@@ -3,7 +3,7 @@
  * tsquery_gist.c
  *	  GiST index support for tsquery
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -17,6 +17,7 @@
 #include "access/stratnum.h"
 #include "access/gist.h"
 #include "tsearch/ts_utils.h"
+#include "utils/builtins.h"
 
 #define GETENTRY(vec,pos) DatumGetTSQuerySign((vec)->vector[pos].key)
 
@@ -36,17 +37,16 @@ gtsquery_compress(PG_FUNCTION_ARGS)
 
 		gistentryinit(*retval, TSQuerySignGetDatum(sign),
 					  entry->rel, entry->page,
-					  entry->offset, FALSE);
+					  entry->offset, false);
 	}
 
 	PG_RETURN_POINTER(retval);
 }
 
-Datum
-gtsquery_decompress(PG_FUNCTION_ARGS)
-{
-	PG_RETURN_DATUM(PG_GETARG_DATUM(0));
-}
+/*
+ * We do not need a decompress function, because the other gtsquery
+ * support functions work with the compressed representation.
+ */
 
 Datum
 gtsquery_consistent(PG_FUNCTION_ARGS)
@@ -79,7 +79,7 @@ gtsquery_consistent(PG_FUNCTION_ARGS)
 				retval = (key & sq) != 0;
 			break;
 		default:
-			retval = FALSE;
+			retval = false;
 	}
 	PG_RETURN_BOOL(retval);
 }

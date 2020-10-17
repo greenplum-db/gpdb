@@ -11,6 +11,6 @@
 extern int PQsendGpQuery_shared(PGconn       *conn,
 								 char         *query,
 								 int          query_len,
-								 pqbool         nonblock);
+								 bool         nonblock);
 
 #endif

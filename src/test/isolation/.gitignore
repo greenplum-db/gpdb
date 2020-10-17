@@ -13,5 +13,5 @@
 
 # Generated subdirectories
 /results/
-/log/
-/tmp_check/
+/output_iso/
+/tmp_check_iso/

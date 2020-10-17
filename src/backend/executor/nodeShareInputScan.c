@@ -63,6 +63,8 @@
 #include "executor/nodeShareInputScan.h"
 #include "miscadmin.h"
 #include "storage/condition_variable.h"
+#include "storage/lwlock.h"
+#include "storage/shmem.h"
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
@@ -114,6 +116,24 @@ typedef struct shareinput_Xslice_state
 
 /* shared memory hash table holding 'shareinput_Xslice_state' entries */
 static HTAB *shareinput_Xslice_hash = NULL;
+
+/*
+ * The tuplestore files for all share input scans are held in one SharedFileSet.
+ * The SharedFileSet is attached to a single DSM segment that persists until
+ * postmaster shutdown. When the reference count of the SharedFileSet reaches
+ * zero, the SharedFileSet is automatically destroyed, but it is re-initialized
+ * the next time it's needed.
+ *
+ * The SharedFileSet deletes any remaining files when the reference count
+ * reaches zero, but we don't rely on that mechanism. All the files are
+ * held in the same SharedFileSet, so it cannot be recycled until all
+ * ShareInputScans in the system have finished, which might never happen if
+ * new queries are started continuously. The shareinput_Xslice_state entries
+ * are reference counted separately, and we clean up the files backing each
+ * individual ShareInputScan whenever its reference count reaches zero.
+ */
+static dsm_handle *shareinput_Xslice_dsm_handle_ptr;
+static SharedFileSet *shareinput_Xslice_fileset;
 
 /*
  * 'shareinput_reference' represents a reference or "lease" to an entry
@@ -216,7 +236,9 @@ init_tuplestore_state(ShareInputScanState *node)
 										   10); /* maxKBytes FIXME */
 
 				shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-				tuplestore_make_shared(ts, rwfile_prefix);
+				tuplestore_make_shared(ts,
+									   get_shareinput_fileset(),
+									   rwfile_prefix);
 			}
 			else
 			{
@@ -276,7 +298,7 @@ init_tuplestore_state(ShareInputScanState *node)
 			shareinput_reader_waitready(node->ref);
 
 			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-			ts = tuplestore_open_shared(rwfile_prefix, false /* interXact */);
+			ts = tuplestore_open_shared(get_shareinput_fileset(), rwfile_prefix);
 		}
 		local_state->ts_state = ts;
 		local_state->ready = true;
@@ -304,10 +326,11 @@ init_tuplestore_state(ShareInputScanState *node)
  * 	Retrieve a tuple from the ShareInputScan
  * ------------------------------------------------------------------
  */
-TupleTableSlot *
-ExecShareInputScan(ShareInputScanState *node)
+static TupleTableSlot *
+ExecShareInputScan(PlanState *pstate)
 {
-	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
+	ShareInputScanState *node = castNode(ShareInputScanState, pstate);
+	ShareInputScan *sisc = (ShareInputScan *) pstate->plan;
 	EState	   *estate;
 	ScanDirection dir;
 	bool		forward;
@@ -316,7 +339,7 @@ ExecShareInputScan(ShareInputScanState *node)
 	/*
 	 * get state info from node
 	 */
-	estate = node->ss.ps.state;
+	estate = pstate->state;
 	dir = estate->es_direction;
 	forward = ScanDirectionIsForward(dir);
 
@@ -360,7 +383,6 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	ShareInputScanState *sisstate;
 	Plan	   *outerPlan;
 	PlanState  *childState;
-	TupleDesc	tupDesc;
 
 	Assert(innerPlan(node) == NULL);
 
@@ -368,6 +390,7 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	sisstate = makeNode(ShareInputScanState);
 	sisstate->ss.ps.plan = (Plan *) node;
 	sisstate->ss.ps.state = estate;
+	sisstate->ss.ps.ExecProcNode = ExecShareInputScan;
 
 	sisstate->ts_state = NULL;
 	sisstate->ts_pos = -1;
@@ -390,35 +413,19 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	childState = ExecInitNode(outerPlan, estate, eflags);
 	outerPlanState(sisstate) = childState;
 
-	sisstate->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) node->scan.plan.targetlist, (PlanState *) sisstate);
 	Assert(node->scan.plan.qual == NULL);
 	sisstate->ss.ps.qual = NULL;
 
-	/* Misc initialization
-	 *
-	 * Create expression context
+	/* Misc initialization 
+	 * 
+	 * Create expression context 
 	 */
 	ExecAssignExprContext(estate, &sisstate->ss.ps);
 
-	/* tuple table init */
-	ExecInitResultTupleSlot(estate, &sisstate->ss.ps);
-	sisstate->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
-
-	/*
-	 * init tuple type.
+	/* 
+	 * Initialize result slot and type.
 	 */
-	ExecAssignResultTypeFromTL(&sisstate->ss.ps);
-
-	{
-		bool hasoid;
-		if (!ExecContextForcesOids(&sisstate->ss.ps, &hasoid))
-			hasoid = false;
-
-		tupDesc = ExecTypeFromTL(node->scan.plan.targetlist, hasoid);
-	}
-
-	ExecAssignScanType(&sisstate->ss, tupDesc);
+	ExecInitResultTupleSlotTL(&sisstate->ss.ps, &TTSOpsMinimalTuple);
 
 	sisstate->ss.ps.ps_ProjInfo = NULL;
 
@@ -497,7 +504,6 @@ ExecEndShareInputScan(ShareInputScanState *node)
 	shareinput_local_state *local_state = node->local_state;
 
 	/* clean up tuple table */
-	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
 	if (node->ref)
@@ -572,7 +578,6 @@ ExecSquelchShareInputScan(ShareInputScanState *node)
 	shareinput_local_state *local_state = node->local_state;
 
 	/* clean up tuple table */
-	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
 	/*
@@ -664,16 +669,73 @@ ShareInputShmemSize(void)
 void
 ShareInputShmemInit(void)
 {
-	HASHCTL		info;
+	bool		found;
 
-	info.keysize = sizeof(shareinput_tag);
-	info.entrysize = sizeof(shareinput_Xslice_state);
+	shareinput_Xslice_dsm_handle_ptr =
+		ShmemInitStruct("ShareInputScan DSM handle", sizeof(dsm_handle), &found);
+	if (!found)
+	{
+		HASHCTL		info;
 
-	shareinput_Xslice_hash = ShmemInitHash("ShareInputScan notifications",
-										   N_SHAREINPUT_SLOTS(),
-										   N_SHAREINPUT_SLOTS(),
-										   &info,
-										   HASH_ELEM | HASH_BLOBS);
+		// GPDB_12_MERGE_FIXME: would be nicer to store this hash in the DSM segment
+		info.keysize = sizeof(shareinput_tag);
+		info.entrysize = sizeof(shareinput_Xslice_state);
+
+		shareinput_Xslice_hash = ShmemInitHash("ShareInputScan notifications",
+											   N_SHAREINPUT_SLOTS(),
+											   N_SHAREINPUT_SLOTS(),
+											   &info,
+											   HASH_ELEM | HASH_BLOBS);
+	}
+}
+
+/*
+ * Get reference to the SharedFileSet used to hold all the tuplestore files.
+ *
+ * This is exported so that it can also be used by the INITPLAN function
+ * tuplestores.
+ */
+SharedFileSet *
+get_shareinput_fileset(void)
+{
+	dsm_handle		handle;
+
+	if (shareinput_Xslice_fileset == NULL)
+	{
+		dsm_segment *seg;
+
+		LWLockAcquire(ShareInputScanLock, LW_EXCLUSIVE);
+
+		handle = *shareinput_Xslice_dsm_handle_ptr;
+
+		if (handle)
+		{
+			seg = dsm_attach(handle);
+			if (seg == NULL)
+				elog(ERROR, "could not attach to ShareInputScan DSM segment");
+			dsm_pin_mapping(seg);
+
+			shareinput_Xslice_fileset = dsm_segment_address(seg);
+		}
+		else
+		{
+			seg = dsm_create(sizeof(SharedFileSet), 0);
+			dsm_pin_segment(seg);
+			*shareinput_Xslice_dsm_handle_ptr = dsm_segment_handle(seg);
+			dsm_pin_mapping(seg);
+
+			shareinput_Xslice_fileset = dsm_segment_address(seg);
+		}
+
+		if (shareinput_Xslice_fileset->refcnt == 0)
+			SharedFileSetInit(shareinput_Xslice_fileset, seg);
+		else
+			SharedFileSetAttach(shareinput_Xslice_fileset, seg);
+
+		LWLockRelease(ShareInputScanLock);
+	}
+
+	return shareinput_Xslice_fileset;
 }
 
 /*
@@ -914,6 +976,7 @@ shareinput_writer_waitdone(shareinput_Xslice_reference *ref, int nconsumers)
 	if (!state->ready)
 		elog(ERROR, "shareinput_writer_waitdone() called without creating the tuplestore");
 
+	ConditionVariablePrepareToSleep(&state->ready_done_cv);
 	for (;;)
 	{
 		int			ndone;
@@ -932,6 +995,7 @@ shareinput_writer_waitdone(shareinput_Xslice_reference *ref, int nconsumers)
 
 			continue;
 		}
+		ConditionVariableCancelSleep();
 		if (ndone > nconsumers)
 			elog(WARNING, "%d sharers of ShareInputScan reported to be done, but only %d were expected",
 				 ndone, nconsumers);

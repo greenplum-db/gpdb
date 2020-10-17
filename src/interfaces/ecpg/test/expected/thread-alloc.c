@@ -22,6 +22,7 @@ main(void)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <process.h>
+#include <locale.h>
 #else
 #include <pthread.h>
 #endif
@@ -40,13 +41,13 @@ main(void)
 #define PGDLLIMPORT __declspec (dllimport)
 #else
 #define PGDLLIMPORT
-#endif   /* __CYGWIN__ */
-#endif   /* PGDLLIMPORT */
+#endif							/* __CYGWIN__ */
+#endif							/* PGDLLIMPORT */
 
 #define SQLERRMC_LEN	150
 
 #ifdef __cplusplus
-extern		"C"
+extern "C"
 {
 #endif
 
@@ -99,7 +100,7 @@ struct sqlca_t *ECPGget_sqlca(void);
 
 #endif
 
-#line 24 "alloc.pgc"
+#line 25 "alloc.pgc"
 
 
 #line 1 "regression.h"
@@ -109,14 +110,14 @@ struct sqlca_t *ECPGget_sqlca(void);
 
 
 
-#line 25 "alloc.pgc"
+#line 26 "alloc.pgc"
 
 
 /* exec sql whenever sqlerror  sqlprint ; */
-#line 27 "alloc.pgc"
+#line 28 "alloc.pgc"
 
 /* exec sql whenever not found  sqlprint ; */
-#line 28 "alloc.pgc"
+#line 29 "alloc.pgc"
 
 
 #ifdef WIN32
@@ -132,54 +133,54 @@ static void* fn(void* arg)
 	 
 	   
 	
-#line 39 "alloc.pgc"
+#line 40 "alloc.pgc"
  int value ;
  
-#line 40 "alloc.pgc"
+#line 41 "alloc.pgc"
  char name [ 100 ] ;
  
-#line 41 "alloc.pgc"
+#line 42 "alloc.pgc"
  char ** r = NULL ;
 /* exec sql end declare section */
-#line 42 "alloc.pgc"
+#line 43 "alloc.pgc"
 
 
 	value = (long)arg;
 	sprintf(name, "Connection: %d", value);
 
 	{ ECPGconnect(__LINE__, 0, "ecpg1_regression" , NULL, NULL , name, 0); 
-#line 47 "alloc.pgc"
+#line 48 "alloc.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 47 "alloc.pgc"
+#line 48 "alloc.pgc"
 
 	{ ECPGsetcommit(__LINE__, "on", NULL);
-#line 48 "alloc.pgc"
+#line 49 "alloc.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 48 "alloc.pgc"
+#line 49 "alloc.pgc"
 
 	for (i = 1; i <= REPEATS; ++i)
 	{
 		{ ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select relname from pg_class where relname = 'pg_class'", ECPGt_EOIT, 
 	ECPGt_char,&(r),(long)0,(long)0,(1)*sizeof(char), 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);
-#line 51 "alloc.pgc"
+#line 52 "alloc.pgc"
 
 if (sqlca.sqlcode == ECPG_NOT_FOUND) sqlprint();
-#line 51 "alloc.pgc"
+#line 52 "alloc.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 51 "alloc.pgc"
+#line 52 "alloc.pgc"
 
 		free(r);
 		r = NULL;
 	}
 	{ ECPGdisconnect(__LINE__, name);
-#line 55 "alloc.pgc"
+#line 56 "alloc.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 55 "alloc.pgc"
+#line 56 "alloc.pgc"
 
 
 	return 0;

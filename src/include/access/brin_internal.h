@@ -2,7 +2,7 @@
  * brin_internal.h
  *		internal declarations for BRIN indexes
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -85,25 +85,26 @@ typedef struct BrinDesc
 extern BrinDesc *brin_build_desc(Relation rel);
 extern void brin_free_desc(BrinDesc *bdesc);
 extern IndexBuildResult *brinbuild(Relation heap, Relation index,
-		  struct IndexInfo *indexInfo);
+								   struct IndexInfo *indexInfo);
 extern void brinbuildempty(Relation index);
 extern bool brininsert(Relation idxRel, Datum *values, bool *nulls,
-		   ItemPointer heaptid, Relation heapRel,
-		   IndexUniqueCheck checkUnique);
+					   ItemPointer heaptid, Relation heapRel,
+					   IndexUniqueCheck checkUnique,
+					   struct IndexInfo *indexInfo);
 extern IndexScanDesc brinbeginscan(Relation r, int nkeys, int norderbys);
 extern Node *bringetbitmap(IndexScanDesc scan, Node *tbm);
 extern void brinrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys,
-		   ScanKey orderbys, int norderbys);
+					   ScanKey orderbys, int norderbys);
 extern void brinendscan(IndexScanDesc scan);
 extern IndexBulkDeleteResult *brinbulkdelete(IndexVacuumInfo *info,
-			   IndexBulkDeleteResult *stats,
-			   IndexBulkDeleteCallback callback,
-			   void *callback_state);
+											 IndexBulkDeleteResult *stats,
+											 IndexBulkDeleteCallback callback,
+											 void *callback_state);
 extern IndexBulkDeleteResult *brinvacuumcleanup(IndexVacuumInfo *info,
-				  IndexBulkDeleteResult *stats);
+												IndexBulkDeleteResult *stats);
 extern bytea *brinoptions(Datum reloptions, bool validate);
 
 /* brin_validate.c */
 extern bool brinvalidate(Oid opclassoid);
 
-#endif   /* BRIN_INTERNAL_H */
+#endif							/* BRIN_INTERNAL_H */

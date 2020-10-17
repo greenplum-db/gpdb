@@ -4,7 +4,6 @@
 CREATE TABLE returning_parttab (distkey int4, partkey int4, i int, t text)
 DISTRIBUTED BY (distkey)
 PARTITION BY RANGE (partkey) (START (1) END (10));
-NOTICE:  CREATE TABLE will create partition "returning_parttab_1_prt_1" for table "returning_parttab"
 --
 -- Test INSERT RETURNING with partitioning
 --
@@ -31,7 +30,6 @@ returning distkey, partkey, i, t;
 -- just marked as dropped. Make sure the executor maps the columns correctly.
 ALTER TABLE returning_parttab DROP COLUMN i;
 alter table returning_parttab add partition newpart start (10) end (20);
-NOTICE:  CREATE TABLE will create partition "returning_parttab_1_prt_newpart" for table "returning_parttab"
 insert into returning_parttab values (1, 10, 'single2 insert') returning *;
  distkey | partkey |       t        
 ---------+---------+----------------
@@ -64,9 +62,13 @@ update returning_parttab set partkey = 19 where partkey = 13 returning *;
        2 |      19 | multi2 3
 (1 row)
 
--- update that moves the tuple across partitions (not supported)
+-- update that moves the tuple across partitions
 update returning_parttab set partkey = 18 where partkey = 4 returning *;
-ERROR:  moving tuple from partition "returning_parttab_1_prt_1" to partition "returning_parttab_1_prt_newpart" not supported  (seg0 slice1 127.0.0.1:40000 pid=5753)
+ distkey | partkey |    t    
+---------+---------+---------
+       1 |      18 | multi 4
+(1 row)
+
 -- delete
 delete from returning_parttab where partkey = 14 returning *;
  distkey | partkey |    t     
@@ -81,9 +83,9 @@ select * from returning_parttab;
        1 |       1 | single insert
        1 |       1 | multi 1
        1 |       2 | multi 2
-       1 |       4 | multi 4
        1 |       5 | multi 5
        1 |       9 | multi 3
+       1 |      18 | multi 4
        1 |      10 | single2 insert
        2 |      11 | multi2 1
        2 |      12 | multi2 2
@@ -97,7 +99,7 @@ select * from returning_parttab;
 CREATE TEMP TABLE returning_aotab (id int4) WITH (appendonly=true);
 INSERT INTO returning_aotab VALUES (1);
 DELETE FROM returning_aotab RETURNING *;
-ERROR:  DELETE RETURNING is not supported on appendonly tables
+ERROR:  feature not supported on appendoptimized relations
 --
 -- Test UPDATE RETURNING with a split update, i.e. an update of the distribution
 -- key.
@@ -115,4 +117,18 @@ SELECT * FROM returning_disttest;
   3
   2
 (2 rows)
+
+-- Test an UPDATE that moves the row to different segment and different partition
+UPDATE returning_parttab SET distkey = 2, partkey = 13 WHERE partkey = 2 RETURNING distkey, partkey, t;
+ distkey | partkey |    t    
+---------+---------+---------
+       2 |      13 | multi 2
+(1 row)
+
+UPDATE 1
+select * from returning_parttab WHERE distkey = 2 AND partkey = 13;
+ distkey | partkey |    t    
+---------+---------+---------
+       2 |      13 | multi 2
+(1 row)
 

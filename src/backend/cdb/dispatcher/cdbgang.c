@@ -21,6 +21,7 @@
 #include "access/xact.h"
 #include "catalog/namespace.h"
 #include "commands/variable.h"
+#include "common/ip.h"
 #include "nodes/execnodes.h"	/* CdbProcess, Slice, SliceTable */
 #include "postmaster/postmaster.h"
 #include "tcop/tcopprot.h"
@@ -40,7 +41,6 @@
 #include "cdb/cdbvars.h"		/* Gp_role, etc. */
 #include "cdb/cdbconn.h"		/* cdbconn_* */
 #include "libpq/libpq-be.h"
-#include "libpq/ip.h"
 
 #include "utils/guc_tables.h"
 
@@ -343,8 +343,6 @@ addOneOption(StringInfo string, struct config_generic *guc)
 				}
 				break;
 			}
-		default:
-			Insist(false);
 	}
 }
 

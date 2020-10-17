@@ -64,10 +64,9 @@ SET
 3: select c_relname, 1 as different_relfilenode from before_reindex_dropindex_crtab_part_aoco_btree b where exists (select oid, gp_segment_id, relfilenode from gp_dist_random('pg_class') where relname like 'reindex_dropindex_crtab_part_aoco_btree%_id_idx' and b.c_oid = oid and b.c_gp_segment_id = gp_segment_id and b.c_relfilenode != relfilenode) group by b.c_oid, b.c_relname;
  c_relname                                                     | different_relfilenode 
 ---------------------------------------------------------------+-----------------------
- reindex_dropindex_crtab_part_aoco_btree_id_idx                | 1                     
  reindex_dropindex_crtab_part_aoco_btree_1_prt_p_one_id_idx    | 1                     
  reindex_dropindex_crtab_part_aoco_btree_1_prt_de_fault_id_idx | 1                     
-(3 rows)
+(2 rows)
 
 -- expect only the index on parent table to be dropped; drop index will not drop indexes on child partitions
 3: select 1-count(1) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'reindex_dropindex_crtab_part_aoco_btree_owner_idx';

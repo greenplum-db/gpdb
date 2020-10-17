@@ -2,7 +2,6 @@
 -- "the limit of xxx distributed transactions has been reached".
 -- Refer comment in https://github.com/greenplum-db/gpdb/issues/9207 for the
 -- context.
-include: helpers/server_helpers.sql;
 
 -- We will reset the value to 250 finally so sanity check the current value here.
 6: show max_prepared_transactions;

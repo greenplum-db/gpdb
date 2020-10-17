@@ -202,7 +202,7 @@ SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
 ERROR:  operator does not exist: character varying = integer
 LINE 1: SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
                                     ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 --
 -- DECODE(): Oracle compatibility
 --
@@ -615,7 +615,7 @@ order by sid, name;
 ERROR:  operator does not exist: date = integer
 LINE 9:            WHEN 2007 THEN 2007
                    ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select sid,
        name,
        gender,

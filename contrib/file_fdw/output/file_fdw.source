@@ -70,7 +70,7 @@ CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', null '
 ');       -- ERROR
 ERROR:  COPY null representation cannot use newline or carriage return
 CREATE FOREIGN TABLE tbl () SERVER file_server;  -- ERROR
-ERROR:  filename is required for file_fdw foreign tables
+ERROR:  either filename or program is required for file_fdw foreign tables
 CREATE FOREIGN TABLE agg_text (
 	a	int2 CHECK (a >= 0),
 	b	float4
@@ -126,7 +126,7 @@ ERROR:  invalid option "force_not_null"
 HINT:  There are no valid options in this context.
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_not_null '*'); -- ERROR
 ERROR:  invalid option "force_not_null"
-HINT:  Valid options in this context are: filename, format, header, delimiter, quote, escape, null, encoding
+HINT:  Valid options in this context are: filename, program, format, header, delimiter, quote, escape, null, encoding
 -- force_null is not allowed to be specified at any foreign object level:
 ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_null '*'); -- ERROR
 ERROR:  invalid option "force_null"
@@ -139,7 +139,7 @@ ERROR:  invalid option "force_null"
 HINT:  There are no valid options in this context.
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_null '*'); -- ERROR
 ERROR:  invalid option "force_null"
-HINT:  Valid options in this context are: filename, format, header, delimiter, quote, escape, null, encoding
+HINT:  Valid options in this context are: filename, program, format, header, delimiter, quote, escape, null, encoding
 -- basic query tests
 SELECT * FROM agg_text WHERE b > 10.0 ORDER BY a;
   a  |   b    
@@ -253,8 +253,6 @@ SELECT * FROM agg_csv WHERE a < 0;
 RESET constraint_exclusion;
 -- table inheritance tests
 CREATE TABLE agg (a int2, b float4);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER FOREIGN TABLE agg_csv INHERIT agg;
 SELECT tableoid::regclass, * FROM agg;
  tableoid |  a  |    b    
@@ -293,6 +291,100 @@ SELECT tableoid::regclass, * FROM agg FOR UPDATE;
 
 ALTER FOREIGN TABLE agg_csv NO INHERIT agg;
 DROP TABLE agg;
+-- declarative partitioning tests
+SET ROLE regress_file_fdw_superuser;
+CREATE TABLE pt (a int, b text) partition by list (a);
+CREATE FOREIGN TABLE p1 partition of pt for values in (1) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/list1.csv', delimiter ',');
+CREATE TABLE p2 partition of pt for values in (2);
+SELECT tableoid::regclass, * FROM pt;
+ tableoid | a |  b  
+----------+---+-----
+ p1       | 1 | foo
+ p1       | 1 | bar
+(2 rows)
+
+SELECT tableoid::regclass, * FROM p1;
+ tableoid | a |  b  
+----------+---+-----
+ p1       | 1 | foo
+ p1       | 1 | bar
+(2 rows)
+
+SELECT tableoid::regclass, * FROM p2;
+ tableoid | a | b 
+----------+---+---
+(0 rows)
+
+COPY pt FROM '@abs_srcdir@/data/list2.bad' with (format 'csv', delimiter ','); -- ERROR
+ERROR:  cannot insert into foreign table "p1"
+CONTEXT:  COPY pt, line 2: "1,qux"
+COPY pt FROM '@abs_srcdir@/data/list2.csv' with (format 'csv', delimiter ',');
+SELECT tableoid::regclass, * FROM pt;
+ tableoid | a |  b  
+----------+---+-----
+ p1       | 1 | foo
+ p1       | 1 | bar
+ p2       | 2 | baz
+ p2       | 2 | qux
+(4 rows)
+
+SELECT tableoid::regclass, * FROM p1;
+ tableoid | a |  b  
+----------+---+-----
+ p1       | 1 | foo
+ p1       | 1 | bar
+(2 rows)
+
+SELECT tableoid::regclass, * FROM p2;
+ tableoid | a |  b  
+----------+---+-----
+ p2       | 2 | baz
+ p2       | 2 | qux
+(2 rows)
+
+INSERT INTO pt VALUES (1, 'xyzzy'); -- ERROR
+ERROR:  cannot insert into foreign table "p1"
+INSERT INTO pt VALUES (2, 'xyzzy');
+UPDATE pt set a = 1 where a = 2; -- ERROR
+ERROR:  cannot insert into foreign table "p1"
+SELECT tableoid::regclass, * FROM pt;
+ tableoid | a |   b   
+----------+---+-------
+ p1       | 1 | foo
+ p1       | 1 | bar
+ p2       | 2 | baz
+ p2       | 2 | qux
+ p2       | 2 | xyzzy
+(5 rows)
+
+SELECT tableoid::regclass, * FROM p1;
+ tableoid | a |  b  
+----------+---+-----
+ p1       | 1 | foo
+ p1       | 1 | bar
+(2 rows)
+
+SELECT tableoid::regclass, * FROM p2;
+ tableoid | a |   b   
+----------+---+-------
+ p2       | 2 | baz
+ p2       | 2 | qux
+ p2       | 2 | xyzzy
+(3 rows)
+
+DROP TABLE pt;
+-- generated column tests
+CREATE FOREIGN TABLE gft1 (a int, b text, c text GENERATED ALWAYS AS ('foo') STORED) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/list1.csv', delimiter ',');
+SELECT a, c FROM gft1;
+ a |   c    
+---+--------
+ 1 | _null_
+ 1 | _null_
+(2 rows)
+
+DROP FOREIGN TABLE gft1;
 -- privilege tests
 SET ROLE regress_file_fdw_superuser;
 SELECT * FROM agg_text ORDER BY a;
@@ -316,7 +408,7 @@ SELECT * FROM agg_text ORDER BY a;
 
 SET ROLE regress_no_priv_user;
 SELECT * FROM agg_text ORDER BY a;   -- ERROR
-ERROR:  permission denied for relation agg_text
+ERROR:  permission denied for foreign table agg_text
 SET ROLE regress_file_fdw_user;
 \t on
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_text WHERE a > 0;
@@ -345,7 +437,7 @@ ALTER FOREIGN TABLE agg_text OWNER TO regress_file_fdw_user;
 ALTER FOREIGN TABLE agg_text OPTIONS (SET format 'text');
 SET ROLE regress_file_fdw_user;
 ALTER FOREIGN TABLE agg_text OPTIONS (SET format 'text');
-ERROR:  only superuser can change options of a file_fdw foreign table
+ERROR:  only superuser or a member of the pg_read_server_files role may specify the filename option of a file_fdw foreign table
 SET ROLE regress_file_fdw_superuser;
 -- cleanup
 RESET ROLE;

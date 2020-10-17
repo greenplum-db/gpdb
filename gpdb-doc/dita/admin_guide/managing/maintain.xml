@@ -279,11 +279,11 @@ VACUUM cust_info;</codeblock></p>
           and you do not need to save it indefinitely. Administrators should purge older log files
           periodically.</p>
         <p>Greenplum Database by default has log file rotation enabled for the master and segment
-          database logs. Log files are created in the <codeph>pg_log</codeph> subdirectory of the
+          database logs. Log files are created in the <codeph>log</codeph> subdirectory of the
           master and each segment data directory using the following naming convention:
               <codeph>gpdb-<i>YYYY</i>-<i>MM</i>-<i>DD_hhmmss</i>.csv</codeph>. Administrators need
           to implement scripts or programs to periodically clean up old log files in the
-            <codeph>pg_log</codeph> directory of the master and each segment instance.</p>
+            <codeph>log</codeph> directory of the master and each segment instance.</p>
         <p>Log rotation can be triggered by the size of the current log file or the age of the
           current log file. The <codeph>log_rotation_size</codeph> configuration parameter sets the
           size of an individual log file that triggers log rotation. When the log file size is equal

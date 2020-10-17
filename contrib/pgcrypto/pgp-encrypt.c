@@ -217,6 +217,8 @@ encrypt_free(void *priv)
 {
 	struct EncStat *st = priv;
 
+	if (st->ciph)
+		pgp_cfb_free(st->ciph);
 	px_memset(st, 0, sizeof(*st));
 	px_free(st);
 }
@@ -482,9 +484,8 @@ write_prefix(PGP_Context *ctx, PushFilter *dst)
 				bs;
 
 	bs = pgp_get_cipher_block_size(ctx->cipher_algo);
-	res = px_get_random_bytes(prefix, bs);
-	if (res < 0)
-		return res;
+	if (!pg_strong_random(prefix, bs))
+		return PXE_NO_RANDOM;
 
 	prefix[bs + 0] = prefix[bs - 2];
 	prefix[bs + 1] = prefix[bs - 1];
@@ -578,14 +579,11 @@ init_s2k_key(PGP_Context *ctx)
 static int
 init_sess_key(PGP_Context *ctx)
 {
-	int			res;
-
 	if (ctx->use_sess_key || ctx->pub_key)
 	{
 		ctx->sess_key_len = pgp_get_cipher_key_size(ctx->cipher_algo);
-		res = px_get_random_bytes(ctx->sess_key, ctx->sess_key_len);
-		if (res < 0)
-			return res;
+		if (!pg_strong_random(ctx->sess_key, ctx->sess_key_len))
+			return PXE_NO_RANDOM;
 	}
 	else
 	{

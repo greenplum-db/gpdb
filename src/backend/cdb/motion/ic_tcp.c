@@ -14,12 +14,12 @@
 
 #include "postgres.h"
 
+#include "common/ip.h"
 #include "nodes/execnodes.h"	/* ExecSlice, SliceTable */
 #include "nodes/pg_list.h"
 #include "nodes/print.h"
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
-#include "libpq/ip.h"
 #include "postmaster/postmaster.h"
 #include "utils/builtins.h"
 
@@ -2770,11 +2770,12 @@ flushBuffer(ChunkTransportState *transportStates,
 
 		if ((n = send(conn->sockfd, sendptr + sent, conn->msgSize - sent, 0)) < 0)
 		{
-			int	send_errno = errno;
+			int			send_errno = errno;
+
 			ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
-			if (errno == EINTR)
+			if (send_errno == EINTR)
 				continue;
-			if (errno == EWOULDBLOCK)
+			if (send_errno == EWOULDBLOCK)
 			{
 				do
 				{
@@ -2789,7 +2790,9 @@ flushBuffer(ChunkTransportState *transportStates,
 					n = select(conn->sockfd + 1, (fd_set *) &rset, (fd_set *) &wset, NULL, &timeout);
 					if (n < 0)
 					{
-						if (errno == EINTR)
+						int			select_errno = errno;
+
+						if (select_errno == EINTR)
 							continue;
 
 						/*
@@ -2808,7 +2811,7 @@ flushBuffer(ChunkTransportState *transportStates,
 								(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								 errmsg("interconnect error writing an outgoing packet: %m"),
 								 errdetail("Error during select() call (error: %d), for remote connection: contentId=%d at %s",
-										   errno, conn->remoteContentId,
+										   select_errno, conn->remoteContentId,
 										   conn->remoteHostAndPort)));
 					}
 

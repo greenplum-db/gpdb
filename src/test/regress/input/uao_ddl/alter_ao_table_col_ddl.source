@@ -1,6 +1,6 @@
-create schema alter_ao_table_col_ddl_@orientation@;
-set search_path="$user",alter_ao_table_col_ddl_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_table_col_ddl_@amname@;
+set search_path="$user",alter_ao_table_col_ddl_@amname@,public;
+SET default_table_access_method=@amname@;
 
 BEGIN;
 CREATE TABLE sto_alt_uao1(
@@ -14,7 +14,7 @@ CREATE TABLE sto_alt_uao1(
           before_rename_col int4,
           change_datatype_col numeric,
           date_column date,
-          col_set_default numeric) with(appendonly=true) DISTRIBUTED RANDOMLY;
+          col_set_default numeric) DISTRIBUTED RANDOMLY;
 
 insert into sto_alt_uao1 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '1-1-2000', 0);
 insert into sto_alt_uao1 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '1-1-2001', 1);

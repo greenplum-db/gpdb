@@ -34,13 +34,7 @@ PARTITION BY list (gender)
 SUBPARTITION BY range (year)
 SUBPARTITION TEMPLATE (start (date '2001-01-01'))
 (VALUES ('M'), VALUES ('F'));
-NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1" for table "mdt_test_part1"
-NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1_2_prt_1" for table "mdt_test_part1_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2" for table "mdt_test_part1"
-NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2_2_prt_1" for table "mdt_test_part1_1_prt_2"
 ALTER TABLE mdt_test_part1 ADD DEFAULT PARTITION default_part;
-NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_default_part" for table "mdt_test_part1"
-NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_default_part_2_prt_1" for table "mdt_test_part1_1_prt_default_part"
 CREATE TABLE mdt_all_types (
   a int,
   col001 char DEFAULT 'z',
@@ -101,6 +95,21 @@ SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
  mdt_all_types                             | CREATE     | TABLE
 (12 rows)
 
+-- CREATE TABLE .. PARTITION OF
+CREATE TABLE mdt_test_newpart PARTITION OF mdt_test_part1 FOR VALUES IN ('X');
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- ATTACH PARTITION
+CREATE TABLE mdt_test_newpart2 (
+  id int,
+  rank int,
+  year date,
+  gender char(1))
+DISTRIBUTED BY (id, gender, year);
+ALTER TABLE mdt_test_part1 ATTACH PARTITION mdt_test_newpart2 FOR VALUES IN ('Y');
+-- DETACH PARTITION
+CREATE TABLE mdt_test_detach PARTITION OF mdt_test_part1 FOR VALUES IN ('Z');
+NOTICE:  table has parent, setting distribution columns to match parent table
+ALTER TABLE mdt_test_part1 DETACH PARTITION mdt_test_detach;
 -- GRANT
 GRANT ALL ON mdt_all_types TO public;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'PRIVILEGE';
@@ -156,27 +165,32 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
 -------------------------------------------+------------+----------
  mdt_test_part1                            | CREATE     | TABLE
  mdt_test_part1_1_prt_1                    | CREATE     | TABLE
- mdt_test_part1_1_prt_1                    | ALTER      | INHERIT
- mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
- mdt_test_part1_1_prt_1_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_1                    | PARTITION  | ATTACH
  mdt_test_part1_1_prt_2                    | CREATE     | TABLE
- mdt_test_part1_1_prt_2                    | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2                    | PARTITION  | ATTACH
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | PARTITION  | ATTACH
  mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
- mdt_test_part1_1_prt_2_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2_2_prt_1            | PARTITION  | ATTACH
  mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
- mdt_test_part1_1_prt_default_part         | ALTER      | INHERIT
+ mdt_test_part1_1_prt_default_part         | PARTITION  | ATTACH
  mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
- mdt_test_part1_1_prt_default_part_2_prt_1 | ALTER      | INHERIT
- mdt_test_part1                            | PARTITION  | ADD
+ mdt_test_part1_1_prt_default_part_2_prt_1 | PARTITION  | ATTACH
  mdt_all_types_col021_seq                  | CREATE     | SEQUENCE
  mdt_all_types_col023_seq                  | CREATE     | SEQUENCE
  mdt_all_types                             | CREATE     | TABLE
  mdt_all_types_col021_seq                  | ALTER      | OWNED BY
  mdt_all_types_col023_seq                  | ALTER      | OWNED BY
+ mdt_test_newpart                          | CREATE     | TABLE
+ mdt_test_newpart                          | PARTITION  | ATTACH
+ mdt_test_newpart2                         | CREATE     | TABLE
+ mdt_test_newpart2                         | PARTITION  | ATTACH
+ mdt_test_detach                           | CREATE     | TABLE
+ mdt_test_detach                           | PARTITION  | DETACH
  mdt_all_types                             | PRIVILEGE  | GRANT
  mdt_all_types                             | VACUUM     | 
  mdt_all_types                             | ANALYZE    | 
-(22 rows)
+(27 rows)
 
 DROP TABLE mdt_all_types;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
@@ -184,23 +198,30 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
 -------------------------------------------+------------+---------
  mdt_test_part1                            | CREATE     | TABLE
  mdt_test_part1_1_prt_1                    | CREATE     | TABLE
- mdt_test_part1_1_prt_1                    | ALTER      | INHERIT
- mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
- mdt_test_part1_1_prt_1_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_1                    | PARTITION  | ATTACH
  mdt_test_part1_1_prt_2                    | CREATE     | TABLE
- mdt_test_part1_1_prt_2                    | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2                    | PARTITION  | ATTACH
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | PARTITION  | ATTACH
  mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
- mdt_test_part1_1_prt_2_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2_2_prt_1            | PARTITION  | ATTACH
  mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
- mdt_test_part1_1_prt_default_part         | ALTER      | INHERIT
+ mdt_test_part1_1_prt_default_part         | PARTITION  | ATTACH
  mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
- mdt_test_part1_1_prt_default_part_2_prt_1 | ALTER      | INHERIT
- mdt_test_part1                            | PARTITION  | ADD
-(14 rows)
+ mdt_test_part1_1_prt_default_part_2_prt_1 | PARTITION  | ATTACH
+ mdt_test_newpart                          | CREATE     | TABLE
+ mdt_test_newpart                          | PARTITION  | ATTACH
+ mdt_test_newpart2                         | CREATE     | TABLE
+ mdt_test_newpart2                         | PARTITION  | ATTACH
+ mdt_test_detach                           | CREATE     | TABLE
+ mdt_test_detach                           | PARTITION  | DETACH
+(19 rows)
 
 DROP TABLE mdt_test_part1;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
- objname | actionname | subtype 
----------+------------+---------
-(0 rows)
+     objname     | actionname | subtype 
+-----------------+------------+---------
+ mdt_test_detach | CREATE     | TABLE
+ mdt_test_detach | PARTITION  | DETACH
+(2 rows)
 

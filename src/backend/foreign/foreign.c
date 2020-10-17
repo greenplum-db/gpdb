@@ -3,7 +3,7 @@
  * foreign.c
  *		  support for foreign-data wrappers, servers and user mappings.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  src/backend/foreign/foreign.c
@@ -78,6 +78,18 @@ SeparateOutMppExecute(List **options)
 ForeignDataWrapper *
 GetForeignDataWrapper(Oid fdwid)
 {
+	return GetForeignDataWrapperExtended(fdwid, 0);
+}
+
+
+/*
+ * GetForeignDataWrapperExtended -	look up the foreign-data wrapper
+ * by OID. If flags uses FDW_MISSING_OK, return NULL if the object cannot
+ * be found instead of raising an error.
+ */
+ForeignDataWrapper *
+GetForeignDataWrapperExtended(Oid fdwid, bits16 flags)
+{
 	Form_pg_foreign_data_wrapper fdwform;
 	ForeignDataWrapper *fdw;
 	Datum		datum;
@@ -87,7 +99,11 @@ GetForeignDataWrapper(Oid fdwid)
 	tp = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid));
 
 	if (!HeapTupleIsValid(tp))
-		elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwid);
+	{
+		if ((flags & FDW_MISSING_OK) == 0)
+			elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwid);
+		return NULL;
+	}
 
 	fdwform = (Form_pg_foreign_data_wrapper) GETSTRUCT(tp);
 
@@ -140,6 +156,18 @@ GetForeignDataWrapperByName(const char *fdwname, bool missing_ok)
 ForeignServer *
 GetForeignServer(Oid serverid)
 {
+	return GetForeignServerExtended(serverid, 0);
+}
+
+
+/*
+ * GetForeignServerExtended - look up the foreign server definition. If
+ * flags uses FSV_MISSING_OK, return NULL if the object cannot be found
+ * instead of raising an error.
+ */
+ForeignServer *
+GetForeignServerExtended(Oid serverid, bits16 flags)
+{
 	Form_pg_foreign_server serverform;
 	ForeignServer *server;
 	HeapTuple	tp;
@@ -149,7 +177,11 @@ GetForeignServer(Oid serverid)
 	tp = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid));
 
 	if (!HeapTupleIsValid(tp))
-		elog(ERROR, "cache lookup failed for foreign server %u", serverid);
+	{
+		if ((flags & FSV_MISSING_OK) == 0)
+			elog(ERROR, "cache lookup failed for foreign server %u", serverid);
+		return NULL;
+	}
 
 	serverform = (Form_pg_foreign_server) GETSTRUCT(tp);
 
@@ -244,7 +276,7 @@ GetUserMapping(Oid userid, Oid serverid)
 						MappingUserName(userid))));
 
 	um = (UserMapping *) palloc(sizeof(UserMapping));
-	um->umid = HeapTupleGetOid(tp);
+	um->umid = ((Form_pg_user_mapping) GETSTRUCT(tp))->oid;
 	um->userid = userid;
 	um->serverid = serverid;
 
@@ -512,7 +544,7 @@ GetFdwRoutineForRelation(Relation relation, bool makecopy)
 /*
  * IsImportableForeignTable - filter table names for IMPORT FOREIGN SCHEMA
  *
- * Returns TRUE if given table name should be imported according to the
+ * Returns true if given table name should be imported according to the
  * statement's import filter options.
  */
 bool
@@ -644,7 +676,7 @@ struct ConnectionOption
  *
  * The list is small - don't bother with bsearch if it stays so.
  */
-static struct ConnectionOption libpq_conninfo_options[] = {
+static const struct ConnectionOption libpq_conninfo_options[] = {
 	{"authtype", ForeignServerRelationId},
 	{"service", ForeignServerRelationId},
 	{"user", UserMappingRelationId},
@@ -671,7 +703,7 @@ static struct ConnectionOption libpq_conninfo_options[] = {
 static bool
 is_conninfo_option(const char *option, Oid context)
 {
-	struct ConnectionOption *opt;
+	const struct ConnectionOption *opt;
 
 	for (opt = libpq_conninfo_options; opt->optname; opt++)
 		if (context == opt->optcontext && strcmp(opt->optname, option) == 0)
@@ -706,7 +738,7 @@ postgresql_fdw_validator(PG_FUNCTION_ARGS)
 
 		if (!is_conninfo_option(def->defname, catalog))
 		{
-			struct ConnectionOption *opt;
+			const struct ConnectionOption *opt;
 			StringInfoData buf;
 
 			/*
@@ -744,7 +776,9 @@ get_foreign_data_wrapper_oid(const char *fdwname, bool missing_ok)
 {
 	Oid			oid;
 
-	oid = GetSysCacheOid1(FOREIGNDATAWRAPPERNAME, CStringGetDatum(fdwname));
+	oid = GetSysCacheOid1(FOREIGNDATAWRAPPERNAME,
+						  Anum_pg_foreign_data_wrapper_oid,
+						  CStringGetDatum(fdwname));
 	if (!OidIsValid(oid) && !missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -765,7 +799,8 @@ get_foreign_server_oid(const char *servername, bool missing_ok)
 {
 	Oid			oid;
 
-	oid = GetSysCacheOid1(FOREIGNSERVERNAME, CStringGetDatum(servername));
+	oid = GetSysCacheOid1(FOREIGNSERVERNAME, Anum_pg_foreign_server_oid,
+						  CStringGetDatum(servername));
 	if (!OidIsValid(oid) && !missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -796,19 +831,19 @@ get_foreign_server_oid(const char *servername, bool missing_ok)
  * path list in RelOptInfo is anyway sorted by total cost we are likely to
  * choose the most efficient path, which is all for the best.
  */
-extern Path *
+Path *
 GetExistingLocalJoinPath(RelOptInfo *joinrel)
 {
 	ListCell   *lc;
 
-	Assert(joinrel->reloptkind == RELOPT_JOINREL);
+	Assert(IS_JOIN_REL(joinrel));
 
 	foreach(lc, joinrel->pathlist)
 	{
 		Path	   *path = (Path *) lfirst(lc);
 		JoinPath   *joinpath = NULL;
 
-		/* Skip parameterised paths. */
+		/* Skip parameterized paths. */
 		if (path->param_info != NULL)
 			continue;
 
@@ -866,7 +901,7 @@ GetExistingLocalJoinPath(RelOptInfo *joinrel)
 			ForeignPath *foreign_path;
 
 			foreign_path = (ForeignPath *) joinpath->outerjoinpath;
-			if (foreign_path->path.parent->reloptkind == RELOPT_JOINREL)
+			if (IS_JOIN_REL(foreign_path->path.parent))
 				joinpath->outerjoinpath = foreign_path->fdw_outerpath;
 		}
 
@@ -875,7 +910,7 @@ GetExistingLocalJoinPath(RelOptInfo *joinrel)
 			ForeignPath *foreign_path;
 
 			foreign_path = (ForeignPath *) joinpath->innerjoinpath;
-			if (foreign_path->path.parent->reloptkind == RELOPT_JOINREL)
+			if (IS_JOIN_REL(foreign_path->path.parent))
 				joinpath->innerjoinpath = foreign_path->fdw_outerpath;
 		}
 

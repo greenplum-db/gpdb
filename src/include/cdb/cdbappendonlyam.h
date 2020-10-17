@@ -19,8 +19,10 @@
 #define CDBAPPENDONLYAM_H
 
 #include "access/htup.h"
+#include "access/memtup.h"
 #include "access/relscan.h"
 #include "access/sdir.h"
+#include "access/tableam.h"
 #include "access/tupmacs.h"
 #include "access/xlogutils.h"
 #include "access/xlog.h"
@@ -31,7 +33,7 @@
 #include "storage/block.h"
 #include "storage/lmgr.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 #include "access/appendonlytid.h"
 
@@ -106,8 +108,6 @@ typedef struct AppendOnlyInsertDescData
 
 	/* The block directory for the appendonly relation. */
 	AppendOnlyBlockDirectory blockDirectory;
-
-	bool update_mode;
 } AppendOnlyInsertDescData;
 
 typedef AppendOnlyInsertDescData *AppendOnlyInsertDesc;
@@ -118,6 +118,7 @@ typedef struct AppendOnlyExecutorReadBlock
 
 	AppendOnlyStorageRead	*storageRead;
 
+	MemTupleBinding *mt_bind;
 	/*
 	 * When reading a segfile that's using version < AORelationVersion_PG83,
 	 * that is, was created before GPDB 5.0 and upgraded with pg_upgrade, we need
@@ -155,10 +156,14 @@ typedef struct AppendOnlyExecutorReadBlock
 } AppendOnlyExecutorReadBlock;
 
 /*
- * used for scan of append only relations using BufferedRead and VarBlocks
+ * Descriptor for append-only table scans.
+ *
+ * Used for scan of append only relations using BufferedRead and VarBlocks
  */
 typedef struct AppendOnlyScanDescData
 {
+	TableScanDescData rs_base;	/* AM independent part of the descriptor */
+
 	/* scan parameters */
 	Relation	aos_rd;				/* target relation descriptor */
 	Snapshot	appendOnlyMetaDataSnapshot;
@@ -220,6 +225,16 @@ typedef struct AppendOnlyScanDescData
 	 * to check tuple visibility using visi map.
 	 */ 
 	AppendOnlyVisimap visibilityMap;
+
+	/*
+	 * Only used by `analyze`
+	 */
+	int64		nextTupleId;
+	int64		targetTupleId;
+
+	/* For Bitmap scan */
+	int			rs_cindex;		/* current tuple's index in tbmres->offsets */
+	struct AppendOnlyFetchDescData *aofetch;
 
 }	AppendOnlyScanDescData;
 
@@ -327,30 +342,41 @@ typedef struct AppendOnlyFetchDescData
 
 typedef AppendOnlyFetchDescData *AppendOnlyFetchDesc;
 
-typedef struct AppendOnlyUpdateDescData *AppendOnlyUpdateDesc;
 typedef struct AppendOnlyDeleteDescData *AppendOnlyDeleteDesc;
 
+/*
+ * Descriptor for fetches from table via an index.
+ */
+typedef struct IndexFetchAppendOnlyData
+{
+	IndexFetchTableData xs_base;	/* AM independent part of the descriptor */
+
+	AppendOnlyFetchDesc aofetch;
+} IndexFetchAppendOnlyData;
 
 /* ----------------
  *		function prototypes for appendonly access method
  * ----------------
  */
 
-extern AppendOnlyScanDesc appendonly_beginscan(Relation relation,
-											   Snapshot snapshot,
-											   Snapshot appendOnlyMetaDataSnapshot,
-											   int nkeys, 
-											   ScanKey key);
 extern AppendOnlyScanDesc appendonly_beginrangescan(Relation relation, 
 		Snapshot snapshot,
 		Snapshot appendOnlyMetaDataSnapshot, 
 		int *segfile_no_arr, int segfile_count,
 		int nkeys, ScanKey keys);
-extern void appendonly_rescan(AppendOnlyScanDesc scan, ScanKey key);
-extern void appendonly_endscan(AppendOnlyScanDesc scan);
-extern bool appendonly_getnext(AppendOnlyScanDesc scan,
-							   ScanDirection direction,
-							   TupleTableSlot *slot);
+
+extern TableScanDesc appendonly_beginscan(Relation relation,
+										  Snapshot snapshot,
+										  int nkeys, struct ScanKeyData *key,
+										  ParallelTableScanDesc pscan,
+										  uint32 flags);
+extern void appendonly_rescan(TableScanDesc scan, ScanKey key,
+								bool set_params, bool allow_strat,
+								bool allow_sync, bool allow_pagemode);
+extern void appendonly_endscan(TableScanDesc scan);
+extern bool appendonly_getnextslot(TableScanDesc scan,
+								   ScanDirection direction,
+								   TupleTableSlot *slot);
 extern AppendOnlyFetchDesc appendonly_fetch_init(
 	Relation 	relation,
 	Snapshot    snapshot,
@@ -360,28 +386,19 @@ extern bool appendonly_fetch(
 	AOTupleId *aoTid,
 	TupleTableSlot *slot);
 extern void appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc);
-extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel, int segno, bool update_mode);
-extern Oid appendonly_insert(
+extern void appendonly_dml_init(Relation relation, CmdType operation);
+extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel, int segno);
+extern void appendonly_insert(
 		AppendOnlyInsertDesc aoInsertDesc, 
 		MemTuple instup, 
-		Oid tupleOid,
 		AOTupleId *aoTupleId);
 extern void appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc);
-extern BlockNumber RelationGuessNumberOfBlocks(double totalbytes);
+extern void appendonly_dml_finish(Relation relation, CmdType operation);
 
-extern AppendOnlyDeleteDesc appendonly_delete_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot);
-extern HTSU_Result appendonly_delete(
+extern AppendOnlyDeleteDesc appendonly_delete_init(Relation rel);
+extern TM_Result appendonly_delete(
 		AppendOnlyDeleteDesc aoDeleteDesc,
 		AOTupleId* aoTupleId);
 extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
-
-extern AppendOnlyUpdateDesc appendonly_update_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int segno);
-extern HTSU_Result appendonly_update(
-		AppendOnlyUpdateDesc aoUpdateDesc,
-		MemTuple memTuple,
-		AOTupleId* aoTupleId,
-		AOTupleId* newAoTupleId);
-
-extern void appendonly_update_finish(AppendOnlyUpdateDesc aoUpdateDesc);
 
 #endif   /* CDBAPPENDONLYAM_H */

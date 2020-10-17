@@ -17,22 +17,10 @@ DROP schema IF EXISTS index_constraint_naming_partition cascade;
 CREATE schema index_constraint_naming_partition;
 SET search_path='index_constraint_naming_partition';
 
-DROP FUNCTION IF EXISTS partition_tables();
-CREATE FUNCTION partition_tables() RETURNS TABLE(partition_name name, parent_name name, root_name name)
+DROP FUNCTION IF EXISTS partition_tables(text);
+CREATE FUNCTION partition_tables(tab text) RETURNS TABLE(partition_name regclass, parent_name regclass, root_name regclass)
   LANGUAGE SQL STABLE STRICT AS $fn$
-(SELECT partitiontablename, parentpartitiontablename, tablename
- FROM pg_partitions
- WHERE partitionschemaname='index_constraint_naming_partition'
- ORDER BY tablename
-) UNION
-(SELECT CAST(parrelid::regclass as name),      --pg_partition contains root
-        NULL,
-        CAST(p.parrelid::regclass AS name)
-		FROM pg_partition p
-		JOIN pg_class c ON p.parrelid=c.oid
-		JOIN pg_namespace ns ON c.relnamespace=ns.oid
-		WHERE ns.nspname='index_constraint_naming_partition'
-);
+SELECT relid, parentrelid, pg_partition_root(relid) FROM pg_partition_tree(tab);
 $fn$;
 
 DROP FUNCTION IF EXISTS constraints_and_indices();
@@ -99,7 +87,7 @@ FROM w
                  ON refclassid = 'pg_constraint'::regclass AND
                     refobjid = con2.oid
        LEFT JOIN pg_class c2
-                 ON refclassid = 'pg_class'::regclass AND refobjid = c2.oid
+                 ON refclassid = 'pg_class'::regclass AND refobjid = c2.oid AND c2.relkind NOT IN ('p', 'I')
        LEFT JOIN pg_type t2
                  ON refclassid = 'pg_type'::regclass AND refobjid = t2.oid
        LEFT JOIN pg_namespace nsp2 ON refclassid = 'pg_namespace'::regclass AND
@@ -128,20 +116,20 @@ FROM
   JOIN pg_namespace nsp2 ON t.refnsoid=nsp2.oid;
 $fn$;
 
-DROP FUNCTION IF EXISTS partition_tables_show_all();
-CREATE FUNCTION partition_tables_show_all() RETURNS TABLE(partition_name name, parent_name name, root_name name, constraint_name name, index_name name, constraint_type char)
+DROP FUNCTION IF EXISTS partition_tables_show_all(text);
+CREATE FUNCTION partition_tables_show_all(tab text) RETURNS TABLE(partition_name regclass, parent_name regclass, root_name regclass, constraint_name name, index_name name, constraint_type char)
 --connspname NAME) --, deptype "char")
   LANGUAGE SQL STABLE STRICT AS $fn$
   SELECT p.partition_name, p.parent_name, p.root_name, c.constraint_name, c.index_name, c.constraint_type --nsp.nspname --, d.deptype
     FROM 
-         (SELECT partition_name, parent_name, root_name FROM partition_tables()) as p
+         (SELECT partition_name, parent_name, root_name FROM partition_tables(tab)) as p
     LEFT JOIN 
          (SELECT table_name, constraint_name, CAST(index_name as name), constraint_type, connspoid from constraints_and_indices()) as c
-    ON p.partition_name = CAST(c.table_name as name)
-    JOIN pg_class as pgc ON p.root_name=pgc.relname     --find root_name's namespace name
+    ON p.partition_name::name = CAST(c.table_name as name)
+    JOIN pg_class as pgc ON p.root_name::name=pgc.relname     --find root_name's namespace name
     JOIN pg_namespace as nsp
     ON  pgc.relnamespace=nsp.oid WHERE nsp.nspname='index_constraint_naming_partition'
-    ORDER BY p.partition_name, p.parent_name, p.root_name, c.constraint_name, c.index_name, c.constraint_type;  --make sure output is stabely ordered for pg_regress
+    ORDER BY p.partition_name::name, p.parent_name::name, p.root_name::name, c.constraint_name, c.index_name, c.constraint_type;  --make sure output is stabely ordered for pg_regress
 
 $fn$;
 
@@ -192,13 +180,13 @@ CREATE FUNCTION recreate_two_level_table() RETURNS VOID
 $fn$;
 
 -- validate that there are no constraints when we start
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 -- UNIQUE constraint: validate we correctly add it and can only drop from root
 SELECT recreate_two_level_table();
 ALTER TABLE r ADD UNIQUE(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 INSERT INTO r VALUES (1,'xxxx'),(1,'xxxx'); --should be prevented by constraint
 INSERT INTO r VALUES (6,'xxxx'),(6,'xxxx'); --should be prevented by constraint
 
@@ -206,36 +194,36 @@ ALTER TABLE r ADD PARTITION added_part START(8) INCLUSIVE END (10) EXCLUSIVE;
 SELECT * FROM dependencies_show_for_cons_idx();
 INSERT INTO r VALUES (9,'xxxx'),(9,'xxxx'); --should be prevented by constraint
 
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r_1_prt_r1 DROP CONSTRAINT r_1_prt_r1_r_key_r_name_key; --should fail
 INSERT INTO r VALUES (1,'xxxx'),(1,'xxxx'); --should be prevented by constraint
 INSERT INTO r VALUES (6,'xxxx'),(6,'xxxx'); --should be prevented by constraint
 
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r ADD DEFAULT PARTITION d;
 SELECT * FROM dependencies_show_for_cons_idx();
 INSERT INTO r VALUES (22,'xxxx'),(22,'xxxx'); --should be prevented by constraint
 
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r SPLIT PARTITION r2 AT (6) INTO (PARTITION r2_split_l, PARTITION r2_split_r);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 INSERT INTO r VALUES (5,'xxxx'),(5,'xxxx'); --should be prevented by constraint
 INSERT INTO r VALUES (7,'xxxx'),(7,'xxxx'); --should be prevented by constraint
 
 
 alter table r rename partition r1 to r1_renamed;
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 INSERT INTO r VALUES (1,'xxxx'),(1,'xxxx'); --should be prevented by constraint
 
 ALTER TABLE r DROP PARTITION r1_renamed;
 SELECT * FROM dependencies_show_for_cons_idx();
 INSERT INTO r VALUES (1,'xxxx'),(1,'xxxx'); --should be prevented by constraint
 
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r DROP CONSTRAINT r_r_key_r_name_key;                   --should work
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 INSERT INTO r VALUES (1,'xxxx'),(1,'xxxx');     --should be allowed: no unique constraint exists
 INSERT INTO r VALUES (6,'xxxx'),(6,'xxxx');     --should be allowed: no unique constraint exists
 INSERT INTO r VALUES (9,'xxxx'),(9,'xxxx');     --should be allowed: no unique constraint exists
@@ -246,13 +234,13 @@ INSERT INTO r VALUES (22,'xxxx'),(22,'xxxx');   --should be allowed: no unique c
 SELECT recreate_two_level_table();
 ALTER TABLE r ADD UNIQUE(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 CREATE TABLE e (LIKE r INCLUDING CONSTRAINTS INCLUDING INDEXES);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r EXCHANGE PARTITION r1 WITH TABLE e;
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 --MAKE SURE PARTITION CONSTRAINT EXISTS...
 
 -- UNIQUE create constraint inside CREATE TABLE DDL...this is different
@@ -260,13 +248,12 @@ DROP TABLE IF EXISTS r;
 CREATE TABLE r (r_key INTEGER NOT NULL,UNIQUE(r_key)) DISTRIBUTED BY (r_key)
 PARTITION BY range (r_key) (PARTITION r1 START (0), PARTITION r2 START (5) END (8));
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 INSERT INTO r VALUES (1),(1);
 INSERT INTO r VALUES (6),(6);
 
-ALTER TABLE r DROP CONSTRAINT r_r_key_key;                   --should work
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 INSERT INTO r VALUES (1),(1);
 INSERT INTO r VALUES (6),(6);
 
@@ -274,21 +261,21 @@ INSERT INTO r VALUES (6),(6);
 SELECT recreate_two_level_table();
 ALTER TABLE r ADD PRIMARY KEY(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r_1_prt_r1 DROP CONSTRAINT r_1_prt_r1_pkey; --should fail
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r DROP CONSTRAINT r_pkey;                   --should work
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 --EXCLUSION constraint: validate we cannot create an exclusion constraint on a
 --partition table. These are disallowed in GPDB.
 SELECT recreate_two_level_table();
 ALTER TABLE r ADD EXCLUDE (r_key WITH =,r_name WITH =);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r_1_prt_r1 DROP CONSTRAINT r_1_prt_r1_r_key_r_name_excl;   --should fail
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 --new partition table (4) should be created with constraints.
 DROP TABLE IF EXISTS r;
@@ -304,20 +291,20 @@ PARTITION BY list (r_key)
 );
 ALTER TABLE r ADD UNIQUE(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r ADD PARTITION r3 VALUES(2);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 -- PRIMARY create constraint inside CREATE TABLE DDL...this is different
 DROP TABLE IF EXISTS r;
 CREATE TABLE r (r_key INTEGER NOT NULL,PRIMARY KEY (r_key)) DISTRIBUTED BY (r_key)
   PARTITION BY range (r_key) (PARTITION r1 START (0), PARTITION r2 START (5) END (8));
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r DROP CONSTRAINT r_pkey;                   --should work
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 
 DROP TABLE r;
@@ -344,54 +331,54 @@ CREATE FUNCTION recreate_three_level_table() RETURNS VOID
 $fn$;
 
 -- validate that there are no constraints when we start
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 -- UNIQUE constraint: validate we correctly add it and can only drop from root
 SELECT recreate_three_level_table();
 ALTER TABLE r ADD UNIQUE(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
-ALTER TABLE r_1_prt_r1 DROP CONSTRAINT r_1_prt_r1_r_key_r_name_key;                --should fail
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
+ALTER TABLE r_1_prt_r1 DROP CONSTRAINT r_1_prt_r1_r_key_r_name_key1;                --should fail
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r_1_prt_r1_2_prt_a DROP CONSTRAINT r_1_prt_r1_2_prt_a_r_key_r_name_key; --should fail
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r DROP CONSTRAINT r_r_key_r_name_key;                                   --should work
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 --PRIMARY KEY constraint: validate we correctly add it and can only drop from root
 SELECT recreate_three_level_table();
 ALTER TABLE r ADD PRIMARY KEY(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r_1_prt_r1 DROP CONSTRAINT r_1_prt_r1_pkey;                --should fail
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r_1_prt_r1_2_prt_a DROP CONSTRAINT r_1_prt_r1_2_prt_a_pkey; --should fail
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r DROP CONSTRAINT r_pkey;                     --should work
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 --New partition table 'C' should be created with constraints.
 SELECT recreate_three_level_table();
 ALTER TABLE r ADD UNIQUE(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r ALTER PARTITION r1 ADD PARTITION c VALUES ('C');
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 -- EXCHANGE... prepare table e2 and swap with partition
 SELECT recreate_three_level_table();
 ALTER TABLE r ADD UNIQUE(r_key,r_name);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 CREATE TABLE e2 (LIKE r INCLUDING CONSTRAINTS INCLUDING INDEXES);
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r ALTER PARTITION r1 EXCHANGE PARTITION a WITH TABLE e2;
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 -- UNIQUE: create constraint inside CREATE TABLE DDL...this is different
 DROP TABLE IF EXISTS r;
@@ -401,10 +388,10 @@ CREATE TABLE r (r_key INTEGER NOT NULL,r_name CHAR(25), UNIQUE(r_key, r_name))
   (SUBPARTITION a VALUES ('A'),SUBPARTITION b VALUES ('B'))
   (PARTITION r1 START (0),PARTITION r2 START (5) END (8));
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
-ALTER TABLE r DROP CONSTRAINT r_key;
+SELECT * FROM partition_tables_show_all('r');
+ALTER TABLE r DROP CONSTRAINT r_r_key_r_name_key;
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 
 -- PRIMARY: create constraint inside CREATE TABLE DDL...this is different
 DROP TABLE IF EXISTS r;
@@ -414,53 +401,10 @@ CREATE TABLE r (r_key INTEGER NOT NULL,r_name CHAR(25), PRIMARY KEY(r_key, r_nam
 (SUBPARTITION a VALUES ('A'),SUBPARTITION b VALUES ('B'))
 (PARTITION r1 START (0),PARTITION r2 START (5) END (8));
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
+SELECT * FROM partition_tables_show_all('r');
 ALTER TABLE r DROP CONSTRAINT r_pkey;
 SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
-
----------------------------------------------------------------------
--- You should not be able to add a constraint to partition leaves
----------------------------------------------------------------------
-SELECT recreate_two_level_table();
-ALTER TABLE r_1_prt_r2 ADD UNIQUE(r_key); -- Should fail.
-SELECT * FROM dependencies_show_for_cons_idx();
-
----------------------------------------------------------------------
--- Cannot add a dangling constraint to a leaf partition of a multi-level table
----------------------------------------------------------------------
-SELECT recreate_three_level_table();
-ALTER TABLE r_1_prt_r1_2_prt_a ADD UNIQUE(r_key,r_name); -- should fail
-SELECT * FROM dependencies_show_for_cons_idx();
-
----------------------------------------------------------------------
--- EXCHANGE PARTITION
----------------------------------------------------------------------
--- exchange partition should fail with dangling constraint ONLY on new table
----------------------------------------------------------------------
-SELECT recreate_two_level_table();
-DROP TABLE IF EXISTS e;
-CREATE TABLE e (LIKE r INCLUDING CONSTRAINTS INCLUDING INDEXES);
-ALTER TABLE e ADD UNIQUE(r_key); -- add dangling constraint to new table
-SELECT * FROM dependencies_show_for_cons_idx();
-SELECT * FROM partition_tables_show_all();
-ALTER TABLE r EXCHANGE PARTITION r2 WITH TABLE e; -- should fail
-SELECT * FROM partition_tables_show_all();
-
----------------------------------------------------------------------
--- exchange partition: constraint on root should be added to old partition before exchange
----------------------------------------------------------------------
-SELECT recreate_two_level_table();
-DROP TABLE IF EXISTS e;
-CREATE TABLE e (LIKE r INCLUDING CONSTRAINTS INCLUDING INDEXES);
-SET sql_inheritance TO off;
-ALTER TABLE r ADD UNIQUE(r_key); -- add dangling constraint to new table
-SELECT * FROM dependencies_show_for_cons_idx();
-SET sql_inheritance TO on;
-SELECT * FROM partition_tables_show_all();
-ALTER TABLE r EXCHANGE PARTITION r2 WITH TABLE e; -- should fail
-SELECT * FROM partition_tables_show_all();
-
+SELECT * FROM partition_tables_show_all('r');
 
 -- PARTITIONED INDEX TESTS--------------
 -- UNIQUE index: validate we can add a unique index to any node in the partition
@@ -480,9 +424,9 @@ SELECT * FROM dependencies_show_for_idx();
 
 --create the index starting at mid-level; should only be able to drop it from mid-level
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
+CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key, r_name);
 SELECT * FROM dependencies_show_for_idx();
-DROP INDEX r_1_prt_r1_2_prt_a_r_key_idx;  --should fail: cannot drop from non-creating node
+DROP INDEX r_1_prt_r1_2_prt_a_r_key_r_name_idx;  --should fail: cannot drop from non-creating node
 SELECT * FROM dependencies_show_for_idx();
 DROP INDEX myidx_midlevel;                --works: is root of index hierarchy
 SELECT * FROM dependencies_show_for_idx();
@@ -498,14 +442,14 @@ SELECT * FROM dependencies_show_for_idx();
 
 --test subsumption of lower-level index from upper-level one
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
+CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key, r_name);
 SELECT * FROM dependencies_show_for_idx();
 CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
 
 --show subsumption works across rename
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
+CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key, r_name);
 SELECT * FROM dependencies_show_for_idx();
 ALTER INDEX myidx_midlevel RENAME TO myidx_midlevel_renamed;
 SELECT * FROM dependencies_show_for_idx();
@@ -514,7 +458,7 @@ SELECT * FROM dependencies_show_for_idx();
 
 --show that renaming still does not allow a name conflict
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
+CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key, r_name);
 SELECT * FROM dependencies_show_for_idx();
 ALTER INDEX myidx_midlevel RENAME TO myidx_midlevel_renamed;
 SELECT * FROM dependencies_show_for_idx();

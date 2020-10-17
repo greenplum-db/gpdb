@@ -146,6 +146,48 @@ ALTER INDEX ao_ts_index SET TABLESPACE testspace;
 ALTER TABLE ao_ul_ts_table SET TABLESPACE ul_testspace;
 ALTER INDEX ao_ul_ts_index SET TABLESPACE ul_testspace;
 ALTER TABLE aoco_ul_ts_table SET TABLESPACE ul_testspace;
+-- Unlogged tables with .0 segfiles
+CREATE UNLOGGED TABLE ao_ul_ctas USING ao_row AS select * from ao_ul_ts_table distributed by (id);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE ao_ul_ctas SET TABLESPACE ul_testspace;
+CREATE UNLOGGED TABLE aoco_ul_ctas USING ao_column AS select * from aoco_ul_ts_table distributed by (id);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE aoco_ul_ctas SET TABLESPACE ul_testspace;
+-- The .0 segfile should have been moved correctly, leading to
+-- non-zero tuple count
+select count(*) from ao_ul_ctas;
+ count 
+-------
+ 10000
+(1 row)
+
+select * from gp_toolkit.__gp_aoseg('ao_ul_ctas');
+ segment_id | segno |  eof  | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-------+----------+---------------+------------------+----------+---------------+-------
+          2 |     0 | 84336 |     3247 |             3 |            84336 |        1 |             3 |     1
+          1 |     0 | 87816 |     3385 |             3 |            87816 |        1 |             3 |     1
+          0 |     0 | 87368 |     3368 |             3 |            87368 |        1 |             3 |     1
+(3 rows)
+
+select count(*) from aoco_ul_ctas;
+ count 
+-------
+ 10000
+(1 row)
+
+select * from gp_toolkit.__gp_aocsseg('aoco_ul_ctas');
+ segment_id | gp_tid | segno | column_num | physical_segno | tupcount |  eof  | eof_uncompressed | modcount | formatversion | state 
+------------+--------+-------+------------+----------------+----------+-------+------------------+----------+---------------+-------
+          2 | (0,2)  |     0 |          0 |              0 |     3247 | 13032 |            13032 |        1 |             3 |     1
+          2 | (0,2)  |     0 |          1 |            128 |     3247 | 25656 |            25656 |        1 |             3 |     1
+          0 | (0,2)  |     0 |          0 |              0 |     3368 | 13512 |            13512 |        1 |             3 |     1
+          0 | (0,2)  |     0 |          1 |            128 |     3368 | 26608 |            26608 |        1 |             3 |     1
+          1 | (0,2)  |     0 |          0 |              0 |     3385 | 13584 |            13584 |        1 |             3 |     1
+          1 | (0,2)  |     0 |          1 |            128 |     3385 | 26760 |            26760 |        1 |             3 |     1
+(6 rows)
+
 -- Check that init fork exists on master
 select has_init_file('ao_ul_ts_table', 'table');
  has_init_file 
@@ -244,15 +286,82 @@ SELECT * FROM aoco_ul_ts_table where id > 9995 and id < 10005;
   9998 | foo9998
 (5 rows)
 
+-- Test moving multi-level partitioned table from one tablespace to another
+CREATE TABLE part_ts_table(a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+SUBPARTITION BY RANGE (c)
+(
+	PARTITION p1 START (1) END (2) (
+		SUBPARTITION pp1 START (1) END (2),
+		SUBPARTITION pp2 START (2) END (3)
+	),
+	PARTITION p2 START (2) END (3) (
+		SUBPARTITION pp1 START (1) END (2),
+		SUBPARTITION pp2 START (2) END (3)
+	)
+);
+INSERT INTO part_ts_table SELECT i, i, i FROM generate_series(1, 2)i;
+-- Move a middle-level partitioned table to another tablespace
+ALTER TABLE part_ts_table ALTER PARTITION p1 SET TABLESPACE testspace;
+-- The partition being altered and all of its inheritors should be moved
+SELECT relname, spcname FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_tablespace t ON c.reltablespace = t.oid
+    where c.relname LIKE 'part_ts_table%' order by relname;
+             relname              |  spcname  
+----------------------------------+-----------
+ part_ts_table                    | 
+ part_ts_table_1_prt_p1           | testspace
+ part_ts_table_1_prt_p1_2_prt_pp1 | testspace
+ part_ts_table_1_prt_p1_2_prt_pp2 | testspace
+ part_ts_table_1_prt_p2           | 
+ part_ts_table_1_prt_p2_2_prt_pp1 | 
+ part_ts_table_1_prt_p2_2_prt_pp2 | 
+(7 rows)
+
+SELECT * FROM part_ts_table;
+ a | b | c 
+---+---+---
+ 2 | 2 | 2
+ 1 | 1 | 1
+(2 rows)
+
+-- Move the root partitioned table to another tablespace
+ALTER TABLE part_ts_table SET TABLESPACE testspace;
+-- The root table and all of its inheritors should be moved
+SELECT relname, spcname FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_tablespace t ON c.reltablespace = t.oid
+    where c.relname LIKE 'part_ts_table%' order by relname;
+             relname              |  spcname  
+----------------------------------+-----------
+ part_ts_table                    | testspace
+ part_ts_table_1_prt_p1           | testspace
+ part_ts_table_1_prt_p1_2_prt_pp1 | testspace
+ part_ts_table_1_prt_p1_2_prt_pp2 | testspace
+ part_ts_table_1_prt_p2           | testspace
+ part_ts_table_1_prt_p2_2_prt_pp1 | testspace
+ part_ts_table_1_prt_p2_2_prt_pp2 | testspace
+(7 rows)
+
+SELECT * FROM part_ts_table;
+ a | b | c 
+---+---+---
+ 1 | 1 | 1
+ 2 | 2 | 2
+(2 rows)
+
 -- Clean up. (It would be good to leave some extra tablespaces behind, so that
 -- they would go through the gpcheckcat, pg_upgrade, etc. passes that run
 -- after the main regression test suite. But all those tools are not up to
 -- snuff yet to deal with tablespaces.)
 drop table ao_ts_table;
 drop table aoco_ts_table;
+drop table part_ts_table;
 drop tablespace testspace;
 drop table ao_ul_ts_table;
 drop table aoco_ul_ts_table;
+drop table ao_ul_ctas;
+drop table aoco_ul_ctas;
 drop tablespace ul_testspace;
 -- Greenplum tablespaces have the option to define tablespace location for specific segments
 CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' WITH (content9999='@testtablespace@_otherloc'); -- should fail

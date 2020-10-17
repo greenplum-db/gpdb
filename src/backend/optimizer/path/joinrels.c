@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -16,26 +16,39 @@
  */
 #include "postgres.h"
 
-#include "miscadmin.h"                  /* CHECK_FOR_INTERRUPTS */
+#include "miscadmin.h"
+#include "optimizer/appendinfo.h"
 #include "optimizer/joininfo.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "partitioning/partbounds.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
 
 static void make_rels_by_clause_joins(PlannerInfo *root,
-						  RelOptInfo *old_rel,
-						  ListCell *other_rels);
+									  RelOptInfo *old_rel,
+									  ListCell *other_rels);
 static void make_rels_by_clauseless_joins(PlannerInfo *root,
-							  RelOptInfo *old_rel,
-							  ListCell *other_rels);
+										  RelOptInfo *old_rel,
+										  ListCell *other_rels);
 static bool has_join_restriction(PlannerInfo *root, RelOptInfo *rel);
 static bool has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel);
-static bool is_dummy_rel(RelOptInfo *rel);
-static void mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel);
 static bool restriction_is_constant_false(List *restrictlist,
-							  RelOptInfo *joinrel,
-							  bool only_pushed_down);
+										  RelOptInfo *joinrel,
+										  bool only_pushed_down);
+static void populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1,
+										RelOptInfo *rel2, RelOptInfo *joinrel,
+										SpecialJoinInfo *sjinfo, List *restrictlist);
+static void try_partitionwise_join(PlannerInfo *root, RelOptInfo *rel1,
+								   RelOptInfo *rel2, RelOptInfo *joinrel,
+								   SpecialJoinInfo *parent_sjinfo,
+								   List *parent_restrictlist);
+static SpecialJoinInfo *build_child_join_sjinfo(PlannerInfo *root,
+												SpecialJoinInfo *parent_sjinfo,
+												Relids left_relids, Relids right_relids);
+static int	match_expr_to_partition_keys(Expr *expr, RelOptInfo *rel,
+										 bool strict_op);
 
 
 /*
@@ -99,7 +112,7 @@ join_search_one_level(PlannerInfo *root, int level)
 
 			if (level == 2)		/* consider remaining initial rels */
 				other_rels = lnext(r);
-			else	/* consider all initial rels */
+			else				/* consider all initial rels */
 				other_rels = list_head(joinrels[1]);
 
 			make_rels_by_clause_joins(root,
@@ -329,7 +342,7 @@ make_rels_by_clauseless_joins(PlannerInfo *root,
  *
  * On success, *sjinfo_p is set to NULL if this is to be a plain inner join,
  * else it's set to point to the associated SpecialJoinInfo node.  Also,
- * *reversed_p is set TRUE if the given relations need to be swapped to
+ * *reversed_p is set true if the given relations need to be swapped to
  * match the SpecialJoinInfo node.
  */
 static bool
@@ -617,20 +630,15 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 				{
 					SpecialJoinInfo *sjinfo = (SpecialJoinInfo *) lfirst(l);
 
+					/* ignore full joins --- their ordering is predetermined */
+					if (sjinfo->jointype == JOIN_FULL)
+						continue;
+
 					if (bms_overlap(sjinfo->min_lefthand, join_plus_rhs) &&
 						!bms_is_subset(sjinfo->min_righthand, join_plus_rhs))
 					{
 						join_plus_rhs = bms_add_members(join_plus_rhs,
-													  sjinfo->min_righthand);
-						more = true;
-					}
-					/* full joins constrain both sides symmetrically */
-					if (sjinfo->jointype == JOIN_FULL &&
-						bms_overlap(sjinfo->min_righthand, join_plus_rhs) &&
-						!bms_is_subset(sjinfo->min_lefthand, join_plus_rhs))
-					{
-						join_plus_rhs = bms_add_members(join_plus_rhs,
-														sjinfo->min_lefthand);
+														sjinfo->min_righthand);
 						more = true;
 					}
 				}
@@ -672,7 +680,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	/* This is a convenient place to check for query cancel. */
 	CHECK_FOR_INTERRUPTS();
 
-    Insist(rel1 &&
+    Assert(rel1 &&
            rel2 &&
            rel1->cheapest_total_path &&
            rel2->cheapest_total_path);
@@ -741,6 +749,27 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 		return joinrel;
 	}
 
+	/* Add paths to the join relation. */
+	populate_joinrel_with_paths(root, rel1, rel2, joinrel, sjinfo,
+								restrictlist);
+
+	bms_free(joinrelids);
+
+	return joinrel;
+}
+
+/*
+ * populate_joinrel_with_paths
+ *	  Add paths to the given joinrel for given pair of joining relations. The
+ *	  SpecialJoinInfo provides details about the join and the restrictlist
+ *	  contains the join clauses and the other clauses applicable for given pair
+ *	  of the joining relations.
+ */
+static void
+populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1,
+							RelOptInfo *rel2, RelOptInfo *joinrel,
+							SpecialJoinInfo *sjinfo, List *restrictlist)
+{
 	/*
 	 * Consider paths using each rel as both outer and inner.  Depending on
 	 * the join type, a provably empty outer or inner rel might mean the join
@@ -898,9 +927,8 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 			break;
 	}
 
-	bms_free(joinrelids);
-
-	return joinrel;
+	/* Apply partitionwise join technique, if possible. */
+	try_partitionwise_join(root, rel1, rel2, joinrel, sjinfo, restrictlist);
 }
 
 /*
@@ -1200,10 +1228,38 @@ have_dangerous_phv(PlannerInfo *root,
 /*
  * is_dummy_rel --- has relation been proven empty?
  */
-static bool
+bool
 is_dummy_rel(RelOptInfo *rel)
 {
-	return IS_DUMMY_REL(rel);
+	Path	   *path;
+
+	/*
+	 * A rel that is known dummy will have just one path that is a childless
+	 * Append.  (Even if somehow it has more paths, a childless Append will
+	 * have cost zero and hence should be at the front of the pathlist.)
+	 */
+	if (rel->pathlist == NIL)
+		return false;
+	path = (Path *) linitial(rel->pathlist);
+
+	/*
+	 * Initially, a dummy path will just be a childless Append.  But in later
+	 * planning stages we might stick a ProjectSetPath and/or ProjectionPath
+	 * on top, since Append can't project.  Rather than make assumptions about
+	 * which combinations can occur, just descend through whatever we find.
+	 */
+	for (;;)
+	{
+		if (IsA(path, ProjectionPath))
+			path = ((ProjectionPath *) path)->subpath;
+		else if (IsA(path, ProjectSetPath))
+			path = ((ProjectSetPath *) path)->subpath;
+		else
+			break;
+	}
+	if (IS_DUMMY_APPEND(path))
+		return true;
+	return false;
 }
 
 /*
@@ -1221,7 +1277,7 @@ is_dummy_rel(RelOptInfo *rel)
  * is that the best solution is to explicitly make the dummy path in the same
  * context the given RelOptInfo is in.
  */
-static void
+void
 mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel)
 {
 	MemoryContext oldcontext;
@@ -1241,7 +1297,9 @@ mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel)
 	rel->partial_pathlist = NIL;
 
 	/* Set up the dummy path */
-	add_path(rel, (Path *) create_append_path(root, rel, NIL, NULL, 0));
+	add_path(rel, (Path *) create_append_path(root, rel, NIL, NIL,
+											  NIL, rel->lateral_relids,
+											  0, false, NIL, -1));
 
 	/* Set or update cheapest_total_path */
 	set_cheapest(rel);
@@ -1277,9 +1335,8 @@ restriction_is_constant_false(List *restrictlist,
 	 */
 	foreach(lc, restrictlist)
 	{
-		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
-		Assert(IsA(rinfo, RestrictInfo));
 		if (only_pushed_down && !RINFO_IS_PUSHED_DOWN(rinfo, joinrel->relids))
 			continue;
 
@@ -1295,4 +1352,413 @@ restriction_is_constant_false(List *restrictlist,
 		}
 	}
 	return false;
+}
+
+/*
+ * Assess whether join between given two partitioned relations can be broken
+ * down into joins between matching partitions; a technique called
+ * "partitionwise join"
+ *
+ * Partitionwise join is possible when a. Joining relations have same
+ * partitioning scheme b. There exists an equi-join between the partition keys
+ * of the two relations.
+ *
+ * Partitionwise join is planned as follows (details: optimizer/README.)
+ *
+ * 1. Create the RelOptInfos for joins between matching partitions i.e
+ * child-joins and add paths to them.
+ *
+ * 2. Construct Append or MergeAppend paths across the set of child joins.
+ * This second phase is implemented by generate_partitionwise_join_paths().
+ *
+ * The RelOptInfo, SpecialJoinInfo and restrictlist for each child join are
+ * obtained by translating the respective parent join structures.
+ */
+static void
+try_partitionwise_join(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
+					   RelOptInfo *joinrel, SpecialJoinInfo *parent_sjinfo,
+					   List *parent_restrictlist)
+{
+	bool		rel1_is_simple = IS_SIMPLE_REL(rel1);
+	bool		rel2_is_simple = IS_SIMPLE_REL(rel2);
+	int			nparts;
+	int			cnt_parts;
+
+	/* Guard against stack overflow due to overly deep partition hierarchy. */
+	check_stack_depth();
+
+	/* Nothing to do, if the join relation is not partitioned. */
+	if (!IS_PARTITIONED_REL(joinrel))
+		return;
+
+	/* The join relation should have consider_partitionwise_join set. */
+	Assert(joinrel->consider_partitionwise_join);
+
+	/*
+	 * Since this join relation is partitioned, all the base relations
+	 * participating in this join must be partitioned and so are all the
+	 * intermediate join relations.
+	 */
+	Assert(IS_PARTITIONED_REL(rel1) && IS_PARTITIONED_REL(rel2));
+	Assert(REL_HAS_ALL_PART_PROPS(rel1) && REL_HAS_ALL_PART_PROPS(rel2));
+
+	/* The joining relations should have consider_partitionwise_join set. */
+	Assert(rel1->consider_partitionwise_join &&
+		   rel2->consider_partitionwise_join);
+
+	/*
+	 * The partition scheme of the join relation should match that of the
+	 * joining relations.
+	 */
+	Assert(joinrel->part_scheme == rel1->part_scheme &&
+		   joinrel->part_scheme == rel2->part_scheme);
+
+	/*
+	 * Since we allow partitionwise join only when the partition bounds of the
+	 * joining relations exactly match, the partition bounds of the join
+	 * should match those of the joining relations.
+	 */
+	Assert(partition_bounds_equal(joinrel->part_scheme->partnatts,
+								  joinrel->part_scheme->parttyplen,
+								  joinrel->part_scheme->parttypbyval,
+								  joinrel->boundinfo, rel1->boundinfo));
+	Assert(partition_bounds_equal(joinrel->part_scheme->partnatts,
+								  joinrel->part_scheme->parttyplen,
+								  joinrel->part_scheme->parttypbyval,
+								  joinrel->boundinfo, rel2->boundinfo));
+
+	nparts = joinrel->nparts;
+
+	/*
+	 * Create child-join relations for this partitioned join, if those don't
+	 * exist. Add paths to child-joins for a pair of child relations
+	 * corresponding to the given pair of parent relations.
+	 */
+	for (cnt_parts = 0; cnt_parts < nparts; cnt_parts++)
+	{
+		RelOptInfo *child_rel1 = rel1->part_rels[cnt_parts];
+		RelOptInfo *child_rel2 = rel2->part_rels[cnt_parts];
+		bool		rel1_empty = (child_rel1 == NULL ||
+								  IS_DUMMY_REL(child_rel1));
+		bool		rel2_empty = (child_rel2 == NULL ||
+								  IS_DUMMY_REL(child_rel2));
+		SpecialJoinInfo *child_sjinfo;
+		List	   *child_restrictlist;
+		RelOptInfo *child_joinrel;
+		Relids		child_joinrelids;
+		AppendRelInfo **appinfos;
+		int			nappinfos;
+
+		/*
+		 * Check for cases where we can prove that this segment of the join
+		 * returns no rows, due to one or both inputs being empty (including
+		 * inputs that have been pruned away entirely).  If so just ignore it.
+		 * These rules are equivalent to populate_joinrel_with_paths's rules
+		 * for dummy input relations.
+		 */
+		switch (parent_sjinfo->jointype)
+		{
+			case JOIN_INNER:
+			case JOIN_SEMI:
+				if (rel1_empty || rel2_empty)
+					continue;	/* ignore this join segment */
+				break;
+			case JOIN_LEFT:
+			case JOIN_ANTI:
+				if (rel1_empty)
+					continue;	/* ignore this join segment */
+				break;
+			case JOIN_FULL:
+				if (rel1_empty && rel2_empty)
+					continue;	/* ignore this join segment */
+				break;
+			default:
+				/* other values not expected here */
+				elog(ERROR, "unrecognized join type: %d",
+					 (int) parent_sjinfo->jointype);
+				break;
+		}
+
+		/*
+		 * If a child has been pruned entirely then we can't generate paths
+		 * for it, so we have to reject partitionwise joining unless we were
+		 * able to eliminate this partition above.
+		 */
+		if (child_rel1 == NULL || child_rel2 == NULL)
+		{
+			/*
+			 * Mark the joinrel as unpartitioned so that later functions treat
+			 * it correctly.
+			 */
+			joinrel->nparts = 0;
+			return;
+		}
+
+		/*
+		 * If a leaf relation has consider_partitionwise_join=false, it means
+		 * that it's a dummy relation for which we skipped setting up tlist
+		 * expressions and adding EC members in set_append_rel_size(), so
+		 * again we have to fail here.
+		 */
+		if (rel1_is_simple && !child_rel1->consider_partitionwise_join)
+		{
+			Assert(child_rel1->reloptkind == RELOPT_OTHER_MEMBER_REL);
+			Assert(IS_DUMMY_REL(child_rel1));
+			joinrel->nparts = 0;
+			return;
+		}
+		if (rel2_is_simple && !child_rel2->consider_partitionwise_join)
+		{
+			Assert(child_rel2->reloptkind == RELOPT_OTHER_MEMBER_REL);
+			Assert(IS_DUMMY_REL(child_rel2));
+			joinrel->nparts = 0;
+			return;
+		}
+
+		/* We should never try to join two overlapping sets of rels. */
+		Assert(!bms_overlap(child_rel1->relids, child_rel2->relids));
+		child_joinrelids = bms_union(child_rel1->relids, child_rel2->relids);
+		appinfos = find_appinfos_by_relids(root, child_joinrelids, &nappinfos);
+
+		/*
+		 * Construct SpecialJoinInfo from parent join relations's
+		 * SpecialJoinInfo.
+		 */
+		child_sjinfo = build_child_join_sjinfo(root, parent_sjinfo,
+											   child_rel1->relids,
+											   child_rel2->relids);
+
+		/*
+		 * Construct restrictions applicable to the child join from those
+		 * applicable to the parent join.
+		 */
+		child_restrictlist =
+			(List *) adjust_appendrel_attrs(root,
+											(Node *) parent_restrictlist,
+											nappinfos, appinfos);
+		pfree(appinfos);
+
+		child_joinrel = joinrel->part_rels[cnt_parts];
+		if (!child_joinrel)
+		{
+			child_joinrel = build_child_join_rel(root, child_rel1, child_rel2,
+												 joinrel, child_restrictlist,
+												 child_sjinfo,
+												 child_sjinfo->jointype);
+			joinrel->part_rels[cnt_parts] = child_joinrel;
+		}
+
+		Assert(bms_equal(child_joinrel->relids, child_joinrelids));
+
+		populate_joinrel_with_paths(root, child_rel1, child_rel2,
+									child_joinrel, child_sjinfo,
+									child_restrictlist);
+	}
+}
+
+/*
+ * Construct the SpecialJoinInfo for a child-join by translating
+ * SpecialJoinInfo for the join between parents. left_relids and right_relids
+ * are the relids of left and right side of the join respectively.
+ */
+static SpecialJoinInfo *
+build_child_join_sjinfo(PlannerInfo *root, SpecialJoinInfo *parent_sjinfo,
+						Relids left_relids, Relids right_relids)
+{
+	SpecialJoinInfo *sjinfo = makeNode(SpecialJoinInfo);
+	AppendRelInfo **left_appinfos;
+	int			left_nappinfos;
+	AppendRelInfo **right_appinfos;
+	int			right_nappinfos;
+
+	memcpy(sjinfo, parent_sjinfo, sizeof(SpecialJoinInfo));
+	left_appinfos = find_appinfos_by_relids(root, left_relids,
+											&left_nappinfos);
+	right_appinfos = find_appinfos_by_relids(root, right_relids,
+											 &right_nappinfos);
+
+	sjinfo->min_lefthand = adjust_child_relids(sjinfo->min_lefthand,
+											   left_nappinfos, left_appinfos);
+	sjinfo->min_righthand = adjust_child_relids(sjinfo->min_righthand,
+												right_nappinfos,
+												right_appinfos);
+	sjinfo->syn_lefthand = adjust_child_relids(sjinfo->syn_lefthand,
+											   left_nappinfos, left_appinfos);
+	sjinfo->syn_righthand = adjust_child_relids(sjinfo->syn_righthand,
+												right_nappinfos,
+												right_appinfos);
+	sjinfo->semi_rhs_exprs = (List *) adjust_appendrel_attrs(root,
+															 (Node *) sjinfo->semi_rhs_exprs,
+															 right_nappinfos,
+															 right_appinfos);
+
+	pfree(left_appinfos);
+	pfree(right_appinfos);
+
+	return sjinfo;
+}
+
+/*
+ * Returns true if there exists an equi-join condition for each pair of
+ * partition keys from given relations being joined.
+ */
+bool
+have_partkey_equi_join(RelOptInfo *joinrel,
+					   RelOptInfo *rel1, RelOptInfo *rel2,
+					   JoinType jointype, List *restrictlist)
+{
+	PartitionScheme part_scheme = rel1->part_scheme;
+	ListCell   *lc;
+	int			cnt_pks;
+	bool		pk_has_clause[PARTITION_MAX_KEYS];
+	bool		strict_op;
+
+	/*
+	 * This function should be called when the joining relations have same
+	 * partitioning scheme.
+	 */
+	Assert(rel1->part_scheme == rel2->part_scheme);
+	Assert(part_scheme);
+
+	memset(pk_has_clause, 0, sizeof(pk_has_clause));
+	foreach(lc, restrictlist)
+	{
+		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
+		OpExpr	   *opexpr;
+		Expr	   *expr1;
+		Expr	   *expr2;
+		int			ipk1;
+		int			ipk2;
+
+		/* If processing an outer join, only use its own join clauses. */
+		if (IS_OUTER_JOIN(jointype) &&
+			RINFO_IS_PUSHED_DOWN(rinfo, joinrel->relids))
+			continue;
+
+		/* Skip clauses which can not be used for a join. */
+		if (!rinfo->can_join)
+			continue;
+
+		/* Skip clauses which are not equality conditions. */
+		if (!rinfo->mergeopfamilies && !OidIsValid(rinfo->hashjoinoperator))
+			continue;
+
+		opexpr = castNode(OpExpr, rinfo->clause);
+
+		/*
+		 * The equi-join between partition keys is strict if equi-join between
+		 * at least one partition key is using a strict operator. See
+		 * explanation about outer join reordering identity 3 in
+		 * optimizer/README
+		 */
+		strict_op = op_strict(opexpr->opno);
+
+		/* Match the operands to the relation. */
+		if (bms_is_subset(rinfo->left_relids, rel1->relids) &&
+			bms_is_subset(rinfo->right_relids, rel2->relids))
+		{
+			expr1 = linitial(opexpr->args);
+			expr2 = lsecond(opexpr->args);
+		}
+		else if (bms_is_subset(rinfo->left_relids, rel2->relids) &&
+				 bms_is_subset(rinfo->right_relids, rel1->relids))
+		{
+			expr1 = lsecond(opexpr->args);
+			expr2 = linitial(opexpr->args);
+		}
+		else
+			continue;
+
+		/*
+		 * Only clauses referencing the partition keys are useful for
+		 * partitionwise join.
+		 */
+		ipk1 = match_expr_to_partition_keys(expr1, rel1, strict_op);
+		if (ipk1 < 0)
+			continue;
+		ipk2 = match_expr_to_partition_keys(expr2, rel2, strict_op);
+		if (ipk2 < 0)
+			continue;
+
+		/*
+		 * If the clause refers to keys at different ordinal positions, it can
+		 * not be used for partitionwise join.
+		 */
+		if (ipk1 != ipk2)
+			continue;
+
+		/*
+		 * The clause allows partitionwise join if only it uses the same
+		 * operator family as that specified by the partition key.
+		 */
+		if (rel1->part_scheme->strategy == PARTITION_STRATEGY_HASH)
+		{
+			if (!op_in_opfamily(rinfo->hashjoinoperator,
+								part_scheme->partopfamily[ipk1]))
+				continue;
+		}
+		else if (!list_member_oid(rinfo->mergeopfamilies,
+								  part_scheme->partopfamily[ipk1]))
+			continue;
+
+		/* Mark the partition key as having an equi-join clause. */
+		pk_has_clause[ipk1] = true;
+	}
+
+	/* Check whether every partition key has an equi-join condition. */
+	for (cnt_pks = 0; cnt_pks < part_scheme->partnatts; cnt_pks++)
+	{
+		if (!pk_has_clause[cnt_pks])
+			return false;
+	}
+
+	return true;
+}
+
+/*
+ * Find the partition key from the given relation matching the given
+ * expression. If found, return the index of the partition key, else return -1.
+ */
+static int
+match_expr_to_partition_keys(Expr *expr, RelOptInfo *rel, bool strict_op)
+{
+	int			cnt;
+
+	/* This function should be called only for partitioned relations. */
+	Assert(rel->part_scheme);
+
+	/* Remove any relabel decorations. */
+	while (IsA(expr, RelabelType))
+		expr = (Expr *) (castNode(RelabelType, expr))->arg;
+
+	for (cnt = 0; cnt < rel->part_scheme->partnatts; cnt++)
+	{
+		ListCell   *lc;
+
+		Assert(rel->partexprs);
+		foreach(lc, rel->partexprs[cnt])
+		{
+			if (equal(lfirst(lc), expr))
+				return cnt;
+		}
+
+		if (!strict_op)
+			continue;
+
+		/*
+		 * If it's a strict equi-join a NULL partition key on one side will
+		 * not join a NULL partition key on the other side. So, rows with NULL
+		 * partition key from a partition on one side can not join with those
+		 * from a non-matching partition on the other side. So, search the
+		 * nullable partition keys as well.
+		 */
+		Assert(rel->nullable_partexprs);
+		foreach(lc, rel->nullable_partexprs[cnt])
+		{
+			if (equal(lfirst(lc), expr))
+				return cnt;
+		}
+	}
+
+	return -1;
 }

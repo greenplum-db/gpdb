@@ -23,55 +23,54 @@
 
 namespace gpmd
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CMDProviderGeneric
-	//
-	//	@doc:
-	//		Provider of system-independent metadata objects.
-	//
-	//---------------------------------------------------------------------------
-	class CMDProviderGeneric
-	{
+using namespace gpos;
 
-		private:
-			// mdid of int2
-			IMDId *m_mdid_int2;
+//---------------------------------------------------------------------------
+//	@class:
+//		CMDProviderGeneric
+//
+//	@doc:
+//		Provider of system-independent metadata objects.
+//
+//---------------------------------------------------------------------------
+class CMDProviderGeneric
+{
+private:
+	// mdid of int2
+	IMDId *m_mdid_int2;
 
-			// mdid of int4
-			IMDId *m_mdid_int4;
-			
-			// mdid of int8
-			IMDId *m_mdid_int8;
+	// mdid of int4
+	IMDId *m_mdid_int4;
 
-			// mdid of bool
-			IMDId *m_mdid_bool;
+	// mdid of int8
+	IMDId *m_mdid_int8;
 
-			// mdid of oid
-			IMDId *m_mdid_oid;
+	// mdid of bool
+	IMDId *m_mdid_bool;
 
-			// private copy ctor
-			CMDProviderGeneric(const CMDProviderGeneric&);
-			
-		public:
-			// ctor/dtor
-			CMDProviderGeneric(CMemoryPool *mp);
-			
-			// dtor
-			~CMDProviderGeneric();
-			
-			// return the mdid for the requested type
-			IMDId *MDId(IMDType::ETypeInfo type_info) const;
-			
-			// default system id
-			CSystemId SysidDefault() const;
-	};
-}
+	// mdid of oid
+	IMDId *m_mdid_oid;
 
+	// private copy ctor
+	CMDProviderGeneric(const CMDProviderGeneric &);
+
+public:
+	// ctor/dtor
+	CMDProviderGeneric(CMemoryPool *mp);
+
+	// dtor
+	~CMDProviderGeneric();
+
+	// return the mdid for the requested type
+	IMDId *MDId(IMDType::ETypeInfo type_info) const;
+
+	// default system id
+	CSystemId SysidDefault() const;
+};
+}  // namespace gpmd
 
 
-#endif // !GPMD_CMDProviderGeneric_H
+
+#endif	// !GPMD_CMDProviderGeneric_H
 
 // EOF

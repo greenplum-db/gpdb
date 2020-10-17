@@ -9,7 +9,7 @@
 //		Bitmap index probe scalar operator
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -36,16 +36,10 @@ using namespace gpopt;
 //		Takes ownership of the index descriptor and the bitmap type id.
 //
 //---------------------------------------------------------------------------
-CScalarBitmapIndexProbe::CScalarBitmapIndexProbe
-	(
-	CMemoryPool *mp,
-	CIndexDescriptor *pindexdesc,
-	IMDId *pmdidBitmapType
-	)
-	:
-	CScalar(mp),
-	m_pindexdesc(pindexdesc),
-	m_pmdidBitmapType(pmdidBitmapType)
+CScalarBitmapIndexProbe::CScalarBitmapIndexProbe(CMemoryPool *mp,
+												 CIndexDescriptor *pindexdesc,
+												 IMDId *pmdidBitmapType)
+	: CScalar(mp), m_pindexdesc(pindexdesc), m_pmdidBitmapType(pmdidBitmapType)
 {
 	GPOS_ASSERT(NULL != mp);
 	GPOS_ASSERT(NULL != pindexdesc);
@@ -77,7 +71,8 @@ CScalarBitmapIndexProbe::~CScalarBitmapIndexProbe()
 ULONG
 CScalarBitmapIndexProbe::HashValue() const
 {
-	return gpos::CombineHashes(COperator::HashValue(), m_pindexdesc->MDId()->HashValue());
+	return gpos::CombineHashes(COperator::HashValue(),
+							   m_pindexdesc->MDId()->HashValue());
 }
 
 
@@ -90,11 +85,7 @@ CScalarBitmapIndexProbe::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarBitmapIndexProbe::Matches
-	(
-	COperator *pop
-	)
-	const
+CScalarBitmapIndexProbe::Matches(COperator *pop) const
 {
 	if (pop->Eopid() != Eopid())
 	{
@@ -114,17 +105,13 @@ CScalarBitmapIndexProbe::Matches
 //
 //---------------------------------------------------------------------------
 IOstream &
-CScalarBitmapIndexProbe::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CScalarBitmapIndexProbe::OsPrint(IOstream &os) const
 {
 	os << SzId() << " ";
 	// index name
 	os << "  Bitmap Index Name: (";
 	m_pindexdesc->Name().OsPrint(os);
-	os <<")";
+	os << ")";
 
 	return os;
 }

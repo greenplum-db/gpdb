@@ -7,11 +7,14 @@
 #include "postgres.h"
 
 #undef ereport
-#define ereport(elevel, rest) ereport_mock(elevel, rest)
+#define ereport(elevel, ...) \
+	do { \
+	__VA_ARGS__, ereport_mock(elevel); \
+	} while(0)
 
 static int expected_elevel;
 
-static void ereport_mock(int elevel, int dummy pg_attribute_unused(),...)
+static void ereport_mock(int elevel)
 {
 	assert_int_equal(elevel, expected_elevel);
 	
@@ -49,7 +52,7 @@ test_GetNewTransactionId_xid_stop_limit(void **state)
 	 * and it's larger than xidStopLimit to trigger the ereport(ERROR).
 	 */
 	ShmemVariableCache = &data;
-	ShmemVariableCache->nextXid = 30;
+	ShmemVariableCache->nextFullXid.value = 30;
 	ShmemVariableCache->xidVacLimit = 10;
 	ShmemVariableCache->xidStopLimit = 20;
 	IsUnderPostmaster = true;
@@ -94,7 +97,7 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 	 * the ereport(WARNING).
 	 */
 	ShmemVariableCache = &data;
-	ShmemVariableCache->nextXid = xid;
+	ShmemVariableCache->nextFullXid.value = xid;
 	ShmemVariableCache->xidVacLimit = 10;
 	ShmemVariableCache->xidWarnLimit = 20;
 	ShmemVariableCache->xidStopLimit = 30;

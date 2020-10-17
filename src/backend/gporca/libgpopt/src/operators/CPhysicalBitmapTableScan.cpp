@@ -9,7 +9,7 @@
 //		Bitmap table scan physical operator
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -32,17 +32,13 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalBitmapTableScan::CPhysicalBitmapTableScan
-	(
-	CMemoryPool *mp,
-	CTableDescriptor *ptabdesc,
-	ULONG ulOriginOpId,
-	const CName *pnameTableAlias,
-	CColRefArray *pdrgpcrOutput
-	)
-	:
-	CPhysicalScan(mp, pnameTableAlias, ptabdesc, pdrgpcrOutput),
-	m_ulOriginOpId(ulOriginOpId)
+CPhysicalBitmapTableScan::CPhysicalBitmapTableScan(CMemoryPool *mp,
+												   CTableDescriptor *ptabdesc,
+												   ULONG ulOriginOpId,
+												   const CName *pnameTableAlias,
+												   CColRefArray *pdrgpcrOutput)
+	: CPhysicalScan(mp, pnameTableAlias, ptabdesc, pdrgpcrOutput),
+	  m_ulOriginOpId(ulOriginOpId)
 {
 	GPOS_ASSERT(NULL != mp);
 	GPOS_ASSERT(NULL != ptabdesc);
@@ -60,8 +56,10 @@ CPhysicalBitmapTableScan::CPhysicalBitmapTableScan
 ULONG
 CPhysicalBitmapTableScan::HashValue() const
 {
-	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(), m_ptabdesc->MDId()->HashValue());
-	ulHash = gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
+	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(),
+									   m_ptabdesc->MDId()->HashValue());
+	ulHash =
+		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
 
 	return ulHash;
 }
@@ -75,11 +73,7 @@ CPhysicalBitmapTableScan::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalBitmapTableScan::Matches
-	(
-	COperator *pop
-	)
-	const
+CPhysicalBitmapTableScan::Matches(COperator *pop) const
 {
 	return CUtils::FMatchBitmapScan(this, pop);
 }
@@ -94,16 +88,12 @@ CPhysicalBitmapTableScan::Matches
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPhysicalBitmapTableScan::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPhysicalBitmapTableScan::OsPrint(IOstream &os) const
 {
 	os << SzId() << " ";
 	os << ", Table Name: (";
 	m_ptabdesc->Name().OsPrint(os);
-	os <<")";
+	os << ")";
 	os << ", Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "]";

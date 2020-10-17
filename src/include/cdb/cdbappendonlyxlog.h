@@ -15,7 +15,8 @@
 #define CDBAPPENDONLYXLOG_H
 
 
-#include "access/xlog.h"
+#include "access/xlogreader.h"
+#include "lib/stringinfo.h"
 #include "storage/fd.h"
 #include "storage/relfilenode.h"
 #include "storage/smgr.h"

@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "postmaster/bgworker.h"
+#include "storage/ipc.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 
@@ -40,6 +41,9 @@ static uv_pipe_t	ic_proxy_client_listener;
 static bool			ic_proxy_client_listening;
 
 static int			ic_proxy_server_exit_code = 1;
+
+/* pipe to check whether postmaster is alive */
+static uv_pipe_t	ic_proxy_postmaster_pipe;
 
 /*
  * The peer listener is closed.
@@ -128,9 +132,8 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 static void
 ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 {
-	struct sockaddr_in addr;
+	const ICProxyAddr *addr;
 	uv_tcp_t   *listener = &ic_proxy_peer_listener;
-	int			port;
 	int			fd = -1;
 	int			ret;
 
@@ -140,20 +143,32 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	if (ic_proxy_peer_listening)
 		return;
 
-	/* Get the ip from the gp_interconnect_proxy_addresses */
-	port = ic_proxy_get_my_port();
-	if (port < 0)
-		/* Cannot get my port, maybe the setting is invalid */
+	/* Get the addr from the gp_interconnect_proxy_addresses */
+	addr = ic_proxy_get_my_addr();
+	if (addr == NULL)
+		/* Cannot get my addr, maybe the setting is invalid */
 		return;
 
-	/*
-	 * TODO: listen on the ip specified in gp_interconnect_proxy_addresses for
-	 * better security.
-	 */
-	uv_ip4_addr("0.0.0.0", port, &addr);
+#if IC_PROXY_LOG_LEVEL <= LOG
+	{
+		char		name[HOST_NAME_MAX] = "unknown";
+		int			port = 0;
+		int			family;
+		int			ret;
 
-	ic_proxy_log(LOG, "ic-proxy-server: setting up peer listener on port %d",
-				 port);
+		ret = ic_proxy_extract_addr((struct sockaddr *) &addr->addr,
+									name, sizeof(name), &port, &family);
+		if (ret == 0)
+			ic_proxy_log(LOG,
+						 "ic-proxy-server: setting up peer listener on %s:%s (%s:%d family=%d)",
+						 addr->hostname, addr->service, name, port, family);
+		else
+			ic_proxy_log(WARNING,
+						 "ic-proxy-server: setting up peer listener on %s:%s (%s:%d family=%d) (fail to extract the address: %s)",
+						 addr->hostname, addr->service, name, port, family,
+						 uv_strerror(ret));
+	}
+#endif /* IC_PROXY_LOG_LEVEL <= LOG */
 
 	/*
 	 * It is important to set TCP_NODELAY, otherwise we will suffer from
@@ -162,7 +177,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	uv_tcp_init(loop, listener);
 	uv_tcp_nodelay(listener, true);
 
-	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr, 0);
+	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->addr, 0);
 	if (ret < 0)
 	{
 		ic_proxy_log(WARNING, "ic-proxy-server: tcp: fail to bind: %s",
@@ -367,7 +382,7 @@ ic_proxy_server_on_signal(uv_signal_t *handle, int signum)
 	{
 		ProcessConfigFile(PGC_SIGHUP);
 
-		ic_proxy_reload_addresses();
+		ic_proxy_reload_addresses(handle->loop);
 
 		ic_proxy_server_peer_listener_init(handle->loop);
 		ic_proxy_server_ensure_peers(handle->loop);
@@ -377,6 +392,25 @@ ic_proxy_server_on_signal(uv_signal_t *handle, int signum)
 	{
 		uv_stop(handle->loop);
 	}
+}
+
+/*
+ * callback when received data from ic_proxy_postmaster_pipe
+ */
+static void
+ic_proxy_server_on_read_postmaster_pipe(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
+{
+	/* return the pkt to cache freelist, we don't care about the buffer content */
+	if (buf->base)
+		ic_proxy_pkt_cache_free(buf->base);
+
+	/* nread = 0 means EAGAIN and EWOULDBLOCK, while nread = EOF means postmaster is dead */
+	if (nread == UV_EOF)
+		proc_exit(1);
+	else if (nread < 0)
+		ic_proxy_log(FATAL, "read on postmaster death monitoring pipe failed: %s", uv_strerror(nread));
+	else if (nread > 0)
+		ic_proxy_log(FATAL, "unexpected data in postmaster death monitoring pipe with length: %ld", nread);
 }
 
 /*
@@ -391,9 +425,9 @@ ic_proxy_server_main(void)
 
 	ic_proxy_pkt_cache_init(IC_PROXY_MAX_PKT_SIZE);
 
-	ic_proxy_reload_addresses();
-
 	uv_loop_init(&ic_proxy_server_loop);
+
+	ic_proxy_reload_addresses(&ic_proxy_server_loop);
 
 	ic_proxy_router_init(&ic_proxy_server_loop);
 	ic_proxy_peer_table_init();
@@ -419,6 +453,12 @@ ic_proxy_server_main(void)
 	/* TODO: we could stop the timer if all the peers are connected */
 	uv_timer_init(&ic_proxy_server_loop, &ic_proxy_server_timer);
 	uv_timer_start(&ic_proxy_server_timer, ic_proxy_server_on_timer, 100, 1000);
+
+	/* monitor the postmaster pipe to check whether postmaster is still alive */
+	uv_pipe_init(&ic_proxy_server_loop, &ic_proxy_postmaster_pipe, false);
+	uv_pipe_open(&ic_proxy_postmaster_pipe, postmaster_alive_fds[POSTMASTER_FD_WATCH]);
+	uv_read_start((uv_stream_t *)&ic_proxy_postmaster_pipe, ic_proxy_pkt_cache_alloc_buffer,
+				  ic_proxy_server_on_read_postmaster_pipe);
 
 	ic_proxy_log(LOG, "ic-proxy-server: running");
 

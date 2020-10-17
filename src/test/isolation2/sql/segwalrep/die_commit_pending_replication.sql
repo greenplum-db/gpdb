@@ -21,19 +21,19 @@ select gp_inject_fault_infinite('sync_rep_query_die', 'skip', dbid) from gp_segm
 -- Let the transaction move forward with the commit
 select gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid) from gp_segment_configuration where role='p' and content = 0;
 
--- Ensure the ProcDiePending code block is called. It implies 'Replication' in pg_stat_activity.
+-- Ensure the ProcDiePending code block is called. It implies 'SyncRep' in pg_stat_activity.
 select gp_wait_until_triggered_fault('sync_rep_query_die', 1, dbid) from gp_segment_configuration where role='p' and content = 0;
 
 -- We can terminate the backend on QE now.
 0U: select pg_terminate_backend(pid) from pg_stat_activity
-      where wait_event_type='Replication' and
+      where wait_event='SyncRep' and
       sess_id in (select sess_id from store_session_id);
 
 -- We expect two more occurrence: one for backend quitting and another for retry.
 select gp_wait_until_triggered_fault('sync_rep_query_die', 3, dbid) from gp_segment_configuration where role='p' and content = 0;
 
 -- Verify that the sess_id changes due to retry.
-0U: select pid,sess_id,wait_event_type,query from pg_stat_activity
+0U: select pid,sess_id,wait_event,query from pg_stat_activity
       where sess_id in (select sess_id from store_session_id);
 
 -- resume the primary wal replication so that retry could complete.

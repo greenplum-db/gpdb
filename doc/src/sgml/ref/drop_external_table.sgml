@@ -3,7 +3,7 @@ doc/src/sgml/ref/drop_external_table.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-DROPEXTERNALTABLE">
+<refentry id="sql-dropexternaltable">
  <indexterm zone="sql-dropexternaltable">
   <primary>DROP EXTERNAL TABLE</primary>
  </indexterm>

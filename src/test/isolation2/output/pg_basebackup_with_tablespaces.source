@@ -1,6 +1,3 @@
-include: helpers/gp_management_utils_helpers.sql;
-CREATE
-
 -- Given a segment with a database that has a tablespace
 !\retcode mkdir -p @testtablespace@/some_basebackup_tablespace;
 -- start_ignore
@@ -38,7 +35,7 @@ CREATE
 1q: ... <quitting>
 
 -- When we create a full backup
-select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, 100, port, true, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -51,11 +48,13 @@ select count_of_items_in_directory('@testtablespace@/some_basebackup_tablespace/
  2                           
 (1 row)
 
--- Then we should have four files in newly created target tablespace under the some_database_without_tablespace, test, test_index, test_tmp, test_tmp_index
+-- Then we should have two files in newly created target tablespace
+-- under the some_database_without_tablespace, test, test_index. Files
+-- for temp table are not copied.
 select count_of_items_in_database_directory('@testtablespace@/some_basebackup_tablespace/100/GPDB_*/', oid) from pg_database where datname='some_database_without_tablespace';
  count_of_items_in_database_directory 
 --------------------------------------
- 4                                    
+ 2                                    
 (1 row)
 
 -- Then we should have the tablespace symlink link to the mapped tablespace directory
@@ -66,7 +65,7 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 (1 row)
 
 -- When we create a full backup again for the same target using force overwrite
-select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', true, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, 100, port, false, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', true, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -79,11 +78,13 @@ select count_of_items_in_directory('@testtablespace@/some_basebackup_tablespace/
  2                           
 (1 row)
 
--- Then we should have four files in newly created target tablespace under the some_database_without_tablespace, test, test_index, test_tmp, test_tmp_index
+-- Then we should have two files in newly created target tablespace
+-- under the some_database_without_tablespace, test, test_index. Files
+-- for temp table are not copied.
 select count_of_items_in_database_directory('@testtablespace@/some_basebackup_tablespace/100/GPDB_*/', oid) from pg_database where datname='some_database_without_tablespace';
  count_of_items_in_database_directory 
 --------------------------------------
- 4                                    
+ 2                                    
 (1 row)
 
 -- Then we should have the tablespace symlink link to the mapped tablespace directory
@@ -163,7 +164,7 @@ CREATE
 1q: ... <quitting>
 
 -- When we create a full backup
-select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, 100, port, true, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                

@@ -37,6 +37,7 @@ To test GPORCA, first go into the `gporca` directory:
 
 ```
 cmake -GNinja -H. -Bbuild
+ninja -C build
 ```
 
 
@@ -225,6 +226,18 @@ ninja -v -C build
 # How to Contribute
 
 We accept contributions via [Github Pull requests](https://help.github.com/articles/using-pull-requests) only.
+
+
+ORCA has a [style guide](StyleGuilde.md), try to follow the existing style in your contribution to be consistent.
+
+[clang-format]: https://clang.llvm.org/docs/ClangFormat.html
+A set of [clang-format]-based rules are enforced in CI. Your editor or IDE may automatically support it. When in doubt, check formatting locally before submitting your PR:
+
+```
+CLANG_FORMAT=clang-format src/tools/fmt chk
+```
+
+For more information, head over to the [formatting README](README.format.md).
 
 We follow GPDB's comprehensive contribution policy. Please refer to it [here](https://github.com/greenplum-db/gpdb#contributing) for details.
 

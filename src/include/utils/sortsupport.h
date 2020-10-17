@@ -42,7 +42,7 @@
  * function for such cases, but probably not any other acceleration method.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/sortsupport.h
@@ -72,7 +72,7 @@ typedef struct SortSupportData
 	 * sort support functions.
 	 */
 	bool		ssup_reverse;	/* descending-order sort? */
-	bool		ssup_nulls_first;		/* sort nulls first? */
+	bool		ssup_nulls_first;	/* sort nulls first? */
 
 	/*
 	 * These fields are workspace for callers, and should not be touched by
@@ -96,8 +96,7 @@ typedef struct SortSupportData
 	 * Comparator function has the same API as the traditional btree
 	 * comparison function, ie, return <0, 0, or >0 according as x is less
 	 * than, equal to, or greater than y.  Note that x and y are guaranteed
-	 * not null, and there is no way to return null either.  Do not return
-	 * INT_MIN, as callers are allowed to negate the result before using it.
+	 * not null, and there is no way to return null either.
 	 *
 	 * This may be either the authoritative comparator, or the abbreviated
 	 * comparator.  Core code may switch this over the initial preference of
@@ -185,8 +184,8 @@ typedef struct SortSupportData
 	/*
 	 * Full, authoritative comparator for key that an abbreviated
 	 * representation was generated for, used when an abbreviated comparison
-	 * was inconclusive (by calling ApplySortComparatorFull()), or used to
-	 * replace "comparator" when core system ultimately decides against
+	 * was inconclusive (by calling ApplySortAbbrevFullComparator()), or used
+	 * to replace "comparator" when core system ultimately decides against
 	 * abbreviation.
 	 */
 	int			(*abbrev_full_comparator) (Datum x, Datum y, SortSupport ssup);
@@ -222,7 +221,7 @@ ApplySortComparator(Datum datum1, bool isNull1,
 	}
 	else
 	{
-		compare = (*ssup->comparator) (datum1, datum2, ssup);
+		compare = ssup->comparator(datum1, datum2, ssup);
 		if (ssup->ssup_reverse)
 			INVERT_COMPARE_RESULT(compare);
 	}
@@ -260,9 +259,9 @@ ApplySortAbbrevFullComparator(Datum datum1, bool isNull1,
 	}
 	else
 	{
-		compare = (*ssup->abbrev_full_comparator) (datum1, datum2, ssup);
+		compare = ssup->abbrev_full_comparator(datum1, datum2, ssup);
 		if (ssup->ssup_reverse)
-			compare = -compare;
+			INVERT_COMPARE_RESULT(compare);
 	}
 
 	return compare;
@@ -272,6 +271,6 @@ ApplySortAbbrevFullComparator(Datum datum1, bool isNull1,
 extern void PrepareSortSupportComparisonShim(Oid cmpFunc, SortSupport ssup);
 extern void PrepareSortSupportFromOrderingOp(Oid orderingOp, SortSupport ssup);
 extern void PrepareSortSupportFromIndexRel(Relation indexRel, int16 strategy,
-							   SortSupport ssup);
+										   SortSupport ssup);
 
-#endif   /* SORTSUPPORT_H */
+#endif							/* SORTSUPPORT_H */

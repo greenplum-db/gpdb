@@ -30,12 +30,9 @@ WHERE relname='tenk_ao1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 |             0 |             1
- NormalXid |      1 |             0 |             1
  NormalXid |      0 |             0 |             2
- NormalXid |      1 |             0 |             2
  NormalXid |      0 |             0 |             0
- NormalXid |      1 |             0 |             0
-(6 rows)
+(3 rows)
 
 CREATE TABLE tenk_ao2 (like tenk_heap) with (appendonly=true, compresslevel=0, blocksize=262144) distributed by(unique1);
 CREATE TABLE tenk_ao3 (like tenk_heap) with (appendonly=true, compresslevel=6, blocksize=1048576, checksum=true) distributed by(unique1);
@@ -43,8 +40,7 @@ CREATE TABLE tenk_ao4 (like tenk_heap) with (appendonly=true, compresslevel=1, c
 CREATE TABLE tenk_ao5 (like tenk_heap) with (appendonly=true, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
 -- invalid
 CREATE TABLE tenk_ao6 (like tenk_heap) with (appendonly=false, compresslevel=6, checksum=true) distributed by(unique1);
-ERROR:  invalid option "compresslevel" for base relation
-HINT:  Compression only valid for Append Only relations, create an AO relation to use compression.
+ERROR:  unrecognized parameter "compresslevel"
 CREATE TABLE tenk_ao7 (like tenk_heap) with (appendonly=true, compresslevel=16, compresstype=zlib) distributed by(unique1);
 ERROR:  compresslevel=16 is out of range for zlib (should be in the range 1 to 9)
 CREATE TABLE tenk_ao8 (like tenk_heap) with (appendonly=true, blocksize=100) distributed by(unique1);
@@ -54,20 +50,17 @@ CREATE TABLE tenk_ao9 (like tenk_heap) with (appendonly=true, compresslevel=0, c
 ERROR:  compresstype "zlib" can't be used with compresslevel 0
 -- these should not work without appendonly=true
 CREATE TABLE tenk_ao10 (like tenk_heap) with (compresslevel=5);
-ERROR:  invalid option "compresslevel" for base relation
-HINT:  Compression only valid for Append Only relations, create an AO relation to use compression.
+ERROR:  unrecognized parameter "compresslevel"
 CREATE TABLE tenk_ao11 (like tenk_heap) with (blocksize=8192);
-ERROR:  invalid option "blocksize" for base relation
-HINT:  "blocksize" is only valid for Append Only relations, create an AO relation to use "blocksize".
+ERROR:  unrecognized parameter "blocksize"
 CREATE TABLE tenk_ao12 (like tenk_heap) with (appendonly=false,blocksize=8192);
-ERROR:  invalid option "blocksize" for base relation
-HINT:  "blocksize" is only valid for Append Only relations, create an AO relation to use "blocksize".
+ERROR:  unrecognized parameter "blocksize"
 -- appendoptimized is an alias for appendonly
 CREATE TABLE tenk_ao13 (like tenk_heap) with (appendoptimized=true);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendonly=true, appendoptimized=false);
 ERROR:  parameter "appendonly" specified more than once
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
-ERROR:  invalid value for boolean option "appendonly": maybe
+ERROR:  appendoptimized requires a Boolean value
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
 ERROR:  parameter "appendonly" specified more than once
 CREATE TABLE tenk_ao15 (like tenk_heap) with (appendoptimized=true) 
@@ -86,23 +79,37 @@ START (2) end (3) WITH (appendoptimized=true)
 );
 ERROR:  parameter "appendonly" specified more than once
 -- also make sure appendoptimized works in the gp_default_storage_options GUC
-SET gp_default_storage_options = 'appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
-ERROR:  parameter "appendonly" specified more than once
-SET gp_default_storage_options = 'appendoptimized=true,blocksize=32768,compresstype=none,checksum=true,orientation=row';
+SET gp_default_storage_options = 'blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
+ERROR:  invalid storage option "orientation"
+HINT:  For table access methods use "default_table_access_method" instead.
+SET gp_default_storage_options = 'blocksize=32768,compresstype=none,checksum=true,orientation=row';
+ERROR:  invalid storage option "orientation"
+HINT:  For table access methods use "default_table_access_method" instead.
+SET gp_default_storage_options = 'blocksize=32768,compresstype=none,checksum=true,blocksize=8';
+ERROR:  parameter "blocksize" specified more than once
+SET gp_default_storage_options = 'blocksize=65536,compresstype=none,checksum=true';
 SHOW gp_default_storage_options;
-                           gp_default_storage_options                            
----------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=65536,compresstype=none,checksum=true
+(1 row)
+
+SET default_table_access_method = ao_row;
+SHOW default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_row
 (1 row)
 
 CREATE TABLE tenk_ao14 (like tenk_heap);
-SELECT relstorage FROM pg_catalog.pg_class WHERE relname = 'tenk_ao14';
- relstorage 
-------------
- a
+SELECT amhandler, reloptions FROM pg_class c, PG_AM a WHERE c.relname = 'tenk_ao14' AND c.relam = a.oid;
+       amhandler        |    reloptions     
+------------------------+-------------------
+ ao_row_tableam_handler | {blocksize=65536}
 (1 row)
 
 RESET gp_default_storage_options;
+RESET default_table_access_method;
 -------------------- 
 -- catalog checks
 --------------------
@@ -113,8 +120,7 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
 -------------------+-----------+--------------+---------------+----------
  tenk_ao1          |     32768 |              |             0 | t
  tenk_ao13         |     32768 |              |             0 | t
- tenk_ao14         |     32768 |              |             0 | t
- tenk_ao15         |     32768 |              |             0 | t
+ tenk_ao14         |     65536 |              |             0 | t
  tenk_ao15_1_prt_1 |     32768 |              |             0 | t
  tenk_ao15_1_prt_2 |     32768 |              |             0 | t
  tenk_ao15_1_prt_3 |     32768 |              |             0 | t
@@ -122,7 +128,7 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_ao3          |   1048576 | zlib         |             6 | t
  tenk_ao4          |     32768 | zlib         |             1 | t
  tenk_ao5          |   1048576 | zlib         |             6 | t
-(11 rows)
+(10 rows)
 
 --------------------
 -- fn needed later
@@ -255,16 +261,16 @@ SELECT count(*) FROM tenk_ao4;
 -- The first row is good (so it grows the file), the second is bad.
 --
 COPY tenk_ao1 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_ao1, line 2, column unique1: "bad data row"
 COPY tenk_ao2 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_ao2, line 2, column unique1: "bad data row"
 COPY tenk_ao3 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_ao3, line 2, column unique1: "bad data row"
 COPY tenk_ao4 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_ao4, line 2, column unique1: "bad data row"
 SELECT count(*) FROM tenk_ao1;
  count 
@@ -330,11 +336,11 @@ WHERE relname='tenk_ao1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 |             0 |             1
- NormalXid |      1 |         17100 |             1
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |         16400 |             2
+ FrozenXid |      1 |         17000 |             1
  NormalXid |      0 |             0 |             0
- NormalXid |      1 |         17000 |             0
+ FrozenXid |      1 |         17000 |             0
+ NormalXid |      0 |             0 |             2
+ FrozenXid |      1 |         16400 |             2
 (6 rows)
 
 -- commit
@@ -483,13 +489,10 @@ WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (
   SELECT oid FROM pg_class WHERE relname='tenk_ao1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 | >= 3300       |             1
- NormalXid |      1 | zero          |             1
- NormalXid |      0 | >= 3300       |             2
- NormalXid |      1 | zero          |             2
  NormalXid |      0 | >= 3300       |             0
- NormalXid |      1 | zero          |             0
-(6 rows)
+ NormalXid |      0 | >= 3300       |             1
+ NormalXid |      0 | >= 3300       |             2
+(3 rows)
 
 -- Since we check last_sequence for the tenk_ao2 table later, the data distribution should be same for orca and planner.
 -- If we don't specify the DISTRIBUTED BY caluse, ORCA will mark the table distributed randomly.
@@ -506,8 +509,7 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
 -------------------+-----------+--------------+---------------+----------
  tenk_ao1          |     32768 |              |             0 | t
  tenk_ao13         |     32768 |              |             0 | t
- tenk_ao14         |     32768 |              |             0 | t
- tenk_ao15         |     32768 |              |             0 | t
+ tenk_ao14         |     65536 |              |             0 | t
  tenk_ao15_1_prt_1 |     32768 |              |             0 | t
  tenk_ao15_1_prt_2 |     32768 |              |             0 | t
  tenk_ao15_1_prt_3 |     32768 |              |             0 | t
@@ -515,7 +517,7 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_ao3          |   1048576 | zlib         |             6 | t
  tenk_ao4          |     32768 | zlib         |             1 | t
  tenk_ao5          |   1048576 | zlib         |             6 | t
-(11 rows)
+(10 rows)
 
 SELECT count(*) FROM tenk_ao1;
  count 
@@ -548,20 +550,17 @@ CREATE TABLE appendonly_sametxn_create_insert(a int, b int) with (appendonly=tru
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO appendonly_sametxn_create_insert select * from generate_series(1, 10);
--- Make sure insert is using segfile 1 for the insert, as part of create table itself.
+-- Make sure insert is using segfile 0 for the insert, as part of create table itself.
 SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
 last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='appendonly_sametxn_create_insert'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
-(6 rows)
+ NormalXid |      0 |           100 |             1
+ NormalXid |      0 |           100 |             0
+ NormalXid |      0 |           100 |             2
+(3 rows)
 
 INSERT INTO appendonly_sametxn_create_insert select * from generate_series(1, 10);
 SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
@@ -570,13 +569,10 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='appendonly_sametxn_create_insert'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |           200 |             1
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |           200 |             2
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |           200 |             0
-(6 rows)
+ NormalXid |      0 |           200 |             1
+ NormalXid |      0 |           200 |             2
+ NormalXid |      0 |           200 |             0
+(3 rows)
 
 ABORT;
 -- test get_ao_compression_ratio. use uncompressed table, so result is always 1.
@@ -717,12 +713,9 @@ WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 | >= 3300       |             1
- NormalXid |      1 | zero          |             1
  NormalXid |      0 | >= 3300       |             2
- NormalXid |      1 | zero          |             2
  NormalXid |      0 | >= 3300       |             0
- NormalXid |      1 | zero          |             0
-(6 rows)
+(3 rows)
 
 -- TRUNCATE
 TRUNCATE tenk_ao2;
@@ -739,33 +732,16 @@ WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (
   SELECT oid FROM pg_class WHERE relname='tenk_ao2'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 | >= 3300       |             2
- NormalXid |      1 | zero          |             2
  NormalXid |      0 | >= 3300       |             1
- NormalXid |      1 | zero          |             1
  NormalXid |      0 | >= 3300       |             0
- NormalXid |      1 | zero          |             0
-(6 rows)
+ NormalXid |      0 | >= 3300       |             2
+(3 rows)
 
--- OIDS
+-- WITH OIDS is no longer supported
 CREATE TABLE aowithoids(a int, b int) WITH (appendonly=true,oids=true);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
-COPY aowithoids FROM STDIN;
-SELECT * FROM aowithoids ORDER BY a; -- this should show a,b only
- a | b 
----+---
- 1 | 1
- 2 | 2
-(2 rows)
-
-SELECT oideq(oid,-1) FROM aowithoids; -- kind of stupid but checks that oid actually exists and is queriable. should always be 'f'
- oideq 
--------
- f
- f
-(2 rows)
-
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  tables declared WITH OIDS are not supported
 -- CREATE INDEX
 CREATE INDEX tenk_ao1_unique1 ON tenk_ao1 USING btree(unique1 int4_ops);
 -- Verify that the visimap and block-directory indexes have unique and
@@ -833,8 +809,6 @@ select indexname from pg_indexes where tablename = 'ao' order by indexname;
 (4 rows)
 
 alter table ao alter j type bigint;
-ERROR:  cannot alter indexed column
-HINT:  DROP the index first, and recreate it after the ALTER
 alter table ao rename j to j_renamed;
 alter table ao drop column j_renamed;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;
@@ -849,7 +823,7 @@ analyze ao;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;
  tablename | attname | avg_width | n_distinct 
 -----------+---------+-----------+------------
- ao        | i       |         4 |  -0.666667
+ ao        | i       |         4 | -0.6666667
  ao        | k       |         5 |       -0.5
 (2 rows)
 
@@ -952,25 +926,25 @@ select count(*) from temp_tenk_ao5;
 vacuum analyze temp_tenk_ao5;
 truncate table temp_tenk_ao5;
 \d temp_tenk_ao5
-Append-Only Table "pg_temp_15.temp_tenk_ao5"
-   Column    |  Type   | Modifiers 
--------------+---------+-----------
- unique1     | integer | 
- unique2     | integer | 
- two         | integer | 
- four        | integer | 
- ten         | integer | 
- twenty      | integer | 
- hundred     | integer | 
- thousand    | integer | 
- twothousand | integer | 
- fivethous   | integer | 
- tenthous    | integer | 
- odd         | integer | 
- even        | integer | 
- stringu1    | name    | 
- stringu2    | name    | 
- string4     | name    | 
+            Table "pg_temp_274.temp_tenk_ao5"
+   Column    |  Type   | Collation | Nullable | Default 
+-------------+---------+-----------+----------+---------
+ unique1     | integer |           |          | 
+ unique2     | integer |           |          | 
+ two         | integer |           |          | 
+ four        | integer |           |          | 
+ ten         | integer |           |          | 
+ twenty      | integer |           |          | 
+ hundred     | integer |           |          | 
+ thousand    | integer |           |          | 
+ twothousand | integer |           |          | 
+ fivethous   | integer |           |          | 
+ tenthous    | integer |           |          | 
+ odd         | integer |           |          | 
+ even        | integer |           |          | 
+ stringu1    | name    |           |          | 
+ stringu2    | name    |           |          | 
+ string4     | name    |           |          | 
 Compression Type: zlib
 Compression Level: 1
 Block Size: 32768
@@ -1136,18 +1110,15 @@ segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE
 relname='tenk_renamed'));
    case    | objmod | case | gp_segment_id 
 -----------+--------+------+---------------
- NormalXid |      0 | t    |             1
- NormalXid |      1 | t    |             1
  NormalXid |      0 | t    |             0
- NormalXid |      1 | t    |             0
+ NormalXid |      0 | t    |             1
  NormalXid |      0 | t    |             2
- NormalXid |      1 | t    |             2
-(6 rows)
+(3 rows)
 
 ALTER TABLE tenk_renamed ALTER COLUMN twothousand SET NOT NULL;
 ALTER TABLE tenk_renamed ADD COLUMN sercol serial; -- MPP-10015
 ALTER TABLE tenk_renamed ADD COLUMN newcol2 int NOT NULL; -- should fail
-ERROR:  column "newcol2" contains null values
+ERROR:  column "newcol2" contains null values  (seg1 127.0.0.1:40001 pid=10274)
 SELECT count(*) FROM tenk_renamed;
  count 
 -------
@@ -1204,7 +1175,7 @@ SELECT pg_total_relation_size('aosizetest_1') < pg_total_relation_size('aosizete
 DROP TABLE aosizetest_1;
 DROP TABLE aosizetest_2;
 -- Check that pg_total_relation_size() returns a sane value for an AO table.
--- (As of this writing, 1468872 bytes, but leave some slack for minor changes
+-- (As of this writing, 1436104 bytes, but leave some slack for minor changes
 -- to indexes etc.)
 CREATE TABLE aosizetest_3(a text) WITH (appendonly=true);
 insert into aosizetest_3 select repeat('x', 100) from generate_series(1, 10000);
@@ -1225,12 +1196,12 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='ao_selection'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |         33500 |             0
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |         33400 |             1
  NormalXid |      0 |             0 |             2
- NormalXid |      1 |         33300 |             2
+ FrozenXid |      1 |         33300 |             2
+ NormalXid |      0 |             0 |             0
+ FrozenXid |      1 |         33500 |             0
+ NormalXid |      0 |             0 |             1
+ FrozenXid |      1 |         33400 |             1
 (6 rows)
 
 -- Following insert without concurrency is also using same segfile as above
@@ -1242,11 +1213,11 @@ WHERE relname='ao_selection'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 |             0 |             0
- NormalXid |      1 |         67000 |             0
+ FrozenXid |      1 |         67000 |             0
  NormalXid |      0 |             0 |             1
- NormalXid |      1 |         66800 |             1
+ FrozenXid |      1 |         66800 |             1
  NormalXid |      0 |             0 |             2
- NormalXid |      1 |         66600 |             2
+ FrozenXid |      1 |         66600 |             2
 (6 rows)
 
 -- Check compression and distribution
@@ -1369,7 +1340,6 @@ DROP TABLE tenk_ao2;
 DROP TABLE tenk_ao3;
 DROP TABLE tenk_ao4;
 DROP TABLE tenk_ao5;
-DROP TABLE aowithoids;
 DROP TABLE ao_selection;
 ---------------------------------------------------------------
 -- Sub-transaction tests to validate AO behavior
@@ -1387,13 +1357,10 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='appendonly_subxans_test'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
-(6 rows)
+ NormalXid |      0 |           100 |             0
+ NormalXid |      0 |           100 |             1
+ NormalXid |      0 |           100 |             2
+(3 rows)
 
 ROLLBACK TO SAVEPOINT sp1;
 COMMIT;
@@ -1404,24 +1371,31 @@ SAVEPOINT sp1;
 CREATE TABLE appendonly_subxans_test(a int, b int) WITH (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select oid as appendonly_subxans_test_oid from pg_class
+where relname = 'appendonly_subxans_test' \gset
 SAVEPOINT sp2;
 INSERT INTO appendonly_subxans_test SELECT * FROM generate_series(1, 10);
 SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
-IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
-WHERE relname='appendonly_subxans_test'));
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence')
+WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid =:appendonly_subxans_test_oid);
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
-(6 rows)
+ NormalXid |      0 |           100 |             1
+ NormalXid |      0 |           100 |             0
+ NormalXid |      0 |           100 |             2
+(3 rows)
 
 ROLLBACK TO SAVEPOINT sp1;
 COMMIT;
+-- No entry should have leaked in gp_fastsequence after subtransaction
+-- rollback.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence')
+WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid =:appendonly_subxans_test_oid);
+ case | objmod | last_sequence | gp_segment_id 
+------+--------+---------------+---------------
+(0 rows)
+
 -- create table and insert in independent subtransactions, validate insert to
 -- gp_fastsequence is using NormalXid and not FrozenXid and stays despite
 -- inserting subtransaction aborting.
@@ -1439,13 +1413,10 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='appendonly_subxans_test1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
-(6 rows)
+ NormalXid |      0 |           100 |             0
+ NormalXid |      0 |           100 |             2
+ NormalXid |      0 |           100 |             1
+(3 rows)
 
 ROLLBACK TO SAVEPOINT sp2;
 COMMIT;
@@ -1461,13 +1432,10 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='appendonly_subxans_test1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
- NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
- NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
-(6 rows)
+ NormalXid |      0 |           100 |             0
+ NormalXid |      0 |           100 |             1
+ NormalXid |      0 |           100 |             2
+(3 rows)
 
 -- create table in top transaction but first insert in sub-transaction
 BEGIN;
@@ -1666,3 +1634,32 @@ pg_class) AS pgc ON (gfs.objid = pgc.oid) WHERE pgc.oid IS NULL;
 -------
 (0 rows)
 
+-- test case for append optimized columnar bitmap scan when row level bitmap is promoted to page level
+drop table if exists bms_ao_bug;
+NOTICE:  table "bms_ao_bug" does not exist, skipping
+create table bms_ao_bug
+(c1 int not null,
+c2 int not null,
+c3 char(100) not null)
+with (appendonly=true, compresstype=zlib)
+distributed by (c1)
+;
+insert into bms_ao_bug select 1, 1, a.c1::char(100) from generate_series(1, 2000000) a(c1);
+create index bms_ao_bug_ix1 on bms_ao_bug (c2);
+set enable_seqscan=off;
+set work_mem=256;
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+select
+a.c1,
+count(*) row_cnt
+from bms_ao_bug a
+where a.c2 = 1
+group by
+a.c1
+;
+ c1 | row_cnt 
+----+---------
+  1 | 2000000
+(1 row)
+
+drop table bms_ao_bug;

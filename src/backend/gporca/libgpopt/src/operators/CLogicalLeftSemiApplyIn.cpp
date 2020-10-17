@@ -24,16 +24,14 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalLeftSemiApplyIn::PxfsCandidates
-	(
-	CMemoryPool *mp
-	)
-	const
+CLogicalLeftSemiApplyIn::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 	(void) xform_set->ExchangeSet(CXform::ExfLeftSemiApplyIn2LeftSemiJoin);
-	(void) xform_set->ExchangeSet(CXform::ExfLeftSemiApplyInWithExternalCorrs2InnerJoin);
-	(void) xform_set->ExchangeSet(CXform::ExfLeftSemiApplyIn2LeftSemiJoinNoCorrelations);
+	(void) xform_set->ExchangeSet(
+		CXform::ExfLeftSemiApplyInWithExternalCorrs2InnerJoin);
+	(void) xform_set->ExchangeSet(
+		CXform::ExfLeftSemiApplyIn2LeftSemiJoinNoCorrelations);
 
 	return xform_set;
 }
@@ -47,17 +45,14 @@ CLogicalLeftSemiApplyIn::PxfsCandidates
 //
 //---------------------------------------------------------------------------
 COperator *
-CLogicalLeftSemiApplyIn::PopCopyWithRemappedColumns
-	(
-	CMemoryPool *mp,
-	UlongToColRefMap *colref_mapping,
-	BOOL must_exist
-	)
+CLogicalLeftSemiApplyIn::PopCopyWithRemappedColumns(
+	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
 {
-	CColRefArray *pdrgpcrInner = CUtils::PdrgpcrRemap(mp, m_pdrgpcrInner, colref_mapping, must_exist);
+	CColRefArray *pdrgpcrInner =
+		CUtils::PdrgpcrRemap(mp, m_pdrgpcrInner, colref_mapping, must_exist);
 
-	return GPOS_NEW(mp) CLogicalLeftSemiApplyIn(mp, pdrgpcrInner, m_eopidOriginSubq);
+	return GPOS_NEW(mp)
+		CLogicalLeftSemiApplyIn(mp, pdrgpcrInner, m_eopidOriginSubq);
 }
 
 // EOF
-

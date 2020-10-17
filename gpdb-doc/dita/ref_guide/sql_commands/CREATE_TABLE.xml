@@ -340,9 +340,12 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             <codeph>...</codeph>]</pt>
           <pd>The <codeph>LIKE</codeph> clause specifies a table from which the new table
             automatically copies all column names, their data types, not-null constraints, and
-            distribution policy. Storage properties like append-optimized or partition structure are
-            not copied. Unlike <codeph>INHERITS</codeph>, the new table and original table are
-            completely decoupled after creation is complete.</pd>
+            distribution policy. Unlike <codeph>INHERITS</codeph>, the new table and original table
+            are completely decoupled after creation is complete.</pd>
+          <pd>
+            <note>Storage properties like append-optimized or partition structure are not
+              copied.</note>
+          </pd>
           <pd>Default expressions for the copied column definitions will only be copied if
               <codeph>INCLUDING DEFAULTS</codeph> is specified. The default behavior is to exclude
             default expressions, resulting in the copied columns in the new table having null
@@ -366,10 +369,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             comments, resulting in the copied columns and constraints in the new table having no
             comments. </pd>
           <pd>
-            <codeph>INCLUDING ALL</codeph> is an abbreviated form of
-            <codeph>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES 
-     INCLUDING STORAGE INCLUDING COMMENTS</codeph>.
-          </pd>
+            <codeph>INCLUDING ALL</codeph> is an abbreviated form of <codeph>INCLUDING DEFAULTS
+              INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS</codeph>. </pd>
           <pd> Note that unlike <codeph>INHERITS</codeph>, columns and constraints copied by
               <codeph>LIKE</codeph> are not merged with similarly named columns and constraints. If
             the same name is specified explicitly or in another <codeph>LIKE</codeph> clause, an

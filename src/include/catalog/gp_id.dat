@@ -1,0 +1,21 @@
+#----------------------------------------------------------------------
+#
+# gp_id.dat
+#    Initial contents of the gp_id system relation.
+#
+# Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/gp_id.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+
+# The contract of the gp_id table is that it must have exactly one row on
+# every segment.  The contents of the row do not matter.
+{
+  gpname => 'Greenplum', content => '-1', dbid => '-1', numsegments => '-1' },
+
+]

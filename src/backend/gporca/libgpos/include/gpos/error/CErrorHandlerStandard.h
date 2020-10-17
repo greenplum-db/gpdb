@@ -15,40 +15,37 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CErrorHandlerStandard
+//
+//	@doc:
+//		Default error handler;
+//
+//---------------------------------------------------------------------------
+class CErrorHandlerStandard : public CErrorHandler
+{
+private:
+	// private copy ctor
+	CErrorHandlerStandard(const CErrorHandlerStandard &);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CErrorHandlerStandard
-	//
-	//	@doc:
-	//		Default error handler;
-	//
-	//---------------------------------------------------------------------------
-	class CErrorHandlerStandard : public CErrorHandler
+public:
+	// ctor
+	CErrorHandlerStandard()
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CErrorHandlerStandard()
+	{
+	}
 
-			// private copy ctor
-			CErrorHandlerStandard(const CErrorHandlerStandard&);
+	// process error
+	virtual void Process(CException exception);
 
-		public:
+};	// class CErrorHandlerStandard
+}  // namespace gpos
 
-			// ctor
-			CErrorHandlerStandard() {}
-			
-			// dtor
-			virtual
-			~CErrorHandlerStandard() {}
-
-			// process error
-			virtual
-			void Process(CException exception);
-
-	}; // class CErrorHandlerStandard
-}
-
-#endif // !GPOS_CErrorHandlerStandard_H
+#endif	// !GPOS_CErrorHandlerStandard_H
 
 // EOF
-

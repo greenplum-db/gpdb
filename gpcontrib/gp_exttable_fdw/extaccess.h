@@ -33,8 +33,6 @@ typedef struct ExternalInsertDescData
 								 * mirror seg) */
 
 	TupleDesc	ext_tupDesc;
-	Datum	   *ext_values;
-	bool	   *ext_nulls;
 
 	FmgrInfo   *ext_custom_formatter_func; /* function to convert to custom format */
 	List	   *ext_custom_formatter_params; /* list of defelems that hold user's format parameters */
@@ -73,7 +71,6 @@ typedef struct FileScanDescData
 	/* current file parse state */
 	struct CopyStateData *fs_pstate;
 
-	Form_pg_attribute *attr;
 	AttrNumber	num_phys_attrs;
 	Datum	   *values;
 	bool	   *nulls;
@@ -90,9 +87,11 @@ typedef struct FileScanDescData
 	List	   *fs_custom_formatter_params; /* list of defelems that hold user's format parameters */
 	FormatterData *fs_formatter;
 
-	/* external partition */
+	/* CHECK constraints and partition check quals, if any */
 	bool		fs_hasConstraints;
-	List		**fs_constraintExprs;
+	struct ExprState **fs_constraintExprs;
+	bool		fs_isPartition;
+	struct ExprState *fs_partitionCheckExpr;
 }	FileScanDescData;
 
 typedef FileScanDescData *FileScanDesc;
@@ -120,7 +119,7 @@ external_getnext(FileScanDesc scan,
                  ScanDirection direction,
                  ExternalSelectDesc desc);
 extern ExternalInsertDesc external_insert_init(Relation rel);
-extern Oid	external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup);
+extern void external_insert(ExternalInsertDesc extInsertDesc, TupleTableSlot *slot);
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 
 extern List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);

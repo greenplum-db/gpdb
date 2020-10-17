@@ -1,6 +1,6 @@
-create schema compresstype_@orientation@;
-set search_path="$user",compresstype_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema compresstype_@amname@;
+set search_path="$user",compresstype_@amname@,public;
+SET default_table_access_method=@amname@;
 -- Test compress types.  The objective is to verify basic
 -- insert/update/delete works and NOT to test compression algorithm.
 -- So don't bother inserting large data and checking compression
@@ -10,7 +10,7 @@ CREATE TABLE uao_tab_compress_none (
 		  col_int int,
 		  col_text text,
 		  col_numeric numeric)
- with (appendonly=true , COMPRESSTYPE=NONE) distributed by (col_int);
+ with (COMPRESSTYPE=NONE) distributed by (col_int);
 insert into uao_tab_compress_none values
  (1, 'abc', 1), (2, 'pqr', 2), (3, 'lmn', 3);
 delete from uao_tab_compress_none;
@@ -23,7 +23,7 @@ CREATE TABLE uao_tab_compress_zlib1 (
 		  col_int int,
 		  col_text text,
 		  col_numeric numeric)
- with (appendonly=true , COMPRESSTYPE=zlib, COMPRESSLEVEL=1)
+ with (COMPRESSTYPE=zlib, COMPRESSLEVEL=1)
  distributed by (col_int);
 
 insert into uao_tab_compress_zlib1 select i , 'This is news of today:
@@ -49,7 +49,7 @@ CREATE TABLE uao_tab_compress_zlib9 (
 		  col_int int,
 		  col_text text,
 		  col_numeric numeric)
- with (appendonly=true , COMPRESSTYPE=zlib, COMPRESSLEVEL=9)
+ with (COMPRESSTYPE=zlib, COMPRESSLEVEL=9)
  distributed by (col_int);
 
 insert into uao_tab_compress_zlib9 select i , 'This is news of today:

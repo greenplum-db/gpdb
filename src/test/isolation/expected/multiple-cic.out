@@ -14,6 +14,6 @@ step s2i:
 		WHERE unlck();
 
 step s1i: <... completed>
-s1             
+unlck          
 
-               
+t              

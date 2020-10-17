@@ -10,6 +10,8 @@
         <dxl:Column ColId="3" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
       </dxl:Columns>
       <dxl:CTASOptions OnCommitAction="PreserveRows"/>
+      <dxl:DistrOpfamilies/>
+      <dxl:DistrOpclasses/>
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="a">

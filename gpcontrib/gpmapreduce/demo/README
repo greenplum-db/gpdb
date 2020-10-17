@@ -35,7 +35,7 @@ BEFORE YOU BEGIN
 3. In this database, create the procedural languages used by the demos:
 
     $ psql gpmrdemo -c 'CREATE LANGUAGE plperl;'
-    $ psql gpmrdemo -c 'CREATE LANGUAGE plpythonu;'
+    $ psql gpmrdemo -c 'CREATE LANGUAGE plpython3u;'
 
 
 NOTE: If the CREATE LANGUAGE command does not succeed because a

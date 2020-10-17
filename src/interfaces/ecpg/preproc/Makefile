@@ -2,7 +2,7 @@
 #
 # Makefile for src/interfaces/ecpg/preproc
 #
-# Copyright (c) 1998-2016, PostgreSQL Global Development Group
+# Copyright (c) 1998-2019, PostgreSQL Global Development Group
 #
 # src/interfaces/ecpg/preproc/Makefile
 #
@@ -15,23 +15,23 @@ subdir = src/interfaces/ecpg/preproc
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-MAJOR_VERSION= 4
-MINOR_VERSION= 12
-PATCHLEVEL=0
-
 override CPPFLAGS := -I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
-	-I. -I$(srcdir) -DMAJOR_VERSION=$(MAJOR_VERSION) \
-	-DMINOR_VERSION=$(MINOR_VERSION) -DPATCHLEVEL=$(PATCHLEVEL) \
-	 $(CPPFLAGS)
+	-I. -I$(srcdir) \
+	-I$(top_srcdir)/src/interfaces/ecpg/ecpglib \
+	-I$(libpq_srcdir) \
+	-DECPG_COMPILE \
+	$(CPPFLAGS)
 
-ifeq ($(GCC), yes)
-override CFLAGS +=  $(PTHREAD_CFLAGS) -DECPG_COMPILE -Wno-unused-label -Wno-error
-endif
-override CFLAGS += $(PTHREAD_CFLAGS) -DECPG_COMPILE
+override CFLAGS += $(PTHREAD_CFLAGS)
 
 OBJS=	preproc.o pgc.o type.o ecpg.o output.o parser.o \
-	keywords.o c_keywords.o ecpg_keywords.o ../ecpglib/typename.o descriptor.o variable.o \
+	keywords.o c_keywords.o ecpg_keywords.o typename.o descriptor.o variable.o \
 	$(WIN32RES)
+
+# where to find gen_keywordlist.pl and subsidiary files
+TOOLSDIR = $(top_srcdir)/src/tools
+GEN_KEYWORDLIST = $(PERL) -I $(TOOLSDIR) $(TOOLSDIR)/gen_keywordlist.pl
+GEN_KEYWORDLIST_DEPS = $(TOOLSDIR)/gen_keywordlist.pl $(TOOLSDIR)/PerfectHash.pm
 
 # Suppress parallel build to avoid a bug in GNU make 3.82
 # (see comments in ../Makefile)
@@ -42,10 +42,11 @@ endif
 all: ecpg
 
 ecpg: $(OBJS) | submake-libpgport
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) $^ $(LIBS) $(PTHREAD_LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) $(PTHREAD_LIBS) -o $@$(X)
 
-../ecpglib/typename.o: ../ecpglib/typename.c
-	$(MAKE) -C $(dir $@) $(notdir $@)
+# We symlink typename.c from ecpglib and recompile it here
+typename.c: % : $(top_srcdir)/src/interfaces/ecpg/ecpglib/%
+	rm -f $@ && $(LN_S) $< .
 
 # See notes in src/backend/parser/Makefile about the following two rules
 preproc.h: preproc.c
@@ -57,9 +58,20 @@ preproc.y: ../../../backend/parser/gram.y parse.pl ecpg.addons ecpg.header ecpg.
 	$(PERL) $(srcdir)/parse.pl $(srcdir) < $< > $@
 	$(PERL) $(srcdir)/check_rules.pl $(srcdir) $<
 
-ecpg_keywords.o c_keywords.o keywords.o preproc.o pgc.o parser.o: preproc.h
+# generate keyword headers
+c_kwlist_d.h: c_kwlist.h $(GEN_KEYWORDLIST_DEPS)
+	$(GEN_KEYWORDLIST) --varname ScanCKeywords --no-case-fold $<
 
-distprep: preproc.y preproc.c preproc.h pgc.c
+ecpg_kwlist_d.h: ecpg_kwlist.h $(GEN_KEYWORDLIST_DEPS)
+	$(GEN_KEYWORDLIST) --varname ScanECPGKeywords $<
+
+# Force these dependencies to be known even without dependency info built:
+ecpg_keywords.o c_keywords.o keywords.o preproc.o pgc.o parser.o: preproc.h
+ecpg_keywords.o: ecpg_kwlist_d.h
+c_keywords.o: c_kwlist_d.h
+keywords.o: $(top_srcdir)/src/include/parser/kwlist.h
+
+distprep: preproc.y preproc.c preproc.h pgc.c c_kwlist_d.h ecpg_kwlist_d.h
 
 install: all installdirs
 	$(INSTALL_PROGRAM) ecpg$(X) '$(DESTDIR)$(bindir)'
@@ -70,15 +82,11 @@ installdirs:
 uninstall:
 	rm -f '$(DESTDIR)$(bindir)/ecpg$(X)'
 
+# preproc.y, preproc.c, preproc.h, pgc.c, c_kwlist_d.h, and ecpg_kwlist_d.h
+# are in the distribution tarball, so they are not cleaned here.
 clean distclean:
 	rm -f *.o ecpg$(X)
-# garbage from partial builds
-	@rm -f y.tab.c y.tab.h preproc.tab.c preproc.tab.y preproc.tab.h
-# garbage from development
-	@rm -f core a.out *.output *.tab.c
+	rm -f typename.c
 
-# `make distclean' must not remove preproc.y, preproc.c, preproc.h, or pgc.c
-# since we want to ship those files in the distribution for people with
-# inadequate tools.  Instead, `make maintainer-clean' will remove them.
 maintainer-clean: distclean
-	rm -f preproc.y preproc.c preproc.h pgc.c
+	rm -f preproc.y preproc.c preproc.h pgc.c c_kwlist_d.h ecpg_kwlist_d.h

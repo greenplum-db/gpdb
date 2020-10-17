@@ -13,14 +13,15 @@ class TestUnitPgBaseBackup(unittest.TestCase):
 
         tokens = base_backup.command_tokens
 
-        self.assertIn("--xlog", tokens)
         self.assertNotIn("--slot", tokens)
         self.assertNotIn("some-replication-slot-name", tokens)
-        self.assertNotIn("--xlog-method", tokens)
+        self.assertIn("--wal-method", tokens)
+        self.assertIn("fetch", tokens)
         self.assertNotIn("stream", tokens)
 
     def test_base_backup_passes_parameters_necessary_to_create_replication_slot_when_given_slotname(self):
         base_backup = pg.PgBaseBackup(
+            create_slot = True,
             replication_slot_name = 'some-replication-slot-name',
             pgdata = "foo",
             host = "bar",
@@ -29,11 +30,12 @@ class TestUnitPgBaseBackup(unittest.TestCase):
 
         self.assertIn("--slot", base_backup.command_tokens)
         self.assertIn("some-replication-slot-name", base_backup.command_tokens)
-        self.assertIn("--xlog-method", base_backup.command_tokens)
+        self.assertIn("--wal-method", base_backup.command_tokens)
         self.assertIn("stream", base_backup.command_tokens)
 
     def test_base_backup_does_not_pass_conflicting_xlog_method_argument_when_given_replication_slot(self):
         base_backup = pg.PgBaseBackup(
+            create_slot = True,
             replication_slot_name = 'some-replication-slot-name',
             pgdata = "foo",
             host = "bar",

@@ -1,9 +1,5 @@
-include: helpers/gp_management_utils_helpers.sql;
-CREATE
-
-
--- When pg_basebackup runs with --slot and stream as xlog-method
-select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+-- When pg_basebackup runs with --slot and stream as wal-method
+select pg_basebackup(address, dbid, port, true, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -20,14 +16,14 @@ select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablesp
 (1 row)
 
 -- When another basebackup is run with the same slot name
-select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablespace@/some_other_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, false, 'some_replication_slot', '@testtablespace@/some_other_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
 (1 row)
 
 -- Then the backup should exist on the filesystem, ready for mirroring
-!\retcode cat @testtablespace@/some_other_isolation2_pg_basebackup/recovery.conf;
+!\retcode cat @testtablespace@/some_other_isolation2_pg_basebackup/postgresql.auto.conf;
 -- start_ignore
 standby_mode = 'on'
 primary_conninfo = 'user=adamberlin host=adamberlin-linux port=25432 sslmode=disable sslcompression=1 application_name=gp_walreceiver'
@@ -61,7 +57,7 @@ primary_slot_name = 'some_replication_slot'
 (exited with code 0)
 
 -- When pg_basebackup runs without --slot
-select pg_basebackup(address, dbid, port, null, '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, false, null, '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                

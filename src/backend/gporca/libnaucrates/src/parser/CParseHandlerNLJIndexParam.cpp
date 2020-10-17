@@ -6,7 +6,7 @@
 //		CParseHandlerNLJIndexParam.cpp
 //
 //	@doc:
-//		
+//
 //		Implementation of the SAX parse handler class for parsing a NLJ index Param
 //---------------------------------------------------------------------------
 
@@ -25,15 +25,11 @@ XERCES_CPP_NAMESPACE_USE
 
 
 // ctor
-CParseHandlerNLJIndexParam::CParseHandlerNLJIndexParam
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_manager,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_manager, parse_handler_root),
-	m_nest_param_colref_dxl(NULL)
+CParseHandlerNLJIndexParam::CParseHandlerNLJIndexParam(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_manager,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_manager, parse_handler_root),
+	  m_nest_param_colref_dxl(NULL)
 {
 }
 
@@ -47,37 +43,42 @@ CParseHandlerNLJIndexParam::~CParseHandlerNLJIndexParam()
 
 // processes a Xerces start element event
 void
-CParseHandlerNLJIndexParam::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname,
-	const Attributes &attrs
-	)
+CParseHandlerNLJIndexParam::StartElement(const XMLCh *const,  // element_uri,
+										 const XMLCh *const element_local_name,
+										 const XMLCh *const,  // element_qname,
+										 const Attributes &attrs)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenNLJIndexParam), element_local_name))
+	if (0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenNLJIndexParam),
+				 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
-	m_nest_param_colref_dxl = CDXLOperatorFactory::MakeDXLColRef(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenNLJIndexParam);
+	m_nest_param_colref_dxl = CDXLOperatorFactory::MakeDXLColRef(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+		EdxltokenNLJIndexParam);
 }
 
 
 // processes a Xerces end element event
 void
-CParseHandlerNLJIndexParam::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerNLJIndexParam::EndElement(const XMLCh *const,	// element_uri,
+									   const XMLCh *const element_local_name,
+									   const XMLCh *const  // element_qname
+)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenNLJIndexParam), element_local_name))
+	if (0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenNLJIndexParam),
+				 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,	str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	// deactivate handler

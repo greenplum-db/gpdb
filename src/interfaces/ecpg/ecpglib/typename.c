@@ -3,13 +3,13 @@
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
 
-#include <stdlib.h>
+#include "catalog/pg_type_d.h"
+
 #include "ecpgtype.h"
 #include "ecpglib.h"
-#include "extern.h"
+#include "ecpglib_extern.h"
 #include "sqltypes.h"
 #include "sql3types.h"
-#include "pg_type.h"
 
 /*
  * This function is used to generate the correct type names.
@@ -48,6 +48,8 @@ ecpg_type_name(enum ECPGttype typ)
 			return "bool";
 		case ECPGt_varchar:
 			return "varchar";
+		case ECPGt_bytea:
+			return "bytea";
 		case ECPGt_char_variable:
 			return "char";
 		case ECPGt_decimal:
@@ -76,19 +78,19 @@ ecpg_dynamic_type(Oid type)
 		case BOOLOID:
 			return SQL3_BOOLEAN;	/* bool */
 		case INT2OID:
-			return SQL3_SMALLINT;		/* int2 */
+			return SQL3_SMALLINT;	/* int2 */
 		case INT4OID:
 			return SQL3_INTEGER;	/* int4 */
 		case TEXTOID:
-			return SQL3_CHARACTER;		/* text */
+			return SQL3_CHARACTER;	/* text */
 		case FLOAT4OID:
 			return SQL3_REAL;	/* float4 */
 		case FLOAT8OID:
-			return SQL3_DOUBLE_PRECISION;		/* float8 */
+			return SQL3_DOUBLE_PRECISION;	/* float8 */
 		case BPCHAROID:
-			return SQL3_CHARACTER;		/* bpchar */
+			return SQL3_CHARACTER;	/* bpchar */
 		case VARCHAROID:
-			return SQL3_CHARACTER_VARYING;		/* varchar */
+			return SQL3_CHARACTER_VARYING;	/* varchar */
 		case DATEOID:
 			return SQL3_DATE_TIME_TIMESTAMP;	/* date */
 		case TIMEOID:

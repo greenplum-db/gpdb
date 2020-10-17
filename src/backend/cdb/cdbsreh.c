@@ -22,14 +22,13 @@
 #include "libpq-fe.h"
 #include "access/transam.h"
 #include "access/xact.h"
-#include "catalog/gp_policy.h"
+#include "catalog/gp_distribution_policy.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "commands/dbcommands.h"
@@ -43,8 +42,9 @@
 #include "utils/builtins.h"
 #include "utils/bytea.h"
 #include "utils/lsyscache.h"
-#include "utils/timestamp.h"
 #include "utils/syscache.h"
+#include "utils/timestamp.h"
+#include "utils/varlena.h"
 
 static void ErrorLogFileName(Oid dbid, Oid relid, bool persistent, char *fname /* out */);
 static void PreprocessByteaData(char *src);
@@ -212,7 +212,7 @@ GetErrorTupleDesc(void)
 		TupleDesc	tmp;
 		MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
 
-		tmp = CreateTemplateTupleDesc(NUM_ERRORTABLE_ATTR, false);
+		tmp = CreateTemplateTupleDesc(NUM_ERRORTABLE_ATTR);
 		TupleDescInitEntry(tmp, 1, "cmdtime", TIMESTAMPTZOID, -1, 0);
 		TupleDescInitEntry(tmp, 2, "relname", TEXTOID, -1, 0);
 		TupleDescInitEntry(tmp, 3, "filename", TEXTOID, -1, 0);
@@ -745,7 +745,7 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 			/* Requires SELECT priv to read error log. */
 			aclresult = pg_class_aclcheck(relid, GetUserId(), ACL_SELECT);
 			if (aclresult != ACLCHECK_OK)
-				aclcheck_error(aclresult, ACL_KIND_CLASS, relrv->relname);
+				aclcheck_error(aclresult, OBJECT_TABLE, relrv->relname);
 
 			ErrorLogNormalFileName(context->filename, MyDatabaseId, relid);
 			context->fp = AllocateFile(context->filename, "r");
@@ -800,7 +800,7 @@ RetrievePersistentErrorLogFromRangeVar(RangeVar *relrv, AclMode mode, char *fnam
 		/* Requires priv on relation to operate error log. */
 		aclresult = pg_class_aclcheck(relid, GetUserId(), mode);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_CLASS, relrv->relname);
+			aclcheck_error(aclresult, OBJECT_TABLE, relrv->relname);
 
 		ErrorLogFileName(MyDatabaseId, relid, true, fname /* out */);
 		return true;
@@ -851,7 +851,7 @@ RetrievePersistentErrorLogFromRangeVar(RangeVar *relrv, AclMode mode, char *fnam
 		/* Requires priv on namespace to operate error log. */
 		aclresult = pg_namespace_aclcheck(namespaceId, GetUserId(), mode);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_NAMESPACE, schemaname);
+			aclcheck_error(aclresult, OBJECT_SCHEMA, schemaname);
 		return true;
 	}
 	return false;
@@ -1098,7 +1098,7 @@ TruncateErrorLog(text *relname, bool persistent)
 		 * Database owner can delete error log files.
 		 */
 		if (!pg_database_ownercheck(MyDatabaseId, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_DATABASE,
+			aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_DATABASE,
 						   get_database_name(MyDatabaseId));
 
 		ErrorLogPrefixDelete(MyDatabaseId, InvalidOid, persistent);
@@ -1132,11 +1132,11 @@ TruncateErrorLog(text *relname, bool persistent)
 				PG_RETURN_BOOL(false);
 
 			/*
-			* Allow only the table owner to truncate error log.
-			*/
+			 * Allow only the table owner to truncate error log.
+			 */
 			aclresult = pg_class_aclcheck(relid, GetUserId(), ACL_TRUNCATE);
 			if (aclresult != ACLCHECK_OK)
-				aclcheck_error(aclresult, ACL_KIND_CLASS, relrv->relname);
+				aclcheck_error(aclresult, OBJECT_TABLE, relrv->relname);
 
 			/* We don't care if this fails or not. */
 			ErrorLogDelete(MyDatabaseId, relid);

@@ -10,12 +10,13 @@
  */
 #include "postgres.h"
 
+#include "access/genam.h"
 #include "access/heapam.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_collation.h"
+#include "catalog/pg_inherits.h"
 #include "catalog/pg_statistic.h"
 #include "cdb/cdbhash.h"
-#include "cdb/cdbpartition.h"
 #include "commands/analyzeutils.h"
 #include "commands/vacuum.h"
 #include "lib/binaryheap.h"
@@ -54,11 +55,13 @@ static void addLeafPartitionMCVsToHashTable(HTAB *datumHash, HeapTuple heaptuple
 static void addMCVToHashTable(HTAB *datumHash, MCVFreqPair *mcvFreqPair);
 static int	mcvpair_cmp(const void *a, const void *b);
 
-static void initTypInfo(TypInfo *typInfo, Oid typOid);
+static void initTypInfo(TypInfo *typInfo, Oid relationOid, AttrNumber attnum);
 static int	DatumHeapComparator(Datum lhs, Datum rhs, void *context);
 static void advanceCursor(int pid, int *cursors, AttStatsSlot * *histSlots);
-static Datum getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid);
-static Datum getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid);
+static Datum getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts,
+						 Oid ltFuncOid, Oid collid);
+static Datum getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid, Oid
+						 collid);
 static void
 			getHistogramHeapTuple(AttStatsSlot * *histSlots, HeapTuple *heaptupleStats, int *numNotNullParts, int nParts);
 static void initDatumHeap(binaryheap *hp, AttStatsSlot * *histSlots, int *cursors, int nParts);
@@ -168,10 +171,9 @@ aggregate_leaf_partition_MCVs(Oid relationOid,
 							  int *rem_mcv,
 							  void **result)
 {
-	Oid			typoid = get_atttype(relationOid, attnum);
 	TypInfo    *typInfo = (TypInfo *) palloc(sizeof(TypInfo));
 
-	initTypInfo(typInfo, typoid);
+	initTypInfo(typInfo, relationOid, attnum);
 
 	/* Hash table for storing combined MCVs */
 	HTAB	   *datumHash = createDatumHashTable(nEntries);
@@ -464,8 +466,9 @@ datumHashTableHash(const void *keyPtr, Size keysize)
 	uint32		result;
 	MCVFreqPair *mcvFreqPair = *((MCVFreqPair **)keyPtr);
 	FmgrInfo   *hashfunc = &mcvFreqPair->typinfo->hashfunc;
+	Oid			collid = mcvFreqPair->typinfo->collid;
 
-	result = DatumGetUInt32(FunctionCall1(hashfunc, mcvFreqPair->mcv));
+	result = DatumGetUInt32(FunctionCall1Coll(hashfunc, collid, mcvFreqPair->mcv));
 
 	return result;
 }
@@ -489,27 +492,37 @@ datumHashTableMatch(const void *keyPtr1, const void *keyPtr2, Size keysize)
 
 	Assert(left->typinfo->typOid == right->typinfo->typOid);
 
-	return datumCompare(left->mcv, right->mcv, left->typinfo->eqFuncOp) ? 0 : 1;
+	return OidFunctionCall2Coll(left->typinfo->eqFuncOp,
+								left->typinfo->collid,
+								left->mcv, right->mcv) ? 0 : 1;
 }
 
 /*
  * Initialize type information
  * Input:
- * 	typOid - Oid of the type
+ * 	relationOid - oid of the relation
+ * 	attnum - attribute numbe
  * Output:
  *  members of typInfo are initialized
  */
 static void
-initTypInfo(TypInfo *typInfo, Oid typOid)
+initTypInfo(TypInfo *typInfo, Oid relationOid, AttrNumber attnum)
 {
 	Oid			ltOpr;
 	Oid			eqOpr;
 	Oid			hashFunc;
 
-	typInfo->typOid = typOid;
-	get_typlenbyval(typOid, &typInfo->typlen, &typInfo->typbyval);
+	Oid			typoid;
+	int32		typmod;
+	Oid			collid;
 
-	get_sort_group_operators(typOid, false, true, false, &ltOpr, &eqOpr, NULL, NULL);
+	get_atttypetypmodcoll(relationOid, attnum, &typoid, &typmod, &collid);
+
+	typInfo->typOid = typoid;
+	typInfo->collid = collid;
+	get_typlenbyval(typoid, &typInfo->typlen, &typInfo->typbyval);
+
+	get_sort_group_operators(typoid, false, true, false, &ltOpr, &eqOpr, NULL, NULL);
 	typInfo->ltFuncOp = get_opcode(ltOpr);
 	typInfo->eqFuncOp = get_opcode(eqOpr);
 
@@ -535,12 +548,16 @@ DatumHeapComparator(Datum lhs, Datum rhs, void *context)
 	Datum		d2 = ((PartDatum *) DatumGetPointer(rhs))->datum;
 	TypInfo    *typInfo = (TypInfo *) context;
 
-	if (datumCompare(d1, d2, typInfo->ltFuncOp))
+	if (OidFunctionCall2Coll(typInfo->ltFuncOp,
+							 typInfo->collid,
+							 d1, d2))
 	{
 		return 1;
 	}
 
-	if (datumCompare(d1, d2, typInfo->eqFuncOp))
+	if (OidFunctionCall2Coll(typInfo->eqFuncOp,
+							 typInfo->collid,
+							 d1, d2))
 	{
 		return 0;
 	}
@@ -569,7 +586,7 @@ advanceCursor(int pid, int *cursors, AttStatsSlot * *histSlots)
  * the first bound of each partition since the bounds in a histogram are ordered.
  */
 static Datum
-getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid)
+getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid, Oid collid)
 {
 	Assert(histSlots);
 	Assert(histSlots[0]);
@@ -580,7 +597,8 @@ getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid)
 
 	for (int pid = 0; pid < nParts; pid++)
 	{
-		if (datumCompare(histSlots[pid]->values[0], minDatum, ltFuncOid))
+		if (OidFunctionCall2Coll(ltFuncOid, collid,
+								 histSlots[pid]->values[0], minDatum))
 		{
 			minDatum = histSlots[pid]->values[0];
 		}
@@ -595,7 +613,7 @@ getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid)
  * the last bound of each partition since the bounds in a histogram are ordered.
  */
 static Datum
-getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid)
+getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid, Oid collid)
 {
 	Assert(histSlots);
 	Assert(histSlots[0]);
@@ -605,7 +623,8 @@ getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid)
 
 	for (int pid = 0; pid < nParts; pid++)
 	{
-		if (datumCompare(maxDatum, histSlots[pid]->values[histSlots[pid]->nvalues - 1], ltFuncOid))
+		if (OidFunctionCall2Coll(ltFuncOid, collid,
+								 maxDatum, histSlots[pid]->values[histSlots[pid]->nvalues - 1]))
 		{
 			maxDatum = histSlots[pid]->values[histSlots[pid]->nvalues - 1];
 		}
@@ -641,7 +660,8 @@ buildHistogramEntryForStats(List *ldatum, TypInfo *typInfo, int *num_hist)
 		Datum	   *pdatum = (Datum *) lfirst(lc);
 
 		/* remove duplicate datum in the list, starting from the second datum */
-		if (datumCompare(*pdatum, *prevDatum, typInfo->eqFuncOp) && idx > 0)
+		if (OidFunctionCall2Coll(typInfo->eqFuncOp, typInfo->collid,
+								 *pdatum, *prevDatum) && idx > 0)
 		{
 			continue;
 		}
@@ -743,21 +763,6 @@ initDatumHeap(binaryheap *hp, AttStatsSlot * *histSlots, int *cursors, int nPart
 }
 
 /*
- * Comparison function for two datums
- * Input:
- * 	d1, d2 - datums
- * 	opFuncOid - oid of the function for comparison operator of this datum type
- */
-bool
-datumCompare(Datum d1, Datum d2, Oid opFuncOid)
-{
-	FmgrInfo	ltproc;
-
-	fmgr_info(opFuncOid, &ltproc);
-	return DatumGetBool(FunctionCall2Coll(&ltproc, DEFAULT_COLLATION_OID, d1, d2));
-}
-
-/*
  * Main function for aggregating leaf partition histogram to compute
  * root or interior partition histogram
  * Input:
@@ -838,9 +843,8 @@ aggregate_leaf_partition_histograms(Oid relationOid,
 
 	/* get type information */
 	TypInfo		typInfo;
-	Oid			typOid = get_atttype(relationOid, attnum);
 
-	initTypInfo(&typInfo, typOid);
+	initTypInfo(&typInfo, relationOid, attnum);
 
 	AttStatsSlot **histSlots = (AttStatsSlot * *) palloc0((nParts + rem_mcv) * sizeof(AttStatsSlot *));
 	float4		sumReltuples = 0;
@@ -903,7 +907,8 @@ aggregate_leaf_partition_histograms(Oid relationOid,
 	 * the first bound in the aggregated histogram will be the minimum of the
 	 * first bounds of all parts
 	 */
-	Datum		minBound = getMinBound(histSlots, cursors, nParts, typInfo.ltFuncOp);
+	Datum		minBound = getMinBound(histSlots, cursors, nParts,
+									   typInfo.ltFuncOp, typInfo.collid);
 
 	ldatum = lappend(ldatum, &minBound);
 
@@ -947,7 +952,7 @@ aggregate_leaf_partition_histograms(Oid relationOid,
 	 * adding the max boundary across all histograms to the aggregated
 	 * histogram
 	 */
-	Datum		maxBound = getMaxBound(histSlots, nParts, typInfo.ltFuncOp);
+	Datum		maxBound = getMaxBound(histSlots, nParts, typInfo.ltFuncOp, typInfo.collid);
 
 	ldatum = lappend(ldatum, &maxBound);
 
@@ -1094,7 +1099,7 @@ fetch_leaf_att_stats(Oid leafRelid, AttrNumber leafAttNum)
 	SysScanDesc sscan;
 	HeapTuple	tuple = NULL;
 
-	rel = heap_open(StatisticRelationId, AccessShareLock);
+	rel = table_open(StatisticRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_statistic_starelid,
@@ -1148,26 +1153,37 @@ fetch_leaf_att_stats(Oid leafRelid, AttrNumber leafAttNum)
  *  It is used when we are asked to auto merge statistics when analyzing a
  *  single leaf partition. As we are going to produce stats for that
  *  specific leaf partition, we should not check its stats availability.
- *  va_cols - column attnum list to be analyzed from root table's perspective.
- *  These attnum's needs to be translated for each leaf table as the attnums
- *  for different columns might be different due to the dropped columns and
- *  split partitions.
+ *  va_cols - list of column names to be analyzed. (The corresponding attnums
+ *             in partitions might differ.)
  */
 bool
 leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 {
-	PartitionNode *pn = get_parts(attrelid,
-								  0 /* level */ ,
-								  0 /* parent */ ,
-								  false /* inctemplate */ ,
-								  true /* includesubparts */ );
-
-	Assert(pn);
-
-	List	   *oid_list = all_leaf_partition_relids(pn);	/* all leaves */
+	List	   *oid_list;
 	bool		all_parts_empty = true;
 	ListCell   *lc,
 			   *lc_col;
+
+	/* empty list means "all columns" */
+	if (va_cols == NIL)
+	{
+		Relation        parentrel = table_open(attrelid, AccessShareLock);
+		TupleDesc       tupdesc = RelationGetDescr(parentrel);
+
+		for (int i = 0; i < tupdesc->natts; i++)
+		{
+			Form_pg_attribute att = TupleDescAttr(tupdesc, i);
+			char       *attname;
+
+			if (att->attisdropped)
+				continue;
+
+			attname = pstrdup(NameStr(att->attname));
+
+			va_cols = lappend(va_cols, makeString(attname));
+		}
+		table_close(parentrel, NoLock);
+	}
 
 	/*
 	 * The first loop only make sure all leaf tables are analyzed through
@@ -1175,11 +1191,20 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 	 * and pg_attribute tuples to avoid overhead cost if there still leaf
 	 * tables not analyzed. Return false once find a leaf table not analyzed.
 	 */
+	/* GPDB_12_MERGE_FIXME: what's the appropriate lock level? AccessShareLock
+	 * is enough to scan the table, but are we updating them, too? If not,
+	 * NoLock might be enough?
+	 */
+	oid_list = find_all_inheritors(attrelid, NoLock, NULL);
 	foreach(lc, oid_list)
 	{
 		Oid			partRelid = lfirst_oid(lc);
 
 		if (partRelid == relid_exclude)
+			continue;
+
+		/* Ignore all but leaf partition */
+		if (get_rel_relkind(partRelid) == RELKIND_PARTITIONED_TABLE)
 			continue;
 
 		float4		relTuples = get_rel_reltuples(partRelid);
@@ -1221,15 +1246,7 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 			 * Check stats availability for each column that asked to be
 			 * analyzed.
 			 */
-			AttrNumber	attnum = lfirst_int(lc_col);
-
-			/*
-			 * Here, using the root table's attnum to retrieve the attname. And then use
-			 * the attname to retrieve the real attnum in current leaf table.
-			 * This is required because modification on root partition columns will cause
-			 * inconsistent attnum between root table and new added leaf tables.
-			 */
-			const char *attname = get_relid_attribute_name(attrelid, attnum);
+			const char *attname = strVal(lfirst(lc_col));
 
 			/*
 			 * fetch_leaf_attnum and fetch_leaf_att_stats retrieve leaf partition

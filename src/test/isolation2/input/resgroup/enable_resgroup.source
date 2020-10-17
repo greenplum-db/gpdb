@@ -1,6 +1,5 @@
-CREATE LANGUAGE plpythonu;
-
 -- start_ignore
+CREATE LANGUAGE plpython3u;
 ! rmdir @cgroup_mnt_point@/cpu/gpdb;
 ! rmdir @cgroup_mnt_point@/cpuacct/gpdb;
 ! rmdir @cgroup_mnt_point@/cpuset/gpdb;
@@ -20,7 +19,7 @@ CREATE LANGUAGE plpythonu;
 -- so: limit = 2GB * 1.0 / 3 * nsegs / total
 --
 -- with the simulation each primary segment should manage 682MB memory.
-DO LANGUAGE plpythonu $$
+DO LANGUAGE plpython3u $$
     import os
     import psutil
 

@@ -2,6 +2,71 @@
 -- grouping sets
 --
 
+-- GPDB: Some of the tests in this file test the case that some columns are
+-- unsortable, and some are unhashable. For the unhashable column, the upstream
+-- tests use 'bit' datatype. However, we have added a hash opclass for 'bit'
+-- in GPDB, which makes the tests ineffective in testing that.
+--
+-- To work around that, create a new datatype that is just like the built-in
+-- 'bit' type, but doesn't have the hash opclass.
+create type unhashable_bit;
+create function unhashable_bit_out (unhashable_bit) returns cstring immutable
+language internal as 'bit_out';
+create function unhashable_bit_in (cstring) returns unhashable_bit immutable
+language internal as 'bit_in';
+create type unhashable_bit (
+  input = unhashable_bit_in,
+  output = unhashable_bit_out,
+  typmod_in = bittypmodin,
+  typmod_out = bittypmodout,
+  like = bit);
+
+create function unhashable_biteq(unhashable_bit, unhashable_bit) returns bool
+immutable language internal as 'biteq';
+create function unhashable_bitne(unhashable_bit, unhashable_bit) returns bool
+immutable language internal as 'bitne';
+create function unhashable_bitge(unhashable_bit, unhashable_bit) returns bool
+immutable language internal as 'bitge';
+create function unhashable_bitgt(unhashable_bit, unhashable_bit) returns bool
+immutable language internal as 'bitgt';
+create function unhashable_bitle(unhashable_bit, unhashable_bit) returns bool
+immutable language internal as 'bitle';
+create function unhashable_bitlt(unhashable_bit, unhashable_bit) returns bool
+immutable language internal as 'bitlt';
+create function unhashable_bitcmp(unhashable_bit, unhashable_bit) returns int4
+immutable language internal as 'bitcmp';
+
+create operator = (function=unhashable_biteq, leftarg=unhashable_bit, rightarg=unhashable_bit,
+                   merges, commutator = "=", negator = "<>",
+		   restrict = 'eqsel', join = 'eqjoinsel');
+create operator <> (function=unhashable_bitne, leftarg=unhashable_bit, rightarg=unhashable_bit,
+                   commutator = "<>", negator = "=",
+		   restrict = 'neqsel', join = 'neqjoinsel');
+create operator >= (function=unhashable_bitge, leftarg=unhashable_bit, rightarg=unhashable_bit,
+                   commutator = "<=", negator = "<",
+		   restrict = 'scalargesel', join = 'scalargejoinsel');
+create operator > (function=unhashable_bitgt, leftarg=unhashable_bit, rightarg=unhashable_bit,
+                   commutator = "<", negator = "<=",
+		   restrict = 'scalargtsel', join = 'scalargtjoinsel');
+create operator <= (function=unhashable_bitle, leftarg=unhashable_bit, rightarg=unhashable_bit,
+                   commutator = ">=", negator = ">",
+		   restrict = 'scalarlesel', join = 'scalarlejoinsel');
+create operator < (function=unhashable_bitlt, leftarg=unhashable_bit, rightarg=unhashable_bit,
+                   commutator = ">", negator = ">=",
+		   restrict = 'scalarltsel', join = 'scalarltjoinsel');
+
+create operator class unhashable_bit_ops
+  default for type unhashable_bit using btree as
+    operator 1 <  ,
+    operator 2 <= ,
+    operator 3 =  ,
+    operator 4 >= ,
+    operator 5 >  ,
+    function 1 unhashable_bitcmp(unhashable_bit, unhashable_bit);
+
+create cast (bit as unhashable_bit) without function as assignment;
+
+
 -- test data sources
 
 create temp view gstest1(a,b,v)
@@ -31,6 +96,14 @@ copy gstest3 from stdin;
 \.
 alter table gstest3 add primary key (a);
 
+create temp table gstest4(id integer, v integer,
+                          unhashable_col unhashable_bit(4), unsortable_col xid);
+insert into gstest4
+values (1,1,b'0000','1'), (2,2,b'0001','1'),
+       (3,4,b'0010','2'), (4,8,b'0011','2'),
+       (5,16,b'0000','2'), (6,32,b'0001','2'),
+       (7,64,b'0010','1'), (8,128,b'0011','1');
+
 create temp table gstest_empty (a integer, b integer, v integer);
 
 create function gstest_data(v integer, out a integer, out b integer)
@@ -43,8 +116,11 @@ create function gstest_data(v integer, out a integer, out b integer)
 
 -- basic functionality
 
+set enable_hashagg = false;  -- test hashing explicitly later
+
 -- simple rollup with multiple plain aggregates, with and without ordering
 -- (and with ordering differing from grouping)
+
 select a, b, grouping(a,b), sum(v), count(*), max(v)
   from gstest1 group by rollup (a,b);
 select a, b, grouping(a,b), sum(v), count(*), max(v)
@@ -130,6 +206,37 @@ select a, d, grouping(a,b,c)
   from gstest3
  group by grouping sets ((a,b), (a,c));
 
+-- check that distinct grouping columns are kept separate
+-- even if they are equal()
+explain (costs off)
+select g as alias1, g as alias2
+  from generate_series(1,3) g
+ group by alias1, rollup(alias2);
+
+select g as alias1, g as alias2
+  from generate_series(1,3) g
+ group by alias1, rollup(alias2);
+
+-- check that pulled-up subquery outputs still go to null when appropriate
+select four, x
+  from (select four, ten, 'foo'::text as x from tenk1) as t
+  group by grouping sets (four, x)
+  having x = 'foo';
+
+select four, x || 'x'
+  from (select four, ten, 'foo'::text as x from tenk1) as t
+  group by grouping sets (four, x)
+  order by four;
+
+select (x+y)*1, sum(z)
+ from (select 1 as x, 2 as y, 3 as z) s
+ group by grouping sets (x+y, x);
+
+select x, not x as not_x, q2 from
+  (select *, q1 = 1 as x from int8_tbl i1) as t
+  group by grouping sets(x, q2)
+  order by x, q2;
+
 -- simple rescan tests
 
 select a, b, sum(v.x)
@@ -140,7 +247,7 @@ select *
   from (values (1),(2)) v(x),
        lateral (select a, b, sum(v.x) from gstest_data(v.x) group by rollup (a,b)) s;
 
--- min max optimisation should still work with GROUP BY ()
+-- min max optimization should still work with GROUP BY ()
 explain (costs off)
   select min(unique1) from tenk1 GROUP BY ();
 
@@ -161,7 +268,7 @@ select a, b from (values (1,2),(2,3)) v(a,b) group by a,b, grouping sets(a);
 
 -- Tests for chained aggregates
 select a, b, grouping(a,b), sum(v), count(*), max(v)
-  from gstest1 group by grouping sets ((a,b),(a+1,b+1),(a+2,b+2));
+  from gstest1 group by grouping sets ((a,b),(a+1,b+1),(a+2,b+2)) order by 3,6;
 select(select (select grouping(a,b) from (values (1)) v2(c)) from (values (1,2)) v1(a,b) group by (a,b)) from (values(6,7)) v3(e,f) GROUP BY ROLLUP((e+1),(f+1));
 select(select (select grouping(a,b) from (values (1)) v2(c)) from (values (1,2)) v1(a,b) group by (a,b)) from (values(6,7)) v3(e,f) GROUP BY CUBE((e+1),(f+1)) ORDER BY (e+1),(f+1);
 select a, b, sum(c), sum(sum(c)) over (order by a,b) as rsum
@@ -171,6 +278,9 @@ select a, b, sum(v.x)
   from (values (1),(2)) v(x), gstest_data(v.x)
  group by cube (a,b) order by a,b;
 
+-- Test reordering of grouping sets
+explain (costs off)
+select * from gstest1 group by grouping sets((a,b,v),(v)) order by v,b,a;
 
 -- Agg level check. This query should error out.
 select (select grouping(a,b) from gstest2) from gstest2 group by a,b;
@@ -226,5 +336,278 @@ select array(select row(v.a,s1.*) from (select two,four, count(*) from onek grou
 -- Grouping on text columns
 select sum(ten) from onek group by two, rollup(four::text) order by 1;
 select sum(ten) from onek group by rollup(four::text), two order by 1;
+
+-- hashing support
+
+set enable_hashagg = true;
+
+-- failure cases
+
+select count(*) from gstest4 group by rollup(unhashable_col,unsortable_col);
+select array_agg(v order by v) from gstest4 group by grouping sets ((id,unsortable_col),(id));
+
+-- simple cases
+
+select a, b, grouping(a,b), sum(v), count(*), max(v)
+  from gstest1 group by grouping sets ((a),(b)) order by 3,1,2;
+explain (costs off) select a, b, grouping(a,b), sum(v), count(*), max(v)
+  from gstest1 group by grouping sets ((a),(b)) order by 3,1,2;
+
+select a, b, grouping(a,b), sum(v), count(*), max(v)
+  from gstest1 group by cube(a,b) order by 3,1,2;
+explain (costs off) select a, b, grouping(a,b), sum(v), count(*), max(v)
+  from gstest1 group by cube(a,b) order by 3,1,2;
+
+-- shouldn't try and hash
+explain (costs off)
+  select a, b, grouping(a,b), array_agg(v order by v)
+    from gstest1 group by cube(a,b);
+
+-- unsortable cases
+select unsortable_col, count(*)
+  from gstest4 group by grouping sets ((unsortable_col),(unsortable_col))
+  order by unsortable_col::text;
+
+-- mixed hashable/sortable cases
+select unhashable_col, unsortable_col,
+       grouping(unhashable_col, unsortable_col),
+       count(*), sum(v)
+  from gstest4 group by grouping sets ((unhashable_col),(unsortable_col))
+ order by 3, 5;
+explain (costs off)
+  select unhashable_col, unsortable_col,
+         grouping(unhashable_col, unsortable_col),
+         count(*), sum(v)
+    from gstest4 group by grouping sets ((unhashable_col),(unsortable_col))
+   order by 3,5;
+
+select unhashable_col, unsortable_col,
+       grouping(unhashable_col, unsortable_col),
+       count(*), sum(v)
+  from gstest4 group by grouping sets ((v,unhashable_col),(v,unsortable_col))
+ order by 3,5;
+explain (costs off)
+  select unhashable_col, unsortable_col,
+         grouping(unhashable_col, unsortable_col),
+         count(*), sum(v)
+    from gstest4 group by grouping sets ((v,unhashable_col),(v,unsortable_col))
+   order by 3,5;
+
+-- empty input: first is 0 rows, second 1, third 3 etc.
+select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),a);
+explain (costs off)
+  select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),a);
+select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),());
+select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),(),(),());
+explain (costs off)
+  select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),(),(),());
+select sum(v), count(*) from gstest_empty group by grouping sets ((),(),());
+explain (costs off)
+  select sum(v), count(*) from gstest_empty group by grouping sets ((),(),());
+
+-- check that functionally dependent cols are not nulled
+select a, d, grouping(a,b,c)
+  from gstest3
+ group by grouping sets ((a,b), (a,c));
+explain (costs off)
+  select a, d, grouping(a,b,c)
+    from gstest3
+   group by grouping sets ((a,b), (a,c));
+
+-- simple rescan tests
+
+select a, b, sum(v.x)
+  from (values (1),(2)) v(x), gstest_data(v.x)
+ group by grouping sets (a,b)
+ order by 1, 2, 3;
+explain (costs off)
+  select a, b, sum(v.x)
+    from (values (1),(2)) v(x), gstest_data(v.x)
+   group by grouping sets (a,b)
+   order by 3, 1, 2;
+select *
+  from (values (1),(2)) v(x),
+       lateral (select a, b, sum(v.x) from gstest_data(v.x) group by grouping sets (a,b)) s;
+explain (costs off)
+  select *
+    from (values (1),(2)) v(x),
+         lateral (select a, b, sum(v.x) from gstest_data(v.x) group by grouping sets (a,b)) s;
+
+-- Tests for chained aggregates
+select a, b, grouping(a,b), sum(v), count(*), max(v)
+  from gstest1 group by grouping sets ((a,b),(a+1,b+1),(a+2,b+2)) order by 3,6;
+explain (costs off)
+  select a, b, grouping(a,b), sum(v), count(*), max(v)
+    from gstest1 group by grouping sets ((a,b),(a+1,b+1),(a+2,b+2)) order by 3,6;
+select a, b, sum(c), sum(sum(c)) over (order by a,b) as rsum
+  from gstest2 group by cube (a,b) order by rsum, a, b;
+explain (costs off)
+  select a, b, sum(c), sum(sum(c)) over (order by a,b) as rsum
+    from gstest2 group by cube (a,b) order by rsum, a, b;
+select a, b, sum(v.x)
+  from (values (1),(2)) v(x), gstest_data(v.x)
+ group by cube (a,b) order by a,b;
+explain (costs off)
+  select a, b, sum(v.x)
+    from (values (1),(2)) v(x), gstest_data(v.x)
+   group by cube (a,b) order by a,b;
+
+-- More rescan tests
+-- start_ignore
+-- GPDB_95_MERGE_FIXME: the lateral query with grouping sets do not make right plans
+select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, count(*) from onek group by cube(four,ten)) s on true order by v.a,four,ten;
+-- end_ignore
+select array(select row(v.a,s1.*) from (select two,four, count(*) from onek group by cube(two,four) order by two,four) s1) from (values (1),(2)) v(a);
+
+-- Rescan logic changes when there are no empty grouping sets, so test
+-- that too:
+select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, count(*) from onek group by grouping sets(four,ten)) s on true order by v.a,four,ten;
+select array(select row(v.a,s1.*) from (select two,four, count(*) from onek group by grouping sets(two,four) order by two,four) s1) from (values (1),(2)) v(a);
+
+-- test the knapsack
+
+set enable_indexscan = false;
+set work_mem = '64kB';
+explain (costs off)
+  select unique1,
+         count(two), count(four), count(ten),
+         count(hundred), count(thousand), count(twothousand),
+         count(*)
+    from tenk1 group by grouping sets (unique1,twothousand,thousand,hundred,ten,four,two);
+explain (costs off)
+  select unique1,
+         count(two), count(four), count(ten),
+         count(hundred), count(thousand), count(twothousand),
+         count(*)
+    from tenk1 group by grouping sets (unique1,hundred,ten,four,two);
+
+set work_mem = '384kB';
+explain (costs off)
+  select unique1,
+         count(two), count(four), count(ten),
+         count(hundred), count(thousand), count(twothousand),
+         count(*)
+    from tenk1 group by grouping sets (unique1,twothousand,thousand,hundred,ten,four,two);
+
+-- check collation-sensitive matching between grouping expressions
+-- (similar to a check for aggregates, but there are additional code
+-- paths for GROUPING, so check again here)
+
+select v||'a', case grouping(v||'a') when 1 then 1 else 0 end, count(*)
+  from unnest(array[1,1], array['a','b']) u(i,v)
+ group by rollup(i, v||'a') order by 1,3;
+select v||'a', case when grouping(v||'a') = 1 then 1 else 0 end, count(*)
+  from unnest(array[1,1], array['a','b']) u(i,v)
+ group by rollup(i, v||'a') order by 1,3;
+
+--
+-- Compare results between plans using sorting and plans using hash
+-- aggregation. Force spilling in both cases by setting work_mem low
+-- and turning on enable_groupingsets_hash_disk.
+--
+
+SET enable_groupingsets_hash_disk = true;
+SET work_mem='64kB';
+
+-- Produce results with sorting.
+
+set enable_hashagg = false;
+
+set jit_above_cost = 0;
+
+explain (costs off)
+select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
+  (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
+   from generate_series(0,199999) g) s
+group by cube (g1000,g100,g10);
+
+create table gs_group_1 as
+select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
+  (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
+   from generate_series(0,199999) g) s
+group by cube (g1000,g100,g10);
+
+set jit_above_cost to default;
+
+create table gs_group_2 as
+select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
+  (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
+   from generate_series(0,19999) g) s
+group by cube (g1000,g100,g10);
+
+create table gs_group_3 as
+select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
+  (select g/200 as g100, g/2000 as g10, g
+   from generate_series(0,19999) g) s
+group by grouping sets (g100,g10);
+
+-- Produce results with hash aggregation.
+
+set enable_hashagg = true;
+set enable_sort = false;
+set work_mem='64kB';
+
+set jit_above_cost = 0;
+
+explain (costs off)
+select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
+  (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
+   from generate_series(0,199999) g) s
+group by cube (g1000,g100,g10);
+
+create table gs_hash_1 as
+select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
+  (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
+   from generate_series(0,199999) g) s
+group by cube (g1000,g100,g10);
+
+set jit_above_cost to default;
+
+create table gs_hash_2 as
+select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
+  (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
+   from generate_series(0,19999) g) s
+group by cube (g1000,g100,g10);
+
+create table gs_hash_3 as
+select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
+  (select g/200 as g100, g/2000 as g10, g
+   from generate_series(0,19999) g) s
+group by grouping sets (g100,g10);
+
+set enable_sort = true;
+set work_mem to default;
+
+-- GPDB_12_MERGE_FIXME: the following comparison query has an ORCA plan that
+-- relies on "IS NOT DISTINCT FROM" Hash Join, a variant that we likely have
+-- lost during the merge with upstream Postgres 12. Disable ORCA for this query
+SET optimizer TO off;
+
+-- Compare results
+
+(select * from gs_hash_1 except select * from gs_group_1)
+  union all
+(select * from gs_group_1 except select * from gs_hash_1);
+
+(select * from gs_hash_2 except select * from gs_group_2)
+  union all
+(select * from gs_group_2 except select * from gs_hash_2);
+
+(select g100,g10,unnest(a),c,m from gs_hash_3 except
+  select g100,g10,unnest(a),c,m from gs_group_3)
+    union all
+(select g100,g10,unnest(a),c,m from gs_group_3 except
+  select g100,g10,unnest(a),c,m from gs_hash_3);
+
+RESET optimizer;
+
+drop table gs_group_1;
+drop table gs_group_2;
+drop table gs_group_3;
+drop table gs_hash_1;
+drop table gs_hash_2;
+drop table gs_hash_3;
+
+SET enable_groupingsets_hash_disk TO DEFAULT;
 
 -- end

@@ -491,8 +491,7 @@ select * from join_tab1 where i = (select i from join_tab4 where t='satday');
 
                       
 select * from join_tab1 where i = (select i from join_tab4);
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 --
 -- Test references to outer query in join quals
 --

@@ -6,7 +6,7 @@
 #include "ecpgerrno.h"
 #include "ecpgtype.h"
 #include "ecpglib.h"
-#include "extern.h"
+#include "ecpglib_extern.h"
 #include "sqlca.h"
 
 void
@@ -44,7 +44,7 @@ ecpg_raise(int line, int code, const char *sqlstate, const char *str)
 			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
 			/*------
 			   translator: this string will be truncated at 149 characters expanded.  */
-			  ecpg_gettext("unsupported type \"%s\" on line %d"), str, line);
+					 ecpg_gettext("unsupported type \"%s\" on line %d"), str, line);
 			break;
 
 		case ECPG_TOO_MANY_ARGUMENTS:
@@ -106,7 +106,7 @@ ecpg_raise(int line, int code, const char *sqlstate, const char *str)
 			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
 			/*------
 			   translator: this string will be truncated at 149 characters expanded.  */
-			  ecpg_gettext("null value without indicator on line %d"), line);
+					 ecpg_gettext("null value without indicator on line %d"), line);
 			break;
 
 		case ECPG_NO_ARRAY:
@@ -162,7 +162,7 @@ ecpg_raise(int line, int code, const char *sqlstate, const char *str)
 			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
 			/*------
 			   translator: this string will be truncated at 149 characters expanded.  */
-			 ecpg_gettext("descriptor index out of range on line %d"), line);
+					 ecpg_gettext("descriptor index out of range on line %d"), line);
 			break;
 
 		case ECPG_UNKNOWN_DESCRIPTOR_ITEM:
@@ -190,7 +190,7 @@ ecpg_raise(int line, int code, const char *sqlstate, const char *str)
 			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
 			/*------
 			   translator: this string will be truncated at 149 characters expanded.  */
-			ecpg_gettext("error in transaction processing on line %d"), line);
+					 ecpg_gettext("error in transaction processing on line %d"), line);
 			break;
 
 		case ECPG_CONNECT:
@@ -198,6 +198,13 @@ ecpg_raise(int line, int code, const char *sqlstate, const char *str)
 			/*------
 			   translator: this string will be truncated at 149 characters expanded.  */
 					 ecpg_gettext("could not connect to database \"%s\" on line %d"), str, line);
+			break;
+
+		case ECPG_INVALID_CURSOR:
+			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
+			/*------
+				translator: this string will be truncated at 149 characters expanded.  */
+					 ecpg_gettext("The cursor is invalid on line %d"), line);
 			break;
 
 		default:
@@ -286,23 +293,23 @@ ecpg_check_PQresult(PGresult *results, int lineno, PGconn *connection, enum COMP
 	{
 		ecpg_log("ecpg_check_PQresult on line %d: no result - %s", lineno, PQerrorMessage(connection));
 		ecpg_raise_backend(lineno, NULL, connection, compat);
-		return (false);
+		return false;
 	}
 
 	switch (PQresultStatus(results))
 	{
 
 		case PGRES_TUPLES_OK:
-			return (true);
+			return true;
 			break;
 		case PGRES_EMPTY_QUERY:
 			/* do nothing */
 			ecpg_raise(lineno, ECPG_EMPTY, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR, NULL);
 			PQclear(results);
-			return (false);
+			return false;
 			break;
 		case PGRES_COMMAND_OK:
-			return (true);
+			return true;
 			break;
 		case PGRES_NONFATAL_ERROR:
 		case PGRES_FATAL_ERROR:
@@ -310,23 +317,23 @@ ecpg_check_PQresult(PGresult *results, int lineno, PGconn *connection, enum COMP
 			ecpg_log("ecpg_check_PQresult on line %d: bad response - %s", lineno, PQresultErrorMessage(results));
 			ecpg_raise_backend(lineno, results, connection, compat);
 			PQclear(results);
-			return (false);
+			return false;
 			break;
 		case PGRES_COPY_OUT:
-			return (true);
+			return true;
 			break;
 		case PGRES_COPY_IN:
 			ecpg_log("ecpg_check_PQresult on line %d: COPY IN data transfer in progress\n", lineno);
 			PQendcopy(connection);
 			PQclear(results);
-			return (false);
+			return false;
 			break;
 		default:
 			ecpg_log("ecpg_check_PQresult on line %d: unknown execution status type\n",
 					 lineno);
 			ecpg_raise_backend(lineno, results, connection, compat);
 			PQclear(results);
-			return (false);
+			return false;
 			break;
 	}
 }

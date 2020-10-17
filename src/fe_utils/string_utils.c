@@ -6,7 +6,7 @@
  * and interpreting backend output.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/fe_utils/string_utils.c
@@ -104,11 +104,9 @@ fmtId(const char *rawid)
 		 * Note: ScanKeywordLookup() does case-insensitive comparison, but
 		 * that's fine, since we already know we have all-lower-case.
 		 */
-		const ScanKeyword *keyword = ScanKeywordLookup(rawid,
-													   ScanKeywords,
-													   NumScanKeywords);
+		int			kwnum = ScanKeywordLookup(rawid, &ScanKeywords);
 
-		if (keyword != NULL && keyword->category != UNRESERVED_KEYWORD)
+		if (kwnum >= 0 && ScanKeywordCategories[kwnum] != UNRESERVED_KEYWORD)
 			need_quotes = true;
 	}
 
@@ -138,8 +136,7 @@ fmtId(const char *rawid)
 }
 
 /*
- * fmtQualifiedId - convert a qualified name to the proper format for
- * the source database.
+ * fmtQualifiedId - construct a schema-qualified name, with quoting as needed.
  *
  * Like fmtId, use the result before calling again.
  *
@@ -147,13 +144,13 @@ fmtId(const char *rawid)
  * use that buffer until we're finished with calling fmtId().
  */
 const char *
-fmtQualifiedId(int remoteVersion, const char *schema, const char *id)
+fmtQualifiedId(const char *schema, const char *id)
 {
 	PQExpBuffer id_return;
 	PQExpBuffer lcl_pqexp = createPQExpBuffer();
 
-	/* Suppress schema name if fetching from pre-7.3 DB */
-	if (remoteVersion >= 70300 && schema && *schema)
+	/* Some callers might fail to provide a schema name */
+	if (schema && *schema)
 	{
 		appendPQExpBuffer(lcl_pqexp, "%s.", fmtId(schema));
 	}
@@ -172,7 +169,7 @@ fmtQualifiedId(int remoteVersion, const char *schema, const char *id)
  * returned by PQserverVersion()) as a string.  This exists mainly to
  * encapsulate knowledge about two-part vs. three-part version numbers.
  *
- * For re-entrancy, caller must supply the buffer the string is put in.
+ * For reentrancy, caller must supply the buffer the string is put in.
  * Recommended size of the buffer is 32 bytes.
  *
  * Returns address of 'buf', as a notational convenience.
@@ -203,6 +200,7 @@ formatPGVersionNumber(int version_number, bool include_minor,
 	}
 	return buf;
 }
+
 
 /*
  * Convert a string value to an SQL string literal and append it to
@@ -416,18 +414,49 @@ appendByteaLiteral(PQExpBuffer buf, const unsigned char *str, size_t length,
 
 /*
  * Append the given string to the shell command being built in the buffer,
- * with suitable shell-style quoting to create exactly one argument.
+ * with shell-style quoting as needed to create exactly one argument.
  *
  * Forbid LF or CR characters, which have scant practical use beyond designing
  * security breaches.  The Windows command shell is unusable as a conduit for
  * arguments containing LF or CR characters.  A future major release should
  * reject those characters in CREATE ROLE and CREATE DATABASE, because use
  * there eventually leads to errors here.
+ *
+ * appendShellString() simply prints an error and dies if LF or CR appears.
+ * appendShellStringNoError() omits those characters from the result, and
+ * returns false if there were any.
  */
 void
 appendShellString(PQExpBuffer buf, const char *str)
 {
+	if (!appendShellStringNoError(buf, str))
+	{
+		fprintf(stderr,
+				_("shell command argument contains a newline or carriage return: \"%s\"\n"),
+				str);
+		exit(EXIT_FAILURE);
+	}
+}
+
+bool
+appendShellStringNoError(PQExpBuffer buf, const char *str)
+{
+#ifdef WIN32
+	int			backslash_run_length = 0;
+#endif
+	bool		ok = true;
 	const char *p;
+
+	/*
+	 * Don't bother with adding quotes if the string is nonempty and clearly
+	 * contains only safe characters.
+	 */
+	if (*str != '\0' &&
+		strspn(str, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./:") == strlen(str))
+	{
+		appendPQExpBufferStr(buf, str);
+		return ok;
+	}
 
 #ifndef WIN32
 	appendPQExpBufferChar(buf, '\'');
@@ -435,10 +464,8 @@ appendShellString(PQExpBuffer buf, const char *str)
 	{
 		if (*p == '\n' || *p == '\r')
 		{
-			fprintf(stderr,
-					_("shell command argument contains a newline or carriage return: \"%s\"\n"),
-					str);
-			exit(EXIT_FAILURE);
+			ok = false;
+			continue;
 		}
 
 		if (*p == '\'')
@@ -448,7 +475,6 @@ appendShellString(PQExpBuffer buf, const char *str)
 	}
 	appendPQExpBufferChar(buf, '\'');
 #else							/* WIN32 */
-	int			backslash_run_length = 0;
 
 	/*
 	 * A Windows system() argument experiences two layers of interpretation.
@@ -466,10 +492,8 @@ appendShellString(PQExpBuffer buf, const char *str)
 	{
 		if (*p == '\n' || *p == '\r')
 		{
-			fprintf(stderr,
-					_("shell command argument contains a newline or carriage return: \"%s\"\n"),
-					str);
-			exit(EXIT_FAILURE);
+			ok = false;
+			continue;
 		}
 
 		/* Change N backslashes before a double quote to 2N+1 backslashes. */
@@ -508,14 +532,15 @@ appendShellString(PQExpBuffer buf, const char *str)
 		backslash_run_length--;
 	}
 	appendPQExpBufferStr(buf, "^\"");
-#endif   /* WIN32 */
+#endif							/* WIN32 */
+
+	return ok;
 }
 
 
 /*
  * Append the given string to the buffer, with suitable quoting for passing
- * the string as a value, in a keyword/pair value in a libpq connection
- * string
+ * the string as a value in a keyword/value pair in a libpq connection string.
  */
 void
 appendConnStrVal(PQExpBuffer buf, const char *str)
@@ -566,7 +591,7 @@ void
 appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname)
 {
 	const char *s;
-	bool		complex;
+	bool complex;
 
 	/*
 	 * If the name is plain ASCII characters, emit a trivial "\connect "foo"".
@@ -574,6 +599,7 @@ appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname)
 	 * general case.  No database has a zero-length name.
 	 */
 	complex = false;
+
 	for (s = dbname; *s; s++)
 	{
 		if (*s == '\n' || *s == '\r')
@@ -682,9 +708,9 @@ parsePGArray(const char *atext, char ***itemarray, int *nitems)
 					{
 						atext++;
 						if (*atext == '\0')
-							return false;		/* premature end of string */
+							return false;	/* premature end of string */
 					}
-					*strings++ = *atext++;		/* copy quoted data */
+					*strings++ = *atext++;	/* copy quoted data */
 				}
 				atext++;
 			}
@@ -925,8 +951,15 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern,
 	}
 
 	/*
-	 * Now decide what we need to emit.  Note there will be a leading "^(" in
-	 * the patterns in any case.
+	 * Now decide what we need to emit.  We may run under a hostile
+	 * search_path, so qualify EVERY name.  Note there will be a leading "^("
+	 * in the patterns in any case.
+	 *
+	 * We want the regex matches to use the database's default collation where
+	 * collation-sensitive behavior is required (for example, which characters
+	 * match '\w').  That happened by default before PG v12, but if the server
+	 * is >= v12 then we need to force it through explicit COLLATE clauses,
+	 * otherwise the "C" collation attached to "name" catalog columns wins.
 	 */
 	if (namebuf.len > 2)
 	{
@@ -939,16 +972,25 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern,
 			WHEREAND();
 			if (altnamevar)
 			{
-				appendPQExpBuffer(buf, "(%s ~ ", namevar);
+				appendPQExpBuffer(buf,
+								  "(%s OPERATOR(pg_catalog.~) ", namevar);
 				appendStringLiteralConn(buf, namebuf.data, conn);
-				appendPQExpBuffer(buf, "\n        OR %s ~ ", altnamevar);
+				if (PQserverVersion(conn) >= 120000)
+					appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
+				appendPQExpBuffer(buf,
+								  "\n        OR %s OPERATOR(pg_catalog.~) ",
+								  altnamevar);
 				appendStringLiteralConn(buf, namebuf.data, conn);
+				if (PQserverVersion(conn) >= 120000)
+					appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
 				appendPQExpBufferStr(buf, ")\n");
 			}
 			else
 			{
-				appendPQExpBuffer(buf, "%s ~ ", namevar);
+				appendPQExpBuffer(buf, "%s OPERATOR(pg_catalog.~) ", namevar);
 				appendStringLiteralConn(buf, namebuf.data, conn);
+				if (PQserverVersion(conn) >= 120000)
+					appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
 				appendPQExpBufferChar(buf, '\n');
 			}
 		}
@@ -963,8 +1005,10 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern,
 		if (strcmp(schemabuf.data, "^(.*)$") != 0 && schemavar)
 		{
 			WHEREAND();
-			appendPQExpBuffer(buf, "%s ~ ", schemavar);
+			appendPQExpBuffer(buf, "%s OPERATOR(pg_catalog.~) ", schemavar);
 			appendStringLiteralConn(buf, schemabuf.data, conn);
+			if (PQserverVersion(conn) >= 120000)
+				appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
 			appendPQExpBufferChar(buf, '\n');
 		}
 	}

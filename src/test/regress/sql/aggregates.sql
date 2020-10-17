@@ -6,6 +6,9 @@
 SET optimizer_trace_fallback to on;
 -- end_ignore
 
+-- avoid bit-exact output here because operations may not be bit-exact.
+SET extra_float_digits = 0;
+
 SELECT avg(four) AS avg_1 FROM onek;
 
 SELECT avg(a) AS avg_32 FROM aggtest WHERE a < 100;
@@ -55,6 +58,22 @@ select avg(null::float8) from generate_series(1,3);
 select sum('NaN'::numeric) from generate_series(1,3);
 select avg('NaN'::numeric) from generate_series(1,3);
 
+-- verify correct results for infinite inputs
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('1'), ('infinity')) v(x);
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('infinity'), ('1')) v(x);
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('infinity'), ('infinity')) v(x);
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('-infinity'), ('infinity')) v(x);
+
+-- test accuracy with a large input offset
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES (100000003), (100000004), (100000006), (100000007)) v(x);
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES (7000000000005), (7000000000007)) v(x);
+
 -- SQL2003 binary aggregates
 SELECT regr_count(b, a) FROM aggtest;
 SELECT regr_sxx(b, a) FROM aggtest;
@@ -66,6 +85,31 @@ SELECT regr_slope(b, a), regr_intercept(b, a) FROM aggtest;
 SELECT covar_pop(b, a), covar_samp(b, a) FROM aggtest;
 SELECT corr(b, a) FROM aggtest;
 
+-- test accum and combine functions directly
+CREATE TABLE regr_test (x float8, y float8);
+INSERT INTO regr_test VALUES (10,150),(20,250),(30,350),(80,540),(100,200);
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test WHERE x IN (10,20,30,80);
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test;
+SELECT float8_accum('{4,140,2900}'::float8[], 100);
+SELECT float8_regr_accum('{4,140,2900,1290,83075,15050}'::float8[], 200, 100);
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test WHERE x IN (10,20,30);
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test WHERE x IN (80,100);
+SELECT float8_combine('{3,60,200}'::float8[], '{0,0,0}'::float8[]);
+SELECT float8_combine('{0,0,0}'::float8[], '{2,180,200}'::float8[]);
+SELECT float8_combine('{3,60,200}'::float8[], '{2,180,200}'::float8[]);
+SELECT float8_regr_combine('{3,60,200,750,20000,2000}'::float8[],
+                           '{0,0,0,0,0,0}'::float8[]);
+SELECT float8_regr_combine('{0,0,0,0,0,0}'::float8[],
+                           '{2,180,200,740,57800,-3400}'::float8[]);
+SELECT float8_regr_combine('{3,60,200,750,20000,2000}'::float8[],
+                           '{2,180,200,740,57800,-3400}'::float8[]);
+DROP TABLE regr_test;
+
+-- test count, distinct
 SELECT count(four) AS cnt_1000 FROM onek;
 SELECT count(DISTINCT four) AS cnt_4 FROM onek;
 
@@ -692,6 +736,8 @@ drop table bytea_test_table;
 
 select min(unique1) filter (where unique1 > 100) from tenk1;
 
+select sum(1/ten) filter (where ten > 0) from tenk1;
+
 select ten, sum(distinct four) filter (where four::text ~ '123') from onek a
 group by ten;
 
@@ -915,12 +961,18 @@ select my_avg(one) filter (where one > 1),my_sum(one) from (values(1),(3)) t(one
 -- this should not share the state due to different input columns.
 select my_avg(one),my_sum(two) from (values(1,2),(3,4)) t(one,two);
 
--- ideally these would share state, but we have to fix the OSAs first.
+-- exercise cases where OSAs share state
 select
   percentile_cont(0.5) within group (order by a),
   percentile_disc(0.5) within group (order by a)
 from (values(1::float8),(3),(5),(7)) t(a);
 
+select
+  percentile_cont(0.25) within group (order by a),
+  percentile_disc(0.5) within group (order by a)
+from (values(1::float8),(3),(5),(7)) t(a);
+
+-- these can't share state currently
 select
   rank(4) within group (order by a),
   dense_rank(4) within group (order by a)
@@ -1012,6 +1064,99 @@ select my_sum(one),my_half_sum(one) from (values(1),(2),(3),(4)) t(one);
 
 rollback;
 
+
+-- test that the aggregate transition logic correctly handles
+-- transition / combine functions returning NULL
+
+-- First test the case of a normal transition function returning NULL
+BEGIN;
+CREATE FUNCTION balkifnull(int8, int4)
+RETURNS int8
+STRICT
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF $1 IS NULL THEN
+       RAISE 'erroneously called with NULL argument';
+    END IF;
+    RETURN NULL;
+END$$;
+
+CREATE AGGREGATE balk(int4)
+(
+    SFUNC = balkifnull(int8, int4),
+    STYPE = int8,
+    PARALLEL = SAFE,
+    INITCOND = '0'
+);
+
+SELECT balk(hundred) FROM tenk1;
+
+ROLLBACK;
+
+-- Secondly test the case of a parallel aggregate combiner function
+-- returning NULL. For that use normal transition function, but a
+-- combiner function returning NULL.
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+CREATE FUNCTION balkifnull(int8, int8)
+RETURNS int8
+PARALLEL SAFE
+STRICT
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF $1 IS NULL THEN
+       RAISE 'erroneously called with NULL argument';
+    END IF;
+    RETURN NULL;
+END$$;
+
+CREATE AGGREGATE balk(int4)
+(
+    SFUNC = int4_sum(int8, int4),
+    STYPE = int8,
+    COMBINEFUNC = balkifnull(int8, int8),
+    PARALLEL = SAFE,
+    INITCOND = '0'
+);
+
+-- force use of parallelism
+ALTER TABLE tenk1 set (parallel_workers = 4);
+SET LOCAL parallel_setup_cost=0;
+SET LOCAL max_parallel_workers_per_gather=4;
+
+EXPLAIN (COSTS OFF) SELECT balk(hundred) FROM tenk1;
+SELECT balk(hundred) FROM tenk1;
+
+ROLLBACK;
+
+-- test coverage for aggregate combine/serial/deserial functions
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+
+SET parallel_setup_cost = 0;
+SET parallel_tuple_cost = 0;
+SET min_parallel_table_scan_size = 0;
+SET max_parallel_workers_per_gather = 4;
+SET enable_indexonlyscan = off;
+
+-- variance(int4) covers numeric_poly_combine
+-- sum(int8) covers int8_avg_combine
+-- regr_count(float8, float8) covers int8inc_float8_float8 and aggregates with > 1 arg
+EXPLAIN (COSTS OFF, VERBOSE)
+  SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8) FROM tenk1;
+
+SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8) FROM tenk1;
+
+ROLLBACK;
+
+-- test coverage for dense_rank
+SELECT dense_rank(x) WITHIN GROUP (ORDER BY x) FROM (VALUES (1),(1),(2),(2),(3),(3)) v(x) GROUP BY (x) ORDER BY 1;
+
+
+-- Ensure that the STRICT checks for aggregates does not take NULLness
+-- of ORDER BY columns into account. See bug report around
+-- 2a505161-2727-2473-7c46-591ed108ac52@email.cz
+SELECT min(x ORDER BY y) FROM (VALUES(1, NULL)) AS d(x,y);
+SELECT min(x ORDER BY y) FROM (VALUES(1, 2)) AS d(x,y);
+
 -- check collation-sensitive matching between grouping expressions
 select v||'a', case v||'a' when 'aa' then 1 else 0 end, count(*)
   from unnest(array['a','b']) u(v)
@@ -1019,3 +1164,147 @@ select v||'a', case v||'a' when 'aa' then 1 else 0 end, count(*)
 select v||'a', case when v||'a' = 'aa' then 1 else 0 end, count(*)
   from unnest(array['a','b']) u(v)
  group by v||'a' order by 1;
+
+-- Make sure that generation of HashAggregate for uniqification purposes
+-- does not lead to array overflow due to unexpected duplicate hash keys
+-- see CAFeeJoKKu0u+A_A9R9316djW-YW3-+Gtgvy3ju655qRHR3jtdA@mail.gmail.com
+explain (costs off)
+  select 1 from tenk1
+   where (hundred, thousand) in (select twothousand, twothousand from onek);
+
+--
+-- Hash Aggregation Spill tests
+--
+
+set enable_sort=false;
+set work_mem='64kB';
+
+select unique1, count(*), sum(twothousand) from tenk1
+group by unique1
+having sum(fivethous) > 4975
+order by sum(twothousand);
+
+set work_mem to default;
+set enable_sort to default;
+
+--
+-- Compare results between plans using sorting and plans using hash
+-- aggregation. Force spilling in both cases by setting work_mem low.
+--
+
+set work_mem='64kB';
+
+-- Produce results with sorting.
+
+set enable_hashagg = false;
+
+set jit_above_cost = 0;
+
+explain (costs off)
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+
+create table agg_group_1 as
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+
+/*
+ * create table agg_group_2 as
+ * select * from
+ *   (values (100), (300), (500)) as r(a),
+ *   lateral (
+ *     select (g/2)::numeric as c1,
+ *            array_agg(g::numeric) as c2,
+ *            count(*) as c3
+ *     from generate_series(0, 1999) g
+ *     where g < r.a
+ *     group by g/2) as s;
+ */
+
+set jit_above_cost to default;
+
+create table agg_group_3 as
+select (g/2)::numeric as c1, sum(7::int4) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+
+create table agg_group_4 as
+select (g/2)::numeric as c1, array_agg(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+
+-- Produce results with hash aggregation
+
+set enable_hashagg = true;
+set enable_sort = false;
+
+set jit_above_cost = 0;
+
+explain (costs off)
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+
+create table agg_hash_1 as
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+
+/*
+ * create table agg_hash_2 as
+ * select * from
+ *   (values (100), (300), (500)) as r(a),
+ *   lateral (
+ *     select (g/2)::numeric as c1,
+ *            array_agg(g::numeric) as c2,
+ *            count(*) as c3
+ *     from generate_series(0, 1999) g
+ *     where g < r.a
+ *     group by g/2) as s;
+ */
+
+set jit_above_cost to default;
+
+create table agg_hash_3 as
+select (g/2)::numeric as c1, sum(7::int4) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+
+create table agg_hash_4 as
+select (g/2)::numeric as c1, array_agg(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+
+set enable_sort = true;
+set work_mem to default;
+
+-- Compare group aggregation results to hash aggregation results
+
+(select * from agg_hash_1 except select * from agg_group_1)
+  union all
+(select * from agg_group_1 except select * from agg_hash_1);
+
+/*
+ * (select * from agg_hash_2 except select * from agg_group_2)
+ *   union all
+ * (select * from agg_group_2 except select * from agg_hash_2);
+ */
+
+(select * from agg_hash_3 except select * from agg_group_3)
+  union all
+(select * from agg_group_3 except select * from agg_hash_3);
+
+(select * from agg_hash_4 except select * from agg_group_4)
+  union all
+(select * from agg_group_4 except select * from agg_hash_4);
+
+drop table agg_group_1;
+--  drop table agg_group_2;
+drop table agg_group_3;
+drop table agg_group_4;
+drop table agg_hash_1;
+--  drop table agg_hash_2;
+drop table agg_hash_3;
+drop table agg_hash_4;

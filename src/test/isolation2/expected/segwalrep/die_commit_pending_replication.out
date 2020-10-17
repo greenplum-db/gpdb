@@ -48,7 +48,7 @@ select gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid) from 
  Success:        
 (1 row)
 
--- Ensure the ProcDiePending code block is called. It implies 'Replication' in pg_stat_activity.
+-- Ensure the ProcDiePending code block is called. It implies 'SyncRep' in pg_stat_activity.
 select gp_wait_until_triggered_fault('sync_rep_query_die', 1, dbid) from gp_segment_configuration where role='p' and content = 0;
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -56,7 +56,7 @@ select gp_wait_until_triggered_fault('sync_rep_query_die', 1, dbid) from gp_segm
 (1 row)
 
 -- We can terminate the backend on QE now.
-0U: select pg_terminate_backend(pid) from pg_stat_activity where wait_event_type='Replication' and sess_id in (select sess_id from store_session_id);
+0U: select pg_terminate_backend(pid) from pg_stat_activity where wait_event='SyncRep' and sess_id in (select sess_id from store_session_id);
  pg_terminate_backend 
 ----------------------
  t                    
@@ -70,9 +70,9 @@ select gp_wait_until_triggered_fault('sync_rep_query_die', 3, dbid) from gp_segm
 (1 row)
 
 -- Verify that the sess_id changes due to retry.
-0U: select pid,sess_id,wait_event_type,query from pg_stat_activity where sess_id in (select sess_id from store_session_id);
- pid | sess_id | wait_event_type | query 
------+---------+-----------------+-------
+0U: select pid,sess_id,wait_event,query from pg_stat_activity where sess_id in (select sess_id from store_session_id);
+ pid | sess_id | wait_event | query 
+-----+---------+------------+-------
 (0 rows)
 
 -- resume the primary wal replication so that retry could complete.

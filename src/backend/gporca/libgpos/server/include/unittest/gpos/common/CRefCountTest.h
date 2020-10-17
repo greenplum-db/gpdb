@@ -16,73 +16,68 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CRefCountTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
+class CRefCountTest
+{
+private:
 	//---------------------------------------------------------------------------
 	//	@class:
-	//		CRefCountTest
+	//		CDeletableTest
 	//
 	//	@doc:
-	//		Static unit tests
+	//		Local class for testing deletable/undeletable objects
 	//
 	//---------------------------------------------------------------------------
-	class CRefCountTest
+	class CDeletableTest : public CRefCount
 	{
-		private:
+	private:
+		// is calling object's destructor allowed?
+		BOOL m_fDeletable;
 
-		//---------------------------------------------------------------------------
-		//	@class:
-		//		CDeletableTest
-		//
-		//	@doc:
-		//		Local class for testing deletable/undeletable objects
-		//
-		//---------------------------------------------------------------------------
-		class CDeletableTest : public CRefCount
+	public:
+		// ctor
+		CDeletableTest()
+			: m_fDeletable(false)  // by default, object is not deletable
 		{
+		}
 
-			private:
+		// return true if calling object's destructor is allowed
+		virtual BOOL
+		Deletable() const
+		{
+			return m_fDeletable;
+		}
 
-				// is calling object's destructor allowed?
-				BOOL m_fDeletable;
+		// allow calling object's destructor
+		void
+		AllowDeletion()
+		{
+			m_fDeletable = true;
+		}
 
-			public:
-
-				// ctor
-				CDeletableTest()
-					:
-					m_fDeletable(false) // by default, object is not deletable
-				{}
-
-				// return true if calling object's destructor is allowed
-				virtual
-				BOOL Deletable() const
-				{
-					return m_fDeletable;
-				}
-
-				// allow calling object's destructor
-				void AllowDeletion()
-				{
-					m_fDeletable = true;
-				}
-
-		}; // class CDeletableTest
+	};	// class CDeletableTest
 
 
-		public:
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_CountUpAndDown();
-			static GPOS_RESULT EresUnittest_DeletableObjects();
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_CountUpAndDown();
+	static GPOS_RESULT EresUnittest_DeletableObjects();
 
 #ifdef GPOS_DEBUG
-			static GPOS_RESULT EresUnittest_Stack();
-			static GPOS_RESULT EresUnittest_Check();
-#endif // GPOS_DEBUG
-	};
-}
+	static GPOS_RESULT EresUnittest_Stack();
+	static GPOS_RESULT EresUnittest_Check();
+#endif	// GPOS_DEBUG
+};
+}  // namespace gpos
 
-#endif // !GPOS_CRefCountTest_H
+#endif	// !GPOS_CRefCountTest_H
 
 // EOF
-

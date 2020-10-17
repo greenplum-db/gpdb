@@ -4,7 +4,7 @@
  *	  Tuple macros used by both index tuples and heap tuples.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/tupmacs.h
@@ -18,7 +18,9 @@
 #include "catalog/pg_type.h"
 
 /*
- * check to see if the ATT'th bit of an array of 8-bit bytes is set.
+ * Check a tuple's null bitmap to determine whether the attribute is null.
+ * Note that a 0 in the null bitmap indicates a null, while 1 indicates
+ * non-null.
  */
 #define att_isnull(ATT, BITS) (!((BITS)[(ATT) >> 3] & (1 << ((ATT) & 0x07))))
 

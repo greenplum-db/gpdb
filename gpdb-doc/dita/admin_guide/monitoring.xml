@@ -24,7 +24,7 @@ WHERE status &lt;> 'u';</codeblock></li>
           <p>Run the query every five to fifteen minutes.</p>
           <title>Corrective Action</title>
           <p>Check that hosts that have down segments are responsive. If the hosts are OK, check the
-              <filepath>pg_log</filepath> file for the primary and mirror of the down segments to
+              <filepath>log</filepath> file for the primary and mirror of the down segments to
             determine the root cause of the segments going down. If there are no unexpected errors,
             run the <codeph>gprecoverseg</codeph> utility to bring the segments back online.</p>
           <title>Severity</title>
@@ -50,7 +50,7 @@ WHERE mode = 'c';</codeblock></li>
           <p>Every 5 to 15 minutes.</p>
           <title>Corrective Action</title>
           <p>Check that hosts with down segments are responsive. If the hosts are OK, check the
-              <filepath>pg_log</filepath> files for the primaries and mirrors of the down segments
+              <filepath>log</filepath> files for the primaries and mirrors of the down segments
             to determine the root cause of the segments going down. If there are no unexpected
             errors, run the <codeph>gprecoverseg</codeph> utility to bring the segments back
             online.</p>

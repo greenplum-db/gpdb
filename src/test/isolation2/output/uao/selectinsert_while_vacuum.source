@@ -1,82 +1,82 @@
 -- @Description Ensures that an insert during a vacuum operation is ok
 --
-CREATE TABLE selectinsert_while_vacuum_@orientation@ (a INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE selectinsert_while_vacuum_@amname@ (a INT) USING @amname@;
 CREATE
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
-insert into selectinsert_while_vacuum_@orientation@ select generate_series(1,1000);
+insert into selectinsert_while_vacuum_@amname@ select generate_series(1,1000);
 INSERT 1000
 
-DELETE FROM selectinsert_while_vacuum_@orientation@ WHERE a < 128;
+DELETE FROM selectinsert_while_vacuum_@amname@ WHERE a < 128;
 DELETE 2667
 4: BEGIN;
 BEGIN
-4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@orientation@;
+4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@amname@;
  count 
 -------
  18333 
 (1 row)
 5: BEGIN;
 BEGIN
-4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@orientation@;
+4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@amname@;
  count 
 -------
  18333 
 (1 row)
 4: BEGIN;
 BEGIN
-4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@orientation@;
+4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@amname@;
  count 
 -------
  18333 
 (1 row)
-2>: VACUUM selectinsert_while_vacuum_@orientation@;  <waiting ...>
-4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@orientation@;SELECT COUNT(*) FROM selectinsert_while_vacuum_@orientation@;BEGIN;insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@orientation@ select generate_series(1001,2000);COMMIT;
+2>: VACUUM selectinsert_while_vacuum_@amname@;  <waiting ...>
+4: SELECT COUNT(*) FROM selectinsert_while_vacuum_@amname@;SELECT COUNT(*) FROM selectinsert_while_vacuum_@amname@;BEGIN;insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);insert into selectinsert_while_vacuum_@amname@ select generate_series(1001,2000);COMMIT;
 SELECT
 2<:  <... completed>
 VACUUM
-3: SELECT COUNT(*) FROM selectinsert_while_vacuum_@orientation@ WHERE a = 1500;
+3: SELECT COUNT(*) FROM selectinsert_while_vacuum_@amname@ WHERE a = 1500;
  count 
 -------
  20    
 (1 row)
-3: INSERT INTO selectinsert_while_vacuum_@orientation@ VALUES (0);
+3: INSERT INTO selectinsert_while_vacuum_@amname@ VALUES (0);
 INSERT 1

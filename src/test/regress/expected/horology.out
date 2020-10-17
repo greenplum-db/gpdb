@@ -2,17 +2,6 @@
 -- HOROLOGY
 --
 -- create needed tables
-CREATE TABLE ABSTIME_HOROLOGY_TBL (f1 abstime);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO ABSTIME_HOROLOGY_TBL (f1) VALUES ('Jan 14, 1973 03:14:21'),
-(abstime 'Mon May  1 00:30:30 1995'),
-(abstime 'epoch'),
-(abstime 'infinity'),
-(abstime '-infinity'),
-(abstime 'May 10, 1947 23:59:12');
--- orca will fail for this
-INSERT INTO ABSTIME_HOROLOGY_TBL (f1) VALUES('Jun 10, 1843');
 CREATE TABLE INTERVAL_HOROLOGY_TBL (f1 interval);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -26,15 +15,6 @@ INSERT INTO INTERVAL_HOROLOGY_TBL (f1) VALUES ('@ 1 minute'),
 ('6 years'),
 ('5 months'),
 ('5 months 12 hours');
-CREATE TABLE RELTIME_HOROLOGY_TBL (f1 reltime);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO RELTIME_HOROLOGY_TBL (f1) VALUES ('@ 1 minute'),
-('@ 5 hour'),
-('@ 10 day'),
-('@ 34 year'),
-('@ 3 months'),
-('@ 14 seconds ago');
 CREATE TABLE TIME_HOROLOGY_TBL (f1 time(2));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -527,7 +507,7 @@ SELECT date '1991-02-03' - time with time zone '04:05:06 UTC' AS "Subtract Time 
 ERROR:  operator does not exist: date - time with time zone
 LINE 1: SELECT date '1991-02-03' - time with time zone '04:05:06 UTC...
                                  ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 --
 -- timestamp, interval arithmetic
 --
@@ -2254,70 +2234,6 @@ SELECT '' AS "226", d1.f1 AS timestamp1, d2.f1 AS timestamp2, d1.f1 - d2.f1 AS d
 (256 rows)
 
 --
--- abstime, reltime arithmetic
---
-SELECT '' AS ten, ABSTIME_HOROLOGY_TBL.f1 AS abstime, RELTIME_HOROLOGY_TBL.f1 AS reltime
-    FROM ABSTIME_HOROLOGY_TBL, RELTIME_HOROLOGY_TBL
-   WHERE (ABSTIME_HOROLOGY_TBL.f1 + RELTIME_HOROLOGY_TBL.f1) < abstime 'Jan 14 14:00:00 1971'
-   ORDER BY abstime, reltime;
- ten |           abstime            |    reltime    
------+------------------------------+---------------
-     | Sat May 10 23:59:12 1947 PST | @ 14 secs ago
-     | Sat May 10 23:59:12 1947 PST | @ 1 min
-     | Sat May 10 23:59:12 1947 PST | @ 5 hours
-     | Sat May 10 23:59:12 1947 PST | @ 10 days
-     | Sat May 10 23:59:12 1947 PST | @ 3 mons
-     | Wed Dec 31 16:00:00 1969 PST | @ 14 secs ago
-     | Wed Dec 31 16:00:00 1969 PST | @ 1 min
-     | Wed Dec 31 16:00:00 1969 PST | @ 5 hours
-     | Wed Dec 31 16:00:00 1969 PST | @ 10 days
-     | Wed Dec 31 16:00:00 1969 PST | @ 3 mons
-(10 rows)
-
--- these four queries should return the same answer
--- the "infinity" and "-infinity" tuples in ABSTIME_HOROLOGY_TBL cannot be added and
--- therefore, should not show up in the results.
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-  WHERE  (ABSTIME_HOROLOGY_TBL.f1 + reltime '@ 3 year')         -- +3 years
-    < abstime 'Jan 14 14:00:00 1977' ORDER BY 2;
- three |              f1              
--------+------------------------------
-       | Sat May 10 23:59:12 1947 PST
-       | Wed Dec 31 16:00:00 1969 PST
-       | Sun Jan 14 03:14:21 1973 PST
-(3 rows)
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-   WHERE  (ABSTIME_HOROLOGY_TBL.f1 + reltime '@ 3 year ago')    -- -3 years
-     < abstime 'Jan 14 14:00:00 1971' ORDER BY 2;
- three |              f1              
--------+------------------------------
-       | Sat May 10 23:59:12 1947 PST
-       | Wed Dec 31 16:00:00 1969 PST
-       | Sun Jan 14 03:14:21 1973 PST
-(3 rows)
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-   WHERE  (ABSTIME_HOROLOGY_TBL.f1 - reltime '@ 3 year')        -- -(+3) years
-    < abstime 'Jan 14 14:00:00 1971' ORDER BY 2;
- three |              f1              
--------+------------------------------
-       | Sat May 10 23:59:12 1947 PST
-       | Wed Dec 31 16:00:00 1969 PST
-       | Sun Jan 14 03:14:21 1973 PST
-(3 rows)
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-   WHERE  (ABSTIME_HOROLOGY_TBL.f1 - reltime '@ 3 year ago')    -- -(-3) years
-     < abstime 'Jan 14 14:00:00 1977' ORDER BY 2;
- three |              f1              
--------+------------------------------
-       | Sat May 10 23:59:12 1947 PST
-       | Wed Dec 31 16:00:00 1969 PST
-       | Sun Jan 14 03:14:21 1973 PST
-(3 rows)
-
---
 -- Conversions
 --
 SELECT '' AS "16", f1 AS "timestamp", date(f1) AS date
@@ -2343,80 +2259,6 @@ SELECT '' AS "16", f1 AS "timestamp", date(f1) AS date
     | Mon Jan 01 17:32:01 2001 PST | 01-01-2001
     | Sat Sep 22 18:19:20 2001 PDT | 09-22-2001
 (16 rows)
-
-SELECT '' AS "16", f1 AS "timestamp", abstime(f1) AS abstime
-  FROM TEMP_TIMESTAMP
-  ORDER BY abstime;
- 16 |          timestamp           |           abstime            
-----+------------------------------+------------------------------
-    | Thu Jan 01 00:00:00 1970 PST | Thu Jan 01 00:00:00 1970 PST
-    | Wed Feb 28 17:32:01 1996 PST | Wed Feb 28 17:32:01 1996 PST
-    | Thu Feb 29 17:32:01 1996 PST | Thu Feb 29 17:32:01 1996 PST
-    | Fri Mar 01 17:32:01 1996 PST | Fri Mar 01 17:32:01 1996 PST
-    | Mon Dec 30 17:32:01 1996 PST | Mon Dec 30 17:32:01 1996 PST
-    | Tue Dec 31 17:32:01 1996 PST | Tue Dec 31 17:32:01 1996 PST
-    | Fri Dec 31 17:32:01 1999 PST | Fri Dec 31 17:32:01 1999 PST
-    | Sat Jan 01 17:32:01 2000 PST | Sat Jan 01 17:32:01 2000 PST
-    | Wed Mar 15 02:14:05 2000 PST | Wed Mar 15 02:14:05 2000 PST
-    | Wed Mar 15 03:14:04 2000 PST | Wed Mar 15 03:14:04 2000 PST
-    | Wed Mar 15 08:14:01 2000 PST | Wed Mar 15 08:14:01 2000 PST
-    | Wed Mar 15 12:14:03 2000 PST | Wed Mar 15 12:14:03 2000 PST
-    | Wed Mar 15 13:14:02 2000 PST | Wed Mar 15 13:14:02 2000 PST
-    | Sun Dec 31 17:32:01 2000 PST | Sun Dec 31 17:32:01 2000 PST
-    | Mon Jan 01 17:32:01 2001 PST | Mon Jan 01 17:32:01 2001 PST
-    | Sat Sep 22 18:19:20 2001 PDT | Sat Sep 22 18:19:20 2001 PDT
-(16 rows)
-
-SELECT '' AS four, f1 AS abstime, date(f1) AS date
-  FROM ABSTIME_HOROLOGY_TBL
-  WHERE isfinite(f1) AND f1 <> abstime 'now'
-  ORDER BY date, abstime;
- four |           abstime            |    date    
-------+------------------------------+------------
-      | Sat May 10 23:59:12 1947 PST | 05-10-1947
-      | Wed Dec 31 16:00:00 1969 PST | 12-31-1969
-      | Sun Jan 14 03:14:21 1973 PST | 01-14-1973
-      | Mon May 01 00:30:30 1995 PDT | 05-01-1995
-(4 rows)
-
-SELECT '' AS two, d1 AS "timestamp", abstime(d1) AS abstime
-  FROM TIMESTAMP_HOROLOGY_TBL WHERE NOT isfinite(d1) ORDER BY 2;
- two | timestamp |  abstime  
------+-----------+-----------
-     | -infinity | -infinity
-     | infinity  | infinity
-(2 rows)
-
-SELECT '' AS three, f1 as abstime, cast(f1 as timestamp) AS "timestamp"
-  FROM ABSTIME_HOROLOGY_TBL WHERE NOT isfinite(f1) ORDER BY 2;
-ERROR:  cannot convert abstime "invalid" to timestamp
-SELECT '' AS ten, f1 AS interval, reltime(f1) AS reltime
-  FROM INTERVAL_HOROLOGY_TBL ORDER BY 2;
- ten |           interval            |            reltime            
------+-------------------------------+-------------------------------
-     | @ 14 secs ago                 | @ 14 secs ago
-     | @ 1 min                       | @ 1 min
-     | @ 5 hours                     | @ 5 hours
-     | @ 1 day 2 hours 3 mins 4 secs | @ 1 day 2 hours 3 mins 4 secs
-     | @ 10 days                     | @ 10 days
-     | @ 3 mons                      | @ 3 mons
-     | @ 5 mons                      | @ 5 mons
-     | @ 5 mons 12 hours             | @ 5 mons 12 hours
-     | @ 6 years                     | @ 6 years
-     | @ 34 years                    | @ 34 years
-(10 rows)
-
-SELECT '' AS six, f1 as reltime, CAST(f1 AS interval) AS interval
-  FROM RELTIME_HOROLOGY_TBL ORDER BY 2;
- six |    reltime    |   interval    
------+---------------+---------------
-     | @ 14 secs ago | @ 14 secs ago
-     | @ 1 min       | @ 1 min
-     | @ 5 hours     | @ 5 hours
-     | @ 10 days     | @ 10 days
-     | @ 3 mons      | @ 3 mons
-     | @ 34 years    | @ 34 years
-(6 rows)
 
 DROP TABLE TEMP_TIMESTAMP;
 --
@@ -2499,18 +2341,6 @@ SELECT '' AS "64", d1 AS us_postgres FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
     | infinity
 (65 rows)
 
-SELECT '' AS seven, f1 AS us_postgres FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
- seven |         us_postgres          
--------+------------------------------
-       | -infinity
-       | Sat May 10 23:59:12 1947 PST
-       | Wed Dec 31 16:00:00 1969 PST
-       | Sun Jan 14 03:14:21 1973 PST
-       | Mon May 01 00:30:30 1995 PDT
-       | infinity
-       | invalid
-(7 rows)
-
 SET DateStyle TO 'US,ISO';
 SELECT '' AS "64", d1 AS us_iso FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
  64 |         us_iso         
@@ -2581,18 +2411,6 @@ SELECT '' AS "64", d1 AS us_iso FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
     | 2097-02-16 17:32:01
     | infinity
 (65 rows)
-
-SELECT '' AS seven, f1 AS us_iso FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
- seven |         us_iso         
--------+------------------------
-       | -infinity
-       | 1947-05-10 23:59:12-08
-       | 1969-12-31 16:00:00-08
-       | 1973-01-14 03:14:21-08
-       | 1995-05-01 00:30:30-07
-       | infinity
-       | invalid
-(7 rows)
 
 SET DateStyle TO 'US,SQL';
 SHOW DateStyle;
@@ -2670,18 +2488,6 @@ SELECT '' AS "64", d1 AS us_sql FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
     | 02/16/2097 17:32:01
     | infinity
 (65 rows)
-
-SELECT '' AS seven, f1 AS us_sql FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
- seven |         us_sql          
--------+-------------------------
-       | -infinity
-       | 05/10/1947 23:59:12 PST
-       | 12/31/1969 16:00:00 PST
-       | 01/14/1973 03:14:21 PST
-       | 05/01/1995 00:30:30 PDT
-       | infinity
-       | invalid
-(7 rows)
 
 SET DateStyle TO 'European,Postgres';
 SHOW DateStyle;
@@ -2768,18 +2574,6 @@ SELECT '' AS "65", d1 AS european_postgres FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 
     | infinity
 (66 rows)
 
-SELECT '' AS seven, f1 AS european_postgres FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
- seven |      european_postgres       
--------+------------------------------
-       | -infinity
-       | Sat 10 May 23:59:12 1947 PST
-       | Wed 31 Dec 16:00:00 1969 PST
-       | Sun 14 Jan 03:14:21 1973 PST
-       | Mon 01 May 00:30:30 1995 PDT
-       | infinity
-       | invalid
-(7 rows)
-
 SET DateStyle TO 'European,ISO';
 SHOW DateStyle;
  DateStyle 
@@ -2857,18 +2651,6 @@ SELECT '' AS "65", d1 AS european_iso FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
     | 2097-02-16 17:32:01
     | infinity
 (66 rows)
-
-SELECT '' AS seven, f1 AS european_iso FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
- seven |      european_iso      
--------+------------------------
-       | -infinity
-       | 1947-05-10 23:59:12-08
-       | 1969-12-31 16:00:00-08
-       | 1973-01-14 03:14:21-08
-       | 1995-05-01 00:30:30-07
-       | infinity
-       | invalid
-(7 rows)
 
 SET DateStyle TO 'European,SQL';
 SHOW DateStyle;
@@ -2948,18 +2730,6 @@ SELECT '' AS "65", d1 AS european_sql FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
     | infinity
 (66 rows)
 
-SELECT '' AS seven, f1 AS european_sql FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
- seven |      european_sql       
--------+-------------------------
-       | -infinity
-       | 10/05/1947 23:59:12 PST
-       | 31/12/1969 16:00:00 PST
-       | 14/01/1973 03:14:21 PST
-       | 01/05/1995 00:30:30 PDT
-       | infinity
-       | invalid
-(7 rows)
-
 RESET DateStyle;
 --
 -- to_timestamp()
@@ -2976,14 +2746,32 @@ SELECT to_timestamp('97/2/16 8:14:30', 'FMYYYY/FMMM/FMDD FMHH:FMMI:FMSS');
  Sat Feb 16 08:14:30 0097 PST
 (1 row)
 
+SELECT to_timestamp('2011$03!18 23_38_15', 'YYYY-MM-DD HH24:MI:SS');
+         to_timestamp         
+------------------------------
+ Fri Mar 18 23:38:15 2011 PDT
+(1 row)
+
 SELECT to_timestamp('1985 January 12', 'YYYY FMMonth DD');
          to_timestamp         
 ------------------------------
  Sat Jan 12 00:00:00 1985 PST
 (1 row)
 
+SELECT to_timestamp('1985 FMMonth 12', 'YYYY "FMMonth" DD');
+         to_timestamp         
+------------------------------
+ Sat Jan 12 00:00:00 1985 PST
+(1 row)
+
+SELECT to_timestamp('1985 \ 12', 'YYYY \\ DD');
+         to_timestamp         
+------------------------------
+ Sat Jan 12 00:00:00 1985 PST
+(1 row)
+
 SELECT to_timestamp('My birthday-> Year: 1976, Month: May, Day: 16',
-                    '"My birthday-> Year" YYYY, "Month:" FMMonth, "Day:" DD');
+                    '"My birthday-> Year:" YYYY, "Month:" FMMonth, "Day:" DD');
          to_timestamp         
 ------------------------------
  Sun May 16 00:00:00 1976 PDT
@@ -2996,7 +2784,7 @@ SELECT to_timestamp('1,582nd VIII 21', 'Y,YYYth FMRM DD');
 (1 row)
 
 SELECT to_timestamp('15 "text between quote marks" 98 54 45',
-                    E'HH24 "\\text between quote marks\\"" YY MI SS');
+                    E'HH24 "\\"text between quote marks\\"" YY MI SS');
          to_timestamp         
 ------------------------------
  Thu Jan 01 15:54:45 1998 PST
@@ -3017,6 +2805,24 @@ SELECT to_timestamp('2000January09Sunday', 'YYYYFMMonthDDFMDay');
 SELECT to_timestamp('97/Feb/16', 'YYMonDD');
 ERROR:  invalid value "/Fe" for "Mon"
 DETAIL:  The given value did not match any of the allowed values for this field.
+SELECT to_timestamp('97/Feb/16', 'YY:Mon:DD');
+         to_timestamp         
+------------------------------
+ Sun Feb 16 00:00:00 1997 PST
+(1 row)
+
+SELECT to_timestamp('97/Feb/16', 'FXYY:Mon:DD');
+         to_timestamp         
+------------------------------
+ Sun Feb 16 00:00:00 1997 PST
+(1 row)
+
+SELECT to_timestamp('97/Feb/16', 'FXYY/Mon/DD');
+         to_timestamp         
+------------------------------
+ Sun Feb 16 00:00:00 1997 PST
+(1 row)
+
 SELECT to_timestamp('19971116', 'YYYYMMDD');
          to_timestamp         
 ------------------------------
@@ -3137,13 +2943,43 @@ SELECT to_timestamp('2011-12-18 11:38 PM', 'YYYY-MM-DD HH12:MI PM');
  Sun Dec 18 23:38:00 2011 PST
 (1 row)
 
+SELECT to_timestamp('2011-12-18 11:38 +05',    'YYYY-MM-DD HH12:MI TZH');
+         to_timestamp         
+------------------------------
+ Sat Dec 17 22:38:00 2011 PST
+(1 row)
+
+SELECT to_timestamp('2011-12-18 11:38 -05',    'YYYY-MM-DD HH12:MI TZH');
+         to_timestamp         
+------------------------------
+ Sun Dec 18 08:38:00 2011 PST
+(1 row)
+
+SELECT to_timestamp('2011-12-18 11:38 +05:20', 'YYYY-MM-DD HH12:MI TZH:TZM');
+         to_timestamp         
+------------------------------
+ Sat Dec 17 22:18:00 2011 PST
+(1 row)
+
+SELECT to_timestamp('2011-12-18 11:38 -05:20', 'YYYY-MM-DD HH12:MI TZH:TZM');
+         to_timestamp         
+------------------------------
+ Sun Dec 18 08:58:00 2011 PST
+(1 row)
+
+SELECT to_timestamp('2011-12-18 11:38 20',     'YYYY-MM-DD HH12:MI TZM');
+         to_timestamp         
+------------------------------
+ Sun Dec 18 03:18:00 2011 PST
+(1 row)
+
 --
 -- Check handling of multiple spaces in format and/or input
 --
 SELECT to_timestamp('2011-12-18 23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
          to_timestamp         
 ------------------------------
- Sun Dec 18 03:38:15 2011 PST
+ Sun Dec 18 23:38:15 2011 PST
 (1 row)
 
 SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
@@ -3173,7 +3009,64 @@ SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
 SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD   HH24:MI:SS');
          to_timestamp         
 ------------------------------
- Sun Dec 18 03:38:15 2011 PST
+ Sun Dec 18 23:38:15 2011 PST
+(1 row)
+
+SELECT to_timestamp('2000+   JUN', 'YYYY/MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp('  2000 +JUN', 'YYYY/MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp(' 2000 +JUN', 'YYYY//MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp('2000  +JUN', 'YYYY//MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp('2000 + JUN', 'YYYY MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp('2000 ++ JUN', 'YYYY  MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp('2000 + + JUN', 'YYYY  MON');
+ERROR:  invalid value "+ J" for "MON"
+DETAIL:  The given value did not match any of the allowed values for this field.
+SELECT to_timestamp('2000 + + JUN', 'YYYY   MON');
+         to_timestamp         
+------------------------------
+ Thu Jun 01 00:00:00 2000 PDT
+(1 row)
+
+SELECT to_timestamp('2000 -10', 'YYYY TZH');
+         to_timestamp         
+------------------------------
+ Sat Jan 01 02:00:00 2000 PST
+(1 row)
+
+SELECT to_timestamp('2000 -10', 'YYYY  TZH');
+         to_timestamp         
+------------------------------
+ Fri Dec 31 06:00:00 1999 PST
 (1 row)
 
 SELECT to_date('2011 12  18', 'YYYY MM DD');
@@ -3191,13 +3084,13 @@ SELECT to_date('2011 12  18', 'YYYY MM  DD');
 SELECT to_date('2011 12  18', 'YYYY MM   DD');
   to_date   
 ------------
- 12-08-2011
+ 12-18-2011
 (1 row)
 
 SELECT to_date('2011 12 18', 'YYYY  MM DD');
   to_date   
 ------------
- 02-18-2011
+ 12-18-2011
 (1 row)
 
 SELECT to_date('2011  12 18', 'YYYY  MM DD');
@@ -3212,6 +3105,21 @@ SELECT to_date('2011   12 18', 'YYYY  MM DD');
  12-18-2011
 (1 row)
 
+SELECT to_date('2011 12 18', 'YYYYxMMxDD');
+  to_date   
+------------
+ 12-18-2011
+(1 row)
+
+SELECT to_date('2011x 12x 18', 'YYYYxMMxDD');
+  to_date   
+------------
+ 12-18-2011
+(1 row)
+
+SELECT to_date('2011 x12 x18', 'YYYYxMMxDD');
+ERROR:  invalid value "x1" for "MM"
+DETAIL:  Value must be an integer.
 --
 -- Check errors for some incorrect usages of to_timestamp() and to_date()
 --
@@ -3347,17 +3255,8 @@ SELECT to_char('2012-12-12 12:00'::timestamptz, 'YYYY-MM-DD HH:MI:SS TZ');
 
 RESET TIME ZONE;
 -- Clean up
-DROP TABLE abstime_horology_tbl;
 DROP TABLE interval_horology_tbl;
-DROP TABLE reltime_horology_tbl;
 DROP TABLE time_horology_tbl;
 DROP TABLE timestamp_horology_tbl;
 DROP TABLE timestamptz_horology_tbl;
 DROP TABLE timetz_horology_tbl;
---
--- Drop tables that we don't want to keep because they interfere with
--- testing pg_upgrade to v12 and up
---
-DROP TABLE abstime_tbl;
-DROP TABLE reltime_tbl;
-DROP TABLE tinterval_tbl;

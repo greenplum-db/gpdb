@@ -1,5 +1,5 @@
 from mock import *
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.operations.package import IsVersionCompatible, ListPackages, MigratePackages, AlreadyInstalledError, \
     ARCHIVE_PATH, SyncPackages, CleanGppkg
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
@@ -84,7 +84,7 @@ class ListPackagesTestCase(GpTestCase):
 
     def test__execute_fail_raise_error_with_no_gppkg_postfix(self):
         self.mock_list_files_by_pattern_run.return_value = ['sample']
-        with self.assertRaisesRegexp(Exception, "unable to parse sample as a gppkg"):
+        with self.assertRaisesRegex(Exception, "unable to parse sample as a gppkg"):
             self.subject.execute()
 
 
@@ -120,7 +120,7 @@ class MigratePackagesTestCase(GpTestCase):
         subject = MigratePackages(**self.args)
 
         expected_raise = "The target GPHOME, %s, must match the current \$GPHOME used to launch gppkg." % self.args['to_gphome']
-        with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, expected_raise):
+        with self.assertRaisesRegex(ExceptionNoStackTraceNeeded, expected_raise):
             subject.execute()
 
     def test__execute_identical_source_target_raises(self):
@@ -128,7 +128,7 @@ class MigratePackagesTestCase(GpTestCase):
         subject = MigratePackages(**self.args)
 
         expected_raise = "The source and target GPHOMEs, %s => %s, must differ for packages to be migrated." % (self.args['from_gphome'], self.args['to_gphome'])
-        with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, expected_raise):
+        with self.assertRaisesRegex(ExceptionNoStackTraceNeeded, expected_raise):
             subject.execute()
 
     def test__execute_finds_no_packages(self):
@@ -250,7 +250,7 @@ class SyncPackagesTestCase(GpTestCase):
         self.assertEqual(self.make_remote_dir_mock.call_count, 1)
 
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
-        self.assertIn('The following packages will be uninstalled on localhost: zing.gppkg, ga.gppkg', log_messages)
+        self.assertIn('The following packages will be uninstalled on localhost: ga.gppkg, zing.gppkg', log_messages)
         self.assertNotIn('The packages on %s are consistent.' % hostname, log_messages)
 
 
@@ -268,7 +268,7 @@ class CleanGppkgTestCase(GpTestCase):
         self.sync_packages_mock.return_value.get_ret.side_effect = [Exception('first failure'), Exception('second failure')]
         subject = CleanGppkg("localhost", ["fiction", "fairytale"])
 
-        with self.assertRaisesRegexp(Exception, "SyncPackages failed:\nfirst failure\nsecond failure"):
+        with self.assertRaisesRegex(Exception, "SyncPackages failed:\nfirst failure\nsecond failure"):
             subject.execute()
 
 

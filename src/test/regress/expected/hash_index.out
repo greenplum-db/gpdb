@@ -196,9 +196,51 @@ SELECT h.seqno AS f20000
 --   WHERE x = 90;
 -- SELECT count(*) AS i988 FROM hash_ovfl_heap
 --  WHERE x = 1000;
--- test that we can disable hash index
-create table hash_test(i int);
-create index hash_test_idx on hash_test using hash (i);
-ERROR:  hash indexes are not supported
-drop table hash_test;
-reset all;
+--
+-- Cause some overflow insert and splits.
+--
+CREATE TABLE hash_split_heap (keycol INT);
+INSERT INTO hash_split_heap SELECT 1 FROM generate_series(1, 500) a;
+CREATE INDEX hash_split_index on hash_split_heap USING HASH (keycol);
+INSERT INTO hash_split_heap SELECT 1 FROM generate_series(1, 5000) a;
+-- Let's do a backward scan.
+BEGIN;
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+DECLARE c CURSOR FOR SELECT * from hash_split_heap WHERE keycol = 1;
+MOVE FORWARD ALL FROM c;
+MOVE BACKWARD 10000 FROM c;
+ERROR:  backward scan is not supported in this version of Greenplum Database
+MOVE BACKWARD ALL FROM c;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+CLOSE c;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+END;
+-- DELETE, INSERT, VACUUM.
+DELETE FROM hash_split_heap WHERE keycol = 1;
+INSERT INTO hash_split_heap SELECT a/2 FROM generate_series(1, 25000) a;
+VACUUM hash_split_heap;
+-- Rebuild the index using a different fillfactor
+ALTER INDEX hash_split_index SET (fillfactor = 10);
+REINDEX INDEX hash_split_index;
+-- Clean up.
+DROP TABLE hash_split_heap;
+-- Index on temp table.
+CREATE TEMP TABLE hash_temp_heap (x int, y int);
+INSERT INTO hash_temp_heap VALUES (1,1);
+CREATE INDEX hash_idx ON hash_temp_heap USING hash (x);
+DROP TABLE hash_temp_heap CASCADE;
+-- Float4 type.
+CREATE TABLE hash_heap_float4 (x float4, y int);
+INSERT INTO hash_heap_float4 VALUES (1.1,1);
+CREATE INDEX hash_idx ON hash_heap_float4 USING hash (x);
+DROP TABLE hash_heap_float4 CASCADE;
+-- Test out-of-range fillfactor values
+CREATE INDEX hash_f8_index2 ON hash_f8_heap USING hash (random float8_ops)
+	WITH (fillfactor=9);
+ERROR:  value 9 out of bounds for option "fillfactor"
+DETAIL:  Valid values are between "10" and "100".
+CREATE INDEX hash_f8_index2 ON hash_f8_heap USING hash (random float8_ops)
+	WITH (fillfactor=101);
+ERROR:  value 101 out of bounds for option "fillfactor"
+DETAIL:  Valid values are between "10" and "100".

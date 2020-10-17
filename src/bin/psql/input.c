@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  *
  * src/bin/psql/input.c
  */
@@ -17,6 +17,8 @@
 #include "settings.h"
 #include "tab-complete.h"
 #include "common.h"
+
+#include "common/logging.h"
 
 #ifndef WIN32
 #define PSQLHISTORY ".psql_history"
@@ -212,8 +214,7 @@ gets_fromFile(FILE *source)
 		{
 			if (ferror(source))
 			{
-				psql_error("could not read from input file: %s\n",
-						   strerror(errno));
+				pg_log_error("could not read from input file: %m");
 				return NULL;
 			}
 			break;
@@ -223,7 +224,7 @@ gets_fromFile(FILE *source)
 
 		if (PQExpBufferBroken(buffer))
 		{
-			psql_error("out of memory\n");
+			pg_log_error("out of memory");
 			return NULL;
 		}
 
@@ -332,7 +333,7 @@ decode_history(void)
 	}
 	END_ITERATE_HISTORY();
 }
-#endif   /* USE_READLINE */
+#endif							/* USE_READLINE */
 
 
 /*
@@ -410,7 +411,7 @@ saveHistory(char *fname, int max_lines)
 
 	/*
 	 * Suppressing the write attempt when HISTFILE is set to /dev/null may
-	 * look like a negligible optimization, but it's necessary on e.g. Darwin,
+	 * look like a negligible optimization, but it's necessary on e.g. macOS,
 	 * where write_history will fail because it tries to chmod the target
 	 * file.
 	 */
@@ -467,8 +468,7 @@ saveHistory(char *fname, int max_lines)
 		}
 #endif
 
-		psql_error("could not save history to file \"%s\": %s\n",
-				   fname, strerror(errnum));
+		pg_log_error("could not save history to file \"%s\": %m", fname);
 	}
 	return false;
 }
@@ -506,8 +506,7 @@ printHistory(const char *fname, unsigned short int pager)
 		output = fopen(fname, "w");
 		if (output == NULL)
 		{
-			psql_error("could not save history to file \"%s\": %s\n",
-					   fname, strerror(errno));
+			pg_log_error("could not save history to file \"%s\": %m", fname);
 			return false;
 		}
 		is_pager = false;
@@ -526,7 +525,7 @@ printHistory(const char *fname, unsigned short int pager)
 
 	return true;
 #else
-	psql_error("history is not supported by this installation\n");
+	pg_log_error("history is not supported by this installation");
 	return false;
 #endif
 }
@@ -538,10 +537,7 @@ finishInput(void)
 #ifdef USE_READLINE
 	if (useHistory && psql_history)
 	{
-		int			hist_size;
-
-		hist_size = GetVariableNum(pset.vars, "HISTSIZE", 500, -1, true);
-		(void) saveHistory(psql_history, hist_size);
+		(void) saveHistory(psql_history, pset.histsize);
 		free(psql_history);
 		psql_history = NULL;
 	}

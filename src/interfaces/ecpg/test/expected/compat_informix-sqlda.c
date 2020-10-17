@@ -43,7 +43,7 @@ typedef struct sqlda_struct sqlda_t;
 
 #endif
 
-#endif   /* ECPG_SQLDA_H */
+#endif							/* ECPG_SQLDA_H */
 
 #line 7 "sqlda.pgc"
 
@@ -105,7 +105,7 @@ typedef struct sqlda_struct sqlda_t;
 #define SQLSERIAL8	ECPGt_long
 #endif
 
-#endif   /* ndef ECPG_SQLTYPES_H */
+#endif							/* ndef ECPG_SQLTYPES_H */
 
 #line 8 "sqlda.pgc"
 
@@ -236,12 +236,12 @@ if (sqlca.sqlcode < 0) exit (1);}
 
 
 	strcpy(msg, "declare");
-	ECPG_informix_reset_sqlca(); /* declare mycur1 cursor for $1 */
+	/* declare mycur1 cursor for $1 */
 #line 98 "sqlda.pgc"
 
 
 	strcpy(msg, "open");
-	{ ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "declare mycur1 cursor for $1", 
+	{ ECPGopen("mycur1", "st_id1", __LINE__, 1, 1, NULL, 0, ECPGst_normal, "declare mycur1 cursor for $1", 
 	ECPGt_char_variable,(ECPGprepared_statement(NULL, "st_id1", __LINE__)),(long)1,(long)1,(1)*sizeof(char), 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 101 "sqlda.pgc"
@@ -258,7 +258,7 @@ if (sqlca.sqlcode < 0) exit (1);}
 	while (1)
 	{
 		strcpy(msg, "fetch");
-		{ ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "fetch 1 from mycur1", ECPGt_EOIT, 
+		{ ECPGfetch("mycur1", __LINE__, 1, 1, NULL, 0, ECPGst_normal, "fetch 1 from mycur1", ECPGt_EOIT, 
 	ECPGt_sqlda, &outp_sqlda, 0L, 0L, 0L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);
 #line 109 "sqlda.pgc"
@@ -279,7 +279,7 @@ if (sqlca.sqlcode < 0) exit (1);}
 
 
 	strcpy(msg, "close");
-	{ ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "close mycur1", ECPGt_EOIT, ECPGt_EORT);
+	{ ECPGclose("mycur1", __LINE__, 1, 1, NULL, 0, ECPGst_normal, "close mycur1", ECPGt_EOIT, ECPGt_EORT);
 #line 118 "sqlda.pgc"
 
 if (sqlca.sqlcode < 0) exit (1);}
@@ -311,12 +311,12 @@ if (sqlca.sqlcode < 0) exit (1);}
 
 
 	strcpy(msg, "declare");
-	ECPG_informix_reset_sqlca(); /* declare mycur2 cursor for $1 */
+	/* declare mycur2 cursor for $1 */
 #line 135 "sqlda.pgc"
 
 
 	strcpy(msg, "open");
-	{ ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "declare mycur2 cursor for $1", 
+	{ ECPGopen("mycur2", "st_id2", __LINE__, 1, 1, NULL, 0, ECPGst_normal, "declare mycur2 cursor for $1", 
 	ECPGt_char_variable,(ECPGprepared_statement(NULL, "st_id2", __LINE__)),(long)1,(long)1,(1)*sizeof(char), 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 138 "sqlda.pgc"
@@ -333,7 +333,7 @@ if (sqlca.sqlcode < 0) exit (1);}
 	while (1)
 	{
 		strcpy(msg, "fetch");
-		{ ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "fetch from mycur2", ECPGt_EOIT, 
+		{ ECPGfetch("mycur2", __LINE__, 1, 1, NULL, 0, ECPGst_normal, "fetch from mycur2", ECPGt_EOIT, 
 	ECPGt_sqlda, &outp_sqlda, 0L, 0L, 0L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);
 #line 146 "sqlda.pgc"
@@ -354,7 +354,7 @@ if (sqlca.sqlcode < 0) exit (1);}
 
 
 	strcpy(msg, "close");
-	{ ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "close mycur2", ECPGt_EOIT, ECPGt_EORT);
+	{ ECPGclose("mycur2", __LINE__, 1, 1, NULL, 0, ECPGst_normal, "close mycur2", ECPGt_EOIT, ECPGt_EORT);
 #line 155 "sqlda.pgc"
 
 if (sqlca.sqlcode < 0) exit (1);}
@@ -526,5 +526,5 @@ if (sqlca.sqlcode < 0) exit (1);}
 #line 247 "sqlda.pgc"
 
 
-	return (0);
+	return 0;
 }

@@ -36,6 +36,7 @@
 #include "utils/faultinjector.h"
 #include "gdddetector.h"
 #include "gdddetectorpriv.h"
+#include "pgstat.h"
 
 #define RET_STATUS_OK 0
 #define RET_STATUS_ERROR 1
@@ -93,7 +94,6 @@ sigHupHandler(SIGNAL_ARGS)
 bool
 GlobalDeadLockDetectorStartRule(Datum main_arg)
 {
-	/* we only start gdd on master when -E is specified */
 	if (Gp_role == GP_ROLE_DISPATCH &&
 		gp_enable_global_deadlock_detector)
 		return true;
@@ -115,7 +115,7 @@ GlobalDeadLockDetectorMain(Datum main_arg)
 	BackgroundWorkerUnblockSignals();
 
 	/* Connect to our database */
-	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL);
+	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL, 0);
 
 	/* disable orca here */
 	extern bool optimizer;
@@ -166,7 +166,8 @@ GlobalDeadLockDetectorLoop(void)
 
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
-					   timeout * 1000L);
+					   timeout * 1000L,
+					   WAIT_EVENT_GLOBAL_DEADLOCK_DETECTOR_MAIN);
 
 		ResetLatch(&MyProc->procLatch);
 

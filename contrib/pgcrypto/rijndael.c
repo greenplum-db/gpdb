@@ -97,7 +97,7 @@ static u4byte il_tab[4][256];
 #endif
 
 static u4byte tab_gen = 0;
-#endif   /* !PRE_CALC_TABLES */
+#endif							/* !PRE_CALC_TABLES */
 
 #define ff_mult(a,b)	((a) && (b) ? pow_tab[(log_tab[a] + log_tab[b]) % 255] : 0)
 
@@ -163,7 +163,7 @@ gen_tabs(void)
 				q;
 
 	/* log and power tables for GF(2**8) finite field with	*/
-	/* 0x11b as modular polynomial - the simplest prmitive	*/
+	/* 0x11b as modular polynomial - the simplest primitive	*/
 	/* root is 0x11, used here to generate the tables		*/
 
 	for (i = 0, p = 1; i < 256; ++i)
@@ -250,7 +250,7 @@ gen_tabs(void)
 	}
 
 	tab_gen = 1;
-#endif   /* !PRE_CALC_TABLES */
+#endif							/* !PRE_CALC_TABLES */
 }
 
 

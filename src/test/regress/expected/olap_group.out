@@ -2870,12 +2870,12 @@ LINE 1: select grouping(cn,vn,pn) from sale group by rollup(cn);
 -- Using in View --
 create view cube_view as select cn,vn,grouping(vn,cn) from sale group by cube(cn,vn);
 \d+ cube_view;
-                View "public.cube_view"
-  Column  |  Type   | Modifiers | Storage | Description 
-----------+---------+-----------+---------+-------------
- cn       | integer |           | plain   | 
- vn       | integer |           | plain   | 
- grouping | integer |           | plain   | 
+                           View "public.cube_view"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Description 
+----------+---------+-----------+----------+---------+---------+-------------
+ cn       | integer |           |          |         | plain   | 
+ vn       | integer |           |          |         | plain   | 
+ grouping | integer |           |          |         | plain   | 
 View definition:
  SELECT sale.cn,
     sale.vn,
@@ -2885,13 +2885,13 @@ View definition:
 
 create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by rollup(cn),vn,pn;
 \d+ rollup_view;
-               View "public.rollup_view"
-  Column  |  Type   | Modifiers | Storage | Description 
-----------+---------+-----------+---------+-------------
- cn       | integer |           | plain   | 
- vn       | integer |           | plain   | 
- pn       | integer |           | plain   | 
- grouping | integer |           | plain   | 
+                          View "public.rollup_view"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Description 
+----------+---------+-----------+----------+---------+---------+-------------
+ cn       | integer |           |          |         | plain   | 
+ vn       | integer |           |          |         | plain   | 
+ pn       | integer |           |          |         | plain   | 
+ grouping | integer |           |          |         | plain   | 
 View definition:
  SELECT sale.cn,
     sale.vn,
@@ -2902,12 +2902,12 @@ View definition:
 
 create view gs_view as select cn,vn,grouping(vn,cn) from sale group by grouping sets ((vn), (cn), (), (cn,vn));
 \d+ gs_view;
-                 View "public.gs_view"
-  Column  |  Type   | Modifiers | Storage | Description 
-----------+---------+-----------+---------+-------------
- cn       | integer |           | plain   | 
- vn       | integer |           | plain   | 
- grouping | integer |           | plain   | 
+                            View "public.gs_view"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Description 
+----------+---------+-----------+----------+---------+---------+-------------
+ cn       | integer |           |          |         | plain   | 
+ vn       | integer |           |          |         | plain   | 
+ grouping | integer |           |          |         | plain   | 
 View definition:
  SELECT sale.cn,
     sale.vn,
@@ -5694,30 +5694,30 @@ create view grp_v1 as select count(*) from sale group by ();
 create view grp_v2 as select count(*) from sale group by grouping sets(());
 create view grp_v3 as select count(*) from sale group by grouping sets((), ());
 \d+ grp_v1;
-                View "public.grp_v1"
- Column |  Type  | Modifiers | Storage | Description 
---------+--------+-----------+---------+-------------
- count  | bigint |           | plain   | 
+                           View "public.grp_v1"
+ Column |  Type  | Collation | Nullable | Default | Storage | Description 
+--------+--------+-----------+----------+---------+---------+-------------
+ count  | bigint |           |          |         | plain   | 
 View definition:
  SELECT count(*) AS count
    FROM sale
   GROUP BY ();
 
 \d+ grp_v2;
-                View "public.grp_v2"
- Column |  Type  | Modifiers | Storage | Description 
---------+--------+-----------+---------+-------------
- count  | bigint |           | plain   | 
+                           View "public.grp_v2"
+ Column |  Type  | Collation | Nullable | Default | Storage | Description 
+--------+--------+-----------+----------+---------+---------+-------------
+ count  | bigint |           |          |         | plain   | 
 View definition:
  SELECT count(*) AS count
    FROM sale
   GROUP BY GROUPING SETS (());
 
 \d+ grp_v3;
-                View "public.grp_v3"
- Column |  Type  | Modifiers | Storage | Description 
---------+--------+-----------+---------+-------------
- count  | bigint |           | plain   | 
+                           View "public.grp_v3"
+ Column |  Type  | Collation | Nullable | Default | Storage | Description 
+--------+--------+-----------+----------+---------+---------+-------------
+ count  | bigint |           |          |         | plain   | 
 View definition:
  SELECT count(*) AS count
    FROM sale
@@ -5797,125 +5797,125 @@ from sale, product where sale.pn = product.pn group by rollup(sale.pn); --mvd 1-
 
 select sale.pn, count(distinct prc), count(distinct vn), sum(prc) + log(sale.pn) + grouping(sale.pn)
 from sale, product where sale.pn = product.pn group by rollup(sale.pn); --mvd 1->3
- pn  | count | count |     ?column?     
------+-------+-------+------------------
- 100 |     2 |     2 |             2402
- 200 |     1 |     2 | 2.30102999566398
- 300 |     1 |     1 | 2.47712125471966
- 400 |     1 |     1 | 2.60205999132796
- 500 |     1 |     1 |  12.698970004336
- 600 |     1 |     1 | 7.77815125038364
- 700 |     1 |     1 | 3.84509804001426
- 800 |     1 |     1 | 3.90308998699194
-     |     4 |     5 |                 
+ pn  | count | count |      ?column?      
+-----+-------+-------+--------------------
+ 100 |     2 |     2 |               2402
+ 200 |     1 |     2 | 2.3010299956639813
+ 300 |     1 |     1 | 2.4771212547196626
+ 400 |     1 |     1 | 2.6020599913279625
+ 500 |     1 |     1 | 12.698970004336019
+ 600 |     1 |     1 |  7.778151250383644
+ 700 |     1 |     1 |  3.845098040014257
+ 800 |     1 |     1 | 3.9030899869919438
+     |     4 |     5 |                   
 (9 rows)
 
 SELECT group_id(), sale.pn, sale.qty, sale.cn, sale.prc, STDDEV(sale.prc*sale.cn),MIN(DISTINCT sale.prc*sale.vn) from sale
 GROUP BY ROLLUP((sale.qty,sale.cn),(sale.qty,sale.pn),(sale.vn),(sale.prc)),ROLLUP((sale.dt,sale.pn,sale.qty)); --mvd 2,3,4,5->6
- group_id | pn  | qty  | cn | prc  |      stddev      |  min  
-----------+-----+------+----+------+------------------+-------
-        0 | 100 |    1 |  1 |    0 |                  |     0
-        0 | 200 |    1 |  1 |    0 |                  |     0
-        0 | 200 |    1 |  3 |    0 |                  |     0
-        0 | 300 |    1 |  1 |    0 |                  |     0
-        0 | 400 |    1 |  1 |    0 |                  |     0
-        0 | 400 |    1 |  2 |    0 |                  |     0
-        0 | 700 |    1 |  4 |    1 |                  |    40
-        0 | 800 |    1 |  4 |    1 |                  |    40
-        0 | 500 |   12 |  1 |    5 |                  |   150
-        0 | 500 |   12 |  3 |    5 |                  |   150
-        0 | 600 |   12 |  3 |    5 |                  |   150
-        0 | 100 | 1100 |  2 | 2400 |                  | 96000
-        0 | 100 |    1 |  1 |      |                  |     0
-        0 | 200 |    1 |  1 |      |                  |     0
-        0 | 200 |    1 |  3 |      |                  |     0
-        0 | 300 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  2 |      |                  |     0
-        0 | 700 |    1 |  4 |      |                  |    40
-        0 | 800 |    1 |  4 |      |                  |    40
-        0 | 500 |   12 |  1 |      |                  |   150
-        0 | 500 |   12 |  3 |      |                  |   150
-        0 | 600 |   12 |  3 |      |                  |   150
-        0 | 100 | 1100 |  2 |      |                  | 96000
-        1 | 100 |    1 |  1 |      |                  |     0
-        0 | 100 |    1 |  1 |      |                  |     0
-        1 | 200 |    1 |  1 |      |                  |     0
-        0 | 200 |    1 |  1 |      |                  |     0
-        1 | 200 |    1 |  3 |      |                  |     0
-        0 | 200 |    1 |  3 |      |                  |     0
-        1 | 300 |    1 |  1 |      |                  |     0
-        0 | 300 |    1 |  1 |      |                  |     0
-        1 | 400 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  1 |      |                  |     0
-        1 | 400 |    1 |  2 |      |                  |     0
-        0 | 400 |    1 |  2 |      |                  |     0
-        1 | 700 |    1 |  4 |      |                  |    40
-        0 | 700 |    1 |  4 |      |                  |    40
-        1 | 800 |    1 |  4 |      |                  |    40
-        0 | 800 |    1 |  4 |      |                  |    40
-        1 | 500 |   12 |  1 |      |                  |   150
-        0 | 500 |   12 |  1 |      |                  |   150
-        1 | 500 |   12 |  3 |      |                  |   150
-        0 | 500 |   12 |  3 |      |                  |   150
-        1 | 600 |   12 |  3 |      |                  |   150
-        0 | 600 |   12 |  3 |      |                  |   150
-        1 | 100 | 1100 |  2 |      |                  | 96000
-        0 | 100 | 1100 |  2 |      |                  | 96000
-        0 | 100 |    1 |    |      |                  |     0
-        0 | 200 |    1 |    |      |                  |     0
-        0 | 200 |    1 |    |      |                  |     0
-        0 | 300 |    1 |    |      |                  |     0
-        0 | 400 |    1 |    |      |                0 |     0
-        0 | 700 |    1 |    |      |                  |    40
-        0 | 800 |    1 |    |      |                  |    40
-        0 | 500 |   12 |    |      | 7.07106781186548 |   150
-        0 | 600 |   12 |    |      |                  |   150
-        0 | 100 | 1100 |    |      |                  | 96000
-        0 |     |      |    |      | 1384.52331529883 |     0
-        0 | 100 |    1 |  1 |    0 |                  |     0
-        0 | 200 |    1 |  1 |    0 |                  |     0
-        0 | 300 |    1 |  1 |    0 |                  |     0
-        0 | 400 |    1 |  1 |    0 |                  |     0
-        0 | 400 |    1 |  2 |    0 |                  |     0
-        0 | 200 |    1 |  3 |    0 |                  |     0
-        0 | 700 |    1 |  4 |    1 |                  |    40
-        0 | 800 |    1 |  4 |    1 |                  |    40
-        0 | 500 |   12 |  1 |    5 |                  |   150
-        0 | 500 |   12 |  3 |    5 |                  |   150
-        0 | 600 |   12 |  3 |    5 |                  |   150
-        0 | 100 | 1100 |  2 | 2400 |                  | 96000
-        0 | 100 |    1 |  1 |      |                  |     0
-        0 | 200 |    1 |  1 |      |                  |     0
-        0 | 300 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  2 |      |                  |     0
-        0 | 200 |    1 |  3 |      |                  |     0
-        0 | 700 |    1 |  4 |      |                  |    40
-        0 | 800 |    1 |  4 |      |                  |    40
-        0 | 500 |   12 |  1 |      |                  |   150
-        0 | 500 |   12 |  3 |      |                  |   150
-        0 | 600 |   12 |  3 |      |                  |   150
-        0 | 100 | 1100 |  2 |      |                  | 96000
-        0 | 100 |    1 |  1 |      |                  |     0
-        0 | 200 |    1 |  1 |      |                  |     0
-        0 | 300 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  1 |      |                  |     0
-        0 | 400 |    1 |  2 |      |                  |     0
-        0 | 200 |    1 |  3 |      |                  |     0
-        0 | 700 |    1 |  4 |      |                  |    40
-        0 | 800 |    1 |  4 |      |                  |    40
-        0 | 500 |   12 |  1 |      |                  |   150
-        0 | 500 |   12 |  3 |      |                  |   150
-        0 | 600 |   12 |  3 |      |                  |   150
-        0 | 100 | 1100 |  2 |      |                  | 96000
-        0 |     |    1 |  1 |      |                0 |     0
-        0 |     |    1 |  2 |      |                  |     0
-        0 |     |    1 |  3 |      |                  |     0
-        0 |     |    1 |  4 |      |                0 |    40
-        0 |     |   12 |  1 |      |                  |   150
-        0 |     |   12 |  3 |      |                0 |   150
-        0 |     | 1100 |  2 |      |                  | 96000
+ group_id | pn  | qty  | cn | prc  |       stddev       |  min  
+----------+-----+------+----+------+--------------------+-------
+        0 | 100 |    1 |  1 |    0 |                    |     0
+        0 | 200 |    1 |  1 |    0 |                    |     0
+        0 | 200 |    1 |  3 |    0 |                    |     0
+        0 | 300 |    1 |  1 |    0 |                    |     0
+        0 | 400 |    1 |  1 |    0 |                    |     0
+        0 | 400 |    1 |  2 |    0 |                    |     0
+        0 | 700 |    1 |  4 |    1 |                    |    40
+        0 | 800 |    1 |  4 |    1 |                    |    40
+        0 | 500 |   12 |  1 |    5 |                    |   150
+        0 | 500 |   12 |  3 |    5 |                    |   150
+        0 | 600 |   12 |  3 |    5 |                    |   150
+        0 | 100 | 1100 |  2 | 2400 |                    | 96000
+        0 | 100 |    1 |  1 |      |                    |     0
+        0 | 200 |    1 |  1 |      |                    |     0
+        0 | 200 |    1 |  3 |      |                    |     0
+        0 | 300 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  2 |      |                    |     0
+        0 | 700 |    1 |  4 |      |                    |    40
+        0 | 800 |    1 |  4 |      |                    |    40
+        0 | 500 |   12 |  1 |      |                    |   150
+        0 | 500 |   12 |  3 |      |                    |   150
+        0 | 600 |   12 |  3 |      |                    |   150
+        0 | 100 | 1100 |  2 |      |                    | 96000
+        1 | 100 |    1 |  1 |      |                    |     0
+        0 | 100 |    1 |  1 |      |                    |     0
+        1 | 200 |    1 |  1 |      |                    |     0
+        0 | 200 |    1 |  1 |      |                    |     0
+        1 | 200 |    1 |  3 |      |                    |     0
+        0 | 200 |    1 |  3 |      |                    |     0
+        1 | 300 |    1 |  1 |      |                    |     0
+        0 | 300 |    1 |  1 |      |                    |     0
+        1 | 400 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  1 |      |                    |     0
+        1 | 400 |    1 |  2 |      |                    |     0
+        0 | 400 |    1 |  2 |      |                    |     0
+        1 | 700 |    1 |  4 |      |                    |    40
+        0 | 700 |    1 |  4 |      |                    |    40
+        1 | 800 |    1 |  4 |      |                    |    40
+        0 | 800 |    1 |  4 |      |                    |    40
+        1 | 500 |   12 |  1 |      |                    |   150
+        0 | 500 |   12 |  1 |      |                    |   150
+        1 | 500 |   12 |  3 |      |                    |   150
+        0 | 500 |   12 |  3 |      |                    |   150
+        1 | 600 |   12 |  3 |      |                    |   150
+        0 | 600 |   12 |  3 |      |                    |   150
+        1 | 100 | 1100 |  2 |      |                    | 96000
+        0 | 100 | 1100 |  2 |      |                    | 96000
+        0 | 100 |    1 |    |      |                    |     0
+        0 | 200 |    1 |    |      |                    |     0
+        0 | 200 |    1 |    |      |                    |     0
+        0 | 300 |    1 |    |      |                    |     0
+        0 | 400 |    1 |    |      |                  0 |     0
+        0 | 700 |    1 |    |      |                    |    40
+        0 | 800 |    1 |    |      |                    |    40
+        0 | 500 |   12 |    |      | 7.0710678118654755 |   150
+        0 | 600 |   12 |    |      |                    |   150
+        0 | 100 | 1100 |    |      |                    | 96000
+        0 |     |      |    |      |  1384.523315298829 |     0
+        0 | 100 |    1 |  1 |    0 |                    |     0
+        0 | 200 |    1 |  1 |    0 |                    |     0
+        0 | 300 |    1 |  1 |    0 |                    |     0
+        0 | 400 |    1 |  1 |    0 |                    |     0
+        0 | 400 |    1 |  2 |    0 |                    |     0
+        0 | 200 |    1 |  3 |    0 |                    |     0
+        0 | 700 |    1 |  4 |    1 |                    |    40
+        0 | 800 |    1 |  4 |    1 |                    |    40
+        0 | 500 |   12 |  1 |    5 |                    |   150
+        0 | 500 |   12 |  3 |    5 |                    |   150
+        0 | 600 |   12 |  3 |    5 |                    |   150
+        0 | 100 | 1100 |  2 | 2400 |                    | 96000
+        0 | 100 |    1 |  1 |      |                    |     0
+        0 | 200 |    1 |  1 |      |                    |     0
+        0 | 300 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  2 |      |                    |     0
+        0 | 200 |    1 |  3 |      |                    |     0
+        0 | 700 |    1 |  4 |      |                    |    40
+        0 | 800 |    1 |  4 |      |                    |    40
+        0 | 500 |   12 |  1 |      |                    |   150
+        0 | 500 |   12 |  3 |      |                    |   150
+        0 | 600 |   12 |  3 |      |                    |   150
+        0 | 100 | 1100 |  2 |      |                    | 96000
+        0 | 100 |    1 |  1 |      |                    |     0
+        0 | 200 |    1 |  1 |      |                    |     0
+        0 | 300 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  1 |      |                    |     0
+        0 | 400 |    1 |  2 |      |                    |     0
+        0 | 200 |    1 |  3 |      |                    |     0
+        0 | 700 |    1 |  4 |      |                    |    40
+        0 | 800 |    1 |  4 |      |                    |    40
+        0 | 500 |   12 |  1 |      |                    |   150
+        0 | 500 |   12 |  3 |      |                    |   150
+        0 | 600 |   12 |  3 |      |                    |   150
+        0 | 100 | 1100 |  2 |      |                    | 96000
+        0 |     |    1 |  1 |      |                  0 |     0
+        0 |     |    1 |  2 |      |                    |     0
+        0 |     |    1 |  3 |      |                    |     0
+        0 |     |    1 |  4 |      |                  0 |    40
+        0 |     |   12 |  1 |      |                    |   150
+        0 |     |   12 |  3 |      |                  0 |   150
+        0 |     | 1100 |  2 |      |                    | 96000
 (102 rows)
 
 -- MPP-6756
@@ -5929,8 +5929,6 @@ create table r6756 ( a int, b int, x int, y int )
         values (0), 
         values (1)
         );
-NOTICE:  CREATE TABLE will create partition "r6756_1_prt_1" for table "r6756"
-NOTICE:  CREATE TABLE will create partition "r6756_1_prt_2" for table "r6756"
 create table s6756 ( c int, d int, e int ) 
     distributed randomly;
 insert into s6756 values 

@@ -65,12 +65,17 @@ START (2) end (3) WITH (appendoptimized=true)
 );
 
 -- also make sure appendoptimized works in the gp_default_storage_options GUC
-SET gp_default_storage_options = 'appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
-SET gp_default_storage_options = 'appendoptimized=true,blocksize=32768,compresstype=none,checksum=true,orientation=row';
+SET gp_default_storage_options = 'blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
+SET gp_default_storage_options = 'blocksize=32768,compresstype=none,checksum=true,orientation=row';
+SET gp_default_storage_options = 'blocksize=32768,compresstype=none,checksum=true,blocksize=8';
+SET gp_default_storage_options = 'blocksize=65536,compresstype=none,checksum=true';
 SHOW gp_default_storage_options;
+SET default_table_access_method = ao_row;
+SHOW default_table_access_method;
 CREATE TABLE tenk_ao14 (like tenk_heap);
-SELECT relstorage FROM pg_catalog.pg_class WHERE relname = 'tenk_ao14';
+SELECT amhandler, reloptions FROM pg_class c, PG_AM a WHERE c.relname = 'tenk_ao14' AND c.relam = a.oid;
 RESET gp_default_storage_options;
+RESET default_table_access_method;
 
 -------------------- 
 -- catalog checks
@@ -295,7 +300,7 @@ SELECT count(*) FROM tenk_ao4;
 BEGIN;
 CREATE TABLE appendonly_sametxn_create_insert(a int, b int) with (appendonly=true);
 INSERT INTO appendonly_sametxn_create_insert select * from generate_series(1, 10);
--- Make sure insert is using segfile 1 for the insert, as part of create table itself.
+-- Make sure insert is using segfile 0 for the insert, as part of create table itself.
 SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
 last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
@@ -371,14 +376,8 @@ FROM gp_dist_random('gp_fastsequence')
 WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (
   SELECT oid FROM pg_class WHERE relname='tenk_ao2'));
 
--- OIDS
+-- WITH OIDS is no longer supported
 CREATE TABLE aowithoids(a int, b int) WITH (appendonly=true,oids=true);
-COPY aowithoids FROM STDIN;
-1	1
-2	2
-\.
-SELECT * FROM aowithoids ORDER BY a; -- this should show a,b only
-SELECT oideq(oid,-1) FROM aowithoids; -- kind of stupid but checks that oid actually exists and is queriable. should always be 'f'
 
 -- CREATE INDEX
 CREATE INDEX tenk_ao1_unique1 ON tenk_ao1 USING btree(unique1 int4_ops);
@@ -565,7 +564,7 @@ DROP TABLE aosizetest_2;
 
 
 -- Check that pg_total_relation_size() returns a sane value for an AO table.
--- (As of this writing, 1468872 bytes, but leave some slack for minor changes
+-- (As of this writing, 1436104 bytes, but leave some slack for minor changes
 -- to indexes etc.)
 CREATE TABLE aosizetest_3(a text) WITH (appendonly=true);
 insert into aosizetest_3 select repeat('x', 100) from generate_series(1, 10000);
@@ -634,7 +633,6 @@ DROP TABLE tenk_ao2;
 DROP TABLE tenk_ao3;
 DROP TABLE tenk_ao4;
 DROP TABLE tenk_ao5;
-DROP TABLE aowithoids;
 DROP TABLE ao_selection;
 
 ---------------------------------------------------------------
@@ -657,14 +655,26 @@ COMMIT;
 BEGIN;
 SAVEPOINT sp1;
 CREATE TABLE appendonly_subxans_test(a int, b int) WITH (appendonly=true);
+
+select oid as appendonly_subxans_test_oid from pg_class
+where relname = 'appendonly_subxans_test' \gset
+
 SAVEPOINT sp2;
+
 INSERT INTO appendonly_subxans_test SELECT * FROM generate_series(1, 10);
+
 SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
-IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
-WHERE relname='appendonly_subxans_test'));
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence')
+WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid =:appendonly_subxans_test_oid);
+
 ROLLBACK TO SAVEPOINT sp1;
 COMMIT;
+
+-- No entry should have leaked in gp_fastsequence after subtransaction
+-- rollback.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence')
+WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid =:appendonly_subxans_test_oid);
 
 -- create table and insert in independent subtransactions, validate insert to
 -- gp_fastsequence is using NormalXid and not FrozenXid and stays despite
@@ -798,3 +808,32 @@ select * from ao_inh_p4;
 --------------------------------------------------------------------------------
 SELECT objid FROM gp_fastsequence AS gfs LEFT OUTER JOIN (SELECT oid FROM
 pg_class) AS pgc ON (gfs.objid = pgc.oid) WHERE pgc.oid IS NULL;
+
+-- test case for append optimized columnar bitmap scan when row level bitmap is promoted to page level
+
+drop table if exists bms_ao_bug;
+create table bms_ao_bug
+(c1 int not null,
+c2 int not null,
+c3 char(100) not null)
+with (appendonly=true, compresstype=zlib)
+distributed by (c1)
+;
+
+insert into bms_ao_bug select 1, 1, a.c1::char(100) from generate_series(1, 2000000) a(c1);
+
+create index bms_ao_bug_ix1 on bms_ao_bug (c2);
+
+set enable_seqscan=off;
+set work_mem=256;
+
+select
+a.c1,
+count(*) row_cnt
+from bms_ao_bug a
+where a.c2 = 1
+group by
+a.c1
+;
+
+drop table bms_ao_bug;

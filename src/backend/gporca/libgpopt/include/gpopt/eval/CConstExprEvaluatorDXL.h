@@ -9,7 +9,7 @@
 //		Constant expression evaluator implementation that delegates to a DXL evaluator
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -32,58 +32,55 @@
 // forward declaration
 namespace gpos
 {
-	class CMemoryPool;
+class CMemoryPool;
 }
 
 namespace gpopt
 {
-	class CExpression;
-	class CMDAccessor;
-	class IConstDXLNodeEvaluator;
+class CExpression;
+class CMDAccessor;
+class IConstDXLNodeEvaluator;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CConstExprEvaluatorDXL
-	//
-	//	@doc:
-	//		Constant expression evaluator implementation that delegates to a DXL evaluator
-	//
-	//---------------------------------------------------------------------------
-	class CConstExprEvaluatorDXL : public IConstExprEvaluator
-	{
-		private:
-			// evaluates expressions represented as DXL, not owned
-			IConstDXLNodeEvaluator *m_pconstdxleval;
+//---------------------------------------------------------------------------
+//	@class:
+//		CConstExprEvaluatorDXL
+//
+//	@doc:
+//		Constant expression evaluator implementation that delegates to a DXL evaluator
+//
+//---------------------------------------------------------------------------
+class CConstExprEvaluatorDXL : public IConstExprEvaluator
+{
+private:
+	// evaluates expressions represented as DXL, not owned
+	IConstDXLNodeEvaluator *m_pconstdxleval;
 
-			// translates CExpression's to DXL which can then be sent to the evaluator
-			CTranslatorExprToDXL m_trexpr2dxl;
+	// translates CExpression's to DXL which can then be sent to the evaluator
+	CTranslatorExprToDXL m_trexpr2dxl;
 
-			// translates DXL coming from the evaluator back to CExpression
-			CTranslatorDXLToExpr m_trdxl2expr;
+	// translates DXL coming from the evaluator back to CExpression
+	CTranslatorDXLToExpr m_trdxl2expr;
 
-			// private copy ctor
-			CConstExprEvaluatorDXL(const CConstExprEvaluatorDXL &);
+	// private copy ctor
+	CConstExprEvaluatorDXL(const CConstExprEvaluatorDXL &);
 
-		public:
-			// ctor
-			CConstExprEvaluatorDXL(CMemoryPool *mp, CMDAccessor *md_accessor, IConstDXLNodeEvaluator *pconstdxleval);
+public:
+	// ctor
+	CConstExprEvaluatorDXL(CMemoryPool *mp, CMDAccessor *md_accessor,
+						   IConstDXLNodeEvaluator *pconstdxleval);
 
-			// dtor
-			virtual
-			~CConstExprEvaluatorDXL();
+	// dtor
+	virtual ~CConstExprEvaluatorDXL();
 
-			// evaluate the given expression and return the result as a new expression
-			// caller takes ownership of returned expression
-			virtual
-			CExpression *PexprEval(CExpression *pexpr);
+	// evaluate the given expression and return the result as a new expression
+	// caller takes ownership of returned expression
+	virtual CExpression *PexprEval(CExpression *pexpr);
 
-			// Returns true iff the evaluator can evaluate expressions
-			virtual
-			BOOL FCanEvalExpressions();
+	// Returns true iff the evaluator can evaluate expressions
+	virtual BOOL FCanEvalExpressions();
+};
+}  // namespace gpopt
 
-	};
-}
-
-#endif // !GPOPT_CConstExprEvaluatorDXL_H
+#endif	// !GPOPT_CConstExprEvaluatorDXL_H
 
 // EOF

@@ -30,7 +30,7 @@ time install_gpdb
 # Set PIP Download cache directory
 export PIP_CACHE_DIR=${PWD}/pip-cache-dir
 
-pip --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
+pip3 --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
 
 # Save the JSON_KEY to a file, for later use by gsutil.
 keyfile=secret-key.json
@@ -99,7 +99,7 @@ find . -name '*.coverage.*' -print0 | xargs -0 coverage combine --append
 # text report for developers perusing the CI directly. The artifacts we push are
 # publicly readable, to make it easy to browse the HTML. They're also gzipped to
 # save on storage (see the -Z option for `gsutil cp`).
-coverage html -d ./html
+coverage html -i -d ./html
 gsutil -m cp -rZ -a public-read ./html/* "$BUCKET_URI/$COMMIT_SHA/html"
-coverage report
+coverage report -i
 echo "View the full coverage report: https://storage.googleapis.com/$BUCKET_PATH/$COMMIT_SHA/html/index.html"

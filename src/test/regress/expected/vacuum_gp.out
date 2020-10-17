@@ -9,14 +9,10 @@ partition by list (b)
 (partition b1 values ('f'),
  partition b2 values ('t')
 );
-NOTICE:  CREATE TABLE will create partition "ao_age_test_1_prt_b1" for table "ao_age_test"
-NOTICE:  CREATE TABLE will create partition "ao_age_test_1_prt_b2" for table "ao_age_test"
 insert into ao_age_test select i, (i%123 > 50), (i/11) || '',
 '2008/10/12'::date + (i || ' days')::interval
 from generate_series(0, 99) i;
 create index ao_age_test_i on ao_age_test(i);
-NOTICE:  building index for child partition "ao_age_test_1_prt_b1"
-NOTICE:  building index for child partition "ao_age_test_1_prt_b2"
 -- MPP-23647 Create a empty table with no segments, let its age
 -- increase during the test.  We will vacuum it at the end of the
 -- test.
@@ -39,12 +35,12 @@ vacuum aocs_empty;
 create index ao_empty_a on ao_empty(a);
 create index aocs_empty_a on aocs_empty(a);
 \d ao_empty
-  Append-Only Table "public.ao_empty"
- Column |       Type        | Modifiers 
---------+-------------------+-----------
- a      | integer           | 
- b      | integer           | 
- c      | character varying | 
+                   Table "public.ao_empty"
+ Column |       Type        | Collation | Nullable | Default 
+--------+-------------------+-----------+----------+---------
+ a      | integer           |           |          | 
+ b      | integer           |           |          | 
+ c      | character varying |           |          | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
@@ -54,12 +50,12 @@ Indexes:
 Distributed by: (a)
 
 \d aocs_empty
-Append-Only Columnar Table "public.aocs_empty"
- Column |       Type        | Modifiers 
---------+-------------------+-----------
- a      | integer           | 
- b      | integer           | 
- c      | character varying | 
+                  Table "public.aocs_empty"
+ Column |       Type        | Collation | Nullable | Default 
+--------+-------------------+-----------+----------+---------
+ a      | integer           |           |          | 
+ b      | integer           |           |          | 
+ c      | character varying |           |          | 
 Checksum: t
 Indexes:
     "aocs_empty_a" btree (a)
@@ -124,8 +120,6 @@ partition by list (b)
 (partition b1 values ('f'),
  partition b2 values ('t')
 );
-NOTICE:  CREATE TABLE will create partition "vactst_1_prt_b1" for table "vactst"
-NOTICE:  CREATE TABLE will create partition "vactst_1_prt_b2" for table "vactst"
 insert into vactst select i, (i%123 > 50), (i/11) || '', '2008/10/12'::date + (i || ' days')::interval
 from generate_series(0, 99) i;
 vacuum analyze vactst;
@@ -158,7 +152,7 @@ vacuum ao_age_test;
 -- each of the three tables.
 -- AO/CO tables should have relfrozenxid = 0.
 select relname, relfrozenxid from pg_class
-where relname like 'ao_age_test%' and relkind = 'r' order by 1;
+where relname like 'ao_age_test%' and relkind in ('r','p') order by 1;
        relname        | relfrozenxid 
 ----------------------+--------------
  ao_age_test          |            0
@@ -203,6 +197,7 @@ where c.oid = a.segrelid and
 (2 rows)
 
 -- Verify that age of toast table is updated by vacuum.
+-- AOCS doesn't have a valid reltoastrelid from Greenplum 7.
 select 0 < age(relfrozenxid) as age_positive,
        age(relfrozenxid) < 100 as age_within_limit
 from pg_class where oid in (select reltoastrelid from pg_class
@@ -210,17 +205,16 @@ from pg_class where oid in (select reltoastrelid from pg_class
  age_positive | age_within_limit 
 --------------+------------------
  t            | t
- t            | t
-(2 rows)
+(1 row)
 
 -- Verify that index is displayed by \d after vacuum.
 \d ao_empty;
-  Append-Only Table "public.ao_empty"
- Column |       Type        | Modifiers 
---------+-------------------+-----------
- a      | integer           | 
- b      | integer           | 
- c      | character varying | 
+                   Table "public.ao_empty"
+ Column |       Type        | Collation | Nullable | Default 
+--------+-------------------+-----------+----------+---------
+ a      | integer           |           |          | 
+ b      | integer           |           |          | 
+ c      | character varying |           |          | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
@@ -230,12 +224,12 @@ Indexes:
 Distributed by: (a)
 
 \d aocs_empty;
-Append-Only Columnar Table "public.aocs_empty"
- Column |       Type        | Modifiers 
---------+-------------------+-----------
- a      | integer           | 
- b      | integer           | 
- c      | character varying | 
+                  Table "public.aocs_empty"
+ Column |       Type        | Collation | Nullable | Default 
+--------+-------------------+-----------+----------+---------
+ a      | integer           |           |          | 
+ b      | integer           |           |          | 
+ c      | character varying |           |          | 
 Checksum: t
 Indexes:
     "aocs_empty_a" btree (a)
@@ -313,7 +307,7 @@ VACUUM vacuum_gp_pt;
 SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
        relname        | reltuples | relpages 
 ----------------------+-----------+----------
- vacuum_gp_pt         |         0 |        1
+ vacuum_gp_pt         |         0 |        0
  vacuum_gp_pt_1_prt_1 |         0 |        1
  vacuum_gp_pt_1_prt_2 |        12 |        1
 (3 rows)
@@ -322,7 +316,7 @@ VACUUM ANALYZE vacuum_gp_pt;
 SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
        relname        | reltuples | relpages 
 ----------------------+-----------+----------
- vacuum_gp_pt         |         0 |        1
+ vacuum_gp_pt         |         0 |        0
  vacuum_gp_pt_1_prt_1 |         0 |        1
  vacuum_gp_pt_1_prt_2 |        12 |        1
 (3 rows)
@@ -331,10 +325,10 @@ reset gp_autostats_mode;
 -- Check forbidden relkind for vacuum is correctly skipped
 CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
-WARNING:  skipping "s_serial" --- cannot vacuum non-tables, external tables, foreign tables or special system tables
+WARNING:  skipping "s_serial" --- cannot vacuum non-tables or special system tables
 DROP SEQUENCE s_serial;
 VACUUM gp_toolkit.__gp_log_master_ext;
-WARNING:  skipping "__gp_log_master_ext" --- cannot vacuum non-tables, external tables, foreign tables or special system tables
+WARNING:  skipping "__gp_log_master_ext" --- cannot vacuum non-tables or special system tables
 -- Vacuum related access control tests (Issue: https://github.com/greenplum-db/gpdb/issues/9001)
 -- Given a non-super-user role
 CREATE ROLE non_super_user_vacuum;

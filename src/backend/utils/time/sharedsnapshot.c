@@ -156,7 +156,6 @@
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "lib/stringinfo.h"
-#include "storage/buffile.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/builtins.h"
@@ -178,7 +177,7 @@ DtxContextInfo QEDtxContextInfo = DtxContextInfo_StaticInit;
 typedef struct DumpEntry
 {
 	uint32  segmate;
-	TransactionId localXid;
+	FullTransactionId localXid;
 	Snapshot snapshot;
 } DumpEntry;
 
@@ -314,7 +313,6 @@ CreateSharedSnapshotArray(void)
 			 * So each slot gets (MaxBackends + max_prepared_xacts) transaction-ids.
 			 */
 			tmpSlot->snapshot.xip = &xip_base[0];
-			tmpSlot->snapshot.satisfies = HeapTupleSatisfiesMVCC;
 			xip_base += xipEntryCount;
 		}
 	}
@@ -449,9 +447,9 @@ retry:
 
 	/* initialize some things */
 	slot->slotid = slotId;
-	slot->xid = 0;
+	slot->fullXid = InvalidFullTransactionId;
 	slot->startTimestamp = 0;
-	slot->distributedXid = 0;
+	slot->distributedXid = InvalidDistributedTransactionId;
 	slot->segmateSync = 0;
 	/* Remember the writer proc for IsCurrentTransactionIdForReader */
 	slot->writer_proc = MyProc;
@@ -557,9 +555,9 @@ SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription
 
 	/* reset the slotid which marks it as being unused. */
 	slot->slotid = -1;
-	slot->xid = 0;
+	slot->fullXid = InvalidFullTransactionId;
 	slot->startTimestamp = 0;
-	slot->distributedXid = 0;
+	slot->distributedXid = InvalidDistributedTransactionId;
 	slot->segmateSync = 0;
 
 	sharedSnapshotArray->numSlots -= 1;
@@ -646,7 +644,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 	pDump->handle = dsm_segment_handle(segment);
 	pDump->segmateSync = src->segmateSync;
 	pDump->distributedXid = src->distributedXid;
-	pDump->localXid = src->xid;
+	pDump->localXid = src->fullXid;
 
 	elog(LOG, "Dump syncmate : %u snapshot to slot %d", src->segmateSync, id);
 
@@ -662,7 +660,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 {
 	bool found;
 	SharedSnapshotSlot *src = NULL;
-	TransactionId localXid;
+	FullTransactionId localXid;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 	Assert(!Gp_is_writer);
@@ -698,7 +696,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 			if (search_iter < 0)
 				search_iter = SNAPSHOTDUMPARRAYSZ - 1;
 
-			if(src->dump[search_iter].segmateSync == QEDtxContextInfo.segmateSync &&
+			if (src->dump[search_iter].segmateSync == QEDtxContextInfo.segmateSync &&
 				src->dump[search_iter].distributedXid == QEDtxContextInfo.distributedXid)
 			{
 				pDump = &src->dump[search_iter];
@@ -727,7 +725,6 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 
 		entry->snapshot = RestoreSnapshot(ptr);
 		entry->localXid = pDump->localXid;
-
 
 		dsm_detach(segment);
 

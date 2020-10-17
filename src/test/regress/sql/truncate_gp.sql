@@ -1,16 +1,16 @@
 -- Mask out segment file name
 -- start_matchsubs
 -- m/segfile.*,/
--- s/segfile.*,/segfile###,/
+-- s/segfile:\d+\/\d+/segfile###/
 -- end_matchsubs
 
 -- start_ignore
-CREATE EXTENSION plpythonu;
+CREATE EXTENSION plpython3u;
 -- end_ignore
 --- Fucntion which lists the table segment file size on each segment.
 CREATE OR REPLACE FUNCTION stat_table_segfile_size(datname text, tabname text)
     RETURNS TABLE (dbid int2, relfilenode_dboid_relative_path text, size int)
-    VOLATILE LANGUAGE plpythonu
+    VOLATILE LANGUAGE plpython3u
 AS
 $fn$
 import os

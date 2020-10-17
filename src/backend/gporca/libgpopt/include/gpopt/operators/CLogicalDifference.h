@@ -18,133 +18,113 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CLogicalDifference
-	//
-	//	@doc:
-	//		Difference operators
-	//
-	//---------------------------------------------------------------------------
-	class CLogicalDifference : public CLogicalSetOp
+//---------------------------------------------------------------------------
+//	@class:
+//		CLogicalDifference
+//
+//	@doc:
+//		Difference operators
+//
+//---------------------------------------------------------------------------
+class CLogicalDifference : public CLogicalSetOp
+{
+private:
+	// private copy ctor
+	CLogicalDifference(const CLogicalDifference &);
+
+public:
+	// ctor
+	explicit CLogicalDifference(CMemoryPool *mp);
+
+	CLogicalDifference(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
+					   CColRef2dArray *pdrgpdrgpcrInput);
+
+	// dtor
+	virtual ~CLogicalDifference();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopLogicalDifference;
+	}
 
-		private:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CLogicalDifference";
+	}
 
-			// private copy ctor
-			CLogicalDifference(const CLogicalDifference &);
+	// sensitivity to order of inputs
+	BOOL
+	FInputOrderSensitive() const
+	{
+		return true;
+	}
 
-		public:
+	// return a copy of the operator with remapped columns
+	virtual COperator *PopCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// ctor
-			explicit
-			CLogicalDifference(CMemoryPool *mp);
+	//-------------------------------------------------------------------------------------
+	// Derived Relational Properties
+	//-------------------------------------------------------------------------------------
 
-			CLogicalDifference
-				(
-				CMemoryPool *mp,
-				CColRefArray *pdrgpcrOutput,
-				CColRef2dArray *pdrgpdrgpcrInput
-				);
+	// derive max card
+	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const;
 
-			// dtor
-			virtual
-			~CLogicalDifference();
+	// derive constraint property
+	virtual CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *,	 //mp,
+							 CExpressionHandle &exprhdl) const
+	{
+		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
+	}
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopLogicalDifference;
-			}
+	//-------------------------------------------------------------------------------------
+	// Transformations
+	//-------------------------------------------------------------------------------------
 
-			// return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CLogicalDifference";
-			}
+	// candidate set of xforms
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const;
 
-			// sensitivity to order of inputs
-			BOOL FInputOrderSensitive() const
-			{
-				return true;
-			}
+	//-------------------------------------------------------------------------------------
+	// Derived Stats
+	//-------------------------------------------------------------------------------------
 
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	// stat promise
+	virtual EStatPromise
+	Esp(CExpressionHandle &) const
+	{
+		return CLogical::EspHigh;
+	}
 
-			//-------------------------------------------------------------------------------------
-			// Derived Relational Properties
-			//-------------------------------------------------------------------------------------
+	// derive statistics
+	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl,
+									  IStatisticsArray *stats_ctxt) const;
 
-			// derive max card
-			virtual
-			CMaxCard DeriveMaxCard(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
 
-			// derive constraint property
-			virtual
-			CPropConstraint *DerivePropertyConstraint
-				(
-				CMemoryPool *, //mp,
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
-			}
+	// conversion function
+	static CLogicalDifference *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopLogicalDifference == pop->Eopid());
 
-			//-------------------------------------------------------------------------------------
-			// Transformations
-			//-------------------------------------------------------------------------------------
+		return reinterpret_cast<CLogicalDifference *>(pop);
+	}
 
-			// candidate set of xforms
-			CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+};	// class CLogicalDifference
 
-			//-------------------------------------------------------------------------------------
-			// Derived Stats
-			//-------------------------------------------------------------------------------------
-
-			// stat promise
-			virtual
-			EStatPromise Esp(CExpressionHandle &) const
-			{
-				return CLogical::EspHigh;
-			}
-
-			// derive statistics
-			virtual
-			IStatistics *PstatsDerive
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				IStatisticsArray *stats_ctxt
-				)
-				const;
-
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-
-			// conversion function
-			static
-			CLogicalDifference *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopLogicalDifference == pop->Eopid());
-
-				return reinterpret_cast<CLogicalDifference*>(pop);
-			}
-
-	}; // class CLogicalDifference
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CLogicalDifference_H
+#endif	// !GPOPT_CLogicalDifference_H
 
 // EOF

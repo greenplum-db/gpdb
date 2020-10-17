@@ -11,22 +11,19 @@
 
 namespace gpopt
 {
-	class CColConstraintsArrayMapper : public IColConstraintsMapper
-	{
-		public:
-			CColConstraintsArrayMapper
-				(
-				gpos::CMemoryPool *mp,
-				CConstraintArray *pdrgpcnstr
-				);
-			virtual CConstraintArray *PdrgPcnstrLookup(CColRef *colref);
+class CColConstraintsArrayMapper : public IColConstraintsMapper
+{
+public:
+	CColConstraintsArrayMapper(gpos::CMemoryPool *mp,
+							   CConstraintArray *pdrgpcnstr);
+	virtual CConstraintArray *PdrgPcnstrLookup(CColRef *colref);
 
-			virtual ~CColConstraintsArrayMapper();
+	virtual ~CColConstraintsArrayMapper();
 
-		private:
-			gpos::CMemoryPool *m_mp;
-			CConstraintArray *m_pdrgpcnstr;
-	};
-}
+private:
+	gpos::CMemoryPool *m_mp;
+	CConstraintArray *m_pdrgpcnstr;
+};
+}  // namespace gpopt
 
-#endif //GPOPT_CColConstraintsArrayMapper_H
+#endif	//GPOPT_CColConstraintsArrayMapper_H

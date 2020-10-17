@@ -43,7 +43,7 @@ class GpSegmentRebalanceOperation:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
 
             self.logger.info("Stopping unbalanced primary segments...")
-            for hostname in unbalanced_primary_segs.keys():
+            for hostname in list(unbalanced_primary_segs.keys()):
                 cmd = GpSegStopCmd("stop unbalanced primary segs",
                                    self.gpEnv.getGpHome(),
                                    self.gpEnv.getGpVersion(),
@@ -101,7 +101,7 @@ class GpSegmentRebalanceOperation:
                 sys.argv = original_sys_args
                 self.logger.info("==============================END ANOTHER RECOVER==========================================")
 
-        except Exception, ex:
+        except Exception as ex:
             raise ex
         finally:
             pool.join()

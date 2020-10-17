@@ -7,10 +7,7 @@
 using namespace gpopt;
 
 CConstraintArray *
-CColConstraintsHashMapper::PdrgPcnstrLookup
-	(
-		CColRef *colref
-	)
+CColConstraintsHashMapper::PdrgPcnstrLookup(CColRef *colref)
 {
 	CConstraintArray *pdrgpcnstrCol = m_phmColConstr->Find(colref);
 	pdrgpcnstrCol->AddRef();
@@ -18,16 +15,12 @@ CColConstraintsHashMapper::PdrgPcnstrLookup
 }
 
 // mapping between columns and single column constraints in array of constraints
-static
-ColRefToConstraintArrayMap *
-PhmcolconstrSingleColConstr
-	(
-		CMemoryPool *mp,
-		CConstraintArray *drgPcnstr
-	)
+static ColRefToConstraintArrayMap *
+PhmcolconstrSingleColConstr(CMemoryPool *mp, CConstraintArray *drgPcnstr)
 {
 	CAutoRef<CConstraintArray> arpdrgpcnstr(drgPcnstr);
-	ColRefToConstraintArrayMap *phmcolconstr = GPOS_NEW(mp) ColRefToConstraintArrayMap(mp);
+	ColRefToConstraintArrayMap *phmcolconstr =
+		GPOS_NEW(mp) ColRefToConstraintArrayMap(mp);
 
 	const ULONG length = arpdrgpcnstr->Size();
 
@@ -53,12 +46,9 @@ PhmcolconstrSingleColConstr
 	return phmcolconstr;
 }
 
-CColConstraintsHashMapper::CColConstraintsHashMapper
-	(
-		CMemoryPool *mp,
-		CConstraintArray *pdrgpcnstr
-	) :
-	m_phmColConstr(PhmcolconstrSingleColConstr(mp, pdrgpcnstr))
+CColConstraintsHashMapper::CColConstraintsHashMapper(
+	CMemoryPool *mp, CConstraintArray *pdrgpcnstr)
+	: m_phmColConstr(PhmcolconstrSingleColConstr(mp, pdrgpcnstr))
 {
 }
 

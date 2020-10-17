@@ -7,8 +7,6 @@
 -- adding a new mirror. When dbid in gp_segment_configuration is not
 -- continous, the inconsistent issue will happen
 
-include: helpers/server_helpers.sql;
-
 --
 -- generate_recover_config_file:
 --   generate config file used by recoverseg -i
@@ -24,7 +22,7 @@ returns void as $$
     f = open("/tmp/recover_config_file", "w")
     f.write(configStr)
     f.close()
-$$ language plpythonu;
+$$ language plpython3u;
 
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
 -- stop a primary in order to trigger a mirror promotion

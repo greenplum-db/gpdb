@@ -4,7 +4,7 @@
  *	  Common header for some locking-related declarations.
  *
  *
- * Copyright (c) 2014-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2014-2019, PostgreSQL Global Development Group
  *
  * src/include/nodes/lockoptions.h
  *
@@ -43,4 +43,19 @@ typedef enum LockWaitPolicy
 	LockWaitError
 } LockWaitPolicy;
 
-#endif   /* LOCKOPTIONS_H */
+/*
+ * Possible lock modes for a tuple.
+ */
+typedef enum LockTupleMode
+{
+	/* SELECT FOR KEY SHARE */
+	LockTupleKeyShare,
+	/* SELECT FOR SHARE */
+	LockTupleShare,
+	/* SELECT FOR NO KEY UPDATE, and UPDATEs that don't modify key columns */
+	LockTupleNoKeyExclusive,
+	/* SELECT FOR UPDATE, UPDATEs that modify key columns, and DELETE */
+	LockTupleExclusive
+} LockTupleMode;
+
+#endif							/* LOCKOPTIONS_H */

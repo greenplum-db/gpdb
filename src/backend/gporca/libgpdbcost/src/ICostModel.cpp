@@ -17,7 +17,7 @@ using namespace gpopt;
 using namespace gpdbcost;
 
 // default number segments for the cost model
-#define GPOPT_DEFAULT_SEGMENT_COUNT 2 
+#define GPOPT_DEFAULT_SEGMENT_COUNT 2
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -28,10 +28,7 @@ using namespace gpdbcost;
 //
 //---------------------------------------------------------------------------
 ICostModel *
-ICostModel::PcmDefault
-	(
-	CMemoryPool *mp
-	)
+ICostModel::PcmDefault(CMemoryPool *mp)
 {
 	return GPOS_NEW(mp) CCostModelGPDBLegacy(mp, GPOPT_DEFAULT_SEGMENT_COUNT);
 }
@@ -46,10 +43,7 @@ ICostModel::PcmDefault
 //
 //---------------------------------------------------------------------------
 void
-ICostModel::SetParams
-	(
-	ICostModelParamsArray *pdrgpcp
-	)
+ICostModel::SetParams(ICostModelParamsArray *pdrgpcp)
 {
 	if (NULL == pdrgpcp)
 	{
@@ -61,7 +55,9 @@ ICostModel::SetParams
 	for (ULONG ul = 0; ul < size; ul++)
 	{
 		ICostModelParams::SCostParam *pcp = (*pdrgpcp)[ul];
-		GetCostModelParams()->SetParam(pcp->Id(), pcp->Get(), pcp->GetLowerBoundVal(), pcp->GetUpperBoundVal());
+		GetCostModelParams()->SetParam(pcp->Id(), pcp->Get(),
+									   pcp->GetLowerBoundVal(),
+									   pcp->GetUpperBoundVal());
 	}
 }
 

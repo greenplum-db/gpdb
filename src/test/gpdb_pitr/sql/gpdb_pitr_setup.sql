@@ -60,10 +60,10 @@ SELECT * FROM gpdb_two_phase_commit_after_acquire_share_lock;
 SELECT * FROM gpdb_one_phase_commit;
 SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
 
--- Run pg_switch_xlog() so that the WAL segment files with the restore
+-- Run pg_switch_wal() so that the WAL segment files with the restore
 -- points are archived to the WAL Archive directories.
-SELECT true FROM pg_switch_xlog();
-SELECT (SELECT true FROM pg_switch_xlog()) FROM gp_dist_random('gp_id');
+SELECT true FROM pg_switch_wal();
+SELECT (SELECT true FROM pg_switch_wal()) FROM gp_dist_random('gp_id');
 
 -- Call a checkpoint to flush buffers (including the switch xlog record)
 CHECKPOINT;

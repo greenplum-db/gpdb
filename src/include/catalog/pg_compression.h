@@ -18,6 +18,7 @@
 #define PG_COMPRESSION
 
 #include "catalog/genbki.h"
+#include "catalog/pg_compression_d.h"
 #include "fmgr.h"
 #include "utils/relcache.h"
 
@@ -26,17 +27,16 @@
  *		typedef struct FormData_pg_compression
  * ----------------
  */
-#define CompressionRelationId	7056
 
-CATALOG(pg_compression,7056)
+CATALOG(pg_compression,7056,CompressionRelationId)
 {
-	NameData	compname;			
-	regproc		compconstructor;	
-	regproc		compdestructor;		
-	regproc		compcompressor;		
-	regproc		compdecompressor;	
-	regproc		compvalidator;		
-	Oid			compowner;			
+	NameData	compname;
+	regproc		compconstructor BKI_LOOKUP(pg_proc);
+	regproc		compdestructor BKI_LOOKUP(pg_proc);
+	regproc		compcompressor BKI_LOOKUP(pg_proc);
+	regproc		compdecompressor BKI_LOOKUP(pg_proc);
+	regproc		compvalidator BKI_LOOKUP(pg_proc);
+	Oid			compowner BKI_DEFAULT(PGUID);
 } FormData_pg_compression;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -53,27 +53,6 @@ FOREIGN_KEY(compowner REFERENCES pg_authid(oid));
  * ----------------
  */
 typedef FormData_pg_compression *Form_pg_compression;
-
-
-/* ----------------
- *		compiler constants for pg_compression
- * ----------------
- */
-#define Natts_pg_compression					7
-#define Anum_pg_compression_compname			1
-#define Anum_pg_compression_compconstructor		2
-#define Anum_pg_compression_compdestructor		3
-#define Anum_pg_compression_compcompressor		4
-#define Anum_pg_compression_compdecompressor	5
-#define Anum_pg_compression_compvalidator		6
-#define Anum_pg_compression_compowner			7
-
-/* Initial contents */
-DATA(insert OID = 7060 ( zlib gp_zlib_constructor gp_zlib_destructor gp_zlib_compress gp_zlib_decompress gp_zlib_validator PGUID ));
-
-DATA(insert OID = 7062 ( rle_type gp_rle_type_constructor gp_rle_type_destructor gp_rle_type_compress gp_rle_type_decompress gp_rle_type_validator PGUID ));
-
-DATA(insert OID = 7063 ( none gp_dummy_compression_constructor gp_dummy_compression_destructor gp_dummy_compression_compress gp_dummy_compression_decompress gp_dummy_compression_validator PGUID ));
 
 #define NUM_COMPRESS_FUNCS 5
 

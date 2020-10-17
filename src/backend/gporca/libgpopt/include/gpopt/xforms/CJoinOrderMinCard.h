@@ -19,50 +19,40 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CJoinOrderMinCard
-	//
-	//	@doc:
-	//		Helper class for creating join orders based on cardinality of results
-	//
-	//---------------------------------------------------------------------------
-	class CJoinOrderMinCard : public CJoinOrder
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CJoinOrderMinCard
+//
+//	@doc:
+//		Helper class for creating join orders based on cardinality of results
+//
+//---------------------------------------------------------------------------
+class CJoinOrderMinCard : public CJoinOrder
+{
+private:
+	// result component
+	SComponent *m_pcompResult;
 
-		private:
+public:
+	// ctor
+	CJoinOrderMinCard(CMemoryPool *mp, CExpressionArray *pdrgpexprComponents,
+					  CExpressionArray *pdrgpexprConjuncts);
 
-			// result component
-			SComponent *m_pcompResult;
+	// dtor
+	virtual ~CJoinOrderMinCard();
 
-		public:
+	// main handler
+	virtual CExpression *PexprExpand();
 
-			// ctor
-			CJoinOrderMinCard
-				(
-				CMemoryPool *mp,
-				CExpressionArray *pdrgpexprComponents,
-				CExpressionArray *pdrgpexprConjuncts
-				);
+	// print function
+	virtual IOstream &OsPrint(IOstream &) const;
 
-			// dtor
-			virtual
-			~CJoinOrderMinCard();
+};	// class CJoinOrderMinCard
 
-			// main handler
-			virtual
-			CExpression *PexprExpand();
+}  // namespace gpopt
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &) const;
-
-	}; // class CJoinOrderMinCard
-
-}
-
-#endif // !GPOPT_CJoinOrderMinCard_H
+#endif	// !GPOPT_CJoinOrderMinCard_H
 
 // EOF

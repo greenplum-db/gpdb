@@ -28,14 +28,9 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLScalarConstValue::CDXLScalarConstValue
-	(
-	CMemoryPool *mp,
-	CDXLDatum *dxl_datum
-	)
-	:
-	CDXLScalar(mp),
-	m_dxl_datum(dxl_datum)
+CDXLScalarConstValue::CDXLScalarConstValue(CMemoryPool *mp,
+										   CDXLDatum *dxl_datum)
+	: CDXLScalar(mp), m_dxl_datum(dxl_datum)
 {
 }
 
@@ -79,7 +74,8 @@ CDXLScalarConstValue::GetDXLOperator() const
 const CWStringConst *
 CDXLScalarConstValue::GetOpNameStr() const
 {
-	return CDXLTokens::GetDXLTokenStr(EdxltokenScalarConstValue);;
+	return CDXLTokens::GetDXLTokenStr(EdxltokenScalarConstValue);
+	;
 }
 
 //---------------------------------------------------------------------------
@@ -91,12 +87,9 @@ CDXLScalarConstValue::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarConstValue::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *//node
-	)
-	const
+CDXLScalarConstValue::SerializeToDXL(CXMLSerializer *xml_serializer,
+									 const CDXLNode *  //node
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 	m_dxl_datum->Serialize(xml_serializer, element_name);
@@ -111,13 +104,10 @@ CDXLScalarConstValue::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLScalarConstValue::HasBoolResult
-	(
-	CMDAccessor *md_accessor
-	)
-	const
+CDXLScalarConstValue::HasBoolResult(CMDAccessor *md_accessor) const
 {
-	return (IMDType::EtiBool == md_accessor->RetrieveType(m_dxl_datum->MDId())->GetDatumType());
+	return (IMDType::EtiBool ==
+			md_accessor->RetrieveType(m_dxl_datum->MDId())->GetDatumType());
 }
 
 #ifdef GPOS_DEBUG
@@ -130,16 +120,13 @@ CDXLScalarConstValue::HasBoolResult
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarConstValue::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL // validate_children 
-	) 
-	const
+CDXLScalarConstValue::AssertValid(const CDXLNode *node,
+								  BOOL	// validate_children
+) const
 {
 	GPOS_ASSERT(0 == node->Arity());
 	GPOS_ASSERT(m_dxl_datum->MDId()->IsValid());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

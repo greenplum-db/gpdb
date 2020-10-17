@@ -3,13 +3,22 @@
 -- exist at the time of running upgrades. If objects are to be manipulated
 -- in other databases, make sure to change to the correct database first.
 
+-- GPDB_12_MERGE_FIXME: We don't need to drop partitioned table with indexes
+-- anymore, do we?
 --partition tables with indexes requires dropping for now
 --NOTE: 'isolation2test' and 'regression' database must already exist
-\c isolation2test;
-\i test_gpdb_pre_drop_partition_indices.sql;
+--\c isolation2test;
+--\i test_gpdb_pre_drop_partition_indices.sql;
 
-\c regression;
-\i test_gpdb_pre_drop_partition_indices.sql;
+--\c regression;
+--\i test_gpdb_pre_drop_partition_indices.sql;
+
+-- The isolation tests are run in utility mode, and the objects left behind
+-- are not consistent between the QD and QEs.
+DROP DATABASE IF EXISTS isolation_regression;
+
+-- The rest of the things we're fixing are in the 'regression' database
+\c regression
 
 -- This one's interesting:
 --    No match found in new cluster for old relation with OID 173472 in database "regression": "public.sales_1_prt_bb_pkey" which is an index on "public.newpart"
@@ -26,6 +35,20 @@ DROP TABLE IF EXISTS public.test_inh_check_child CASCADE;
 -- This view definition changes after upgrade.
 DROP VIEW IF EXISTS v_xpect_triangle_de CASCADE;
 
+-- Similarly, one of the partitions in this table has a DEFAULT that has
+-- a cosmetic difference when it's dumped and restored twice:
+--
+-- CREATE TABLE public.constraint_pt1_1_prt_feb08 (
+--      id integer,
+--      date date,
+-- -    amt numeric(10,2) DEFAULT NULL,
+-- +    amt numeric(10,2) DEFAULT NULL::numeric,
+--      CONSTRAINT amt_check CHECK ((amt > (0)::numeric))
+--  )
+--   DISTRIBUTED BY (id);
+--
+DROP TABLE IF EXISTS constraint_pt1;
+
 -- The dump locations for these protocols change sporadically and cause a false
 -- negative. This may indicate a bug in pg_dump's sort priority for PROTOCOLs.
 DROP PROTOCOL IF EXISTS demoprot_untrusted;
@@ -36,7 +59,3 @@ DROP PROTOCOL IF EXISTS demoprot_untrusted2;
 -- we need to drop this view.
 DROP VIEW IF EXISTS nums CASCADE;
 DROP VIEW IF EXISTS sums_1_100 CASCADE;
-
--- Cannot currently handle partitioned table with a composite type as
--- partitioning key (see https://github.com/greenplum-db/gpdb/issues/9405).
-drop table public.employee_table;

@@ -14,7 +14,10 @@
 #include "executor/executor.h"
 #include "executor/nodeTupleSplit.h"
 #include "optimizer/tlist.h"
+#include "optimizer/optimizer.h"
 #include "utils/memutils.h"
+
+static TupleTableSlot *ExecTupleSplit(PlanState *pstate);
 
 /* -----------------
  * ExecInitTupleSplit
@@ -23,7 +26,8 @@
  *	planner and initializes its outer subtree
  * -----------------
  */
-TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags)
+TupleSplitState *
+ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags)
 {
 	TupleSplitState     *tup_spl_state;
 	Plan                *outerPlan;
@@ -34,21 +38,9 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 	tup_spl_state = makeNode(TupleSplitState);
 	tup_spl_state->ss.ps.plan = (Plan *) node;
 	tup_spl_state->ss.ps.state = estate;
+	tup_spl_state->ss.ps.ExecProcNode = ExecTupleSplit;
 
 	ExecAssignExprContext(estate, &tup_spl_state->ss.ps);
-
-	/*
-	 * tuple table initialization
-	 */
-	tup_spl_state->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
-	ExecInitResultTupleSlot(estate, &tup_spl_state->ss.ps);
-
-	/*
-	 * initialize child expressions
-	 */
-	tup_spl_state->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) node->plan.targetlist,
-					 (PlanState *) tup_spl_state);
 
 	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
@@ -65,18 +57,17 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 	/*
 	 * initialize source tuple type.
 	 */
-	ExecAssignScanTypeFromOuterPlan(&tup_spl_state->ss);
+	tup_spl_state->ss.ps.outerops =
+		ExecGetResultSlotOps(outerPlanState(&tup_spl_state->ss),
+							 &tup_spl_state->ss.ps.outeropsfixed);
+	tup_spl_state->ss.ps.outeropsset = true;
 
-	ExecAssignResultTypeFromTL(&tup_spl_state->ss.ps);
+	ExecCreateScanSlotFromOuterPlan(estate, &tup_spl_state->ss,
+									tup_spl_state->ss.ps.outerops);
+
+	/* initialize result type, slot and projection. */
+	ExecInitResultTupleSlotTL(&tup_spl_state->ss.ps, &TTSOpsVirtual);
 	ExecAssignProjectionInfo(&tup_spl_state->ss.ps, NULL);
-
-	/*
-	 * initialize group by bitmap set
-	 */
-	for (int keyno = 0; keyno < node->numCols; keyno++)
-	{
-		tup_spl_state->grpbySet = bms_add_member(tup_spl_state->grpbySet, node->grpColIdx[keyno]);
-	}
 
 	/*
 	 * initialize input tuple isnull buffer
@@ -85,26 +76,74 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 
 	/* create bitmap set for each dqa expr to store its input tuple attribute number */
 	AttrNumber maxAttrNum = 0;
-	tup_spl_state->dqa_args_attr_num = palloc0(sizeof(Bitmapset *) * node->numDisDQAs);
-	for (int i = 0; i < node->numDisDQAs; i++)
+	tup_spl_state->numDisDQAs = list_length(node->dqa_expr_lst);
+	tup_spl_state->dqa_split_bms = palloc0(sizeof(Bitmapset *) * tup_spl_state->numDisDQAs);
+	tup_spl_state->agg_filter_array = palloc0(sizeof(ExprState *) * tup_spl_state->numDisDQAs);
+	tup_spl_state->dqa_id_array = palloc0( sizeof(int) * tup_spl_state->numDisDQAs);
+
+	int i = 0;
+	ListCell *lc;
+	foreach(lc, node->dqa_expr_lst)
 	{
+		DQAExpr *dqaExpr = (DQAExpr *)lfirst(lc);
+
 		int j = -1;
-		while ((j = bms_next_member(node->dqa_args_id_bms[i], j)) >= 0)
+		while ((j = bms_next_member(dqaExpr->agg_args_id_bms, j)) >= 0)
 		{
 			TargetEntry *te = get_sortgroupref_tle((Index)j, node->plan.lefttree->targetlist);
-			tup_spl_state->dqa_args_attr_num[i] = bms_add_member(tup_spl_state->dqa_args_attr_num[i], te->resno);
+			tup_spl_state->dqa_split_bms[i] = bms_add_member(tup_spl_state->dqa_split_bms[i], te->resno);
 
 			if (maxAttrNum < te->resno)
 				maxAttrNum = te->resno;
 		}
+
+		/* init filter expr */
+		tup_spl_state->agg_filter_array[i] = ExecInitExpr(dqaExpr->agg_filter, (PlanState *)tup_spl_state);
+		tup_spl_state->dqa_id_array[i] = dqaExpr->agg_expr_id;
+		i ++;
 	}
 
 	tup_spl_state->maxAttrNum = maxAttrNum;
+
 	/*
-	 * add all DQA expr AttrNum into a bitmapset
+	 * fetch group by expr bitmap set
 	 */
-	for (int i = 0; i < node->numDisDQAs; i++)
-		tup_spl_state->all_dist_attr_num = bms_add_members(tup_spl_state->all_dist_attr_num, tup_spl_state->dqa_args_attr_num[i]);
+	Bitmapset *grpbySet = NULL;
+	for (int keyno = 0; keyno < node->numCols; keyno++)
+	{
+		grpbySet = bms_add_member(grpbySet, node->grpColIdx[keyno]);
+	}
+
+	/*
+	 * fetch all columns which is not referenced by all DQAs
+	 */
+	Bitmapset *all_input_attr_bms = NULL;
+	for (int id = 0; id < list_length(outerPlan(node)->targetlist); id++)
+		all_input_attr_bms = bms_add_member(all_input_attr_bms, id);
+
+	Bitmapset *dqa_not_used_bms = all_input_attr_bms;
+	for (int id = 0; id < tup_spl_state->numDisDQAs; id++)
+	{
+		dqa_not_used_bms =
+			bms_del_members(dqa_not_used_bms, tup_spl_state->dqa_split_bms[id]);
+	}
+
+	/* grpbySet + dqa_not_used_bms is common skip splitting pattern */
+	Bitmapset *skip_split_bms = bms_join(dqa_not_used_bms, grpbySet);
+
+	/*
+	 * For each DQA splitting tuple, it contain DQA's expr needed column and
+	 * common skip column.
+	 */
+	for (int id = 0; id < tup_spl_state->numDisDQAs; id++)
+	{
+		Bitmapset *orig_bms = tup_spl_state->dqa_split_bms[id];
+		tup_spl_state->dqa_split_bms[id] =
+			bms_union(orig_bms, skip_split_bms);
+		bms_free(orig_bms);
+	}
+
+	bms_free(skip_split_bms);
 
 	return tup_spl_state;
 }
@@ -117,47 +156,68 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
  *      the DQAs exprs). Each output tuple only contain one DQA expr and
  *      all GROUP BY exprs.
  */
-struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node)
+static TupleTableSlot *
+ExecTupleSplit(PlanState *pstate)
 {
+	TupleSplitState *node = castNode(TupleSplitState, pstate);
 	TupleTableSlot  *result;
 	ExprContext     *econtext;
 	TupleSplit      *plan;
-	ExprDoneCond     isDone;
+	bool             filter_out = false;
 
 	econtext = node->ss.ps.ps_ExprContext;
 	plan = (TupleSplit *)node->ss.ps.plan;
 
-	/* if all DQAs of the last slot were processed, get a new slot */
-	if (node->currentExprId == 0)
-	{
-		node->outerslot = ExecProcNode(outerPlanState(node));
+	do {
+		/* if all DQAs of the last slot were processed, get a new slot */
+		if (node->currentExprId == 0)
+		{
+			node->outerslot = ExecProcNode(outerPlanState(node));
 
-		if (TupIsNull(node->outerslot))
-			return NULL;
+			if (TupIsNull(node->outerslot))
+				return NULL;
 
-		slot_getsomeattrs(node->outerslot, node->maxAttrNum);
+			slot_getsomeattrs(node->outerslot, node->maxAttrNum);
 
-		/* store original tupleslot isnull array */
-		memcpy(node->isnull_orig, slot_get_isnull(node->outerslot),
-			   node->outerslot->PRIVATE_tts_nvalid * sizeof(bool));
-	}
+			/* store original tupleslot isnull array */
+			memcpy(node->isnull_orig, node->outerslot->tts_isnull,
+		           node->outerslot->tts_nvalid * sizeof(bool));
+		}
+
+		econtext->ecxt_outertuple = node->outerslot;
+
+		/* The filter is pushed down from relative DQA */
+		ExprState * filter = node->agg_filter_array[node->currentExprId];
+		if (filter)
+		{
+			Datum		res;
+			bool		isnull;
+
+			res = ExecEvalExprSwitchContext(filter, econtext, &isnull);
+
+			if (isnull || !DatumGetBool(res))
+			{
+				/* skip tuple split once, if the tuple filter out */
+				node->currentExprId = (node->currentExprId + 1) % node->numDisDQAs;
+				filter_out = true;
+			}
+			else
+			{
+
+				filter_out = false;
+			}
+
+		}
+	} while(filter_out);
 
 	/* reset the isnull array to the original state */
-	bool *isnull = slot_get_isnull(node->outerslot);
-	memcpy(isnull, node->isnull_orig, node->outerslot->PRIVATE_tts_nvalid);
+	bool *isnull = node->outerslot->tts_isnull;
+	memcpy(isnull, node->isnull_orig, node->outerslot->tts_nvalid);
 
-	for (AttrNumber attno = 1; attno <= node->outerslot->PRIVATE_tts_nvalid; attno++)
+	for (AttrNumber attno = 1; attno <= node->outerslot->tts_nvalid; attno++)
 	{
-		/* If the column is in the group by, keep it */
-		if (bms_is_member(attno, node->grpbySet))
-			continue;
-
 		/* If the column is relevant to the current dqa, keep it */
-		if (bms_is_member(attno, node->dqa_args_attr_num[node->currentExprId]))
-			continue;
-
-		/* If the column does not belong to any DQA but the projection needs it, keep it */
-		if (!bms_is_member(attno, node->all_dist_attr_num))
+		if (bms_is_member(attno, node->dqa_split_bms[node->currentExprId]))
 			continue;
 
 		/* otherwise, null this column out */
@@ -165,11 +225,10 @@ struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node)
 	}
 
 	/* project the tuple */
-	econtext->ecxt_outertuple = node->outerslot;
-	result = ExecProject(node->ss.ps.ps_ProjInfo, &isDone);
+	result = ExecProject(node->ss.ps.ps_ProjInfo);
 
 	/* the next DQA to process */
-	node->currentExprId = (node->currentExprId + 1) % plan->numDisDQAs;
+	node->currentExprId = (node->currentExprId + 1) % node->numDisDQAs;
 	ResetExprContext(econtext);
 
 	return result;
@@ -179,7 +238,6 @@ void ExecEndTupleSplit(TupleSplitState *node)
 {
 	PlanState   *outerPlan;
 
-	bms_free(node->grpbySet);
 	pfree(node->isnull_orig);
 
 	/*

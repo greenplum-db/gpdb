@@ -139,26 +139,6 @@ DROP TABLE copy_regression_default2;
 DROP TABLE copy_regression_default3;
 
 -- ######################################################
--- COPY with OIDS
--- ######################################################
-
-CREATE TABLE copy_regression_oids(a text) WITH OIDS;
-
-COPY copy_regression_oids from stdin with oids delimiter '|';
-50000|a text data
-50001|a text data
-\.
-COPY copy_regression_oids from stdin with oids csv;
-60000,a text data
-60001,a text data
-\.
-SELECT * FROM copy_regression_oids ORDER BY oid;
-
-DROP TABLE copy_regression_oids;
-
-
-
--- ######################################################
 -- COPY OUT
 -- ######################################################
 
@@ -836,16 +816,10 @@ INSERT INTO test_copy_on_segment VALUES (3, 'h', 'j');
 INSERT INTO test_copy_on_segment VALUES (4, 'i', 'l');
 INSERT INTO test_copy_on_segment VALUES (5, 'q', 'w');
 
-CREATE TABLE test_copy_on_segment_withoids (a int, b text, c text) WITH OIDS DISTRIBUTED BY (a,c);
-INSERT INTO test_copy_on_segment_withoids VALUES (1, 's', 'd');
-INSERT INTO test_copy_on_segment_withoids VALUES (2, 'f', 'g');
-INSERT INTO test_copy_on_segment_withoids VALUES (3, 'h', 'j');
-
 COPY test_copy_on_segment TO '/tmp/invalid_filename.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
-COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 
 CREATE TABLE test_copy_from_on_segment_txt (LIKE test_copy_on_segment) DISTRIBUTED BY (b);
 COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename.txt' ON SEGMENT;
@@ -860,15 +834,10 @@ CREATE TABLE test_copy_from_on_segment_csv (LIKE test_copy_on_segment) DISTRIBUT
 COPY test_copy_from_on_segment_csv FROM '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
 SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
 
-CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_withoids) WITH OIDS DISTRIBUTED BY (a,c);
-COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
-SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
-
 COPY (select * from test_copy_on_segment) TO '/tmp/invalid_filename_select.txt' ON SEGMENT;
 COPY (select * from test_copy_on_segment) TO '/tmp/valid_filename_select<SEGID>.txt' ON SEGMENT;
 COPY (select * from test_copy_on_segment) TO '/tmp/valid_filename_select<SEGID>.bin' ON SEGMENT BINARY;
 COPY test_copy_on_segment TO '/tmp/valid_filename_select<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER;
-COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename_select<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',';
 
 delete from test_copy_from_on_segment_txt;
 COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename_select.txt' ON SEGMENT;
@@ -882,10 +851,6 @@ SELECT * FROM test_copy_from_on_segment_binary ORDER BY a;
 delete from test_copy_from_on_segment_csv;
 COPY test_copy_from_on_segment_csv FROM '/tmp/valid_filename_select<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER;
 SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
-
-delete from  test_copy_from_on_segment_withoids;
-COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename_select<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',';
-SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
 
 CREATE TABLE onek_copy_onsegment (
     unique1     int4,
@@ -933,11 +898,9 @@ DROP TABLE IF EXISTS test_copy_on_segment_array;
 DROP TABLE IF EXISTS test_copy_on_segment_array_1;
 DROP TABLE IF EXISTS test_copy_on_segment_2dim_array;
 DROP TABLE IF EXISTS test_copy_on_segment_2dim_array_1;
-DROP TABLE IF EXISTS test_copy_on_segment_withoids;
 DROP TABLE IF EXISTS test_copy_from_on_segment_txt;
 DROP TABLE IF EXISTS test_copy_from_on_segment_binary;
 DROP TABLE IF EXISTS test_copy_from_on_segment_csv;
-DROP TABLE IF EXISTS test_copy_from_on_segment_withoids;
 DROP TABLE IF EXISTS onek_copy_from_onsegment;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 
@@ -1116,11 +1079,14 @@ CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION(a int,b int) DISTRIBUTED
     )
 ( START (0) END (10) EVERY (5));
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION SELECT generate_series(0,9),generate_series(0,9);
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
+COPY (SELECT * FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION ORDER BY a, b) to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
 
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION0.csv'  CSV;
+COPY (VALUES
+  (2, 2),
+  (0, 0)
+) to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION0.csv'  CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 
 -- start_ignore
@@ -1234,31 +1200,36 @@ COPY sales (id, date, amt) FROM stdin;
 18	2017-08-01	20.00
 12	2017-12-01	20.00
 \.
--- execute external psql here to get the message of COPY
-\! psql -c "COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
-\! psql -c "COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
-CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t20.00\n"' ON MASTER FORMAT 'text';
-ALTER TABLE sales ALTER PARTITION dec17 EXCHANGE PARTITION dec17 WITH TABLE ext_dec17 WITHOUT VALIDATION;
+-- Set QUIET off, to also test the row counts that COPY returns
+\set QUIET 'off'
+
+COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT;
+TRUNCATE sales;
+COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT;
+
+CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t21.00\n"' ON MASTER FORMAT 'text';
+ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
 DROP TABLE ext_dec17;
-COPY sales TO PROGRAM 'cat > /dev/null' IGNORE EXTERNAL PARTITIONS;
-COPY sales TO PROGRAM 'printf <SEGID> && cat > /dev/null' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
+COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
+COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
+
+-- Verify that the files don't contain the row from the external partition.
+\set QUIET 'on'
+
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_all' ON MASTER FORMAT 'text' (DELIMITER 'off');
+SELECT * FROM pg_temp.read_result;
+DROP EXTERNAL TABLE pg_temp.read_result;
+
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_$GP_SEGMENT_ID' FORMAT 'text' (DELIMITER 'off');
+SELECT * FROM pg_temp.read_result;
+DROP EXTERNAL TABLE pg_temp.read_result;
+
 DROP TABLE sales;
+
 CREATE TABLE ao_copy(c int) WITH (appendonly=true);
 COPY ao_copy TO '/tmp/ao<SEGID>.txt' ON SEGMENT;
 COPY ao_copy FROM '/tmp/ao<SEGID>.txt' ON SEGMENT;
 DROP TABLE ao_copy;
-
--- "unknown" types can be dumped and restored: these attributes are
--- NULL-terminated in memory (attlen == -2), so the COPY code needs to handle
--- them explicitly.
-CREATE TEMP TABLE type_unknown ( a unknown );
-
-COPY type_unknown FROM stdin;
-unknown
-\.
-
-COPY type_unknown TO stdout;
-
 
 --
 -- Test row counts

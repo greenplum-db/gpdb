@@ -23,6 +23,7 @@
 #include "funcapi.h"
 
 #include "utils/builtins.h"
+#include "utils/regproc.h"
 
 Datum
 gp_deprecated(PG_FUNCTION_ARGS)

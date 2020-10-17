@@ -69,10 +69,8 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Missing" to stdout
         And gpcheckcat should print "Table miss_attr_db1.public.heap_table.-1" to stdout
         And gpcheckcat should print "Table miss_attr_db1.public.heap_part_table.-1" to stdout
-        And gpcheckcat should print "Table miss_attr_db1.public.heap_part_table_1_prt_p1_2_prt_1.-1" to stdout
         And gpcheckcat should print "Table miss_attr_db1.public.ao_table.-1" to stdout
         And gpcheckcat should print "Table miss_attr_db1.public.ao_part_table.-1" to stdout
-        And gpcheckcat should print "Table miss_attr_db1.public.ao_part_table_1_prt_p1_2_prt_1.-1" to stdout
         And gpcheckcat should print "on content -1" to stdout
         Examples:
           | attrname   | tablename     |
@@ -518,7 +516,7 @@ Feature: gpcheckcat tests
         And the user runs "echo > /tmp/backup_gpfdist_dummy"
         And the user runs "gpfdist -p 8098 -d /tmp &"
         And there is a partition table "part_external" has external partitions of gpfdist with file "backup_gpfdist_dummy" on port "8098" in "miss_attr_db3" with data
-        Then data for partition table "part_external" with partition level "0" is distributed across all segments on "miss_attr_db3"
+        Then data for partition table "part_external" with leaf partition distributed across all segments on "miss_attr_db3"
         When the user runs "gpcheckcat miss_attr_db3"
         And gpcheckcat should return a return code of 0
         Then gpcheckcat should not print "Missing" to stdout
@@ -531,22 +529,26 @@ Feature: gpcheckcat tests
             | attrname   | tablename          |
             | ftrelid    | pg_foreign_table   |
 
-    @concourse_cluster
-    Scenario Outline: gpcheckcat should discover missing attributes for external tables
-        Given database "miss_attr_db3" is dropped and recreated
-        And the user runs "echo > /tmp/backup_gpfdist_dummy"
-        And the user runs "gpfdist -p 8098 -d /tmp &"
-        And there is a partition table "part_external" has external partitions of gpfdist with file "backup_gpfdist_dummy" on port "8098" in "miss_attr_db3" with data
-        Then data for partition table "part_external" with partition level "0" is distributed across all segments on "miss_attr_db3"
-        When the user runs "gpcheckcat miss_attr_db3"
-        And gpcheckcat should return a return code of 0
-        Then gpcheckcat should not print "Missing" to stdout
-        And the user runs "psql miss_attr_db3 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='part_external_1_prt_p_2'::regclass::oid;""
-        Then psql should return a return code of 0
-        When the user runs "gpcheckcat miss_attr_db3"
-        Then gpcheckcat should print "Missing" to stdout
-        And gpcheckcat should print "part_external_1_prt_p_2_check" to stdout
-        Examples:
-            | attrname   | tablename     |
-            | conrelid   | pg_constraint |
-
+# GPDB_12_MERGE_FIXME:
+# 1, this case is removed because 12 partitioning implementation will not record pg_constraint, right?
+# 2, gpcheckcat in the concourse only runs 1 or 2 tests, how about merging into another task?
+#
+#    @concourse_cluster
+#    Scenario Outline: gpcheckcat should discover missing attributes for external tables
+#        Given database "miss_attr_db3" is dropped and recreated
+#        And the user runs "echo > /tmp/backup_gpfdist_dummy"
+#        And the user runs "gpfdist -p 8098 -d /tmp &"
+#        And there is a partition table "part_external" has external partitions of gpfdist with file "backup_gpfdist_dummy" on port "8098" in "miss_attr_db3" with data
+#        Then data for partition table "part_external" with leaf partition distributed across all segments on "miss_attr_db3"
+#        When the user runs "gpcheckcat miss_attr_db3"
+#        And gpcheckcat should return a return code of 0
+#        Then gpcheckcat should not print "Missing" to stdout
+#        And the user runs "psql miss_attr_db3 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='part_external_1_prt_p_2'::regclass::oid;""
+#        Then psql should return a return code of 0
+#        When the user runs "gpcheckcat miss_attr_db3"
+#        Then gpcheckcat should print "Missing" to stdout
+#        And gpcheckcat should print "part_external_1_prt_p_2_check" to stdout
+#        Examples:
+#            | attrname   | tablename     |
+#            | conrelid   | pg_constraint |
+#

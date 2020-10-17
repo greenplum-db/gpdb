@@ -342,24 +342,24 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
         exitCode = commandObject.run()
         exit_status = exitCode
 
-    except ProgramArgumentValidationException, e:
+    except ProgramArgumentValidationException as e:
         if e.shouldPrintHelp():
             parser.print_help()
         logger.error("%s: error: %s" % (gProgramName, e.getMessage()))
         exit_status = 2
-    except ExceptionNoStackTraceNeeded, e:
+    except ExceptionNoStackTraceNeeded as e:
         logger.error("%s error: %s" % (gProgramName, e))
         exit_status = 2
-    except UserAbortedException, e:
+    except UserAbortedException as e:
         logger.info("User abort requested, Exiting...")
         exit_status = 4
-    except ExecutionError, e:
+    except ExecutionError as e:
         logger.fatal("Error occurred: %s\n Command was: '%s'\n"
                      "rc=%d, stdout='%s', stderr='%s'" % \
                      (e.summary, e.cmd.cmdStr, e.cmd.results.rc, e.cmd.results.stdout,
                       e.cmd.results.stderr))
         exit_status = 2
-    except Exception, e:
+    except Exception as e:
         if options is None:
             logger.exception("%s failed.  exiting...", gProgramName)
         else:
@@ -419,5 +419,4 @@ def addMasterDirectoryOptionForSingleClusterProgram(addTo):
                      metavar="<master data directory>",
                      help="Optional. The master host data directory. If not specified, the value set" \
                           "for $MASTER_DATA_DIRECTORY will be used.")
-
 

@@ -114,8 +114,6 @@ $ gpstop -r</codeblock></li>
             <codeph>testdb</codeph>:</p>
         <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plr;'</codeblock>
         <p>PL/R is registered as an untrusted language.</p>
-        <note>Using the deprecated <codeph>createlang</codeph> command to enable PL/R generates an
-          error.</note>
       </body>
     </topic>
     <topic id="topic6" xml:lang="en" otherprops="pivotal">
@@ -145,8 +143,6 @@ $ gpstop -r</codeblock></li>
           <p> The default command fails if any existing objects (such as functions) depend on the
             language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent
             objects, including functions that you created with PL/R. </p>
-          <note>Using the deprecated <codeph>droplang</codeph> command to remove support for PL/R
-            generates an error.</note>
         </body>
       </topic>
       <topic id="topic8" xml:lang="en">

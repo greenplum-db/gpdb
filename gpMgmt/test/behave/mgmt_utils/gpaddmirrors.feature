@@ -39,6 +39,7 @@ Feature: Tests for gpaddmirrors
         And gpaddmirrors adds mirrors
         And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
         And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "samehost"
+        And verify that the file "pg_hba.conf" in each segment data directory has "no" line starting with "host.*replication.*\(127.0.0\|::1\).*trust"
         Then verify the database has mirrors
         And the information of a "mirror" segment on a remote host is saved
         When user kills a "mirror" process with the saved information

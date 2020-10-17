@@ -119,11 +119,11 @@ begin
 	checkpoint;
 
 	-- Get the WAL positions after the checkpoint records on every segment.
-	for r in select gp_segment_id, pg_current_xlog_location() as loc from gp_dist_random('gp_id') loop
+	for r in select gp_segment_id, pg_current_wal_lsn() as loc from gp_dist_random('gp_id') loop
 		checkpoint_locs[r.gp_segment_id] = r.loc;
 	end loop;
 	-- and the QD, too.
-	checkpoint_locs[-1] = pg_current_xlog_location();
+	checkpoint_locs[-1] = pg_current_wal_lsn();
 
 	-- Force some WAL activity, to nudge the mirrors to replay past the
 	-- checkpoint location. There are some cases where a non-transactional
@@ -137,7 +137,7 @@ begin
 	-- memorized above.
 	loop
 		all_caught_up = true;
-		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
+		for r in select gp_segment_id, replay_lsn as loc from gp_stat_replication loop
 			replay_locs[r.gp_segment_id] = r.loc;
 			if r.loc < checkpoint_locs[r.gp_segment_id] then
 				all_caught_up = false;
@@ -201,11 +201,11 @@ def impl(context):
 
 @then('the tablespace is valid after gpexpand')
 def impl(context):
-    for _, tbs in context.tablespaces.items():
+    for _, tbs in list(context.tablespaces.items()):
         tbs.verify_for_gpexpand()
 
 @then('all tablespaces are dropped')
 def impl(context):
-    for tablespace in context.tablespaces.values():
+    for tablespace in list(context.tablespaces.values()):
         tablespace.cleanup()
     context.tablespaces = {}

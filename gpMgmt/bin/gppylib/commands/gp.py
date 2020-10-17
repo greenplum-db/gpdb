@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
@@ -6,13 +6,12 @@
 """
 TODO: docs!
 """
-import os, pickle, base64, time
+import json
+import os, time
+import shlex
 import os.path
 import pipes
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 
 import re, socket
 
@@ -20,9 +19,9 @@ from gppylib.gplog import *
 from gppylib.db import dbconn
 from gppylib import gparray
 from gppylib.commands.base import *
-from unix import *
+from .unix import *
 from gppylib import pgconf
-from gppylib.utils import writeLinesToFile, createFromSingleHostFile, shellEscape
+from gppylib.utils import writeLinesToFile, createFromSingleHostFile
 
 
 logger = get_default_logger()
@@ -46,18 +45,18 @@ DEFAULT_GPSTART_NUM_WORKERS=64
 RECOVERY_REWIND_APPNAME = '__gprecoverseg_pg_rewind__'
 
 def get_postmaster_pid_locally(datadir):
-    cmdStr = "ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep `cat %s/postmaster.pid | head -1` || echo -1" % (datadir)
+    cmdStr = "ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name = "get postmaster"
     cmd = Command(name, cmdStr)
     try:
         cmd.run(validateAfter=True)
         sout = cmd.get_results().stdout.lstrip(' ')
-        return int(sout.split()[0])
+        return int(sout.split()[1])
     except:
         return -1
 
 def getPostmasterPID(hostname, datadir):
-    cmdStr="ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep \\`cat %s/postmaster.pid | head -1\\` || echo -1" % (datadir)
+    cmdStr="ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name="get postmaster pid"
     cmd=Command(name,cmdStr,ctxt=REMOTE,remoteHost=hostname)
     try:
@@ -89,7 +88,10 @@ class CmdArgs(list):
         list.__init__(self, l)
 
     def __str__(self):
-        return " ".join(self)
+        ret = []
+        for i in self:
+            ret.append(str(i))
+        return " ".join(ret)
 
     def set_verbose(self, verbose):
         """
@@ -218,7 +220,7 @@ class PgCtlStartArgs(CmdArgs):
     >>> a = PgCtlStartArgs("/data1/master/gpseg-1", str(PgCtlBackendOptions(5432, 1, 2)), 123, None, None, True, 600)
     >>> str(a).split(' ') #doctest: +NORMALIZE_WHITESPACE
     ['env', GPERA=123', '$GPHOME/bin/pg_ctl', '-D', '/data1/master/gpseg-1', '-l',
-     '/data1/master/gpseg-1/pg_log/startup.log', '-w', '-t', '600',
+     '/data1/master/gpseg-1/log/startup.log', '-w', '-t', '600',
      '-o', '"', '-p', '5432', '--silent-mode=true', '"', 'start']
     """
 
@@ -239,7 +241,7 @@ class PgCtlStartArgs(CmdArgs):
             "GPERA=%s" % str(era),	# <- master era used to help identify orphans
             "$GPHOME/bin/pg_ctl",
             "-D", str(datadir),
-            "-l", "%s/pg_log/startup.log" % datadir,
+            "-l", "%s/log/startup.log" % datadir,
         ])
         self.set_wrapper(wrapper, args)
         self.set_wait_timeout(wait, timeout)
@@ -427,10 +429,10 @@ class SegmentRewind(Command):
             source_host, source_port, RECOVERY_REWIND_APPNAME
         )
 
-        # Build the pg_rewind command. Do not run pg_rewind if recovery.conf
+        # Build the pg_rewind command. Do not run pg_rewind if standby.signal
         # file exists in target data directory because the target instance can
         # be started up normally as a mirror for WAL replication catch up.
-        rewind_cmd = '[ -f %s/recovery.conf ] || PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (target_datadir, source_server, target_datadir)
+        rewind_cmd = '[ -f %s/standby.signal ] || PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (target_datadir, source_server, target_datadir)
 
         if verbose:
             rewind_cmd = rewind_cmd + ' --progress'
@@ -534,11 +536,17 @@ class GpGetSegmentStatusValues(Command):
         if self.get_results().rc != 0:
             return ("Error getting status from host %s" % self.remoteHost, None)
 
+        # JSON turns int keys (like DBIDs) to string keys on dump, so we parse them back to ints on load
+        def keys_to_ints(d):
+            if isinstance(d, dict):
+                return {(int(k) if k.isdigit() else k):v for k,v in d.items()}
+            return d
+
         outputFromCmd = None
         for line in self.get_results().stdout.split('\n'):
             if line.startswith("STATUS_RESULTS:"):
                 toDecode = line[len("STATUS_RESULTS:"):]
-                outputFromCmd = pickle.loads(base64.urlsafe_b64decode(toDecode))
+                outputFromCmd = json.loads(toDecode, object_hook=keys_to_ints)
                 break
         if outputFromCmd is None:
             return ("No status output provided from host %s" % self.remoteHost, None)
@@ -818,7 +826,7 @@ class ModifyConfSetting(Command):
         elif optType == 'string':
             cmdStr = "perl -i -p -e \"s/^%s[ ]*=[ ]*'[^']*'/%s='%s'/\" %s" % (optName, optName, optVal, file)
         else:
-            raise Exception, "Invalid optType for ModifyConfSetting"
+            raise Exception("Invalid optType for ModifyConfSetting")
         self.cmdStr = cmdStr
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
 
@@ -833,7 +841,7 @@ class ModifyPgHbaConfSetting(Command):
                 hba_content += "\nhost all {username} {hostname} trust".format(username=username, hostname=address)
                 hba_content += "\nhost replication {username} {hostname} trust".format(username=username, hostname=address)
             else:
-                ips = InterfaceAddrs.remote('get mirror ips', address)
+                ips = IfAddrs.list_addrs(address)
                 for ip in ips:
                     cidr_suffix = '/128' if ':' in ip else '/32'
                     cidr = ip + cidr_suffix
@@ -944,7 +952,7 @@ class ConfigureNewSegment(Command):
             elif primaryMirror == 'mirror' and seg.isSegmentPrimary() == True:
                continue
             hostname = seg.getSegmentHostName()
-            if result.has_key(hostname):
+            if hostname in result:
                 result[hostname] += ','
             else:
                 result[hostname] = ''
@@ -1050,11 +1058,11 @@ class GpConfigHelper(Command):
 
         addParameter = (not getParameter) and (not removeParameter)
         if addParameter:
-            args = '--add-parameter %s --value %s ' % (name, base64.urlsafe_b64encode(pickle.dumps(value)))
+            args = "--add-parameter %s --value %s " % (name, shlex.quote(value))
         if getParameter:
-            args = '--get-parameter %s' % name
+            args = "--get-parameter %s" % name
         if removeParameter:
-            args = '--remove-parameter %s' % name
+            args = "--remove-parameter %s" % name
 
         cmdStr = "$GPHOME/sbin/gpconfig_helper.py --file %s %s" % (
             os.path.join(postgresconf_dir, 'postgresql.conf'),
@@ -1064,8 +1072,7 @@ class GpConfigHelper(Command):
 
     # FIXME: figure out how callers of this can handle exceptions here
     def get_value(self):
-        raw_value = self.get_results().stdout
-        return pickle.loads(base64.urlsafe_b64decode(raw_value))
+        return self.get_results().stdout
 
 
 #-----------------------------------------------
@@ -1311,7 +1318,7 @@ def start_standbymaster(host, datadir, port, era=None,
 
     logger.info("Checking if standby master is running on host: %s  in directory: %s" % (host,datadir))
     cmd = Command("recovery_startup",
-                  ("python -c "
+                  ("python3 -c "
                    "'from gppylib.commands.gp import recovery_startup; "
                    """recovery_startup("{0}", "{1}")'""").format(
                        datadir, port),
@@ -1339,15 +1346,15 @@ def start_standbymaster(host, datadir, port, era=None,
     # started, this means now postmaster is responsive to signals, which
     # allows shutdown etc.  If we exit earlier, there is a big chance
     # a shutdown message from other process is missed.
-    for i in xrange(60):
+    for i in range(60):
         # Fetch it every time, as postmaster might not have been up yet for
         # the first few cycles, which we have seen when trying wrapper
         # shell script.
         pid = getPostmasterPID(host, datadir)
         cmd = Command("get pids",
-                      ("python -c "
+                      ("python3 -c "
                        "'from gppylib.commands import unix; "
-                       "print unix.getDescendentProcesses({0})'".format(pid)),
+                       "print(unix.getDescendentProcesses({0}))'".format(pid)),
                       ctxt=REMOTE, remoteHost=host)
         cmd.run()
         logger.debug(str(cmd))
@@ -1543,7 +1550,7 @@ def get_local_db_mode(master_data_dir):
 ######
 def read_postmaster_pidfile(datadir, host=None):
     if host:
-        cmdStr ="""python -c 'from {module} import {func}; print {func}("{args}")'""".format(module=sys.modules[__name__].__name__,
+        cmdStr ="""python3 -c 'from {module} import {func}; print({func}("{args}"))'""".format(module=sys.modules[__name__].__name__,
                                                                                              func='read_postmaster_pidfile',
                                                                                              args=datadir)
         cmd = Command(name='run this method remotely', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
@@ -1594,7 +1601,7 @@ class IfAddrs:
         else:
             args = cmd
 
-        result = subprocess.check_output(args)
+        result = subprocess.check_output(args).decode()
         return result.splitlines()
 
 if __name__ == '__main__':

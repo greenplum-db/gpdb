@@ -93,8 +93,14 @@ report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 				   filename);
 	}
 
+	/*
+	 * GPDB_12_MERGE_FIXME: The CLUSTER_NAME macro was removed, so we've
+	 * changed to printing the major version of the cluster instead. This may
+	 * well be good enough (or even better), but some more thought should go
+	 * into this before calling it done.
+	 */
 	fprintf(progress_file, "%lu;%s;%s;%s;\n",
-			epoch_us(), CLUSTER_NAME(cluster), opname(op), message);
+			epoch_us(), cluster->major_version_str, opname(op), message);
 	progress_counter++;
 
 	/*

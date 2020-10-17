@@ -2,6 +2,9 @@
 -- CIRCLE
 --
 
+-- avoid bit-exact output here because operations may not be bit-exact.
+SET extra_float_digits = 0;
+
 CREATE TABLE CIRCLE_TBL (f1 circle);
 
 INSERT INTO CIRCLE_TBL VALUES ('<(5,1),3>');
@@ -14,11 +17,19 @@ INSERT INTO CIRCLE_TBL VALUES ('((1,2),3)');
 
 INSERT INTO CIRCLE_TBL VALUES ('<(100,200),10>');
 
-INSERT INTO CIRCLE_TBL VALUES ('<(100,1),115>');
+INSERT INTO CIRCLE_TBL VALUES (' < ( 100 , 1 ) , 115 > ');
+
+INSERT INTO CIRCLE_TBL VALUES ('<(3,5),0>');	-- Zero radius
+
+INSERT INTO CIRCLE_TBL VALUES ('<(3,5),NaN>');	-- NaN radius
 
 -- bad values
 
 INSERT INTO CIRCLE_TBL VALUES ('<(-100,0),-100>');
+
+INSERT INTO CIRCLE_TBL VALUES ('<(100,200),10');
+
+INSERT INTO CIRCLE_TBL VALUES ('<(100,200),10> x');
 
 INSERT INTO CIRCLE_TBL VALUES ('1abc,3,5');
 

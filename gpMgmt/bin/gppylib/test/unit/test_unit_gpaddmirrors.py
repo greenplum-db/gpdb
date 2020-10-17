@@ -1,9 +1,9 @@
 import os
 import sys
 
-import StringIO
+import io
 from mock import *
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.programs.clsAddMirrors import GpAddMirrorsProgram, ProgramArgumentValidationException
 from gparray import Segment, GpArray
 from gppylib.system.environment import GpMasterEnvironment
@@ -21,7 +21,7 @@ class GpAddMirrorsTest(GpTestCase):
         self.gparrayMock = self._createGpArrayWith2Primary2Mirrors()
         self.gparray_get_segments_by_hostname = dict(sdw1=[self.primary0])
         self.apply_patches([
-            patch('__builtin__.raw_input'),
+            patch('builtins.input'),
             patch('gppylib.programs.clsAddMirrors.base.WorkerPool'),
             patch('gppylib.programs.clsAddMirrors.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
             patch('gppylib.programs.clsAddMirrors.log_to_file_only', return_value=Mock()),
@@ -32,10 +32,11 @@ class GpAddMirrorsTest(GpTestCase):
             patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value=self.gparray_get_segments_by_hostname),
 
         ])
-        self.raw_input_mock = self.get_mock_from_apply_patch("raw_input")
+        self.input_mock = self.get_mock_from_apply_patch("input")
         self.mock_logger = self.get_mock_from_apply_patch('logger')
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
+        self.gpMasterEnvironmentMock.return_value.getMasterDataDir.return_value = "/data/master/gpseg-1"
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch('getConfigurationProvider')
         self.config_provider_mock = Mock(spec=GpConfigurationProvider)
         self.getConfigProviderFunctionMock.return_value = self.config_provider_mock
@@ -74,7 +75,7 @@ class GpAddMirrorsTest(GpTestCase):
         sys.argv = ['gpaddmirrors', '-a']
         options, args = self.parser.parse_args()
         command_obj = self.subject.createProgram(options, args)
-        with self.assertRaisesRegexp(Exception, 'Segments have heap_checksum set inconsistently to master'):
+        with self.assertRaisesRegex(Exception, 'Segments have heap_checksum set inconsistently to master'):
             command_obj.run()
 
     def test_option_batch_of_size_0_will_raise(self):
@@ -84,14 +85,14 @@ class GpAddMirrorsTest(GpTestCase):
         with self.assertRaises(ProgramArgumentValidationException):
             self.subject.run()
 
-    @patch('sys.stdout', new_callable=StringIO.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
     def test_option_version(self, mock_stdout):
         sys.argv = ['gpaddmirrors', '--version']
         with self.assertRaises(SystemExit) as cm:
             options, _ = self.parser.parse_args()
 
         self.assertIn("gpaddmirrors version $Revision$", mock_stdout.getvalue())
-        self.assertEquals(cm.exception.code, 0)
+        self.assertEqual(cm.exception.code, 0)
 
     def test_generated_file_contains_default_port_offsets(self):
         datadir_config = _write_datadir_config(self.mdd)
@@ -122,9 +123,8 @@ class GpAddMirrorsTest(GpTestCase):
         self.assertIn("45000", result[0])
 
     @patch('gppylib.programs.clsAddMirrors.Command')
-    @patch('gppylib.programs.clsAddMirrors.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
     @patch('gppylib.programs.clsAddMirrors.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
-    def test_pghbaconf_updated_successfully(self, mock1, mock2, mock3):
+    def test_pghbaconf_updated_successfully(self, mock1, mock2):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
@@ -133,19 +133,18 @@ class GpAddMirrorsTest(GpTestCase):
         self.mock_logger.info.assert_any_call("Successfully modified pg_hba.conf on primary segments to allow replication connections")
 
     @patch('gppylib.programs.clsAddMirrors.Command', side_effect=Exception("boom"))
-    @patch('gppylib.programs.clsAddMirrors.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
     @patch('gppylib.programs.clsAddMirrors.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
-    def test_pghbaconf_updated_fails(self, mock1, mock2, mock3):
+    def test_pghbaconf_updated_fails(self, mock1, mock2):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
-        with self.assertRaisesRegexp(Exception, "boom"):
+        with self.assertRaisesRegex(Exception, "boom"):
             self.subject.config_primaries_for_replication(self.gparrayMock)
         self.mock_logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
         self.mock_logger.error.assert_any_call("Failed while modifying pg_hba.conf on primary segments to allow replication connections: boom")
 
     def test_datadir_interview(self):
-        self.raw_input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
+        self.input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
         sys.argv = ['gpaddmirrors', '-p', '5000']
         options, _ = self.parser.parse_args()
         self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])

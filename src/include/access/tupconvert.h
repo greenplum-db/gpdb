@@ -36,12 +36,15 @@ extern TupleConversionMap *convert_tuples_by_position(TupleDesc indesc,
 													  const char *msg);
 
 extern TupleConversionMap *convert_tuples_by_name(TupleDesc indesc,
-												  TupleDesc outdesc);
+												  TupleDesc outdesc,
+												  const char *msg);
 
 extern AttrNumber *convert_tuples_by_name_map(TupleDesc indesc,
-											  TupleDesc outdesc);
+											  TupleDesc outdesc,
+											  const char *msg);
 extern AttrNumber *convert_tuples_by_name_map_if_req(TupleDesc indesc,
-													 TupleDesc outdesc);
+													 TupleDesc outdesc,
+													 const char *msg);
 
 extern HeapTuple execute_attr_map_tuple(HeapTuple tuple, TupleConversionMap *map);
 extern TupleTableSlot *execute_attr_map_slot(AttrNumber *attrMap,

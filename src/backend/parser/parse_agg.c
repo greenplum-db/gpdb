@@ -3,7 +3,7 @@
  * parse_agg.c
  *	  handle aggregates in parser
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,12 +15,11 @@
 #include "postgres.h"
 
 #include "catalog/pg_aggregate.h"
-#include "catalog/pg_constraint_fn.h"
+#include "catalog/pg_constraint.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/tlist.h"
-#include "optimizer/var.h"
+#include "optimizer/optimizer.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_coerce.h"
@@ -43,7 +42,7 @@ typedef struct
 {
 	ParseState *pstate;
 	Query	   *qry;
-	PlannerInfo *root;
+	bool		hasJoinRTEs;
 	List	   *groupClauses;
 	List	   *groupClauseCommonVars;
 	bool		have_non_var_grouping;
@@ -57,24 +56,23 @@ typedef struct
 	int sublevels_up;
 } checkHasGroupExtFuncs_context;
 
-static int check_agg_arguments(ParseState *pstate,
-					List *directargs,
-					List *args,
-					Expr *filter);
+static int	check_agg_arguments(ParseState *pstate,
+								List *directargs,
+								List *args,
+								Expr *filter);
 static bool check_agg_arguments_walker(Node *node,
-						   check_agg_arguments_context *context);
+									   check_agg_arguments_context *context);
 static void check_ungrouped_columns(Node *node, ParseState *pstate, Query *qry,
-						List *groupClauses, List *groupClauseVars,
-						bool have_non_var_grouping,
-						List **func_grouped_rels);
+									List *groupClauses, List *groupClauseVars,
+									bool have_non_var_grouping,
+									List **func_grouped_rels);
 static bool check_ungrouped_columns_walker(Node *node,
-							   check_ungrouped_columns_context *context);
-
+										   check_ungrouped_columns_context *context);
 static void finalize_grouping_exprs(Node *node, ParseState *pstate, Query *qry,
-						List *groupClauses, PlannerInfo *root,
-						bool have_non_var_grouping);
+									List *groupClauses, bool hasJoinRTEs,
+									bool have_non_var_grouping);
 static bool finalize_grouping_exprs_walker(Node *node,
-							   check_ungrouped_columns_context *context);
+										   check_ungrouped_columns_context *context);
 static void check_agglevels_and_constraints(ParseState *pstate, Node *expr);
 static List *expand_groupingset_node(GroupingSet *gs);
 static Node *make_agg_arg(Oid argtype, Oid argcollation);
@@ -161,8 +159,7 @@ transformAggregateCall(ParseState *pstate, Aggref *agg,
 			tlist = lappend(tlist, tle);
 
 			torder = addTargetToSortList(pstate, tle,
-										 torder, tlist, sortby,
-										 true /* fix unknowns */ );
+										 torder, tlist, sortby);
 		}
 
 		/* Never any DISTINCT in an ordered-set agg */
@@ -202,7 +199,6 @@ transformAggregateCall(ParseState *pstate, Aggref *agg,
 									 aggorder,
 									 &tlist,
 									 EXPR_KIND_ORDER_BY,
-									 true /* fix unknowns */ ,
 									 true /* force SQL99 rules */ );
 
 		/*
@@ -454,6 +450,13 @@ check_agglevels_and_constraints(ParseState *pstate, Node *expr)
 				err = _("grouping operations are not allowed in window ROWS");
 
 			break;
+		case EXPR_KIND_WINDOW_FRAME_GROUPS:
+			if (isAgg)
+				err = _("aggregate functions are not allowed in window GROUPS");
+			else
+				err = _("grouping operations are not allowed in window GROUPS");
+
+			break;
 		case EXPR_KIND_SELECT_TARGET:
 			/* okay */
 			break;
@@ -479,6 +482,7 @@ check_agglevels_and_constraints(ParseState *pstate, Node *expr)
 			errkind = true;
 			break;
 		case EXPR_KIND_VALUES:
+		case EXPR_KIND_VALUES_SINGLE:
 			errkind = true;
 			break;
 		case EXPR_KIND_CHECK_CONSTRAINT:
@@ -533,11 +537,46 @@ check_agglevels_and_constraints(ParseState *pstate, Node *expr)
 				err = _("grouping operations are not allowed in trigger WHEN conditions");
 
 			break;
-		case EXPR_KIND_PARTITION_EXPRESSION:
-			err = _("aggregate functions are not allowed in partition key expression");
-
 		case EXPR_KIND_SCATTER_BY:
 			/* okay */
+			break;
+		case EXPR_KIND_PARTITION_BOUND:
+			if (isAgg)
+				err = _("aggregate functions are not allowed in partition bound");
+			else
+				err = _("grouping operations are not allowed in partition bound");
+
+			break;
+		case EXPR_KIND_PARTITION_EXPRESSION:
+			if (isAgg)
+				err = _("aggregate functions are not allowed in partition key expressions");
+			else
+				err = _("grouping operations are not allowed in partition key expressions");
+
+			break;
+		case EXPR_KIND_GENERATED_COLUMN:
+
+			if (isAgg)
+				err = _("aggregate functions are not allowed in column generation expressions");
+			else
+				err = _("grouping operations are not allowed in column generation expressions");
+
+			break;
+
+		case EXPR_KIND_CALL_ARGUMENT:
+			if (isAgg)
+				err = _("aggregate functions are not allowed in CALL arguments");
+			else
+				err = _("grouping operations are not allowed in CALL arguments");
+
+			break;
+
+		case EXPR_KIND_COPY_WHERE:
+			if (isAgg)
+				err = _("aggregate functions are not allowed in COPY FROM WHERE conditions");
+			else
+				err = _("grouping operations are not allowed in COPY FROM WHERE conditions");
+
 			break;
 
 			/*
@@ -672,15 +711,15 @@ check_agg_arguments(ParseState *pstate,
 					(errcode(ERRCODE_GROUPING_ERROR),
 					 errmsg("outer-level aggregate cannot contain a lower-level variable in its direct arguments"),
 					 parser_errposition(pstate,
-									 locate_var_of_level((Node *) directargs,
-													context.min_varlevel))));
+										locate_var_of_level((Node *) directargs,
+															context.min_varlevel))));
 		if (context.min_agglevel >= 0 && context.min_agglevel <= agglevel)
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
 					 errmsg("aggregate function calls cannot be nested"),
 					 parser_errposition(pstate,
-									 locate_agg_of_level((Node *) directargs,
-													context.min_agglevel))));
+										locate_agg_of_level((Node *) directargs,
+															context.min_agglevel))));
 	}
 	return agglevel;
 }
@@ -752,13 +791,27 @@ check_agg_arguments_walker(Node *node,
 		}
 		/* Continue and descend into subtree */
 	}
-	/* We can throw error on sight for a window function */
-	if (IsA(node, WindowFunc) && context->sublevels_up == 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-				 errmsg("aggregate function calls cannot contain window function calls"),
-				 parser_errposition(context->pstate,
-									((WindowFunc *) node)->location)));
+	/*
+	 * SRFs and window functions can be rejected immediately, unless we are
+	 * within a sub-select within the aggregate's arguments; in that case
+	 * they're OK.
+	 */
+	if (context->sublevels_up == 0)
+	{
+		if ((IsA(node, FuncExpr) &&((FuncExpr *) node)->funcretset) ||
+			(IsA(node, OpExpr) &&((OpExpr *) node)->opretset))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("aggregate function calls cannot contain set-returning function calls"),
+					 errhint("You might be able to move the set-returning function into a LATERAL FROM item."),
+					 parser_errposition(context->pstate, exprLocation(node))));
+		if (IsA(node, WindowFunc))
+			ereport(ERROR,
+					(errcode(ERRCODE_GROUPING_ERROR),
+					 errmsg("aggregate function calls cannot contain window function calls"),
+					 parser_errposition(context->pstate,
+										((WindowFunc *) node)->location)));
+	}
 	if (IsA(node, Query))
 	{
 		/* Recurse into subselects */
@@ -811,7 +864,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 				(errcode(ERRCODE_WINDOWING_ERROR),
 				 errmsg("window function calls cannot be nested"),
 				 parser_errposition(pstate,
-								  locate_windowfunc((Node *) wfunc->args))));
+									locate_windowfunc((Node *) wfunc->args))));
 
 	/*
 	 * Check to see if the window function is in an invalid place within the
@@ -860,6 +913,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 		case EXPR_KIND_WINDOW_ORDER:
 		case EXPR_KIND_WINDOW_FRAME_RANGE:
 		case EXPR_KIND_WINDOW_FRAME_ROWS:
+		case EXPR_KIND_WINDOW_FRAME_GROUPS:
 			err = _("window functions are not allowed in window definitions");
 			break;
 		case EXPR_KIND_SELECT_TARGET:
@@ -887,6 +941,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 			errkind = true;
 			break;
 		case EXPR_KIND_VALUES:
+		case EXPR_KIND_VALUES_SINGLE:
 			errkind = true;
 			break;
 		case EXPR_KIND_CHECK_CONSTRAINT:
@@ -912,12 +967,23 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 		case EXPR_KIND_TRIGGER_WHEN:
 			err = _("window functions are not allowed in trigger WHEN conditions");
 			break;
-		case EXPR_KIND_PARTITION_EXPRESSION:
-			err = _("window functions are not allowed in partition key expression");
-			break;
-
 		case EXPR_KIND_SCATTER_BY:
 			/* okay */
+			break;
+		case EXPR_KIND_PARTITION_BOUND:
+			err = _("window functions are not allowed in partition bound");
+			break;
+		case EXPR_KIND_PARTITION_EXPRESSION:
+			err = _("window functions are not allowed in partition key expressions");
+			break;
+		case EXPR_KIND_CALL_ARGUMENT:
+			err = _("window functions are not allowed in CALL arguments");
+			break;
+		case EXPR_KIND_COPY_WHERE:
+			err = _("window functions are not allowed in COPY FROM WHERE conditions");
+			break;
+		case EXPR_KIND_GENERATED_COLUMN:
+			err = _("window functions are not allowed in column generation expressions");
 			break;
 
 			/*
@@ -1053,7 +1119,6 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	ListCell   *l;
 	bool		hasJoinRTEs;
 	bool		hasSelfRefRTEs;
-	PlannerInfo *root = NULL;
 	Node	   *clause;
 
 	/* This should only be called if we found aggregates or grouping */
@@ -1077,8 +1142,8 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 					 errmsg("too many grouping sets present (maximum 4096)"),
 					 parser_errposition(pstate,
 										qry->groupClause
-									? exprLocation((Node *) qry->groupClause)
-							   : exprLocation((Node *) qry->groupingSets))));
+										? exprLocation((Node *) qry->groupClause)
+										: exprLocation((Node *) qry->groupingSets))));
 
 		/*
 		 * The intersection will often be empty, so help things along by
@@ -1144,20 +1209,11 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	 * If there are join alias vars involved, we have to flatten them to the
 	 * underlying vars, so that aliased and unaliased vars will be correctly
 	 * taken as equal.  We can skip the expense of doing this if no rangetable
-	 * entries are RTE_JOIN kind. We use the planner's flatten_join_alias_vars
-	 * routine to do the flattening; it wants a PlannerInfo root node, which
-	 * fortunately can be mostly dummy.
+	 * entries are RTE_JOIN kind.
 	 */
 	if (hasJoinRTEs)
-	{
-		root = makeNode(PlannerInfo);
-		root->parse = qry;
-		root->planner_cxt = CurrentMemoryContext;
-		root->hasJoinRTEs = true;
-
-		groupClauses = (List *) flatten_join_alias_vars(root,
-													  (Node *) groupClauses);
-	}
+		groupClauses = (List *) flatten_join_alias_vars(qry,
+														(Node *) groupClauses);
 
 	/*
 	 * Detect whether any of the grouping expressions aren't simple Vars; if
@@ -1197,10 +1253,10 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	 */
 	clause = (Node *) qry->targetList;
 	finalize_grouping_exprs(clause, pstate, qry,
-							groupClauses, root,
+							groupClauses, hasJoinRTEs,
 							have_non_var_grouping);
 	if (hasJoinRTEs)
-		clause = flatten_join_alias_vars(root, clause);
+		clause = flatten_join_alias_vars(qry, clause);
 	check_ungrouped_columns(clause, pstate, qry,
 							groupClauses, groupClauseCommonVars,
 							have_non_var_grouping,
@@ -1208,10 +1264,10 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 
 	clause = (Node *) qry->havingQual;
 	finalize_grouping_exprs(clause, pstate, qry,
-							groupClauses, root,
+							groupClauses, hasJoinRTEs,
 							have_non_var_grouping);
 	if (hasJoinRTEs)
-		clause = flatten_join_alias_vars(root, clause);
+		clause = flatten_join_alias_vars(qry, clause);
 	check_ungrouped_columns(clause, pstate, qry,
 							groupClauses, groupClauseCommonVars,
 							have_non_var_grouping,
@@ -1259,7 +1315,7 @@ check_ungrouped_columns(Node *node, ParseState *pstate, Query *qry,
 
 	context.pstate = pstate;
 	context.qry = qry;
-	context.root = NULL;
+	context.hasJoinRTEs = false;	/* assume caller flattened join Vars */
 	context.groupClauses = groupClauses;
 	context.groupClauseCommonVars = groupClauseCommonVars;
 	context.have_non_var_grouping = have_non_var_grouping;
@@ -1381,7 +1437,7 @@ check_ungrouped_columns_walker(Node *node,
 					gvar->varno == var->varno &&
 					gvar->varattno == var->varattno &&
 					gvar->varlevelsup == 0)
-					return false;		/* acceptable, we're okay */
+					return false;	/* acceptable, we're okay */
 			}
 		}
 
@@ -1469,14 +1525,14 @@ check_ungrouped_columns_walker(Node *node,
  */
 static void
 finalize_grouping_exprs(Node *node, ParseState *pstate, Query *qry,
-						List *groupClauses, PlannerInfo *root,
+						List *groupClauses, bool hasJoinRTEs,
 						bool have_non_var_grouping)
 {
 	check_ungrouped_columns_context context;
 
 	context.pstate = pstate;
 	context.qry = qry;
-	context.root = root;
+	context.hasJoinRTEs = hasJoinRTEs;
 	context.groupClauses = groupClauses;
 	context.groupClauseCommonVars = NIL;
 	context.have_non_var_grouping = have_non_var_grouping;
@@ -1549,8 +1605,8 @@ finalize_grouping_exprs_walker(Node *node,
 				Node	   *expr = lfirst(lc);
 				Index		ref = 0;
 
-				if (context->root)
-					expr = flatten_join_alias_vars(context->root, expr);
+				if (context->hasJoinRTEs)
+					expr = flatten_join_alias_vars(context->qry, expr);
 
 				/*
 				 * Each expression must match a grouping entry at the current

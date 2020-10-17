@@ -3,7 +3,7 @@
 --
 DROP TABLE IF EXISTS ao;
 DROP
-CREATE TABLE ao (a INT) WITH (appendonly=true, orientation=@orientation@) DISTRIBUTED BY (a);
+CREATE TABLE ao (a INT) USING @amname@ DISTRIBUTED BY (a);
 CREATE
 insert into ao select generate_series(1,100);
 INSERT 100
@@ -16,11 +16,10 @@ BEGIN
 2: DELETE FROM ao WHERE a = 2;
 DELETE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
- coalesce | mode            | locktype | node   
-----------+-----------------+----------+--------
- ao       | AccessShareLock | relation | master 
- ao       | ExclusiveLock   | relation | master 
-(2 rows)
+ coalesce | mode          | locktype | node   
+----------+---------------+----------+--------
+ ao       | ExclusiveLock | relation | master 
+(1 row)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
  coalesce | mode             | locktype | node       
 ----------+------------------+----------+------------

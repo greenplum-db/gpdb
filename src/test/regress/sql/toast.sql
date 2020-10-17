@@ -1,6 +1,7 @@
 
 CREATE TABLE toastable_heap(a text, b varchar, c int) distributed by (b);
 CREATE TABLE toastable_ao(a text, b varchar, c int) with(appendonly=true, compresslevel=1) distributed by (b);
+ALTER TABLE toastable_ao ALTER COLUMN a SET STORAGE EXTERNAL;
 
 -- Helper function to generate a random string with given length. (Due to the
 -- implementation, the length is rounded down to nearest multiple of 32.

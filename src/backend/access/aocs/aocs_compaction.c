@@ -179,20 +179,20 @@ AOCSMoveTuple(TupleTableSlot *slot,
 	Assert(slot);
 	Assert(estate);
 
-	oldAoTupleId = (AOTupleId *) slot_get_ctid(slot);
+	oldAoTupleId = (AOTupleId *) &slot->tts_tid;
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
 	(void) aocs_insert_values(insertDesc,
-							  slot_get_values(slot),
-							  slot_get_isnull(slot),
+							  slot->tts_values,
+							  slot->tts_isnull,
 							  &newAoTupleId);
+	memcpy(&slot->tts_tid, &newAoTupleId, sizeof(ItemPointerData));
 
 	/* insert index' tuples if needed */
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate,
-							  false, NULL, NIL);
+		ExecInsertIndexTuples(slot, estate, false, false, NIL);
 		ResetPerTupleExprContext(estate);
 	}
 
@@ -221,8 +221,6 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	ResultRelInfo *resultRelInfo;
 	MemTupleBinding *mt_bind;
 	EState	   *estate;
-	bool	   *proj;
-	int			i;
 	AOTupleId  *aoTupleId;
 	int64		tupleCount = 0;
 	int64		tuplePerPage = INT_MAX;
@@ -239,8 +237,8 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	relname = RelationGetRelationName(aorel);
 
 	AppendOnlyVisimap_Init(&visiMap,
-						   aorel->rd_appendonly->visimaprelid,
-						   aorel->rd_appendonly->visimapidxid,
+						   insertDesc->visimaprelid,
+						   insertDesc->visimapidxid,
 						   ShareLock,
 						   snapshot);
 
@@ -248,17 +246,14 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		   LOG, "Compact AO segfile %d, relation %sd",
 		   compact_segno, relname);
 
-	proj = palloc0(sizeof(bool) * RelationGetNumberOfAttributes(aorel));
-	for (i = 0; i < RelationGetNumberOfAttributes(aorel); ++i)
-	{
-		proj[i] = true;
-	}
 	scanDesc = aocs_beginrangescan(aorel,
 								   snapshot, snapshot,
-								   &compact_segno, 1, NULL, proj);
+								   &compact_segno, 1);
 
 	tupDesc = RelationGetDescr(aorel);
-	slot = MakeSingleTupleTableSlot(tupDesc);
+	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
+	slot->tts_tableOid = RelationGetRelid(aorel);
+
 	mt_bind = create_memtuple_binding(tupDesc);
 
 	/*
@@ -279,7 +274,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	{
 		CHECK_FOR_INTERRUPTS();
 
-		aoTupleId = (AOTupleId *) slot_get_ctid(slot);
+		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		if (AppendOnlyVisimap_IsVisible(&scanDesc->visibilityMap, aoTupleId))
 		{
 			AOCSMoveTuple(slot,
@@ -291,9 +286,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel,
-									 slot,
-									 mt_bind);
+			AppendOnlyThrowAwayTuple(aorel, slot);
 		}
 
 		/*
@@ -312,7 +305,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 										compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(aorel->rd_appendonly->blkdirrelid))
+	if (OidIsValid(insertDesc->blkdirrelid))
 	{
 		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
 												   snapshot,
@@ -334,7 +327,6 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	destroy_memtuple_binding(mt_bind);
 
 	aocs_endscan(scanDesc);
-	pfree(proj);
 
 	return true;
 }
@@ -386,7 +378,7 @@ AOCSCompact(Relation aorel,
 
 		if (*insert_segno != -1)
 		{
-			insertDesc = aocs_insert_init(aorel, *insert_segno, false);
+			insertDesc = aocs_insert_init(aorel, *insert_segno);
 
 			AOCSSegmentFileFullCompaction(aorel,
 										  insertDesc,

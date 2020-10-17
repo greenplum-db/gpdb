@@ -3,7 +3,7 @@
  * _int_selfuncs.c
  *	  Functions for selectivity estimation of intarray operators
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -19,6 +19,7 @@
 #include "catalog/pg_operator.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_type.h"
+#include "utils/builtins.h"
 #include "utils/selfuncs.h"
 #include "utils/syscache.h"
 #include "utils/lsyscache.h"
@@ -32,17 +33,9 @@ PG_FUNCTION_INFO_V1(_int_contains_joinsel);
 PG_FUNCTION_INFO_V1(_int_contained_joinsel);
 PG_FUNCTION_INFO_V1(_int_matchsel);
 
-Datum		_int_overlap_sel(PG_FUNCTION_ARGS);
-Datum		_int_contains_sel(PG_FUNCTION_ARGS);
-Datum		_int_contained_sel(PG_FUNCTION_ARGS);
-Datum		_int_overlap_joinsel(PG_FUNCTION_ARGS);
-Datum		_int_contains_joinsel(PG_FUNCTION_ARGS);
-Datum		_int_contained_joinsel(PG_FUNCTION_ARGS);
-Datum		_int_matchsel(PG_FUNCTION_ARGS);
-
 
 static Selectivity int_query_opr_selec(ITEM *item, Datum *values, float4 *freqs,
-					int nmncelems, float4 minfreq);
+									   int nmncelems, float4 minfreq);
 static int	compare_val_int4(const void *a, const void *b);
 
 /*
@@ -50,7 +43,7 @@ static int	compare_val_int4(const void *a, const void *b);
  *
  * The default array selectivity operators for the @>, && and @< operators
  * work fine for integer arrays. However, if we tried to just use arraycontsel
- * and arracontjoinsel directly as the cost estimator functions for our
+ * and arraycontjoinsel directly as the cost estimator functions for our
  * operators, they would not work as intended, because they look at the
  * operator's OID. Our operators behave exactly like the built-in anyarray
  * versions, but we must tell the cost estimator functions which built-in
@@ -64,7 +57,7 @@ _int_overlap_sel(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_DATUM(DirectFunctionCall4(arraycontsel,
 										PG_GETARG_DATUM(0),
-									  ObjectIdGetDatum(OID_ARRAY_OVERLAP_OP),
+										ObjectIdGetDatum(OID_ARRAY_OVERLAP_OP),
 										PG_GETARG_DATUM(2),
 										PG_GETARG_DATUM(3)));
 }
@@ -74,7 +67,7 @@ _int_contains_sel(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_DATUM(DirectFunctionCall4(arraycontsel,
 										PG_GETARG_DATUM(0),
-									 ObjectIdGetDatum(OID_ARRAY_CONTAINS_OP),
+										ObjectIdGetDatum(OID_ARRAY_CONTAINS_OP),
 										PG_GETARG_DATUM(2),
 										PG_GETARG_DATUM(3)));
 }
@@ -84,7 +77,7 @@ _int_contained_sel(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_DATUM(DirectFunctionCall4(arraycontsel,
 										PG_GETARG_DATUM(0),
-									ObjectIdGetDatum(OID_ARRAY_CONTAINED_OP),
+										ObjectIdGetDatum(OID_ARRAY_CONTAINED_OP),
 										PG_GETARG_DATUM(2),
 										PG_GETARG_DATUM(3)));
 }
@@ -94,7 +87,7 @@ _int_overlap_joinsel(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_DATUM(DirectFunctionCall5(arraycontjoinsel,
 										PG_GETARG_DATUM(0),
-									  ObjectIdGetDatum(OID_ARRAY_OVERLAP_OP),
+										ObjectIdGetDatum(OID_ARRAY_OVERLAP_OP),
 										PG_GETARG_DATUM(2),
 										PG_GETARG_DATUM(3),
 										PG_GETARG_DATUM(4)));
@@ -105,7 +98,7 @@ _int_contains_joinsel(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_DATUM(DirectFunctionCall5(arraycontjoinsel,
 										PG_GETARG_DATUM(0),
-									 ObjectIdGetDatum(OID_ARRAY_CONTAINS_OP),
+										ObjectIdGetDatum(OID_ARRAY_CONTAINS_OP),
 										PG_GETARG_DATUM(2),
 										PG_GETARG_DATUM(3),
 										PG_GETARG_DATUM(4)));
@@ -116,7 +109,7 @@ _int_contained_joinsel(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_DATUM(DirectFunctionCall5(arraycontjoinsel,
 										PG_GETARG_DATUM(0),
-									ObjectIdGetDatum(OID_ARRAY_CONTAINED_OP),
+										ObjectIdGetDatum(OID_ARRAY_CONTAINED_OP),
 										PG_GETARG_DATUM(2),
 										PG_GETARG_DATUM(3),
 										PG_GETARG_DATUM(4)));

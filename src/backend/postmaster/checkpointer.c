@@ -26,7 +26,7 @@
  * restart needs to be forced.)
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -41,7 +41,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "access/appendonlywriter.h"
 #include "access/htup_details.h"
 #include "access/xlog.h"
 #include "access/xlog_internal.h"
@@ -110,21 +109,13 @@
  */
 typedef struct
 {
-	RelFileNode rnode;
-	ForkNumber	forknum;
-	BlockNumber segno;			/* see md.c for special values */
-	/*
-	 * Is segno a real ao segno but not specially ones like
-	 * FORGET_RELATION_FSYNC. For example for a real relfile like
-	 * /base/16384/50237.129, it should be true and segno should be 129.
-	 */
-	bool		is_ao_segno;
-	/* might add a real request-type field later; not needed yet */
+	SyncRequestType type;		/* request type */
+	FileTag		ftag;			/* file identifier */
 } CheckpointerRequest;
 
 typedef struct
 {
-	pid_t		checkpointer_pid;		/* PID (0 if not started) */
+	pid_t		checkpointer_pid;	/* PID (0 if not started) */
 
 	slock_t		ckpt_lck;		/* protects all the ckpt_* fields */
 
@@ -134,8 +125,11 @@ typedef struct
 
 	int			ckpt_flags;		/* checkpoint flags, as defined in xlog.h */
 
-	uint32		num_backend_writes;		/* counts user backend buffer writes */
-	uint32		num_backend_fsync;		/* counts user backend fsync calls */
+	ConditionVariable start_cv; /* signaled when ckpt_started advances */
+	ConditionVariable done_cv;	/* signaled when ckpt_done advances */
+
+	uint32		num_backend_writes; /* counts user backend buffer writes */
+	uint32		num_backend_fsync;	/* counts user backend fsync calls */
 
 	int			num_requests;	/* current # of requests */
 	int			max_requests;	/* allocated array size */
@@ -144,7 +138,7 @@ typedef struct
 
 static CheckpointerShmemStruct *CheckpointerShmem;
 
-/* interval for calling AbsorbFsyncRequests in CheckpointWriteDelay */
+/* interval for calling AbsorbSyncRequests in CheckpointWriteDelay */
 #define WRITES_PER_ABSORB		1000
 
 /*
@@ -158,7 +152,6 @@ double		CheckPointCompletionTarget = 0.5;
  * Flags set by interrupt handlers for later service in the main loop.
  */
 static volatile sig_atomic_t got_SIGHUP = false;
-static volatile sig_atomic_t checkpoint_requested = false;
 static volatile sig_atomic_t shutdown_requested = false;
 
 /*
@@ -213,24 +206,19 @@ CheckpointerMain(void)
 	 * want to wait for the backends to exit, whereupon the postmaster will
 	 * tell us it's okay to shut down (via SIGUSR2).
 	 */
-	pqsignal(SIGHUP, ChkptSigHupHandler);		/* set flag to read config
-												 * file */
-	pqsignal(SIGINT, ReqCheckpointHandler);		/* request checkpoint */
+	pqsignal(SIGHUP, ChkptSigHupHandler);	/* set flag to read config file */
+	pqsignal(SIGINT, ReqCheckpointHandler); /* request checkpoint */
 	pqsignal(SIGTERM, SIG_IGN); /* ignore SIGTERM */
 	pqsignal(SIGQUIT, chkpt_quickdie);	/* hard crash time */
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, chkpt_sigusr1_handler);
-	pqsignal(SIGUSR2, ReqShutdownHandler);		/* request shutdown */
+	pqsignal(SIGUSR2, ReqShutdownHandler);	/* request shutdown */
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
 	 */
 	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
 	sigdelset(&BlockSig, SIGQUIT);
@@ -241,12 +229,6 @@ CheckpointerMain(void)
 	last_checkpoint_time = last_xlog_switch_time = (pg_time_t) time(NULL);
 
 	/*
-	 * Create a resource owner to keep track of our resources (currently only
-	 * buffer pins).
-	 */
-	CurrentResourceOwner = ResourceOwnerCreate(NULL, "Checkpointer");
-
-	/*
 	 * Create a memory context that we will do all our work in.  We do this so
 	 * that we can reset the context during error recovery and thereby avoid
 	 * possible memory leaks.  Formerly this code just ran in
@@ -254,9 +236,7 @@ CheckpointerMain(void)
 	 */
 	checkpointer_context = AllocSetContextCreate(TopMemoryContext,
 												 "Checkpointer",
-												 ALLOCSET_DEFAULT_MINSIZE,
-												 ALLOCSET_DEFAULT_INITSIZE,
-												 ALLOCSET_DEFAULT_MAXSIZE);
+												 ALLOCSET_DEFAULT_SIZES);
 	MemoryContextSwitchTo(checkpointer_context);
 
 	/*
@@ -286,14 +266,10 @@ CheckpointerMain(void)
 		pgstat_report_wait_end();
 		AbortBufferIO();
 		UnlockBuffers();
-		/* buffer pins are released here: */
-		ResourceOwnerRelease(CurrentResourceOwner,
-							 RESOURCE_RELEASE_BEFORE_LOCKS,
-							 false, true);
-		/* we needn't bother with the other ResourceOwnerRelease phases */
+		ReleaseAuxProcessResources(false);
 		AtEOXact_Buffers(false);
 		AtEOXact_SMgr();
-		AtEOXact_Files();
+		AtEOXact_Files(false);
 		AtEOXact_HashTables(false);
 
 		/* Warn any waiting backends that the checkpoint failed. */
@@ -303,6 +279,8 @@ CheckpointerMain(void)
 			CheckpointerShmem->ckpt_failed++;
 			CheckpointerShmem->ckpt_done = CheckpointerShmem->ckpt_started;
 			SpinLockRelease(&CheckpointerShmem->ckpt_lck);
+
+			ConditionVariableBroadcast(&CheckpointerShmem->done_cv);
 
 			ckpt_active = false;
 		}
@@ -365,7 +343,6 @@ CheckpointerMain(void)
 		pg_time_t	now;
 		int			elapsed_secs;
 		int			cur_timeout;
-		int			rc;
 
 		/* Clear any already-pending wakeups */
 		ResetLatch(MyLatch);
@@ -373,7 +350,7 @@ CheckpointerMain(void)
 		/*
 		 * Process any requests or signals received recently.
 		 */
-		AbsorbFsyncRequests();
+		AbsorbSyncRequests();
 
 		if (got_SIGHUP)
 		{
@@ -393,12 +370,6 @@ CheckpointerMain(void)
 			 */
 			UpdateSharedMemoryConfig();
 		}
-		if (checkpoint_requested)
-		{
-			checkpoint_requested = false;
-			do_checkpoint = true;
-			BgWriterStats.m_requested_checkpoints++;
-		}
 		if (shutdown_requested)
 		{
 			/*
@@ -410,6 +381,17 @@ CheckpointerMain(void)
 			ShutdownXLOG(0, 0);
 			/* Normal exit from the checkpointer is here */
 			proc_exit(0);		/* done */
+		}
+
+		/*
+		 * Detect a pending checkpoint request by checking whether the flags
+		 * word in shared memory is nonzero.  We shouldn't need to acquire the
+		 * ckpt_lck for this.
+		 */
+		if (((volatile CheckpointerShmemStruct *) CheckpointerShmem)->ckpt_flags)
+		{
+			do_checkpoint = true;
+			BgWriterStats.m_requested_checkpoints++;
 		}
 
 		/*
@@ -454,6 +436,8 @@ CheckpointerMain(void)
 			CheckpointerShmem->ckpt_started++;
 			SpinLockRelease(&CheckpointerShmem->ckpt_lck);
 
+			ConditionVariableBroadcast(&CheckpointerShmem->start_cv);
+
 			/*
 			 * The end-of-recovery checkpoint is a real checkpoint that's
 			 * performed while we're still in recovery.
@@ -473,7 +457,7 @@ CheckpointerMain(void)
 				elapsed_secs < CheckPointWarning)
 				ereport(LOG,
 						(errmsg_plural("checkpoints are occurring too frequently (%d second apart)",
-				"checkpoints are occurring too frequently (%d seconds apart)",
+									   "checkpoints are occurring too frequently (%d seconds apart)",
 									   elapsed_secs,
 									   elapsed_secs),
 						 errhint("Consider increasing the configuration parameter \"max_wal_size\".")));
@@ -513,6 +497,8 @@ CheckpointerMain(void)
 			SpinLockAcquire(&CheckpointerShmem->ckpt_lck);
 			CheckpointerShmem->ckpt_done = CheckpointerShmem->ckpt_started;
 			SpinLockRelease(&CheckpointerShmem->ckpt_lck);
+
+			ConditionVariableBroadcast(&CheckpointerShmem->done_cv);
 
 			if (ckpt_performed)
 			{
@@ -566,31 +552,31 @@ CheckpointerMain(void)
 			cur_timeout = Min(cur_timeout, XLogArchiveTimeout - elapsed_secs);
 		}
 
-		rc = WaitLatch(MyLatch,
-					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
-					   cur_timeout * 1000L /* convert to ms */ );
-
-		/*
-		 * Emergency bailout if postmaster has died.  This is to avoid the
-		 * necessity for manual cleanup of all postmaster children.
-		 */
-		if (rc & WL_POSTMASTER_DEATH)
-			exit(1);
+		(void) WaitLatch(MyLatch,
+						 WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH,
+						 cur_timeout * 1000L /* convert to ms */ ,
+						 WAIT_EVENT_CHECKPOINTER_MAIN);
 	}
 }
 
 /*
  * CheckArchiveTimeout -- check for archive_timeout and switch xlog files
  *
- * This will switch to a new WAL file and force an archive file write
- * if any activity is recorded in the current WAL file, including just
- * a single checkpoint record.
+ * This will switch to a new WAL file and force an archive file write if
+ * meaningful activity is recorded in the current WAL file. This includes most
+ * writes, including just a single checkpoint record, but excludes WAL records
+ * that were inserted with the XLOG_MARK_UNIMPORTANT flag being set (like
+ * snapshots of running transactions).  Such records, depending on
+ * configuration, occur on regular intervals and don't contain important
+ * information.  This avoids generating archives with a few unimportant
+ * records.
  */
 static void
 CheckArchiveTimeout(void)
 {
 	pg_time_t	now;
 	pg_time_t	last_time;
+	XLogRecPtr	last_switch_lsn;
 
 	if (XLogArchiveTimeout <= 0 || RecoveryInProgress())
 		return;
@@ -605,26 +591,33 @@ CheckArchiveTimeout(void)
 	 * Update local state ... note that last_xlog_switch_time is the last time
 	 * a switch was performed *or requested*.
 	 */
-	last_time = GetLastSegSwitchTime();
+	last_time = GetLastSegSwitchData(&last_switch_lsn);
 
 	last_xlog_switch_time = Max(last_xlog_switch_time, last_time);
 
-	/* Now we can do the real check */
+	/* Now we can do the real checks */
 	if ((int) (now - last_xlog_switch_time) >= XLogArchiveTimeout)
 	{
-		XLogRecPtr	switchpoint;
-
-		/* OK, it's time to switch */
-		switchpoint = RequestXLogSwitch();
-
 		/*
-		 * If the returned pointer points exactly to a segment boundary,
-		 * assume nothing happened.
+		 * Switch segment only when "important" WAL has been logged since the
+		 * last segment switch (last_switch_lsn points to end of segment
+		 * switch occurred in).
 		 */
-		if ((switchpoint % XLogSegSize) != 0)
-			ereport(DEBUG1,
-				(errmsg("transaction log switch forced (archive_timeout=%d)",
-						XLogArchiveTimeout)));
+		if (GetLastImportantRecPtr() > last_switch_lsn)
+		{
+			XLogRecPtr	switchpoint;
+
+			/* mark switch as unimportant, avoids triggering checkpoints */
+			switchpoint = RequestXLogSwitch(true);
+
+			/*
+			 * If the returned pointer points exactly to a segment boundary,
+			 * assume nothing happened.
+			 */
+			if (XLogSegmentOffset(switchpoint, wal_segment_size) != 0)
+				elog(DEBUG1, "write-ahead log switch forced (archive_timeout=%d)",
+					 XLogArchiveTimeout);
+		}
 
 		/*
 		 * Update state in any case, so we don't retry constantly when the
@@ -642,17 +635,14 @@ CheckArchiveTimeout(void)
 static bool
 ImmediateCheckpointRequested(void)
 {
-	if (checkpoint_requested)
-	{
-		volatile CheckpointerShmemStruct *cps = CheckpointerShmem;
+	volatile CheckpointerShmemStruct *cps = CheckpointerShmem;
 
-		/*
-		 * We don't need to acquire the ckpt_lck in this case because we're
-		 * only looking at a single flag bit.
-		 */
-		if (cps->ckpt_flags & CHECKPOINT_IMMEDIATE)
-			return true;
-	}
+	/*
+	 * We don't need to acquire the ckpt_lck in this case because we're only
+	 * looking at a single flag bit.
+	 */
+	if (cps->ckpt_flags & CHECKPOINT_IMMEDIATE)
+		return true;
 	return false;
 }
 
@@ -695,7 +685,7 @@ CheckpointWriteDelay(int flags, double progress)
 			UpdateSharedMemoryConfig();
 		}
 
-		AbsorbFsyncRequests();
+		AbsorbSyncRequests();
 		absorb_counter = WRITES_PER_ABSORB;
 
 		CheckArchiveTimeout();
@@ -720,7 +710,7 @@ CheckpointWriteDelay(int flags, double progress)
 		 * operations even when we don't sleep, to prevent overflow of the
 		 * fsync request queue.
 		 */
-		AbsorbFsyncRequests();
+		AbsorbSyncRequests();
 		absorb_counter = WRITES_PER_ABSORB;
 	}
 }
@@ -779,7 +769,8 @@ IsCheckpointOnSchedule(double progress)
 		recptr = GetXLogReplayRecPtr(NULL);
 	else
 		recptr = GetInsertRecPtr();
-	elapsed_xlogs = (((double) (recptr - ckpt_start_recptr)) / XLogSegSize) / CheckPointSegments;
+	elapsed_xlogs = (((double) (recptr - ckpt_start_recptr)) /
+					 wal_segment_size) / CheckPointSegments;
 
 	if (progress < elapsed_xlogs)
 	{
@@ -854,7 +845,10 @@ ReqCheckpointHandler(SIGNAL_ARGS)
 {
 	int			save_errno = errno;
 
-	checkpoint_requested = true;
+	/*
+	 * The signalling process should have set ckpt_flags nonzero, so all we
+	 * need do is ensure that our main loop gets kicked out of any wait.
+	 */
 	SetLatch(MyLatch);
 
 	errno = save_errno;
@@ -933,6 +927,8 @@ CheckpointerShmemInit(void)
 		MemSet(CheckpointerShmem, 0, size);
 		SpinLockInit(&CheckpointerShmem->ckpt_lck);
 		CheckpointerShmem->max_requests = NBuffers;
+		ConditionVariableInit(&CheckpointerShmem->start_cv);
+		ConditionVariableInit(&CheckpointerShmem->done_cv);
 	}
 }
 
@@ -993,31 +989,35 @@ RequestCheckpoint(int flags)
 
 	old_failed = CheckpointerShmem->ckpt_failed;
 	old_started = CheckpointerShmem->ckpt_started;
-	CheckpointerShmem->ckpt_flags |= flags;
+	CheckpointerShmem->ckpt_flags |= (flags | CHECKPOINT_REQUESTED);
 
 	SpinLockRelease(&CheckpointerShmem->ckpt_lck);
 
 	/*
 	 * Send signal to request checkpoint.  It's possible that the checkpointer
 	 * hasn't started yet, or is in process of restarting, so we will retry a
-	 * few times if needed.  Also, if not told to wait for the checkpoint to
-	 * occur, we consider failure to send the signal to be nonfatal and merely
-	 * LOG it.
+	 * few times if needed.  (Actually, more than a few times, since on slow
+	 * or overloaded buildfarm machines, it's been observed that the
+	 * checkpointer can take several seconds to start.)  However, if not told
+	 * to wait for the checkpoint to occur, we consider failure to send the
+	 * signal to be nonfatal and merely LOG it.  The checkpointer should see
+	 * the request when it does start, with or without getting a signal.
 	 */
+#define MAX_SIGNAL_TRIES 600	/* max wait 60.0 sec */
 	for (ntries = 0;; ntries++)
 	{
 		if (CheckpointerShmem->checkpointer_pid == 0)
 		{
-			if (ntries >= 20)	/* max wait 2.0 sec */
+			if (ntries >= MAX_SIGNAL_TRIES || !(flags & CHECKPOINT_WAIT))
 			{
 				elog((flags & CHECKPOINT_WAIT) ? ERROR : LOG,
-					 "could not request checkpoint because checkpointer not running");
+					 "could not signal for checkpoint: checkpointer is not running");
 				break;
 			}
 		}
 		else if (kill(CheckpointerShmem->checkpointer_pid, SIGINT) != 0)
 		{
-			if (ntries >= 20)	/* max wait 2.0 sec */
+			if (ntries >= MAX_SIGNAL_TRIES || !(flags & CHECKPOINT_WAIT))
 			{
 				elog((flags & CHECKPOINT_WAIT) ? ERROR : LOG,
 					 "could not signal for checkpoint: %m");
@@ -1041,6 +1041,7 @@ RequestCheckpoint(int flags)
 					new_failed;
 
 		/* Wait for a new checkpoint to start. */
+		ConditionVariablePrepareToSleep(&CheckpointerShmem->start_cv);
 		for (;;)
 		{
 			SpinLockAcquire(&CheckpointerShmem->ckpt_lck);
@@ -1050,13 +1051,15 @@ RequestCheckpoint(int flags)
 			if (new_started != old_started)
 				break;
 
-			CHECK_FOR_INTERRUPTS();
-			pg_usleep(100000L);
+			ConditionVariableSleep(&CheckpointerShmem->start_cv,
+								   WAIT_EVENT_CHECKPOINT_START);
 		}
+		ConditionVariableCancelSleep();
 
 		/*
 		 * We are waiting for ckpt_done >= new_started, in a modulo sense.
 		 */
+		ConditionVariablePrepareToSleep(&CheckpointerShmem->done_cv);
 		for (;;)
 		{
 			int			new_done;
@@ -1069,9 +1072,10 @@ RequestCheckpoint(int flags)
 			if (new_done - new_started >= 0)
 				break;
 
-			CHECK_FOR_INTERRUPTS();
-			pg_usleep(100000L);
+			ConditionVariableSleep(&CheckpointerShmem->done_cv,
+								   WAIT_EVENT_CHECKPOINT_DONE);
 		}
+		ConditionVariableCancelSleep();
 
 		if (new_failed != old_failed)
 			ereport(ERROR,
@@ -1081,7 +1085,7 @@ RequestCheckpoint(int flags)
 }
 
 /*
- * ForwardFsyncRequest
+ * ForwardSyncRequest
  *		Forward a file-fsync request from a backend to the checkpointer
  *
  * Whenever a backend is compelled to write directly to a relation
@@ -1089,18 +1093,6 @@ RequestCheckpoint(int flags)
  * the backend calls this routine to pass over knowledge that the relation
  * is dirty and must be fsync'd before next checkpoint.  We also use this
  * opportunity to count such writes for statistical purposes.
- *
- * This functionality is only supported for regular (not backend-local)
- * relations, so the rnode argument is intentionally RelFileNode not
- * RelFileNodeBackend.
- *
- * segno specifies which segment (not block!) of the relation needs to be
- * fsync'd.  (Since the valid range is much less than BlockNumber, we can
- * use high values for special flags; that's all internal to md.c, which
- * see for details.)
- *
- * is_ao_segno means the segno is a real segno (i.e. not FORGET_RELATION_FSYNC,
- * etc) of ao relation.
  *
  * To avoid holding the lock for longer than necessary, we normally write
  * to the requests[] queue without checking for duplicates.  The checkpointer
@@ -1113,8 +1105,7 @@ RequestCheckpoint(int flags)
  * let the backend know by returning false.
  */
 bool
-ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno,
-					bool is_ao_segno)
+ForwardSyncRequest(const FileTag *ftag, SyncRequestType type)
 {
 	CheckpointerRequest *request;
 	bool		too_full;
@@ -1122,22 +1113,8 @@ ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno,
 	if (!IsUnderPostmaster)
 		return false;			/* probably shouldn't even get here */
 
-	/*
-	 * Special values of segno are used to indicate that a fsync request
-	 * needs to be forgotten.  Fsync requests for append-optimized tables
-	 * carry no such special meaning.  The segno must identify a valid
-	 * append-optimized segment file on disk.
-	 */
-	AssertImply(is_ao_segno, segno <= MAX_AOREL_CONCURRENCY * MaxTupleAttributeNumber);
-
-	/*
-	 * Append-optimized tables do not use relation forks currently.
-	 * MAIN_FORKNUM is the only fork applicable.
-	 */
-	AssertImply(is_ao_segno, forknum == MAIN_FORKNUM);
-
 	if (AmCheckpointerProcess())
-		elog(ERROR, "ForwardFsyncRequest must not be called in checkpointer");
+		elog(ERROR, "ForwardSyncRequest must not be called in checkpointer");
 
 	LWLockAcquire(CheckpointerCommLock, LW_EXCLUSIVE);
 
@@ -1166,10 +1143,8 @@ ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno,
 
 	/* OK, insert request */
 	request = &CheckpointerShmem->requests[CheckpointerShmem->num_requests++];
-	request->rnode = rnode;
-	request->forknum = forknum;
-	request->segno = segno;
-	request->is_ao_segno = is_ao_segno;
+	request->ftag = *ftag;
+	request->type = type;
 
 	/* If queue is more than half full, nudge the checkpointer to empty it */
 	too_full = (CheckpointerShmem->num_requests >=
@@ -1239,12 +1214,11 @@ CompactCheckpointerRequestQueue(void)
 	 * backwards from the end of the queue and check whether a request is
 	 * *preceded* by an earlier, identical request, in the hopes of doing less
 	 * copying.  But that might change the semantics, if there's an
-	 * intervening FORGET_RELATION_FSYNC or FORGET_DATABASE_FSYNC request, so
-	 * we do it this way.  It would be possible to be even smarter if we made
-	 * the code below understand the specific semantics of such requests (it
-	 * could blow away preceding entries that would end up being canceled
-	 * anyhow), but it's not clear that the extra complexity would buy us
-	 * anything.
+	 * intervening SYNC_FORGET_REQUEST or SYNC_FILTER_REQUEST, so we do it
+	 * this way.  It would be possible to be even smarter if we made the code
+	 * below understand the specific semantics of such requests (it could blow
+	 * away preceding entries that would end up being canceled anyhow), but
+	 * it's not clear that the extra complexity would buy us anything.
 	 */
 	for (n = 0; n < CheckpointerShmem->num_requests; n++)
 	{
@@ -1290,8 +1264,8 @@ CompactCheckpointerRequestQueue(void)
 		CheckpointerShmem->requests[preserve_count++] = CheckpointerShmem->requests[n];
 	}
 	ereport(DEBUG1,
-	   (errmsg("compacted fsync request queue from %d entries to %d entries",
-			   CheckpointerShmem->num_requests, preserve_count)));
+			(errmsg("compacted fsync request queue from %d entries to %d entries",
+					CheckpointerShmem->num_requests, preserve_count)));
 	CheckpointerShmem->num_requests = preserve_count;
 
 	/* Cleanup. */
@@ -1300,8 +1274,8 @@ CompactCheckpointerRequestQueue(void)
 }
 
 /*
- * AbsorbFsyncRequests
- *		Retrieve queued fsync requests and pass them to local smgr.
+ * AbsorbSyncRequests
+ *		Retrieve queued sync requests and pass them to sync mechanism.
  *
  * This is exported because it must be called during CreateCheckPoint;
  * we have to be sure we have accepted all pending requests just before
@@ -1309,7 +1283,7 @@ CompactCheckpointerRequestQueue(void)
  * non-checkpointer processes, do nothing if not checkpointer.
  */
 void
-AbsorbFsyncRequests(void)
+AbsorbSyncRequests(void)
 {
 	CheckpointerRequest *requests = NULL;
 	CheckpointerRequest *request;
@@ -1352,7 +1326,7 @@ AbsorbFsyncRequests(void)
 	LWLockRelease(CheckpointerCommLock);
 
 	for (request = requests; n > 0; request++, n--)
-		RememberFsyncRequest(request->rnode, request->forknum, request->segno, request->is_ao_segno);
+		RememberSyncRequest(&request->ftag, request->type);
 
 	END_CRIT_SECTION();
 

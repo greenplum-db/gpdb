@@ -3,7 +3,7 @@
  * unaccent.c
  *	  Text search unaccent dictionary
  *
- * Copyright (c) 2009-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2009-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/unaccent/unaccent.c
@@ -14,6 +14,7 @@
 #include "postgres.h"
 
 #include "catalog/namespace.h"
+#include "catalog/pg_ts_dict.h"
 #include "commands/defrem.h"
 #include "lib/stringinfo.h"
 #include "tsearch/ts_cache.h"
@@ -21,6 +22,7 @@
 #include "tsearch/ts_public.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/regproc.h"
 #include "utils/syscache.h"
 
 PG_MODULE_MAGIC;
@@ -68,7 +70,7 @@ placeChar(TrieChar *node, const unsigned char *str, int lenstr,
 		if (curnode->replaceTo)
 			ereport(WARNING,
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
-				errmsg("duplicate source strings, first one will be used")));
+					 errmsg("duplicate source strings, first one will be used")));
 		else
 		{
 			curnode->replacelen = replacelen;
@@ -91,7 +93,7 @@ placeChar(TrieChar *node, const unsigned char *str, int lenstr,
  * Function converts UTF8-encoded file into current encoding.
  */
 static TrieChar *
-initTrie(char *filename)
+initTrie(const char *filename)
 {
 	TrieChar   *volatile rootTrie = NULL;
 	MemoryContext ccxt = CurrentMemoryContext;
@@ -277,7 +279,7 @@ unaccent_init(PG_FUNCTION_ARGS)
 	{
 		DefElem    *defel = (DefElem *) lfirst(l);
 
-		if (pg_strcasecmp("Rules", defel->defname) == 0)
+		if (strcmp(defel->defname, "rules") == 0)
 		{
 			if (fileloaded)
 				ereport(ERROR,
@@ -384,7 +386,7 @@ unaccent_dict(PG_FUNCTION_ARGS)
 		Oid			procnspid = get_func_namespace(fcinfo->flinfo->fn_oid);
 		const char *dictname = "unaccent";
 
-		dictOid = GetSysCacheOid2(TSDICTNAMENSP,
+		dictOid = GetSysCacheOid2(TSDICTNAMENSP, Anum_pg_ts_dict_oid,
 								  PointerGetDatum(dictname),
 								  ObjectIdGetDatum(procnspid));
 		if (!OidIsValid(dictOid))
@@ -399,14 +401,14 @@ unaccent_dict(PG_FUNCTION_ARGS)
 		dictOid = PG_GETARG_OID(0);
 		strArg = 1;
 	}
-	str = PG_GETARG_TEXT_P(strArg);
+	str = PG_GETARG_TEXT_PP(strArg);
 
 	dict = lookup_ts_dictionary_cache(dictOid);
 
 	res = (TSLexeme *) DatumGetPointer(FunctionCall4(&(dict->lexize),
-											 PointerGetDatum(dict->dictData),
-											   PointerGetDatum(VARDATA(str)),
-									  Int32GetDatum(VARSIZE(str) - VARHDRSZ),
+													 PointerGetDatum(dict->dictData),
+													 PointerGetDatum(VARDATA_ANY(str)),
+													 Int32GetDatum(VARSIZE_ANY_EXHDR(str)),
 													 PointerGetDatum(NULL)));
 
 	PG_FREE_IF_COPY(str, strArg);

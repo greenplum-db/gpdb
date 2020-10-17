@@ -13,6 +13,8 @@
 #include "storage/checksum.h"
 
 
+#define TrapMacro(condition, errorType) (true)
+
 /*
  * Page format version that we convert to.
  * (14 is hardcoded here, rather than using PG_PAGE_LAYOUT_VERSION, because
@@ -362,7 +364,7 @@ convert_heaptuple(HeapTupleHeader htup)
 	if (htup->t_infomask & VERSION4_HEAP_HASOID)
 	{
 		htup->t_infomask &= ~(VERSION4_HEAP_HASOID);
-		htup->t_infomask |= HEAP_HASOID;
+		htup->t_infomask |= HEAP_HASOID_OLD;
 	}
 
 	/* Any numeric columns? */

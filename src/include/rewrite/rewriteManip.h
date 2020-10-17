@@ -4,7 +4,7 @@
  *		Querytree manipulation subroutines for query rewriter.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/rewrite/rewriteManip.h
@@ -20,7 +20,7 @@
 typedef struct replace_rte_variables_context replace_rte_variables_context;
 
 typedef Node *(*replace_rte_variables_callback) (Var *var,
-									 replace_rte_variables_context *context);
+												 replace_rte_variables_context *context);
 
 struct replace_rte_variables_context
 {
@@ -28,7 +28,7 @@ struct replace_rte_variables_context
 	void	   *callback_arg;	/* context data for callback function */
 	int			target_varno;	/* RTE index to search for */
 	int			sublevels_up;	/* (current) nesting depth */
-	bool		inserted_sublink;		/* have we inserted a SubLink? */
+	bool		inserted_sublink;	/* have we inserted a SubLink? */
 };
 
 typedef enum ReplaceVarsNoMatchOption
@@ -41,16 +41,16 @@ typedef enum ReplaceVarsNoMatchOption
 
 extern void OffsetVarNodes(Node *node, int offset, int sublevels_up);
 extern void ChangeVarNodes(Node *node, int old_varno, int new_varno,
-			   int sublevels_up);
+						   int sublevels_up);
 extern void IncrementVarSublevelsUp(Node *node, int delta_sublevels_up,
-						int min_sublevels_up);
+									int min_sublevels_up);
 extern void IncrementVarSublevelsUp_rtable(List *rtable,
-							   int delta_sublevels_up, int min_sublevels_up);
+										   int delta_sublevels_up, int min_sublevels_up);
 extern void IncrementVarSublevelsUpInTransformGroupedWindows(Node *node,
-		int delta_sublevels_up, int min_sublevels_up);
+															 int delta_sublevels_up, int min_sublevels_up);
 
 extern bool rangeTableEntry_used(Node *node, int rt_index,
-					 int sublevels_up);
+								 int sublevels_up);
 
 extern Query *getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr);
 
@@ -64,24 +64,24 @@ extern int	locate_windowfunc(Node *node);
 extern bool checkExprHasSubLink(Node *node);
 
 extern Node *replace_rte_variables(Node *node,
-					  int target_varno, int sublevels_up,
-					  replace_rte_variables_callback callback,
-					  void *callback_arg,
-					  bool *outer_hasSubLinks);
+								   int target_varno, int sublevels_up,
+								   replace_rte_variables_callback callback,
+								   void *callback_arg,
+								   bool *outer_hasSubLinks);
 extern Node *replace_rte_variables_mutator(Node *node,
-							  replace_rte_variables_context *context);
+										   replace_rte_variables_context *context);
 
 extern Node *map_variable_attnos(Node *node,
-					int target_varno, int sublevels_up,
-					const AttrNumber *attno_map, int map_length,
-					bool *found_whole_row);
+								 int target_varno, int sublevels_up,
+								 const AttrNumber *attno_map, int map_length,
+								 Oid to_rowtype, bool *found_whole_row);
 
 extern Node *ReplaceVarsFromTargetList(Node *node,
-						  int target_varno, int sublevels_up,
-						  RangeTblEntry *target_rte,
-						  List *targetlist,
-						  ReplaceVarsNoMatchOption nomatch_option,
-						  int nomatch_varno,
-						  bool *outer_hasSubLinks);
+									   int target_varno, int sublevels_up,
+									   RangeTblEntry *target_rte,
+									   List *targetlist,
+									   ReplaceVarsNoMatchOption nomatch_option,
+									   int nomatch_varno,
+									   bool *outer_hasSubLinks);
 
-#endif   /* REWRITEMANIP_H */
+#endif							/* REWRITEMANIP_H */

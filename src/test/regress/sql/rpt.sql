@@ -123,13 +123,13 @@ CREATE TABLE parent_part (
 CREATE TABLE child (
         salary          int4,
         manager         name
-) INHERITS (parent_rep) WITH OIDS;
+) INHERITS (parent_rep);
 
 -- replicated table can not have parents, should fail
 CREATE TABLE child (
         salary          int4,
         manager         name
-) INHERITS (parent_part) WITH OIDS DISTRIBUTED REPLICATED;
+) INHERITS (parent_part) DISTRIBUTED REPLICATED;
 
 drop table if exists parent_rep;
 drop table if exists parent_part;
@@ -351,6 +351,32 @@ ALTER TABLE foopart SET DISTRIBUTED REPLICATED;
 ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
 DROP TABLE foopart;
 
+-- Test that replicated table can't inherit a parent table, and it also
+-- can't be inherited by a child table.
+-- 1. Replicated table can't inherit a parent table.
+CREATE TABLE parent (t text) DISTRIBUTED BY (t);
+-- This is not allowed: should fail
+CREATE TABLE child () INHERITS (parent) DISTRIBUTED REPLICATED;
+
+CREATE TABLE child (t text) DISTRIBUTED REPLICATED;
+-- should fail
+ALTER TABLE child INHERIT parent;
+DROP TABLE child, parent;
+
+-- 2. Replicated table can't be inherited
+CREATE TABLE parent (t text) DISTRIBUTED REPLICATED;
+-- should fail
+CREATE TABLE child () INHERITS (parent) DISTRIBUTED REPLICATED;
+CREATE TABLE child () INHERITS (parent) DISTRIBUTED BY (t);
+
+CREATE TABLE child (t text) DISTRIBUTED REPLICATED;
+ALTER TABLE child INHERIT parent;
+
+CREATE TABLE child2(t text) DISTRIBUTED BY (t);
+ALTER TABLE child2 INHERIT parent;
+
+DROP TABLE child, child2, parent;
+
 -- volatile replicated
 -- General and segmentGeneral locus imply that if the corresponding
 -- slice is executed in many different segments should provide the
@@ -398,8 +424,8 @@ explain (costs off) delete from t_replicate_volatile using t_replicate_volatile 
 explain (costs off) update t_replicate_volatile set a = random();
 
 -- limit
-explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
-explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit 1) x;
+explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit random();
+explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit random()) x;
 
 -- start_ignore
 drop schema rpt cascade;

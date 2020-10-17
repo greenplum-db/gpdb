@@ -53,8 +53,7 @@ checkIODataDirectory(void)
 	errno = 0;
 	bool failure = false;
 
-	fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | PG_O_DIRECT | O_EXCL,
-                                           S_IRUSR | S_IWUSR);
+	fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | PG_O_DIRECT | O_EXCL);
 	do
 	{
 		if (fd < 0)
@@ -62,8 +61,7 @@ checkIODataDirectory(void)
 			if (errno == ENOENT)
 			{
 				elog(LOG, "FTS: \"%s\" file doesn't exist, creating it once.", FTS_PROBE_FILE_NAME);
-				fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | O_CREAT | O_EXCL,
-                                           S_IRUSR | S_IWUSR);
+				fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | O_CREAT | O_EXCL);
 				if (fd < 0)
 				{
 					failure = true;

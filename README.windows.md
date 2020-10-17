@@ -7,7 +7,7 @@ If not specified, all commands in this readme should be executed in x64 Native T
 # Components of client tools
 
 - Command line client: psql, pg_dump, pg_dumpall
-- Script tools: createdb, createuser, createlang, dropdb, dropuser, droplang, clusterdb, vacuumdb
+- Script tools: createdb, createuser, dropdb, dropuser, clusterdb, vacuumdb
 - Loaders: gpfdist, gpload
 
 # Prerequisite

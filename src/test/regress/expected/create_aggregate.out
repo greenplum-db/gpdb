@@ -71,7 +71,8 @@ create aggregate my_percentile_disc(float8 ORDER BY anyelement) (
   stype = internal,
   sfunc = ordered_set_transition,
   finalfunc = percentile_disc_final,
-  finalfunc_extra = true
+  finalfunc_extra = true,
+  finalfunc_modify = read_write
 );
 create aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any") (
   stype = internal,
@@ -146,17 +147,90 @@ CREATE AGGREGATE myavg (numeric)
 	finalfunc = numeric_avg,
 	serialfunc = numeric_avg_serialize,
 	deserialfunc = numeric_avg_deserialize,
-	combinefunc = numeric_avg_combine
+	combinefunc = numeric_avg_combine,
+	finalfunc_modify = shareable  -- just to test a non-default setting
 );
 -- Ensure all these functions made it into the catalog
-SELECT aggfnoid,aggtransfn,aggcombinefn,aggtranstype,aggserialfn,aggdeserialfn
+SELECT aggfnoid, aggtransfn, aggcombinefn, aggtranstype::regtype,
+       aggserialfn, aggdeserialfn, aggfinalmodify
 FROM pg_aggregate
 WHERE aggfnoid = 'myavg'::REGPROC;
- aggfnoid |    aggtransfn     |    aggcombinefn     | aggtranstype |      aggserialfn      |      aggdeserialfn      
-----------+-------------------+---------------------+--------------+-----------------------+-------------------------
- myavg    | numeric_avg_accum | numeric_avg_combine |         2281 | numeric_avg_serialize | numeric_avg_deserialize
+ aggfnoid |    aggtransfn     |    aggcombinefn     | aggtranstype |      aggserialfn      |      aggdeserialfn      | aggfinalmodify 
+----------+-------------------+---------------------+--------------+-----------------------+-------------------------+----------------
+ myavg    | numeric_avg_accum | numeric_avg_combine | internal     | numeric_avg_serialize | numeric_avg_deserialize | s
 (1 row)
 
+DROP AGGREGATE myavg (numeric);
+-- create or replace aggregate
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	finalfunc = numeric_avg
+);
+CREATE OR REPLACE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	finalfunc = numeric_avg,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_deserialize,
+	combinefunc = numeric_avg_combine,
+	finalfunc_modify = shareable  -- just to test a non-default setting
+);
+-- Ensure all these functions made it into the catalog again
+SELECT aggfnoid, aggtransfn, aggcombinefn, aggtranstype::regtype,
+       aggserialfn, aggdeserialfn, aggfinalmodify
+FROM pg_aggregate
+WHERE aggfnoid = 'myavg'::REGPROC;
+ aggfnoid |    aggtransfn     |    aggcombinefn     | aggtranstype |      aggserialfn      |      aggdeserialfn      | aggfinalmodify 
+----------+-------------------+---------------------+--------------+-----------------------+-------------------------+----------------
+ myavg    | numeric_avg_accum | numeric_avg_combine | internal     | numeric_avg_serialize | numeric_avg_deserialize | s
+(1 row)
+
+-- can change stype:
+CREATE OR REPLACE AGGREGATE myavg (numeric)
+(
+	stype = numeric,
+	sfunc = numeric_add
+);
+SELECT aggfnoid, aggtransfn, aggcombinefn, aggtranstype::regtype,
+       aggserialfn, aggdeserialfn, aggfinalmodify
+FROM pg_aggregate
+WHERE aggfnoid = 'myavg'::REGPROC;
+ aggfnoid | aggtransfn  | aggcombinefn | aggtranstype | aggserialfn | aggdeserialfn | aggfinalmodify 
+----------+-------------+--------------+--------------+-------------+---------------+----------------
+ myavg    | numeric_add | -            | numeric      | -           | -             | r
+(1 row)
+
+-- can't change return type:
+CREATE OR REPLACE AGGREGATE myavg (numeric)
+(
+	stype = numeric,
+	sfunc = numeric_add,
+	finalfunc = numeric_out
+);
+ERROR:  cannot change return type of existing function
+HINT:  Use DROP AGGREGATE myavg(numeric) first.
+-- can't change to a different kind:
+CREATE OR REPLACE AGGREGATE myavg (order by numeric)
+(
+	stype = numeric,
+	sfunc = numeric_add
+);
+ERROR:  cannot change routine kind
+DETAIL:  "myavg" is an ordinary aggregate function.
+-- can't change plain function to aggregate:
+create function sum4(int8,int8,int8,int8) returns int8 as
+'select $1 + $2 + $3 + $4' language sql strict immutable;
+CREATE OR REPLACE AGGREGATE sum3 (int8,int8,int8)
+(
+	stype = int8,
+	sfunc = sum4
+);
+ERROR:  cannot change routine kind
+DETAIL:  "sum3" is a function.
+drop function sum4(int8,int8,int8,int8);
 DROP AGGREGATE myavg (numeric);
 -- invalid: bad parallel-safety marking
 CREATE AGGREGATE mysum (int)
@@ -192,6 +266,36 @@ CREATE AGGREGATE wrongreturntype (float8)
     minvfunc = float8mi_int
 );
 ERROR:  return type of inverse transition function float8mi_int is not double precision
+-- invalid: non-lowercase quoted identifiers
+CREATE AGGREGATE case_agg ( -- old syntax
+	"Sfunc1" = int4pl,
+	"Basetype" = int4,
+	"Stype1" = int4,
+	"Initcond1" = '0',
+	"Parallel" = safe
+);
+WARNING:  aggregate attribute "Sfunc1" not recognized
+WARNING:  aggregate attribute "Basetype" not recognized
+WARNING:  aggregate attribute "Stype1" not recognized
+WARNING:  aggregate attribute "Initcond1" not recognized
+WARNING:  aggregate attribute "Parallel" not recognized
+ERROR:  aggregate stype must be specified
+CREATE AGGREGATE case_agg(float8)
+(
+	"Stype" = internal,
+	"Sfunc" = ordered_set_transition,
+	"Finalfunc" = percentile_disc_final,
+	"Finalfunc_extra" = true,
+	"Finalfunc_modify" = read_write,
+	"Parallel" = safe
+);
+WARNING:  aggregate attribute "Stype" not recognized
+WARNING:  aggregate attribute "Sfunc" not recognized
+WARNING:  aggregate attribute "Finalfunc" not recognized
+WARNING:  aggregate attribute "Finalfunc_extra" not recognized
+WARNING:  aggregate attribute "Finalfunc_modify" not recognized
+WARNING:  aggregate attribute "Parallel" not recognized
+ERROR:  aggregate stype must be specified
 -- Negative test: "ordered aggregate prefunc is not supported"
 create ordered aggregate should_error(integer,integer,text) (
    stype = aggtype[],

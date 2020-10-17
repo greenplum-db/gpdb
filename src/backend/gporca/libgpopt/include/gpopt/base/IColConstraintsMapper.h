@@ -9,13 +9,13 @@
 
 namespace gpopt
 {
-	class IColConstraintsMapper : public CRefCount
-	{
-		public:
-			virtual CConstraintArray* PdrgPcnstrLookup(CColRef *colref) = 0;
+class IColConstraintsMapper : public CRefCount
+{
+public:
+	virtual CConstraintArray *PdrgPcnstrLookup(CColRef *colref) = 0;
 
-			virtual ~IColConstraintsMapper() = 0;
-	};
-}
+	virtual ~IColConstraintsMapper() = 0;
+};
+}  // namespace gpopt
 
-#endif //GPOPT_IColConstraintsMapper_H
+#endif	//GPOPT_IColConstraintsMapper_H

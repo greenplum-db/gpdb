@@ -15,7 +15,7 @@ RESET ALL;
 -- both sides have varchar(10)
 --
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 create or replace function count_operator(query text, operator text) returns int as
 $$
@@ -28,7 +28,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 -- ----------------------------------------------------------------------
 -- Test: DPE not being applied for tables partitioned by a string column
 -- ----------------------------------------------------------------------
@@ -45,12 +45,6 @@ partition by list(j)
 (partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
 insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
 create table foo2 (i int, j varchar(10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -62,13 +56,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -88,12 +82,6 @@ partition by list(j)
 (partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
 insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
 create table foo2 (i int, j text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -105,13 +93,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -131,12 +119,6 @@ partition by list(j)
 (partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
 insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
 create table foo2 (i int, j varchar(10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -148,13 +130,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -174,12 +156,6 @@ partition by list(j)
 (partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
 insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
 create table foo2 (i int, j text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -191,13 +167,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -217,12 +193,6 @@ partition by list(j)
 (partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
 insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
 create table foo2 (i int, j text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -234,13 +204,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -258,12 +228,6 @@ partition by list(j)
 (partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
-NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
 insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
 create table foo2 (i int, j varchar(10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -278,19 +242,19 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);

@@ -16,65 +16,55 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformInsert2DML
-	//
-	//	@doc:
-	//		Transform Logical Insert to Logical DML
-	//
-	//---------------------------------------------------------------------------
-	class CXformInsert2DML : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformInsert2DML
+//
+//	@doc:
+//		Transform Logical Insert to Logical DML
+//
+//---------------------------------------------------------------------------
+class CXformInsert2DML : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformInsert2DML(const CXformInsert2DML &);
+
+public:
+	// ctor
+	explicit CXformInsert2DML(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformInsert2DML()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfInsert2DML;
+	}
 
-			// private copy ctor
-			CXformInsert2DML(const CXformInsert2DML &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformInsert2DML";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformInsert2DML(CMemoryPool *mp);
+	// actual transform
+	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+						   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformInsert2DML() {}
+};	// class CXformInsert2DML
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfInsert2DML;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformInsert2DML";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			virtual
-			void Transform
-				(
-				CXformContext *pxfctxt,
-				CXformResult *pxfres,
-				CExpression *pexpr
-				)
-				const;
-
-	}; // class CXformInsert2DML
-}
-
-#endif // !GPOPT_CXformInsert2DML_H
+#endif	// !GPOPT_CXformInsert2DML_H
 
 // EOF

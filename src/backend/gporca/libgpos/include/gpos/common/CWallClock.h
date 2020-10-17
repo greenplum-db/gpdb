@@ -15,42 +15,36 @@
 
 namespace gpos
 {
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CWallClock
-	//
-	//	@doc:
-	//		Records wall clock time;
-	//
-	//---------------------------------------------------------------------------
-	class CWallClock : public ITimer
+//---------------------------------------------------------------------------
+//	@class:
+//		CWallClock
+//
+//	@doc:
+//		Records wall clock time;
+//
+//---------------------------------------------------------------------------
+class CWallClock : public ITimer
+{
+private:
+	// actual timer
+	TIMEVAL m_time;
+
+public:
+	// ctor
+	CWallClock()
 	{
-		private:
+		Restart();
+	}
 
-			// actual timer
-			TIMEVAL m_time;
+	// retrieve elapsed wall-clock time in micro-seconds
+	virtual ULONG ElapsedUS() const;
 
-		public:
+	// restart timer
+	virtual void Restart();
+};
 
-			// ctor
-			CWallClock()
-			{
-				Restart();
-			}
+}  // namespace gpos
 
-			// retrieve elapsed wall-clock time in micro-seconds
-			virtual
-			ULONG ElapsedUS() const;
-
-			// restart timer
-			virtual
-			void Restart();
-	};
-
-}
-
-#endif // !GPOS_CWallClock_H
+#endif	// !GPOS_CWallClock_H
 
 // EOF
-

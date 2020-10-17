@@ -2,7 +2,7 @@
  * test_ddl_deparse.c
  *		Support functions for the test_ddl_deparse module
  *
- * Copyright (c) 2014-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2014-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/test/modules/test_ddl_deparse/test_ddl_deparse.c
@@ -94,10 +94,8 @@ get_altertable_subcmdtypes(PG_FUNCTION_ARGS)
 	foreach(cell, cmd->d.alterTable.subcmds)
 	{
 		CollectedATSubcmd *sub = lfirst(cell);
-		AlterTableCmd *subcmd = (AlterTableCmd *) sub->parsetree;
+		AlterTableCmd *subcmd = castNode(AlterTableCmd, sub->parsetree);
 		const char *strtype;
-
-		Assert(IsA(subcmd, AlterTableCmd));
 
 		switch (subcmd->subtype)
 		{
@@ -118,6 +116,9 @@ get_altertable_subcmdtypes(PG_FUNCTION_ARGS)
 				break;
 			case AT_SetNotNull:
 				strtype = "SET NOT NULL";
+				break;
+			case AT_CheckNotNull:
+				strtype = "CHECK NOT NULL";
 				break;
 			case AT_SetStatistics:
 				strtype = "SET STATS";
@@ -196,12 +197,6 @@ get_altertable_subcmdtypes(PG_FUNCTION_ARGS)
 				break;
 			case AT_SetUnLogged:
 				strtype = "SET UNLOGGED";
-				break;
-			case AT_AddOids:
-				strtype = "ADD OIDS";
-				break;
-			case AT_AddOidsRecurse:
-				strtype = "ADD OIDS (and recurse)";
 				break;
 			case AT_DropOids:
 				strtype = "DROP OIDS";

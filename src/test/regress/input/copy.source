@@ -164,3 +164,73 @@ CREATE TEMP TABLE venue(
 
 COPY venue FROM '@abs_srcdir@/data/venue_pipe.txt' WITH DELIMITER AS '|';
 SELECT count(*) FROM venue;
+
+-- test copy from with a partitioned table
+create table parted_copytest (
+	a int,
+	b int,
+	c text
+) partition by list (b);
+
+create table parted_copytest_a1 (c text, b int, a int);
+create table parted_copytest_a2 (a int, c text, b int);
+
+alter table parted_copytest_a1 set distributed by (a);
+
+alter table parted_copytest attach partition parted_copytest_a1 for values in(1);
+alter table parted_copytest attach partition parted_copytest_a2 for values in(2);
+
+-- We must insert enough rows to trigger multi-inserts.  These are only
+-- enabled adaptively when there are few enough partition changes.
+insert into parted_copytest select x,1,'One' from generate_series(1,1000) x;
+insert into parted_copytest select x,2,'Two' from generate_series(1001,1010) x;
+insert into parted_copytest select x,1,'One' from generate_series(1011,1020) x;
+
+copy (select * from parted_copytest order by a) to '@abs_builddir@/results/parted_copytest.csv';
+
+truncate parted_copytest;
+
+copy parted_copytest from '@abs_builddir@/results/parted_copytest.csv';
+
+-- Ensure COPY FREEZE errors for partitioned tables.
+begin;
+truncate parted_copytest;
+copy parted_copytest from '@abs_builddir@/results/parted_copytest.csv' (freeze);
+rollback;
+
+select tableoid::regclass,count(*),sum(a) from parted_copytest
+group by tableoid order by tableoid::regclass::name;
+
+truncate parted_copytest;
+
+-- create before insert row trigger on parted_copytest_a2
+create function part_ins_func() returns trigger language plpgsql as $$
+begin
+  return new;
+end;
+$$;
+
+create trigger part_ins_trig
+	before insert on parted_copytest_a2
+	for each row
+	execute procedure part_ins_func();
+
+copy parted_copytest from '@abs_builddir@/results/parted_copytest.csv';
+
+select tableoid::regclass,count(*),sum(a) from parted_copytest
+group by tableoid order by tableoid::regclass::name;
+
+truncate table parted_copytest;
+create index on parted_copytest (b);
+drop trigger part_ins_trig on parted_copytest_a2;
+
+copy parted_copytest from stdin;
+1	1	str1
+2	2	str2
+\.
+
+-- Ensure index entries were properly added during the copy.
+select * from parted_copytest where b = 1;
+select * from parted_copytest where b = 2;
+
+drop table parted_copytest;

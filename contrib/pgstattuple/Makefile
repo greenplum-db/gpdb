@@ -4,12 +4,14 @@ MODULE_big	= pgstattuple
 OBJS		= pgstattuple.o pgstatindex.o pgstatapprox.o $(WIN32RES)
 
 EXTENSION = pgstattuple
-DATA = pgstattuple--1.4.sql pgstattuple--1.3--1.4.sql \
-	pgstattuple--1.2--1.3.sql pgstattuple--1.1--1.2.sql \
-	pgstattuple--1.0--1.1.sql pgstattuple--unpackaged--1.0.sql
+DATA = pgstattuple--1.4.sql pgstattuple--1.4--1.5.sql \
+	pgstattuple--1.3--1.4.sql pgstattuple--1.2--1.3.sql \
+	pgstattuple--1.1--1.2.sql pgstattuple--1.0--1.1.sql \
+	pgstattuple--unpackaged--1.0.sql
 PGFILEDESC = "pgstattuple - tuple-level statistics"
 
 REGRESS = pgstattuple
+REGRESS_OPTS = --init-file=$(top_srcdir)/src/test/regress/init_file
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

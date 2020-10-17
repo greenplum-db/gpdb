@@ -12,7 +12,7 @@ subdir = src/backend/utils/time
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-OBJS = combocid.o tqual.o snapmgr.o
+OBJS = combocid.o snapmgr.o
 
 OBJS += sharedsnapshot.o visibility_summary.o
 

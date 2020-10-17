@@ -19,8 +19,7 @@
 #define GPOS_SQLSTATE_LENGTH 5
 
 // standard way to raise an exception
-#define GPOS_RAISE(...) \
-	gpos::CException::Raise(__FILE__, __LINE__, __VA_ARGS__)
+#define GPOS_RAISE(...) gpos::CException::Raise(__FILE__, __LINE__, __VA_ARGS__)
 
 // raises GPOS exception,
 // these exceptions can later be translated to GPDB log severity levels
@@ -30,274 +29,263 @@
 
 // helper to match a caught exception
 #define GPOS_MATCH_EX(ex, major, minor) \
-									(major == ex.Major() && minor == ex.Minor())
+	(major == ex.Major() && minor == ex.Minor())
 
 // being of a try block w/o explicit handler
-#define GPOS_TRY \
-									do \
-									{ \
-										CErrorHandler *err_hdl__ = NULL; \
-										try \
-										{
-
+#define GPOS_TRY                         \
+	do                                   \
+	{                                    \
+		CErrorHandler *err_hdl__ = NULL; \
+		try                              \
+		{
 // begin of a try block
-#define GPOS_TRY_HDL(perrhdl) \
-									do \
-									{ \
-										CErrorHandler *err_hdl__ = perrhdl; \
-										try \
-										{
-
+#define GPOS_TRY_HDL(perrhdl)               \
+	do                                      \
+	{                                       \
+		CErrorHandler *err_hdl__ = perrhdl; \
+		try                                 \
+		{
 // begin of a catch block
-#define GPOS_CATCH_EX(exc) \
-										} \
-										catch(gpos::CException &exc) \
-										{ \
-											{ if (NULL != err_hdl__) err_hdl__->Process(exc); }
-											
+#define GPOS_CATCH_EX(exc)               \
+	}                                    \
+	catch (gpos::CException & exc)       \
+	{                                    \
+		{                                \
+			if (NULL != err_hdl__)       \
+				err_hdl__->Process(exc); \
+		}
+
 
 // end of a catch block
 #define GPOS_CATCH_END \
-										} \
-									} while (0)
+	}                  \
+	}                  \
+	while (0)
 
 // to be used inside a catch block
-#define GPOS_RESET_EX				ITask::Self()->GetErrCtxt()->Reset()
-#define GPOS_RETHROW(exc)			gpos::CException::Reraise(exc)
-	
+#define GPOS_RESET_EX ITask::Self()->GetErrCtxt()->Reset()
+#define GPOS_RETHROW(exc) gpos::CException::Reraise(exc)
+
 // short hands for frequently used exceptions
-#define GPOS_ABORT					GPOS_RAISE(CException::ExmaSystem, CException::ExmiAbort)
-#define GPOS_OOM_CHECK(x)			do \
-									{ \
-										if (NULL == (void*)x) \
-											{ \
-											GPOS_RAISE(CException::ExmaSystem, CException::ExmiOOM); \
-											} \
-									} \
-									while (0)
+#define GPOS_ABORT GPOS_RAISE(CException::ExmaSystem, CException::ExmiAbort)
+#define GPOS_OOM_CHECK(x)                                            \
+	do                                                               \
+	{                                                                \
+		if (NULL == (void *) x)                                      \
+		{                                                            \
+			GPOS_RAISE(CException::ExmaSystem, CException::ExmiOOM); \
+		}                                                            \
+	} while (0)
 
 namespace gpos
 {
-
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CException
-	//
-	//	@doc:
-	//		Basic exception class -- used for "throw by value/catch by reference"
-	//		Contains only a category (= major) and a error (= minor).
-	//
-	//---------------------------------------------------------------------------
-	class CException
+//---------------------------------------------------------------------------
+//	@class:
+//		CException
+//
+//	@doc:
+//		Basic exception class -- used for "throw by value/catch by reference"
+//		Contains only a category (= major) and a error (= minor).
+//
+//---------------------------------------------------------------------------
+class CException
+{
+public:
+	// majors - reserve range 0-99
+	enum ExMajor
 	{
-		public:
-			// majors - reserve range 0-99
-			enum ExMajor
-			{
-				ExmaInvalid = 0,
-				ExmaSystem	= 1,
-	
-				ExmaSQL = 2,
-				
-				ExmaUnhandled = 3,
+		ExmaInvalid = 0,
+		ExmaSystem = 1,
 
-				ExmaSentinel
-			};
-	
-			// minors
-			enum ExMinor
-			{
-				// system errors
-				ExmiInvalid = 0,
-				ExmiAbort,
-				ExmiAssert,
-				ExmiOOM,
-				ExmiOutOfStack,
-				ExmiAbortTimeout,
-				ExmiIOError,
-				ExmiOverflow,
-				ExmiInvalidDeletion,
-	
-				// sql exceptions
-				ExmiSQLDefault,
-				ExmiSQLNotNullViolation,
-				ExmiSQLCheckConstraintViolation,
-				ExmiSQLMaxOneRow,
-				ExmiSQLTest,
-				
-				// warnings
-				ExmiDummyWarning,
+		ExmaSQL = 2,
 
-				// unknown exception
-				ExmiUnhandled,
+		ExmaUnhandled = 3,
 
-				// illegal byte sequence
-				ExmiIllegalByteSequence,
+		ExmaSentinel
+	};
 
-				ExmiSentinel
-			};
-		
-		// structure for mapping exceptions to SQLerror codes
-		private:
-			struct ErrCodeElem
-			{
-				// exception number
-				ULONG m_exception_num;
-				
-				// SQL standard error code
-				const CHAR *m_sql_state;
-			};
-			
-			// error range
-			ULONG m_major;
-			
-			// error number
-			ULONG m_minor;
-			
-			// SQL state error code
-			const CHAR *m_sql_state;
-			
-			// filename
-			CHAR *m_filename;
-			
-			// line in file
-			ULONG m_line;
+	// minors
+	enum ExMinor
+	{
+		// system errors
+		ExmiInvalid = 0,
+		ExmiAbort,
+		ExmiAssert,
+		ExmiOOM,
+		ExmiOutOfStack,
+		ExmiAbortTimeout,
+		ExmiIOError,
+		ExmiOverflow,
+		ExmiInvalidDeletion,
 
-			// severity level mapped to GPDB log severity level
-			ULONG m_severity_level;
+		// sql exceptions
+		ExmiSQLDefault,
+		ExmiSQLNotNullViolation,
+		ExmiSQLCheckConstraintViolation,
+		ExmiSQLMaxOneRow,
+		ExmiSQLTest,
 
-			// sql state error codes
-			static
-			const ErrCodeElem m_errcode[ExmiSQLTest - ExmiSQLDefault + 1];
+		// warnings
+		ExmiDummyWarning,
+
+		// unknown exception
+		ExmiUnhandled,
+
+		// illegal byte sequence
+		ExmiIllegalByteSequence,
+
+		ExmiSentinel
+	};
+
+	// structure for mapping exceptions to SQLerror codes
+private:
+	struct ErrCodeElem
+	{
+		// exception number
+		ULONG m_exception_num;
+
+		// SQL standard error code
+		const CHAR *m_sql_state;
+	};
+
+	// error range
+	ULONG m_major;
+
+	// error number
+	ULONG m_minor;
+
+	// SQL state error code
+	const CHAR *m_sql_state;
+
+	// filename
+	CHAR *m_filename;
+
+	// line in file
+	ULONG m_line;
+
+	// severity level mapped to GPDB log severity level
+	ULONG m_severity_level;
+
+	// sql state error codes
+	static const ErrCodeElem m_errcode[ExmiSQLTest - ExmiSQLDefault + 1];
 
 
-			// internal raise API
-			static
-			void Raise(CException exc) __attribute__((__noreturn__));
+	// internal raise API
+	static void Raise(CException exc) __attribute__((__noreturn__));
 
-			// get sql error code for given exception
-			static
-			const CHAR *GetSQLState(ULONG major, ULONG minor);
-			
-		public:
+	// get sql error code for given exception
+	static const CHAR *GetSQLState(ULONG major, ULONG minor);
 
-			// severity levels
-			enum ExSeverity
-			{
-				ExsevInvalid = 0,
-				ExsevPanic,
-				ExsevFatal,
-				ExsevError,
-				ExsevWarning,
-				ExsevNotice,
-				ExsevTrace,
-				ExsevDebug1,
+public:
+	// severity levels
+	enum ExSeverity
+	{
+		ExsevInvalid = 0,
+		ExsevPanic,
+		ExsevFatal,
+		ExsevError,
+		ExsevWarning,
+		ExsevNotice,
+		ExsevTrace,
+		ExsevDebug1,
 
-				ExsevSentinel
-			};
+		ExsevSentinel
+	};
 
-			// severity levels
-			static
-			const CHAR *m_severity[ExsevSentinel];
+	// severity levels
+	static const CHAR *m_severity[ExsevSentinel];
 
-			// ctor
-			CException(ULONG major, ULONG minor);
-			CException(ULONG major, ULONG minor, const CHAR *filename, ULONG line);
-			CException(ULONG major, ULONG minor, const CHAR *filename, ULONG line, ULONG severity_level);
+	// ctor
+	CException(ULONG major, ULONG minor);
+	CException(ULONG major, ULONG minor, const CHAR *filename, ULONG line);
+	CException(ULONG major, ULONG minor, const CHAR *filename, ULONG line,
+			   ULONG severity_level);
 
-			// accessors
-			ULONG Major() const
-			{
-				return m_major;
-			}
-		
-			ULONG Minor() const
-			{
-				return m_minor;
-			}
+	// accessors
+	ULONG
+	Major() const
+	{
+		return m_major;
+	}
 
-			const CHAR *Filename() const
-			{
-				return m_filename;
-			}
-			
-			ULONG Line() const
-			{
-				return m_line;
-			}
+	ULONG
+	Minor() const
+	{
+		return m_minor;
+	}
 
-			ULONG SeverityLevel() const
-			{
-				return m_severity_level;
-			}
+	const CHAR *
+	Filename() const
+	{
+		return m_filename;
+	}
 
-			const CHAR *GetSQLState() const
-			{
-				return m_sql_state;
-			}
-			
-			// simple equality
-			BOOL operator == 
-				(
-				const CException &exc
-				)
-				const
-			{
-				return m_major == exc.m_major && m_minor == exc.m_minor;
-			}
+	ULONG
+	Line() const
+	{
+		return m_line;
+	}
 
-			
-			// simple inequality
-			BOOL operator !=
-				(
-				const CException &exc
-				)
-				const
-			{
-				return !(*this == exc);
-			}
+	ULONG
+	SeverityLevel() const
+	{
+		return m_severity_level;
+	}
 
-			// equality function -- needed for hashtable
-			static
-			BOOL Equals
-				(
-				const CException &exc,
-				const CException &excOther
-				)
-			{
-				return exc == excOther;
-			}
+	const CHAR *
+	GetSQLState() const
+	{
+		return m_sql_state;
+	}
 
-			// basic hash function
-			static
-			ULONG HashValue
-				(
-				const CException &exc
-				)
-			{
-				return exc.m_major ^ exc.m_minor;
-			}
+	// simple equality
+	BOOL
+	operator==(const CException &exc) const
+	{
+		return m_major == exc.m_major && m_minor == exc.m_minor;
+	}
 
-			// wrapper around throw
-			static 
-			void Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,...) __attribute__((__noreturn__));
 
-			// wrapper around throw with severity level
-			static
-			void Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor, ULONG severity_level, ...) __attribute__((__noreturn__));
+	// simple inequality
+	BOOL
+	operator!=(const CException &exc) const
+	{
+		return !(*this == exc);
+	}
 
-			// rethrow wrapper
-			static
-			void Reraise(CException exc, BOOL propagate = false) __attribute__((__noreturn__));
+	// equality function -- needed for hashtable
+	static BOOL
+	Equals(const CException &exc, const CException &excOther)
+	{
+		return exc == excOther;
+	}
 
-			// invalid exception
-			static
-			const CException m_invalid_exception;
-			
-	}; // class CException
-}
+	// basic hash function
+	static ULONG
+	HashValue(const CException &exc)
+	{
+		return exc.m_major ^ exc.m_minor;
+	}
 
-#endif // !GPOS_CException_H
+	// wrapper around throw
+	static void Raise(const CHAR *filename, ULONG line, ULONG major,
+					  ULONG minor, ...) __attribute__((__noreturn__));
+
+	// wrapper around throw with severity level
+	static void Raise(const CHAR *filename, ULONG line, ULONG major,
+					  ULONG minor, ULONG severity_level, ...)
+		__attribute__((__noreturn__));
+
+	// rethrow wrapper
+	static void Reraise(CException exc, BOOL propagate = false)
+		__attribute__((__noreturn__));
+
+	// invalid exception
+	static const CException m_invalid_exception;
+
+};	// class CException
+}  // namespace gpos
+
+#endif	// !GPOS_CException_H
 
 // EOF
-

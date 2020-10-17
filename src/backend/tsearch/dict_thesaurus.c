@@ -3,7 +3,7 @@
  * dict_thesaurus.c
  *		Thesaurus dictionary: phrase to phrase substitution
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -19,10 +19,11 @@
 #include "tsearch/ts_locale.h"
 #include "tsearch/ts_utils.h"
 #include "utils/builtins.h"
+#include "utils/regproc.h"
 
 
 /*
- * Temporay we use TSLexeme.flags for inner use...
+ * Temporary we use TSLexeme.flags for inner use...
  */
 #define DT_USEASIS		0x1000
 
@@ -164,7 +165,7 @@ addWrd(DictThesaurus *d, char *b, char *e, uint32 idsubst, uint16 nwrd, uint16 p
 #define TR_INSUBS	4
 
 static void
-thesaurusRead(char *filename, DictThesaurus *d)
+thesaurusRead(const char *filename, DictThesaurus *d)
 {
 	tsearch_readline_state trst;
 	uint32		idsubst = 0;
@@ -404,15 +405,15 @@ compileTheLexeme(DictThesaurus *d)
 	{
 		TSLexeme   *ptr;
 
-		if (strcmp(d->wrds[i].lexeme, "?") == 0)		/* Is stop word marker? */
+		if (strcmp(d->wrds[i].lexeme, "?") == 0)	/* Is stop word marker? */
 			newwrds = addCompiledLexeme(newwrds, &nnw, &tnm, NULL, d->wrds[i].entries, 0);
 		else
 		{
 			ptr = (TSLexeme *) DatumGetPointer(FunctionCall4(&(d->subdict->lexize),
-									   PointerGetDatum(d->subdict->dictData),
-										  PointerGetDatum(d->wrds[i].lexeme),
-									Int32GetDatum(strlen(d->wrds[i].lexeme)),
-													 PointerGetDatum(NULL)));
+															 PointerGetDatum(d->subdict->dictData),
+															 PointerGetDatum(d->wrds[i].lexeme),
+															 Int32GetDatum(strlen(d->wrds[i].lexeme)),
+															 PointerGetDatum(NULL)));
 
 			if (!ptr)
 				ereport(ERROR,
@@ -534,11 +535,11 @@ compileTheSubstitute(DictThesaurus *d)
 			{
 				lexized = (TSLexeme *) DatumGetPointer(
 													   FunctionCall4(
-													   &(d->subdict->lexize),
-									   PointerGetDatum(d->subdict->dictData),
-											  PointerGetDatum(inptr->lexeme),
-										Int32GetDatum(strlen(inptr->lexeme)),
-														PointerGetDatum(NULL)
+																	 &(d->subdict->lexize),
+																	 PointerGetDatum(d->subdict->dictData),
+																	 PointerGetDatum(inptr->lexeme),
+																	 Int32GetDatum(strlen(inptr->lexeme)),
+																	 PointerGetDatum(NULL)
 																	 )
 					);
 			}
@@ -615,7 +616,7 @@ thesaurus_init(PG_FUNCTION_ARGS)
 	{
 		DefElem    *defel = (DefElem *) lfirst(l);
 
-		if (pg_strcasecmp("DictFile", defel->defname) == 0)
+		if (strcmp(defel->defname, "dictfile") == 0)
 		{
 			if (fileloaded)
 				ereport(ERROR,
@@ -624,7 +625,7 @@ thesaurus_init(PG_FUNCTION_ARGS)
 			thesaurusRead(defGetString(defel), d);
 			fileloaded = true;
 		}
-		else if (pg_strcasecmp("Dictionary", defel->defname) == 0)
+		else if (strcmp(defel->defname, "dictionary") == 0)
 		{
 			if (subdictname)
 				ereport(ERROR,
@@ -815,7 +816,7 @@ thesaurus_lexize(PG_FUNCTION_ARGS)
 		d->subdict = lookup_ts_dictionary_cache(d->subdictOid);
 
 	res = (TSLexeme *) DatumGetPointer(FunctionCall4(&(d->subdict->lexize),
-									   PointerGetDatum(d->subdict->dictData),
+													 PointerGetDatum(d->subdict->dictData),
 													 PG_GETARG_DATUM(1),
 													 PG_GETARG_DATUM(2),
 													 PointerGetDatum(NULL)));

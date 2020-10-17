@@ -26,11 +26,9 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 CFileReader::CFileReader()
-	:
-	CFileDescriptor(),
-	m_file_size(0),
-	m_file_read_size(0)
-{}
+	: CFileDescriptor(), m_file_size(0), m_file_read_size(0)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -42,7 +40,8 @@ CFileReader::CFileReader()
 //
 //---------------------------------------------------------------------------
 CFileReader::~CFileReader()
-{}
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -54,11 +53,7 @@ CFileReader::~CFileReader()
 //
 //---------------------------------------------------------------------------
 void
-CFileReader::Open
-	(
-	const CHAR *file_path,
-	const ULONG permission_bits
-	)
+CFileReader::Open(const CHAR *file_path, const ULONG permission_bits)
 {
 	GPOS_ASSERT(NULL != file_path);
 
@@ -93,13 +88,11 @@ CFileReader::Close()
 //
 //---------------------------------------------------------------------------
 ULONG_PTR
-CFileReader::ReadBytesToBuffer
-	(
-	BYTE *read_buffer,
-	const ULONG_PTR file_read_size
-	)
+CFileReader::ReadBytesToBuffer(BYTE *read_buffer,
+							   const ULONG_PTR file_read_size)
 {
-	GPOS_ASSERT(CFileDescriptor::IsFileOpen() && "Attempt to read from invalid file descriptor");
+	GPOS_ASSERT(CFileDescriptor::IsFileOpen() &&
+				"Attempt to read from invalid file descriptor");
 	GPOS_ASSERT(0 < file_read_size);
 	GPOS_ASSERT(NULL != read_buffer);
 
@@ -110,33 +103,34 @@ CFileReader::ReadBytesToBuffer
 		INT_PTR current_byte;
 
 		// read from file
-		current_byte = ioutils::Read(GetFileDescriptor(), read_buffer, bytes_to_read);
+		current_byte =
+			ioutils::Read(GetFileDescriptor(), read_buffer, bytes_to_read);
 
-    	 	// reach the end of file
-    	 	if (0 == current_byte)
-    	 	{
-    	 		break;
-    	 	}
+		// reach the end of file
+		if (0 == current_byte)
+		{
+			break;
+		}
 
-    	 	// check for error
-    	 	if (-1 == current_byte)
-    	 	{
-    	 		// in case an interrupt was received we retry
-    	 		if (EINTR == errno)
-    	 		{
-    	 			GPOS_CHECK_ABORT;
-    	 			continue;
-    	 		}
+		// check for error
+		if (-1 == current_byte)
+		{
+			// in case an interrupt was received we retry
+			if (EINTR == errno)
+			{
+				GPOS_CHECK_ABORT;
+				continue;
+			}
 
-    	 		GPOS_RAISE(CException::ExmaSystem, CException::ExmiIOError, errno);
-    	 	}
+			GPOS_RAISE(CException::ExmaSystem, CException::ExmiIOError, errno);
+		}
 
-    	 	bytes_to_read -= current_byte;
-    	 	read_buffer += current_byte;
-    	 	m_file_read_size += current_byte;
+		bytes_to_read -= current_byte;
+		read_buffer += current_byte;
+		m_file_read_size += current_byte;
 	};
 
-    return file_read_size - bytes_to_read;
+	return file_read_size - bytes_to_read;
 }
 
 
@@ -170,4 +164,3 @@ CFileReader::FileReadSize() const
 }
 
 // EOF
-

@@ -16,7 +16,7 @@
 #ifndef CDBPULLUP_H
 #define CDBPULLUP_H
 
-#include "nodes/relation.h"     /* PathKey, Relids */
+#include "nodes/pathnodes.h"     /* PathKey, Relids */
 
 /*
  * cdbpullup_expr

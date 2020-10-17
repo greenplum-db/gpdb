@@ -18,28 +18,27 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerUtils
-	//
-	//	@doc:
-	//		Class providing helper methods for parse handler
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerUtils
-	{
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerUtils
+//
+//	@doc:
+//		Class providing helper methods for parse handler
+//
+//---------------------------------------------------------------------------
+class CParseHandlerUtils
+{
+public:
+	// parse and the set operator's costing and statistical properties
+	static void SetProperties(CDXLNode *dxlnode,
+							  CParseHandlerProperties *prop_parse_handler);
+};
+}  // namespace gpdxl
 
-			// parse and the set operator's costing and statistical properties
-			static
-			void SetProperties(CDXLNode *dxlnode, CParseHandlerProperties *prop_parse_handler);
-	};
-}
-
-#endif // !GPDXL_CParseHandlerUtils_H
+#endif	// !GPDXL_CParseHandlerUtils_H
 
 // EOF

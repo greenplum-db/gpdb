@@ -4,16 +4,16 @@
  *
  * Routines corresponding to relation/attribute objects
  *
- * Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/sysattr.h"
+#include "access/table.h"
 #include "catalog/indexing.h"
 #include "catalog/dependency.h"
 #include "catalog/pg_attribute.h"
@@ -26,8 +26,8 @@
 #include "utils/catcache.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 
 #include "sepgsql.h"
 
@@ -54,19 +54,20 @@ sepgsql_attribute_post_create(Oid relOid, AttrNumber attnum)
 	ObjectAddress object;
 	Form_pg_attribute attForm;
 	StringInfoData audit_name;
+	char		relkind = get_rel_relkind(relOid);
 
 	/*
-	 * Only attributes within regular relation have individual security
-	 * labels.
+	 * Only attributes within regular relations or partition relations have
+	 * individual security labels.
 	 */
-	if (get_rel_relkind(relOid) != RELKIND_RELATION)
+	if (relkind != RELKIND_RELATION && relkind != RELKIND_PARTITIONED_TABLE)
 		return;
 
 	/*
 	 * Compute a default security label of the new column underlying the
 	 * specified relation, and check permission to create it.
 	 */
-	rel = heap_open(AttributeRelationId, AccessShareLock);
+	rel = table_open(AttributeRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_attribute_attrelid,
@@ -82,7 +83,7 @@ sepgsql_attribute_post_create(Oid relOid, AttrNumber attnum)
 
 	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "catalog lookup failed for column %d of relation %u",
+		elog(ERROR, "could not find tuple for column %d of relation %u",
 			 attnum, relOid);
 
 	attForm = (Form_pg_attribute) GETSTRUCT(tuple);
@@ -119,7 +120,7 @@ sepgsql_attribute_post_create(Oid relOid, AttrNumber attnum)
 	SetSecurityLabel(&object, SEPGSQL_LABEL_TAG, ncontext);
 
 	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	pfree(tcontext);
 	pfree(ncontext);
@@ -135,8 +136,9 @@ sepgsql_attribute_drop(Oid relOid, AttrNumber attnum)
 {
 	ObjectAddress object;
 	char	   *audit_name;
+	char		relkind = get_rel_relkind(relOid);
 
-	if (get_rel_relkind(relOid) != RELKIND_RELATION)
+	if (relkind != RELKIND_RELATION && relkind != RELKIND_PARTITIONED_TABLE)
 		return;
 
 	/*
@@ -167,8 +169,9 @@ sepgsql_attribute_relabel(Oid relOid, AttrNumber attnum,
 {
 	ObjectAddress object;
 	char	   *audit_name;
+	char		relkind = get_rel_relkind(relOid);
 
-	if (get_rel_relkind(relOid) != RELKIND_RELATION)
+	if (relkind != RELKIND_RELATION && relkind != RELKIND_PARTITIONED_TABLE)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("cannot set security label on non-regular columns")));
@@ -209,8 +212,9 @@ sepgsql_attribute_setattr(Oid relOid, AttrNumber attnum)
 {
 	ObjectAddress object;
 	char	   *audit_name;
+	char		relkind = get_rel_relkind(relOid);
 
-	if (get_rel_relkind(relOid) != RELKIND_RELATION)
+	if (relkind != RELKIND_RELATION && relkind != RELKIND_PARTITIONED_TABLE)
 		return;
 
 	/*
@@ -243,7 +247,7 @@ sepgsql_relation_post_create(Oid relOid)
 	HeapTuple	tuple;
 	Form_pg_class classForm;
 	ObjectAddress object;
-	uint16		tclass;
+	uint16_t	tclass;
 	char	   *scontext;		/* subject */
 	char	   *tcontext;		/* schema */
 	char	   *rcontext;		/* relation */
@@ -255,10 +259,10 @@ sepgsql_relation_post_create(Oid relOid)
 	 * Fetch catalog record of the new relation. Because pg_class entry is not
 	 * visible right now, we need to scan the catalog using SnapshotSelf.
 	 */
-	rel = heap_open(RelationRelationId, AccessShareLock);
+	rel = table_open(RelationRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey,
-				ObjectIdAttributeNumber,
+				Anum_pg_class_oid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(relOid));
 
@@ -267,7 +271,7 @@ sepgsql_relation_post_create(Oid relOid)
 
 	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "catalog lookup failed for relation %u", relOid);
+		elog(ERROR, "could not find tuple for relation %u", relOid);
 
 	classForm = (Form_pg_class) GETSTRUCT(tuple);
 
@@ -291,6 +295,7 @@ sepgsql_relation_post_create(Oid relOid)
 	switch (classForm->relkind)
 	{
 		case RELKIND_RELATION:
+		case RELKIND_PARTITIONED_TABLE:
 			tclass = SEPG_CLASS_DB_TABLE;
 			break;
 		case RELKIND_SEQUENCE:
@@ -333,7 +338,8 @@ sepgsql_relation_post_create(Oid relOid)
 								  true);
 
 	/*
-	 * Assign the default security label on the new relation
+	 * Assign the default security label on the new regular or partitioned
+	 * relation.
 	 */
 	object.classId = RelationRelationId;
 	object.objectId = relOid;
@@ -341,10 +347,10 @@ sepgsql_relation_post_create(Oid relOid)
 	SetSecurityLabel(&object, SEPGSQL_LABEL_TAG, rcontext);
 
 	/*
-	 * We also assigns a default security label on columns of the new regular
-	 * tables.
+	 * We also assign a default security label on columns of a new table.
 	 */
-	if (classForm->relkind == RELKIND_RELATION)
+	if (classForm->relkind == RELKIND_RELATION ||
+		classForm->relkind == RELKIND_PARTITIONED_TABLE)
 	{
 		Relation	arel;
 		ScanKeyData akey;
@@ -352,7 +358,7 @@ sepgsql_relation_post_create(Oid relOid)
 		HeapTuple	atup;
 		Form_pg_attribute attForm;
 
-		arel = heap_open(AttributeRelationId, AccessShareLock);
+		arel = table_open(AttributeRelationId, AccessShareLock);
 
 		ScanKeyInit(&akey,
 					Anum_pg_attribute_attrelid,
@@ -394,13 +400,13 @@ sepgsql_relation_post_create(Oid relOid)
 			pfree(ccontext);
 		}
 		systable_endscan(ascan);
-		heap_close(arel, AccessShareLock);
+		table_close(arel, AccessShareLock);
 	}
 	pfree(rcontext);
 
 out:
 	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 }
 
 /*
@@ -413,13 +419,13 @@ sepgsql_relation_drop(Oid relOid)
 {
 	ObjectAddress object;
 	char	   *audit_name;
-	uint16_t	tclass;
-	char		relkind;
+	uint16_t	tclass = 0;
+	char		relkind = get_rel_relkind(relOid);
 
-	relkind = get_rel_relkind(relOid);
 	switch (relkind)
 	{
 		case RELKIND_RELATION:
+		case RELKIND_PARTITIONED_TABLE:
 			tclass = SEPG_CLASS_DB_TABLE;
 			break;
 		case RELKIND_SEQUENCE:
@@ -479,7 +485,7 @@ sepgsql_relation_drop(Oid relOid)
 	/*
 	 * check db_column:{drop} permission
 	 */
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_PARTITIONED_TABLE)
 	{
 		Form_pg_attribute attForm;
 		CatCList   *attrList;
@@ -521,11 +527,10 @@ sepgsql_relation_relabel(Oid relOid, const char *seclabel)
 {
 	ObjectAddress object;
 	char	   *audit_name;
-	char		relkind;
+	char		relkind = get_rel_relkind(relOid);
 	uint16_t	tclass = 0;
 
-	relkind = get_rel_relkind(relOid);
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_PARTITIONED_TABLE)
 		tclass = SEPG_CLASS_DB_TABLE;
 	else if (relkind == RELKIND_SEQUENCE)
 		tclass = SEPG_CLASS_DB_SEQUENCE;
@@ -585,6 +590,7 @@ sepgsql_relation_setattr(Oid relOid)
 	switch (get_rel_relkind(relOid))
 	{
 		case RELKIND_RELATION:
+		case RELKIND_PARTITIONED_TABLE:
 			tclass = SEPG_CLASS_DB_TABLE;
 			break;
 		case RELKIND_SEQUENCE:
@@ -605,10 +611,10 @@ sepgsql_relation_setattr(Oid relOid)
 	/*
 	 * Fetch newer catalog
 	 */
-	rel = heap_open(RelationRelationId, AccessShareLock);
+	rel = table_open(RelationRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey,
-				ObjectIdAttributeNumber,
+				Anum_pg_class_oid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(relOid));
 
@@ -617,7 +623,7 @@ sepgsql_relation_setattr(Oid relOid)
 
 	newtup = systable_getnext(sscan);
 	if (!HeapTupleIsValid(newtup))
-		elog(ERROR, "catalog lookup failed for relation %u", relOid);
+		elog(ERROR, "could not find tuple for relation %u", relOid);
 	newform = (Form_pg_class) GETSTRUCT(newtup);
 
 	/*
@@ -661,7 +667,7 @@ sepgsql_relation_setattr(Oid relOid)
 
 	ReleaseSysCache(oldtup);
 	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 }
 
 /*
@@ -694,7 +700,7 @@ sepgsql_relation_setattr_extra(Relation catalog,
 							   SnapshotSelf, 1, &skey);
 	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "catalog lookup failed for object %u in catalog \"%s\"",
+		elog(ERROR, "could not find tuple for object %u in catalog \"%s\"",
 			 extra_oid, RelationGetRelationName(catalog));
 
 	datum = heap_getattr(tuple, anum_relation_id,
@@ -717,7 +723,7 @@ sepgsql_relation_setattr_extra(Relation catalog,
 static void
 sepgsql_index_modify(Oid indexOid)
 {
-	Relation	catalog = heap_open(IndexRelationId, AccessShareLock);
+	Relation	catalog = table_open(IndexRelationId, AccessShareLock);
 
 	/* check db_table:{setattr} permission of the table being indexed */
 	sepgsql_relation_setattr_extra(catalog,
@@ -725,5 +731,5 @@ sepgsql_index_modify(Oid indexOid)
 								   indexOid,
 								   Anum_pg_index_indrelid,
 								   Anum_pg_index_indexrelid);
-	heap_close(catalog, AccessShareLock);
+	table_close(catalog, AccessShareLock);
 }

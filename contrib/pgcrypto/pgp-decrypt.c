@@ -132,7 +132,7 @@ pgp_parse_pkt_hdr(PullFilter *src, uint8 *tag, int *len_p, int allow_ctx)
 	int			res;
 	uint8	   *p;
 
-	/* EOF is normal here, thus we dont use GETBYTE */
+	/* EOF is normal here, thus we don't use GETBYTE */
 	res = pullf_read(src, 1, &p);
 	if (res < 0)
 		return res;
@@ -460,7 +460,7 @@ mdcbuf_init(void **priv_p, void *arg, PullFilter *src)
 }
 
 static int
-mdcbuf_finish(struct MDCBufData * st)
+mdcbuf_finish(struct MDCBufData *st)
 {
 	uint8		hash[20];
 	int			res;
@@ -485,7 +485,7 @@ mdcbuf_finish(struct MDCBufData * st)
 }
 
 static void
-mdcbuf_load_data(struct MDCBufData * st, uint8 *src, int len)
+mdcbuf_load_data(struct MDCBufData *st, uint8 *src, int len)
 {
 	uint8	   *dst = st->pos + st->avail;
 
@@ -495,14 +495,14 @@ mdcbuf_load_data(struct MDCBufData * st, uint8 *src, int len)
 }
 
 static void
-mdcbuf_load_mdc(struct MDCBufData * st, uint8 *src, int len)
+mdcbuf_load_mdc(struct MDCBufData *st, uint8 *src, int len)
 {
 	memmove(st->mdc_buf + st->mdc_avail, src, len);
 	st->mdc_avail += len;
 }
 
 static int
-mdcbuf_refill(struct MDCBufData * st, PullFilter *src)
+mdcbuf_refill(struct MDCBufData *st, PullFilter *src)
 {
 	uint8	   *data;
 	int			res;
@@ -811,8 +811,8 @@ parse_literal_data(PGP_Context *ctx, MBuf *dst, PullFilter *pkt)
 }
 
 /* process_data_packets and parse_compressed_data call each other */
-static int process_data_packets(PGP_Context *ctx, MBuf *dst,
-					 PullFilter *src, int allow_compr, int need_mdc);
+static int	process_data_packets(PGP_Context *ctx, MBuf *dst,
+								 PullFilter *src, int allow_compr, int need_mdc);
 
 static int
 parse_compressed_data(PGP_Context *ctx, MBuf *dst, PullFilter *pkt)

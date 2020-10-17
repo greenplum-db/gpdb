@@ -3,7 +3,7 @@ import optparse
 import socket
 import threading
 import time
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 no_reponse_handler_key = 'NoResponse'
 test_sequence_number_handler_key = 'TestSequenceNumber'
@@ -124,8 +124,8 @@ gpfdist_modes = {
 
 
 def start_server(port, mode):
-    if not gpfdist_modes.has_key(mode):
-        print 'mode : %s is not support' % (mode)
+    if mode not in gpfdist_modes:
+        print('mode : %s is not support' % (mode))
         sys.exit(1)
     handler = gpfdist_modes[mode]
     http_server = HTTPServer((socket.gethostname(), int(port)), handler)
@@ -139,7 +139,7 @@ def parse_commandline():
     parser.add_option("-m", "--mode",
                   action="store", dest="gpfdist_mode",
                   help="gpfdist run mode\r\n"
-                       "%s" % (gpfdist_modes.keys()))
+                       "%s" % (list(gpfdist_modes.keys())))
 
     return parser.parse_args()
 

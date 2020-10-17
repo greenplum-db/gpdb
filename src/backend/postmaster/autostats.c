@@ -20,10 +20,10 @@
 
 #include "catalog/catalog.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbpartition.h"
 #include "commands/vacuum.h"
 #include "executor/execdesc.h"
 #include "executor/executor.h"
+#include "foreign/foreign.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/plannodes.h"
@@ -48,8 +48,9 @@ static bool autostats_on_no_stats_check(AutoStatsCmdType cmdType, Oid relationOi
 static void
 autostats_issue_analyze(Oid relationOid)
 {
-	VacuumStmt *analyzeStmt = NULL;
-	RangeVar   *relation = NULL;
+	VacuumStmt *analyzeStmt;
+	VacuumRelation *relation;
+	ParseState *pstate;
 
 	/*
 	 * If this user does not own the table, then auto-stats will not issue the
@@ -64,15 +65,19 @@ autostats_issue_analyze(Oid relationOid)
 		return;
 	}
 
-	relation = makeRangeVar(get_namespace_name(get_rel_namespace(relationOid)), get_rel_name(relationOid), -1);
+	/* Set up an ANALYZE command */
+	relation = makeVacuumRelation(NULL, relationOid, NIL);
 	analyzeStmt = makeNode(VacuumStmt);
-	/* Set up command parameters */
-	analyzeStmt->options = VACOPT_ANALYZE;
-	analyzeStmt->relation = relation;	/* not used since we pass relids list */
-	analyzeStmt->va_cols = NIL;
+	analyzeStmt->options = NIL;
+	analyzeStmt->rels = list_make1(relation);
+	analyzeStmt->is_vacuumcmd = false;
 
-	ExecVacuum(analyzeStmt, false);
+	pstate = make_parsestate(NULL);
+	pstate->p_sourcetext = NULL;
 
+	ExecVacuum(pstate, analyzeStmt, false);
+
+	free_parsestate(pstate);
 	pfree(analyzeStmt);
 }
 
@@ -278,20 +283,30 @@ autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *pr
 void
 auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFunction)
 {
+	char		relkind;
+
 	TimestampTz start;
 	bool		policyCheck = false;
 
 	start = GetCurrentTimestamp();
 
-	if (Gp_role != GP_ROLE_DISPATCH || relationOid == InvalidOid
-		|| rel_is_partitioned(relationOid)
-		/* Updates on views are possible via triggers, but we can't analyze views. */
-		|| get_rel_relkind(relationOid) == RELKIND_VIEW)
-	{
+	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
-	}
 
-	Assert(relationOid != InvalidOid);
+	if (relationOid == InvalidOid)
+		return;
+
+	relkind = get_rel_relkind(relationOid);
+	if (relkind == '\0')
+		return; /* relation not found */
+
+	/* Updates on views are possible via triggers, but we can't analyze views. */
+	if (relkind == RELKIND_VIEW)
+		return;
+
+	if (relkind == RELKIND_PARTITIONED_TABLE)
+		return;
+
 	Assert(cmdType >= 0 && cmdType <= AUTOSTATS_CMDTYPE_SENTINEL);		/* it is a valid command
 																		 * as per auto-stats */
 

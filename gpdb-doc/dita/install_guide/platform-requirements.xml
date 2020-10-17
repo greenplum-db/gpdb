@@ -40,6 +40,7 @@
         <li>CentOS 64-bit 7.x</li>
         <li id="pm405698" class="- topic/li ">CentOS 64-bit 6.x</li>
         <li>Ubuntu 18.04 LTS</li>
+        <li>Oracle Linux 64-bit 7, using the Red Hat Compatible Kernel (RHCK)</li>
       </ul>
       <note type="important">Significant Greenplum Database performance degradation has been
         observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x
@@ -385,7 +386,7 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry "><xref href="../analytics/postGIS.xml"
                     format="dita" scope="peer">PostGIS Spatial and Geographic Objects</xref></entry>
-                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.2,
+                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.3, 2.5.4+pivotal.2,
                     2.5.4+pivotal.1,<p>2.1.5+pivotal.2-2</p></entry>
                 <entry/>
               </row>
@@ -408,7 +409,7 @@
       <body>
         <p>
           <ul id="ul_ckf_sfc_hbb">
-            <li>Greenplum Platform Extension Framework (PXF) v5.14.0 - PXF, integrated with
+            <li>Greenplum Platform Extension Framework (PXF) v5.15.0 - PXF, integrated with
               Greenplum Database 6, provides access to Hadoop, object store, and SQL external data
               stores. Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml"
                 >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
@@ -479,7 +480,7 @@
     <title id="pm357649">Hadoop Distributions</title>
     <body>
       <p>Greenplum Database provides access to HDFS with the Greenplum Platform Extension Framework
-          (PXF).<ph otherprops="oss-only"> PXF v5.14.0 is integrated with Greenplum Database 6, and
+          (PXF).<ph otherprops="oss-only"> PXF v5.15.0 is integrated with Greenplum Database 6, and
           provides access to Hadoop, object store, and SQL external data stores. Refer to <xref
             scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing External Data
             with PXF</xref> in the <cite>Greenplum Database Administrator Guide</cite> for PXF
@@ -504,7 +505,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">5.14.0, 5.13.0, 5.12.0, 5.11.1, 5.10.1</entry>
+              <entry colname="col1">5.15.0, 5.14.0, 5.13.0, 5.12.0, 5.11.1, 5.10.1</entry>
               <entry colname="col2">2.x, 3.1+</entry>
               <entry colname="col3">1.x, 2.x, 3.1+</entry>
               <entry colname="col4">1.3.2</entry>

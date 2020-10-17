@@ -24,14 +24,14 @@ CREATE TABLE heap_col_null (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 \d heap_col_null
-                     Table "public.heap_col_null"
-  Column   |         Type          |             Modifiers             
------------+-----------------------+-----------------------------------
- s1        | character(10)         | 
- s2        | character varying(10) | 
- s3        | text                  | 
- col_empty | character(5)          | 
- col_null  | character varying(5)  | default 'NULL'::character varying
+                             Table "public.heap_col_null"
+  Column   |         Type          | Collation | Nullable |          Default          
+-----------+-----------------------+-----------+----------+---------------------------
+ s1        | character(10)         |           |          | 
+ s2        | character varying(10) |           |          | 
+ s3        | text                  |           |          | 
+ col_empty | character(5)          |           |          | 
+ col_null  | character varying(5)  |           |          | 'NULL'::character varying
 Distributed by: (s1)
 
 -- Create ext table like "heap_col_null"
@@ -43,15 +43,15 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in',
     s1='10',s2='10', s3='10', col_empty='5');
 -- Describe ext table, notice column "col_null" does not have default value
 \d tbl_ext_fixedwidth
-          Foreign table "public.tbl_ext_fixedwidth"
-  Column   |         Type          | Modifiers | FDW Options 
------------+-----------------------+-----------+-------------
- s1        | character(10)         |           | 
- s2        | character varying(10) |           | 
- s3        | text                  |           | 
- col_empty | character(5)          |           | 
- col_null  | character varying(5)  |           | 
-FDW Options: (formatter 'fixedwidth_in', s1 '10', s2 '10', s3 '10', col_empty '5', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_miss_col_null.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+                    Foreign table "public.tbl_ext_fixedwidth"
+  Column   |         Type          | Collation | Nullable | Default | FDW options 
+-----------+-----------------------+-----------+----------+---------+-------------
+ s1        | character(10)         |           |          |         | 
+ s2        | character varying(10) |           |          |         | 
+ s3        | text                  |           |          |         | 
+ col_empty | character(5)          |           |          |         | 
+ col_null  | character varying(5)  |           |          |         | 
+FDW options: (formatter 'fixedwidth_in', s1 '10', s2 '10', s3 '10', col_empty '5', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_miss_col_null.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 -- Note field "col_null" is loaded with null value
 select * from tbl_ext_fixedwidth where col_null is null order by s1;

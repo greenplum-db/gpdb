@@ -9,7 +9,7 @@
 //		Implementation of a constant expression evaluator for dates data
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -40,21 +40,22 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CExpression *
-CConstExprEvaluatorForDates::PexprEval
-	(
-	CExpression *pexpr
-	)
+CConstExprEvaluatorForDates::PexprEval(CExpression *pexpr)
 {
 	GPOS_ASSERT(COperator::EopScalarCmp == pexpr->Pop()->Eopid());
 	GPOS_ASSERT(COperator::EopScalarConst == (*pexpr)[0]->Pop()->Eopid());
 	GPOS_ASSERT(COperator::EopScalarConst == (*pexpr)[1]->Pop()->Eopid());
 
-	CScalarConst *popScalarLeft = dynamic_cast<CScalarConst *>((*pexpr)[0]->Pop());
+	CScalarConst *popScalarLeft =
+		dynamic_cast<CScalarConst *>((*pexpr)[0]->Pop());
 
-	GPOS_ASSERT(CMDIdGPDB::m_mdid_date.Equals(popScalarLeft->GetDatum()->MDId()));
-	CScalarConst *popScalarRight = dynamic_cast<CScalarConst *>((*pexpr)[1]->Pop());
+	GPOS_ASSERT(
+		CMDIdGPDB::m_mdid_date.Equals(popScalarLeft->GetDatum()->MDId()));
+	CScalarConst *popScalarRight =
+		dynamic_cast<CScalarConst *>((*pexpr)[1]->Pop());
 
-	GPOS_ASSERT(CMDIdGPDB::m_mdid_date.Equals(popScalarRight->GetDatum()->MDId()));
+	GPOS_ASSERT(
+		CMDIdGPDB::m_mdid_date.Equals(popScalarRight->GetDatum()->MDId()));
 
 	CScalarCmp *popScCmp = dynamic_cast<CScalarCmp *>(pexpr->Pop());
 	CDouble dLeft = popScalarLeft->GetDatum()->GetDoubleMapping();

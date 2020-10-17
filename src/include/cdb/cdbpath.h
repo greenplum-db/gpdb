@@ -15,7 +15,7 @@
 #ifndef CDBPATH_H
 #define CDBPATH_H
 
-#include "nodes/relation.h"
+#include "nodes/pathnodes.h"
 
 void
 cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath);

@@ -9,7 +9,7 @@
 //		Class to transform logical difference all into a LASJ
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -21,66 +21,61 @@
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
-{	using namespace gpos;
+{
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformDifferenceAll2LeftAntiSemiJoin
-	//
-	//	@doc:
-	//		Class to transform logical difference all into a LASJ
-	//
-	//---------------------------------------------------------------------------
-	class CXformDifferenceAll2LeftAntiSemiJoin : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformDifferenceAll2LeftAntiSemiJoin
+//
+//	@doc:
+//		Class to transform logical difference all into a LASJ
+//
+//---------------------------------------------------------------------------
+class CXformDifferenceAll2LeftAntiSemiJoin : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformDifferenceAll2LeftAntiSemiJoin(
+		const CXformDifferenceAll2LeftAntiSemiJoin &);
+
+public:
+	// ctor
+	explicit CXformDifferenceAll2LeftAntiSemiJoin(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformDifferenceAll2LeftAntiSemiJoin()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfDifferenceAll2LeftAntiSemiJoin;
+	}
 
-			// private copy ctor
-			CXformDifferenceAll2LeftAntiSemiJoin(const CXformDifferenceAll2LeftAntiSemiJoin &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformDifferenceAll2LeftAntiSemiJoin";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  // exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// ctor
-			explicit
-			CXformDifferenceAll2LeftAntiSemiJoin(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *, CXformResult *, CExpression *) const;
 
-			// dtor
-			virtual
-			~CXformDifferenceAll2LeftAntiSemiJoin()
-			{}
+};	// class CXformDifferenceAll2LeftAntiSemiJoin
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfDifferenceAll2LeftAntiSemiJoin;
-			}
+}  // namespace gpopt
 
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformDifferenceAll2LeftAntiSemiJoin";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
-
-			// actual transform
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformDifferenceAll2LeftAntiSemiJoin
-
-}
-
-#endif // !GPOPT_CXformDifferenceAll2LeftAntiSemiJoin_H
+#endif	// !GPOPT_CXformDifferenceAll2LeftAntiSemiJoin_H
 
 // EOF

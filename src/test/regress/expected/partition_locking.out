@@ -69,15 +69,6 @@ create table partlockt (i int, t text) partition by range(i)
 (start(1) end(10) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_1" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_2" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_3" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_4" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_5" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_6" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_7" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_8" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_9" for table "partlockt"
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |        mode         | locktype |  node  
 -------------------+---------------------+----------+--------
@@ -92,25 +83,57 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  partlockt_1_prt_8 | AccessExclusiveLock | relation | master
  partlockt_1_prt_9 | AccessExclusiveLock | relation | master
  toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
  toast table       | ShareLock           | relation | master
-(12 rows)
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+(28 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |        mode         | locktype |    node    
 -------------------+---------------------+----------+------------
+ partlockt         | AccessExclusiveLock | relation | n segments
+ partlockt_1_prt_1 | AccessExclusiveLock | relation | n segments
  partlockt_1_prt_2 | AccessExclusiveLock | relation | n segments
- partlockt_1_prt_8 | AccessExclusiveLock | relation | n segments
- partlockt_1_prt_5 | AccessExclusiveLock | relation | n segments
  partlockt_1_prt_3 | AccessExclusiveLock | relation | n segments
  partlockt_1_prt_4 | AccessExclusiveLock | relation | n segments
- partlockt_1_prt_1 | AccessExclusiveLock | relation | n segments
- partlockt_1_prt_9 | AccessExclusiveLock | relation | n segments
- partlockt         | AccessExclusiveLock | relation | n segments
+ partlockt_1_prt_5 | AccessExclusiveLock | relation | n segments
  partlockt_1_prt_6 | AccessExclusiveLock | relation | n segments
- toast table       | ShareLock           | relation | n segments
  partlockt_1_prt_7 | AccessExclusiveLock | relation | n segments
+ partlockt_1_prt_8 | AccessExclusiveLock | relation | n segments
+ partlockt_1_prt_9 | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
  toast index       | AccessExclusiveLock | relation | n segments
-(12 rows)
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+(28 rows)
 
 commit;
 -- drop
@@ -147,9 +170,7 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  dropped table | AccessExclusiveLock | relation | master
  dropped table | AccessExclusiveLock | relation | master
  dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
-(30 rows)
+(28 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
    coalesce    |        mode         | locktype |    node    
@@ -182,9 +203,7 @@ select * from locktest_segments where coalesce not like 'gp_%' and coalesce not 
  dropped table | AccessExclusiveLock | relation | n segments
  dropped table | AccessExclusiveLock | relation | n segments
  dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
-(30 rows)
+(28 rows)
 
 commit;
 -- AO table (ao segments, block directory won't exist after create)
@@ -196,9 +215,6 @@ partition by list(i)
 (values(1), values(2), values(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_1" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_2" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_3" for table "partlockt"
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |        mode         | locktype |  node  
 -------------------+---------------------+----------+--------
@@ -207,45 +223,53 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  partlockt_1_prt_2 | AccessExclusiveLock | relation | master
  partlockt_1_prt_3 | AccessExclusiveLock | relation | master
  toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
  toast table       | ShareLock           | relation | master
-(6 rows)
+ toast table       | ShareLock           | relation | master
+ toast table       | ShareLock           | relation | master
+(10 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |        mode         | locktype |    node    
 -------------------+---------------------+----------+------------
- toast index       | AccessExclusiveLock | relation | n segments
  partlockt         | AccessExclusiveLock | relation | n segments
+ partlockt_1_prt_1 | AccessExclusiveLock | relation | n segments
+ partlockt_1_prt_2 | AccessExclusiveLock | relation | n segments
  partlockt_1_prt_3 | AccessExclusiveLock | relation | n segments
  toast table       | ShareLock           | relation | n segments
- partlockt_1_prt_2 | AccessExclusiveLock | relation | n segments
- partlockt_1_prt_1 | AccessExclusiveLock | relation | n segments
-(6 rows)
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+ toast table       | ShareLock           | relation | n segments
+ toast index       | AccessExclusiveLock | relation | n segments
+(10 rows)
 
 commit;
 begin;
 -- add a little data
+-- This only needs a lock on the parent table in the QD. On the segments, where the
+-- tuple is routed to the correct partition, the partitions are locked, too.
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-     coalesce      |       mode       | locktype |  node  
--------------------+------------------+----------+--------
- partlockt         | RowExclusiveLock | relation | master
- partlockt_1_prt_1 | RowExclusiveLock | relation | master
- partlockt_1_prt_2 | RowExclusiveLock | relation | master
- partlockt_1_prt_3 | RowExclusiveLock | relation | master
-(4 rows)
+ coalesce  |       mode       | locktype |  node  
+-----------+------------------+----------+--------
+ partlockt | RowExclusiveLock | relation | master
+(1 row)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |       mode       | locktype |    node    
 -------------------+------------------+----------+------------
- partlockt_1_prt_1 | RowExclusiveLock | relation | 1 segment
- partlockt_1_prt_3 | RowExclusiveLock | relation | 1 segment
+ partlockt         | AccessShareLock  | relation | n segments
  partlockt         | RowExclusiveLock | relation | n segments
+ partlockt_1_prt_1 | RowExclusiveLock | relation | 1 segment
  partlockt_1_prt_2 | RowExclusiveLock | relation | 1 segment
-(4 rows)
+ partlockt_1_prt_3 | RowExclusiveLock | relation | 1 segment
+(5 rows)
 
 commit;
 -- drop
@@ -273,12 +297,7 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  dropped table | AccessExclusiveLock | relation | master
  dropped table | AccessExclusiveLock | relation | master
  dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
-(24 rows)
+(19 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
    coalesce    |        mode         | locktype |    node    
@@ -302,12 +321,7 @@ select * from locktest_segments where coalesce not like 'gp_%' and coalesce not 
  dropped table | AccessExclusiveLock | relation | n segments
  dropped table | AccessExclusiveLock | relation | n segments
  dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
-(24 rows)
+(19 rows)
 
 commit;
 -- Indexing
@@ -315,26 +329,8 @@ create table partlockt (i int, t text) partition by range(i)
 (start(1) end(10) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_1" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_2" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_3" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_4" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_5" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_6" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_7" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_8" for table "partlockt"
-NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_9" for table "partlockt"
 begin;
 create index partlockt_idx on partlockt(i);
-NOTICE:  building index for child partition "partlockt_1_prt_1"
-NOTICE:  building index for child partition "partlockt_1_prt_2"
-NOTICE:  building index for child partition "partlockt_1_prt_3"
-NOTICE:  building index for child partition "partlockt_1_prt_4"
-NOTICE:  building index for child partition "partlockt_1_prt_5"
-NOTICE:  building index for child partition "partlockt_1_prt_6"
-NOTICE:  building index for child partition "partlockt_1_prt_7"
-NOTICE:  building index for child partition "partlockt_1_prt_8"
-NOTICE:  building index for child partition "partlockt_1_prt_9"
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |        mode         | locktype |  node  
 -------------------------+---------------------+----------+--------
@@ -405,23 +401,7 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  partlockt               | AccessShareLock | relation | master
  partlockt_1_prt_1       | AccessShareLock | relation | master
  partlockt_1_prt_1_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_2       | AccessShareLock | relation | master
- partlockt_1_prt_2_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_3       | AccessShareLock | relation | master
- partlockt_1_prt_3_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_4       | AccessShareLock | relation | master
- partlockt_1_prt_4_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_5       | AccessShareLock | relation | master
- partlockt_1_prt_5_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_6       | AccessShareLock | relation | master
- partlockt_1_prt_6_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_7       | AccessShareLock | relation | master
- partlockt_1_prt_7_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_8       | AccessShareLock | relation | master
- partlockt_1_prt_8_i_idx | AccessShareLock | relation | master
- partlockt_1_prt_9       | AccessShareLock | relation | master
- partlockt_1_prt_9_i_idx | AccessShareLock | relation | master
-(19 rows)
+(3 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |      mode       | locktype |   node    
@@ -435,26 +415,18 @@ begin;
 -- insert locking
 insert into partlockt values(3, 'f');
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-     coalesce      |       mode       | locktype |  node  
--------------------+------------------+----------+--------
- partlockt         | RowExclusiveLock | relation | master
- partlockt_1_prt_1 | RowExclusiveLock | relation | master
- partlockt_1_prt_2 | RowExclusiveLock | relation | master
- partlockt_1_prt_3 | RowExclusiveLock | relation | master
- partlockt_1_prt_4 | RowExclusiveLock | relation | master
- partlockt_1_prt_5 | RowExclusiveLock | relation | master
- partlockt_1_prt_6 | RowExclusiveLock | relation | master
- partlockt_1_prt_7 | RowExclusiveLock | relation | master
- partlockt_1_prt_8 | RowExclusiveLock | relation | master
- partlockt_1_prt_9 | RowExclusiveLock | relation | master
-(10 rows)
+ coalesce  |       mode       | locktype |  node  
+-----------+------------------+----------+--------
+ partlockt | RowExclusiveLock | relation | master
+(1 row)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |       mode       | locktype |   node    
 -------------------+------------------+----------+-----------
+ partlockt         | AccessShareLock  | relation | 1 segment
  partlockt         | RowExclusiveLock | relation | 1 segment
  partlockt_1_prt_3 | RowExclusiveLock | relation | 1 segment
-(2 rows)
+(3 rows)
 
 commit;
 -- delete locking
@@ -464,33 +436,20 @@ delete from partlockt where i = 4;
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |       mode       | locktype |  node  
 -------------------------+------------------+----------+--------
+ partlockt               | AccessShareLock  | relation | master
  partlockt               | ExclusiveLock    | relation | master
- partlockt_1_prt_1       | RowExclusiveLock | relation | master
- partlockt_1_prt_1_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_2       | RowExclusiveLock | relation | master
- partlockt_1_prt_2_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_3       | RowExclusiveLock | relation | master
- partlockt_1_prt_3_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_4       | ExclusiveLock    | relation | master
  partlockt_1_prt_4       | RowExclusiveLock | relation | master
  partlockt_1_prt_4_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_5       | RowExclusiveLock | relation | master
- partlockt_1_prt_5_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_6       | RowExclusiveLock | relation | master
- partlockt_1_prt_6_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_7       | RowExclusiveLock | relation | master
- partlockt_1_prt_7_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_8       | RowExclusiveLock | relation | master
- partlockt_1_prt_8_i_idx | RowExclusiveLock | relation | master
- partlockt_1_prt_9       | RowExclusiveLock | relation | master
- partlockt_1_prt_9_i_idx | RowExclusiveLock | relation | master
-(20 rows)
+(4 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-     coalesce      |       mode       | locktype |   node    
--------------------+------------------+----------+-----------
- partlockt_1_prt_4 | RowExclusiveLock | relation | 1 segment
-(1 row)
+        coalesce         |       mode       | locktype |   node    
+-------------------------+------------------+----------+-----------
+ partlockt               | AccessShareLock  | relation | 1 segment
+ partlockt               | RowExclusiveLock | relation | 1 segment
+ partlockt_1_prt_4       | RowExclusiveLock | relation | 1 segment
+ partlockt_1_prt_4_i_idx | RowExclusiveLock | relation | 1 segment
+(4 rows)
 
 commit;
 -- drop index
@@ -537,9 +496,7 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  dropped table | AccessExclusiveLock | relation | master
  dropped table | AccessExclusiveLock | relation | master
  dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
- dropped table | AccessExclusiveLock | relation | master
-(40 rows)
+(38 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
    coalesce    |        mode         | locktype |    node    
@@ -582,8 +539,6 @@ select * from locktest_segments where coalesce not like 'gp_%' and coalesce not 
  dropped table | AccessExclusiveLock | relation | n segments
  dropped table | AccessExclusiveLock | relation | n segments
  dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
- dropped table | AccessExclusiveLock | relation | n segments
-(40 rows)
+(38 rows)
 
 commit;

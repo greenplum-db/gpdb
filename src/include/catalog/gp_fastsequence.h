@@ -17,14 +17,12 @@
 #define GP_FASTSEQUENCE_H
 
 #include "catalog/genbki.h"
-#include "storage/itemptr.h"
+#include "catalog/gp_fastsequence_d.h"
 
 /*
  * gp_fastsequence definition
  */
-#define FastSequenceRelationId 5043
-
-CATALOG(gp_fastsequence,5043) BKI_WITHOUT_OIDS
+CATALOG(gp_fastsequence,5043,FastSequenceRelationId)
 {
 	Oid				objid;				/* object oid */
 	int8			objmod;				/* object modifier */
@@ -42,14 +40,7 @@ FOREIGN_KEY(objid REFERENCES pg_class(oid));
 */
 typedef FormData_gp_fastsequence *Form_gp_fastsequence;
 
-#define Natts_gp_fastsequence				3
-#define Anum_gp_fastsequence_objid			1
-#define Anum_gp_fastsequence_objmod         2
-#define Anum_gp_fastsequence_last_sequence	3
-
 #define NUM_FAST_SEQUENCES					 100
-
-/* No initial content */
 
 /*
  * Insert a new light-weight fast sequence entry for a given object.

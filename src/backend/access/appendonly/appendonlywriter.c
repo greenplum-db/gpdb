@@ -27,16 +27,24 @@
 #include "access/heapam.h"				/* heap_open */
 #include "access/transam.h"
 #include "access/xact.h"
+#include "catalog/indexing.h"
+#include "catalog/pg_am.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_authid.h"
 #include "cdb/cdbvars.h"
+#include "libpq-fe.h"
+#include "miscadmin.h"
+#include "nodes/pathnodes.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "utils/faultinjector.h"
+#include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/int8.h"
 #include "utils/snapmgr.h"
 
 #define SEGFILE_CAPACITY_THRESHOLD	0.9
+
 
 /*
  * Modes of operation for the choose_segno_internal() function.
@@ -139,6 +147,8 @@ LockSegnoForWrite(Relation rel, int segno)
 	SysScanDesc aoscan;
 	HeapTuple	tuple;
 	Snapshot	snapshot;
+	Snapshot	appendOnlyMetaDataSnapshot;
+	Oid			segrelid;
 	bool		found = false;
 
 	if (Debug_appendonly_print_segfile_choice)
@@ -152,11 +162,14 @@ LockSegnoForWrite(Relation rel, int segno)
 	 */
 	LockRelationForExtension(rel, ExclusiveLock);
 
+	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	GetAppendOnlyEntryAuxOids(rel->rd_id, appendOnlyMetaDataSnapshot,
+							  &segrelid, NULL, NULL, NULL, NULL);
 	/*
 	 * Now pick a segment that is not in use, and is not over the allowed
 	 * size threshold (90% full).
 	 */
-	pg_aoseg_rel = heap_open(rel->rd_appendonly->segrelid, AccessShareLock);
+	pg_aoseg_rel = table_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
 	/*
@@ -179,7 +192,7 @@ LockSegnoForWrite(Relation rel, int segno)
 		LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
 	}
 
-	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, true, snapshot, 0, NULL);
+	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, false, snapshot, 0, NULL);
 	while ((tuple = systable_getnext(aoscan)) != NULL)
 	{
 		int32		this_segno;
@@ -203,6 +216,8 @@ LockSegnoForWrite(Relation rel, int segno)
 		/* Skip using the ao segment if not latest version (except as a compaction target) */
 		if (formatversion != AORelationVersion_GetLatest())
 			elog(ERROR, "segfile %d is not of the latest version", segno);
+
+		found = true;
 		break;
 	}
 
@@ -213,7 +228,7 @@ LockSegnoForWrite(Relation rel, int segno)
 			InsertInitialSegnoEntry(rel, segno);
 		else
 			InsertInitialAOCSFileSegInfo(rel, segno,
-										 RelationGetNumberOfAttributes(rel));
+										 RelationGetNumberOfAttributes(rel), segrelid);
 
 		/* the tuple was locked by InsertInitial already */
 	}
@@ -230,8 +245,8 @@ LockSegnoForWrite(Relation rel, int segno)
 		/* this segno is available and not full. Try to lock it. */
 		HeapTupleData locktup;
 		Buffer		buf = InvalidBuffer;
-		HeapUpdateFailureData hufd;
-		HTSU_Result result;
+		TM_FailureData hufd;
+		TM_Result result;
 
 		locktup.t_self = tuple->t_self;
 		result = heap_lock_tuple(pg_aoseg_rel, &locktup,
@@ -243,7 +258,7 @@ LockSegnoForWrite(Relation rel, int segno)
 								 &hufd);
 		if (BufferIsValid(buf))
 			ReleaseBuffer(buf);
-		if (result != HeapTupleMayBeUpdated)
+		if (result != TM_Ok)
 			elog(ERROR, "could not lock segfile %d", segno);
 	}
 
@@ -253,6 +268,8 @@ LockSegnoForWrite(Relation rel, int segno)
 	UnlockRelationForExtension(rel, ExclusiveLock);
 
 	heap_close(pg_aoseg_rel, AccessShareLock);
+
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 
 	/* success! */
 }
@@ -306,6 +323,49 @@ ChooseSegnoForCompaction(Relation rel, List *avoid_segnos)
 }
 
 /*
+ * Reserved segno is special: it is inserted as a regular tuple (not frozen)
+ * in gp_fastsequence to leverage MVCC for cleanup in case of abort.  Reserved
+ * segno should be chosen for insert when the insert command is part of the
+ * same transaction that created the table.  See
+ * InsertInitialFastSequenceEntries for more details.
+ */
+static bool
+ShouldUseReservedSegno(Relation rel, choose_segno_mode mode)
+{
+	Relation pg_class;
+	ScanKeyData scankey[1];
+	SysScanDesc scan;
+	HeapTuple tuple;
+	TransactionId xmin;
+
+	/*
+	 * Reserved segno can only be chosen for non-vacuum cases because vacuum
+	 * cannot be executed from inside a transaction.
+	 */
+	if (mode != CHOOSE_MODE_WRITE)
+		return false;
+
+	ScanKeyInit(&scankey[0],
+				Anum_pg_class_oid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(rel)));
+	pg_class = table_open(RelationRelationId, AccessShareLock);
+	scan = systable_beginscan(pg_class, ClassOidIndexId, true,
+							  NULL, 1, scankey);
+	tuple = systable_getnext(scan);
+	if (!tuple)
+		elog(ERROR, "unable to find relation entry in pg_class for %s",
+			 RelationGetRelationName(rel));
+	
+	xmin = HeapTupleHeaderGetXmin(tuple->t_data);
+	systable_endscan(scan);
+	table_close(pg_class, NoLock);
+
+	return TransactionIdIsCurrentTransactionId(xmin);
+}
+
+
+/*
  * Decide which segment number should be used to write into during the COPY,
  * INSERT, or VACUUM operation we're executing. This contains the common
  * logic for all three ChooseSegno* variants.
@@ -344,22 +404,26 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	SysScanDesc aoscan;
 	HeapTuple	tuple;
 	Snapshot	snapshot;
+	Oid			segrelid;
 	bool		tried_creating_new_segfile = false;
 
 	memset(used, 0, sizeof(used));
+
+	if (ShouldUseReservedSegno(rel, mode))
+	{
+		Assert(avoid_segnos == NIL);
+		if (Debug_appendonly_print_segfile_choice)
+			elog(LOG, "choose_segno_internal: chose RESERVED_SEGNO for wrie");
+
+		LockSegnoForWrite(rel, RESERVED_SEGNO);
+		return RESERVED_SEGNO;
+	}
 
 	/*
 	 * The algorithm below for choosing a target segment is not concurrent-safe.
 	 * Grab a lock to serialize.
 	 */
 	LockRelationForExtension(rel, ExclusiveLock);
-
-	/*
-	 * Now pick a segment that is not in use, and is not over the allowed
-	 * size threshold (90% full).
-	 */
-	pg_aoseg_rel = heap_open(rel->rd_appendonly->segrelid, AccessShareLock);
-	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
 	/*
 	 * Obtain the snapshot that is taken at the beginning of the transaction.
@@ -381,11 +445,21 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 		LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
 	}
 
+	GetAppendOnlyEntryAuxOids(rel->rd_id, NULL,
+							  &segrelid, NULL, NULL, NULL, NULL);
+
+	/*
+	 * Now pick a segment that is not in use, and is not over the allowed
+	 * size threshold (90% full).
+	 */
+	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
+	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
+
 	/*
 	 * Scan through all the pg_aoseg (or pg_aocs) entries, and make note of
 	 * all "candidates".
 	 */
-	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, true, snapshot, 0, NULL);
+	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, false, snapshot, 0, NULL);
 	while ((tuple = systable_getnext(aoscan)) != NULL)
 	{
 		int32		segno;
@@ -417,12 +491,11 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 				continue;
 
 			/*
-			 * Historically, segment 0 was only used in utility mode. There is no
-			 * particular reason we couldn't use segment 0 these days, but keep
-			 * that behavior to avoid surprising external tools. Regression
-			 * tests also expect that.
+			 * Historically, segment 0 was only used in utility mode.
+			 * Nowadays, segment 0 is also used for CTAS and alter table
+			 * rewrite commands.
 			 */
-			if (Gp_role != GP_ROLE_UTILITY && segno == 0)
+			if (Gp_role != GP_ROLE_UTILITY && segno == RESERVED_SEGNO)
 				continue;
 
 			/*
@@ -472,8 +545,8 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 		{
 			HeapTupleData locktup;
 			Buffer		buf = InvalidBuffer;
-			HeapUpdateFailureData hufd;
-			HTSU_Result result;
+			TM_FailureData hufd;
+			TM_Result result;
 
 			/*
 			 * When performing VACUUM compaction, we prefer to create a new segment
@@ -503,7 +576,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 									 &hufd);
 			if (BufferIsValid(buf))
 				ReleaseBuffer(buf);
-			if (result == HeapTupleMayBeUpdated)
+			if (result == TM_Ok)
 			{
 				chosen_segno = candidates[i].segno;
 				if (Debug_appendonly_print_segfile_choice)
@@ -570,8 +643,18 @@ choose_new_segfile(Relation rel, bool *used, List *avoid_segnos)
 		if (RelationIsAoRows(rel))
 			InsertInitialSegnoEntry(rel, chosen_segno);
 		else
+		{
+			Oid segrelid;
+			Snapshot appendOnlyMetaDataSnapshot;
+
+			appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+			GetAppendOnlyEntryAuxOids(rel->rd_id, appendOnlyMetaDataSnapshot,
+									  &segrelid, NULL, NULL, NULL, NULL);
+			UnregisterSnapshot(appendOnlyMetaDataSnapshot);
+
 			InsertInitialAOCSFileSegInfo(rel, chosen_segno,
-										 RelationGetNumberOfAttributes(rel));
+										 RelationGetNumberOfAttributes(rel), segrelid);
+		}
 	}
 	else
 	{

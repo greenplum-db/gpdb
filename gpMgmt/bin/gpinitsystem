@@ -81,7 +81,7 @@ STANDBY_RET_CODE=0
 #******************************************************************************
 # DCA Specific Variables
 #******************************************************************************
-DCA_VERSION_FILE="/etc/gpdb-appliance-version"
+DCA_VERSION_FILE="${__DCA_VERSION_FILE__:-/etc/gpdb-appliance-version}"
 
 DCA_RESQUEUE_PRIORITY_NAME="gp_resqueue_priority"
 DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME="gp_resqueue_priority_cpucores_per_segment"
@@ -536,42 +536,7 @@ CHK_MULTI_HOME () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Commencing multi-home checks, please wait..." 1
 
-	# For MPP-12043 we need a way to sort that we can't get with the sort command
-	# so we'll use a little command line python script.
-
-read -d '' HOSTNAME_SORTER <<"END_PYTHON_CODE"
-import sys, re
-
-standard_host_re = re.compile(r'([a-zA-Z]+)((\\d+)(-(\\d+))?)')
-
-def standard_host_cmp(h1, h2):
-	m1 = standard_host_re.match(h1)
-	m2 = standard_host_re.match(h2)
-
-	if not m1 or not m2:
-		if h1 == h2:
-		        return 0
-		elif h1 < h2:
-		        return -1
-		else:
-		        return 1
-	else:
-		if m1.group(1) <= m2.group(1):
-			if not int(m1.group(3)) == int(m2.group(3)):
-				return int(m1.group(3)) - int(m2.group(3))
-			elif m1.group(5):
-				return int(m1.group(5)) - int(m2.group(5))
-			else:
-				return 0
-		else:
-			return 1
-
-hl = sys.stdin.readlines()
-for h in sorted(hl,cmp=standard_host_cmp):
-        print h,
-END_PYTHON_CODE
-
-	MACHINE_LIST=(`$CAT $MACHINE_LIST_FILE|python -c "$HOSTNAME_SORTER"`)
+	MACHINE_LIST=(`$CAT $MACHINE_LIST_FILE`)
 	M_HOST_ARRAY=()
 	MCOUNT=0
 	for MHOST in ${MACHINE_LIST[@]}
@@ -1267,7 +1232,7 @@ CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Creating gpssh configuration file"
 		BUILD_GPSSH_CONF $GP_DIR
 		LOG_MSG "[INFO]:-Starting the Master in admin mode" 1
-		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
+		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
 		-m" start >> /dev/null 2>&1
 		RET_TEXT="`$PG_CTL status -D $GP_DIR`"
 		RUNNING=`$ECHO $RET_TEXT|$EGREP -c "not running|neither"`
@@ -1568,7 +1533,7 @@ SCAN_LOG () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Scanning utility log file for any warning messages" 1
 	SCAN_STRING="\[WARN\]|invalid|warning:|fatal|error"
-	if [ `$EGREP -i -w "$SCAN_STRING" $LOG_FILE|$GREP -v "\[INFO\]"|$GREP -v "[Start|End] Function ERROR_CHK"|$GREP -v "WARNING: enabling \"trust\" authentication for local connections"|$GREP -v "to the list of known hosts"|$GREP -v "LOG"|$WC -w` -ne 0 ];then
+	if [ `$EGREP -i -w "$SCAN_STRING" $LOG_FILE|$GREP -v "\[INFO\]"|$GREP -v "[Start|End] Function ERROR_CHK"|$GREP -v "warning: enabling \"trust\" authentication for local connections"|$GREP -v "to the list of known hosts"|$GREP -v "LOG"|$WC -w` -ne 0 ];then
 		LOG_MSG "[WARN]:-*******************************************************" 1
 		LOG_MSG "[WARN]:-Scan of log file indicates that some warnings or errors" 1
 		LOG_MSG "[WARN]:-were generated during the array creation" 1
@@ -1779,23 +1744,24 @@ CHK_QE_ARRAY_PORT_RANGES () {
 
 SET_DCA_CONFIG_SETTINGS () {
 	LOG_MSG "[INFO]:-Setting DCA specific configuration values..." 1
+	local master_data_directory="${MASTER_DIRECTORY}/${SEG_PREFIX}-1"
 
-	LOG_MSG "[INFO]:-$GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_VAL" 1
-	$GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_VAL
+	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_VAL" 1
+	MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_VAL
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		LOG_MSG "[WARN]:-Failed to set value for $DCA_RESQUEUE_PRIORITY_NAME" 1
 	fi
 	
-	LOG_MSG "[INFO]:-$GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL" 1
-	$GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL
+	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL" 1
+	MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		LOG_MSG "[WARN]:-Failed to set value for $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME" 1
 	fi
 
-	LOG_MSG "[INFO]:-$GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL" 1
-	$GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL
+	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL" 1
+	MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		LOG_MSG "[WARN]:-Failed to set value for $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME" 1

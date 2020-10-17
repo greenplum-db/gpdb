@@ -19,7 +19,7 @@ for i in range(len(rv)):
          result = 1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 
 -- Force Sort operator to spill workfiles and examine if stats are correct
@@ -29,6 +29,5 @@ insert into testsort select i, i % 1000, i % 100000, i % 75 from generate_series
 
 set statement_mem="2MB";
 set gp_resqueue_print_operator_memory_limits=on;
-set gp_enable_mk_sort=off; 
 
 select isSpilling('explain (analyze, verbose) select i1,i2 from testsort order by i2');

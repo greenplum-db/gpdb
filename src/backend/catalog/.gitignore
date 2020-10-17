@@ -3,4 +3,6 @@
 /postgres.shdescription
 /cdb_init.sql
 /schemapg.h
-/pg_proc_combined.h
+/pg_*_d.h
+/gp_*_d.h
+/bki-stamp

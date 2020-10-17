@@ -3,12 +3,12 @@
 ## ======================================================================
 resource_types:
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
 - name: git-lfs
-  type: docker-image
+  type: registry-image
   source:
      repository: concourse/git-resource
 
@@ -17,18 +17,18 @@ resources:
   type: git
   source:
     branch: master_explain_test
-    private_key: {{slack-trigger-git-key}}
-    uri: {{slack-trigger-git-remote}}
+    private_key: ((slack-trigger-git-key))
+    uri: ((slack-trigger-git-remote))
 
 - name: gp_workloads
   type: git-lfs
   source:
     branch: master
-    private_key: {{gp_workloads_deploy_key}}
-    uri: {{gp_workloads-git-remote}}
+    private_key: ((gp_workloads_deploy_key))
+    uri: ((gp_workloads-git-remote))
 
 - name: gpdb7-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-build
 

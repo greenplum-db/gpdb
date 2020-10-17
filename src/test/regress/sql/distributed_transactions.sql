@@ -10,9 +10,6 @@
 -- m/(ERROR|WARNING|CONTEXT|NOTICE):.*The previous session was reset because its gang was disconnected/
 -- s/session id \=\s*\d+/session id \= DUMMY/gm
 --
--- m/NOTICE:  exchanged partition .*/
--- s/pg_temp_\d+/pg_temp_DUMMY/gm
---
 -- m/^DETAIL:.*gid=.*/
 -- s/gid=\d+-\d+/gid DUMMY/
 --

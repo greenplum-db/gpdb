@@ -57,29 +57,32 @@ CREATE ACCESS METHOD <replaceable class="parameter">name</replaceable>
    </varlistentry>
 
    <varlistentry>
-    <term><literal>access_method_type</literal></term>
+    <term><replaceable class="parameter">access_method_type</replaceable></term>
     <listitem>
      <para>
-      This clause specifies type of access method to define.
-      Only <literal>INDEX</literal> is supported at present.
+      This clause specifies the type of access method to define.
+      Only <literal>TABLE</literal> and <literal>INDEX</literal>
+      are supported at present.
      </para>
     </listitem>
    </varlistentry>
 
    <varlistentry>
-    <term><literal>HANDLER <replaceable class="parameter">handler_function</replaceable></literal></term>
+    <term><replaceable class="parameter">handler_function</replaceable></term>
     <listitem>
-     <para><replaceable class="parameter">handler_function</replaceable> is the
-      name of a previously registered function that will be called to
-      retrieve the struct which contains required parameters and functions
-      of access method to the core.  The handler function must take single
-      argument of type <type>internal</>, and its return type depends on the
-      type of access method; for <literal>INDEX</literal> access methods, it
-      must be <type>index_am_handler</type>.
-     </para>
-
      <para>
-      See <xref linkend="index-api"> for index access methods API.
+      <replaceable class="parameter">handler_function</replaceable> is the
+      name (possibly schema-qualified) of a previously registered function
+      that represents the access method.  The handler function must be
+      declared to take a single argument of type <type>internal</type>,
+      and its return type depends on the type of access method;
+      for <literal>TABLE</literal> access methods, it must
+      be <type>table_am_handler</type> and for <literal>INDEX</literal>
+      access methods, it must be <type>index_am_handler</type>.
+      The C-level API that the handler function must implement varies
+      depending on the type of access method. The table access method API
+      is described in <xref linkend="tableam"/> and the index access method
+      API is described in <xref linkend="indexam"/>.
      </para>
     </listitem>
    </varlistentry>
@@ -90,12 +93,11 @@ CREATE ACCESS METHOD <replaceable class="parameter">name</replaceable>
   <title>Examples</title>
 
   <para>
-   Create an access method <literal>heptree</> with
-   handler function <literal>heptree_handler</>:
+   Create an index access method <literal>heptree</literal> with
+   handler function <literal>heptree_handler</literal>:
 <programlisting>
 CREATE ACCESS METHOD heptree TYPE INDEX HANDLER heptree_handler;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>
@@ -103,7 +105,7 @@ CREATE ACCESS METHOD heptree TYPE INDEX HANDLER heptree_handler;
 
   <para>
    <command>CREATE ACCESS METHOD</command> is a
-   <productname>PostgreSQL</> extension.
+   <productname>PostgreSQL</productname> extension.
   </para>
  </refsect1>
 
@@ -111,9 +113,9 @@ CREATE ACCESS METHOD heptree TYPE INDEX HANDLER heptree_handler;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-drop-access-method"></member>
-   <member><xref linkend="sql-createopclass"></member>
-   <member><xref linkend="sql-createopfamily"></member>
+   <member><xref linkend="sql-drop-access-method"/></member>
+   <member><xref linkend="sql-createopclass"/></member>
+   <member><xref linkend="sql-createopfamily"/></member>
   </simplelist>
  </refsect1>
 

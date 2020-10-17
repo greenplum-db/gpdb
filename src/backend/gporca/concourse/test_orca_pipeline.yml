@@ -4,7 +4,7 @@
 
 resource_types:
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -13,16 +13,16 @@ resources:
   type: git
   source:
     branch: test-gpdb
-    private_key: {{slack-trigger-git-key}}
-    uri: {{slack-trigger-git-remote}}
+    private_key: ((slack-trigger-git-key))
+    uri: ((slack-trigger-git-remote))
 
 - name: gpdb7-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-build
 
 - name: gpdb7-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-test
 
@@ -87,7 +87,7 @@ jobs:
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
       image: gpdb7-centos7-build
       params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
         TARGET_OS: centos
         TARGET_OS_VERSION: 7
         BLD_TARGETS: "clients loaders"
@@ -103,7 +103,7 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: {{configure_flags}}
+          CONFIGURE_FLAGS: ((configure_flags))
         timeout: 3h
 
       - task: icw_gporca_centos7
@@ -114,5 +114,5 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: {{configure_flags}}
+          CONFIGURE_FLAGS: ((configure_flags))
         timeout: 5h

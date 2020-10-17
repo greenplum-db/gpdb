@@ -54,7 +54,8 @@ static AOCSScanDesc aocs_beginscan_internal(Relation relation,
 						int total_seg,
 						Snapshot snapshot,
 						Snapshot appendOnlyMetaDataSnapshot,
-						TupleDesc relationTupleDesc, bool *proj);
+						bool *proj,
+						uint32 flags);
 
 /*
  * Open the segment file for a specified column associated with the datum
@@ -94,18 +95,16 @@ static void
 open_all_datumstreamread_segfiles(Relation rel,
 								  AOCSFileSegInfo *segInfo,
 								  DatumStreamRead **ds,
-								  int *proj_atts,
-								  int num_proj_atts,
+								  AttrNumber *proj_atts,
+								  AttrNumber num_proj_atts,
 								  AppendOnlyBlockDirectory *blockDirectory)
 {
 	char	   *basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
-	int			i;
 
 	Assert(proj_atts);
-
-	for (i = 0; i < num_proj_atts; i++)
+	for (AttrNumber i = 0; i < num_proj_atts; i++)
 	{
-		int			attno = proj_atts[i];
+		AttrNumber	attno = proj_atts[i];
 
 		open_datumstreamread_segfile(basepath, rel->rd_node, segInfo, ds[attno], attno);
 		datumstreamread_block(ds[attno], blockDirectory, attno);
@@ -119,8 +118,7 @@ open_all_datumstreamread_segfiles(Relation rel,
  * means all columns.
  */
 static void
-open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
-			  bool checksum)
+open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, bool checksum)
 {
 	int			nvp = relationTupleDesc->natts;
 	StdRdOptions **opts = RelationGetAttributeOptions(rel);
@@ -128,7 +126,7 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
 	/* open datum streams.  It will open segment file underneath */
 	for (int i = 0; i < nvp; ++i)
 	{
-		Form_pg_attribute attr = relationTupleDesc->attrs[i];
+		Form_pg_attribute attr = TupleDescAttr(relationTupleDesc, i);
 		char	   *ct;
 		int32		clvl;
 		int32		blksz;
@@ -148,7 +146,8 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
 		 * column of a column oriented table.  Note: checksum is a table level
 		 * attribute.
 		 */
-		Assert(opts[i]);
+		if (opts[i] == NULL || opts[i]->blocksize == 0)
+			elog(ERROR, "could not find blocksize option for AOCO column in pg_attribute_encoding");
 		ct = opts[i]->compresstype;
 		clvl = opts[i]->compresslevel;
 		blksz = opts[i]->blocksize;
@@ -174,33 +173,65 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
  */
 static void
 open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
-			 int *proj_atts, int num_proj_atts, bool checksum)
+			 AttrNumber *proj_atts, AttrNumber num_proj_atts, bool checksum)
 {
-	int			nvp = relationTupleDesc->natts;
-	StdRdOptions **opts = RelationGetAttributeOptions(rel);
-	int			i;
+	/*
+	 *  RelationGetAttributeOptions does not always success return opts. e.g.
+	 *  `ALTER TABLE ADD COLUMN` with an illegal option.
+	 *
+	 *  In this situation, the transaction will abort, and the Relation will be
+	 *  free. Upstream have sanity check to promise we must have a worked TupleDesc
+	 *  attached the Relation during memory recycle. Otherwise, the query will crash.
+	 *
+	 *  For some reason, we can not put the option validation check into "perp"
+	 *  phase for AOCO table ALTER command.
+	 *  (commit: e707c19c885fadffe50095cc699e52af1ee64f4b)
+	 *
+	 *  So, a fake TupleDesc temporary replace into Relation.
+	 */
 
-	/* Clear all the entries to NULL first. */
-	for (i = 0; i < nvp; ++i)
-		ds[i] = NULL;
+	TupleDesc orig_att = rel->rd_att;
+	if (orig_att->tdrefcount == -1)
+	{
+		rel->rd_att = CreateTemplateTupleDesc(relationTupleDesc->natts);
+		rel->rd_att->tdrefcount = 1;
+	}
+
+	StdRdOptions **opts = RelationGetAttributeOptions(rel);
+
+	if (orig_att->tdrefcount == -1)
+	{
+		pfree(rel->rd_att);
+		rel->rd_att = orig_att;
+	}
+
+	/*
+	 * Clear all the entries to NULL first, as the NULL value is used during
+	 * closing
+	 */
+	for (AttrNumber attno = 0; attno < relationTupleDesc->natts; attno++)
+		ds[attno] = NULL;
 
 	/* And then initialize the data streams for those columns we need */
-	for (i = 0; i < num_proj_atts; i++)
+	for (AttrNumber i = 0; i < num_proj_atts; i++)
 	{
-		int			attno = proj_atts[i];
-		Form_pg_attribute attr = relationTupleDesc->attrs[attno];
-		char	   *ct;
-		int32		clvl;
-		int32		blksz;
+		AttrNumber			attno = proj_atts[i];
+		Form_pg_attribute	attr;
+		char			   *ct;
+		int32				clvl;
+		int32				blksz;
 		StringInfoData titleBuf;
+
+		Assert(attno <= relationTupleDesc->natts);
+		attr = TupleDescAttr(relationTupleDesc, attno);
 
 		/*
 		 * We always record all the three column specific attributes for each
 		 * column of a column oriented table.  Note: checksum is a table level
 		 * attribute.
 		 */
-		Assert(opts[attno]);
-
+		if (opts[attno] == NULL || opts[attno]->blocksize == 0)
+			elog(ERROR, "could not find blocksize option for AOCO column in pg_attribute_encoding");
 		ct = opts[attno]->compresstype;
 		clvl = opts[attno]->compresslevel;
 		blksz = opts[attno]->blocksize;
@@ -226,16 +257,14 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 }
 
 static void
-close_ds_read(DatumStreamRead **ds, int nvp)
+close_ds_read(DatumStreamRead **ds, AttrNumber natts)
 {
-	int			i;
-
-	for (i = 0; i < nvp; ++i)
+	for (AttrNumber attno = 0; attno < natts; attno++)
 	{
-		if (ds[i])
+		if (ds[attno])
 		{
-			destroy_datumstreamread(ds[i]);
-			ds[i] = NULL;
+			destroy_datumstreamread(ds[attno]);
+			ds[attno] = NULL;
 		}
 	}
 }
@@ -255,27 +284,53 @@ close_ds_write(DatumStreamWrite **ds, int nvp)
 	}
 }
 
-
+/*
+ * GPDB_12_MERGE_FIXME: Find a better name to match what this function is
+ * actually doing
+ */
 static void
 aocs_initscan(AOCSScanDesc scan)
 {
-	scan->cur_seg = -1;
+	MemoryContext	oldCtx;
+	AttrNumber		natts;
 
-	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
+	Assert(scan->columnScanInfo.relationTupleDesc);
+	natts = scan->columnScanInfo.relationTupleDesc->natts;
+
+	oldCtx = MemoryContextSwitchTo(scan->columnScanInfo.scanCtx);
+
+	if (scan->columnScanInfo.ds == NULL)
+		scan->columnScanInfo.ds = (DatumStreamRead **)
+								  palloc0(natts * sizeof(DatumStreamRead *));
+
+	if (scan->columnScanInfo.proj_atts == NULL)
+	{
+		scan->columnScanInfo.num_proj_atts = natts;
+		scan->columnScanInfo.proj_atts = (AttrNumber *)
+										 palloc0(natts * sizeof(AttrNumber *));
+
+		for (AttrNumber attno = 0; attno < natts; attno++)
+			scan->columnScanInfo.proj_atts[attno] = attno;
+	}
+
+	open_ds_read(scan->rs_base.rs_rd, scan->columnScanInfo.ds,
+				 scan->columnScanInfo.relationTupleDesc,
+				 scan->columnScanInfo.proj_atts, scan->columnScanInfo.num_proj_atts,
+				 scan->checksum);
+
+	MemoryContextSwitchTo(oldCtx);
+
+	scan->cur_seg = -1;
 	scan->cur_seg_row = 0;
 
-	open_ds_read(scan->aos_rel, scan->ds, scan->relationTupleDesc,
-				 scan->proj_atts, scan->num_proj_atts,
-				 scan->aos_rel->rd_appendonly->checksum);
+	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
-	pgstat_count_heap_scan(scan->aos_rel);
+	pgstat_count_heap_scan(scan->rs_base.rs_rd);
 }
 
 static int
 open_next_scan_seg(AOCSScanDesc scan)
 {
-	int			nvp = scan->relationTupleDesc->natts;
-
 	while (++scan->cur_seg < scan->total_seg)
 	{
 		AOCSFileSegInfo *curSegInfo = scan->seginfo[scan->cur_seg];
@@ -291,22 +346,23 @@ open_next_scan_seg(AOCSScanDesc scan)
 			 * the same state. So somewhat arbitrarily, we check the state of
 			 * the first column we'll be accessing.
 			 */
-			if (scan->num_proj_atts > 0)
-			{
-				/*
-				 * subtle: we must check for AWAITING_DROP before calling getAOCSVPEntry().
-				 * ALTER TABLE ADD COLUMN does not update vpinfos on AWAITING_DROP segments.
-				 */
-				if (curSegInfo->state == AOSEG_STATE_AWAITING_DROP)
-					emptySeg = true;
-				else
-				{
-					AOCSVPInfoEntry *e;
 
-					e = getAOCSVPEntry(curSegInfo, scan->proj_atts[0]);
-					if (e->eof == 0)
-						emptySeg = true;
-				}
+			/*
+			 * subtle: we must check for AWAITING_DROP before calling getAOCSVPEntry().
+			 * ALTER TABLE ADD COLUMN does not update vpinfos on AWAITING_DROP segments.
+			 */
+			if (curSegInfo->state == AOSEG_STATE_AWAITING_DROP)
+				emptySeg = true;
+			else
+			{
+				AOCSVPInfoEntry *e;
+
+				e = getAOCSVPEntry(curSegInfo, scan->columnScanInfo.proj_atts[0]);
+				if (e->eof == 0)
+					elog(ERROR, "inconsistent segment state for relation %s, segment %d, tuple count " INT64_FORMAT,
+						 RelationGetRelationName(scan->rs_base.rs_rd),
+						 curSegInfo->segno,
+						 curSegInfo->total_tupcount);
 			}
 
 			if (!emptySeg)
@@ -329,9 +385,14 @@ open_next_scan_seg(AOCSScanDesc scan)
 					 * 1 then we don't even need to update the sequence value
 					 */
 					int64		firstSequence;
+					Oid         segrelid;
+					GetAppendOnlyEntryAuxOids(RelationGetRelid(scan->rs_base.rs_rd),
+                                              scan->appendOnlyMetaDataSnapshot,
+                                              &segrelid, NULL, NULL,
+                                              NULL, NULL);
 
 					firstSequence =
-						GetFastSequences(scan->aos_rel->rd_appendonly->segrelid,
+						GetFastSequences(segrelid,
 										 curSegInfo->segno,
 										 curSegInfo->total_tupcount + 1,
 										 NUM_FAST_SEQUENCES);
@@ -340,21 +401,21 @@ open_next_scan_seg(AOCSScanDesc scan)
 															scan->appendOnlyMetaDataSnapshot,
 															(FileSegInfo *) curSegInfo,
 															0 /* lastSequence */ ,
-															scan->aos_rel,
+															scan->rs_base.rs_rd,
 															curSegInfo->segno,
-															nvp,
+															scan->columnScanInfo.relationTupleDesc->natts,
 															true);
 
-					InsertFastSequenceEntry(scan->aos_rel->rd_appendonly->segrelid,
+					InsertFastSequenceEntry(segrelid,
 											curSegInfo->segno,
 											firstSequence);
 				}
 
-				open_all_datumstreamread_segfiles(scan->aos_rel,
+				open_all_datumstreamread_segfiles(scan->rs_base.rs_rd,
 												  curSegInfo,
-												  scan->ds,
-												  scan->proj_atts,
-												  scan->num_proj_atts,
+												  scan->columnScanInfo.ds,
+												  scan->columnScanInfo.proj_atts,
+												  scan->columnScanInfo.num_proj_atts,
 												  scan->blockDirectory);
 
 				return scan->cur_seg;
@@ -368,16 +429,22 @@ open_next_scan_seg(AOCSScanDesc scan)
 static void
 close_cur_scan_seg(AOCSScanDesc scan)
 {
-	int			nvp = scan->relationTupleDesc->natts;
-	int			i;
-
 	if (scan->cur_seg < 0)
 		return;
 
-	for (i = 0; i < nvp; ++i)
+	/*
+	 * If rescan is called before we lazily initialized then there is nothing to
+	 * do
+	 */
+	if (scan->columnScanInfo.relationTupleDesc == NULL)
+		return;
+
+	for (AttrNumber attno = 0;
+		 attno < scan->columnScanInfo.relationTupleDesc->natts;
+		 attno++)
 	{
-		if (scan->ds[i])
-			datumstreamread_close_file(scan->ds[i]);
+		if (scan->columnScanInfo.ds[attno])
+			datumstreamread_close_file(scan->columnScanInfo.ds[attno]);
 	}
 
 	if (scan->blockDirectory)
@@ -393,8 +460,7 @@ AOCSScanDesc
 aocs_beginrangescan(Relation relation,
 					Snapshot snapshot,
 					Snapshot appendOnlyMetaDataSnapshot,
-					int *segfile_no_arr, int segfile_count,
-					TupleDesc relationTupleDesc, bool *proj)
+					int *segfile_no_arr, int segfile_count)
 {
 	AOCSFileSegInfo **seginfo;
 	int			i;
@@ -413,41 +479,43 @@ aocs_beginrangescan(Relation relation,
 								   segfile_count,
 								   snapshot,
 								   appendOnlyMetaDataSnapshot,
-								   relationTupleDesc,
-								   proj);
+								   NULL,
+								   0);
 }
 
 AOCSScanDesc
 aocs_beginscan(Relation relation,
 			   Snapshot snapshot,
-			   Snapshot appendOnlyMetaDataSnapshot,
-			   TupleDesc relationTupleDesc, bool *proj)
+			   bool *proj,
+			   uint32 flags)
 {
-	AOCSFileSegInfo **seginfo;
-	int			total_seg;
+	AOCSFileSegInfo	  **seginfo;
+	Snapshot			aocsMetaDataSnapshot;
+	int32				total_seg;
 
 	RelationIncrementReferenceCount(relation);
 
-	seginfo = GetAllAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot, &total_seg);
+	/*
+	 * the append-only meta data should never be fetched with
+	 * SnapshotAny as bogus results are returned.
+	 */
+	if (snapshot != SnapshotAny)
+		aocsMetaDataSnapshot = snapshot;
+	else
+		aocsMetaDataSnapshot = GetTransactionSnapshot();
 
+	seginfo = GetAllAOCSFileSegInfo(relation, aocsMetaDataSnapshot, &total_seg);
 	return aocs_beginscan_internal(relation,
 								   seginfo,
 								   total_seg,
 								   snapshot,
-								   appendOnlyMetaDataSnapshot,
-								   relationTupleDesc,
-								   proj);
+								   aocsMetaDataSnapshot,
+								   proj,
+								   flags);
 }
 
 /*
  * begin the scan over the given relation.
- *
- * 'relationTupleDesc' if NULL, then this function will simply use
- * relation->rd_att.  This is the typical use-case. Passing in a
- * separate tuple descriptor is only needed for cases for the caller has
- * changed relation->rd_att without updating the underlying relation files
- * yet (that is, the caller is doing an alter and relation->rd_att will be
- * the relation's new form but relationTupleDesc is the old form)
  */
 static AOCSScanDesc
 aocs_beginscan_internal(Relation relation,
@@ -455,30 +523,25 @@ aocs_beginscan_internal(Relation relation,
 						int total_seg,
 						Snapshot snapshot,
 						Snapshot appendOnlyMetaDataSnapshot,
-						TupleDesc relationTupleDesc, bool *proj)
+						bool *proj,
+						uint32 flags)
 {
-	AOCSScanDesc scan;
-	int			nvp;
-	int			i;
-
-	if (!relationTupleDesc)
-		relationTupleDesc = relation->rd_att;
-
-	nvp = relationTupleDesc->natts;
+	AOCSScanDesc	scan;
+	AttrNumber		natts;
+	Oid				visimaprelid;
+	Oid				visimapidxid;
 
 	scan = (AOCSScanDesc) palloc0(sizeof(AOCSScanDescData));
-	scan->aos_rel = relation;
+	scan->rs_base.rs_rd = relation;
+	scan->rs_base.rs_snapshot = snapshot;
+	scan->rs_base.rs_flags = flags;
 	scan->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
-	scan->snapshot = snapshot;
-
-	scan->compLevel = relation->rd_appendonly->compresslevel;
-	scan->compType = NameStr(relation->rd_appendonly->compresstype);
-	scan->blocksz = relation->rd_appendonly->blocksize;
-
 	scan->seginfo = seginfo;
-
 	scan->total_seg = total_seg;
-	scan->relationTupleDesc = relationTupleDesc;
+	scan->columnScanInfo.scanCtx = CurrentMemoryContext;
+
+	/* relationTupleDesc will be inited by the slot when needed */
+	scan->columnScanInfo.relationTupleDesc = NULL;
 
 	/*
 	 * We get an array of booleans to indicate which columns are needed. But
@@ -486,28 +549,43 @@ aocs_beginscan_internal(Relation relation,
 	 * it, just scanning the boolean array to figure out which columns are
 	 * needed can incur a noticeable overhead in aocs_getnext. So convert it
 	 * into an array of the attribute numbers of the required columns.
+	 *
+	 * However, if no array is given, then let it get lazily initialized when
+	 * needed since all the attributes will be fetched.
 	 */
-	Assert(proj);
-	scan->proj_atts = palloc(scan->relationTupleDesc->natts * sizeof(int));
-
-	scan->num_proj_atts = 0;
-	for (i = 0; i < scan->relationTupleDesc->natts; i++)
+	if (proj)
 	{
-		if (proj[i])
-			scan->proj_atts[scan->num_proj_atts++] = i;
+		natts = RelationGetNumberOfAttributes(relation);
+		scan->columnScanInfo.proj_atts = palloc0(natts * sizeof(AttrNumber *));
+		scan->columnScanInfo.num_proj_atts = 0;
+
+		for (AttrNumber i = 0; i < natts; i++)
+		{
+			if (proj[i])
+				scan->columnScanInfo.proj_atts[scan->columnScanInfo.num_proj_atts++] = i;
+		}
 	}
 
-	scan->ds = (DatumStreamRead **) palloc0(sizeof(DatumStreamRead *) * nvp);
+	scan->columnScanInfo.ds = NULL;
 
-	aocs_initscan(scan);
+	GetAppendOnlyEntryAttributes(RelationGetRelid(relation),
+								 NULL,
+								 NULL,
+								 NULL,
+								 &scan->checksum,
+								 NULL);
 
-	scan->blockDirectory = NULL;
+	GetAppendOnlyEntryAuxOids(RelationGetRelid(relation),
+							  scan->appendOnlyMetaDataSnapshot,
+							  NULL, NULL, NULL,
+							  &visimaprelid, &visimapidxid);
 
-	AppendOnlyVisimap_Init(&scan->visibilityMap,
-						   relation->rd_appendonly->visimaprelid,
-						   relation->rd_appendonly->visimapidxid,
-						   AccessShareLock,
-						   appendOnlyMetaDataSnapshot);
+	if (scan->total_seg != 0)
+		AppendOnlyVisimap_Init(&scan->visibilityMap,
+							   visimaprelid,
+							   visimapidxid,
+							   AccessShareLock,
+							   appendOnlyMetaDataSnapshot);
 
 	return scan;
 }
@@ -516,24 +594,36 @@ void
 aocs_rescan(AOCSScanDesc scan)
 {
 	close_cur_scan_seg(scan);
-	close_ds_read(scan->ds, scan->relationTupleDesc->natts);
+	if (scan->columnScanInfo.ds)
+		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
 	aocs_initscan(scan);
 }
 
 void
 aocs_endscan(AOCSScanDesc scan)
 {
-	int			i;
-
-	RelationDecrementReferenceCount(scan->aos_rel);
-
 	close_cur_scan_seg(scan);
-	close_ds_read(scan->ds, scan->relationTupleDesc->natts);
 
-	pfree(scan->proj_atts);
-	pfree(scan->ds);
+	if (scan->columnScanInfo.ds)
+	{
+		Assert(scan->columnScanInfo.proj_atts);
 
-	for (i = 0; i < scan->total_seg; ++i)
+		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
+		pfree(scan->columnScanInfo.ds);
+	}
+
+	if (scan->columnScanInfo.relationTupleDesc)
+	{
+		Assert(scan->columnScanInfo.proj_atts);
+
+		ReleaseTupleDesc(scan->columnScanInfo.relationTupleDesc);
+		scan->columnScanInfo.relationTupleDesc = NULL;
+	}
+
+	if (scan->columnScanInfo.proj_atts)
+		pfree(scan->columnScanInfo.proj_atts);
+
+	for (int i = 0; i < scan->total_seg; ++i)
 	{
 		if (scan->seginfo[i])
 		{
@@ -541,10 +631,14 @@ aocs_endscan(AOCSScanDesc scan)
 			scan->seginfo[i] = NULL;
 		}
 	}
+
 	if (scan->seginfo)
 		pfree(scan->seginfo);
 
-	AppendOnlyVisimap_Finish(&scan->visibilityMap, AccessShareLock);
+	if (scan->total_seg != 0)
+		AppendOnlyVisimap_Finish(&scan->visibilityMap, AccessShareLock);
+
+	RelationDecrementReferenceCount(scan->rs_base.rs_rd);
 
 	pfree(scan);
 }
@@ -613,7 +707,7 @@ static void upgrade_datum_impl(DatumStreamRead *ds, int attno, Datum values[],
 static void upgrade_datum_scan(AOCSScanDesc scan, int attno, Datum values[],
 							   bool isnull[], int formatversion)
 {
-	upgrade_datum_impl(scan->ds[attno], attno, values, isnull, formatversion);
+	upgrade_datum_impl(scan->columnScanInfo.ds[attno], attno, values, isnull, formatversion);
 }
 
 static void upgrade_datum_fetch(AOCSFetchDesc fetch, int attno, Datum values[],
@@ -626,19 +720,27 @@ static void upgrade_datum_fetch(AOCSFetchDesc fetch, int attno, Datum values[],
 bool
 aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 {
-	int			ncol;
-	Datum	   *d = slot_get_values(slot);
-	bool	   *null = slot_get_isnull(slot);
+	Datum	   *d = slot->tts_values;
+	bool	   *null = slot->tts_isnull;
+
 	AOTupleId	aoTupleId;
 	int64		rowNum = INT64CONST(-1);
 	int			err = 0;
-	int			i;
-	bool		isSnapshotAny = (scan->snapshot == SnapshotAny);
+	bool		isSnapshotAny = (scan->rs_base.rs_snapshot == SnapshotAny);
+	AttrNumber	natts;
 
 	Assert(ScanDirectionIsForward(direction));
 
-	ncol = slot->tts_tupleDescriptor->natts;
-	Assert(ncol <= scan->relationTupleDesc->natts);
+	if (scan->columnScanInfo.relationTupleDesc == NULL)
+	{
+		scan->columnScanInfo.relationTupleDesc = slot->tts_tupleDescriptor;
+		/* Pin it! ... and of course release it upon destruction / rescan */
+		PinTupleDesc(scan->columnScanInfo.relationTupleDesc);
+		aocs_initscan(scan);
+	}
+
+	natts = slot->tts_tupleDescriptor->natts;
+	Assert(natts <= scan->columnScanInfo.relationTupleDesc->natts);
 
 	while (1)
 	{
@@ -663,15 +765,15 @@ ReadNext:
 		curseginfo = scan->seginfo[scan->cur_seg];
 
 		/* Read from cur_seg */
-		for (i = 0; i < scan->num_proj_atts; i++)
+		for (AttrNumber i = 0; i < scan->columnScanInfo.num_proj_atts; i++)
 		{
-			int			attno = scan->proj_atts[i];
+			AttrNumber	attno = scan->columnScanInfo.proj_atts[i];
 
-			err = datumstreamread_advance(scan->ds[attno]);
+			err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 			Assert(err >= 0);
 			if (err == 0)
 			{
-				err = datumstreamread_block(scan->ds[attno], scan->blockDirectory, attno);
+				err = datumstreamread_block(scan->columnScanInfo.ds[attno], scan->blockDirectory, attno);
 				if (err < 0)
 				{
 					/*
@@ -681,7 +783,7 @@ ReadNext:
 					goto ReadNext;
 				}
 
-				err = datumstreamread_advance(scan->ds[attno]);
+				err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 				Assert(err > 0);
 			}
 
@@ -689,7 +791,7 @@ ReadNext:
 			 * Get the column's datum right here since the data structures
 			 * should still be hot in CPU data cache memory.
 			 */
-			datumstreamread_get(scan->ds[attno], &d[attno], &null[attno]);
+			datumstreamread_get(scan->columnScanInfo.ds[attno], &d[attno], &null[attno]);
 
 			/*
 			 * Perform any required upgrades on the Datum we just fetched.
@@ -701,11 +803,11 @@ ReadNext:
 			}
 
 			if (rowNum == INT64CONST(-1) &&
-				scan->ds[attno]->blockFirstRowNum != INT64CONST(-1))
+				scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
 			{
-				Assert(scan->ds[attno]->blockFirstRowNum > 0);
-				rowNum = scan->ds[attno]->blockFirstRowNum +
-					datumstreamread_nth(scan->ds[attno]);
+				Assert(scan->columnScanInfo.ds[attno]->blockFirstRowNum > 0);
+				rowNum = scan->columnScanInfo.ds[attno]->blockFirstRowNum +
+					datumstreamread_nth(scan->columnScanInfo.ds[attno]);
 			}
 		}
 
@@ -721,13 +823,20 @@ ReadNext:
 
 		if (!isSnapshotAny && !AppendOnlyVisimap_IsVisible(&scan->visibilityMap, &aoTupleId))
 		{
+			/*
+			 * The tuple is invisible.
+			 * In `analyze`, we can simply return false
+			 */
+			if ((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) != 0)
+				return false;
+
 			rowNum = INT64CONST(-1);
 			goto ReadNext;
 		}
 		scan->cdb_fake_ctid = *((ItemPointer) &aoTupleId);
 
-		TupSetVirtualTupleNValid(slot, ncol);
-		slot_set_ctid(slot, &(scan->cdb_fake_ctid));
+		slot->tts_nvalid = natts;
+		slot->tts_tid = scan->cdb_fake_ctid;
 		return true;
 	}
 
@@ -755,13 +864,14 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 	desc->ds = (DatumStreamWrite **) palloc0(sizeof(DatumStreamWrite *) * nvp);
 
 	open_ds_write(desc->aoi_rel, desc->ds, tupdesc,
-				  desc->aoi_rel->rd_appendonly->checksum);
+				  desc->checksum);
 
 	/* Now open seg info file and get eof mark. */
 	seginfo = GetAOCSFileSegInfo(desc->aoi_rel,
 								 desc->appendOnlyMetaDataSnapshot,
 								 desc->cur_segno,
 								 true);
+
 	desc->fsInfo = seginfo;
 
 	/* Never insert into a segment that is awaiting a drop */
@@ -810,8 +920,9 @@ SetBlockFirstRowNums(DatumStreamWrite **datumStreams,
 
 
 AOCSInsertDesc
-aocs_insert_init(Relation rel, int segno, bool update_mode)
+aocs_insert_init(Relation rel, int segno)
 {
+    NameData    nd;
 	AOCSInsertDesc desc;
 	TupleDesc	tupleDesc;
 	int64		firstSequence = 0;
@@ -829,11 +940,19 @@ aocs_insert_init(Relation rel, int segno, bool update_mode)
 
 	Assert(segno >= 0);
 	desc->cur_segno = segno;
-	desc->update_mode = update_mode;
 
-	desc->compLevel = rel->rd_appendonly->compresslevel;
-	desc->compType = NameStr(rel->rd_appendonly->compresstype);
-	desc->blocksz = rel->rd_appendonly->blocksize;
+    GetAppendOnlyEntryAttributes(rel->rd_id,
+                                 &desc->blocksz,
+                                 NULL,
+                                 (int16 *)&desc->compLevel,
+                                 &desc->checksum,
+                                 &nd);
+    desc->compType = NameStr(nd);
+
+    GetAppendOnlyEntryAuxOids(rel->rd_id,
+                              desc->appendOnlyMetaDataSnapshot,
+                              &desc->segrelid, &desc->blkdirrelid, NULL,
+                              &desc->visimaprelid, &desc->visimapidxid);
 
 	OpenAOCSDatumStreams(desc);
 
@@ -846,7 +965,7 @@ aocs_insert_init(Relation rel, int segno, bool update_mode)
 	desc->numSequences = 0;
 
 	firstSequence =
-		GetFastSequences(rel->rd_appendonly->segrelid,
+		GetFastSequences(desc->segrelid,
 						 segno,
 						 desc->rowCount + 1,
 						 NUM_FAST_SEQUENCES);
@@ -874,16 +993,11 @@ aocs_insert_init(Relation rel, int segno, bool update_mode)
 }
 
 
-Oid
+void
 aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupleId)
 {
 	Relation	rel = idesc->aoi_rel;
 	int			i;
-
-	if (rel->rd_rel->relhasoids)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("append-only column-oriented tables do not support rows with OIDs")));
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
@@ -970,7 +1084,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 		int64		firstSequence;
 
 		firstSequence =
-			GetFastSequences(rel->rd_appendonly->segrelid,
+			GetFastSequences(idesc->segrelid,
 							 idesc->cur_segno,
 							 idesc->lastSequence + 1,
 							 NUM_FAST_SEQUENCES);
@@ -978,8 +1092,6 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 		Assert(firstSequence == idesc->lastSequence + 1);
 		idesc->numSequences = NUM_FAST_SEQUENCES;
 	}
-
-	return InvalidOid;
 }
 
 void
@@ -1067,8 +1179,8 @@ fetchFromCurrentBlock(AOCSFetchDesc aocsFetchDesc,
 
 	if (slot != NULL)
 	{
-		Datum	   *values = slot_get_values(slot);
-		bool	   *nulls = slot_get_isnull(slot);
+		Datum	   *values = slot->tts_values;
+		bool	   *nulls = slot->tts_isnull;
 		int			formatversion = datumStream->ao_read.formatVersion;
 
 		datumstreamread_get(datumStream, &(values[colno]), &(nulls[colno]));
@@ -1225,14 +1337,29 @@ aocs_fetch_init(Relation relation,
 
 	Assert(proj);
 
+    bool checksum;
+    Oid visimaprelid;
+    Oid visimapidxid;
+    GetAppendOnlyEntryAuxOids(relation->rd_id,
+                              appendOnlyMetaDataSnapshot,
+                              &aocsFetchDesc->segrelid, NULL, NULL,
+                              &visimaprelid, &visimapidxid);
+
+    GetAppendOnlyEntryAttributes(relation->rd_id,
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                 &checksum,
+                                 NULL);
+
 	aocsFetchDesc->segmentFileInfo =
 		GetAllAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot, &aocsFetchDesc->totalSegfiles);
 
 	/* Init the biggest row number of each aoseg */
 	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
 	{
-		aocsFetchDesc->lastSequence[segno] = ReadLastSequence(
-				aocsFetchDesc->relation->rd_appendonly->segrelid, segno);
+		aocsFetchDesc->lastSequence[segno] =
+			ReadLastSequence(aocsFetchDesc->segrelid, segno);
 	}
 
 	AppendOnlyBlockDirectory_Init_forSearch(
@@ -1277,7 +1404,7 @@ aocs_fetch_init(Relation relation,
 			appendStringInfo(&titleBuf, "Fetch from Append-Only Column-Oriented relation '%s', column #%d '%s'",
 							 RelationGetRelationName(relation),
 							 colno + 1,
-							 NameStr(tupleDesc->attrs[colno]->attname));
+							 NameStr(TupleDescAttr(tupleDesc, colno)->attname));
 
 			aocsFetchDesc->datumStreamFetchDesc[colno] = (DatumStreamFetchDesc)
 				palloc0(sizeof(DatumStreamFetchDescData));
@@ -1285,12 +1412,12 @@ aocs_fetch_init(Relation relation,
 			aocsFetchDesc->datumStreamFetchDesc[colno]->datumStream =
 				create_datumstreamread(ct,
 									   clvl,
-									   relation->rd_appendonly->checksum,
+									   checksum,
 									    /* safeFSWriteSize */ false,	/* UNDONE:Need to wire
 																		 * down pg_appendonly
 																		 * column */
 									   blksz,
-									   tupleDesc->attrs[colno],
+									   TupleDescAttr(tupleDesc, colno),
 									   relation->rd_rel->relname.data,
 									    /* title */ titleBuf.data);
 
@@ -1301,8 +1428,8 @@ aocs_fetch_init(Relation relation,
 	if (opts)
 		pfree(opts);
 	AppendOnlyVisimap_Init(&aocsFetchDesc->visibilityMap,
-						   relation->rd_appendonly->visimaprelid,
-						   relation->rd_appendonly->visimapidxid,
+						   visimaprelid,
+						   visimapidxid,
 						   AccessShareLock,
 						   appendOnlyMetaDataSnapshot);
 
@@ -1495,8 +1622,8 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 	{
 		if (slot != NULL)
 		{
-			TupSetVirtualTupleNValid(slot, colno);
-			slot_set_ctid(slot, (ItemPointer) aoTupleId);
+			slot->tts_nvalid = colno;
+			slot->tts_tid = *(ItemPointer)(aoTupleId);
 		}
 	}
 	else
@@ -1566,13 +1693,19 @@ typedef struct AOCSUpdateDescData
 AOCSUpdateDesc
 aocs_update_init(Relation rel, int segno)
 {
+	Oid			visimaprelid;
+	Oid			visimapidxid;
 	AOCSUpdateDesc desc = (AOCSUpdateDesc) palloc0(sizeof(AOCSUpdateDescData));
 
-	desc->insertDesc = aocs_insert_init(rel, segno, true);
+	desc->insertDesc = aocs_insert_init(rel, segno);
 
+    GetAppendOnlyEntryAuxOids(rel->rd_id,
+                              desc->insertDesc->appendOnlyMetaDataSnapshot,
+                              NULL, NULL, NULL,
+                              &visimaprelid, &visimapidxid);
 	AppendOnlyVisimap_Init(&desc->visibilityMap,
-						   rel->rd_appendonly->visimaprelid,
-						   rel->rd_appendonly->visimapidxid,
+						   visimaprelid,
+						   visimapidxid,
 						   RowExclusiveLock,
 						   desc->insertDesc->appendOnlyMetaDataSnapshot);
 
@@ -1598,12 +1731,11 @@ aocs_update_finish(AOCSUpdateDesc desc)
 	pfree(desc);
 }
 
-HTSU_Result
+TM_Result
 aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
 			AOTupleId *oldTupleId, AOTupleId *newTupleId)
 {
-	Oid oid;
-	HTSU_Result result;
+	TM_Result result;
 
 	Assert(desc);
 	Assert(oldTupleId);
@@ -1619,14 +1751,13 @@ aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
 #endif
 
 	result = AppendOnlyVisimapDelete_Hide(&desc->visiMapDelete, oldTupleId);
-	if (result != HeapTupleMayBeUpdated)
+	if (result != TM_Ok)
 		return result;
 
 	slot_getallattrs(slot);
-	oid = aocs_insert_values(desc->insertDesc,
-							 slot_get_values(slot), slot_get_isnull(slot),
-							 newTupleId);
-	(void) oid;					/* ignore the oid value */
+	aocs_insert_values(desc->insertDesc,
+					   slot->tts_values, slot->tts_isnull,
+					   newTupleId);
 
 	return result;
 }
@@ -1671,15 +1802,24 @@ aocs_delete_init(Relation rel)
 	/*
 	 * Get the pg_appendonly information
 	 */
+	Oid visimaprelid;
+	Oid visimapidxid;
 	AOCSDeleteDesc aoDeleteDesc = palloc0(sizeof(AOCSDeleteDescData));
 
 	aoDeleteDesc->aod_rel = rel;
 
+    Snapshot snapshot = GetCatalogSnapshot(InvalidOid);
+
+    GetAppendOnlyEntryAuxOids(rel->rd_id,
+                              snapshot,
+                              NULL, NULL, NULL,
+                              &visimaprelid, &visimapidxid);
+
 	AppendOnlyVisimap_Init(&aoDeleteDesc->visibilityMap,
-						   rel->rd_appendonly->visimaprelid,
-						   rel->rd_appendonly->visimapidxid,
+						   visimaprelid,
+						   visimapidxid,
 						   RowExclusiveLock,
-						   GetCatalogSnapshot(InvalidOid));
+						   snapshot);
 
 	AppendOnlyVisimapDelete_Init(&aoDeleteDesc->visiMapDelete,
 								 &aoDeleteDesc->visibilityMap);
@@ -1698,7 +1838,7 @@ aocs_delete_finish(AOCSDeleteDesc aoDeleteDesc)
 	pfree(aoDeleteDesc);
 }
 
-HTSU_Result
+TM_Result
 aocs_delete(AOCSDeleteDesc aoDeleteDesc,
 			AOTupleId *aoTupleId)
 {
@@ -1734,7 +1874,12 @@ aocs_begin_headerscan(Relation rel, int colno)
 
 	Assert(opts[colno]);
 
-	ao_attr.checksum = rel->rd_appendonly->checksum;
+    GetAppendOnlyEntryAttributes(rel->rd_id,
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                 &ao_attr.checksum,
+                                 NULL);
 
 	/*
 	 * We are concerned with varblock headers only, not their content.
@@ -1809,6 +1954,7 @@ aocs_addcol_init(Relation rel,
 	int			i;
 	int			iattr;
 	StringInfoData titleBuf;
+	bool        checksum;
 
 	desc = palloc(sizeof(AOCSAddColumnDescData));
 	desc->num_newcols = num_newcols;
@@ -1823,10 +1969,17 @@ aocs_addcol_init(Relation rel,
 
 	desc->dsw = palloc(sizeof(DatumStreamWrite *) * desc->num_newcols);
 
+    GetAppendOnlyEntryAttributes(rel->rd_id,
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                 &checksum,
+                                 NULL);
+
 	iattr = rel->rd_att->natts - num_newcols;
 	for (i = 0; i < num_newcols; ++i, ++iattr)
 	{
-		Form_pg_attribute attr = rel->rd_att->attrs[iattr];
+		Form_pg_attribute attr = TupleDescAttr(rel->rd_att, iattr);
 
 		initStringInfo(&titleBuf);
 		appendStringInfo(&titleBuf, "ALTER TABLE ADD COLUMN new segfile");
@@ -1835,7 +1988,7 @@ aocs_addcol_init(Relation rel,
 		ct = opts[iattr]->compresstype;
 		clvl = opts[iattr]->compresslevel;
 		blksz = opts[iattr]->blocksize;
-		desc->dsw[i] = create_datumstreamwrite(ct, clvl, rel->rd_appendonly->checksum, 0, blksz /* safeFSWriteSize */ ,
+		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, 0, blksz /* safeFSWriteSize */ ,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
 											   RelationNeedsWAL(rel));

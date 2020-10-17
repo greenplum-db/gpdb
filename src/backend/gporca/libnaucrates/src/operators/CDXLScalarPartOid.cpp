@@ -28,14 +28,8 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLScalarPartOid::CDXLScalarPartOid
-	(
-	CMemoryPool *mp,
-	ULONG partitioning_level
-	)
-	:
-	CDXLScalar(mp),
-	m_partitioning_level(partitioning_level)
+CDXLScalarPartOid::CDXLScalarPartOid(CMemoryPool *mp, ULONG partitioning_level)
+	: CDXLScalar(mp), m_partitioning_level(partitioning_level)
 {
 }
 
@@ -76,18 +70,18 @@ CDXLScalarPartOid::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarPartOid::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode * // dxlnode
-	)
-	const
+CDXLScalarPartOid::SerializeToDXL(CXMLSerializer *xml_serializer,
+								  const CDXLNode *	// dxlnode
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenPartLevel), m_partitioning_level);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenPartLevel),
+								 m_partitioning_level);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -100,15 +94,12 @@ CDXLScalarPartOid::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarPartOid::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL // validate_children
-	)
-	const
+CDXLScalarPartOid::AssertValid(const CDXLNode *dxlnode,
+							   BOOL	 // validate_children
+) const
 {
 	GPOS_ASSERT(0 == dxlnode->Arity());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

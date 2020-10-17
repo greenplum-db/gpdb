@@ -17,8 +17,8 @@ dirty_buffers(PG_FUNCTION_ARGS)
 	MemoryContext		oldcontext;
 	List               *dirty_tags;
 	BufferTag          *tag;
-	AttrNumber          natts = 4; /* (RelFileNode, segno) */
 	AttrNumber          attno;
+#define natts 4 /* (RelFileNode, segno) */
 
 	if (SRF_IS_FIRSTCALL())
 	{
@@ -27,7 +27,7 @@ dirty_buffers(PG_FUNCTION_ARGS)
 
 		funcctx = SRF_FIRSTCALL_INIT();
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-		tupdesc = CreateTemplateTupleDesc(natts, false);
+		tupdesc = CreateTemplateTupleDesc(natts);
 		attno = 1;
 		TupleDescInitEntry(tupdesc, attno++, "tablespace", OIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, attno++, "database", OIDOID, -1, 0);

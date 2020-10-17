@@ -31,20 +31,16 @@ using namespace gpopt;
 //		Ctor - for pattern
 //
 //---------------------------------------------------------------------------
-CLogicalTVF::CLogicalTVF
-	(
-	CMemoryPool *mp
-	)
-	:
-	CLogical(mp),
-	m_func_mdid(NULL),
-	m_return_type_mdid(NULL),
-	m_pstr(NULL),
-	m_pdrgpcoldesc(NULL),
-	m_pdrgpcrOutput(NULL),
-	m_efs(IMDFunction::EfsImmutable),
-	m_efda(IMDFunction::EfdaNoSQL),
-	m_returns_set(true)
+CLogicalTVF::CLogicalTVF(CMemoryPool *mp)
+	: CLogical(mp),
+	  m_func_mdid(NULL),
+	  m_return_type_mdid(NULL),
+	  m_pstr(NULL),
+	  m_pdrgpcoldesc(NULL),
+	  m_pdrgpcrOutput(NULL),
+	  m_efs(IMDFunction::EfsImmutable),
+	  m_efda(IMDFunction::EfdaNoSQL),
+	  m_returns_set(true)
 {
 	m_fPattern = true;
 }
@@ -58,21 +54,15 @@ CLogicalTVF::CLogicalTVF
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalTVF::CLogicalTVF
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_func,
-	IMDId *mdid_return_type,
-	CWStringConst *str,
-	CColumnDescriptorArray *pdrgpcoldesc
-	)
-	:
-	CLogical(mp),
-	m_func_mdid(mdid_func),
-	m_return_type_mdid(mdid_return_type),
-	m_pstr(str),
-	m_pdrgpcoldesc(pdrgpcoldesc),
-	m_pdrgpcrOutput(NULL)
+CLogicalTVF::CLogicalTVF(CMemoryPool *mp, IMDId *mdid_func,
+						 IMDId *mdid_return_type, CWStringConst *str,
+						 CColumnDescriptorArray *pdrgpcoldesc)
+	: CLogical(mp),
+	  m_func_mdid(mdid_func),
+	  m_return_type_mdid(mdid_return_type),
+	  m_pstr(str),
+	  m_pdrgpcoldesc(pdrgpcoldesc),
+	  m_pdrgpcrOutput(NULL)
 {
 	GPOS_ASSERT(mdid_func->IsValid());
 	GPOS_ASSERT(mdid_return_type->IsValid());
@@ -98,22 +88,16 @@ CLogicalTVF::CLogicalTVF
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalTVF::CLogicalTVF
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_func,
-	IMDId *mdid_return_type,
-	CWStringConst *str,
-	CColumnDescriptorArray *pdrgpcoldesc,
-	CColRefArray *pdrgpcrOutput
-	)
-	:
-	CLogical(mp),
-	m_func_mdid(mdid_func),
-	m_return_type_mdid(mdid_return_type),
-	m_pstr(str),
-	m_pdrgpcoldesc(pdrgpcoldesc),
-	m_pdrgpcrOutput(pdrgpcrOutput)
+CLogicalTVF::CLogicalTVF(CMemoryPool *mp, IMDId *mdid_func,
+						 IMDId *mdid_return_type, CWStringConst *str,
+						 CColumnDescriptorArray *pdrgpcoldesc,
+						 CColRefArray *pdrgpcrOutput)
+	: CLogical(mp),
+	  m_func_mdid(mdid_func),
+	  m_return_type_mdid(mdid_return_type),
+	  m_pstr(str),
+	  m_pdrgpcoldesc(pdrgpcoldesc),
+	  m_pdrgpcrOutput(pdrgpcrOutput)
 {
 	GPOS_ASSERT(mdid_func->IsValid());
 	GPOS_ASSERT(mdid_return_type->IsValid());
@@ -158,13 +142,14 @@ ULONG
 CLogicalTVF::HashValue() const
 {
 	ULONG ulHash = gpos::CombineHashes(
-								COperator::HashValue(),
-								gpos::CombineHashes(
-										m_func_mdid->HashValue(),
-										gpos::CombineHashes(
-												m_return_type_mdid->HashValue(),
-												gpos::HashPtr<CColumnDescriptorArray>(m_pdrgpcoldesc))));
-	ulHash = gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
+		COperator::HashValue(),
+		gpos::CombineHashes(
+			m_func_mdid->HashValue(),
+			gpos::CombineHashes(
+				m_return_type_mdid->HashValue(),
+				gpos::HashPtr<CColumnDescriptorArray>(m_pdrgpcoldesc))));
+	ulHash =
+		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
 	return ulHash;
 }
 
@@ -177,11 +162,7 @@ CLogicalTVF::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CLogicalTVF::Matches
-	(
-	COperator *pop
-	)
-	const
+CLogicalTVF::Matches(COperator *pop) const
 {
 	if (pop->Eopid() != Eopid())
 	{
@@ -189,11 +170,11 @@ CLogicalTVF::Matches
 	}
 
 	CLogicalTVF *popTVF = CLogicalTVF::PopConvert(pop);
-		
+
 	return m_func_mdid->Equals(popTVF->FuncMdId()) &&
-			m_return_type_mdid->Equals(popTVF->ReturnTypeMdId()) &&
-			m_pdrgpcoldesc->Equals(popTVF->Pdrgpcoldesc()) &&
-			m_pdrgpcrOutput->Equals(popTVF->PdrgpcrOutput());
+		   m_return_type_mdid->Equals(popTVF->ReturnTypeMdId()) &&
+		   m_pdrgpcoldesc->Equals(popTVF->Pdrgpcoldesc()) &&
+		   m_pdrgpcrOutput->Equals(popTVF->PdrgpcrOutput());
 }
 
 //---------------------------------------------------------------------------
@@ -205,21 +186,20 @@ CLogicalTVF::Matches
 //
 //---------------------------------------------------------------------------
 COperator *
-CLogicalTVF::PopCopyWithRemappedColumns
-	(
-	CMemoryPool *mp,
-	UlongToColRefMap *colref_mapping,
-	BOOL must_exist
-	)
+CLogicalTVF::PopCopyWithRemappedColumns(CMemoryPool *mp,
+										UlongToColRefMap *colref_mapping,
+										BOOL must_exist)
 {
 	CColRefArray *pdrgpcrOutput = NULL;
 	if (must_exist)
 	{
-		pdrgpcrOutput = CUtils::PdrgpcrRemapAndCreate(mp, m_pdrgpcrOutput, colref_mapping);
+		pdrgpcrOutput =
+			CUtils::PdrgpcrRemapAndCreate(mp, m_pdrgpcrOutput, colref_mapping);
 	}
 	else
 	{
-		pdrgpcrOutput = CUtils::PdrgpcrRemap(mp, m_pdrgpcrOutput, colref_mapping, must_exist);
+		pdrgpcrOutput = CUtils::PdrgpcrRemap(mp, m_pdrgpcrOutput,
+											 colref_mapping, must_exist);
 	}
 
 	CWStringConst *str = GPOS_NEW(mp) CWStringConst(m_pstr->GetBuffer());
@@ -227,7 +207,8 @@ CLogicalTVF::PopCopyWithRemappedColumns
 	m_return_type_mdid->AddRef();
 	m_pdrgpcoldesc->AddRef();
 
-	return GPOS_NEW(mp) CLogicalTVF(mp, m_func_mdid, m_return_type_mdid, str, m_pdrgpcoldesc, pdrgpcrOutput);
+	return GPOS_NEW(mp) CLogicalTVF(mp, m_func_mdid, m_return_type_mdid, str,
+									m_pdrgpcoldesc, pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -239,11 +220,9 @@ CLogicalTVF::PopCopyWithRemappedColumns
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CLogicalTVF::DeriveOutputColumns
-	(
-	CMemoryPool *mp,
-	CExpressionHandle & // exprhdl
-	)
+CLogicalTVF::DeriveOutputColumns(CMemoryPool *mp,
+								 CExpressionHandle &  // exprhdl
+)
 {
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 	pcrs->Include(m_pdrgpcrOutput);
@@ -260,15 +239,12 @@ CLogicalTVF::DeriveOutputColumns
 //
 //---------------------------------------------------------------------------
 CFunctionProp *
-CLogicalTVF::DeriveFunctionProperties
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalTVF::DeriveFunctionProperties(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl) const
 {
 	BOOL fVolatileScan = (IMDFunction::EfsVolatile == m_efs);
-	return PfpDeriveFromChildren(mp, exprhdl, m_efs, m_efda, fVolatileScan, true /*fScan*/);
+	return PfpDeriveFromChildren(mp, exprhdl, m_efs, m_efda, fVolatileScan,
+								 true /*fScan*/);
 }
 
 //---------------------------------------------------------------------------
@@ -294,11 +270,7 @@ CLogicalTVF::FInputOrderSensitive() const
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalTVF::PxfsCandidates
-	(
-	CMemoryPool *mp
-	) 
-	const
+CLogicalTVF::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 
@@ -317,12 +289,9 @@ CLogicalTVF::PxfsCandidates
 //
 //---------------------------------------------------------------------------
 CMaxCard
-CLogicalTVF::DeriveMaxCard
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle & // exprhdl
-	)
-	const
+CLogicalTVF::DeriveMaxCard(CMemoryPool *,		// mp
+						   CExpressionHandle &	// exprhdl
+) const
 {
 	if (m_returns_set)
 	{
@@ -343,13 +312,9 @@ CLogicalTVF::DeriveMaxCard
 //---------------------------------------------------------------------------
 
 IStatistics *
-CLogicalTVF::PstatsDerive
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	IStatisticsArray * // stats_ctxt
-	)
-	const
+CLogicalTVF::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						  IStatisticsArray *  // stats_ctxt
+) const
 {
 	CDouble rows(1.0);
 	if (m_returns_set)
@@ -369,11 +334,7 @@ CLogicalTVF::PstatsDerive
 //
 //---------------------------------------------------------------------------
 IOstream &
-CLogicalTVF::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CLogicalTVF::OsPrint(IOstream &os) const
 {
 	if (m_fPattern)
 	{
@@ -383,9 +344,8 @@ CLogicalTVF::OsPrint
 	os << "Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "] ";
-		
+
 	return os;
 }
 
 // EOF
-

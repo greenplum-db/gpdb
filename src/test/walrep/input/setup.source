@@ -31,8 +31,8 @@ BEGIN
 	myseg := gp_execution_segment();
 	startpoint := startpoints[myseg + 1];
 	select 'port=' || setting INTO port from pg_settings where name = 'port';
-	RAISE DEBUG 'port %, startpoint % current_xlog_location %',
-	port, startpoint, pg_current_xlog_location();
+	RAISE DEBUG 'port %, startpoint % current_wal_lsn %',
+	port, startpoint, pg_current_wal_lsn();
 
 	RETURN QUERY
 	SELECT gp_execution_segment(), pg.oid, pg.relname, upper('0/' || to_hex(t.xrecoff)), t.record_type, 

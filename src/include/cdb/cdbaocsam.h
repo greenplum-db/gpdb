@@ -17,6 +17,7 @@
 
 #include "access/relscan.h"
 #include "access/sdir.h"
+#include "access/tableam.h"
 #include "access/tupmacs.h"
 #include "access/xlogutils.h"
 #include "access/appendonlytid.h"
@@ -25,12 +26,13 @@
 #include "nodes/primnodes.h"
 #include "storage/block.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "cdb/cdbappendonlystoragelayer.h"
 #include "cdb/cdbappendonlystorageread.h"
 #include "cdb/cdbappendonlystoragewrite.h"
 #include "utils/datumstream.h"
+#include "nodes/execnodes.h"
 
 /*
  * AOCSInsertDescData is used for inserting data into append-only columnar
@@ -56,64 +58,117 @@ typedef struct AOCSInsertDescData
 	char *compType;
 	int32 compLevel;
 	int32 blocksz;
+	bool  checksum;
 
+    Oid         segrelid;
+    Oid         blkdirrelid;
+    Oid         visimaprelid;
+    Oid         visimapidxid;
 	struct DatumStreamWrite **ds;
 
 	AppendOnlyBlockDirectory blockDirectory;
-
-	/**
-	 * When initialized in update mode, the insert is really part of
-	 * an AO update.
-	 * Certain statistics are then counted differently.
-	 */ 
-	bool update_mode;
 } AOCSInsertDescData;
 
 typedef AOCSInsertDescData *AOCSInsertDesc;
 
 /*
- * used for scan of append only relations using BufferedRead and VarBlocks
+ * Scan descriptors
+ */
+
+/*
+ * AOCS relations do not have a direct access to TID's. In order to scan via
+ * TID's the blockdirectory is used and a distinct scan descriptor that is
+ * closer to an index scan than a relation scan is needed. This is different
+ * from heap relations where the same descriptor is used for all scans.
+ *
+ * Likewise the tableam API always expects the same TableScanDescData extended
+ * structure to be used for all scans. However, for bitmapheapscans on AOCS
+ * relations, a distinct descriptor is needed and a different method to
+ * initialize it is used, (table_beginscan_bm_ecs).
+ *
+ * This enum is used by the aocsam_handler to distiguish between the different
+ * TableScanDescData structures internaly in the aocsam_handler.
+ */
+enum AOCSScanDescIdentifier
+{
+	AOCSSCANDESCDATA,		/* public */
+	AOCSBITMAPSCANDATA		/* am private */
+};
+
+/*
+ * Used for scan of appendoptimized column oriented relations, should be used in
+ * the tableam api related code and under it.
  */
 typedef struct AOCSScanDescData
 {
-	/* scan parameters */
-	Relation	aos_rel;			/* target relation descriptor */
-	Snapshot	appendOnlyMetaDataSnapshot;
+	TableScanDescData rs_base;	/* AM independent part of the descriptor */
 
-	/*
-	 * Snapshot to use for non-metadata operations.
-	 * Usually snapshot = appendOnlyMetaDataSnapshot, but they
-	 * differ e.g. if gp_select_invisible is set.
-	 */ 
-	Snapshot    snapshot;
-
-	/* tuple descriptor of table to scan.
-	 *  Code should use this rather than aos_rel->rd_att,
-	 *  as THEY MAY BE DIFFERENT.
-	 *  See code in aocsam.c's aocs_beginscan for more info
-	 */
-	TupleDesc   relationTupleDesc;	
-
-	Index aos_scanrelid; /* index */
-
-	int total_seg;
-	int cur_seg;
-
-	char *compType;
-	int32 compLevel;
-	int32 blocksz;
-
-	struct AOCSFileSegInfo **seginfo;
-	struct DatumStreamRead **ds;
-
-	/* Column numbers (starting from 0) of columns we need to fetch */
-	int		   *proj_atts;
-	int			num_proj_atts;
+	/* AM dependant part of the descriptor */
+	enum AOCSScanDescIdentifier descIdentifier;
 
 	/* synthetic system attributes */
 	ItemPointerData cdb_fake_ctid;
 	int64 total_row;
 	int64 cur_seg_row;
+
+	/*
+	 * Only used by `analyze`
+	 */
+	int64		nextTupleId;
+	int64		targetTupleId;
+
+	/*
+	 * Part of the struct to be used only inside aocsam.c
+	 */
+
+	/*
+	 * Snapshot to use for metadata operations.
+	 * Usually snapshot = appendOnlyMetaDataSnapshot, but they
+	 * differ e.g. if gp_select_invisible is set.
+	 */ 
+	Snapshot	appendOnlyMetaDataSnapshot;
+
+	/*
+	 * Anonymous struct containing column level informations. In AOCS relations,
+	 * it is possible to only scan a subset of the columns. That subset is
+	 * recorderd in the proj_atts array. If all the columns are required, then
+	 * is populated from the relation's tuple descriptor.
+	 *
+	 * The tuple descriptor for the scan can be different from the tuple
+	 * descriptor of the relation as held in rs_base. Such a scenario occurs
+	 * during some ALTER TABLE operations. In all cases, it is the caller's
+	 * responsibility to provide a valid tuple descriptor for the scan. It will
+	 * get acquired from the slot.
+	 *
+	 * The proj_atts array if empty, and the datumstreams, will get initialized in
+	 * relation to the tuple descriptor, when it becomes available.
+	 */
+	struct {
+		/*
+		 * Used during lazy initialization since at that moment, the context is the
+		 * per tuple context, we need to keep a reference to the context used in
+		 * begin_scan
+		 */
+		MemoryContext	scanCtx;
+
+		TupleDesc	relationTupleDesc;
+
+		/* Column numbers (zero based) of columns we need to fetch */
+		AttrNumber		   *proj_atts;
+		AttrNumber			num_proj_atts;
+
+		struct DatumStreamRead **ds;
+	} columnScanInfo;
+
+	struct AOCSFileSegInfo **seginfo;
+	int32					 total_seg;
+	int32					 cur_seg;
+
+	/*
+	 * The only relation wide Storage Option, the rest are aquired in a per
+	 * column basis and there is no need to keep track of.
+	 */
+	bool checksum;
 
 	/*
 	 * The block directory info.
@@ -123,10 +178,8 @@ typedef struct AOCSScanDescData
 	 * scanning.
 	 */
 	AppendOnlyBlockDirectory *blockDirectory;
-
 	AppendOnlyVisimap visibilityMap;
-
-}	AOCSScanDescData;
+} AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;
 
@@ -174,12 +227,36 @@ typedef struct AOCSFetchDescData
 
 	AppendOnlyVisimap visibilityMap;
 
+	Oid segrelid;
 } AOCSFetchDescData;
 
 typedef AOCSFetchDescData *AOCSFetchDesc;
 
 typedef struct AOCSUpdateDescData *AOCSUpdateDesc;
 typedef struct AOCSDeleteDescData *AOCSDeleteDesc;
+
+/*
+ * Descriptor for fetches from table via an index.
+ */
+typedef struct IndexFetchAOCOData
+{
+	IndexFetchTableData xs_base;	/* AM independent part of the descriptor */
+
+	AOCSFetchDesc       aocofetch;
+
+	bool                *proj;
+} IndexFetchAOCOData;
+
+/*
+ * GPDB_12_MERGE_FIXME:
+ * Descriptor for fetches from table via bitmap. In upstream the code goes
+ * through table_beginscan() and it should be the same struct in all cases.
+ * However in GPDB extra info is needed which should not be initialized or
+ * computed for all scan calls. A new method has been added (with a MERGE_FIXME)
+ * which is only used for bitmap scans. Take advantage of it and create a new
+ * struct to contain only the information needed. 
+ */
+
 
 typedef struct AOCSHeaderScanDescData
 {
@@ -208,33 +285,26 @@ typedef struct AOCSAddColumnDescData
 typedef AOCSAddColumnDescData *AOCSAddColumnDesc;
 
 /* ----------------
- *		function prototypes for appendonly access method
+ *		function prototypes for appendoptimized columnar access method
  * ----------------
  */
 
 extern AOCSScanDesc aocs_beginscan(Relation relation, Snapshot snapshot,
-		Snapshot appendOnlyMetaDataSnapshot, TupleDesc relationTupleDesc, bool *proj);
+								   bool *proj, uint32 flags);
 extern AOCSScanDesc aocs_beginrangescan(Relation relation, Snapshot snapshot,
-		Snapshot appendOnlyMetaDataSnapshot, 
-		int *segfile_no_arr, int segfile_count,
-	TupleDesc relationTupleDesc, bool *proj);
+										Snapshot appendOnlyMetaDataSnapshot,
+										int *segfile_no_arr, int segfile_count);
 
 extern void aocs_rescan(AOCSScanDesc scan);
 extern void aocs_endscan(AOCSScanDesc scan);
 
 extern bool aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot);
-extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno, bool update_mode);
-extern Oid aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupleId);
-static inline Oid aocs_insert(AOCSInsertDesc idesc, TupleTableSlot *slot)
+extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno);
+extern void aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupleId);
+static inline void aocs_insert(AOCSInsertDesc idesc, TupleTableSlot *slot)
 {
-	Oid oid;
-	AOTupleId aotid;
-
 	slot_getallattrs(slot);
-	oid = aocs_insert_values(idesc, slot_get_values(slot), slot_get_isnull(slot), &aotid);
-	slot_set_ctid(slot, (ItemPointer)&aotid);
-
-	return oid;
+	aocs_insert_values(idesc, slot->tts_values, slot->tts_isnull, (AOTupleId *) &slot->tts_tid);
 }
 extern void aocs_insert_finish(AOCSInsertDesc idesc);
 extern AOCSFetchDesc aocs_fetch_init(Relation relation,
@@ -248,11 +318,11 @@ extern void aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc);
 
 extern AOCSUpdateDesc aocs_update_init(Relation rel, int segno);
 extern void aocs_update_finish(AOCSUpdateDesc desc);
-extern HTSU_Result aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
+extern TM_Result aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
 			AOTupleId *oldTupleId, AOTupleId *newTupleId);
 
 extern AOCSDeleteDesc aocs_delete_init(Relation rel);
-extern HTSU_Result aocs_delete(AOCSDeleteDesc desc, 
+extern TM_Result aocs_delete(AOCSDeleteDesc desc, 
 		AOTupleId *aoTupleId);
 extern void aocs_delete_finish(AOCSDeleteDesc desc);
 
@@ -277,4 +347,8 @@ extern void aocs_addcol_emptyvpe(
 		int32 nseg, int num_newcols);
 extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
 		int64 firstRowNum);
+
+extern void aoco_dml_init(Relation relation, CmdType operation);
+extern void aoco_dml_finish(Relation relation, CmdType operation);
+
 #endif   /* AOCSAM_H */

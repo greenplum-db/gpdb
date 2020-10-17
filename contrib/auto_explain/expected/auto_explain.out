@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/^LOG.*\"Feature/
+-- s/^LOG.*\"Feature/\"Feature/
+-- end_matchsubs
 CREATE SCHEMA auto_explain_test;
 CREATE TABLE auto_explain_test.t1(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

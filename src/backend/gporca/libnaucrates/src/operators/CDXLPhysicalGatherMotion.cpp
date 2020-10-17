@@ -26,12 +26,8 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalGatherMotion::CDXLPhysicalGatherMotion
-	(
-	CMemoryPool *mp
-	)
-	:
-	CDXLPhysicalMotion(mp)
+CDXLPhysicalGatherMotion::CDXLPhysicalGatherMotion(CMemoryPool *mp)
+	: CDXLPhysicalMotion(mp)
 {
 }
 
@@ -89,26 +85,24 @@ CDXLPhysicalGatherMotion::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalGatherMotion::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLPhysicalGatherMotion::SerializeToDXL(CXMLSerializer *xml_serializer,
+										 const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	
+
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+
 	SerializeSegmentInfoToDXL(xml_serializer);
-	
+
 	// serialize properties
 	node->SerializePropertiesToDXL(xml_serializer);
-	
+
 	// serialize children
 	node->SerializeChildrenToDXL(xml_serializer);
-	
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);		
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -117,15 +111,12 @@ CDXLPhysicalGatherMotion::SerializeToDXL
 //		CDXLPhysicalGatherMotion::AssertValid
 //
 //	@doc:
-//		Checks whether operator node is well-structured 
+//		Checks whether operator node is well-structured
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalGatherMotion::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) const
+CDXLPhysicalGatherMotion::AssertValid(const CDXLNode *node,
+									  BOOL validate_children) const
 {
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(node, validate_children);
@@ -135,15 +126,17 @@ CDXLPhysicalGatherMotion::AssertValid
 	GPOS_ASSERT(1 == m_output_segids_array->Size());
 
 	GPOS_ASSERT(EdxlgmIndexSentinel == node->Arity());
-	
+
 	CDXLNode *child_dxlnode = (*node)[EdxlgmIndexChild];
-	GPOS_ASSERT(EdxloptypePhysical == child_dxlnode->GetOperator()->GetDXLOperatorType());
-	
+	GPOS_ASSERT(EdxloptypePhysical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
+
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

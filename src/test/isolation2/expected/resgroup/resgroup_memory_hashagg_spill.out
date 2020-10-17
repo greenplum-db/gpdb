@@ -8,12 +8,12 @@ set search_path to hashagg_spill;
 SET
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 CREATE
 -- end_ignore
 
 -- set workfile is created to true if all segment did it.
-create or replace function hashagg_spill.is_workfile_created(explain_query text) returns setof int as $$ import re query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;" rv = plpy.execute(query) nsegments = int(rv[0]['nsegments']) rv = plpy.execute(explain_query) search_text = 'Work_mem used' result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] if search_text.lower() in cur_line.lower(): p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)') m = p.match(cur_line) if not m: continue workfile_created = int(m.group(2)) cur_row = int(workfile_created == nsegments) result.append(cur_row) return result $$ language plpythonu;
+create or replace function hashagg_spill.is_workfile_created(explain_query text) returns setof int as $$ import re query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;" rv = plpy.execute(query) nsegments = int(rv[0]['nsegments']) rv = plpy.execute(explain_query) search_text = 'Work_mem used' result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] if search_text.lower() in cur_line.lower(): p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)') m = p.match(cur_line) if not m: continue workfile_created = int(m.group(2)) cur_row = int(workfile_created == nsegments) result.append(cur_row) return result $$ language plpython3u;
 CREATE
 
 create table testhagg (i1 int, i2 int, i3 int, i4 int);
@@ -76,7 +76,7 @@ reset all;
 RESET
 
 -- Returns the number of overflows from EXPLAIN ANALYZE output
-create or replace function hashagg_spill.num_hashagg_overflows(explain_query text) returns setof int as $$ import re query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;" rv = plpy.execute(query) rv = plpy.execute(explain_query) result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] p = re.compile('.+\((seg[\d]+).+ ([\d+]) overflows;') m = p.match(cur_line) if m: overflows = int(m.group(2)) result.append(overflows) return result $$ language plpythonu;
+create or replace function hashagg_spill.num_hashagg_overflows(explain_query text) returns setof int as $$ import re query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;" rv = plpy.execute(query) rv = plpy.execute(explain_query) result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] p = re.compile('.+\((seg[\d]+).+ ([\d+]) overflows;') m = p.match(cur_line) if m: overflows = int(m.group(2)) result.append(overflows) return result $$ language plpython3u;
 CREATE
 
 -- Test agg spilling scenarios

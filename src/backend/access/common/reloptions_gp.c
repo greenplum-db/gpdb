@@ -24,19 +24,20 @@
 #include "access/reloptions.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
+#include "commands/defrem.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/formatting.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
+#include "parser/analyze.h"
 
 /*
- * Confusingly, RELOPT_KIND_HEAP is also used for AO/CO tables. To reduce
- * the confusion in this file, use this macro to check for "heap or AO/CO
- * table".
+ * Helper macro used for validation
  */
-#define KIND_IS_RELATION(kind) (((kind) & RELOPT_KIND_HEAP) != 0)
+#define KIND_IS_APPENDOPTIMIZED(kind) (((kind) & RELOPT_KIND_APPENDOPTIMIZED) != 0)
 
 /*
  * GPDB reloptions specification.
@@ -46,18 +47,9 @@ static relopt_bool boolRelOpts_gp[] =
 {
 	{
 		{
-			SOPT_APPENDONLY,
-			"Append only storage parameter",
-			RELOPT_KIND_HEAP,
-			AccessExclusiveLock
-		},
-		AO_DEFAULT_APPENDONLY,
-	},
-	{
-		{
 			SOPT_CHECKSUM,
 			"Append table checksum",
-			RELOPT_KIND_HEAP,
+			RELOPT_KIND_APPENDOPTIMIZED,
 			AccessExclusiveLock
 		},
 		AO_DEFAULT_CHECKSUM
@@ -82,7 +74,7 @@ static relopt_int intRelOpts_gp[] =
 		{
 			SOPT_BLOCKSIZE,
 			"AO tables block size in bytes",
-			RELOPT_KIND_HEAP,
+			RELOPT_KIND_APPENDOPTIMIZED,
 			AccessExclusiveLock
 		},
 		AO_DEFAULT_BLOCKSIZE, MIN_APPENDONLY_BLOCK_SIZE, MAX_APPENDONLY_BLOCK_SIZE
@@ -91,7 +83,7 @@ static relopt_int intRelOpts_gp[] =
 		{
 			SOPT_COMPLEVEL,
 			"AO table compression level",
-			RELOPT_KIND_HEAP,
+			RELOPT_KIND_APPENDOPTIMIZED,
 			ShareUpdateExclusiveLock	/* since it applies only to later
 										 * inserts */
 		},
@@ -113,19 +105,10 @@ static relopt_string stringRelOpts_gp[] =
 		{
 			SOPT_COMPTYPE,
 			"AO tables compression type",
-			RELOPT_KIND_HEAP,
+			RELOPT_KIND_APPENDOPTIMIZED,
 			AccessExclusiveLock
 		},
 		0, true, NULL, ""
-	},
-	{
-		{
-			SOPT_ORIENTATION,
-			"AO tables orientation",
-			RELOPT_KIND_HEAP,
-			AccessExclusiveLock
-		},
-		0, false, NULL, ""
 	},
 	/* list terminator */
 	{{NULL}}
@@ -199,24 +182,12 @@ initialize_reloptions_gp(void)
 static StdRdOptions ao_storage_opts;
 static bool ao_storage_opts_changed = false;
 
-bool
-isDefaultAOCS(void)
-{
-	return ao_storage_opts.columnstore;
-}
-
-bool
-isDefaultAO(void)
-{
-	return ao_storage_opts.appendonly;
-}
-
 /*
  * Accumulate a new datum for one AO storage option.
  */
 static void
 accumAOStorageOpt(char *name, char *value,
-				  ArrayBuildState *astate, bool *foundAO, bool *aovalue)
+				  ArrayBuildState *astate)
 {
 	text	   *t;
 	bool		boolval;
@@ -227,35 +198,7 @@ accumAOStorageOpt(char *name, char *value,
 
 	initStringInfo(&buf);
 
-	/*
-	 * "appendoptimized" is a recognized alias for "appendonly", but it's a
-	 * thin alias in the sense that "appendonly" will be saved as the storage
-	 * option.
-	 */
-	if ((pg_strcasecmp(SOPT_APPENDONLY, name) == 0) ||
-		(pg_strcasecmp(SOPT_ALIAS_APPENDOPTIMIZED, name) == 0))
-	{
-		if (!parse_bool(value, &boolval))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid bool value \"%s\" for storage option \"%s\"",
-							value, name)));
-		/* "appendonly" option is explicitly specified. */
-		if (foundAO != NULL)
-			*foundAO = true;
-		if (aovalue != NULL)
-			*aovalue = boolval;
-
-		/*
-		 * Record value of "appendonly" option as true always.  Return the
-		 * value specified by user in aovalue.  Setting appendonly=true always
-		 * in the array of datums enables us to reuse default_reloptions() and
-		 * validateAppendOnlyRelOptions().  If validations are successful, we
-		 * keep the user specified value for appendonly.
-		 */
-		appendStringInfo(&buf, "%s=%s", SOPT_APPENDONLY, "true");
-	}
-	else if (pg_strcasecmp(SOPT_BLOCKSIZE, name) == 0)
+	if (pg_strcasecmp(SOPT_BLOCKSIZE, name) == 0)
 	{
 		if (!parse_int(value, &intval, 0 /* unit flags */ ,
 					   NULL /* hint message */ ))
@@ -288,23 +231,25 @@ accumAOStorageOpt(char *name, char *value,
 							value, name)));
 		appendStringInfo(&buf, "%s=%s", SOPT_CHECKSUM, boolval ? "true" : "false");
 	}
-	else if (pg_strcasecmp(SOPT_ORIENTATION, name) == 0)
+	else
 	{
-		if ((pg_strcasecmp(value, "row") != 0) &&
-			(pg_strcasecmp(value, "column") != 0))
+		/*
+		 * Provide a user friendly message in case that the options are
+		 * appendonly and its variants
+		 */
+		if (!pg_strcasecmp(name, "appendonly") ||
+			!pg_strcasecmp(name, "appendoptimized") ||
+			!pg_strcasecmp(name, "orientation"))
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid value \"%s\" for storage option \"%s\"",
-							value, name)));
+					 errmsg("invalid storage option \"%s\"", name),
+					 errhint("For table access methods use \"default_table_access_method\" instead.")));
 		}
-		appendStringInfo(&buf, "%s=%s", SOPT_ORIENTATION, value);
-	}
-	else
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid storage option \"%s\"", name)));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid storage option \"%s\"", name)));
 	}
 
 	t = cstring_to_text(buf.data);
@@ -322,13 +267,10 @@ accumAOStorageOpt(char *name, char *value,
 inline void
 resetAOStorageOpts(StdRdOptions *ao_opts)
 {
-	ao_opts->appendonly = AO_DEFAULT_APPENDONLY;
 	ao_opts->blocksize = AO_DEFAULT_BLOCKSIZE;
 	ao_opts->checksum = AO_DEFAULT_CHECKSUM;
-	ao_opts->columnstore = AO_DEFAULT_COLUMNSTORE;
 	ao_opts->compresslevel = AO_DEFAULT_COMPRESSLEVEL;
 	ao_opts->compresstype[0] = '\0';
-	ao_opts->orientation[0] = '\0';
 }
 
 /*
@@ -354,6 +296,8 @@ currentAOStorageOptions(void)
 void
 setDefaultAOStorageOpts(StdRdOptions *copy)
 {
+	Assert(copy);
+
 	memcpy(&ao_storage_opts, copy, sizeof(ao_storage_opts));
 	if (pg_strcasecmp(copy->compresstype, "none") == 0)
 	{
@@ -374,19 +318,19 @@ static int	setDefaultCompressionLevel(char *compresstype);
  * scanned.
  */
 Datum
-parseAOStorageOpts(const char *opts_str, bool *aovalue)
+parseAOStorageOpts(const char *opts_str)
 {
 	int			dims[1];
 	int			lbs[1];
 	Datum		result;
 	ArrayBuildState *astate;
 
-	bool		foundAO = false;
 	const char *cp;
 	const char *name_st = NULL;
 	const char *value_st = NULL;
 	char	   *name = NULL,
 			   *value = NULL;
+
 	enum state
 	{
 		/*
@@ -525,8 +469,7 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 					for (value_st = value; *value_st != '\0'; ++value_st)
 						*(char *) value_st = pg_tolower(*value_st);
 					Assert(name);
-					accumAOStorageOpt(name, value, astate,
-									  &foundAO, aovalue);
+					accumAOStorageOpt(name, value, astate);
 					pfree(name);
 					name = NULL;
 					pfree(value);
@@ -555,15 +498,6 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 	} while (*cp != '\0');
 	if (st != EOS)
 		elog(ERROR, "invalid value \"%s\" for GUC", opts_str);
-	if (!foundAO)
-	{
-		/*
-		 * Add "appendonly=true" datum if it was not explicitly specified by
-		 * user.  This is needed to validate the array of datums constructed
-		 * from user specified options.
-		 */
-		accumAOStorageOpt(SOPT_APPENDONLY, "true", astate, NULL, NULL);
-	}
 
 	lbs[0] = 1;
 	dims[0] = astate->nelems;
@@ -596,12 +530,10 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				nWithOpts = 0;
 	ArrayType  *withArr;
 	ArrayBuildState *astate = NULL;
-	bool		foundAO = false,
-				foundBlksz = false,
+	bool		foundBlksz = false,
 				foundComptype = false,
 				foundComplevel = false,
-				foundChecksum = false,
-				foundOrientation = false;
+				foundChecksum = false;
 
 	/*
 	 * withOpts must be parsed to see if an option was spcified in WITH()
@@ -632,20 +564,9 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 
 			/*
 			 * withDatums[i] may not be used directly.  It may be e.g.
-			 * "aPPendOnly=tRue".  Therefore we don't set it as reloptions as
+			 * "bLoCksiZe=3213".  Therefore we don't set it as reloptions as
 			 * is.
 			 */
-			soptLen = strlen(SOPT_APPENDONLY);
-			if (withLen > soptLen &&
-				pg_strncasecmp(strval, SOPT_APPENDONLY, soptLen) == 0)
-			{
-				foundAO = true;
-				d = CStringGetTextDatum(psprintf("%s=%s",
-												 SOPT_APPENDONLY,
-												 (opts->appendonly ? "true" : "false"))),
-				astate = accumArrayResult(astate, d, false, TEXTOID,
-										  CurrentMemoryContext);
-			}
 			soptLen = strlen(SOPT_BLOCKSIZE);
 			if (withLen > soptLen &&
 				pg_strncasecmp(strval, SOPT_BLOCKSIZE, soptLen) == 0)
@@ -695,17 +616,6 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
-			soptLen = strlen(SOPT_ORIENTATION);
-			if (withLen > soptLen &&
-				pg_strncasecmp(strval, SOPT_ORIENTATION, soptLen) == 0)
-			{
-				foundOrientation = true;
-				d = CStringGetTextDatum(psprintf("%s=%s",
-												 SOPT_ORIENTATION,
-												 (opts->columnstore ? "column" : "row")));
-				astate = accumArrayResult(astate, d, false, TEXTOID,
-										  CurrentMemoryContext);
-			}
 
 			/*
 			 * Record fillfactor only if it's specified in WITH clause.
@@ -724,15 +634,6 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		}
 	}
 
-	/* Include options that are not defaults and not already included. */
-	if ((opts->appendonly != AO_DEFAULT_APPENDONLY) && !foundAO)
-	{
-		d = CStringGetTextDatum(psprintf("%s=%s",
-										 SOPT_APPENDONLY,
-										 (opts->appendonly ? "true" : "false")));
-		astate = accumArrayResult(astate, d, false, TEXTOID,
-								  CurrentMemoryContext);
-	}
 	if ((opts->blocksize != AO_DEFAULT_BLOCKSIZE) && !foundBlksz)
 	{
 		d = CStringGetTextDatum(psprintf("%s=%d",
@@ -782,14 +683,6 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
 	}
-	if ((opts->columnstore != AO_DEFAULT_COLUMNSTORE) && !foundOrientation)
-	{
-		d = CStringGetTextDatum(psprintf("%s=%s",
-										 SOPT_ORIENTATION,
-										 (opts->columnstore ? "column" : "row")));
-		astate = accumArrayResult(astate, d, false, TEXTOID,
-								  CurrentMemoryContext);
-	}
 	return astate ?
 		makeArrayResult(astate, CurrentMemoryContext) :
 		PointerGetDatum(NULL);
@@ -802,12 +695,10 @@ validate_and_adjust_options(StdRdOptions *result,
 {
 	int			i;
 	relopt_value *fillfactor_opt;
-	relopt_value *appendonly_opt;
 	relopt_value *blocksize_opt;
 	relopt_value *comptype_opt;
 	relopt_value *complevel_opt;
 	relopt_value *checksum_opt;
-	relopt_value *orientation_opt;
 
 	/* fillfactor */
 	fillfactor_opt = get_option_set(options, num_options, SOPT_FILLFACTOR);
@@ -815,31 +706,15 @@ validate_and_adjust_options(StdRdOptions *result,
 	{
 		result->fillfactor = fillfactor_opt->values.int_val;
 	}
-	/* appendonly */
-	appendonly_opt = get_option_set(options, num_options, SOPT_APPENDONLY);
-	if (appendonly_opt != NULL)
-	{
-		if (!KIND_IS_RELATION(kind))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"appendonly\" in a non relation object is not supported")));
-		result->appendonly = appendonly_opt->values.bool_val;
-	}
 
 	/* blocksize */
 	blocksize_opt = get_option_set(options, num_options, SOPT_BLOCKSIZE);
 	if (blocksize_opt != NULL)
 	{
-		if (!KIND_IS_RELATION(kind) && validate)
+		if (!KIND_IS_APPENDOPTIMIZED(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"blocksize\" in a non relation object is not supported")));
-
-		if (!result->appendonly && validate)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"blocksize\" for base relation"),
-					 errhint("\"blocksize\" is only valid for Append Only relations, create an AO relation to use \"blocksize\".")));
 
 		result->blocksize = blocksize_opt->values.int_val;
 
@@ -862,16 +737,10 @@ validate_and_adjust_options(StdRdOptions *result,
 	comptype_opt = get_option_set(options, num_options, SOPT_COMPTYPE);
 	if (comptype_opt != NULL)
 	{
-		if (!KIND_IS_RELATION(kind) && validate)
+		if (!KIND_IS_APPENDOPTIMIZED(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"compresstype\" in a non relation object is not supported")));
-
-		if (!result->appendonly && validate)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"compresstype\" for base relation"),
-					 errhint("\"compresstype\" is only valid for Append Only relations, create an AO relation to use \"compresstype\".")));
 
 		if (!compresstype_is_valid(comptype_opt->values.string_val))
 			ereport(ERROR,
@@ -887,16 +756,10 @@ validate_and_adjust_options(StdRdOptions *result,
 	complevel_opt = get_option_set(options, num_options, SOPT_COMPLEVEL);
 	if (complevel_opt != NULL)
 	{
-		if (!KIND_IS_RELATION(kind) && validate)
+		if (!KIND_IS_APPENDOPTIMIZED(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"compresslevel\" in a non relation object is not supported")));
-
-		if (!result->appendonly && validate)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"compresslevel\" for base relation"),
-					 errhint("Compression only valid for Append Only relations, create an AO relation to use compression.")));
 
 		result->compresslevel = complevel_opt->values.int_val;
 
@@ -912,7 +775,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range (should be positive)",
+					 errmsg("compresslevel=%d is out of range (should be positive)",
 								result->compresslevel)));
 
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
@@ -1009,65 +872,19 @@ validate_and_adjust_options(StdRdOptions *result,
 	checksum_opt = get_option_set(options, num_options, SOPT_CHECKSUM);
 	if (checksum_opt != NULL)
 	{
-		if (!KIND_IS_RELATION(kind) && validate)
+		if (!KIND_IS_APPENDOPTIMIZED(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"checksum\" in a non relation object is not supported")));
 
-		if (!result->appendonly && validate)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"checksum\" for base relation"),
-					 errhint("\"checksum\" option only valid for Append Only relations, data checksum for heap relations are turned on at cluster creation.")));
 		result->checksum = checksum_opt->values.bool_val;
 	}
-	/* Disable checksum for heap relations. */
-	else if (result->appendonly == false)
-		result->checksum = false;
 
-	/* columnstore */
-	orientation_opt = get_option_set(options, num_options, SOPT_ORIENTATION);
-	if (orientation_opt != NULL)
+	if (result->compresstype[0] &&
+		result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
 	{
-		if (!KIND_IS_RELATION(kind) && validate)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"orientation\" in a non relation object is not supported")));
-
-		if (!result->appendonly && validate)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"orientation\" for base relation"),
-					 errhint("Table orientation only valid for Append Only relations, create an AO relation to use table orientation.")));
-
-		if (!(pg_strcasecmp(orientation_opt->values.string_val, "column") == 0 ||
-			  pg_strcasecmp(orientation_opt->values.string_val, "row") == 0) &&
-			validate)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid parameter value for \"orientation\": \"%s\"",
-							orientation_opt->values.string_val)));
-		}
-
-		result->columnstore = (pg_strcasecmp(orientation_opt->values.string_val, "column") == 0 ?
-							   true : false);
-
-		if (result->compresstype[0] &&
-			(pg_strcasecmp(result->compresstype, "rle_type") == 0) &&
-			!result->columnstore)
-		{
-			if (validate)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("%s cannot be used with Append Only relations row orientation",
-								result->compresstype)));
-		}
+		result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 	}
-
-	if (result->appendonly && result->compresstype[0])
-		if (result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
-			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 }
 
 void
@@ -1076,11 +893,8 @@ validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 {
 	if (validate &&
 		ao_storage_opts_changed &&
-		KIND_IS_RELATION(kind))
+		KIND_IS_APPENDOPTIMIZED(kind))
 	{
-		if (!(get_option_set(options, numrelopts, SOPT_APPENDONLY)))
-			result->appendonly = ao_storage_opts.appendonly;
-
 		if (!(get_option_set(options, numrelopts, SOPT_FILLFACTOR)))
 			result->fillfactor = ao_storage_opts.fillfactor;
 
@@ -1095,9 +909,6 @@ validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 
 		if (!(get_option_set(options, numrelopts, SOPT_CHECKSUM)))
 			result->checksum = ao_storage_opts.checksum;
-
-		if (!(get_option_set(options, numrelopts, SOPT_ORIENTATION)))
-			result->columnstore = ao_storage_opts.columnstore;
 	}
 
 	validate_and_adjust_options(result, options, numrelopts, kind, validate);
@@ -1110,8 +921,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	relopt_value *options;
 	int			num_options;
 
-	options = parseRelOptions(reloptions, validate, RELOPT_KIND_HEAP,
-							  &num_options);
+	options = parseRelOptions(reloptions, validate, kind, &num_options);
 
 	validate_and_adjust_options(result, options, num_options, kind, validate);
 	free_options_deep(options, num_options);
@@ -1123,39 +933,13 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
  *		Various checks for validity of appendonly relation rules.
  */
 void
-validateAppendOnlyRelOptions(bool ao,
-							 int blocksize,
+validateAppendOnlyRelOptions(int blocksize,
 							 int safewrite,
 							 int complevel,
 							 char *comptype,
 							 bool checksum,
-							 char relkind,
 							 bool co)
 {
-	if (relkind != RELKIND_RELATION  && relkind != RELKIND_MATVIEW)
-	{
-		if (ao)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("\"appendonly\" may only be specified for base relations")));
-
-		if (checksum)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("\"checksum\" may only be specified for base relations")));
-
-		if (comptype)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("\"compresstype\" may only be specified for base relations")));
-	}
-
-	/*
-	 * If this is not an appendonly relation, no point in going further.
-	 */
-	if (!ao)
-		return;
-
 	if (comptype &&
 		(pg_strcasecmp(comptype, "quicklz") == 0 ||
 		 pg_strcasecmp(comptype, "zlib") == 0 ||
@@ -1297,4 +1081,564 @@ get_option_set(relopt_value *options, int num_options, const char *opt_name)
 			return &options[i];
 	}
 	return NULL;
+}
+
+/* ------------------------------------------------------------------------
+ * Attribute Encoding specific functions
+ * ------------------------------------------------------------------------
+ */
+
+/*
+ * Add any missing encoding attributes (compresstype = none,
+ * blocksize=...).  The column specific encoding attributes supported
+ * today are compresstype, compresslevel and blocksize.  Refer to
+ * pg_compression.c for more info.
+ *
+ */
+static List *
+fillin_encoding(List *aocoColumnEncoding)
+{
+	bool foundCompressType = false;
+	bool foundCompressTypeNone = false;
+	char *cmplevel = NULL;
+	bool foundBlockSize = false;
+	char *arg;
+	List *retList = list_copy(aocoColumnEncoding);
+	ListCell *lc;
+	DefElem *el;
+	const StdRdOptions *ao_opts = currentAOStorageOptions();
+
+	foreach(lc, aocoColumnEncoding)
+	{
+		el = lfirst(lc);
+
+		if (pg_strcasecmp("compresstype", el->defname) == 0)
+		{
+			foundCompressType = true;
+			arg = defGetString(el);
+			if (pg_strcasecmp("none", arg) == 0)
+				foundCompressTypeNone = true;
+		}
+		else if (pg_strcasecmp("compresslevel", el->defname) == 0)
+		{
+			cmplevel = defGetString(el);
+		}
+		else if (pg_strcasecmp("blocksize", el->defname) == 0)
+			foundBlockSize = true;
+	}
+
+	if (foundCompressType == false && cmplevel == NULL)
+	{
+		/* No compression option specified, use current defaults. */
+		arg = ao_opts->compresstype[0] ?
+				pstrdup(ao_opts->compresstype) : "none";
+		el = makeDefElem("compresstype", (Node *) makeString(arg), -1);
+		retList = lappend(retList, el);
+		el = makeDefElem("compresslevel",
+						 (Node *) makeInteger(ao_opts->compresslevel),
+						 -1);
+		retList = lappend(retList, el);
+	}
+	else if (foundCompressType == false && cmplevel)
+	{
+		if (strcmp(cmplevel, "0") == 0)
+		{
+			/*
+			 * User wants to disable compression by specifying
+			 * compresslevel=0.
+			 */
+			el = makeDefElem("compresstype", (Node *) makeString("none"), -1);
+			retList = lappend(retList, el);
+		}
+		else
+		{
+			/*
+			 * User wants to enable compression by specifying non-zero
+			 * compresslevel.  Therefore, choose default compresstype
+			 * if configured, otherwise use zlib.
+			 */
+			if (ao_opts->compresstype[0] &&
+				strcmp(ao_opts->compresstype, "none") != 0)
+			{
+				arg = pstrdup(ao_opts->compresstype);
+			}
+			else
+			{
+				arg = AO_DEFAULT_COMPRESSTYPE;
+			}
+			el = makeDefElem("compresstype", (Node *) makeString(arg), -1);
+			retList = lappend(retList, el);
+		}
+	}
+	else if (foundCompressType && cmplevel == NULL)
+	{
+		if (foundCompressTypeNone)
+		{
+			/*
+			 * User wants to disable compression by specifying
+			 * compresstype=none.
+			 */
+			el = makeDefElem("compresslevel", (Node *) makeInteger(0), -1);
+			retList = lappend(retList, el);
+		}
+		else
+		{
+			/*
+			 * Valid compresstype specified.  Use default
+			 * compresslevel if it's non-zero, otherwise use 1.
+			 */
+			el = makeDefElem("compresslevel",
+							 (Node *) makeInteger(ao_opts->compresslevel > 0 ?
+												  ao_opts->compresslevel : 1),
+							 -1);
+			retList = lappend(retList, el);
+		}
+	}
+	if (foundBlockSize == false)
+	{
+		el = makeDefElem("blocksize", (Node *) makeInteger(ao_opts->blocksize), -1);
+		retList = lappend(retList, el);
+	}
+	return retList;
+}
+
+/*
+ * See if two encodings attempt to set the same parameters.
+ */
+static bool
+encodings_overlap(List *a, List *b)
+{
+	ListCell *lca;
+	foreach(lca, a)
+	{
+		ListCell *lcb;
+		DefElem *ela = lfirst(lca);
+
+		foreach(lcb, b)
+		{
+			DefElem *elb = lfirst(lcb);
+			if (pg_strcasecmp(ela->defname, elb->defname) == 0)
+				return true;
+		}
+	}
+	return false;
+}
+
+/*
+ * Validate the sanity of column reference storage clauses.
+ *
+ * 1. Ensure that we only refer to columns that exist.
+ * 2. Ensure that each column is referenced either zero times or once.
+ * 3. Ensure that the column reference storage clauses do not clash with the
+ * 	  gp_default_storage_options
+ */
+static void
+validateColumnStorageEncodingClauses(List *aocoColumnEncoding,
+									 List *tableElts)
+{
+	ListCell *lc;
+	struct HTAB *ht = NULL;
+	struct colent {
+		char colname[NAMEDATALEN];
+		int count;
+	} *ce = NULL;
+
+	/* Generate a hash table for all the columns */
+	foreach(lc, tableElts)
+	{
+		Node *n = lfirst(lc);
+
+		if (IsA(n, ColumnDef))
+		{
+			ColumnDef *c = (ColumnDef *)n;
+			char *colname;
+			bool found = false;
+			size_t n = NAMEDATALEN - 1 < strlen(c->colname) ?
+							NAMEDATALEN - 1 : strlen(c->colname);
+
+			colname = palloc0(NAMEDATALEN);
+			MemSet(colname, 0, NAMEDATALEN);
+			memcpy(colname, c->colname, n);
+			colname[n] = '\0';
+
+			if (!ht)
+			{
+				HASHCTL  cacheInfo;
+				int      cacheFlags;
+
+				memset(&cacheInfo, 0, sizeof(cacheInfo));
+				cacheInfo.keysize = NAMEDATALEN;
+				cacheInfo.entrysize = sizeof(*ce);
+				cacheFlags = HASH_ELEM;
+
+				ht = hash_create("column info cache",
+								 list_length(tableElts),
+								 &cacheInfo, cacheFlags);
+			}
+
+			ce = hash_search(ht, colname, HASH_ENTER, &found);
+
+			/*
+			 * The user specified a duplicate column name. We check duplicate
+			 * column names VERY late (under MergeAttributes(), which is called
+			 * by DefineRelation(). For the specific case here, it is safe to
+			 * call out that this is a duplicate. We don't need to delay until
+			 * we look at inheritance.
+			 */
+			if (found)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_DUPLICATE_COLUMN),
+						 errmsg("column \"%s\" duplicated",
+								colname)));
+			}
+			ce->count = 0;
+		}
+	}
+
+	/*
+	 * If the table has no columns -- usually in the partitioning case -- then
+	 * we can short circuit.
+	 */
+	if (!ht)
+		return;
+
+	/*
+	 * All column reference storage directives without the DEFAULT
+	 * clause should refer to real columns.
+	 */
+	foreach(lc, aocoColumnEncoding)
+	{
+		ColumnReferenceStorageDirective *c = lfirst(lc);
+
+		Assert(IsA(c, ColumnReferenceStorageDirective));
+
+		if (c->deflt)
+			continue;
+		else
+		{
+			bool found = false;
+			char colname[NAMEDATALEN];
+			size_t collen = strlen(c->column);
+			size_t n = NAMEDATALEN - 1 < collen ? NAMEDATALEN - 1 : collen;
+			MemSet(colname, 0, NAMEDATALEN);
+			memcpy(colname, c->column, n);
+			colname[n] = '\0';
+
+			ce = hash_search(ht, colname, HASH_FIND, &found);
+
+			if (!found)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("column \"%s\" does not exist", colname)));
+
+			ce->count++;
+
+			if (ce->count > 1)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("column \"%s\" referenced in more than one COLUMN ENCODING clause",
+								colname)));
+		}
+	}
+
+	hash_destroy(ht);
+
+	foreach(lc, aocoColumnEncoding)
+	{
+		ColumnReferenceStorageDirective *crsd = lfirst(lc);
+
+		Datum d = transformRelOptions(PointerGetDatum(NULL),
+									  crsd->encoding,
+									  NULL, NULL,
+									  true, false);
+		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(d,
+																	true,
+																	RELOPT_KIND_APPENDOPTIMIZED);
+
+		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
+									 gp_safefswritesize,
+									 stdRdOptions->compresslevel,
+									 stdRdOptions->compresstype,
+									 stdRdOptions->checksum,
+									 true);
+	}
+}
+
+/*
+ * Make a default column storage directive from a WITH clause
+ * Ignore options in the WITH clause that don't appear in
+ * storage_directives for column-level compression.
+ */
+List *
+form_default_storage_directive(List *enc)
+{
+	List *out = NIL;
+	ListCell *lc;
+
+	foreach(lc, enc)
+	{
+		DefElem *el = lfirst(lc);
+
+		if (!el->defname)
+			out = lappend(out, copyObject(el));
+
+		if (pg_strcasecmp("oids", el->defname) == 0)
+			continue;
+		if (pg_strcasecmp("fillfactor", el->defname) == 0)
+			continue;
+		if (pg_strcasecmp("tablename", el->defname) == 0)
+			continue;
+		/* checksum is not a column specific attribute. */
+		if (pg_strcasecmp("checksum", el->defname) == 0)
+			continue;
+		out = lappend(out, copyObject(el));
+	}
+	return out;
+}
+
+/*
+ * Transform and validate the actual encoding clauses.
+ *
+ * We need tell the underlying system that these are AO/CO tables too,
+ * hence the concatenation of the extra elements.
+ *
+ * If 'validate' is true, we validate that the optionsa are valid WITH options
+ * for an AO table. Otherwise, any unrecognized options are passed through as
+ * is.
+ */
+List *
+transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
+{
+	ListCell   *lc;
+	DefElem	   *dl;
+
+	foreach(lc, aocoColumnEncoding)
+	{
+		dl = (DefElem *) lfirst(lc);
+		if (pg_strncasecmp(dl->defname, SOPT_CHECKSUM, strlen(SOPT_CHECKSUM)) == 0)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("\"%s\" is not a column specific option",
+							SOPT_CHECKSUM)));
+		}
+	}
+
+	/* add defaults for missing values */
+	aocoColumnEncoding = fillin_encoding(aocoColumnEncoding);
+
+	/*
+	 * The following two statements validate that the encoding clause is well
+	 * formed.
+	 */
+	if (validate)
+	{
+		Datum		d;
+
+		d = transformRelOptions(PointerGetDatum(NULL),
+								aocoColumnEncoding,
+								NULL, NULL,
+								true, false);
+		(void) default_reloptions(d, true, RELOPT_KIND_APPENDOPTIMIZED);
+	}
+
+	return aocoColumnEncoding;
+}
+
+/*
+ * Find the column reference storage encoding clause for `column'.
+ *
+ * This is called by transformAttributeEncoding() in a loop but stenc should be
+ * quite small in practice.
+ */
+static ColumnReferenceStorageDirective *
+find_crsd(const char *column, List *stenc)
+{
+	ListCell *lc;
+
+	foreach(lc, stenc)
+	{
+		ColumnReferenceStorageDirective *c = lfirst(lc);
+
+		if (c->deflt == false && strcmp(column, c->column) == 0)
+			return c;
+	}
+	return NULL;
+}
+
+/*
+ * Parse and validate COLUMN <col> ENCODING ... directives.
+ *
+ * The 'columns', 'stenc' and 'taboptions' arguments are parts of the
+ * CREATE TABLE command:
+ *
+ * 'columns' - list of ColumnDefs
+ * 'stenc' - list of ColumnReferenceStorageDirectives
+ * 'withOptions' - list of WITH options
+ *
+ * ENCODING options can be attached to column definitions, like
+ * "mycolumn integer ENCODING ..."; these go into ColumnDefs. They
+ * can also be specified with the "COLUMN mycolumn ENCODING ..." syntax;
+ * they go into the ColumnReferenceStorageDirectives. And table-wide
+ * defaults can be given in the WITH clause.
+ *
+ * If any ENCODING clauses were given, *found_enc is set to true.
+ * That's a separate output argument, because the returned list will
+ * include defaults from the GUCs etc. even if no ENCODING clause was
+ * given in this CREATE TABLE command.
+ *
+ * This function is called for RELKIND_PARTITIONED_TABLE as well even if we
+ * don't store entries in pg_attribute_encoding for rootpartition. The reason
+ * is to transformAttributeEncoding for parent as need to use them later while
+ * creating partitions in GPDB legacy partitioning syntax. Hence, if
+ * rootpartition add to the list, only encoding elements specified in command,
+ * defaults based on GUCs and such are skipped. Each child partition would
+ * independently later run through this logic and that time add those GUC
+ * specific defaults if required. Reason to avoid adding defaults for
+ * rootpartition is need to first merge partition level user specified options
+ * and then need to add defaults only for remaining columns.
+ *
+ * NOTE: This is *not* performed during the parse analysis phase, like
+ * most transformation, but only later in DefineRelation(). This needs
+ * access to possible inherited columns, so it can only be done after
+ * expanding them.
+ *
+ * GPDB_12_AFTER_MERGE_FIXME:
+ *		Attempt to code, precedence, merging and access to possibly existing
+ *		encodings in this function, in a manner similar to
+ *		validateColumnStorageEncodingClauses(). Currently the whole transform,
+ *		merge, validate dance is happening both inside and outside this function
+ *		but not consistently in all cases. Look at CREATE and ALTER table for
+ *		specifics.
+ */
+List *
+transformAttributeEncoding(List *columns,
+						   List *stenc,
+						   List *withOptions,
+						   bool rootpartition,
+						   bool *found_enc)
+{
+	ListCell   *lc;
+	ColumnReferenceStorageDirective *deflt = NULL;
+	List	   *newenc = NIL;
+	List	   *tmpenc;
+
+	*found_enc = false;
+
+	validateColumnStorageEncodingClauses(stenc, columns);
+
+	/* get the default clause, if there is one. */
+	foreach(lc, stenc)
+	{
+		ColumnReferenceStorageDirective *c = lfirst(lc);
+		Assert(IsA(c, ColumnReferenceStorageDirective));
+
+		if (c->deflt)
+		{
+			/*
+			 * Some quick validation: there should only be one default
+			 * clause
+			 */
+			if (deflt)
+				elog(ERROR, "only one default column encoding may be specified");
+
+			deflt = copyObject(c);
+			deflt->encoding = transformStorageEncodingClause(deflt->encoding, true);
+
+			/*
+			 * The default encoding and the with clause better not
+			 * try and set the same options!
+			 */
+			if (encodings_overlap(withOptions, deflt->encoding))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("DEFAULT COLUMN ENCODING clause cannot override values set in WITH clause")));
+		}
+
+		*found_enc = true;
+	}
+
+	/*
+	 * If no default has been specified, we might create one out of the
+	 * WITH clause.
+	 */
+	tmpenc = form_default_storage_directive(withOptions);
+	if (tmpenc)
+	{
+		deflt = makeNode(ColumnReferenceStorageDirective);
+		deflt->deflt = true;
+		deflt->encoding = transformStorageEncodingClause(tmpenc, false);
+	}
+
+	/*
+	 * Loop over all columns. If a column has a column reference storage clause
+	 * -- i.e., COLUMN name ENCODING () -- apply that. Otherwise, apply the
+	 * default.
+	 */
+	foreach(lc, columns)
+	{
+		Node	   *elem = (Node *) lfirst(lc);
+		ColumnDef *d;
+		ColumnReferenceStorageDirective *c;
+		List *encoding = NIL;
+
+		/* GPDB_12_AFTER_MERGE_FIXME: can we have anything else here? This used to be an Insist */
+		if (!IsA(elem, ColumnDef))
+			continue;
+
+		d = (ColumnDef *) elem;
+
+		/*
+		 * Find a storage encoding for this column, in this order:
+		 *
+		 * 1. An explicit encoding clause in the ColumnDef
+		 * 2. A column reference storage directive for this column
+		 * 3. A default column encoding in the statement
+		 * 4. A default for the type.
+		 */
+		if (d->encoding)
+		{
+			encoding = transformStorageEncodingClause(d->encoding, true);
+			*found_enc = true;
+		}
+		else
+		{
+			ColumnReferenceStorageDirective *s = find_crsd(d->colname, stenc);
+
+			if (s)
+				encoding = transformStorageEncodingClause(s->encoding, true);
+			else
+			{
+				if (deflt)
+					encoding = copyObject(deflt->encoding);
+				else if (!rootpartition)
+				{
+					List	   *te;
+
+					if (d->typeName)
+						te = TypeNameGetStorageDirective(d->typeName);
+					else
+						te = NIL;
+
+					if (te)
+						encoding = copyObject(te);
+					else
+						encoding = default_column_encoding_clause(NULL);
+				}
+			}
+		}
+
+		if (encoding)
+		{
+			c = makeNode(ColumnReferenceStorageDirective);
+			c->column = pstrdup(d->colname);
+			c->encoding = encoding;
+
+			newenc = lappend(newenc, c);
+		}
+	}
+
+	Assert(rootpartition?true:list_length(newenc) == list_length(columns));
+	return newenc;
 }

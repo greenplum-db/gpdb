@@ -19,7 +19,7 @@ ERROR:  permission denied for schema test_schema_2
 LINE 1: CREATE TABLE test_schema_2.grant_test(a int) DISTRIBUTED BY ...
                      ^
 SELECT * FROM test_schema_1.abc; -- no permissions on table
-ERROR:  permission denied for relation abc
+ERROR:  permission denied for table abc
 SELECT * FROM test_schema_2.abc; -- no permissions on schema
 ERROR:  permission denied for schema test_schema_2
 LINE 1: SELECT * FROM test_schema_2.abc;
@@ -65,8 +65,8 @@ FROM gp_dist_random('pg_namespace') n1
   full outer join pg_namespace n2 on (n1.oid = n2.oid)
 WHERE n1.nspname != n2.nspname or n1.nspowner != n2.nspowner or
       n1.nspname is null or n2.nspname is null;
- nspname | nspowner | nspacl | nspname | nspowner | nspacl 
----------+----------+--------+---------+----------+--------
+ oid | nspname | nspowner | nspacl | oid | nspname | nspowner | nspacl 
+-----+---------+----------+--------+-----+---------+----------+--------
 (0 rows)
 
 -- DROP SCHEMA

@@ -4,16 +4,16 @@
  *
  * Routines corresponding to schema objects
  *
- * Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/sysattr.h"
+#include "access/table.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_database.h"
@@ -24,7 +24,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
-#include "utils/tqual.h"
+#include "utils/snapmgr.h"
 
 #include "sepgsql.h"
 
@@ -56,10 +56,10 @@ sepgsql_schema_post_create(Oid namespaceId)
 	 * handle special treatment on default security label; such as special
 	 * label on "pg_temp" schema.
 	 */
-	rel = heap_open(NamespaceRelationId, AccessShareLock);
+	rel = table_open(NamespaceRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey,
-				ObjectIdAttributeNumber,
+				Anum_pg_namespace_oid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(namespaceId));
 
@@ -67,7 +67,7 @@ sepgsql_schema_post_create(Oid namespaceId)
 							   SnapshotSelf, 1, &skey);
 	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "catalog lookup failed for namespace %u", namespaceId);
+		elog(ERROR, "could not find tuple for namespace %u", namespaceId);
 
 	nspForm = (Form_pg_namespace) GETSTRUCT(tuple);
 	nsp_name = NameStr(nspForm->nspname);
@@ -93,7 +93,7 @@ sepgsql_schema_post_create(Oid namespaceId)
 								  audit_name.data,
 								  true);
 	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	/*
 	 * Assign the default security label on a new procedure

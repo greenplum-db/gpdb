@@ -16,35 +16,29 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CEscapeMechanismTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CEscapeMechanismTest
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CEscapeMechanismTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CEscapeMechanismTest
+{
+private:
+	// counter used to mark last successful test
+	static gpos::ULONG m_ulEscapeMechanismTestCounter;
 
-			// counter used to mark last successful test
-			static
-			gpos::ULONG m_ulEscapeMechanismTestCounter;
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
 
-		public:
+	static gpos::GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
+};	// class CEscapeMechanismTest
+}  // namespace gpopt
 
-			static
-			gpos::GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CEscapeMechanismTest
-}
-
-#endif // !GPOPT_CEscapeMechanismTest_H
+#endif	// !GPOPT_CEscapeMechanismTest_H
 
 // EOF
-

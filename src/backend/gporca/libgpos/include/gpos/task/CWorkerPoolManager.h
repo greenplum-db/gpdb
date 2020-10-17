@@ -22,146 +22,139 @@
 #include "gpos/task/CTaskSchedulerFifo.h"
 #include "gpos/task/CWorker.h"
 
-#define GPOS_WORKERPOOL_HT_SIZE 			(1024)				// number of buckets in hash tables
-#define GPOS_WORKER_STACK_SIZE				(500 * 1024)		// max worker stack size
+#define GPOS_WORKERPOOL_HT_SIZE (1024)		 // number of buckets in hash tables
+#define GPOS_WORKER_STACK_SIZE (500 * 1024)	 // max worker stack size
 
 namespace gpos
 {
-	//------------------------------------------------------------------------
-	//	@class:
-	//		CWorkerPoolManager
-	//
-	//	@doc:
-	//		Singleton object to handle worker pool;
-	//		maintains WLS (worker local storage);
-	//		assigns tasks to workers;
-	//
-	//------------------------------------------------------------------------
-	class CWorkerPoolManager
-	{	
-		friend class CWorker;
-		friend class CAutoTaskProxy;
+//------------------------------------------------------------------------
+//	@class:
+//		CWorkerPoolManager
+//
+//	@doc:
+//		Singleton object to handle worker pool;
+//		maintains WLS (worker local storage);
+//		assigns tasks to workers;
+//
+//------------------------------------------------------------------------
+class CWorkerPoolManager
+{
+	friend class CWorker;
+	friend class CAutoTaskProxy;
 
-		private:
+private:
+	// response to worker scheduling request
+	enum EScheduleResponse
+	{
+		EsrExecTask,   // run assigned task
+		EsrWorkerExit  // clean up and exit
+	};
 
-			// response to worker scheduling request
-			enum EScheduleResponse
-			{
-				EsrExecTask,	// run assigned task
-				EsrWorkerExit		// clean up and exit
-			};
+	// memory pool
+	CMemoryPool *m_mp;
 
-			// memory pool
-			CMemoryPool *m_mp;
-		
-			// task scheduler
-			CTaskSchedulerFifo m_task_scheduler;
+	// task scheduler
+	CTaskSchedulerFifo m_task_scheduler;
 
-			// auto task proxy counter
-			ULONG_PTR m_auto_task_proxy_counter;
+	// auto task proxy counter
+	ULONG_PTR m_auto_task_proxy_counter;
 
-			// active flag
-			BOOL m_active;
+	// active flag
+	BOOL m_active;
 
-			// we only support a single worker now
-			CWorker *m_single_worker;
+	// we only support a single worker now
+	CWorker *m_single_worker;
 
-			// task storage
-			CSyncHashtable
-			<CTask, CTaskId> m_shtTS;
+	// task storage
+	CSyncHashtable<CTask, CTaskId> m_shtTS;
 
-			//-------------------------------------------------------------------
-			// Interface for CAutoTaskProxy
-			//-------------------------------------------------------------------
+	//-------------------------------------------------------------------
+	// Interface for CAutoTaskProxy
+	//-------------------------------------------------------------------
 
-			// add task to scheduler
-			void Schedule(CTask *task);
+	// add task to scheduler
+	void Schedule(CTask *task);
 
-			// increment AutoTaskProxy reference counter
-			void AddRef()
-			{
-				m_auto_task_proxy_counter++;
-			}
+	// increment AutoTaskProxy reference counter
+	void
+	AddRef()
+	{
+		m_auto_task_proxy_counter++;
+	}
 
-			// decrement AutoTaskProxy reference counter
-			void RemoveRef()
-			{
-				GPOS_ASSERT(m_auto_task_proxy_counter != 0 &&
-							"AutoTaskProxy counter decremented from 0");
-				m_auto_task_proxy_counter--;
-			}
+	// decrement AutoTaskProxy reference counter
+	void
+	RemoveRef()
+	{
+		GPOS_ASSERT(m_auto_task_proxy_counter != 0 &&
+					"AutoTaskProxy counter decremented from 0");
+		m_auto_task_proxy_counter--;
+	}
 
-			// insert task in table
-			void RegisterTask(CTask *task);
+	// insert task in table
+	void RegisterTask(CTask *task);
 
-			// remove task from table
-			CTask *RemoveTask(CTaskId tid);
+	// remove task from table
+	CTask *RemoveTask(CTaskId tid);
 
-			//-------------------------------------------------------------------
-			// Interface for CWorker
-			//-------------------------------------------------------------------
+	//-------------------------------------------------------------------
+	// Interface for CWorker
+	//-------------------------------------------------------------------
 
-			// insert worker in table
-			void RegisterWorker(CWorker *worker);
+	// insert worker in table
+	void RegisterWorker(CWorker *worker);
 
-			// remove worker from table
-			void RemoveWorker();
+	// remove worker from table
+	void RemoveWorker();
 
-			//-------------------------------------------------------------------
-			// Methods for internal use
-			//-------------------------------------------------------------------
+	//-------------------------------------------------------------------
+	// Methods for internal use
+	//-------------------------------------------------------------------
 
-			// no copy ctor
-			CWorkerPoolManager(const CWorkerPoolManager&);
+	// no copy ctor
+	CWorkerPoolManager(const CWorkerPoolManager &);
 
-			// private ctor
-			CWorkerPoolManager
-				(
-				CMemoryPool *mp
-				);
+	// private ctor
+	CWorkerPoolManager(CMemoryPool *mp);
 
-			// static singleton - global instance of worker pool manager
-			static CWorkerPoolManager *m_worker_pool_manager;
+	// static singleton - global instance of worker pool manager
+	static CWorkerPoolManager *m_worker_pool_manager;
 
-		public:
+public:
+	// lookup own worker
+	inline CWorker *
+	Self()
+	{
+		return m_single_worker;
+	}
 
-			// lookup own worker
-			inline
-			CWorker *Self()
-			{
-				return m_single_worker;
-			}
+	// dtor
+	~CWorkerPoolManager()
+	{
+		GPOS_ASSERT(NULL == m_worker_pool_manager &&
+					"Worker pool has not been shut down");
+	}
 
-			// dtor
-			~CWorkerPoolManager()
-			{
-				GPOS_ASSERT(NULL == m_worker_pool_manager &&
-						   "Worker pool has not been shut down");
-			}
+	// initialize worker pool manager
+	static GPOS_RESULT Init();
 
-			// initialize worker pool manager
-			static
-			GPOS_RESULT Init();
+	// de-init global instance
+	static void Shutdown();
 
-			// de-init global instance
-			static
-			void Shutdown();
+	// global accessor
+	inline static CWorkerPoolManager *
+	WorkerPoolManager()
+	{
+		return m_worker_pool_manager;
+	}
 
-			// global accessor
-			inline
-			static CWorkerPoolManager *WorkerPoolManager()
-			{
-				return m_worker_pool_manager;
-			}
+	// cancel task by task id
+	void Cancel(CTaskId tid);
 
-			// cancel task by task id
-			void Cancel(CTaskId tid);
+};	// class CWorkerPoolManager
 
-	}; // class CWorkerPoolManager
+}  // namespace gpos
 
-}
-
-#endif // !GPOS_CWorkerPoolManager_H
+#endif	// !GPOS_CWorkerPoolManager_H
 
 // EOF
-

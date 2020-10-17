@@ -17,6 +17,7 @@
 /autovacuum-template0.sql
 /bb_memory_quota.sql
 /bb_mpph.sql
+/collect_tabstat.sql
 /createdb.sql
 /default_tablespace.sql
 /dispatch.sql
@@ -32,7 +33,6 @@
 /guc_env_var.sql
 /hooktest.sql
 /oid_wraparound.sql
-/partindex_test.sql
 /partition_ddl.sql
 /qp_gist_indexes2.sql
 /qp_regexp.sql

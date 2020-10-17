@@ -27,27 +27,21 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalRowTrigger::CPhysicalRowTrigger
-	(
-	CMemoryPool *mp,
-	IMDId *rel_mdid,
-	INT type,
-	CColRefArray *pdrgpcrOld,
-	CColRefArray *pdrgpcrNew
-	)
-	:
-	CPhysical(mp),
-	m_rel_mdid(rel_mdid),
-	m_type(type),
-	m_pdrgpcrOld(pdrgpcrOld),
-	m_pdrgpcrNew(pdrgpcrNew),
-	m_pcrsRequiredLocal(NULL)
+CPhysicalRowTrigger::CPhysicalRowTrigger(CMemoryPool *mp, IMDId *rel_mdid,
+										 INT type, CColRefArray *pdrgpcrOld,
+										 CColRefArray *pdrgpcrNew)
+	: CPhysical(mp),
+	  m_rel_mdid(rel_mdid),
+	  m_type(type),
+	  m_pdrgpcrOld(pdrgpcrOld),
+	  m_pdrgpcrNew(pdrgpcrNew),
+	  m_pcrsRequiredLocal(NULL)
 {
 	GPOS_ASSERT(rel_mdid->IsValid());
 	GPOS_ASSERT(0 != type);
 	GPOS_ASSERT(NULL != pdrgpcrNew || NULL != pdrgpcrOld);
 	GPOS_ASSERT_IMP(NULL != pdrgpcrNew && NULL != pdrgpcrOld,
-			pdrgpcrNew->Size() == pdrgpcrOld->Size());
+					pdrgpcrNew->Size() == pdrgpcrOld->Size());
 
 	m_pcrsRequiredLocal = GPOS_NEW(mp) CColRefSet(mp);
 	if (NULL != m_pdrgpcrOld)
@@ -86,20 +80,17 @@ CPhysicalRowTrigger::~CPhysicalRowTrigger()
 //
 //---------------------------------------------------------------------------
 COrderSpec *
-CPhysicalRowTrigger::PosRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &, //exprhdl,
-	COrderSpec *, //posRequired,
-	ULONG
+CPhysicalRowTrigger::PosRequired(CMemoryPool *mp,
+								 CExpressionHandle &,  //exprhdl,
+								 COrderSpec *,		   //posRequired,
+								 ULONG
 #ifdef GPOS_DEBUG
-	child_index
+									 child_index
 #endif
-	,
-	CDrvdPropArray *, // pdrgpdpCtxt
-	ULONG // ulOptReq
-	)
-	const
+								 ,
+								 CDrvdPropArray *,	// pdrgpdpCtxt
+								 ULONG				// ulOptReq
+) const
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -115,12 +106,9 @@ CPhysicalRowTrigger::PosRequired
 //
 //---------------------------------------------------------------------------
 COrderSpec *
-CPhysicalRowTrigger::PosDerive
-	(
-	CMemoryPool *mp,
-	CExpressionHandle & //exprhdl
-	)
-	const
+CPhysicalRowTrigger::PosDerive(CMemoryPool *mp,
+							   CExpressionHandle &	//exprhdl
+) const
 {
 	return GPOS_NEW(mp) COrderSpec(mp);
 }
@@ -134,15 +122,12 @@ CPhysicalRowTrigger::PosDerive
 //
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
-CPhysicalRowTrigger::EpetOrder
-	(
-	CExpressionHandle &, // exprhdl
-	const CEnfdOrder *
+CPhysicalRowTrigger::EpetOrder(CExpressionHandle &,	 // exprhdl
+							   const CEnfdOrder *
 #ifdef GPOS_DEBUG
-	peo
-#endif // GPOS_DEBUG
-	)
-	const
+								   peo
+#endif	// GPOS_DEBUG
+) const
 {
 	GPOS_ASSERT(NULL != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
@@ -160,19 +145,17 @@ CPhysicalRowTrigger::EpetOrder
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CPhysicalRowTrigger::PcrsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &, // exprhdl,
-	CColRefSet *pcrsRequired,
-	ULONG
+CPhysicalRowTrigger::PcrsRequired(CMemoryPool *mp,
+								  CExpressionHandle &,	// exprhdl,
+								  CColRefSet *pcrsRequired,
+								  ULONG
 #ifdef GPOS_DEBUG
-	child_index
-#endif // GPOS_DEBUG
-	,
-	CDrvdPropArray *, // pdrgpdpCtxt
-	ULONG // ulOptReq
-	)
+									  child_index
+#endif	// GPOS_DEBUG
+								  ,
+								  CDrvdPropArray *,	 // pdrgpdpCtxt
+								  ULONG				 // ulOptReq
+)
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -191,16 +174,11 @@ CPhysicalRowTrigger::PcrsRequired
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalRowTrigger::PdsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CDistributionSpec *pdsInput,
-	ULONG child_index,
-	CDrvdPropArray *, // pdrgpdpCtxt
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalRowTrigger::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								 CDistributionSpec *pdsInput, ULONG child_index,
+								 CDrvdPropArray *,	// pdrgpdpCtxt
+								 ULONG				// ulOptReq
+) const
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -222,16 +200,12 @@ CPhysicalRowTrigger::PdsRequired
 //
 //---------------------------------------------------------------------------
 CRewindabilitySpec *
-CPhysicalRowTrigger::PrsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CRewindabilitySpec *prsRequired,
-	ULONG child_index,
-	CDrvdPropArray *, // pdrgpdpCtxt
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalRowTrigger::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								 CRewindabilitySpec *prsRequired,
+								 ULONG child_index,
+								 CDrvdPropArray *,	// pdrgpdpCtxt
+								 ULONG				// ulOptReq
+) const
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -247,20 +221,18 @@ CPhysicalRowTrigger::PrsRequired
 //
 //---------------------------------------------------------------------------
 CPartitionPropagationSpec *
-CPhysicalRowTrigger::PppsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired,
-	ULONG child_index,
-	CDrvdPropArray *, //pdrgpdpCtxt,
-	ULONG //ulOptReq
-	)
+CPhysicalRowTrigger::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  CPartitionPropagationSpec *pppsRequired,
+								  ULONG child_index,
+								  CDrvdPropArray *,	 //pdrgpdpCtxt,
+								  ULONG				 //ulOptReq
+)
 {
 	GPOS_ASSERT(0 == child_index);
 	GPOS_ASSERT(NULL != pppsRequired);
 
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired, child_index);
+	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
+										   child_index);
 }
 
 //---------------------------------------------------------------------------
@@ -272,20 +244,17 @@ CPhysicalRowTrigger::PppsRequired
 //
 //---------------------------------------------------------------------------
 CCTEReq *
-CPhysicalRowTrigger::PcteRequired
-	(
-	CMemoryPool *, //mp,
-	CExpressionHandle &, //exprhdl,
-	CCTEReq *pcter,
-	ULONG
+CPhysicalRowTrigger::PcteRequired(CMemoryPool *,		//mp,
+								  CExpressionHandle &,	//exprhdl,
+								  CCTEReq *pcter,
+								  ULONG
 #ifdef GPOS_DEBUG
-	child_index
+									  child_index
 #endif
-	,
-	CDrvdPropArray *, //pdrgpdpCtxt,
-	ULONG //ulOptReq
-	)
-	const
+								  ,
+								  CDrvdPropArray *,	 //pdrgpdpCtxt,
+								  ULONG				 //ulOptReq
+) const
 {
 	GPOS_ASSERT(0 == child_index);
 	return PcterPushThru(pcter);
@@ -300,13 +269,10 @@ CPhysicalRowTrigger::PcteRequired
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalRowTrigger::FProvidesReqdCols
-	(
-	CExpressionHandle &exprhdl,
-	CColRefSet *pcrsRequired,
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalRowTrigger::FProvidesReqdCols(CExpressionHandle &exprhdl,
+									   CColRefSet *pcrsRequired,
+									   ULONG  // ulOptReq
+) const
 {
 	return FUnaryProvidesReqdCols(exprhdl, pcrsRequired);
 }
@@ -320,12 +286,8 @@ CPhysicalRowTrigger::FProvidesReqdCols
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalRowTrigger::PdsDerive
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
-	const
+CPhysicalRowTrigger::PdsDerive(CMemoryPool *,  // mp
+							   CExpressionHandle &exprhdl) const
 {
 	return PdsDerivePassThruOuter(exprhdl);
 }
@@ -339,12 +301,8 @@ CPhysicalRowTrigger::PdsDerive
 //
 //---------------------------------------------------------------------------
 CRewindabilitySpec *
-CPhysicalRowTrigger::PrsDerive
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl
-	)
-	const
+CPhysicalRowTrigger::PrsDerive(CMemoryPool *mp,
+							   CExpressionHandle &exprhdl) const
 {
 	return PrsDerivePassThruOuter(mp, exprhdl);
 }
@@ -360,17 +318,20 @@ CPhysicalRowTrigger::PrsDerive
 ULONG
 CPhysicalRowTrigger::HashValue() const
 {
-	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(), m_rel_mdid->HashValue());
+	ULONG ulHash =
+		gpos::CombineHashes(COperator::HashValue(), m_rel_mdid->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, gpos::HashValue<INT>(&m_type));
 
-	if(NULL != m_pdrgpcrOld)
+	if (NULL != m_pdrgpcrOld)
 	{
-		ulHash = gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOld));
+		ulHash =
+			gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOld));
 	}
 
-	if(NULL != m_pdrgpcrNew)
+	if (NULL != m_pdrgpcrNew)
 	{
-		ulHash = gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrNew));
+		ulHash =
+			gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrNew));
 	}
 
 	return ulHash;
@@ -385,11 +346,7 @@ CPhysicalRowTrigger::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalRowTrigger::Matches
-	(
-	COperator *pop
-	)
-	const
+CPhysicalRowTrigger::Matches(COperator *pop) const
 {
 	if (pop->Eopid() != Eopid())
 	{
@@ -402,9 +359,9 @@ CPhysicalRowTrigger::Matches
 	CColRefArray *pdrgpcrNew = popRowTrigger->PdrgpcrNew();
 
 	return m_rel_mdid->Equals(popRowTrigger->GetRelMdId()) &&
-			m_type == popRowTrigger->GetType() &&
-			CUtils::Equals(m_pdrgpcrOld, pdrgpcrOld) &&
-			CUtils::Equals(m_pdrgpcrNew, pdrgpcrNew);
+		   m_type == popRowTrigger->GetType() &&
+		   CUtils::Equals(m_pdrgpcrOld, pdrgpcrOld) &&
+		   CUtils::Equals(m_pdrgpcrNew, pdrgpcrNew);
 }
 
 
@@ -417,18 +374,14 @@ CPhysicalRowTrigger::Matches
 //
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
-CPhysicalRowTrigger::EpetRewindability
-	(
-	CExpressionHandle &exprhdl,
-	const CEnfdRewindability *per
-	)
-	const
+CPhysicalRowTrigger::EpetRewindability(CExpressionHandle &exprhdl,
+									   const CEnfdRewindability *per) const
 {
 	CRewindabilitySpec *prs = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Prs();
 	if (per->FCompatible(prs))
 	{
-		 // required rewindability is already provided
-		 return CEnfdProp::EpetUnnecessary;
+		// required rewindability is already provided
+		return CEnfdProp::EpetUnnecessary;
 	}
 
 	// always force spool to be on top of trigger
@@ -444,11 +397,7 @@ CPhysicalRowTrigger::EpetRewindability
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPhysicalRowTrigger::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPhysicalRowTrigger::OsPrint(IOstream &os) const
 {
 	if (m_fPattern)
 	{

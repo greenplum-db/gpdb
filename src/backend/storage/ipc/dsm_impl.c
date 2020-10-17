@@ -36,7 +36,7 @@
  *
  * As ever, Windows requires its own implementation.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -50,7 +50,6 @@
 #include "miscadmin.h"
 
 #include <fcntl.h>
-#include <string.h>
 #include <unistd.h>
 #ifndef WIN32
 #include <sys/mman.h>
@@ -62,6 +61,8 @@
 #ifdef HAVE_SYS_SHM_H
 #include <sys/shm.h>
 #endif
+#include "common/file_perm.h"
+#include "pgstat.h"
 
 #include "portability/mem.h"
 #include "storage/dsm_impl.h"
@@ -72,26 +73,26 @@
 
 #ifdef USE_DSM_POSIX
 static bool dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
-			   void **impl_private, void **mapped_address,
-			   Size *mapped_size, int elevel);
+						   void **impl_private, void **mapped_address,
+						   Size *mapped_size, int elevel);
 static int	dsm_impl_posix_resize(int fd, off_t size);
 #endif
 #ifdef USE_DSM_SYSV
 static bool dsm_impl_sysv(dsm_op op, dsm_handle handle, Size request_size,
-			  void **impl_private, void **mapped_address,
-			  Size *mapped_size, int elevel);
+						  void **impl_private, void **mapped_address,
+						  Size *mapped_size, int elevel);
 #endif
 #ifdef USE_DSM_WINDOWS
 static bool dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
-				 void **impl_private, void **mapped_address,
-				 Size *mapped_size, int elevel);
+							 void **impl_private, void **mapped_address,
+							 Size *mapped_size, int elevel);
 #endif
 #ifdef USE_DSM_MMAP
 static bool dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
-			  void **impl_private, void **mapped_address,
-			  Size *mapped_size, int elevel);
+						  void **impl_private, void **mapped_address,
+						  Size *mapped_size, int elevel);
 #endif
-static int	errcode_for_dynamic_shared_memory(void);
+static void errcode_for_dynamic_shared_memory(void);
 
 const struct config_enum_entry dynamic_shared_memory_options[] = {
 #ifdef USE_DSM_POSIX
@@ -106,7 +107,6 @@ const struct config_enum_entry dynamic_shared_memory_options[] = {
 #ifdef USE_DSM_MMAP
 	{"mmap", DSM_IMPL_MMAP, false},
 #endif
-	{"none", DSM_IMPL_NONE, false},
 	{NULL, 0, false}
 };
 
@@ -127,13 +127,8 @@ int			dynamic_shared_memory_type;
  * map it.
  *
  * DSM_OP_ATTACH.  Map the segment, whose size must be the request_size.
- * The segment may already be mapped; any existing mapping should be removed
- * before creating a new one.
  *
  * DSM_OP_DETACH.  Unmap the segment.
- *
- * DSM_OP_RESIZE.  Resize the segment to the given request_size and
- * remap the segment at that new size.
  *
  * DSM_OP_DESTROY.  Unmap the segment, if it is mapped.  Destroy the
  * segment.
@@ -142,8 +137,7 @@ int			dynamic_shared_memory_type;
  *	 op: The operation to be performed.
  *	 handle: The handle of an existing object, or for DSM_OP_CREATE, the
  *	   a new handle the caller wants created.
- *	 request_size: For DSM_OP_CREATE, the requested size.  For DSM_OP_RESIZE,
- *	   the new size.  Otherwise, 0.
+ *	 request_size: For DSM_OP_CREATE, the requested size.  Otherwise, 0.
  *	 impl_private: Private, implementation-specific data.  Will be a pointer
  *	   to NULL for the first operation on a shared memory segment within this
  *	   backend; thereafter, it will point to the value to which it was set
@@ -165,7 +159,7 @@ dsm_impl_op(dsm_op op, dsm_handle handle, Size request_size,
 			void **impl_private, void **mapped_address, Size *mapped_size,
 			int elevel)
 {
-	Assert(op == DSM_OP_CREATE || op == DSM_OP_RESIZE || request_size == 0);
+	Assert(op == DSM_OP_CREATE || request_size == 0);
 	Assert((op != DSM_OP_CREATE && op != DSM_OP_ATTACH) ||
 		   (*mapped_address == NULL && *mapped_size == 0));
 
@@ -195,33 +189,6 @@ dsm_impl_op(dsm_op op, dsm_handle handle, Size request_size,
 			elog(ERROR, "unexpected dynamic shared memory type: %d",
 				 dynamic_shared_memory_type);
 			return false;
-	}
-}
-
-/*
- * Does the current dynamic shared memory implementation support resizing
- * segments?  (The answer here could be platform-dependent in the future,
- * since AIX allows shmctl(shmid, SHM_RESIZE, &buffer), though you apparently
- * can't resize segments to anything larger than 256MB that way.  For now,
- * we keep it simple.)
- */
-bool
-dsm_impl_can_resize(void)
-{
-	switch (dynamic_shared_memory_type)
-	{
-		case DSM_IMPL_NONE:
-			return false;
-		case DSM_IMPL_POSIX:
-			return true;
-		case DSM_IMPL_SYSV:
-			return false;
-		case DSM_IMPL_WINDOWS:
-			return false;
-		case DSM_IMPL_MMAP:
-			return true;
-		default:
-			return false;		/* should not happen */
 	}
 }
 
@@ -260,8 +227,8 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 		{
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				   errmsg("could not unmap shared memory segment \"%s\": %m",
-						  name)));
+					 errmsg("could not unmap shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		*mapped_address = NULL;
@@ -270,15 +237,15 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 		{
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				  errmsg("could not remove shared memory segment \"%s\": %m",
-						 name)));
+					 errmsg("could not remove shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		return true;
 	}
 
 	/*
-	 * Create new segment or open an existing one for attach or resize.
+	 * Create new segment or open an existing one for attach.
 	 *
 	 * Even though we're not going through fd.c, we should be safe against
 	 * running out of file descriptors, because of NUM_RESERVED_FDS.  We're
@@ -286,7 +253,7 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 	 * returning.
 	 */
 	flags = O_RDWR | (op == DSM_OP_CREATE ? O_CREAT | O_EXCL : 0);
-	if ((fd = shm_open(name, flags, 0600)) == -1)
+	if ((fd = shm_open(name, flags, PG_FILE_MODE_OWNER)) == -1)
 	{
 		if (errno != EEXIST)
 			ereport(elevel,
@@ -298,7 +265,7 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 
 	/*
 	 * If we're attaching the segment, determine the current size; if we are
-	 * creating or resizing the segment, set the size to the requested value.
+	 * creating the segment, set the size to the requested value.
 	 */
 	if (op == DSM_OP_ATTACH)
 	{
@@ -321,16 +288,14 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 		}
 		request_size = st.st_size;
 	}
-	else if (*mapped_size != request_size &&
-			 dsm_impl_posix_resize(fd, request_size) != 0)
+	else if (dsm_impl_posix_resize(fd, request_size) != 0)
 	{
 		int			save_errno;
 
 		/* Back out what's already been done. */
 		save_errno = errno;
 		close(fd);
-		if (op == DSM_OP_CREATE)
-			shm_unlink(name);
+		shm_unlink(name);
 		errno = save_errno;
 
 		/*
@@ -346,35 +311,6 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 				 errmsg("could not resize shared memory segment \"%s\" to %zu bytes: %m",
 						name, request_size)));
 		return false;
-	}
-
-	/*
-	 * If we're reattaching or resizing, we must remove any existing mapping,
-	 * unless we've already got the right thing mapped.
-	 */
-	if (*mapped_address != NULL)
-	{
-		if (*mapped_size == request_size)
-			return true;
-		if (munmap(*mapped_address, *mapped_size) != 0)
-		{
-			int			save_errno;
-
-			/* Back out what's already been done. */
-			save_errno = errno;
-			close(fd);
-			if (op == DSM_OP_CREATE)
-				shm_unlink(name);
-			errno = save_errno;
-
-			ereport(elevel,
-					(errcode_for_dynamic_shared_memory(),
-				   errmsg("could not unmap shared memory segment \"%s\": %m",
-						  name)));
-			return false;
-		}
-		*mapped_address = NULL;
-		*mapped_size = 0;
 	}
 
 	/* Map it. */
@@ -459,10 +395,9 @@ dsm_impl_posix_resize(int fd, off_t size)
  * Operating system primitives to support System V shared memory.
  *
  * System V shared memory segments are manipulated using shmget(), shmat(),
- * shmdt(), and shmctl().  There's no portable way to resize such
- * segments.  As the default allocation limits for System V shared memory
- * are usually quite low, the POSIX facilities may be preferable; but
- * those are not supported everywhere.
+ * shmdt(), and shmctl().  As the default allocation limits for System V
+ * shared memory are usually quite low, the POSIX facilities may be
+ * preferable; but those are not supported everywhere.
  */
 static bool
 dsm_impl_sysv(dsm_op op, dsm_handle handle, Size request_size,
@@ -474,17 +409,6 @@ dsm_impl_sysv(dsm_op op, dsm_handle handle, Size request_size,
 	char	   *address;
 	char		name[64];
 	int		   *ident_cache;
-
-	/* Resize is not supported for System V shared memory. */
-	if (op == DSM_OP_RESIZE)
-	{
-		elog(elevel, "System V shared memory segments cannot be resized");
-		return false;
-	}
-
-	/* Since resize isn't supported, reattach is a no-op. */
-	if (op == DSM_OP_ATTACH && *mapped_address != NULL)
-		return true;
 
 	/*
 	 * POSIX shared memory and mmap-based shared memory identify segments with
@@ -590,8 +514,8 @@ dsm_impl_sysv(dsm_op op, dsm_handle handle, Size request_size,
 		{
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				   errmsg("could not unmap shared memory segment \"%s\": %m",
-						  name)));
+					 errmsg("could not unmap shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		*mapped_address = NULL;
@@ -600,8 +524,8 @@ dsm_impl_sysv(dsm_op op, dsm_handle handle, Size request_size,
 		{
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				  errmsg("could not remove shared memory segment \"%s\": %m",
-						 name)));
+					 errmsg("could not remove shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		return true;
@@ -672,17 +596,6 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
 	char		name[64];
 	MEMORY_BASIC_INFORMATION info;
 
-	/* Resize is not supported for Windows shared memory. */
-	if (op == DSM_OP_RESIZE)
-	{
-		elog(elevel, "Windows shared memory segments cannot be resized");
-		return false;
-	}
-
-	/* Since resize isn't supported, reattach is a no-op. */
-	if (op == DSM_OP_ATTACH && *mapped_address != NULL)
-		return true;
-
 	/*
 	 * Storing the shared memory segment in the Global\ namespace, can allow
 	 * any process running in any session to access that file mapping object
@@ -695,7 +608,7 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
 
 	/*
 	 * Handle teardown cases.  Since Windows automatically destroys the object
-	 * when no references reamin, we can treat it the same as detach.
+	 * when no references remain, we can treat it the same as detach.
 	 */
 	if (op == DSM_OP_DETACH || op == DSM_OP_DESTROY)
 	{
@@ -705,8 +618,8 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
 			_dosmaperr(GetLastError());
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				   errmsg("could not unmap shared memory segment \"%s\": %m",
-						  name)));
+					 errmsg("could not unmap shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		if (*impl_private != NULL
@@ -715,8 +628,8 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
 			_dosmaperr(GetLastError());
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				  errmsg("could not remove shared memory segment \"%s\": %m",
-						 name)));
+					 errmsg("could not remove shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 
@@ -746,9 +659,9 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
 
 		hmap = CreateFileMapping(INVALID_HANDLE_VALUE,	/* Use the pagefile */
 								 NULL,	/* Default security attrs */
-								 PAGE_READWRITE,		/* Memory is read/write */
-								 size_high,		/* Upper 32 bits of size */
-								 size_low,		/* Lower 32 bits of size */
+								 PAGE_READWRITE,	/* Memory is read/write */
+								 size_high, /* Upper 32 bits of size */
+								 size_low,	/* Lower 32 bits of size */
 								 name);
 
 		errcode = GetLastError();
@@ -771,8 +684,8 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size,
 			_dosmaperr(errcode);
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				  errmsg("could not create shared memory segment \"%s\": %m",
-						 name)));
+					 errmsg("could not create shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 	}
@@ -876,8 +789,8 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 		{
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				   errmsg("could not unmap shared memory segment \"%s\": %m",
-						  name)));
+					 errmsg("could not unmap shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		*mapped_address = NULL;
@@ -886,16 +799,16 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 		{
 			ereport(elevel,
 					(errcode_for_dynamic_shared_memory(),
-				  errmsg("could not remove shared memory segment \"%s\": %m",
-						 name)));
+					 errmsg("could not remove shared memory segment \"%s\": %m",
+							name)));
 			return false;
 		}
 		return true;
 	}
 
-	/* Create new segment or open an existing one for attach or resize. */
+	/* Create new segment or open an existing one for attach. */
 	flags = O_RDWR | (op == DSM_OP_CREATE ? O_CREAT | O_EXCL : 0);
-	if ((fd = OpenTransientFile(name, flags, 0600)) == -1)
+	if ((fd = OpenTransientFile(name, flags)) == -1)
 	{
 		if (errno != EEXIST)
 			ereport(elevel,
@@ -907,7 +820,7 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 
 	/*
 	 * If we're attaching the segment, determine the current size; if we are
-	 * creating or resizing the segment, set the size to the requested value.
+	 * creating the segment, set the size to the requested value.
 	 */
 	if (op == DSM_OP_ATTACH)
 	{
@@ -930,24 +843,7 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 		}
 		request_size = st.st_size;
 	}
-	else if (*mapped_size > request_size && ftruncate(fd, request_size))
-	{
-		int			save_errno;
-
-		/* Back out what's already been done. */
-		save_errno = errno;
-		CloseTransientFile(fd);
-		if (op == DSM_OP_CREATE)
-			unlink(name);
-		errno = save_errno;
-
-		ereport(elevel,
-				(errcode_for_dynamic_shared_memory(),
-				 errmsg("could not resize shared memory segment \"%s\" to %zu bytes: %m",
-						name, request_size)));
-		return false;
-	}
-	else if (*mapped_size < request_size)
+	else
 	{
 		/*
 		 * Allocate a buffer full of zeros.
@@ -972,10 +868,12 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 
 			if (goal > ZBUFFER_SIZE)
 				goal = ZBUFFER_SIZE;
+			pgstat_report_wait_start(WAIT_EVENT_DSM_FILL_ZERO_WRITE);
 			if (write(fd, zbuffer, goal) == goal)
 				remaining -= goal;
 			else
 				success = false;
+			pgstat_report_wait_end();
 		}
 
 		if (!success)
@@ -985,8 +883,7 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 			/* Back out what's already been done. */
 			save_errno = errno;
 			CloseTransientFile(fd);
-			if (op == DSM_OP_CREATE)
-				unlink(name);
+			unlink(name);
 			errno = save_errno ? save_errno : ENOSPC;
 
 			ereport(elevel,
@@ -995,35 +892,6 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 							name, request_size)));
 			return false;
 		}
-	}
-
-	/*
-	 * If we're reattaching or resizing, we must remove any existing mapping,
-	 * unless we've already got the right thing mapped.
-	 */
-	if (*mapped_address != NULL)
-	{
-		if (*mapped_size == request_size)
-			return true;
-		if (munmap(*mapped_address, *mapped_size) != 0)
-		{
-			int			save_errno;
-
-			/* Back out what's already been done. */
-			save_errno = errno;
-			CloseTransientFile(fd);
-			if (op == DSM_OP_CREATE)
-				unlink(name);
-			errno = save_errno;
-
-			ereport(elevel,
-					(errcode_for_dynamic_shared_memory(),
-				   errmsg("could not unmap shared memory segment \"%s\": %m",
-						  name)));
-			return false;
-		}
-		*mapped_address = NULL;
-		*mapped_size = 0;
 	}
 
 	/* Map it. */
@@ -1048,15 +916,23 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
 	}
 	*mapped_address = address;
 	*mapped_size = request_size;
-	CloseTransientFile(fd);
+
+	if (CloseTransientFile(fd))
+	{
+		ereport(elevel,
+				(errcode_for_file_access(),
+				 errmsg("could not close shared memory segment \"%s\": %m",
+						name)));
+		return false;
+	}
 
 	return true;
 }
 #endif
 
 /*
- * Implementation-specific actions that must be performed when a segment
- * is to be preserved until postmaster shutdown.
+ * Implementation-specific actions that must be performed when a segment is to
+ * be preserved even when no backend has it attached.
  *
  * Except on Windows, we don't need to do anything at all.  But since Windows
  * cleans up segments automatically when no references remain, we duplicate
@@ -1064,7 +940,8 @@ dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size,
  * do anything to receive the handle; Windows transfers it automatically.
  */
 void
-dsm_impl_pin_segment(dsm_handle handle, void *impl_private)
+dsm_impl_pin_segment(dsm_handle handle, void *impl_private,
+					 void **impl_private_pm_handle)
 {
 	switch (dynamic_shared_memory_type)
 	{
@@ -1083,9 +960,18 @@ dsm_impl_pin_segment(dsm_handle handle, void *impl_private)
 					_dosmaperr(GetLastError());
 					ereport(ERROR,
 							(errcode_for_dynamic_shared_memory(),
-						  errmsg("could not duplicate handle for \"%s\": %m",
-								 name)));
+							 errmsg("could not duplicate handle for \"%s\": %m",
+									name)));
 				}
+
+				/*
+				 * Here, we remember the handle that we created in the
+				 * postmaster process.  This handle isn't actually usable in
+				 * any process other than the postmaster, but that doesn't
+				 * matter.  We're just holding onto it so that, if the segment
+				 * is unpinned, dsm_impl_unpin_segment can close it.
+				 */
+				*impl_private_pm_handle = hmap;
 				break;
 			}
 #endif
@@ -1094,11 +980,52 @@ dsm_impl_pin_segment(dsm_handle handle, void *impl_private)
 	}
 }
 
-static int
+/*
+ * Implementation-specific actions that must be performed when a segment is no
+ * longer to be preserved, so that it will be cleaned up when all backends
+ * have detached from it.
+ *
+ * Except on Windows, we don't need to do anything at all.  For Windows, we
+ * close the extra handle that dsm_impl_pin_segment created in the
+ * postmaster's process space.
+ */
+void
+dsm_impl_unpin_segment(dsm_handle handle, void **impl_private)
+{
+	switch (dynamic_shared_memory_type)
+	{
+#ifdef USE_DSM_WINDOWS
+		case DSM_IMPL_WINDOWS:
+			{
+				if (*impl_private &&
+					!DuplicateHandle(PostmasterHandle, *impl_private,
+									 NULL, NULL, 0, FALSE,
+									 DUPLICATE_CLOSE_SOURCE))
+				{
+					char		name[64];
+
+					snprintf(name, 64, "%s.%u", SEGMENT_NAME_PREFIX, handle);
+					_dosmaperr(GetLastError());
+					ereport(ERROR,
+							(errcode_for_dynamic_shared_memory(),
+							 errmsg("could not duplicate handle for \"%s\": %m",
+									name)));
+				}
+
+				*impl_private = NULL;
+				break;
+			}
+#endif
+		default:
+			break;
+	}
+}
+
+static void
 errcode_for_dynamic_shared_memory(void)
 {
 	if (errno == EFBIG || errno == ENOMEM)
-		return errcode(ERRCODE_OUT_OF_MEMORY);
+		errcode(ERRCODE_OUT_OF_MEMORY);
 	else
-		return errcode_for_file_access();
+		errcode_for_file_access();
 }

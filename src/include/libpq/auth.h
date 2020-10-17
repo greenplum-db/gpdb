@@ -4,7 +4,7 @@
  *	  Definitions for network authentication routines
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/libpq/auth.h
@@ -55,4 +55,4 @@ extern bool interval_contains(const authInterval *interval, const authPoint *poi
 extern int CheckAuthTimeConstraints(char *rolname);
 extern int check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp);
 
-#endif   /* AUTH_H */
+#endif							/* AUTH_H */

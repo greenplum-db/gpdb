@@ -5,7 +5,6 @@
 -- m/ERROR:.*server closed the connection unexpectedly/
 -- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
 -- end_matchsubs
-include: helpers/server_helpers.sql;
 
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 --
@@ -13,8 +12,8 @@ include: helpers/server_helpers.sql;
 --
 -- Setup tables to test crash at different points
 -- for crash_before_cleanup_phase
-3:set gp_default_storage_options="appendonly=true,orientation=column";
-3:show gp_default_storage_options;
+3:set default_table_access_method = ao_column;
+3:show default_table_access_method;
 3:DROP TABLE IF EXISTS crash_before_cleanup_phase CASCADE;
 3:CREATE TABLE crash_before_cleanup_phase (a INT, b INT, c CHAR(20));
 3:CREATE INDEX crash_before_cleanup_phase_index ON crash_before_cleanup_phase(b);
@@ -71,7 +70,10 @@ include: helpers/server_helpers.sql;
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
 -- crash_vacuum_in_appendonly_insert
-1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
+-- verify the old segment files are still visible after the vacuum is aborted.
+1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 1;
+-- verify the new segment files contain no tuples.
+1:SELECT sum(tupcount) FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 2;
 1:VACUUM crash_vacuum_in_appendonly_insert;
 1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
 1:INSERT INTO crash_vacuum_in_appendonly_insert VALUES(21, 1, 'c'), (26, 1, 'c');
@@ -82,8 +84,8 @@ include: helpers/server_helpers.sql;
 -- Setup tables to test crash at different points on master now
 --
 -- for crash_master_before_cleanup_phase
-2:set gp_default_storage_options="appendonly=true,orientation=column";
-2:show gp_default_storage_options;
+2:set default_table_access_method = ao_column;
+2:show default_table_access_method;
 2:DROP TABLE IF EXISTS crash_master_before_cleanup_phase CASCADE;
 2:CREATE TABLE crash_master_before_cleanup_phase (a INT, b INT, c CHAR(20));
 2:CREATE INDEX crash_master_before_cleanup_phase_index ON crash_master_before_cleanup_phase(b);
@@ -116,7 +118,7 @@ include: helpers/server_helpers.sql;
 4:SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
 4:SELECT gp_request_fts_probe_scan();
 4:SELECT gp_wait_until_triggered_fault('fts_probe', 1, 1);
-4:SET gp_default_storage_options="appendonly=true,orientation=column";
+4:SET default_table_access_method = ao_column;
 4:CREATE TABLE crash_vacuum_in_appendonly_insert_1 (a INT, b INT, c CHAR(20));
 -- just sanity check to make sure appendonly table is created
 4:SELECT count(*) from pg_appendonly where relid in (select oid from pg_class where relname='crash_vacuum_in_appendonly_insert_1');

@@ -17,111 +17,104 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	// forward declarations
-	class CGroupExpression;
-	class CDrvdProp;
-	class COptimizationContext;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CGroupProxy
-	//
-	//	@doc:
-	//		Exclusive access to a given group
-	//
-	//---------------------------------------------------------------------------
-	class CGroupProxy
-	{	
+using namespace gpos;
 
-		private:
+// forward declarations
+class CGroupExpression;
+class CDrvdProp;
+class COptimizationContext;
 
-			// group we're operating on
-			CGroup *m_pgroup;
+//---------------------------------------------------------------------------
+//	@class:
+//		CGroupProxy
+//
+//	@doc:
+//		Exclusive access to a given group
+//
+//---------------------------------------------------------------------------
+class CGroupProxy
+{
+private:
+	// group we're operating on
+	CGroup *m_pgroup;
 
-			// skip group expressions starting from the given expression;
-			CGroupExpression *PgexprSkip(CGroupExpression *pgexprStart, BOOL fSkipLogical);
+	// skip group expressions starting from the given expression;
+	CGroupExpression *PgexprSkip(CGroupExpression *pgexprStart,
+								 BOOL fSkipLogical);
 
-		public:
-		
-			// ctor
-			explicit
-			CGroupProxy(CGroup *pgroup);
-			
-			// dtor
-			~CGroupProxy();
+public:
+	// ctor
+	explicit CGroupProxy(CGroup *pgroup);
 
-			// set group id
-			void SetId(ULONG id)
-			{
-				m_pgroup->SetId(id);
-			}
+	// dtor
+	~CGroupProxy();
 
-			// set group state
-			void SetState
-				(
-				CGroup::EState estNewState
-				)
-			{
-				m_pgroup->SetState(estNewState);
-			}
+	// set group id
+	void
+	SetId(ULONG id)
+	{
+		m_pgroup->SetId(id);
+	}
 
-			// set hash join keys
-			void SetJoinKeys
-				(
-				CExpressionArray *pdrgpexprOuter,
-				CExpressionArray *pdrgpexprInner,
-				IMdIdArray *join_opfamilies
-				)
-			{
-				m_pgroup->SetJoinKeys(pdrgpexprOuter, pdrgpexprInner, join_opfamilies);
-			}
+	// set group state
+	void
+	SetState(CGroup::EState estNewState)
+	{
+		m_pgroup->SetState(estNewState);
+	}
 
-			// insert group expression
-			void Insert(CGroupExpression *pgexpr);
+	// set hash join keys
+	void
+	SetJoinKeys(CExpressionArray *pdrgpexprOuter,
+				CExpressionArray *pdrgpexprInner, IMdIdArray *join_opfamilies)
+	{
+		m_pgroup->SetJoinKeys(pdrgpexprOuter, pdrgpexprInner, join_opfamilies);
+	}
 
-			// move duplicate group expression to duplicates list
-			void MoveDuplicateGExpr(CGroupExpression *pgexpr);
+	// insert group expression
+	void Insert(CGroupExpression *pgexpr);
 
-			// initialize group's properties;
-			void InitProperties(CDrvdProp *pdp);
+	// move duplicate group expression to duplicates list
+	void MoveDuplicateGExpr(CGroupExpression *pgexpr);
 
-			// initialize group's stat;
-			void InitStats(IStatistics *stats);
+	// initialize group's properties;
+	void InitProperties(CDrvdProp *pdp);
 
-			// retrieve first group expression
-			CGroupExpression *PgexprFirst();
-			
-			// retrieve next group expression
-			CGroupExpression *PgexprNext(CGroupExpression *pgexpr);
+	// initialize group's stat;
+	void InitStats(IStatistics *stats);
 
-			// get the first non-logical group expression following the given expression
-			CGroupExpression *PgexprSkipLogical(CGroupExpression *pgexpr);
+	// retrieve first group expression
+	CGroupExpression *PgexprFirst();
 
-			// get the next logical group expression following the given expression
-			CGroupExpression *PgexprNextLogical(CGroupExpression *pgexpr);
+	// retrieve next group expression
+	CGroupExpression *PgexprNext(CGroupExpression *pgexpr);
 
-			// lookup best expression under optimization context
-			CGroupExpression *PgexprLookup(COptimizationContext *poc) const;
+	// get the first non-logical group expression following the given expression
+	CGroupExpression *PgexprSkipLogical(CGroupExpression *pgexpr);
+
+	// get the next logical group expression following the given expression
+	CGroupExpression *PgexprNextLogical(CGroupExpression *pgexpr);
+
+	// lookup best expression under optimization context
+	CGroupExpression *PgexprLookup(COptimizationContext *poc) const;
 
 
 #ifdef GPOS_DEBUG
-			// is group transition to given state complete?
-			BOOL FTransitioned(CGroup::EState estate) const
-			{
-				return
-					(CGroup::estExplored == estate && m_pgroup->FExplored()) ||
-					(CGroup::estImplemented == estate && m_pgroup->FImplemented()) ||
-					(CGroup::estOptimized == estate && m_pgroup->FOptimized());
-			}
-#endif // GPOS_DEBUG
+	// is group transition to given state complete?
+	BOOL
+	FTransitioned(CGroup::EState estate) const
+	{
+		return (CGroup::estExplored == estate && m_pgroup->FExplored()) ||
+			   (CGroup::estImplemented == estate && m_pgroup->FImplemented()) ||
+			   (CGroup::estOptimized == estate && m_pgroup->FOptimized());
+	}
+#endif	// GPOS_DEBUG
 
-	}; // class CGroupProxy
-	
-}
+};	// class CGroupProxy
 
-#endif // !GPOPT_CGroupProxy_H
+}  // namespace gpopt
+
+#endif	// !GPOPT_CGroupProxy_H
 
 
 // EOF

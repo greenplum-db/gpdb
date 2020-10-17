@@ -11,18 +11,39 @@ CREATE
 -1U: drop table utilitymode_primary_key_tab;
 DROP
 
+-- Try a few queries in utility mode. (Once upon a time, there was a bug that
+-- caused a crash on EXPLAIN ANALYZE on a Sort node in utility mode.)
+0U: begin;
+BEGIN
+0U: set local enable_seqscan=off;
+SET
 0U: explain analyze select * from gp_segment_configuration order by dbid;
- QUERY PLAN                                                                                                               
---------------------------------------------------------------------------------------------------------------------------
- Sort  (cost=0.01..0.02 rows=1 width=108) (actual time=0.255..0.255 rows=0 loops=1)                                       
-   Sort Key: dbid                                                                                                         
-   Sort Method:  quicksort  Memory: 33kB                                                                                  
-   ->  Seq Scan on gp_segment_configuration  (cost=0.00..0.00 rows=1 width=108) (actual time=0.000..0.000 rows=0 loops=1) 
- Planning time: 2.111 ms                                                                                                  
-   (slice0)    Executor memory: 89K bytes (seg0).  Work_mem: 65K bytes max.                                               
- Optimizer: Postgres query optimizer                                                                                      
- Execution time: 0.357 ms                                                                                                 
+ QUERY PLAN                                                                                                                                                  
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using gp_segment_config_dbid_index on gp_segment_configuration  (cost=0.15..84.16 rows=2400 width=108) (actual time=0.010..0.012 rows=4 loops=1) 
+ Planning Time: 2.267 ms                                                                                                                                     
+   (slice0)    Executor memory: 38K bytes (seg0).                                                                                                            
+ Optimizer: Postgres query optimizer                                                                                                                         
+ Execution Time: 0.110 ms                                                                                                                                    
+(5 rows)
+0U: reset enable_seqscan;
+RESET
+0U: set local enable_indexscan=off;
+SET
+0U: explain analyze select * from gp_segment_configuration order by dbid;
+ QUERY PLAN                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=168.75..174.75 rows=2400 width=108) (actual time=0.067..0.071 rows=4 loops=1)                                    
+   Sort Key: dbid                                                                                                             
+   Sort Method:  quicksort  Memory: 50kB                                                                                      
+   ->  Seq Scan on gp_segment_configuration  (cost=0.00..34.00 rows=2400 width=108) (actual time=0.010..0.012 rows=4 loops=1) 
+ Planning Time: 0.331 ms                                                                                                      
+   (slice0)    Executor memory: 59K bytes (seg0).                                                                             
+ Optimizer: Postgres query optimizer                                                                                          
+ Execution Time: 0.136 ms                                                                                                     
 (8 rows)
+0U: rollback;
+ROLLBACK
 
 --
 -- Temp tables should have a different schema name pattern in utility mode.

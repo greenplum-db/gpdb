@@ -82,7 +82,6 @@ Feature: gprecoverseg tests
         When the postmaster.pid file on "primary" segment is saved
         And user stops all primary processes
         When user can start transactions
-        And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
         And we generate the postmaster.pid file with the background pid on "primary" segment
         And the user runs "gprecoverseg -a"
@@ -155,7 +154,6 @@ Feature: gprecoverseg tests
         When the postmaster.pid file on "primary" segment is saved
         And user stops all primary processes
         When user can start transactions
-        And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
         And we generate the postmaster.pid file with the background pid on "primary" segment
         And the user runs "gprecoverseg -F -a"

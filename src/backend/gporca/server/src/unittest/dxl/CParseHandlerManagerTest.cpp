@@ -42,10 +42,8 @@ using namespace gpdxl;
 GPOS_RESULT
 CParseHandlerManagerTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CParseHandlerManagerTest::EresUnittest_Basic)
-		};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CParseHandlerManagerTest::EresUnittest_Basic)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -64,20 +62,23 @@ CParseHandlerManagerTest::EresUnittest_Basic()
 	// create memory pool
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone);
 	CMemoryPool *mp = amp.Pmp();
-		
+
 	// create XML reader and a parse handler manager for it
 	CDXLMemoryManager *dxl_memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
 
-	SAX2XMLReader* parser;
+	SAX2XMLReader *parser;
 
 	parser = XMLReaderFactory::createXMLReader(dxl_memory_manager);
 
-	CParseHandlerManager *parse_handler_mgr = GPOS_NEW(mp) CParseHandlerManager(dxl_memory_manager, parser);
-	
+	CParseHandlerManager *parse_handler_mgr =
+		GPOS_NEW(mp) CParseHandlerManager(dxl_memory_manager, parser);
+
 	// create some parse handlers
-	CParseHandlerPlan *pphPlan = GPOS_NEW(mp) CParseHandlerPlan(mp, parse_handler_mgr, NULL);
-	CParseHandlerHashJoin *pphHJ = GPOS_NEW(mp) CParseHandlerHashJoin(mp, parse_handler_mgr, pphPlan);
-	
+	CParseHandlerPlan *pphPlan =
+		GPOS_NEW(mp) CParseHandlerPlan(mp, parse_handler_mgr, NULL);
+	CParseHandlerHashJoin *pphHJ =
+		GPOS_NEW(mp) CParseHandlerHashJoin(mp, parse_handler_mgr, pphPlan);
+
 	parse_handler_mgr->ActivateParseHandler(pphPlan);
 	GPOS_ASSERT(pphPlan == parse_handler_mgr->GetCurrentParseHandler());
 	GPOS_ASSERT(pphPlan == parser->getContentHandler());
@@ -90,7 +91,7 @@ CParseHandlerManagerTest::EresUnittest_Basic()
 	parse_handler_mgr->DeactivateHandler();
 	GPOS_ASSERT(pphPlan == parse_handler_mgr->GetCurrentParseHandler());
 	GPOS_ASSERT(pphPlan == parser->getContentHandler());
-	
+
 	parse_handler_mgr->DeactivateHandler();
 	// no more parse handlers
 	GPOS_ASSERT(NULL == parse_handler_mgr->GetCurrentParseHandler());
@@ -105,8 +106,6 @@ CParseHandlerManagerTest::EresUnittest_Basic()
 
 	return GPOS_OK;
 }
-
-
 
 
 

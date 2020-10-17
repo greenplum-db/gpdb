@@ -294,8 +294,8 @@ where x.a > random();
 ---- join qual
 explain (costs off) select * from
 t_hashdist,
-(select a from generate_series(1, 10) a) x,
-(select a from generate_series(1, 10) a) y
+(select a from generate_series(1, 1000) a) x,
+(select a from generate_series(1, 1000) a) y
 where x.a + y.a > random();
 
 ---- sublink & subquery
@@ -313,7 +313,7 @@ explain (costs off) select * from t_hashdist cross join (select random() as k, s
 explain (costs off) select * from t_hashdist cross join (select a, count(1) as s from generate_series(1, 10) a group by a having count(1) > random() order by a) x ;
 
 -- limit
-explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit 1) x;
+explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;
 
 -- start_ignore
 drop table if exists bfv_planner_x;

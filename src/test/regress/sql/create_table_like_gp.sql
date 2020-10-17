@@ -8,20 +8,21 @@ CREATE TABLE t_ao_c (LIKE t_ao); -- Should create a heap table
 
 CREATE TABLE t_ao_enc_a (LIKE t_ao_enc INCLUDING STORAGE);
 
--- Verify gp_default_storage_options GUC doesn't get used
-SET gp_default_storage_options = "appendonly=true, orientation=row";
+-- Verify default_table_access_method GUC doesn't get used
+SET default_table_access_method = ao_row;
 CREATE TABLE t_ao_d (LIKE t_ao INCLUDING ALL);
 RESET gp_default_storage_options;
 
 -- Verify created tables and attributes
 SELECT
 	c.relname,
-	c.relstorage,
+	am.amname,
 	a.columnstore,
 	a.compresstype,
 	a.compresslevel
 FROM
 	pg_catalog.pg_class c
+		LEFT OUTER JOIN pg_catalog.pg_am am ON (c.relam = am.oid)
 		LEFT OUTER JOIN pg_catalog.pg_appendonly a ON (c.oid = a.relid)
 WHERE
 	c.relname LIKE 't_ao%';
@@ -70,7 +71,7 @@ $$;
 -- Verify created tables
 SELECT
 	c.relname,
-	c.relstorage,
+	c.relkind,
 	f.ftoptions
 FROM
 	pg_catalog.pg_class c

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 import sys
@@ -10,10 +10,7 @@ import socket
 import fileinput
 import platform
 import re
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 
 """
 Global Values
@@ -334,7 +331,7 @@ def modify_sql_file(num):
                 line = re.sub('-U \w+', '-U fake_user', line)
             else:
                 line = re.sub('-U \w+', '-U '+user, line)
-            print str(re.sub('\n','',line))
+            print((str(re.sub('\n','',line))))
 
 def windows_path(command):
     if platform.system() in ['Windows', 'Microsoft']:
@@ -350,7 +347,7 @@ def get_port():
     file = os.environ.get('MASTER_DATA_DIRECTORY')+'/postgresql.conf'
     if os.path.isfile(file):
         f = open(file)
-        for line in f.xreadlines():
+        for line in f:
             match = re.search('port=\d+',line)
             if match:
                 match1 = re.search('\d+', match.group())

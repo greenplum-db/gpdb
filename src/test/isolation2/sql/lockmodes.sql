@@ -1,5 +1,3 @@
-include: helpers/server_helpers.sql;
-
 -- table to just store the master's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
@@ -312,6 +310,73 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 2q:
 
+-- 1.8 Test on DML lock behavior on Partition tables on QDs.
+-- This suite will test:
+--   * DML on root
+--   * DML on one specific leaf
+-- For detailed behavior and notes, please refer below
+-- cases's comments.
+-- GPDB_12_MERGE_FIXME: DML lockmodes on partition table
+-- is a bit in disorder, we shoule correct them.
+-- Details: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/wAPKpJzhbpM
+-- start_ignore
+1:DROP TABLE IF EXISTS t_lockmods_part_tbl_upd_del;
+-- end_ignore
+
+1:CREATE TABLE t_lockmods_part_tbl_upd_del (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
+1:INSERT INTO t_lockmods_part_tbl_upd_del SELECT i, 1, i FROM generate_series(1,10)i;
+
+-- 
+1: BEGIN;
+1: DELETE FROM t_lockmods_part_tbl_upd_del;
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+
+--
+-- The session cannot be reused.
+--
+-- The macro RELCACHE_FORCE_RELEASE is defined iff USE_ASSERT_CHECKING is
+-- defined, and when RELCACHE_FORCE_RELEASE is defined the relcache is
+-- forcefully released when closing the relation.
+--
+-- The function generate_partition_qual() will behave differently depends on
+-- the existence of the relcache.
+--
+-- - if the relation is not cached, it will open it in AccessShareLock mode,
+--   and save the relpartbound in the relcache;
+-- - if the relation is already cached, it will load the relpartbound from the
+--   cache directly without opening the relation;
+--
+-- So as a result, in the following transactions we will see an extra
+-- AccessShareLock lock in a --enable-cassert build compared to a
+-- --disable-cassert build.
+--
+-- To make the test results stable, we do not reuse the sessions in the test,
+-- all the tests are performed without the relcache.
+1q:
+
+1: BEGIN;
+1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+1: BEGIN;
+1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+-- since the delete operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+1: BEGIN;
+1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+-- since the update operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
 -- enable gdd
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 -- Use utility session on seg 0 to restart master. This way avoids the
@@ -604,6 +669,42 @@ ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 1q:
 2q:
 
+-- 2.7 Test on DML lock behavior on Partition tables on QDs.
+-- This suite will test:
+--   * DML on root
+--   * DML on one specific leaf
+-- For detailed behavior and notes, please refer below
+-- cases's comments.
+
+1: BEGIN;
+1: DELETE FROM t_lockmods_part_tbl_upd_del;
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+1: BEGIN;
+1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+1: BEGIN;
+1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+-- since the delete operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+1: BEGIN;
+1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+-- since the update operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+-- reset gdd
 2: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
 

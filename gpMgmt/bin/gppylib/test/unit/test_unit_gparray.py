@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Line too long - pylint: disable=C0301
 #
@@ -11,7 +11,7 @@ import os
 
 from gppylib.gparray import GpArray, Segment, createSegmentRows, get_gparray_from_config
 from gppylib import gplog
-from gp_unittest import *
+from .gp_unittest import *
 from mock import patch, Mock
 from gppylib.system.configurationInterface import GpConfigurationProvider
 
@@ -169,7 +169,7 @@ class GpArrayTestCase(GpTestCase):
 
         gpArray = get_gparray_from_config()
 
-        self.assertEquals(gpArray.hasMirrors, False)
+        self.assertEqual(gpArray.hasMirrors, False)
         gpMasterEnvironmentMock.assert_called_once_with("MY_TEST_DIR", False)
         getConfigProviderFunctionMock.assert_any_call()
         configProviderMock.initializeProvider.assert_called_once_with(123456)
@@ -226,8 +226,8 @@ class GpArrayTestCase(GpTestCase):
             
         expected_count = portdict[lastport]
             
-        for count in portdict.values():
-            self.assertEquals(expected_count, count)
+        for count in list(portdict.values()):
+            self.assertEqual(expected_count, count)
 
     def _validate_get_segment_list(self, gparray, hostlist, expansion_hosts, primary_list):
         hostlist.extend(expansion_hosts)
@@ -243,17 +243,17 @@ class GpArrayTestCase(GpTestCase):
             primary = segment.primaryDB
             datadir = primary.datadir[0:primary.datadir.rindex("/")] # strip off the "/gpseg##" portion of the primary name for comparison
             actual.append("host %s, primary %s" % (primary.hostname, datadir))
-        self.assertEquals(len(expected), len(actual))
+        self.assertEqual(len(expected), len(actual))
 
         expected = sorted(expected)
         actual = sorted(actual)
         for i in range(len(expected)):
-            self.assertEquals(expected[i], actual[i])
+            self.assertEqual(expected[i], actual[i])
 
     @patch('gppylib.db.dbconn.querySingleton', return_value='PostgreSQL 8.3.23 (Greenplum Database 5.0.0 build dev) on x86_64-pc-linux-gnu, compiled by GCC gcc (GCC) 4.4.7 20120313 (Red Hat 4.4.7-17) compiled on Feb  9 2017 23:06:31')
     @patch('gppylib.db.dbconn.connect', autospec=True)
     def test_initFromCatalog_mismatched_versions(self, mock_connect, mock_query):
-        with self.assertRaisesRegexp(Exception, 'Cannot connect to GPDB version 5 from installed version 7'):
+        with self.assertRaisesRegex(Exception, 'Cannot connect to GPDB version 5 from installed version 7'):
             GpArray.initFromCatalog(None)
 
 def convert_bool(val):

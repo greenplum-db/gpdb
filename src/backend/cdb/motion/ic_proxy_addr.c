@@ -30,7 +30,83 @@
 /*
  * List<ICProxyAddr *>, the addresses list.
  */
-List	   *ic_proxy_addrs;
+List	   *ic_proxy_addrs = NIL;
+
+/*
+ * List<ICProxyAddr *>, the addresses list that are being resolved.
+ */
+static List *ic_proxy_unknown_addrs = NIL;
+
+/*
+ * Resolved one address.
+ */
+static void
+ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
+							 int status, struct addrinfo *res)
+{
+	ICProxyAddr *addr = CONTAINER_OF((void *) req, ICProxyAddr, req);
+
+	ic_proxy_unknown_addrs = list_delete_ptr(ic_proxy_unknown_addrs, addr);
+
+	if (status != 0)
+	{
+		if (status == UV_ECANCELED)
+		{
+			/* the req is cancelled, nothing to do */
+		}
+		else
+			ic_proxy_log(WARNING,
+						 "ic-proxy-addr: seg%d,dbid%d: fail to resolve the hostname \"%s\":%s: %s",
+						 addr->content, addr->dbid,
+						 addr->hostname, addr->service,
+						 uv_strerror(status));
+
+		ic_proxy_free(addr);
+	}
+	else
+	{
+		struct addrinfo *iter;
+
+		/* should we follow the logic in getDnsCachedAddress() ? */
+		for (iter = res; iter; iter = iter->ai_next)
+		{
+			if (iter->ai_family == AF_UNIX)
+				continue;
+
+#if IC_PROXY_LOG_LEVEL <= LOG
+			{
+				char		name[HOST_NAME_MAX] = "unknown";
+				int			port = 0;
+				int			family;
+				int			ret;
+
+				ret = ic_proxy_extract_addr(iter->ai_addr, name, sizeof(name),
+											&port, &family);
+				if (ret == 0)
+					ic_proxy_log(LOG,
+								 "ic-proxy-addr: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d",
+								 addr->content, addr->dbid,
+								 addr->hostname, addr->service,
+								 name, port, family);
+				else
+					ic_proxy_log(LOG,
+								 "ic-proxy-addr: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d (fail to extract the address: %s)",
+								 addr->content, addr->dbid,
+								 addr->hostname, addr->service,
+								 name, port, family,
+								 uv_strerror(ret));
+			}
+#endif /* IC_PROXY_LOG_LEVEL <= LOG */
+
+			memcpy(&addr->addr, iter->ai_addr, iter->ai_addrlen);
+			ic_proxy_addrs = lappend(ic_proxy_addrs, addr);
+			break;
+		}
+	}
+
+	if (res)
+		uv_freeaddrinfo(res);
+}
 
 /*
  * Reload the addresses from the GUC gp_interconnect_proxy_addresses.
@@ -39,11 +115,8 @@ List	   *ic_proxy_addrs;
  * calling ProcessConfigFile().
  */
 void
-ic_proxy_reload_addresses(void)
+ic_proxy_reload_addresses(uv_loop_t *loop)
 {
-	int			max_content_id;
-	int			uniq_content_count;
-
 	/* reset the old addresses */
 	{
 		ListCell   *cell;
@@ -57,7 +130,21 @@ ic_proxy_reload_addresses(void)
 		ic_proxy_addrs = NIL;
 	}
 
-	max_content_id = IC_PROXY_INVALID_CONTENT;
+	/* cancel any unfinished getaddrinfo reqs */
+	{
+		ListCell   *cell;
+
+		foreach(cell, ic_proxy_unknown_addrs)
+		{
+			ICProxyAddr *addr = lfirst(cell);
+
+			uv_cancel((uv_req_t *) &addr->req);
+			ic_proxy_free(addr);
+		}
+
+		list_free(ic_proxy_unknown_addrs);
+		ic_proxy_unknown_addrs = NIL;
+	}
 
 	/* parse the new addresses */
 	{
@@ -67,7 +154,14 @@ ic_proxy_reload_addresses(void)
 		int			dbid;
 		int			content;
 		int			port;
-		char		ip[HOST_NAME_MAX];
+		char		hostname[HOST_NAME_MAX];
+		struct addrinfo hints;
+
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = 0;
+		hints.ai_flags = 0;
 
 		buf = ic_proxy_alloc(size);
 		memcpy(buf, gp_interconnect_proxy_addresses, size);
@@ -75,51 +169,39 @@ ic_proxy_reload_addresses(void)
 		f = fmemopen(buf, size, "r");
 
 		/*
-		 * format: dbid:segid:ip:port
+		 * format: dbid:segid:hostname:port
 		 */
-		while (fscanf(f, "%d:%d:%[0-9.]:%d,", &dbid, &content, ip, &port) == 4)
+		while (fscanf(f, "%d:%d:%[^:]:%d,",
+					  &dbid, &content, hostname, &port) == 4)
 		{
 			ICProxyAddr *addr = ic_proxy_new(ICProxyAddr);
-			int			ret;
 
 			addr->dbid = dbid;
 			addr->content = content;
+			snprintf(addr->hostname, sizeof(addr->hostname), "%s", hostname);
+			snprintf(addr->service, sizeof(addr->service), "%d", port);
+			ic_proxy_unknown_addrs = lappend(ic_proxy_unknown_addrs, addr);
 
-			ic_proxy_log(LOG, "ic-proxy-server: addr: seg%d,dbid%d: %s:%d",
-						 content, dbid, ip, port);
+			ic_proxy_log(LOG,
+						 "ic-proxy-addr: seg%d,dbid%d: parsed addr: %s:%d",
+						 content, dbid, hostname, port);
 
-			ret = uv_ip4_addr(ip, port, (struct sockaddr_in *) addr);
-			if (ret < 0)
-				ic_proxy_log(WARNING,
-							 "ic-proxy-server: invalid address: seg%d,dbid%d: %s:%d: %s",
-							 content, dbid, ip, port, uv_strerror(ret));
-
-			ic_proxy_addrs = lappend(ic_proxy_addrs, addr);
-
-			max_content_id = Max(max_content_id, content);
+			uv_getaddrinfo(loop, &addr->req, ic_proxy_addr_on_getaddrinfo,
+						   addr->hostname, addr->service, &hints);
 		}
 
 		fclose(f);
 		ic_proxy_free(buf);
 	}
-
-	/*
-	 * We have found the max content id, convert it to a count by adding 2, as
-	 * content ids are counted from -1.
-	 */
-	uniq_content_count = max_content_id + 2;
-
-	ic_proxy_log(LOG, "ic-proxy-server: %d unique content ids",
-				 uniq_content_count);
 }
 
 /*
- * Get the port of current segment.
+ * Get the proxy addr of the current segment.
  *
- * Return -1 if cannot find the port.
+ * Return NULL if cannot find the addr.
  */
-int
-ic_proxy_get_my_port(void)
+const ICProxyAddr *
+ic_proxy_get_my_addr(void)
 {
 	ListCell   *cell;
 	int			dbid = GpIdentity.dbid;
@@ -129,11 +211,11 @@ ic_proxy_get_my_port(void)
 		ICProxyAddr *addr = lfirst(cell);
 
 		if (addr->dbid == dbid)
-			return ic_proxy_addr_get_port(addr);
+			return addr;
 	}
 
-	ic_proxy_log(WARNING, "ic-proxy-addr: cannot get my port");
-	return -1;
+	ic_proxy_log(LOG, "ic-proxy-addr: cannot get my addr");
+	return NULL;
 }
 
 /*
@@ -153,4 +235,68 @@ ic_proxy_addr_get_port(const ICProxyAddr *addr)
 				 "ic-proxy-addr: invalid address family %d for seg%d,dbid%d",
 				 addr->addr.ss_family, addr->content, addr->dbid);
 	return -1;
+}
+
+/*
+ * Extract the name and port from a sockaddr.
+ *
+ * - the hostname is stored in "name", the recommended size is HOST_NAME_MAX;
+ * - the "namelen" is the buffer size of "name";
+ * - the port is stored in "port";
+ * - the address family is stored in "family" if it is not NULL;
+ *
+ * "name" and "port" must be provided, "family" is optional.
+ *
+ * Return 0 on success; otherwise return a negative value, which can be
+ * translated with uv_strerror().  The __out__ fields are always filled.
+ *
+ * Failures from this function can be safely ignored, if the "addr" is really
+ * bad, the "uv_tcp_bind()" or "uv_tcp_connect()" will fail with the actual
+ * error code.
+ */
+int
+ic_proxy_extract_addr(const struct sockaddr *addr,
+					  char *name, size_t namelen, int *port, int *family)
+{
+	int			ret;
+
+	if (family)
+		*family = addr->sa_family;
+
+	switch (addr->sa_family)
+	{
+		case AF_INET:
+			{
+				const struct sockaddr_in *addr4
+					= (const struct sockaddr_in *) addr;
+
+				ret = uv_ip4_name(addr4, name, namelen);
+				if (ret == 0)
+					*port = ntohs(addr4->sin_port);
+			}
+			break;
+
+		case AF_INET6:
+			{
+				const struct sockaddr_in6 *addr6
+					= (const struct sockaddr_in6 *) addr;
+
+				ret = uv_ip6_name(addr6, name, namelen);
+				if (ret == 0)
+					*port = ntohs(addr6->sin6_port);
+			}
+			break;
+
+		default:
+			ret = UV_EINVAL;
+			break;
+	}
+
+	if (ret < 0)
+	{
+		snprintf(name, namelen, "unknown");
+		*port = 0;
+	}
+
+	return ret;
 }

@@ -1,5 +1,5 @@
 import os
-import StringIO
+import io
 import threading
 import time
 import unittest
@@ -240,7 +240,7 @@ class WorkerPoolTest(unittest.TestCase):
         self.assertEqual(self.pool.assigned, 0)
 
     def test_join_and_indicate_progress_prints_nothing_if_pool_is_done(self):
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         join_and_indicate_progress(self.pool, stdout)
 
         self.assertEqual(stdout.getvalue(), '')
@@ -283,7 +283,7 @@ class WorkerPoolTest(unittest.TestCase):
             # newline. (tmain() closes the write end of the pipe so that this
             # read() will complete.)
             remaining = read_end.read()
-            self.assertRegexpMatches(remaining, r'^[.]*\n$')
+            self.assertRegex(remaining, r'^[.]*\n$')
 
         finally:
             # Make sure that we unblock and join all threads, even on a test
@@ -300,7 +300,7 @@ class WorkerPoolTest(unittest.TestCase):
         cmd.run.side_effect = wait_for_duration
         self.pool.addCommand(cmd)
 
-        stdout = mock.Mock(spec=file)
+        stdout = mock.Mock(io.StringIO())
         join_and_indicate_progress(self.pool, stdout, interval=(duration / 5))
 
         for i, call in enumerate(stdout.mock_calls):

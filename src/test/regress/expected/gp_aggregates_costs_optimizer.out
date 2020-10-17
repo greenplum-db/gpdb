@@ -1,0 +1,67 @@
+create table cost_agg_t1(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into cost_agg_t1 select i, random() * 99999, i % 2000 from generate_series(1, 1000000) i;
+create table cost_agg_t2 as select * from cost_agg_t1 with no data;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+insert into cost_agg_t2 select i, random() * 99999, i % 300000 from generate_series(1, 1000000) i;
+--
+-- Test planner's decisions on aggregates when only little memory is available.
+--
+set statement_mem= '1800 kB';
+-- There are only 2000 distinct values of 'c' in the table, which fits
+-- comfortably in an in-memory hash table.
+explain select avg(b) from cost_agg_t1 group by c;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..485.40 rows=2001 width=8)
+   ->  Finalize HashAggregate  (cost=0.00..485.34 rows=667 width=8)
+         Group Key: c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..485.26 rows=667 width=12)
+               Hash Key: c
+               ->  Streaming Partial HashAggregate  (cost=0.00..485.23 rows=667 width=12)
+                     Group Key: c
+                     ->  Seq Scan on cost_agg_t1  (cost=0.00..438.70 rows=333334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+-- In the other table, there are 300000 distinct values of 'c', which doesn't
+-- fit in statement_mem. The planner chooses to do a single-phase agg for this.
+--
+-- In the single-phase plan, the aggregation is performed after redistrbuting
+-- the data, which means that each node only has to process 1/(# of segments)
+-- fraction of the data. That fits in memory, whereas an initial stage before
+-- redistributing would not. And it would eliminate only a few rows, anyway.
+explain select avg(b) from cost_agg_t2 group by c;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..501.88 rows=305691 width=8)
+   ->  HashAggregate  (cost=0.00..492.76 rows=101897 width=8)
+         Group Key: c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..452.01 rows=333334 width=8)
+               Hash Key: c
+               ->  Seq Scan on cost_agg_t2  (cost=0.00..438.70 rows=333334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+-- But if there are a lot more duplicate values, the two-stage plan becomes
+-- cheaper again, even though it doesn't git in memory and has to spill.
+insert into cost_agg_t2 select i, random() * 99999,1 from generate_series(1, 200000) i;
+analyze cost_agg_t2;
+explain select avg(b) from cost_agg_t2 group by c;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..504.85 rows=102902 width=8)
+   ->  Finalize HashAggregate  (cost=0.00..501.78 rows=34301 width=8)
+         Group Key: c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..497.48 rows=34301 width=12)
+               Hash Key: c
+               ->  Streaming Partial HashAggregate  (cost=0.00..496.19 rows=34301 width=12)
+                     Group Key: c
+                     ->  Seq Scan on cost_agg_t2  (cost=0.00..440.24 rows=400000 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+drop table cost_agg_t1;
+drop table cost_agg_t2;
+reset statement_mem;

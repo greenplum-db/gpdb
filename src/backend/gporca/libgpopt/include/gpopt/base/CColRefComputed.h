@@ -22,62 +22,57 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	using namespace gpmd;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CColRefComputed
-	//
-	//	@doc:
-	//
-	//---------------------------------------------------------------------------
-	class CColRefComputed : public CColRef
+using namespace gpos;
+using namespace gpmd;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CColRefComputed
+//
+//	@doc:
+//
+//---------------------------------------------------------------------------
+class CColRefComputed : public CColRef
+{
+private:
+	// private copy ctor
+	CColRefComputed(const CColRefComputed &);
+
+public:
+	// ctor
+	CColRefComputed(const IMDType *pmdtype, INT type_modifier, ULONG id,
+					const CName *pname);
+
+	// dtor
+	virtual ~CColRefComputed();
+
+	virtual CColRef::Ecolreftype
+	Ecrt() const
 	{
-		private:
+		return CColRef::EcrtComputed;
+	}
 
-			// private copy ctor
-			CColRefComputed(const CColRefComputed &);
-			
-		public:
-		
-			// ctor
-			CColRefComputed
-				(
-				const IMDType *pmdtype,
-				INT type_modifier,
-				ULONG id, 
-				const CName *pname
-				);
+	// is column a system column?
+	BOOL
+	IsSystemCol() const
+	{
+		// we cannot introduce system columns as computed column
+		return false;
+	}
 
-			// dtor
-			virtual ~CColRefComputed();
-			
-			virtual
-			CColRef::Ecolreftype Ecrt() const
-			{
-				return CColRef::EcrtComputed;
-			}
-
-			// is column a system column?
-			BOOL IsSystemCol() const
-			{
-				// we cannot introduce system columns as computed column
-				return false;
-			}
-
-			// is column a distribution column?
-			BOOL IsDistCol() const
-			{
-				// we cannot introduce distribution columns as computed column
-				return false;
-			};
+	// is column a distribution column?
+	BOOL
+	IsDistCol() const
+	{
+		// we cannot introduce distribution columns as computed column
+		return false;
+	};
 
 
-	}; // class CColRefComputed
+};	// class CColRefComputed
 
-}
+}  // namespace gpopt
 
-#endif // !GPOS_CColRefComputed_H
+#endif	// !GPOS_CColRefComputed_H
 
 // EOF

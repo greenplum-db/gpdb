@@ -5,7 +5,7 @@ create or replace function wait_for_replication(iterations int)
 returns bool as $$
 begin /* in func */
 	for i in 1 .. iterations loop /* in func */
-	    if exists (select wait_event_type from pg_stat_activity where sess_id in (select sess_id from store_session_id) and wait_event_type = 'Replication') then /* in func */
+	    if exists (select wait_event from pg_stat_activity where sess_id in (select sess_id from store_session_id) and wait_event = 'SyncRep') then /* in func */
 	       return true; /* in func */
 	    end if; /* in func */
 	    perform pg_sleep(0.1); /* in func */
@@ -31,15 +31,15 @@ select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, 2);
 select gp_inject_fault_infinite('wal_sender_loop', 'suspend', 2);
 -- let the transaction move forward with the commit
 select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
--- loop to reach wait_event_type=Replication
+-- loop to reach wait_event=SyncRep
 0U: select wait_for_replication(1200);
 -- hitting this fault, is checked for test validation
 select gp_inject_fault_infinite('sync_rep_query_cancel', 'skip', 2);
-0U: select pg_cancel_backend(pid) from pg_stat_activity where wait_event_type='Replication' and sess_id in (select sess_id from store_session_id);
+0U: select pg_cancel_backend(pid) from pg_stat_activity where wait_event='SyncRep' and sess_id in (select sess_id from store_session_id);
 -- EXPECT: hit this fault for QueryCancelPending
 select gp_wait_until_triggered_fault('sync_rep_query_cancel', 1, 2);
 -- EXPECT: the query is still in waiting mode, to verify the cancel is ignored.
-0U: select wait_event_type from pg_stat_activity where sess_id in (select sess_id from store_session_id);
+0U: select wait_event from pg_stat_activity where sess_id in (select sess_id from store_session_id);
 -- resume the primary on content 0
 select gp_inject_fault('wal_sender_loop', 'reset', 2);
 1<:

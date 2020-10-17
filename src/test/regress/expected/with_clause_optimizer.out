@@ -122,6 +122,25 @@ select sum(total) from (select sum(value) as total from with_test1 group by i) m
 
 --end_equivalent
 -- pathkeys
+explain (costs off)
+with my_order as (select * from with_test1 order by i)
+select i, count(*)
+from my_order
+group by i order by i;
+                   QUERY PLAN                   
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: i
+   ->  Sort
+         Sort Key: i
+         ->  GroupAggregate
+               Group Key: i
+               ->  Sort
+                     Sort Key: i
+                     ->  Seq Scan on with_test1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
 with my_order as (select * from with_test1 order by i)
 select i, count(*)
 from my_order
@@ -1004,12 +1023,12 @@ from my_sum;
 SELECT pg_get_viewdef('my_view'::regclass);
                 pg_get_viewdef                
 ----------------------------------------------
-            FROM with_test1                  +
-          SELECT sum(with_test1.value) AS sum+
-         )                                   +
-    FROM my_sum;
-  SELECT my_sum.total                        +
   WITH my_sum(total) AS (                    +
+          SELECT sum(with_test1.value) AS sum+
+            FROM with_test1                  +
+         )                                   +
+  SELECT my_sum.total                        +
+    FROM my_sum;
 (1 row)
 
 SELECT pg_get_viewdef('my_view'::regclass, true);
@@ -1367,7 +1386,7 @@ ERROR:  relation "my_group_sum" does not exist
 LINE 1: with my_sum(total) as (select sum(total) from my_group_sum),
                                                       ^
 DETAIL:  There is a WITH item named "my_group_sum", but it cannot be referenced from this part of the query.
-HINT:  Use WITH RECURSIVE, or re-order the WITH items to remove forward references.
+HINT:  Re-order the WITH items to remove forward references.
 -- two WITH clauses
 with my_sum(total) as (select sum(total) from with_test1),
 with my_group_sum(i, total) as (select i, sum(total) from with_test1 group by i)
@@ -1378,10 +1397,10 @@ LINE 2: with my_group_sum(i, total) as (select i, sum(total) from wi...
         ^
 -- Test behavior with an unknown-type literal in the WITH
 WITH q AS (SELECT 'foo' AS x)
-SELECT x, x IS OF (unknown) as is_unknown FROM q;
-  x  | is_unknown 
------+------------
- foo | t
+SELECT x, x IS OF (unknown) as is_unknown, x IS OF (text) as is_text FROM q;
+  x  | is_unknown | is_text 
+-----+------------+---------
+ foo | f          | t
 (1 row)
 
 with cte(foo) as ( select 42 ) select * from ((select foo from cte)) q;

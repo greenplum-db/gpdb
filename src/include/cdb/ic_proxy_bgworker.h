@@ -13,9 +13,6 @@
 #ifndef IC_PROXY_BGWORKER_H
 #define IC_PROXY_BGWORKER_H
 
-#include "postgres.h"
-
-
 extern bool ICProxyStartRule(Datum main_arg);
 extern void ICProxyMain(Datum main_arg);
 

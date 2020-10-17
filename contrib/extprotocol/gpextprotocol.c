@@ -53,7 +53,7 @@ static void check_ext_options(const FunctionCallInfo fcinfo)
 			char *value = defGetString(def);
 
 			if (key && strcasestr(key, "database") && !strcasestr(value, "greenplum")) {
-					ereport(ERROR, (0, errmsg("This is greenplum.")));
+					ereport(ERROR, errmsg("This is greenplum."));
 			}
         }
 }

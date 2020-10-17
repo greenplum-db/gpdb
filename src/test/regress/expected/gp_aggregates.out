@@ -370,21 +370,22 @@ create table multiagg_with_subquery (i int, j int, k int, m int) distributed by 
 insert into multiagg_with_subquery select i, i+1, i+2, i+3 from generate_series(1, 10)i;
 explain (costs off)
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
-                                                    QUERY PLAN                                                    
-------------------------------------------------------------------------------------------------------------------
- GroupAggregate
-   Group Key: multiagg_with_subquery.j
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
-         ->  GroupAggregate
-               Group Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
-               ->  Sort
-                     Sort Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
-                           ->  Seq Scan on multiagg_with_subquery
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: multiagg_with_subquery.j
+         ->  Sort
+               Sort Key: multiagg_with_subquery.j
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: multiagg_with_subquery.j
+                     ->  HashAggregate
+                           Group Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
+                                 ->  Seq Scan on multiagg_with_subquery
  Optimizer: Postgres query optimizer
-(12 rows)
+(13 rows)
 
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
  count | count | count 

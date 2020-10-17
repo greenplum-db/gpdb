@@ -1,7 +1,7 @@
 /*
  * xlog_internal.h
  *
- * PostgreSQL transaction log internal declarations
+ * PostgreSQL write-ahead log internal declarations
  *
  * NOTE: this file is intended to contain declarations useful for
  * manipulating the XLOG files directly, but it is not supposed to be
@@ -9,9 +9,9 @@
  * So the XLogRecord typedef and associated stuff appear in xlogrecord.h.
  *
  * Note: This file must be includable in both frontend and backend contexts,
- * to allow stand-alone tools like pg_receivexlog to deal with WAL files.
+ * to allow stand-alone tools like pg_receivewal to deal with WAL files.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xlog_internal.h
@@ -31,7 +31,7 @@
 /*
  * Each page of XLOG file has a header like this:
  */
-#define XLOG_PAGE_MAGIC 0xD093	/* can be used as WAL version indicator */
+#define XLOG_PAGE_MAGIC 0xD101	/* can be used as WAL version indicator */
 
 typedef struct XLogPageHeaderData
 {
@@ -85,15 +85,27 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 #define XLogPageHeaderSize(hdr)		\
 	(((hdr)->xlp_info & XLP_LONG_HEADER) ? SizeOfXLogLongPHD : SizeOfXLogShortPHD)
 
-/*
- * The XLOG is split into WAL segments (physical files) of the size indicated
- * by XLOG_SEG_SIZE.
- */
-#define XLogSegSize		((uint32) XLOG_SEG_SIZE)
-#define XLogSegmentsPerXLogId	(UINT64CONST(0x100000000) / XLOG_SEG_SIZE)
+/* wal_segment_size can range from 1MB to 1GB */
+#define WalSegMinSize (1024 * 1024)
+#define WalSegMaxSize (1024 * 1024 * 1024)
+/* default number of min and max wal segments */
+#define DEFAULT_MIN_WAL_SEGS 5
+#define DEFAULT_MAX_WAL_SEGS 64
 
-#define XLogSegNoOffsetToRecPtr(segno, offset, dest) \
-		(dest) = (segno) * XLOG_SEG_SIZE + (offset)
+/* check that the given size is a valid wal_segment_size */
+#define IsPowerOf2(x) (x > 0 && ((x) & ((x)-1)) == 0)
+#define IsValidWalSegSize(size) \
+	 (IsPowerOf2(size) && \
+	 ((size) >= WalSegMinSize && (size) <= WalSegMaxSize))
+
+#define XLogSegmentsPerXLogId(wal_segsz_bytes)	\
+	(UINT64CONST(0x100000000) / (wal_segsz_bytes))
+
+#define XLogSegNoOffsetToRecPtr(segno, offset, wal_segsz_bytes, dest) \
+		(dest) = (segno) * (wal_segsz_bytes) + (offset)
+
+#define XLogSegmentOffset(xlogptr, wal_segsz_bytes)	\
+	((xlogptr) & ((wal_segsz_bytes) - 1))
 
 /*
  * Compute a segment number from an XLogRecPtr.
@@ -103,11 +115,11 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
  * for deciding which segment to write given a pointer to a record end,
  * for example.
  */
-#define XLByteToSeg(xlrp, logSegNo) \
-	logSegNo = (xlrp) / XLogSegSize
+#define XLByteToSeg(xlrp, logSegNo, wal_segsz_bytes) \
+	logSegNo = (xlrp) / (wal_segsz_bytes)
 
-#define XLByteToPrevSeg(xlrp, logSegNo) \
-	logSegNo = ((xlrp) - 1) / XLogSegSize
+#define XLByteToPrevSeg(xlrp, logSegNo, wal_segsz_bytes) \
+	logSegNo = ((xlrp) - 1) / (wal_segsz_bytes)
 
 /*
  * Is an XLogRecPtr within a particular XLOG segment?
@@ -115,11 +127,11 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
  * For XLByteInSeg, do the computation at face value.  For XLByteInPrevSeg,
  * a boundary byte is taken to be in the previous segment.
  */
-#define XLByteInSeg(xlrp, logSegNo) \
-	(((xlrp) / XLogSegSize) == (logSegNo))
+#define XLByteInSeg(xlrp, logSegNo, wal_segsz_bytes) \
+	(((xlrp) / (wal_segsz_bytes)) == (logSegNo))
 
-#define XLByteInPrevSeg(xlrp, logSegNo) \
-	((((xlrp) - 1) / XLogSegSize) == (logSegNo))
+#define XLByteInPrevSeg(xlrp, logSegNo, wal_segsz_bytes) \
+	((((xlrp) - 1) / (wal_segsz_bytes)) == (logSegNo))
 
 /* Check if an XLogRecPtr value is in a plausible range */
 #define XRecOffIsValid(xlrp) \
@@ -128,7 +140,7 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 /*
  * The XLog directory and control file (relative to $PGDATA)
  */
-#define XLOGDIR				"pg_xlog"
+#define XLOGDIR				"pg_wal"
 #define XLOG_CONTROL_FILE	"global/pg_control"
 
 /*
@@ -140,10 +152,10 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 /* Length of XLog file name */
 #define XLOG_FNAME_LEN	   24
 
-#define XLogFileName(fname, tli, logSegNo)	\
+#define XLogFileName(fname, tli, logSegNo, wal_segsz_bytes)	\
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X", tli,		\
-			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId), \
-			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId))
+			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId(wal_segsz_bytes)), \
+			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId(wal_segsz_bytes)))
 
 #define XLogFileNameById(fname, tli, log, seg)	\
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X", tli, log, seg)
@@ -153,7 +165,7 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 	 strspn(fname, "0123456789ABCDEF") == XLOG_FNAME_LEN)
 
 /*
- * XLOG segment with .partial suffix.  Used by pg_receivexlog and at end of
+ * XLOG segment with .partial suffix.  Used by pg_receivewal and at end of
  * archive recovery, when we want to archive a WAL segment but it might not
  * be complete yet.
  */
@@ -162,18 +174,18 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 	 strspn(fname, "0123456789ABCDEF") == XLOG_FNAME_LEN &&		\
 	 strcmp((fname) + XLOG_FNAME_LEN, ".partial") == 0)
 
-#define XLogFromFileName(fname, tli, logSegNo)	\
+#define XLogFromFileName(fname, tli, logSegNo, wal_segsz_bytes)	\
 	do {												\
 		uint32 log;										\
 		uint32 seg;										\
 		sscanf(fname, "%08X%08X%08X", tli, &log, &seg); \
-		*logSegNo = (uint64) log * XLogSegmentsPerXLogId + seg; \
+		*logSegNo = (uint64) log * XLogSegmentsPerXLogId(wal_segsz_bytes) + seg; \
 	} while (0)
 
-#define XLogFilePath(path, tli, logSegNo)	\
-	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X", tli,				\
-			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId),				\
-			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId))
+#define XLogFilePath(path, tli, logSegNo, wal_segsz_bytes)	\
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X", tli,	\
+			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId(wal_segsz_bytes)), \
+			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId(wal_segsz_bytes)))
 
 #define TLHistoryFileName(fname, tli)	\
 	snprintf(fname, MAXFNAMELEN, "%08X.history", tli)
@@ -189,20 +201,22 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 #define StatusFilePath(path, xlog, suffix)	\
 	snprintf(path, MAXPGPATH, XLOGDIR "/archive_status/%s%s", xlog, suffix)
 
-#define BackupHistoryFileName(fname, tli, logSegNo, offset) \
+#define BackupHistoryFileName(fname, tli, logSegNo, startpoint, wal_segsz_bytes) \
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X.%08X.backup", tli, \
-			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId),		  \
-			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId), offset)
+			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId(wal_segsz_bytes)), \
+			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId(wal_segsz_bytes)), \
+			 (uint32) (XLogSegmentOffset(startpoint, wal_segsz_bytes)))
 
 #define IsBackupHistoryFileName(fname) \
 	(strlen(fname) > XLOG_FNAME_LEN && \
 	 strspn(fname, "0123456789ABCDEF") == XLOG_FNAME_LEN && \
 	 strcmp((fname) + strlen(fname) - strlen(".backup"), ".backup") == 0)
 
-#define BackupHistoryFilePath(path, tli, logSegNo, offset)	\
+#define BackupHistoryFilePath(path, tli, logSegNo, startpoint, wal_segsz_bytes)	\
 	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X.%08X.backup", tli, \
-			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId), \
-			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId), offset)
+			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId(wal_segsz_bytes)), \
+			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId(wal_segsz_bytes)), \
+			 (uint32) (XLogSegmentOffset((startpoint), wal_segsz_bytes)))
 
 /*
  * Information logged when we detect a change in one of the parameters
@@ -212,6 +226,7 @@ typedef struct xl_parameter_change
 {
 	int			MaxConnections;
 	int			max_worker_processes;
+	int			max_wal_senders;
 	int			max_prepared_xacts;
 	int			max_locks_per_xact;
 	int			wal_level;
@@ -259,7 +274,7 @@ typedef enum
 	RECOVERY_TARGET_ACTION_PAUSE,
 	RECOVERY_TARGET_ACTION_PROMOTE,
 	RECOVERY_TARGET_ACTION_SHUTDOWN
-} RecoveryTargetAction;
+}			RecoveryTargetAction;
 
 /*
  * Method table for resource managers.
@@ -272,6 +287,9 @@ typedef enum
  * "VACUUM". rm_desc can then be called to obtain additional detail for the
  * record, if available (e.g. the last block).
  *
+ * rm_mask takes as input a page modified by the resource manager and masks
+ * out bits that shouldn't be flagged by wal_consistency_checking.
+ *
  * RmgrTable[] is indexed by RmgrId values (see rmgrlist.h).
  */
 typedef struct RmgrData
@@ -282,11 +300,6 @@ typedef struct RmgrData
 	const char *(*rm_identify) (uint8 info);
 	void		(*rm_startup) (void);
 	void		(*rm_cleanup) (void);
-
-	/*
-	 * rm_mask takes as input a page modified by the resource manager and masks
-	 * out bits that shouldn't be flagged by wal_consistency_checking.
-	 */
 	void		(*rm_mask) (char *pagedata, BlockNumber blkno);
 } RmgrData;
 
@@ -295,8 +308,8 @@ extern const RmgrData RmgrTable[];
 /*
  * Exported to support xlog switching from checkpointer
  */
-extern pg_time_t GetLastSegSwitchTime(void);
-extern XLogRecPtr RequestXLogSwitch(void);
+extern pg_time_t GetLastSegSwitchData(XLogRecPtr *lastSwitchLSN);
+extern XLogRecPtr RequestXLogSwitch(bool mark_unimportant);
 
 extern void GetOldestRestartPoint(XLogRecPtr *oldrecptr, TimeLineID *oldtli);
 
@@ -313,11 +326,11 @@ extern char *recoveryRestoreCommand;
  * Prototypes for functions in xlogarchive.c
  */
 extern bool RestoreArchivedFile(char *path, const char *xlogfname,
-					const char *recovername, off_t expectedSize,
-					bool cleanupEnabled);
-extern void ExecuteRecoveryCommand(char *command, char *commandName,
-					   bool failOnerror);
-extern void KeepFileRestoredFromArchive(char *path, char *xlogfname);
+								const char *recovername, off_t expectedSize,
+								bool cleanupEnabled);
+extern void ExecuteRecoveryCommand(const char *command, const char *commandName,
+								   bool failOnerror);
+extern void KeepFileRestoredFromArchive(const char *path, const char *xlogfname);
 extern void XLogArchiveNotify(const char *xlog);
 extern void XLogArchiveNotifySeg(XLogSegNo segno);
 extern void XLogArchiveForceDone(const char *xlog);
@@ -327,4 +340,4 @@ extern bool XLogArchiveIsReady(const char *xlog);
 extern bool XLogArchiveIsReadyOrDone(const char *xlog);
 extern void XLogArchiveCleanup(const char *xlog);
 
-#endif   /* XLOG_INTERNAL_H */
+#endif							/* XLOG_INTERNAL_H */

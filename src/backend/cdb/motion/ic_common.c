@@ -15,10 +15,10 @@
 
 #include "postgres.h"
 
+#include "common/ip.h"
 #include "nodes/execnodes.h"	/* ExecSlice, SliceTable */
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
-#include "libpq/ip.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 

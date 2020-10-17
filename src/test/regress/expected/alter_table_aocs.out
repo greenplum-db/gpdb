@@ -94,7 +94,7 @@ select a,c,d from addcol1 where a > 9 and a < 15 order by a;
 insert into addcol1 select i, 'abc', 22*i/7, -i from generate_series(1,10)i;
 -- add columns with compression (dense and bulk dense content varblocks)
 alter table addcol1
-   add column e float default 22/7::float encoding (compresstype=RLE_TYPE),
+   add column e float default to_char((22/7::float), '9.99999999999999')::float encoding (compresstype=RLE_TYPE),
    add column f int default 20 encoding (compresstype=zlib);
 select * from addcol1 where a < 2 and a > -4 order by a,c;
  a  |                b                 |  c  | d  |        e         | f  
@@ -272,11 +272,11 @@ WHERE relname='addcol6'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
+ FrozenXid |      1 |           100 |             1
  NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
+ FrozenXid |      1 |           100 |             2
  NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
+ FrozenXid |      1 |           100 |             0
 (6 rows)
 
 abort;
@@ -288,11 +288,11 @@ WHERE relname='addcol6'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 |             0 |             1
- NormalXid |      1 |           100 |             1
+ FrozenXid |      1 |           100 |             1
  NormalXid |      0 |             0 |             2
- NormalXid |      1 |           100 |             2
+ FrozenXid |      1 |           100 |             2
  NormalXid |      0 |             0 |             0
- NormalXid |      1 |           100 |             0
+ FrozenXid |      1 |           100 |             0
 (6 rows)
 
 insert into addcol6 select i,i/2 from generate_series(1,20)i;
@@ -319,11 +319,11 @@ WHERE relname='addcol6'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
  NormalXid |      0 |             0 |             0
- NormalXid |      1 |           200 |             0
+ FrozenXid |      1 |           200 |             0
  NormalXid |      0 |             0 |             1
- NormalXid |      1 |           200 |             1
+ FrozenXid |      1 |           200 |             1
  NormalXid |      0 |             0 |             2
- NormalXid |      1 |           200 |             2
+ FrozenXid |      1 |           200 |             2
 (6 rows)
 
 -- add column with default value as sequence
@@ -366,8 +366,6 @@ create table addcol7 (
          with (appendonly=true, orientation=column, compresslevel=5),
       partition part201203 values('201203')
          with (appendonly=true, orientation=column, compresslevel=5));
-NOTICE:  CREATE TABLE will create partition "addcol7_1_prt_part201202" for table "addcol7"
-NOTICE:  CREATE TABLE will create partition "addcol7_1_prt_part201203" for table "addcol7"
 insert into addcol7 select '201202', 100*i, i, 'a'
    from generate_series(1,10)i;
 insert into addcol7 select '201203', 101*i, i, 'b'
@@ -393,7 +391,6 @@ alter table addcol7
    add partition part201204 values('201204')
       with (appendonly=true, compresslevel=5),
    add column new2 varchar default 'abc';
-NOTICE:  CREATE TABLE will create partition "addcol7_1_prt_part201204" for table "addcol7"
 -- insert, select, update, delete and vacuum post alter
 insert into addcol7 values
    ('201202', 101, 1, 'p1', 3/5::float, 'newcol2'),
@@ -406,17 +403,17 @@ insert into addcol7 values
    ('201204', 302, 8, 'p3', null, null),
    ('201204', 303, 9, 'p3', null, null);
 select * from addcol7 where tag2 like 'p%' order by user_id;
- timest | user_id | tag1 | tag2 |       new1        |  new2   
---------+---------+------+------+-------------------+---------
- 201202 |     101 |    1 | p1   |               0.6 | newcol2
- 201202 |     102 |    2 | p1   | 0.166666666666667 | newcol2
- 201202 |     103 |    3 | p1   |  3.14285714285714 | newcol2
- 201203 |     201 |    4 | p2   | 0.333333333333333 | newcol2
- 201203 |     202 |    5 | p2   |                   | 
- 201203 |     203 |    6 | p2   |                   | 
- 201204 |     301 |    7 | p3   |  3.14285714285714 | newcol2
- 201204 |     302 |    8 | p3   |                   | 
- 201204 |     303 |    9 | p3   |                   | 
+ timest | user_id | tag1 | tag2 |        new1         |  new2   
+--------+---------+------+------+---------------------+---------
+ 201202 |     101 |    1 | p1   |                 0.6 | newcol2
+ 201202 |     102 |    2 | p1   | 0.16666666666666666 | newcol2
+ 201202 |     103 |    3 | p1   |   3.142857142857143 | newcol2
+ 201203 |     201 |    4 | p2   |  0.3333333333333333 | newcol2
+ 201203 |     202 |    5 | p2   |                     | 
+ 201203 |     203 |    6 | p2   |                     | 
+ 201204 |     301 |    7 | p3   |   3.142857142857143 | newcol2
+ 201204 |     302 |    8 | p3   |                     | 
+ 201204 |     303 |    9 | p3   |                     | 
 (9 rows)
 
 update addcol7 set new1 = 0, tag1 = -1 where tag2 like 'p%';
@@ -455,13 +452,13 @@ select * from addcol8 order by a;
 (10 rows)
 
 \d addcol8
-Append-Only Columnar Table "aocs_addcol.addcol8"
- Column |         Type          | Modifiers 
---------+-----------------------+-----------
- a      | integer               | 
- b      | character varying(20) | 
- d      | integer               | 
- e      | double precision      | default 1
+                   Table "aocs_addcol.addcol8"
+ Column |         Type          | Collation | Nullable | Default 
+--------+-----------------------+-----------+----------+---------
+ a      | integer               |           |          | 
+ b      | character varying(20) |           |          | 
+ d      | integer               |           |          | 
+ e      | double precision      |           |          | 1
 Checksum: t
 Distributed by: (a)
 
@@ -575,44 +572,44 @@ ERROR:  cannot SET reloption "appendonly"
 create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
     partition by range(b) (start (1) end (5) exclusive every (1), default partition foo);
 insert into alter_aocs_part_table values (generate_series(1,10), generate_series(1,10));
-alter table alter_aocs_part_table drop partition for (rank(1));
+alter table alter_aocs_part_table drop partition for (1);
 alter table alter_aocs_part_table split default partition start(6) inclusive end(7) exclusive;
-NOTICE:  dropped partition "foo" for relation "alter_aocs_part_table"
 alter table alter_aocs_part_table split default partition start(6) inclusive end(8) exclusive;
-NOTICE:  dropped partition "foo" for relation "alter_aocs_part_table"
-ERROR:  new partition overlaps existing partition "r2064870801"
+ERROR:  partition "alter_aocs_part_table_1_prt_11" would overlap partition "alter_aocs_part_table_1_prt_1"
 alter table alter_aocs_part_table split default partition start(7) inclusive end(8) exclusive;
-NOTICE:  dropped partition "foo" for relation "alter_aocs_part_table"
-select partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive, partitionisdefault
-    from pg_partitions where tablename = 'alter_aocs_part_table';
- partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitionisdefault 
----------------------+-------------------------+-------------------+-----------------------+--------------------
-                     | f                       |                   | f                     | t
- 2                   | t                       | 3                 | f                     | f
- 3                   | t                       | 4                 | f                     | f
- 4                   | t                       | 5                 | f                     | f
- 6                   | t                       | 7                 | f                     | f
- 7                   | t                       | 8                 | f                     | f
-(6 rows)
+\d+ alter_aocs_part_table
+                  Partitioned table "aocs_addcol.alter_aocs_part_table"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: alter_aocs_part_table_1_prt_1 FOR VALUES FROM (6) TO (7),
+            alter_aocs_part_table_1_prt_11 FOR VALUES FROM (7) TO (8),
+            alter_aocs_part_table_1_prt_3 FOR VALUES FROM (2) TO (3),
+            alter_aocs_part_table_1_prt_4 FOR VALUES FROM (3) TO (4),
+            alter_aocs_part_table_1_prt_5 FOR VALUES FROM (4) TO (5),
+            alter_aocs_part_table_1_prt_foo DEFAULT
+Distributed by: (a)
 
 create table alter_aocs_ao_table (a int, b int) with (appendonly=true) distributed by (a);
 insert into alter_aocs_ao_table values (2,2);
-alter table alter_aocs_part_table exchange partition for (rank(1)) with table alter_aocs_ao_table;
+alter table alter_aocs_part_table exchange partition for (2) with table alter_aocs_ao_table;
 create table alter_aocs_heap_table (a int, b int) distributed by (a);
 insert into alter_aocs_heap_table values (3,3);
-alter table alter_aocs_part_table exchange partition for (rank(2)) with table alter_aocs_heap_table;
+alter table alter_aocs_part_table exchange partition for (3) with table alter_aocs_heap_table;
 -- Test truncating and exchanging partition and then rolling back
 begin work;
 create table alter_aocs_ptable_exchange (a int, b int) with (appendonly=true, orientation=column) distributed by (a);
 insert into alter_aocs_ptable_exchange values (3,3), (3,3), (3,3);
-alter table alter_aocs_part_table truncate partition for (rank(2));
+alter table alter_aocs_part_table truncate partition for (3);
 select count(*) from alter_aocs_part_table;
  count 
 -------
      8
 (1 row)
 
-alter table alter_aocs_part_table exchange partition for (rank(2)) with table alter_aocs_ptable_exchange;
+alter table alter_aocs_part_table exchange partition for (3) with table alter_aocs_ptable_exchange;
 select count(*) from alter_aocs_part_table;
  count 
 -------
@@ -643,19 +640,20 @@ alter table aocs_multi_level_part_table add partition part3 start(date '2010-01-
   (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
 -- Add default partition (defaults to heap storage unless set with AO)
 alter table aocs_multi_level_part_table add default partition yearYYYY (default subpartition def);
-select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count 
--------
-     0
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid)
+WHERE c.relname = 'aocs_multi_level_part_table_1_prt_yearyyyy_2_prt_def';
+ amname 
+--------
+ heap
 (1 row)
 
 alter table aocs_multi_level_part_table drop partition yearYYYY;
-NOTICE:  dropped partition "yearyyyy" for relation "aocs_multi_level_part_table" and its children
 alter table aocs_multi_level_part_table add default partition yearYYYY with (appendonly=true, orientation=column) (default subpartition def);
-select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count 
--------
-     1
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid)
+WHERE c.relname = 'aocs_multi_level_part_table_1_prt_yearyyyy_2_prt_def';
+  amname   
+-----------
+ ao_column
 (1 row)
 
 -- index on atts 1, 4
@@ -692,8 +690,7 @@ select * from aocs_multi_level_part_table;
  03-03-2009 | asia   | Japan   |   1.01
 (3 rows)
 
-alter table aocs_multi_level_part_table truncate partition for (rank(1));
-NOTICE:  truncated partition "part1" for relation "aocs_multi_level_part_table" and its children
+alter table aocs_multi_level_part_table truncate partition for ('02-02-2008');
 select * from aocs_multi_level_part_table;
     date    | region | region1 | amount 
 ------------+--------+---------+--------
@@ -702,7 +699,6 @@ select * from aocs_multi_level_part_table;
 (2 rows)
 
 alter table aocs_multi_level_part_table alter partition part2 truncate partition usa;
-NOTICE:  truncated partition "usa" for partition "part2" of relation "aocs_multi_level_part_table"
 select * from aocs_multi_level_part_table;
     date    | region | region1 | amount 
 ------------+--------+---------+--------
@@ -710,7 +706,6 @@ select * from aocs_multi_level_part_table;
 (1 row)
 
 alter table aocs_multi_level_part_table truncate partition part2;
-NOTICE:  truncated partition "part2" for relation "aocs_multi_level_part_table" and its children
 select * from aocs_multi_level_part_table;
  date | region | region1 | amount 
 ------+--------+---------+--------
@@ -732,7 +727,7 @@ select count(*) from pg_attribute where attrelid='aocs_multi_level_part_table'::
 
 -- splitting top partition of a multi-level partition should not work
 alter table aocs_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
-ERROR:  cannot split partition with child partitions
+ERROR:  cannot SPLIT PARTITION for relation "aocs_multi_level_part_table" -- partition has children
 HINT:  Try splitting the child partitions.
 -- Test case: alter table add column with FirstRowNumber > 1
 create table aocs_first_row_number (a int, b int) with (appendonly=true, orientation=column);
@@ -783,7 +778,7 @@ alter table aocs_with_compress set with (reorganize=true);
 alter table aocs_with_compress alter column c type integer;
 -- test case: alter AOCS table add column, the preference of the storage setting is: the encoding clause > table setting > gp_default_storage_options
 CREATE TABLE aocs_alter_add_col(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
-SET gp_default_storage_options ='appendonly=true, orientation=column, compresstype=zlib, compresslevel=2';
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 -- use statement encoding 
 ALTER TABLE aocs_alter_add_col ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
 -- use table setting
@@ -792,20 +787,20 @@ RESET gp_default_storage_options;
 -- use table setting
 ALTER TABLE aocs_alter_add_col ADD COLUMN d int;
 \d+ aocs_alter_add_col
-                                 Append-Only Columnar Table "public.aocs_alter_add_col"
- Column |  Type   | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+---------+-----------+---------+--------------+------------------+-------------------+------------+-------------
- a      | integer |           | plain   |              | rle_type         | 4                 | 65536      | 
- b      | integer |           | plain   |              | zlib             | 3                 | 16384      | 
- c      | integer |           | plain   |              | rle_type         | 4                 | 65536      | 
- d      | integer |           | plain   |              | rle_type         | 4                 | 65536      | 
+                                                      Table "public.aocs_alter_add_col"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
+ b      | integer |           |          |         | plain   |              | zlib             | 3                 | 16384      | 
+ c      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
+ d      | integer |           |          |         | plain   |              | rle_type         | 4                 | 65536      | 
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536
+Options: compresstype=rle_type, compresslevel=4, blocksize=65536
 
 DROP TABLE aocs_alter_add_col;
 CREATE TABLE aocs_alter_add_col_no_compress(a int) WITH (appendonly=true, orientation=column);
-SET gp_default_storage_options ='appendonly=true, orientation=column, compresstype=zlib, compresslevel=2, blocksize=8192';
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2, blocksize=8192';
 -- use statement encoding
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN b int ENCODING(compresstype=rle_type, compresslevel=3, blocksize=16384);
 -- use gp_default_storage_options
@@ -814,15 +809,14 @@ RESET gp_default_storage_options;
 -- use default value 
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN d int;
 \d+ aocs_alter_add_col_no_compress 
-                           Append-Only Columnar Table "public.aocs_alter_add_col_no_compress"
- Column |  Type   | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+---------+-----------+---------+--------------+------------------+-------------------+------------+-------------
- a      | integer |           | plain   |              | none             | 0                 | 32768      | 
- b      | integer |           | plain   |              | rle_type         | 3                 | 16384      | 
- c      | integer |           | plain   |              | zlib             | 2                 | 32768      | 
- d      | integer |           | plain   |              | none             | 0                 | 32768      | 
+                                                Table "public.aocs_alter_add_col_no_compress"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
+ b      | integer |           |          |         | plain   |              | rle_type         | 3                 | 16384      | 
+ c      | integer |           |          |         | plain   |              | zlib             | 2                 | 32768      | 
+ d      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, orientation=column
 
 DROP TABLE aocs_alter_add_col_no_compress;

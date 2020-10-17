@@ -9,12 +9,15 @@ CDistributionSpecStrictRandom::CDistributionSpecStrictRandom()
 {
 }
 
-BOOL CDistributionSpecStrictRandom::Matches(const CDistributionSpec *pds) const
+BOOL
+CDistributionSpecStrictRandom::Matches(const CDistributionSpec *pds) const
 {
-    return pds->Edt() == Edt();
+	return pds->Edt() == Edt();
 }
 
-BOOL CDistributionSpecStrictRandom::FSatisfies(const CDistributionSpec *pds) const
+BOOL
+CDistributionSpecStrictRandom::FSatisfies(const CDistributionSpec *pds) const
 {
-    return Matches(pds) || EdtAny == pds->Edt() || EdtRandom == pds->Edt() || EdtNonSingleton == pds->Edt();
+	return Matches(pds) || EdtAny == pds->Edt() || EdtRandom == pds->Edt() ||
+		   EdtNonSingleton == pds->Edt();
 }

@@ -3,7 +3,7 @@ doc/src/sgml/ref/create_resource_group.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATERESOURCEGROUP">
+<refentry id="sql-createresourcegroup">
  <indexterm zone="sql-createresourcegroup">
   <primary>CREATE RESOURCE GROUP</primary>
  </indexterm>

@@ -12,9 +12,8 @@
 #undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
-#define errfinish errfinish_impl
-static int
-errfinish_impl(int dummy pg_attribute_unused(),...)
+static void
+_errfinish_impl()
 {
 	PG_RE_THROW();
 }
@@ -22,14 +21,7 @@ errfinish_impl(int dummy pg_attribute_unused(),...)
 #include "../postgres.c"
 
 #define EXPECT_EREPORT(LOG_LEVEL)     \
-	expect_any(errmsg, fmt); \
-	will_be_called(errmsg); \
-	expect_any(errcode, sqlerrcode); \
-	will_be_called(errcode); \
 	expect_value(errstart, elevel, (LOG_LEVEL)); \
-	expect_any(errstart, filename); \
-	expect_any(errstart, lineno); \
-	expect_any(errstart, funcname); \
 	expect_any(errstart, domain); \
 	if (LOG_LEVEL < ERROR) \
 	{ \
@@ -37,7 +29,7 @@ errfinish_impl(int dummy pg_attribute_unused(),...)
 	} \
     else \
     { \
-		will_return(errstart, true);\
+		will_return_with_sideeffect(errstart, false, &_errfinish_impl, NULL); \
     } \
 
 const char *progname = "postgres";
@@ -55,37 +47,22 @@ test__IsTransactionExitStmtList__MultipleElementList(void **state)
 
 /*  Transaction with Exit Statement, return TRUE. */
 static void
-test__IsTransactionExitStmt__IsTransactionStmt(void **state)
+test__IsTransactionExitStmt(void **state)
 {
+	PlannedStmt *pstmt = makeNode(PlannedStmt);
 	TransactionStmt *stmt = makeNode(TransactionStmt);
-	stmt->kind = TRANS_STMT_COMMIT;
 
-	List *list = list_make1(stmt);
+	stmt->kind = TRANS_STMT_COMMIT;
+	pstmt->commandType = CMD_UTILITY;
+	pstmt->utilityStmt = (Node *)stmt;
+
+	List *list = list_make1(pstmt);
 
 	assert_true(IsTransactionExitStmtList(list));
 
 	list_free(list);
 	pfree(stmt);
-}
-
-/* Query with Transaction with Exit Statement, return TRUE. */
-static void
-test__IsTransactionExitStmt__IsQuery(void **state)
-{
-	TransactionStmt *stmt = makeNode(TransactionStmt);
-	stmt->kind = TRANS_STMT_COMMIT;
-	Query *query = (Query *)palloc(sizeof(Query));
-	query->type = T_Query;
-	query->commandType = CMD_UTILITY;
-	query->utilityStmt = (Node*) stmt;
-
-	List *list = list_make1(query);
-
-	assert_true(IsTransactionExitStmtList(list));
-
-	list_free(list);
-	pfree(query);
-	pfree(stmt);
+	pfree(pstmt);
 }
 
 /*
@@ -139,14 +116,7 @@ test__ProcessInterrupts__DoingCommandRead(void **state)
 	QueryCancelPending = true;
 	DoingCommandRead = true;
 
-	/* Mock up elog_start and elog_finish */
-	expect_any(elog_start, filename);
-	expect_any(elog_start, lineno);
-	expect_any(elog_start, funcname);
-	will_be_called(elog_start);
-	expect_value(elog_finish, elevel, LOG);
-	expect_any(elog_finish, fmt);
-	will_be_called(elog_finish);
+	EXPECT_EREPORT(LOG);
 
 	ProcessInterrupts(__FILE__, __LINE__);
 
@@ -159,15 +129,7 @@ test__ProcessInterrupts__DoingCommandRead(void **state)
 	QueryCancelPending = true;
 	DoingCommandRead = false;
 
-	/* Mock up elog_start and elog_finish */
-	expect_any(elog_start, filename);
-	expect_any(elog_start, lineno);
-	expect_any(elog_start, funcname);
-	will_be_called(elog_start);
-	expect_value(elog_finish, elevel, LOG);
-	expect_any(elog_finish, fmt);
-	will_be_called(elog_finish);
-
+	EXPECT_EREPORT(LOG);
 	EXPECT_EREPORT(ERROR);
 
 	PG_TRY();
@@ -191,8 +153,7 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test__IsTransactionExitStmtList__MultipleElementList),
-		unit_test(test__IsTransactionExitStmt__IsTransactionStmt),
-		unit_test(test__IsTransactionExitStmt__IsQuery),
+		unit_test(test__IsTransactionExitStmt),
 		unit_test(test__ProcessInterrupts__ClientConnectionLost),
 		unit_test(test__ProcessInterrupts__DoingCommandRead)
 	};

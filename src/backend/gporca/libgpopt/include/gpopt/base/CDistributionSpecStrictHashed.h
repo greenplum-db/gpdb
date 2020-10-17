@@ -8,22 +8,23 @@
 
 namespace gpopt
 {
-	// Class to represent a "forced" hashed distribution. Introduced to support
-	// parallel append, this distribution is meant to be incompatible with
-	// (or unsatisfiable by) most other distributions to force a motion.
-	class CDistributionSpecStrictHashed : public CDistributionSpecHashed
+// Class to represent a "forced" hashed distribution. Introduced to support
+// parallel append, this distribution is meant to be incompatible with
+// (or unsatisfiable by) most other distributions to force a motion.
+class CDistributionSpecStrictHashed : public CDistributionSpecHashed
+{
+public:
+	CDistributionSpecStrictHashed(CExpressionArray *pdrgpexpr,
+								  BOOL fNullsColocated);
+
+	virtual EDistributionType Edt() const;
+
+	virtual const CHAR *
+	SzId() const
 	{
-		public:
-			CDistributionSpecStrictHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated);
-
-			virtual EDistributionType Edt() const;
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "STRICT HASHED";
-			}
-	};
-}
+		return "STRICT HASHED";
+	}
+};
+}  // namespace gpopt
 
 #endif

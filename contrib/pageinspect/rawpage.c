@@ -5,7 +5,7 @@
  *
  * Access-method specific inspection functions are in separate files.
  *
- * Copyright (c) 2007-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/pageinspect/rawpage.c
@@ -15,21 +15,25 @@
 
 #include "postgres.h"
 
+#include "pageinspect.h"
+
 #include "access/htup_details.h"
-#include "catalog/catalog.h"
+#include "access/relation.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
+#include "storage/checksum.h"
 #include "utils/builtins.h"
 #include "utils/pg_lsn.h"
 #include "utils/rel.h"
+#include "utils/varlena.h"
 
 PG_MODULE_MAGIC;
 
 static bytea *get_raw_page_internal(text *relname, ForkNumber forknum,
-					  BlockNumber blkno);
+									BlockNumber blkno);
 
 
 /*
@@ -42,7 +46,7 @@ PG_FUNCTION_INFO_V1(get_raw_page);
 Datum
 get_raw_page(PG_FUNCTION_ARGS)
 {
-	text	   *relname = PG_GETARG_TEXT_P(0);
+	text	   *relname = PG_GETARG_TEXT_PP(0);
 	uint32		blkno = PG_GETARG_UINT32(1);
 	bytea	   *raw_page;
 
@@ -71,8 +75,8 @@ PG_FUNCTION_INFO_V1(get_raw_page_fork);
 Datum
 get_raw_page_fork(PG_FUNCTION_ARGS)
 {
-	text	   *relname = PG_GETARG_TEXT_P(0);
-	text	   *forkname = PG_GETARG_TEXT_P(1);
+	text	   *relname = PG_GETARG_TEXT_PP(0);
+	text	   *forkname = PG_GETARG_TEXT_PP(1);
 	uint32		blkno = PG_GETARG_UINT32(2);
 	bytea	   *raw_page;
 	ForkNumber	forknum;
@@ -99,7 +103,7 @@ get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
 	if (!superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser to use raw functions"))));
+				 (errmsg("must be superuser to use raw page functions"))));
 
 	relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	rel = relation_openrv(relrv, AccessShareLock);
@@ -120,10 +124,19 @@ get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("cannot get raw page from foreign table \"%s\"",
 						RelationGetRelationName(rel))));
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cannot get raw page from partitioned table \"%s\"",
+						RelationGetRelationName(rel))));
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_INDEX)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cannot get raw page from partitioned index \"%s\"",
+						RelationGetRelationName(rel))));
 
 	/* Check that this relation has the right kind of storage */
-	if (rel->rd_rel->relstorage == RELSTORAGE_AOROWS ||
-		rel->rd_rel->relstorage == RELSTORAGE_AOCOLS)
+	if (RelationIsAppendOptimized(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("cannot get raw page from append-optimized relation \"%s\"",
@@ -164,6 +177,42 @@ get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
 
 	return raw_page;
 }
+
+
+/*
+ * get_page_from_raw
+ *
+ * Get a palloc'd, maxalign'ed page image from the result of get_raw_page()
+ *
+ * On machines with MAXALIGN = 8, the payload of a bytea is not maxaligned,
+ * since it will start 4 bytes into a palloc'd value.  On alignment-picky
+ * machines, this will cause failures in accesses to 8-byte-wide values
+ * within the page.  We don't need to worry if accessing only 4-byte or
+ * smaller fields, but when examining a struct that contains 8-byte fields,
+ * use this function for safety.
+ */
+Page
+get_page_from_raw(bytea *raw_page)
+{
+	Page		page;
+	int			raw_page_size;
+
+	raw_page_size = VARSIZE_ANY_EXHDR(raw_page);
+
+	if (raw_page_size != BLCKSZ)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid page size"),
+				 errdetail("Expected %d bytes, got %d.",
+						   BLCKSZ, raw_page_size)));
+
+	page = palloc(raw_page_size);
+
+	memcpy(page, VARDATA_ANY(raw_page), raw_page_size);
+
+	return page;
+}
+
 
 /*
  * page_header
@@ -216,7 +265,7 @@ page_header(PG_FUNCTION_ARGS)
 	lsn = PageGetLSN((Page) page);
 
 	/* pageinspect >= 1.2 uses pg_lsn instead of text for the LSN field. */
-	if (tupdesc->attrs[0]->atttypid == TEXTOID)
+	if (TupleDescAttr(tupdesc, 0)->atttypid == TEXTOID)
 	{
 		char		lsnchar[64];
 
@@ -243,4 +292,40 @@ page_header(PG_FUNCTION_ARGS)
 	result = HeapTupleGetDatum(tuple);
 
 	PG_RETURN_DATUM(result);
+}
+
+/*
+ * page_checksum
+ *
+ * Compute checksum of a raw page
+ */
+
+PG_FUNCTION_INFO_V1(page_checksum);
+
+Datum
+page_checksum(PG_FUNCTION_ARGS)
+{
+	bytea	   *raw_page = PG_GETARG_BYTEA_P(0);
+	uint32		blkno = PG_GETARG_INT32(1);
+	int			raw_page_size;
+	PageHeader	page;
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser to use raw page functions"))));
+
+	raw_page_size = VARSIZE(raw_page) - VARHDRSZ;
+
+	/*
+	 * Check that the supplied page is of the right size.
+	 */
+	if (raw_page_size != BLCKSZ)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("incorrect size of input page (%d bytes)", raw_page_size)));
+
+	page = (PageHeader) VARDATA(raw_page);
+
+	PG_RETURN_INT16(pg_checksum_page((char *) page, blkno));
 }

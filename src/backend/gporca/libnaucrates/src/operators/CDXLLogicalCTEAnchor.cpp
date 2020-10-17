@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Implementation of DXL logical CTE anchors
-//		
+//
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLLogicalCTEAnchor.h"
@@ -26,14 +26,8 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLLogicalCTEAnchor::CDXLLogicalCTEAnchor
-	(
-	CMemoryPool *mp,
-	ULONG id
-	)
-	:
-	CDXLLogical(mp),
-	m_id(id)
+CDXLLogicalCTEAnchor::CDXLLogicalCTEAnchor(CMemoryPool *mp, ULONG id)
+	: CDXLLogical(mp), m_id(id)
 {
 }
 
@@ -74,20 +68,19 @@ CDXLLogicalCTEAnchor::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalCTEAnchor::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLLogicalCTEAnchor::SerializeToDXL(CXMLSerializer *xml_serializer,
+									 const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenCTEId), Id());
-	
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenCTEId),
+								 Id());
+
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -100,22 +93,21 @@ CDXLLogicalCTEAnchor::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalCTEAnchor::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	) const
+CDXLLogicalCTEAnchor::AssertValid(const CDXLNode *dxlnode,
+								  BOOL validate_children) const
 {
 	GPOS_ASSERT(1 == dxlnode->Arity());
 
 	CDXLNode *child_dxlnode = (*dxlnode)[0];
-	GPOS_ASSERT(EdxloptypeLogical == child_dxlnode->GetOperator()->GetDXLOperatorType());
+	GPOS_ASSERT(EdxloptypeLogical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
 
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

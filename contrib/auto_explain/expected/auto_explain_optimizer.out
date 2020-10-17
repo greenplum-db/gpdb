@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/^LOG.*\"Feature/
+-- s/^LOG.*\"Feature/\"Feature/
+-- end_matchsubs
 CREATE SCHEMA auto_explain_test;
 CREATE TABLE auto_explain_test.t1(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -25,9 +29,13 @@ SET auto_explain.log_timing = FALSE;
 LOG:  statement: SET auto_explain.log_timing = FALSE;
 SET auto_explain.log_verbose = FALSE;
 LOG:  statement: SET auto_explain.log_verbose = FALSE;
+-- start_ignore
+-- GPDB_12_MERGE_FIXME: Non default collations
+-- end_ignore
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
-LOG:  duration: 0.112 ms  plan:
+"Feature not supported: Non-default collation",
+LOG:  duration: 0.026 ms  plan:
 Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
 Index Only Scan using pg_class_relname_nsp_index on pg_class  (cost=0.15..4.17 rows=1 width=64) (actual rows=1 loops=1)
   Index Cond: (relname = 'pg_class'::name)
@@ -67,8 +75,12 @@ LOG:  statement: SET auto_explain.log_triggers = FALSE;
 SET auto_explain.log_verbose = TRUE;
 LOG:  statement: SET auto_explain.log_verbose = TRUE;
 -- this select should not dump execution plan
+-- start_ignore
+-- GPDB_12_MERGE_FIXME: Non default collation
+-- end_ignore
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
+"Feature not supported: Non-default collation",
  relname  
 ----------
  pg_class

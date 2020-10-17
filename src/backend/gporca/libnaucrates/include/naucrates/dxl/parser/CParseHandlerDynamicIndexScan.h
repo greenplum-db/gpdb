@@ -19,59 +19,53 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerDynamicIndexScan
-	//
-	//	@doc:
-	//		Parse handler for index scan operator nodes
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerDynamicIndexScan : public CParseHandlerIndexScan
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerDynamicIndexScan
+//
+//	@doc:
+//		Parse handler for index scan operator nodes
+//
+//---------------------------------------------------------------------------
+class CParseHandlerDynamicIndexScan : public CParseHandlerIndexScan
+{
+private:
+	// part index id
+	ULONG m_part_index_id;
 
-			// part index id
-			ULONG m_part_index_id;
-			
-			// printable partition index id
-			ULONG m_part_index_id_printable;
+	// printable partition index id
+	ULONG m_part_index_id_printable;
 
-			// private copy ctor
-			CParseHandlerDynamicIndexScan(const CParseHandlerDynamicIndexScan &);
+	// private copy ctor
+	CParseHandlerDynamicIndexScan(const CParseHandlerDynamicIndexScan &);
 
-			// process the start of an element
-			void StartElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-				);
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-			// process the end of an element
-			void EndElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-				);
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
 
-		public:
-			// ctor
-			CParseHandlerDynamicIndexScan
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-	};
-}
+public:
+	// ctor
+	CParseHandlerDynamicIndexScan(CMemoryPool *mp,
+								  CParseHandlerManager *parse_handler_mgr,
+								  CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
 
-#endif // !GPDXL_CParseHandlerDynamicIndexScan_H
+#endif	// !GPDXL_CParseHandlerDynamicIndexScan_H
 
 // EOF

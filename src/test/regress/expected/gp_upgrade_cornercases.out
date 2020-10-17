@@ -34,12 +34,11 @@ CREATE TABLE part (a int, b int, c int)
         PARTITION part_1 START (0) INCLUSIVE END (3) EXCLUSIVE,
         DEFAULT PARTITION part_extra
 );
-NOTICE:  CREATE TABLE will create partition "part_1_prt_part_extra" for table "part"
-NOTICE:  CREATE TABLE will create partition "part_1_prt_part_1" for table "part"
 INSERT INTO part VALUES (1, 2, 3), (4, 5, 6);
 ALTER TABLE part DROP COLUMN c;
 ALTER TABLE ONLY part DROP COLUMN b; -- note the ONLY here!
-ERROR:  can't drop a column from "part"; it is a partitioned table or part thereof
+ERROR:  cannot drop column from only the partitioned table when partitions exist
+HINT:  Do not specify the ONLY keyword.
 -- DROP all the columns
 CREATE TABLE no_cols_left (a int, b int, c int) DISTRIBUTED RANDOMLY;
 INSERT INTO no_cols_left VALUES (1, 2, 3), (4, 5, 6), (7, 8, 9);

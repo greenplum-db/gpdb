@@ -25,18 +25,13 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalRowTrigger::CDXLPhysicalRowTrigger
-	(
-	CMemoryPool *mp,
-	IMDId *rel_mdid,
-	INT type,
-	ULongPtrArray *colids_old,
-	ULongPtrArray *colids_new
-	)
-	:
-	CDXLPhysical(mp),
-	m_rel_mdid(rel_mdid),
-	m_type(type),
+CDXLPhysicalRowTrigger::CDXLPhysicalRowTrigger(CMemoryPool *mp, IMDId *rel_mdid,
+											   INT type,
+											   ULongPtrArray *colids_old,
+											   ULongPtrArray *colids_new)
+	: CDXLPhysical(mp),
+	  m_rel_mdid(rel_mdid),
+	  m_type(type),
 	  m_colids_old(colids_old),
 	  m_colids_new(colids_new)
 {
@@ -99,29 +94,30 @@ CDXLPhysicalRowTrigger::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalRowTrigger::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLPhysicalRowTrigger::SerializeToDXL(CXMLSerializer *xml_serializer,
+									   const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	m_rel_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenRelationMdid));
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenMDType), m_type);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	m_rel_mdid->Serialize(xml_serializer,
+						  CDXLTokens::GetDXLTokenStr(EdxltokenRelationMdid));
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenMDType),
+								 m_type);
 
 	if (NULL != m_colids_old)
 	{
 		CWStringDynamic *pstrColsOld = CDXLUtils::Serialize(m_mp, m_colids_old);
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOldCols), pstrColsOld);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenOldCols), pstrColsOld);
 		GPOS_DELETE(pstrColsOld);
 	}
 
 	if (NULL != m_colids_new)
 	{
 		CWStringDynamic *pstrColsNew = CDXLUtils::Serialize(m_mp, m_colids_new);
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenNewCols), pstrColsNew);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenNewCols), pstrColsNew);
 		GPOS_DELETE(pstrColsNew);
 	}
 
@@ -133,7 +129,8 @@ CDXLPhysicalRowTrigger::SerializeToDXL
 	// serialize physical child
 	(*dxlnode)[1]->SerializeToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -146,24 +143,22 @@ CDXLPhysicalRowTrigger::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalRowTrigger::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	)
-	const
+CDXLPhysicalRowTrigger::AssertValid(const CDXLNode *dxlnode,
+									BOOL validate_children) const
 {
 	GPOS_ASSERT(2 == dxlnode->Arity());
 	CDXLNode *child_dxlnode = (*dxlnode)[1];
-	GPOS_ASSERT(EdxloptypePhysical == child_dxlnode->GetOperator()->GetDXLOperatorType());
+	GPOS_ASSERT(EdxloptypePhysical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
 
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 
 // EOF

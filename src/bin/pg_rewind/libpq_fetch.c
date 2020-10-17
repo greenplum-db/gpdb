@@ -3,39 +3,30 @@
  * libpq_fetch.c
  *	  Functions for fetching files from a remote server.
  *
- * Copyright (c) 2013-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2013-2019, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres_fe.h"
 
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
-
-/* for ntohl/htonl */
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #include "pg_rewind.h"
 #include "datapagemap.h"
 #include "fetch.h"
 #include "file_ops.h"
 #include "filemap.h"
-#include "logging.h"
 
-#include "libpq-fe.h"
-#include "catalog/catalog.h"
-#include "catalog/pg_type.h"
+#include "catalog/pg_type_d.h"
+#include "fe_utils/connect.h"
+#include "port/pg_bswap.h"
 
 #include "pqexpbuffer.h"
 
-static PGconn *conn = NULL;
-
-/* Contents of recovery.conf to be generated */
-static PQExpBuffer recoveryconfcontents = NULL;
+PGconn *conn = NULL;
 
 /*
  * Files are fetched max CHUNKSIZE bytes at a time.
@@ -61,7 +52,14 @@ libpqConnect(const char *connstr)
 		pg_fatal("could not connect to server: %s",
 				 PQerrorMessage(conn));
 
-	pg_log(PG_PROGRESS, "connected to server\n");
+	if (showprogress)
+		pg_log_info("connected to server");
+
+	res = PQexec(conn, ALWAYS_SECURE_SEARCH_PATH_SQL);
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+		pg_fatal("could not clear search_path: %s",
+				 PQresultErrorMessage(res));
+	PQclear(res);
 
 	/* Secure connection by enforcing search_path */
 	res = PQexec(conn, "SELECT pg_catalog.set_config('search_path', '', false)");
@@ -78,7 +76,7 @@ libpqConnect(const char *connstr)
 	 */
 	str = run_simple_query("SELECT pg_is_in_recovery()");
 	if (strcmp(str, "f") != 0)
-		pg_fatal("source server must not be in recovery mode\n");
+		pg_fatal("source server must not be in recovery mode");
 	pg_free(str);
 
 	/*
@@ -88,7 +86,7 @@ libpqConnect(const char *connstr)
 	 */
 	str = run_simple_query("SHOW full_page_writes");
 	if (strcmp(str, "on") != 0)
-		pg_fatal("full_page_writes must be enabled in the source server\n");
+		pg_fatal("full_page_writes must be enabled in the source server");
 	pg_free(str);
 
 	/*
@@ -123,7 +121,7 @@ run_simple_query(const char *sql)
 
 	/* sanity check the result set */
 	if (PQnfields(res) != 1 || PQntuples(res) != 1 || PQgetisnull(res, 0, 0))
-		pg_fatal("unexpected result set from query\n");
+		pg_fatal("unexpected result set from query");
 
 	result = pg_strdup(PQgetvalue(res, 0, 0));
 
@@ -133,7 +131,7 @@ run_simple_query(const char *sql)
 }
 
 /*
- * Calls pg_current_xlog_insert_location() function
+ * Calls pg_current_wal_insert_lsn() function
  */
 XLogRecPtr
 libpqGetCurrentXlogInsertLocation(void)
@@ -143,10 +141,10 @@ libpqGetCurrentXlogInsertLocation(void)
 	uint32		lo;
 	char	   *val;
 
-	val = run_simple_query("SELECT pg_current_xlog_insert_location()");
+	val = run_simple_query("SELECT pg_current_wal_insert_lsn()");
 
 	if (sscanf(val, "%X/%X", &hi, &lo) != 2)
-		pg_fatal("unrecognized result \"%s\" for current WAL insert location\n", val);
+		pg_fatal("unrecognized result \"%s\" for current WAL insert location", val);
 
 	result = ((uint64) hi) << 32 | lo;
 
@@ -201,7 +199,7 @@ libpqProcessFileList(void)
 
 	/* sanity check the result set */
 	if (PQnfields(res) != 4)
-		pg_fatal("unexpected result set while fetching file list\n");
+		pg_fatal("unexpected result set while fetching file list");
 
 	/* Read result to local variables */
 	for (i = 0; i < PQntuples(res); i++)
@@ -233,27 +231,6 @@ libpqProcessFileList(void)
 	PQclear(res);
 }
 
-/*
- * Converts an int64 from network byte order to native format.
- */
-static int64
-pg_recvint64(int64 value)
-{
-	union
-	{
-		int64	i64;
-		uint32	i32[2];
-	} swap;
-	int64	result;
-
-	swap.i64 = value;
-
-	result = (uint32) ntohl(swap.i32[0]);
-	result <<= 32;
-	result |= (uint32) ntohl(swap.i32[1]);
-
-	return result;
-}
 
 /*----
  * Runs a query, which returns pieces of files from the remote source data
@@ -273,10 +250,10 @@ receiveFileChunks(const char *sql)
 	if (PQsendQueryParams(conn, sql, 0, NULL, NULL, NULL, NULL, 1) != 1)
 		pg_fatal("could not send query: %s", PQerrorMessage(conn));
 
-	pg_log(PG_DEBUG, "getting file chunks\n");
+	pg_log_debug("getting file chunks");
 
 	if (PQsetSingleRowMode(conn) != 1)
-		pg_fatal("could not set libpq connection to single row mode\n");
+		pg_fatal("could not set libpq connection to single row mode");
 
 	while ((res = PQgetResult(conn)) != NULL)
 	{
@@ -303,13 +280,13 @@ receiveFileChunks(const char *sql)
 
 		/* sanity check the result set */
 		if (PQnfields(res) != 3 || PQntuples(res) != 1)
-			pg_fatal("unexpected result set size while fetching remote files\n");
+			pg_fatal("unexpected result set size while fetching remote files");
 
 		if (PQftype(res, 0) != TEXTOID ||
 			PQftype(res, 1) != INT8OID ||
 			PQftype(res, 2) != BYTEAOID)
 		{
-			pg_fatal("unexpected data types in result set while fetching remote files: %u %u %u\n",
+			pg_fatal("unexpected data types in result set while fetching remote files: %u %u %u",
 					 PQftype(res, 0), PQftype(res, 1), PQftype(res, 2));
 		}
 
@@ -317,21 +294,21 @@ receiveFileChunks(const char *sql)
 			PQfformat(res, 1) != 1 &&
 			PQfformat(res, 2) != 1)
 		{
-			pg_fatal("unexpected result format while fetching remote files\n");
+			pg_fatal("unexpected result format while fetching remote files");
 		}
 
 		if (PQgetisnull(res, 0, 0) ||
 			PQgetisnull(res, 0, 1))
 		{
-			pg_fatal("unexpected null values in result while fetching remote files\n");
+			pg_fatal("unexpected null values in result while fetching remote files");
 		}
 
 		if (PQgetlength(res, 0, 1) != sizeof(int64))
-			pg_fatal("unexpected result length while fetching remote files\n");
+			pg_fatal("unexpected result length while fetching remote files");
 
 		/* Read result set to local variables */
 		memcpy(&chunkoff, PQgetvalue(res, 0, 1), sizeof(int64));
-		chunkoff = pg_recvint64(chunkoff);
+		chunkoff = pg_ntoh64(chunkoff);
 		chunksize = PQgetlength(res, 0, 2);
 
 		filenamelen = PQgetlength(res, 0, 0);
@@ -351,9 +328,8 @@ receiveFileChunks(const char *sql)
 		 */
 		if (PQgetisnull(res, 0, 2))
 		{
-			pg_log(PG_DEBUG,
-				   "received null value for chunk for file \"%s\", file has been deleted\n",
-				   filename);
+			pg_log_debug("received null value for chunk for file \"%s\", file has been deleted",
+						 filename);
 			remove_target_file(filename, true);
 			pg_free(filename);
 			PQclear(res);
@@ -365,8 +341,8 @@ receiveFileChunks(const char *sql)
 		 * translatable strings.
 		 */
 		snprintf(chunkoff_str, sizeof(chunkoff_str), INT64_FORMAT, chunkoff);
-		pg_log(PG_DEBUG, "received chunk for file \"%s\", offset %s, size %d\n",
-			   filename, chunkoff_str, chunksize);
+		pg_log_debug("received chunk for file \"%s\", offset %s, size %d",
+					 filename, chunkoff_str, chunksize);
 
 		open_target_file(filename, false);
 
@@ -399,7 +375,7 @@ libpqGetFile(const char *filename, size_t *filesize)
 
 	/* sanity check the result set */
 	if (PQntuples(res) != 1 || PQgetisnull(res, 0, 0))
-		pg_fatal("unexpected result set while fetching remote file \"%s\"\n",
+		pg_fatal("unexpected result set while fetching remote file \"%s\"",
 				 filename);
 
 	/* Read result to local variables */
@@ -410,7 +386,7 @@ libpqGetFile(const char *filename, size_t *filesize)
 
 	PQclear(res);
 
-	pg_log(PG_DEBUG, "fetched file \"%s\", length %d\n", filename, len);
+	pg_log_debug("fetched file \"%s\", length %d", filename, len);
 
 	if (filesize)
 		*filesize = len;
@@ -535,7 +511,7 @@ libpq_executeFileMap(filemap_t *map)
 	 * temporary table. Now, actually fetch all of those ranges.
 	 */
 	sql =
-		"SELECT path, begin, \n"
+		"SELECT path, begin,\n"
 		"  pg_read_binary_file(path, begin, len, true) AS chunk\n"
 		"FROM fetchchunks\n";
 
@@ -557,224 +533,4 @@ execute_pagemap(datapagemap_t *pagemap, const char *path)
 		fetch_file_range(path, offset, offset + BLCKSZ);
 	}
 	pg_free(iter);
-}
-
-/*
- * TODO: Most of the below code is copied directly from pg_basebackup.c. There
- * are only a couple subtle differences if you diff the two (e.g. removal of
- * recovery.done file, excluding "options" to avoid utility mode, etc.). We
- * should create a common library between the two to create the recovery.conf
- * file.
- */
-static void
-disconnect_and_exit(int code)
-{
-	if (conn != NULL)
-		PQfinish(conn);
-
-	exit(code);
-}
-
-/*
- * Escape a parameter value so that it can be used as part of a libpq
- * connection string, e.g. in:
- *
- * application_name=<value>
- *
- * The returned string is malloc'd. Return NULL on out-of-memory.
- */
-static char *
-escapeConnectionParameter(const char *src)
-{
-	bool		need_quotes = false;
-	bool		need_escaping = false;
-	const char *p;
-	char	   *dstbuf;
-	char	   *dst;
-
-	/*
-	 * First check if quoting is needed. Any quote (') or backslash (\)
-	 * characters need to be escaped. Parameters are separated by whitespace,
-	 * so any string containing whitespace characters need to be quoted. An
-	 * empty string is represented by ''.
-	 */
-	if (strchr(src, '\'') != NULL || strchr(src, '\\') != NULL)
-		need_escaping = true;
-
-	for (p = src; *p; p++)
-	{
-		if (isspace((unsigned char) *p))
-		{
-			need_quotes = true;
-			break;
-		}
-	}
-
-	if (*src == '\0')
-		return pg_strdup("''");
-
-	if (!need_quotes && !need_escaping)
-		return pg_strdup(src);	/* no quoting or escaping needed */
-
-	/*
-	 * Allocate a buffer large enough for the worst case that all the source
-	 * characters need to be escaped, plus quotes.
-	 */
-	dstbuf = pg_malloc(strlen(src) * 2 + 2 + 1);
-
-	dst = dstbuf;
-	if (need_quotes)
-		*(dst++) = '\'';
-	for (; *src; src++)
-	{
-		if (*src == '\'' || *src == '\\')
-			*(dst++) = '\\';
-		*(dst++) = *src;
-	}
-	if (need_quotes)
-		*(dst++) = '\'';
-	*dst = '\0';
-
-	return dstbuf;
-}
-
-/*
- * Escape a string so that it can be used as a value in a key-value pair
- * a configuration file.
- */
-static char *
-escape_quotes(const char *src)
-{
-	char	   *result = escape_single_quotes_ascii(src);
-
-	if (!result)
-	{
-		fprintf(stderr, _("%s: out of memory\n"), progname);
-		exit(1);
-	}
-	return result;
-}
-
-#define GP_WALRECEIVER_APPNAME "gp_walreceiver"
-
-/*
- * Create a recovery.conf file in memory using a PQExpBuffer
- */
-void
-GenerateRecoveryConf(char *replication_slot)
-{
-	PQconninfoOption *connOptions;
-	PQconninfoOption *option;
-	PQExpBufferData conninfo_buf;
-	char	   *escaped;
-
-	recoveryconfcontents = createPQExpBuffer();
-	if (!recoveryconfcontents)
-	{
-		fprintf(stderr, _("%s: out of memory\n"), progname);
-		disconnect_and_exit(1);
-	}
-
-	connOptions = PQconninfo(conn);
-	if (connOptions == NULL)
-	{
-		fprintf(stderr, _("%s: out of memory\n"), progname);
-		disconnect_and_exit(1);
-	}
-
-	appendPQExpBufferStr(recoveryconfcontents, "standby_mode = 'on'\n");
-	appendPQExpBufferStr(recoveryconfcontents, "recovery_target_timeline = 'latest'\n");
-
-	initPQExpBuffer(&conninfo_buf);
-	for (option = connOptions; option && option->keyword; option++)
-	{
-		/*
-		 * Do not emit this setting if: - the setting is "replication",
-		 * "dbname" or "fallback_application_name", since these would be
-		 * overridden by the libpqwalreceiver module anyway. - not set or
-		 * empty.
-		 */
-		if (strcmp(option->keyword, "replication") == 0 ||
-			strcmp(option->keyword, "dbname") == 0 ||
-			strcmp(option->keyword, "fallback_application_name") == 0 ||
-			strcmp(option->keyword, "options") == 0 ||
-			(option->val == NULL) ||
-			(option->val[0] == '\0'))
-			continue;
-
-		/* Separate key-value pairs with spaces */
-		if (conninfo_buf.len != 0)
-			appendPQExpBufferStr(&conninfo_buf, " ");
-
-		/*
-		 * Write "keyword=value" pieces, the value string is escaped and/or
-		 * quoted if necessary.
-		 */
-		escaped = escapeConnectionParameter(option->val);
-		appendPQExpBuffer(&conninfo_buf, "%s=%s", option->keyword, escaped);
-		free(escaped);
-	}
-
-	appendPQExpBuffer(&conninfo_buf, " application_name=%s", GP_WALRECEIVER_APPNAME);
-	/*
-	 * Escape the connection string, so that it can be put in the config file.
-	 * Note that this is different from the escaping of individual connection
-	 * options above!
-	 */
-	escaped = escape_quotes(conninfo_buf.data);
-	appendPQExpBuffer(recoveryconfcontents, "primary_conninfo = '%s'\n", escaped);
-	free(escaped);
-
-	if (replication_slot)
-	{
-		escaped = escape_quotes(replication_slot);
-		appendPQExpBuffer(recoveryconfcontents, "primary_slot_name = '%s'\n", replication_slot);
-		free(escaped);
-	}
-
-	if (PQExpBufferBroken(recoveryconfcontents) ||
-		PQExpBufferDataBroken(conninfo_buf))
-	{
-		fprintf(stderr, _("%s: out of memory\n"), progname);
-		disconnect_and_exit(1);
-	}
-
-	termPQExpBuffer(&conninfo_buf);
-
-	PQconninfoFree(connOptions);
-}
-
-
-/*
- * Write a recovery.conf file into the directory specified in basedir,
- * with the contents already collected in memory.
- */
-void
-WriteRecoveryConf(void)
-{
-	char		filename[MAXPGPATH];
-	FILE	   *cf;
-
-	/* Remove recovery.done file that was most likely copied from source instance */
-	snprintf(filename, sizeof(filename), "%s/recovery.done", datadir_target);
-	unlink(filename);
-
-	snprintf(filename, sizeof(filename), "%s/recovery.conf", datadir_target);
-
-	cf = fopen(filename, "w");
-	if (cf == NULL)
-	{
-		fprintf(stderr, _("%s: could not create file \"%s\": %s\n"), progname, filename, strerror(errno));
-		disconnect_and_exit(1);
-	}
-
-	if (fwrite(recoveryconfcontents->data, recoveryconfcontents->len, 1, cf) != 1)
-	{
-		fprintf(stderr,
-				_("%s: could not write to file \"%s\": %s\n"),
-				progname, filename, strerror(errno));
-		disconnect_and_exit(1);
-	}
-
-	fclose(cf);
 }

@@ -8,14 +8,14 @@ RETURNS fdw_handler
 AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT;
 
-CREATE FUNCTION gp_exttable_validator(text[], oid)
+CREATE FUNCTION gp_exttable_permission_check(text[], oid)
 RETURNS void
 AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT;
 
 CREATE FOREIGN DATA WRAPPER gp_exttable_fdw
     HANDLER gp_exttable_fdw_handler
-    VALIDATOR gp_exttable_validator;
+    VALIDATOR gp_exttable_permission_check;
 
 CREATE SERVER gp_exttable_server FOREIGN DATA WRAPPER gp_exttable_fdw;
 

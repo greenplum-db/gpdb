@@ -20,114 +20,101 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	class CPartitionPropagationSpec;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CEnfdDistribution
-	//
-	//	@doc:
-	//		Enforceable distribution property;
-	//
-	//---------------------------------------------------------------------------
-	class CEnfdDistribution : public CEnfdProp
+class CPartitionPropagationSpec;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CEnfdDistribution
+//
+//	@doc:
+//		Enforceable distribution property;
+//
+//---------------------------------------------------------------------------
+class CEnfdDistribution : public CEnfdProp
+{
+public:
+	// type of distribution matching function
+	enum EDistributionMatching
 	{
-		public:
+		EdmExact = 0,
+		EdmSatisfy,
+		EdmSubset,
 
-			// type of distribution matching function
-			enum EDistributionMatching
-			{
-				EdmExact = 0,
-				EdmSatisfy,
-				EdmSubset,
+		EdmSentinel
+	};
 
-				EdmSentinel
-			};
+private:
+	// required distribution
+	CDistributionSpec *m_pds;
 
-		private:
+	// distribution matching type
+	EDistributionMatching m_edm;
 
-			// required distribution
-			CDistributionSpec *m_pds;
+	// private copy ctor
+	CEnfdDistribution(const CEnfdDistribution &);
 
-			// distribution matching type
-			EDistributionMatching m_edm;
+	// names of distribution matching types
+	static const CHAR *m_szDistributionMatching[EdmSentinel];
 
-			// private copy ctor
-			CEnfdDistribution(const CEnfdDistribution &);
+public:
+	// ctor
+	CEnfdDistribution(CDistributionSpec *pds, EDistributionMatching edm);
 
-			// names of distribution matching types
-			static
-			const CHAR *m_szDistributionMatching[EdmSentinel];
+	// dtor
+	virtual ~CEnfdDistribution();
 
-		public:
+	// distribution spec accessor
+	virtual CPropSpec *
+	Pps() const
+	{
+		return m_pds;
+	}
 
-			// ctor
-			CEnfdDistribution(CDistributionSpec *pds, EDistributionMatching edm);
+	// matching type accessor
+	EDistributionMatching
+	Edm() const
+	{
+		return m_edm;
+	}
 
-			// dtor
-			virtual
-			~CEnfdDistribution();
+	// matching function
+	BOOL
+	Matches(CEnfdDistribution *ped)
+	{
+		GPOS_ASSERT(NULL != ped);
 
-			// distribution spec accessor
-			virtual
-			CPropSpec *Pps() const
-			{
-				return m_pds;
-			}
+		return m_edm == ped->Edm() && m_pds->Equals(ped->PdsRequired());
+	}
 
-			// matching type accessor
-			EDistributionMatching Edm() const
-			{
-				return m_edm;
-			}
+	// hash function
+	virtual ULONG HashValue() const;
 
-			// matching function
-			BOOL Matches
-				(
-				CEnfdDistribution *ped
-				)
-			{
-				GPOS_ASSERT(NULL != ped);
+	// check if the given distribution specification is compatible with the
+	// distribution specification of this object for the specified matching type
+	BOOL FCompatible(CDistributionSpec *pds) const;
 
-				return m_edm == ped->Edm() &&
-							m_pds->Equals(ped->PdsRequired());
-			}
+	// required distribution accessor
+	CDistributionSpec *
+	PdsRequired() const
+	{
+		return m_pds;
+	}
 
-			// hash function
-			virtual
-			ULONG HashValue() const;
+	// get distribution enforcing type for the given operator
+	EPropEnforcingType Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
+							CPartitionPropagationSpec *pppsReqd,
+							BOOL fDistribReqd) const;
 
-			// check if the given distribution specification is compatible with the
-			// distribution specification of this object for the specified matching type
-			BOOL FCompatible(CDistributionSpec *pds) const;
+	// print function
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// required distribution accessor
-			CDistributionSpec *PdsRequired() const
-			{
-				return m_pds;
-			}
+};	// class CEnfdDistribution
 
-			// get distribution enforcing type for the given operator
-			EPropEnforcingType Epet
-				(
-				CExpressionHandle &exprhdl,
-				CPhysical *popPhysical,
-				CPartitionPropagationSpec *pppsReqd,
-				BOOL fDistribReqd
-				) 
-				const;
-
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
-
-	}; // class CEnfdDistribution
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CEnfdDistribution_H
+#endif	// !GPOPT_CEnfdDistribution_H
 
 // EOF

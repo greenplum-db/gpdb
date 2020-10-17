@@ -10,7 +10,7 @@
  * analyze.c and related files.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -30,7 +30,8 @@
  * raw_parser
  *		Given a query in string form, do lexical and grammatical analysis.
  *
- * Returns a list of raw (un-analyzed) parse trees.
+ * Returns a list of raw (un-analyzed) parse trees.  The immediate elements
+ * of the list are always RawStmt nodes.
  */
 List *
 raw_parser(const char *str)
@@ -55,7 +56,7 @@ raw_parser(const char *str)
 
 		/* initialize the flex scanner */
 		yyscanner = scanner_init(str, &yyextra.core_yy_extra,
-								 ScanKeywords, NumScanKeywords);
+								 &ScanKeywords, ScanKeywordTokens);
 
 		if (Gp_role == GP_ROLE_EXECUTE)
 			escape_string_warning = save_escape_string_warning;
@@ -70,6 +71,7 @@ raw_parser(const char *str)
 
 	/* base_yylex() only needs this much initialization */
 	yyextra.have_lookahead = false;
+	yyextra.tail_partition_magic = false;
 
 	/* initialize the bison parser */
 	parser_init(&yyextra);
@@ -124,6 +126,19 @@ base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 	}
 	else
 		cur_token = core_yylex(&(lvalp->core_yystype), llocp, yyscanner);
+
+	/*
+	 * Check for special handling of PARTITION keyword. (see
+	 * OptFirstPartitionSpec rule in the grammar)
+	 */
+	if (yyextra->tail_partition_magic)
+	{
+		if (cur_token == PARTITION)
+		{
+			yyextra->tail_partition_magic = false;
+			return PARTITION_TAIL;
+		}
+	}
 
 	/*
 	 * If this token isn't one that requires lookahead, just return it.  If it

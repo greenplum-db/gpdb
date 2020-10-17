@@ -2,7 +2,7 @@
 /*
  * Scanner for the configuration file
  *
- * Copyright (c) 2000-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  *
  * src/backend/utils/misc/guc-file.l
  */
@@ -72,6 +72,8 @@ static void record_config_file_error(const char *errmsg,
 static int	GUC_flex_fatal(const char *msg);
 static char *GUC_scanstr(const char *s);
 
+/* LCOV_EXCL_START */
+
 %}
 
 %option 8bit
@@ -122,7 +124,7 @@ STRING			\'([^'\\\n]|\\.|\'\')*\'
 
 %%
 
-
+/* LCOV_EXCL_STOP */
 
 /*
  * Exported function to read and process the configuration file. The
@@ -160,9 +162,7 @@ ProcessConfigFile(GucContext context)
 	 */
 	config_cxt = AllocSetContextCreate(CurrentMemoryContext,
 									   "config file processing",
-									   ALLOCSET_DEFAULT_MINSIZE,
-									   ALLOCSET_DEFAULT_MINSIZE,
-									   ALLOCSET_DEFAULT_MAXSIZE);
+									   ALLOCSET_DEFAULT_SIZES);
 	caller_cxt = MemoryContextSwitchTo(config_cxt);
 
 	/*

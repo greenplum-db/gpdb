@@ -173,7 +173,7 @@ multiset_scalar_value(PG_FUNCTION_ARGS)
 	 * We expect an input of one integer column for this stupid
 	 * table function, if that is not what we got then complain.
 	 */
-	if (in_tupdesc->natts != 1 || in_tupdesc->attrs[0]->atttypid != INT4OID)
+	if (in_tupdesc->natts != 1 || TupleDescAttr(in_tupdesc, 0)->atttypid != INT4OID)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CANNOT_COERCE),
@@ -225,8 +225,8 @@ multiset_scalar_tuple(PG_FUNCTION_ARGS)
 	tupdesc	= rsi->expectedDesc;
 
 	if (tupdesc->natts != 2 ||
-		(tupdesc->attrs[0]->atttypid != INT4OID && !tupdesc->attrs[0]->attisdropped) ||
-		(tupdesc->attrs[1]->atttypid != TEXTOID && !tupdesc->attrs[1]->attisdropped))
+		(TupleDescAttr(tupdesc, 0)->atttypid != INT4OID && !TupleDescAttr(tupdesc, 0)->attisdropped) ||
+		(TupleDescAttr(tupdesc, 1)->atttypid != TEXTOID && !TupleDescAttr(tupdesc, 1)->attisdropped))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CANNOT_COERCE),
@@ -390,8 +390,8 @@ multiset_example(PG_FUNCTION_ARGS)
 	 * table function, if that is not what we got then complain.
 	 */
 	if (in_tupdesc->natts != 2 ||
-		in_tupdesc->attrs[0]->atttypid != INT4OID ||
-		in_tupdesc->attrs[1]->atttypid != TEXTOID)
+		TupleDescAttr(in_tupdesc, 0)->atttypid != INT4OID ||
+		TupleDescAttr(in_tupdesc, 1)->atttypid != TEXTOID)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CANNOT_COERCE),
@@ -401,8 +401,8 @@ multiset_example(PG_FUNCTION_ARGS)
 
 	/* For output tuple we also check for possibility of dropped columns */
 	if (out_tupdesc->natts != 2 ||
-		(out_tupdesc->attrs[0]->atttypid != INT4OID && !out_tupdesc->attrs[0]->attisdropped) ||
-		(out_tupdesc->attrs[1]->atttypid != TEXTOID && !out_tupdesc->attrs[1]->attisdropped))
+		(TupleDescAttr(out_tupdesc, 0)->atttypid != INT4OID && !TupleDescAttr(out_tupdesc, 0)->attisdropped) ||
+		(TupleDescAttr(out_tupdesc, 1)->atttypid != TEXTOID && !TupleDescAttr(out_tupdesc, 1)->attisdropped))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CANNOT_COERCE),
@@ -544,7 +544,7 @@ assign_new_record(PG_FUNCTION_ARGS)
 		funcctx = SRF_FIRSTCALL_INIT();
 		TupleDesc	tupdesc;
 
-		tupdesc = CreateTemplateTupleDesc(1, false);
+		tupdesc = CreateTemplateTupleDesc(1);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "c", INT4OID, -1, 0);
 
 		BlessTupleDesc(tupdesc);
@@ -564,21 +564,24 @@ assign_new_record(PG_FUNCTION_ARGS)
 	{
 		TupleDesc	tupdesc;
 		HeapTuple	tuple;
-		Datum		dummy_values[1];
-		bool		dummy_nulls[1];
+		Datum		dummy_values[10];
+		bool		dummy_nulls[10];
 		int			i;
 
-		tupdesc = CreateTemplateTupleDesc(funcctx->call_cntr, false);
-
-		dummy_values[0] = Int32GetDatum(1);
-		dummy_nulls[0] = false;
+		tupdesc = CreateTemplateTupleDesc(funcctx->call_cntr);
 
 		for (i = 1; i <= funcctx->call_cntr; i++)
 			TupleDescInitEntry(tupdesc, (AttrNumber) i, "c", INT4OID, -1, 0);
 
 		BlessTupleDesc(tupdesc);
 
-		tuple = heap_form_tuple(funcctx->tuple_desc, dummy_values, dummy_nulls);
+		for (i = 0; i < funcctx->call_cntr + 1; i++)
+		{
+			dummy_values[i] = Int32GetDatum(i);
+			dummy_nulls[i] = false;
+		}
+
+		tuple = heap_form_tuple(tupdesc, dummy_values, dummy_nulls);
 
 		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
 	}
@@ -749,8 +752,8 @@ sessionize(PG_FUNCTION_ARGS)
 	 * table function, if that is not what we got then complain.
 	 */
 	if (in_tupdesc->natts != 2 ||
-		in_tupdesc->attrs[0]->atttypid != INT4OID ||
-		in_tupdesc->attrs[1]->atttypid != TIMESTAMPOID)
+		TupleDescAttr(in_tupdesc, 0)->atttypid != INT4OID ||
+		TupleDescAttr(in_tupdesc, 1)->atttypid != TIMESTAMPOID)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CANNOT_COERCE),
@@ -760,9 +763,9 @@ sessionize(PG_FUNCTION_ARGS)
 
 	/* For output tuple we also check for possibility of dropped columns */
 	if (out_tupdesc->natts != 3 ||
-		(out_tupdesc->attrs[0]->atttypid != INT4OID && !out_tupdesc->attrs[0]->attisdropped) ||
-		(out_tupdesc->attrs[1]->atttypid != TIMESTAMPOID && !out_tupdesc->attrs[1]->attisdropped) ||
-		(out_tupdesc->attrs[2]->atttypid != INT4OID && !out_tupdesc->attrs[2]->attisdropped))
+		(TupleDescAttr(out_tupdesc, 0)->atttypid != INT4OID && !TupleDescAttr(out_tupdesc, 0)->attisdropped) ||
+		(TupleDescAttr(out_tupdesc, 1)->atttypid != TIMESTAMPOID && !TupleDescAttr(out_tupdesc, 1)->attisdropped) ||
+		(TupleDescAttr(out_tupdesc, 2)->atttypid != INT4OID && !TupleDescAttr(out_tupdesc, 2)->attisdropped))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CANNOT_COERCE),
@@ -857,7 +860,7 @@ describe(PG_FUNCTION_ARGS)
 		ereport(ERROR, (errmsg("invalid parameters for describe")));
 
 	/* Build a result tuple descriptor */
-	tupdesc = CreateTemplateTupleDesc(3, false);
+	tupdesc = CreateTemplateTupleDesc(3);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "id", INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "time", TIMESTAMPOID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "sessionnum", INT4OID, -1, 0);
@@ -883,7 +886,7 @@ gp_fts_probe_stats(PG_FUNCTION_ARGS)
 	SpinLockRelease(&ftsProbeInfo->lock);
 
 	/* Build a result tuple descriptor */
-	tupdesc = CreateTemplateTupleDesc(3, false);
+	tupdesc = CreateTemplateTupleDesc(3);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "start_count", INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "end_count", INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "status_version", INT2OID, -1, 0);
@@ -950,7 +953,7 @@ project(PG_FUNCTION_ARGS)
 		ereport(ERROR, (errmsg("invalid position provided")));
 	if (out_tupdesc->natts != 1)
 		ereport(ERROR, (errmsg("only one expected tuple is allowed")));
-	if (out_tupdesc->attrs[0]->atttypid != in_tupdesc->attrs[position-1]->atttypid)
+	if (TupleDescAttr(out_tupdesc, 0)->atttypid != TupleDescAttr(in_tupdesc, position-1)->atttypid)
 		ereport(ERROR, (errmsg("input and output types do not match")));
 
 	/* check for end of scan */
@@ -1047,7 +1050,7 @@ project_describe(PG_FUNCTION_ARGS)
 	if (!IsA(qexpr, Query))
 		ereport(ERROR, (errmsg("subquery is not a Query object")));
 
-	tdesc = ExecCleanTypeFromTL(qexpr->targetList, false);
+	tdesc = ExecCleanTypeFromTL(qexpr->targetList);
 
 	/*
 	 * The intent of this table function is that it returns the Nth column
@@ -1068,11 +1071,11 @@ project_describe(PG_FUNCTION_ARGS)
 				 errmsg("invalid column position %d", avalue)));
 
 	/* Build an output tuple a single column based on the column number above */
-	odesc = CreateTemplateTupleDesc(1, false);
+	odesc = CreateTemplateTupleDesc(1);
 	TupleDescInitEntry(odesc, 1,
-					   NameStr(tdesc->attrs[avalue-1]->attname),
-					   tdesc->attrs[avalue-1]->atttypid,
-					   tdesc->attrs[avalue-1]->atttypmod,
+					   NameStr(TupleDescAttr(tdesc, avalue-1)->attname),
+					   TupleDescAttr(tdesc, avalue-1)->atttypid,
+					   TupleDescAttr(tdesc, avalue-1)->atttypmod,
 					   0);
 
 	/* Finally return that tupdesc */
@@ -1098,7 +1101,7 @@ userdata_project(PG_FUNCTION_ARGS)
 	 * Sanity checking, shouldn't occur if our CREATE FUNCTION in SQL is done
 	 * correctly.
 	 */
-	if (PG_NARGS() != 1 || PG_ARGISNULL(0) || PG_ARGISNULL(1))
+	if (PG_NARGS() != 1 || PG_ARGISNULL(0))
 		elog(ERROR, "invalid invocation of userdata_project");
 	scan = PG_GETARG_ANYTABLE(0);  /* Should be the first parameter */
 	if (SRF_IS_FIRSTCALL())
@@ -1154,7 +1157,7 @@ userdata_describe(PG_FUNCTION_ARGS)
 		ereport(ERROR, (errmsg("invalid parameters for userdata_describe")));
 
 	/* Build a result tuple descriptor */
-	tupdesc = CreateTemplateTupleDesc(1, false);
+	tupdesc = CreateTemplateTupleDesc(1);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "message", TEXTOID, -1, 0);
 
 	/* Prepare user data */
@@ -1944,55 +1947,6 @@ find_plan(char *ident, EPlan ** eplan, int *nplans)
 	return (newp);
 }
 
-
-/*
- * trigger_udf_return_new_oid
- *
- * A helper function to assign a specific OID to a tuple on INSERT.
- */
-PG_FUNCTION_INFO_V1(trigger_udf_return_new_oid);
-Datum
-trigger_udf_return_new_oid(PG_FUNCTION_ARGS)
-{
-	TriggerData *trigdata = (TriggerData *) fcinfo->context;
-	Trigger    *trigger;
-	char	  **args;
-	HeapTuple	input_tuple;
-	HeapTuple	ret_tuple;
-	Oid			new_oid;
-
-	if (!CALLED_AS_TRIGGER(fcinfo))
-		elog(ERROR, "not fired by trigger manager");
-	if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
-		elog(ERROR, "cannot process STATEMENT events");
-	if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
-		elog(ERROR, "must be fired before event");
-
-	if (!TRIGGER_FIRED_BY_INSERT(trigdata->tg_event))
-		elog(ERROR, "trigger_udf_return_new_oid() called for a non-INSERT");
-
-	/*
-	 * Get the argument. (Trigger functions receive their arguments
-	 * differently than normal functions.)
-	 */
-	trigger = trigdata->tg_trigger;
-	if (trigger->tgnargs != 1)
-		elog(ERROR, "trigger_udf_return_new_oid called with invalid number of arguments (%d, expected 1)",
-			 trigger->tgnargs);
-	args = trigger->tgargs;
-	new_oid = DatumGetObjectId(DirectFunctionCall1(oidin,
-												   CStringGetDatum(args[0])));
-
-	elog(NOTICE, "trigger_udf_return_new_oid assigned OID %u to the new tuple", new_oid);
-
-	input_tuple = trigdata->tg_trigtuple;
-	ret_tuple = heap_copytuple(input_tuple);
-	HeapTupleSetOid(ret_tuple, new_oid);
-
-	return PointerGetDatum(ret_tuple);
-}
-
-
 /*
  * test_consume_xids(int4), for rapidly consuming XIDs, to test wraparound.
  *
@@ -2004,6 +1958,7 @@ test_consume_xids(PG_FUNCTION_ARGS)
 {
 	int32		nxids = PG_GETARG_INT32(0);
 	TransactionId topxid;
+	FullTransactionId fullxid;
 	TransactionId xid;
 	TransactionId targetxid;
 
@@ -2019,7 +1974,8 @@ test_consume_xids(PG_FUNCTION_ARGS)
 	while (TransactionIdPrecedes(xid, targetxid))
 	{
 		elog(DEBUG1, "xid: %u", xid);
-		xid = GetNewTransactionId(true);
+		fullxid = GetNewTransactionId(true);
+		xid = XidFromFullTransactionId(fullxid);
 	}
 
 	PG_RETURN_VOID();

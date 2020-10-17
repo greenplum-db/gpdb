@@ -19,6 +19,7 @@ typedef struct TypInfo
 	Oid typOid;
 	bool typbyval;
 	int16 typlen;
+	Oid collid;
 	Oid ltFuncOp; /* oid of 'less than' operator function id of this type */
 	Oid eqFuncOp; /* oid of equality operator function id of this type */
 	FmgrInfo hashfunc;		/* hash function */
@@ -43,7 +44,6 @@ extern MCVFreqPair **aggregate_leaf_partition_MCVs(Oid relationOid,
 												   int *num_mcv,
 												   int *rem_mcv,
 												   void **result);
-extern bool datumCompare(Datum d1, Datum d2, Oid opFuncOid);
 extern float4 get_rel_reltuples(Oid relid);
 extern int32 get_rel_relpages(Oid relid);
 extern int aggregate_leaf_partition_histograms(Oid relationOid,

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) Greenplum Inc 2010. All Rights Reserved. 
@@ -18,7 +18,7 @@ try:
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment
     from gppylib.operations.package import SyncPackages
     from gppylib.commands.pg import PgBaseBackup
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -275,7 +275,7 @@ def delete_standby(options):
     
     try:
         remove_standby_from_catalog(options, array)
-    except Exception, ex:
+    except Exception as ex:
         logger.error('Failed to remove standby master from catalog.')
         raise GpInitStandbyException(ex)
     
@@ -306,7 +306,7 @@ def remove_standby_datadir(array):
         pool.join()
         try:
             pool.check_results()
-        except Exception, ex:
+        except Exception as ex:
             logger.error('Failed to remove data directory on standby master.')
             raise GpInitStandbyException(ex)
         finally:
@@ -331,14 +331,12 @@ def check_and_start_standby():
     standby = array.standbyMaster
     gp.start_standbymaster(standby.hostname,
                            standby.datadir,
-                           standby.port,
-                           standby.dbid,
-                           array.getNumSegmentContents())
+                           standby.port)
     logger.info("Successfully started standby master")
 
 #-------------------------------------------------------------------------
 def get_standby_pg_hba_info(standby_host):
-    standby_ips = unix.InterfaceAddrs.remote('get standby ips', standby_host)
+    standby_ips = gp.IfAddrs.list_addrs(standby_host)
     current_user = unix.UserId.local('get userid')
     new_section = ['# standby master host ip addresses\n']
     for ip in standby_ips:
@@ -359,7 +357,7 @@ def create_standby(options):
             dburl = getDbUrlForInitStandby()
             array = gparray.GpArray.initFromCatalog(dburl, utility=True)
             
-        except Exception, ex:
+        except Exception as ex:
             logger.error('Failed to retrieve configuration information from the master.')
             raise GpInitStandbyException(ex)
 
@@ -379,7 +377,7 @@ def create_standby(options):
         try:
             logger.info('Syncing Greenplum Database extensions to standby')
             SyncPackages(options.standby_host).run()
-        except Exception, e:
+        except Exception as e:
             logger.warning('Syncing of Greenplum Database extensions has failed.')
             logger.warning('Please run gppkg --clean after successful standby initialization.')
 
@@ -405,13 +403,11 @@ def create_standby(options):
             g_init_standby_state = INIT_STANDBY_STATE_STARTING_STANDBY
             gp.start_standbymaster(standby.hostname,
                                    standby.datadir,
-                                   standby.port,
-                                   standby.dbid,
-                                   array.getNumSegmentContents())
-        except Exception, ex:
+                                   standby.port)
+        except Exception as ex:
             raise GpInitStandbyException('failed to start standby')
 
-    except Exception, ex:
+    except Exception as ex:
         # Something went wrong.  Based on the current state, we can rollback
         # the operation.
         logger.error('Failed to create standby')
@@ -487,8 +483,8 @@ def update_pg_hba_conf(options, array):
     try:
         master_data_dir = array.master.getSegmentDataDirectory()
         pg_hba_path = os.path.join(master_data_dir, 'pg_hba.conf')
-        standby_ips = unix.InterfaceAddrs.remote('get standby ips', options.standby_host)
-        # InterfaceAddrs doesn't return local address, but if standby
+        standby_ips = gp.IfAddrs.list_addrs(options.standby_host)
+        # IfAddrs as called doesn't return local address, but if standby
         # will be on the same host, we should add it too.
         if array.master.getSegmentHostName() == options.standby_host:
             standby_ips.append('127.0.0.1')
@@ -551,7 +547,7 @@ def update_pg_hba_conf(options, array):
         # make it effective
         pg.ReloadDbConf.local('pg_ctl reload', array.master)
 
-    except Exception, ex:
+    except Exception as ex:
         logger.error('Failed to update pg_hba.conf file on master.')
         raise GpInitStandbyException(ex)
 
@@ -656,7 +652,7 @@ def add_standby_to_catalog(options, standby_datadir):
         logger.info('Database catalog updated successfully.')
         array = gparray.GpArray.initFromCatalog(dburl, utility=True)
         return array
-    except Exception, ex:
+    except Exception as ex:
         logger.error('Failed to add standby to master catalog.')
         raise GpInitStandbyException(ex)
 
@@ -678,7 +674,7 @@ def remove_standby_from_catalog(options, array):
         
         logger.info('Database catalog updated successfully.')
 
-    except Exception, ex:
+    except Exception as ex:
         logger.error('Failed to remove standby from master catalog.')
         raise GpInitStandbyException(ex)
         
@@ -704,7 +700,7 @@ def copy_master_datadir_to_standby(options, array, standby_datadir):
                        target_gp_dbid=array.standbyMaster.dbid)
     try:
         cmd.run(validateAfter=True)
-    except Exception, ex:
+    except Exception as ex:
         logger.error('Failed to copy data directory from master to standby.')
         raise GpInitStandbyException(ex)
 
@@ -743,7 +739,7 @@ def stop_standby(array):
             gp.SegmentStop.remote('stop standby',
                                   array.standbyMaster.getSegmentHostName(),
                                   array.standbyMaster.getSegmentDataDirectory())
-    except Exception, ex:
+    except Exception as ex:
         raise Exception('Failed to stop postmaster process on standby master, %s' % ex)
 
 #-------------------------------------------------------------------------
@@ -800,7 +796,7 @@ try:
 except KeyboardInterrupt:
     logger.error('User canceled')
     sys.exit(2)
-except Exception, ex:
+except Exception as ex:
     if options.remove:
         logger.error('Error removing standby master: %s' % str(ex))
     else:

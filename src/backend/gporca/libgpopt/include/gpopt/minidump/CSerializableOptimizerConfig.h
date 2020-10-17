@@ -22,47 +22,42 @@ using namespace gpdxl;
 
 namespace gpopt
 {
+// fwd decl
+class COptimizerConfig;
 
-	// fwd decl
-	class COptimizerConfig;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CSerializableOptimizerConfig
-	//
-	//	@doc:
-	//		Serializable optimizer configuration object
-	//
-	//---------------------------------------------------------------------------
-	class CSerializableOptimizerConfig : public CSerializable
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CSerializableOptimizerConfig
+//
+//	@doc:
+//		Serializable optimizer configuration object
+//
+//---------------------------------------------------------------------------
+class CSerializableOptimizerConfig : public CSerializable
+{
+private:
+	CMemoryPool *m_mp;
 
-			CMemoryPool *m_mp;
+	// optimizer configurations
+	const COptimizerConfig *m_optimizer_config;
 
-			// optimizer configurations
-			const COptimizerConfig *m_optimizer_config;
+	// private copy ctor
+	CSerializableOptimizerConfig(const CSerializableOptimizerConfig &);
 
-			// private copy ctor
-			CSerializableOptimizerConfig(const CSerializableOptimizerConfig&);
-			
-		public:
+public:
+	// ctor
+	CSerializableOptimizerConfig(CMemoryPool *mp,
+								 const COptimizerConfig *optimizer_config);
 
-			// ctor
-			CSerializableOptimizerConfig(CMemoryPool *mp, const COptimizerConfig *optimizer_config);
+	// dtor
+	virtual ~CSerializableOptimizerConfig();
 
-			// dtor
-			virtual
-			~CSerializableOptimizerConfig();
+	// serialize object to passed stream
+	virtual void Serialize(COstream &oos);
 
-			// serialize object to passed stream
-			virtual
-			void Serialize(COstream& oos);
+};	// class CSerializableOptimizerConfig
+}  // namespace gpopt
 
-	}; // class CSerializableOptimizerConfig
-}
-
-#endif // !GPOS_CSerializableOptimizerConfig_H
+#endif	// !GPOS_CSerializableOptimizerConfig_H
 
 // EOF
-

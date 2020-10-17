@@ -1,5 +1,4 @@
 import imp
-import logging
 import os
 import sys
 
@@ -10,8 +9,7 @@ from gppylib.operations.startSegments import StartSegmentsResult
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands import gp
 from gppylib.commands.base import ExecutionError
-from gppylib.commands.pg import PgControlData
-from gppylib.mainUtils import UserAbortedException
+from gppylib.mainUtils import ExceptionNoStackTraceNeeded, UserAbortedException
 
 
 class GpStart(GpTestCase):
@@ -132,7 +130,7 @@ class GpStart(GpTestCase):
         self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
         self.subject.logger.info.assert_any_call('Master Started...')
 
-        self.assertEquals(self.mock_gplog_log_to_file_only.call_count, 0)
+        self.assertEqual(self.mock_gplog_log_to_file_only.call_count, 0)
 
     def test_skip_checksum_validation_succeeds(self):
         sys.argv = ["gpstart", "-a", "--skip-heap-checksum-validation"]
@@ -196,8 +194,8 @@ class GpStart(GpTestCase):
         up, down = gpstart._prepare_segment_start()
 
         # The master and standby should not be accounted for in these lists.
-        self.assertItemsEqual(up, [primary1, mirror0])
-        self.assertItemsEqual(down, [primary0, mirror1])
+        self.assertCountEqual(up, [primary1, mirror0])
+        self.assertCountEqual(down, [primary0, mirror1])
 
     @patch("gppylib.commands.pg.PgControlData.run")
     @patch("gppylib.commands.pg.PgControlData.get_value", return_value="2")
@@ -206,50 +204,126 @@ class GpStart(GpTestCase):
 
         self.assertEqual(gpstart.fetch_tli("", "foo"), 2)
 
-    @patch("gpstart.GpStart.shutdown_master_only")
-    @patch("gppylib.commands.pg.PgControlData.run")
-    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", Mock()))
-    def test_fetch_tli_returns_0_when_standby_is_not_accessible_and_user_proceeds(self, mock_value, mock_run, mock_shutdown):
+    @patch("gpstart.GpStart.fetch_tli", autospec=True)
+    def test_standby_activated_returns_false_when_primary_tli_is_before_standby_tli(self, mock_fetch_tli):
+        def mock_fetch_tli_func(self, data_dir, remote_host=None):
+            if "master" in data_dir:
+                return 3
+            if "standby" in data_dir:
+                return 2
+            return 1
+
+        mock_fetch_tli.side_effect = mock_fetch_tli_func
+
         gpstart = self.setup_gpstart()
+        gpstart.master_datadir = "/data/master"
+
+        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
+        gpstart.gparray = GpArray([master, standby])
+
+        self.assertFalse(gpstart._standby_activated())
+
+    @patch("gpstart.GpStart.fetch_tli", autospec=True)
+    def test_standby_activated_returns_true_when_standby_tli_is_before_primary_tli(self, mock_fetch_tli):
+        def mock_fetch_tli_func(self, data_dir, remote_host=None):
+            if "master" in data_dir:
+                return 1
+            if "standby" in data_dir:
+                return 2
+            return 3
+
+        mock_fetch_tli.side_effect = mock_fetch_tli_func
+
+        gpstart = self.setup_gpstart()
+        gpstart.master_datadir = "/data/master"
+
+        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
+        gpstart.gparray = GpArray([master, standby])
+
+        self.assertTrue(gpstart._standby_activated())
+
+    @patch("gpstart.GpStart.fetch_tli", autospec=True)
+    def test_standby_activated_raises_StandbyUnreachable_exception_when_fetching_standby_tli_fails(self, mock_fetch_tli):
+        def mock_fetch_tli_func(self, data_dir, remote_host=None):
+            if "standby" in data_dir:
+                raise ExecutionError("oops", None)
+            return 10
+
+        mock_fetch_tli.side_effect = mock_fetch_tli_func
+
+        gpstart = self.setup_gpstart()
+        gpstart.master_datadir = "/data/master"
+
+        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
+        gpstart.gparray = GpArray([master, standby])
+
+        with self.assertRaises(gpstart.StandbyUnreachable):
+            gpstart._standby_activated()
+
+    @patch("gpstart.gp.GpStop")
+    @patch("gpstart.GpStart._standby_activated", return_value=False)
+    def test_check_standby_returns_when_standby_is_not_activated(self, mock_standby_activated, mock_gp_stop):
+        gpstart = self.setup_gpstart()
+        gpstart.check_standby()
+        self.assertFalse(mock_gp_stop.called)
+
+    @patch("gpstart.gp.GpStop")
+    @patch("gpstart.GpStart._standby_activated", return_value=True)
+    def test_check_standby_stops_master_and_raises_an_exception_when_standby_is_activated(self, mock_standby_activated, mock_gp_stop):
+        gpstart = self.setup_gpstart()
+        with self.assertRaises(ExceptionNoStackTraceNeeded):
+            gpstart.check_standby()
+        self.assertTrue(mock_gp_stop.return_value.run.called)
+
+    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gpstart.gp.GpStop")
+    @patch("gpstart.GpStart._standby_activated")
+    def test_check_standby_logs_warning_and_returns_when_standby_is_unreachable_and_user_proceeds(self, mock_standby_activated, mock_gp_stop, mock_shutdown_master):
+        gpstart = self.setup_gpstart()
+
+        mock_standby_activated.side_effect = gpstart.StandbyUnreachable()
+        gpstart.interactive = True
         self.mock_userinput.ask_yesno.return_value = True
 
-        self.assertEqual(gpstart.fetch_tli("", "foo"), 0)
-        self.assertFalse(mock_shutdown.called)
+        gpstart.check_standby()
+        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the master"))
+        self.assertFalse(mock_shutdown_master.called)
+        self.assertFalse(mock_gp_stop.called)
 
     @patch("gpstart.GpStart.shutdown_master_only")
-    @patch("gppylib.commands.pg.PgControlData.run")
-    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", Mock()))
-    def test_fetch_tli_raises_exception_when_standby_is_not_accessible_and_user_aborts(self, mock_value, mock_run, mock_shutdown):
+    @patch("gpstart.gp.GpStop")
+    @patch("gpstart.GpStart._standby_activated")
+    def test_check_standby_logs_warning_and_stops_master_and_raises_exception_when_standby_is_unreachable_and_user_does_not_proceeed(self, mock_standby_activated, mock_gp_stop, mock_shutdown_master):
         gpstart = self.setup_gpstart()
+
+        mock_standby_activated.side_effect = gpstart.StandbyUnreachable()
+        gpstart.interactive = True
         self.mock_userinput.ask_yesno.return_value = False
 
         with self.assertRaises(UserAbortedException):
-            gpstart.fetch_tli("", "foo")
-        self.assertTrue(mock_shutdown.called)
+            gpstart.check_standby()
+        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the master"))
+        self.assertTrue(mock_shutdown_master.called)
+        self.assertFalse(mock_gp_stop.called)
 
     @patch("gpstart.GpStart.shutdown_master_only")
-    @patch("gppylib.commands.pg.PgControlData.run")
-    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("cmd foobar failed", Mock()))
-    def test_fetch_tli_logs_warning_when_standby_is_not_accessible(self, mock_value, mock_run, mock_shutdown):
+    @patch("gpstart.gp.GpStop")
+    @patch("gpstart.GpStart._standby_activated")
+    def test_check_standby_logs_warning_and_stops_master_and_raises_exception_in_non_interactive_mode_and_standby_is_unreachable(self, mock_standby_activated, mock_gp_stop, mock_shutdown_master):
         gpstart = self.setup_gpstart()
-        self.mock_userinput.ask_yesno.return_value = False
 
-        with self.assertRaises(UserAbortedException):
-            gpstart.fetch_tli("", "foo")
-        self.subject.logger.warning.assert_any_call(StringContains("Received error: ExecutionError: 'cmd foobar failed' occurred."))
-        self.subject.logger.warning.assert_any_call("Continue only if you are certain that the standby is not acting as the master.")
-
-    @patch("gpstart.GpStart.shutdown_master_only")
-    @patch("gppylib.commands.pg.PgControlData.run")
-    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", Mock()))
-    def test_fetch_tli_logs_non_interactive_warning_when_standby_is_not_accessible(self, mock_value, mock_run, mock_shutdown):
-        gpstart = self.setup_gpstart()
+        mock_standby_activated.side_effect = gpstart.StandbyUnreachable()
         gpstart.interactive = False
 
         with self.assertRaises(UserAbortedException):
-            gpstart.fetch_tli("", "foo")
-        self.assertTrue(mock_shutdown.called)
+            gpstart.check_standby()
+        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the master"))
         self.subject.logger.warning.assert_any_call("Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.")
+        self.assertTrue(mock_shutdown_master.called)
+        self.assertFalse(mock_gp_stop.called)
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(
@@ -274,7 +348,7 @@ class GpStart(GpTestCase):
 
 def os_exists_check(arg):
     # Skip file related checks
-    if 'pg_log' in arg:
+    if 'log' in arg:
         return True
     elif 'postmaster.pid' in arg or '.s.PGSQL' in arg:
         return False

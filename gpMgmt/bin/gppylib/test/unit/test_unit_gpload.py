@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2013. All Rights Reserved. 
 #
@@ -30,7 +30,7 @@ class GpLoadTestCase(unittest.TestCase):
         pass
 
     def help_test_with_config(self, gpload_param, expected_begin_value, expected_commit_value):
-        print gpload_param
+        print(gpload_param)
         gploader = gpload(gpload_param)
         gploader.read_config()
         gploader.db = self
@@ -95,7 +95,7 @@ class GpLoadTestCase(unittest.TestCase):
 
     def test_case_configvalue(self):
         gploader = gpload(['-f', os.path.join(os.path.dirname(__file__), 'allconfig.yml')])
-        self.assertEqual(u'test', gploader.getconfig('gpload:output:table'))
+        self.assertEqual('test', gploader.getconfig('gpload:output:table'))
         self.assertEqual(1981, gploader.getconfig('gpload:input:source:port', int))
         self.assertEqual(True, gploader.getconfig('gpload:preload:reuse_tables', bool))
         self.assertEqual(False, gploader.getconfig('gpload:input:log_errors', bool, False))

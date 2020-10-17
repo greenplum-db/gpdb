@@ -23,16 +23,14 @@ using namespace gpdxl;
 //		CDXLMemoryManagerTest::EresUnittest
 //
 //	@doc:
-//		
+//
 //
 //---------------------------------------------------------------------------
 GPOS_RESULT
 CDXLMemoryManagerTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CDXLMemoryManagerTest::EresUnittest_Basic)
-		};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CDXLMemoryManagerTest::EresUnittest_Basic)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -51,23 +49,21 @@ CDXLMemoryManagerTest::EresUnittest_Basic()
 	// create memory pool
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
-	
+
 	CDXLMemoryManager *dxl_memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
 	void *pvMemory = dxl_memory_manager->allocate(5);
-	
+
 	GPOS_ASSERT(NULL != pvMemory);
-	
+
 	dxl_memory_manager->deallocate(pvMemory);
-	
+
 	// cleanup
 	GPOS_DELETE(dxl_memory_manager);
 	// pvMemory is deallocated through the memory manager, otherwise the test will throw
 	// with a memory leak
-	
+
 	return GPOS_OK;
 }
-
-
 
 
 

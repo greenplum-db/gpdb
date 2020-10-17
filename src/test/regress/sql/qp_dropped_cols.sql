@@ -994,198 +994,6 @@ DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_numeric WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_numeric ORDER BY 1,2,3;
 
 -- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 boolean,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a',True,1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4=False WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 char,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a','z',1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4='-' WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 decimal,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2.00,1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4=1.00 WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 int4,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2000000000,1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4=1000000000 WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 int8,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2000000000000000000,1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4=1000000000000000000 WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 interval,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a','1 day',1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4='1 hour' WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 numeric,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2.000000,1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4=1.000000 WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
-DROP TABLE IF EXISTS oidtab;
-CREATE TABLE oidtab(
-col1 serial,
-col2 decimal,
-col3 char,
-col4 text,
-col5 int
-) WITH OIDS DISTRIBUTED by(col4);
-
-ALTER TABLE oidtab DROP COLUMN col2;
-
-INSERT INTO oidtab(col3,col4,col5) SELECT 'a','abcdefghijklmnop',1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-DROP TABLE IF EXISTS tempoid;
-CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
-
-UPDATE oidtab SET col4='qrstuvwxyz' WHERE col3 = 'a' AND col5 = 1;
-SELECT * FROM oidtab ORDER BY 1,2,3,4;
-
-SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
-
-
--- TEST
 DROP TABLE IF EXISTS mpp21090_dropcol_splitdefpt_addcol_dml_char;
 CREATE TABLE mpp21090_dropcol_splitdefpt_addcol_dml_char
 (
@@ -5004,7 +4812,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDO
 INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_decimal VALUES(2.00,2.00,'a',0);
 
 ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_decimal ADD COLUMN col5 decimal DEFAULT 2.00;
-ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_decimal SELECT 35.00,35.00,'b',1, 35.00;
 SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_decimal ORDER BY 1,2,3;
@@ -5148,7 +4956,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH 
 INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_numeric VALUES(2.000000,2.000000,'a',0);
 
 ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_numeric ADD COLUMN col5 numeric DEFAULT 2.000000;
-ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_numeric SELECT 35.000000,35.000000,'b',1, 35.000000;
 SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_numeric ORDER BY 1,2,3;
@@ -5259,7 +5067,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDO
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_addcol_dml_decimal VALUES(2.00,2.00,'a',0);
 
-ALTER TABLE mpp21090_pttab_addpt_dropcol_addcol_dml_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_addpt_dropcol_addcol_dml_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_addcol_dml_decimal SELECT 35.00,35.00,'b',1;
 SELECT * FROM mpp21090_pttab_addpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
@@ -5419,7 +5227,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH 
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_addcol_dml_numeric VALUES(2.000000,2.000000,'a',0);
 
-ALTER TABLE mpp21090_pttab_addpt_dropcol_addcol_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_addpt_dropcol_addcol_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_addcol_dml_numeric SELECT 35.000000,35.000000,'b',1;
 SELECT * FROM mpp21090_pttab_addpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
@@ -5534,7 +5342,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDO
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_dml_decimal VALUES(2.00,2.00,'a',0);
 
-ALTER TABLE mpp21090_pttab_addpt_dropcol_dml_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_addpt_dropcol_dml_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_dml_decimal SELECT 35.00,35.00,'b',1;
 SELECT * FROM mpp21090_pttab_addpt_dropcol_dml_decimal ORDER BY 1,2,3;
@@ -5674,7 +5482,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH 
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_dml_numeric VALUES(2.000000,2.000000,'a',0);
 
-ALTER TABLE mpp21090_pttab_addpt_dropcol_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_addpt_dropcol_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_addpt_dropcol_dml_numeric SELECT 35.000000,35.000000,'b',1;
 SELECT * FROM mpp21090_pttab_addpt_dropcol_dml_numeric ORDER BY 1,2,3;
@@ -5803,7 +5611,7 @@ SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_decimal ORDER BY 1,2,3;
 DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_dml_decimal WHERE col5 = 1.00;
 SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_decimal ORDER BY 1,2,3;
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_decimal ADD PARTITION partfour start(30.00) end(40.00);
 ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_decimal ADD DEFAULT partition def;
 
 INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_dml_decimal SELECT 35.00,35.00,'d',35.00;
@@ -5983,7 +5791,7 @@ SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_numeric ORDER BY 1,2,3;
 DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_dml_numeric WHERE col5 = 1.000000;
 SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_numeric ORDER BY 1,2,3;
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_numeric ADD DEFAULT partition def;
 
 INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_dml_numeric SELECT 35.000000,35.000000,'d',35.000000;
@@ -6124,7 +5932,7 @@ SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal ORDER BY 1,2,3
 DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal WHERE col5 = 1.00;
 SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal ORDER BY 1,2,3;
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal ADD PARTITION partfour start(30.00) end(40.00);
 ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal ADD DEFAULT partition def;
 
 INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal SELECT 35.00,35.00,'d',35.00;
@@ -6142,8 +5950,8 @@ SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_decimal ORDER BY 1,2,3
 
 
 -- TEST
-DROP TABLE IF EXISTS mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4;
-CREATE TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4
+DROP TABLE IF EXISTS mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml;
+CREATE TABLE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml
 (
     col1 int4,
     col2 int4,
@@ -6153,45 +5961,45 @@ CREATE TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4
 DISTRIBUTED by (col1)
 PARTITION BY RANGE(col2)(partition partone start(1) end(100000001)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(100000001) end(200000001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(200000001) end(300000001));
 
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 VALUES(20000000,20000000,'a',0);
+INSERT INTO mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml VALUES(20000000,20000000,'a',0);
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 DROP COLUMN col4;
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 VALUES(20000000,20000000,'b');
+ALTER TABLE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml DROP COLUMN col4;
+INSERT INTO mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml VALUES(20000000,20000000,'b');
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ADD COLUMN col5 int4 DEFAULT 20000000;
+ALTER TABLE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ADD COLUMN col5 int4 DEFAULT 20000000;
 
-DROP INDEX IF EXISTS mpp21090_pttab_dropcol_addcol_addpt_idx_dml_idx_int4;
-CREATE INDEX mpp21090_pttab_dropcol_addcol_addpt_idx_dml_idx_int4 on mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4(col5);
+DROP INDEX IF EXISTS mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml_idx;
+CREATE INDEX mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml_idx on mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml(col5);
 
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 SELECT 20000000,20000000,'c',20000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+INSERT INTO mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml SELECT 20000000,20000000,'c',20000000;
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-UPDATE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 SET col5 = 10000000 WHERE col2 = 20000000 AND col1 = 20000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+UPDATE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml SET col5 = 10000000 WHERE col2 = 20000000 AND col1 = 20000000;
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 WHERE col5 = 10000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+DELETE FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml WHERE col5 = 10000000;
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ADD PARTITION partfour start(300000001) end(400000001);
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ADD DEFAULT partition def;
+ALTER TABLE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ADD PARTITION partfour start(300000001) end(400000001);
+ALTER TABLE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ADD DEFAULT partition def;
 
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 SELECT 350000000,350000000,'d',350000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+INSERT INTO mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml SELECT 350000000,350000000,'d',350000000;
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-UPDATE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 SET col5 = 10000000 WHERE col2 = 350000000 AND col3 ='d';
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+UPDATE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml SET col5 = 10000000 WHERE col2 = 350000000 AND col3 ='d';
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
 -- Update partition key
-UPDATE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 SET col2 = 10000000 WHERE col2 = 350000000 AND col3 ='d';
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+UPDATE mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml SET col2 = 10000000 WHERE col2 = 350000000 AND col3 ='d';
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 WHERE col5 = 10000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int4 ORDER BY 1,2,3;
+DELETE FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml WHERE col5 = 10000000;
+SELECT * FROM mpp21090_int4_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
 
 -- TEST
-DROP TABLE IF EXISTS mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8;
-CREATE TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8
+DROP TABLE IF EXISTS mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml;
+CREATE TABLE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml
 (
     col1 int8,
     col2 int8,
@@ -6201,40 +6009,40 @@ CREATE TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8
 DISTRIBUTED by (col1)
 PARTITION BY RANGE(col2)(partition partone start(1) end(1000000000000000001)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(1000000000000000001) end(2000000000000000001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(2000000000000000001) end(3000000000000000001));
 
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 VALUES(200000000000000000,200000000000000000,'a',0);
+INSERT INTO mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml VALUES(200000000000000000,200000000000000000,'a',0);
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 DROP COLUMN col4;
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 VALUES(200000000000000000,200000000000000000,'b');
+ALTER TABLE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml DROP COLUMN col4;
+INSERT INTO mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml VALUES(200000000000000000,200000000000000000,'b');
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ADD COLUMN col5 int8 DEFAULT 200000000000000000;
+ALTER TABLE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ADD COLUMN col5 int8 DEFAULT 200000000000000000;
 
-DROP INDEX IF EXISTS mpp21090_pttab_dropcol_addcol_addpt_idx_dml_idx_int8;
-CREATE INDEX mpp21090_pttab_dropcol_addcol_addpt_idx_dml_idx_int8 on mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8(col5);
+DROP INDEX IF EXISTS mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml_idx;
+CREATE INDEX mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml_idx on mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml(col5);
 
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 SELECT 200000000000000000,200000000000000000,'c',200000000000000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+INSERT INTO mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml SELECT 200000000000000000,200000000000000000,'c',200000000000000000;
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-UPDATE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 SET col5 = 1000000000000000000 WHERE col2 = 200000000000000000 AND col1 = 200000000000000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+UPDATE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml SET col5 = 1000000000000000000 WHERE col2 = 200000000000000000 AND col1 = 200000000000000000;
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 WHERE col5 = 1000000000000000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+DELETE FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml WHERE col5 = 1000000000000000000;
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ADD PARTITION partfour start(3000000000000000001) end(4000000000000000001);
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ADD DEFAULT partition def;
+ALTER TABLE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ADD PARTITION partfour start(3000000000000000001) end(4000000000000000001);
+ALTER TABLE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ADD DEFAULT partition def;
 
-INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 SELECT 3500000000000000000,3500000000000000000,'d',3500000000000000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+INSERT INTO mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml SELECT 3500000000000000000,3500000000000000000,'d',3500000000000000000;
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-UPDATE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 SET col5 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col3 ='d';
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+UPDATE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml SET col5 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col3 ='d';
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
 -- Update partition key
-UPDATE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 SET col2 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col3 ='d';
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+UPDATE mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml SET col2 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col3 ='d';
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
-DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 WHERE col5 = 1000000000000000000;
-SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_int8 ORDER BY 1,2,3;
+DELETE FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml WHERE col5 = 1000000000000000000;
+SELECT * FROM mpp21090_int8_pttab_dropcol_addcol_addpt_idx_dml ORDER BY 1,2,3;
 
 
 -- TEST
@@ -6316,7 +6124,7 @@ SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric ORDER BY 1,2,3
 DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric WHERE col5 = 1.000000;
 SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric ORDER BY 1,2,3;
 
-ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric ADD DEFAULT partition def;
 
 INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_idx_dml_numeric SELECT 35.000000,35.000000,'d',35.000000;
@@ -6381,7 +6189,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDO
 INSERT INTO mpp21090_pttab_dropfirstcol_addpt_decimal VALUES(2.00,2.00,'a',2.00,0);
 
 ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_decimal DROP COLUMN col1;
-ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_dropfirstcol_addpt_decimal SELECT 35.00,'b',35.00, 1;
 SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_decimal ORDER BY 1,2,3;
@@ -6451,7 +6259,7 @@ DROP INDEX IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_idx_decimal;
 CREATE INDEX mpp21090_pttab_dropfirstcol_addpt_index_idx_decimal on mpp21090_pttab_dropfirstcol_addpt_index_decimal(col2);
 
 ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_decimal DROP COLUMN col1;
-ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_decimal SELECT 35.00,'b',35.00, 1;
 SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_decimal ORDER BY 1,2,3;
@@ -6591,7 +6399,7 @@ DROP INDEX IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_idx_numeric;
 CREATE INDEX mpp21090_pttab_dropfirstcol_addpt_index_idx_numeric on mpp21090_pttab_dropfirstcol_addpt_index_numeric(col2);
 
 ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_numeric DROP COLUMN col1;
-ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_numeric SELECT 35.000000,'b',35.000000, 1;
 SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_numeric ORDER BY 1,2,3;
@@ -6719,7 +6527,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH 
 INSERT INTO mpp21090_pttab_dropfirstcol_addpt_numeric VALUES(2.000000,2.000000,'a',2.000000,0);
 
 ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_numeric DROP COLUMN col1;
-ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_dropfirstcol_addpt_numeric SELECT 35.000000,'b',35.000000, 1;
 SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_numeric ORDER BY 1,2,3;
@@ -6818,7 +6626,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDO
 INSERT INTO mpp21090_pttab_droplastcol_addpt_decimal VALUES(2.00,2.00,'a',0,2.00);
 
 ALTER TABLE mpp21090_pttab_droplastcol_addpt_decimal DROP COLUMN col5;
-ALTER TABLE mpp21090_pttab_droplastcol_addpt_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_droplastcol_addpt_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_droplastcol_addpt_decimal SELECT 35.00,35.00,'b',1;
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_decimal ORDER BY 1,2,3;
@@ -6954,7 +6762,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH 
 INSERT INTO mpp21090_pttab_droplastcol_addpt_numeric VALUES(2.000000,2.000000,'a',0,2.000000);
 
 ALTER TABLE mpp21090_pttab_droplastcol_addpt_numeric DROP COLUMN col5;
-ALTER TABLE mpp21090_pttab_droplastcol_addpt_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_droplastcol_addpt_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_droplastcol_addpt_numeric SELECT 35.000000,35.000000,'b',1;
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_numeric ORDER BY 1,2,3;
@@ -7054,7 +6862,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDO
 INSERT INTO mpp21090_pttab_dropmidcol_addpt_decimal VALUES(2.00,2.00,'a',2.00,0);
 
 ALTER TABLE mpp21090_pttab_dropmidcol_addpt_decimal DROP COLUMN col4;
-ALTER TABLE mpp21090_pttab_dropmidcol_addpt_decimal ADD PARTITION partfour start(30.00) end(40.00) inclusive;
+ALTER TABLE mpp21090_pttab_dropmidcol_addpt_decimal ADD PARTITION partfour start(30.00) end(40.00);
 
 INSERT INTO mpp21090_pttab_dropmidcol_addpt_decimal SELECT 35.00, 35.00,'b', 1;
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_decimal ORDER BY 1,2,3;
@@ -7186,7 +6994,7 @@ PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH 
 INSERT INTO mpp21090_pttab_dropmidcol_addpt_numeric VALUES(2.000000,2.000000,'a',2.000000,0);
 
 ALTER TABLE mpp21090_pttab_dropmidcol_addpt_numeric DROP COLUMN col4;
-ALTER TABLE mpp21090_pttab_dropmidcol_addpt_numeric ADD PARTITION partfour start(30.000000) end(40.000000) inclusive;
+ALTER TABLE mpp21090_pttab_dropmidcol_addpt_numeric ADD PARTITION partfour start(30.000000) end(40.000000);
 
 INSERT INTO mpp21090_pttab_dropmidcol_addpt_numeric SELECT 35.000000, 35.000000,'b', 1;
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_numeric ORDER BY 1,2,3;

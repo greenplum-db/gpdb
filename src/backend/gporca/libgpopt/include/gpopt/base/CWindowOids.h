@@ -20,42 +20,38 @@
 
 namespace gpopt
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CWindowOids
+//
+//	@doc:
+//		GPDB specific oids
+//
+//---------------------------------------------------------------------------
+class CWindowOids : public CRefCount
+{
+private:
+	// oid of window operation "row_number" function
+	OID m_oidRowNumber;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CWindowOids
-	//
-	//	@doc:
-	//		GPDB specific oids
-	//
-	//---------------------------------------------------------------------------
-	class CWindowOids : public CRefCount
-	{
-		private:
+	// oid of window operation "rank" function
+	OID m_oidRank;
 
-			// oid of window operation "row_number" function
-			OID m_oidRowNumber;
+public:
+	CWindowOids(OID row_number_oid, OID rank_oid);
 
-			// oid of window operation "rank" function
-			OID m_oidRank;
+	// accessor of oid value of "row_number" function
+	OID OidRowNumber() const;
 
-		public:
+	// accessor of oid value of "rank" function
+	OID OidRank() const;
 
-			CWindowOids(OID row_number_oid, OID rank_oid);
+	// generate default window oids
+	static CWindowOids *GetWindowOids(CMemoryPool *mp);
 
-			// accessor of oid value of "row_number" function
-			OID OidRowNumber() const;
+};	// class CWindowOids
+}  // namespace gpopt
 
-			// accessor of oid value of "rank" function
-			OID OidRank() const;
-
-			// generate default window oids
-			static
-			CWindowOids *GetWindowOids(CMemoryPool *mp);
-
-	}; // class CWindowOids
-}
-
-#endif // !GPOPT_CWindowOids_H
+#endif	// !GPOPT_CWindowOids_H
 
 // EOF

@@ -12,11 +12,11 @@
 --     corresponding to fsync_test1 and fsync_test2 tables.
 --   * Verify that at least two files were fsync'ed by checkpointer.
 --
--- the hit times of fsync_counter is undetermined, both 5, 6 or 7 are
--- correct, so mark them out to make case stable.
+-- the hit times of fsync_counter is undetermined, we accept anything
+-- between 4-9.
 -- start_matchsubs
--- m/num times hit:\'[4-7]\'/
--- s/num times hit:\'[4-7]\'/num times hit:\'greater_than_two\'/
+-- m/num times hit:\'[4-9]\'/
+-- s/num times hit:\'[4-9]\'/num times hit:\'greater_than_two\'/
 -- end_matchsubs
 begin;
 create function num_dirty(relid oid) returns bigint as

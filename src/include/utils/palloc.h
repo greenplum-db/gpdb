@@ -20,7 +20,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/palloc.h
@@ -131,7 +131,7 @@ extern void *MemoryContextAlloc(MemoryContext context, Size size);
 extern void *MemoryContextAllocZero(MemoryContext context, Size size);
 extern void *MemoryContextAllocZeroAligned(MemoryContext context, Size size);
 extern void *MemoryContextAllocExtended(MemoryContext context,
-						   Size size, int flags);
+										Size size, int flags);
 
 extern void *palloc(Size size);
 extern void *palloc0(Size size);
@@ -172,11 +172,11 @@ MemoryContextSwitchTo(MemoryContext context)
 	CurrentMemoryContext = context;
 	return old;
 }
-#endif   /* FRONTEND */
+#endif							/* FRONTEND */
 
 /* Registration of memory context reset/delete callbacks */
 extern void MemoryContextRegisterResetCallback(MemoryContext context,
-								   MemoryContextCallback *cb);
+											   MemoryContextCallback *cb);
 
 /*
  * These are like standard strdup() except the copied string is
@@ -185,6 +185,8 @@ extern void MemoryContextRegisterResetCallback(MemoryContext context,
 extern char *MemoryContextStrdup(MemoryContext context, const char *string);
 extern char *pstrdup(const char *in);
 extern char *pnstrdup(const char *in, Size len);
+
+extern char *pchomp(const char *in);
 
 /* sprintf into a palloc'd buffer --- these are in psprintf.c */
 extern char *psprintf(const char *fmt,...) pg_attribute_printf(1, 2);
@@ -234,4 +236,4 @@ extern void MemoryContextStats(MemoryContext context);
 	}\
 }
 
-#endif   /* PALLOC_H */
+#endif							/* PALLOC_H */

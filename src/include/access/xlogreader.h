@@ -3,7 +3,7 @@
  * xlogreader.h
  *		Definitions for the generic XLog reading facility
  *
- * Portions Copyright (c) 2013-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2013-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		src/include/access/xlogreader.h
@@ -31,11 +31,11 @@ typedef struct XLogReaderState XLogReaderState;
 
 /* Function type definition for the read_page callback */
 typedef int (*XLogPageReadCB) (XLogReaderState *xlogreader,
-										   XLogRecPtr targetPagePtr,
-										   int reqLen,
-										   XLogRecPtr targetRecPtr,
-										   char *readBuf,
-										   TimeLineID *pageTLI);
+							   XLogRecPtr targetPagePtr,
+							   int reqLen,
+							   XLogRecPtr targetRecPtr,
+							   char *readBuf,
+							   TimeLineID *pageTLI);
 
 typedef struct
 {
@@ -51,7 +51,8 @@ typedef struct
 	uint8		flags;
 
 	/* Information on full-page image, if any */
-	bool		has_image;
+	bool		has_image;		/* has image, even for consistency checking */
+	bool		apply_image;	/* has image that should be restored */
 	char	   *bkp_image;
 	uint16		hole_offset;
 	uint16		hole_length;
@@ -71,6 +72,11 @@ struct XLogReaderState
 	 * Public parameters
 	 * ----------------------------------------
 	 */
+
+	/*
+	 * Segment size of the to-be-parsed data (mandatory).
+	 */
+	int			wal_segment_size;
 
 	/*
 	 * Data input callback (mandatory).
@@ -162,6 +168,7 @@ struct XLogReaderState
 	XLogRecPtr	currRecPtr;
 	/* timeline to read it from, 0 if a lookup is required */
 	TimeLineID	currTLI;
+
 	/*
 	 * Safe point to read to in currTLI if current TLI is historical
 	 * (tliSwitchPoint) or InvalidXLogRecPtr if on current timeline.
@@ -177,7 +184,10 @@ struct XLogReaderState
 	 */
 	TimeLineID	nextTLI;
 
-	/* Buffer for current ReadRecord result (expandable) */
+	/*
+	 * Buffer for current ReadRecord result (expandable), used when a record
+	 * crosses a page boundary.
+	 */
 	char	   *readRecordBuf;
 	uint32		readRecordBufSize;
 
@@ -186,15 +196,20 @@ struct XLogReaderState
 };
 
 /* Get a new XLogReader */
-extern XLogReaderState *XLogReaderAllocate(XLogPageReadCB pagereadfunc,
-				   void *private_data);
+extern XLogReaderState *XLogReaderAllocate(int wal_segment_size,
+										   XLogPageReadCB pagereadfunc,
+										   void *private_data);
 
 /* Free an XLogReader */
 extern void XLogReaderFree(XLogReaderState *state);
 
 /* Read the next XLog record. Returns NULL on end-of-WAL or failure */
 extern struct XLogRecord *XLogReadRecord(XLogReaderState *state,
-			   XLogRecPtr recptr, char **errormsg);
+										 XLogRecPtr recptr, char **errormsg);
+
+/* Validate a page */
+extern bool XLogReaderValidatePageHeader(XLogReaderState *state,
+										 XLogRecPtr recptr, char *phdr);
 
 /* Validate a page */
 extern bool XLogReaderValidatePageHeader(XLogReaderState *state,
@@ -207,12 +222,12 @@ extern void XLogReaderInvalReadState(XLogReaderState *state);
 /* #ifdef FRONTEND */
 #if 1
 extern XLogRecPtr XLogFindNextRecord(XLogReaderState *state, XLogRecPtr RecPtr);
-#endif   /* FRONTEND */
+#endif							/* FRONTEND */
 
 /* Functions for decoding an XLogRecord */
 
 extern bool DecodeXLogRecord(XLogReaderState *state, XLogRecord *record,
-				 char **errmsg);
+							 char **errmsg);
 
 #define XLogRecGetTotalLen(decoder) ((decoder)->decoded_record->xl_tot_len)
 #define XLogRecGetPrev(decoder) ((decoder)->decoded_record->xl_prev)
@@ -227,11 +242,13 @@ extern bool DecodeXLogRecord(XLogReaderState *state, XLogRecord *record,
 	((decoder)->blocks[block_id].in_use)
 #define XLogRecHasBlockImage(decoder, block_id) \
 	((decoder)->blocks[block_id].has_image)
+#define XLogRecBlockImageApply(decoder, block_id) \
+	((decoder)->blocks[block_id].apply_image)
 
 extern bool RestoreBlockImage(XLogReaderState *recoder, uint8 block_id, char *dst);
 extern char *XLogRecGetBlockData(XLogReaderState *record, uint8 block_id, Size *len);
 extern bool XLogRecGetBlockTag(XLogReaderState *record, uint8 block_id,
-				   RelFileNode *rnode, ForkNumber *forknum,
-				   BlockNumber *blknum);
+							   RelFileNode *rnode, ForkNumber *forknum,
+							   BlockNumber *blknum);
 
-#endif   /* XLOGREADER_H */
+#endif							/* XLOGREADER_H */

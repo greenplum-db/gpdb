@@ -147,7 +147,6 @@ create table foo (i int, j int);
 
 set statement_mem=1024; -- 1mb for 3 segment to get leak.
 set gp_resqueue_print_operator_memory_limits=on;
-set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 
 -- enable the fault injector
@@ -179,7 +178,6 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 
 reset statement_mem;
 reset gp_resqueue_print_operator_memory_limits;
-reset gp_enable_mk_sort;
 reset gp_cte_sharing;
 
 ------------ workfile_limit_per_segment leak check during ERROR on DELETE with APPEND-ONLY table -------------------
@@ -229,9 +227,9 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 drop table if exists testsort;
 create table testsort (i1 int, i2 int, i3 int, i4 int);
 insert into testsort select i, i % 1000, i % 100000, i % 75 from generate_series(0,1000000) i;
+analyze testsort;
 
 set statement_mem="1MB";
-set gp_enable_mk_sort=off;
 
 drop table if exists foo;
 create table foo (c int, d int);
@@ -264,7 +262,6 @@ create table testsisc (i1 int, i2 int, i3 int, i4 int);
 insert into testsisc select i, i % 1000, i % 100000, i % 75 from generate_series(0,1000000) i;
 
 set statement_mem="2MB";
-set gp_enable_mk_sort=off;
 set gp_cte_sharing=on;
 
 drop table if exists foo;

@@ -4,7 +4,7 @@
  *	  routines for signaling the postmaster from its child processes
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/pmsignal.h
@@ -13,6 +13,16 @@
  */
 #ifndef PMSIGNAL_H
 #define PMSIGNAL_H
+
+#include <signal.h>
+
+#ifdef HAVE_SYS_PRCTL_H
+#include "sys/prctl.h"
+#endif
+
+#ifdef HAVE_SYS_PROCCTL_H
+#include "sys/procctl.h"
+#endif
 
 /*
  * Reasons for signaling the postmaster.  We can cope with simultaneous
@@ -27,12 +37,14 @@ typedef enum
 	PMSIGNAL_WAKEN_ARCHIVER,	/* send a NOTIFY signal to xlog archiver */
 	PMSIGNAL_ROTATE_LOGFILE,	/* send SIGUSR1 to syslogger to rotate logfile */
 	PMSIGNAL_START_AUTOVAC_LAUNCHER,	/* start an autovacuum launcher */
-	PMSIGNAL_START_AUTOVAC_WORKER,		/* start an autovacuum worker */
+	PMSIGNAL_START_AUTOVAC_WORKER,	/* start an autovacuum worker */
 	PMSIGNAL_BACKGROUND_WORKER_CHANGE,	/* background worker state change */
 	PMSIGNAL_START_WALRECEIVER, /* start a walreceiver */
-	PMSIGNAL_ADVANCE_STATE_MACHINE,		/* advance postmaster's state machine */
+	PMSIGNAL_ADVANCE_STATE_MACHINE, /* advance postmaster's state machine */
 
 	PMSIGNAL_WAKEN_FTS,         /* wake up FTS to probe segments */
+	PMSIGNAL_WAKEN_DTX_RECOVERY,         /* wake up dtx recovery to abort dtx xacts */
+	PMSIGNAL_DTM_RECOVERED,     /* distributed recovery completed */
 
 	NUM_PMSIGNALS				/* Must be last value of enum! */
 } PMSignalReason;
@@ -53,6 +65,34 @@ extern bool IsPostmasterChildWalSender(int slot);
 extern void MarkPostmasterChildActive(void);
 extern void MarkPostmasterChildInactive(void);
 extern void MarkPostmasterChildWalSender(void);
-extern bool PostmasterIsAlive(void);
+extern bool PostmasterIsAliveInternal(void);
+extern void PostmasterDeathSignalInit(void);
 
-#endif   /* PMSIGNAL_H */
+
+/*
+ * Do we have a way to ask for a signal on parent death?
+ *
+ * If we do, pmsignal.c will set up a signal handler, that sets a flag when
+ * the parent dies.  Checking the flag first makes PostmasterIsAlive() a lot
+ * cheaper in usual case that the postmaster is alive.
+ */
+#if (defined(HAVE_SYS_PRCTL_H) && defined(PR_SET_PDEATHSIG)) || \
+	(defined(HAVE_SYS_PROCCTL_H) && defined(PROC_PDEATHSIG_CTL))
+#define USE_POSTMASTER_DEATH_SIGNAL
+#endif
+
+#ifdef USE_POSTMASTER_DEATH_SIGNAL
+extern volatile sig_atomic_t postmaster_possibly_dead;
+
+static inline bool
+PostmasterIsAlive(void)
+{
+	if (likely(!postmaster_possibly_dead))
+		return true;
+	return PostmasterIsAliveInternal();
+}
+#else
+#define PostmasterIsAlive() PostmasterIsAliveInternal()
+#endif
+
+#endif							/* PMSIGNAL_H */

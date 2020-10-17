@@ -102,6 +102,8 @@ set optimizer = off;
 -- The outher plan of the Nested Loop Semi Join should be Seq Scan on bar b.
 -- The inner plain should be a Bitmap Heap Scan on foo f.
 -- So the Bitmap Heap Scan will call ExecReScanBitmapHeapScan for new outer slot.
+set enable_sort=off;
+set enable_hashagg=off;
 explain select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
@@ -123,8 +125,37 @@ select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_ne
   1
 (2 rows)
 
+-- Also test a similar plan that uses RowIdExpr for duplicate elimination instead of
+-- Nested Loop Semi Join.
+reset enable_sort;
+reset enable_hashagg;
+explain select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000054.02..10000000054.10 rows=4 width=8)
+   ->  HashAggregate  (cost=10000000054.02..10000000054.03 rows=2 width=8)
+         Group Key: (RowIdExpr)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=10000000048.90..10000000054.01 rows=2 width=8)
+               Hash Key: (RowIdExpr)
+               ->  Nested Loop  (cost=10000000048.90..10000000053.95 rows=2 width=8)
+                     ->  Seq Scan on bar b  (cost=10000000000.00..10000000001.02 rows=1 width=8)
+                           Filter: (id = ANY ('{1,2,3,4,5,6}'::bigint[]))
+                     ->  Bitmap Heap Scan on foo f  (cost=48.90..52.92 rows=1 width=8)
+                           Recheck Cond: ((id = b.id) AND (id = ANY ('{1,2,3,4,5,6}'::bigint[])))
+                           ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..48.90 rows=1 width=0)
+                                 Index Cond: ((id = b.id) AND (id = ANY ('{1,2,3,4,5,6}'::bigint[])))
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
+ id 
+----
+  1
+  1
+(2 rows)
+
 reset optimizer;
 drop schema co_nestloop_idxscan cascade;
 NOTICE:  drop cascades to 2 other objects
-DETAIL:  drop cascades to append only columnar table co_nestloop_idxscan.foo
+DETAIL:  drop cascades to table co_nestloop_idxscan.foo
 drop cascades to table co_nestloop_idxscan.bar

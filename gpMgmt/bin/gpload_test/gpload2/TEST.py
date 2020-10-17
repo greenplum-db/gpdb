@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 import sys
@@ -9,17 +9,14 @@ import socket
 import fileinput
 import platform
 import re
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 import pg
 
 def get_port_from_conf():
     file = os.environ.get('MASTER_DATA_DIRECTORY')+'/postgresql.conf'
     if os.path.isfile(file):
         with open(file) as f:
-            for line in f.xreadlines():
+            for line in f:
                 match = re.search('port=\d+',line)
                 if match:
                     match1 = re.search('\d+', match.group())
@@ -62,7 +59,7 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
         raise Exception("Unable to connect to segment server %s as user %s" % (host, user))
 
     for line in out:
-        out = line.split('\n')
+        out = line.decode().split('\n')
     for line in out:
         if re.search(master_pattern, line):
             master_value = int(line.split()[3].strip())
@@ -98,9 +95,9 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False, config='config/config_file', match_columns='true', update_columns='n2'):
 
-    f = open(mkpath('config/config_file'),'w')
+    f = open(mkpath(config),'w')
     f.write("VERSION: 1.0.0.1")
     if database:
         f.write("\nDATABASE: "+database)
@@ -131,6 +128,10 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n           - s_n7: double precision")
         f.write("\n           - s_n8: text")
         f.write("\n           - s_n9: text")
+    if columns_flag == '2':
+        f.write("\n    - COLUMNS:")
+        f.write("\n           - 'Field1': bigint")
+        f.write("\n           - 'Field#2': text")
     if format:
         f.write("\n    - FORMAT: "+format)
     if log_errors:
@@ -159,11 +160,16 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         if mode == 'merge':
             f.write("\n    - MODE: "+'merge')
     f.write("\n    - UPDATE_COLUMNS:")
-    f.write("\n           - n2")
-    f.write("\n    - MATCH_COLUMNS:")
-    f.write("\n           - n1")
-    f.write("\n           - s1")
-    f.write("\n           - s2")
+    f.write("\n           - "+update_columns)
+    if match_columns=='true':
+        f.write("\n    - MATCH_COLUMNS:")
+        f.write("\n           - n1")
+        f.write("\n           - s1")
+        f.write("\n           - s2")
+    if match_columns=='2':
+        f.write("\n    - MATCH_COLUMNS:")
+        f.write("\n           - '\"Field1\"'")
+        f.write("\n           - '\"Field#2\"'")
     if mapping=='1':
         f.write("\n    - MAPPING:")
         f.write("\n           s1: s_s1")
@@ -348,7 +354,7 @@ def modify_sql_file(num):
     if os.path.isfile(file):
         for line in fileinput.FileInput(file,inplace=1):
             line = line.replace("gpload.py ","gpload ")
-            print str(re.sub('\n','',line))
+            print((str(re.sub('\n','',line))))
 
 def copy_data(source='',target=''):
     cmd = 'cp '+ mkpath('data/' + source) + ' ' + mkpath(target)
@@ -364,9 +370,9 @@ def get_table_name():
                   ,host='localhost'
                   ,port=int(PGPORT)
                   )
-    except Exception,e:
+    except Exception as e:
         errorMessage = str(e)
-        print 'could not connect to database: ' + errorMessage
+        print(('could not connect to database: ' + errorMessage))
     queryString = """SELECT relname
                      from pg_class
                      WHERE relname
@@ -382,9 +388,9 @@ def drop_tables():
                   ,host='localhost'
                   ,port=int(PGPORT)
                   )
-    except Exception,e:
+    except Exception as e:
         errorMessage = str(e)
-        print 'could not connect to database: ' + errorMessage
+        print(('could not connect to database: ' + errorMessage))
 
     list = get_table_name()
     for i in list:
@@ -445,7 +451,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,40):
+        for num in range(1,42):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -472,9 +478,9 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         self.doTest(3)
 
     def test_04_gpload_formatOpts_delimiter(self):
-        "4  gpload formatOpts delimiter E'\u0009' with reuse"
+        "4  gpload formatOpts delimiter E'\\u0009' with reuse"
         copy_data('external_file_02.txt','data_file.txt')
-        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\u0009'")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\\u0009'")
         self.doTest(4)
 
     def test_05_gpload_formatOpts_delimiter(self):
@@ -762,6 +768,45 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_04.txt','data_file.txt')
         write_config_file(mode='insert',reuse_flag='false',fast_match='false',file='data_file.txt',table='texttable1', error_limit='1000', fill=True)
         self.doTest(39)
+
+    def test_40_gpload_merge_mode_with_multi_pk(self):
+        "40  gpload merge mode with multiple pk"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_pk.txt','data_file.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file.txt',table='testpk')
+        copy_data('external_file_pk2.txt','data_file2.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file2.txt',table='testpk',config='config/config_file2')
+        f = open(mkpath('query40.sql'),'w')
+        f.write("""\! psql -d reuse_gptest -c "create table testpk (n1 integer, s1 integer, s2 varchar(128), n2 integer, primary key(n1,s1,s2))\
+                partition by range (s1)\
+                subpartition by list(s2)\
+                SUBPARTITION TEMPLATE\
+                ( SUBPARTITION usa VALUES ('usa'),\
+                        SUBPARTITION asia VALUES ('asia'),\
+                        SUBPARTITION europe VALUES ('europe'),\
+                        DEFAULT SUBPARTITION other_regions)\
+                (start (1) end (13) every (1),\
+                default partition others)\
+                ;"\n""")
+        f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.write("\! psql -d reuse_gptest -c 'drop table testpk;'\n")
+        f.close()
+        self.doTest(40)
+
+    def test_41_gpload_special_char(self):
+        "41 gpload special char"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_15.txt','data_file.txt')
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='2', delimiter=";")
+        copy_data('external_file_16.txt','data_file2.txt')
+        write_config_file(update_columns='\'"Field#2"\'',config='config/config_file2', mode='merge',reuse_flag='true',fast_match='false', file='data_file2.txt',table='testSpecialChar',columns_flag='2', delimiter=";",match_columns='2')
+        f = open(mkpath('query41.sql'),'a')
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.close()
+        self.doTest(41)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

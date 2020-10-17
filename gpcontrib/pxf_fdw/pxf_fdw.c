@@ -14,6 +14,7 @@
 #include "pxf_fragment.h"
 
 #include "access/reloptions.h"
+#include "access/table.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
@@ -22,11 +23,11 @@
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
 #include "nodes/pg_list.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/paths.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/restrictinfo.h"
-#include "optimizer/var.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -198,7 +199,7 @@ pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 	 */
 	RangeTblEntry *rte = planner_rt_fetch(baserel->relid, root);
 
-	rel = heap_open(rte->relid, NoLock);
+	rel = table_open(rte->relid, NoLock);
 
 	/*
 	 * Identify which baserestrictinfo clauses can be sent to the remote
@@ -373,7 +374,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	List*	 fragments;
 	ForeignTable *rel = GetForeignTable(RelationGetRelid(node->ss.ss_currentRelation));
 
-	List	   *quals             = node->ss.ps.qual;
+	ExprState  *quals             = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
 	PxfFdwScanState *pxfsstate    = NULL;
 	Relation	relation          = node->ss.ss_currentRelation;
@@ -477,17 +478,13 @@ pxfIterateForeignScan(ForeignScanState *node)
 	 *
 	 * We can pass ExprContext = NULL because we read all columns from the
 	 * file, so no need to evaluate default expressions.
-	 *
-	 * We can also pass tupleOid = NULL because we don't allow oids for
-	 * foreign tables.
 	 */
 	ExecClearTuple(slot);
 
 	found = NextCopyFrom(pxfsstate->cstate,
 						 NULL,
-						 slot_get_values(slot),
-						 slot_get_isnull(slot),
-						 NULL);
+						 slot->tts_values,
+						 slot->tts_isnull);
 	if (found)
 	{
 		if (pxfsstate->cstate->cdbsreh)
@@ -584,8 +581,6 @@ pxfBeginForeignModify(ModifyTableState *mtstate,
 	initStringInfo(&pxfmstate->uri);
 	pxfmstate->relation = relation;
 	pxfmstate->options = options;
-	pxfmstate->values = (Datum *) palloc(tupDesc->natts * sizeof(Datum));
-	pxfmstate->nulls = (bool *) palloc(tupDesc->natts * sizeof(bool));
 
 	InitCopyStateForModify(pxfmstate);
 
@@ -608,15 +603,10 @@ pxfExecForeignInsert(EState *estate,
 
 	PxfFdwModifyState *pxfmstate = (PxfFdwModifyState *) resultRelInfo->ri_FdwState;
 	CopyState	cstate = pxfmstate->cstate;
-	Relation	relation = resultRelInfo->ri_RelationDesc;
-	TupleDesc	tupDesc = RelationGetDescr(relation);
-	HeapTuple	tuple = ExecMaterializeSlot(slot);
-	Datum	   *values = pxfmstate->values;
-	bool	   *nulls = pxfmstate->nulls;
 
 	/* TEXT or CSV */
-	heap_deform_tuple(tuple, tupDesc, values, nulls);
-	CopyOneRowTo(cstate, HeapTupleGetOid(tuple), values, nulls);
+	slot_getallattrs(slot);
+	CopyOneRowTo(cstate, slot);
 	CopySendEndOfRow(cstate);
 
 	StringInfo	fe_msgbuf = cstate->fe_msgbuf;
@@ -691,13 +681,15 @@ InitCopyState(PxfFdwScanState *pxfsstate)
 	 * Create CopyState from FDW options.  We always acquire all columns, so
 	 * as to match the expected ScanTupleSlot signature.
 	 */
-	cstate = BeginCopyFrom(pxfsstate->relation,
+	cstate = BeginCopyFrom(NULL,
+						   pxfsstate->relation,
 						   NULL,
 						   false,	/* is_program */
 						   &PxfBridgeRead,	/* data_source_cb */
 						   pxfsstate,	/* data_source_cb_extra */
 						   NIL, /* attnamelist */
 						   pxfsstate->options->copy_options);	/* copy options */
+
 
 	if (pxfsstate->options->reject_limit == -1)
 	{
@@ -763,7 +755,7 @@ InitCopyStateForModify(PxfFdwModifyState *pxfmstate)
 	/* Initialize 'out_functions', like CopyTo() would. */
 
 	TupleDesc	tupDesc = RelationGetDescr(cstate->rel);
-	Form_pg_attribute *attr = tupDesc->attrs;
+	Form_pg_attribute attr = tupDesc->attrs;
 	int			num_phys_attrs = tupDesc->natts;
 
 	cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
@@ -775,7 +767,7 @@ InitCopyStateForModify(PxfFdwModifyState *pxfmstate)
 		Oid			out_func_oid;
 		bool		isvarlena;
 
-		getTypeOutputInfo(attr[attnum - 1]->atttypid,
+		getTypeOutputInfo(attr[attnum - 1].atttypid,
 						  &out_func_oid,
 						  &isvarlena);
 		fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
@@ -807,7 +799,7 @@ BeginCopyTo(Relation forrel, List *options)
 {
 	CopyState	cstate;
 
-	Assert(RelationIsForeign(forrel));
+	Assert(forrel->rd_rel->relkind == RELKIND_FOREIGN_TABLE);
 
 #if (PG_VERSION_NUM <= 90500)
 	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);

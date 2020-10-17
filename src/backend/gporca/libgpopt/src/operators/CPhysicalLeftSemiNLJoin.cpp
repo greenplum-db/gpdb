@@ -25,13 +25,10 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalLeftSemiNLJoin::CPhysicalLeftSemiNLJoin
-	(
-	CMemoryPool *mp
-	)
-	:
-	CPhysicalNLJoin(mp)
-{}
+CPhysicalLeftSemiNLJoin::CPhysicalLeftSemiNLJoin(CMemoryPool *mp)
+	: CPhysicalNLJoin(mp)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -43,7 +40,8 @@ CPhysicalLeftSemiNLJoin::CPhysicalLeftSemiNLJoin
 //
 //---------------------------------------------------------------------------
 CPhysicalLeftSemiNLJoin::~CPhysicalLeftSemiNLJoin()
-{}
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -55,13 +53,10 @@ CPhysicalLeftSemiNLJoin::~CPhysicalLeftSemiNLJoin()
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalLeftSemiNLJoin::FProvidesReqdCols
-	(
-	CExpressionHandle &exprhdl,
-	CColRefSet *pcrsRequired,
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalLeftSemiNLJoin::FProvidesReqdCols(CExpressionHandle &exprhdl,
+										   CColRefSet *pcrsRequired,
+										   ULONG  // ulOptReq
+) const
 {
 	// left semi join only propagates columns from left child
 	return FOuterProvidesReqdCols(exprhdl, pcrsRequired);
@@ -69,4 +64,3 @@ CPhysicalLeftSemiNLJoin::FProvidesReqdCols
 
 
 // EOF
-

@@ -13,6 +13,7 @@
 #include "executor/spi.h"
 #include "funcapi.h"
 #include "utils/builtins.h"
+#include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/typcache.h"
 
@@ -31,7 +32,7 @@ typedef struct PLySRFState
 {
 	PyObject   *iter;			/* Python iterator producing results */
 	PLySavedArgs *savedargs;	/* function argument values */
-	MemoryContextCallback callback;		/* for releasing refcounts when done */
+	MemoryContextCallback callback; /* for releasing refcounts when done */
 } PLySRFState;
 
 static PyObject *PLy_function_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc);
@@ -44,9 +45,9 @@ static void plpython_srf_cleanup_callback(void *arg);
 static void plpython_return_error_callback(void *arg);
 
 static PyObject *PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc,
-					   HeapTuple *rv);
+										HeapTuple *rv);
 static HeapTuple PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd,
-				 TriggerData *tdata, HeapTuple otup);
+								  TriggerData *tdata, HeapTuple otup);
 static void plpython_trigger_error_callback(void *arg);
 
 static PyObject *PLy_procedure_call(PLyProcedure *proc, const char *kargs, PyObject *vargs);
@@ -57,6 +58,7 @@ static void PLy_abort_open_subtransactions(int save_subxact_level);
 Datum
 PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 {
+	bool		is_setof = proc->is_setof;
 	Datum		rv;
 	PyObject   *volatile plargs = NULL;
 	PyObject   *volatile plrv = NULL;
@@ -73,7 +75,7 @@ PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 
 	PG_TRY();
 	{
-		if (proc->is_setof)
+		if (is_setof)
 		{
 			/* First Call setup */
 			if (SRF_IS_FIRSTCALL())
@@ -93,6 +95,7 @@ PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 			funcctx = SRF_PERCALL_SETUP();
 			Assert(funcctx != NULL);
 			srfstate = (PLySRFState *) funcctx->user_fctx;
+			Assert(srfstate != NULL);
 		}
 
 		if (srfstate == NULL || srfstate->iter == NULL)
@@ -125,7 +128,7 @@ PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 		 * We stay in the SPI context while doing this, because PyIter_Next()
 		 * calls back into Python code which might contain SPI calls.
 		 */
-		if (proc->is_setof)
+		if (is_setof)
 		{
 			if (srfstate->iter == NULL)
 			{
@@ -197,63 +200,44 @@ PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 		error_context_stack = &plerrcontext;
 
 		/*
-		 * If the function is declared to return void, the Python return value
-		 * must be None. For void-returning functions, we also treat a None
-		 * return value as a special "void datum" rather than NULL (as is the
-		 * case for non-void-returning functions).
+		 * For a procedure or function declared to return void, the Python
+		 * return value must be None. For void-returning functions, we also
+		 * treat a None return value as a special "void datum" rather than
+		 * NULL (as is the case for non-void-returning functions).
 		 */
-		if (proc->result.out.d.typoid == VOIDOID)
+		if (proc->result.typoid == VOIDOID)
 		{
 			if (plrv != Py_None)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("PL/Python function with return type \"void\" did not return None")));
+			{
+				if (proc->is_procedure)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATATYPE_MISMATCH),
+							 errmsg("PL/Python procedure did not return None")));
+				else
+					ereport(ERROR,
+							(errcode(ERRCODE_DATATYPE_MISMATCH),
+							 errmsg("PL/Python function with return type \"void\" did not return None")));
+			}
 
 			fcinfo->isnull = false;
 			rv = (Datum) 0;
 		}
-		else if (plrv == Py_None)
+		else if (plrv == Py_None &&
+				 srfstate && srfstate->iter == NULL)
 		{
-			fcinfo->isnull = true;
-
 			/*
 			 * In a SETOF function, the iteration-ending null isn't a real
 			 * value; don't pass it through the input function, which might
 			 * complain.
 			 */
-			if (srfstate && srfstate->iter == NULL)
-				rv = (Datum) 0;
-			else if (proc->result.is_rowtype < 1)
-				rv = InputFunctionCall(&proc->result.out.d.typfunc,
-									   NULL,
-									   proc->result.out.d.typioparam,
-									   -1);
-			else
-				/* Tuple as None */
-				rv = (Datum) 0;
-		}
-		else if (proc->result.is_rowtype >= 1)
-		{
-			TupleDesc	desc;
-
-			/* make sure it's not an unnamed record */
-			Assert((proc->result.out.d.typoid == RECORDOID &&
-					proc->result.out.d.typmod != -1) ||
-				   (proc->result.out.d.typoid != RECORDOID &&
-					proc->result.out.d.typmod == -1));
-
-			desc = lookup_rowtype_tupdesc(proc->result.out.d.typoid,
-										  proc->result.out.d.typmod);
-
-			rv = PLyObject_ToCompositeDatum(&proc->result, desc, plrv, false);
-			fcinfo->isnull = (rv == (Datum) NULL);
-
-			ReleaseTupleDesc(desc);
+			fcinfo->isnull = true;
+			rv = (Datum) 0;
 		}
 		else
 		{
-			fcinfo->isnull = false;
-			rv = (proc->result.out.d.func) (&proc->result.out.d, -1, plrv, false);
+			/* Normal conversion of result */
+			rv = PLy_output_convert(&proc->result, plrv,
+									&fcinfo->isnull);
 		}
 	}
 	PG_CATCH();
@@ -328,23 +312,40 @@ PLy_exec_trigger(FunctionCallInfo fcinfo, PLyProcedure *proc)
 	PyObject   *volatile plargs = NULL;
 	PyObject   *volatile plrv = NULL;
 	TriggerData *tdata;
+	TupleDesc	rel_descr;
 
 	Assert(CALLED_AS_TRIGGER(fcinfo));
-
-	/*
-	 * Input/output conversion for trigger tuples.  Use the result TypeInfo
-	 * variable to store the tuple conversion info.  We do this over again on
-	 * each call to cover the possibility that the relation's tupdesc changed
-	 * since the trigger was last called. PLy_input_tuple_funcs and
-	 * PLy_output_tuple_funcs are responsible for not doing repetitive work.
-	 */
 	tdata = (TriggerData *) fcinfo->context;
 
-	PLy_input_tuple_funcs(&(proc->result), tdata->tg_relation->rd_att);
-	PLy_output_tuple_funcs(&(proc->result), tdata->tg_relation->rd_att);
+	/*
+	 * Input/output conversion for trigger tuples.  We use the result and
+	 * result_in fields to store the tuple conversion info.  We do this over
+	 * again on each call to cover the possibility that the relation's tupdesc
+	 * changed since the trigger was last called.  The PLy_xxx_setup_func
+	 * calls should only happen once, but PLy_input_setup_tuple and
+	 * PLy_output_setup_tuple are responsible for not doing repetitive work.
+	 */
+	rel_descr = RelationGetDescr(tdata->tg_relation);
+	if (proc->result.typoid != rel_descr->tdtypeid)
+		PLy_output_setup_func(&proc->result, proc->mcxt,
+							  rel_descr->tdtypeid,
+							  rel_descr->tdtypmod,
+							  proc);
+	if (proc->result_in.typoid != rel_descr->tdtypeid)
+		PLy_input_setup_func(&proc->result_in, proc->mcxt,
+							 rel_descr->tdtypeid,
+							 rel_descr->tdtypmod,
+							 proc);
+	PLy_output_setup_tuple(&proc->result, rel_descr, proc);
+	PLy_input_setup_tuple(&proc->result_in, rel_descr, proc);
 
 	PG_TRY();
 	{
+		int			rc PG_USED_FOR_ASSERTS_ONLY;
+
+		rc = SPI_register_trigger_data(tdata);
+		Assert(rc >= 0);
+
 		plargs = PLy_trigger_build_args(fcinfo, proc, &rv);
 		plrv = PLy_procedure_call(proc, "TD", plargs);
 
@@ -371,7 +372,7 @@ PLy_exec_trigger(FunctionCallInfo fcinfo, PLyProcedure *proc)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_EXCEPTION),
-					errmsg("unexpected return value from trigger procedure"),
+						 errmsg("unexpected return value from trigger procedure"),
 						 errdetail("Expected None or a string.")));
 				srv = NULL;		/* keep compiler quiet */
 			}
@@ -397,7 +398,7 @@ PLy_exec_trigger(FunctionCallInfo fcinfo, PLyProcedure *proc)
 				 */
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_EXCEPTION),
-					errmsg("unexpected return value from trigger procedure"),
+						 errmsg("unexpected return value from trigger procedure"),
 						 errdetail("Expected None, \"OK\", \"SKIP\", or \"MODIFY\".")));
 			}
 		}
@@ -429,48 +430,17 @@ PLy_function_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc)
 	PG_TRY();
 	{
 		args = PyList_New(proc->nargs);
+		if (!args)
+			return NULL;
+
 		for (i = 0; i < proc->nargs; i++)
 		{
-			if (proc->args[i].is_rowtype > 0)
-			{
-				if (fcinfo->argnull[i])
-					arg = NULL;
-				else
-				{
-					HeapTupleHeader td;
-					Oid			tupType;
-					int32		tupTypmod;
-					TupleDesc	tupdesc;
-					HeapTupleData tmptup;
+			PLyDatumToOb *arginfo = &proc->args[i];
 
-					td = DatumGetHeapTupleHeader(fcinfo->arg[i]);
-					/* Extract rowtype info and find a tupdesc */
-					tupType = HeapTupleHeaderGetTypeId(td);
-					tupTypmod = HeapTupleHeaderGetTypMod(td);
-					tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
-
-					/* Set up I/O funcs if not done yet */
-					if (proc->args[i].is_rowtype != 1)
-						PLy_input_tuple_funcs(&(proc->args[i]), tupdesc);
-
-					/* Build a temporary HeapTuple control structure */
-					tmptup.t_len = HeapTupleHeaderGetDatumLength(td);
-					tmptup.t_data = td;
-
-					arg = PLyDict_FromTuple(&(proc->args[i]), &tmptup, tupdesc);
-					ReleaseTupleDesc(tupdesc);
-				}
-			}
+			if (fcinfo->args[i].isnull)
+				arg = NULL;
 			else
-			{
-				if (fcinfo->argnull[i])
-					arg = NULL;
-				else
-				{
-					arg = (proc->args[i].in.d.func) (&(proc->args[i].in.d),
-													 fcinfo->arg[i]);
-				}
-			}
+				arg = PLy_input_convert(arginfo, fcinfo->args[i].value);
 
 			if (arg == NULL)
 			{
@@ -482,13 +452,13 @@ PLy_function_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc)
 				PLy_elog(ERROR, "PyList_SetItem() failed, while setting up arguments");
 
 			if (proc->argnames && proc->argnames[i] &&
-			PyDict_SetItemString(proc->globals, proc->argnames[i], arg) == -1)
+				PyDict_SetItemString(proc->globals, proc->argnames[i], arg) == -1)
 				PLy_elog(ERROR, "PyDict_SetItemString() failed, while setting up arguments");
 			arg = NULL;
 		}
 
 		/* Set up output conversion for functions returning RECORD */
-		if (proc->result.out.d.typoid == RECORDOID)
+		if (proc->result.typoid == RECORDOID)
 		{
 			TupleDesc	desc;
 
@@ -499,7 +469,7 @@ PLy_function_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc)
 								"that cannot accept type record")));
 
 			/* cache the output conversion functions */
-			PLy_output_record_funcs(&(proc->result), desc);
+			PLy_output_setup_record(&proc->result, desc, proc);
 		}
 	}
 	PG_CATCH();
@@ -549,7 +519,7 @@ PLy_function_save_args(PLyProcedure *proc)
 			if (proc->argnames[i])
 			{
 				result->namedargs[i] = PyDict_GetItemString(proc->globals,
-														  proc->argnames[i]);
+															proc->argnames[i]);
 				Py_XINCREF(result->namedargs[i]);
 			}
 		}
@@ -710,7 +680,8 @@ plpython_return_error_callback(void *arg)
 {
 	PLyExecutionContext *exec_ctx = PLy_current_execution_context();
 
-	if (exec_ctx->curr_proc)
+	if (exec_ctx->curr_proc &&
+		!exec_ctx->curr_proc->is_procedure)
 		errcontext("while creating return value");
 }
 
@@ -718,6 +689,7 @@ static PyObject *
 PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *rv)
 {
 	TriggerData *tdata = (TriggerData *) fcinfo->context;
+	TupleDesc	rel_descr = RelationGetDescr(tdata->tg_relation);
 	PyObject   *pltname,
 			   *pltevent,
 			   *pltwhen,
@@ -735,14 +707,14 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 	{
 		pltdata = PyDict_New();
 		if (!pltdata)
-			PLy_elog(ERROR, "could not create new dictionary while building trigger arguments");
+			return NULL;
 
 		pltname = PyString_FromString(tdata->tg_trigger->tgname);
 		PyDict_SetItemString(pltdata, "name", pltname);
 		Py_DECREF(pltname);
 
 		stroid = DatumGetCString(DirectFunctionCall1(oidout,
-							   ObjectIdGetDatum(tdata->tg_relation->rd_id)));
+													 ObjectIdGetDatum(tdata->tg_relation->rd_id)));
 		pltrelid = PyString_FromString(stroid);
 		PyDict_SetItemString(pltdata, "relid", pltrelid);
 		Py_DECREF(pltrelid);
@@ -780,13 +752,20 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 			PyDict_SetItemString(pltdata, "level", pltlevel);
 			Py_DECREF(pltlevel);
 
+			/*
+			 * Note: In BEFORE trigger, stored generated columns are not
+			 * computed yet, so don't make them accessible in NEW row.
+			 */
+
 			if (TRIGGER_FIRED_BY_INSERT(tdata->tg_event))
 			{
 				pltevent = PyString_FromString("INSERT");
 
 				PyDict_SetItemString(pltdata, "old", Py_None);
-				pytnew = PLyDict_FromTuple(&(proc->result), tdata->tg_trigtuple,
-										   tdata->tg_relation->rd_att);
+				pytnew = PLy_input_from_tuple(&proc->result_in,
+											  tdata->tg_trigtuple,
+											  rel_descr,
+											  !TRIGGER_FIRED_BEFORE(tdata->tg_event));
 				PyDict_SetItemString(pltdata, "new", pytnew);
 				Py_DECREF(pytnew);
 				*rv = tdata->tg_trigtuple;
@@ -796,8 +775,10 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 				pltevent = PyString_FromString("DELETE");
 
 				PyDict_SetItemString(pltdata, "new", Py_None);
-				pytold = PLyDict_FromTuple(&(proc->result), tdata->tg_trigtuple,
-										   tdata->tg_relation->rd_att);
+				pytold = PLy_input_from_tuple(&proc->result_in,
+											  tdata->tg_trigtuple,
+											  rel_descr,
+											  true);
 				PyDict_SetItemString(pltdata, "old", pytold);
 				Py_DECREF(pytold);
 				*rv = tdata->tg_trigtuple;
@@ -806,12 +787,16 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 			{
 				pltevent = PyString_FromString("UPDATE");
 
-				pytnew = PLyDict_FromTuple(&(proc->result), tdata->tg_newtuple,
-										   tdata->tg_relation->rd_att);
+				pytnew = PLy_input_from_tuple(&proc->result_in,
+											  tdata->tg_newtuple,
+											  rel_descr,
+											  !TRIGGER_FIRED_BEFORE(tdata->tg_event));
 				PyDict_SetItemString(pltdata, "new", pytnew);
 				Py_DECREF(pytnew);
-				pytold = PLyDict_FromTuple(&(proc->result), tdata->tg_trigtuple,
-										   tdata->tg_relation->rd_att);
+				pytold = PLy_input_from_tuple(&proc->result_in,
+											  tdata->tg_trigtuple,
+											  rel_descr,
+											  true);
 				PyDict_SetItemString(pltdata, "old", pytold);
 				Py_DECREF(pytold);
 				*rv = tdata->tg_newtuple;
@@ -864,6 +849,11 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 			PyObject   *pltarg;
 
 			pltargs = PyList_New(tdata->tg_trigger->tgnargs);
+			if (!pltargs)
+			{
+				Py_DECREF(pltdata);
+				return NULL;
+			}
 			for (i = 0; i < tdata->tg_trigger->tgnargs; i++)
 			{
 				pltarg = PyString_FromString(tdata->tg_trigger->tgargs[i]);
@@ -892,22 +882,20 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 	return pltdata;
 }
 
+/*
+ * Apply changes requested by a MODIFY return from a trigger function.
+ */
 static HeapTuple
 PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 				 HeapTuple otup)
 {
+	HeapTuple	rtup;
 	PyObject   *volatile plntup;
 	PyObject   *volatile plkeys;
 	PyObject   *volatile plval;
-	HeapTuple	rtup;
-	int			natts,
-				i,
-				attn,
-				atti;
-	int		   *volatile modattrs;
 	Datum	   *volatile modvalues;
-	char	   *volatile modnulls;
-	TupleDesc	tupdesc;
+	bool	   *volatile modnulls;
+	bool	   *volatile modrepls;
 	ErrorContextCallback plerrcontext;
 
 	plerrcontext.callback = plpython_trigger_error_callback;
@@ -915,12 +903,16 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 	error_context_stack = &plerrcontext;
 
 	plntup = plkeys = plval = NULL;
-	modattrs = NULL;
 	modvalues = NULL;
 	modnulls = NULL;
+	modrepls = NULL;
 
 	PG_TRY();
 	{
+		TupleDesc	tupdesc;
+		int			nkeys,
+					i;
+
 		if ((plntup = PyDict_GetItemString(pltd, "new")) == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -932,18 +924,20 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 					 errmsg("TD[\"new\"] is not a dictionary")));
 
 		plkeys = PyDict_Keys(plntup);
-		natts = PyList_Size(plkeys);
+		nkeys = PyList_Size(plkeys);
 
-		modattrs = (int *) palloc(natts * sizeof(int));
-		modvalues = (Datum *) palloc(natts * sizeof(Datum));
-		modnulls = (char *) palloc(natts * sizeof(char));
+		tupdesc = RelationGetDescr(tdata->tg_relation);
 
-		tupdesc = tdata->tg_relation->rd_att;
+		modvalues = (Datum *) palloc0(tupdesc->natts * sizeof(Datum));
+		modnulls = (bool *) palloc0(tupdesc->natts * sizeof(bool));
+		modrepls = (bool *) palloc0(tupdesc->natts * sizeof(bool));
 
-		for (i = 0; i < natts; i++)
+		for (i = 0; i < nkeys; i++)
 		{
 			PyObject   *platt;
 			char	   *plattstr;
+			int			attn;
+			PLyObToDatum *att;
 
 			platt = PyList_GetItem(plkeys, i);
 			if (PyString_Check(platt))
@@ -963,7 +957,16 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 						(errcode(ERRCODE_UNDEFINED_COLUMN),
 						 errmsg("key \"%s\" found in TD[\"new\"] does not exist as a column in the triggering row",
 								plattstr)));
-			atti = attn - 1;
+			if (attn <= 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot set system attribute \"%s\"",
+								plattstr)));
+			if (TupleDescAttr(tupdesc, attn - 1)->attgenerated)
+				ereport(ERROR,
+						(errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED),
+						 errmsg("cannot set generated column \"%s\"",
+								plattstr)));
 
 			plval = PyDict_GetItem(plntup, platt);
 			if (plval == NULL)
@@ -971,41 +974,19 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 
 			Py_INCREF(plval);
 
-			modattrs[i] = attn;
+			/* We assume proc->result is set up to convert tuples properly */
+			att = &proc->result.u.tuple.atts[attn - 1];
 
-			if (tupdesc->attrs[atti]->attisdropped)
-			{
-				modvalues[i] = (Datum) 0;
-				modnulls[i] = 'n';
-			}
-			else if (plval != Py_None)
-			{
-				PLyObToDatum *att = &proc->result.out.r.atts[atti];
-
-				modvalues[i] = (att->func) (att,
-											tupdesc->attrs[atti]->atttypmod,
-											plval,
-											false);
-				modnulls[i] = ' ';
-			}
-			else
-			{
-				modvalues[i] =
-					InputFunctionCall(&proc->result.out.r.atts[atti].typfunc,
-									  NULL,
-									proc->result.out.r.atts[atti].typioparam,
-									  tupdesc->attrs[atti]->atttypmod);
-				modnulls[i] = 'n';
-			}
+			modvalues[attn - 1] = PLy_output_convert(att,
+													 plval,
+													 &modnulls[attn - 1]);
+			modrepls[attn - 1] = true;
 
 			Py_DECREF(plval);
 			plval = NULL;
 		}
 
-		rtup = SPI_modifytuple(tdata->tg_relation, otup, natts,
-							   modattrs, modvalues, modnulls);
-		if (rtup == NULL)
-			elog(ERROR, "SPI_modifytuple failed: error %d", SPI_result);
+		rtup = heap_modify_tuple(otup, tupdesc, modvalues, modnulls, modrepls);
 	}
 	PG_CATCH();
 	{
@@ -1013,12 +994,12 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 		Py_XDECREF(plkeys);
 		Py_XDECREF(plval);
 
-		if (modnulls)
-			pfree(modnulls);
 		if (modvalues)
 			pfree(modvalues);
-		if (modattrs)
-			pfree(modattrs);
+		if (modnulls)
+			pfree(modnulls);
+		if (modrepls)
+			pfree(modrepls);
 
 		PG_RE_THROW();
 	}
@@ -1027,9 +1008,9 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 	Py_DECREF(plntup);
 	Py_DECREF(plkeys);
 
-	pfree(modattrs);
 	pfree(modvalues);
 	pfree(modnulls);
+	pfree(modrepls);
 
 	error_context_stack = plerrcontext.previous;
 
@@ -1109,8 +1090,6 @@ PLy_abort_open_subtransactions(int save_subxact_level)
 				(errmsg("forcibly aborting a subtransaction that has not been exited")));
 
 		RollbackAndReleaseCurrentSubTransaction();
-
-		SPI_restore_connection();
 
 		subtransactiondata = (PLySubtransactionData *) linitial(explicit_subtransactions);
 		explicit_subtransactions = list_delete_first(explicit_subtransactions);

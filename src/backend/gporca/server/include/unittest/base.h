@@ -33,7 +33,6 @@ using namespace gpmd;
 using namespace gpdxl;
 using namespace gpdbcost;
 
-#endif // UNITTEST_BASE_H
+#endif	// UNITTEST_BASE_H
 
 // EOF
-

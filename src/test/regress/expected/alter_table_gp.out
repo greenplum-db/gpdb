@@ -43,7 +43,7 @@ HINT:  DROP the constraint first, and recreate it after the ALTER
 insert into contype values (1, 1), (2, 2), (3, 3);
 -- after insert data, alter primary key/unique column's type will go through a special check logic
 alter table contype alter i type numeric; --error
-ERROR:  changing the type of a column that is used in a UNIQUE or PRIMARY KEY constraint is not allowed
+ERROR:  cannot alter type of a column used in a distribution policy
 alter table contype alter j type numeric;
 -- cleanup
 drop table contype;
@@ -56,7 +56,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into at_foo values('aa','bb','cc');
 drop domain mytype cascade;
-NOTICE:  drop cascades to table at_foo column f2
+NOTICE:  drop cascades to column f2 of table at_foo
 alter table at_foo alter f1 TYPE varchar(10);
 drop table at_foo;
 create domain mytype as int;
@@ -65,7 +65,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into at_foo values('aa',0,'cc');
 drop domain mytype cascade;
-NOTICE:  drop cascades to table at_foo column f2
+NOTICE:  drop cascades to column f2 of table at_foo
 alter table at_foo alter f1 TYPE varchar(10);
 -- Verify that INSERT, UPDATE and DELETE work after dropping a column and
 -- adding a constraint. There was a bug on that in ORCA, once upon a time
@@ -147,32 +147,28 @@ DISTRIBUTED BY(a)
 PARTITION BY RANGE (b)
 ( START (1) END (2) EVERY (1),
     DEFAULT PARTITION other_b);
-NOTICE:  CREATE TABLE will create partition "test_part_col_1_prt_other_b" for table "test_part_col"
-NOTICE:  CREATE TABLE will create partition "test_part_col_1_prt_2" for table "test_part_col"
 ALTER TABLE ONLY test_part_col ADD COLUMN f int; --error
-ERROR:  can't add a column to "test_part_col"; it is a partitioned table or part thereof
+ERROR:  column must be added to child tables too
 ALTER TABLE test_part_col ADD COLUMN f int;
 ALTER TABLE ONLY test_part_col ALTER COLUMN f TYPE TEXT; --error
-ERROR:  can't alter a column datatype of "test_part_col"; it is a partitioned table or part thereof
+ERROR:  type of inherited column "f" must be changed in child tables too
 ALTER TABLE test_part_col ALTER COLUMN f TYPE TEXT;
 ALTER TABLE ONLY test_part_col DROP COLUMN f; --error
-ERROR:  can't drop a column from "test_part_col"; it is a partitioned table or part thereof
+ERROR:  cannot drop column from only the partitioned table when partitions exist
+HINT:  Do not specify the ONLY keyword.
 ALTER TABLE test_part_col DROP COLUMN f;
 ALTER TABLE ONLY test_part_col_1_prt_other_b ADD COLUMN f int;
-ERROR:  can't add a column to "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot add column to a partition
 ALTER TABLE test_part_col_1_prt_other_b ADD COLUMN f int;
-ERROR:  can't add a column to "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot add column to a partition
 ALTER TABLE ONLY test_part_col_1_prt_other_b ALTER COLUMN e TYPE TEXT; --error
-ERROR:  can't alter a column datatype of "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot alter inherited column "e"
 ALTER TABLE test_part_col_1_prt_other_b ALTER COLUMN e TYPE TEXT;
-ERROR:  can't alter a column datatype of "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot alter inherited column "e"
 ALTER TABLE ONLY test_part_col_1_prt_other_b DROP COLUMN e; --error
-ERROR:  can't drop a column from "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot drop inherited column "e"
 ALTER TABLE test_part_col_1_prt_other_b DROP COLUMN e;
-ERROR:  can't drop a column from "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot drop inherited column "e"
 DROP TABLE test_part_col;
 -- Non-partition heap table
 CREATE TABLE test_part_col(a int, b int, c int, d int, e int) DISTRIBUTED BY(a);
@@ -190,32 +186,28 @@ DISTRIBUTED BY(a)
 PARTITION BY RANGE (b)
 ( START (1) END (2) EVERY (1),
     DEFAULT PARTITION other_b);
-NOTICE:  CREATE TABLE will create partition "test_part_col_1_prt_other_b" for table "test_part_col"
-NOTICE:  CREATE TABLE will create partition "test_part_col_1_prt_2" for table "test_part_col"
 ALTER TABLE ONLY test_part_col ADD COLUMN f int; --error
-ERROR:  can't add a column to "test_part_col"; it is a partitioned table or part thereof
+ERROR:  column must be added to child tables too
 ALTER TABLE test_part_col ADD COLUMN f int;
 ALTER TABLE ONLY test_part_col ALTER COLUMN f TYPE TEXT; --error
-ERROR:  can't alter a column datatype of "test_part_col"; it is a partitioned table or part thereof
+ERROR:  type of inherited column "f" must be changed in child tables too
 ALTER TABLE test_part_col ALTER COLUMN f TYPE TEXT;
 ALTER TABLE ONLY test_part_col DROP COLUMN f; --error
-ERROR:  can't drop a column from "test_part_col"; it is a partitioned table or part thereof
+ERROR:  cannot drop column from only the partitioned table when partitions exist
+HINT:  Do not specify the ONLY keyword.
 ALTER TABLE test_part_col DROP COLUMN f;
 ALTER TABLE ONLY test_part_col_1_prt_other_b ADD COLUMN f int;
-ERROR:  can't add a column to "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot add column to a partition
 ALTER TABLE test_part_col_1_prt_other_b ADD COLUMN f int;
-ERROR:  can't add a column to "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot add column to a partition
 ALTER TABLE ONLY test_part_col_1_prt_other_b ALTER COLUMN e TYPE TEXT; --error
-ERROR:  can't alter a column datatype of "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot alter inherited column "e"
 ALTER TABLE test_part_col_1_prt_other_b ALTER COLUMN e TYPE TEXT;
-ERROR:  can't alter a column datatype of "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot alter inherited column "e"
 ALTER TABLE ONLY test_part_col_1_prt_other_b DROP COLUMN e; --error
-ERROR:  can't drop a column from "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot drop inherited column "e"
 ALTER TABLE test_part_col_1_prt_other_b DROP COLUMN e;
-ERROR:  can't drop a column from "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot drop inherited column "e"
 DROP TABLE test_part_col;
 -- Non-partition AO table
 CREATE TABLE test_part_col(a int, b int, c int, d int, e int)
@@ -234,32 +226,28 @@ DISTRIBUTED BY(a)
 PARTITION BY RANGE (b)
 ( START (1) END (2) EVERY (1),
     DEFAULT PARTITION other_b);
-NOTICE:  CREATE TABLE will create partition "test_part_col_1_prt_other_b" for table "test_part_col"
-NOTICE:  CREATE TABLE will create partition "test_part_col_1_prt_2" for table "test_part_col"
 ALTER TABLE ONLY test_part_col ADD COLUMN f int; --error
-ERROR:  can't add a column to "test_part_col"; it is a partitioned table or part thereof
+ERROR:  column must be added to child tables too
 ALTER TABLE test_part_col ADD COLUMN f int;
 ALTER TABLE ONLY test_part_col ALTER COLUMN f TYPE TEXT; --error
-ERROR:  can't alter a column datatype of "test_part_col"; it is a partitioned table or part thereof
+ERROR:  type of inherited column "f" must be changed in child tables too
 ALTER TABLE test_part_col ALTER COLUMN f TYPE TEXT;
 ALTER TABLE ONLY test_part_col DROP COLUMN f; --error
-ERROR:  can't drop a column from "test_part_col"; it is a partitioned table or part thereof
+ERROR:  cannot drop column from only the partitioned table when partitions exist
+HINT:  Do not specify the ONLY keyword.
 ALTER TABLE test_part_col DROP COLUMN f;
 ALTER TABLE ONLY test_part_col_1_prt_other_b ADD COLUMN f int;
-ERROR:  can't add a column to "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot add column to a partition
 ALTER TABLE test_part_col_1_prt_other_b ADD COLUMN f int;
-ERROR:  can't add a column to "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot add column to a partition
 ALTER TABLE ONLY test_part_col_1_prt_other_b ALTER COLUMN e TYPE TEXT; --error
-ERROR:  can't alter a column datatype of "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot alter inherited column "e"
 ALTER TABLE test_part_col_1_prt_other_b ALTER COLUMN e TYPE TEXT;
-ERROR:  can't alter a column datatype of "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot alter inherited column "e"
 ALTER TABLE ONLY test_part_col_1_prt_other_b DROP COLUMN e; --error
-ERROR:  can't drop a column from "test_part_col_1_prt_other_b"; it is a partitioned table or part thereof
+ERROR:  cannot drop inherited column "e"
 ALTER TABLE test_part_col_1_prt_other_b DROP COLUMN e;
-ERROR:  can't drop a column from "test_part_col_1_prt_other_b"; it is part of a partitioned table
-HINT:  You may be able to perform the operation on the partitioned table as a whole.
+ERROR:  cannot drop inherited column "e"
 DROP TABLE test_part_col;
 -- Non-partition AOCS table
 CREATE TABLE test_part_col(a int, b int, c int, d int, e int)
@@ -271,3 +259,15 @@ ALTER TABLE test_part_col ADD COLUMN f int;
 ALTER TABLE test_part_col ALTER COLUMN f TYPE TEXT;
 ALTER TABLE test_part_col DROP COLUMN f;
 DROP TABLE test_part_col;
+-- Test the new "fast default" mechanism from PostgreSQL v11. It's important
+-- that each segment gets the same attmissingval.
+CREATE TABLE gp_test_fast_def(i int);
+INSERT INTO gp_test_fast_def (i) SELECT g FROM generate_series(1, 10) g;
+ALTER TABLE gp_test_fast_def ADD COLUMN ts timestamp DEFAULT now();
+ANALYZE gp_test_fast_def;
+SELECT COUNT (DISTINCT ts) FROM gp_test_fast_def;
+ count 
+-------
+     1
+(1 row)
+

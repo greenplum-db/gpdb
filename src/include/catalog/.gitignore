@@ -1,3 +1,6 @@
 /schemapg.h
-
+/pg_*_d.h
+/gp_*_d.h
 /gp_version.h
+/header-stamp
+/gp_version_at_initdb.dat

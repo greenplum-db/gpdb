@@ -16,15 +16,16 @@
 #ifdef GPOS_DEBUG
 #include "gpopt/base/COptCtxt.h"
 #include "gpos/error/CAutoTrace.h"
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
-namespace gpopt {
-
-	IOstream &operator << (IOstream &os, CEnfdProp &efdprop)
-	{
-		return efdprop.OsPrint(os);
-	}
-
+namespace gpopt
+{
+IOstream &
+operator<<(IOstream &os, CEnfdProp &efdprop)
+{
+	return efdprop.OsPrint(os);
 }
+
+}  // namespace gpopt
 
 // EOF

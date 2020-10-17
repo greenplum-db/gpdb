@@ -20,138 +20,137 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// fwd declaration
-	class CDistributionSpec;
-	class CExpressionHandle;
-	class COrderSpec;
-	class CRewindabilitySpec;
-	class CReqdPropPlan;
-	class CPartIndexMap;
-	class CCTEMap;
+// fwd declaration
+class CDistributionSpec;
+class CExpressionHandle;
+class COrderSpec;
+class CRewindabilitySpec;
+class CReqdPropPlan;
+class CPartIndexMap;
+class CCTEMap;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDrvdPropPlan
-	//
-	//	@doc:
-	//		Derived plan properties container.
-	//
-	//		These are properties that are expression-specific and they depend on
-	//		the physical implementation. This includes sort order, distribution,
-	//		rewindability, partition propagation spec and CTE map.
-	//
-	//---------------------------------------------------------------------------
-	class CDrvdPropPlan : public CDrvdProp
+//---------------------------------------------------------------------------
+//	@class:
+//		CDrvdPropPlan
+//
+//	@doc:
+//		Derived plan properties container.
+//
+//		These are properties that are expression-specific and they depend on
+//		the physical implementation. This includes sort order, distribution,
+//		rewindability, partition propagation spec and CTE map.
+//
+//---------------------------------------------------------------------------
+class CDrvdPropPlan : public CDrvdProp
+{
+private:
+	// derived sort order
+	COrderSpec *m_pos;
+
+	// derived distribution
+	CDistributionSpec *m_pds;
+
+	// derived rewindability
+	CRewindabilitySpec *m_prs;
+
+	// derived partition index map
+	CPartIndexMap *m_ppim;
+
+	// derived filter expressions indexed by the part index id
+	CPartFilterMap *m_ppfm;
+
+	// derived cte map
+	CCTEMap *m_pcm;
+
+	// copy CTE producer plan properties from given context to current object
+	void CopyCTEProducerPlanProps(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt,
+								  COperator *pop);
+
+	// private copy ctor
+	CDrvdPropPlan(const CDrvdPropPlan &);
+
+public:
+	// ctor
+	CDrvdPropPlan();
+
+	// dtor
+	virtual ~CDrvdPropPlan();
+
+	// type of properties
+	virtual EPropType
+	Ept()
 	{
+		return EptPlan;
+	}
 
-		private:
+	// derivation function
+	void Derive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+				CDrvdPropCtxt *pdpctxt);
 
-			// derived sort order
-			COrderSpec *m_pos;
+	// short hand for conversion
+	static CDrvdPropPlan *Pdpplan(CDrvdProp *pdp);
 
-			// derived distribution
-			CDistributionSpec *m_pds;
+	// sort order accessor
+	COrderSpec *
+	Pos() const
+	{
+		return m_pos;
+	}
 
-			// derived rewindability
-			CRewindabilitySpec *m_prs;
+	// distribution accessor
+	CDistributionSpec *
+	Pds() const
+	{
+		return m_pds;
+	}
 
-			// derived partition index map
-			CPartIndexMap *m_ppim;
-			
-			// derived filter expressions indexed by the part index id
-			CPartFilterMap *m_ppfm;
+	// rewindability accessor
+	CRewindabilitySpec *
+	Prs() const
+	{
+		return m_prs;
+	}
 
-			// derived cte map
-			CCTEMap *m_pcm;
+	// partition index map
+	CPartIndexMap *
+	Ppim() const
+	{
+		return m_ppim;
+	}
 
-			 // copy CTE producer plan properties from given context to current object
-			void CopyCTEProducerPlanProps(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt, COperator *pop);
+	// partition filter map
+	CPartFilterMap *
+	Ppfm() const
+	{
+		return m_ppfm;
+	}
 
-			// private copy ctor
-			CDrvdPropPlan(const CDrvdPropPlan &);
+	// cte map
+	CCTEMap *
+	GetCostModel() const
+	{
+		return m_pcm;
+	}
 
-		public:
+	// hash function
+	virtual ULONG HashValue() const;
 
-			// ctor
-			CDrvdPropPlan();
+	// equality function
+	virtual ULONG Equals(const CDrvdPropPlan *pdpplan) const;
 
-			// dtor
-			virtual 
-			~CDrvdPropPlan();
+	// check for satisfying required plan properties
+	virtual BOOL FSatisfies(const CReqdPropPlan *prpp) const;
 
-			// type of properties
-			virtual
-			EPropType Ept()
-			{
-				return EptPlan;
-			}
+	// print function
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// derivation function
-			void Derive(CMemoryPool *mp, CExpressionHandle &exprhdl, CDrvdPropCtxt *pdpctxt);
+};	// class CDrvdPropPlan
 
-			// short hand for conversion
-			static
-			CDrvdPropPlan *Pdpplan(CDrvdProp *pdp);
-
-			// sort order accessor
-			COrderSpec *Pos() const
-			{
-				return m_pos;
-			}
-
-			// distribution accessor
-			CDistributionSpec *Pds() const
-			{
-				return m_pds;
-			}
-
-			// rewindability accessor
-			CRewindabilitySpec *Prs() const
-			{
-				return m_prs;
-			}
-			
-			// partition index map
-			CPartIndexMap *Ppim() const
-			{
-				return m_ppim;
-			}
-
-			// partition filter map
-			CPartFilterMap *Ppfm() const
-			{
-				return m_ppfm;
-			}
-
-			// cte map
-			CCTEMap *GetCostModel() const
-			{
-				return m_pcm;
-			}
-
-			// hash function
-			virtual
-			ULONG HashValue() const;
-
-			// equality function
-			virtual
-			ULONG Equals(const CDrvdPropPlan *pdpplan) const;
-
-			// check for satisfying required plan properties
-			virtual
-			BOOL FSatisfies(const CReqdPropPlan *prpp) const;
-
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
-
-	}; // class CDrvdPropPlan
-	
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CDrvdPropPlan_H
+#endif	// !GPOPT_CDrvdPropPlan_H
 
 // EOF

@@ -196,7 +196,7 @@ CREATE
 
 -- CREATE RESOURCE GROUP cannot run inside a function call
 SELECT * FROM rg_create_func();
-ERROR:  CREATE RESOURCE GROUP cannot be executed from a function or multi-command string
+ERROR:  CREATE RESOURCE GROUP cannot be executed from a function
 CONTEXT:  SQL function "rg_create_func" statement 1
 SELECT * FROM rg_test_monitor;
  groupname | concurrency | cpu_rate_limit 
@@ -207,7 +207,7 @@ SELECT * FROM rg_test_monitor;
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 CREATE
 SELECT * FROM rg_alter_func();
-ERROR:  ALTER RESOURCE GROUP cannot be executed from a function or multi-command string
+ERROR:  ALTER RESOURCE GROUP cannot be executed from a function
 CONTEXT:  SQL function "rg_alter_func" statement 1
 SELECT * FROM rg_test_monitor;
  groupname     | concurrency | cpu_rate_limit 
@@ -217,7 +217,7 @@ SELECT * FROM rg_test_monitor;
 
 -- DROP RESOURCE GROUP cannot run inside a function call
 SELECT * FROM rg_drop_func();
-ERROR:  DROP RESOURCE GROUP cannot be executed from a function or multi-command string
+ERROR:  DROP RESOURCE GROUP cannot be executed from a function
 CONTEXT:  SQL function "rg_drop_func" statement 1
 SELECT * FROM rg_test_monitor;
  groupname     | concurrency | cpu_rate_limit 

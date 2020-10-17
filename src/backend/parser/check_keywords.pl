@@ -4,7 +4,7 @@
 # Usage: check_keywords.pl gram.y kwlist.h
 
 # src/backend/parser/check_keywords.pl
-# Copyright (c) 2009-2016, PostgreSQL Global Development Group
+# Copyright (c) 2009-2019, PostgreSQL Global Development Group
 
 use warnings;
 use strict;
@@ -14,10 +14,11 @@ my $kwlist_filename = $ARGV[1];
 
 my $errors = 0;
 
-sub error(@)
+sub error
 {
 	print STDERR @_;
 	$errors = 1;
+	return;
 }
 
 $, = ' ';     # set output field separator
@@ -29,18 +30,18 @@ $keyword_categories{'col_name_keyword'}       = 'COL_NAME_KEYWORD';
 $keyword_categories{'type_func_name_keyword'} = 'TYPE_FUNC_NAME_KEYWORD';
 $keyword_categories{'reserved_keyword'}       = 'RESERVED_KEYWORD';
 
-open(GRAM, $gram_filename) || die("Could not open : $gram_filename");
+open(my $gram, '<', $gram_filename) || die("Could not open : $gram_filename");
 
-my ($S, $s, $k, $n, $kcat);
+my $kcat;
 my $comment;
 my @arr;
 my %keywords;
 
-line: while (<GRAM>)
+line: while (my $S = <$gram>)
 {
-	chomp;    # strip record separator
+	chomp $S;    # strip record separator
 
-	$S = $_;
+	my $s;
 
 	# Make sure any braces are split
 	$s = '{', $S =~ s/$s/ { /g;
@@ -54,7 +55,7 @@ line: while (<GRAM>)
 	{
 
 		# Is this the beginning of a keyword list?
-		foreach $k (keys %keyword_categories)
+		foreach my $k (keys %keyword_categories)
 		{
 			if ($S =~ m/^($k):/)
 			{
@@ -66,7 +67,7 @@ line: while (<GRAM>)
 	}
 
 	# Now split the line into individual fields
-	$n = (@arr = split(' ', $S));
+	my $n = (@arr = split(' ', $S));
 
 	# Ok, we're in a keyword list. Go through each field in turn
 	for (my $fieldIndexer = 0; $fieldIndexer < $n; $fieldIndexer++)
@@ -109,15 +110,15 @@ line: while (<GRAM>)
 		push @{ $keywords{$kcat} }, $arr[$fieldIndexer];
 	}
 }
-close GRAM;
+close $gram;
 
 # Check that each keyword list is in alphabetical order (just for neatnik-ism)
-my ($prevkword, $kword, $bare_kword);
-foreach $kcat (keys %keyword_categories)
+my ($prevkword, $bare_kword);
+foreach my $kcat (keys %keyword_categories)
 {
 	$prevkword = '';
 
-	foreach $kword (@{ $keywords{$kcat} })
+	foreach my $kword (@{ $keywords{$kcat} })
 	{
 
 		# Some keyword have a _P suffix. Remove it for the comparison.
@@ -149,12 +150,13 @@ while (my ($kcat, $kcat_id) = each(%keyword_categories))
 
 # Now read in kwlist.h
 
-open(KWLIST, $kwlist_filename) || die("Could not open : $kwlist_filename");
+open(my $kwlist, '<', $kwlist_filename)
+  || die("Could not open : $kwlist_filename");
 
 my $prevkwstring = '';
 my $bare_kwname;
 my %kwhash;
-kwlist_line: while (<KWLIST>)
+kwlist_line: while (<$kwlist>)
 {
 	my ($line) = $_;
 
@@ -176,14 +178,14 @@ kwlist_line: while (<KWLIST>)
 		if ($kwstring !~ /^[a-z_]+$/)
 		{
 			error
-"'$kwstring' is not a valid keyword string, must be all lower-case ASCII chars";
+			  "'$kwstring' is not a valid keyword string, must be all lower-case ASCII chars";
 		}
 
 		# Check that the keyword name is valid: all upper-case ASCII chars
 		if ($kwname !~ /^[A-Z_]+$/)
 		{
 			error
-"'$kwname' is not a valid keyword name, must be all upper-case ASCII chars";
+			  "'$kwname' is not a valid keyword name, must be all upper-case ASCII chars";
 		}
 
 		# Check that the keyword string matches keyword name
@@ -192,7 +194,7 @@ kwlist_line: while (<KWLIST>)
 		if ($bare_kwname ne uc($kwstring))
 		{
 			error
-"keyword name '$kwname' doesn't match keyword string '$kwstring'";
+			  "keyword name '$kwname' doesn't match keyword string '$kwstring'";
 		}
 
 		# Check that the keyword is present in the grammar
@@ -219,7 +221,7 @@ kwlist_line: while (<KWLIST>)
 		}
 	}
 }
-close KWLIST;
+close $kwlist;
 
 # Check that we've paired up all keywords from gram.y with lines in kwlist.h
 while (my ($kwcat, $kwcat_id) = each(%keyword_categories))

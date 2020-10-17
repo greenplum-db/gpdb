@@ -8,6 +8,16 @@ CREATE TABLE trigger_test (
 		foo rowcompnest
 );
 
+CREATE TABLE trigger_test_generated (
+    i int,
+    j int GENERATED ALWAYS AS (i * 2) STORED
+);
+
+-- GPDB: The UPDATEs below fail otherwise:
+-- ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+alter table trigger_test set distributed randomly;
+alter table trigger_test_generated set distributed randomly;
+
 CREATE OR REPLACE FUNCTION trigger_data() RETURNS trigger LANGUAGE plperl AS $$
 
   # make sure keys are sorted for consistent results - perl no longer
@@ -69,6 +79,21 @@ update trigger_test set v = 'update' where i = 1;
 delete from trigger_test;
 
 DROP TRIGGER show_trigger_data_trig on trigger_test;
+
+CREATE TRIGGER show_trigger_data_trig_before
+BEFORE INSERT OR UPDATE OR DELETE ON trigger_test_generated
+FOR EACH ROW EXECUTE PROCEDURE trigger_data();
+
+CREATE TRIGGER show_trigger_data_trig_after
+AFTER INSERT OR UPDATE OR DELETE ON trigger_test_generated
+FOR EACH ROW EXECUTE PROCEDURE trigger_data();
+
+insert into trigger_test_generated (i) values (1);
+update trigger_test_generated set i = 11 where i = 1;
+delete from trigger_test_generated;
+
+DROP TRIGGER show_trigger_data_trig_before ON trigger_test_generated;
+DROP TRIGGER show_trigger_data_trig_after ON trigger_test_generated;
 
 insert into trigger_test values(1,'insert', '("(1)")');
 CREATE VIEW trigger_test_view AS SELECT * FROM trigger_test;
@@ -173,6 +198,40 @@ $$ LANGUAGE plperl;
 
 SELECT direct_trigger();
 
+-- check that SQL run in trigger code can see transition tables
+
+CREATE TABLE transition_table_test (id int, name text);
+INSERT INTO transition_table_test VALUES (1, 'a');
+
+CREATE FUNCTION transition_table_test_f() RETURNS trigger LANGUAGE plperl AS
+$$
+    my $cursor = spi_query("SELECT * FROM old_table");
+    my $row = spi_fetchrow($cursor);
+    defined($row) || die "expected a row";
+    elog(INFO, "old: " . $row->{id} . " -> " . $row->{name});
+    my $row = spi_fetchrow($cursor);
+    !defined($row) || die "expected no more rows";
+
+    my $cursor = spi_query("SELECT * FROM new_table");
+    my $row = spi_fetchrow($cursor);
+    defined($row) || die "expected a row";
+    elog(INFO, "new: " . $row->{id} . " -> " . $row->{name});
+    my $row = spi_fetchrow($cursor);
+    !defined($row) || die "expected no more rows";
+
+    return undef;
+$$;
+
+-- GPDB: this test doesn't work properly on GPDB, because statement triggers
+-- are not fired.
+CREATE TRIGGER a_t AFTER UPDATE ON transition_table_test
+  REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+  FOR EACH STATEMENT EXECUTE PROCEDURE transition_table_test_f();
+UPDATE transition_table_test SET name = 'b';
+
+DROP TABLE transition_table_test;
+DROP FUNCTION transition_table_test_f();
+
 -- test plperl command triggers
 create or replace function perlsnitch() returns event_trigger language plperl as $$
   elog(NOTICE, "perlsnitch: " . $_TD->{event} . " " . $_TD->{tag} . " ");
@@ -192,3 +251,19 @@ drop table foo;
 
 drop event trigger perl_a_snitch;
 drop event trigger perl_b_snitch;
+
+-- dealing with generated columns
+
+CREATE FUNCTION generated_test_func1() RETURNS trigger
+LANGUAGE plperl
+AS $$
+$_TD->{new}{j} = 5;  # not allowed
+return 'MODIFY';
+$$;
+
+CREATE TRIGGER generated_test_trigger1 BEFORE INSERT ON trigger_test_generated
+FOR EACH ROW EXECUTE PROCEDURE generated_test_func1();
+
+TRUNCATE trigger_test_generated;
+INSERT INTO trigger_test_generated (i) VALUES (1);
+SELECT * FROM trigger_test_generated;

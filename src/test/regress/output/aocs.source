@@ -58,8 +58,8 @@ LINE 1: ...9 (like tenk_heap_for_aocs) with (appendonly=true orientatio...
                                                              ^
 -- appendonly=false with orientation=column should not work
 CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
-ERROR:  invalid option "compresslevel" for base relation
-HINT:  Compression only valid for Append Only relations, create an AO relation to use compression.
+ERROR:  invalid option "orientation" for base relation
+HINT:  Table orientation only valid for Append Only relations, create an AO relation to use table orientation.
 -- block size must be between 8KB and 2MB w/ 8KB multiple
 CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
 ERROR:  value 100 out of bounds for option "blocksize"
@@ -187,16 +187,16 @@ SELECT count(*) FROM tenk_aocs4;
 -- The first row is good (so it grows the file), the second is bad.
 --
 COPY tenk_aocs1 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_aocs1, line 2, column unique1: "bad data row"
 COPY tenk_aocs2 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_aocs2, line 2, column unique1: "bad data row"
 COPY tenk_aocs3 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_aocs3, line 2, column unique1: "bad data row"
 COPY tenk_aocs4 FROM STDIN;
-ERROR:  invalid input syntax for integer: "bad data row"
+ERROR:  invalid input syntax for type integer: "bad data row"
 CONTEXT:  COPY tenk_aocs4, line 2, column unique1: "bad data row"
 SELECT count(*) FROM tenk_aocs1;
  count 
@@ -523,7 +523,7 @@ SELECT count(*) FROM tenk_aocs4;
 -- LIKE
 -- Should not copy storage options if not specified
 CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);
-SELECT count(*) FROM pg_class WHERE relstorage = 'c' AND relname = 'tenk_like_nocopy_storage';
+SELECT count(*) FROM pg_class WHERE reloptions is not null AND relname = 'tenk_like_nocopy_storage';
  count 
 -------
      0
@@ -647,12 +647,6 @@ SELECT count(*) FROM tenk_aocs2;
      0
 (1 row)
 
--- OID with aocs NYI
--- OIDS
---
--- MPP-8058: should fail
-CREATE TABLE aocswithoids(a int, b int) WITH (appendonly=true, orientation=column, oids=true);
-ERROR:  OIDS=TRUE is not allowed on tables that use column-oriented storage. Use OIDS=FALSE
 -- INDEX
 CREATE INDEX tenk_aocs1_unique1 ON tenk_aocs1 USING btree(unique1 int4_ops);
 -- Verify that the visimap and block-directory indexes have unique and
@@ -720,8 +714,6 @@ select indexname from pg_indexes where tablename = 'co' order by indexname;
 (4 rows)
 
 alter table co alter j type bigint;
-ERROR:  cannot alter indexed column
-HINT:  DROP the index first, and recreate it after the ALTER
 alter table co rename j to j_renamed;
 alter table co drop column j_renamed;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
@@ -736,7 +728,7 @@ analyze co;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
  tablename | attname | avg_width | n_distinct 
 -----------+---------+-----------+------------
- co        | i       |         4 |  -0.666667
+ co        | i       |         4 | -0.6666667
  co        | k       |         5 |       -0.5
 (2 rows)
 
@@ -861,25 +853,25 @@ select count(*) from temp_tenk_aocs5;
 vacuum analyze temp_tenk_aocs5;
 truncate table temp_tenk_aocs5;
 \d temp_tenk_aocs5
-Append-Only Columnar Table "pg_temp_274.temp_tenk_aocs5"
-   Column    |  Type   | Modifiers 
--------------+---------+-----------
- unique1     | integer | 
- unique2     | integer | 
- two         | integer | 
- four        | integer | 
- ten         | integer | 
- twenty      | integer | 
- hundred     | integer | 
- thousand    | integer | 
- twothousand | integer | 
- fivethous   | integer | 
- tenthous    | integer | 
- odd         | integer | 
- even        | integer | 
- stringu1    | name    | 
- stringu2    | name    | 
- string4     | name    | 
+          Table "pg_temp_273.temp_tenk_aocs5"
+   Column    |  Type   | Collation | Nullable | Default 
+-------------+---------+-----------+----------+---------
+ unique1     | integer |           |          | 
+ unique2     | integer |           |          | 
+ two         | integer |           |          | 
+ four        | integer |           |          | 
+ ten         | integer |           |          | 
+ twenty      | integer |           |          | 
+ hundred     | integer |           |          | 
+ thousand    | integer |           |          | 
+ twothousand | integer |           |          | 
+ fivethous   | integer |           |          | 
+ tenthous    | integer |           |          | 
+ odd         | integer |           |          | 
+ even        | integer |           |          | 
+ stringu1    | name    |           |          | 
+ stringu2    | name    |           |          | 
+ string4     | name    |           |          | 
 Checksum: t
 Indexes:
     "temp_even_index" btree (even)
@@ -1063,33 +1055,6 @@ select distinct (case when b='13' then 'replacement' else d end) as d from aocs_
  replacement
  something to keep
 (2 rows)
-
-create table aocs_unknown(
-    a int,
-    b unknown,
-    c unknown encoding (compresstype=rle_type)
-) with (appendonly=true, orientation=column)
-distributed by (a);
-WARNING:  column "b" has type "unknown"
-DETAIL:  Proceeding with relation creation anyway.
-WARNING:  column "c" has type "unknown"
-DETAIL:  Proceeding with relation creation anyway.
-insert into aocs_unknown
-select i, 'unknown' from generate_series(1, 10)i;
-select * from aocs_unknown;
- a  |    b    | c 
-----+---------+---
-  1 | unknown | 
-  2 | unknown | 
-  3 | unknown | 
-  4 | unknown | 
-  5 | unknown | 
-  6 | unknown | 
-  7 | unknown | 
-  8 | unknown | 
-  9 | unknown | 
- 10 | unknown | 
-(10 rows)
 
 -- Check compression and distribution
 create table aocs_compress_table (id int, v varchar)

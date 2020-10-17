@@ -520,7 +520,6 @@ ERROR:  could not create unique index "ijk_ij"
 DETAIL:  Key (i, j)=(1, 3) is duplicated.
 -- should OK.
 create unique index ijk_ijk on ijk(i,j,k);
-set gp_enable_mk_sort=on;
 drop table if exists ijk;
 create table ijk(i int, j int, k int) distributed by (i);
 insert into ijk values (1, 1, 3);
@@ -538,7 +537,6 @@ ERROR:  could not create unique index "ijk_ij"
 DETAIL:  Key (i, j)=(1, 3) is duplicated.
 -- should OK.
 create unique index ijk_ijk on ijk(i,j,k);
-set gp_enable_mk_sort=off;
 drop table ijk;
 --
 -- test bitmaps with NULL and non-NULL values (MPP-8461)
@@ -596,6 +594,56 @@ drop index oversize_test_idx;
 insert into oversize_test values (array_to_string(array(select generate_series(1, 10000)), '123456789'));
 CREATE INDEX oversize_test_idx ON oversize_test USING BITMAP (c1);
 ERROR:  row is too big: size 33256, maximum size 32736  (seg2 172.17.0.2:25434 pid=390371)
+--
+-- Test Index Only Scans.
+--
+-- Bitmap indexes don't really support index only scans at the moment. But the
+-- planner can still choose an Index Only Scan, if the query doesn't need any
+-- of the attributes from the index.
+create table bm_indexonly_test (i int, t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into bm_indexonly_test select g, 'foo' || g from generate_series(1, 5) g;
+create index on bm_indexonly_test using bitmap (i, t);
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+set enable_indexscan=on;
+set enable_indexonlyscan=on;
+-- if bitmap indexes supported Index Only Scans, properly, this could use one.
+explain (costs off) select i, t from bm_indexonly_test where i = 1;
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using bm_indexonly_test_i_t_idx on bm_indexonly_test
+         Index Cond: (i = 1)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select i, t from bm_indexonly_test where i = 1;
+ i |  t   
+---+------
+ 1 | foo1
+(1 row)
+
+-- even without proper support, the planner chooses an Index Only Scan for this.
+explain (costs off) select 'foobar' from bm_indexonly_test;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Only Scan using bm_indexonly_test_i_t_idx on bm_indexonly_test
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+select 'foobar' from bm_indexonly_test;
+ ?column? 
+----------
+ foobar
+ foobar
+ foobar
+ foobar
+ foobar
+(5 rows)
+
 --
 -- Test unlogged table
 --

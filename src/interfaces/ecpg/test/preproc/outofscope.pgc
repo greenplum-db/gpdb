@@ -38,27 +38,18 @@ static void
 open_cur1(void)
 {
 	exec sql open mycur;
-
-	if (sqlca.sqlcode != 0)
-		exit(1);
 }
 
 static void
 get_record1(void)
 {
 	exec sql fetch mycur;
-
-	if (sqlca.sqlcode != 0 && sqlca.sqlcode != ECPG_NOT_FOUND)
-		exit(1);
 }
 
 static void
 close_cur1(void)
 {
 	exec sql close mycur;
-
-	if (sqlca.sqlcode != 0)
-		exit(1);
 }
 
 int
@@ -66,7 +57,7 @@ main (void)
 {
 	MYTYPE		*myvar;
 	MYNULLTYPE	*mynullvar;
-
+	int loopcount;
 	char msg[128];
 
 	ECPGdebug(1, stderr);
@@ -93,9 +84,7 @@ main (void)
 	get_var1(&myvar, &mynullvar);
 	open_cur1();
 
-	exec sql whenever not found do break;
-
-	while (1)
+	for (loopcount = 0; loopcount < 100; loopcount++)
 	{
 		memset(myvar, 0, sizeof(MYTYPE));
 		get_record1();
@@ -123,5 +112,5 @@ main (void)
 	strcpy(msg, "disconnect");
 	exec sql disconnect;
 
-	return (0);
+	return 0;
 }

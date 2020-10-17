@@ -20,14 +20,16 @@ using namespace gpos;
 
 // initialize static variables
 
-CDebugCounter * CDebugCounter::m_instance = NULL;
+CDebugCounter *CDebugCounter::m_instance = NULL;
 
-ULONG CDebugCounter::SDebugCounterKey::HashValue(const CDebugCounter::SDebugCounterKey *key)
+ULONG
+CDebugCounter::SDebugCounterKey::HashValue(
+	const CDebugCounter::SDebugCounterKey *key)
 {
 	ULONG result = 0;
 	int key_size = key->m_counter_name.size();
 
-	for (int i=0; i<key_size; i++)
+	for (int i = 0; i < key_size; i++)
 	{
 		result += result * 257 + key->m_counter_name.at(i);
 	}
@@ -35,25 +37,26 @@ ULONG CDebugCounter::SDebugCounterKey::HashValue(const CDebugCounter::SDebugCoun
 	return result;
 }
 
-CDebugCounter::CDebugCounter(CMemoryPool *mp) :
-	m_mp(mp),
-	m_start_marker_has_been_logged(false),
-	m_suppress_counting(false),
-	m_qry_number(0),
-	m_qry_name(""),
-	m_is_name_constant_get(false),
-	m_hashmap(NULL)
+CDebugCounter::CDebugCounter(CMemoryPool *mp)
+	: m_mp(mp),
+	  m_start_marker_has_been_logged(false),
+	  m_suppress_counting(false),
+	  m_qry_number(0),
+	  m_qry_name(""),
+	  m_is_name_constant_get(false),
+	  m_hashmap(NULL)
 {
 	m_hashmap = GPOS_NEW(mp) CounterKeyToValueMap(mp);
 }
 
 CDebugCounter::~CDebugCounter()
 {
-  CRefCount::SafeRelease(m_hashmap);
-  m_hashmap = NULL;
+	CRefCount::SafeRelease(m_hashmap);
+	m_hashmap = NULL;
 }
 
-void CDebugCounter::Init()
+void
+CDebugCounter::Init()
 {
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
@@ -65,7 +68,8 @@ void CDebugCounter::Init()
 	(void) amp.Detach();
 }
 
-void CDebugCounter::Shutdown()
+void
+CDebugCounter::Shutdown()
 {
 	if (NULL != m_instance)
 	{
@@ -77,7 +81,8 @@ void CDebugCounter::Shutdown()
 	}
 }
 
-void CDebugCounter::NextQry(const char *next_qry_name)
+void
+CDebugCounter::NextQry(const char *next_qry_name)
 {
 	if (NULL != next_qry_name && '\0' != *next_qry_name)
 	{
@@ -126,30 +131,30 @@ void CDebugCounter::NextQry(const char *next_qry_name)
 
 				switch (val->m_type)
 				{
-				case ECounterTypeCount:
+					case ECounterTypeCount:
 						typeString = "count";
-					break;
-				case ECounterTypeSum:
+						break;
+					case ECounterTypeSum:
 						typeString = "sum";
-					break;
-				case ECounterTypeSumDouble:
+						break;
+					case ECounterTypeSumDouble:
 						typeString = "sum_double";
 						use_long = false;
-					break;
-				case ECounterTypeCpuTime:
+						break;
+					case ECounterTypeCpuTime:
 						typeString = "cpu_usec";
-					break;
-				default:
-					GPOS_RTL_ASSERT(!"Corrupted debug counter type");
-					break;
+						break;
+					default:
+						GPOS_RTL_ASSERT(!"Corrupted debug counter type");
+						break;
 				}
 
 				wstr.Reset();
-				os	<< "CDebugCounterEvent(qryid, qryname, counter, type, val), "
-					<< m_instance->m_qry_number << ", "
-					<< m_instance->m_qry_name.c_str() << ", "
-					<< iter.Key()->m_counter_name.c_str() << ", "
-					<< typeString << ", ";
+				os << "CDebugCounterEvent(qryid, qryname, counter, type, val), "
+				   << m_instance->m_qry_number << ", "
+				   << m_instance->m_qry_name.c_str() << ", "
+				   << iter.Key()->m_counter_name.c_str() << ", " << typeString
+				   << ", ";
 
 				if (use_long)
 				{
@@ -165,17 +170,14 @@ void CDebugCounter::NextQry(const char *next_qry_name)
 
 		// clear the hash map for the next query by allocating a new, empty one in its stead
 		m_instance->m_hashmap->Release();
-		m_instance->m_hashmap = GPOS_NEW(m_instance->m_mp) CounterKeyToValueMap(m_instance->m_mp);
+		m_instance->m_hashmap =
+			GPOS_NEW(m_instance->m_mp) CounterKeyToValueMap(m_instance->m_mp);
 	}
 }
 
-BOOL CDebugCounter::FindByName
-	(
-	 const char *counter_name,
-	 SDebugCounterKey **key,
-	 SDebugCounterValue **val,
-	 enum ECounterType typ
-	)
+BOOL
+CDebugCounter::FindByName(const char *counter_name, SDebugCounterKey **key,
+						  SDebugCounterValue **val, enum ECounterType typ)
 {
 	GPOS_RTL_ASSERT(NULL != key && NULL == *key);
 	GPOS_RTL_ASSERT(NULL != val && NULL == *val);
@@ -200,12 +202,9 @@ BOOL CDebugCounter::FindByName
 
 // insert or update a key value pair that was generated
 // by FindByName()
-void CDebugCounter::InsertOrUpdateCounter
-	(
-	 SDebugCounterKey *key,
-	 SDebugCounterValue *val,
-	 BOOL update
-	)
+void
+CDebugCounter::InsertOrUpdateCounter(SDebugCounterKey *key,
+									 SDebugCounterValue *val, BOOL update)
 {
 	if (update)
 	{
@@ -221,7 +220,8 @@ void CDebugCounter::InsertOrUpdateCounter
 }
 
 
-void CDebugCounter::Bump(const char *counter_name)
+void
+CDebugCounter::Bump(const char *counter_name)
 {
 	if (OkToProceed())
 	{
@@ -229,10 +229,8 @@ void CDebugCounter::Bump(const char *counter_name)
 
 		SDebugCounterKey *key = NULL;
 		SDebugCounterValue *val = NULL;
-		BOOL found = m_instance->FindByName(counter_name,
-											&key,
-											&val,
-											ECounterTypeCount);
+		BOOL found =
+			m_instance->FindByName(counter_name, &key, &val, ECounterTypeCount);
 
 		val->m_counter_val_long++;
 
@@ -240,7 +238,8 @@ void CDebugCounter::Bump(const char *counter_name)
 	}
 }
 
-void CDebugCounter::Add(const char *counter_name, long delta)
+void
+CDebugCounter::Add(const char *counter_name, long delta)
 {
 	if (OkToProceed())
 	{
@@ -248,17 +247,16 @@ void CDebugCounter::Add(const char *counter_name, long delta)
 
 		SDebugCounterKey *key = NULL;
 		SDebugCounterValue *val = NULL;
-		BOOL found = m_instance->FindByName(counter_name,
-											&key,
-											&val,
-											ECounterTypeSum);
+		BOOL found =
+			m_instance->FindByName(counter_name, &key, &val, ECounterTypeSum);
 
 		val->m_counter_val_long += delta;
 		m_instance->InsertOrUpdateCounter(key, val, found);
 	}
 }
 
-void CDebugCounter::AddDouble(const char *counter_name, double delta)
+void
+CDebugCounter::AddDouble(const char *counter_name, double delta)
 {
 	if (OkToProceed())
 	{
@@ -266,9 +264,7 @@ void CDebugCounter::AddDouble(const char *counter_name, double delta)
 
 		SDebugCounterKey *key = NULL;
 		SDebugCounterValue *val = NULL;
-		BOOL found = m_instance->FindByName(counter_name,
-											&key,
-											&val,
+		BOOL found = m_instance->FindByName(counter_name, &key, &val,
 											ECounterTypeSumDouble);
 
 		val->m_counter_val_double += delta;
@@ -276,7 +272,8 @@ void CDebugCounter::AddDouble(const char *counter_name, double delta)
 	}
 }
 
-void CDebugCounter::StartCpuTime(const char *counter_name)
+void
+CDebugCounter::StartCpuTime(const char *counter_name)
 {
 	if (OkToProceed())
 	{
@@ -284,9 +281,7 @@ void CDebugCounter::StartCpuTime(const char *counter_name)
 
 		SDebugCounterKey *key = NULL;
 		SDebugCounterValue *val = NULL;
-		BOOL found = m_instance->FindByName(counter_name,
-											&key,
-											&val,
+		BOOL found = m_instance->FindByName(counter_name, &key, &val,
 											ECounterTypeCpuTime);
 
 		if (NULL == val->m_cpu_timer)
@@ -302,7 +297,8 @@ void CDebugCounter::StartCpuTime(const char *counter_name)
 	}
 }
 
-void CDebugCounter::StopCpuTime(const char *counter_name)
+void
+CDebugCounter::StopCpuTime(const char *counter_name)
 {
 	if (OkToProceed())
 	{
@@ -310,9 +306,7 @@ void CDebugCounter::StopCpuTime(const char *counter_name)
 
 		SDebugCounterKey *key = NULL;
 		SDebugCounterValue *val = NULL;
-		BOOL found = m_instance->FindByName(counter_name,
-											&key,
-											&val,
+		BOOL found = m_instance->FindByName(counter_name, &key, &val,
 											ECounterTypeCpuTime);
 
 		// note that we tolerate starting a timer but never stopping

@@ -6,7 +6,7 @@
 #include "catalog/indexing.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
-#include "libpq/ip.h"
+#include "libpq/ifaddr.h"
 #include "libpq-fe.h"
 #include "postmaster/fts.h"
 #include "utils/builtins.h"
@@ -55,7 +55,7 @@ getHostnameAndPort(int dbid, char **hostname, int *port)
 	Datum       attr;
 	bool        isNull;
 
-	configrel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
+	configrel = table_open(GpSegmentConfigRelationId, AccessShareLock);
 	ScanKeyInit(&scankey[0],
 				Anum_gp_segment_configuration_dbid,
 				BTEqualStrategyNumber, F_INT2EQ,
@@ -81,7 +81,7 @@ getHostnameAndPort(int dbid, char **hostname, int *port)
 		elog(ERROR, "dbid %d not found", dbid);
 
 	systable_endscan(scan);
-	heap_close(configrel, NoLock);
+	table_close(configrel, NoLock);
 }
 
 PG_FUNCTION_INFO_V1(gp_inject_fault);

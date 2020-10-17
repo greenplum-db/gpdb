@@ -62,10 +62,17 @@ select sum(total) from (select sum(value) as total from with_test1 group by i) m
 --end_equivalent
 
 -- pathkeys
+explain (costs off)
 with my_order as (select * from with_test1 order by i)
 select i, count(*)
 from my_order
 group by i order by i;
+
+with my_order as (select * from with_test1 order by i)
+select i, count(*)
+from my_order
+group by i order by i;
+
 
 -- WITH query used in InitPlan
 --begin_equivalent
@@ -236,7 +243,7 @@ from my_sum;
 
 -- Test behavior with an unknown-type literal in the WITH
 WITH q AS (SELECT 'foo' AS x)
-SELECT x, x IS OF (unknown) as is_unknown FROM q;
+SELECT x, x IS OF (unknown) as is_unknown, x IS OF (text) as is_text FROM q;
 
 with cte(foo) as ( select 42 ) select * from ((select foo from cte)) q;
 

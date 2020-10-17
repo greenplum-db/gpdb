@@ -830,7 +830,7 @@ AND
     <dxl:Plan Id="0" SpaceSize="498">
       <dxl:HashJoin JoinType="In">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1730.239400" Rows="512.000000" Width="106"/>
+          <dxl:Cost StartupCost="0" TotalCost="1730.242933" Rows="512.000000" Width="106"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="rolname">
@@ -963,7 +963,7 @@ AND
         </dxl:HashCondList>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1299.032587" Rows="64.000000" Width="106"/>
+            <dxl:Cost StartupCost="0" TotalCost="1299.036120" Rows="64.000000" Width="106"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="rolname">
@@ -1090,7 +1090,7 @@ AND
           </dxl:JoinFilter>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.004129" Rows="8.000000" Width="82"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.007662" Rows="8.000000" Width="82"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="rolname">
@@ -1293,7 +1293,7 @@ AND
             </dxl:TableScan>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000432" Rows="1.000000" Width="39"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.003457" Rows="8.000000" Width="39"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="25" Alias="rolname">

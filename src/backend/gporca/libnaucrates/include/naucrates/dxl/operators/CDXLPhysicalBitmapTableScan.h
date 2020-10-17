@@ -18,74 +18,65 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// fwd declarations
-	class CDXLTableDescr;
-	class CXMLSerializer;
+// fwd declarations
+class CDXLTableDescr;
+class CXMLSerializer;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLPhysicalBitmapTableScan
-	//
-	//	@doc:
-	//		Class for representing DXL bitmap table scan operators
-	//
-	//---------------------------------------------------------------------------
-	class CDXLPhysicalBitmapTableScan : public CDXLPhysicalAbstractBitmapScan
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLPhysicalBitmapTableScan
+//
+//	@doc:
+//		Class for representing DXL bitmap table scan operators
+//
+//---------------------------------------------------------------------------
+class CDXLPhysicalBitmapTableScan : public CDXLPhysicalAbstractBitmapScan
+{
+private:
+	// private copy ctor
+	CDXLPhysicalBitmapTableScan(const CDXLPhysicalBitmapTableScan &);
+
+public:
+	// ctors
+	CDXLPhysicalBitmapTableScan(CMemoryPool *mp, CDXLTableDescr *table_descr)
+		: CDXLPhysicalAbstractBitmapScan(mp, table_descr)
 	{
-		private:
-			// private copy ctor
-			CDXLPhysicalBitmapTableScan(const CDXLPhysicalBitmapTableScan &);
+	}
 
-		public:
-			// ctors
-			CDXLPhysicalBitmapTableScan
-				(
-				CMemoryPool *mp,
-				CDXLTableDescr *table_descr
-				)
-				:
-				CDXLPhysicalAbstractBitmapScan(mp, table_descr)
-			{
-			}
+	// dtor
+	virtual ~CDXLPhysicalBitmapTableScan()
+	{
+	}
 
-			// dtor
-			virtual
-			~CDXLPhysicalBitmapTableScan()
-			{}
+	// operator type
+	virtual Edxlopid
+	GetDXLOperator() const
+	{
+		return EdxlopPhysicalBitmapTableScan;
+	}
 
-			// operator type
-			virtual
-			Edxlopid GetDXLOperator() const
-			{
-				return EdxlopPhysicalBitmapTableScan;
-			}
+	// operator name
+	virtual const CWStringConst *GetOpNameStr() const;
 
-			// operator name
-			virtual
-			const CWStringConst *GetOpNameStr() const;
+	// serialize operator in DXL format
+	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
+								const CDXLNode *dxlnode) const;
 
-			// serialize operator in DXL format
-			virtual
-			void SerializeToDXL(CXMLSerializer *xml_serializer, const CDXLNode *dxlnode) const;
+	// conversion function
+	static CDXLPhysicalBitmapTableScan *
+	Cast(CDXLOperator *dxl_op)
+	{
+		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(EdxlopPhysicalBitmapTableScan == dxl_op->GetDXLOperator());
 
-			// conversion function
-			static
-			CDXLPhysicalBitmapTableScan *Cast
-				(
-				CDXLOperator *dxl_op
-				)
-			{
-				GPOS_ASSERT(NULL != dxl_op);
-				GPOS_ASSERT(EdxlopPhysicalBitmapTableScan == dxl_op->GetDXLOperator());
+		return dynamic_cast<CDXLPhysicalBitmapTableScan *>(dxl_op);
+	}
 
- 	 	 		return dynamic_cast<CDXLPhysicalBitmapTableScan *>(dxl_op);
-			}
+};	// class CDXLPhysicalBitmapTableScan
+}  // namespace gpdxl
 
-	};  // class CDXLPhysicalBitmapTableScan
-}
-
-#endif  // !GPDXL_CDXLPhysicalBitmapTableScan_H
+#endif	// !GPDXL_CDXLPhysicalBitmapTableScan_H
 
 // EOF

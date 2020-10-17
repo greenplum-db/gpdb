@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -304,7 +304,7 @@ class Ping(Command):
                     self.pingToUse = SYSTEM.getPing6()
                     self.cmdStr = "%s -c 1 %s" % (self.pingToUse, self.hostToPing)
             except Exception as e:
-                self.results = CommandResult(1, '', 'Failed to get ip address: ' + str(e), False, True)
+                self.results = CommandResult(1, b'', b'Failed to get ip address: ' + str(e).encode(), False, True)
                 if validateAfter:
                     self.validate()
                 else:
@@ -488,7 +488,7 @@ class RemoveGlob(Command):
 class FileDirExists(Command):
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
         self.directory = directory
-        cmdStr = """python  -c "import os; print os.path.exists('%s')" """ % directory
+        cmdStr = """python3  -c "import os; print(os.path.exists('%s'))" """ % directory
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
@@ -573,33 +573,8 @@ class Hostname(Command):
 
     def get_hostname(self):
         if not self.results:
-            raise Exception, 'Command not yet executed'
+            raise Exception('Command not yet executed')
         return self.results.stdout.strip()
-
-
-# todo: This class should be replaced with gp.IfAddrs
-class InterfaceAddrs(Command):
-    """Returns list of interface IP Addresses.  List does not include loopback."""
-
-    def __init__(self, name, ctxt=LOCAL, remoteHost=None):
-        ifconfig = SYSTEM.getIfconfigCmd()
-        grep = findCmdInPath('grep')
-        awk = findCmdInPath('awk')
-        cut = findCmdInPath('cut')
-        cmdStr = '%s|%s "inet "|%s -v "127.0.0"|%s \'{print \$2}\'|%s -d: -f2' % (ifconfig, grep, grep, awk, cut)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def local(name):
-        cmd = InterfaceAddrs(name)
-        cmd.run(validateAfter=True)
-        return cmd.get_results().stdout.split()
-
-    @staticmethod
-    def remote(name, remoteHost):
-        cmd = InterfaceAddrs(name, ctxt=REMOTE, remoteHost=remoteHost)
-        cmd.run(validateAfter=True)
-        return cmd.get_results().stdout.split()
 
 
 # --------------tcp port is active -----------------------

@@ -21,14 +21,24 @@ CREATE TABLE bfv_tab1 (
 ) distributed by (unique1);
 
 create index bfv_tab1_idx1 on bfv_tab1 using btree(unique1);
-
+-- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
     WHERE bfv_tab1.unique1 = v.i and bfv_tab1.stringu1 = v.j;
 
 set gp_enable_relsize_collection=on;
-
+-- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
     WHERE bfv_tab1.unique1 = v.i and bfv_tab1.stringu1 = v.j;
+
+-- Test that we do not choose to perform an index scan if indisvalid=false.
+create table bfv_tab1_with_invalid_index (like bfv_tab1 including indexes);
+set allow_system_table_mods=on;
+update pg_index set indisvalid=false where indrelid='bfv_tab1_with_invalid_index'::regclass;
+reset allow_system_table_mods;
+explain select * from bfv_tab1_with_invalid_index where unique1>42;
+-- Cannot currently upgrade table with invalid index
+-- (see https://github.com/greenplum-db/gpdb/issues/10805).
+drop table bfv_tab1_with_invalid_index;
 
 reset gp_enable_relsize_collection;
 
@@ -98,7 +108,7 @@ AND ft.id = dt1.id;
 
 reset optimizer_cost_model;
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function count_index_scans(explain_query text) returns int as
@@ -112,7 +122,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 DROP TABLE bfv_tab1;
 DROP TABLE bfv_tab2_facttable1;
@@ -164,7 +174,7 @@ drop table if exists Tbl23383_partitioned;
 create table Tbl23383_partitioned(a int, b varchar(20), c varchar(20), d varchar(20))
 partition by range(a)
 (partition p1 start(1) end(500),
-partition p2 start(500) end(1000) inclusive);
+partition p2 start(500) end(1001));
 insert into Tbl23383_partitioned select g,g,g,g from generate_series(1,1000) g;
 create index idx23383_b on Tbl23383_partitioned(b);
 

@@ -16,81 +16,73 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformExploration
-	//
-	//	@doc:
-	//		Base class for all explorations
-	//
-	//---------------------------------------------------------------------------
-	class CXformExploration : public CXform
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformExploration
+//
+//	@doc:
+//		Base class for all explorations
+//
+//---------------------------------------------------------------------------
+class CXformExploration : public CXform
+{
+private:
+	// private copy ctor
+	CXformExploration(const CXformExploration &);
+
+public:
+	// ctor
+	explicit CXformExploration(CExpression *pexpr);
+
+	// dtor
+	virtual ~CXformExploration();
+
+	// type of operator
+	virtual BOOL
+	FExploration() const
 	{
+		GPOS_ASSERT(!FSubstitution() && !FImplementation());
+		return true;
+	}
 
-		private:
+	// is transformation a subquery unnesting (Subquery To Apply) xform?
+	virtual BOOL
+	FSubqueryUnnesting() const
+	{
+		return false;
+	}
 
-			// private copy ctor
-			CXformExploration(const CXformExploration &);
+	// is transformation an Apply decorrelation (Apply To Join) xform?
+	virtual BOOL
+	FApplyDecorrelating() const
+	{
+		return false;
+	}
 
-		public:
+	// do stats need to be computed before applying xform?
+	virtual BOOL
+	FNeedsStats() const
+	{
+		return false;
+	}
 
-			// ctor
-			explicit
-			CXformExploration(CExpression *pexpr);
+	// conversion function
+	static CXformExploration *
+	Pxformexp(CXform *pxform)
+	{
+		GPOS_ASSERT(NULL != pxform);
+		GPOS_ASSERT(pxform->FExploration());
 
-			// dtor
-			virtual
-			~CXformExploration();
+		return dynamic_cast<CXformExploration *>(pxform);
+	}
 
-			// type of operator
-			virtual
-			BOOL FExploration() const
-			{
-				GPOS_ASSERT(!FSubstitution() && !FImplementation());
-				return true;
-			}
+};	// class CXformExploration
 
-			// is transformation a subquery unnesting (Subquery To Apply) xform?
-			virtual
-			BOOL FSubqueryUnnesting() const
-			{
-				return false;
-			}
-
-			// is transformation an Apply decorrelation (Apply To Join) xform?
-			virtual
-			BOOL FApplyDecorrelating() const
-			{
-				return false;
-			}
-
-			// do stats need to be computed before applying xform?
-			virtual
-			BOOL FNeedsStats() const
-			{
-				return false;
-			}
-
-			// conversion function
-			static
-			CXformExploration *Pxformexp
-				(
-				CXform *pxform
-				)
-			{
-				GPOS_ASSERT(NULL != pxform);
-				GPOS_ASSERT(pxform->FExploration());
-
-				return dynamic_cast<CXformExploration*>(pxform);
-			}
-
-	}; // class CXformExploration
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CXformExploration_H
+#endif	// !GPOPT_CXformExploration_H
 
 // EOF

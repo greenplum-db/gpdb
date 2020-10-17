@@ -302,7 +302,7 @@
       <title id="ki155597">Checking the Log Files</title>
       <body>
         <p>Log files can provide information to help determine an error's cause. The master and
-          segment instances each have their own log file in <codeph>pg_log</codeph> of the data
+          segment instances each have their own log file in <codeph>log</codeph> of the data
           directory. The master log file contains the most information and you should always check
           it first. </p>
         <p>Use the <codeph>gplogfilter</codeph> utility to check the Greenplum Database log files
@@ -320,7 +320,7 @@
               messages on each segment instance. For
               example:<codeblock>$ gpssh -f seg_hosts_file -e 'source 
 /usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -t 
-/data1/primary/*/pg_log/gpdb*.log' &gt; seglog.out
+/data1/primary/*/log/gpdb*.log' &gt; seglog.out
 </codeblock></li>
           </ol>
         </section>

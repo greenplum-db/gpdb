@@ -8,6 +8,14 @@
  * DynamicSeqScan node scans each relation one after the other. For each
  * relation, it opens the table, scans the tuple, and returns relevant tuples.
  *
+ * GPDB_12_MERGE_FIXME: This is currently disabled altogether. If it is
+ * resurrected, some changes are needed to GPORCA. The way Partition
+ * Selectors work has been heavily rewritten, there's no global hash table
+ * of selected partitions anymore. For "static selection", there's a
+ * partOids field in the DynamicSeqScan plan node that holds the selected
+ * partitions; but none of the code in this file has been fixed to
+ * actually work that way. Same with all the other Dynamic*Scan nodes.
+ *
  * Portions Copyright (c) 2012 - present, EMC/Greenplum
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
@@ -22,23 +30,88 @@
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
+#include "nodes/nodeFuncs.h"
 #include "executor/execDynamicScan.h"
 #include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeSeqscan.h"
 #include "utils/hsearch.h"
 #include "parser/parsetree.h"
 #include "utils/memutils.h"
-#include "cdb/cdbpartition.h"
+#include "utils/rel.h"
 #include "cdb/cdbvars.h"
-#include "cdb/partitionselection.h"
+#include "access/table.h"
+#include "access/tableam.h"
 
 static void CleanupOnePartition(DynamicSeqScanState *node);
+
+/*
+ * During attribute re-mapping for heterogeneous partitions, we use
+ * this struct to identify which varno's attributes will be re-mapped.
+ * Using this struct as a *context* during expression tree walking, we
+ * can skip varattnos that do not belong to a given varno.
+ */
+typedef struct AttrMapContext
+{
+	const AttrNumber *newattno; /* The mapping table to remap the varattno */
+	Index		varno;			/* Which rte's varattno to re-map */
+} AttrMapContext;
+
+/*
+ * Remaps the varattno of a varattno in a Var node using an attribute map.
+ */
+static bool
+change_varattnos_varno_walker(Node *node, const AttrMapContext *attrMapCxt)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+
+		if (var->varlevelsup == 0 && (var->varno == attrMapCxt->varno) &&
+			var->varattno > 0)
+		{
+			/*
+			 * ??? the following may be a problem when the node is multiply
+			 * referenced though stringToNode() doesn't create such a node
+			 * currently.
+			 */
+			Assert(attrMapCxt->newattno[var->varattno - 1] > 0);
+			var->varattno = var->varoattno = attrMapCxt->newattno[var->varattno - 1];
+		}
+		return false;
+	}
+	return expression_tree_walker(node, change_varattnos_varno_walker,
+	                              (void *) attrMapCxt);
+}
+
+/*
+ * Replace varattno values for a given varno RTE index in an expression
+ * tree according to the given map array, that is, varattno N is replaced
+ * by newattno[N-1].  It is caller's responsibility to ensure that the array
+ * is long enough to define values for all user varattnos present in the tree.
+ * System column attnos remain unchanged.
+ *
+ * Note that the passed node tree is modified in-place!
+ */
+static void
+change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno)
+{
+	AttrMapContext attrMapCxt;
+
+	attrMapCxt.newattno = newattno;
+	attrMapCxt.varno = varno;
+
+	(void) change_varattnos_varno_walker(node, &attrMapCxt);
+}
 
 DynamicSeqScanState *
 ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 {
 	DynamicSeqScanState *state;
 	Oid			reloid;
+	ListCell *lc;
+	int i;
 
 	Assert((eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)) == 0);
 
@@ -46,22 +119,28 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 	state->eflags = eflags;
 	state->ss.ps.plan = (Plan *) node;
 	state->ss.ps.state = estate;
+	state->ss.ps.ExecProcNode = ExecDynamicSeqScan;
 
 	state->scan_state = SCAN_INIT;
 
 	/* Initialize child expressions. This is needed to find subplans. */
-	state->ss.ps.qual = (List *)
-		ExecInitExpr((Expr *) node->seqscan.plan.qual,
-					 (PlanState *) state);
-	state->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) node->seqscan.plan.targetlist,
-					 (PlanState *) state);
+	state->ss.ps.qual =
+		ExecInitQual(node->seqscan.plan.qual, (PlanState *) state);
+
+	Relation scanRel = ExecOpenScanRelation(estate, node->seqscan.scanrelid, eflags);
+	ExecInitScanTupleSlot(estate, &state->ss, RelationGetDescr(scanRel), table_slot_callbacks(scanRel));
 
 	/* Initialize result tuple type. */
-	ExecInitResultTupleSlot(estate, &state->ss.ps);
-	ExecAssignResultTypeFromTL(&state->ss.ps);
+	ExecInitResultTypeTL(&state->ss.ps);
+	ExecAssignScanProjectionInfo(&state->ss);
 
-	reloid = getrelid(node->seqscan.scanrelid, estate->es_range_table);
+	state->nOids = list_length(node->partOids);
+	state->partOids = palloc(sizeof(Oid) * state->nOids);
+	foreach_with_count(lc, node->partOids, i)
+		state->partOids[i] = lfirst_oid(lc);
+	state->whichPart = -1;
+
+	reloid = exec_rt_fetch(node->seqscan.scanrelid, estate)->relid;
 	Assert(OidIsValid(reloid));
 
 	state->firstPartition = true;
@@ -106,32 +185,37 @@ initNextTableToScan(DynamicSeqScanState *node)
 	Oid		   *pid;
 	Relation	currentRelation;
 
-	pid = hash_seq_search(&node->pidStatus);
-	if (pid == NULL)
-	{
-		node->shouldCallHashSeqTerm = false;
+	if (++node->whichPart < node->nOids)
+		pid = &node->partOids[node->whichPart];
+	else
 		return false;
-	}
 
-	/* Collect number of partitions scanned in EXPLAIN ANALYZE */
-	if (NULL != scanState->ps.instrument)
+	currentRelation = scanState->ss_currentRelation =
+		table_open(node->partOids[node->whichPart], AccessShareLock);
+
+	if (currentRelation->rd_rel->relkind != RELKIND_RELATION)
 	{
-		Instrumentation *instr = scanState->ps.instrument;
-		instr->numPartScanned++;
+		/* shouldn't happen */
+		elog(ERROR, "unexpected relkind in Dynamic Scan: %c", currentRelation->rd_rel->relkind);
 	}
-
-	CleanupOnePartition(node);
-
-	currentRelation = scanState->ss_currentRelation = heap_open(*pid, AccessShareLock);
-	lastScannedRel = heap_open(node->lastRelOid, AccessShareLock);
+	lastScannedRel = table_open(node->lastRelOid, AccessShareLock);
 	lastTupDesc = RelationGetDescr(lastScannedRel);
 	partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
-	attMap = varattnos_map(lastTupDesc, partTupDesc);
-	heap_close(lastScannedRel, AccessShareLock);
+	/*
+	 * FIXME: should we use execute_attr_map_tuple instead? Seems like a
+	 * higher level abstraction that fits the bill
+	 */
+	attMap = convert_tuples_by_name_map_if_req(partTupDesc, lastTupDesc, "unused msg");
+	table_close(lastScannedRel, AccessShareLock);
 
 	/* If attribute remapping is not necessary, then do not change the varattno */
 	if (attMap)
 	{
+		/*
+		 * FIXME: Ewww, this doesn't really belong in the executor. The optimizer
+		 * really should explicitly pass a qual and a tlist to us, for each
+		 * partition
+		 */
 		change_varattnos_of_a_varno((Node*)scanState->ps.plan->qual, attMap, node->scanrelid);
 		change_varattnos_of_a_varno((Node*)scanState->ps.plan->targetlist, attMap, node->scanrelid);
 
@@ -154,10 +238,8 @@ initNextTableToScan(DynamicSeqScanState *node)
 		MemoryContext oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
 
 		/* Initialize child expressions */
-		scanState->ps.qual = (List *) ExecInitExpr((Expr *) scanState->ps.plan->qual,
-												   (PlanState *) scanState);
-		scanState->ps.targetlist = (List *) ExecInitExpr((Expr *) scanState->ps.plan->targetlist,
-														 (PlanState *) scanState);
+		scanState->ps.qual =
+			ExecInitQual(scanState->ps.plan->qual, (PlanState *) scanState);
 
 		MemoryContextSwitchTo(oldCxt);
 	}
@@ -165,56 +247,18 @@ initNextTableToScan(DynamicSeqScanState *node)
 	if (attMap)
 		pfree(attMap);
 
-	DynamicScan_SetTableOid(&node->ss, *pid);
-	node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate, node->eflags,
+//	DynamicScan_SetTableOid(&node->ss, *pid);
+	node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate,
 													 currentRelation);
 	return true;
 }
 
-/*
- * setPidIndex
- *   Set the pid index for the given dynamic table.
- */
-static void
-setPidIndex(DynamicSeqScanState *node)
-{
-	Assert(node->pidIndex == NULL);
-
-	ScanState *scanState = (ScanState *)node;
-	EState *estate = scanState->ps.state;
-	DynamicSeqScan *plan = (DynamicSeqScan *) scanState->ps.plan;
-	Assert(estate->dynamicTableScanInfo != NULL);
-
-	/*
-	 * Ensure that the dynahash exists even if the partition selector
-	 * didn't choose any partition for current scan node [MPP-24169].
-	 */
-	InsertPidIntoDynamicTableScanInfo(estate, plan->partIndex,
-									  InvalidOid, InvalidPartitionSelectorId);
-
-	Assert(NULL != estate->dynamicTableScanInfo->pidIndexes);
-	Assert(estate->dynamicTableScanInfo->numScans >= plan->partIndex);
-	node->pidIndex = estate->dynamicTableScanInfo->pidIndexes[plan->partIndex - 1];
-	Assert(node->pidIndex != NULL);
-}
 
 TupleTableSlot *
-ExecDynamicSeqScan(DynamicSeqScanState *node)
+ExecDynamicSeqScan(PlanState *pstate)
 {
+	DynamicSeqScanState *node = castNode(DynamicSeqScanState, pstate);
 	TupleTableSlot *slot = NULL;
-
-	/*
-	 * If this is called the first time, find the pid index that contains all unique
-	 * partition pids for this node to scan.
-	 */
-	if (node->pidIndex == NULL)
-	{
-		setPidIndex(node);
-		Assert(node->pidIndex != NULL);
-
-		hash_seq_init(&node->pidStatus, node->pidIndex);
-		node->shouldCallHashSeqTerm = true;
-	}
 
 	/*
 	 * Scan the table to find next tuple to return. If the current table
@@ -229,7 +273,7 @@ ExecDynamicSeqScan(DynamicSeqScanState *node)
 				break;
 		}
 
-		slot = ExecSeqScan(node->seqScanState);
+		slot = ExecProcNode(&node->seqScanState->ss.ps);
 
 		if (!TupIsNull(slot))
 			break;
@@ -254,11 +298,8 @@ CleanupOnePartition(DynamicSeqScanState *scanState)
 	{
 		ExecEndSeqScan(scanState->seqScanState);
 		scanState->seqScanState = NULL;
-	}
-	if ((scanState->scan_state & SCAN_SCAN) != 0)
-	{
 		Assert(scanState->ss.ss_currentRelation != NULL);
-		ExecCloseScanRelation(scanState->ss.ss_currentRelation);
+		table_close(scanState->ss.ss_currentRelation, NoLock);
 		scanState->ss.ss_currentRelation = NULL;
 	}
 }
@@ -271,12 +312,6 @@ static void
 DynamicSeqScanEndCurrentScan(DynamicSeqScanState *node)
 {
 	CleanupOnePartition(node);
-
-	if (node->shouldCallHashSeqTerm)
-	{
-		hash_seq_term(&node->pidStatus);
-		node->shouldCallHashSeqTerm = false;
-	}
 }
 
 /*
@@ -289,7 +324,8 @@ ExecEndDynamicSeqScan(DynamicSeqScanState *node)
 {
 	DynamicSeqScanEndCurrentScan(node);
 
-	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+	if (node->ss.ps.ps_ResultTupleSlot)
+		ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 }
 
 /*
@@ -302,5 +338,4 @@ ExecReScanDynamicSeqScan(DynamicSeqScanState *node)
 	DynamicSeqScanEndCurrentScan(node);
 
 	/* Force reloading the partition hash table */
-	node->pidIndex = NULL;
 }

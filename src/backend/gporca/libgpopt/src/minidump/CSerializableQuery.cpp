@@ -29,19 +29,15 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CSerializableQuery::CSerializableQuery
-	(
-	CMemoryPool *mp,
-	const CDXLNode *query,
+CSerializableQuery::CSerializableQuery(
+	CMemoryPool *mp, const CDXLNode *query,
 	const CDXLNodeArray *query_output_dxlnode_array,
-	const CDXLNodeArray *cte_producers
-	)
-	:
-	CSerializable(),
-	m_mp(mp),
-	m_query_dxl_root(query),
-	m_query_output(query_output_dxlnode_array),
-	m_cte_producers(cte_producers)
+	const CDXLNodeArray *cte_producers)
+	: CSerializable(),
+	  m_mp(mp),
+	  m_query_dxl_root(query),
+	  m_query_output(query_output_dxlnode_array),
+	  m_cte_producers(cte_producers)
 {
 	GPOS_ASSERT(NULL != query);
 	GPOS_ASSERT(NULL != query_output_dxlnode_array);
@@ -69,22 +65,12 @@ CSerializableQuery::~CSerializableQuery()
 //
 //---------------------------------------------------------------------------
 void
-CSerializableQuery::Serialize
-	(
-	COstream &oos
-	)
+CSerializableQuery::Serialize(COstream &oos)
 {
-	CDXLUtils::SerializeQuery
-			(
-			m_mp,
-			oos,
-			m_query_dxl_root,
-			m_query_output,
-			m_cte_producers,
-			false /*fSerializeHeaders*/,
-			false /*indentation*/
-			);
+	CDXLUtils::SerializeQuery(m_mp, oos, m_query_dxl_root, m_query_output,
+							  m_cte_producers, false /*fSerializeHeaders*/,
+							  false /*indentation*/
+	);
 }
 
 // EOF
-

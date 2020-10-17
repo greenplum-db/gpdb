@@ -52,7 +52,7 @@ class Operation(object):
         try:
             self.ret = self.execute()
             return self.ret
-        except Exception, e:
+        except Exception as e:
             self.ret = e
             raise
         finally:

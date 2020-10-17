@@ -15,29 +15,27 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CKeyCollectionTest
-	//
-	//	@doc:
-	//		Static unit tests for key collections
-	//
-	//---------------------------------------------------------------------------
-	class CKeyCollectionTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CKeyCollectionTest
+//
+//	@doc:
+//		Static unit tests for key collections
+//
+//---------------------------------------------------------------------------
+class CKeyCollectionTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
+	static GPOS_RESULT EresUnittest_Subsumes();
+};	// class CKeyCollectionTest
+}  // namespace gpopt
 
-		public:
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-			static GPOS_RESULT EresUnittest_Subsumes();
-	}; // class CKeyCollectionTest
-}
-
-#endif // !GPOS_CKeyCollectionTest_H
+#endif	// !GPOS_CKeyCollectionTest_H
 
 
 // EOF

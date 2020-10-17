@@ -149,6 +149,10 @@ SELECT * FROM query_select TABLESAMPLE BERNOULLI (5.5) REPEATABLE (1);
 
 SELECT q.* FROM (SELECT * FROM test_tablesample) as q TABLESAMPLE BERNOULLI (5);
 
-DROP VIEW test_tablesample_v1;
-DROP VIEW test_tablesample_v2;
-DROP TABLE test_tablesample;
+-- check partitioned tables support tablesample
+create table parted_sample (a int) partition by list (a);
+create table parted_sample_1 partition of parted_sample for values in (1);
+create table parted_sample_2 partition of parted_sample for values in (2);
+explain (costs off)
+  select * from parted_sample tablesample bernoulli (100);
+drop table parted_sample, parted_sample_1, parted_sample_2;

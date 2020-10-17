@@ -5,6 +5,7 @@
 -- Finland, http://www.stat.fi/worldinfigures.
 --
 -- Modified to use it with GPDB
+set extra_float_digits=0;
 --start_ignore
 create schema qp_with_clause;
 set search_path = qp_with_clause;
@@ -8562,6 +8563,7 @@ select LC from lang_total;
 ERROR:  column "lc" does not exist
 LINE 5: select LC from lang_total;
                ^
+HINT:  Perhaps you meant to reference the column "lang_total.cc" or the column "lang_total.clc".
 -- query 3 use column list when there are duplicate names within the CTE
 with capitals("CO_C","C_ID","CAPITAL",country) as 
 (select country.code,id,city.name,country.name from city,country 
@@ -9499,18 +9501,18 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 );
 \d+ view_with_shared_scans;
-                View "qp_with_clause.view_with_shared_scans"
-       Column        |       Type       | Modifiers | Storage  | Description 
----------------------+------------------+-----------+----------+-------------
- city_cnt            | bigint           |           | plain    | 
- lang_cnt            | bigint           |           | plain    | 
- name                | text             |           | extended | 
- REGION_SURFACE_AREA | numeric          |           | main     | 
- REGION_LIFETIME     | double precision |           | plain    | 
- REGION_POP          | bigint           |           | plain    | 
- lang_count          | bigint           |           | plain    | 
- REGION_GNP          | numeric          |           | main     | 
- region              | text             |           | extended | 
+                           View "qp_with_clause.view_with_shared_scans"
+       Column        |       Type       | Collation | Nullable | Default | Storage  | Description 
+---------------------+------------------+-----------+----------+---------+----------+-------------
+ city_cnt            | bigint           |           |          |         | plain    | 
+ lang_cnt            | bigint           |           |          |         | plain    | 
+ name                | text             |           |          |         | extended | 
+ REGION_SURFACE_AREA | numeric          |           |          |         | main     | 
+ REGION_LIFETIME     | double precision |           |          |         | plain    | 
+ REGION_POP          | bigint           |           |          |         | plain    | 
+ lang_count          | bigint           |           |          |         | plain    | 
+ REGION_GNP          | numeric          |           |          |         | main     | 
+ region              | text             |           |          |         | extended | 
 View definition:
  WITH longlivingregions AS (
          SELECT foo."REGION_POP",
@@ -11135,12 +11137,12 @@ NOTICE:  drop cascades to table emp
 NOTICE:  drop cascades to table bar
 NOTICE:  drop cascades to table foo
 NOTICE:  drop cascades to table tbl87
-NOTICE:  drop cascades to append only columnar table countrylanguage_co
-NOTICE:  drop cascades to append only columnar table country_co
-NOTICE:  drop cascades to append only columnar table city_co
-NOTICE:  drop cascades to append only table countrylanguage_ao
-NOTICE:  drop cascades to append only table country_ao
-NOTICE:  drop cascades to append only table city_ao
+NOTICE:  drop cascades to table countrylanguage_co
+NOTICE:  drop cascades to table country_co
+NOTICE:  drop cascades to table city_co
+NOTICE:  drop cascades to table countrylanguage_ao
+NOTICE:  drop cascades to table country_ao
+NOTICE:  drop cascades to table city_ao
 NOTICE:  drop cascades to table countrylanguage
 NOTICE:  drop cascades to table country
 NOTICE:  drop cascades to table city

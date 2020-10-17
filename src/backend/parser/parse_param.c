@@ -12,7 +12,7 @@
  * Note that other approaches to parameters are possible using the parser
  * hooks defined in ParseState.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -54,8 +54,8 @@ typedef struct VarParamState
 static Node *fixed_paramref_hook(ParseState *pstate, ParamRef *pref);
 static Node *variable_paramref_hook(ParseState *pstate, ParamRef *pref);
 static Node *variable_coerce_param_hook(ParseState *pstate, Param *param,
-						   Oid targetTypeId, int32 targetTypeMod,
-						   int location);
+										Oid targetTypeId, int32 targetTypeMod,
+										int location);
 static bool check_parameter_resolution_walker(Node *node, ParseState *pstate);
 static bool query_contains_extern_params_walker(Node *node, void *context);
 
@@ -210,7 +210,7 @@ variable_coerce_param_hook(ParseState *pstate, Param *param,
 		}
 		else
 		{
-			/* Ooops */
+			/* Oops */
 			ereport(ERROR,
 					(errcode(ERRCODE_AMBIGUOUS_PARAMETER),
 					 errmsg("inconsistent types deduced for parameter $%d",
@@ -301,8 +301,8 @@ check_parameter_resolution_walker(Node *node, ParseState *pstate)
 			if (param->paramtype != (*parstate->paramTypes)[paramno - 1])
 				ereport(ERROR,
 						(errcode(ERRCODE_AMBIGUOUS_PARAMETER),
-					 errmsg("could not determine data type of parameter $%d",
-							paramno),
+						 errmsg("could not determine data type of parameter $%d",
+								paramno),
 						 parser_errposition(pstate, param->location)));
 		}
 		return false;

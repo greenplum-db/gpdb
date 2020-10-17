@@ -1,4 +1,4 @@
-	//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //	Greenplum Database
 //	Copyright (C) 2011 EMC Corp.
 //
@@ -29,12 +29,7 @@ using namespace gpopt;
 //		ctor
 //
 //---------------------------------------------------------------------------
-CLogicalLeftSemiJoin::CLogicalLeftSemiJoin
-	(
-	CMemoryPool *mp
-	)
-	:
-	CLogicalJoin(mp)
+CLogicalLeftSemiJoin::CLogicalLeftSemiJoin(CMemoryPool *mp) : CLogicalJoin(mp)
 {
 	GPOS_ASSERT(NULL != mp);
 }
@@ -49,11 +44,7 @@ CLogicalLeftSemiJoin::CLogicalLeftSemiJoin
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalLeftSemiJoin::PxfsCandidates
-	(
-	CMemoryPool *mp
-	)
-	const
+CLogicalLeftSemiJoin::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 
@@ -79,11 +70,8 @@ CLogicalLeftSemiJoin::PxfsCandidates
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CLogicalLeftSemiJoin::DeriveOutputColumns
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
+CLogicalLeftSemiJoin::DeriveOutputColumns(CMemoryPool *,  // mp
+										  CExpressionHandle &exprhdl)
 {
 	GPOS_ASSERT(3 == exprhdl.Arity());
 
@@ -100,12 +88,8 @@ CLogicalLeftSemiJoin::DeriveOutputColumns
 //
 //---------------------------------------------------------------------------
 CKeyCollection *
-CLogicalLeftSemiJoin::DeriveKeyCollection
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalLeftSemiJoin::DeriveKeyCollection(CMemoryPool *,  // mp
+										  CExpressionHandle &exprhdl) const
 {
 	return PkcDeriveKeysPassThru(exprhdl, 0 /* ulChild */);
 }
@@ -120,14 +104,11 @@ CLogicalLeftSemiJoin::DeriveKeyCollection
 //
 //---------------------------------------------------------------------------
 CMaxCard
-CLogicalLeftSemiJoin::DeriveMaxCard
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalLeftSemiJoin::DeriveMaxCard(CMemoryPool *,	// mp
+									CExpressionHandle &exprhdl) const
 {
-	return CLogical::Maxcard(exprhdl, 2 /*ulScalarIndex*/, exprhdl.DeriveMaxCard(0));
+	return CLogical::Maxcard(exprhdl, 2 /*ulScalarIndex*/,
+							 exprhdl.DeriveMaxCard(0));
 }
 
 //---------------------------------------------------------------------------
@@ -139,13 +120,10 @@ CLogicalLeftSemiJoin::DeriveMaxCard
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CLogicalLeftSemiJoin::PstatsDerive
-	(
-	CMemoryPool *mp,
-	CStatsPredJoinArray *join_preds_stats,
-	IStatistics *outer_stats,
-	IStatistics *inner_side_stats
-	)
+CLogicalLeftSemiJoin::PstatsDerive(CMemoryPool *mp,
+								   CStatsPredJoinArray *join_preds_stats,
+								   IStatistics *outer_stats,
+								   IStatistics *inner_side_stats)
 {
 	return outer_stats->CalcLSJoinStats(mp, inner_side_stats, join_preds_stats);
 }
@@ -160,19 +138,18 @@ CLogicalLeftSemiJoin::PstatsDerive
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CLogicalLeftSemiJoin::PstatsDerive
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	IStatisticsArray * // not used
-	)
-	const
+CLogicalLeftSemiJoin::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   IStatisticsArray *  // not used
+) const
 {
 	GPOS_ASSERT(Esp(exprhdl) > EspNone);
 	IStatistics *outer_stats = exprhdl.Pstats(0);
 	IStatistics *inner_side_stats = exprhdl.Pstats(1);
-	CStatsPredJoinArray *join_preds_stats = CStatsPredUtils::ExtractJoinStatsFromExprHandle(mp, exprhdl, true/*semi-join*/);
-	IStatistics *pstatsSemiJoin = PstatsDerive(mp, join_preds_stats, outer_stats, inner_side_stats);
+	CStatsPredJoinArray *join_preds_stats =
+		CStatsPredUtils::ExtractJoinStatsFromExprHandle(mp, exprhdl,
+														true /*semi-join*/);
+	IStatistics *pstatsSemiJoin =
+		PstatsDerive(mp, join_preds_stats, outer_stats, inner_side_stats);
 
 	join_preds_stats->Release();
 

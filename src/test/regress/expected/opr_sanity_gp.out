@@ -35,9 +35,6 @@ and oprleft IN (
   'time'::regtype,
   'timetz '::regtype,
   'interval'::regtype,
-  'abstime'::regtype,
-  'reltime'::regtype,
-  'tinterval'::regtype,
   'inet'::regtype,
   'cidr'::regtype,
   'macaddr'::regtype,
@@ -47,7 +44,7 @@ and oprleft IN (
   'anyarray'::regtype,
   'oidvector'::regtype,
   'money'::regtype);
- oprname | oprnamespace | oprowner | oprkind | oprcanmerge | oprcanhash | oprleft | oprright | oprresult | oprcom | oprnegate | oprcode | oprrest | oprjoin 
----------+--------------+----------+---------+-------------+------------+---------+----------+-----------+--------+-----------+---------+---------+---------
+ oid | oprname | oprnamespace | oprowner | oprkind | oprcanmerge | oprcanhash | oprleft | oprright | oprresult | oprcom | oprnegate | oprcode | oprrest | oprjoin 
+-----+---------+--------------+----------+---------+-------------+------------+---------+----------+-----------+--------+-----------+---------+---------+---------
 (0 rows)
 

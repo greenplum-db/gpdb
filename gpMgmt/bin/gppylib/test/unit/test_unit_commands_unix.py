@@ -3,7 +3,7 @@ import os
 from mock import patch
 
 from commands.unix import RemoveFile, RemoveDirectory, RemoveDirectoryContents, RemoveGlob, REMOTE, Command
-from gp_unittest import *
+from .gp_unittest import *
 
 
 class CommandsUnix(GpTestCase):

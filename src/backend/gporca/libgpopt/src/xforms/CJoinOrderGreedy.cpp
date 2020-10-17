@@ -33,23 +33,20 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJoinOrderGreedy::CJoinOrderGreedy
-	(
-	CMemoryPool *pmp,
-	CExpressionArray *pdrgpexprComponents,
-	CExpressionArray *pdrgpexprConjuncts
-	)
-	:
-	CJoinOrder(pmp, pdrgpexprComponents, pdrgpexprConjuncts, true /* m_include_loj_childs */),
-	m_pcompResult(NULL)
+CJoinOrderGreedy::CJoinOrderGreedy(CMemoryPool *pmp,
+								   CExpressionArray *pdrgpexprComponents,
+								   CExpressionArray *pdrgpexprConjuncts)
+	: CJoinOrder(pmp, pdrgpexprComponents, pdrgpexprConjuncts,
+				 true /* m_include_loj_childs */),
+	  m_pcompResult(NULL)
 {
 #ifdef GPOS_DEBUG
 	for (ULONG ul = 0; ul < m_ulComps; ul++)
 	{
 		GPOS_ASSERT(NULL != m_rgpcomp[ul]->m_pexpr->Pstats() &&
-				"stats were not derived on input component");
+					"stats were not derived on input component");
 	}
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 }
 
 
@@ -71,15 +68,15 @@ CJoinOrderGreedy::~CJoinOrderGreedy()
 CJoinOrder::SComponent *
 CJoinOrderGreedy::GetStartingJoins()
 {
-
 	CDouble dMinRows(0.0);
 	ULONG ul1Counter = 0;
 	ULONG ul2Counter = 0;
-	CJoinOrder::SComponent *pcompBest = GPOS_NEW(m_mp) SComponent(m_mp, NULL /*pexpr*/);
+	CJoinOrder::SComponent *pcompBest =
+		GPOS_NEW(m_mp) SComponent(m_mp, NULL /*pexpr*/);
 
 	for (ULONG ul1 = 0; ul1 < m_ulComps; ul1++)
 	{
-		for (ULONG ul2 = ul1+1; ul2 < m_ulComps; ul2++)
+		for (ULONG ul2 = ul1 + 1; ul2 < m_ulComps; ul2++)
 		{
 			SComponent *comp1 = m_rgpcomp[ul1];
 			SComponent *comp2 = m_rgpcomp[ul2];
@@ -89,10 +86,10 @@ CJoinOrderGreedy::GetStartingJoins()
 				continue;
 			}
 
-			CJoinOrder::SComponent *compTemp = PcompCombine(comp1,comp2);
+			CJoinOrder::SComponent *compTemp = PcompCombine(comp1, comp2);
 
 			// exclude cross joins to be considered as late as possible in the join order
-			if(CUtils::FCrossJoin(compTemp->m_pexpr))
+			if (CUtils::FCrossJoin(compTemp->m_pexpr))
 			{
 				compTemp->Release();
 				continue;
@@ -112,7 +109,7 @@ CJoinOrderGreedy::GetStartingJoins()
 		}
 	}
 
-	if((ul1Counter == 0) && (ul2Counter==0))
+	if ((ul1Counter == 0) && (ul2Counter == 0))
 	{
 		pcompBest->Release();
 		return NULL;
@@ -125,7 +122,6 @@ CJoinOrderGreedy::GetStartingJoins()
 	pcompBest->m_fUsed = true;
 
 	return pcompBest;
-
 }
 
 //---------------------------------------------------------------------------
@@ -143,7 +139,7 @@ CJoinOrderGreedy::PexprExpand()
 
 	m_pcompResult = GetStartingJoins();
 
-	if(NULL != m_pcompResult)
+	if (NULL != m_pcompResult)
 	{
 		// found atleast one non cross join
 		MarkUsedEdges(m_pcompResult);
@@ -153,7 +149,7 @@ CJoinOrderGreedy::PexprExpand()
 		// every join combination is a cross join
 		m_pcompResult = GPOS_NEW(m_mp) SComponent(m_mp, NULL /*pexpr*/);
 	}
-	
+
 	// create a bitset for all the unused components
 	CBitSet *unused_components_set = GPOS_NEW(m_mp) CBitSet(m_mp);
 	for (ULONG ul = 0; ul < m_ulComps; ul++)
@@ -163,7 +159,7 @@ CJoinOrderGreedy::PexprExpand()
 			unused_components_set->ExchangeSet(ul);
 		}
 	}
-	
+
 	while (unused_components_set->Size() > 0)
 	{
 		// get a set of components which can be joined with m_pcompResult
@@ -205,7 +201,6 @@ CJoinOrderGreedy::PexprExpand()
 		}
 		candidate_comp_set->Release();
 		GPOS_ASSERT(gpos::ulong_max != best_comp_idx);
-
 	}
 	unused_components_set->Release();
 	GPOS_ASSERT(NULL != m_pcompResult->m_pexpr);
@@ -223,14 +218,12 @@ CJoinOrderGreedy::PexprExpand()
  * the component which was picked
  */
 ULONG
-CJoinOrderGreedy::PickBestJoin
-	(
-	 CBitSet *candidate_comp_set
-	)
+CJoinOrderGreedy::PickBestJoin(CBitSet *candidate_comp_set)
 {
-
-	SComponent *pcompBestComponent = NULL; // component which gives minimum cardinality when joined with m_pcompResult
-	SComponent *pcompBest = NULL; // resulting join component using pcompBestComponent and original m_pcompResult which gives minimum cardinality
+	SComponent *pcompBestComponent =
+		NULL;  // component which gives minimum cardinality when joined with m_pcompResult
+	SComponent *pcompBest =
+		NULL;  // resulting join component using pcompBestComponent and original m_pcompResult which gives minimum cardinality
 	CDouble dMinRows = 0.0;
 	ULONG best_comp_idx = gpos::ulong_max;
 
@@ -280,13 +273,13 @@ CJoinOrderGreedy::PickBestJoin
 /*
  * Get components that are reachable from the result component by a single edge
  */
-CBitSet*
+CBitSet *
 CJoinOrderGreedy::GetAdjacentComponentsToJoinCandidate()
 {
 	// iterator over index of edges in m_rgpedge array associated with this component
 	CBitSetIter edges_iter(*(m_pcompResult->m_edge_set));
 	CBitSet *candidate_component_set = GPOS_NEW(m_mp) CBitSet(m_mp);
-	
+
 	while (edges_iter.Advance())
 	{
 		SEdge *edge = m_rgpedge[edges_iter.Bit()];
@@ -297,7 +290,7 @@ CJoinOrderGreedy::GetAdjacentComponentsToJoinCandidate()
 			candidate_component_set->Difference(m_pcompResult->m_pbs);
 		}
 	}
-	
+
 	return candidate_component_set;
 }
 

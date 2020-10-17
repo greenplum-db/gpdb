@@ -21,6 +21,7 @@
 
 #include "cdb/cdbappendonlyxlog.h"
 #include "cdb/cdbbufferedappend.h"
+#include "pgstat.h"
 #include "utils/guc.h"
 
 static void BufferedAppendWrite(
@@ -146,27 +147,6 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 	int32		bytestotal;
 	uint8	   *largeWriteMemory;
 
-#ifdef USE_ASSERT_CHECKING
-	{
-		int64		currentWritePosition;
-
-		currentWritePosition = FileNonVirtualCurSeek(bufferedAppend->file);
-		if (currentWritePosition < 0)
-			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to get current position in table \"%s\" for file \"%s\": %m",
-								   bufferedAppend->relationName,
-								   bufferedAppend->filePathName)));
-
-		if (currentWritePosition != bufferedAppend->largeWritePosition)
-			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("Current position mismatch actual "
-								   INT64_FORMAT ", expected " INT64_FORMAT " in table \"%s\" for file \"%s\"",
-								   currentWritePosition, bufferedAppend->largeWritePosition,
-								   bufferedAppend->relationName,
-								   bufferedAppend->filePathName)));
-	}
-#endif
-
 	Assert(bufferedAppend->largeWriteLen > 0);
 	largeWriteMemory = bufferedAppend->largeWriteMemory;
 
@@ -178,7 +158,9 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 
 		byteswritten = FileWrite(bufferedAppend->file,
 								 (char *) largeWriteMemory + bytestotal,
-								 bytesleft);
+								 bytesleft,
+								 bufferedAppend->largeWritePosition + bytestotal,
+								 WAIT_EVENT_DATA_FILE_WRITE);
 		if (byteswritten < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),

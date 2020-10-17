@@ -28,16 +28,12 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLLogicalInsert::CDXLLogicalInsert
-	(
-	CMemoryPool *mp,
-	CDXLTableDescr *table_descr,
-	ULongPtrArray *src_colids_array
-	)
-	:
-	CDXLLogical(mp),
-	m_dxl_table_descr(table_descr),
-	m_src_colids_array(src_colids_array)
+CDXLLogicalInsert::CDXLLogicalInsert(CMemoryPool *mp,
+									 CDXLTableDescr *table_descr,
+									 ULongPtrArray *src_colids_array)
+	: CDXLLogical(mp),
+	  m_dxl_table_descr(table_descr),
+	  m_src_colids_array(src_colids_array)
 {
 	GPOS_ASSERT(NULL != table_descr);
 	GPOS_ASSERT(NULL != src_colids_array);
@@ -94,27 +90,27 @@ CDXLLogicalInsert::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalInsert::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLLogicalInsert::SerializeToDXL(CXMLSerializer *xml_serializer,
+								  const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
-	CWStringDynamic *src_colids = CDXLUtils::Serialize(m_mp, m_src_colids_array);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenInsertCols), src_colids);
+	CWStringDynamic *src_colids =
+		CDXLUtils::Serialize(m_mp, m_src_colids_array);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenInsertCols), src_colids);
 	GPOS_DELETE(src_colids);
 
 	// serialize table descriptor
 	m_dxl_table_descr->SerializeToDXL(xml_serializer);
-	
+
 	// serialize arguments
 	node->SerializeChildrenToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -127,25 +123,23 @@ CDXLLogicalInsert::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalInsert::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) 
-	const
+CDXLLogicalInsert::AssertValid(const CDXLNode *node,
+							   BOOL validate_children) const
 {
 	GPOS_ASSERT(1 == node->Arity());
 
 	CDXLNode *child_dxlnode = (*node)[0];
-	GPOS_ASSERT(EdxloptypeLogical == child_dxlnode->GetOperator()->GetDXLOperatorType());
+	GPOS_ASSERT(EdxloptypeLogical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
 
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 
 // EOF

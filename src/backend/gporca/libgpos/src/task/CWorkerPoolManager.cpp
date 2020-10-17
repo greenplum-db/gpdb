@@ -34,27 +34,17 @@ CWorkerPoolManager *CWorkerPoolManager::m_worker_pool_manager = NULL;
 //		Private ctor
 //
 //---------------------------------------------------------------------------
-CWorkerPoolManager::CWorkerPoolManager
-	(
-	CMemoryPool *mp
-	)
-	:
-	m_mp(mp),
-	m_auto_task_proxy_counter(0),
-	m_active(false),
-	m_single_worker(NULL)
+CWorkerPoolManager::CWorkerPoolManager(CMemoryPool *mp)
+	: m_mp(mp),
+	  m_auto_task_proxy_counter(0),
+	  m_active(false),
+	  m_single_worker(NULL)
 {
 	// initialize hash table
-	m_shtTS.Init
-		(
-		mp,
-		GPOS_WORKERPOOL_HT_SIZE,
-		GPOS_OFFSET(CTask, m_worker_pool_manager_link),
-		GPOS_OFFSET(CTask, m_tid),
-		&(CTaskId::m_invalid_tid),
-		CTaskId::HashValue,
-		CTaskId::Equals
-		);
+	m_shtTS.Init(mp, GPOS_WORKERPOOL_HT_SIZE,
+				 GPOS_OFFSET(CTask, m_worker_pool_manager_link),
+				 GPOS_OFFSET(CTask, m_tid), &(CTaskId::m_invalid_tid),
+				 CTaskId::HashValue, CTaskId::Equals);
 
 	// set active
 	m_active = true;
@@ -114,12 +104,14 @@ CWorkerPoolManager::Init()
 void
 CWorkerPoolManager::Shutdown()
 {
-	CWorkerPoolManager *worker_pool_manager = CWorkerPoolManager::m_worker_pool_manager;
+	CWorkerPoolManager *worker_pool_manager =
+		CWorkerPoolManager::m_worker_pool_manager;
 
-	GPOS_ASSERT(NULL != worker_pool_manager && "Worker pool has not been initialized");
+	GPOS_ASSERT(NULL != worker_pool_manager &&
+				"Worker pool has not been initialized");
 
 	GPOS_ASSERT(0 == worker_pool_manager->m_auto_task_proxy_counter &&
-			    "AutoTaskProxy alive at worker pool shutdown");
+				"AutoTaskProxy alive at worker pool shutdown");
 
 	// stop scheduling tasks
 	worker_pool_manager->m_active = false;
@@ -131,7 +123,7 @@ CWorkerPoolManager::Shutdown()
 	GPOS_DELETE(worker_pool_manager);
 
 	// release allocated memory pool
-    CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
 }
 
 
@@ -144,10 +136,7 @@ CWorkerPoolManager::Shutdown()
 //
 //---------------------------------------------------------------------------
 void
-CWorkerPoolManager::RegisterWorker
-	(
-	CWorker *worker
-	)
+CWorkerPoolManager::RegisterWorker(CWorker *worker)
 {
 	GPOS_ASSERT(NULL != worker);
 	GPOS_ASSERT(NULL == m_single_worker);
@@ -179,10 +168,7 @@ CWorkerPoolManager::RemoveWorker()
 //
 //---------------------------------------------------------------------------
 void
-CWorkerPoolManager::RegisterTask
-	(
-	CTask *task
-	)
+CWorkerPoolManager::RegisterTask(CTask *task)
 {
 	GPOS_ASSERT(m_active && "Worker pool is not operating");
 
@@ -206,12 +192,8 @@ CWorkerPoolManager::RegisterTask
 //
 //---------------------------------------------------------------------------
 CTask *
-CWorkerPoolManager::RemoveTask
-	(
-	CTaskId tid
-	)
+CWorkerPoolManager::RemoveTask(CTaskId tid)
 {
-
 	CTask *task = NULL;
 
 	// scope for hash table accessor
@@ -239,10 +221,7 @@ CWorkerPoolManager::RemoveTask
 //
 //---------------------------------------------------------------------------
 void
-CWorkerPoolManager::Schedule
-	(
-	CTask *task
-	)
+CWorkerPoolManager::Schedule(CTask *task)
 {
 	GPOS_ASSERT(m_active && "Worker pool is not operating");
 
@@ -262,10 +241,7 @@ CWorkerPoolManager::Schedule
 //
 //---------------------------------------------------------------------------
 void
-CWorkerPoolManager::Cancel
-	(
-	CTaskId tid
-	)
+CWorkerPoolManager::Cancel(CTaskId tid)
 {
 	BOOL is_queued = false;
 
@@ -301,4 +277,3 @@ CWorkerPoolManager::Cancel
 
 
 // EOF
-

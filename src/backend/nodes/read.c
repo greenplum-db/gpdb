@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -23,14 +23,20 @@
 
 #include <ctype.h>
 
+#include "common/string.h"
 #include "nodes/pg_list.h"
 #include "nodes/readfuncs.h"
 #include "nodes/value.h"
 
 
 /* Static state for pg_strtok */
-static char *pg_strtok_ptr = NULL;
-static char *pg_strtok_begin = NULL;                    /*CDB*/
+static const char *pg_strtok_ptr = NULL;
+static const char *pg_strtok_begin = NULL;                    /*CDB*/
+
+/* State flag that determines how readfuncs.c should treat location fields */
+#ifdef WRITE_READ_PARSE_PLAN_TREES
+bool		restore_location_fields = false;
+#endif
 
 static void nodeReadSkipThru(char closingDelimiter);    /*CDB*/
 
@@ -42,14 +48,14 @@ static void nodeReadSkipThru(char closingDelimiter);    /*CDB*/
  * (readfast.c), set_strtok_states() to pg_strtok() the string.
  */
 void
-save_strtok_states(char **save_ptr, char **save_begin)
+save_strtok_states(const char ** save_ptr, const char ** save_begin)
 {
 	*save_ptr = pg_strtok_ptr;		/* point pg_strtok at the string to read */
 	*save_begin = pg_strtok_begin;	/* CDB: save starting position for debug */
 }
 
 void
-set_strtok_states(char *ptr, char *begin)
+set_strtok_states(const char *ptr, const char *begin)
 {
 	pg_strtok_ptr = ptr;		/* point pg_strtok at the string to read */
 	pg_strtok_begin = begin;	/* CDB: save starting position for debug */
@@ -57,14 +63,21 @@ set_strtok_states(char *ptr, char *begin)
 
 /*
  * stringToNode -
- *	  returns a Node with a given legal ASCII representation
+ *	  builds a Node tree from its string representation (assumed valid)
+ *
+ * restore_loc_fields instructs readfuncs.c whether to restore location
+ * fields rather than set them to -1.  This is currently only supported
+ * in builds with the WRITE_READ_PARSE_PLAN_TREES debugging flag set.
  */
-void *
-stringToNode(char *str)
+static void *
+stringToNodeInternal(const char *str, bool restore_loc_fields)
 {
-	char	   *save_strtok;
-    char       *save_begin = pg_strtok_begin;
 	void	   *retval;
+	const char *save_strtok;
+    const char *save_begin = pg_strtok_begin;
+#ifdef WRITE_READ_PARSE_PLAN_TREES
+	bool		save_restore_location_fields;
+#endif
 
 	/*
 	 * We save and restore the pre-existing state of pg_strtok. This makes the
@@ -77,13 +90,45 @@ stringToNode(char *str)
     pg_strtok_ptr = str;		/* point pg_strtok at the string to read */
     pg_strtok_begin = str;      /* CDB: save starting position for debug */
 
+	/*
+	 * If enabled, likewise save/restore the location field handling flag.
+	 */
+#ifdef WRITE_READ_PARSE_PLAN_TREES
+	save_restore_location_fields = restore_location_fields;
+	restore_location_fields = restore_loc_fields;
+#endif
+
 	retval = nodeRead(NULL, 0); /* do the reading */
 
 	pg_strtok_ptr = save_strtok;
     pg_strtok_begin = save_begin;
 
+#ifdef WRITE_READ_PARSE_PLAN_TREES
+	restore_location_fields = save_restore_location_fields;
+#endif
+
 	return retval;
 }
+
+/*
+ * Externally visible entry points
+ */
+void *
+stringToNode(const char *str)
+{
+	return stringToNodeInternal(str, false);
+}
+
+#ifdef WRITE_READ_PARSE_PLAN_TREES
+
+void *
+stringToNodeWithLocations(const char *str)
+{
+	return stringToNodeInternal(str, true);
+}
+
+#endif
+
 
 /*****************************************************************************
  *
@@ -131,11 +176,11 @@ stringToNode(char *str)
  * code should add backslashes to a string constant to ensure it is treated
  * as a single token.
  */
-char *
+const char *
 pg_strtok(int *length)
 {
-	char	   *local_str;		/* working pointer to string */
-	char	   *ret_str;		/* start of token to return */
+	const char *local_str;		/* working pointer to string */
+	const char *ret_str;		/* start of token to return */
 
 	local_str = pg_strtok_ptr;
 
@@ -193,7 +238,7 @@ pg_strtok(int *length)
  *	  any protective backslashes in the token are removed.
  */
 char *
-debackslash(char *token, int length)
+debackslash(const char *token, int length)
 {
 	char	   *result = palloc(length + 1);
 	char	   *ptr = result;
@@ -225,10 +270,10 @@ debackslash(char *token, int length)
  *	  Assumption: the ascii representation is legal
  */
 static NodeTag
-nodeTokenType(char *token, int length)
+nodeTokenType(const char *token, int length)
 {
 	NodeTag		retval;
-	char	   *numptr;
+	const char *numptr;
 	int			numlen;
 
 	/*
@@ -243,22 +288,15 @@ nodeTokenType(char *token, int length)
 	{
 		/*
 		 * Yes.  Figure out whether it is integral or float; this requires
-		 * both a syntax check and a range check. strtol() can do both for us.
-		 * We know the token will end at a character that strtol will stop at,
-		 * so we do not need to modify the string.
+		 * both a syntax check and a range check. strtoint() can do both for
+		 * us. We know the token will end at a character that strtoint will
+		 * stop at, so we do not need to modify the string.
 		 */
-		long		val;
 		char	   *endptr;
 
 		errno = 0;
-		val = strtol(token, &endptr, 10);
-		(void) val;				/* avoid compiler warning if unused */
-		if (endptr != token + length || errno == ERANGE
-#ifdef HAVE_LONG_INT_64
-		/* if long > 32 bits, check for overflow of int4 */
-			|| val != (long) ((int32) val)
-#endif
-			)
+		(void) strtoint(token, &endptr, 10);
+		if (endptr != token + length || errno == ERANGE)
 			return T_Float;
 		return T_Integer;
 	}
@@ -303,7 +341,7 @@ nodeTokenType(char *token, int length)
  * this should only be invoked from within a stringToNode operation).
  */
 void *
-nodeRead(char *token, int tok_len)
+nodeRead(const char *token, int tok_len)
 {
 	Node	   *result;
 	NodeTag		type;
@@ -465,9 +503,9 @@ nodeRead(char *token, int tok_len)
 		case T_Integer:
 
 			/*
-			 * we know that the token terminates on a char atol will stop at
+			 * we know that the token terminates on a char atoi will stop at
 			 */
-			result = (Node *) makeInteger(atol(token));
+			result = (Node *) makeInteger(atoi(token));
 			break;
 		case T_Float:
 			{
@@ -510,7 +548,7 @@ void
 nodeReadSkip(void)
 {
     int     tok_len;
-    char   *token = pg_strtok(&tok_len);
+    const char *token = pg_strtok(&tok_len);
 
     if (!token)
     {
@@ -550,7 +588,7 @@ nodeReadSkipThru(char closingDelimiter)
     for (;;)
     {
         int     tok_len;
-        char   *token = pg_strtok(&tok_len);
+        const char   *token = pg_strtok(&tok_len);
 
         if (!token)
         {
@@ -591,8 +629,8 @@ nodeReadSkipThru(char closingDelimiter)
 bool
 pg_strtok_peek_fldname(const char *fldname)
 {
-    char   *bp = pg_strtok_ptr;
-    char   *cp;
+    const char   *bp = pg_strtok_ptr;
+    const char   *cp;
 
     if (!bp)
         return false;

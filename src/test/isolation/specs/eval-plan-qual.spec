@@ -9,6 +9,14 @@ setup
  CREATE TABLE accounts (accountid text PRIMARY KEY, balance numeric not null);
  INSERT INTO accounts VALUES ('checking', 600), ('savings', 600);
 
+ CREATE FUNCTION update_checking(int) RETURNS bool LANGUAGE sql AS $$
+     UPDATE accounts SET balance = balance + 1 WHERE accountid = 'checking'; SELECT true;$$;
+
+ CREATE TABLE accounts_ext (accountid text PRIMARY KEY, balance numeric not null, other text);
+ INSERT INTO accounts_ext VALUES ('checking', 600, 'other'), ('savings', 700, null);
+ ALTER TABLE accounts_ext ADD COLUMN newcol int DEFAULT 42;
+ ALTER TABLE accounts_ext ADD COLUMN newcol2 text DEFAULT NULL;
+
  CREATE TABLE p (a int, b int, c int);
  CREATE TABLE c1 () INHERITS (p);
  CREATE TABLE c2 () INHERITS (p);
@@ -21,21 +29,45 @@ setup
  CREATE TABLE table_b (id integer, value text);
  INSERT INTO table_a VALUES (1, 'tableAValue');
  INSERT INTO table_b VALUES (1, 'tableBValue');
+
+ CREATE TABLE jointest AS SELECT generate_series(1,10) AS id, 0 AS data;
+ CREATE INDEX ON jointest(id);
+
+ CREATE TABLE parttbl (a int, b int, c int) PARTITION BY LIST (a);
+ CREATE TABLE parttbl1 PARTITION OF parttbl FOR VALUES IN (1);
+ CREATE TABLE parttbl2 PARTITION OF parttbl FOR VALUES IN (2);
+ INSERT INTO parttbl VALUES (1, 1, 1);
+
+ CREATE TABLE another_parttbl (a int, b int, c int) PARTITION BY LIST (a);
+ CREATE TABLE another_parttbl1 PARTITION OF another_parttbl FOR VALUES IN (1);
+ CREATE TABLE another_parttbl2 PARTITION OF another_parttbl FOR VALUES IN (2);
+ INSERT INTO another_parttbl VALUES (1, 1, 1);
 }
 
 teardown
 {
  DROP TABLE accounts;
+ DROP FUNCTION update_checking(int);
+ DROP TABLE accounts_ext;
  DROP TABLE p CASCADE;
- DROP TABLE table_a, table_b;
+ DROP TABLE table_a, table_b, jointest;
+ DROP TABLE parttbl;
+ DROP TABLE another_parttbl;
 }
 
 session "s1"
 setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; }
 # wx1 then wx2 checks the basic case of re-fetching up-to-date values
-step "wx1"	{ UPDATE accounts SET balance = balance - 200 WHERE accountid = 'checking'; }
+step "wx1"	{ UPDATE accounts SET balance = balance - 200 WHERE accountid = 'checking' RETURNING balance; }
 # wy1 then wy2 checks the case where quals pass then fail
-step "wy1"	{ UPDATE accounts SET balance = balance + 500 WHERE accountid = 'checking'; }
+step "wy1"	{ UPDATE accounts SET balance = balance + 500 WHERE accountid = 'checking' RETURNING balance; }
+
+# d1 then wx1 checks that update can deal with the updated row vanishing
+# wx2 then d1 checks that the delete affects the updated row
+# wx2, wx2 then d1 checks that the delete checks the quals correctly (balance too high)
+# wx2, d2, then d1 checks that delete handles a vanishing row correctly
+step "d1"	{ DELETE FROM accounts WHERE accountid = 'checking' AND balance < 1500 RETURNING balance; }
+
 # upsert tests are to check writable-CTE cases
 step "upsert1"	{
 	WITH upsert AS
@@ -55,6 +87,7 @@ step "readp1"	{ SELECT tableoid::regclass, ctid, * FROM p WHERE b IN (0, 1) AND 
 step "writep1"	{ UPDATE p SET b = -1 WHERE a = 1 AND b = 1 AND c = 0; }
 step "writep2"	{ UPDATE p SET b = -b WHERE a = 1 AND c = 0; }
 step "c1"	{ COMMIT; }
+step "r1"	{ ROLLBACK; }
 
 # these tests are meant to exercise EvalPlanQualFetchRowMarks,
 # ie, handling non-locked tables in an EvalPlanQual recheck
@@ -67,6 +100,11 @@ step "partiallock"	{
 step "lockwithvalues"	{
 	SELECT * FROM accounts a1, (values('checking'),('savings')) v(id)
 	  WHERE a1.accountid = v.id
+	  FOR UPDATE OF a1;
+}
+step "partiallock_ext"	{
+	SELECT * FROM accounts_ext a1, accounts_ext a2
+	  WHERE a1.accountid = a2.accountid
 	  FOR UPDATE OF a1;
 }
 
@@ -85,11 +123,58 @@ step "updateforcip"	{
 	UPDATE table_a SET value = NULL WHERE id = 1;
 }
 
+<<<<<<< HEAD
+=======
+# these tests exercise mark/restore during EPQ recheck, cf bug #15032
+
+step "selectjoinforupdate"	{
+	set local enable_nestloop to 0;
+	set local enable_hashjoin to 0;
+	set local enable_seqscan to 0;
+	explain (costs off)
+	select * from jointest a join jointest b on a.id=b.id for update;
+	select * from jointest a join jointest b on a.id=b.id for update;
+}
+
+# these tests exercise Result plan nodes participating in EPQ
+
+step "selectresultforupdate"	{
+	select * from (select 1 as x) ss1 join (select 7 as y) ss2 on true
+	  left join table_a a on a.id = x, jointest jt
+	  where jt.id = y;
+	explain (verbose, costs off)
+	select * from (select 1 as x) ss1 join (select 7 as y) ss2 on true
+	  left join table_a a on a.id = x, jointest jt
+	  where jt.id = y for update of jt, ss1, ss2;
+	select * from (select 1 as x) ss1 join (select 7 as y) ss2 on true
+	  left join table_a a on a.id = x, jointest jt
+	  where jt.id = y for update of jt, ss1, ss2;
+}
+
+# test for EPQ on a partitioned result table
+
+step "simplepartupdate"	{
+	update parttbl set a = a;
+}
+
+# test scenarios where update may cause row movement
+
+step "simplepartupdate_route1to2" {
+	update parttbl set a = 2 where c = 1 returning *;
+}
+
+step "simplepartupdate_noroute" {
+	update parttbl set b = 2 where c = 1 returning *;
+}
+
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 
 session "s2"
 setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; }
-step "wx2"	{ UPDATE accounts SET balance = balance + 450 WHERE accountid = 'checking'; }
-step "wy2"	{ UPDATE accounts SET balance = balance + 1000 WHERE accountid = 'checking' AND balance < 1000; }
+step "wx2"	{ UPDATE accounts SET balance = balance + 450 WHERE accountid = 'checking' RETURNING balance; }
+step "wy2"	{ UPDATE accounts SET balance = balance + 1000 WHERE accountid = 'checking' AND balance < 1000  RETURNING balance; }
+step "d2"	{ DELETE FROM accounts WHERE accountid = 'checking'; }
+
 step "upsert2"	{
 	WITH upsert AS
 	  (UPDATE accounts SET balance = balance + 1234
@@ -98,6 +183,7 @@ step "upsert2"	{
 	INSERT INTO accounts SELECT 'savings', 1234
 	  WHERE NOT EXISTS (SELECT 1 FROM upsert);
 }
+step "wx2_ext"	{ UPDATE accounts_ext SET balance = balance + 450; }
 step "readp2"	{ SELECT tableoid::regclass, ctid, * FROM p WHERE b IN (0, 1) AND c = 0 FOR UPDATE; }
 step "returningp1" {
 	WITH u AS ( UPDATE p SET b = b WHERE a > 0 RETURNING * )
@@ -118,11 +204,49 @@ step "updateforcip3"	{
 	UPDATE table_a SET value = COALESCE(value, (SELECT val FROM d)) WHERE id = 1;
 }
 step "wrtwcte"	{ UPDATE table_a SET value = 'tableAValue2' WHERE id = 1; }
+<<<<<<< HEAD
+=======
+step "wrjt"	{ UPDATE jointest SET data = 42 WHERE id = 7; }
+step "complexpartupdate"	{
+	with u as (update parttbl set a = a returning parttbl.*)
+	update parttbl set a = u.a from u;
+}
+
+step "complexpartupdate_route_err1" {
+	with u as (update another_parttbl set a = 1 returning another_parttbl.*)
+	update parttbl p set a = u.a from u where p.a = u.a and p.c = 1 returning p.*;
+}
+
+step "complexpartupdate_route" {
+	with u as (update another_parttbl set a = 1 returning another_parttbl.*)
+	update parttbl p set a = p.b from u where p.a = u.a and p.c = 1 returning p.*;
+}
+
+step "complexpartupdate_doesnt_route" {
+	with u as (update another_parttbl set a = 1 returning another_parttbl.*)
+	update parttbl p set a = 3 - p.b from u where p.a = u.a and p.c = 1 returning p.*;
+}
+
+# Use writable CTEs to create self-updated rows, that then are
+# (updated|deleted). The *fail versions of the tests additionally
+# perform an update, via a function, in a different command, to test
+# behaviour relating to that.
+step "updwcte"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100 WHERE accountid = 'checking' RETURNING *) UPDATE accounts a SET balance = doup.balance + 100 FROM doup RETURNING *; }
+step "updwctefail"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100 WHERE accountid = 'checking' RETURNING *, update_checking(999)) UPDATE accounts a SET balance = doup.balance + 100 FROM doup RETURNING *; }
+step "delwcte"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100 WHERE accountid = 'checking' RETURNING *) DELETE FROM accounts a USING doup RETURNING *; }
+step "delwctefail"  { WITH doup AS (UPDATE accounts SET balance = balance + 1100 WHERE accountid = 'checking' RETURNING *, update_checking(999)) DELETE FROM accounts a USING doup RETURNING *; }
+
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 step "c2"	{ COMMIT; }
+step "r2"	{ ROLLBACK; }
 
 session "s3"
 setup		{ BEGIN ISOLATION LEVEL READ COMMITTED; }
 step "read"	{ SELECT * FROM accounts ORDER BY accountid; }
+<<<<<<< HEAD
+=======
+step "read_ext"	{ SELECT * FROM accounts_ext ORDER BY accountid; }
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 step "read_a"	{ SELECT * FROM table_a ORDER BY id; }
 
 # this test exercises EvalPlanQual with a CTE, cf bug #14328
@@ -149,15 +273,56 @@ step "multireadwcte"	{
 
 teardown	{ COMMIT; }
 
+# test that normal update follows update chains, and reverifies quals
 permutation "wx1" "wx2" "c1" "c2" "read"
 permutation "wy1" "wy2" "c1" "c2" "read"
+permutation "wx1" "wx2" "r1" "c2" "read"
+permutation "wy1" "wy2" "r1" "c2" "read"
+
+# test that deletes follow chains, and if necessary reverifies quals
+permutation "wx1" "d1" "wx2" "c1" "c2" "read"
+permutation "wx2" "d1" "c2" "c1" "read"
+permutation "wx2" "wx2" "d1" "c2" "c1" "read"
+permutation "wx2" "d2" "d1" "c2" "c1" "read"
+permutation "wx1" "d1" "wx2" "r1" "c2" "read"
+permutation "wx2" "d1" "r2" "c1" "read"
+permutation "wx2" "wx2" "d1" "r2" "c1" "read"
+permutation "wx2" "d2" "d1" "r2" "c1" "read"
+permutation "d1" "wx2" "c1" "c2" "read"
+permutation "d1" "wx2" "r1" "c2" "read"
+
+# test that an update to a self-modified row is ignored when
+# previously updated by the same cid
+permutation "wx1" "updwcte" "c1" "c2" "read"
+# test that an update to a self-modified row throws error when
+# previously updated by a different cid
+permutation "wx1" "updwctefail" "c1" "c2" "read"
+# test that a delete to a self-modified row is ignored when
+# previously updated by the same cid
+permutation "wx1" "delwcte" "c1" "c2" "read"
+# test that a delete to a self-modified row throws error when
+# previously updated by a different cid
+permutation "wx1" "delwctefail" "c1" "c2" "read"
+
 permutation "upsert1" "upsert2" "c1" "c2" "read"
 permutation "readp1" "writep1" "readp2" "c1" "c2"
 permutation "writep2" "returningp1" "c1" "c2"
 permutation "wx2" "partiallock" "c2" "c1" "read"
 permutation "wx2" "lockwithvalues" "c2" "c1" "read"
+permutation "wx2_ext" "partiallock_ext" "c2" "c1" "read_ext"
 permutation "updateforss" "readforss" "c1" "c2"
 permutation "updateforcip" "updateforcip2" "c1" "c2" "read_a"
 permutation "updateforcip" "updateforcip3" "c1" "c2" "read_a"
 permutation "wrtwcte" "readwcte" "c1" "c2"
+<<<<<<< HEAD
 permutation "wrtwcte" "multireadwcte" "c1" "c2"
+=======
+permutation "wrjt" "selectjoinforupdate" "c2" "c1"
+permutation "wrjt" "selectresultforupdate" "c2" "c1"
+permutation "wrtwcte" "multireadwcte" "c1" "c2"
+
+permutation "simplepartupdate" "complexpartupdate" "c1" "c2"
+permutation "simplepartupdate_route1to2" "complexpartupdate_route_err1" "c1" "c2"
+permutation "simplepartupdate_noroute" "complexpartupdate_route" "c1" "c2"
+permutation "simplepartupdate_noroute" "complexpartupdate_doesnt_route" "c1" "c2"
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196

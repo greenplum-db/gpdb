@@ -95,7 +95,7 @@ job_thread(void *arg)
 static void
 concurrent_pg_mkdir_p(int n)
 {
-	Job			jobs[n];
+	Job			*jobs = malloc(sizeof(Job) * n);
 	int			failed = 0;
 	int			i;
 
@@ -128,6 +128,8 @@ concurrent_pg_mkdir_p(int n)
 	}
 
 	assert_int_equal(failed, 0);
+
+	free(jobs);
 }
 
 static void

@@ -1,9 +1,0 @@
---
--- We cannot ensure that these warnings will appear for all users because they
--- depend on where their greenplum source directory is located. Therefore, ignore
--- these errors. They are tested in the main regress suite also.
---
--- start_matchignore
-m/WARNING:  tablespace location ".*" is too long for TAR/
-m/DETAIL:  The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR \(e.g the BASE_BACKUP protocol response\)./
--- end_matchignore

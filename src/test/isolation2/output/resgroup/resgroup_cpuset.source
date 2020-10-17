@@ -1,5 +1,5 @@
 
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 CREATE
 
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
@@ -13,18 +13,18 @@ CREATE
 -- @return bool: true/false indicating whether it corresponds to the rule
 CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$ import subprocess import pg import time import re 
 conn = pg.connect(dbname="isolation2resgrouptest") pt = re.compile(r'con(\d+)') 
-def check(expect_cpus, sess_ids): procs = subprocess.check_output(['ps', '-eF']).split('\n') head, proc_stats = procs[0], procs[1:] PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0] cpus = [proc_stat.split()[PSR].strip() for proc_stat in proc_stats if 'postgres' in proc_stat and pt.findall(proc_stat) and set(pt.findall(proc_stat)).issubset(sess_ids)] return set(cpus).issubset(set(expect_cpus)) 
+def check(expect_cpus, sess_ids): procs = subprocess.check_output(['ps', '-eF']).decode().split('\n') head, proc_stats = procs[0], procs[1:] PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0] cpus = [proc_stat.split()[PSR].strip() for proc_stat in proc_stats if 'postgres' in proc_stat and pt.findall(proc_stat) and set(pt.findall(proc_stat)).issubset(sess_ids)] return set(cpus).issubset(set(expect_cpus)) 
 def get_all_sess_ids_in_group(group_name): sql = "select sess_id from pg_stat_activity where rsgname = '%s'" % group_name result = conn.query(sql).getresult() return set([str(r[0]) for r in result]) 
 expect_cpu = [] conf = cpuset if conf == '': fd = open("@cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus") line = fd.readline() fd.close() conf = line.strip('\n') 
 tokens = conf.split(",") for token in tokens: if token.find('-') != -1: interval = token.split("-") num1 = interval[0] num2 = interval[1] for num in range(int(num1), int(num2) + 1): expect_cpu.append(str(num)) else: expect_cpu.append(token) sess_ids = get_all_sess_ids_in_group(grp) 
-for i in xrange(1000): time.sleep(0.01) if not check(expect_cpu, sess_ids): return False 
-return True $$ LANGUAGE plpythonu;
+for i in range(1000): time.sleep(0.01) if not check(expect_cpu, sess_ids): return False 
+return True $$ LANGUAGE plpython3u;
 CREATE
 
 -- create a resource group that contains all the cpu cores
 CREATE FUNCTION create_allcores_group(grp TEXT) RETURNS BOOL AS $$ import pg conn = pg.connect(dbname="isolation2resgrouptest") file = "@cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus" fd = open(file) line = fd.readline() fd.close() line = line.strip('\n') sql = "create resource group " + grp + " with (" \ + "memory_limit=1, cpuset='" + line + "')" result = conn.query(sql) 
 file = "@cgroup_mnt_point@/cpuset/gpdb/1/cpuset.cpus" fd = open(file) line = fd.readline() fd.close() line = line.strip('\n') if line != "0": return False 
-return True $$ LANGUAGE plpythonu;
+return True $$ LANGUAGE plpython3u;
 CREATE
 
 -- check whether the cpuset value in cgroup is valid according to the rule
@@ -33,7 +33,7 @@ def get_all_group_which_cpuset_is_set(): sql = "select groupid,cpuset from gp_to
 def parse_cpuset(line): line = line.strip('\n') if len(line) == 0: return set([]) tokens = line.split(",") cpuset = [] for token in tokens: if token.find('-') != -1: interval = token.split("-") num1 = interval[0] num2 = interval[1] for num in range(int(num1), int(num2) + 1): cpuset.append(str(num)) else: cpuset.append(token) return set(cpuset) 
 def get_cgroup_cpuset(group): group = str(group) if group == '0': file = "@cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus" else: file = "@cgroup_mnt_point@/cpuset/gpdb/" + group + "/cpuset.cpus" fd = open(file) line = fd.readline() fd.close() return parse_cpuset(line) 
 conn = pg.connect(dbname="isolation2resgrouptest") config_groups = get_all_group_which_cpuset_is_set() groups_cpuset = set([]) # check whether cpuset in config and cgroup are same, and have no overlap for config_group in config_groups: groupid = config_group[0] cpuset_value = config_group[1] config_cpuset = parse_cpuset(cpuset_value) cgroup_cpuset = get_cgroup_cpuset(groupid) if len(groups_cpuset & cgroup_cpuset) > 0: return False groups_cpuset |= cgroup_cpuset if not(config_cpuset.issubset(cgroup_cpuset) and cgroup_cpuset.issubset(config_cpuset)): return False # check whether cpuset in resource group union default group is universal set default_cpuset = get_cgroup_cpuset(1) all_cpuset = get_cgroup_cpuset(0) if not (default_cpuset | groups_cpuset).issubset(all_cpuset): return False if not all_cpuset.issubset(default_cpuset | groups_cpuset): return False # if all the cores are allocated to resource group, default group must has a core left if len(default_cpuset & groups_cpuset) > 0 and \ (len(default_cpuset) != 1 or \ (not default_cpuset.issubset(all_cpuset))): return False 
-return True $$ LANGUAGE plpythonu;
+return True $$ LANGUAGE plpython3u;
 CREATE
 
 CREATE TABLE bigtable AS SELECT i AS c1, 'abc' AS c2 FROM generate_series(1,50000) i;
@@ -299,7 +299,7 @@ DROP FUNCTION check_cpuset(TEXT, TEXT);
 DROP
 DROP FUNCTION create_allcores_group(TEXT);
 DROP
-DROP LANGUAGE plpythonu CASCADE;
+DROP LANGUAGE plpython3u CASCADE;
 DROP
 DROP VIEW cancel_all;
 DROP

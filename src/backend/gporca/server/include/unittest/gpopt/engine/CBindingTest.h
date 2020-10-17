@@ -16,28 +16,26 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CBindingTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CBindingTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CBindingTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CBindingTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
 
-		public:
+};	// class CBindingTest
+}  // namespace gpopt
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-
-	}; // class CBindingTest
-}
-
-#endif // !GPOPT_CBindingTest_H
+#endif	// !GPOPT_CBindingTest_H
 
 // EOF

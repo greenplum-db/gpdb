@@ -340,7 +340,7 @@ SELECT * FROM street;
  98th                          Ave  | [(-122.2001,37.258),(-122.1974,37.27)]                                                                                                                                                                                                                                                                                                                                                                                                       | Lafayette
 (333 rows)
 
-SELECT name, #thepath FROM iexit ORDER BY 1, 2;
+SELECT name, #thepath FROM iexit ORDER BY name COLLATE "C", 2;
                 name                | ?column? 
 ------------------------------------+----------
  I- 580                             |        2
@@ -1330,7 +1330,9 @@ SET SESSION AUTHORIZATION regress_alice;
 -- cost of the function, do we want to do that?
 -- end_ignore
 SELECT * FROM my_property_normal WHERE f_leak(passwd);
-NOTICE:  f_leak => passwd123  (seg0 slice1 10.64.4.155:25432 pid=8483)
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=9756)
+NOTICE:  f_leak => beafsteak  (seg1 slice1 127.0.0.1:7003 pid=9756)
+NOTICE:  f_leak => hamburger  (seg1 slice1 127.0.0.1:7003 pid=9756)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
@@ -1341,29 +1343,29 @@ NOTICE:  f_leak => passwd123  (seg0 slice1 10.64.4.155:25432 pid=8483)
 -- cost of the function, do we want to do that?
 -- end_ignore
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal WHERE f_leak(passwd);
-                             QUERY PLAN                              
----------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
-         Filter: ((name = 'regress_alice'::text) AND f_leak(passwd))
- Optimizer: Pivotal Optimizer (GPORCA) version 2.59.1
+         Filter: (f_leak(passwd) AND (name = CURRENT_USER))
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 SELECT * FROM my_property_secure WHERE f_leak(passwd);
-NOTICE:  f_leak => passwd123
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure WHERE f_leak(passwd);
-                      QUERY PLAN                      
-------------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on my_property_secure
          Filter: f_leak(my_property_secure.passwd)
          ->  Seq Scan on customer
-               Filter: (name = 'regress_alice'::text)
+               Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -1373,8 +1375,12 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure WHERE f_leak(passwd);
 --
 SELECT * FROM my_property_normal v
 		WHERE f_leak('passwd') AND f_leak(passwd);
-NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:25433 pid=36802)
-NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:25433 pid=36802)
+NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => beafsteak  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => hamburger  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
@@ -1382,20 +1388,20 @@ NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:25433 pid=36802)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal v
 		WHERE f_leak('passwd') AND f_leak(passwd);
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
-         Filter: ((name = 'regress_alice'::text) AND f_leak('passwd'::text) AND f_leak(passwd))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.44.0
+         Filter: (f_leak('passwd'::text) AND f_leak(passwd) AND (name = CURRENT_USER))
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 SELECT * FROM my_property_secure v
 		WHERE f_leak('passwd') AND f_leak(passwd);
-NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:25433 pid=98813)
-NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:25433 pid=98813)
-NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:25433 pid=98813)
-NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:25433 pid=98813)
+NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
@@ -1403,13 +1409,13 @@ NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:25433 pid=98813)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure v
 		WHERE f_leak('passwd') AND f_leak(passwd);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on v
          Filter: f_leak(v.passwd)
          ->  Seq Scan on customer
-               Filter: (f_leak('passwd'::text) AND (name = 'regress_alice'::text))
+               Filter: (f_leak('passwd'::text) AND (name = CURRENT_USER))
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -1419,30 +1425,30 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure v
 --           possible as we can.
 --
 SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=12346)
-NOTICE:  f_leak => 5555-6666-7777-8888  (seg0 slice1 127.0.0.1:25434 pid=12346)
-NOTICE:  f_leak => 9801-2345-6789-0123  (seg0 slice1 127.0.0.1:25432 pid=12344)
+NOTICE:  f_leak => 1111-2222-3333-4444  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => 5555-6666-7777-8888  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => 9801-2345-6789-0123  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   |        cnum         | climit 
 -----+---------------+------------------+-----------+---------------------+--------
  101 | regress_alice | +81-12-3456-7890 | passwd123 | 1111-2222-3333-4444 |   4000
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         Join Filter: true
-         ->  Seq Scan on credit_card
+   ->  Hash Join
+         Hash Cond: ((r.cid = l.cid) AND (r.dist_key = l.dist_key))
+         ->  Seq Scan on credit_card r
                Filter: f_leak(cnum)
-         ->  Index Scan using customer_dist_key_cid_key on customer
-               Index Cond: ((dist_key = credit_card.dist_key) AND (cid = credit_card.cid))
-               Filter: (name = 'regress_alice'::text)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
+         ->  Hash
+               ->  Seq Scan on customer l
+                     Filter: (name = CURRENT_USER)
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
-NOTICE:  f_leak => 1111-2222-3333-4444
+NOTICE:  f_leak => 1111-2222-3333-4444  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   |        cnum         | climit 
 -----+---------------+------------------+-----------+---------------------+--------
  101 | regress_alice | +81-12-3456-7890 | passwd123 | 1111-2222-3333-4444 |   4000
@@ -1459,7 +1465,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
                ->  Seq Scan on credit_card r
                ->  Hash
                      ->  Seq Scan on customer l
-                           Filter: (name = 'regress_alice'::text)
+                           Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (10 rows)
 
@@ -1470,7 +1476,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
 --
 SELECT * FROM my_credit_card_usage_normal
        WHERE f_leak(cnum) AND ymd >= '2011-10-01' AND ymd < '2011-11-01';
-NOTICE:  f_leak => 1111-2222-3333-4444
+NOTICE:  f_leak => 1111-2222-3333-4444  (seg1 slice2 127.0.0.1:7003 pid=16823)
  cid |     name      |       tel        |  passwd   |        cnum         | climit |    ymd     | usage 
 -----+---------------+------------------+-----------+---------------------+--------+------------+-------
  101 | regress_alice | +81-12-3456-7890 | passwd123 | 1111-2222-3333-4444 |   4000 | 10-05-2011 |    90
@@ -1496,15 +1502,15 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l_1
-                                             Filter: (name = 'regress_alice'::text)
+                                             Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (16 rows)
 
 SELECT * FROM my_credit_card_usage_secure
        WHERE f_leak(cnum) AND ymd >= '2011-10-01' AND ymd < '2011-11-01';
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
+NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:7002 pid=16816)
+NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:7002 pid=16816)
+NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:7002 pid=16816)
  cid |     name      |       tel        |  passwd   |        cnum         | climit |    ymd     | usage 
 -----+---------------+------------------+-----------+---------------------+--------+------------+-------
  101 | regress_alice | +81-12-3456-7890 | passwd123 | 1111-2222-3333-4444 |   4000 | 10-05-2011 |    90
@@ -1533,7 +1539,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l
-                                             Filter: (name = 'regress_alice'::text)
+                                             Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (19 rows)
 
@@ -1544,18 +1550,16 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
 PREPARE p1 AS SELECT * FROM my_property_normal WHERE f_leak(passwd);
 PREPARE p2 AS SELECT * FROM my_property_secure WHERE f_leak(passwd);
 EXECUTE p1;
--- start_ignore
--- GPDB_92_MERGE_FIXME: ORCA doesn't seem to order the predicates based on the
--- cost of the function, do we want to do that?
--- end_ignore
-NOTICE:  f_leak => passwd123  (seg0 slice1 127.0.0.1:25434 pid=892)
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => beafsteak  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => hamburger  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
 (1 row)
 
 EXECUTE p2;
-NOTICE:  f_leak => passwd123
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
@@ -1566,18 +1570,16 @@ ALTER VIEW my_property_normal SET (security_barrier=true);
 ALTER VIEW my_property_secure SET (security_barrier=false);
 SET SESSION AUTHORIZATION regress_alice;
 EXECUTE p1;		-- To be perform as a view with security-barrier
-NOTICE:  f_leak => passwd123
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123
 (1 row)
 
 EXECUTE p2;		-- To be perform as a view without security-barrier
--- start_ignore
--- GPDB_92_MERGE_FIXME: ORCA doesn't seem to order the predicates based on the
--- cost of the function, do we want to do that?
--- end_ignore
-NOTICE:  f_leak => passwd123  (seg0 slice1 127.0.0.1:25434 pid=892)
+NOTICE:  f_leak => passwd123  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => beafsteak  (seg1 slice1 127.0.0.1:7003 pid=16817)
+NOTICE:  f_leak => hamburger  (seg1 slice1 127.0.0.1:7003 pid=16817)
  cid |     name      |       tel        |  passwd   
 -----+---------------+------------------+-----------
  101 | regress_alice | +81-12-3456-7890 | passwd123

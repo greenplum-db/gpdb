@@ -17,105 +17,84 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformSimplifySubquery
+//
+//	@doc:
+//		Simplify existential/quantified subqueries by transforming
+//		into count(*) subqueries
+//
+//---------------------------------------------------------------------------
+class CXformSimplifySubquery : public CXformExploration
+{
+private:
+	// definition of simplification function
+	typedef BOOL(FnSimplify)(CMemoryPool *mp, CExpression *, CExpression **);
+
+	// definition of matching function
+	typedef BOOL(FnMatch)(COperator *);
 
 	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformSimplifySubquery
+	//	@struct:
+	//		SSimplifySubqueryMapping
 	//
 	//	@doc:
-	//		Simplify existential/quantified subqueries by transforming
-	//		into count(*) subqueries
+	//		Mapping of a simplify function to matching function
 	//
 	//---------------------------------------------------------------------------
-	class CXformSimplifySubquery : public CXformExploration
+	struct SSimplifySubqueryMapping
 	{
+		// simplification function
+		FnSimplify *m_pfnsimplify;
 
-		private:
+		// matching function
+		FnMatch *m_pfnmatch;
 
-			// definition of simplification function
-			typedef BOOL(FnSimplify) (CMemoryPool *mp, CExpression *, CExpression **);
+	};	// struct SSimplifySubqueryMapping
 
-			// definition of matching function
-			typedef BOOL(FnMatch) (COperator *);
+	// array of mappings
+	static const SSimplifySubqueryMapping m_rgssm[];
 
-			//---------------------------------------------------------------------------
-			//	@struct:
-			//		SSimplifySubqueryMapping
-			//
-			//	@doc:
-			//		Mapping of a simplify function to matching function
-			//
-			//---------------------------------------------------------------------------
-			struct SSimplifySubqueryMapping
-			{
-				// simplification function
-				FnSimplify *m_pfnsimplify;
+	// transform existential subqueries to count(*) subqueries
+	static BOOL FSimplifyExistential(CMemoryPool *mp, CExpression *pexprScalar,
+									 CExpression **ppexprNewScalar);
 
-				// matching function
-				FnMatch *m_pfnmatch;
+	// transform quantified subqueries to count(*) subqueries
+	static BOOL FSimplifyQuantified(CMemoryPool *mp, CExpression *pexprScalar,
+									CExpression **ppexprNewScalar);
 
-			}; // struct SSimplifySubqueryMapping
+	// main driver, transform existential/quantified subqueries to count(*) subqueries
+	static BOOL FSimplify(CMemoryPool *mp, CExpression *pexprScalar,
+						  CExpression **ppexprNewScalar,
+						  FnSimplify *pfnsimplify, FnMatch *pfnmatch);
 
-			// array of mappings
-			static
-			const SSimplifySubqueryMapping m_rgssm[];
+	// private copy ctor
+	CXformSimplifySubquery(const CXformSimplifySubquery &);
 
-			// transform existential subqueries to count(*) subqueries
-			static
-			BOOL FSimplifyExistential
-				(
-				CMemoryPool *mp,
-				CExpression *pexprScalar,
-				CExpression **ppexprNewScalar
-				);
+public:
+	// ctor
+	explicit CXformSimplifySubquery(CExpression *pexprPattern);
 
-			// transform quantified subqueries to count(*) subqueries
-			static
-			BOOL FSimplifyQuantified
-				(
-				CMemoryPool *mp,
-				CExpression *pexprScalar,
-				CExpression **ppexprNewScalar
-				);
+	// dtor
+	virtual ~CXformSimplifySubquery()
+	{
+	}
 
-			// main driver, transform existential/quantified subqueries to count(*) subqueries
-			static
-			BOOL FSimplify
-				(
-				CMemoryPool *mp,
-				CExpression *pexprScalar,
-				CExpression **ppexprNewScalar,
-				FnSimplify *pfnsimplify,
-				FnMatch *pfnmatch
-				);
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// private copy ctor
-			CXformSimplifySubquery(const CXformSimplifySubquery &);
-
-		public:
-
-			// ctor
-			explicit
-			CXformSimplifySubquery(CExpression *pexprPattern);
-
-			// dtor
-			virtual
-			~CXformSimplifySubquery()
-			{}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl)const;
-
-			// actual transform
-			void Transform(CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const;
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
 
-	}; // class CXformSimplifySubquery
+};	// class CXformSimplifySubquery
 
-}
+}  // namespace gpopt
 
-#endif // !GPOPT_CXformSimplifySubquery_H
+#endif	// !GPOPT_CXformSimplifySubquery_H
 
 // EOF

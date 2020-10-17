@@ -437,7 +437,7 @@
         <dxl:ProjList>
           <dxl:ProjElem ColId="22" Alias="x">
             <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final">
-              <dxl:Ident ColId="27" ColName="ColRef_0027" TypeMdid="0.1700.1.0"/>
+              <dxl:Ident ColId="26" ColName="ColRef_0026" TypeMdid="0.1700.1.0"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -447,8 +447,8 @@
             <dxl:Cost StartupCost="0" TotalCost="862.001200" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
-            <dxl:ProjElem ColId="27" Alias="ColRef_0027">
-              <dxl:Ident ColId="27" ColName="ColRef_0027" TypeMdid="0.1700.1.0"/>
+            <dxl:ProjElem ColId="26" Alias="ColRef_0026">
+              <dxl:Ident ColId="26" ColName="ColRef_0026" TypeMdid="0.1700.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
@@ -459,20 +459,20 @@
             </dxl:Properties>
             <dxl:GroupingColumns/>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="27" Alias="ColRef_0027">
+              <dxl:ProjElem ColId="26" Alias="ColRef_0026">
                 <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial">
                   <dxl:If TypeMdid="0.1700.1.0">
                     <dxl:If TypeMdid="0.16.1.0">
                       <dxl:Not>
                         <dxl:IsNull>
-                          <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                          <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                         </dxl:IsNull>
                       </dxl:Not>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="false"/>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
                     </dxl:If>
                     <dxl:Ident ColId="1" ColName="d" TypeMdid="0.1700.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" IsNull="false" Value="AAAACAAAAAA=" DoubleValue="0.000000"/>
+                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACAAAAAA=" DoubleValue="0.000000"/>
                   </dxl:If>
                 </dxl:AggFunc>
               </dxl:ProjElem>
@@ -489,14 +489,14 @@
                 <dxl:GroupingColumn ColId="4"/>
                 <dxl:GroupingColumn ColId="9"/>
                 <dxl:GroupingColumn ColId="10"/>
-                <dxl:GroupingColumn ColId="24"/>
+                <dxl:GroupingColumn ColId="23"/>
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="d">
                   <dxl:Ident ColId="1" ColName="d" TypeMdid="0.1700.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                  <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                  <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="0" Alias="c">
                   <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
@@ -538,8 +538,8 @@
                   <dxl:ProjElem ColId="10" Alias="gp_segment_id">
                     <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                    <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                  <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                    <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
@@ -550,7 +550,7 @@
                   <dxl:SortingColumn ColId="4" SortOperatorMdid="0.2799.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                   <dxl:SortingColumn ColId="9" SortOperatorMdid="0.609.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                   <dxl:SortingColumn ColId="10" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                  <dxl:SortingColumn ColId="24" SortOperatorMdid="0.58.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="23" SortOperatorMdid="0.58.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                 </dxl:SortingColumnList>
                 <dxl:LimitCount/>
                 <dxl:LimitOffset/>
@@ -577,8 +577,8 @@
                     <dxl:ProjElem ColId="10" Alias="gp_segment_id">
                       <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
-                    <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                      <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                    <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                      <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
@@ -603,7 +603,7 @@
                       <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                     </dxl:HashExpr>
                     <dxl:HashExpr>
-                      <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                      <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                     </dxl:HashExpr>
                   </dxl:HashExprList>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
@@ -617,7 +617,7 @@
                       <dxl:GroupingColumn ColId="4"/>
                       <dxl:GroupingColumn ColId="9"/>
                       <dxl:GroupingColumn ColId="10"/>
-                      <dxl:GroupingColumn ColId="24"/>
+                      <dxl:GroupingColumn ColId="23"/>
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="c">
@@ -638,8 +638,8 @@
                       <dxl:ProjElem ColId="10" Alias="gp_segment_id">
                         <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
-                      <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                        <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                      <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                        <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
@@ -666,8 +666,8 @@
                         <dxl:ProjElem ColId="10" Alias="gp_segment_id">
                           <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                          <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                        <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                          <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
@@ -678,7 +678,7 @@
                         <dxl:SortingColumn ColId="4" SortOperatorMdid="0.2799.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                         <dxl:SortingColumn ColId="9" SortOperatorMdid="0.609.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                         <dxl:SortingColumn ColId="10" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                        <dxl:SortingColumn ColId="24" SortOperatorMdid="0.58.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="23" SortOperatorMdid="0.58.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                       </dxl:SortingColumnList>
                       <dxl:LimitCount/>
                       <dxl:LimitOffset/>
@@ -705,8 +705,8 @@
                           <dxl:ProjElem ColId="10" Alias="gp_segment_id">
                             <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                           </dxl:ProjElem>
-                          <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                            <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                          <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                            <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
@@ -734,8 +734,8 @@
                             <dxl:ProjElem ColId="10" Alias="gp_segment_id">
                               <dxl:Ident ColId="10" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                             </dxl:ProjElem>
-                            <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                              <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.16.1.0"/>
+                            <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                              <dxl:Ident ColId="23" ColName="ColRef_0023" TypeMdid="0.16.1.0"/>
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
@@ -807,19 +807,19 @@
                                 </dxl:Properties>
                                 <dxl:ProjList/>
                                 <dxl:PartEqFilters>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                                 </dxl:PartEqFilters>
                                 <dxl:PartFilters>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                                 </dxl:PartFilters>
                                 <dxl:ResidualFilter>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                                 </dxl:ResidualFilter>
                                 <dxl:PropagationExpression>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="false" Value="1"/>
+                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                                 </dxl:PropagationExpression>
                                 <dxl:PrintableFilter>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                                 </dxl:PrintableFilter>
                               </dxl:PartitionSelector>
                               <dxl:DynamicTableScan PartIndexId="1">
@@ -870,10 +870,10 @@
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="21" Alias="?column?">
-                                <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="false" Value="1"/>
+                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                               </dxl:ProjElem>
-                              <dxl:ProjElem ColId="24" Alias="ColRef_0024">
-                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                              <dxl:ProjElem ColId="23" Alias="ColRef_0023">
+                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                               </dxl:ProjElem>
                               <dxl:ProjElem ColId="13" Alias="c">
                                 <dxl:Ident ColId="13" ColName="c" TypeMdid="0.1042.1.0" TypeModifier="5"/>

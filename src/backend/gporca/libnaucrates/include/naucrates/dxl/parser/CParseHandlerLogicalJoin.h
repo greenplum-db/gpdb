@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Parse handler for parsing a logical join operator
-//		
+//
 //---------------------------------------------------------------------------
 #ifndef GPDXL_CParseHandlerLogicalJoin_H
 #define GPDXL_CParseHandlerLogicalJoin_H
@@ -19,55 +19,49 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerLogicalJoin
-	//
-	//	@doc:
-	//		Parse handler for parsing a logical join operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerLogicalJoin : public CParseHandlerLogicalOp
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerLogicalJoin
+//
+//	@doc:
+//		Parse handler for parsing a logical join operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerLogicalJoin : public CParseHandlerLogicalOp
+{
+private:
+	// private copy ctor
+	CParseHandlerLogicalJoin(const CParseHandlerLogicalJoin &);
 
-			// private copy ctor
-			CParseHandlerLogicalJoin(const CParseHandlerLogicalJoin &);
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-			// process the start of an element
-			void StartElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-				);
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
 
-			// process the end of an element
-			void EndElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-				);
+public:
+	// ctor/dtor
+	CParseHandlerLogicalJoin(CMemoryPool *mp,
+							 CParseHandlerManager *parse_handler_mgr,
+							 CParseHandlerBase *parse_handler_root);
 
-		public:
-			// ctor/dtor
-			CParseHandlerLogicalJoin
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
+	~CParseHandlerLogicalJoin();
+};
+}  // namespace gpdxl
 
-			~CParseHandlerLogicalJoin();
-	};
-}
-
-#endif // !GPDXL_CParseHandlerLogicalJoin_H
+#endif	// !GPDXL_CParseHandlerLogicalJoin_H
 
 // EOF

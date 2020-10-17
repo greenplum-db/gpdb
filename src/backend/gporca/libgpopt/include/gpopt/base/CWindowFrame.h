@@ -20,201 +20,189 @@
 
 namespace gpopt
 {
-	// type definition of corresponding dynamic pointer array
-	class CWindowFrame;
-	typedef CDynamicPtrArray<CWindowFrame, CleanupRelease> CWindowFrameArray;
+// type definition of corresponding dynamic pointer array
+class CWindowFrame;
+typedef CDynamicPtrArray<CWindowFrame, CleanupRelease> CWindowFrameArray;
 
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CWindowFrame
-	//
-	//	@doc:
-	//		Description of window frame
-	//
-	//---------------------------------------------------------------------------
-	class CWindowFrame : public CRefCount
+//---------------------------------------------------------------------------
+//	@class:
+//		CWindowFrame
+//
+//	@doc:
+//		Description of window frame
+//
+//---------------------------------------------------------------------------
+class CWindowFrame : public CRefCount
+{
+public:
+	// specification method
+	enum EFrameSpec
 	{
+		EfsRows,   // frame is specified using Rows construct
+		EfsRange,  // frame is specified using Range construct
 
-		public:
+		EfsSentinel
+	};
 
-			// specification method
-			enum EFrameSpec
-			{
-				EfsRows,	// frame is specified using Rows construct
-				EfsRange,	// frame is specified using Range construct
+	// types of frame boundary
+	enum EFrameBoundary
+	{
+		EfbUnboundedPreceding,	// boundary is unlimited preceding current row
+		EfbBoundedPreceding,	// boundary is limited preceding current row
+		EfbCurrentRow,			// boundary is set to current row
+		EfbUnboundedFollowing,	// boundary is unlimited following current row
+		EfbBoundedFollowing,	// boundary is limited following current row
+		EfbDelayedBoundedPreceding,	 // boundary is delayed preceding current row
+		EfbDelayedBoundedFollowing,	 // boundary is delayed following current row
 
-				EfsSentinel
-			};
+		EfbSentinel
+	};
 
-			// types of frame boundary
-			enum EFrameBoundary
-			{
-				EfbUnboundedPreceding,		// boundary is unlimited preceding current row
-				EfbBoundedPreceding,		// boundary is limited preceding current row
-				EfbCurrentRow,				// boundary is set to current row
-				EfbUnboundedFollowing,		// boundary is unlimited following current row
-				EfbBoundedFollowing,		// boundary is limited following current row
-				EfbDelayedBoundedPreceding,	// boundary is delayed preceding current row
-				EfbDelayedBoundedFollowing,	// boundary is delayed following current row
+	// possible exclusion strategies
+	enum EFrameExclusionStrategy
+	{
+		EfesNone,			 // no exclusion
+		EfesNulls,			 // exclude nulls
+		EfesCurrentRow,		 // exclude current row
+		EfseMatchingOthers,	 // exclude other rows matching current row
+		EfesTies,			 // exclude other matching rows and current row
 
-				EfbSentinel
-			};
+		EfesSentinel
+	};
 
-			// possible exclusion strategies
-			enum EFrameExclusionStrategy
-			{
-				EfesNone,			// no exclusion
-				EfesNulls,			// exclude nulls
-				EfesCurrentRow,		// exclude current row
-				EfseMatchingOthers,	// exclude other rows matching current row
-				EfesTies,			// exclude other matching rows and current row
+private:
+	// specification method
+	const EFrameSpec m_efs;
 
-				EfesSentinel
-			};
+	// type of leading edge
+	const EFrameBoundary m_efbLeading;
 
-		private:
+	// type of trailing edge
+	const EFrameBoundary m_efbTrailing;
 
-			// specification method
-			const EFrameSpec m_efs;
+	// scalar value of leading edge, memory owned by this class
+	CExpression *m_pexprLeading;
 
-			// type of leading edge
-			const EFrameBoundary m_efbLeading;
+	// scalar value of trailing edge, memory owned by this class
+	CExpression *m_pexprTrailing;
 
-			// type of trailing edge
-			const EFrameBoundary m_efbTrailing;
+	// exclusion strategy
+	const EFrameExclusionStrategy m_efes;
 
-			// scalar value of leading edge, memory owned by this class
-			CExpression *m_pexprLeading;
+	// columns used by frame edges
+	CColRefSet *m_pcrsUsed;
 
-			// scalar value of trailing edge, memory owned by this class
-			CExpression *m_pexprTrailing;
+	// singelton empty frame -- used with any unspecified window function frame
+	static const CWindowFrame m_wfEmpty;
 
-			// exclusion strategy
-			const EFrameExclusionStrategy m_efes;
+	// private copy ctor
+	CWindowFrame(const CWindowFrame &);
 
-			// columns used by frame edges
-			CColRefSet *m_pcrsUsed;
+	// private dummy ctor used to create empty frame
+	CWindowFrame();
 
-			// singelton empty frame -- used with any unspecified window function frame
-			static
-			const CWindowFrame m_wfEmpty;
+public:
+	// ctor
+	CWindowFrame(CMemoryPool *mp, EFrameSpec efs, EFrameBoundary efbLeading,
+				 EFrameBoundary efbTrailing, CExpression *pexprLeading,
+				 CExpression *pexprTrailing, EFrameExclusionStrategy efes);
 
-			// private copy ctor
-			CWindowFrame(const CWindowFrame &);
+	// dtor
+	virtual ~CWindowFrame();
 
-			// private dummy ctor used to create empty frame
-			CWindowFrame();
+	// specification
+	EFrameSpec
+	Efs() const
+	{
+		return m_efs;
+	}
 
-		public:
+	// type of leading edge
+	EFrameBoundary
+	EfbLeading() const
+	{
+		return m_efbLeading;
+	}
 
-			// ctor
-			CWindowFrame
-				(
-				CMemoryPool *mp,
-				EFrameSpec efs,
-				EFrameBoundary efbLeading,
-				EFrameBoundary efbTrailing,
-				CExpression *pexprLeading,
-				CExpression *pexprTrailing,
-				EFrameExclusionStrategy efes
-				);
+	// type of trailing edge
+	EFrameBoundary
+	EfbTrailing() const
+	{
+		return m_efbTrailing;
+	}
 
-			// dtor
-			virtual
-			~CWindowFrame();
+	// scalar value of leading edge
+	CExpression *
+	PexprLeading() const
+	{
+		return m_pexprLeading;
+	}
 
-			// specification
-			EFrameSpec Efs() const
-			{
-				return m_efs;
-			}
+	// scalar value of trailing edge
+	CExpression *
+	PexprTrailing() const
+	{
+		return m_pexprTrailing;
+	}
 
-			// type of leading edge
-			EFrameBoundary EfbLeading() const
-			{
-				return m_efbLeading;
-			}
+	// exclusion strategy
+	EFrameExclusionStrategy
+	Efes() const
+	{
+		return m_efes;
+	}
 
-			// type of trailing edge
-			EFrameBoundary EfbTrailing() const
-			{
-				return m_efbTrailing;
-			}
+	// matching function
+	BOOL Matches(const CWindowFrame *pwf) const;
 
-			// scalar value of leading edge
-			CExpression *PexprLeading() const
-			{
-				return m_pexprLeading;
-			}
+	// hash function
+	virtual ULONG HashValue() const;
 
-			// scalar value of trailing edge
-			CExpression *PexprTrailing() const
-			{
-				return m_pexprTrailing;
-			}
+	// return a copy of the window frame with remapped columns
+	virtual CWindowFrame *PwfCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// exclusion strategy
-			EFrameExclusionStrategy Efes() const
-			{
-				return m_efes;
-			}
+	// return columns used by frame edges
+	CColRefSet *
+	PcrsUsed() const
+	{
+		return m_pcrsUsed;
+	}
 
-			// matching function
- 			BOOL Matches(const CWindowFrame *pwf) const;
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// hash function
-			virtual
-			ULONG HashValue() const;
+	// matching function over frame arrays
+	static BOOL Equals(const CWindowFrameArray *pdrgpwfFirst,
+					   const CWindowFrameArray *pdrgpwfSecond);
 
-			// return a copy of the window frame with remapped columns
-			virtual
-			CWindowFrame *PwfCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	// combine hash values of a maximum number of entries
+	static ULONG HashValue(const CWindowFrameArray *pdrgpwfFirst,
+						   ULONG ulMaxSize);
 
-			// return columns used by frame edges
-			CColRefSet *PcrsUsed() const
-			{
-				return m_pcrsUsed;
-			}
+	// print array of window frame objects
+	static IOstream &OsPrint(IOstream &os, const CWindowFrameArray *pdrgpwf);
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
+	// check if a given window frame is empty
+	static BOOL
+	IsEmpty(CWindowFrame *pwf)
+	{
+		return pwf == &m_wfEmpty;
+	}
 
-			// matching function over frame arrays
-			static
-			BOOL Equals(const CWindowFrameArray *pdrgpwfFirst, const CWindowFrameArray *pdrgpwfSecond);
+	// return pointer to singleton empty window frame
+	static const CWindowFrame *
+	PwfEmpty()
+	{
+		return &m_wfEmpty;
+	}
 
-			// combine hash values of a maximum number of entries
-			static
-			ULONG HashValue(const CWindowFrameArray *pdrgpwfFirst, ULONG ulMaxSize);
+};	// class CWindowFrame
 
-			// print array of window frame objects
-			static
-			IOstream &OsPrint(IOstream &os, const CWindowFrameArray *pdrgpwf);
+}  // namespace gpopt
 
-			// check if a given window frame is empty
-			static
-			BOOL IsEmpty
-				(
-				CWindowFrame *pwf
-				)
-			{
-				return pwf == &m_wfEmpty;
-			}
-
-			// return pointer to singleton empty window frame
-			static
-			const CWindowFrame *PwfEmpty()
-			{
-				return &m_wfEmpty;
-			}
-
-	}; // class CWindowFrame
-
-}
-
-#endif // !GPOPT_CWindowFrame_H
+#endif	// !GPOPT_CWindowFrame_H
 
 // EOF

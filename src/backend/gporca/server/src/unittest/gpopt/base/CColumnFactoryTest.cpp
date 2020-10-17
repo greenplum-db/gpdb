@@ -39,10 +39,8 @@ using namespace gpopt;
 GPOS_RESULT
 CColumnFactoryTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CColumnFactoryTest::EresUnittest_Basic)
-		};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CColumnFactoryTest::EresUnittest_Basic)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -78,7 +76,8 @@ CColumnFactoryTest::EresUnittest_Basic()
 
 	// typed/named colref
 	CWStringConst strName(GPOS_WSZ_LIT("C_CustKey"));
-	CColRef *pcrTwo = cf.PcrCreate(pmdtypeint4, default_type_modifier, CName(&strName));
+	CColRef *pcrTwo =
+		cf.PcrCreate(pmdtypeint4, default_type_modifier, CName(&strName));
 	GPOS_ASSERT(pcrTwo == cf.LookupColRef(pcrTwo->m_id));
 
 	// clone previous colref
@@ -94,4 +93,3 @@ CColumnFactoryTest::EresUnittest_Basic()
 
 
 // EOF
-

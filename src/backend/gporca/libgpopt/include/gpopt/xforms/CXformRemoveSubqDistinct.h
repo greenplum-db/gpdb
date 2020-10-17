@@ -16,53 +16,48 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	class CXformRemoveSubqDistinct : public CXformExploration
+class CXformRemoveSubqDistinct : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformRemoveSubqDistinct(const CXformRemoveSubqDistinct &);
+
+public:
+	// ctor
+	explicit CXformRemoveSubqDistinct(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformRemoveSubqDistinct()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfRemoveSubqDistinct;
+	}
 
-			// private copy ctor
-			CXformRemoveSubqDistinct(const CXformRemoveSubqDistinct &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformRemoveSubqDistinct";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformRemoveSubqDistinct(CMemoryPool *mp);
+	// actual transform
+	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+						   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformRemoveSubqDistinct()
-			{}
+};	// class CXformRemoveSubqDistinct
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfRemoveSubqDistinct;
-			}
+}  // namespace gpopt
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformRemoveSubqDistinct";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp (CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			virtual
-			void Transform(CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const;
-
-	}; // class CXformRemoveSubqDistinct
-
-}
-
-#endif // !GPOPT_CXformRemoveSubqDistinct_H
+#endif	// !GPOPT_CXformRemoveSubqDistinct_H
 
 // EOF

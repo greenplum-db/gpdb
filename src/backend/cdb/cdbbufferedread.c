@@ -17,8 +17,9 @@
 #include "postgres.h"
 
 #include "cdb/cdbbufferedread.h"
-#include "utils/guc.h"
 #include "miscadmin.h"
+#include "pgstat.h"
+#include "utils/guc.h"
 
 static void BufferedReadIo(
 			   BufferedRead *bufferedRead);
@@ -100,6 +101,8 @@ BufferedReadInit(
 	 */
 	bufferedRead->file = -1;
 	bufferedRead->fileLen = 0;
+	/* start reading from beginning of file */
+	bufferedRead->fileOff = 0;
 
 	/*
 	 * Temporary limit support for random reading.
@@ -138,6 +141,7 @@ BufferedReadSetFile(
 
 	bufferedRead->haveTemporaryLimitInEffect = false;
 	bufferedRead->temporaryLimitFileLen = 0;
+	bufferedRead->fileOff =0;
 
 	if (fileLen > 0)
 	{
@@ -167,36 +171,14 @@ BufferedReadIo(
 	Assert(bufferedRead->largeReadLen > 0);
 	largeReadMemory = bufferedRead->largeReadMemory;
 
-#ifdef USE_ASSERT_CHECKING
-	{
-		int64		currentReadPosition;
-
-		currentReadPosition = FileNonVirtualCurSeek(bufferedRead->file);
-		if (currentReadPosition < 0)
-			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to get current position for table \"%s\" in file \"%s\": %m",
-								   bufferedRead->relationName,
-								   bufferedRead->filePathName)));
-
-		if (currentReadPosition != bufferedRead->largeReadPosition)
-		{
-			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("Current position mismatch actual "
-								   INT64_FORMAT ", expected " INT64_FORMAT " for table \"%s\" in file \"%s\"",
-								   currentReadPosition, bufferedRead->largeReadPosition,
-								   bufferedRead->relationName,
-								   bufferedRead->filePathName)));
-		}
-	}
-#endif
-
 	offset = 0;
 	while (largeReadLen > 0)
 	{
-		int			actualLen = FileRead(
-										 bufferedRead->file,
+		int			actualLen = FileRead(bufferedRead->file,
 										 (char *) largeReadMemory,
-										 largeReadLen);
+										 largeReadLen,
+										 bufferedRead->fileOff,
+										 WAIT_EVENT_DATA_FILE_READ);
 
 		if (actualLen == 0)
 			ereport(ERROR, (errcode_for_file_access(),
@@ -220,6 +202,7 @@ BufferedReadIo(
 								   offset,
 								   actualLen,
 								   bufferedRead->largeReadLen)));
+		bufferedRead->fileOff += actualLen;
 
 		elogif(Debug_appendonly_print_read_block, LOG,
 			   "Append-Only storage read: table \"%s\", segment file \"%s\", read position " INT64_FORMAT " (small offset %d), "
@@ -421,15 +404,7 @@ BufferedReadSetTemporaryRange(
 		 * segment file, followed by a lookup for a block directory entry at
 		 * the beginning of file.
 		 */
-		int64		seekOffset = beginFileOffset - largeReadAfterPos;
-		int64		seekPos = FileSeek(bufferedRead->file, seekOffset, SEEK_CUR);
-
-		if (seekPos != beginFileOffset)
-			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to seek to position for table \"%s\" in file \"%s\": %m",
-								   bufferedRead->relationName,
-								   bufferedRead->filePathName)));
-
+		bufferedRead->fileOff = beginFileOffset;
 		bufferedRead->bufferOffset = 0;
 
 		remainingFileLen = afterFileOffset - beginFileOffset;

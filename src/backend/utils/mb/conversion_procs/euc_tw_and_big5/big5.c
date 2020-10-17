@@ -22,7 +22,7 @@ typedef struct
 } codes_t;
 
 /* map Big5 Level 1 to CNS 11643-1992 Plane 1 */
-static const codes_t big5Level1ToCnsPlane1[25] = {		/* range */
+static const codes_t big5Level1ToCnsPlane1[25] = {	/* range */
 	{0xA140, 0x2121},
 	{0xA1F6, 0x2258},
 	{0xA1F7, 0x2257},
@@ -51,7 +51,7 @@ static const codes_t big5Level1ToCnsPlane1[25] = {		/* range */
 };
 
 /* map CNS 11643-1992 Plane 1 to Big5 Level 1 */
-static const codes_t cnsPlane1ToBig5Level1[26] = {		/* range */
+static const codes_t cnsPlane1ToBig5Level1[26] = {	/* range */
 	{0x2121, 0xA140},
 	{0x2257, 0xA1F7},
 	{0x2258, 0xA1F6},
@@ -81,7 +81,7 @@ static const codes_t cnsPlane1ToBig5Level1[26] = {		/* range */
 };
 
 /* map Big5 Level 2 to CNS 11643-1992 Plane 2 */
-static const codes_t big5Level2ToCnsPlane2[48] = {		/* range */
+static const codes_t big5Level2ToCnsPlane2[48] = {	/* range */
 	{0xC940, 0x2121},
 	{0xc94a, 0x0000},
 	{0xC94B, 0x212B},
@@ -133,7 +133,7 @@ static const codes_t big5Level2ToCnsPlane2[48] = {		/* range */
 };
 
 /* map CNS 11643-1992 Plane 2 to Big5 Level 2 */
-static const codes_t cnsPlane2ToBig5Level2[49] = {		/* range */
+static const codes_t cnsPlane2ToBig5Level2[49] = {	/* range */
 	{0x2121, 0xC940},
 	{0x212B, 0xC94B},
 	{0x214C, 0xC9BE},
@@ -361,14 +361,14 @@ CNStoBIG5(unsigned short cns, unsigned char lc)
 			for (i = 0; i < sizeof(b2c3) / (sizeof(unsigned short) * 2); i++)
 			{
 				if (b2c3[i][1] == cns)
-					return (b2c3[i][0]);
+					return b2c3[i][0];
 			}
 			break;
 		case LC_CNS11643_4:
 			for (i = 0; i < sizeof(b1c4) / (sizeof(unsigned short) * 2); i++)
 			{
 				if (b1c4[i][1] == cns)
-					return (b1c4[i][0]);
+					return b1c4[i][0];
 			}
 		default:
 			break;

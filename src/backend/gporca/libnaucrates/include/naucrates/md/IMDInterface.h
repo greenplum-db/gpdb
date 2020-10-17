@@ -19,27 +19,27 @@
 
 namespace gpmd
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		IMDInterface
-	//
-	//	@doc:
-	//		Base interface for metadata-related objects
-	//
-	//---------------------------------------------------------------------------
-	class IMDInterface : public CRefCount
-	{		
-		public:
-			virtual ~IMDInterface(){}
-			
-		
-	};
-}
+//---------------------------------------------------------------------------
+//	@class:
+//		IMDInterface
+//
+//	@doc:
+//		Base interface for metadata-related objects
+//
+//---------------------------------------------------------------------------
+class IMDInterface : public CRefCount
+{
+public:
+	virtual ~IMDInterface()
+	{
+	}
+};
+}  // namespace gpmd
 
 
 
-#endif // !GPMD_IMDInterface_H
+#endif	// !GPMD_IMDInterface_H
 
 // EOF

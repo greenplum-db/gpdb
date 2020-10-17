@@ -15,16 +15,14 @@
 
 namespace gpopt
 {
-	class CJoinOrderDPTest
-	{
-		public:
+class CJoinOrderDPTest
+{
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
+};	// class CJoinOrderDPTest
+}  // namespace gpopt
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
-	}; // class CJoinOrderDPTest
-}
-
-#endif // !GPOPT_CJoinOrderDPTest_H
+#endif	// !GPOPT_CJoinOrderDPTest_H
 
 // EOF

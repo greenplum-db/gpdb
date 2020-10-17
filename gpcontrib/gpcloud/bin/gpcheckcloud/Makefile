@@ -23,6 +23,13 @@ include $(PGXS)
 else
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
+
+# Don't bother with building LLVM bytecode for this client tool.
+# It would be a waste of time, but also, it doesn't work, because
+# of the way we build the source files from another directory into
+# .o files in this directory.
+with_llvm = no
+
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 

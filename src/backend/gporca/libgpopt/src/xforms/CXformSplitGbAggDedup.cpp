@@ -32,23 +32,18 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformSplitGbAggDedup::CXformSplitGbAggDedup
-	(
-	CMemoryPool *mp
-	)
-	:
-	CXformSplitGbAgg
-		(
-		 // pattern
-		GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CLogicalGbAggDeduplicate(mp),
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)), // relational child
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))  // scalar project list
-					)
-		)
-{}
+CXformSplitGbAggDedup::CXformSplitGbAggDedup(CMemoryPool *mp)
+	: CXformSplitGbAgg(
+		  // pattern
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CLogicalGbAggDeduplicate(mp),
+			  GPOS_NEW(mp) CExpression(
+				  mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // relational child
+			  GPOS_NEW(mp) CExpression(
+				  mp, GPOS_NEW(mp) CPatternTree(mp))  // scalar project list
+			  ))
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -60,13 +55,8 @@ CXformSplitGbAggDedup::CXformSplitGbAggDedup
 //
 //---------------------------------------------------------------------------
 void
-CXformSplitGbAggDedup::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformSplitGbAggDedup::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+								 CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(NULL != pxfres);
@@ -74,7 +64,8 @@ CXformSplitGbAggDedup::Transform
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
-	CLogicalGbAggDeduplicate *popAggDedup = CLogicalGbAggDeduplicate::PopConvert(pexpr->Pop());
+	CLogicalGbAggDeduplicate *popAggDedup =
+		CLogicalGbAggDeduplicate::PopConvert(pexpr->Pop());
 
 	// extract components
 	CExpression *pexprRelational = (*pexpr)[0];
@@ -91,7 +82,8 @@ CXformSplitGbAggDedup::Transform
 	CExpression *pexprProjectListLocal = NULL;
 	CExpression *pexprProjectListGlobal = NULL;
 
-	(void) PopulateLocalGlobalProjectList(mp, pexprProjectList, &pexprProjectListLocal, &pexprProjectListGlobal);
+	(void) PopulateLocalGlobalProjectList(
+		mp, pexprProjectList, &pexprProjectListLocal, &pexprProjectListGlobal);
 	GPOS_ASSERT(NULL != pexprProjectListLocal && NULL != pexprProjectListLocal);
 
 	CColRefArray *colref_array = popAggDedup->Pdrgpcr();
@@ -109,23 +101,19 @@ CXformSplitGbAggDedup::Transform
 	pdrgpcrKeys->AddRef();
 	pdrgpcrKeys->AddRef();
 
-	CExpression *local_expr =
-			GPOS_NEW(mp) CExpression
-						(
-						mp,
-						GPOS_NEW(mp) CLogicalGbAggDeduplicate(mp, colref_array, pdrgpcrMinimal, COperator::EgbaggtypeLocal /*egbaggtype*/, pdrgpcrKeys),
-						pexprRelational,
-						pexprProjectListLocal
-						);
+	CExpression *local_expr = GPOS_NEW(mp)
+		CExpression(mp,
+					GPOS_NEW(mp) CLogicalGbAggDeduplicate(
+						mp, colref_array, pdrgpcrMinimal,
+						COperator::EgbaggtypeLocal /*egbaggtype*/, pdrgpcrKeys),
+					pexprRelational, pexprProjectListLocal);
 
-	CExpression *pexprGlobal =
-			GPOS_NEW(mp) CExpression
-						(
-						mp,
-						GPOS_NEW(mp) CLogicalGbAggDeduplicate(mp, colref_array, pdrgpcrMinimal, COperator::EgbaggtypeGlobal /*egbaggtype*/, pdrgpcrKeys),
-						local_expr,
-						pexprProjectListGlobal
-						);
+	CExpression *pexprGlobal = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp) CLogicalGbAggDeduplicate(
+			mp, colref_array, pdrgpcrMinimal,
+			COperator::EgbaggtypeGlobal /*egbaggtype*/, pdrgpcrKeys),
+		local_expr, pexprProjectListGlobal);
 
 	pxfres->Add(pexprGlobal);
 }

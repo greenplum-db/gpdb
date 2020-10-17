@@ -3,7 +3,7 @@
  * tqueue.h
  *	  Use shm_mq to send & receive tuples between parallel backends
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/tqueue.h
@@ -24,10 +24,9 @@ typedef struct TupleQueueReader TupleQueueReader;
 extern DestReceiver *CreateTupleQueueDestReceiver(shm_mq_handle *handle);
 
 /* Use these to receive tuples from a shm_mq. */
-extern TupleQueueReader *CreateTupleQueueReader(shm_mq_handle *handle,
-					   TupleDesc tupledesc);
+extern TupleQueueReader *CreateTupleQueueReader(shm_mq_handle *handle);
 extern void DestroyTupleQueueReader(TupleQueueReader *reader);
 extern HeapTuple TupleQueueReaderNext(TupleQueueReader *reader,
-					 bool nowait, bool *done);
+									  bool nowait, bool *done);
 
-#endif   /* TQUEUE_H */
+#endif							/* TQUEUE_H */

@@ -47,18 +47,20 @@ CommitTsLock						39
 ReplicationOriginLock				40
 MultiXactTruncationLock				41
 OldSnapshotTimeMapLock				42
+LogicalRepWorkerLock				43
+CLogTruncationLock					44
 
 # Additional individual locks in GPDB
-SharedSnapshotLock					43
-DistributedLogControlLock			44
-# 45 is available; was formerly AOSegFileLock
-ResQueueLock						46
-ResGroupLock						47
-ErrorLogLock						48
-SessionStateLock					49
-RelfilenodeGenLock					50
-WorkFileManagerLock					51
-DistributedLogTruncateLock			52
-TwophaseCommitLock					53
-ShareInputScanLock					54
-FTSReplicationStatusLock			55
+SharedSnapshotLock					45
+DistributedLogControlLock			46
+# 47 is available; was formerly AOSegFileLock
+ResQueueLock						48
+ResGroupLock						49
+ErrorLogLock						50
+SessionStateLock					51
+RelfilenodeGenLock					52
+WorkFileManagerLock					53
+DistributedLogTruncateLock			54
+TwophaseCommitLock				55
+ShareInputScanLock				56
+FTSReplicationStatusLock			57

@@ -16,7 +16,7 @@
 -- end_ignore
 
 
-create or replace language plpythonu;
+create or replace language plpython3u;
 
 
 create or replace function remove_tablespace_location_directory(tablespace_location_dir text) returns void as $$
@@ -48,13 +48,13 @@ create or replace function remove_tablespace_location_directory(tablespace_locat
 		shutil.rmtree(tablespace_location_dir);
 	except OSError:
 		pass
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 
 create or replace function setup_tablespace_location_dir_for_test(tablespace_location_dir text) returns void as $$
 	import os;
 	os.mkdir(tablespace_location_dir);
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 
 create or replace function disable_fts() returns void as $$
@@ -127,7 +127,7 @@ create or replace function list_tablespace_dbid_dirs(expected_number_of_tablespa
 	for row in rows:
 		result.append(str(row))
 	return result
-$$ language plpythonu;
+$$ language plpython3u;
 
 
 create or replace function wait_for_primaries_to_restart() returns boolean as $$

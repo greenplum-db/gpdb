@@ -129,25 +129,29 @@ struct TupleRemapper
 	bool		remap_needed;	/* is remap needed */
 };
 
-static GenericTuple TRRemapTuple(TupleRemapper *remapper,
-			 TupleDesc tupledesc,
-			 TupleRemapInfo **field_remapinfo,
-			 GenericTuple tuple);
+static HeapTuple TRRemapTuple(TupleRemapper *remapper,
+							  TupleDesc tupledesc,
+							  TupleRemapInfo **field_remapinfo,
+							  HeapTuple tuple);
+static MinimalTuple TRRemapMinimalTuple(TupleRemapper *remapper,
+										TupleDesc tupledesc,
+										TupleRemapInfo **field_remapinfo,
+										MinimalTuple tuple);
 static Datum TRRemap(TupleRemapper *remapper, TupleRemapInfo *remapinfo,
-		Datum value, bool *changed);
+					 Datum value, bool *changed);
 static Datum TRRemapArray(TupleRemapper *remapper, ArrayRemapInfo *remapinfo,
-			 Datum value, bool *changed);
+						  Datum value, bool *changed);
 static Datum TRRemapRange(TupleRemapper *remapper, RangeRemapInfo *remapinfo,
-			 Datum value, bool *changed);
+						  Datum value, bool *changed);
 static Datum TRRemapRecord(TupleRemapper *remapper, RecordRemapInfo *remapinfo,
-			  Datum value, bool *changed);
+						   Datum value, bool *changed);
 static TupleRemapInfo *BuildTupleRemapInfo(Oid typid, MemoryContext mycontext);
 static TupleRemapInfo *BuildArrayRemapInfo(Oid elemtypid,
-					MemoryContext mycontext);
+										   MemoryContext mycontext);
 static TupleRemapInfo *BuildRangeRemapInfo(Oid rngtypid,
-					MemoryContext mycontext);
+										   MemoryContext mycontext);
 static TupleRemapInfo **BuildFieldRemapInfo(TupleDesc tupledesc,
-					MemoryContext mycontext);
+											MemoryContext mycontext);
 
 
 /*
@@ -187,8 +191,8 @@ DestroyTupleRemapper(TupleRemapper *remapper)
  *
  * Form a new tuple with all the remote typmods remapped to local typmods.
  */
-GenericTuple
-TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, GenericTuple tuple)
+MinimalTuple
+TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, MinimalTuple tuple)
 {
 	if (!remapper->remap_needed)
 		return tuple;
@@ -205,7 +209,7 @@ TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, GenericTuple tuple
 		}
 	}
 
-	return TRRemapTuple(remapper, tupledesc, remapper->field_remapinfo, tuple);
+	return TRRemapMinimalTuple(remapper, tupledesc, remapper->field_remapinfo, tuple);
 }
 
 /*
@@ -281,11 +285,11 @@ TRRemapDatum(TupleRemapper *remapper, Oid typeid, Datum value)
 /*
  * Copy the given tuple, remapping any transient typmods contained in it.
  */
-static GenericTuple
+static HeapTuple
 TRRemapTuple(TupleRemapper *remapper,
 			 TupleDesc tupledesc,
 			 TupleRemapInfo **field_remapinfo,
-			 GenericTuple tuple)
+			 HeapTuple tuple)
 {
 	Datum	   *values;
 	bool	   *isnull;
@@ -303,17 +307,7 @@ TRRemapTuple(TupleRemapper *remapper,
 	values = (Datum *) palloc(tupledesc->natts * sizeof(Datum));
 	isnull = (bool *) palloc(tupledesc->natts * sizeof(bool));
 
-	/* CDB */
-	if (is_memtuple(tuple))
-	{
-		MemTupleBinding *pbind = create_memtuple_binding(tupledesc);
-
-		memtuple_deform((MemTuple) tuple, pbind, values, isnull);
-	}
-	else
-	{
-		heap_deform_tuple((HeapTuple) tuple, tupledesc, values, isnull);
-	}
+	heap_deform_tuple(tuple, tupledesc, values, isnull);
 
 	/* Recursively process each interesting non-NULL attribute. */
 	for (i = 0; i < tupledesc->natts; i++)
@@ -325,7 +319,53 @@ TRRemapTuple(TupleRemapper *remapper,
 
 	/* Reconstruct the modified tuple, if anything was modified. */
 	if (changed)
-		return (GenericTuple) heap_form_tuple(tupledesc, values, isnull);
+		return heap_form_tuple(tupledesc, values, isnull);
+	else
+		return tuple;
+}
+
+/*
+ * Like TRRemapTuple(), but for a MinimalTuple
+ */
+static MinimalTuple
+TRRemapMinimalTuple(TupleRemapper *remapper,
+					TupleDesc tupledesc,
+					TupleRemapInfo **field_remapinfo,
+					MinimalTuple tuple)
+{
+	Datum	   *values;
+	bool	   *isnull;
+	bool		changed = false;
+	int			i;
+	HeapTupleData htup;
+
+	/*
+	 * If no remapping is necessary, just copy the tuple into a single
+	 * palloc'd chunk, as caller will expect.
+	 */
+	if (field_remapinfo == NULL)
+		return tuple;
+
+	/* Deform tuple so we can remap record typmods for individual attrs. */
+	values = (Datum *) palloc(tupledesc->natts * sizeof(Datum));
+	isnull = (bool *) palloc(tupledesc->natts * sizeof(bool));
+
+	htup.t_len = tuple->t_len + MINIMAL_TUPLE_OFFSET;
+	htup.t_data = (HeapTupleHeader) ((char *) tuple - MINIMAL_TUPLE_OFFSET);
+
+	heap_deform_tuple(&htup, tupledesc, values, isnull);
+
+	/* Recursively process each interesting non-NULL attribute. */
+	for (i = 0; i < tupledesc->natts; i++)
+	{
+		if (isnull[i] || field_remapinfo[i] == NULL)
+			continue;
+		values[i] = TRRemap(remapper, field_remapinfo[i], values[i], &changed);
+	}
+
+	/* Reconstruct the modified tuple, if anything was modified. */
+	if (changed)
+		return heap_form_minimal_tuple(tupledesc, values, isnull);
 	else
 		return tuple;
 }
@@ -416,7 +456,7 @@ static Datum
 TRRemapRange(TupleRemapper *remapper, RangeRemapInfo *remapinfo,
 			 Datum value, bool *changed)
 {
-	RangeType  *range = DatumGetRangeType(value);
+	RangeType  *range = DatumGetRangeTypeP(value);
 	bool		bound_changed = false;
 	RangeBound	lower;
 	RangeBound	upper;
@@ -442,7 +482,7 @@ TRRemapRange(TupleRemapper *remapper, RangeRemapInfo *remapinfo,
 		/* Reserialize.  */
 		*changed = true;
 		range = range_serialize(remapinfo->typcache, &lower, &upper, empty);
-		return RangeTypeGetDatum(range);
+		return RangeTypePGetDatum(range);
 	}
 
 	/* Else just return the value as-is. */
@@ -487,7 +527,8 @@ TRRemapRecord(TupleRemapper *remapper, RecordRemapInfo *remapinfo,
 		{
 			Assert(remapper->typmodmap != NULL);
 			Assert(typmod >= 0);
-			Assert(typmod < remapper->typmodmapsize);
+			if (typmod >= remapper->typmodmapsize)
+				elog(ERROR, "received unknown record type with typmod %d", typmod);
 
 			remapinfo->localtypmod = remapper->typmodmap[typmod];
 			Assert(remapinfo->localtypmod >= 0);
@@ -550,10 +591,10 @@ TRRemapRecord(TupleRemapper *remapper, RecordRemapInfo *remapinfo,
 		ItemPointerSetInvalid(&htup.t_self);
 		htup.t_len = HeapTupleHeaderGetDatumLength(tup);
 		htup.t_data = tup;
-		atup = (HeapTuple) TRRemapTuple(remapper,
-										remapinfo->tupledesc,
-										remapinfo->field_remap,
-										(GenericTuple) &htup);
+		atup = TRRemapTuple(remapper,
+							remapinfo->tupledesc,
+							remapinfo->field_remap,
+							&htup);
 
 		/* Apply the correct labeling for a local Datum. */
 		HeapTupleHeaderSetTypeId(atup->t_data, typid);
@@ -707,7 +748,7 @@ BuildFieldRemapInfo(TupleDesc tupledesc, MemoryContext mycontext)
 						   tupledesc->natts * sizeof(TupleRemapInfo *));
 	for (i = 0; i < tupledesc->natts; i++)
 	{
-		Form_pg_attribute attr = tupledesc->attrs[i];
+		Form_pg_attribute attr = TupleDescAttr(tupledesc, i);
 
 		if (attr->attisdropped)
 		{

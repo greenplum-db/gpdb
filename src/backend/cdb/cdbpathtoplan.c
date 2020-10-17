@@ -13,13 +13,12 @@
  */
 #include "postgres.h"
 
-#include "nodes/relation.h"
-
 #include "cdb/cdbpathlocus.h"
 #include "cdb/cdbllize.h"		/* makeFlow() */
 #include "cdb/cdbpathtoplan.h"	/* me */
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "nodes/pathnodes.h"
 
 /*
  * cdbpathtoplan_create_flow
@@ -82,7 +81,7 @@ cdbpathtoplan_create_flow(PlannerInfo *root,
 		flow = makeFlow(FLOW_SINGLETON, 1);
 	}
 	else
-		Insist(0);
+		elog(ERROR, "incorrect locus type %d to create flow", locus.locustype);
 
 	flow->locustype = locus.locustype;
 	return flow;

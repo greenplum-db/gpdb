@@ -7,7 +7,7 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 NAME = isolation2_regress
-OBJS = isolation2_regress.o
+OBJS = isolation2_regress.o workfile_mgr_test.o
 include $(top_srcdir)/src/Makefile.shlib
 
 ifeq ($(PORTNAME), win32)
@@ -17,13 +17,10 @@ endif
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
-all: test_python pg_isolation2_regress$(X) all-lib data extended_protocol_test scan_flaky_fault_injectors
+all: pg_isolation2_regress$(X) all-lib data extended_protocol_test scan_flaky_fault_injectors
 
 extended_protocol_test: extended_protocol_test.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
-
-test_python:
-	python helpers_test.py
 
 pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o

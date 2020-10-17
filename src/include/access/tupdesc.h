@@ -4,7 +4,7 @@
  *	  POSTGRES tuple descriptor definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/tupdesc.h
@@ -19,13 +19,13 @@
 #include "nodes/pg_list.h"
 
 
-typedef struct attrDefault
+typedef struct AttrDefault
 {
 	AttrNumber	adnum;
 	char	   *adbin;			/* nodeToString representation of expr */
 } AttrDefault;
 
-typedef struct constrCheck
+typedef struct ConstrCheck
 {
 	char	   *ccname;
 	char	   *ccbin;			/* nodeToString representation of expr */
@@ -34,13 +34,15 @@ typedef struct constrCheck
 } ConstrCheck;
 
 /* This structure contains constraints of a tuple */
-typedef struct tupleConstr
+typedef struct TupleConstr
 {
 	AttrDefault *defval;		/* array */
 	ConstrCheck *check;			/* array */
+	struct AttrMissing *missing;	/* missing attributes values, NULL if none */
 	uint16		num_defval;
 	uint16		num_check;
 	bool		has_not_null;
+	bool		has_generated_stored;
 } TupleConstr;
 
 /*
@@ -52,13 +54,19 @@ typedef struct tupleConstr
  * structure is designed to let the constraints be omitted efficiently.
  *
  * Note that only user attributes, not system attributes, are mentioned in
- * TupleDesc; with the exception that tdhasoid indicates if OID is present.
+ * TupleDesc.
  *
  * If the tupdesc is known to correspond to a named rowtype (such as a table's
  * rowtype) then tdtypeid identifies that type and tdtypmod is -1.  Otherwise
  * tdtypeid is RECORDOID, and tdtypmod can be either -1 for a fully anonymous
  * row type, or a value >= 0 to allow the rowtype to be looked up in the
  * typcache.c type cache.
+ *
+ * Note that tdtypeid is never the OID of a domain over composite, even if
+ * we are dealing with values that are known (at some higher level) to be of
+ * a domain-over-composite type.  This is because tdtypeid/tdtypmod need to
+ * match up with the type labeling of composite Datums, and those are never
+ * explicitly marked as being of a domain type, either.
  *
  * Tuple descriptors that live in caches (relcache or typcache, at present)
  * are reference-counted: they can be deleted when their reference count goes
@@ -68,17 +76,17 @@ typedef struct tupleConstr
  * field of such a descriptor to -1, while reference-counted descriptors
  * always have tdrefcount >= 0.
  */
-typedef struct tupleDesc
+typedef struct TupleDescData
 {
 	int			natts;			/* number of attributes in the tuple */
-	Form_pg_attribute *attrs;
-	/* attrs[N] is a pointer to the description of Attribute Number N+1 */
-	TupleConstr *constr;		/* constraints, or NULL if none */
 	Oid			tdtypeid;		/* composite type ID for tuple type */
 	int32		tdtypmod;		/* typmod for tuple type */
-	bool		tdhasoid;		/* tuple has oid attribute in its header */
 	int			tdrefcount;		/* reference count, or -1 if not counting */
-}	*TupleDesc;
+	TupleConstr *constr;		/* constraints, or NULL if none */
+	/* attrs[N] is the description of Attribute Number N+1 */
+	FormData_pg_attribute attrs[FLEXIBLE_ARRAY_MEMBER];
+}			TupleDescData;
+typedef struct TupleDescData *TupleDesc;
 
 /*
  * When dispatching a planned statement from QD to QEs, we need to be able
@@ -97,19 +105,24 @@ typedef struct tupleDescNode
 } TupleDescNode;
 
 /* Accessor for the i'th attribute of tupdesc. */
-#define TupleDescAttr(tupdesc, i) ((tupdesc)->attrs[(i)])
+#define TupleDescAttr(tupdesc, i) (&(tupdesc)->attrs[(i)])
 
-extern TupleDesc CreateTemplateTupleDesc(int natts, bool hasoid);
+extern TupleDesc CreateTemplateTupleDesc(int natts);
 
-extern TupleDesc CreateTupleDesc(int natts, bool hasoid,
-				Form_pg_attribute *attrs);
+extern TupleDesc CreateTupleDesc(int natts, Form_pg_attribute *attrs);
 
 extern TupleDesc CreateTupleDescCopy(TupleDesc tupdesc);
 
 extern TupleDesc CreateTupleDescCopyConstr(TupleDesc tupdesc);
 
+#define TupleDescSize(src) \
+	(offsetof(struct TupleDescData, attrs) + \
+	 (src)->natts * sizeof(FormData_pg_attribute))
+
+extern void TupleDescCopy(TupleDesc dst, TupleDesc src);
+
 extern void TupleDescCopyEntry(TupleDesc dst, AttrNumber dstAttno,
-				   TupleDesc src, AttrNumber srcAttno);
+							   TupleDesc src, AttrNumber srcAttno);
 
 extern void FreeTupleDesc(TupleDesc tupdesc);
 
@@ -130,19 +143,28 @@ extern void DecrTupleDescRefCount(TupleDesc tupdesc);
 
 extern bool equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict);
 
+extern uint32 hashTupleDesc(TupleDesc tupdesc);
+
 extern void TupleDescInitEntry(TupleDesc desc,
-				   AttrNumber attributeNumber,
-				   const char *attributeName,
-				   Oid oidtypeid,
-				   int32 typmod,
-				   int attdim);
+							   AttrNumber attributeNumber,
+							   const char *attributeName,
+							   Oid oidtypeid,
+							   int32 typmod,
+							   int attdim);
+
+extern void TupleDescInitBuiltinEntry(TupleDesc desc,
+									  AttrNumber attributeNumber,
+									  const char *attributeName,
+									  Oid oidtypeid,
+									  int32 typmod,
+									  int attdim);
 
 extern void TupleDescInitEntryCollation(TupleDesc desc,
-							AttrNumber attributeNumber,
-							Oid collationid);
+										AttrNumber attributeNumber,
+										Oid collationid);
 
 extern TupleDesc BuildDescForRelation(List *schema);
 
 extern TupleDesc BuildDescFromLists(List *names, List *types, List *typmods, List *collations);
 
-#endif   /* TUPDESC_H */
+#endif							/* TUPDESC_H */

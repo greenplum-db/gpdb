@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Line too long            - pylint: disable=C0301
 # Invalid name             - pylint: disable=C0103
 #
@@ -69,7 +69,7 @@ class PortAssigner:
         self.__usedPortsByHostName = {}
 
         byHost = GpArray.getSegmentsByHostName(segments)
-        for hostName, segments in byHost.iteritems():
+        for hostName, segments in byHost.items():
             usedPorts = self.__usedPortsByHostName[hostName] = {}
             for seg in segments:
                 usedPorts[seg.getSegmentPort()] = True
@@ -335,7 +335,7 @@ class GpRecoverSegmentProgram:
                 segHostname = seg.getSegmentHostName()
 
                 # Haven't seen this hostname before so we put it on a new host
-                if not recoverHostMap.has_key(segHostname):
+                if segHostname not in recoverHostMap:
                     try:
                         recoverHostMap[segHostname] = self.__options.newRecoverHosts[recoverHostIdx]
                     except:
@@ -363,10 +363,10 @@ class GpRecoverSegmentProgram:
 
             # Now that we've generated the mapping, look up all the addresses to make
             # sure they are resolvable.
-            interfaces = [address for (_ignore, address) in recoverAddressMap.values()]
+            interfaces = [address for (_ignore, address) in list(recoverAddressMap.values())]
             interfaceLookup = GpInterfaceToHostNameCache(self.__pool, interfaces, [None] * len(interfaces))
 
-            for key in recoverAddressMap.keys():
+            for key in list(recoverAddressMap.keys()):
                 (newHostname, newAddress) = recoverAddressMap[key]
                 try:
                     addressHostnameLookup = interfaceLookup.getHostName(newAddress)
@@ -589,7 +589,7 @@ class GpRecoverSegmentProgram:
                     if h.strip() not in uniqueHosts:
                         uniqueHosts.append(h.strip())
                 self.__options.newRecoverHosts = uniqueHosts
-            except Exception, ex:
+            except Exception as ex:
                 raise ProgramArgumentValidationException( \
                     "Invalid value for recover hosts: %s" % ex)
 

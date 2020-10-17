@@ -19,17 +19,16 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 
-extern bool CreateAOAuxiliaryTable(
-		Relation rel,
-		const char *auxiliaryNamePrefix,
-		char relkind,
-		TupleDesc tupledesc,
-		IndexInfo  *indexInfo,
-		List *indexColNames,
-		Oid	*classObjectId,
-		int16 *coloptions,
-		bool is_part_parent);
+extern bool CreateAOAuxiliaryTable(Relation rel,
+								   const char *auxiliaryNamePrefix,
+								   char relkind,
+								   TupleDesc tupledesc,
+								   IndexInfo  *indexInfo,
+								   List *indexColNames,
+								   Oid	*classObjectId,
+								   int16 *coloptions);
 
 extern bool IsAppendonlyMetadataRelkind(const char relkind);
 
+extern void NewRelationCreateAOAuxTables(Oid relOid, bool createBlkDir);
 #endif   /* AOCATALOG_H */

@@ -26,7 +26,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/file.h>
-#include <access/aomd.h>
 
 #include "access/aomd.h"
 #include "access/appendonlytid.h"
@@ -36,10 +35,13 @@
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "common/relpath.h"
+#include "pgstat.h"
+#include "storage/sync.h"
 #include "utils/guc.h"
 
 #define SEGNO_SUFFIX_LENGTH 12
 
+static void mdunlink_ao_base_relfile(void *ctx);
 static bool mdunlink_ao_perFile(const int segno, void *ctx);
 static bool copy_append_only_data_perFile(const int segno, void *ctx);
 static bool truncate_ao_perFile(const int segno, void *ctx);
@@ -146,7 +148,7 @@ OpenAOSegmentFile(Relation rel,
 	File		fd;
 
 	errno = 0;
-	fd = PathNameOpenFile(filepathname, fileFlags, 0600);
+	fd = PathNameOpenFile(filepathname, fileFlags);
 	if (fd < 0)
 	{
 		if (logicalEof == 0 && errno == ENOENT)
@@ -185,7 +187,7 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 	 * Call the 'fd' module with a 64-bit length since AO segment files
 	 * can be multi-gigabyte to the terabytes...
 	 */
-	if (FileTruncate(fd, offset) != 0)
+	if (FileTruncate(fd, offset, WAIT_EVENT_DATA_FILE_TRUNCATE) != 0)
 		ereport(ERROR,
 				(errmsg("\"%s\": failed to truncate data after eof: %m",
 					    relname)));
@@ -203,8 +205,10 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 
 struct mdunlink_ao_callback_ctx
 {
+	RelFileNode rnode; /* used to register forget request */
 	char *segPath;
 	char *segpathSuffixPosition;
+	bool isRedo;
 };
 
 struct truncate_ao_callback_ctx
@@ -215,53 +219,144 @@ struct truncate_ao_callback_ctx
 };
 
 void
-mdunlink_ao(const char *path, ForkNumber forkNumber)
+mdunlink_ao(RelFileNodeBackend rnode, ForkNumber forkNumber, bool isRedo)
 {
+	const char *path = relpath(rnode, forkNumber);
+
 	/*
-	 * Unlogged AO tables have INIT_FORK, in addition to MAIN_FORK.  This
-	 * function is called for each fork type.  For INIT_FORK, the "_init"
-	 * file is unlinked generically by mdunlinkfork.
+	 * Unlogged AO tables have INIT_FORK, in addition to MAIN_FORK.  It is
+	 * created once, regardless of the number of segment files (or the number
+	 * of columns for column-oriented tables).  Sync requests for INIT_FORKs
+	 * are not remembered, so they need not be forgotten.
 	 */
 	if (forkNumber == INIT_FORKNUM)
-		return;
+	{
+		path = relpath(rnode, forkNumber);
+		if (unlink(path) < 0 && errno != ENOENT)
+			ereport(WARNING,
+					(errcode_for_file_access(),
+					 errmsg("could not remove file \"%s\": %m", path)));
+	}
+	/* This storage manager is not concerend with forks other than MAIN_FORK */
+	else if (forkNumber == MAIN_FORKNUM)
+	{
+		int pathSize = strlen(path);
+		char *segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
+		char *segPathSuffixPosition = segPath + pathSize;
+		struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
+		unlinkFiles.isRedo = isRedo;
+		unlinkFiles.rnode = rnode.node;
 
-	Assert(forkNumber == MAIN_FORKNUM);
+		strncpy(segPath, path, pathSize);
 
-	int pathSize = strlen(path);
-	char *segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
-	char *segPathSuffixPosition = segPath + pathSize;
-	struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
+		unlinkFiles.segPath = segPath;
+		unlinkFiles.segpathSuffixPosition = segPathSuffixPosition;
 
-	strncpy(segPath, path, pathSize);
+		mdunlink_ao_base_relfile(&unlinkFiles);
 
-	unlinkFiles.segPath = segPath;
-	unlinkFiles.segpathSuffixPosition = segPathSuffixPosition;
+		ao_foreach_extent_file(mdunlink_ao_perFile, &unlinkFiles);
 
-    ao_foreach_extent_file(mdunlink_ao_perFile, &unlinkFiles);
+		pfree(segPath);
+	}
 
-	pfree(segPath);
+	pfree((void *) path);
+}
+
+/*
+ * Delete or truncate segfile 0.  Note: There is no <relfilenode>.0 file.  The
+ * segfile 0 is the same as base relfilenode for row-oriented AO.  For
+ * column-oriented AO, the segno 0 for the first column corresponds to base
+ * relfilenode.  See also: ao_foreach_extent_file.
+ */
+static void
+mdunlink_ao_base_relfile(void *ctx)
+{
+	FileTag tag;
+	struct mdunlink_ao_callback_ctx *unlinkFiles =
+		(struct mdunlink_ao_callback_ctx *)ctx;
+
+	const char *baserel = unlinkFiles->segPath;
+
+	*unlinkFiles->segpathSuffixPosition = '\0';
+	if (unlinkFiles->isRedo)
+	{
+		/* First, forget any pending sync requests for the first segment */
+		INIT_FILETAG(tag, unlinkFiles->rnode, MAIN_FORKNUM, 0,
+					 SYNC_HANDLER_AO);
+		RegisterSyncRequest(&tag, SYNC_FORGET_REQUEST, true);
+
+		if (unlink(baserel) != 0)
+		{
+			/* ENOENT is expected after the end of the extensions */
+			if (errno != ENOENT)
+				ereport(WARNING,
+						(errcode_for_file_access(),
+						 errmsg("could not remove file \"%s\": %m",
+								baserel)));
+		}
+	}
+	else
+	{
+		int			fd;
+		int			ret;
+
+
+		/* Register request to unlink first segment later */
+		INIT_FILETAG(tag, unlinkFiles->rnode, MAIN_FORKNUM, 0,
+					 SYNC_HANDLER_AO);
+		RegisterSyncRequest(&tag, SYNC_UNLINK_REQUEST, true /* retryOnError */ );
+
+		fd = OpenTransientFile(baserel, O_RDWR | PG_BINARY);
+		if (fd >= 0)
+		{
+			int			save_errno;
+
+			ret = ftruncate(fd, 0);
+			save_errno = errno;
+			CloseTransientFile(fd);
+			errno = save_errno;
+		}
+		else
+			ret = -1;
+
+		if (ret < 0 && errno != ENOENT)
+		{
+			ereport(WARNING,
+					(errcode_for_file_access(),
+					 errmsg("could not truncate file \"%s\": %m", baserel)));
+
+		}
+	}
 }
 
 static bool
 mdunlink_ao_perFile(const int segno, void *ctx)
 {
+	FileTag tag;
 	const struct mdunlink_ao_callback_ctx *unlinkFiles = ctx;
 
 	char *segPath = unlinkFiles->segPath;
 	char *segPathSuffixPosition = unlinkFiles->segpathSuffixPosition;
 
+	Assert (segno > 0);
 	sprintf(segPathSuffixPosition, ".%u", segno);
+
+	/* First, forget any pending sync requests for the first segment */
+	INIT_FILETAG(tag, unlinkFiles->rnode, MAIN_FORKNUM, segno,
+				 SYNC_HANDLER_AO);
+	RegisterSyncRequest(&tag, SYNC_FORGET_REQUEST, true);
+
+	/* Next unlink the file */
 	if (unlink(segPath) != 0)
 	{
 		/* ENOENT is expected after the end of the extensions */
 		if (errno != ENOENT)
 			ereport(WARNING,
 					(errcode_for_file_access(),
-							errmsg("could not remove file \"%s\": %m", segPath)));
+					 errmsg("could not remove file \"%s\": %m", segPath)));
 		else
 			return false;
 	}
-
 	return true;
 }
 
@@ -276,7 +371,7 @@ copy_file(char *srcsegpath, char *dstsegpath,
 	char       *buffer = palloc(BLCKSZ);
 	int dstflags;
 
-	srcFile = PathNameOpenFile(srcsegpath, O_RDONLY | PG_BINARY, 0600);
+	srcFile = PathNameOpenFile(srcsegpath, O_RDONLY | PG_BINARY);
 	if (srcFile < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
@@ -291,22 +386,17 @@ copy_file(char *srcsegpath, char *dstsegpath,
 	if (segfilenum)
 		dstflags |= O_CREAT;
 
-	dstFile = PathNameOpenFile(dstsegpath, dstflags, 0600);
+	dstFile = PathNameOpenFile(dstsegpath, dstflags);
 	if (dstFile < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 (errmsg("could not create destination file %s: %m", dstsegpath))));
 
-	left = FileSeek(srcFile, 0, SEEK_END);
+	left = FileDiskSize(srcFile);
 	if (left < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 (errmsg("could not seek to end of file %s: %m", srcsegpath))));
-
-	if (FileSeek(srcFile, 0, SEEK_SET) < 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 (errmsg("could not seek to beginning of file %s: %m", srcsegpath))));
 
 	offset = 0;
 	while(left > 0)
@@ -316,13 +406,13 @@ copy_file(char *srcsegpath, char *dstsegpath,
 		CHECK_FOR_INTERRUPTS();
 
 		len = Min(left, BLCKSZ);
-		if (FileRead(srcFile, buffer, len) != len)
+		if (FileRead(srcFile, buffer, len, offset, WAIT_EVENT_DATA_FILE_READ) != len)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not read %d bytes from file \"%s\": %m",
 							len, srcsegpath)));
 
-		if (FileWrite(dstFile, buffer, len) != len)
+		if (FileWrite(dstFile, buffer, len, offset, WAIT_EVENT_DATA_FILE_WRITE) != len)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not write %d bytes to file \"%s\": %m",
@@ -335,7 +425,7 @@ copy_file(char *srcsegpath, char *dstsegpath,
 		left -= len;
 	}
 
-	if (FileSync(dstFile) != 0)
+	if (FileSync(dstFile, WAIT_EVENT_DATA_FILE_IMMEDIATE_SYNC) != 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not fsync file \"%s\": %m",
@@ -441,7 +531,16 @@ ao_truncate_one_rel(Relation rel)
 	truncateFiles.segpathSuffixPosition = segPathSuffixPosition;
 	truncateFiles.rel = rel;
 
-	/* Truncate the actual file */
+	/*
+	 * Truncate the actual file.
+	 *
+	 * Segfile 0 first, ao_foreach_extent_file() doesn't invoke the
+	 * callback for it.
+	 *
+	 * GPDB_12_MERGE_FIXME: shouldn't we unlink, not truncate, the
+	 * other segfiles?
+	 */
+	truncate_ao_perFile(0, &truncateFiles);
 	ao_foreach_extent_file(truncate_ao_perFile, &truncateFiles);
 
 	pfree(segPath);
@@ -463,7 +562,10 @@ truncate_ao_perFile(const int segno, void *ctx)
 	char *segPathSuffixPosition = truncateFiles->segpathSuffixPosition;
 	aorel = truncateFiles->rel;
 
-	sprintf(segPathSuffixPosition, ".%u", segno);
+	if (segno > 0)
+		sprintf(segPathSuffixPosition, ".%u", segno);
+	else
+		*segPathSuffixPosition = '\0';
 
 	fd = OpenAOSegmentFile(aorel, segPath, 0);
 

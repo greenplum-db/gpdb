@@ -26,15 +26,11 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalLeftSemiHashJoin::CPhysicalLeftSemiHashJoin
-	(
-	CMemoryPool *mp,
-	CExpressionArray *pdrgpexprOuterKeys,
-	CExpressionArray *pdrgpexprInnerKeys,
-	IMdIdArray *hash_opfamilies
-	)
-	:
-	CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys, hash_opfamilies)
+CPhysicalLeftSemiHashJoin::CPhysicalLeftSemiHashJoin(
+	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
+	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies)
+	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
+						hash_opfamilies)
 {
 }
 
@@ -61,13 +57,10 @@ CPhysicalLeftSemiHashJoin::~CPhysicalLeftSemiHashJoin()
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalLeftSemiHashJoin::FProvidesReqdCols
-	(
-	CExpressionHandle &exprhdl,
-	CColRefSet *pcrsRequired,
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalLeftSemiHashJoin::FProvidesReqdCols(CExpressionHandle &exprhdl,
+											 CColRefSet *pcrsRequired,
+											 ULONG	// ulOptReq
+) const
 {
 	// left semi join only propagates columns from left child
 	return FOuterProvidesReqdCols(exprhdl, pcrsRequired);
@@ -82,18 +75,16 @@ CPhysicalLeftSemiHashJoin::FProvidesReqdCols
 //
 //---------------------------------------------------------------------------
 CPartitionPropagationSpec *
-CPhysicalLeftSemiHashJoin::PppsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired,
-	ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt,
-	ULONG // ulOptReq
-	)
+CPhysicalLeftSemiHashJoin::PppsRequired(CMemoryPool *mp,
+										CExpressionHandle &exprhdl,
+										CPartitionPropagationSpec *pppsRequired,
+										ULONG child_index,
+										CDrvdPropArray *pdrgpdpCtxt,
+										ULONG  // ulOptReq
+)
 {
-	return PppsRequiredJoinChild(mp, exprhdl, pppsRequired, child_index, pdrgpdpCtxt, false);
+	return PppsRequiredJoinChild(mp, exprhdl, pppsRequired, child_index,
+								 pdrgpdpCtxt, false);
 }
 
 // EOF
-

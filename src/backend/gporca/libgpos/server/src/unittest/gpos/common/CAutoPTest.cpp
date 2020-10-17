@@ -31,10 +31,7 @@ using namespace gpos;
 GPOS_RESULT
 CAutoPTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CAutoPTest::EresUnittest_Basics)
-		};
+	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(CAutoPTest::EresUnittest_Basics)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -74,7 +71,7 @@ CAutoPTest::EresUnittest_Basics()
 #ifdef GPOS_DEBUG
 	CHAR *szBack = asz3.Value();
 	GPOS_ASSERT(szBack == sz2);
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// deref
 	GPOS_ASSERT(*sz2 == *asz3);
@@ -102,4 +99,3 @@ CAutoPTest::EresUnittest_Basics()
 }
 
 // EOF
-

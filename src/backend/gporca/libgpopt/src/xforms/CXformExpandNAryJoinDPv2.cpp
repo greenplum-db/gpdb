@@ -37,23 +37,15 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformExpandNAryJoinDPv2::CXformExpandNAryJoinDPv2
-	(
-	CMemoryPool *mp
-	)
-	:
-	CXformExploration
-		(
-		 // pattern
-		GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CLogicalNAryJoin(mp),
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternMultiLeaf(mp)),
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))
-					)
-		)
-{}
+CXformExpandNAryJoinDPv2::CXformExpandNAryJoinDPv2(CMemoryPool *mp)
+	: CXformExploration(
+		  // pattern
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CLogicalNAryJoin(mp),
+			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternMultiLeaf(mp)),
+			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))))
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -65,13 +57,9 @@ CXformExpandNAryJoinDPv2::CXformExpandNAryJoinDPv2
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformExpandNAryJoinDPv2::Exfp
-	(
-	CExpressionHandle &exprhdl
-	)
-	const
+CXformExpandNAryJoinDPv2::Exfp(CExpressionHandle &exprhdl) const
 {
-	return CXformUtils::ExfpExpandJoinOrder(exprhdl);
+	return CXformUtils::ExfpExpandJoinOrder(exprhdl, this);
 }
 
 
@@ -85,13 +73,9 @@ CXformExpandNAryJoinDPv2::Exfp
 //
 //---------------------------------------------------------------------------
 void
-CXformExpandNAryJoinDPv2::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformExpandNAryJoinDPv2::Transform(CXformContext *pxfctxt,
+									CXformResult *pxfres,
+									CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(NULL != pxfres);
@@ -124,9 +108,10 @@ CXformExpandNAryJoinDPv2::Transform
 
 	if (NULL != CScalarNAryJoinPredList::PopConvert(pexprScalar->Pop()))
 	{
-		innerJoinPreds = CPredicateUtils::PdrgpexprConjuncts(mp, (*pexprScalar)[0]);
+		innerJoinPreds =
+			CPredicateUtils::PdrgpexprConjuncts(mp, (*pexprScalar)[0]);
 
-		for(ULONG ul = 1; ul < pexprScalar->Arity(); ul++)
+		for (ULONG ul = 1; ul < pexprScalar->Arity(); ul++)
 		{
 			(*pexprScalar)[ul]->AddRef();
 			onPreds->Append((*pexprScalar)[ul]);
@@ -141,8 +126,13 @@ CXformExpandNAryJoinDPv2::Transform
 		innerJoinPreds = CPredicateUtils::PdrgpexprConjuncts(mp, pexprScalar);
 	}
 
+	CColRefSet *outerRefs = pexpr->DeriveOuterReferences();
+
+	outerRefs->AddRef();
+
 	// create join order using dynamic programming v2, record topk results in jodp
-	CJoinOrderDPv2 jodp(mp, pdrgpexpr, innerJoinPreds, onPreds, childPredIndexes);
+	CJoinOrderDPv2 jodp(mp, pdrgpexpr, innerJoinPreds, onPreds,
+						childPredIndexes, outerRefs);
 	jodp.PexprExpand();
 
 	// Retrieve top K join orders from jodp and add as alternatives
@@ -150,12 +140,12 @@ CXformExpandNAryJoinDPv2::Transform
 
 	while (NULL != (nextJoinOrder = jodp.GetNextOfTopK()))
 	{
-		CExpression *pexprNormalized = CNormalizer::PexprNormalize(mp, nextJoinOrder);
+		CExpression *pexprNormalized =
+			CNormalizer::PexprNormalize(mp, nextJoinOrder);
 
 		nextJoinOrder->Release();
 		pxfres->Add(pexprNormalized);
 	}
-
 }
 
 // EOF

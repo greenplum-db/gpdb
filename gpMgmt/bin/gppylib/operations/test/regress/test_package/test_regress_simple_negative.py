@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os 
 import tarfile
@@ -14,7 +14,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         alpha_spec = GppkgSpec("alpha", "1.0", GPDB_VERSION, os)
         gppkg_file = self.build(alpha_spec, A_spec) 
 
-        with self.assertRaisesRegexp(ExecutionError , "%s OS required. %s OS found" % (os, OS)):
+        with self.assertRaisesRegex(ExecutionError , "%s OS required. %s OS found" % (os, OS)):
             self.install(gppkg_file)
        
     def test01_wrong_arch(self):
@@ -23,7 +23,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         alpha_spec = GppkgSpec("alpha", "1.0", GPDB_VERSION, OS, arch)
         gppkg_file = self.build(alpha_spec, A_spec) 
 
-        with self.assertRaisesRegexp(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
+        with self.assertRaisesRegex(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
             self.install(gppkg_file)
 
     def test02_wrong_gpdbversion(self):
@@ -32,7 +32,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         alpha_spec = GppkgSpec("alpha", "1.0", gpdb_version)
         gppkg_file = self.build(alpha_spec, A_spec)
 
-        with self.assertRaisesRegexp(ExecutionError, "requires Greenplum Database version %s" % gpdb_version):
+        with self.assertRaisesRegex(ExecutionError, "requires Greenplum Database version %s" % gpdb_version):
             self.install(gppkg_file)
 
     def test03_install_twice(self):
@@ -40,7 +40,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
 
         self.install(self.alpha_spec.get_filename())
  
-        with self.assertRaisesRegexp(ExecutionError, "%s is already installed" % gppkg_file):
+        with self.assertRaisesRegex(ExecutionError, "%s is already installed" % gppkg_file):
             self.install(gppkg_file)
 
     @unittest.expectedFailure
@@ -58,7 +58,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         update_gppkg_spec = GppkgSpec("alpha", "0.1")
         update_gppkg_file = self.build(update_gppkg_spec, update_rpm_spec)
        
-        with self.assertRaisesRegexp(ExecutionError, "Newer version of %s already installed" % update_gppkg_spec.get_package_name()):
+        with self.assertRaisesRegex(ExecutionError, "Newer version of %s already installed" % update_gppkg_spec.get_package_name()):
             self.update(update_gppkg_file)
         #Check that the original package is still installed and not updated
         assert self.check_install(self.alpha_spec.get_filename())
@@ -77,7 +77,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         update_gppkg_spec = GppkgSpec("alpha", "1.1") 
         update_gppkg_file = self.build(update_gppkg_spec, update_rpm_spec)
         
-        with self.assertRaisesRegexp(ExecutionError, self.A_spec.get_filename()):
+        with self.assertRaisesRegex(ExecutionError, self.A_spec.get_filename()):
             self.update(update_gppkg_file)
         #Check that the original package is still installed and not updated
         assert self.check_install(self.alpha_spec.get_filename())
@@ -89,12 +89,12 @@ class SimpleNegativeTestCase(GppkgTestCase):
         #Uninstall gppkg 
         self.remove(self.alpha_spec.get_filename())
 
-        with self.assertRaisesRegexp(ExecutionError, "%s has not been installed" % self.alpha_spec.get_package_name()):
+        with self.assertRaisesRegex(ExecutionError, "%s has not been installed" % self.alpha_spec.get_package_name()):
             self.remove(self.alpha_spec.get_filename())
 
     def test07_invalid_gppkg_name(self):
         invalid_gppkg_name = "abcde-abc"
-        with self.assertRaisesRegexp(ExecutionError, "Cannot find package %s" % invalid_gppkg_name):
+        with self.assertRaisesRegex(ExecutionError, "Cannot find package %s" % invalid_gppkg_name):
             self.install(invalid_gppkg_name)
 
     @unittest.expectedFailure
@@ -105,7 +105,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         invalid_os_gppkg = GppkgSpec("alpha", "1.1", GPDB_VERSION, os)
         gppkg_file = self.build(invalid_os_gppkg, self.A_spec)
         
-        with self.assertRaisesRegexp(ExecutionError, "%s os required. %s os found" % (os, OS)):
+        with self.assertRaisesRegex(ExecutionError, "%s os required. %s os found" % (os, OS)):
             self.update(gppkg_file)
 
     def test09_wrong_arch_update(self):
@@ -115,7 +115,7 @@ class SimpleNegativeTestCase(GppkgTestCase):
         invalid_os_gppkg = GppkgSpec("alpha", "1.1", GPDB_VERSION, OS, arch)
         gppkg_file = self.build(invalid_os_gppkg, self.A_spec)
 
-        with self.assertRaisesRegexp(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
+        with self.assertRaisesRegex(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
             self.update(gppkg_file) 
 
 if __name__ == "__main__":

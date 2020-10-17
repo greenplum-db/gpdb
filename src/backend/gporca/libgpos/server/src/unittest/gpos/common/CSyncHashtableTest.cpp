@@ -24,13 +24,13 @@
 
 using namespace gpos;
 
-#define GPOS_SHT_SMALL_BUCKETS	5
-#define GPOS_SHT_BIG_BUCKETS	100
-#define GPOS_SHT_ELEMENTS	10
-#define GPOS_SHT_LOOKUPS	500
-#define GPOS_SHT_INITIAL_ELEMENTS	(1 + GPOS_SHT_ELEMENTS / 2)
-#define GPOS_SHT_ELEMENT_DUPLICATES		5
-#define GPOS_SHT_THREADS	15
+#define GPOS_SHT_SMALL_BUCKETS 5
+#define GPOS_SHT_BIG_BUCKETS 100
+#define GPOS_SHT_ELEMENTS 10
+#define GPOS_SHT_LOOKUPS 500
+#define GPOS_SHT_INITIAL_ELEMENTS (1 + GPOS_SHT_ELEMENTS / 2)
+#define GPOS_SHT_ELEMENT_DUPLICATES 5
+#define GPOS_SHT_THREADS 15
 
 
 // invalid key
@@ -51,14 +51,13 @@ const CSyncHashtableTest::SElem CSyncHashtableTest::SElem::m_elemInvalid(
 GPOS_RESULT
 CSyncHashtableTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CSyncHashtableTest::EresUnittest_Basics),
 		GPOS_UNITTEST_FUNC(CSyncHashtableTest::EresUnittest_Accessor),
 		GPOS_UNITTEST_FUNC(CSyncHashtableTest::EresUnittest_ComplexEquality),
 		GPOS_UNITTEST_FUNC(CSyncHashtableTest::EresUnittest_SameKeyIteration),
-		GPOS_UNITTEST_FUNC(CSyncHashtableTest::EresUnittest_NonConcurrentIteration)
-		};
+		GPOS_UNITTEST_FUNC(
+			CSyncHashtableTest::EresUnittest_NonConcurrentIteration)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -81,16 +80,9 @@ CSyncHashtableTest::EresUnittest_Basics()
 
 	SElem *rgelem = GPOS_NEW_ARRAY(mp, SElem, GPOS_SHT_ELEMENTS);
 	CSyncHashtable<SElem, ULONG> sht;
-	sht.Init
-		(
-		mp,
-		GPOS_SHT_SMALL_BUCKETS,
-		GPOS_OFFSET(SElem, m_link),
-		GPOS_OFFSET(SElem, m_ulKey),
-		&(SElem::m_ulInvalid),
-		SElem::HashValue,
-		SElem::FEqualKeys
-		);
+	sht.Init(mp, GPOS_SHT_SMALL_BUCKETS, GPOS_OFFSET(SElem, m_link),
+			 GPOS_OFFSET(SElem, m_ulKey), &(SElem::m_ulInvalid),
+			 SElem::HashValue, SElem::FEqualKeys);
 
 	for (ULONG i = 0; i < GPOS_SHT_ELEMENTS; i++)
 	{
@@ -123,34 +115,20 @@ CSyncHashtableTest::EresUnittest_Accessor()
 
 	CSyncHashtable<SElem, ULONG> rgsht[2];
 
-	rgsht[0].Init
-		(
-		mp,
-		GPOS_SHT_SMALL_BUCKETS,
-		GPOS_OFFSET(SElem, m_link),
-		GPOS_OFFSET(SElem, m_ulKey),
-		&(SElem::m_ulInvalid),
-		SElem::HashValue,
-		SElem::FEqualKeys
-		);
+	rgsht[0].Init(mp, GPOS_SHT_SMALL_BUCKETS, GPOS_OFFSET(SElem, m_link),
+				  GPOS_OFFSET(SElem, m_ulKey), &(SElem::m_ulInvalid),
+				  SElem::HashValue, SElem::FEqualKeys);
 
-	rgsht[1].Init
-		(
-		mp,
-		GPOS_SHT_BIG_BUCKETS,
-		GPOS_OFFSET(SElem, m_link),
-		GPOS_OFFSET(SElem, m_ulKey),
-		&(SElem::m_ulInvalid),
-		SElem::HashValue,
-		SElem::FEqualKeys
-		);
+	rgsht[1].Init(mp, GPOS_SHT_BIG_BUCKETS, GPOS_OFFSET(SElem, m_link),
+				  GPOS_OFFSET(SElem, m_ulKey), &(SElem::m_ulInvalid),
+				  SElem::HashValue, SElem::FEqualKeys);
 
 	for (ULONG i = 0; i < GPOS_SHT_ELEMENTS; i++)
 	{
 		rgelem[i] = SElem(i, i);
 
 		// distribute elements over both hashtables
-		rgsht[i%2].Insert(&rgelem[i]);
+		rgsht[i % 2].Insert(&rgelem[i]);
 	}
 
 	for (ULONG i = 0; i < GPOS_SHT_ELEMENTS; i++)
@@ -158,13 +136,9 @@ CSyncHashtableTest::EresUnittest_Accessor()
 		SElem *pelem = &rgelem[i];
 		ULONG ulKey = pelem->m_ulKey;
 
-		CSyncHashtableAccessByKey
-			<SElem,
-			ULONG> shtacc0(rgsht[0], ulKey);
+		CSyncHashtableAccessByKey<SElem, ULONG> shtacc0(rgsht[0], ulKey);
 
-		CSyncHashtableAccessByKey
-			<SElem,
-			ULONG> shtacc1(rgsht[1], ulKey);
+		CSyncHashtableAccessByKey<SElem, ULONG> shtacc1(rgsht[1], ulKey);
 
 		if (NULL == shtacc0.Find())
 		{
@@ -183,13 +157,9 @@ CSyncHashtableTest::EresUnittest_Accessor()
 		SElem *pelem = &rgelem[i];
 		ULONG ulKey = pelem->m_ulKey;
 
-		CSyncHashtableAccessByKey
-			<SElem,
-			ULONG> shtacc0(rgsht[0], ulKey);
+		CSyncHashtableAccessByKey<SElem, ULONG> shtacc0(rgsht[0], ulKey);
 
-		CSyncHashtableAccessByKey
-			<SElem,
-			ULONG> shtacc1(rgsht[1], ulKey);
+		CSyncHashtableAccessByKey<SElem, ULONG> shtacc1(rgsht[1], ulKey);
 
 		GPOS_ASSERT(NULL == shtacc1.Find());
 		GPOS_ASSERT(pelem == shtacc0.Find());
@@ -219,16 +189,9 @@ CSyncHashtableTest::EresUnittest_ComplexEquality()
 	SElem *rgelem = GPOS_NEW_ARRAY(mp, SElem, GPOS_SHT_ELEMENTS);
 
 	CSyncHashtable<SElem, SElem> sht;
-	sht.Init
-		(
-		mp,
-		GPOS_SHT_SMALL_BUCKETS,
-		GPOS_OFFSET(SElem, m_link),
-		0 /*cKeyOffset*/,
-		&(SElem::m_elemInvalid),
-		SElem::HashValue,
-		SElem::Equals
-		);
+	sht.Init(mp, GPOS_SHT_SMALL_BUCKETS, GPOS_OFFSET(SElem, m_link),
+			 0 /*cKeyOffset*/, &(SElem::m_elemInvalid), SElem::HashValue,
+			 SElem::Equals);
 
 	for (ULONG i = 0; i < GPOS_SHT_ELEMENTS; i++)
 	{
@@ -240,16 +203,13 @@ CSyncHashtableTest::EresUnittest_ComplexEquality()
 	for (ULONG j = 0; j < GPOS_SHT_ELEMENTS; j++)
 	{
 		SElem elem(GPOS_SHT_ELEMENTS + j, j);
-		CSyncHashtableAccessByKey
-			<SElem,
-			SElem> shtacc(sht, elem);
+		CSyncHashtableAccessByKey<SElem, SElem> shtacc(sht, elem);
 
 #ifdef GPOS_DEBUG
 		SElem *pelem = shtacc.Find();
 		GPOS_ASSERT(NULL != pelem && pelem != &elem);
 		GPOS_ASSERT(pelem->Id() == GPOS_SHT_ELEMENTS + j);
-#endif // GPOS_DEBUG
-
+#endif	// GPOS_DEBUG
 	}
 
 	GPOS_DELETE_ARRAY(rgelem);
@@ -278,16 +238,9 @@ CSyncHashtableTest::EresUnittest_SameKeyIteration()
 
 	SElemHashtable sht;
 
-	sht.Init
-		(
-		mp,
-		GPOS_SHT_SMALL_BUCKETS,
-		GPOS_OFFSET(SElem, m_link),
-		GPOS_OFFSET(SElem, m_ulKey),
-		&(SElem::m_ulInvalid),
-		SElem::HashValue,
-		SElem::FEqualKeys
-		);
+	sht.Init(mp, GPOS_SHT_SMALL_BUCKETS, GPOS_OFFSET(SElem, m_link),
+			 GPOS_OFFSET(SElem, m_ulKey), &(SElem::m_ulInvalid),
+			 SElem::HashValue, SElem::FEqualKeys);
 
 	// insert a mix of elements with duplicate keys
 	for (ULONG j = 0; j < GPOS_SHT_ELEMENT_DUPLICATES; j++)
@@ -313,7 +266,6 @@ CSyncHashtableTest::EresUnittest_SameKeyIteration()
 			pelem = shtacc.Next(pelem);
 		}
 		GPOS_ASSERT(count == GPOS_SHT_ELEMENT_DUPLICATES);
-
 	}
 
 	GPOS_DELETE_ARRAY(rgelem);
@@ -341,16 +293,9 @@ CSyncHashtableTest::EresUnittest_NonConcurrentIteration()
 
 	SElemHashtable sht;
 
-	sht.Init
-		(
-		mp,
-		GPOS_SHT_SMALL_BUCKETS,
-		GPOS_OFFSET(SElem, m_link),
-		GPOS_OFFSET(SElem, m_ulKey),
-		&(SElem::m_ulInvalid),
-		SElem::HashValue,
-		SElem::FEqualKeys
-		);
+	sht.Init(mp, GPOS_SHT_SMALL_BUCKETS, GPOS_OFFSET(SElem, m_link),
+			 GPOS_OFFSET(SElem, m_ulKey), &(SElem::m_ulInvalid),
+			 SElem::HashValue, SElem::FEqualKeys);
 
 
 	// iterate over empty hash table
@@ -380,10 +325,7 @@ CSyncHashtableTest::EresUnittest_NonConcurrentIteration()
 	{
 		SElemHashtableIterAccessor htitacc(shtit);
 
-#ifdef GPOS_DEBUG
-		SElem *pelem =
-#endif	// GPOS_DEBUG
-			htitacc.Value();
+		SElem *pelem GPOS_ASSERTS_ONLY = htitacc.Value();
 
 		GPOS_ASSERT(NULL != pelem);
 
@@ -391,7 +333,7 @@ CSyncHashtableTest::EresUnittest_NonConcurrentIteration()
 
 		// check if element has been visited before
 		GPOS_ASSERT(!bv.ExchangeSet(pelem->Id()) &&
-				    "Iterator returned duplicates");
+					"Iterator returned duplicates");
 
 		count++;
 	}

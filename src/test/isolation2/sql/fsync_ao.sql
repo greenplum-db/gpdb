@@ -19,6 +19,9 @@
 
 create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
 create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
+-- no fsync requests should ever be registered for unlogged tables
+create unlogged table ul_fsync_co(a int, b int, c int) using ao_column distributed by (a);
+
 insert into fsync_ao select i, i from generate_series(1,10)i;
 insert into fsync_co select i, i from generate_series(1,10)i;
 
@@ -42,6 +45,7 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 1, dbid)
 -- These should be fsync-ed by checkpoint & restartpoint.
 insert into fsync_ao select i, i from generate_series(1,20)i;
 insert into fsync_co select i, i from generate_series(1,20)i;
+insert into ul_fsync_co select i, i, i from generate_series(1,20)i;
 
 -- Inject fault to count relfiles fsync'ed by checkpointer on mirror.
 select gp_inject_fault_infinite('ao_fsync_counter', 'skip', dbid)
@@ -66,18 +70,24 @@ select gp_inject_fault('ao_fsync_counter', 'status', dbid)
 1: begin;
 1: insert into fsync_ao select i, i from generate_series(1,20)i;
 1: insert into fsync_co select i, i from generate_series(1,20)i;
+1: insert into ul_fsync_co select i, i, i from generate_series(1,20)i;
 insert into fsync_ao select i, i from generate_series(21,40)i;
 insert into fsync_co select i, i from generate_series(21,40)i;
+insert into ul_fsync_co select i, i, i from generate_series(1,40)i;
 1: end;
 -- Generate some invisible tuples in both the tables so as to trigger
 -- compaction during vacuum.
 delete from fsync_ao where a > 20;
 update fsync_co set b = -a;
+delete from ul_fsync_co where b < 20;
+
 -- Expect two segment files for each table (ao table) or each column (co table).
 select segment_id, segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
 select segment_id, segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('fsync_co');
+select segment_id, segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('ul_fsync_co');
 vacuum fsync_ao;
 vacuum fsync_co;
+vacuum ul_fsync_co;
 checkpoint;
 -- Wait until restartpoint happens again.
 select gp_wait_until_triggered_fault('restartpoint_guts', 3, dbid)
@@ -91,6 +101,8 @@ select gp_inject_fault('ao_fsync_counter', 'status', dbid)
 -- previously registed with the checkpointer.
 update fsync_co set b = -a;
 drop table fsync_co;
+update ul_fsync_co set c = -a;
+drop table ul_fsync_co;
 -- Drop but don't commit the transaction.
 begin;
 update fsync_ao set b = -a;

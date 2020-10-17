@@ -119,7 +119,9 @@
 #include "access/appendonly_compaction.h"
 #include "access/genam.h"
 #include "access/multixact.h"
+#include "access/visibilitymap.h"
 #include "access/xact.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
@@ -432,6 +434,8 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
 	FileSegInfo **segmentFileInfo = NULL; /* Might be a casted AOCSFileSegInfo */
 	int			totalSegfiles;
 	Snapshot	appendOnlyMetaDataSnapshot;
+	Oid			visimaprelid;
+	Oid			visimapidxid;
 
 	Assert(RelationIsAppendOptimized(aoRelation));
 
@@ -463,10 +467,15 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
 																&totalSegfiles);
 	}
 
+	GetAppendOnlyEntryAuxOids(aoRelation->rd_id,
+							  appendOnlyMetaDataSnapshot, 
+							  NULL, NULL, NULL,
+							  &visimaprelid, &visimapidxid);
+
 	AppendOnlyVisimap_Init(
 			&vacuumIndexState.visiMap,
-			aoRelation->rd_appendonly->visimaprelid,
-			aoRelation->rd_appendonly->visimapidxid,
+			visimaprelid,
+			visimapidxid,
 			AccessShareLock,
 			appendOnlyMetaDataSnapshot);
 
@@ -510,7 +519,7 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
 		else
 		{
 			for (i = 0; i < nindexes; i++)
-				scan_index(Irel[i], rel_tuple_count, elevel);
+				scan_index(Irel[i], rel_tuple_count, elevel, bstrategy);
 		}
 	}
 
@@ -682,10 +691,10 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	BlockNumber nblocks;
 	char	   *relname;
 	double		num_tuples;
-	double		totalbytes;
-	double		eof;
 	int64       hidden_tupcount;
 	AppendOnlyVisimap visimap;
+	Oid			visimaprelid;
+	Oid			visimapidxid;
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
 
@@ -703,14 +712,17 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	}
 
 	/* calculate the values we care about */
-	eof = (double)fstotal->totalbytes;
 	num_tuples = (double)fstotal->totaltuples;
-	totalbytes = eof;
-	nblocks = (uint32)RelationGuessNumberOfBlocks(totalbytes);
+	nblocks = (uint32)RelationGetNumberOfBlocks(aorel);
+
+	GetAppendOnlyEntryAuxOids(aorel->rd_id,
+							  snapshot, 
+							  NULL, NULL, NULL,
+							  &visimaprelid, &visimapidxid);
 
 	AppendOnlyVisimap_Init(&visimap,
-						   aorel->rd_appendonly->visimaprelid,
-						   aorel->rd_appendonly->visimapidxid,
+						   visimaprelid,
+						   visimapidxid,
 						   AccessShareLock,
 						   snapshot);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
@@ -733,4 +745,66 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 			(errmsg("\"%s\": found %.0f rows in %u pages.",
 					relname, num_tuples, nblocks)));
 	pfree(fstotal);
+}
+
+/*
+ * GPDB_12_MERGE_FIXME: taken almost verbadim from appendonly_vacuum.c, verify
+ *
+ *	scan_index() -- scan one index relation to update pg_class statistics.
+ *
+ * We use this when we have no deletions to do.
+ */
+void
+scan_index(Relation indrel, double num_tuples,
+		   int elevel, BufferAccessStrategy vac_strategy)
+{
+	IndexBulkDeleteResult *stats;
+	IndexVacuumInfo ivinfo;
+	PGRUsage	ru0;
+	BlockNumber relallvisible;
+
+	pg_rusage_init(&ru0);
+
+	ivinfo.index = indrel;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = false;
+	ivinfo.message_level = elevel;
+	ivinfo.num_heap_tuples = num_tuples;
+	ivinfo.strategy = vac_strategy;
+
+	stats = index_vacuum_cleanup(&ivinfo, NULL);
+
+	if (!stats)
+		return;
+
+	if (RelationIsAppendOptimized(indrel))
+		relallvisible = 0;
+	else
+		visibilitymap_count(indrel, &relallvisible, NULL);
+
+	/*
+	 * Now update statistics in pg_class, but only if the index says the count
+	 * is accurate.
+	 */
+	if (!stats->estimated_count)
+		vac_update_relstats(indrel,
+							stats->num_pages, stats->num_index_tuples,
+							relallvisible,
+							false,
+							InvalidTransactionId,
+							InvalidMultiXactId,
+							false,
+							true /* isvacuum */);
+
+	ereport(elevel,
+			(errmsg("index \"%s\" now contains %.0f row versions in %u pages",
+					RelationGetRelationName(indrel),
+					stats->num_index_tuples,
+					stats->num_pages),
+	errdetail("%u index pages have been deleted, %u are currently reusable.\n"
+			  "%s.",
+			  stats->pages_deleted, stats->pages_free,
+			  pg_rusage_show(&ru0))));
+
+	pfree(stats);
 }

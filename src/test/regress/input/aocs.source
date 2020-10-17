@@ -292,7 +292,7 @@ SELECT count(*) FROM tenk_aocs4;
 -- LIKE
 -- Should not copy storage options if not specified
 CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);
-SELECT count(*) FROM pg_class WHERE relstorage = 'c' AND relname = 'tenk_like_nocopy_storage';
+SELECT count(*) FROM pg_class WHERE reloptions is not null AND relname = 'tenk_like_nocopy_storage';
 -- Check tables are truly decoupled
 CREATE TABLE tenk_truly_decoupled (LIKE tenk_aocs4);
 ALTER TABLE tenk_aocs4 DROP COLUMN two;
@@ -336,12 +336,6 @@ SELECT unique1 FROM tenk_heap_for_aocs EXCEPT SELECT unique1 FROM tenk_aocs3;
 -- TRUNCATE
 TRUNCATE tenk_aocs2;
 SELECT count(*) FROM tenk_aocs2;
-
--- OID with aocs NYI
--- OIDS
---
--- MPP-8058: should fail
-CREATE TABLE aocswithoids(a int, b int) WITH (appendonly=true, orientation=column, oids=true);
 
 -- INDEX
 CREATE INDEX tenk_aocs1_unique1 ON tenk_aocs1 USING btree(unique1 int4_ops);
@@ -543,18 +537,6 @@ COPY aocs_new (a,b,c,d,e,f) FROM stdin;
 
 select (case when b='13' then 'replacement' else d end) as d from aocs_new order by 1;
 select distinct (case when b='13' then 'replacement' else d end) as d from aocs_new where f='M' order by 1;
-
-create table aocs_unknown(
-    a int,
-    b unknown,
-    c unknown encoding (compresstype=rle_type)
-) with (appendonly=true, orientation=column)
-distributed by (a);
-
-insert into aocs_unknown
-select i, 'unknown' from generate_series(1, 10)i;
-
-select * from aocs_unknown;
 
 -- Check compression and distribution
 create table aocs_compress_table (id int, v varchar)

@@ -67,10 +67,10 @@ LINE 1: copy (select * from copyselect_test1) (t,id) to stdout;
 -- Test JOIN
 --
 copy (select * from copyselect_test1 join copyselect_test2 using (id)) to stdout;
-2	b	B
-4	d	D
 1	a	A
+2	b	B
 3	c	C
+4	d	D
 5	e	E
 --
 -- Test UNION SELECT

@@ -21,21 +21,21 @@ const CHAR rgszFrameSpec[][10] = {"Rows", "Range"};
 GPOS_CPL_ASSERT(CWindowFrame::EfsSentinel == GPOS_ARRAY_SIZE(rgszFrameSpec));
 
 // string encoding of frame boundary
-const CHAR rgszFrameBoundary[][40] =
-	{
-	"Unbounded Preceding",
-	"Bounded Preceding",
-	"Current",
-	"Unbounded Following",
-	"Bounded Following",
-	"Delayed Bounded Preceding",
-	"Delayed Bounded Following"
-	};
-GPOS_CPL_ASSERT(CWindowFrame::EfbSentinel == GPOS_ARRAY_SIZE(rgszFrameBoundary));
+const CHAR rgszFrameBoundary[][40] = {"Unbounded Preceding",
+									  "Bounded Preceding",
+									  "Current",
+									  "Unbounded Following",
+									  "Bounded Following",
+									  "Delayed Bounded Preceding",
+									  "Delayed Bounded Following"};
+GPOS_CPL_ASSERT(CWindowFrame::EfbSentinel ==
+				GPOS_ARRAY_SIZE(rgszFrameBoundary));
 
 // string encoding of frame exclusion strategy
-const CHAR rgszFrameExclusionStrategy[][20] = {"None", "Nulls", "Current", "MatchingOthers", "Ties"};
-GPOS_CPL_ASSERT(CWindowFrame::EfesSentinel == GPOS_ARRAY_SIZE(rgszFrameExclusionStrategy));
+const CHAR rgszFrameExclusionStrategy[][20] = {"None", "Nulls", "Current",
+											   "MatchingOthers", "Ties"};
+GPOS_CPL_ASSERT(CWindowFrame::EfesSentinel ==
+				GPOS_ARRAY_SIZE(rgszFrameExclusionStrategy));
 
 // empty window frame
 const CWindowFrame CWindowFrame::m_wfEmpty;
@@ -48,27 +48,26 @@ const CWindowFrame CWindowFrame::m_wfEmpty;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CWindowFrame::CWindowFrame
-	(
-	CMemoryPool *mp,
-	EFrameSpec efs,
-	EFrameBoundary efbLeading,
-	EFrameBoundary efbTrailing,
-	CExpression *pexprLeading,
-	CExpression *pexprTrailing,
-	EFrameExclusionStrategy efes
-	)
-	:
-	m_efs(efs),
-	m_efbLeading(efbLeading),
-	m_efbTrailing(efbTrailing),
-	m_pexprLeading(pexprLeading),
-	m_pexprTrailing(pexprTrailing),
-	m_efes(efes),
-	m_pcrsUsed(NULL)
+CWindowFrame::CWindowFrame(CMemoryPool *mp, EFrameSpec efs,
+						   EFrameBoundary efbLeading,
+						   EFrameBoundary efbTrailing,
+						   CExpression *pexprLeading,
+						   CExpression *pexprTrailing,
+						   EFrameExclusionStrategy efes)
+	: m_efs(efs),
+	  m_efbLeading(efbLeading),
+	  m_efbTrailing(efbTrailing),
+	  m_pexprLeading(pexprLeading),
+	  m_pexprTrailing(pexprTrailing),
+	  m_efes(efes),
+	  m_pcrsUsed(NULL)
 {
-	GPOS_ASSERT_IMP(EfbBoundedPreceding == m_efbLeading || EfbBoundedFollowing == m_efbLeading, NULL != pexprLeading);
-	GPOS_ASSERT_IMP(EfbBoundedPreceding == m_efbTrailing || EfbBoundedFollowing == m_efbTrailing, NULL != pexprTrailing);
+	GPOS_ASSERT_IMP(EfbBoundedPreceding == m_efbLeading ||
+						EfbBoundedFollowing == m_efbLeading,
+					NULL != pexprLeading);
+	GPOS_ASSERT_IMP(EfbBoundedPreceding == m_efbTrailing ||
+						EfbBoundedFollowing == m_efbTrailing,
+					NULL != pexprTrailing);
 
 	// include used columns by frame edges
 	m_pcrsUsed = GPOS_NEW(mp) CColRefSet(mp);
@@ -93,15 +92,15 @@ CWindowFrame::CWindowFrame
 //
 //---------------------------------------------------------------------------
 CWindowFrame::CWindowFrame()
-	:
-	m_efs(EfsRange),
-	m_efbLeading(EfbUnboundedPreceding),
-	m_efbTrailing(EfbCurrentRow),
-	m_pexprLeading(NULL),
-	m_pexprTrailing(NULL),
-	m_efes(EfesNone),
-	m_pcrsUsed(NULL)
-{}
+	: m_efs(EfsRange),
+	  m_efbLeading(EfbUnboundedPreceding),
+	  m_efbTrailing(EfbCurrentRow),
+	  m_pexprLeading(NULL),
+	  m_pexprTrailing(NULL),
+	  m_efes(EfesNone),
+	  m_pcrsUsed(NULL)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -129,19 +128,12 @@ CWindowFrame::~CWindowFrame()
 //
 //---------------------------------------------------------------------------
 BOOL
-CWindowFrame::Matches
-	(
-	const CWindowFrame *pwf
-	)
-	const
+CWindowFrame::Matches(const CWindowFrame *pwf) const
 {
-	return
-		m_efs == pwf->Efs() &&
-		m_efbLeading == pwf->EfbLeading() &&
-		m_efbTrailing == pwf->EfbTrailing() &&
-		m_efes == pwf->Efes() &&
-		CUtils::Equals(m_pexprLeading , pwf->PexprLeading()) &&
-		CUtils::Equals(m_pexprTrailing , pwf->PexprTrailing());
+	return m_efs == pwf->Efs() && m_efbLeading == pwf->EfbLeading() &&
+		   m_efbTrailing == pwf->EfbTrailing() && m_efes == pwf->Efes() &&
+		   CUtils::Equals(m_pexprLeading, pwf->PexprLeading()) &&
+		   CUtils::Equals(m_pexprTrailing, pwf->PexprTrailing());
 }
 
 
@@ -163,12 +155,14 @@ CWindowFrame::HashValue() const
 	ulHash = gpos::CombineHashes(ulHash, m_efes);
 	if (NULL != m_pexprLeading)
 	{
-		ulHash = gpos::CombineHashes(ulHash, CExpression::HashValue(m_pexprLeading));
+		ulHash =
+			gpos::CombineHashes(ulHash, CExpression::HashValue(m_pexprLeading));
 	}
 
 	if (NULL != m_pexprTrailing)
 	{
-		ulHash = gpos::CombineHashes(ulHash, CExpression::HashValue(m_pexprTrailing));
+		ulHash = gpos::CombineHashes(ulHash,
+									 CExpression::HashValue(m_pexprTrailing));
 	}
 
 	return ulHash;
@@ -184,12 +178,9 @@ CWindowFrame::HashValue() const
 //
 //---------------------------------------------------------------------------
 CWindowFrame *
-CWindowFrame::PwfCopyWithRemappedColumns
-	(
-	CMemoryPool *mp,
-	UlongToColRefMap *colref_mapping,
-	BOOL must_exist
-	)
+CWindowFrame::PwfCopyWithRemappedColumns(CMemoryPool *mp,
+										 UlongToColRefMap *colref_mapping,
+										 BOOL must_exist)
 {
 	if (this == &m_wfEmpty)
 	{
@@ -200,16 +191,19 @@ CWindowFrame::PwfCopyWithRemappedColumns
 	CExpression *pexprLeading = NULL;
 	if (NULL != m_pexprLeading)
 	{
-		pexprLeading = m_pexprLeading->PexprCopyWithRemappedColumns(mp, colref_mapping, must_exist);
+		pexprLeading = m_pexprLeading->PexprCopyWithRemappedColumns(
+			mp, colref_mapping, must_exist);
 	}
 
 	CExpression *pexprTrailing = NULL;
 	if (NULL != m_pexprTrailing)
 	{
-		pexprTrailing = m_pexprTrailing->PexprCopyWithRemappedColumns(mp, colref_mapping, must_exist);
+		pexprTrailing = m_pexprTrailing->PexprCopyWithRemappedColumns(
+			mp, colref_mapping, must_exist);
 	}
 
-	return GPOS_NEW(mp) CWindowFrame(mp, m_efs, m_efbLeading, m_efbTrailing, pexprLeading, pexprTrailing, m_efes);
+	return GPOS_NEW(mp) CWindowFrame(mp, m_efs, m_efbLeading, m_efbTrailing,
+									 pexprLeading, pexprTrailing, m_efes);
 }
 
 //---------------------------------------------------------------------------
@@ -221,11 +215,7 @@ CWindowFrame::PwfCopyWithRemappedColumns
 //
 //---------------------------------------------------------------------------
 IOstream &
-CWindowFrame::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CWindowFrame::OsPrint(IOstream &os) const
 {
 	if (this == &m_wfEmpty)
 	{
@@ -264,15 +254,12 @@ CWindowFrame::OsPrint
 //
 //---------------------------------------------------------------------------
 BOOL
-CWindowFrame::Equals
-	(
-	const CWindowFrameArray *pdrgpwfFirst,
-	const CWindowFrameArray *pdrgpwfSecond
-	)
+CWindowFrame::Equals(const CWindowFrameArray *pdrgpwfFirst,
+					 const CWindowFrameArray *pdrgpwfSecond)
 {
 	if (NULL == pdrgpwfFirst || NULL == pdrgpwfSecond)
 	{
-		return (NULL == pdrgpwfFirst && NULL ==pdrgpwfSecond);
+		return (NULL == pdrgpwfFirst && NULL == pdrgpwfSecond);
 	}
 
 	if (pdrgpwfFirst->Size() != pdrgpwfSecond->Size())
@@ -300,11 +287,7 @@ CWindowFrame::Equals
 //
 //---------------------------------------------------------------------------
 ULONG
-CWindowFrame::HashValue
-	(
-	const CWindowFrameArray *pdrgpwf,
-	ULONG ulMaxSize
-	)
+CWindowFrame::HashValue(const CWindowFrameArray *pdrgpwf, ULONG ulMaxSize)
 {
 	GPOS_ASSERT(NULL != pdrgpwf);
 	const ULONG size = std::min(ulMaxSize, pdrgpwf->Size());
@@ -327,20 +310,16 @@ CWindowFrame::HashValue
 //
 //---------------------------------------------------------------------------
 IOstream &
-CWindowFrame::OsPrint
-	(
-	IOstream &os,
-	const CWindowFrameArray *pdrgpwf
-	)
+CWindowFrame::OsPrint(IOstream &os, const CWindowFrameArray *pdrgpwf)
 {
-	os	<< "[";
+	os << "[";
 	const ULONG size = pdrgpwf->Size();
 	if (0 < size)
 	{
 		for (ULONG ul = 0; ul < size - 1; ul++)
 		{
 			(void) (*pdrgpwf)[ul]->OsPrint(os);
-			os <<	", ";
+			os << ", ";
 		}
 
 		(void) (*pdrgpwf)[size - 1]->OsPrint(os);
@@ -351,4 +330,3 @@ CWindowFrame::OsPrint
 
 
 // EOF
-

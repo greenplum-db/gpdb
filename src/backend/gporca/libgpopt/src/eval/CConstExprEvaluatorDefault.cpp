@@ -9,7 +9,7 @@
 //		Dummy implementation of the constant expression evaluator
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -43,10 +43,7 @@ CConstExprEvaluatorDefault::~CConstExprEvaluatorDefault()
 //
 //---------------------------------------------------------------------------
 CExpression *
-CConstExprEvaluatorDefault::PexprEval
-	(
-	CExpression *pexpr
-	)
+CConstExprEvaluatorDefault::PexprEval(CExpression *pexpr)
 {
 	pexpr->AddRef();
 	return pexpr;

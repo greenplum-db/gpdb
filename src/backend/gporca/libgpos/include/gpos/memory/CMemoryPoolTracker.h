@@ -28,114 +28,103 @@
 
 namespace gpos
 {
-	// memory pool with statistics and debugging support
-	class CMemoryPoolTracker : public CMemoryPool
+// memory pool with statistics and debugging support
+class CMemoryPoolTracker : public CMemoryPool
+{
+private:
+	// Defines memory block header layout for all allocations;
+	// does not include the pointer to the pool;
+	struct SAllocHeader
 	{
-		private:
+		// pointer to pool
+		CMemoryPoolTracker *m_mp;
 
+		// total allocation size (including headers)
+		ULONG m_alloc_size;
 
-			// Defines memory block header layout for all allocations;
-			// does not include the pointer to the pool;
-			struct SAllocHeader
-			{
-				// pointer to pool
-				CMemoryPoolTracker *m_mp;
+		// user requested size
+		ULONG m_user_size;
 
-				// total allocation size (including headers)
-				ULONG m_alloc_size;
+		// sequence number
+		ULLONG m_serial;
 
-				// user requested size
-				ULONG m_user_size;
+		// file name
+		const CHAR *m_filename;
 
-				// sequence number
-				ULLONG m_serial;
-
-				// file name
-				const CHAR *m_filename;
-
-				// line in file
-				ULONG m_line;
+		// line in file
+		ULONG m_line;
 
 #ifdef GPOS_DEBUG
-				// allocation stack
-				CStackDescriptor m_stack_desc;
-#endif // GPOS_DEBUG
+		// allocation stack
+		CStackDescriptor m_stack_desc;
+#endif	// GPOS_DEBUG
 
-				// link for allocation list
-				SLink m_link;
-			};
-
-			// statistics
-			CMemoryPoolStatistics m_memory_pool_statistics;
-
-			// allocation sequence number
-			ULONG m_alloc_sequence;
-
-			// list of allocated (live) objects
-			CList<SAllocHeader> m_allocations_list;
-
-			// private copy ctor
-			CMemoryPoolTracker(CMemoryPoolTracker &);
-
-			// record a successful allocation
-			void RecordAllocation(SAllocHeader *header);
-
-			// record a successful free
-			void RecordFree(SAllocHeader *header);
-
-		protected:
-
-			// dtor
-			virtual
-			~CMemoryPoolTracker();
-
-		public:
-
-			// ctor
-			CMemoryPoolTracker();
-
-			// prepare the memory pool to be deleted
-			virtual
-			void TearDown();
-
-			// allocate memory
-			void *NewImpl(const ULONG bytes, const CHAR *file, const ULONG line,
-						  CMemoryPool::EAllocationType eat);
-
-			// free memory allocation
-			static
-			void DeleteImpl(void *ptr, EAllocationType eat);
-
-			// get user requested size of allocation
-			static
-			ULONG UserSizeOfAlloc(const void *ptr);
-
-			// return total allocated size
-			virtual
-			ULLONG TotalAllocatedSize() const
-			{
-				return m_memory_pool_statistics.TotalAllocatedSize();
-			}
-
-#ifdef GPOS_DEBUG
-
-			// check if the memory pool keeps track of live objects
-			virtual
-			BOOL SupportsLiveObjectWalk() const
-			{
-				return true;
-			}
-
-			// walk the live objects
-			virtual
-			void WalkLiveObjects(gpos::IMemoryVisitor *visitor);
-
-#endif // GPOS_DEBUG
-
+		// link for allocation list
+		SLink m_link;
 	};
-}
 
-#endif // !GPOS_CMemoryPoolTracker_H
+	// statistics
+	CMemoryPoolStatistics m_memory_pool_statistics;
+
+	// allocation sequence number
+	ULONG m_alloc_sequence;
+
+	// list of allocated (live) objects
+	CList<SAllocHeader> m_allocations_list;
+
+	// private copy ctor
+	CMemoryPoolTracker(CMemoryPoolTracker &);
+
+	// record a successful allocation
+	void RecordAllocation(SAllocHeader *header);
+
+	// record a successful free
+	void RecordFree(SAllocHeader *header);
+
+protected:
+	// dtor
+	virtual ~CMemoryPoolTracker();
+
+public:
+	// ctor
+	CMemoryPoolTracker();
+
+	// prepare the memory pool to be deleted
+	virtual void TearDown();
+
+	// allocate memory
+	void *NewImpl(const ULONG bytes, const CHAR *file, const ULONG line,
+				  CMemoryPool::EAllocationType eat);
+
+	// free memory allocation
+	static void DeleteImpl(void *ptr, EAllocationType eat);
+
+	// get user requested size of allocation
+	static ULONG UserSizeOfAlloc(const void *ptr);
+
+	// return total allocated size
+	virtual ULLONG
+	TotalAllocatedSize() const
+	{
+		return m_memory_pool_statistics.TotalAllocatedSize();
+	}
+
+#ifdef GPOS_DEBUG
+
+	// check if the memory pool keeps track of live objects
+	virtual BOOL
+	SupportsLiveObjectWalk() const
+	{
+		return true;
+	}
+
+	// walk the live objects
+	virtual void WalkLiveObjects(gpos::IMemoryVisitor *visitor);
+
+#endif	// GPOS_DEBUG
+};
+}  // namespace gpos
+
+#endif	// !GPOS_CMemoryPoolTracker_H
 
 // EOF
-

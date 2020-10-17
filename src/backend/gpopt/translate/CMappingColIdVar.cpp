@@ -25,12 +25,7 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CMappingColIdVar::CMappingColIdVar
-	(
-	CMemoryPool *mp
-	)
-	:
-	m_mp(mp)
+CMappingColIdVar::CMappingColIdVar(CMemoryPool *mp) : m_mp(mp)
 {
 }
 

@@ -1,20 +1,18 @@
 /*-------------------------------------------------------------------------
  *
  * pg_ts_config.h
- *	definition of configuration of tsearch
+ *	  definition of the "text search configuration" system catalog
+ *	  (pg_ts_config)
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_ts_config.h
  *
  * NOTES
- *		the genbki.pl script reads this file and generates .bki
- *		information from the DATA() statements.
- *
- *		XXX do NOT break up DATA() statements into multiple lines!
- *			the scripts are not as smart as you might think...
+ *	  The Catalog.pm module reads this file and derives schema
+ *	  information.
  *
  *-------------------------------------------------------------------------
  */
@@ -22,20 +20,29 @@
 #define PG_TS_CONFIG_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_ts_config_d.h"
 
 /* ----------------
  *		pg_ts_config definition.  cpp turns this into
  *		typedef struct FormData_pg_ts_config
  * ----------------
  */
-#define TSConfigRelationId	3602
-
-CATALOG(pg_ts_config,3602)
+CATALOG(pg_ts_config,3602,TSConfigRelationId)
 {
-	NameData	cfgname;		/* name of configuration */
-	Oid			cfgnamespace;	/* name space */
-	Oid			cfgowner;		/* owner */
-	Oid			cfgparser;		/* OID of parser (in pg_ts_parser) */
+	/* oid */
+	Oid			oid;
+
+	/* name of configuration */
+	NameData	cfgname;
+
+	/* name space */
+	Oid			cfgnamespace BKI_DEFAULT(PGNSP);
+
+	/* owner */
+	Oid			cfgowner BKI_DEFAULT(PGUID);
+
+	/* OID of parser */
+	Oid			cfgparser BKI_LOOKUP(pg_ts_parser);
 } FormData_pg_ts_config;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -45,21 +52,4 @@ FOREIGN_KEY(cfgparser REFERENCES pg_ts_parser(oid));
 
 typedef FormData_pg_ts_config *Form_pg_ts_config;
 
-/* ----------------
- *		compiler constants for pg_ts_config
- * ----------------
- */
-#define Natts_pg_ts_config				4
-#define Anum_pg_ts_config_cfgname		1
-#define Anum_pg_ts_config_cfgnamespace	2
-#define Anum_pg_ts_config_cfgowner		3
-#define Anum_pg_ts_config_cfgparser		4
-
-/* ----------------
- *		initial contents of pg_ts_config
- * ----------------
- */
-DATA(insert OID = 3748 ( "simple" PGNSP PGUID 3722 ));
-DESCR("simple configuration");
-
-#endif   /* PG_TS_CONFIG_H */
+#endif							/* PG_TS_CONFIG_H */

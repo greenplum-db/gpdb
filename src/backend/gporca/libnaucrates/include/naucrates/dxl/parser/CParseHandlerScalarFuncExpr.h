@@ -6,7 +6,7 @@
 //		CParseHandlerScalarFuncExpr.h
 //
 //	@doc:
-//		
+//
 //		SAX parse handler class for parsing scalar FuncExpr.
 //---------------------------------------------------------------------------
 
@@ -21,55 +21,49 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerScalarFuncExpr
-	//
-	//	@doc:
-	//		Parse handler for parsing a scalar func expression
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerScalarFuncExpr : public CParseHandlerScalarOp
-	{
-		private:
-	
-			BOOL m_inside_func_expr;
-	
-			// private copy ctor
-			CParseHandlerScalarFuncExpr(const CParseHandlerScalarFuncExpr &);
-	
-			// process the start of an element
-			void StartElement
-					(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-					);
-	
-			// process the end of an element
-			void EndElement
-					(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-					);
-	
-		public:
-			// ctor
-			CParseHandlerScalarFuncExpr
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-	};
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerScalarFuncExpr
+//
+//	@doc:
+//		Parse handler for parsing a scalar func expression
+//
+//---------------------------------------------------------------------------
+class CParseHandlerScalarFuncExpr : public CParseHandlerScalarOp
+{
+private:
+	BOOL m_inside_func_expr;
 
-}
-#endif // !GPDXL_CParseHandlerScalarFuncExpr_H
+	// private copy ctor
+	CParseHandlerScalarFuncExpr(const CParseHandlerScalarFuncExpr &);
+
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
+
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
+
+public:
+	// ctor
+	CParseHandlerScalarFuncExpr(CMemoryPool *mp,
+								CParseHandlerManager *parse_handler_mgr,
+								CParseHandlerBase *parse_handler_root);
+};
+
+}  // namespace gpdxl
+#endif	// !GPDXL_CParseHandlerScalarFuncExpr_H
 
 //EOF

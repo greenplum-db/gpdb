@@ -8,10 +8,10 @@
  * and only the receiver may receive.  This is intended to allow a user
  * backend to communicate with worker backends that it has registered.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * src/include/storage/shm_mq.h
+ * src/backend/storage/ipc/shm_mq.c
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
+#include "pgstat.h"
 #include "postmaster/bgworker.h"
 #include "storage/procsignal.h"
 #include "storage/shm_mq.h"
@@ -30,27 +31,28 @@
  * Some notes on synchronization:
  *
  * mq_receiver and mq_bytes_read can only be changed by the receiver; and
- * mq_sender and mq_bytes_written can only be changed by the sender.  However,
- * because most of these fields are 8 bytes and we don't assume that 8 byte
- * reads and writes are atomic, the spinlock must be taken whenever the field
- * is updated, and whenever it is read by a process other than the one allowed
- * to modify it. But the process that is allowed to modify it is also allowed
- * to read it without the lock.  On architectures where 8-byte writes are
- * atomic, we could replace these spinlocks with memory barriers, but
- * testing found no performance benefit, so it seems best to keep things
- * simple for now.
+ * mq_sender and mq_bytes_written can only be changed by the sender.
+ * mq_receiver and mq_sender are protected by mq_mutex, although, importantly,
+ * they cannot change once set, and thus may be read without a lock once this
+ * is known to be the case.
  *
- * mq_detached can be set by either the sender or the receiver, so the mutex
- * must be held to read or write it.  Memory barriers could be used here as
- * well, if needed.
+ * mq_bytes_read and mq_bytes_written are not protected by the mutex.  Instead,
+ * they are written atomically using 8 byte loads and stores.  Memory barriers
+ * must be carefully used to synchronize reads and writes of these values with
+ * reads and writes of the actual data in mq_ring.
+ *
+ * mq_detached needs no locking.  It can be set by either the sender or the
+ * receiver, but only ever from false to true, so redundant writes don't
+ * matter.  It is important that if we set mq_detached and then set the
+ * counterparty's latch, the counterparty must be certain to see the change
+ * after waking up.  Since SetLatch begins with a memory barrier and ResetLatch
+ * ends with one, this should be OK.
  *
  * mq_ring_size and mq_ring_offset never change after initialization, and
  * can therefore be read without the lock.
  *
- * Importantly, mq_ring can be safely read and written without a lock.  Were
- * this not the case, we'd have to hold the spinlock for much longer
- * intervals, and performance might suffer.  Fortunately, that's not
- * necessary.  At any given time, the difference between mq_bytes_read and
+ * Importantly, mq_ring can be safely read and written without a lock.
+ * At any given time, the difference between mq_bytes_read and
  * mq_bytes_written defines the number of bytes within mq_ring that contain
  * unread data, and mq_bytes_read defines the position where those bytes
  * begin.  The sender can increase the number of unread bytes at any time,
@@ -70,8 +72,8 @@ struct shm_mq
 	slock_t		mq_mutex;
 	PGPROC	   *mq_receiver;
 	PGPROC	   *mq_sender;
-	uint64		mq_bytes_read;
-	uint64		mq_bytes_written;
+	pg_atomic_uint64 mq_bytes_read;
+	pg_atomic_uint64 mq_bytes_written;
 	Size		mq_ring_size;
 	bool		mq_detached;
 	uint8		mq_ring_offset;
@@ -82,7 +84,9 @@ struct shm_mq
  * This structure is a backend-private handle for access to a queue.
  *
  * mqh_queue is a pointer to the queue we've attached, and mqh_segment is
- * a pointer to the dynamic shared memory segment that contains it.
+ * an optional pointer to the dynamic shared memory segment that contains it.
+ * (If mqh_segment is provided, we register an on_dsm_detach callback to
+ * make sure we detach from the queue before detaching from DSM.)
  *
  * If this queue is intended to connect the current process with a background
  * worker that started it, the user can pass a pointer to the worker handle
@@ -138,19 +142,18 @@ struct shm_mq_handle
 	MemoryContext mqh_context;
 };
 
-static shm_mq_result shm_mq_send_bytes(shm_mq_handle *mq, Size nbytes,
-				  const void *data, bool nowait, Size *bytes_written);
-static shm_mq_result shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed,
-					 bool nowait, Size *nbytesp, void **datap);
-static bool shm_mq_counterparty_gone(volatile shm_mq *mq,
-						 BackgroundWorkerHandle *handle);
-static bool shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
-					 BackgroundWorkerHandle *handle);
-static uint64 shm_mq_get_bytes_read(volatile shm_mq *mq, bool *detached);
-static void shm_mq_inc_bytes_read(volatile shm_mq *mq, Size n);
-static uint64 shm_mq_get_bytes_written(volatile shm_mq *mq, bool *detached);
-static void shm_mq_inc_bytes_written(volatile shm_mq *mq, Size n);
-static shm_mq_result shm_mq_notify_receiver(volatile shm_mq *mq);
+static void shm_mq_detach_internal(shm_mq *mq);
+static shm_mq_result shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes,
+									   const void *data, bool nowait, Size *bytes_written);
+static shm_mq_result shm_mq_receive_bytes(shm_mq_handle *mqh,
+										  Size bytes_needed, bool nowait, Size *nbytesp,
+										  void **datap);
+static bool shm_mq_counterparty_gone(shm_mq *mq,
+									 BackgroundWorkerHandle *handle);
+static bool shm_mq_wait_internal(shm_mq *mq, PGPROC **ptr,
+								 BackgroundWorkerHandle *handle);
+static void shm_mq_inc_bytes_read(shm_mq *mq, Size n);
+static void shm_mq_inc_bytes_written(shm_mq *mq, Size n);
 static void shm_mq_detach_callback(dsm_segment *seg, Datum arg);
 
 /* Minimum queue size is enough for header and at least one chunk of data. */
@@ -178,8 +181,8 @@ shm_mq_create(void *address, Size size)
 	SpinLockInit(&mq->mq_mutex);
 	mq->mq_receiver = NULL;
 	mq->mq_sender = NULL;
-	mq->mq_bytes_read = 0;
-	mq->mq_bytes_written = 0;
+	pg_atomic_init_u64(&mq->mq_bytes_read, 0);
+	pg_atomic_init_u64(&mq->mq_bytes_written, 0);
 	mq->mq_ring_size = size - data_offset;
 	mq->mq_detached = false;
 	mq->mq_ring_offset = data_offset - offsetof(shm_mq, mq_ring);
@@ -194,13 +197,12 @@ shm_mq_create(void *address, Size size)
 void
 shm_mq_set_receiver(shm_mq *mq, PGPROC *proc)
 {
-	volatile shm_mq *vmq = mq;
 	PGPROC	   *sender;
 
 	SpinLockAcquire(&mq->mq_mutex);
-	Assert(vmq->mq_receiver == NULL);
-	vmq->mq_receiver = proc;
-	sender = vmq->mq_sender;
+	Assert(mq->mq_receiver == NULL);
+	mq->mq_receiver = proc;
+	sender = mq->mq_sender;
 	SpinLockRelease(&mq->mq_mutex);
 
 	if (sender != NULL)
@@ -213,13 +215,12 @@ shm_mq_set_receiver(shm_mq *mq, PGPROC *proc)
 void
 shm_mq_set_sender(shm_mq *mq, PGPROC *proc)
 {
-	volatile shm_mq *vmq = mq;
 	PGPROC	   *receiver;
 
 	SpinLockAcquire(&mq->mq_mutex);
-	Assert(vmq->mq_sender == NULL);
-	vmq->mq_sender = proc;
-	receiver = vmq->mq_receiver;
+	Assert(mq->mq_sender == NULL);
+	mq->mq_sender = proc;
+	receiver = mq->mq_receiver;
 	SpinLockRelease(&mq->mq_mutex);
 
 	if (receiver != NULL)
@@ -232,11 +233,10 @@ shm_mq_set_sender(shm_mq *mq, PGPROC *proc)
 PGPROC *
 shm_mq_get_receiver(shm_mq *mq)
 {
-	volatile shm_mq *vmq = mq;
 	PGPROC	   *receiver;
 
 	SpinLockAcquire(&mq->mq_mutex);
-	receiver = vmq->mq_receiver;
+	receiver = mq->mq_receiver;
 	SpinLockRelease(&mq->mq_mutex);
 
 	return receiver;
@@ -248,11 +248,10 @@ shm_mq_get_receiver(shm_mq *mq)
 PGPROC *
 shm_mq_get_sender(shm_mq *mq)
 {
-	volatile shm_mq *vmq = mq;
 	PGPROC	   *sender;
 
 	SpinLockAcquire(&mq->mq_mutex);
-	sender = vmq->mq_sender;
+	sender = mq->mq_sender;
 	SpinLockRelease(&mq->mq_mutex);
 
 	return sender;
@@ -287,14 +286,15 @@ shm_mq_attach(shm_mq *mq, dsm_segment *seg, BackgroundWorkerHandle *handle)
 	Assert(mq->mq_receiver == MyProc || mq->mq_sender == MyProc);
 	mqh->mqh_queue = mq;
 	mqh->mqh_segment = seg;
-	mqh->mqh_buffer = NULL;
 	mqh->mqh_handle = handle;
+	mqh->mqh_buffer = NULL;
 	mqh->mqh_buflen = 0;
 	mqh->mqh_consume_pending = 0;
-	mqh->mqh_context = CurrentMemoryContext;
 	mqh->mqh_partial_bytes = 0;
+	mqh->mqh_expected_bytes = 0;
 	mqh->mqh_length_word_complete = false;
 	mqh->mqh_counterparty_attached = false;
+	mqh->mqh_context = CurrentMemoryContext;
 
 	if (seg != NULL)
 		on_dsm_detach(seg, shm_mq_detach_callback, PointerGetDatum(mq));
@@ -347,6 +347,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
 {
 	shm_mq_result res;
 	shm_mq	   *mq = mqh->mqh_queue;
+	PGPROC	   *receiver;
 	Size		nbytes = 0;
 	Size		bytes_written;
 	int			i;
@@ -364,7 +365,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
 	{
 		Assert(mqh->mqh_partial_bytes < sizeof(Size));
 		res = shm_mq_send_bytes(mqh, sizeof(Size) - mqh->mqh_partial_bytes,
-								((char *) &nbytes) +mqh->mqh_partial_bytes,
+								((char *) &nbytes) + mqh->mqh_partial_bytes,
 								nowait, &bytes_written);
 
 		if (res == SHM_MQ_DETACHED)
@@ -487,8 +488,30 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
 	mqh->mqh_partial_bytes = 0;
 	mqh->mqh_length_word_complete = false;
 
+	/* If queue has been detached, let caller know. */
+	if (mq->mq_detached)
+		return SHM_MQ_DETACHED;
+
+	/*
+	 * If the counterparty is known to have attached, we can read mq_receiver
+	 * without acquiring the spinlock and assume it isn't NULL.  Otherwise,
+	 * more caution is needed.
+	 */
+	if (mqh->mqh_counterparty_attached)
+		receiver = mq->mq_receiver;
+	else
+	{
+		SpinLockAcquire(&mq->mq_mutex);
+		receiver = mq->mq_receiver;
+		SpinLockRelease(&mq->mq_mutex);
+		if (receiver == NULL)
+			return SHM_MQ_SUCCESS;
+		mqh->mqh_counterparty_attached = true;
+	}
+
 	/* Notify receiver of the newly-written data, and return. */
-	return shm_mq_notify_receiver(mq);
+	SetLatch(&receiver->procLatch);
+	return SHM_MQ_SUCCESS;
 }
 
 /*
@@ -560,8 +583,14 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 		mqh->mqh_counterparty_attached = true;
 	}
 
-	/* Consume any zero-copy data from previous receive operation. */
-	if (mqh->mqh_consume_pending > 0)
+	/*
+	 * If we've consumed an amount of data greater than 1/4th of the ring
+	 * size, mark it consumed in shared memory.  We try to avoid doing this
+	 * unnecessarily when only a small amount of data has been consumed,
+	 * because SetLatch() is fairly expensive and we don't want to do it too
+	 * often.
+	 */
+	if (mqh->mqh_consume_pending > mq->mq_ring_size / 4)
 	{
 		shm_mq_inc_bytes_read(mq, mqh->mqh_consume_pending);
 		mqh->mqh_consume_pending = 0;
@@ -572,7 +601,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 	{
 		/* Try to receive the message length word. */
 		Assert(mqh->mqh_partial_bytes < sizeof(Size));
-		res = shm_mq_receive_bytes(mq, sizeof(Size) - mqh->mqh_partial_bytes,
+		res = shm_mq_receive_bytes(mqh, sizeof(Size) - mqh->mqh_partial_bytes,
 								   nowait, &rb, &rawdata);
 		if (res != SHM_MQ_SUCCESS)
 			return res;
@@ -592,13 +621,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 			needed = MAXALIGN(sizeof(Size)) + MAXALIGN(nbytes);
 			if (rb >= needed)
 			{
-				/*
-				 * Technically, we could consume the message length
-				 * information at this point, but the extra write to shared
-				 * memory wouldn't be free and in most cases we would reap no
-				 * benefit.
-				 */
-				mqh->mqh_consume_pending = needed;
+				mqh->mqh_consume_pending += needed;
 				*nbytesp = nbytes;
 				*datap = ((char *) rawdata) + MAXALIGN(sizeof(Size));
 				return SHM_MQ_SUCCESS;
@@ -610,7 +633,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 			 */
 			mqh->mqh_expected_bytes = nbytes;
 			mqh->mqh_length_word_complete = true;
-			shm_mq_inc_bytes_read(mq, MAXALIGN(sizeof(Size)));
+			mqh->mqh_consume_pending += MAXALIGN(sizeof(Size));
 			rb -= MAXALIGN(sizeof(Size));
 		}
 		else
@@ -629,7 +652,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 			}
 			Assert(mqh->mqh_buflen >= sizeof(Size));
 
-			/* Copy and consume partial length word. */
+			/* Copy partial length word; remember to consume it. */
 			if (mqh->mqh_partial_bytes + rb > sizeof(Size))
 				lengthbytes = sizeof(Size) - mqh->mqh_partial_bytes;
 			else
@@ -637,7 +660,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 			memcpy(&mqh->mqh_buffer[mqh->mqh_partial_bytes], rawdata,
 				   lengthbytes);
 			mqh->mqh_partial_bytes += lengthbytes;
-			shm_mq_inc_bytes_read(mq, MAXALIGN(lengthbytes));
+			mqh->mqh_consume_pending += MAXALIGN(lengthbytes);
 			rb -= lengthbytes;
 
 			/* If we now have the whole word, we're ready to read payload. */
@@ -659,13 +682,13 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 		 * we need not copy the data and can return a pointer directly into
 		 * shared memory.
 		 */
-		res = shm_mq_receive_bytes(mq, nbytes, nowait, &rb, &rawdata);
+		res = shm_mq_receive_bytes(mqh, nbytes, nowait, &rb, &rawdata);
 		if (res != SHM_MQ_SUCCESS)
 			return res;
 		if (rb >= nbytes)
 		{
 			mqh->mqh_length_word_complete = false;
-			mqh->mqh_consume_pending = MAXALIGN(nbytes);
+			mqh->mqh_consume_pending += MAXALIGN(nbytes);
 			*nbytesp = nbytes;
 			*datap = rawdata;
 			return SHM_MQ_SUCCESS;
@@ -705,13 +728,13 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 		mqh->mqh_partial_bytes += rb;
 
 		/*
-		 * Update count of bytes read, with alignment padding.  Note that this
-		 * will never actually insert any padding except at the end of a
-		 * message, because the buffer size is a multiple of MAXIMUM_ALIGNOF,
-		 * and each read and write is as well.
+		 * Update count of bytes that can be consumed, accounting for
+		 * alignment padding.  Note that this will never actually insert any
+		 * padding except at the end of a message, because the buffer size is
+		 * a multiple of MAXIMUM_ALIGNOF, and each read and write is as well.
 		 */
 		Assert(mqh->mqh_partial_bytes == nbytes || rb == MAXALIGN(rb));
-		shm_mq_inc_bytes_read(mq, MAXALIGN(rb));
+		mqh->mqh_consume_pending += MAXALIGN(rb);
 
 		/* If we got all the data, exit the loop. */
 		if (mqh->mqh_partial_bytes >= nbytes)
@@ -719,7 +742,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 
 		/* Wait for some more data. */
 		still_needed = nbytes - mqh->mqh_partial_bytes;
-		res = shm_mq_receive_bytes(mq, still_needed, nowait, &rb, &rawdata);
+		res = shm_mq_receive_bytes(mqh, still_needed, nowait, &rb, &rawdata);
 		if (res != SHM_MQ_SUCCESS)
 			return res;
 		if (rb > still_needed)
@@ -764,30 +787,54 @@ shm_mq_wait_for_attach(shm_mq_handle *mqh)
 }
 
 /*
- * Detach a shared message queue.
+ * Detach from a shared message queue, and destroy the shm_mq_handle.
+ */
+void
+shm_mq_detach(shm_mq_handle *mqh)
+{
+	/* Notify counterparty that we're outta here. */
+	shm_mq_detach_internal(mqh->mqh_queue);
+
+	/* Cancel on_dsm_detach callback, if any. */
+	if (mqh->mqh_segment)
+		cancel_on_dsm_detach(mqh->mqh_segment,
+							 shm_mq_detach_callback,
+							 PointerGetDatum(mqh->mqh_queue));
+
+	/* Release local memory associated with handle. */
+	if (mqh->mqh_buffer != NULL)
+		pfree(mqh->mqh_buffer);
+	pfree(mqh);
+}
+
+/*
+ * Notify counterparty that we're detaching from shared message queue.
  *
  * The purpose of this function is to make sure that the process
  * with which we're communicating doesn't block forever waiting for us to
- * fill or drain the queue once we've lost interest.  Whem the sender
+ * fill or drain the queue once we've lost interest.  When the sender
  * detaches, the receiver can read any messages remaining in the queue;
  * further reads will return SHM_MQ_DETACHED.  If the receiver detaches,
  * further attempts to send messages will likewise return SHM_MQ_DETACHED.
+ *
+ * This is separated out from shm_mq_detach() because if the on_dsm_detach
+ * callback fires, we only want to do this much.  We do not try to touch
+ * the local shm_mq_handle, as it may have been pfree'd already.
  */
-void
-shm_mq_detach(shm_mq *mq)
+static void
+shm_mq_detach_internal(shm_mq *mq)
 {
-	volatile shm_mq *vmq = mq;
 	PGPROC	   *victim;
 
 	SpinLockAcquire(&mq->mq_mutex);
-	if (vmq->mq_sender == MyProc)
-		victim = vmq->mq_receiver;
+	if (mq->mq_sender == MyProc)
+		victim = mq->mq_receiver;
 	else
 	{
-		Assert(vmq->mq_receiver == MyProc);
-		victim = vmq->mq_sender;
+		Assert(mq->mq_receiver == MyProc);
+		victim = mq->mq_sender;
 	}
-	vmq->mq_detached = true;
+	mq->mq_detached = true;
 	SpinLockRelease(&mq->mq_mutex);
 
 	if (victim != NULL)
@@ -818,18 +865,28 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data,
 
 	while (sent < nbytes)
 	{
-		bool		detached;
 		uint64		rb;
+		uint64		wb;
 
 		/* Compute number of ring buffer bytes used and available. */
-		rb = shm_mq_get_bytes_read(mq, &detached);
-		Assert(mq->mq_bytes_written >= rb);
-		used = mq->mq_bytes_written - rb;
+		rb = pg_atomic_read_u64(&mq->mq_bytes_read);
+		wb = pg_atomic_read_u64(&mq->mq_bytes_written);
+		Assert(wb >= rb);
+		used = wb - rb;
 		Assert(used <= ringsize);
 		available = Min(ringsize - used, nbytes - sent);
 
-		/* Bail out if the queue has been detached. */
-		if (detached)
+		/*
+		 * Bail out if the queue has been detached.  Note that we would be in
+		 * trouble if the compiler decided to cache the value of
+		 * mq->mq_detached in a register or on the stack across loop
+		 * iterations.  It probably shouldn't do that anyway since we'll
+		 * always return, call an external function that performs a system
+		 * call, or reach a memory barrier at some point later in the loop,
+		 * but just to be sure, insert a compiler barrier here.
+		 */
+		pg_compiler_barrier();
+		if (mq->mq_detached)
 		{
 			*bytes_written = sent;
 			return SHM_MQ_DETACHED;
@@ -870,15 +927,13 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data,
 		}
 		else if (available == 0)
 		{
-			shm_mq_result res;
-
-			/* Let the receiver know that we need them to read some data. */
-			res = shm_mq_notify_receiver(mq);
-			if (res != SHM_MQ_SUCCESS)
-			{
-				*bytes_written = sent;
-				return res;
-			}
+			/*
+			 * Since mq->mqh_counterparty_attached is known to be true at this
+			 * point, mq_receiver has been set, and it can't change once set.
+			 * Therefore, we can read it without acquiring the spinlock.
+			 */
+			Assert(mqh->mqh_counterparty_attached);
+			SetLatch(&mq->mq_receiver->procLatch);
 
 			/* Skip manipulation of our latch if nowait = true. */
 			if (nowait)
@@ -894,7 +949,8 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data,
 			 * at top of loop, because setting an already-set latch is much
 			 * cheaper than setting one that has been reset.
 			 */
-			WaitLatch(MyLatch, WL_LATCH_SET, 0);
+			(void) WaitLatch(MyLatch, WL_LATCH_SET | WL_EXIT_ON_PM_DEATH, 0,
+							 WAIT_EVENT_MQ_SEND);
 
 			/* Reset the latch so we don't spin. */
 			ResetLatch(MyLatch);
@@ -904,10 +960,20 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data,
 		}
 		else
 		{
-			Size		offset = mq->mq_bytes_written % (uint64) ringsize;
-			Size		sendnow = Min(available, ringsize - offset);
+			Size		offset;
+			Size		sendnow;
 
-			/* Write as much data as we can via a single memcpy(). */
+			offset = wb % (uint64) ringsize;
+			sendnow = Min(available, ringsize - offset);
+
+			/*
+			 * Write as much data as we can via a single memcpy(). Make sure
+			 * these writes happen after the read of mq_bytes_read, above.
+			 * This barrier pairs with the one in shm_mq_inc_bytes_read.
+			 * (Since we're separating the read of mq_bytes_read from a
+			 * subsequent write to mq_ring, we need a full barrier here.)
+			 */
+			pg_memory_barrier();
 			memcpy(&mq->mq_ring[mq->mq_ring_offset + offset],
 				   (char *) data + sent, sendnow);
 			sent += sendnow;
@@ -943,9 +1009,10 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data,
  * is SHM_MQ_SUCCESS.
  */
 static shm_mq_result
-shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed, bool nowait,
+shm_mq_receive_bytes(shm_mq_handle *mqh, Size bytes_needed, bool nowait,
 					 Size *nbytesp, void **datap)
 {
+	shm_mq	   *mq = mqh->mqh_queue;
 	Size		ringsize = mq->mq_ring_size;
 	uint64		used;
 	uint64		written;
@@ -953,19 +1020,33 @@ shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed, bool nowait,
 	for (;;)
 	{
 		Size		offset;
-		bool		detached;
+		uint64		read;
 
 		/* Get bytes written, so we can compute what's available to read. */
-		written = shm_mq_get_bytes_written(mq, &detached);
-		used = written - mq->mq_bytes_read;
+		written = pg_atomic_read_u64(&mq->mq_bytes_written);
+
+		/*
+		 * Get bytes read.  Include bytes we could consume but have not yet
+		 * consumed.
+		 */
+		read = pg_atomic_read_u64(&mq->mq_bytes_read) +
+			mqh->mqh_consume_pending;
+		used = written - read;
 		Assert(used <= ringsize);
-		offset = mq->mq_bytes_read % (uint64) ringsize;
+		offset = read % (uint64) ringsize;
 
 		/* If we have enough data or buffer has wrapped, we're done. */
 		if (used >= bytes_needed || offset + used >= ringsize)
 		{
 			*nbytesp = Min(used, ringsize - offset);
 			*datap = &mq->mq_ring[mq->mq_ring_offset + offset];
+
+			/*
+			 * Separate the read of mq_bytes_written, above, from caller's
+			 * attempt to read the data itself.  Pairs with the barrier in
+			 * shm_mq_inc_bytes_written.
+			 */
+			pg_read_barrier();
 			return SHM_MQ_SUCCESS;
 		}
 
@@ -977,8 +1058,30 @@ shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed, bool nowait,
 		 * receiving a message stored in the buffer even after the sender has
 		 * detached.
 		 */
-		if (detached)
+		if (mq->mq_detached)
+		{
+			/*
+			 * If the writer advanced mq_bytes_written and then set
+			 * mq_detached, we might not have read the final value of
+			 * mq_bytes_written above.  Insert a read barrier and then check
+			 * again if mq_bytes_written has advanced.
+			 */
+			pg_read_barrier();
+			if (written != pg_atomic_read_u64(&mq->mq_bytes_written))
+				continue;
+
 			return SHM_MQ_DETACHED;
+		}
+
+		/*
+		 * We didn't get enough data to satisfy the request, so mark any data
+		 * previously-consumed as read to make more buffer space.
+		 */
+		if (mqh->mqh_consume_pending > 0)
+		{
+			shm_mq_inc_bytes_read(mq, mqh->mqh_consume_pending);
+			mqh->mqh_consume_pending = 0;
+		}
 
 		/* Skip manipulation of our latch if nowait = true. */
 		if (nowait)
@@ -991,7 +1094,8 @@ shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed, bool nowait,
 		 * loop, because setting an already-set latch is much cheaper than
 		 * setting one that has been reset.
 		 */
-		WaitLatch(MyLatch, WL_LATCH_SET, 0);
+		(void) WaitLatch(MyLatch, WL_LATCH_SET | WL_EXIT_ON_PM_DEATH, 0,
+						 WAIT_EVENT_MQ_RECEIVE);
 
 		/* Reset the latch so we don't spin. */
 		ResetLatch(MyLatch);
@@ -1005,18 +1109,12 @@ shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed, bool nowait,
  * Test whether a counterparty who may not even be alive yet is definitely gone.
  */
 static bool
-shm_mq_counterparty_gone(volatile shm_mq *mq, BackgroundWorkerHandle *handle)
+shm_mq_counterparty_gone(shm_mq *mq, BackgroundWorkerHandle *handle)
 {
-	bool		detached;
 	pid_t		pid;
 
-	/* Acquire the lock just long enough to check the pointer. */
-	SpinLockAcquire(&mq->mq_mutex);
-	detached = mq->mq_detached;
-	SpinLockRelease(&mq->mq_mutex);
-
 	/* If the queue has been detached, counterparty is definitely gone. */
-	if (detached)
+	if (mq->mq_detached)
 		return true;
 
 	/* If there's a handle, check worker status. */
@@ -1029,9 +1127,7 @@ shm_mq_counterparty_gone(volatile shm_mq *mq, BackgroundWorkerHandle *handle)
 		if (status != BGWH_STARTED && status != BGWH_NOT_YET_STARTED)
 		{
 			/* Mark it detached, just to make it official. */
-			SpinLockAcquire(&mq->mq_mutex);
 			mq->mq_detached = true;
-			SpinLockRelease(&mq->mq_mutex);
 			return true;
 		}
 	}
@@ -1052,8 +1148,7 @@ shm_mq_counterparty_gone(volatile shm_mq *mq, BackgroundWorkerHandle *handle)
  * non-NULL when our counterpart attaches to the queue.
  */
 static bool
-shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
-					 BackgroundWorkerHandle *handle)
+shm_mq_wait_internal(shm_mq *mq, PGPROC **ptr, BackgroundWorkerHandle *handle)
 {
 	bool		result = false;
 
@@ -1061,16 +1156,14 @@ shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
 	{
 		BgwHandleStatus status;
 		pid_t		pid;
-		bool		detached;
 
 		/* Acquire the lock just long enough to check the pointer. */
 		SpinLockAcquire(&mq->mq_mutex);
-		detached = mq->mq_detached;
 		result = (*ptr != NULL);
 		SpinLockRelease(&mq->mq_mutex);
 
 		/* Fail if detached; else succeed if initialized. */
-		if (detached)
+		if (mq->mq_detached)
 		{
 			result = false;
 			break;
@@ -1090,7 +1183,8 @@ shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
 		}
 
 		/* Wait to be signalled. */
-		WaitLatch(MyLatch, WL_LATCH_SET, 0);
+		(void) WaitLatch(MyLatch, WL_LATCH_SET | WL_EXIT_ON_PM_DEATH, 0,
+						 WAIT_EVENT_MQ_INTERNAL);
 
 		/* Reset the latch so we don't spin. */
 		ResetLatch(MyLatch);
@@ -1103,87 +1197,58 @@ shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
 }
 
 /*
- * Get the number of bytes read.  The receiver need not use this to access
- * the count of bytes read, but the sender must.
- */
-static uint64
-shm_mq_get_bytes_read(volatile shm_mq *mq, bool *detached)
-{
-	uint64		v;
-
-	SpinLockAcquire(&mq->mq_mutex);
-	v = mq->mq_bytes_read;
-	*detached = mq->mq_detached;
-	SpinLockRelease(&mq->mq_mutex);
-
-	return v;
-}
-
-/*
  * Increment the number of bytes read.
  */
 static void
-shm_mq_inc_bytes_read(volatile shm_mq *mq, Size n)
+shm_mq_inc_bytes_read(shm_mq *mq, Size n)
 {
 	PGPROC	   *sender;
 
-	SpinLockAcquire(&mq->mq_mutex);
-	mq->mq_bytes_read += n;
-	sender = mq->mq_sender;
-	SpinLockRelease(&mq->mq_mutex);
+	/*
+	 * Separate prior reads of mq_ring from the increment of mq_bytes_read
+	 * which follows.  This pairs with the full barrier in
+	 * shm_mq_send_bytes(). We only need a read barrier here because the
+	 * increment of mq_bytes_read is actually a read followed by a dependent
+	 * write.
+	 */
+	pg_read_barrier();
 
-	/* We shouldn't have any bytes to read without a sender. */
+	/*
+	 * There's no need to use pg_atomic_fetch_add_u64 here, because nobody
+	 * else can be changing this value.  This method should be cheaper.
+	 */
+	pg_atomic_write_u64(&mq->mq_bytes_read,
+						pg_atomic_read_u64(&mq->mq_bytes_read) + n);
+
+	/*
+	 * We shouldn't have any bytes to read without a sender, so we can read
+	 * mq_sender here without a lock.  Once it's initialized, it can't change.
+	 */
+	sender = mq->mq_sender;
 	Assert(sender != NULL);
 	SetLatch(&sender->procLatch);
-}
-
-/*
- * Get the number of bytes written.  The sender need not use this to access
- * the count of bytes written, but the receiver must.
- */
-static uint64
-shm_mq_get_bytes_written(volatile shm_mq *mq, bool *detached)
-{
-	uint64		v;
-
-	SpinLockAcquire(&mq->mq_mutex);
-	v = mq->mq_bytes_written;
-	*detached = mq->mq_detached;
-	SpinLockRelease(&mq->mq_mutex);
-
-	return v;
 }
 
 /*
  * Increment the number of bytes written.
  */
 static void
-shm_mq_inc_bytes_written(volatile shm_mq *mq, Size n)
+shm_mq_inc_bytes_written(shm_mq *mq, Size n)
 {
-	SpinLockAcquire(&mq->mq_mutex);
-	mq->mq_bytes_written += n;
-	SpinLockRelease(&mq->mq_mutex);
-}
+	/*
+	 * Separate prior reads of mq_ring from the write of mq_bytes_written
+	 * which we're about to do.  Pairs with the read barrier found in
+	 * shm_mq_receive_bytes.
+	 */
+	pg_write_barrier();
 
-/*
- * Set sender's latch, unless queue is detached.
- */
-static shm_mq_result
-shm_mq_notify_receiver(volatile shm_mq *mq)
-{
-	PGPROC	   *receiver;
-	bool		detached;
-
-	SpinLockAcquire(&mq->mq_mutex);
-	detached = mq->mq_detached;
-	receiver = mq->mq_receiver;
-	SpinLockRelease(&mq->mq_mutex);
-
-	if (detached)
-		return SHM_MQ_DETACHED;
-	if (receiver)
-		SetLatch(&receiver->procLatch);
-	return SHM_MQ_SUCCESS;
+	/*
+	 * There's no need to use pg_atomic_fetch_add_u64 here, because nobody
+	 * else can be changing this value.  This method avoids taking the bus
+	 * lock unnecessarily.
+	 */
+	pg_atomic_write_u64(&mq->mq_bytes_written,
+						pg_atomic_read_u64(&mq->mq_bytes_written) + n);
 }
 
 /* Shim for on_dsm_callback. */
@@ -1192,5 +1257,5 @@ shm_mq_detach_callback(dsm_segment *seg, Datum arg)
 {
 	shm_mq	   *mq = (shm_mq *) DatumGetPointer(arg);
 
-	shm_mq_detach(mq);
+	shm_mq_detach_internal(mq);
 }

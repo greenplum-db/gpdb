@@ -68,7 +68,7 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 
 		s = (TransactionState)
 				MemoryContextAllocZero(TopTransactionContext, sizeof(TransactionStateData));
-		s->transactionId = i;
+		s->fullTransactionId.value = i;
 		s->parent = p;
 		s->nestingLevel = p->nestingLevel + 1;
 

@@ -14,38 +14,35 @@ ic-proxy is disabled by default, we could enable it with `configure
 --enable-ic-proxy`.
 
 After the installation we also need to setup the ic-proxy network, it is done
-by setting the GUC `gp_interconnect_proxy_addresses`, for example:
+by setting the GUC `gp_interconnect_proxy_addresses`, for example if a cluster
+has one master, one standby master, one primary segment and one mirror segment,
+we could set it like below:
 
-    gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'1:-1:127.0.0.1:2000,2:0:127.0.0.1:2002,3:1:127.0.0.1:2003,4:2:127.0.0.1:2004,5:0:127.0.0.1:2005,6:1:127.0.0.1:2006,7:2:127.0.0.1:2007,8:-1:127.0.0.1:2001'"
+    gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'1:-1:localhost:2000,2:0:localhost:2002,3:0:localhost:2003,4:-1:localhost:2001'"
 
 It contains information for all the master, standby, primary and mirror
-segments, for each segment it contains below information:
+segments, the syntax is as below:
 
-    dbid:segid:ip:port[,dbid:segid:ip:port]
+    dbid:segid:hostname:port[,dbid:segid:ip:port]
 
 It is important to specify the value as a single-quoted string, otherwise it
 will be parsed as an interger with invalid format.
 
 An example script to setup this GUC automatically:
 
-    #!/usr/bin/env bash
+    #!/bin/sh
     
     : ${delta:=-5000}
     
-    psql -tqA -d postgres -P pager=off -F ' ' \
-        -c "select dbid, content, port+$delta as port, address from gp_segment_configuration order by 1" \
-    | while read -r dbid content port addr; do
-        # below 2 lines convert the segment hostname to ip address, it is only
-        # an example, replace them with a proper way in your side
-        ip=$(host "$addr" | fgrep -v IPv6 | head -n1)
-        ip=${ip##* }
+    PGOPTIONS="-c gp_interconnect_type=udpifc" \
+    psql -tqA -d postgres -P pager=off -F: -R, -c "
+        SELECT dbid, content, address, port+$delta
+          FROM gp_segment_configuration
+         ORDER BY 1" \
+    | xargs -rI'{}' \
+        gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"
 
-        echo "$dbid:$content:$ip:$port"
-      done \
-    | paste -sd, - \
-    | xargs -rI'{}' gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"
-
-Restart the cluster for the GUC to take effect, a `gpstop -u` does not work.
+Reload the setting with `gpstop -u` for it to take effect.
 
 Now we are able to run queries in the ic-proxy mode by setting the GUC
 `gp_interconnect_type=proxy`, we could set it cluster level or session level,
@@ -53,6 +50,10 @@ for example:
 
     # launch a session in ic-proxy mode
     PGOPTIONS="-c gp_interconnect_type=proxy" psql
+
+    # enable ic-proxy by default
+    gpconfig -c gp_interconnect_type -v proxy
+    gpstop -u
 
 ## Design
 

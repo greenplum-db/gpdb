@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 import sys
@@ -9,10 +9,7 @@ import socket
 import fileinput
 import platform
 import re
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 from shutil import copyfile
 import pg
 
@@ -28,7 +25,7 @@ if UPD not in sys.path:
 def ensure_env(name):
     v = os.environ.get(name)
     if v is None:
-        print "Environment variable " + name + " is required"
+        print(("Environment variable " + name + " is required"))
         sys.exit(1)
     return v
 
@@ -283,9 +280,9 @@ def get_table_name():
                   ,host='localhost'
                   ,port=int(PGPORT)
                   )
-    except Exception,e:
+    except Exception as e:
         errorMessage = str(e)
-        print 'could not connect to database: ' + errorMessage
+        print(('could not connect to database: ' + errorMessage))
     queryString = """SELECT relname
                      from pg_class
                      WHERE relname
@@ -301,9 +298,9 @@ def drop_tables():
                   ,host='localhost'
                   ,port=int(PGPORT)
                   )
-    except Exception,e:
+    except Exception as e:
         errorMessage = str(e)
-        print 'could not connect to database: ' + errorMessage
+        print(('could not connect to database: ' + errorMessage))
 
     list = get_table_name()
     for i in list:
@@ -402,9 +399,9 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         self.doTest(3)
 
     def test_04_gpload_formatOpts_delimiter(self):
-        "4  gpload formatOpts delimiter E'\u0009' with reuse"
+        "4  gpload formatOpts delimiter E'\\u0009' with reuse"
         copy_data('external_file_02.txt','data_file.txt')
-        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\u0009'")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\\u0009'")
         self.doTest(4)
 
     def test_05_gpload_formatOpts_delimiter(self):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import time
@@ -68,28 +68,14 @@ class GpReload:
             if (parent_schema, parent_table) == (schema_name, table_name):
                 return
             try:
-                max_level = dbconn.querySingleton(conn,
-                                                   """SELECT max(partitionlevel)
-                                                      FROM pg_partitions
-                                                      WHERE tablename='%s'
-                                                      AND schemaname='%s'
-                                                   """ % (parent_table, parent_schema))
+                res = dbconn.query(conn,
+                                   """ SELECT isleaf from pg_partition_tree('%s.%s') """ % (schema_name, table_name))
             except Exception as e:
-                logger.debug('Unable to get the maximum partition level for table %s: (%s)' % (table_name, str(e)))
+                logger.debug('Unable to get the partition information for table %s: (%s)' % (table_name, str(e)))
 
-            try:
-                partition_level = dbconn.querySingleton(conn,
-                                                         """SELECT partitionlevel
-                                                            FROM pg_partitions
-                                                            WHERE partitiontablename='%s'
-                                                            AND partitionschemaname='%s'
-                                                         """ % (table_name, schema_name))
-            except Exception as e:
-                logger.debug('Unable to get the partition level for table %s: (%s)' % (table_name, str(e)))
-
-            if partition_level != max_level:
-                logger.error('Partition level of the table = %s, Max partition level = %s' % (partition_level, max_level))
-                raise Exception('Mid Level partition %s.%s is not supported by gpreload. Please specify only leaf partitions or parent table name' % (schema_name, table_name))
+            for isleaf in res.fetchall():
+                if not isleaf[0]:
+                    raise Exception('Mid Level partition %s.%s is not supported by gpreload. Please specify only leaf partitions or parent table name' % (schema_name, table_name))
         finally:
             conn.close()
 
@@ -185,10 +171,12 @@ class GpReload:
     def get_parent_partitions(self):
         with closing(dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))) as conn:
             for schema, table, col_list in self.table_list:
-                PARENT_PARTITION_TABLENAME = """SELECT schemaname, tablename
-                                                FROM pg_partitions
-                                                WHERE partitiontablename='%s' 
-                                                AND partitionschemaname='%s'""" % (table, schema)
+                PARENT_PARTITION_TABLENAME = """SELECT nspname, relname
+                                                FROM pg_catalog.pg_class AS c
+                                                JOIN pg_catalog.pg_namespace AS ns
+                                                ON c.relnamespace = ns.oid
+                                                WHERE c.oid = pg_partition_root('%s.%s')
+                                                """ % (schema, table)
                 res = dbconn.query(conn, PARENT_PARTITION_TABLENAME)
                 for r in res:
                     self.parent_partition_map[(schema, table)] = (r[0], r[1]) 

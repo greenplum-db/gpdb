@@ -2,7 +2,7 @@
  * brin_xlog.c
  *		XLog replay routines for BRIN indexes
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -14,6 +14,7 @@
 #include "access/brin_pageops.h"
 #include "access/brin_revmap.h"
 #include "access/brin_xlog.h"
+#include "access/bufmask.h"
 #include "access/xlogutils.h"
 
 
@@ -189,10 +190,8 @@ brin_xlog_update(XLogReaderState *record)
 		page = (Page) BufferGetPage(buffer);
 
 		offnum = xlrec->oldOffnum;
-		if (PageGetMaxOffsetNumber(page) + 1 < offnum)
-			elog(PANIC, "brin_xlog_update: invalid max offset number");
 
-		PageIndexDeleteNoCompact(page, &offnum, 1);
+		PageIndexTupleDeleteNoCompact(page, offnum);
 
 		PageSetLSN(page, lsn);
 		MarkBufferDirty(buffer);
@@ -230,14 +229,9 @@ brin_xlog_samepage_update(XLogReaderState *record)
 		page = (Page) BufferGetPage(buffer);
 
 		offnum = xlrec->offnum;
-		if (PageGetMaxOffsetNumber(page) + 1 < offnum)
-			elog(PANIC, "brin_xlog_samepage_update: invalid max offset number");
 
-		PageIndexDeleteNoCompact(page, &offnum, 1);
-		offnum = PageAddItemExtended(page, (Item) brintuple, tuplen, offnum,
-									 PAI_OVERWRITE | PAI_ALLOW_FAR_OFFSET);
-		if (offnum == InvalidOffsetNumber)
-			elog(PANIC, "brin_xlog_samepage_update: failed to add tuple");
+		if (!PageIndexTupleOverwrite(page, offnum, (Item) brintuple, tuplen))
+			elog(PANIC, "brin_xlog_samepage_update: failed to replace tuple");
 
 		PageSetLSN(page, lsn);
 		MarkBufferDirty(buffer);
@@ -281,6 +275,17 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 		metadata->lastRevmapPage = xlrec->targetBlk;
 
 		PageSetLSN(metapg, lsn);
+
+		/*
+		 * Set pd_lower just past the end of the metadata.  This is essential,
+		 * because without doing so, metadata will be lost if xlog.c
+		 * compresses the page.  (We must do this here because pre-v11
+		 * versions of PG did not set the metapage's pd_lower correctly, so a
+		 * pg_upgraded index might contain the wrong value.)
+		 */
+		((PageHeader) metapg)->pd_lower =
+			((char *) metadata + sizeof(BrinMetaPageData)) - (char *) metapg;
+
 		MarkBufferDirty(metabuf);
 	}
 
@@ -299,6 +304,46 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 	UnlockReleaseBuffer(buf);
 	if (BufferIsValid(metabuf))
 		UnlockReleaseBuffer(metabuf);
+}
+
+static void
+brin_xlog_desummarize_page(XLogReaderState *record)
+{
+	XLogRecPtr	lsn = record->EndRecPtr;
+	xl_brin_desummarize *xlrec;
+	Buffer		buffer;
+	XLogRedoAction action;
+
+	xlrec = (xl_brin_desummarize *) XLogRecGetData(record);
+
+	/* Update the revmap */
+	action = XLogReadBufferForRedo(record, 0, &buffer);
+	if (action == BLK_NEEDS_REDO)
+	{
+		ItemPointerData iptr;
+
+		ItemPointerSetInvalid(&iptr);
+		brinSetHeapBlockItemptr(buffer, xlrec->pagesPerRange, xlrec->heapBlk, iptr);
+
+		PageSetLSN(BufferGetPage(buffer), lsn);
+		MarkBufferDirty(buffer);
+	}
+	if (BufferIsValid(buffer))
+		UnlockReleaseBuffer(buffer);
+
+	/* remove the leftover entry from the regular page */
+	action = XLogReadBufferForRedo(record, 1, &buffer);
+	if (action == BLK_NEEDS_REDO)
+	{
+		Page		regPg = BufferGetPage(buffer);
+
+		PageIndexTupleDeleteNoCompact(regPg, xlrec->regOffset);
+
+		PageSetLSN(regPg, lsn);
+		MarkBufferDirty(buffer);
+	}
+	if (BufferIsValid(buffer))
+		UnlockReleaseBuffer(buffer);
 }
 
 /*
@@ -370,10 +415,38 @@ brin_redo(XLogReaderState *record)
 		case XLOG_BRIN_REVMAP_EXTEND:
 			brin_xlog_revmap_extend(record);
 			break;
+		case XLOG_BRIN_DESUMMARIZE:
+			brin_xlog_desummarize_page(record);
+			break;
 		case XLOG_BRIN_REVMAP_EXTEND_UPPER:
 			brin_xlog_revmap_extend_upper(record);
 			break;
 		default:
 			elog(PANIC, "brin_redo: unknown op code %u", info);
+	}
+}
+
+/*
+ * Mask a BRIN page before doing consistency checks.
+ */
+void
+brin_mask(char *pagedata, BlockNumber blkno)
+{
+	Page		page = (Page) pagedata;
+	PageHeader	pagehdr = (PageHeader) page;
+
+	mask_page_lsn_and_checksum(page);
+
+	mask_page_hint_bits(page);
+
+	/*
+	 * Regular brin pages contain unused space which needs to be masked.
+	 * Similarly for meta pages, but mask it only if pd_lower appears to have
+	 * been set correctly.
+	 */
+	if (BRIN_IS_REGULAR_PAGE(page) ||
+		(BRIN_IS_META_PAGE(page) && pagehdr->pd_lower > SizeOfPageHeaderData))
+	{
+		mask_unused_space(page);
 	}
 }

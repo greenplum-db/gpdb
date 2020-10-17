@@ -32,15 +32,11 @@ XERCES_CPP_NAMESPACE_USE
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerTraceFlags::CParseHandlerTraceFlags
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_trace_flags_bitset(NULL)
+CParseHandlerTraceFlags::CParseHandlerTraceFlags(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_trace_flags_bitset(NULL)
 {
 	m_trace_flags_bitset = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
 }
@@ -67,42 +63,36 @@ CParseHandlerTraceFlags::~CParseHandlerTraceFlags()
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTraceFlags::StartElement
-	(
-	const XMLCh* const , //element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const , //element_qname,
-	const Attributes& attrs
-	)
-{	
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTraceFlags), element_local_name))
+CParseHandlerTraceFlags::StartElement(const XMLCh *const,  //element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const,  //element_qname,
+									  const Attributes &attrs)
+{
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTraceFlags),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
-	
+
 	// parse and tokenize traceflags
-	const XMLCh *xml_str_trace_flags = CDXLOperatorFactory::ExtractAttrValue
-															(
-															attrs,
-															EdxltokenValue,
-															EdxltokenTraceFlags
-															);
-	
-	ULongPtrArray *trace_flag_array = CDXLOperatorFactory::ExtractIntsToUlongArray
-												(
-												m_parse_handler_mgr->GetDXLMemoryManager(),
-												xml_str_trace_flags,
-												EdxltokenDistrColumns,
-												EdxltokenRelation
-												);
-	
+	const XMLCh *xml_str_trace_flags = CDXLOperatorFactory::ExtractAttrValue(
+		attrs, EdxltokenValue, EdxltokenTraceFlags);
+
+	ULongPtrArray *trace_flag_array =
+		CDXLOperatorFactory::ExtractIntsToUlongArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_trace_flags,
+			EdxltokenDistrColumns, EdxltokenRelation);
+
 	for (ULONG idx = 0; idx < trace_flag_array->Size(); idx++)
 	{
 		ULONG *trace_flag = (*trace_flag_array)[idx];
 		m_trace_flags_bitset->ExchangeSet(*trace_flag);
 	}
-	
+
 	trace_flag_array->Release();
 }
 
@@ -115,17 +105,19 @@ CParseHandlerTraceFlags::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTraceFlags::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerTraceFlags::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const element_local_name,
+									const XMLCh *const	// element_qname
+)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTraceFlags), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTraceFlags),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE( gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	// deactivate handler

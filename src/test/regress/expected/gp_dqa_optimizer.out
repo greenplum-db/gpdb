@@ -1,3 +1,9 @@
+-- The last digits of some of the results vary from one invocation to another,
+-- because the intermediate operations are done in arbitrary order when rows
+-- are flowing from different segments in different order. Mask those
+-- differences by setting 'extra_float_digits'. This isn't enough for all of
+-- the queries, so a few also use TO_CHAR() to truncate the results further.
+set extra_float_digits=0;
 drop table if exists dqa_t1;
 NOTICE:  table "dqa_t1" does not exist, skipping
 drop table if exists dqa_t2;
@@ -12,6 +18,10 @@ insert into dqa_t1 select i%23, i%12, (i%10) || '', '2009-06-10'::date + ( (i%34
 from generate_series(0, 99) i;
 insert into dqa_t2 select i%34, i%45, (i%10) || '', '2009-06-10'::date + ( (i%56) || ' days')::interval
 from generate_series(0, 99) i;
+-- With the default very small cost, the planner often prefer to just Gather
+-- all the rows to the QD. We want to test the more complicated multi-tage DQA
+-- plans here, without using a huge number of rows.
+set gp_motion_cost_per_row=1;
 set enable_hashagg=on;
 set enable_groupagg=off;
 -- Also run EXPLAIN on each of these queries, to make sure you get an efficient plan,
@@ -783,13 +793,20 @@ select corr(distinct d, i) from dqa_t1;
 (1 row)
 
 explain (costs off) select corr(distinct d, i) from dqa_t1;
-                   QUERY PLAN                   
-------------------------------------------------
- Aggregate
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on dqa_t1
+         ->  Partial Aggregate
+               ->  HashAggregate
+                     Group Key: ((d)::double precision), ((i)::double precision)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: ((d)::double precision), ((i)::double precision)
+                           ->  Streaming HashAggregate
+                                 Group Key: (d)::double precision, (i)::double precision
+                                 ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
-(4 rows)
+(11 rows)
 
 -- multi args singledqa with group by
 select corr(distinct d, i) from dqa_t1 group by d;
@@ -832,22 +849,22 @@ explain (costs off) select corr(distinct d, i) from dqa_t1 group by d;
  Optimizer: Postgres query optimizer
 (7 rows)
 
-select corr(distinct d, i) from dqa_t1 group by c;
-        corr        
---------------------
-  0.136706026184786
-  0.136706026184786
-  0.326224104260335
- -0.118104768408327
- 0.0700865292449608
- 0.0700865292449608
- -0.175826369278399
- -0.175826369278399
-  0.420377774079621
- 0.0579678449086239
+select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
+      to_char      
+-------------------
+   .13670602618479
+   .13670602618479
+   .32622410426034
+  -.11810476840833
+   .07008652924496
+   .07008652924496
+  -.17582636927840
+  -.17582636927840
+   .42037777407962
+   .05796784490862
 (10 rows)
 
-explain (costs off) select corr(distinct d, i) from dqa_t1 group by c;
+explain (costs off) select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
                                       QUERY PLAN                                      
 --------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -881,7 +898,7 @@ explain (costs off) select count(distinct c), corr(distinct d, i) from dqa_t1;
                      ->  Streaming HashAggregate
                            Group Key: AggExprId, c, ((d)::double precision), ((i)::double precision)
                            ->  TupleSplit
-                                 Split by Col: (c), ((d)::double precision,(i)::double precision)
+                                 Split by Col: (c), (((d)::double precision),((i)::double precision))
                                  ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
 (11 rows)
@@ -903,7 +920,7 @@ explain (costs off) select count(distinct d), corr(distinct d, i) from dqa_t1;
                      ->  Streaming HashAggregate
                            Group Key: AggExprId, d, ((d)::double precision), ((i)::double precision)
                            ->  TupleSplit
-                                 Split by Col: (d), ((d)::double precision,(i)::double precision)
+                                 Split by Col: (d), (((d)::double precision),((i)::double precision))
                                  ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
 (11 rows)
@@ -925,7 +942,7 @@ explain (costs off) select count(distinct d), count(distinct i), corr(distinct d
                      ->  Streaming HashAggregate
                            Group Key: AggExprId, d, i, ((d)::double precision), ((i)::double precision)
                            ->  TupleSplit
-                                 Split by Col: (d), (i), ((d)::double precision,(i)::double precision)
+                                 Split by Col: (d), (i), (((d)::double precision),((i)::double precision))
                                  ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
 (11 rows)
@@ -947,7 +964,7 @@ explain (costs off) select count(distinct c), count(distinct d), count(distinct 
                      ->  Streaming HashAggregate
                            Group Key: AggExprId, c, d, i, ((d)::double precision), ((i)::double precision)
                            ->  TupleSplit
-                                 Split by Col: (c), (d), (i), ((d)::double precision,(i)::double precision)
+                                 Split by Col: (c), (d), (i), (((d)::double precision),((i)::double precision))
                                  ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
 (11 rows)
@@ -996,7 +1013,7 @@ explain (costs off) select count(distinct c), corr(distinct d, i), d from dqa_t1
                            ->  Streaming HashAggregate
                                  Group Key: AggExprId, c, ((d)::double precision), ((i)::double precision), d
                                  ->  TupleSplit
-                                       Split by Col: (c), ((d)::double precision,(i)::double precision)
+                                       Split by Col: (c), (((d)::double precision),((i)::double precision))
                                        Group Key: d
                                        ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
@@ -1122,7 +1139,7 @@ explain (costs off) select count(distinct c), corr(distinct d, i), d, i from dqa
                            ->  Streaming HashAggregate
                                  Group Key: AggExprId, c, ((d)::double precision), ((i)::double precision), d, i
                                  ->  TupleSplit
-                                       Split by Col: (c), ((d)::double precision,(i)::double precision)
+                                       Split by Col: (c), (((d)::double precision),((i)::double precision))
                                        Group Key: d, i
                                        ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
@@ -1182,7 +1199,7 @@ explain (costs off) select count(distinct c), corr(distinct d, i), dt from dqa_t
                            ->  Streaming HashAggregate
                                  Group Key: AggExprId, c, ((d)::double precision), ((i)::double precision), dt
                                  ->  TupleSplit
-                                       Split by Col: (c), ((d)::double precision,(i)::double precision)
+                                       Split by Col: (c), (((d)::double precision),((i)::double precision))
                                        Group Key: dt
                                        ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
@@ -1220,7 +1237,7 @@ explain (costs off) select count(distinct d), corr(distinct d, i), i from dqa_t1
                            ->  Streaming HashAggregate
                                  Group Key: AggExprId, d, ((d)::double precision), ((i)::double precision), i
                                  ->  TupleSplit
-                                       Split by Col: (d), ((d)::double precision,(i)::double precision)
+                                       Split by Col: (d), (((d)::double precision),((i)::double precision))
                                        Group Key: i
                                        ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
@@ -1269,28 +1286,28 @@ explain (costs off) select count(distinct d), corr(distinct d, i), d from dqa_t1
                            ->  Streaming HashAggregate
                                  Group Key: AggExprId, ((d)::double precision), ((i)::double precision), d
                                  ->  TupleSplit
-                                       Split by Col: (d), ((d)::double precision,(i)::double precision)
+                                       Split by Col: (d), (((d)::double precision),((i)::double precision))
                                        Group Key: d
                                        ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
 (16 rows)
 
-select count(distinct d), corr(distinct d, i), c from dqa_t1 group by c;
- count |        corr        | c 
--------+--------------------+---
-    10 |  0.136706026184786 | 0
-    10 |  0.136706026184786 | 1
-    10 |  0.326224104260335 | 2
-    10 | -0.118104768408327 | 3
-    10 | 0.0700865292449608 | 4
-    10 | 0.0700865292449608 | 5
-    10 | -0.175826369278399 | 6
-    10 | -0.175826369278399 | 7
-    10 |  0.420377774079621 | 8
-    10 | 0.0579678449086239 | 9
+select count(distinct d),  to_char(corr(distinct d, i), '9.99999999999999'), c from dqa_t1 group by c;
+ count |      to_char      | c 
+-------+-------------------+---
+    10 |   .13670602618479 | 0
+    10 |   .13670602618479 | 1
+    10 |   .32622410426034 | 2
+    10 |  -.11810476840833 | 3
+    10 |   .07008652924496 | 4
+    10 |   .07008652924496 | 5
+    10 |  -.17582636927840 | 6
+    10 |  -.17582636927840 | 7
+    10 |   .42037777407962 | 8
+    10 |   .05796784490862 | 9
 (10 rows)
 
-explain (costs off) select count(distinct d), corr(distinct d, i), c from dqa_t1 group by c;
+explain (costs off) select count(distinct d),  to_char(corr(distinct d, i), '9.99999999999999'), c from dqa_t1 group by c;
                                                   QUERY PLAN                                                  
 --------------------------------------------------------------------------------------------------------------
  Finalize HashAggregate
@@ -1305,7 +1322,7 @@ explain (costs off) select count(distinct d), corr(distinct d, i), c from dqa_t1
                            ->  Streaming HashAggregate
                                  Group Key: AggExprId, d, ((d)::double precision), ((i)::double precision), c
                                  ->  TupleSplit
-                                       Split by Col: (d), ((d)::double precision,(i)::double precision)
+                                       Split by Col: (d), (((d)::double precision),((i)::double precision))
                                        Group Key: c
                                        ->  Seq Scan on dqa_t1
  Optimizer: Postgres query optimizer
@@ -1969,4 +1986,178 @@ select countall(distinct a), count(distinct b) from nonullstab;
 ----------+-------
         1 |     1
 (1 row)
+
+-- multi DQA with filter test
+set enable_hashagg=on;
+set enable_groupagg=off;
+create table dqa_f1(a int, b int, c int) distributed by (a);
+create table dqa_f2(x int, y int, z int) distributed by (x);
+insert into dqa_f1 select i%17, i%5 , i%3 from generate_series(1,1000) i;
+insert into dqa_f2 select i % 13, i % 5 , i % 11 from generate_series(1,1000) i;
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
+ sum | sum 
+-----+-----
+ 136 |  10
+(1 row)
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
+ sum | sum 
+-----+-----
+ 136 |   0
+ 136 |   1
+ 136 |   2
+ 136 |   3
+ 136 |   4
+(5 rows)
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+ sum | sum 
+-----+-----
+ 136 |  10
+ 136 |  10
+ 136 |  10
+(3 rows)
+
+select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1;
+ sum | sum 
+-----+-----
+  78 |  10
+(1 row)
+
+select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+ sum | sum 
+-----+-----
+  78 |  10
+  78 |  10
+  78 |  10
+(3 rows)
+
+select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
+ count | count | sum 
+-------+-------+-----
+    13 |     5 |  10
+(1 row)
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=20.66..20.67 rows=1 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=20.62..20.65 rows=1 width=16)
+         ->  Partial Aggregate  (cost=20.62..20.63 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=20.50..20.59 rows=1 width=8)
+                     Hash Key: a, b, (AggExprId)
+                     ->  Streaming HashAggregate  (cost=20.50..20.53 rows=1 width=8)
+                           Group Key: AggExprId, a, b
+                           ->  TupleSplit  (cost=13.00..15.50 rows=667 width=8)
+                                 Split by Col: (a) FILTER (WHERE (a > 0)), (b) FILTER (WHERE (a > 0))
+                                 ->  Seq Scan on dqa_f1  (cost=0.00..13.00 rows=334 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate  (cost=21.62..21.67 rows=5 width=20)
+   Group Key: b
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=21.30..21.56 rows=9 width=20)
+         ->  Partial HashAggregate  (cost=21.30..21.39 rows=3 width=20)
+               Group Key: b
+               ->  HashAggregate  (cost=21.06..21.17 rows=4 width=8)
+                     Group Key: (AggExprId), a, b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=20.50..20.95 rows=5 width=8)
+                           Hash Key: b, a, (AggExprId)
+                           ->  Streaming HashAggregate  (cost=20.50..20.65 rows=5 width=8)
+                                 Group Key: AggExprId, a, b
+                                 ->  TupleSplit  (cost=13.00..15.50 rows=667 width=8)
+                                       Split by Col: (a) FILTER (WHERE (a > 0)), (b) FILTER (WHERE (a > 0))
+                                       Group Key: b
+                                       ->  Seq Scan on dqa_f1  (cost=0.00..13.00 rows=334 width=8)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate  (cost=21.20..21.23 rows=3 width=20)
+   Group Key: c
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=21.00..21.16 rows=6 width=20)
+         ->  Partial HashAggregate  (cost=21.00..21.05 rows=2 width=20)
+               Group Key: c
+               ->  HashAggregate  (cost=20.86..20.92 rows=3 width=12)
+                     Group Key: (AggExprId), a, b, c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=20.50..20.77 rows=3 width=12)
+                           Hash Key: c, a, b, (AggExprId)
+                           ->  Streaming HashAggregate  (cost=20.50..20.59 rows=3 width=12)
+                                 Group Key: AggExprId, a, b, c
+                                 ->  TupleSplit  (cost=13.00..15.50 rows=667 width=12)
+                                       Split by Col: (a) FILTER (WHERE (a > 0)), (b) FILTER (WHERE (a > 0))
+                                       Group Key: c
+                                       ->  Seq Scan on dqa_f1  (cost=0.00..13.00 rows=334 width=12)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1;
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=96.41..96.42 rows=1 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=96.37..96.40 rows=1 width=16)
+         ->  Partial Aggregate  (cost=96.37..96.38 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=20.50..20.59 rows=1 width=8)
+                     Hash Key: dqa_f1.a, dqa_f1.b, (AggExprId)
+                     ->  Streaming HashAggregate  (cost=20.50..20.53 rows=1 width=8)
+                           Group Key: AggExprId, dqa_f1.a, dqa_f1.b
+                           ->  TupleSplit  (cost=13.00..15.50 rows=667 width=8)
+                                 Split by Col: (dqa_f1.a) FILTER (WHERE (SubPlan 1)), (dqa_f1.b) FILTER (WHERE (dqa_f1.a > 0))
+                                 ->  Seq Scan on dqa_f1  (cost=0.00..13.00 rows=334 width=8)
+                                 SubPlan 1
+                                   ->  Result  (cost=0.00..48.00 rows=334 width=4)
+                                         Filter: (dqa_f2.x = dqa_f1.a)
+                                         ->  Materialize  (cost=0.00..38.00 rows=334 width=4)
+                                               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..33.00 rows=334 width=4)
+                                                     ->  Seq Scan on dqa_f2  (cost=0.00..13.00 rows=334 width=4)
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate  (cost=181.11..181.14 rows=3 width=20)
+   Group Key: dqa_f1.c
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=180.92..181.07 rows=6 width=20)
+         ->  Partial HashAggregate  (cost=180.92..180.97 rows=2 width=20)
+               Group Key: dqa_f1.c
+               ->  HashAggregate  (cost=20.86..20.92 rows=3 width=12)
+                     Group Key: (AggExprId), dqa_f1.a, dqa_f1.b, dqa_f1.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=20.50..20.77 rows=3 width=12)
+                           Hash Key: dqa_f1.c, dqa_f1.a, dqa_f1.b, (AggExprId)
+                           ->  Streaming HashAggregate  (cost=20.50..20.59 rows=3 width=12)
+                                 Group Key: AggExprId, dqa_f1.a, dqa_f1.b, dqa_f1.c
+                                 ->  TupleSplit  (cost=13.00..15.50 rows=667 width=12)
+                                       Split by Col: (dqa_f1.a) FILTER (WHERE (SubPlan 1)), (dqa_f1.b) FILTER (WHERE (dqa_f1.a > 0))
+                                       Group Key: dqa_f1.c
+                                       ->  Seq Scan on dqa_f1  (cost=0.00..13.00 rows=334 width=12)
+                                       SubPlan 1
+                                         ->  Result  (cost=0.00..48.00 rows=334 width=4)
+                                               Filter: (dqa_f2.x = dqa_f1.a)
+                                               ->  Materialize  (cost=0.00..38.00 rows=334 width=4)
+                                                     ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..33.00 rows=334 width=4)
+                                                           ->  Seq Scan on dqa_f2  (cost=0.00..13.00 rows=334 width=4)
+ Optimizer: Postgres query optimizer
+(22 rows)
+
+explain select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=20.67..20.68 rows=1 width=24)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=20.64..20.67 rows=1 width=24)
+         ->  Partial Aggregate  (cost=20.64..20.65 rows=1 width=24)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=20.50..20.59 rows=1 width=8)
+                     Hash Key: a, b, (AggExprId)
+                     ->  Streaming HashAggregate  (cost=20.50..20.53 rows=1 width=8)
+                           Group Key: AggExprId, a, b
+                           ->  TupleSplit  (cost=13.00..15.50 rows=667 width=8)
+                                 Split by Col: (a) FILTER (WHERE (a > 3)), (b) FILTER (WHERE (a > 4))
+                                 ->  Seq Scan on dqa_f1  (cost=0.00..13.00 rows=334 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
 

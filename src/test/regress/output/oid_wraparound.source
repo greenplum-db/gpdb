@@ -103,7 +103,7 @@ SELECT gp_get_next_oid_segments();
 (3 rows)
 
 CREATE TABLE oid_wraparound_table_other AS SELECT 1 AS a;
-SELECT gp_get_next_oid_master() in (16388, 18389);
+SELECT gp_get_next_oid_master() in (16388, 16389);
  ?column? 
 ----------
  t

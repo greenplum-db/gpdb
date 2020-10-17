@@ -21,9 +21,11 @@
 
 #include "access/genam.h"
 #include "access/reloptions.h"
+#include "access/table.h"
 #include "access/tupdesc.h"
 #include "access/tupmacs.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_compression.h"
 #include "catalog/dependency.h"
@@ -43,6 +45,11 @@
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
 
+/*
+ * GPDB_12_MERGE_FIXME:
+ *		This enumaration does not fit in pg_compression. Also it should probably
+ *		be treated as a new reloption kind and be unified in reloptions_gp
+ */
 /* names we expect to see in ENCODING clauses */
 char *storage_directive_names[] = {"compresstype", "compresslevel",
 								   "blocksize", NULL};
@@ -120,9 +127,9 @@ GetCompressionImplementation(char *comptype)
 
 	/*
 	 * Many callers pass RelationData->rd_appendonly->compresstype as
-	 * the argument. That can become invalid, if heap_open below causes
+	 * the argument. That can become invalid, if table_open below causes
 	 * a relcache invalidation. Call comptype_to_name() on the argument
-	 * first, to make a copy of it before we call heap_open().
+	 * first, to make a copy of it before we call table_open().
 	 *
 	 * This is hazardous to the callers, too, if they try to use the
 	 * string after the call for something else, but there isn't much
@@ -130,9 +137,9 @@ GetCompressionImplementation(char *comptype)
 	 */
 	compname = comptype_to_name(comptype);
 
-	comprel = heap_open(CompressionRelationId, AccessShareLock);
+	comprel = table_open(CompressionRelationId, AccessShareLock);
 
-	comptype = NULL;	/* heap_open might have invalidated this */
+	comptype = NULL;	/* table_open might have invalidated this */
 
 	/* SELECT * FROM pg_compression WHERE compname = :1 */
 	ScanKeyInit(&scankey,
@@ -153,28 +160,28 @@ GetCompressionImplementation(char *comptype)
 
 	ctup = (Form_pg_compression)GETSTRUCT(tuple);
 
-	Insist(OidIsValid(ctup->compconstructor));
+	Assert(OidIsValid(ctup->compconstructor));
 	fmgr_info(ctup->compconstructor, &finfo);
 	funcs[COMPRESSION_CONSTRUCTOR] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compdestructor));
+	Assert(OidIsValid(ctup->compdestructor));
 	fmgr_info(ctup->compdestructor, &finfo);
 	funcs[COMPRESSION_DESTRUCTOR] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compcompressor));
+	Assert(OidIsValid(ctup->compcompressor));
 	fmgr_info(ctup->compcompressor, &finfo);
 	funcs[COMPRESSION_COMPRESS] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compdecompressor));
+	Assert(OidIsValid(ctup->compdecompressor));
 	fmgr_info(ctup->compdecompressor, &finfo);
 	funcs[COMPRESSION_DECOMPRESS] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compvalidator));
+	Assert(OidIsValid(ctup->compvalidator));
 	fmgr_info(ctup->compvalidator, &finfo);
 	funcs[COMPRESSION_VALIDATOR] = finfo.fn_addr;
 
 	systable_endscan(scan);
-	heap_close(comprel, AccessShareLock);
+	table_close(comprel, AccessShareLock);
 
 	return funcs;
 }
@@ -242,7 +249,7 @@ zlib_constructor(PG_FUNCTION_ARGS)
 	cs->opaque = (void *) state;
 	cs->desired_sz = NULL;
 
-	Insist(PointerIsValid(sa->comptype));
+	Assert(PointerIsValid(sa->comptype));
 
 	if (sa->complevel == 0)
 		sa->complevel = 1;
@@ -310,7 +317,7 @@ zlib_compress(PG_FUNCTION_ARGS)
 
 			default:
 				/* shouldn't get here */
-				Insist(false);
+				elog(ERROR, "zlib compression failed with error %d", last_error);
 				break;
 		}
 	}
@@ -331,7 +338,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 	int				last_error;
 	unsigned long amount_available_used = dst_sz;
 
-	Insist(src_sz > 0 && dst_sz > 0);
+	Assert(src_sz > 0 && dst_sz > 0);
 
 
 	last_error = state->decompress_fn(dst, &amount_available_used,
@@ -369,7 +376,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 
 			default:
 				/* shouldn't get here */
-				Insist(false);
+				elog(ERROR, "zlib decompression failed with error %d", last_error);
 				break;
 		}
 	}
@@ -529,6 +536,17 @@ compresstype_is_valid(char *comptype)
 }
 
 /*
+ * GPDB_12_MERGE_FIXME:
+ *		This function does not fit pg_compression and should probably be moved
+ *		to pg_attribute_encoding or reloptions_gp.
+ *
+ *		The comment of the function does not match what the function is actually
+ *		doing. Especially for blocksize, it is impossible for the value to be
+ *		unset if an appendonly relation, hence the default is always ignored.
+ *
+ *		Currently used only in reloptions_gp.
+ */
+/*
  * Make encoding (compresstype = ..., blocksize=...) based on
  * currently configured defaults.
  */
@@ -537,41 +555,55 @@ default_column_encoding_clause(Relation rel)
 {
 	DefElem *e1, *e2, *e3;
 	const StdRdOptions *ao_opts = currentAOStorageOptions();
-	Form_pg_appendonly appendonly = rel ? rel->rd_appendonly : NULL;
-	char *compresstype = appendonly ? NameStr(appendonly->compresstype) : NULL;
+	bool		appendonly;
+	int32		blocksize = -1;
+	int16		compresslevel = 0;
+	char	   *compresstype = NULL;
+	NameData	compresstype_nd;
+
+	appendonly = rel && RelationIsAppendOptimized(rel);
+	if (appendonly)
+	{
+		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
+									 &blocksize,
+									 NULL,
+									 &compresslevel,
+									 NULL,
+									 &compresstype_nd);
+		compresstype = NameStr(compresstype_nd);
+	}
 
 	if (compresstype && compresstype[0])
-		e1 = makeDefElem("compresstype",
-				(Node *)makeString(pstrdup(compresstype)));
+		e1 = makeDefElem("compresstype", (Node *) makeString(pstrdup(compresstype)), -1);
 	else if (ao_opts->compresstype[0])
-		e1 = makeDefElem("compresstype",
-				(Node *)makeString(pstrdup(ao_opts->compresstype)));
+		e1 = makeDefElem("compresstype", (Node *) makeString(pstrdup(ao_opts->compresstype)), -1);
 	else
-		e1 = makeDefElem("compresstype", (Node *)makeString("none"));
+		e1 = makeDefElem("compresstype", (Node *) makeString("none"), -1);
 
 	if (appendonly)
-		e2 = makeDefElem("blocksize",
-				(Node *)makeInteger(appendonly->blocksize));
+		e2 = makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1);
 	else if (ao_opts->blocksize != 0)
-		e2 = makeDefElem("blocksize",
-				(Node *)makeInteger(ao_opts->blocksize));
+		e2 = makeDefElem("blocksize", (Node *) makeInteger(ao_opts->blocksize), -1);
 	else
-		e2 = makeDefElem("blocksize",
-				(Node *)makeInteger(AO_DEFAULT_BLOCKSIZE));
+		e2 = makeDefElem("blocksize", (Node *) makeInteger(AO_DEFAULT_BLOCKSIZE), -1);
 
-	if (appendonly && appendonly->compresslevel != 0)
-		e3 = makeDefElem("compresslevel",
-				(Node *)makeInteger(appendonly->compresslevel));
+	if (appendonly && compresslevel != 0)
+		e3 = makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1);
 	else if (ao_opts->compresslevel != 0)
-		e3 = makeDefElem("compresslevel",
-				(Node *)makeInteger(ao_opts->compresslevel));
+		e3 = makeDefElem("compresslevel", (Node *) makeInteger(ao_opts->compresslevel), -1);
 	else
-		e3 = makeDefElem("compresslevel",
-				(Node *)makeInteger(AO_DEFAULT_COMPRESSLEVEL));
+		e3 = makeDefElem("compresslevel", (Node *) makeInteger(AO_DEFAULT_COMPRESSLEVEL), -1);
 
 	return list_make3(e1, e2, e3);
 }
 
+/*
+ * GPDB_12_MERGE_FIXME:
+ *		This function does not fit pg_compression and should probably be moved
+ *		to pg_attribute_encoding or reloptions_gp.
+ *
+ *		Currently used only in typecmds.c
+ */
 bool
 is_storage_encoding_directive(char *name)
 {

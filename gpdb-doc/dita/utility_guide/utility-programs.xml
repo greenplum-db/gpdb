@@ -46,13 +46,9 @@
                         <p><xref href="ref/clusterdb.xml" type="topic" format="dita"/></p>
                         <p><xref href="ref/createdb.xml" type="topic" format="dita"/><sup
                                 otherprops="pivotal">3</sup></p>
-                        <p><xref href="ref/createlang.xml" type="topic" format="dita"/><sup
-                                otherprops="pivotal">3</sup></p>
                         <p><xref href="ref/createuser.xml" type="topic" format="dita"/><sup
                                 otherprops="pivotal">3</sup></p>
                         <p><xref href="ref/dropdb.xml" type="topic" format="dita"/><sup
-                                otherprops="pivotal">3</sup></p>
-                        <p><xref href="ref/droplang.xml" type="topic" format="dita"/><sup
                                 otherprops="pivotal">3</sup></p>
                         <p><xref href="ref/dropuser.xml" type="topic" format="dita"/><sup
                                 otherprops="pivotal">3</sup></p>
@@ -116,9 +112,9 @@
                         <p><xref href="ref/plcontainer.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/plcontainer-configuration.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/psql.xml#topic1"/><sup otherprops="pivotal">3</sup></p>
-                        <p><xref href="../../pxf/5-14/ref/pxf.html" format="html" scope="external"
+                        <p><xref href="../../pxf/5-15/ref/pxf.html" format="html" scope="external"
                             >pxf</xref></p>
-                        <p><xref href="../../pxf/5-14/ref/pxf-cluster.html" format="html"
+                        <p><xref href="../../pxf/5-15/ref/pxf-cluster.html" format="html"
                             scope="external">pxf cluster</xref></p>
                         <p><xref href="ref/reindexdb.xml#topic1"/></p>
                         <p><xref href="ref/vacuumdb.xml#topic1"/></p>

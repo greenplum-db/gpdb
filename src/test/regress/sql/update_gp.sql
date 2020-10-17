@@ -207,8 +207,8 @@ drop table tab5;
 drop table if exists r;
 drop table if exists s;
 drop table if exists update_dist;
-drop table if exists ao_table;
-drop table if exists aoco_table;
+drop table if exists update_ao_table;
+drop table if exists update_aoco_table;
 -- end_ignore
 
 -- Update normal table distribution key
@@ -253,18 +253,18 @@ update s set a = s.a + 1 where exists (select 1 from r where s.a = r.b);
 select * from s;
 
 -- Update ao table distribution key
-create table ao_table (a int, b int) WITH (appendonly=true) distributed by (a);
-insert into ao_table select g, g from generate_series(1, 5) g;
-select * from ao_table;
-update ao_table set a = a + 1 where b = 3;
-select * from ao_table;
+create table update_ao_table (a int, b int) WITH (appendonly=true) distributed by (a);
+insert into update_ao_table select g, g from generate_series(1, 5) g;
+select * from update_ao_table;
+update update_ao_table set a = a + 1 where b = 3;
+select * from update_ao_table;
 
 -- Update aoco table distribution key
-create table aoco_table (a int, b int) WITH (appendonly=true, orientation=column) distributed by (a);
-insert into aoco_table select g,g from generate_series(1, 5) g;
-select * from aoco_table;
-update aoco_table set a = a + 1 where b = 3;
-select * from aoco_table;
+create table update_aoco_table (a int, b int) WITH (appendonly=true, orientation=column) distributed by (a);
+insert into update_aoco_table select g,g from generate_series(1, 5) g;
+select * from update_aoco_table;
+update update_aoco_table set a = a + 1 where b = 3;
+select * from update_aoco_table;
 
 -- Update prepare
 delete from s;
@@ -342,12 +342,38 @@ create unique index uidx_t_insert_on_conflict_update_distkey on t_insert_on_conf
 -- the following statement should succeed because replicated table does not contain distkey
 insert into t_insert_on_conflict_update_distkey values (1, 1) on conflict(a, b) do update set a = 1;
 
+-- Some tests on a partitioned table.
+CREATE TABLE update_gp_rangep (a int, b int, orig_a int) DISTRIBUTED BY (b) PARTITION BY RANGE (a);
+
+CREATE TABLE update_gp_rangep_1_to_10  PARTITION OF update_gp_rangep FOR VALUES FROM  (1) TO (10);
+CREATE TABLE update_gp_rangep_10_to_20 PARTITION OF update_gp_rangep FOR VALUES FROM (10) TO (20);
+
+INSERT INTO update_gp_rangep SELECT g, g, g FROM generate_series(1, 4) g;
+
+-- Simple case: Same partition, same node.
+UPDATE update_gp_rangep SET a = 9 WHERE a = 1;
+
+-- Distribution key update, same partition.
+UPDATE update_gp_rangep SET b = 1 WHERE a = 2;
+
+-- Move row to different partition, but no change in distribution key
+UPDATE update_gp_rangep SET a = 10 WHERE a = 3;
+
+-- Move row to different partition and also change distribution key
+UPDATE update_gp_rangep SET a = 11, b = 1 WHERE a = 4;
+
+SELECT tableoid::regclass, * FROM update_gp_rangep ORDER BY orig_a;
+-- Also do a lookup with specific distribution key. If the rows were not
+-- correctly moved across segments, this would fail to find them, assuming
+-- that direct dispatch is effective.
+SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
+
 -- start_ignore
 drop table r;
 drop table s;
 drop table update_dist;
-drop table ao_table;
-drop table aoco_table;
+drop table update_ao_table;
+drop table update_aoco_table;
 drop table nosplitupdate;
 drop table tsplit_entry;
 -- end_ignore

@@ -5,7 +5,7 @@ import tempfile
 
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.gparray import GpArray, Segment
 from gppylib.heapchecksum import HeapChecksum
 from gppylib.operations.buildMirrorSegments import GpMirrorToBuild, GpMirrorListToBuild
@@ -137,7 +137,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
         self.assertTrue(self.gparray.master.isSegmentMaster(True))
 
-        with self.assertRaisesRegexp(Exception, "Heap checksum setting differences reported on segments"):
+        with self.assertRaisesRegex(Exception, "Heap checksum setting differences reported on segments"):
             self.subject.run()
 
         self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])
@@ -152,7 +152,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
         self.return_one = True
         self.assertTrue(self.gparray.master.isSegmentMaster(True))
-        with self.assertRaisesRegexp(Exception, "No segments responded to ssh query for heap checksum validation."):
+        with self.assertRaisesRegex(Exception, "No segments responded to ssh query for heap checksum validation."):
             self.subject.run()
 
         self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])

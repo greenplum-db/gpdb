@@ -3,7 +3,7 @@
  * walsender_private.h
  *	  Private definitions from replication/walsender.c.
  *
- * Portions Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *
  * src/include/replication/walsender_private.h
  *
@@ -30,10 +30,17 @@ typedef enum WalSndState
 
 /*
  * Each walsender has a WalSnd struct in shared memory.
+ *
+ * This struct is protected by 'mutex', with two exceptions: one is
+ * sync_standby_priority as noted below.  The other exception is that some
+ * members are only written by the walsender process itself, and thus that
+ * process is free to read those members without holding spinlock.  pid and
+ * needreload always require the spinlock to be held for all accesses.
  */
 typedef struct WalSnd
 {
-	pid_t		pid;			/* this walsender's process id, or 0 */
+	pid_t		pid;			/* this walsender's PID, or 0 if not active */
+
 	WalSndState state;			/* this walsender's state */
 	XLogRecPtr	sentPtr;		/* WAL has been sent up to this point */
 	bool		sendKeepalive;	/* do we send keepalives on this connection? */
@@ -68,6 +75,11 @@ typedef struct WalSnd
 	 */
 	XLogRecPtr	xlogCleanUpTo;
 
+	/* Measured lag times, or -1 for unknown/none. */
+	TimeOffset	writeLag;
+	TimeOffset	flushLag;
+	TimeOffset	applyLag;
+
 	/* Protects shared variables shown above. */
 	slock_t		mutex;
 
@@ -83,6 +95,11 @@ typedef struct WalSnd
 	 * SyncRepLock.
 	 */
 	int			sync_standby_priority;
+
+	/*
+	 * Timestamp of the last message received from standby.
+	 */
+	TimestampTz replyTime;
 
 	/*
 	 * Indicates whether the WalSnd represents a connection with a Greenplum
@@ -170,4 +187,4 @@ extern Node *replication_parse_result;
 
 #define GP_WALRECEIVER_APPNAME "gp_walreceiver"
 
-#endif   /* _WALSENDER_PRIVATE_H */
+#endif							/* _WALSENDER_PRIVATE_H */

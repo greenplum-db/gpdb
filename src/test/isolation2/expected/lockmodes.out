@@ -1,6 +1,3 @@
-include: helpers/server_helpers.sql;
-CREATE
-
 -- table to just store the master's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 CREATE
@@ -1017,6 +1014,112 @@ ABORT
 1q: ... <quitting>
 2q: ... <quitting>
 
+-- 1.8 Test on DML lock behavior on Partition tables on QDs.
+-- This suite will test:
+--   * DML on root
+--   * DML on one specific leaf
+-- For detailed behavior and notes, please refer below
+-- cases's comments.
+-- GPDB_12_MERGE_FIXME: DML lockmodes on partition table
+-- is a bit in disorder, we shoule correct them.
+-- Details: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/wAPKpJzhbpM
+-- start_ignore
+1:DROP TABLE IF EXISTS t_lockmods_part_tbl_upd_del;
+DROP
+-- end_ignore
+
+1:CREATE TABLE t_lockmods_part_tbl_upd_del (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
+CREATE
+1:INSERT INTO t_lockmods_part_tbl_upd_del SELECT i, 1, i FROM generate_series(1,10)i;
+INSERT 10
+
+--
+1: BEGIN;
+BEGIN
+1: DELETE FROM t_lockmods_part_tbl_upd_del;
+DELETE 10
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                            
+----------+------------------+---------+-------------------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_upd_del         
+ relation | ExclusiveLock    | t       | t_lockmods_part_tbl_upd_del         
+(4 rows)
+1: ROLLBACK;
+ROLLBACK
+
+--
+-- The session cannot be reused.
+--
+-- The macro RELCACHE_FORCE_RELEASE is defined iff USE_ASSERT_CHECKING is
+-- defined, and when RELCACHE_FORCE_RELEASE is defined the relcache is
+-- forcefully released when closing the relation.
+--
+-- The function generate_partition_qual() will behave differently depends on
+-- the existence of the relcache.
+--
+-- - if the relation is not cached, it will open it in AccessShareLock mode,
+--   and save the relpartbound in the relcache;
+-- - if the relation is already cached, it will load the relpartbound from the
+--   cache directly without opening the relation;
+--
+-- So as a result, in the following transactions we will see an extra
+-- AccessShareLock lock in a --enable-cassert build compared to a
+-- --disable-cassert build.
+--
+-- To make the test results stable, we do not reuse the sessions in the test,
+-- all the tests are performed without the relcache.
+1q: ... <quitting>
+
+1: BEGIN;
+BEGIN
+1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+UPDATE 1
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                            
+----------+------------------+---------+-------------------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_upd_del         
+ relation | ExclusiveLock    | t       | t_lockmods_part_tbl_upd_del         
+(4 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
+1: BEGIN;
+BEGIN
+1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+DELETE 10
+-- since the delete operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation                            
+----------+-----------------+---------+-------------------------------------
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_upd_del         
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+(2 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
+1: BEGIN;
+BEGIN
+1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+UPDATE 1
+-- since the update operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation                            
+----------+-----------------+---------+-------------------------------------
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_upd_del         
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+(2 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
 -- enable gdd
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 ALTER
@@ -2014,6 +2117,78 @@ ABORT
 1q: ... <quitting>
 2q: ... <quitting>
 
+-- 2.7 Test on DML lock behavior on Partition tables on QDs.
+-- This suite will test:
+--   * DML on root
+--   * DML on one specific leaf
+-- For detailed behavior and notes, please refer below
+-- cases's comments.
+
+1: BEGIN;
+BEGIN
+1: DELETE FROM t_lockmods_part_tbl_upd_del;
+DELETE 10
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                            
+----------+------------------+---------+-------------------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_upd_del         
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del         
+(4 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
+1: BEGIN;
+BEGIN
+1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+UPDATE 1
+-- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                            
+----------+------------------+---------+-------------------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_upd_del         
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del         
+(4 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
+1: BEGIN;
+BEGIN
+1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+DELETE 10
+-- since the delete operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                            
+----------+------------------+---------+-------------------------------------
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_upd_del         
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+(2 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
+1: BEGIN;
+BEGIN
+1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+UPDATE 1
+-- since the update operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                            
+----------+------------------+---------+-------------------------------------
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_upd_del         
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_upd_del_1_prt_1 
+(2 rows)
+1: ROLLBACK;
+ROLLBACK
+1q: ... <quitting>
+
+-- reset gdd
 2: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
 ALTER
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;

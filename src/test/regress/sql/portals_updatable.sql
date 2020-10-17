@@ -171,11 +171,12 @@ DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank_1_prt_extra WHERE rank
 DELETE FROM portals_updatable_rank WHERE CURRENT OF c;	-- error out on wrong table
 ROLLBACK;
 
--- Partitioning, negative, cursor-agnostic: cannot move tuple across partitions
+-- Partitioning, cursor-agnostic: move tuple across partitions
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank WHERE rank = 1;
 FETCH 1 FROM c;
 UPDATE portals_updatable_rank SET rank = rank + 1 WHERE CURRENT OF c;
+SELECT tableoid::regclass, * FROM portals_updatable_rank;
 ROLLBACK;
 
 -- Partitioning: AO part

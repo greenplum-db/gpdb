@@ -1,6 +1,6 @@
-create schema create_ao_table_500cols_@orientation@;
-set search_path="$user",create_ao_table_500cols_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema create_ao_table_500cols_@amname@;
+set search_path="$user",create_ao_table_500cols_@amname@,public;
+SET default_table_access_method=@amname@;
 Create table sto_uao_500cols (id SERIAL, a1 int, a2 char(5), a3
 numeric, a4 boolean DEFAULT false , a5 char DEFAULT 'd', a6 text, a7
 timestamp, a8 character varying(705), a9 bigint, a10 date, a11
@@ -108,7 +108,7 @@ bytea, a480 timestamp with time zone, a481 timetz, a482 path, a483
 box, a484 macaddr, a485 interval, a486 character varying(800), a487
 lseg, a488 point, a489 double precision, a490 circle, a491 int4, a492
 numeric(8), a493 polygon, a494 date, a495 real, a496 money, a497 cidr,
-a498 inet, a499 time, a500 text)  with (appendonly=true)
+a498 inet, a499 time, a500 text)
  DISTRIBUTED BY (id);
 
 SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND

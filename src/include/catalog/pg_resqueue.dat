@@ -1,0 +1,19 @@
+#----------------------------------------------------------------------
+#
+# pg_resqueue.dat
+#    Initial contents of the pg_resqueue system relation.
+#
+# Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/pg_resqueue.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+{ oid => '6055', oid_symbol => 'DEFAULTRESQUEUE_OID',
+  rsqname => 'pg_default', rsqcountlimit => '20', rsqcostlimit => '-1',
+  rsqovercommit => 'f', rsqignorecostlimit => '0' },
+
+]

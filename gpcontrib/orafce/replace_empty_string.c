@@ -65,7 +65,7 @@ heap_modify_tuple_by_cols(HeapTuple tuple,
 	 */
 	newTuple->t_data->t_ctid = tuple->t_data->t_ctid;
 	newTuple->t_self = tuple->t_self;
-	/* newTuple->t_tableOid = tuple->t_tableOid; */
+	newTuple->t_tableOid = tuple->t_tableOid;
 	if (tupleDesc->tdhasoid)
 		HeapTupleSetOid(newTuple, HeapTupleGetOid(tuple));
 

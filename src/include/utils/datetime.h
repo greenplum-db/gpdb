@@ -3,10 +3,10 @@
  * datetime.h
  *	  Definitions for date/time support code.
  *	  The support code is shared with other date data types,
- *	   including abstime, reltime, date, and time.
+ *	   including date, and time.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/datetime.h
@@ -148,8 +148,6 @@ struct tzEntry;
 #define DTK_AGO			5
 
 #define DTK_SPECIAL		6
-#define DTK_INVALID		7
-#define DTK_CURRENT		8
 #define DTK_EARLY		9
 #define DTK_LATE		10
 #define DTK_EPOCH		11
@@ -244,30 +242,22 @@ do { \
 } while(0)
 
 /* TMODULO()
- * Like FMODULO(), but work on the timestamp datatype (either int64 or float8).
+ * Like FMODULO(), but work on the timestamp datatype (now always int64).
  * We assume that int64 follows the C99 semantics for division (negative
  * quotients truncate towards zero).
  */
-#ifdef HAVE_INT64_TIMESTAMP
 #define TMODULO(t,q,u) \
 do { \
 	(q) = ((t) / (u)); \
 	if ((q) != 0) (t) -= ((q) * (u)); \
 } while(0)
-#else
-#define TMODULO(t,q,u) \
-do { \
-	(q) = (((t) < 0) ? ceil((t) / (u)) : floor((t) / (u))); \
-	if ((q) != 0) (t) -= rint((q) * (u)); \
-} while(0)
-#endif
 
 /*
  * Date/time validation
  * Include check for leap year.
  */
 
-extern const char *const months[];		/* months (3-char abbreviations) */
+extern const char *const months[];	/* months (3-char abbreviations) */
 extern const char *const days[];	/* days (full names) */
 extern const int day_tab[2][13];
 
@@ -294,59 +284,56 @@ extern const int day_tab[2][13];
 #define DTERR_TZDISP_OVERFLOW	(-5)
 
 
-extern void GetCurrentDateTime(struct pg_tm * tm);
-extern void GetCurrentTimeUsec(struct pg_tm * tm, fsec_t *fsec, int *tzp);
+extern void GetCurrentDateTime(struct pg_tm *tm);
+extern void GetCurrentTimeUsec(struct pg_tm *tm, fsec_t *fsec, int *tzp);
 extern void j2date(int jd, int *year, int *month, int *day);
 extern int	date2j(int year, int month, int day);
 
-extern int ParseDateTime(const char *timestr, char *workbuf, size_t buflen,
-			  char **field, int *ftype,
-			  int maxfields, int *numfields);
-extern int DecodeDateTime(char **field, int *ftype,
-			   int nf, int *dtype,
-			   struct pg_tm * tm, fsec_t *fsec, int *tzp);
+extern int	ParseDateTime(const char *timestr, char *workbuf, size_t buflen,
+						  char **field, int *ftype,
+						  int maxfields, int *numfields);
+extern int	DecodeDateTime(char **field, int *ftype,
+						   int nf, int *dtype,
+						   struct pg_tm *tm, fsec_t *fsec, int *tzp);
 extern int	DecodeTimezone(char *str, int *tzp);
-extern int DecodeTimeOnly(char **field, int *ftype,
-			   int nf, int *dtype,
-			   struct pg_tm * tm, fsec_t *fsec, int *tzp);
-extern int DecodeInterval(char **field, int *ftype, int nf, int range,
-			   int *dtype, struct pg_tm * tm, fsec_t *fsec);
-extern int DecodeISO8601Interval(char *str,
-					  int *dtype, struct pg_tm * tm, fsec_t *fsec);
+extern int	DecodeTimeOnly(char **field, int *ftype,
+						   int nf, int *dtype,
+						   struct pg_tm *tm, fsec_t *fsec, int *tzp);
+extern int	DecodeInterval(char **field, int *ftype, int nf, int range,
+						   int *dtype, struct pg_tm *tm, fsec_t *fsec);
+extern int	DecodeISO8601Interval(char *str,
+								  int *dtype, struct pg_tm *tm, fsec_t *fsec);
 
 extern void DateTimeParseError(int dterr, const char *str,
-				   const char *datatype) pg_attribute_noreturn();
+							   const char *datatype) pg_attribute_noreturn();
 
-extern int	DetermineTimeZoneOffset(struct pg_tm * tm, pg_tz *tzp);
-extern int	DetermineTimeZoneAbbrevOffset(struct pg_tm * tm, const char *abbr, pg_tz *tzp);
-extern int DetermineTimeZoneAbbrevOffsetTS(TimestampTz ts, const char *abbr,
-								pg_tz *tzp, int *isdst);
+extern int	DetermineTimeZoneOffset(struct pg_tm *tm, pg_tz *tzp);
+extern int	DetermineTimeZoneAbbrevOffset(struct pg_tm *tm, const char *abbr, pg_tz *tzp);
+extern int	DetermineTimeZoneAbbrevOffsetTS(TimestampTz ts, const char *abbr,
+											pg_tz *tzp, int *isdst);
 
-extern void EncodeDateOnly(struct pg_tm * tm, int style, char *str);
-extern void EncodeTimeOnly(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, int style, char *str);
-extern void EncodeDateTime(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, const char *tzn, int style, char *str);
-extern void EncodeInterval(struct pg_tm * tm, fsec_t fsec, int style, char *str);
+extern void EncodeDateOnly(struct pg_tm *tm, int style, char *str);
+extern void EncodeTimeOnly(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, int style, char *str);
+extern void EncodeDateTime(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, const char *tzn, int style, char *str);
+extern void EncodeInterval(struct pg_tm *tm, fsec_t fsec, int style, char *str);
 extern void EncodeSpecialTimestamp(Timestamp dt, char *str);
 
-extern int ValidateDate(int fmask, bool isjulian, bool is2digits, bool bc,
-			 struct pg_tm * tm);
+extern int	ValidateDate(int fmask, bool isjulian, bool is2digits, bool bc,
+						 struct pg_tm *tm);
 
-extern int DecodeTimezoneAbbrev(int field, char *lowtoken,
-					 int *offset, pg_tz **tz);
+extern int	DecodeTimezoneAbbrev(int field, char *lowtoken,
+								 int *offset, pg_tz **tz);
 extern int	DecodeSpecial(int field, char *lowtoken, int *val);
 extern int	DecodeUnits(int field, char *lowtoken, int *val);
 
 extern int	j2day(int jd);
 
-extern Node *TemporalTransform(int32 max_precis, Node *node);
+extern Node *TemporalSimplify(int32 max_precis, Node *node);
 
 extern bool CheckDateTokenTables(void);
 
 extern TimeZoneAbbrevTable *ConvertTimeZoneAbbrevs(struct tzEntry *abbrevs,
-					   int n);
+												   int n);
 extern void InstallTimeZoneAbbrevs(TimeZoneAbbrevTable *tbl);
 
-extern Datum pg_timezone_abbrevs(PG_FUNCTION_ARGS);
-extern Datum pg_timezone_names(PG_FUNCTION_ARGS);
-
-#endif   /* DATETIME_H */
+#endif							/* DATETIME_H */

@@ -1,39 +1,39 @@
 -- SQL coverage of RESOURCE QUEUE
 
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq COST THRESHOLD 3000.00 OVERCOMMIT;
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq COST THRESHOLD 4e+3 NOOVERCOMMIT;
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 COMMENT ON RESOURCE QUEUE regressq IS 'regressq comment';
 DROP RESOURCE QUEUE regressq;
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 
 
 -- more coverage
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000);
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITHOUT (max_cost);
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000)
 WITHOUT (overcommit); -- negative
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000)
 WITHOUT (cost_overcommit); -- works
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq OVERCOMMIT WITH (max_cost=2000);
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq IGNORE THRESHOLD 1 WITHOUT (max_cost);
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq WITH (priority=high);
 SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq WITH (priority='MeDiUm');
 SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq;
 DROP RESOURCE QUEUE regressq;
-SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
 
 -- negative
 
@@ -72,7 +72,7 @@ DROP RESOURCE QUEUE regressq2;
 
 -- Create resource queue with cost_overcommit=true
 create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
-select * from pg_resqueue where rsqname='t3_test_q';
+select rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit from pg_resqueue where rsqname='t3_test_q';
 drop resource queue t3_test_q;
 
 

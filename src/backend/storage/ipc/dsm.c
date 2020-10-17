@@ -14,7 +14,7 @@
  * hard postmaster crash, remaining segments will be removed, if they
  * still exist, at the next postmaster startup.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -27,7 +27,6 @@
 #include "postgres.h"
 
 #include <fcntl.h>
-#include <string.h>
 #include <unistd.h>
 #ifndef WIN32
 #include <sys/mman.h>
@@ -82,6 +81,8 @@ typedef struct dsm_control_item
 {
 	dsm_handle	handle;
 	uint32		refcnt;			/* 2+ = active, 1 = moribund, 0 = gone */
+	void	   *impl_private_pm_handle; /* only needed on Windows */
+	bool		pinned;
 } dsm_control_item;
 
 /* Layout of the dynamic shared memory control segment. */
@@ -97,7 +98,7 @@ static void dsm_cleanup_for_mmap(void);
 static void dsm_postmaster_shutdown(int code, Datum arg);
 static dsm_segment *dsm_create_descriptor(void);
 static bool dsm_control_segment_sane(dsm_control_header *control,
-						 Size mapped_size);
+									 Size mapped_size);
 static uint64 dsm_control_bytes_needed(uint32 nitems);
 
 /* Has this backend initialized the dynamic shared memory system yet? */
@@ -149,10 +150,6 @@ dsm_postmaster_startup(PGShmemHeader *shim)
 
 	Assert(!IsUnderPostmaster);
 
-	/* If dynamic shared memory is disabled, there's nothing to do. */
-	if (dynamic_shared_memory_type == DSM_IMPL_NONE)
-		return;
-
 	/*
 	 * If we're using the mmap implementations, clean up any leftovers.
 	 * Cleanup isn't needed on Windows, and happens earlier in startup for
@@ -180,7 +177,7 @@ dsm_postmaster_startup(PGShmemHeader *shim)
 		Assert(dsm_control_address == NULL);
 		Assert(dsm_control_mapped_size == 0);
 		dsm_control_handle = random();
-		if (dsm_control_handle == 0)
+		if (dsm_control_handle == DSM_HANDLE_INVALID)
 			continue;
 		if (dsm_impl_op(DSM_OP_CREATE, dsm_control_handle, segsize,
 						&dsm_control_impl_private, &dsm_control_address,
@@ -217,10 +214,6 @@ dsm_cleanup_using_control_segment(dsm_handle old_control_handle)
 	uint32		nitems;
 	uint32		i;
 	dsm_control_header *old_control;
-
-	/* If dynamic shared memory is disabled, there's nothing to do. */
-	if (dynamic_shared_memory_type == DSM_IMPL_NONE)
-		return;
 
 	/*
 	 * Try to attach the segment.  If this fails, it probably just means that
@@ -293,14 +286,9 @@ dsm_cleanup_for_mmap(void)
 	DIR		   *dir;
 	struct dirent *dent;
 
-	/* Open the directory; can't use AllocateDir in postmaster. */
-	if ((dir = AllocateDir(PG_DYNSHMEM_DIR)) == NULL)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open directory \"%s\": %m",
-						PG_DYNSHMEM_DIR)));
+	/* Scan the directory for something with a name of the correct format. */
+	dir = AllocateDir(PG_DYNSHMEM_DIR);
 
-	/* Scan for something with a name of the correct format. */
 	while ((dent = ReadDir(dir, PG_DYNSHMEM_DIR)) != NULL)
 	{
 		if (strncmp(dent->d_name, PG_DYNSHMEM_MMAP_FILE_PREFIX,
@@ -314,17 +302,9 @@ dsm_cleanup_for_mmap(void)
 
 			/* We found a matching file; so remove it. */
 			if (unlink(buf) != 0)
-			{
-				int			save_errno;
-
-				save_errno = errno;
-				closedir(dir);
-				errno = save_errno;
-
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not remove file \"%s\": %m", buf)));
-			}
 		}
 	}
 
@@ -403,13 +383,6 @@ dsm_postmaster_shutdown(int code, Datum arg)
 static void
 dsm_backend_startup(void)
 {
-	/* If dynamic shared memory is disabled, reject this. */
-	if (dynamic_shared_memory_type == DSM_IMPL_NONE)
-		ereport(ERROR,
-				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("dynamic shared memory is disabled"),
-				 errhint("Set dynamic_shared_memory_type to a value other than \"none\".")));
-
 #ifdef EXEC_BACKEND
 	{
 		void	   *control_address = NULL;
@@ -428,7 +401,7 @@ dsm_backend_startup(void)
 						&dsm_control_mapped_size, WARNING);
 			ereport(FATAL,
 					(errcode(ERRCODE_INTERNAL_ERROR),
-			  errmsg("dynamic shared memory control segment is not valid")));
+					 errmsg("dynamic shared memory control segment is not valid")));
 		}
 	}
 #endif
@@ -452,6 +425,13 @@ dsm_set_control_handle(dsm_handle h)
 
 /*
  * Create a new dynamic shared memory segment.
+ *
+ * If there is a non-NULL CurrentResourceOwner, the new segment is associated
+ * with it and must be detached before the resource owner releases, or a
+ * warning will be logged.  If CurrentResourceOwner is NULL, the segment
+ * remains attached until explicitly detached or the session ends.
+ * Creating with a NULL CurrentResourceOwner is equivalent to creating
+ * with a non-NULL CurrentResourceOwner and then calling dsm_pin_mapping.
  */
 dsm_segment *
 dsm_create(Size size, int flags)
@@ -474,6 +454,8 @@ dsm_create(Size size, int flags)
 	{
 		Assert(seg->mapped_address == NULL && seg->mapped_size == 0);
 		seg->handle = random();
+		if (seg->handle == DSM_HANDLE_INVALID)	/* Reserve sentinel */
+			continue;
 		if (dsm_impl_op(DSM_OP_CREATE, seg->handle, size, &seg->impl_private,
 						&seg->mapped_address, &seg->mapped_size, ERROR))
 			break;
@@ -491,6 +473,8 @@ dsm_create(Size size, int flags)
 			dsm_control->item[i].handle = seg->handle;
 			/* refcnt of 1 triggers destruction, so start at 2 */
 			dsm_control->item[i].refcnt = 2;
+			dsm_control->item[i].impl_private_pm_handle = NULL;
+			dsm_control->item[i].pinned = false;
 			seg->control_slot = i;
 			LWLockRelease(DynamicSharedMemoryControlLock);
 			return seg;
@@ -520,6 +504,8 @@ dsm_create(Size size, int flags)
 	dsm_control->item[nitems].handle = seg->handle;
 	/* refcnt of 1 triggers destruction, so start at 2 */
 	dsm_control->item[nitems].refcnt = 2;
+	dsm_control->item[nitems].impl_private_pm_handle = NULL;
+	dsm_control->item[nitems].pinned = false;
 	seg->control_slot = nitems;
 	dsm_control->nitems++;
 	LWLockRelease(DynamicSharedMemoryControlLock);
@@ -537,6 +523,11 @@ dsm_create(Size size, int flags)
  * This can happen if we're asked to attach the segment, but then everyone
  * else detaches it (causing it to be destroyed) before we get around to
  * attaching it.
+ *
+ * If there is a non-NULL CurrentResourceOwner, the attached segment is
+ * associated with it and must be detached before the resource owner releases,
+ * or a warning will be logged.  Otherwise the segment remains attached until
+ * explicitly detached or the session ends.  See the note atop dsm_create().
  */
 dsm_segment *
 dsm_attach(dsm_handle h)
@@ -578,21 +569,19 @@ dsm_attach(dsm_handle h)
 	nitems = dsm_control->nitems;
 	for (i = 0; i < nitems; ++i)
 	{
-		/* If the reference count is 0, the slot is actually unused. */
-		if (dsm_control->item[i].refcnt == 0)
+		/*
+		 * If the reference count is 0, the slot is actually unused.  If the
+		 * reference count is 1, the slot is still in use, but the segment is
+		 * in the process of going away; even if the handle matches, another
+		 * slot may already have started using the same handle value by
+		 * coincidence so we have to keep searching.
+		 */
+		if (dsm_control->item[i].refcnt <= 1)
 			continue;
 
 		/* If the handle doesn't match, it's not the slot we want. */
 		if (dsm_control->item[i].handle != seg->handle)
 			continue;
-
-		/*
-		 * If the reference count is 1, the slot is still in use, but the
-		 * segment is in the process of going away.  Treat that as if we
-		 * didn't find a match.
-		 */
-		if (dsm_control->item[i].refcnt == 1)
-			break;
 
 		/* Otherwise we've found a match. */
 		dsm_control->item[i].refcnt++;
@@ -663,38 +652,6 @@ dsm_detach_all(void)
 }
 
 /*
- * Resize an existing shared memory segment.
- *
- * This may cause the shared memory segment to be remapped at a different
- * address.  For the caller's convenience, we return the mapped address.
- */
-void *
-dsm_resize(dsm_segment *seg, Size size)
-{
-	Assert(seg->control_slot != INVALID_CONTROL_SLOT);
-	dsm_impl_op(DSM_OP_RESIZE, seg->handle, size, &seg->impl_private,
-				&seg->mapped_address, &seg->mapped_size, ERROR);
-	return seg->mapped_address;
-}
-
-/*
- * Remap an existing shared memory segment.
- *
- * This is intended to be used when some other process has extended the
- * mapping using dsm_resize(), but we've still only got the initial
- * portion mapped.  Since this might change the address at which the
- * segment is mapped, we return the new mapped address.
- */
-void *
-dsm_remap(dsm_segment *seg)
-{
-	dsm_impl_op(DSM_OP_ATTACH, seg->handle, 0, &seg->impl_private,
-				&seg->mapped_address, &seg->mapped_size, ERROR);
-
-	return seg->mapped_address;
-}
-
-/*
  * Detach from a shared memory segment, destroying the segment if we
  * remove the last reference.
  *
@@ -760,6 +717,9 @@ dsm_detach(dsm_segment *seg)
 		/* If new reference count is 1, try to destroy the segment. */
 		if (refcnt == 1)
 		{
+			/* A pinned segment should never reach 1. */
+			Assert(!dsm_control->item[control_slot].pinned);
+
 			/*
 			 * If we fail to destroy the segment here, or are killed before we
 			 * finish doing so, the reference count will remain at 1, which
@@ -830,11 +790,11 @@ dsm_unpin_mapping(dsm_segment *seg)
 }
 
 /*
- * Keep a dynamic shared memory segment until postmaster shutdown.
+ * Keep a dynamic shared memory segment until postmaster shutdown, or until
+ * dsm_unpin_segment is called.
  *
- * This function should not be called more than once per segment;
- * on Windows, doing so will create unnecessary handles which will
- * consume system resources to no benefit.
+ * This function should not be called more than once per segment, unless the
+ * segment is explicitly unpinned with dsm_unpin_segment in between calls.
  *
  * Note that this function does not arrange for the current process to
  * keep the segment mapped indefinitely; if that behavior is desired,
@@ -844,16 +804,112 @@ dsm_unpin_mapping(dsm_segment *seg)
 void
 dsm_pin_segment(dsm_segment *seg)
 {
+	void	   *handle;
+
 	/*
 	 * Bump reference count for this segment in shared memory. This will
 	 * ensure that even if there is no session which is attached to this
-	 * segment, it will remain until postmaster shutdown.
+	 * segment, it will remain until postmaster shutdown or an explicit call
+	 * to unpin.
 	 */
 	LWLockAcquire(DynamicSharedMemoryControlLock, LW_EXCLUSIVE);
+	if (dsm_control->item[seg->control_slot].pinned)
+		elog(ERROR, "cannot pin a segment that is already pinned");
+	dsm_impl_pin_segment(seg->handle, seg->impl_private, &handle);
+	dsm_control->item[seg->control_slot].pinned = true;
 	dsm_control->item[seg->control_slot].refcnt++;
+	dsm_control->item[seg->control_slot].impl_private_pm_handle = handle;
+	LWLockRelease(DynamicSharedMemoryControlLock);
+}
+
+/*
+ * Unpin a dynamic shared memory segment that was previously pinned with
+ * dsm_pin_segment.  This function should not be called unless dsm_pin_segment
+ * was previously called for this segment.
+ *
+ * The argument is a dsm_handle rather than a dsm_segment in case you want
+ * to unpin a segment to which you haven't attached.  This turns out to be
+ * useful if, for example, a reference to one shared memory segment is stored
+ * within another shared memory segment.  You might want to unpin the
+ * referenced segment before destroying the referencing segment.
+ */
+void
+dsm_unpin_segment(dsm_handle handle)
+{
+	uint32		control_slot = INVALID_CONTROL_SLOT;
+	bool		destroy = false;
+	uint32		i;
+
+	/* Find the control slot for the given handle. */
+	LWLockAcquire(DynamicSharedMemoryControlLock, LW_EXCLUSIVE);
+	for (i = 0; i < dsm_control->nitems; ++i)
+	{
+		/* Skip unused slots and segments that are concurrently going away. */
+		if (dsm_control->item[i].refcnt <= 1)
+			continue;
+
+		/* If we've found our handle, we can stop searching. */
+		if (dsm_control->item[i].handle == handle)
+		{
+			control_slot = i;
+			break;
+		}
+	}
+
+	/*
+	 * We should definitely have found the slot, and it should not already be
+	 * in the process of going away, because this function should only be
+	 * called on a segment which is pinned.
+	 */
+	if (control_slot == INVALID_CONTROL_SLOT)
+		elog(ERROR, "cannot unpin unknown segment handle");
+	if (!dsm_control->item[control_slot].pinned)
+		elog(ERROR, "cannot unpin a segment that is not pinned");
+	Assert(dsm_control->item[control_slot].refcnt > 1);
+
+	/*
+	 * Allow implementation-specific code to run.  We have to do this before
+	 * releasing the lock, because impl_private_pm_handle may get modified by
+	 * dsm_impl_unpin_segment.
+	 */
+	dsm_impl_unpin_segment(handle,
+						   &dsm_control->item[control_slot].impl_private_pm_handle);
+
+	/* Note that 1 means no references (0 means unused slot). */
+	if (--dsm_control->item[control_slot].refcnt == 1)
+		destroy = true;
+	dsm_control->item[control_slot].pinned = false;
+
+	/* Now we can release the lock. */
 	LWLockRelease(DynamicSharedMemoryControlLock);
 
-	dsm_impl_pin_segment(seg->handle, seg->impl_private);
+	/* Clean up resources if that was the last reference. */
+	if (destroy)
+	{
+		void	   *junk_impl_private = NULL;
+		void	   *junk_mapped_address = NULL;
+		Size		junk_mapped_size = 0;
+
+		/*
+		 * For an explanation of how error handling works in this case, see
+		 * comments in dsm_detach.  Note that if we reach this point, the
+		 * current process certainly does not have the segment mapped, because
+		 * if it did, the reference count would have still been greater than 1
+		 * even after releasing the reference count held by the pin.  The fact
+		 * that there can't be a dsm_segment for this handle makes it OK to
+		 * pass the mapped size, mapped address, and private data as NULL
+		 * here.
+		 */
+		if (dsm_impl_op(DSM_OP_DESTROY, handle, 0, &junk_impl_private,
+						&junk_mapped_address, &junk_mapped_size, WARNING))
+		{
+			LWLockAcquire(DynamicSharedMemoryControlLock, LW_EXCLUSIVE);
+			Assert(dsm_control->item[control_slot].handle == handle);
+			Assert(dsm_control->item[control_slot].refcnt == 1);
+			dsm_control->item[control_slot].refcnt = 0;
+			LWLockRelease(DynamicSharedMemoryControlLock);
+		}
+	}
 }
 
 /*
@@ -989,7 +1045,8 @@ dsm_create_descriptor(void)
 {
 	dsm_segment *seg;
 
-	ResourceOwnerEnlargeDSMs(CurrentResourceOwner);
+	if (CurrentResourceOwner)
+		ResourceOwnerEnlargeDSMs(CurrentResourceOwner);
 
 	seg = MemoryContextAlloc(TopMemoryContext, sizeof(dsm_segment));
 	dlist_push_head(&dsm_segment_list, &seg->node);
@@ -1001,7 +1058,8 @@ dsm_create_descriptor(void)
 	seg->mapped_size = 0;
 
 	seg->resowner = CurrentResourceOwner;
-	ResourceOwnerRememberDSM(CurrentResourceOwner, seg);
+	if (CurrentResourceOwner)
+		ResourceOwnerRememberDSM(CurrentResourceOwner, seg);
 
 	slist_init(&seg->on_detach);
 
@@ -1040,5 +1098,5 @@ static uint64
 dsm_control_bytes_needed(uint32 nitems)
 {
 	return offsetof(dsm_control_header, item)
-		+sizeof(dsm_control_item) * (uint64) nitems;
+		+ sizeof(dsm_control_item) * (uint64) nitems;
 }

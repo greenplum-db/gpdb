@@ -3,6 +3,9 @@
 # VALIDATE allows a minimum of ShareUpdateExclusiveLock
 # so we mix reads with it to see what works or waits
 
+# Greenplum doesn't enforce foreign keys, which make this pretty
+# uninteresting. But doesn't hurt to run it anyway.
+
 setup
 {
  CREATE TABLE a (i int PRIMARY KEY);

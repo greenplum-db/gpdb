@@ -6102,7 +6102,7 @@
     <body>
       <p>Controls logging of temporary file names and sizes. Temporary files can be created for
         sorts, hashes, temporary query results and spill files. A log entry is made in
-          <codeph>pg_log</codeph> for each temporary file when it is deleted. Depending on the
+          <codeph>log</codeph> for each temporary file when it is deleted. Depending on the
         source of the temporary files, the log entry could be created on either the master and/or
         segments. A <codeph>log_temp_files</codeph> value of zero logs all temporary file
         information, while positive values log only files whose size is greater than or equal to the

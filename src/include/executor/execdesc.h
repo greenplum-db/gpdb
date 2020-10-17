@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/execdesc.h
@@ -69,29 +69,6 @@ typedef struct SerializedParams
 	List	   *transientTypes;
 
 } SerializedParams;
-
-/*
- * When a CREATE command is dispatched to segments, the OIDs used for the
- * new objects are sent in a list of OidAssignments.
- */
-typedef struct
-{
-	NodeTag		type;
-
-	/*
-	 * Key data. Depending on the catalog table, different fields are used.
-	 * See CreateKeyFromCatalogTuple().
-	 */
-	Oid			catalog;		/* OID of the catalog table, e.g. pg_class */
-	Oid			namespaceOid;	/* namespace OID for most objects */
-	char	   *objname;		/* object name (e.g. relation name) */
-	Oid			keyOid1;		/* generic OID field, meaning depends on object type */
-	Oid			keyOid2;		/* 2nd generic OID field, meaning depends on object type */
-
-	Oid			oid;			/* OID to assign */
-
-} OidAssignment;
-
 
 /*
  * MPP Plan Slice information
@@ -254,6 +231,36 @@ typedef struct QueryDispatchDesc
 	bool useChangedAOOpts;
 } QueryDispatchDesc;
 
+/*
+ * When a CREATE command is dispatched to segments, the OIDs used for the
+ * new objects are sent in a list of OidAssignments.
+ */
+typedef struct
+{
+	NodeTag		type;
+
+	/*
+	 * Key data. Depending on the catalog table, different fields are used.
+	 * See CreateKeyFromCatalogTuple().
+	 */
+	Oid			catalog;		/* OID of the catalog table, e.g. pg_class */
+	Oid			namespaceOid;	/* namespace OID for most objects */
+	char	   *objname;		/* object name (e.g. relation name) */
+	Oid			keyOid1;		/* generic OID field, meaning depends on object type */
+	Oid			keyOid2;		/* 2nd generic OID field, meaning depends on object type */
+	Oid			keyOid3;		/* 3rd generic OID field, meaning depends on object type */
+	Oid			keyOid4;		/* 4th generic OID field, meaning depends on object type */
+
+	Oid			oid;			/* OID to assign */
+
+} OidAssignment;
+
+/*
+ * Special value stored in OidAssignment.catalog, when the entry is used to
+ * store the choice of index name for a partitioned index, instead of the
+ * choice of an OID like normally.
+ */
+#define INDEX_NAME_ASSIGNMENT		1
 
 /* ----------------
  *		query descriptor:
@@ -270,23 +277,25 @@ typedef struct QueryDesc
 {
 	/* These fields are provided by CreateQueryDesc */
 	CmdType		operation;		/* CMD_SELECT, CMD_UPDATE, etc. */
-	PlannedStmt *plannedstmt;	/* planner's output, or null if utility */
-	Node	   *utilitystmt;	/* utility statement, or null */
+	PlannedStmt *plannedstmt;	/* planner's output (could be utility, too) */
 	const char *sourceText;		/* source text of the query */
 	Snapshot	snapshot;		/* snapshot to use for query */
 	Snapshot	crosscheck_snapshot;	/* crosscheck for RI update/delete */
 	DestReceiver *dest;			/* the destination for tuple output */
 	ParamListInfo params;		/* param values being passed in */
-	int			instrument_options;		/* OR of InstrumentOption flags */
+	QueryEnvironment *queryEnv; /* query environment passed in */
+	int			instrument_options; /* OR of InstrumentOption flags */
 
 	/* These fields are set by ExecutorStart */
 	TupleDesc	tupDesc;		/* descriptor for result tuples */
 	EState	   *estate;			/* executor's query-wide state */
 	PlanState  *planstate;		/* tree of per-plan-node state */
 
+	/* This field is set by ExecutorRun */
+	bool		already_executed;	/* true if previously executed */
+
 	/* This field is set by ExecutorEnd after collecting cdbdisp results */
 	uint64		es_processed;	/* # of tuples processed */
-	Oid			es_lastoid;		/* oid of row inserted */
 	bool		extended_query;   /* simple or extended query protocol? */
 	char		*portal_name;	/* NULL for unnamed portal */
 
@@ -301,19 +310,14 @@ typedef struct QueryDesc
 
 /* in pquery.c */
 extern QueryDesc *CreateQueryDesc(PlannedStmt *plannedstmt,
-				const char *sourceText,
-				Snapshot snapshot,
-				Snapshot crosscheck_snapshot,
-				DestReceiver *dest,
-				ParamListInfo params,
-				int instrument_options);
-
-extern QueryDesc *CreateUtilityQueryDesc(Node *utilitystmt,
-					   const char *sourceText,
-					   Snapshot snapshot,
-					   DestReceiver *dest,
-					   ParamListInfo params);
+								  const char *sourceText,
+								  Snapshot snapshot,
+								  Snapshot crosscheck_snapshot,
+								  DestReceiver *dest,
+								  ParamListInfo params,
+								  QueryEnvironment *queryEnv,
+								  int instrument_options);
 
 extern void FreeQueryDesc(QueryDesc *qdesc);
 
-#endif   /* EXECDESC_H  */
+#endif							/* EXECDESC_H  */

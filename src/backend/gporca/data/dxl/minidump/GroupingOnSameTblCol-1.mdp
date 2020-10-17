@@ -7885,6 +7885,44 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
           <dxl:Opfamily Mdid="0.3032.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.1058.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.1042.1.0"/>
+        <dxl:RightType Mdid="0.1042.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1049.1.0"/>
+        <dxl:Commutator Mdid="0.1060.1.0"/>
+        <dxl:InverseOp Mdid="0.1061.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.426.1.0"/>
+          <dxl:Opfamily Mdid="0.3018.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.664.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.25.1.0"/>
+        <dxl:RightType Mdid="0.25.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.740.1.0"/>
+        <dxl:Commutator Mdid="0.666.1.0"/>
+        <dxl:InverseOp Mdid="0.667.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1994.1.0"/>
+          <dxl:Opfamily Mdid="0.2003.1.0"/>
+          <dxl:Opfamily Mdid="0.3035.1.0"/>
+          <dxl:Opfamily Mdid="0.3040.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.1754.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.1700.1.0"/>
+        <dxl:RightType Mdid="0.1700.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1722.1.0"/>
+        <dxl:Commutator Mdid="0.1756.1.0"/>
+        <dxl:InverseOp Mdid="0.1757.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1988.1.0"/>
+          <dxl:Opfamily Mdid="0.3032.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:Index Mdid="0.673571.1.0" Name="store_sales_pkey" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2,9" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -10984,10 +11022,10 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="56">
+    <dxl:Plan Id="0" SpaceSize="66">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1261.378722" Rows="3.941034" Width="127"/>
+          <dxl:Cost StartupCost="0" TotalCost="458.857269" Rows="3.941034" Width="127"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -11004,7 +11042,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1261.376475" Rows="3.941034" Width="127"/>
+            <dxl:Cost StartupCost="0" TotalCost="458.855022" Rows="3.941034" Width="127"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="1"/>
@@ -11025,7 +11063,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
           <dxl:Filter/>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1261.375541" Rows="3.941034" Width="127"/>
+              <dxl:Cost StartupCost="0" TotalCost="458.854088" Rows="3.941034" Width="127"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -11051,9 +11089,9 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                 <dxl:Ident ColId="5" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+            <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1261.374758" Rows="3.941034" Width="127"/>
+                <dxl:Cost StartupCost="0" TotalCost="458.853304" Rows="3.941034" Width="127"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="1"/>
@@ -11072,9 +11110,9 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:HashJoin JoinType="Inner">
+              <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1261.224025" Rows="687.492847" Width="127"/>
+                  <dxl:Cost StartupCost="0" TotalCost="458.809508" Rows="687.492847" Width="127"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -11088,40 +11126,12 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:JoinFilter/>
-                <dxl:HashCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                    <dxl:Ident ColId="31" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                    <dxl:Ident ColId="0" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
-                  </dxl:Comparison>
-                </dxl:HashCondList>
-                <dxl:TableScan>
+                <dxl:JoinFilter>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                </dxl:JoinFilter>
+                <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="561.747110" Rows="2881479.000000" Width="4"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="31" Alias="ss_item_sk">
-                      <dxl:Ident ColId="31" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.673545.1.1" TableName="store_sales">
-                    <dxl:Columns>
-                      <dxl:Column ColId="31" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="38" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="52" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                      <dxl:Column ColId="53" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="54" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="55" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="56" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="57" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                      <dxl:Column ColId="58" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                    </dxl:Columns>
-                  </dxl:TableDescriptor>
-                </dxl:TableScan>
-                <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="434.682738" Rows="7.882068" Width="131"/>
+                    <dxl:Cost StartupCost="0" TotalCost="434.688530" Rows="7.882068" Width="131"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="i_item_sk">
@@ -11138,10 +11148,16 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:SortingColumnList/>
-                  <dxl:TableScan>
+                  <dxl:SortingColumnList>
+                    <dxl:SortingColumn ColId="1" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                    <dxl:SortingColumn ColId="4" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                    <dxl:SortingColumn ColId="5" SortOperatorMdid="0.1754.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  </dxl:SortingColumnList>
+                  <dxl:LimitCount/>
+                  <dxl:LimitOffset/>
+                  <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="434.669225" Rows="3.941034" Width="131"/>
+                      <dxl:Cost StartupCost="0" TotalCost="434.682738" Rows="7.882068" Width="131"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="i_item_sk">
@@ -11157,46 +11173,94 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                         <dxl:Ident ColId="5" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:Filter>
-                      <dxl:And>
-                        <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1757.1.0">
+                    <dxl:Filter/>
+                    <dxl:SortingColumnList/>
+                    <dxl:TableScan>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="434.669225" Rows="3.941034" Width="131"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="0" Alias="i_item_sk">
+                          <dxl:Ident ColId="0" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="1" Alias="i_item_id">
+                          <dxl:Ident ColId="1" ColName="i_item_id" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="4" Alias="i_item_desc">
+                          <dxl:Ident ColId="4" ColName="i_item_desc" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="5" Alias="i_current_price">
                           <dxl:Ident ColId="5" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAA+AA==" DoubleValue="62.000000"/>
-                        </dxl:Comparison>
-                        <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.1755.1.0">
-                          <dxl:Ident ColId="5" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAABcAA==" DoubleValue="92.000000"/>
-                        </dxl:Comparison>
-                        <dxl:ArrayComp OperatorName="=" OperatorMdid="0.96.1.0" OperatorType="Any">
-                          <dxl:Ident ColId="13" ColName="i_manufact_id" TypeMdid="0.23.1.0"/>
-                          <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="129"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="270"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="423"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="821"/>
-                          </dxl:Array>
-                        </dxl:ArrayComp>
-                      </dxl:And>
-                    </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.672855.1.1" TableName="item">
-                      <dxl:Columns>
-                        <dxl:Column ColId="0" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="1" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                        <dxl:Column ColId="4" Attno="5" ColName="i_item_desc" TypeMdid="0.1043.1.0" ColWidth="200"/>
-                        <dxl:Column ColId="5" Attno="6" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="13" Attno="14" ColName="i_manufact_id" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="22" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                        <dxl:Column ColId="23" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="24" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="25" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="26" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="27" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                        <dxl:Column ColId="28" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:TableScan>
-                </dxl:BroadcastMotion>
-              </dxl:HashJoin>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter>
+                        <dxl:And>
+                          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1757.1.0">
+                            <dxl:Ident ColId="5" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
+                            <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAA+AA==" DoubleValue="62.000000"/>
+                          </dxl:Comparison>
+                          <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.1755.1.0">
+                            <dxl:Ident ColId="5" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
+                            <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAABcAA==" DoubleValue="92.000000"/>
+                          </dxl:Comparison>
+                          <dxl:ArrayComp OperatorName="=" OperatorMdid="0.96.1.0" OperatorType="Any">
+                            <dxl:Ident ColId="13" ColName="i_manufact_id" TypeMdid="0.23.1.0"/>
+                            <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="129"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="270"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="423"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="821"/>
+                            </dxl:Array>
+                          </dxl:ArrayComp>
+                        </dxl:And>
+                      </dxl:Filter>
+                      <dxl:TableDescriptor Mdid="0.672855.1.1" TableName="item">
+                        <dxl:Columns>
+                          <dxl:Column ColId="0" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="1" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
+                          <dxl:Column ColId="4" Attno="5" ColName="i_item_desc" TypeMdid="0.1043.1.0" ColWidth="200"/>
+                          <dxl:Column ColId="5" Attno="6" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
+                          <dxl:Column ColId="13" Attno="14" ColName="i_manufact_id" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="22" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                          <dxl:Column ColId="23" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                          <dxl:Column ColId="24" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                          <dxl:Column ColId="25" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                          <dxl:Column ColId="26" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                          <dxl:Column ColId="27" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                          <dxl:Column ColId="28" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                  </dxl:BroadcastMotion>
+                </dxl:Sort>
+                <dxl:IndexScan IndexScanDirection="Forward">
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="23.967229" Rows="174.444787" Width="1"/>
+                  </dxl:Properties>
+                  <dxl:ProjList/>
+                  <dxl:Filter/>
+                  <dxl:IndexCondList>
+                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                      <dxl:Ident ColId="31" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="0" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                    </dxl:Comparison>
+                  </dxl:IndexCondList>
+                  <dxl:IndexDescriptor Mdid="0.673571.1.0" IndexName="store_sales_pkey"/>
+                  <dxl:TableDescriptor Mdid="0.673545.1.1" TableName="store_sales">
+                    <dxl:Columns>
+                      <dxl:Column ColId="31" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="38" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="52" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                      <dxl:Column ColId="53" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                      <dxl:Column ColId="54" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                      <dxl:Column ColId="55" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                      <dxl:Column ColId="56" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                      <dxl:Column ColId="57" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                      <dxl:Column ColId="58" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                    </dxl:Columns>
+                  </dxl:TableDescriptor>
+                </dxl:IndexScan>
+              </dxl:NestedLoopJoin>
             </dxl:Aggregate>
           </dxl:RedistributeMotion>
         </dxl:Aggregate>

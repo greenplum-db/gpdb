@@ -17,74 +17,65 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformExpandNAryJoinDPv2
-	//
-	//	@doc:
-	//		Expand n-ary join into series of binary joins using dynamic
-	//		programming
-	//
-	//---------------------------------------------------------------------------
-	class CXformExpandNAryJoinDPv2 : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformExpandNAryJoinDPv2
+//
+//	@doc:
+//		Expand n-ary join into series of binary joins using dynamic
+//		programming
+//
+//---------------------------------------------------------------------------
+class CXformExpandNAryJoinDPv2 : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformExpandNAryJoinDPv2(const CXformExpandNAryJoinDPv2 &);
+
+public:
+	// ctor
+	explicit CXformExpandNAryJoinDPv2(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformExpandNAryJoinDPv2()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfExpandNAryJoinDPv2;
+	}
 
-			// private copy ctor
-			CXformExpandNAryJoinDPv2(const CXformExpandNAryJoinDPv2 &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformExpandNAryJoinDPv2";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformExpandNAryJoinDPv2(CMemoryPool *mp);
+	// do stats need to be computed before applying xform?
+	virtual BOOL
+	FNeedsStats() const
+	{
+		return true;
+	}
 
-			// dtor
-			virtual
-			~CXformExpandNAryJoinDPv2()
-			{}
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfExpandNAryJoinDPv2;
-			}
+};	// class CXformExpandNAryJoinDPv2
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformExpandNAryJoinDPv2";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// do stats need to be computed before applying xform?
-			virtual
-			BOOL FNeedsStats() const
-			{
-				return true;
-			}
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					) const;
-
-	}; // class CXformExpandNAryJoinDPv2
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CXformExpandNAryJoinDPv2_H
+#endif	// !GPOPT_CXformExpandNAryJoinDPv2_H
 
 // EOF

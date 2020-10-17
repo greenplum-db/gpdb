@@ -145,32 +145,32 @@ CREATE TABLE child2 (like parent);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- should be replicated table
 \d child
-       Table "rpt.child"
-  Column  |  Type   | Modifiers 
-----------+---------+-----------
- name     | text    | 
- age      | integer | 
- location | point   | 
+                  Table "rpt.child"
+  Column  |  Type   | Collation | Nullable | Default 
+----------+---------+-----------+----------+---------
+ name     | text    |           |          | 
+ age      | integer |           |          | 
+ location | point   |           |          | 
 Distributed Replicated
 
 -- should distributed by name
 \d child1
-       Table "rpt.child1"
-  Column  |  Type   | Modifiers 
-----------+---------+-----------
- name     | text    | 
- age      | integer | 
- location | point   | 
+                 Table "rpt.child1"
+  Column  |  Type   | Collation | Nullable | Default 
+----------+---------+-----------+----------+---------
+ name     | text    |           |          | 
+ age      | integer |           |          | 
+ location | point   |           |          | 
 Distributed by: (name)
 
 -- should be replicated table
 \d child2
-       Table "rpt.child2"
-  Column  |  Type   | Modifiers 
-----------+---------+-----------
- name     | text    | 
- age      | integer | 
- location | point   | 
+                 Table "rpt.child2"
+  Column  |  Type   | Collation | Nullable | Default 
+----------+---------+-----------+----------+---------
+ name     | text    |           |          | 
+ age      | integer |           |          | 
+ location | point   |           |          | 
 Distributed Replicated
 
 drop table if exists parent;
@@ -192,14 +192,14 @@ CREATE TABLE parent_part (
 CREATE TABLE child (
         salary          int4,
         manager         name
-) INHERITS (parent_rep) WITH OIDS;
+) INHERITS (parent_rep);
 ERROR:  cannot inherit from replicated table "parent_rep" to create table "child"
 DETAIL:  An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.
 -- replicated table can not have parents, should fail
 CREATE TABLE child (
         salary          int4,
         manager         name
-) INHERITS (parent_part) WITH OIDS DISTRIBUTED REPLICATED;
+) INHERITS (parent_part) DISTRIBUTED REPLICATED;
 ERROR:  INHERITS clause cannot be used with DISTRIBUTED REPLICATED clause
 drop table if exists parent_rep;
 drop table if exists parent_part;
@@ -309,35 +309,35 @@ alter table bar set distributed replicated;
 alter table bar1 set distributed replicated;
 -- verify the new policies
 \d foo
-       Table "rpt.foo"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                  Table "rpt.foo"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed by: (x)
 
 \d foo1
-       Table "rpt.foo1"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                 Table "rpt.foo1"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed randomly
 
 \d bar
-       Table "rpt.bar"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                  Table "rpt.bar"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed Replicated
 
 \d bar1
-       Table "rpt.bar1"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                 Table "rpt.bar1"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed Replicated
 
 -- verify the reorganized data
@@ -408,35 +408,35 @@ alter table bar set distributed by (x);
 alter table bar1 set distributed randomly;
 -- verify the policies again
 \d foo
-       Table "rpt.foo"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                  Table "rpt.foo"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed Replicated
 
 \d foo1
-       Table "rpt.foo1"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                 Table "rpt.foo1"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed Replicated
 
 \d bar
-       Table "rpt.bar"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                  Table "rpt.bar"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed by: (x)
 
 \d bar1
-       Table "rpt.bar1"
- Column |  Type   | Modifiers 
---------+---------+-----------
- x      | integer | 
- y      | integer | 
+                 Table "rpt.bar1"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ x      | integer |           |          | 
+ y      | integer |           |          | 
 Distributed randomly
 
 -- verify the reorganized data again
@@ -652,7 +652,7 @@ analyze baz;
 create view v_qux as select ctid from qux;
 alter table qux set distributed replicated;
 ERROR:  cannot set distributed replicated because other object depend on its system columns
-DETAIL:  view v_qux depends on table qux column ctid
+DETAIL:  view v_qux depends on column ctid of table qux
 HINT:  system columns of replicated table will be exposed to users after altering, resolve dependencies first
 drop view v_qux;
 alter table qux set distributed replicated;
@@ -694,6 +694,33 @@ ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
 ERROR:  can't set the distribution policy of "foopart_1_prt_1"
 HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 DROP TABLE foopart;
+-- Test that replicated table can't inherit a parent table, and it also
+-- can't be inherited by a child table.
+-- 1. Replicated table can't inherit a parent table.
+CREATE TABLE parent (t text) DISTRIBUTED BY (t);
+-- This is not allowed: should fail
+CREATE TABLE child () INHERITS (parent) DISTRIBUTED REPLICATED;
+ERROR:  INHERITS clause cannot be used with DISTRIBUTED REPLICATED clause
+CREATE TABLE child (t text) DISTRIBUTED REPLICATED;
+-- should fail
+ALTER TABLE child INHERIT parent;
+ERROR:  Replicated table cannot inherit a parent
+DROP TABLE child, parent;
+-- 2. Replicated table can't be inherited
+CREATE TABLE parent (t text) DISTRIBUTED REPLICATED;
+-- should fail
+CREATE TABLE child () INHERITS (parent) DISTRIBUTED REPLICATED;
+ERROR:  INHERITS clause cannot be used with DISTRIBUTED REPLICATED clause
+CREATE TABLE child () INHERITS (parent) DISTRIBUTED BY (t);
+ERROR:  cannot inherit from replicated table "parent" to create table "child"
+DETAIL:  An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.
+CREATE TABLE child (t text) DISTRIBUTED REPLICATED;
+ALTER TABLE child INHERIT parent;
+ERROR:  Replicated table cannot inherit a parent
+CREATE TABLE child2(t text) DISTRIBUTED BY (t);
+ALTER TABLE child2 INHERIT parent;
+ERROR:  Replicated table cannot be inherited
+DROP TABLE child, child2, parent;
 -- volatile replicated
 -- General and segmentGeneral locus imply that if the corresponding
 -- slice is executed in many different segments should provide the
@@ -708,16 +735,16 @@ create table t_hashdist(a int, b int, c int) distributed by (a);
 create table t_replicate_volatile(a int, b int, c int) distributed replicated;
 ---- pushed down filter
 explain (costs off) select * from t_replicate_volatile, t_hashdist where t_replicate_volatile.a > random();
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Nested Loop
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Seq Scan on t_hashdist
-         ->  Materialize
-               ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  Result
-                           ->  Seq Scan on t_replicate_volatile
-                                 Filter: ((a)::double precision > random())
+   ->  Materialize
+         ->  Result
+               ->  Gather Motion 1:1  (slice2; segments: 1)
+                     ->  Seq Scan on t_replicate_volatile
+                           Filter: ((a)::double precision > random())
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -741,34 +768,36 @@ explain (costs off) select * from t_hashdist, t_replicate_volatile x, t_replicat
 
 -- sublink & subquery
 explain (costs off) select * from t_hashdist where a > All (select random() from t_replicate_volatile);
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop Left Anti Semi (Not-In) Join
-         Join Filter: ((t_hashdist.a)::double precision <= "NotIn_SUBQUERY".random)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Nested Loop Left Anti Semi (Not-In) Join
+   Join Filter: ((t_hashdist.a)::double precision <= "NotIn_SUBQUERY".random)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Seq Scan on t_hashdist
-         ->  Materialize
-               ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  Result
-                           ->  Subquery Scan on "NotIn_SUBQUERY"
-                                 ->  Seq Scan on t_replicate_volatile
+   ->  Materialize
+         ->  Result
+               ->  Gather Motion 1:1  (slice2; segments: 1)
+                     ->  Subquery Scan on "NotIn_SUBQUERY"
+                           ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
 (10 rows)
 
 explain (costs off) select * from t_hashdist where a in (select random()::int from t_replicate_volatile);
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                              QUERY PLAN                              
+----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Hash Semi Join
+   ->  Hash Join
          Hash Cond: (t_hashdist.a = ((random())::integer))
          ->  Seq Scan on t_hashdist
          ->  Hash
                ->  Redistribute Motion 1:3  (slice2; segments: 1)
                      Hash Key: ((random())::integer)
-                     ->  Result
-                           ->  Seq Scan on t_replicate_volatile
+                     ->  HashAggregate
+                           Group Key: ((random())::integer)
+                           ->  Result
+                                 ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
-(10 rows)
+(12 rows)
 
 -- subplan
 explain (costs off, verbose) select * from t_hashdist left join t_replicate_volatile on t_hashdist.a > any (select random() from t_replicate_volatile);
@@ -798,15 +827,15 @@ explain (costs off, verbose) select * from t_hashdist left join t_replicate_vola
 
 -- targetlist
 explain (costs off) select * from t_hashdist cross join (select random () from t_replicate_volatile)x;
-                           QUERY PLAN                           
-----------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Nested Loop
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Seq Scan on t_hashdist
-         ->  Materialize
-               ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  Result
-                           ->  Seq Scan on t_replicate_volatile
+   ->  Materialize
+         ->  Result
+               ->  Gather Motion 1:1  (slice2; segments: 1)
+                     ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
 (8 rows)
 
@@ -896,19 +925,19 @@ explain (costs off) insert into t_replicate_volatile select nextval('seq_for_ins
 
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2545)
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2545)
 explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2545)
 explain (costs off) delete from t_replicate_volatile where a < random();
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2545)
 explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2545)
 explain (costs off) update t_replicate_volatile set a = random();
-ERROR:  could not devise a plan. (cdbpath.c:2398)
+ERROR:  could not devise a plan. (cdbpath.c:2408)
 -- limit
-explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
+explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit random();
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
  Insert on t_replicate_volatile
@@ -919,7 +948,7 @@ explain (costs off) insert into t_replicate_volatile select * from t_replicate_v
  Optimizer: Postgres query optimizer
 (6 rows)
 
-explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit 1) x;
+explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit random()) x;
                               QUERY PLAN                              
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)

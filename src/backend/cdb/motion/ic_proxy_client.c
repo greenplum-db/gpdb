@@ -62,6 +62,7 @@
 #include "ic_proxy_server.h"
 #include "ic_proxy_pkt_cache.h"
 #include "ic_proxy_router.h"
+#include "utils/hsearch.h"
 
 #include <uv.h>
 

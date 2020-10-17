@@ -1,10 +1,10 @@
-create schema alter_ao_part_tables_splitpartition_@orientation@;
-set search_path="$user",alter_ao_part_tables_splitpartition_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_part_tables_splitpartition_@amname@;
+set search_path="$user",alter_ao_part_tables_splitpartition_@amname@,public;
+SET default_table_access_method=@amname@;
 BEGIN;
 CREATE TABLE sto_alt_uao_part_splitpartition (
  id int, date date, amt decimal(10,2))
- with (appendonly=true) DISTRIBUTED BY (id) PARTITION BY RANGE (date)
+ DISTRIBUTED BY (id) PARTITION BY RANGE (date)
  (PARTITION sales_Jul13 START (date '2013-07-01') INCLUSIVE,
   PARTITION sales_Aug13 START (date '2013-08-01') INCLUSIVE,
   PARTITION sales_Sep13 START (date '2013-09-01') INCLUSIVE
@@ -14,7 +14,7 @@ SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
 not NULL AND visimapidxid is not NULL AND relid in (SELECT c.oid FROM
 pg_class c join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
- n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
 
 Insert into sto_alt_uao_part_splitpartition values(1,'2013-07-05',19.20);
 Insert into sto_alt_uao_part_splitpartition values(2,'2013-08-15',10.20);
@@ -25,12 +25,12 @@ select count(*) from sto_alt_uao_part_splitpartition;
 
 -- Alter table add default partition
 Alter table sto_alt_uao_part_splitpartition
- add default partition part_others with(appendonly=true);
+ add default partition part_others;
 select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
 visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
  join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
- n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
 insert into sto_alt_uao_part_splitpartition
  select i, ('2013-'||i||'-11')::date, i from generate_series(1,12)i;
 delete from sto_alt_uao_part_splitpartition where date < '2013-07-10';
@@ -50,7 +50,7 @@ select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
 visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
  join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
- n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
 
 update sto_alt_uao_part_splitpartition set amt = amt - 5;
 select * from sto_alt_uao_part_splitpartition;

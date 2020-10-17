@@ -264,9 +264,9 @@ select count(1) from bm b1, bm b2 where b1.dist_col = b2.dist_col;
 
 -- start_ignore
 drop schema bm_ao cascade;
-NOTICE:  drop cascades to append only table bmcrash
+NOTICE:  drop cascades to table bmcrash
 NOTICE:  drop cascades to default for append only table bmcrash column dist_col
 NOTICE:  drop cascades to table foo
-NOTICE:  drop cascades to append only columnar table inner_table
-NOTICE:  drop cascades to append only columnar table outer_table
+NOTICE:  drop cascades to table inner_table
+NOTICE:  drop cascades to table outer_table
 -- end_ignore

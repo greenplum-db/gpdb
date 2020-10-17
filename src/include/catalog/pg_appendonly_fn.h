@@ -10,6 +10,9 @@
  * IDENTIFICATION
  *	    src/include/catalog/pg_appendonly_fn.h
  *
+ *
+ * GPDB_12_MERGE_FIXME: In upstream commit cefa387153, all *_fn.h header
+ * files were merged back to the plan *.h files. Should do the same here.
  *-------------------------------------------------------------------------
  */
 #ifndef PG_APPENDONLY_FN_H
@@ -17,7 +20,7 @@
 
 #include "catalog/genbki.h"
 #include "utils/relcache.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 extern void
 InsertAppendOnlyEntry(Oid relid,
@@ -32,6 +35,14 @@ InsertAppendOnlyEntry(Oid relid,
 					  Oid blkdiridxid,
 					  Oid visimaprelid,
 					  Oid visimapidxid);
+
+void
+GetAppendOnlyEntryAttributes(Oid relid,
+							 int32 *blocksize,
+							 int32 *safefswritesize,
+							 int16 *compresslevel,
+							 bool *checksum,
+							 NameData *compresstype);
 
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly
@@ -63,9 +74,6 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 
 extern void
 RemoveAppendonlyEntry(Oid relid);
-
-extern void
-TransferAppendonlyEntry(Oid sourceRelId, Oid targetRelId);
 
 extern void
 SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);

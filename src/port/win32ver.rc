@@ -2,8 +2,8 @@
 #include "pg_config.h"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION    9,6,0,0
- PRODUCTVERSION 9,6,0,0
+ FILEVERSION    12,0,0,0
+ PRODUCTVERSION 12,0,0,0
  FILEFLAGSMASK  0x17L
  FILEFLAGS      0x0L
  FILEOS         VOS_NT_WINDOWS32
@@ -17,7 +17,7 @@ BEGIN
    VALUE "CompanyName",      "PostgreSQL Global Development Group"
    VALUE "FileDescription",  FILEDESC
    VALUE "FileVersion",      PG_VERSION
-   VALUE "LegalCopyright", "Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group. Portions Copyright (c) 1994, Regents of the University of California."
+   VALUE "LegalCopyright", "Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group. Portions Copyright (c) 1994, Regents of the University of California."
    VALUE "ProductName",      "PostgreSQL"
    VALUE "ProductVersion",   PG_VERSION
   END

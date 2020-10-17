@@ -7,7 +7,7 @@ EXEC SQL include ../regression;
 EXEC SQL DEFINE MAXDBLEN 30;
 
 /* Check SQLCODE, and produce a "standard error" if it's wrong! */
-static void sql_check(char *fn, char *caller, int ignore)
+static void sql_check(const char *fn, const char *caller, int ignore)
 {
   char errorstring[255];
 
@@ -41,8 +41,6 @@ static void sql_check(char *fn, char *caller, int ignore)
   }
 }
 
-
-
 int main(void)
 {
 	EXEC SQL BEGIN DECLARE SECTION;
@@ -55,7 +53,7 @@ int main(void)
 
 	interval *intvl;
 
-	EXEC SQL whenever sqlerror sqlprint;
+	EXEC SQL whenever sqlerror stop;
 
 	ECPGdebug(1, stderr);
 
@@ -113,8 +111,8 @@ int main(void)
 
 /*
                  Table "public.history"
-    Column    |            Type             | Modifiers
---------------+-----------------------------+-----------
+    Column    |            Type             | Nullable
+--------------+-----------------------------+----------
  customerid   | integer                     | not null
  timestamp    | timestamp without time zone | not null
  action_taken | character(5)                | not null

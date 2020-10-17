@@ -1,6 +1,3 @@
--- helpers:
-include: helpers/server_helpers.sql;
-
 -- expect: create table succeeds
 create unlogged table unlogged_appendonly_table_managers (
 	id int,

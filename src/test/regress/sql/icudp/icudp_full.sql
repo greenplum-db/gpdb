@@ -96,7 +96,7 @@ SELECT SUM(length(long_tval)) AS sum_len_tval
             JOIN (SELECT * FROM small_table ORDER BY dkey LIMIT 500) bar USING(jkey);
 
 -- Gather motion (Window function)
-SELECT dkey % 30 AS dkey2, MIN(rank) AS min_rank, AVG(foo.rval) AS avg_rval
+SELECT dkey % 30 AS dkey2, MIN(rank) AS min_rank, to_char(AVG(foo.rval), '99.9999999999999') AS avg_rval
   FROM (SELECT RANK() OVER(ORDER BY rval DESC) AS rank, jkey, rval
         FROM small_table) foo
     JOIN small_table USING(jkey)

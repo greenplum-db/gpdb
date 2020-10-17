@@ -16,72 +16,64 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementSequenceProject
-	//
-	//	@doc:
-	//		Transform Project to ComputeScalar
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementSequenceProject : public CXformImplementation
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementSequenceProject
+//
+//	@doc:
+//		Transform Project to ComputeScalar
+//
+//---------------------------------------------------------------------------
+class CXformImplementSequenceProject : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementSequenceProject(const CXformImplementSequenceProject &);
+
+public:
+	// ctor
+	explicit CXformImplementSequenceProject(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformImplementSequenceProject()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementSequenceProject;
+	}
 
-			// private copy ctor
-			CXformImplementSequenceProject(const CXformImplementSequenceProject &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementSequenceProject";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &exprhdl) const
+	{
+		if (exprhdl.DeriveHasSubquery(1))
+		{
+			return CXform::ExfpNone;
+		}
 
-			// ctor
-			explicit
-			CXformImplementSequenceProject(CMemoryPool *mp);
+		return CXform::ExfpHigh;
+	}
 
-			// dtor
-			virtual
-			~CXformImplementSequenceProject()
-			{}
+	// actual transform
+	virtual void Transform(CXformContext *, CXformResult *,
+						   CExpression *) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementSequenceProject;
-			}
+};	// class CXformImplementSequenceProject
 
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementSequenceProject";
-			}
+}  // namespace gpopt
 
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				if (exprhdl.DeriveHasSubquery(1))
-				{
-					return CXform::ExfpNone;
-				}
-
-				return CXform::ExfpHigh;
-			}
-
-			// actual transform
-			virtual
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformImplementSequenceProject
-
-}
-
-#endif // !GPOPT_CXformImplementSequenceProject_H
+#endif	// !GPOPT_CXformImplementSequenceProject_H
 
 // EOF

@@ -181,7 +181,7 @@ function export_gpdb() {
 
   pushd ${GREENPLUM_INSTALL_DIR}
     source greenplum_path.sh
-    python -m compileall -q -x test .
+    python3 -m compileall -q -x test .
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd

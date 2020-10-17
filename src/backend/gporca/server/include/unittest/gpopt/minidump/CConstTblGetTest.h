@@ -9,27 +9,21 @@
 
 namespace gpopt
 {
-	class CConstTblGetTest
-	{
-		private:
+class CConstTblGetTest
+{
+private:
+	// counter used to mark last successful test
+	static gpos::ULONG m_ulTestCounter;
 
-			// counter used to mark last successful test
-			static
-			gpos::ULONG m_ulTestCounter;
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
 
-		public:
+	static gpos::GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
+};	// class CConstTblGetTest
+}  // namespace gpopt
 
-			static
-			gpos::GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CConstTblGetTest
-}
-
-#endif // !GPOPT_CConstTblGetTest_H
+#endif	// !GPOPT_CConstTblGetTest_H
 
 // EOF
-

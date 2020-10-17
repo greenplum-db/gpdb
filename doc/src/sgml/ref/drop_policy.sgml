@@ -3,7 +3,7 @@ doc/src/sgml/ref/drop_policy.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-DROPPOLICY">
+<refentry id="sql-droppolicy">
  <indexterm zone="sql-droppolicy">
   <primary>DROP POLICY</primary>
  </indexterm>
@@ -96,8 +96,7 @@ DROP POLICY [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ON <
 
 <programlisting>
 DROP POLICY p1 ON my_table;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>
@@ -112,8 +111,8 @@ DROP POLICY p1 ON my_table;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createpolicy"></member>
-   <member><xref linkend="sql-alterpolicy"></member>
+   <member><xref linkend="sql-createpolicy"/></member>
+   <member><xref linkend="sql-alterpolicy"/></member>
   </simplelist>
  </refsect1>
 

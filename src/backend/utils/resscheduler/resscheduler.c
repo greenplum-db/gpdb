@@ -18,6 +18,8 @@
  */
 #include "postgres.h"
 
+#include <math.h>
+
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/xact.h"
@@ -47,7 +49,6 @@
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
 #include "utils/metrics_utils.h"
-#include "utils/tqual.h"
 
 /*
  * GUC variables.
@@ -232,7 +233,7 @@ InitResQueues(void)
 
 		queueform = (Form_pg_resqueue) GETSTRUCT(tuple);
 
-		queueid = HeapTupleGetOid(tuple);
+		queueid = queueform->oid;
 		queuename = NameStr(queueform->rsqname);
 		thresholds[RES_COUNT_LIMIT] = queueform->rsqcountlimit;
 		thresholds[RES_COST_LIMIT] = queueform->rsqcostlimit;
@@ -282,7 +283,7 @@ ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 	ResQueue		queue;
 	int				i;
 
-	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
+	Assert(LWLockHeldByMeInMode(ResQueueLock, LW_EXCLUSIVE));
 	
 	/* If the new queue pointer is NULL, then we are out of queues. */
 	if (ResScheduler->num_queues >= MaxResourceQueues)
@@ -944,7 +945,7 @@ GetResQueueIdForName(char	*name)
 
 	tuple = systable_getnext(scan);
 	if (tuple)
-		queueid = HeapTupleGetOid(tuple);
+		queueid = ((Form_pg_resqueue) GETSTRUCT(tuple))->oid;
 	else
 		queueid = InvalidOid;
 
@@ -1066,7 +1067,7 @@ ResHandleUtilityStmt(Portal portal, Node *stmt)
 		&& (!ResourceSelectOnly)
 		&& !superuser())
 	{
-		Assert(!LWLockHeldExclusiveByMe(ResQueueLock));
+		Assert(!LWLockHeldByMeInMode(ResQueueLock, LW_EXCLUSIVE));
 		LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 		ResQueue resQueue = ResQueueHashFind(portal->queueId);
 		LWLockRelease(ResQueueLock);

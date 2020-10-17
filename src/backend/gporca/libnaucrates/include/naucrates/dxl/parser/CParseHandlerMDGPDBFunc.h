@@ -21,87 +21,82 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
-	using namespace gpmd;
+using namespace gpos;
+using namespace gpmd;
 
-	XERCES_CPP_NAMESPACE_USE
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerMDGPDBFunc
-	//
-	//	@doc:
-	//		Parse handler for GPDB function metadata
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerMDGPDBFunc : public CParseHandlerMetadataObject
-	{
-		private:
-			// id and version 
-			IMDId *m_mdid;
-			
-			// name
-			CMDName *m_mdname;
-					
-			// result type
-			IMDId *m_mdid_type_result;
-			
-			// output argument types
-		IMdIdArray *m_mdid_types_array;
+XERCES_CPP_NAMESPACE_USE
 
-			// whether function returns a set of values
-			BOOL m_returns_set;
-			
-			// function stability
-			CMDFunctionGPDB::EFuncStbl m_func_stability;
-			
-			// function data access
-			CMDFunctionGPDB::EFuncDataAcc m_func_data_access;
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerMDGPDBFunc
+//
+//	@doc:
+//		Parse handler for GPDB function metadata
+//
+//---------------------------------------------------------------------------
+class CParseHandlerMDGPDBFunc : public CParseHandlerMetadataObject
+{
+private:
+	// id and version
+	IMDId *m_mdid;
 
-			// function strictness (i.e. whether func returns NULL on NULL input)
-			BOOL m_is_strict;
+	// name
+	CMDName *m_mdname;
 
-			BOOL m_is_ndv_preserving;
+	// result type
+	IMDId *m_mdid_type_result;
 
-			BOOL m_is_allowed_for_PS;
-			
-			// private copy ctor
-			CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &);
-			
-			// process the start of an element
-			void StartElement
-				(
-				const XMLCh* const element_uri, 		// URI of element's namespace
-				const XMLCh* const element_local_name,	// local part of element's name
-				const XMLCh* const element_qname,		// element's qname
-				const Attributes& attr				// element's attributes
-				);
-				
-			// process the end of an element
-			void EndElement
-				(
-				const XMLCh* const element_uri, 		// URI of element's namespace
-				const XMLCh* const element_local_name,	// local part of element's name
-				const XMLCh* const element_qname		// element's qname
-				);
-			
-			// parse function stability property from XML string
-			CMDFunctionGPDB::EFuncStbl ParseFuncStability(const XMLCh *xml_val);
+	// output argument types
+	IMdIdArray *m_mdid_types_array;
 
-			// parse function data access property from XML string
-			CMDFunctionGPDB::EFuncDataAcc ParseFuncDataAccess(const XMLCh *xml_val);
+	// whether function returns a set of values
+	BOOL m_returns_set;
 
-		public:
-			// ctor
-			CParseHandlerMDGPDBFunc
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);			
-	};
-}
+	// function stability
+	CMDFunctionGPDB::EFuncStbl m_func_stability;
 
-#endif // !GPDXL_CParseHandlerMDGPDBFunc_H
+	// function data access
+	CMDFunctionGPDB::EFuncDataAcc m_func_data_access;
+
+	// function strictness (i.e. whether func returns NULL on NULL input)
+	BOOL m_is_strict;
+
+	BOOL m_is_ndv_preserving;
+
+	BOOL m_is_allowed_for_PS;
+
+	// private copy ctor
+	CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &);
+
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
+
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
+
+	// parse function stability property from XML string
+	CMDFunctionGPDB::EFuncStbl ParseFuncStability(const XMLCh *xml_val);
+
+	// parse function data access property from XML string
+	CMDFunctionGPDB::EFuncDataAcc ParseFuncDataAccess(const XMLCh *xml_val);
+
+public:
+	// ctor
+	CParseHandlerMDGPDBFunc(CMemoryPool *mp,
+							CParseHandlerManager *parse_handler_mgr,
+							CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CParseHandlerMDGPDBFunc_H
 
 // EOF

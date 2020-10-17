@@ -22,15 +22,15 @@
 
 using namespace gpopt;
 
-ULONG CEscapeMechanismTest::m_ulEscapeMechanismTestCounter = 0;  // start from first test
+ULONG CEscapeMechanismTest::m_ulEscapeMechanismTestCounter =
+	0;	// start from first test
 
 // minidump files
-const CHAR *rgszEscapeMechanismFileNames[] =
-	{
+const CHAR *rgszEscapeMechanismFileNames[] = {
 	"../data/dxl/minidump/JoinArityAssociativityCommutativityAtLimit.mdp",
 	"../data/dxl/minidump/JoinArityAssociativityCommutativityAboveLimit.mdp",
 	"../data/dxl/minidump/JoinArityAssociativityCommutativityBelowLimit.mdp",
-	};
+};
 
 
 //---------------------------------------------------------------------------
@@ -44,10 +44,9 @@ const CHAR *rgszEscapeMechanismFileNames[] =
 GPOS_RESULT
 CEscapeMechanismTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(EresUnittest_RunTests),
-		};
+	};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
@@ -68,14 +67,11 @@ CEscapeMechanismTest::EresUnittest()
 GPOS_RESULT
 CEscapeMechanismTest::EresUnittest_RunTests()
 {
-	return CTestUtils::EresUnittest_RunTestsWithoutAdditionalTraceFlags
-						(
-						rgszEscapeMechanismFileNames,
-						&m_ulEscapeMechanismTestCounter,
-						GPOS_ARRAY_SIZE(rgszEscapeMechanismFileNames),
-						true, /* fMatchPlans */
-						true /* fTestSpacePruning */
-						);
+	return CTestUtils::EresUnittest_RunTestsWithoutAdditionalTraceFlags(
+		rgszEscapeMechanismFileNames, &m_ulEscapeMechanismTestCounter,
+		GPOS_ARRAY_SIZE(rgszEscapeMechanismFileNames), true, /* fMatchPlans */
+		true /* fTestSpacePruning */
+	);
 }
 
 // EOF

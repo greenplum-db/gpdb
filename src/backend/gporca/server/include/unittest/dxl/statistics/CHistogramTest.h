@@ -16,51 +16,42 @@
 
 namespace gpnaucrates
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CHistogramTest
+//
+//	@doc:
+//		Static unit tests for point
+//
+//---------------------------------------------------------------------------
+class CHistogramTest
+{
+private:
+	// generate int histogram having tuples not covered by buckets,
+	// including null fraction and nDistinctRemain
+	static CHistogram *PhistExampleInt4Remain(CMemoryPool *mp);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CHistogramTest
-	//
-	//	@doc:
-	//		Static unit tests for point
-	//
-	//---------------------------------------------------------------------------
-	class CHistogramTest
-	{
-		private:
-			// generate int histogram having tuples not covered by buckets,
-			// including null fraction and nDistinctRemain
-			static
-			CHistogram* PhistExampleInt4Remain(CMemoryPool *mp);
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-		public:
+	// histogram basic tests
+	static GPOS_RESULT EresUnittest_CHistogramValid();
 
-			// unittests
-			static
-			GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_CHistogramInt4();
 
-			// histogram basic tests
-			static
-			GPOS_RESULT EresUnittest_CHistogramValid();
+	static GPOS_RESULT EresUnittest_CHistogramBool();
 
-			static
-			GPOS_RESULT EresUnittest_CHistogramInt4();
+	// skew basic tests
+	static GPOS_RESULT EresUnittest_Skew();
 
-			static
-			GPOS_RESULT EresUnittest_CHistogramBool();
+	// merge basic tests
+	static GPOS_RESULT EresUnittest_MergeUnion();
 
-			// skew basic tests
-			static
-			GPOS_RESULT EresUnittest_Skew();
+};	// class CHistogramTest
+}  // namespace gpnaucrates
 
-			// merge basic tests
-			static
-			GPOS_RESULT EresUnittest_MergeUnion();
-
-	}; // class CHistogramTest
-}
-
-#endif // !GPNAUCRATES_CHistogramTest_H
+#endif	// !GPNAUCRATES_CHistogramTest_H
 
 
 // EOF

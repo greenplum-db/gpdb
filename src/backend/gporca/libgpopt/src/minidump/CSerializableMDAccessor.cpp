@@ -30,13 +30,8 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CSerializableMDAccessor::CSerializableMDAccessor
-	(
-	CMDAccessor *md_accessor
-	)
-	:
-	CSerializable(),
-	m_pmda(md_accessor)
+CSerializableMDAccessor::CSerializableMDAccessor(CMDAccessor *md_accessor)
+	: CSerializable(), m_pmda(md_accessor)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 }
@@ -50,10 +45,7 @@ CSerializableMDAccessor::CSerializableMDAccessor
 //
 //---------------------------------------------------------------------------
 void
-CSerializableMDAccessor::SerializeHeader
-	(
-	COstream &oos
-	)
+CSerializableMDAccessor::SerializeHeader(COstream &oos)
 {
 	oos << CDXLSections::m_wszMetadataHeaderPrefix;
 
@@ -72,10 +64,7 @@ CSerializableMDAccessor::SerializeHeader
 //
 //---------------------------------------------------------------------------
 void
-CSerializableMDAccessor::SerializeFooter
-	(
-	COstream& oos
-	)
+CSerializableMDAccessor::SerializeFooter(COstream &oos)
 {
 	oos << CDXLSections::m_wszMetadataFooter;
 }
@@ -89,10 +78,7 @@ CSerializableMDAccessor::SerializeFooter
 //
 //---------------------------------------------------------------------------
 void
-CSerializableMDAccessor::Serialize
-	(
-	COstream &oos
-	)
+CSerializableMDAccessor::Serialize(COstream &oos)
 {
 	SerializeHeader(oos);
 	m_pmda->Serialize(oos);
@@ -100,4 +86,3 @@ CSerializableMDAccessor::Serialize
 }
 
 // EOF
-

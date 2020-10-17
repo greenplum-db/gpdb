@@ -2,7 +2,7 @@
  * brin_page.h
  *		Prototypes and definitions for BRIN page layouts
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -107,4 +107,4 @@ typedef struct RevmapUpperBlockContents
 #define REVMAP_INDEX_PAGE_NUM \
 	(65536 / REVMAP_PAGE_MAXITEMS) * 65536
 
-#endif   /* BRIN_PAGE_H */
+#endif							/* BRIN_PAGE_H */

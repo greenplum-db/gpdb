@@ -353,7 +353,6 @@ CREATE TABLE bfv_planner_t2 (f int,g int) DISTRIBUTED BY (f) PARTITION BY RANGE(
 (
 PARTITION "201612" START (1) END (10)
 );
-NOTICE:  CREATE TABLE will create partition "bfv_planner_t2_1_prt_201612" for table "bfv_planner_t2"
 insert into bfv_planner_t1 values(1,2,3), (2,3,4), (3,4,5);
 insert into bfv_planner_t2 values(3,1), (4,2), (5,2);
 select count(*) from
@@ -419,21 +418,22 @@ where x.a > random();
 ---- join qual
 explain (costs off) select * from
 t_hashdist,
-(select a from generate_series(1, 10) a) x,
-(select a from generate_series(1, 10) a) y
+(select a from generate_series(1, 1000) a) x,
+(select a from generate_series(1, 1000) a) y
 where x.a + y.a > random();
                              QUERY PLAN                              
 ---------------------------------------------------------------------
- Nested Loop
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (((a.a + a_1.a))::double precision > random())
-         ->  Function Scan on generate_series a
          ->  Function Scan on generate_series a_1
-   ->  Materialize
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Function Scan on generate_series a
+                     ->  Materialize
+                           ->  Seq Scan on t_hashdist
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
 ---- sublink & subquery
 explain (costs off) select * from t_hashdist where a > All (select random() from generate_series(1, 10));
@@ -533,35 +533,34 @@ explain (costs off) select * from t_hashdist cross join (select random() as k, s
 (9 rows)
 
 explain (costs off) select * from t_hashdist cross join (select a, count(1) as s from generate_series(1, 10) a group by a having count(1) > random() order by a) x ;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          ->  Seq Scan on t_hashdist
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  GroupAggregate
-                           Group Key: a.a
-                           Filter: ((count(1))::double precision > random())
-                           ->  Sort
-                                 Sort Key: a.a
+                     ->  Sort
+                           Sort Key: a.a
+                           ->  HashAggregate
+                                 Group Key: a.a
+                                 Filter: ((count(1))::double precision > random())
                                  ->  Function Scan on generate_series a
  Optimizer: Postgres query optimizer
 (12 rows)
 
 -- limit
-explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit 1) x;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;
+                        QUERY PLAN                        
+----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Limit
+                     ->  Function Scan on generate_series
          ->  Seq Scan on t_hashdist
-         ->  Materialize
-               ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  Limit
-                           ->  Function Scan on generate_series
  Optimizer: Postgres query optimizer
-(8 rows)
+(7 rows)
 
 -- start_ignore
 drop table if exists bfv_planner_x;

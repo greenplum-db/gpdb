@@ -4,13 +4,12 @@
 drop database if exists dsp1;
 NOTICE:  database "dsp1" does not exist, skipping
 create database dsp1;
-alter database dsp1 set gp_default_storage_options =
-	"appendonly=true,orientation=column";
+alter database dsp1 set default_table_access_method = ao_column;
 drop database if exists dsp2;
 NOTICE:  database "dsp2" does not exist, skipping
 create database dsp2;
-alter database dsp2 set gp_default_storage_options =
-	"appendonly=true,checksum=true";
+alter database dsp2 set default_table_access_method = ao_row;
+alter database dsp2 set gp_default_storage_options = "checksum=true";
 -- Testing pg_authid.rolconfig is currently deferred in
 -- installcheck-good because it becomes contrived.  These tests will
 -- be covered in detail in Divya's test plan for default storage
@@ -26,73 +25,101 @@ alter database dsp2 set gp_default_storage_options =
 -- \! cp /tmp/pg_hba.conf $(psql -d postgres -t -c "show data_directory")/pg_hba.conf
 -- \! gpstop -qau
 -- alter role dsprole1 set gp_default_storage_options to
--- 	"appendonly=true,blocksize=8192";
+-- 	"blocksize=8192";
 -- alter role dsprole2 set gp_default_storage_options to
--- 	"appendonly=true,compresslevel=2";
+-- 	"compresslevel=2";
 --
 -- \c dsp1 dsprole2
 --
 -- Leaving roles around affects others, e.g. auth_constraints.sql.
 -- Therefore drop them in the end.
 \c dsp1
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_column
+(1 row)
+
 show gp_default_storage_options;
-                             gp_default_storage_options                             
-------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=column
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 create table t1 (a int, b int) distributed by (a);
 \d+ t1
-                                         Append-Only Columnar Table "public.t1"
- Column |  Type   | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+---------+-----------+---------+--------------+------------------+-------------------+------------+-------------
- a      | integer |           | plain   |              | none             | 0                 | 32768      | 
- b      | integer |           | plain   |              | none             | 0                 | 32768      | 
+                                                              Table "public.t1"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
+ b      | integer |           |          |         | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, orientation=column
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't1';
+  amname   
+-----------
+ ao_column
+(1 row)
 
 insert into t1 select i, i from generate_series(1,5)i;
 update t1 set b = 50 where a < 50;
-set gp_default_storage_options=
-	"appendonly=true,orientation=column,blocksize=8192";
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "blocksize=8192";
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_column
+(1 row)
+
 show gp_default_storage_options;
-                            gp_default_storage_options                             
------------------------------------------------------------------------------------
- appendonly=true,blocksize=8192,compresstype=none,checksum=true,orientation=column
+           gp_default_storage_options           
+------------------------------------------------
+ blocksize=8192,compresstype=none,checksum=true
 (1 row)
 
 create table t2 (a int, b varchar, c text) distributed by (a);
 \d+ t2
-                                               Append-Only Columnar Table "public.t2"
- Column |       Type        | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+-------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
- a      | integer           |           | plain    |              | none             | 0                 | 8192       | 
- b      | character varying |           | extended |              | none             | 0                 | 8192       | 
- c      | text              |           | extended |              | none             | 0                 | 8192       | 
+                                                                    Table "public.t2"
+ Column |       Type        | Collation | Nullable | Default | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-------------------+-----------+----------+---------+----------+--------------+------------------+-------------------+------------+-------------
+ a      | integer           |           |          |         | plain    |              | none             | 0                 | 8192       | 
+ b      | character varying |           |          |         | extended |              | none             | 0                 | 8192       | 
+ c      | text              |           |          |         | extended |              | none             | 0                 | 8192       | 
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, blocksize=8192, orientation=column
+Options: blocksize=8192
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't2';
+  amname   
+-----------
+ ao_column
+(1 row)
 
 create table t3 (a int, b float) with (appendonly=false)
 	distributed by (a);
 \d+ t3
-                              Table "public.t3"
- Column |       Type       | Modifiers | Storage | Stats target | Description 
---------+------------------+-----------+---------+--------------+-------------
- a      | integer          |           | plain   |              | 
- b      | double precision |           | plain   |              | 
+                                         Table "public.t3"
+ Column |       Type       | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+------------------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer          |           |          |         | plain   |              | 
+ b      | double precision |           |          |         | plain   |              | 
 Distributed by: (a)
-Options: appendonly=false
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't3';
+ amname 
+--------
+ heap
+(1 row)
 
 create table t4 (a int, b float, c text) with
 	(appendonly=true,orientation=row) distributed by (a);
--- Set defaults to heap, verify basic operations.
-set gp_default_storage_options="appendonly=false";
+-- Set default access method to heap, verify basic operations.
+set default_table_access_method="heap";
 show gp_default_storage_options;
-                            gp_default_storage_options                            
-----------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row
+           gp_default_storage_options           
+------------------------------------------------
+ blocksize=8192,compresstype=none,checksum=true
 (1 row)
 
 create table h1 (a int, b int) distributed by (a);
@@ -114,15 +141,16 @@ select * from h1 where a > 5 and a < 10 order by a,b;
  9 | 18
 (4 rows)
 
-select relname,relstorage,relkind,reloptions from pg_class
-	where relkind='r' and relnamespace=2200 order by relname;
- relname | relstorage | relkind |                     reloptions                      
----------+------------+---------+-----------------------------------------------------
- h1      | h          | r       | 
- t1      | c          | r       | {appendonly=true,orientation=column}
- t2      | c          | r       | {appendonly=true,blocksize=8192,orientation=column}
- t3      | h          | r       | {appendonly=false}
- t4      | a          | r       | {appendonly=true,orientation=row,blocksize=8192}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+	where c.relkind='r' and c.relnamespace=2200 order by relname;
+ relname |  amname   | relkind |    reloptions    
+---------+-----------+---------+------------------
+ h1      | heap      | r       | 
+ t1      | ao_column | r       | 
+ t2      | ao_column | r       | {blocksize=8192}
+ t3      | heap      | r       | 
+ t4      | ao_row    | r       | {blocksize=8192}
 (5 rows)
 
 select relid::regclass, blocksize, compresstype,
@@ -135,29 +163,41 @@ select relid::regclass, blocksize, compresstype,
 (3 rows)
 
 \c dsp2
-set gp_default_storage_options=
-	"appendonly=true,compresslevel=2,checksum=true";
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "compresslevel=2,checksum=true";
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_row
+(1 row)
+
 show gp_default_storage_options;
-                                   gp_default_storage_options                                    
--------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true,orientation=row
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true
 (1 row)
 
 create table t1 (a int, b int) distributed by (a);
 \d+ t1
-                    Append-Only Table "public.t1"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- a      | integer |           | plain   |              | 
- b      | integer |           | plain   |              | 
+                                    Table "public.t1"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
 Compression Type: zlib
 Compression Level: 2
 Block Size: 32768
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, compresslevel=2
+Options: compresslevel=2
 
--- should fail because current default orientation is row
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't1';
+ amname 
+--------
+ ao_row
+(1 row)
+
+-- should fail because current default access method is not aoco
 create table t2 (
 	a int encoding(blocksize=65536),
 	b float encoding(compresstype=zlib),
@@ -171,18 +211,24 @@ create table t2 (
 	b float encoding(compresstype=zlib),
 	c int encoding(compresstype=rle_type, compresslevel=2),
 	d text
-) with (orientation=column) distributed by (a);
+) with (appendonly=true,orientation=column) distributed by (a);
 \d+ t2
-                                              Append-Only Columnar Table "public.t2"
- Column |       Type       | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
- a      | integer          |           | plain    |              | zlib             | 2                 | 65536      | 
- b      | double precision |           | plain    |              | zlib             | 2                 | 32768      | 
- c      | integer          |           | plain    |              | rle_type         | 2                 | 32768      | 
- d      | text             |           | extended |              | zlib             | 2                 | 32768      | 
+                                                                   Table "public.t2"
+ Column |       Type       | Collation | Nullable | Default | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+------------------+-----------+----------+---------+----------+--------------+------------------+-------------------+------------+-------------
+ a      | integer          |           |          |         | plain    |              | zlib             | 2                 | 65536      | 
+ b      | double precision |           |          |         | plain    |              | zlib             | 2                 | 32768      | 
+ c      | integer          |           |          |         | plain    |              | rle_type         | 2                 | 32768      | 
+ d      | text             |           |          |         | extended |              | zlib             | 2                 | 32768      | 
 Checksum: t
 Distributed by: (a)
-Options: orientation=column, appendonly=true, compresslevel=2
+Options: compresslevel=2
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 't2';
+  amname   
+-----------
+ ao_column
+(1 row)
 
 insert into t2 select i, 71/i, 2*i, 'abc'||2*i from generate_series(1,5)i;
 select * from t2 order by 1;
@@ -207,12 +253,18 @@ select attrelid::regclass, attnum, attoptions
 
 -- SET operation in a session has higher precedence.  Also test if
 -- compresstype is correctly inferred based on compress level.
-set gp_default_storage_options=
-	"appendonly=true,compresslevel=4,checksum=false";
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "compresslevel=4,checksum=false";
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_row
+(1 row)
+
 show gp_default_storage_options;
-                                    gp_default_storage_options                                    
---------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=4,checksum=false,orientation=row
+                    gp_default_storage_options                    
+------------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=4,checksum=false
 (1 row)
 
 create table t3 (a int, b int, c text) distributed by (a);
@@ -227,13 +279,14 @@ select * from t3 order by 1;
  5 | 5 | abc
 (5 rows)
 
-select relname,relstorage,relkind,reloptions from pg_class
-	where relname in ('t1', 't2', 't3') order by 1;
- relname | relstorage | relkind |                      reloptions                      
----------+------------+---------+------------------------------------------------------
- t1      | a          | r       | {appendonly=true,compresslevel=2}
- t2      | c          | r       | {orientation=column,appendonly=true,compresslevel=2}
- t3      | a          | r       | {appendonly=true,compresslevel=4,checksum=false}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname in ('t1', 't2', 't3') order by 1;
+ relname |  amname   | relkind |            reloptions            
+---------+-----------+---------+----------------------------------
+ t1      | ao_row    | r       | {compresslevel=2}
+ t2      | ao_column | r       | {compresslevel=2}
+ t3      | ao_row    | r       | {compresslevel=4,checksum=false}
 (3 rows)
 
 select relid::regclass, blocksize, compresstype,
@@ -250,22 +303,17 @@ select relid::regclass, blocksize, compresstype,
 Create table alter_part_tab1 (id SERIAL,a1 int ,a2 char(5) ,a3 text )
 WITH (appendonly=true, orientation=column, checksum=true,compresstype=zlib)
 partition by list(a2) subpartition by range(a1)
-subpartition template
+(partition p1 values('val1')
   (default subpartition subothers,
    subpartition sp1 start(1) end(9) with (appendonly=true,orientation=column,checksum=true,compresstype=rle_type),
+   subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,checksum=true,compresstype=none)),
+ partition p2 values('val2')
+   (default subpartition subothers,
+   subpartition sp1 start(1) end(9) with (appendonly=true,orientation=column,checksum=true,compresstype=rle_type),
    subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,checksum=true,compresstype=none))
-(partition p1 values('val1'),
- partition p2 values('val2'));
+);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1" for table "alter_part_tab1"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1_2_prt_subothers" for table "alter_part_tab1_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1_2_prt_sp1" for table "alter_part_tab1_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1_2_prt_sp2" for table "alter_part_tab1_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2" for table "alter_part_tab1"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2_2_prt_subothers" for table "alter_part_tab1_1_prt_p2"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2_2_prt_sp1" for table "alter_part_tab1_1_prt_p2"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2_2_prt_sp2" for table "alter_part_tab1_1_prt_p2"
 Insert into alter_part_tab1(a1,a2,a3)
   select g, 'val1', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' from generate_series(1,10) g;
 Insert into alter_part_tab1(a1,a2,a3)
@@ -279,37 +327,38 @@ select count(*) from alter_part_tab1;
 -- Make sure that adding a column doesn't affect checksums.
 alter table alter_part_tab1 add column a4 numeric default 5.5;
 -- Check that it works for ADD PARTITION, too.
-ALTER TABLE alter_part_tab1 ADD partition p31 values(1) WITH (appendonly=true, orientation=column, checksum=true,compresstype=zlib);
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31" for table "alter_part_tab1"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31_2_prt_subothers" for table "alter_part_tab1_1_prt_p31"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31_2_prt_sp1" for table "alter_part_tab1_1_prt_p31"
-NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31_2_prt_sp2" for table "alter_part_tab1_1_prt_p31"
+ALTER TABLE alter_part_tab1 ADD partition p31 values(1) WITH (appendonly=true, orientation=column, checksum=true,compresstype=zlib)
+(default subpartition subothers,
+   subpartition sp1 start(1) end(9) with (appendonly=true,orientation=column,checksum=true,compresstype=rle_type),
+   subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,checksum=true,compresstype=none));
 SELECT relname, checksum from pg_appendonly ao, pg_class c where ao.relid = c.oid and relname like 'alter_part_tab1%';
                   relname                  | checksum 
 -------------------------------------------+----------
  alter_part_tab1_1_prt_p1_2_prt_sp1        | t
  alter_part_tab1_1_prt_p1_2_prt_sp2        | t
- alter_part_tab1_1_prt_p1                  | t
- alter_part_tab1_1_prt_p31_2_prt_sp1       | t
- alter_part_tab1_1_prt_p2_2_prt_subothers  | t
+ alter_part_tab1_1_prt_p1_2_prt_subothers  | t
  alter_part_tab1_1_prt_p2_2_prt_sp1        | t
  alter_part_tab1_1_prt_p2_2_prt_sp2        | t
- alter_part_tab1_1_prt_p2                  | t
- alter_part_tab1                           | t
- alter_part_tab1_1_prt_p1_2_prt_subothers  | t
- alter_part_tab1_1_prt_p31                 | t
- alter_part_tab1_1_prt_p31_2_prt_subothers | t
+ alter_part_tab1_1_prt_p2_2_prt_subothers  | t
+ alter_part_tab1_1_prt_p31_2_prt_sp1       | t
  alter_part_tab1_1_prt_p31_2_prt_sp2       | t
-(13 rows)
+ alter_part_tab1_1_prt_p31_2_prt_subothers | t
+(9 rows)
 
 drop table alter_part_tab1;
 -- attribute encoding tests for column oriented tables
-set gp_default_storage_options=
-	"appendonly=true,orientation=column,compresslevel=1";
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "compresslevel=1";
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_column
+(1 row)
+
 show gp_default_storage_options;
-                                     gp_default_storage_options                                     
-----------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true,orientation=column
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true
 (1 row)
 
 create table co1 (a int, b int) distributed by (a);
@@ -383,12 +432,18 @@ select attrelid::regclass,attnum,attoptions
 drop database if exists dsp3;
 create database dsp3;
 \c dsp3
-set gp_default_storage_options=
-	"appendonly=true,orientation=column,compresslevel=0";
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "compresslevel=0";
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_column
+(1 row)
+
 show gp_default_storage_options;
-                             gp_default_storage_options                             
-------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=column
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 create table co1(
@@ -396,12 +451,11 @@ create table co1(
 	b float encoding (compresslevel=5),
 	c char encoding (compresslevel=0,blocksize=65536),
 	d float) distributed by (a);
-set gp_default_storage_options=
-	"appendonly=true,orientation=column,compresslevel=3";
+set gp_default_storage_options= "compresslevel=3";
 show gp_default_storage_options;
-                                     gp_default_storage_options                                     
-----------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=3,checksum=true,orientation=column
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=3,checksum=true
 (1 row)
 
 create table co2(
@@ -412,19 +466,27 @@ create table co2(
 	default column encoding (compresstype=none))
 	distributed by (a);
 -- attribute encoding should be set correctly.
-set gp_default_storage_options='appendonly=false, orientation=column';
-show gp_default_storage_options;
-                             gp_default_storage_options                              
--------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=column
+set default_table_access_method = "heap";
+set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ heap
 (1 row)
 
-create table co3 (a int, b float) with (appendonly=true) distributed by (a);
+show gp_default_storage_options;
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
+(1 row)
+
+create table co3 (a int, b float) with (appendonly=true, orientation=column) distributed by (a);
 create table co4 (a int encoding (blocksize=8192), b int) distributed by (a);
 ERROR:  ENCODING clause only supported with column oriented tables
-set gp_default_storage_options='appendonly=true';
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 create table co5 (a int encoding (blocksize=8192), b float)
-	with (orientation=column, checksum=false) distributed by (a);
+	with (appendonly=true,orientation=column, checksum=false) distributed by (a);
 select relid::regclass,compresslevel,compresstype,blocksize,checksum,columnstore
 	from pg_appendonly order by 1;
  relid | compresslevel | compresstype | blocksize | checksum | columnstore 
@@ -454,54 +516,59 @@ select attrelid::regclass,attnum,attoptions
 (12 rows)
 
 -- misc tests
-alter database dsp1 set gp_default_storage_options="appendonly=false";
+alter database dsp1 set default_table_access_method = "heap";
 \c dsp1
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ heap
+(1 row)
+
 show gp_default_storage_options;
-                            gp_default_storage_options                            
-----------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 \c dsp3
-alter database dsp1 set gp_default_storage_options=
-	"appendonly=true, compresstype=zlib";
+alter database dsp1 set default_table_access_method = ao_row;
+alter database dsp1 set gp_default_storage_options = "compresstype=zlib";
 \c dsp1
+set default_table_access_method = ao_column;
 show gp_default_storage_options;
-                                   gp_default_storage_options                                    
--------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true,orientation=row
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true
 (1 row)
 
--- options without "appendonly"
-set gp_default_storage_options='compresstype=rle_type, orientation = column';
+set gp_default_storage_options = "compresstype=rle_type";
 show gp_default_storage_options;
-                                       gp_default_storage_options                                        
----------------------------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=rle_type,compresslevel=1,checksum=true,orientation=column
+                     gp_default_storage_options                      
+---------------------------------------------------------------------
+ blocksize=32768,compresstype=rle_type,compresslevel=1,checksum=true
 (1 row)
 
-set gp_default_storage_options='compresslevel=0,orientation=column';
+set gp_default_storage_options = "compresslevel=0";
 show gp_default_storage_options;
-                             gp_default_storage_options                              
--------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=column
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
-set gp_default_storage_options=
-	'appendonly=false, checksum=false, orientation=column';
+set gp_default_storage_options = "checksum=false";
 show gp_default_storage_options;
-                              gp_default_storage_options                              
---------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,checksum=false,orientation=column
+            gp_default_storage_options            
+--------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=false
 (1 row)
 
 \c dsp3
-set gp_default_storage_options=
-	"appendonly=true,orientation=column,compresslevel=5";
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "compresslevel=5";
 show gp_default_storage_options;
-                                     gp_default_storage_options                                     
-----------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=5,checksum=true,orientation=column
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=5,checksum=true
 (1 row)
 
 -- negative tests - should fail due to invalid combinations of
@@ -516,61 +583,71 @@ create table co7(a int, b float,
 	distributed by (a);
 ERROR:  compresslevel=7 is out of range for rle_type (should be in the range 1 to 4)
 -- negative tests - session level set
-set gp_default_storage_options="compresstype=zlib,compresslevel=11";
+set gp_default_storage_options = "compresstype=zlib,compresslevel=11";
 ERROR:  compresslevel=11 is out of range for zlib (should be in the range 1 to 9)
-set gp_default_storage_options="compresslevel=5,compresstype=RLE_TYPE";
+set gp_default_storage_options = "compresslevel=5,compresstype=RLE_TYPE";
 ERROR:  compresslevel=5 is out of range for rle_type (should be in the range 1 to 4)
-set gp_default_storage_options="compresslevel=1,compresstype=rle";
+set gp_default_storage_options = "compresslevel=1,compresstype=rle";
 ERROR:  unknown compresstype "rle"
-set gp_default_storage_options="checksum=1234";
+set gp_default_storage_options = "checksum=1234";
 ERROR:  invalid bool value "1234" for storage option "checksum"
-set gp_default_storage_options="blocksize=true";
+set gp_default_storage_options = "blocksize=true";
 ERROR:  invalid integer value "true" for storage option "blocksize"
-set gp_default_storage_options="compresstype = rle_type";
-ERROR:  rle_type cannot be used with Append Only relations row orientation
-set gp_default_storage_options='blocksize=8192,checksumblah=true';
+set gp_default_storage_options = 'blocksize=8192,checksumblah=true';
 ERROR:  invalid storage option "checksumblah"
-set gp_default_storage_options='orientation=columnblah';
-ERROR:  invalid value "columnblah" for storage option "orientation"
 show gp_default_storage_options;
-                                     gp_default_storage_options                                     
-----------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=5,checksum=true,orientation=column
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=5,checksum=true
 (1 row)
 
 -- negative tests - database level
-alter database dsp1 set gp_default_storage_options="compresslevel=-12";
+alter database dsp1 set gp_default_storage_options = "compresslevel=-12";
 ERROR:  invalid value for option "compresslevel"
-alter database dsp1 set
-	gp_default_storage_options="appendonly=false,checksum=invalid";
+alter database dsp1 set gp_default_storage_options = "checksum=invalid";
 ERROR:  invalid bool value "invalid" for storage option "checksum"
-alter database dsp1 set	gp_default_storage_options=
-	"compresstype=zlib,compresslevel=0";
+alter database dsp1 set	gp_default_storage_options = "compresstype=zlib,compresslevel=0";
 ERROR:  compresstype "zlib" can't be used with compresslevel 0
 -- set_config() tests
-select pg_catalog.set_config('gp_default_storage_options',
-    'appendonly=true, orientation=column', false);
-                                     set_config                                     
-------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=column
+select pg_catalog.set_config('default_table_access_method', 'ao_column', false);
+ set_config 
+------------
+ ao_column
+(1 row)
+
+show default_table_access_method;
+ default_table_access_method 
+-----------------------------
+ ao_column
+(1 row)
+
+select pg_catalog.set_config('gp_default_storage_options', 'compresstype=none', false);
+                   set_config                    
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 show gp_default_storage_options;
-                             gp_default_storage_options                             
-------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=column
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 create table co8 (a int, b float) distributed by (a);
 \d+ co8
-                                             Append-Only Columnar Table "public.co8"
- Column |       Type       | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
- a      | integer          |           | plain   |              | none             | 0                 | 32768      | 
- b      | double precision |           | plain   |              | none             | 0                 | 32768      | 
+                                                                  Table "public.co8"
+ Column |       Type       | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+------------------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer          |           |          |         | plain   |              | none             | 0                 | 32768      | 
+ b      | double precision |           |          |         | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, orientation=column
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'co8';
+  amname   
+-----------
+ ao_column
+(1 row)
 
 -- ensure that set_config() has propagated to segments by insert and
 -- select into a column oriented table.
@@ -581,33 +658,50 @@ select count(b) from co8;
     10
 (1 row)
 
-begin;
-select pg_catalog.set_config('gp_default_storage_options',
-    'compresslevel=2', true);
-                                            set_config                                            
---------------------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true,orientation=row
+select pg_catalog.set_config('gp_default_storage_options', 'compresstype=rle_type,compresslevel=1', false);
+                             set_config                              
+---------------------------------------------------------------------
+ blocksize=32768,compresstype=rle_type,compresslevel=1,checksum=true
 (1 row)
 
 show gp_default_storage_options;
-                                    gp_default_storage_options                                    
---------------------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true,orientation=row
+                     gp_default_storage_options                      
+---------------------------------------------------------------------
+ blocksize=32768,compresstype=rle_type,compresslevel=1,checksum=true
+(1 row)
+
+begin;
+select pg_catalog.set_config('gp_default_storage_options', 'compresslevel=2', true);
+                           set_config                            
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true
+(1 row)
+
+show gp_default_storage_options;
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true
 (1 row)
 
 create table ao1 (a int, b int) with (appendonly=true) distributed by (a);
 \d+ ao1;
-                   Append-Only Table "public.ao1"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- a      | integer |           | plain   |              | 
- b      | integer |           | plain   |              | 
+                                    Table "public.ao1"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
 Compression Type: zlib
 Compression Level: 2
 Block Size: 32768
 Checksum: t
 Distributed by: (a)
-Options: appendonly=true, compresslevel=2
+Options: compresslevel=2
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ao1';
+ amname 
+--------
+ ao_row
+(1 row)
 
 insert into ao1 select i, i from generate_series(1,100)i;
 select count(*) from ao1;
@@ -619,22 +713,28 @@ select count(*) from ao1;
 end;
 -- GUC should be reset after end of transaction.
 show gp_default_storage_options;
-                             gp_default_storage_options                             
-------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=column
+                     gp_default_storage_options                      
+---------------------------------------------------------------------
+ blocksize=32768,compresstype=rle_type,compresslevel=1,checksum=true
 (1 row)
 
 -- verify reset happendon on segments by create, insert, select.
 create table co9 (x int, y float) distributed by (x);
 \d+ co9
-                                             Append-Only Columnar Table "public.co9"
- Column |       Type       | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
---------+------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
- x      | integer          |           | plain   |              | none             | 0                 | 32768      | 
- y      | double precision |           | plain   |              | none             | 0                 | 32768      | 
+                                                                  Table "public.co9"
+ Column |       Type       | Collation | Nullable | Default | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+------------------+-----------+----------+---------+---------+--------------+------------------+-------------------+------------+-------------
+ x      | integer          |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
+ y      | double precision |           |          |         | plain   |              | rle_type         | 1                 | 32768      | 
 Checksum: t
 Distributed by: (x)
-Options: appendonly=true, orientation=column
+Options: compresstype=rle_type
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'co9';
+  amname   
+-----------
+ ao_column
+(1 row)
 
 -- ensure that set_config() has propagated to segments by insert and
 -- select into a column oriented table.
@@ -647,20 +747,20 @@ select count(y) from co9;
 
 set gp_default_storage_options='compresstype=none';
 show gp_default_storage_options;
-                            gp_default_storage_options                            
-----------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 -- compresstype should be correctly inferred.
 create table ao2 (a int, b int) with
     (appendonly=true, compresslevel=4) distributed by (a);
 \d ao2
-Append-Only Table "public.ao2"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao2"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: zlib
 Compression Level: 4
 Block Size: 32768
@@ -672,21 +772,21 @@ set gp_default_storage_options='';
 create table ao4 (a int, b int) with (appendonly=true)
     distributed by (a);
 \d ao4
-Append-Only Table "public.ao4"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao4"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
 Checksum: t
 Distributed by: (a)
 
-select reloptions from pg_class where relname = 'ao4';
-    reloptions     
--------------------
- {appendonly=true}
+select amname, reloptions from pg_class left join pg_am on pg_am.oid = relam where relname = 'ao4';
+ amname | reloptions 
+--------+------------
+ ao_row | 
 (1 row)
 
 select compresstype from pg_appendonly where relid = 'ao4'::regclass;
@@ -695,8 +795,9 @@ select compresstype from pg_appendonly where relid = 'ao4'::regclass;
  
 (1 row)
 
-set gp_default_storage_options='appendonly=true,compresstype=NONE';
-create table co10 (a int, b int, c int) with (orientation=column)
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "compresstype=NONE";
+create table co10 (a int, b int, c int) with (appendonly=true,orientation=column)
     distributed by (a);
 select attnum,attoptions from pg_attribute_encoding
     where attrelid = 'co10'::regclass order by attnum;
@@ -714,22 +815,23 @@ select compresstype from pg_appendonly where relid = 'co10'::regclass;
 (1 row)
 
 -- compression disabled by default, enable in WITH clause
-set gp_default_storage_options = 'appendonly=true';
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 show gp_default_storage_options;
-                           gp_default_storage_options                            
----------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row
+           gp_default_storage_options            
+-------------------------------------------------
+ blocksize=32768,compresstype=none,checksum=true
 (1 row)
 
 -- compresstype only
 create table ao5 (a int, b int) with (compresstype=zlib)
     distributed by (a);
 \d ao5
-Append-Only Table "public.ao5"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao5"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: zlib
 Compression Level: 1
 Block Size: 32768
@@ -741,11 +843,11 @@ insert into ao5 select i, i from generate_series(1,10)i;
 create table ao6 with (compresslevel=4) as select * from ao5
     distributed by (a);
 \d ao6
-Append-Only Table "public.ao6"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao6"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: zlib
 Compression Level: 4
 Block Size: 32768
@@ -756,11 +858,11 @@ Distributed by: (a)
 create table ao7 with (compresstype=zlib, compresslevel=3) as
     select * from ao6 distributed by (a);
 \d ao7
-Append-Only Table "public.ao7"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao7"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: zlib
 Compression Level: 3
 Block Size: 32768
@@ -768,22 +870,23 @@ Checksum: t
 Distributed by: (a)
 
 -- compression enabled by default, disable in WITH clause
-set gp_default_storage_options = 'appendonly=true, compresstype=zlib';
+set gp_default_storage_options = "compresstype=zlib";
+set default_table_access_method = ao_row;
 show gp_default_storage_options;
-                                   gp_default_storage_options                                    
--------------------------------------------------------------------------------------------------
- appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true,orientation=row
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true
 (1 row)
 
 -- compresstype only
 create table ao8 with (compresstype=none) as select * from ao7
     distributed by (a);
 \d ao8
-Append-Only Table "public.ao8"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao8"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: none
 Compression Level: 1
 Block Size: 32768
@@ -800,11 +903,11 @@ create table ao10 with (compresslevel=0, compresstype=none)
 create table ao11 (a int, b int) with (compresstype=none, compresslevel=2)
     distributed by (a);
 \d ao11
-Append-Only Table "public.ao11"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao11"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: none
 Compression Level: 2
 Block Size: 32768
@@ -813,18 +916,18 @@ Distributed by: (a)
 
 set gp_default_storage_options='compresstype=none,compresslevel=2';
 show gp_default_storage_options;
-                                    gp_default_storage_options                                    
---------------------------------------------------------------------------------------------------
- appendonly=false,blocksize=32768,compresstype=none,compresslevel=2,checksum=true,orientation=row
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=32768,compresstype=none,compresslevel=2,checksum=true
 (1 row)
 
 create table ao12 (a int, b int) with (appendonly=true) distributed by (a);
 \d ao12
-Append-Only Table "public.ao12"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | integer | 
+                Table "public.ao12"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | integer |           |          | 
 Compression Type: None
 Compression Level: 2
 Block Size: 32768
@@ -832,61 +935,88 @@ Checksum: t
 Distributed by: (a)
 
 --bitmap index
-set gp_default_storage_options='appendonly=true';
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 create table bitmap_table(a int, b int, c varchar);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create index bitmap_i on bitmap_table using bitmap(b);
--- external tables: ensure that default storage options are ignored
+-- external tables: ensure that default access methods are ignored
 -- during external table creation.
-set gp_default_storage_options='appendonly=true';
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 create external table ext_t1 (a int, b int)
     location ('file:///tmp/test.txt') format 'text';
 \d+ ext_t1
-                           Foreign table "public.ext_t1"
- Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
---------+---------+-----------+-------------+---------+--------------+-------------
- a      | integer |           |             | plain   |              | 
- b      | integer |           |             | plain   |              | 
-FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+                                     Foreign table "public.ext_t1"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ a      | integer |           |          |         |             | plain   |              | 
+ b      | integer |           |          |         |             | plain   |              | 
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_t1';
+ amname 
+--------
+ 
+(1 row)
 
 create external table ext_error_logging_off (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     segment reject limit 100;
 \d+ ext_error_logging_off
-                   Foreign table "public.ext_error_logging_off"
- Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
---------+---------+-----------+-------------+---------+--------------+-------------
- a      | integer |           |             | plain   |              | 
- b      | integer |           |             | plain   |              | 
-FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'f', encoding '6', is_writable 'false')
+                              Foreign table "public.ext_error_logging_off"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ a      | integer |           |          |         |             | plain   |              | 
+ b      | integer |           |          |         |             | plain   |              | 
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'f', encoding '6', is_writable 'false')
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_error_logging_off';
+ amname 
+--------
+ 
+(1 row)
 
 create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     log errors segment reject limit 100;
 \d+ ext_t2
-                           Foreign table "public.ext_t2"
- Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
---------+---------+-----------+-------------+---------+--------------+-------------
- a      | integer |           |             | plain   |              | 
- b      | integer |           |             | plain   |              | 
-FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
+                                     Foreign table "public.ext_t2"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ a      | integer |           |          |         |             | plain   |              | 
+ b      | integer |           |          |         |             | plain   |              | 
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_t2';
+ amname 
+--------
+ 
+(1 row)
 
 create external table ext_t3 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     log errors persistently segment reject limit 100;
 \d+ ext_t3
-                           Foreign table "public.ext_t3"
- Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
---------+---------+-----------+-------------+---------+--------------+-------------
- a      | integer |           |             | plain   |              | 
- b      | integer |           |             | plain   |              | 
-FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'p', encoding '6', is_writable 'false')
+                                     Foreign table "public.ext_t3"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ a      | integer |           |          |         |             | plain   |              | 
+ b      | integer |           |          |         |             | plain   |              | 
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'p', encoding '6', is_writable 'false')
+
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_t3';
+ amname 
+--------
+ 
+(1 row)
 
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped
 SET gp_vmem_idle_resource_timeout=30;
-SET gp_default_storage_options='appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row';
+set default_table_access_method = ao_row;
+SET gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=false";
 \! sleep 1
 CREATE TABLE check_guc_value_after_new_cdbgang (a int) DISTRIBUTED RANDOMLY;
 SELECT DISTINCT relid::regclass FROM pg_appendonly WHERE relid='check_guc_value_after_new_cdbgang'::regclass;
@@ -902,54 +1032,66 @@ SELECT DISTINCT relid::regclass FROM gp_dist_random('pg_appendonly') WHERE relid
 (1 row)
 
 SELECT DISTINCT relname, reloptions FROM pg_class WHERE relname='check_guc_value_after_new_cdbgang';
-              relname              |    reloptions     
------------------------------------+-------------------
- check_guc_value_after_new_cdbgang | {appendonly=true}
+              relname              |    reloptions    
+-----------------------------------+------------------
+ check_guc_value_after_new_cdbgang | {checksum=false}
 (1 row)
 
 SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relname='check_guc_value_after_new_cdbgang';
-              relname              |    reloptions     
------------------------------------+-------------------
- check_guc_value_after_new_cdbgang | {appendonly=true}
+              relname              |    reloptions    
+-----------------------------------+------------------
+ check_guc_value_after_new_cdbgang | {checksum=false}
 (1 row)
 
 RESET gp_vmem_idle_resource_timeout;
 -- Make sure ALTER TABLE REORGANIZE does not change the table type due
 -- to gp_default_storage_options GUC
-set gp_default_storage_options='appendonly=false,blocksize=32768';
-create table alter_table_reorg_heap (a int, b text);
+set default_table_access_method = ao_row;
+set gp_default_storage_options = "blocksize=32768";
+create table alter_table_reorg_ao (a int, b text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_heap';
-        relname         | relstorage | reloptions 
-------------------------+------------+------------
- alter_table_reorg_heap | h          | 
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname = 'alter_table_reorg_ao';
+       relname        | amname | relkind | reloptions 
+----------------------+--------+---------+------------
+ alter_table_reorg_ao | ao_row | r       | 
 (1 row)
 
-set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
-alter table alter_table_reorg_heap set with (reorganize=true);
-select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_heap';
-        relname         | relstorage | reloptions 
-------------------------+------------+------------
- alter_table_reorg_heap | h          | 
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "blocksize=32768";
+alter table alter_table_reorg_ao set with (reorganize=true);
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname = 'alter_table_reorg_ao';
+       relname        | amname | relkind | reloptions 
+----------------------+--------+---------+------------
+ alter_table_reorg_ao | ao_row | r       | 
 (1 row)
 
-set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "blocksize=32768";
 create table alter_table_reorg_aoco (a int, b text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_aoco';
-        relname         | relstorage |              reloptions              
-------------------------+------------+--------------------------------------
- alter_table_reorg_aoco | c          | {appendonly=true,orientation=column}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname = 'alter_table_reorg_aoco';
+        relname         |  amname   | relkind | reloptions 
+------------------------+-----------+---------+------------
+ alter_table_reorg_aoco | ao_column | r       | 
 (1 row)
 
-set gp_default_storage_options='appendonly=false,blocksize=32768';
+set default_table_access_method = "heap";
+set gp_default_storage_options = "blocksize=32768";
 alter table alter_table_reorg_aoco set with (reorganize=true);
-select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_aoco';
-        relname         | relstorage |              reloptions              
-------------------------+------------+--------------------------------------
- alter_table_reorg_aoco | c          | {appendonly=true,orientation=column}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname = 'alter_table_reorg_aoco';
+        relname         |  amname   | relkind | reloptions 
+------------------------+-----------+---------+------------
+ alter_table_reorg_aoco | ao_column | r       | 
 (1 row)
 
 -- Make sure SELECT INTO uses gp_default_storage_options GUC
@@ -957,14 +1099,17 @@ create table select_into_heap_from (a int, b text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into select_into_heap_from select i, 'aaa' from generate_series(1,50)i;
-set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "blocksize=32768";
 select * into select_into_heap_to from select_into_heap_from;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select relname, relstorage, reloptions from pg_class where relname='select_into_heap_to';
-       relname       | relstorage |              reloptions              
----------------------+------------+--------------------------------------
- select_into_heap_to | c          | {appendonly=true,orientation=column}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname = 'select_into_heap_to';
+       relname       |  amname   | relkind | reloptions 
+---------------------+-----------+---------+------------
+ select_into_heap_to | ao_column | r       | 
 (1 row)
 
 select count(*) from select_into_heap_to;
@@ -977,10 +1122,12 @@ select count(*) from select_into_heap_to;
 create table ctas_ao_from_heap as select * from select_into_heap_from;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select relname, relstorage, reloptions from pg_class where relname='ctas_ao_from_heap';
-      relname      | relstorage |              reloptions              
--------------------+------------+--------------------------------------
- ctas_ao_from_heap | c          | {appendonly=true,orientation=column}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname = 'ctas_ao_from_heap';
+      relname      |  amname   | relkind | reloptions 
+-------------------+-----------+---------+------------
+ ctas_ao_from_heap | ao_column | r       | 
 (1 row)
 
 select count(*) from ctas_ao_from_heap;
@@ -993,8 +1140,6 @@ RESET gp_default_storage_options;
 create table dsp_partition1(i int, j int, k int) with(appendonly=true) partition by range(i) (start(1) end(10) every(5));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_1" for table "dsp_partition1"
-NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_2" for table "dsp_partition1"
 Insert into dsp_partition1 select i, i+1, i+2 from generate_series(1,9) i;
 select count(*) from dsp_partition1;
  count 
@@ -1002,12 +1147,14 @@ select count(*) from dsp_partition1;
      9
 (1 row)
 
-select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
-        relname         | relkind | relstorage |    reloptions     
-------------------------+---------+------------+-------------------
- dsp_partition1         | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_1 | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_2 | r       | a          | {appendonly=true}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname like 'dsp_partition1%' order by relname;
+        relname         | amname | relkind | reloptions 
+------------------------+--------+---------+------------
+ dsp_partition1         |        | p       | 
+ dsp_partition1_1_prt_1 | ao_row | r       | 
+ dsp_partition1_1_prt_2 | ao_row | r       | 
 (3 rows)
 
 select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly
@@ -1016,55 +1163,69 @@ select compresslevel, compresstype, blocksize, checksum, columnstore from pg_app
 ---------------+--------------+-----------+----------+-------------
              0 |              |     32768 | t        | f
              0 |              |     32768 | t        | f
-             0 |              |     32768 | t        | f
-(3 rows)
+(2 rows)
 
-set gp_default_storage_options="appendonly=true, orientation=column";
+set default_table_access_method = ao_column;
+set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 -- Add partition
 alter table dsp_partition1 add partition p3 start(11) end(15);
-NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_p3" for table "dsp_partition1"
 alter table dsp_partition1 add partition p4 start(16) end(18) with(appendonly=false);
-NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_p4" for table "dsp_partition1"
-select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
-         relname         | relkind | relstorage |              reloptions              
--------------------------+---------+------------+--------------------------------------
- dsp_partition1          | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_1  | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_2  | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_p3 | r       | c          | {appendonly=true,orientation=column}
- dsp_partition1_1_prt_p4 | r       | h          | {appendonly=false}
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname like 'dsp_partition1%' order by relname;
+         relname         |  amname   | relkind | reloptions 
+-------------------------+-----------+---------+------------
+ dsp_partition1          |           | p       | 
+ dsp_partition1_1_prt_1  | ao_row    | r       | 
+ dsp_partition1_1_prt_2  | ao_row    | r       | 
+ dsp_partition1_1_prt_p3 | ao_column | r       | 
+ dsp_partition1_1_prt_p4 | heap      | r       | 
 (5 rows)
 
 -- Split partition
-alter table dsp_partition1 split partition for (rank(2)) at (7) into (partition split_p1, partition split_p2);
-NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_split_p1" for table "dsp_partition1"
-NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_split_p2" for table "dsp_partition1"
-select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
-            relname            | relkind | relstorage |              reloptions              
--------------------------------+---------+------------+--------------------------------------
- dsp_partition1                | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_1        | r       | a          | {appendonly=true}
- dsp_partition1_1_prt_p3       | r       | c          | {appendonly=true,orientation=column}
- dsp_partition1_1_prt_p4       | r       | h          | {appendonly=false}
- dsp_partition1_1_prt_split_p1 | r       | c          | {appendonly=true,orientation=column}
- dsp_partition1_1_prt_split_p2 | r       | c          | {appendonly=true,orientation=column}
+alter table dsp_partition1 split partition for (6) at (7) into (partition split_p1, partition split_p2);
+select c.relname, am.amname, c.relkind, c.reloptions
+	from pg_class c left join pg_am am on (c.relam = am.oid)
+    where c.relname like 'dsp_partition1%' order by relname;
+            relname            |  amname   | relkind | reloptions 
+-------------------------------+-----------+---------+------------
+ dsp_partition1                |           | p       | 
+ dsp_partition1_1_prt_1        | ao_row    | r       | 
+ dsp_partition1_1_prt_p3       | ao_column | r       | 
+ dsp_partition1_1_prt_p4       | heap      | r       | 
+ dsp_partition1_1_prt_split_p1 | ao_row    | r       | 
+ dsp_partition1_1_prt_split_p2 | ao_row    | r       | 
 (6 rows)
 
+-- GPDB_12_MERGE_FIXME: gpcheckcat fails for dsp_partition1_1_prt_1
+-- with checksum mismatch between master and segments. The reason
+-- being RESET gp_default_storage_options above somehow seems not
+-- working properly. So, we should fix RESET to work. Plus, also we
+-- should enhance code to not use `gp_default_storage_options` guc on
+-- segments. Instead master should use it and make all the decisions
+-- and pass the decision to segments. This should avoid any
+-- mis-matches and eliminates the need for the guc to be in-sync
+-- between master and segment.
+drop table dsp_partition1;
 RESET gp_default_storage_options;
 -- cleanup
 \c postgres
+-- Test that gp_default_storage_options option must be the same on all nodes
+-- GPDB_12_MERGE_FIXME: Is this really strictly necessary? There's code in
+-- gpconfig to verify this specifically for gp_default_storage_options. Can
+-- we remove it?
 -- start_matchsubs
 -- m/.*\[ERROR\]*/
 -- s/.*\[ERROR\]/[ERROR]/gm
 -- end_matchsubs
-\!gpconfig -c gp_default_storage_options -v 'appendonly=true' --masteronly
+\!gpconfig -c gp_default_storage_options -v 'checksum=false' --masteronly
 [ERROR]:-gp_default_storage_options value cannot be different on master and segments
 gp_default_storage_options value cannot be different on master and segments
-\!gpconfig -c gp_default_storage_options -v 'appendonly=true' -m 'appendonly=false'
+\!gpconfig -c gp_default_storage_options -v 'checksum=false' -m 'checksum=true'
 [ERROR]:-gp_default_storage_options value cannot be different on master and segments
 gp_default_storage_options value cannot be different on master and segments
 \!gpconfig -s gp_default_storage_options
 Values on all segments are consistent
 GUC          : gp_default_storage_options
-Master  value: appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row
-Segment value: appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row
+Master  value: blocksize=32768,compresstype=none,checksum=true
+Segment value: blocksize=32768,compresstype=none,checksum=true

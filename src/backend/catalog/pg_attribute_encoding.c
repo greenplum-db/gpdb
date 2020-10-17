@@ -34,7 +34,6 @@
 #include "utils/rel.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 
 /*
  * Add a single attribute encoding entry.
@@ -47,7 +46,7 @@ add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
 	bool nulls[Natts_pg_attribute_encoding];
 	HeapTuple tuple;
 	
-	Insist(attnum != InvalidAttrNumber);
+	Assert(attnum != InvalidAttrNumber);
 
 	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
 
@@ -59,8 +58,7 @@ add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
 	tuple = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
 	/* insert a new tuple */
-	simple_heap_insert(rel, tuple);
-	CatalogUpdateIndexes(rel, tuple);
+	CatalogTupleInsert(rel, tuple);
 
 	heap_freetuple(tuple);
 
@@ -88,7 +86,7 @@ get_funcs_for_compression(char *compresstype)
 	{
 		func = GetCompressionImplementation(compresstype);
 
-		Insist(PointerIsValid(func));
+		Assert(PointerIsValid(func));
 	}
 	return func;
 }
@@ -109,7 +107,7 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 									 AccessShareLock);
 
 	/* used for attbyval and len below */
-	attform = pgae->rd_att->attrs[Anum_pg_attribute_encoding_attoptions - 1];
+	attform = TupleDescAttr(pgae->rd_att, Anum_pg_attribute_encoding_attoptions - 1);
 
 	dats = palloc0(max_attno * sizeof(Datum));
 
@@ -128,11 +126,11 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 		Datum attoptions;
 		bool isnull;
 
-		Insist(attnum > 0 && attnum <= max_attno);
+		Assert(attnum > 0 && attnum <= max_attno);
 
 		attoptions = heap_getattr(tuple, Anum_pg_attribute_encoding_attoptions,
 								  RelationGetDescr(pgae), &isnull);
-		Insist(!isnull);
+		Assert(!isnull);
 
 		dats[attnum - 1] = datumCopy(attoptions,
 									 attform->attbyval,
@@ -204,8 +202,9 @@ RelationGetAttributeOptions(Relation rel)
 	{
 		if (DatumGetPointer(dats[i]) != NULL)
 		{
-			opts[i] = (StdRdOptions *)heap_reloptions(
-					RELKIND_RELATION, dats[i], false);
+			opts[i] = (StdRdOptions *) default_reloptions(
+					dats[i], false,
+					RELOPT_KIND_APPENDOPTIMIZED);
 			pfree(DatumGetPointer(dats[i]));
 		}
 	}
@@ -233,7 +232,7 @@ AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
 		List *encoding;
 		AttrNumber attnum;
 
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		attnum = get_attnum(relid, c->column);
 

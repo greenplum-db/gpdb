@@ -16,9 +16,9 @@
 
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "catalog/aoblkdir.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "access/heapam.h"
 #include "access/genam.h"
-#include "catalog/indexing.h"
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -177,11 +177,15 @@ AppendOnlyBlockDirectory_Init_forSearch(
 										bool isAOCol,
 										bool *proj)
 {
-	blockDirectory->aoRel = aoRel;
+	Oid blkdirrelid;
+	Oid blkdiridxid;
 
-	if (!OidIsValid(aoRel->rd_appendonly->blkdirrelid))
+	blockDirectory->aoRel = aoRel;
+	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+
+	if (!OidIsValid(blkdirrelid))
 	{
-		Assert(!OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+		Assert(!OidIsValid(blkdiridxid));
 		blockDirectory->blkdirRel = NULL;
 		blockDirectory->blkdirIdx = NULL;
 
@@ -203,15 +207,15 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->proj = proj;
 	blockDirectory->currentSegmentFileNum = -1;
 
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
+	Assert(OidIsValid(blkdirrelid));
 
 	blockDirectory->blkdirRel =
-		heap_open(aoRel->rd_appendonly->blkdirrelid, AccessShareLock);
+		heap_open(blkdirrelid, AccessShareLock);
 
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+	Assert(OidIsValid(blkdiridxid));
 
 	blockDirectory->blkdirIdx =
-		index_open(aoRel->rd_appendonly->blkdiridxid, AccessShareLock);
+		index_open(blkdiridxid, AccessShareLock);
 
 	init_internal(blockDirectory);
 }
@@ -237,13 +241,17 @@ AppendOnlyBlockDirectory_Init_forInsert(
 										bool isAOCol)
 {
 	int			groupNo;
+	Oid blkdirrelid;
+	Oid blkdiridxid;
 
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 
-	if (!OidIsValid(aoRel->rd_appendonly->blkdirrelid))
+	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+
+	if (!OidIsValid(blkdirrelid))
 	{
-		Assert(!OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+		Assert(!OidIsValid(blkdiridxid));
 		blockDirectory->blkdirRel = NULL;
 		blockDirectory->blkdirIdx = NULL;
 
@@ -259,15 +267,17 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->isAOCol = isAOCol;
 	blockDirectory->proj = NULL;
 
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
+	Assert(OidIsValid(blkdirrelid));
 
 	blockDirectory->blkdirRel =
-		heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
+		heap_open(blkdirrelid, RowExclusiveLock);
 
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+	Assert(OidIsValid(blkdiridxid));
 
 	blockDirectory->blkdirIdx =
-		index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
+		index_open(blkdiridxid, RowExclusiveLock);
+
+	blockDirectory->indinfo = CatalogOpenIndexes(blockDirectory->blkdirRel);
 
 	init_internal(blockDirectory);
 
@@ -300,12 +310,17 @@ AppendOnlyBlockDirectory_Init_addCol(
 									 int numColumnGroups,
 									 bool isAOCol)
 {
+	Oid blkdirrelid;
+	Oid blkdiridxid;
+
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 
-	if (!OidIsValid(aoRel->rd_appendonly->blkdirrelid))
+	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+
+	if (!OidIsValid(blkdirrelid))
 	{
-		Assert(!OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+		Assert(!OidIsValid(blkdiridxid));
 		blockDirectory->blkdirRel = NULL;
 		blockDirectory->blkdirIdx = NULL;
 		blockDirectory->numColumnGroups = 0;
@@ -321,7 +336,7 @@ AppendOnlyBlockDirectory_Init_addCol(
 	blockDirectory->isAOCol = isAOCol;
 	blockDirectory->proj = NULL;
 
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
+	Assert(OidIsValid(blkdirrelid));
 
 	/*
 	 * TODO: refactor the *_addCol* interface so that opening of
@@ -331,12 +346,14 @@ AppendOnlyBlockDirectory_Init_addCol(
 	 * segment.
 	 */
 	blockDirectory->blkdirRel =
-		heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
+		heap_open(blkdirrelid, RowExclusiveLock);
 
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+	Assert(OidIsValid(blkdiridxid));
 
 	blockDirectory->blkdirIdx =
-		index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
+		index_open(blkdiridxid, RowExclusiveLock);
+
+	blockDirectory->indinfo = CatalogOpenIndexes(blockDirectory->blkdirRel);
 
 	init_internal(blockDirectory);
 }
@@ -464,7 +481,7 @@ AppendOnlyBlockDirectory_GetEntry(
 
 	TupleDesc	heapTupleDesc;
 	FileSegInfo *fsInfo = NULL;
-	IndexScanDesc idxScanDesc;
+	SysScanDesc idxScanDesc;
 	HeapTuple	tuple = NULL;
 	MinipagePerColumnGroup *minipageInfo =
 	&blockDirectory->minipages[columnGroupNo];
@@ -574,12 +591,11 @@ AppendOnlyBlockDirectory_GetEntry(
 		scanKeys[1].sk_argument = Int32GetDatum(tmpGroupNo);
 		scanKeys[2].sk_argument = Int64GetDatum(rowNum);
 
-		idxScanDesc = index_beginscan(blkdirRel, blkdirIdx,
-									  blockDirectory->appendOnlyMetaDataSnapshot,
-									  numScanKeys, 0);
-		index_rescan(idxScanDesc, scanKeys, numScanKeys, NULL, 0);
+		idxScanDesc = systable_beginscan_ordered(blkdirRel, blkdirIdx,
+												 blockDirectory->appendOnlyMetaDataSnapshot,
+												 numScanKeys, scanKeys);
 
-		tuple = index_getnext(idxScanDesc, BackwardScanDirection);
+		tuple = systable_getnext_ordered(idxScanDesc, BackwardScanDirection);
 
 		if (tuple != NULL)
 		{
@@ -603,11 +619,11 @@ AppendOnlyBlockDirectory_GetEntry(
 		else
 		{
 			/* MPP-17061: index look up failed, row is invisible */
-			index_endscan(idxScanDesc);
+			systable_endscan_ordered(idxScanDesc);
 			return false;
 		}
 
-		index_endscan(idxScanDesc);
+		systable_endscan_ordered(idxScanDesc);
 	}
 
 	{
@@ -798,13 +814,18 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 										   int segno,
 										   int columnGroupNo)
 {
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
-	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
+	Oid blkdirrelid;
+	Oid blkdiridxid;
 
-	Relation	blkdirRel = heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
-	Relation	blkdirIdx = index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
+	GetAppendOnlyEntryAuxOids(aoRel->rd_id, NULL, NULL, &blkdirrelid, &blkdiridxid, NULL, NULL);
+
+	Assert(OidIsValid(blkdirrelid));
+	Assert(OidIsValid(blkdiridxid));
+
+	Relation	blkdirRel = table_open(blkdirrelid, RowExclusiveLock);
+	Relation	blkdirIdx = index_open(blkdiridxid, RowExclusiveLock);
 	ScanKeyData scanKey;
-	IndexScanDesc indexScan;
+	SysScanDesc indexScan;
 	HeapTuple	tuple;
 
 	ScanKeyInit(&scanKey,
@@ -813,22 +834,20 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 				F_INT4EQ,
 				Int32GetDatum(segno));
 
-	indexScan = index_beginscan(blkdirRel,
-								blkdirIdx,
-								snapshot,
-								1,
-								0);
-	index_rescan(indexScan, &scanKey, 1, NULL, 0);
+	indexScan = systable_beginscan_ordered(blkdirRel,
+										   blkdirIdx,
+										   snapshot,
+										   1 /* nkeys */,
+										   &scanKey);
 
-	while ((tuple = index_getnext(indexScan, ForwardScanDirection)) != NULL)
+	while ((tuple = systable_getnext_ordered(indexScan, ForwardScanDirection)) != NULL)
 	{
-		simple_heap_delete(blkdirRel,
-						   &tuple->t_self);
+		CatalogTupleDelete(blkdirRel, &tuple->t_self);
 	}
-	index_endscan(indexScan);
+	systable_endscan_ordered(indexScan);
 
 	index_close(blkdirIdx, RowExclusiveLock);
-	heap_close(blkdirRel, RowExclusiveLock);
+	table_close(blkdirRel, RowExclusiveLock);
 
 }
 
@@ -848,6 +867,7 @@ init_scankeys(TupleDesc tupleDesc,
 
 	for (keyNo = 0; keyNo < nkeys; keyNo++)
 	{
+		Oid			atttypid = TupleDescAttr(tupleDesc, keyNo)->atttypid;
 		ScanKey		scanKey = (ScanKey) (((char *) scanKeys) +
 										 keyNo * sizeof(ScanKeyData));
 		RegProcedure opfuncid;
@@ -860,7 +880,7 @@ init_scankeys(TupleDesc tupleDesc,
 		{
 			Oid			eq_opr;
 
-			get_sort_group_operators(tupleDesc->attrs[keyNo]->atttypid,
+			get_sort_group_operators(atttypid,
 									 false, true, false,
 									 NULL, &eq_opr, NULL, NULL);
 			opfuncid = get_opcode(eq_opr);
@@ -879,7 +899,7 @@ init_scankeys(TupleDesc tupleDesc,
 			Oid			gtOid,
 						leOid;
 
-			get_sort_group_operators(tupleDesc->attrs[keyNo]->atttypid,
+			get_sort_group_operators(atttypid,
 									 false, false, true,
 									 NULL, NULL, &gtOid, NULL);
 			leOid = get_negator(gtOid);
@@ -1016,7 +1036,7 @@ load_last_minipage(AppendOnlyBlockDirectory *blockDirectory,
 	Relation	blkdirRel = blockDirectory->blkdirRel;
 	Relation	blkdirIdx = blockDirectory->blkdirIdx;
 	TupleDesc	heapTupleDesc;
-	IndexScanDesc idxScanDesc;
+	SysScanDesc idxScanDesc;
 	HeapTuple	tuple = NULL;
 	MemoryContext oldcxt;
 	int			numScanKeys = blockDirectory->numScanKeys;
@@ -1052,12 +1072,11 @@ load_last_minipage(AppendOnlyBlockDirectory *blockDirectory,
 	 * Search the btree to find the entry in the block directory that contains
 	 * the last minipage.
 	 */
-	idxScanDesc = index_beginscan(blkdirRel, blkdirIdx,
-								  blockDirectory->appendOnlyMetaDataSnapshot,
-								  numScanKeys, 0);
-	index_rescan(idxScanDesc, scanKeys, numScanKeys, NULL, 0);
+	idxScanDesc = systable_beginscan_ordered(blkdirRel, blkdirIdx,
+											 blockDirectory->appendOnlyMetaDataSnapshot,
+											 numScanKeys, scanKeys);
 
-	tuple = index_getnext(idxScanDesc, BackwardScanDirection);
+	tuple = systable_getnext_ordered(idxScanDesc, BackwardScanDirection);
 	if (tuple != NULL)
 	{
 		extract_minipage(blockDirectory,
@@ -1066,7 +1085,7 @@ load_last_minipage(AppendOnlyBlockDirectory *blockDirectory,
 						 columnGroupNo);
 	}
 
-	index_endscan(idxScanDesc);
+	systable_endscan_ordered(idxScanDesc);
 
 	MemoryContextSwitchTo(oldcxt);
 
@@ -1140,6 +1159,7 @@ write_minipage(AppendOnlyBlockDirectory *blockDirectory,
 	Datum	   *values = blockDirectory->values;
 	bool	   *nulls = blockDirectory->nulls;
 	Relation	blkdirRel = blockDirectory->blkdirRel;
+	CatalogIndexState indinfo = blockDirectory->indinfo;
 	TupleDesc	heapTupleDesc = RelationGetDescr(blkdirRel);
 
 	Assert(minipageInfo->numMinipageEntries > 0);
@@ -1188,7 +1208,8 @@ write_minipage(AppendOnlyBlockDirectory *blockDirectory,
 						  columnGroupNo, minipageInfo->numMinipageEntries,
 						  minipageInfo->minipage->entry[0].firstRowNum)));
 
-		simple_heap_update(blkdirRel, &minipageInfo->tupleTid, tuple);
+		CatalogTupleUpdateWithInfo(blkdirRel, &minipageInfo->tupleTid, tuple,
+								   indinfo);
 	}
 	else
 	{
@@ -1200,10 +1221,8 @@ write_minipage(AppendOnlyBlockDirectory *blockDirectory,
 						  columnGroupNo, minipageInfo->numMinipageEntries,
 						  minipageInfo->minipage->entry[0].firstRowNum)));
 
-		simple_heap_insert(blkdirRel, tuple);
+		CatalogTupleInsertWithInfo(blkdirRel, tuple, indinfo);
 	}
-
-	CatalogUpdateIndexes(blkdirRel, tuple);
 
 	heap_freetuple(tuple);
 
@@ -1254,6 +1273,7 @@ AppendOnlyBlockDirectory_End_forInsert(
 
 	index_close(blockDirectory->blkdirIdx, RowExclusiveLock);
 	heap_close(blockDirectory->blkdirRel, RowExclusiveLock);
+	CatalogCloseIndexes(blockDirectory->indinfo);
 
 	MemoryContextDelete(blockDirectory->memoryContext);
 }
@@ -1344,6 +1364,7 @@ AppendOnlyBlockDirectory_End_addCol(
 	 */
 	index_close(blockDirectory->blkdirIdx, NoLock);
 	heap_close(blockDirectory->blkdirRel, NoLock);
+	CatalogCloseIndexes(blockDirectory->indinfo);
 
 	MemoryContextDelete(blockDirectory->memoryContext);
 }

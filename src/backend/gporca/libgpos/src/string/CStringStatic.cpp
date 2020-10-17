@@ -27,15 +27,8 @@ using namespace gpos;
 //		Ctor - initializes with empty string
 //
 //---------------------------------------------------------------------------
-CStringStatic::CStringStatic
-	(
-	CHAR buffer[],
-	ULONG capacity
-	)
-	:
-	m_buffer(buffer),
-	m_length(0),
-	m_capacity(capacity)
+CStringStatic::CStringStatic(CHAR buffer[], ULONG capacity)
+	: m_buffer(buffer), m_length(0), m_capacity(capacity)
 {
 	GPOS_ASSERT(NULL != buffer);
 	GPOS_ASSERT(0 < m_capacity);
@@ -52,16 +45,9 @@ CStringStatic::CStringStatic
 //		Ctor with string initialization
 //
 //---------------------------------------------------------------------------
-CStringStatic::CStringStatic
-	(
-	CHAR buffer[],
-	ULONG capacity,
-	const CHAR init_str[]
-	)
-	:
-	m_buffer(buffer),
-	m_length(0),
-	m_capacity(capacity)
+CStringStatic::CStringStatic(CHAR buffer[], ULONG capacity,
+							 const CHAR init_str[])
+	: m_buffer(buffer), m_length(0), m_capacity(capacity)
 {
 	GPOS_ASSERT(NULL != buffer);
 	GPOS_ASSERT(0 < m_capacity);
@@ -79,11 +65,7 @@ CStringStatic::CStringStatic
 //
 //---------------------------------------------------------------------------
 BOOL
-CStringStatic::Equals
-	(
-	const CHAR *buf
-	)
-	const
+CStringStatic::Equals(const CHAR *buf) const
 {
 	GPOS_ASSERT(NULL != buf);
 
@@ -101,10 +83,7 @@ CStringStatic::Equals
 //
 //---------------------------------------------------------------------------
 void
-CStringStatic::Append
-	(
-	const CStringStatic *str
-	)
+CStringStatic::Append(const CStringStatic *str)
 {
 	AppendBuffer(str->Buffer());
 }
@@ -119,10 +98,7 @@ CStringStatic::Append
 //
 //---------------------------------------------------------------------------
 void
-CStringStatic::AppendBuffer
-	(
-	const CHAR *buf
-	)
+CStringStatic::AppendBuffer(const CHAR *buf)
 {
 	GPOS_ASSERT(NULL != buf);
 	ULONG length = clib::Strlen(buf);
@@ -159,13 +135,9 @@ CStringStatic::AppendBuffer
 //
 //---------------------------------------------------------------------------
 void
-CStringStatic::AppendFormat
-	(
-	const CHAR *format,
-	...
-	)
+CStringStatic::AppendFormat(const CHAR *format, ...)
 {
-	VA_LIST	va_args;
+	VA_LIST va_args;
 
 	// get arguments
 	VA_START(va_args, format);
@@ -186,11 +158,7 @@ CStringStatic::AppendFormat
 //
 //---------------------------------------------------------------------------
 void
-CStringStatic::AppendFormatVA
-	(
-	const CHAR *format,
-	VA_LIST va_args
-	)
+CStringStatic::AppendFormatVA(const CHAR *format, VA_LIST va_args)
 {
 	GPOS_ASSERT(NULL != format);
 
@@ -219,10 +187,7 @@ CStringStatic::AppendFormatVA
 //
 //---------------------------------------------------------------------------
 void
-CStringStatic::AppendConvert
-	(
-	const WCHAR *wc_str
-	)
+CStringStatic::AppendConvert(const WCHAR *wc_str)
 {
 	ULONG length_entry = GPOS_WSZ_LENGTH(wc_str);
 
@@ -290,8 +255,7 @@ CStringStatic::IsValid() const
 	return (m_length == clib::Strlen(m_buffer));
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 
 // EOF
-

@@ -8,6 +8,10 @@
 -- updating, as the system improves.
 --
 
+-- GPDB_12_MERGE_FIXME: Many of these queries are no longer able to constraint
+-- exclusion, like we used to on GPDB 6. Not sure what we should do about it.
+-- See https://github.com/greenplum-db/gpdb/issues/10287.
+
 -- Use index scans when possible. That exercises more code, and allows us to
 -- spot the cases where the planner cannot use even when it exists.
 set enable_seqscan=off;
@@ -390,7 +394,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 41 ORDER BY col2,col3 LIMIT 5;
 CREATE TABLE pt_complex (i int, j int, k int, l int, m int) DISTRIBUTED BY (i)
 PARTITION BY list(k)
   SUBPARTITION BY list(j) SUBPARTITION TEMPLATE (subpartition p11 values (1), subpartition p12 values(2))
-  SUBPARTITION BY list(l, m) SUBPARTITION TEMPLATE (subpartition p11 values ((1,1)), subpartition p12 values((2,2)))
+  SUBPARTITION BY list(l) SUBPARTITION TEMPLATE (subpartition p11 values (1), subpartition p12 values(2))
 ( partition p1 values(1), partition p2 values(2));
 
 INSERT INTO pt_complex VALUES (1, 1, 1, 1, 1), (2, 2, 2, 2, 2);
@@ -615,44 +619,49 @@ drop table mytable cascade;
 
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 
 -- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
-
+-- GPDB_12_MERGE_FIXME: this function extract the number such as [5,10] out of
+-- the string "Partition selected: 5 out of 10". We have temporarily broken
+-- that when we reimplemented dynamic seq scan. Currently only the number of
+-- selected partitions is avalable, get the total number of partitions back
+-- post merge.
 create or replace function get_selected_parts(explain_query text) returns text as
 $$
+import re
 rv = plpy.execute(explain_query)
-search_text = 'Partition Selector'
+search_text = 'Dynamic Seq Scan on '
 result = []
 result.append(0)
 result.append(0)
 selected = 0
 out_of = 0
+pattern = re.compile(r"\s+Number of partitions to scan: (?P<selected>\d+)")
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
         j = i+1
         temp_line = rv[j]['QUERY PLAN']
-        while temp_line.find('Partitions selected:') == -1:
+        while (not pattern.match(temp_line)):
             j += 1
             if j == len(rv) - 1:
                 break
             temp_line = rv[j]['QUERY PLAN']
 
-        if temp_line.find('Partitions selected:') != -1:
-            selected += int(temp_line[temp_line.index('selected: ')+10:temp_line.index(' (out')])
-            out_of += int(temp_line[temp_line.index('out of')+6:temp_line.index(')')])
+        else:
+            selected += int(pattern.match(temp_line).group('selected'))
 result[0] = selected
 result[1] = out_of
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 drop table if exists partprune_foo;
 create table partprune_foo(a int, b int, c int) partition by range (b) (start (1) end (101) every (10));
-insert into partprune_foo select generate_series(1,5), generate_series(1,100), generate_series(1,10);
+insert into partprune_foo select g % 5 + 1, g + 1, g % 10 + 1 from generate_series(0, 99) g;
 analyze partprune_foo;
 
 select get_selected_parts('explain select * from partprune_foo;');
@@ -823,7 +832,7 @@ insert into sales_exchange_part values(1, '2011-01-01', 10.1, 'usa');
 
 -- Exchange
 ALTER TABLE sales 
-ALTER PARTITION FOR (RANK(1))
+ALTER PARTITION FOR (date '2011-01-01')
 EXCHANGE PARTITION FOR ('usa') WITH TABLE sales_exchange_part ;
 ANALYZE sales;
 

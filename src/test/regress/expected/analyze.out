@@ -813,7 +813,7 @@ ANALYZE foo_stats;
 SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
  schemaname | tablename | attname | null_frac | avg_width | n_distinct |          most_common_vals           | most_common_freqs | histogram_bounds 
 ------------+-----------+---------+-----------+-----------+------------+-------------------------------------+-------------------+------------------
- public     | foo_stats | a       |         0 |         4 |      -0.25 | {aaa}                               | {1}               | 
+ public     | foo_stats | a       |         0 |         4 |      -0.25 |                                     |                   | 
  public     | foo_stats | b       |         0 |         6 |       -0.5 | {"\\x6262626262","\\x626262626232"} | {0.5,0.5}         | 
  public     | foo_stats | c       |         0 |         5 |       -0.5 | {cccc,cccc2}                        | {0.5,0.5}         | 
  public     | foo_stats | d       |         0 |         4 |       -0.5 | {2,3}                               | {0.5,0.5}         | 
@@ -952,3 +952,60 @@ drop table testid;
 drop extension citext;
 drop schema test_ns;
 drop role nsuser1;
+set search_path to default;
+--
+-- Test analyze on inherited table.
+-- We used to have a bug for acquiring sample rows on QE. It always return
+-- rows for all inherited tables even the QD only wants samples for parent table's.
+--
+CREATE TABLE ana_parent (aa int);
+CREATE TABLE ana_c1 (bb text) INHERITS (ana_parent);
+CREATE TABLE ana_c2 (cc text) INHERITS (ana_c1);
+INSERT INTO ana_c1 SELECT i, 'bb' FROM generate_series(1, 10) AS i;
+INSERT INTO ana_c2 SELECT i, 'bb', 'cc' FROM generate_series(10, 20) AS i;
+ANALYZE ana_parent;
+ANALYZE ana_c1;
+ANALYZE ana_c2;
+-- Check pg_class entry
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_parent';
+ relpages | reltuples 
+----------+-----------
+        1 |         0
+(1 row)
+
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_c1';
+ relpages | reltuples 
+----------+-----------
+        3 |        10
+(1 row)
+
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_c2';
+ relpages | reltuples 
+----------+-----------
+        3 |        11
+(1 row)
+
+-- Check pg_stats entries
+SELECT * FROM pg_stats WHERE tablename = 'ana_parent';
+ schemaname | tablename  | attname | inherited | null_frac | avg_width | n_distinct  | most_common_vals | most_common_freqs |                 histogram_bounds                  | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+------------+---------+-----------+-----------+-----------+-------------+------------------+-------------------+---------------------------------------------------+-------------+-------------------+------------------------+----------------------
+ public     | ana_parent | aa      | t         |         0 |         4 | -0.95238096 | {10}             | {0.0952381}       | {1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20} |  0.38961038 |                   |                        | 
+(1 row)
+
+SELECT * FROM pg_stats WHERE tablename = 'ana_c1';
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct  | most_common_vals | most_common_freqs |                 histogram_bounds                  | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+-------------+------------------+-------------------+---------------------------------------------------+-------------+-------------------+------------------------+----------------------
+ public     | ana_c1    | aa      | f         |         0 |         4 |          -1 |                  |                   | {1,2,3,4,5,6,7,8,9,10}                            |   0.6727273 |                   |                        | 
+ public     | ana_c1    | bb      | f         |         0 |         3 |           1 | {bb}             | {1}               |                                                   |           1 |                   |                        | 
+ public     | ana_c1    | aa      | t         |         0 |         4 | -0.95238096 | {10}             | {0.0952381}       | {1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20} |  0.38961038 |                   |                        | 
+ public     | ana_c1    | bb      | t         |         0 |         3 |           1 | {bb}             | {1}               |                                                   |           1 |                   |                        | 
+(4 rows)
+
+SELECT * FROM pg_stats WHERE tablename = 'ana_c2';
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |          histogram_bounds          | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------------------------+-------------+-------------------+------------------------+----------------------
+ public     | ana_c2    | aa      | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19,20} |  -0.3272727 |                   |                        | 
+ public     | ana_c2    | bb      | f         |         0 |         3 |          1 | {bb}             | {1}               |                                    |           1 |                   |                        | 
+ public     | ana_c2    | cc      | f         |         0 |         3 |          1 | {cc}             | {1}               |                                    |           1 |                   |                        | 
+(3 rows)
+

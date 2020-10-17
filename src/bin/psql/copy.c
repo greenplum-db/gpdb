@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  *
  * src/bin/psql/copy.c
  */
@@ -25,6 +25,7 @@
 #include "prompt.h"
 #include "stringutils.h"
 
+#include "common/logging.h"
 
 /*
  * parse_slash_copy
@@ -64,7 +65,7 @@ struct copy_options
 
 
 static void
-free_copy_options(struct copy_options * ptr)
+free_copy_options(struct copy_options *ptr)
 {
 	if (!ptr)
 		return;
@@ -97,13 +98,13 @@ parse_slash_copy(const char *args)
 
 	if (!args)
 	{
-		psql_error("\\copy: arguments required\n");
+		pg_log_error("\\copy: arguments required");
 		return NULL;
 	}
 
 	result = pg_malloc0(sizeof(struct copy_options));
 
-	result->before_tofrom = pg_strdup("");		/* initialize for appending */
+	result->before_tofrom = pg_strdup("");	/* initialize for appending */
 
 	token = strtokx(args, whitespace, ".,()", "\"",
 					0, false, false, pset.encoding);
@@ -252,9 +253,9 @@ parse_slash_copy(const char *args)
 
 error:
 	if (token)
-		psql_error("\\copy: parse error at \"%s\"\n", token);
+		pg_log_error("\\copy: parse error at \"%s\"", token);
 	else
-		psql_error("\\copy: parse error at end of line\n");
+		pg_log_error("\\copy: parse error at end of line");
 	free_copy_options(result);
 
 	return NULL;
@@ -330,7 +331,7 @@ do_copy(const char *args)
 
 	if (options->after_tofrom && is_on_segment(options->after_tofrom))
 	{
-		psql_error("\\COPY command doesn't support ON SEGMENT\n");
+		pg_log_error("\\COPY command doesn't support ON SEGMENT");
 		free_copy_options(options);
 		return false;
 	}
@@ -381,11 +382,11 @@ do_copy(const char *args)
 	if (!copystream)
 	{
 		if (options->program)
-			psql_error("could not execute command \"%s\": %s\n",
-					   options->file, strerror(errno));
+			pg_log_error("could not execute command \"%s\": %m",
+						 options->file);
 		else
-			psql_error("%s: %s\n",
-					   options->file, strerror(errno));
+			pg_log_error("%s: %m",
+						 options->file);
 		free_copy_options(options);
 		return false;
 	}
@@ -397,12 +398,12 @@ do_copy(const char *args)
 
 		/* make sure the specified file is not a directory */
 		if ((result = fstat(fileno(copystream), &st)) < 0)
-			psql_error("could not stat file \"%s\": %s\n",
-					   options->file, strerror(errno));
+			pg_log_error("could not stat file \"%s\": %m",
+						 options->file);
 
 		if (result == 0 && S_ISDIR(st.st_mode))
-			psql_error("%s: cannot copy from/to a directory\n",
-					   options->file);
+			pg_log_error("%s: cannot copy from/to a directory",
+						 options->file);
 
 		if (result < 0 || S_ISDIR(st.st_mode))
 		{
@@ -438,14 +439,13 @@ do_copy(const char *args)
 			if (pclose_rc != 0)
 			{
 				if (pclose_rc < 0)
-					psql_error("could not close pipe to external command: %s\n",
-							   strerror(errno));
+					pg_log_error("could not close pipe to external command: %m");
 				else
 				{
 					char	   *reason = wait_result_to_str(pclose_rc);
 
-					psql_error("%s: %s\n", options->file,
-							   reason ? reason : "");
+					pg_log_error("%s: %s", options->file,
+								 reason ? reason : "");
 					if (reason)
 						free(reason);
 				}
@@ -457,7 +457,7 @@ do_copy(const char *args)
 		{
 			if (fclose(copystream) != 0)
 			{
-				psql_error("%s: %s\n", options->file, strerror(errno));
+				pg_log_error("%s: %m", options->file);
 				success = false;
 			}
 		}
@@ -480,7 +480,10 @@ do_copy(const char *args)
  *
  * conn should be a database connection that you just issued COPY TO on
  * and got back a PGRES_COPY_OUT result.
+ *
  * copystream is the file stream for the data to go to.
+ * copystream can be NULL to eat the data without writing it anywhere.
+ *
  * The final status for the COPY is returned into *res (but note
  * we already reported the error, if it's not a success result).
  *
@@ -502,10 +505,9 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
 
 		if (buf)
 		{
-			if (OK && fwrite(buf, 1, ret, copystream) != ret)
+			if (OK && copystream && fwrite(buf, 1, ret, copystream) != ret)
 			{
-				psql_error("could not write COPY data: %s\n",
-						   strerror(errno));
+				pg_log_error("could not write COPY data: %m");
 				/* complain only once, keep reading data from server */
 				OK = false;
 			}
@@ -513,16 +515,15 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
 		}
 	}
 
-	if (OK && fflush(copystream))
+	if (OK && copystream && fflush(copystream))
 	{
-		psql_error("could not write COPY data: %s\n",
-				   strerror(errno));
+		pg_log_error("could not write COPY data: %m");
 		OK = false;
 	}
 
 	if (ret == -2)
 	{
-		psql_error("COPY data transfer failed: %s", PQerrorMessage(conn));
+		pg_log_error("COPY data transfer failed: %s", PQerrorMessage(conn));
 		OK = false;
 	}
 
@@ -541,7 +542,7 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
 	*res = PQgetResult(conn);
 	if (PQresultStatus(*res) != PGRES_COMMAND_OK)
 	{
-		psql_error("%s", PQerrorMessage(conn));
+		pg_log_info("%s", PQerrorMessage(conn));
 		OK = false;
 	}
 
@@ -607,7 +608,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 		/* interactive input probably silly, but give one prompt anyway */
 		if (showprompt)
 		{
-			const char *prompt = get_prompt(PROMPT_COPY);
+			const char *prompt = get_prompt(PROMPT_COPY, NULL);
 
 			fputs(prompt, stdout);
 			fflush(stdout);
@@ -645,7 +646,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 
 			if (showprompt)
 			{
-				const char *prompt = get_prompt(PROMPT_COPY);
+				const char *prompt = get_prompt(PROMPT_COPY, NULL);
 
 				fputs(prompt, stdout);
 				fflush(stdout);
@@ -684,8 +685,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 					/*
 					 * This code erroneously assumes '\.' on a line alone
 					 * inside a quoted CSV string terminates the \copy.
-					 * http://www.postgresql.org/message-id/E1TdNVQ-0001ju-GO@w
-					 * rigleys.postgresql.org
+					 * http://www.postgresql.org/message-id/E1TdNVQ-0001ju-GO@wrigleys.postgresql.org
 					 */
 					if (strcmp(buf, "\\.\n") == 0 ||
 						strcmp(buf, "\\.\r\n") == 0)
@@ -761,7 +761,7 @@ copyin_cleanup:
 	}
 	if (PQresultStatus(*res) != PGRES_COMMAND_OK)
 	{
-		psql_error("%s", PQerrorMessage(conn));
+		pg_log_info("%s", PQerrorMessage(conn));
 		OK = false;
 	}
 

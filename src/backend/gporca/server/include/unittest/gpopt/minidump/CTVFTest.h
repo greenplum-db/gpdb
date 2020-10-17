@@ -15,37 +15,31 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CTVFTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CTVFTest
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CTVFTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CTVFTest
+{
+private:
+	// counter used to mark last successful test
+	static ULONG m_ulTVFTestCounter;
 
-			// counter used to mark last successful test
-			static
-			ULONG m_ulTVFTestCounter;
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-		public:
+	static GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			GPOS_RESULT EresUnittest();
+};	// class CTVFTest
+}  // namespace gpopt
 
-			static
-			GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CTVFTest
-}
-
-#endif // !GPOPT_CTVFTest_H
+#endif	// !GPOPT_CTVFTest_H
 
 // EOF
-

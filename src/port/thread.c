@@ -5,7 +5,7 @@
  *		  Prototypes and macros around system calls, used to help make
  *		  threaded libraries reentrant and safe to use from threaded applications.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  * src/port/thread.c
  *
@@ -54,33 +54,6 @@
 
 
 /*
- * Wrapper around strerror and strerror_r to use the former if it is
- * available and also return a more useful value (the error string).
- */
-char *
-pqStrerror(int errnum, char *strerrbuf, size_t buflen)
-{
-#if defined(ENABLE_THREAD_SAFETY) && defined(HAVE_STRERROR_R)
-	/* reentrant strerror_r is available */
-#ifdef STRERROR_R_INT
-	/* SUSv3 version */
-	if (strerror_r(errnum, strerrbuf, buflen) == 0)
-		return strerrbuf;
-	else
-		return "Unknown error";
-#else
-	/* GNU libc */
-	return strerror_r(errnum, strerrbuf, buflen);
-#endif
-#else
-	/* no strerror_r() available, just use strerror */
-	strlcpy(strerrbuf, strerror(errnum), buflen);
-
-	return strerrbuf;
-#endif
-}
-
-/*
  * Wrapper around getpwuid() or getpwuid_r() to mimic POSIX getpwuid_r()
  * behaviour, if that function is not available or required.
  *
@@ -92,8 +65,8 @@ pqStrerror(int errnum, char *strerrbuf, size_t buflen)
  */
 #ifndef WIN32
 int
-pqGetpwuid(uid_t uid, struct passwd * resultbuf, char *buffer,
-		   size_t buflen, struct passwd ** result)
+pqGetpwuid(uid_t uid, struct passwd *resultbuf, char *buffer,
+		   size_t buflen, struct passwd **result)
 {
 #if defined(ENABLE_THREAD_SAFETY) && defined(HAVE_GETPWUID_R)
 	return getpwuid_r(uid, resultbuf, buffer, buflen, result);
@@ -115,9 +88,9 @@ pqGetpwuid(uid_t uid, struct passwd * resultbuf, char *buffer,
 #ifndef HAVE_GETADDRINFO
 int
 pqGethostbyname(const char *name,
-				struct hostent * resultbuf,
+				struct hostent *resultbuf,
 				char *buffer, size_t buflen,
-				struct hostent ** result,
+				struct hostent **result,
 				int *herrno)
 {
 #if defined(ENABLE_THREAD_SAFETY) && defined(HAVE_GETHOSTBYNAME_R)

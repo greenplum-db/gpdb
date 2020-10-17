@@ -16,8 +16,8 @@
 #define CDBMUTATE_H
 
 #include "nodes/execnodes.h"
+#include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"
 #include "optimizer/walkers.h"
 
 extern Motion *make_union_motion(Plan *lefttree);

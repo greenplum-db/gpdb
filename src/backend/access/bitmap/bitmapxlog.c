@@ -17,7 +17,8 @@
 
 #include "postgres.h"
 
-#include "access/bitmap.h"
+#include "access/bitmap_private.h"
+#include "access/bitmap_xlog.h"
 #include "access/xlogutils.h"
 
 /*

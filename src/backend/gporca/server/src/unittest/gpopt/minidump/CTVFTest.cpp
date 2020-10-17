@@ -23,11 +23,10 @@
 
 using namespace gpopt;
 
-ULONG CTVFTest::m_ulTVFTestCounter = 0;  // start from first test
+ULONG CTVFTest::m_ulTVFTestCounter = 0;	 // start from first test
 
 // minidump files
-const CHAR *rgszTVFFileNames[] =
-	{
+const CHAR *rgszTVFFileNames[] = {
 	"../data/dxl/minidump/TVF.mdp",
 	"../data/dxl/minidump/TVFAnyelement.mdp",
 	"../data/dxl/minidump/TVFVolatileJoin.mdp",
@@ -36,7 +35,7 @@ const CHAR *rgszTVFFileNames[] =
 	"../data/dxl/minidump/TVF-With-Deep-Subq-Args.mdp",
 	"../data/dxl/minidump/TVFCorrelatedExecution.mdp",
 	"../data/dxl/minidump/CSQ-VolatileTVF.mdp",
-	};
+};
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -49,10 +48,9 @@ const CHAR *rgszTVFFileNames[] =
 GPOS_RESULT
 CTVFTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(EresUnittest_RunTests),
-		};
+	};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
@@ -73,12 +71,9 @@ CTVFTest::EresUnittest()
 GPOS_RESULT
 CTVFTest::EresUnittest_RunTests()
 {
-	return CTestUtils::EresUnittest_RunTests
-						(
-						rgszTVFFileNames,
-						&m_ulTVFTestCounter,
-						GPOS_ARRAY_SIZE(rgszTVFFileNames)
-						);
+	return CTestUtils::EresUnittest_RunTests(rgszTVFFileNames,
+											 &m_ulTVFTestCounter,
+											 GPOS_ARRAY_SIZE(rgszTVFFileNames));
 }
 
 // EOF

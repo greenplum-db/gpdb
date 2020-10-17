@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import imp
 import os
@@ -19,7 +19,7 @@ class GpCheckCatColumnsTestCase(unittest.TestCase):
         # 5.json has an incomplete list of catalog tables
         # src/backend/catalog has .h files for some catalog tables
         # gpdb-doc/dita/ref_guide/system_catalogs/ has .xml files for almost all catalog tables
-        for key in subject.TableMainColumn.keys():
+        for key in list(subject.TableMainColumn.keys()):
             cursor = dbconn.query(conn, table_query.format(table_name=key))
             self.assertTrue(cursor.rowcount == 1, "%s not found in catalog dir" % key)
 

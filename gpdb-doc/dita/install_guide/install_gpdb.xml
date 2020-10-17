@@ -51,10 +51,11 @@
         <li>Download and copy the Greenplum Database package to the <codeph>gpadmin</codeph> user's
           home directory on the master, standby master, and every segment host machine. The
           distribution file name has the format
-            <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> for RHEL and CentOS
-          systems, or <codeph>greenplum-db-&lt;version>-&lt;platform>.deb</codeph> for Ubuntu
-          systems, where <codeph>&lt;platform></codeph> is similar to <codeph>rhel7-x86_64</codeph>
-          (Red Hat 7 64-bit).</li>
+            <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> for RHEL, CentOS, and
+          Oracle Linux systems, or <codeph>greenplum-db-&lt;version>-&lt;platform>.deb</codeph> for
+          Ubuntu systems, where <codeph>&lt;platform></codeph> is similar to
+            <codeph>rhel7-x86_64</codeph> (Red Hat 7 64-bit). <note>For Oracle Linux installations,
+            download and install the <codeph>rhel7-x86_64</codeph>distribution files.</note></li>
         <li>With sudo (or as root), install the Greenplum Database package on each host machine
           using your system's package manager software. <ul id="ol_wgt_mxz_1jb">
             <li>For RHEL/CentOS systems, execute the <codeph>yum</codeph> command:

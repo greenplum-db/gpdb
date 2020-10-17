@@ -549,7 +549,7 @@ Distributed by: (sale_id)
     <body>
       <p>Every database instance in Greenplum Database (master and segments) runs a PostgreSQL
         database server with its own server log file. Log files are created in the
-          <codeph>pg_log</codeph> directory of the master and each segment data directory.</p>
+          <codeph>log</codeph> directory of the master and each segment data directory.</p>
     </body>
     <topic id="topic29" xml:lang="en">
       <title id="kj165340">Log File Format</title>
@@ -792,7 +792,7 @@ Distributed by: (sale_id)
 </codeblock>
         </p>
         <codeblock>=&gt; source /usr/local/greenplum-db/greenplum_path.sh
-=&gt; gplogfilter -n 3 /gpdata/gp*/pg_log/gpdb*.log</codeblock>
+=&gt; gplogfilter -n 3 /gpdata/gp*/log/gpdb*.log</codeblock>
       </body>
     </topic>
   </topic>

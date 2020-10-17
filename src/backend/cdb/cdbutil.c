@@ -28,14 +28,15 @@
 #endif
 
 #include <sys/param.h>			/* for MAXHOSTNAMELEN */
+
 #include "access/genam.h"
-#include "catalog/gp_segment_config.h"
+#include "catalog/gp_segment_configuration.h"
+#include "common/ip.h"
 #include "nodes/makefuncs.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "catalog/gp_id.h"
-#include "catalog/gp_segment_config.h"
 #include "catalog/indexing.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
@@ -47,8 +48,6 @@
 #include "cdb/cdbtm.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
-#include "libpq/ip.h"
-#include "miscadmin.h"		/* MyProcPort */
 #include "cdb/cdbconn.h"
 #include "cdb/cdbfts.h"
 #include "storage/ipc.h"
@@ -238,17 +237,18 @@ readGpSegConfigFromCatalog(int *total_dbs)
 	Datum				attr;
 	Relation			gp_seg_config_rel;
 	HeapTuple			gp_seg_config_tuple = NULL;
-	HeapScanDesc		gp_seg_config_scan;
+	SysScanDesc			gp_seg_config_scan;
 	GpSegConfigEntry	*configs;
 	GpSegConfigEntry	*config;
 
 	array_size = 500;
 	configs = palloc0(sizeof(GpSegConfigEntry) * array_size);
 
-	gp_seg_config_rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
-	gp_seg_config_scan = heap_beginscan_catalog(gp_seg_config_rel, 0, NULL);
+	gp_seg_config_rel = table_open(GpSegmentConfigRelationId, AccessShareLock);
+	gp_seg_config_scan = systable_beginscan(gp_seg_config_rel, InvalidOid, false, NULL,
+											0, NULL);
 
-	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
+	while (HeapTupleIsValid(gp_seg_config_tuple = systable_getnext(gp_seg_config_scan)))
 	{
 		config = &configs[idx];
 
@@ -317,8 +317,8 @@ readGpSegConfigFromCatalog(int *total_dbs)
 	 * We're done with the catalog config, clean them up, closing all the
 	 * relations we opened.
 	 */
-	heap_endscan(gp_seg_config_scan);
-	heap_close(gp_seg_config_rel, AccessShareLock);
+	systable_endscan(gp_seg_config_scan);
+	table_close(gp_seg_config_rel, AccessShareLock);
 
 	*total_dbs = idx;
 	return configs;
@@ -1084,23 +1084,12 @@ cdb_setup(void)
 		Gp_role == GP_ROLE_DISPATCH &&
 		!*shmDtmStarted)
 	{
-		while (true)
-		{
-			int rc;
-			if (*shmDtmStarted)
-				break;
-			CHECK_FOR_INTERRUPTS();
-			/* wait for 100ms or postmaster dies */
-			rc = WaitLatch(&MyProc->procLatch,
-				   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH, 100);
-
-			ResetLatch(&MyProc->procLatch);
-			if (rc & WL_POSTMASTER_DEATH)
-				proc_exit(1);
-		}
+		ereport(FATAL,
+				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+				 errmsg(POSTMASTER_IN_RECOVERY_MSG),
+				 errdetail("waiting for distributed transaction recovery to complete")));
 	}
 }
-
 
 /*
  * performs all necessary cleanup required when leaving Greenplum
@@ -1474,7 +1463,7 @@ master_standby_dbid(void)
 	 * SELECT * FROM gp_segment_configuration WHERE content = -1 AND role =
 	 * GP_SEGMENT_CONFIGURATION_ROLE_MIRROR
 	 */
-	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
+	rel = table_open(GpSegmentConfigRelationId, AccessShareLock);
 	ScanKeyInit(&scankey[0],
 				Anum_gp_segment_configuration_content,
 				BTEqualStrategyNumber, F_INT2EQ,
@@ -1498,7 +1487,7 @@ master_standby_dbid(void)
 
 	systable_endscan(scan);
 	/* no need to hold the lock, it's a catalog */
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	return dbid;
 }
@@ -1785,8 +1774,12 @@ AvoidCorefileGeneration()
 	getrlimit(RLIMIT_CORE, &lim);
 	lim.rlim_cur = 0;
 	if (setrlimit(RLIMIT_CORE, &lim) != 0)
+	{
+		int			save_errno = errno;
+
 		elog(NOTICE,
 			 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
-			 errno);
+			 save_errno);
+	}
 #endif
 }

@@ -3,7 +3,7 @@
  * seclabel.c
  *	  routines to support security label feature.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * -------------------------------------------------------------------------
@@ -11,8 +11,9 @@
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/htup_details.h"
+#include "access/relation.h"
+#include "access/table.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_seclabel.h"
@@ -23,7 +24,6 @@
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
 
 typedef struct
 {
@@ -89,12 +89,12 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
 	 * object does not exist, and will also acquire a lock on the target to
 	 * guard against concurrent modifications.
 	 */
-	address = get_object_address(stmt->objtype, stmt->objname, stmt->objargs,
+	address = get_object_address(stmt->objtype, stmt->object,
 								 &relation, ShareUpdateExclusiveLock, false);
 
 	/* Require ownership of the target object. */
 	check_object_ownership(GetUserId(), stmt->objtype, address,
-						   stmt->objname, stmt->objargs, relation);
+						   stmt->object, relation);
 
 	/* Perform other integrity checks as needed. */
 	switch (stmt->objtype)
@@ -110,7 +110,8 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
 				relation->rd_rel->relkind != RELKIND_VIEW &&
 				relation->rd_rel->relkind != RELKIND_MATVIEW &&
 				relation->rd_rel->relkind != RELKIND_COMPOSITE_TYPE &&
-				relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE)
+				relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE &&
+				relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("\"%s\" is not a table, view, materialized view, composite type, or foreign table",
@@ -121,7 +122,7 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
 	}
 
 	/* Provider gets control here, may throw ERROR to veto new label. */
-	(*provider->hook) (&address, stmt->label);
+	provider->hook(&address, stmt->label);
 
 	/* Apply new label. */
 	SetSecurityLabel(&address, provider->provider_name, stmt->label);
@@ -166,7 +167,7 @@ GetSharedSecurityLabel(const ObjectAddress *object, const char *provider)
 				BTEqualStrategyNumber, F_TEXTEQ,
 				CStringGetTextDatum(provider));
 
-	pg_shseclabel = heap_open(SharedSecLabelRelationId, AccessShareLock);
+	pg_shseclabel = table_open(SharedSecLabelRelationId, AccessShareLock);
 
 	scan = systable_beginscan(pg_shseclabel, SharedSecLabelObjectIndexId, true,
 							  NULL, 3, keys);
@@ -181,7 +182,7 @@ GetSharedSecurityLabel(const ObjectAddress *object, const char *provider)
 	}
 	systable_endscan(scan);
 
-	heap_close(pg_shseclabel, AccessShareLock);
+	table_close(pg_shseclabel, AccessShareLock);
 
 	return seclabel;
 }
@@ -223,7 +224,7 @@ GetSecurityLabel(const ObjectAddress *object, const char *provider)
 				BTEqualStrategyNumber, F_TEXTEQ,
 				CStringGetTextDatum(provider));
 
-	pg_seclabel = heap_open(SecLabelRelationId, AccessShareLock);
+	pg_seclabel = table_open(SecLabelRelationId, AccessShareLock);
 
 	scan = systable_beginscan(pg_seclabel, SecLabelObjectIndexId, true,
 							  NULL, 4, keys);
@@ -238,7 +239,7 @@ GetSecurityLabel(const ObjectAddress *object, const char *provider)
 	}
 	systable_endscan(scan);
 
-	heap_close(pg_seclabel, AccessShareLock);
+	table_close(pg_seclabel, AccessShareLock);
 
 	return seclabel;
 }
@@ -283,7 +284,7 @@ SetSharedSecurityLabel(const ObjectAddress *object,
 				BTEqualStrategyNumber, F_TEXTEQ,
 				CStringGetTextDatum(provider));
 
-	pg_shseclabel = heap_open(SharedSecLabelRelationId, RowExclusiveLock);
+	pg_shseclabel = table_open(SharedSecLabelRelationId, RowExclusiveLock);
 
 	scan = systable_beginscan(pg_shseclabel, SharedSecLabelObjectIndexId, true,
 							  NULL, 3, keys);
@@ -292,13 +293,13 @@ SetSharedSecurityLabel(const ObjectAddress *object,
 	if (HeapTupleIsValid(oldtup))
 	{
 		if (label == NULL)
-			simple_heap_delete(pg_shseclabel, &oldtup->t_self);
+			CatalogTupleDelete(pg_shseclabel, &oldtup->t_self);
 		else
 		{
 			replaces[Anum_pg_shseclabel_label - 1] = true;
 			newtup = heap_modify_tuple(oldtup, RelationGetDescr(pg_shseclabel),
 									   values, nulls, replaces);
-			simple_heap_update(pg_shseclabel, &oldtup->t_self, newtup);
+			CatalogTupleUpdate(pg_shseclabel, &oldtup->t_self, newtup);
 		}
 	}
 	systable_endscan(scan);
@@ -308,23 +309,19 @@ SetSharedSecurityLabel(const ObjectAddress *object,
 	{
 		newtup = heap_form_tuple(RelationGetDescr(pg_shseclabel),
 								 values, nulls);
-		simple_heap_insert(pg_shseclabel, newtup);
+		CatalogTupleInsert(pg_shseclabel, newtup);
 	}
 
-	/* Update indexes, if necessary */
 	if (newtup != NULL)
-	{
-		CatalogUpdateIndexes(pg_shseclabel, newtup);
 		heap_freetuple(newtup);
-	}
 
-	heap_close(pg_shseclabel, RowExclusiveLock);
+	table_close(pg_shseclabel, RowExclusiveLock);
 }
 
 /*
  * SetSecurityLabel attempts to set the security label for the specified
  * provider on the specified object to the given value.  NULL means that any
- * any existing label should be deleted.
+ * existing label should be deleted.
  */
 void
 SetSecurityLabel(const ObjectAddress *object,
@@ -374,7 +371,7 @@ SetSecurityLabel(const ObjectAddress *object,
 				BTEqualStrategyNumber, F_TEXTEQ,
 				CStringGetTextDatum(provider));
 
-	pg_seclabel = heap_open(SecLabelRelationId, RowExclusiveLock);
+	pg_seclabel = table_open(SecLabelRelationId, RowExclusiveLock);
 
 	scan = systable_beginscan(pg_seclabel, SecLabelObjectIndexId, true,
 							  NULL, 4, keys);
@@ -383,13 +380,13 @@ SetSecurityLabel(const ObjectAddress *object,
 	if (HeapTupleIsValid(oldtup))
 	{
 		if (label == NULL)
-			simple_heap_delete(pg_seclabel, &oldtup->t_self);
+			CatalogTupleDelete(pg_seclabel, &oldtup->t_self);
 		else
 		{
 			replaces[Anum_pg_seclabel_label - 1] = true;
 			newtup = heap_modify_tuple(oldtup, RelationGetDescr(pg_seclabel),
 									   values, nulls, replaces);
-			simple_heap_update(pg_seclabel, &oldtup->t_self, newtup);
+			CatalogTupleUpdate(pg_seclabel, &oldtup->t_self, newtup);
 		}
 	}
 	systable_endscan(scan);
@@ -399,17 +396,14 @@ SetSecurityLabel(const ObjectAddress *object,
 	{
 		newtup = heap_form_tuple(RelationGetDescr(pg_seclabel),
 								 values, nulls);
-		simple_heap_insert(pg_seclabel, newtup);
+		CatalogTupleInsert(pg_seclabel, newtup);
 	}
 
 	/* Update indexes, if necessary */
 	if (newtup != NULL)
-	{
-		CatalogUpdateIndexes(pg_seclabel, newtup);
 		heap_freetuple(newtup);
-	}
 
-	heap_close(pg_seclabel, RowExclusiveLock);
+	table_close(pg_seclabel, RowExclusiveLock);
 }
 
 /*
@@ -433,15 +427,15 @@ DeleteSharedSecurityLabel(Oid objectId, Oid classId)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(classId));
 
-	pg_shseclabel = heap_open(SharedSecLabelRelationId, RowExclusiveLock);
+	pg_shseclabel = table_open(SharedSecLabelRelationId, RowExclusiveLock);
 
 	scan = systable_beginscan(pg_shseclabel, SharedSecLabelObjectIndexId, true,
 							  NULL, 2, skey);
 	while (HeapTupleIsValid(oldtup = systable_getnext(scan)))
-		simple_heap_delete(pg_shseclabel, &oldtup->t_self);
+		CatalogTupleDelete(pg_shseclabel, &oldtup->t_self);
 	systable_endscan(scan);
 
-	heap_close(pg_shseclabel, RowExclusiveLock);
+	table_close(pg_shseclabel, RowExclusiveLock);
 }
 
 /*
@@ -484,15 +478,15 @@ DeleteSecurityLabel(const ObjectAddress *object)
 	else
 		nkeys = 2;
 
-	pg_seclabel = heap_open(SecLabelRelationId, RowExclusiveLock);
+	pg_seclabel = table_open(SecLabelRelationId, RowExclusiveLock);
 
 	scan = systable_beginscan(pg_seclabel, SecLabelObjectIndexId, true,
 							  NULL, nkeys, skey);
 	while (HeapTupleIsValid(oldtup = systable_getnext(scan)))
-		simple_heap_delete(pg_seclabel, &oldtup->t_self);
+		CatalogTupleDelete(pg_seclabel, &oldtup->t_self);
 	systable_endscan(scan);
 
-	heap_close(pg_seclabel, RowExclusiveLock);
+	table_close(pg_seclabel, RowExclusiveLock);
 }
 
 void

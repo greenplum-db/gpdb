@@ -25,55 +25,53 @@ using namespace gpos;
 
 namespace gpdxl
 {
-	//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//	@class:
+//		CConfigParamMapping
+//
+//	@doc:
+//		Functionality for mapping GPDB config params to traceflags
+//
+//---------------------------------------------------------------------------
+class CConfigParamMapping
+{
+private:
+	//------------------------------------------------------------------
 	//	@class:
-	//		CConfigParamMapping
+	//		SConfigMappingElem
 	//
 	//	@doc:
-	//		Functionality for mapping GPDB config params to traceflags
+	//		Unit describing the mapping of a single GPDB config param
+	//		to a trace flag
 	//
-	//---------------------------------------------------------------------------
-	class CConfigParamMapping
+	//------------------------------------------------------------------
+	struct SConfigMappingElem
 	{
-		private:
-			//------------------------------------------------------------------
-			//	@class:
-			//		SConfigMappingElem
-			//
-			//	@doc:
-			//		Unit describing the mapping of a single GPDB config param
-			//		to a trace flag
-			//
-			//------------------------------------------------------------------
-			struct SConfigMappingElem
-			{
-				// trace flag
-				EOptTraceFlag m_trace_flag;
+		// trace flag
+		EOptTraceFlag m_trace_flag;
 
-				// config param address
-				BOOL *m_is_param;
+		// config param address
+		BOOL *m_is_param;
 
-				// if true, we negate the config param value before setting traceflag value
-				BOOL m_negate_param;
+		// if true, we negate the config param value before setting traceflag value
+		BOOL m_negate_param;
 
-				// description
-				const WCHAR *description_str;
-			};
-
-			// array of mapping elements
-			static SConfigMappingElem m_elements[];
-
-			// private ctor
-			CConfigParamMapping(const CConfigParamMapping &);
-
-		public:
-			// pack enabled optimizer config params in a traceflag bitset
-			static
-			CBitSet *PackConfigParamInBitset(CMemoryPool *mp, ULONG xform_id);
+		// description
+		const WCHAR *description_str;
 	};
-}
 
-#endif // ! GPOPT_CGUCMapping_H
+	// array of mapping elements
+	static SConfigMappingElem m_elements[];
+
+	// private ctor
+	CConfigParamMapping(const CConfigParamMapping &);
+
+public:
+	// pack enabled optimizer config params in a traceflag bitset
+	static CBitSet *PackConfigParamInBitset(CMemoryPool *mp, ULONG xform_id);
+};
+}  // namespace gpdxl
+
+#endif	// ! GPOPT_CGUCMapping_H
 
 // EOF
-

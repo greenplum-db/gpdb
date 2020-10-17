@@ -544,6 +544,7 @@ drop table t_joinsize_3;
 -- we should keep it general
 create table t_randomly_dist_table(c int) distributed randomly;
 
+-- force_explain
 -- the following plan should not contain redistributed motion (for planner)
 explain
 select * from (

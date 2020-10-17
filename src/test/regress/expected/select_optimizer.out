@@ -439,19 +439,19 @@ SELECT p.name, p.age FROM person* p ORDER BY age using >, name;
 --
 -- Test some cases involving whole-row Var referencing a subquery
 --
-select foo from (select 1) as foo;
+select foo from (select 1 offset 0) as foo;
  foo 
 -----
  (1)
 (1 row)
 
-select foo from (select null) as foo;
+select foo from (select null offset 0) as foo;
  foo 
 -----
  ()
 (1 row)
 
-select foo from (select 'xyzzy',1,null) as foo;
+select foo from (select 'xyzzy',1,null offset 0) as foo;
     foo     
 ------------
  (xyzzy,1,)
@@ -522,8 +522,6 @@ TABLE int8_tbl;
 -- Test ORDER BY options
 --
 CREATE TEMP TABLE foo (f1 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO foo VALUES (42),(3),(10),(7),(null),(null),(1);
 SELECT * FROM foo ORDER BY f1;
  f1 
@@ -740,14 +738,17 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
 -- Test planning of some cases with partial indexes
 --
 -- partial index is usable
+SET enable_seqscan TO off;
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                  QUERY PLAN                   
+-----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 = 'ATAAAA'::name))
-(4 rows)
+   ->  Index Scan using onek2_u2_prtl on onek2
+         Index Cond: (unique2 = 11)
+         Filter: (stringu1 = 'ATAAAA'::name)
+ Optimizer: Postgres query optimizer
+(5 rows)
 
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
  unique1 | unique2 | two | four | ten | twenty | hundred | thousand | twothousand | fivethous | tenthous | odd | even | stringu1 | stringu2 | string4 
@@ -755,14 +756,28 @@ select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
      494 |      11 |   0 |    2 |   4 |     14 |       4 |       94 |          94 |       494 |      494 |   8 |    9 | ATAAAA   | LAAAAA   | VVVVxx
 (1 row)
 
+-- actually run the query with an analyze to use the partial index
+explain (costs off, analyze on, timing off, summary off)
+select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+   ->  Index Scan using onek2_u2_prtl on onek2 (actual rows=1 loops=1)
+         Index Cond: (unique2 = 11)
+         Filter: (stringu1 = 'ATAAAA'::name)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
 explain (costs off)
 select unique2 from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                  QUERY PLAN                   
+-----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 = 'ATAAAA'::name))
-(4 rows)
+   ->  Index Scan using onek2_u2_prtl on onek2
+         Index Cond: (unique2 = 11)
+         Filter: (stringu1 = 'ATAAAA'::name)
+ Optimizer: Postgres query optimizer
+(5 rows)
 
 select unique2 from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
  unique2 
@@ -773,11 +788,12 @@ select unique2 from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
 -- partial index predicate implies clause, so no need for retest
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 < 'B';
-                         QUERY PLAN                          
--------------------------------------------------------------
+                  QUERY PLAN                   
+-----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 < 'B'::name))
+   ->  Index Scan using onek2_u2_prtl on onek2
+         Index Cond: (unique2 = 11)
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select * from onek2 where unique2 = 11 and stringu1 < 'B';
@@ -788,11 +804,12 @@ select * from onek2 where unique2 = 11 and stringu1 < 'B';
 
 explain (costs off)
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'B';
-                         QUERY PLAN                          
--------------------------------------------------------------
+                     QUERY PLAN                     
+----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 < 'B'::name))
+   ->  Index Only Scan using onek2_u2_prtl on onek2
+         Index Cond: (unique2 = 11)
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'B';
@@ -804,12 +821,14 @@ select unique2 from onek2 where unique2 = 11 and stringu1 < 'B';
 -- but if it's an update target, must retest anyway
 explain (costs off)
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'B' for update;
-                         QUERY PLAN                          
--------------------------------------------------------------
+                  QUERY PLAN                   
+-----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 < 'B'::name))
-(4 rows)
+   ->  Index Scan using onek2_u2_prtl on onek2
+         Index Cond: (unique2 = 11)
+         Filter: (stringu1 < 'B'::name)
+ Optimizer: Postgres query optimizer
+(5 rows)
 
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'B' for update;
  unique2 
@@ -824,7 +843,8 @@ select unique2 from onek2 where unique2 = 11 and stringu1 < 'C';
 -------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 < 'C'::name))
+         Filter: ((stringu1 < 'C'::name) AND (unique2 = 11))
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'C';
@@ -837,12 +857,15 @@ select unique2 from onek2 where unique2 = 11 and stringu1 < 'C';
 SET enable_indexscan TO off;
 explain (costs off)
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'B';
-                         QUERY PLAN                          
--------------------------------------------------------------
+                            QUERY PLAN                             
+-------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: ((unique2 = 11) AND (stringu1 < 'B'::name))
-(4 rows)
+   ->  Bitmap Heap Scan on onek2
+         Recheck Cond: ((unique2 = 11) AND (stringu1 < 'B'::name))
+         ->  Bitmap Index Scan on onek2_u2_prtl
+               Index Cond: (unique2 = 11)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 select unique2 from onek2 where unique2 = 11 and stringu1 < 'B';
  unique2 
@@ -855,12 +878,19 @@ RESET enable_indexscan;
 explain (costs off)
 select unique1, unique2 from onek2
   where (unique2 = 11 or unique1 = 0) and stringu1 < 'B';
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: (((unique2 = 11) OR (unique1 = 0)) AND (stringu1 < 'B'::name))
-(4 rows)
+   ->  Bitmap Heap Scan on onek2
+         Recheck Cond: (((unique2 = 11) AND (stringu1 < 'B'::name)) OR (unique1 = 0))
+         Filter: (stringu1 < 'B'::name)
+         ->  BitmapOr
+               ->  Bitmap Index Scan on onek2_u2_prtl
+                     Index Cond: (unique2 = 11)
+               ->  Bitmap Index Scan on onek2_u1_prtl
+                     Index Cond: (unique1 = 0)
+ Optimizer: Postgres query optimizer
+(10 rows)
 
 select unique1, unique2 from onek2
   where (unique2 = 11 or unique1 = 0) and stringu1 < 'B';
@@ -873,12 +903,18 @@ select unique1, unique2 from onek2
 explain (costs off)
 select unique1, unique2 from onek2
   where (unique2 = 11 and stringu1 < 'B') or unique1 = 0;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek2
-         Filter: (((unique2 = 11) AND (stringu1 < 'B'::name)) OR (unique1 = 0))
-(4 rows)
+   ->  Bitmap Heap Scan on onek2
+         Recheck Cond: (((unique2 = 11) AND (stringu1 < 'B'::name)) OR (unique1 = 0))
+         ->  BitmapOr
+               ->  Bitmap Index Scan on onek2_u2_prtl
+                     Index Cond: (unique2 = 11)
+               ->  Bitmap Index Scan on onek2_u1_prtl
+                     Index Cond: (unique1 = 0)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 select unique1, unique2 from onek2
   where (unique2 = 11 and stringu1 < 'B') or unique1 = 0;
@@ -936,10 +972,22 @@ select * from (values (2),(null),(1)) v(k) where k = k;
  1
 (2 rows)
 
+-- Test partitioned tables with no partitions, which should be handled the
+-- same as the non-inheritance case when expanding its RTE.
+create table list_parted_tbl (a int,b int) partition by list (a);
+create table list_parted_tbl1 partition of list_parted_tbl
+  for values in (1) partition by list(b);
+explain (costs off) select * from list_parted_tbl;
+             QUERY PLAN              
+-------------------------------------
+ Result
+   One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+drop table list_parted_tbl;
 -- Test unsupported sorting operators
 CREATE TABLE nosort (i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO nosort VALUES(1), (2);
 -- << is the bitwise shift left operator, it makes no sense to sort
 -- using this operator. This query should result in error.

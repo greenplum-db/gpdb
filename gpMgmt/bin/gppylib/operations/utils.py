@@ -46,7 +46,7 @@ class RemoteOperation(Operation):
         pickled_execname = pickle.dumps(execname) 
         pickled_operation = pickle.dumps(self.operation)
         cmd = Command('pickling an operation', '$GPHOME/sbin/gpoperation.py',
-                      ctxt=REMOTE, remoteHost=self.host, stdin = pickled_execname + pickled_operation)
+                      ctxt=REMOTE, remoteHost=self.host, stdin = pickled_execname + pickled_operation, pickled=True)
         cmd.run(validateAfter=True)
         msg =  "Output on host %s: %s" % (self.host, cmd.get_results().stdout)
         if self.msg_ctx:
@@ -106,6 +106,6 @@ class MasterOperation(Operation):
 
 if __name__ == "__main__":
     import sys 
-    from unix import CheckFile, CheckRemoteFile
-    print RemoteOperation(CheckFile(sys.argv[1]), "localhost").run()
-    print CheckRemoteFile(sys.argv[1], "localhost").run()
+    from .unix import CheckFile, CheckRemoteFile
+    print(RemoteOperation(CheckFile(sys.argv[1]), "localhost").run())
+    print(CheckRemoteFile(sys.argv[1], "localhost").run())

@@ -16,67 +16,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPatternLeaf
-	//
-	//	@doc:
-	//		Pattern that matches a single leaf
-	//
-	//---------------------------------------------------------------------------
-	class CPatternLeaf : public CPattern
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CPatternLeaf
+//
+//	@doc:
+//		Pattern that matches a single leaf
+//
+//---------------------------------------------------------------------------
+class CPatternLeaf : public CPattern
+{
+private:
+	// private copy ctor
+	CPatternLeaf(const CPatternLeaf &);
+
+public:
+	// ctor
+	explicit CPatternLeaf(CMemoryPool *mp) : CPattern(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CPatternLeaf()
+	{
+	}
 
-			// private copy ctor
-			CPatternLeaf(const CPatternLeaf &);
+	// check if operator is a pattern leaf
+	virtual BOOL
+	FLeaf() const
+	{
+		return true;
+	}
 
-		public:
-		
-			// ctor
-			explicit
-			CPatternLeaf
-				(
-				CMemoryPool *mp
-				)
-				: 
-				CPattern(mp)
-			{
-			}
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopPatternLeaf;
+	}
 
-			// dtor
-			virtual 
-			~CPatternLeaf() {}
-			
-			// check if operator is a pattern leaf
-			virtual
-			BOOL FLeaf() const
-			{
-				return true;
-			}
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPatternLeaf";
+	}
 
-			// ident accessors
-			virtual 
-			EOperatorId Eopid() const
-			{
-				return EopPatternLeaf;
-			}
-			
-			// return a string for operator name
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CPatternLeaf";
-			}		
+};	// class CPatternLeaf
 
-	}; // class CPatternLeaf
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CPatternLeaf_H
+#endif	// !GPOPT_CPatternLeaf_H
 
 // EOF

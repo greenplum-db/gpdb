@@ -20,10 +20,8 @@ using namespace gpopt;
 
 
 // initialization of static variables
-const CHAR *CEnfdRewindability::m_szRewindabilityMatching[ErmSentinel] =
-{
-	"satisfy"
-};
+const CHAR *CEnfdRewindability::m_szRewindabilityMatching[ErmSentinel] = {
+	"satisfy"};
 
 
 //---------------------------------------------------------------------------
@@ -34,14 +32,9 @@ const CHAR *CEnfdRewindability::m_szRewindabilityMatching[ErmSentinel] =
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CEnfdRewindability::CEnfdRewindability
-	(
-	CRewindabilitySpec *prs,
-	ERewindabilityMatching erm
-	)
-	:
-	m_prs(prs),
-	m_erm(erm)
+CEnfdRewindability::CEnfdRewindability(CRewindabilitySpec *prs,
+									   ERewindabilityMatching erm)
+	: m_prs(prs), m_erm(erm)
 {
 	GPOS_ASSERT(NULL != prs);
 	GPOS_ASSERT(ErmSentinel > erm);
@@ -73,11 +66,7 @@ CEnfdRewindability::~CEnfdRewindability()
 //
 //---------------------------------------------------------------------------
 BOOL
-CEnfdRewindability::FCompatible
-	(
-	CRewindabilitySpec *prs
-	)
-	const
+CEnfdRewindability::FCompatible(CRewindabilitySpec *prs) const
 {
 	GPOS_ASSERT(NULL != prs);
 
@@ -118,13 +107,8 @@ CEnfdRewindability::HashValue() const
 //
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
-CEnfdRewindability::Epet
-	(
-	CExpressionHandle &exprhdl,
-	CPhysical *popPhysical,
-	BOOL  fRewindabilityReqd
-	)
-	const
+CEnfdRewindability::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
+						 BOOL fRewindabilityReqd) const
 {
 	if (fRewindabilityReqd)
 	{
@@ -144,15 +128,11 @@ CEnfdRewindability::Epet
 //
 //---------------------------------------------------------------------------
 IOstream &
-CEnfdRewindability::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CEnfdRewindability::OsPrint(IOstream &os) const
 {
 	(void) m_prs->OsPrint(os);
 
-	return os <<" match: " << m_szRewindabilityMatching[m_erm];
+	return os << " match: " << m_szRewindabilityMatching[m_erm];
 }
 
 

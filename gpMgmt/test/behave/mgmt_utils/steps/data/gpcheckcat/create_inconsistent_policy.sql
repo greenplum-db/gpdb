@@ -19,5 +19,5 @@ update gp_distribution_policy set distkey = '2' where localoid in (select localo
 CREATE TABLE test (a int, b int)
     DISTRIBUTED BY (a, b)
     PARTITION BY RANGE(a) (START(1) END(2) EVERY(1));
-UPDATE gp_distribution_policy SET distclass=ARRAY[0, 0]::oidvector
+UPDATE gp_distribution_policy SET distkey=1::int2vector
     WHERE localoid='test_1_prt_1'::regclass;

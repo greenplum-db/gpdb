@@ -42,10 +42,10 @@ GpSetOpType
 choose_setop_type(List *pathlist)
 {
 	ListCell   *cell;
-	bool		ok_general = TRUE;
-	bool		ok_partitioned = TRUE;
-	bool		ok_single_qe = TRUE;
-	bool		has_partitioned = FALSE;
+	bool		ok_general = true;
+	bool		ok_partitioned = true;
+	bool		ok_single_qe = true;
+	bool		has_partitioned = false;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 
@@ -58,8 +58,8 @@ choose_setop_type(List *pathlist)
 			case CdbLocusType_Hashed:
 			case CdbLocusType_HashedOJ:
 			case CdbLocusType_Strewn:
-				ok_general = FALSE;
-				has_partitioned = TRUE;
+				ok_general = false;
+				has_partitioned = true;
 				break;
 
 			case CdbLocusType_Entry:
@@ -70,11 +70,11 @@ choose_setop_type(List *pathlist)
 				return PSETOP_SEQUENTIAL_OUTERQUERY;
 
 			case CdbLocusType_SingleQE:
-				ok_general = FALSE;
+				ok_general = false;
 				break;
 
 			case CdbLocusType_SegmentGeneral:
-				ok_general = FALSE;
+				ok_general = false;
 				break;
 
 			case CdbLocusType_General:
@@ -285,6 +285,7 @@ make_motion_hash_all_targets(PlannerInfo *root, Path *subpath, List *tlist)
 	{
 		/* Distribute to ALL to maximize parallelism */
 		locus = cdbpathlocus_from_exprs(root,
+										subpath->parent,
 										hashexprs,
 										hashopfamilies,
 										hashsortrefs,

@@ -21,7 +21,7 @@ LOG ERRORS
 SEGMENT REJECT LIMIT 10 PERCENT;
 select count(*) from tbl_ext_fixedwidth;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "s32"  (seg1 slice1 rh55-qavm55:7533 pid=29678)
+DETAIL:  Last error was: invalid input syntax for type integer: "s32"  (seg1 slice1 rh55-qavm55:7533 pid=29678)
 CONTEXT:  External table tbl_ext_fixedwidth
 select count(*) > 44 from gp_read_error_log('tbl_ext_fixedwidth');
  ?column? 

@@ -18,83 +18,69 @@
 
 namespace gpnaucrates
 {
-
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDatumInt4GPDB
-	//
-	//	@doc:
-	//		GPDB-specific int4 representation
-	//
-	//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//	@class:
+//		CDatumInt4GPDB
+//
+//	@doc:
+//		GPDB-specific int4 representation
+//
+//---------------------------------------------------------------------------
 class CDatumInt4GPDB : public IDatumInt4
 {
+private:
+	// type information
+	IMDId *m_mdid;
 
-	private:
+	// integer value
+	INT m_val;
 
-		// type information
-		IMDId *m_mdid;
-	
-		// integer value
-		INT m_val;
+	// is null
+	BOOL m_is_null;
 
-		// is null
-		BOOL m_is_null;
+	// private copy ctor
+	CDatumInt4GPDB(const CDatumInt4GPDB &);
 
-		// private copy ctor
-		CDatumInt4GPDB(const CDatumInt4GPDB &);
-		
-	public:
+public:
+	// ctors
+	CDatumInt4GPDB(CSystemId sysid, INT val, BOOL is_null = false);
+	CDatumInt4GPDB(IMDId *mdid, INT val, BOOL is_null = false);
 
-		// ctors
-		CDatumInt4GPDB(CSystemId sysid, INT val, BOOL is_null = false);
-		CDatumInt4GPDB(IMDId *mdid, INT val, BOOL is_null = false);
+	// dtor
+	virtual ~CDatumInt4GPDB();
 
-		// dtor
-		virtual
-		~CDatumInt4GPDB();
+	// accessor of metadata type id
+	virtual IMDId *MDId() const;
 
-		// accessor of metadata type id
-		virtual
-		IMDId *MDId() const;
+	// accessor of size
+	virtual ULONG Size() const;
 
-		// accessor of size
-		virtual
-		ULONG Size() const;
+	// accessor of integer value
+	virtual INT Value() const;
 
-		// accessor of integer value
-		virtual
-		INT Value() const;
+	// accessor of is null
+	virtual BOOL IsNull() const;
 
-		// accessor of is null
-		virtual
-		BOOL IsNull() const;
+	// return string representation
+	virtual const CWStringConst *GetStrRepr(CMemoryPool *mp) const;
 
-		// return string representation
-		virtual
-		const CWStringConst *GetStrRepr(CMemoryPool *mp) const;
+	// hash function
+	virtual ULONG HashValue() const;
 
-		// hash function
-		virtual
-		ULONG HashValue() const;
+	// match function for datums
+	virtual BOOL Matches(const IDatum *) const;
 
-		// match function for datums
-		virtual
-		BOOL Matches(const IDatum *) const;
+	// copy datum
+	virtual IDatum *MakeCopy(CMemoryPool *mp) const;
 
-		// copy datum
-		virtual
-		IDatum *MakeCopy(CMemoryPool *mp) const;
-		
-		// print function
-		virtual
-		IOstream &OsPrint(IOstream &os) const;
+	// print function
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-	}; // class CDatumInt4GPDB
+};	// class CDatumInt4GPDB
 
-}
+}  // namespace gpnaucrates
 
 
-#endif // !GPNAUCRATES_CDatumInt4GPDB_H
+#endif	// !GPNAUCRATES_CDatumInt4GPDB_H
 
 // EOF

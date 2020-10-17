@@ -7,9 +7,6 @@
 
 #define EXPECT_EREPORT(LOG_LEVEL)     \
 	expect_any(errstart, elevel); \
-	expect_any(errstart, filename); \
-	expect_any(errstart, lineno); \
-	expect_any(errstart, funcname); \
 	expect_any(errstart, domain); \
 	if (LOG_LEVEL < ERROR) \
 	{ \
@@ -51,8 +48,9 @@ CreateSessionStateArray(int numEntries)
 	SessionStateArray *fakeSessionStateArray = NULL;
 	fakeSessionStateArray = malloc(SessionState_ShmemSize());
 
+	bool found = false;
 	will_return(ShmemInitStruct, fakeSessionStateArray);
-	will_assign_value(ShmemInitStruct, foundPtr, false);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
 
 	expect_any_count(ShmemInitStruct, name, 1);
 	expect_any_count(ShmemInitStruct, size, 1);
@@ -123,8 +121,8 @@ test__RedZoneHandler_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state
 	expect_any_count(ShmemInitStruct, name, 2);
 	expect_any_count(ShmemInitStruct, size, 2);
 	expect_any_count(ShmemInitStruct, foundPtr, 2);
-	will_assign_value(ShmemInitStruct, foundPtr, false);
-	will_assign_value(ShmemInitStruct, foundPtr, false);
+	will_assign_value(ShmemInitStruct, foundPtr, (bool) false);
+	will_assign_value(ShmemInitStruct, foundPtr, (bool) false);
 	will_return_count(ShmemInitStruct, &fakeIsRunawayDetector, 2);
 
 	/*
@@ -170,7 +168,7 @@ test__RedZoneHandler_ShmemInit__InitializesUnderPostmaster(void **state)
 	expect_any(ShmemInitStruct, name);
 	expect_any(ShmemInitStruct, size);
 	expect_any(ShmemInitStruct, foundPtr);
-	will_assign_value(ShmemInitStruct, foundPtr, true);
+	will_assign_value(ShmemInitStruct, foundPtr, (bool) true);
 	will_return(ShmemInitStruct, &fakeIsRunawayDetector);
 
 	/* For testing that we don't change this value */

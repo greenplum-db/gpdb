@@ -1,6 +1,6 @@
 resource_types:
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -8,15 +8,15 @@ resources:
 - name: gpdb_src
   type: git
   source:
-    branch: {{gpdb-git-branch}}
-    uri: {{gpdb-git-remote}}
+    branch: ((gpdb-git-branch))
+    uri: ((gpdb-git-remote))
 
 - name: centos-coverity
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/centos-coverity
-    username: {{docker_username}}
-    password: {{docker_password}}
+    username: ((docker_username))
+    password: ((docker_password))
 
 - name: coverity_daily
   type: time
@@ -57,5 +57,5 @@ jobs:
     file: gpdb_src/concourse/tasks/scan_with_coverity.yml
     image: centos-coverity
     params:
-      COVERITY_TOKEN: {{coverity_token}}
-      COVERITY_EMAIL: {{coverity_email}}
+      COVERITY_TOKEN: ((coverity_token))
+      COVERITY_EMAIL: ((coverity_email))

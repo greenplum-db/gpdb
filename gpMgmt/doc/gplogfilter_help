@@ -33,7 +33,7 @@ the last three lines of each segment log file:
 
  gpssh -f seg_host_file 
  => source /usr/local/greenplum-db/greenplum_path.sh 
- => gplogfilter -n 3 /gpdata/*/pg_log/gpdb*.csv 
+ => gplogfilter -n 3 /gpdata/*/log/gpdb*.csv 
 
 By default, the output of gplogfilter is sent to standard output. Use 
 the -o option to send the output to a file or a directory. If you supply 
@@ -218,7 +218,7 @@ output to a file.
 
  gpssh -f seg_hosts_file -e 'source 
  /usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f con6 
- /gpdata/*/pg_log/gpdb*.csv' > seglog.out 
+ /gpdata/*/log/gpdb*.csv' > seglog.out 
 
  
 ***************************************************** 

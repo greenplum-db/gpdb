@@ -41,6 +41,10 @@ create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by
 CREATE
 create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
 CREATE
+-- no fsync requests should ever be registered for unlogged tables
+create unlogged table ul_fsync_co(a int, b int, c int) using ao_column distributed by (a);
+CREATE
+
 insert into fsync_ao select i, i from generate_series(1,10)i;
 INSERT 10
 insert into fsync_co select i, i from generate_series(1,10)i;
@@ -74,6 +78,8 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 1, dbid) from gp_segme
 insert into fsync_ao select i, i from generate_series(1,20)i;
 INSERT 20
 insert into fsync_co select i, i from generate_series(1,20)i;
+INSERT 20
+insert into ul_fsync_co select i, i, i from generate_series(1,20)i;
 INSERT 20
 
 -- Inject fault to count relfiles fsync'ed by checkpointer on mirror.
@@ -113,10 +119,14 @@ BEGIN
 INSERT 20
 1: insert into fsync_co select i, i from generate_series(1,20)i;
 INSERT 20
+1: insert into ul_fsync_co select i, i, i from generate_series(1,20)i;
+INSERT 20
 insert into fsync_ao select i, i from generate_series(21,40)i;
 INSERT 20
 insert into fsync_co select i, i from generate_series(21,40)i;
 INSERT 20
+insert into ul_fsync_co select i, i, i from generate_series(1,40)i;
+INSERT 40
 1: end;
 END
 -- Generate some invisible tuples in both the tables so as to trigger
@@ -125,6 +135,9 @@ delete from fsync_ao where a > 20;
 DELETE 20
 update fsync_co set b = -a;
 UPDATE 70
+delete from ul_fsync_co where b < 20;
+DELETE 57
+
 -- Expect two segment files for each table (ao table) or each column (co table).
 select segment_id, segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
  segment_id | segno | state 
@@ -152,9 +165,33 @@ select segment_id, segno, column_num, physical_segno, state from gp_toolkit.__gp
  2          | 2     | 0          | 2              | 1     
  2          | 2     | 1          | 130            | 1     
 (12 rows)
+select segment_id, segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('ul_fsync_co');
+ segment_id | segno | column_num | physical_segno | state 
+------------+-------+------------+----------------+-------
+ 1          | 1     | 0          | 1              | 1     
+ 1          | 1     | 1          | 129            | 1     
+ 1          | 1     | 2          | 257            | 1     
+ 1          | 2     | 0          | 2              | 1     
+ 1          | 2     | 1          | 130            | 1     
+ 1          | 2     | 2          | 258            | 1     
+ 2          | 1     | 0          | 1              | 1     
+ 2          | 1     | 1          | 129            | 1     
+ 2          | 1     | 2          | 257            | 1     
+ 2          | 2     | 0          | 2              | 1     
+ 2          | 2     | 1          | 130            | 1     
+ 2          | 2     | 2          | 258            | 1     
+ 0          | 1     | 0          | 1              | 1     
+ 0          | 1     | 1          | 129            | 1     
+ 0          | 1     | 2          | 257            | 1     
+ 0          | 2     | 0          | 2              | 1     
+ 0          | 2     | 1          | 130            | 1     
+ 0          | 2     | 2          | 258            | 1     
+(18 rows)
 vacuum fsync_ao;
 VACUUM
 vacuum fsync_co;
+VACUUM
+vacuum ul_fsync_co;
 VACUUM
 checkpoint;
 CHECKPOINT
@@ -178,6 +215,10 @@ select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_confi
 update fsync_co set b = -a;
 UPDATE 70
 drop table fsync_co;
+DROP
+update ul_fsync_co set c = -a;
+UPDATE 23
+drop table ul_fsync_co;
 DROP
 -- Drop but don't commit the transaction.
 begin;

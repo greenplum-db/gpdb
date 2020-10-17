@@ -105,13 +105,14 @@ CREATE TABLE mpp22263 (
 ) distributed by (unique1);
 
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
-
+-- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
 -- Extract the Filter explicitly.
+-- GPDB_12_MERGE_FIXME: Non default collation
 SELECT * from
   get_explain_output($$
 select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)

@@ -226,9 +226,6 @@ AppendOnlyStorageRead_DoOpenFile(AppendOnlyStorageRead *storageRead,
 								 char *filePathName)
 {
 	int			fileFlags = O_RDONLY | PG_BINARY;
-
-	/* File mode is S_IRUSR 00400 user has read permission */
-	int			fileMode = 0400;
 	File		file;
 
 	Assert(storageRead != NULL);
@@ -236,16 +233,15 @@ AppendOnlyStorageRead_DoOpenFile(AppendOnlyStorageRead *storageRead,
 	Assert(filePathName != NULL);
 
 	elogif(Debug_appendonly_print_read_block, LOG,
-		   "Append-Only storage read: opening table '%s', segment file '%s', fileFlags 0x%x, fileMode 0x%x",
+		   "Append-Only storage read: opening table '%s', segment file '%s', fileFlags 0x%x",
 		   storageRead->relationName,
 		   storageRead->segmentFileName,
-		   fileFlags,
-		   fileMode);
+		   fileFlags);
 
 	/*
 	 * Open the file for read.
 	 */
-	file = PathNameOpenFile(filePathName, fileFlags, fileMode);
+	file = PathNameOpenFile(filePathName, fileFlags);
 
 	return file;
 }
@@ -266,25 +262,9 @@ AppendOnlyStorageRead_FinishOpenFile(AppendOnlyStorageRead *storageRead,
 									 int version,
 									 int64 logicalEof)
 {
-	int64		seekResult;
 	MemoryContext oldMemoryContext;
 
 	AORelationVersion_CheckValid(version);
-
-	/*
-	 * Seek to the beginning of the file.
-	 */
-	seekResult = FileSeek(file, 0, SEEK_SET);
-	if (seekResult != 0)
-	{
-		FileClose(file);
-		ereport(ERROR,
-				(errcode(ERRCODE_IO_ERROR),
-				 errmsg("append-only storage read error on segment file '%s' for relation '%s'",
-						filePathName, storageRead->relationName),
-				 errdetail("FileSeek offset = 0.  Error code = %d (%s).",
-						errno, strerror(errno))));
-	}
 
 	storageRead->file = file;
 	storageRead->formatVersion = version;
@@ -305,8 +285,7 @@ AppendOnlyStorageRead_FinishOpenFile(AppendOnlyStorageRead *storageRead,
 
 	storageRead->logicalEof = logicalEof;
 
-	BufferedReadSetFile(
-						&storageRead->bufferedRead,
+	BufferedReadSetFile(&storageRead->bufferedRead,
 						storageRead->file,
 						storageRead->segmentFileName,
 						logicalEof);

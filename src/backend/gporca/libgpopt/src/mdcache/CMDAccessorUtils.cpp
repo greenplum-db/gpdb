@@ -41,16 +41,12 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CMDAccessorUtils::PstrWindowFuncName
-	(
-	CMDAccessor *md_accessor,
-	IMDId *mdid_func
-	)
+CMDAccessorUtils::PstrWindowFuncName(CMDAccessor *md_accessor, IMDId *mdid_func)
 {
 	if (md_accessor->FAggWindowFunc(mdid_func))
 	{
 		const IMDAggregate *pmdagg = md_accessor->RetrieveAgg(mdid_func);
-		
+
 		return pmdagg->Mdname().GetMDName();
 	}
 
@@ -68,13 +64,9 @@ CMDAccessorUtils::PstrWindowFuncName
 //
 //---------------------------------------------------------------------------
 IMDId *
-CMDAccessorUtils::PmdidWindowReturnType
-	(
-	CMDAccessor *md_accessor,
-	IMDId *mdid_func
-	)
+CMDAccessorUtils::PmdidWindowReturnType(CMDAccessor *md_accessor,
+										IMDId *mdid_func)
 {
-
 	if (md_accessor->FAggWindowFunc(mdid_func))
 	{
 		const IMDAggregate *pmdagg = md_accessor->RetrieveAgg(mdid_func);
@@ -87,13 +79,8 @@ CMDAccessorUtils::PmdidWindowReturnType
 
 // Does a scalar comparison object between given types exists
 BOOL
-CMDAccessorUtils::FCmpExists
-	(
-	CMDAccessor *md_accessor,
-	IMDId *left_mdid,
-	IMDId *right_mdid,
-	IMDType::ECmpType cmp_type
-	)
+CMDAccessorUtils::FCmpExists(CMDAccessor *md_accessor, IMDId *left_mdid,
+							 IMDId *right_mdid, IMDType::ECmpType cmp_type)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != left_mdid);
@@ -108,7 +95,8 @@ CMDAccessorUtils::FCmpExists
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		GPOS_ASSERT(GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
+		GPOS_ASSERT(
+			GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
 		GPOS_RESET_EX;
 
 		return false;
@@ -120,13 +108,8 @@ CMDAccessorUtils::FCmpExists
 // Throws an exception if no such comparison exists! Use
 // CMDAccessorUtils::FCmpExists() to check that before calling this function.
 IMDId *
-CMDAccessorUtils::GetScCmpMdid
-	(
-	CMDAccessor *md_accessor,
-	IMDId *left_mdid,
-	IMDId *right_mdid,
-	IMDType::ECmpType cmp_type
-	)
+CMDAccessorUtils::GetScCmpMdid(CMDAccessor *md_accessor, IMDId *left_mdid,
+							   IMDId *right_mdid, IMDType::ECmpType cmp_type)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != left_mdid);
@@ -148,7 +131,8 @@ CMDAccessorUtils::GetScCmpMdid
 	}
 
 	// then check for an explicit operator
-	sc_cmp_mdid = md_accessor->Pmdsccmp(left_mdid, right_mdid, cmp_type)->MdIdOp();
+	sc_cmp_mdid =
+		md_accessor->Pmdsccmp(left_mdid, right_mdid, cmp_type)->MdIdOp();
 
 	// either sc_cmp_mdid is valid or an exception was raised during lookup
 	GPOS_ASSERT(IMDId::IsValid(sc_cmp_mdid));
@@ -160,12 +144,8 @@ CMDAccessorUtils::GetScCmpMdid
 // check is a comparison between given types or a comparison after casting one
 // side to an another exists
 BOOL
-CMDAccessorUtils::FCmpOrCastedCmpExists
-(
-	IMDId *left_mdid,
-	IMDId *right_mdid,
-	IMDType::ECmpType cmp_type
-	)
+CMDAccessorUtils::FCmpOrCastedCmpExists(IMDId *left_mdid, IMDId *right_mdid,
+										IMDType::ECmpType cmp_type)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
@@ -176,13 +156,15 @@ CMDAccessorUtils::FCmpOrCastedCmpExists
 
 	GPOS_TRY
 	{
-		(void) CMDAccessorUtils::GetScCmpMdIdConsiderCasts(md_accessor, left_mdid, right_mdid, cmp_type);
+		(void) CMDAccessorUtils::GetScCmpMdIdConsiderCasts(
+			md_accessor, left_mdid, right_mdid, cmp_type);
 
 		return true;
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		GPOS_ASSERT(GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
+		GPOS_ASSERT(
+			GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
 		GPOS_RESET_EX;
 
 		return false;
@@ -195,66 +177,62 @@ CMDAccessorUtils::FCmpOrCastedCmpExists
 // CMDAccessorUtils::FCmpOrCastedCmpExists() to check that before calling this
 // function.
 IMDId *
-CMDAccessorUtils::GetScCmpMdIdConsiderCasts
-	(
-	CMDAccessor *md_accessor,
-	IMDId *left_mdid,
-	IMDId *right_mdid,
-	IMDType::ECmpType cmp_type
-	)
+CMDAccessorUtils::GetScCmpMdIdConsiderCasts(CMDAccessor *md_accessor,
+											IMDId *left_mdid, IMDId *right_mdid,
+											IMDType::ECmpType cmp_type)
 {
 	GPOS_ASSERT(NULL != left_mdid);
 	GPOS_ASSERT(NULL != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	// left op right
-	if (CMDAccessorUtils::FCmpExists(md_accessor, left_mdid, right_mdid, cmp_type))
+	if (CMDAccessorUtils::FCmpExists(md_accessor, left_mdid, right_mdid,
+									 cmp_type))
 	{
-		return CMDAccessorUtils::GetScCmpMdid(md_accessor, left_mdid, right_mdid, cmp_type);
+		return CMDAccessorUtils::GetScCmpMdid(md_accessor, left_mdid,
+											  right_mdid, cmp_type);
 	}
 
 	// left op cast(right)
-	if (CMDAccessorUtils::FCmpExists(md_accessor, left_mdid, left_mdid, cmp_type) &&
+	if (CMDAccessorUtils::FCmpExists(md_accessor, left_mdid, left_mdid,
+									 cmp_type) &&
 		CMDAccessorUtils::FCastExists(md_accessor, right_mdid, left_mdid))
 	{
-		return CMDAccessorUtils::GetScCmpMdid(md_accessor, left_mdid, left_mdid, cmp_type);
+		return CMDAccessorUtils::GetScCmpMdid(md_accessor, left_mdid, left_mdid,
+											  cmp_type);
 	}
 
 	// cast(left) op right
-	if (CMDAccessorUtils::FCmpExists(md_accessor, right_mdid, right_mdid, cmp_type) &&
+	if (CMDAccessorUtils::FCmpExists(md_accessor, right_mdid, right_mdid,
+									 cmp_type) &&
 		CMDAccessorUtils::FCastExists(md_accessor, left_mdid, right_mdid))
 	{
-		return CMDAccessorUtils::GetScCmpMdid(md_accessor, right_mdid, right_mdid, cmp_type);
+		return CMDAccessorUtils::GetScCmpMdid(md_accessor, right_mdid,
+											  right_mdid, cmp_type);
 	}
 
 	// call to raise an error on non-comparable data types
-	return CMDAccessorUtils::GetScCmpMdid(md_accessor, left_mdid, right_mdid, cmp_type);
+	return CMDAccessorUtils::GetScCmpMdid(md_accessor, left_mdid, right_mdid,
+										  cmp_type);
 }
 
 IMDId *
-CMDAccessorUtils::GetScCmpMdIdConsiderCasts
-	(
-	CMDAccessor *md_accessor,
-	CExpression* pexprLeft,
-	CExpression* pexprRight,
-	IMDType::ECmpType cmp_type
-	)
+CMDAccessorUtils::GetScCmpMdIdConsiderCasts(CMDAccessor *md_accessor,
+											CExpression *pexprLeft,
+											CExpression *pexprRight,
+											IMDType::ECmpType cmp_type)
 {
 	IMDId *left_mdid = CScalar::PopConvert(pexprLeft->Pop())->MdidType();
 	IMDId *right_mdid = CScalar::PopConvert(pexprRight->Pop())->MdidType();
 
-	return CMDAccessorUtils::GetScCmpMdIdConsiderCasts(md_accessor, left_mdid, right_mdid, cmp_type);
+	return CMDAccessorUtils::GetScCmpMdIdConsiderCasts(md_accessor, left_mdid,
+													   right_mdid, cmp_type);
 }
 
 void
-CMDAccessorUtils::ApplyCastsForScCmp
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	CExpression*& pexprLeft,
-	CExpression*& pexprRight,
-	IMDId *op_mdid
-	)
+CMDAccessorUtils::ApplyCastsForScCmp(CMemoryPool *mp, CMDAccessor *md_accessor,
+									 CExpression *&pexprLeft,
+									 CExpression *&pexprRight, IMDId *op_mdid)
 {
 	IMDId *left_mdid = CScalar::PopConvert(pexprLeft->Pop())->MdidType();
 	IMDId *right_mdid = CScalar::PopConvert(pexprRight->Pop())->MdidType();
@@ -293,20 +271,25 @@ CMDAccessorUtils::ApplyCastsForScCmp
 		if (CMDAccessorUtils::FCastExists(md_accessor, left_mdid, op_left_mdid))
 		{
 			// The simple case, a direct cast exists
-			pexprLeft = CUtils::PexprCast(mp, md_accessor, pexprLeft, op_left_mdid);
+			pexprLeft =
+				CUtils::PexprCast(mp, md_accessor, pexprLeft, op_left_mdid);
 		}
 		else
 		{
 			// validate proposition B
-			GPOS_ASSERT(CMDAccessorUtils::FCastExists(md_accessor, left_mdid, right_mdid));
+			GPOS_ASSERT(CMDAccessorUtils::FCastExists(md_accessor, left_mdid,
+													  right_mdid));
 			// Create the two casts described above, first from left to right type
-			pexprLeft = CUtils::PexprCast(mp, md_accessor, pexprLeft, right_mdid);
+			pexprLeft =
+				CUtils::PexprCast(mp, md_accessor, pexprLeft, right_mdid);
 			if (!right_mdid->Equals(op_left_mdid))
 			{
 				// validate proposition A
-				GPOS_ASSERT(CMDAccessorUtils::FCastExists(md_accessor, right_mdid, op_left_mdid));
+				GPOS_ASSERT(CMDAccessorUtils::FCastExists(
+					md_accessor, right_mdid, op_left_mdid));
 				// and then from right type to the type the comparison operator expects
-				pexprLeft = CUtils::PexprCast(mp, md_accessor, pexprLeft, op_left_mdid);
+				pexprLeft =
+					CUtils::PexprCast(mp, md_accessor, pexprLeft, op_left_mdid);
 			}
 		}
 	}
@@ -314,23 +297,29 @@ CMDAccessorUtils::ApplyCastsForScCmp
 	if (!op_right_mdid->Equals(right_mdid))
 	{
 		// We are in case b).
-		if (CMDAccessorUtils::FCastExists(md_accessor, right_mdid, op_right_mdid))
+		if (CMDAccessorUtils::FCastExists(md_accessor, right_mdid,
+										  op_right_mdid))
 		{
 			// The simple case, a direct cast exists
-			pexprRight = CUtils::PexprCast(mp, md_accessor, pexprRight, op_right_mdid);
+			pexprRight =
+				CUtils::PexprCast(mp, md_accessor, pexprRight, op_right_mdid);
 		}
 		else
 		{
 			// validate proposition B
-			GPOS_ASSERT(CMDAccessorUtils::FCastExists(md_accessor, right_mdid, left_mdid));
+			GPOS_ASSERT(CMDAccessorUtils::FCastExists(md_accessor, right_mdid,
+													  left_mdid));
 			// Create the two casts described above, first from right to left type
-			pexprRight = CUtils::PexprCast(mp, md_accessor, pexprRight, left_mdid);
+			pexprRight =
+				CUtils::PexprCast(mp, md_accessor, pexprRight, left_mdid);
 			if (!left_mdid->Equals(op_right_mdid))
 			{
 				// validate proposition A
-				GPOS_ASSERT(CMDAccessorUtils::FCastExists(md_accessor, left_mdid, op_right_mdid));
+				GPOS_ASSERT(CMDAccessorUtils::FCastExists(
+					md_accessor, left_mdid, op_right_mdid));
 				// and then from left type to the type the comparison operator expects
-				pexprRight = CUtils::PexprCast(mp, md_accessor, pexprRight, op_right_mdid);
+				pexprRight = CUtils::PexprCast(mp, md_accessor, pexprRight,
+											   op_right_mdid);
 			}
 		}
 	}
@@ -345,12 +334,8 @@ CMDAccessorUtils::ApplyCastsForScCmp
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDAccessorUtils::FCastExists
-	(
-	CMDAccessor *md_accessor,
-	IMDId *mdid_src,
-	IMDId *mdid_dest
-	)
+CMDAccessorUtils::FCastExists(CMDAccessor *md_accessor, IMDId *mdid_src,
+							  IMDId *mdid_dest)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != mdid_src);
@@ -364,7 +349,8 @@ CMDAccessorUtils::FCastExists
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		GPOS_ASSERT(GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
+		GPOS_ASSERT(
+			GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
 		GPOS_RESET_EX;
 
 		return false;
@@ -382,11 +368,8 @@ CMDAccessorUtils::FCastExists
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDAccessorUtils::FScalarOpReturnsNullOnNullInput
-	(
-	CMDAccessor *md_accessor,
-	IMDId *mdid_op
-	)
+CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(CMDAccessor *md_accessor,
+												  IMDId *mdid_op)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 
@@ -404,7 +387,8 @@ CMDAccessorUtils::FScalarOpReturnsNullOnNullInput
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		GPOS_ASSERT(GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
+		GPOS_ASSERT(
+			GPOS_MATCH_EX(ex, gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound));
 		GPOS_RESET_EX;
 	}
 	GPOS_CATCH_END;
@@ -422,17 +406,14 @@ CMDAccessorUtils::FScalarOpReturnsNullOnNullInput
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDAccessorUtils::FBoolType
-	(
-	CMDAccessor *md_accessor,
-	IMDId *mdid_type
-	)
+CMDAccessorUtils::FBoolType(CMDAccessor *md_accessor, IMDId *mdid_type)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 
 	if (NULL != mdid_type && mdid_type->IsValid())
 	{
-		return (IMDType::EtiBool == md_accessor->RetrieveType(mdid_type)->GetDatumType());
+		return (IMDType::EtiBool ==
+				md_accessor->RetrieveType(mdid_type)->GetDatumType());
 	}
 
 	return false;
@@ -447,11 +428,7 @@ CMDAccessorUtils::FBoolType
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDAccessorUtils::FCommutativeScalarOp
-	(
-	CMDAccessor *md_accessor,
-	IMDId *mdid_op
-	)
+CMDAccessorUtils::FCommutativeScalarOp(CMDAccessor *md_accessor, IMDId *mdid_op)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != mdid_op);

@@ -16,8 +16,8 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
+#include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"
 
 extern Query *normalize_query(Query *query);
 

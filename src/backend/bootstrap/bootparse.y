@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -24,7 +24,6 @@
 #include "access/htup.h"
 #include "access/itup.h"
 #include "access/tupdesc.h"
-#include "access/xact.h"
 #include "bootstrap/bootstrap.h"
 #include "catalog/catalog.h"
 #include "catalog/heap.h"
@@ -53,9 +52,9 @@
 #include "storage/off.h"
 #include "storage/smgr.h"
 #include "tcop/dest.h"
+#include "utils/memutils.h"
 #include "utils/rel.h"
 
-#define atooid(x)	((Oid) strtoul((x), NULL, 10))
 
 /*
  * Bison doesn't allocate anything that needs to live across parser calls,
@@ -68,30 +67,27 @@
 #define YYMALLOC palloc
 #define YYFREE   pfree
 
-/*
- * Bison doesn't allocate anything that needs to live across parser calls,
- * so we can easily have it use palloc instead of malloc.  This prevents
- * memory leaks if we error out during parsing.  Note this only works with
- * bison >= 2.0.  However, in bison 1.875 the default is to use alloca()
- * if possible, so there's not really much problem anyhow, at least if
- * you're building with gcc.
- */
-#define YYMALLOC palloc
-#define YYFREE   pfree
+static MemoryContext per_line_ctx = NULL;
 
 static void
 do_start(void)
 {
-	StartTransactionCommand();
-	elog(DEBUG4, "start transaction");
+	Assert(CurrentMemoryContext == CurTransactionContext);
+	/* First time through, create the per-line working context */
+	if (per_line_ctx == NULL)
+		per_line_ctx = AllocSetContextCreate(CurTransactionContext,
+											 "bootstrap per-line processing",
+											 ALLOCSET_DEFAULT_SIZES);
+	MemoryContextSwitchTo(per_line_ctx);
 }
 
 
 static void
 do_end(void)
 {
-	CommitTransactionCommand();
-	elog(DEBUG4, "commit transaction");
+	/* Reclaim memory allocated while processing this line */
+	MemoryContextSwitchTo(CurTransactionContext);
+	MemoryContextReset(per_line_ctx);
 	CHECK_FOR_INTERRUPTS();		/* allow SIGINT to kill bootstrap run */
 	if (isatty(0))
 	{
@@ -113,27 +109,28 @@ static int num_columns_read = 0;
 	List		*list;
 	IndexElem	*ielem;
 	char		*str;
+	const char	*kw;
 	int			ival;
 	Oid			oidval;
 }
 
 %type <list>  boot_index_params
 %type <ielem> boot_index_param
-%type <str>   boot_const boot_ident
-%type <ival>  optbootstrap optsharedrelation optwithoutoids boot_column_nullness
-%type <oidval> oidspec optoideq optrowtypeoid
+%type <str>   boot_ident
+%type <ival>  optbootstrap optsharedrelation boot_column_nullness
+%type <oidval> oidspec optrowtypeoid
 
-%token <str> CONST_P ID
-%token OPEN XCLOSE XCREATE INSERT_TUPLE
-%token XDECLARE INDEX ON USING XBUILD INDICES UNIQUE XTOAST
+%token <str> ID
 %token COMMA EQUALS LPAREN RPAREN
-%token OBJ_ID XBOOTSTRAP XSHARED_RELATION XWITHOUT_OIDS XROWTYPE_OID NULLVAL
-%token XFORCE XNOT XNULL
+/* NULLVAL is a reserved keyword */
+%token NULLVAL
+/* All the rest are unreserved, and should be handled in boot_ident! */
+%token <kw> OPEN XCLOSE XCREATE INSERT_TUPLE
+%token <kw> XDECLARE INDEX ON USING XBUILD INDICES UNIQUE XTOAST
+%token <kw> OBJ_ID XBOOTSTRAP XSHARED_RELATION XROWTYPE_OID
+%token <kw> XFORCE XNOT XNULL
 
 %start TopLevel
-
-%nonassoc low
-%nonassoc high
 
 %%
 
@@ -168,22 +165,16 @@ Boot_OpenStmt:
 		;
 
 Boot_CloseStmt:
-		  XCLOSE boot_ident %prec low
+		  XCLOSE boot_ident
 				{
 					do_start();
 					closerel($2);
 					do_end();
 				}
-		| XCLOSE %prec high
-				{
-					do_start();
-					closerel(NULL);
-					do_end();
-				}
 		;
 
 Boot_CreateStmt:
-		  XCREATE boot_ident oidspec optbootstrap optsharedrelation optwithoutoids optrowtypeoid LPAREN
+		  XCREATE boot_ident oidspec optbootstrap optsharedrelation optrowtypeoid LPAREN
 				{
 					do_start();
 					numattr = 0;
@@ -205,7 +196,7 @@ Boot_CreateStmt:
 
 					do_start();
 
-					tupdesc = CreateTupleDesc(numattr, !($6), attrtypes);
+					tupdesc = CreateTupleDesc(numattr, attrtypes);
 
 					shared_relation = $5;
 
@@ -222,6 +213,9 @@ Boot_CreateStmt:
 
 					if ($4)
 					{
+						TransactionId relfrozenxid;
+						MultiXactId relminmxid;
+
 						if (boot_reldesc)
 						{
 							elog(DEBUG4, "create bootstrap: warning, open relation exists, closing first");
@@ -233,13 +227,15 @@ Boot_CreateStmt:
 												   shared_relation ? GLOBALTABLESPACE_OID : 0,
 												   $3,
 												   InvalidOid,
+												   HEAP_TABLE_AM_OID,
 												   tupdesc,
 												   RELKIND_RELATION,
 												   RELPERSISTENCE_PERMANENT,
-												   RELSTORAGE_HEAP,
 												   shared_relation,
 												   mapped_relation,
-												   true);
+												   true,
+												   &relfrozenxid,
+												   &relminmxid);
 						elog(DEBUG4, "bootstrap relation created");
 					}
 					else
@@ -250,28 +246,25 @@ Boot_CreateStmt:
 													  PG_CATALOG_NAMESPACE,
 													  shared_relation ? GLOBALTABLESPACE_OID : 0,
 													  $3,
-													  $7,
+													  $6,
 													  InvalidOid,
 													  BOOTSTRAP_SUPERUSERID,
+													  HEAP_TABLE_AM_OID,
 													  tupdesc,
 													  NIL,
 													  RELKIND_RELATION,
 													  RELPERSISTENCE_PERMANENT,
-													  RELSTORAGE_HEAP,
 													  shared_relation,
 													  mapped_relation,
-													  true,
-													  0,
 													  ONCOMMIT_NOOP,
 													  NULL,			/*CDB*/
 													  (Datum) 0,
 													  false,
 													  true,
 													  false,
+													  InvalidOid,
 													  NULL,
-													  /* valid_opts */ false,
-													  /* is_part_child */ false,
-													  /* is_part_parent */ false);
+													  /* valid_opts */ false);
 						elog(DEBUG4, "relation created with OID %u", id);
 					}
 					do_end();
@@ -279,13 +272,10 @@ Boot_CreateStmt:
 		;
 
 Boot_InsertStmt:
-		  INSERT_TUPLE optoideq
+		  INSERT_TUPLE
 				{
 					do_start();
-					if ($2)
-						elog(DEBUG4, "inserting row with oid %u", $2);
-					else
-						elog(DEBUG4, "inserting row");
+					elog(DEBUG4, "inserting row");
 					num_columns_read = 0;
 				}
 		  LPAREN boot_column_val_list RPAREN
@@ -295,7 +285,7 @@ Boot_InsertStmt:
 							 numattr, num_columns_read);
 					if (boot_reldesc == NULL)
 						elog(FATAL, "relation not open");
-					InsertOneTuple($2);
+					InsertOneTuple();
 					do_end();
 				}
 		;
@@ -306,6 +296,8 @@ Boot_DeclareIndexStmt:
 					IndexStmt *stmt = makeNode(IndexStmt);
 					Oid		relationId;
 
+					elog(DEBUG4, "creating index \"%s\"", $3);
+
 					do_start();
 
 					stmt->idxname = $3;
@@ -313,6 +305,7 @@ Boot_DeclareIndexStmt:
 					stmt->accessMethod = $8;
 					stmt->tableSpace = NULL;
 					stmt->indexParams = $10;
+					stmt->indexIncludingParams = NIL;
 					stmt->options = NIL;
 					stmt->whereClause = NULL;
 					stmt->excludeOpNames = NIL;
@@ -327,6 +320,7 @@ Boot_DeclareIndexStmt:
 					stmt->transformed = false;
 					stmt->concurrent = false;
 					stmt->if_not_exists = false;
+					stmt->reset_default_tblspc = false;
 
 					/* locks and races need not concern us in bootstrap mode */
 					relationId = RangeVarGetRelid(stmt->relation, NoLock,
@@ -335,10 +329,14 @@ Boot_DeclareIndexStmt:
 					DefineIndex(relationId,
 								stmt,
 								$4,
+								InvalidOid,
+								InvalidOid,
+								false,
 								false,
 								false,
 								true, /* skip_build */
-								false);
+								false,
+								false /* is_new_table */);
 					do_end();
 				}
 		;
@@ -349,6 +347,8 @@ Boot_DeclareUniqueIndexStmt:
 					IndexStmt *stmt = makeNode(IndexStmt);
 					Oid		relationId;
 
+					elog(DEBUG4, "creating unique index \"%s\"", $4);
+
 					do_start();
 
 					stmt->idxname = $4;
@@ -356,6 +356,7 @@ Boot_DeclareUniqueIndexStmt:
 					stmt->accessMethod = $9;
 					stmt->tableSpace = NULL;
 					stmt->indexParams = $11;
+					stmt->indexIncludingParams = NIL;
 					stmt->options = NIL;
 					stmt->whereClause = NULL;
 					stmt->excludeOpNames = NIL;
@@ -370,6 +371,7 @@ Boot_DeclareUniqueIndexStmt:
 					stmt->transformed = false;
 					stmt->concurrent = false;
 					stmt->if_not_exists = false;
+					stmt->reset_default_tblspc = false;
 
 					/* locks and races need not concern us in bootstrap mode */
 					relationId = RangeVarGetRelid(stmt->relation, NoLock,
@@ -378,10 +380,14 @@ Boot_DeclareUniqueIndexStmt:
 					DefineIndex(relationId,
 								stmt,
 								$5,
+								InvalidOid,
+								InvalidOid,
+								false,
 								false,
 								false,
 								true, /* skip_build */
-								false);
+								false,
+								false /* is_new_table */);
 					do_end();
 				}
 		;
@@ -389,6 +395,8 @@ Boot_DeclareUniqueIndexStmt:
 Boot_DeclareToastStmt:
 		  XDECLARE XTOAST oidspec oidspec ON boot_ident
 				{
+					elog(DEBUG4, "creating toast table for table \"%s\"", $6);
+
 					do_start();
 
 					BootstrapToastTable($6, $3, $4);
@@ -436,11 +444,6 @@ optsharedrelation:
 		|						{ $$ = 0; }
 		;
 
-optwithoutoids:
-			XWITHOUT_OIDS	{ $$ = 1; }
-		|					{ $$ = 0; }
-		;
-
 optrowtypeoid:
 			XROWTYPE_OID oidspec	{ $$ = $2; }
 		|							{ $$ = InvalidOid; }
@@ -470,11 +473,6 @@ oidspec:
 			boot_ident							{ $$ = atooid($1); }
 		;
 
-optoideq:
-			OBJ_ID EQUALS oidspec				{ $$ = $3; }
-		|										{ $$ = InvalidOid; }
-		;
-
 boot_column_val_list:
 		   boot_column_val
 		|  boot_column_val_list boot_column_val
@@ -484,18 +482,31 @@ boot_column_val_list:
 boot_column_val:
 		  boot_ident
 			{ InsertOneValue($1, num_columns_read++); }
-		| boot_const
-			{ InsertOneValue($1, num_columns_read++); }
 		| NULLVAL
 			{ InsertOneNull(num_columns_read++); }
 		;
 
-boot_const :
-		  CONST_P { $$ = yylval.str; }
-		;
-
-boot_ident :
-		  ID	{ $$ = yylval.str; }
+boot_ident:
+		  ID			{ $$ = $1; }
+		| OPEN			{ $$ = pstrdup($1); }
+		| XCLOSE		{ $$ = pstrdup($1); }
+		| XCREATE		{ $$ = pstrdup($1); }
+		| INSERT_TUPLE	{ $$ = pstrdup($1); }
+		| XDECLARE		{ $$ = pstrdup($1); }
+		| INDEX			{ $$ = pstrdup($1); }
+		| ON			{ $$ = pstrdup($1); }
+		| USING			{ $$ = pstrdup($1); }
+		| XBUILD		{ $$ = pstrdup($1); }
+		| INDICES		{ $$ = pstrdup($1); }
+		| UNIQUE		{ $$ = pstrdup($1); }
+		| XTOAST		{ $$ = pstrdup($1); }
+		| OBJ_ID		{ $$ = pstrdup($1); }
+		| XBOOTSTRAP	{ $$ = pstrdup($1); }
+		| XSHARED_RELATION	{ $$ = pstrdup($1); }
+		| XROWTYPE_OID	{ $$ = pstrdup($1); }
+		| XFORCE		{ $$ = pstrdup($1); }
+		| XNOT			{ $$ = pstrdup($1); }
+		| XNULL			{ $$ = pstrdup($1); }
 		;
 %%
 

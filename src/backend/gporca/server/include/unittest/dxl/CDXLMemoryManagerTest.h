@@ -21,28 +21,27 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLMemoryManagerTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	
-	class CDXLMemoryManagerTest
-	{
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLMemoryManagerTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
+class CDXLMemoryManagerTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
 
-	}; // class CDXLMemoryManagerTest
-}
+};	// class CDXLMemoryManagerTest
+}  // namespace gpdxl
 
-#endif // !GPOPT_CDXLMemoryManagerTest_H
+#endif	// !GPOPT_CDXLMemoryManagerTest_H
 
 // EOF

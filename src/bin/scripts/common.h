@@ -2,7 +2,7 @@
  *	common.h
  *		Common support routines for bin/scripts/
  *
- *	Copyright (c) 2003-2016, PostgreSQL Global Development Group
+ *	Copyright (c) 2003-2019, PostgreSQL Global Development Group
  *
  *	src/bin/scripts/common.h
  */
@@ -26,27 +26,33 @@ extern bool CancelRequested;
 typedef void (*help_handler) (const char *progname);
 
 extern void handle_help_version_opts(int argc, char *argv[],
-						 const char *fixed_progname,
-						 help_handler hlp);
+									 const char *fixed_progname,
+									 help_handler hlp);
 
 extern PGconn *connectDatabase(const char *dbname, const char *pghost,
-				const char *pgport, const char *pguser,
-				enum trivalue prompt_password, const char *progname,
-				bool echo, bool fail_ok, bool allow_password_reuse);
+							   const char *pgport, const char *pguser,
+							   enum trivalue prompt_password, const char *progname,
+							   bool echo, bool fail_ok, bool allow_password_reuse);
 
 extern PGconn *connectMaintenanceDatabase(const char *maintenance_db,
-						   const char *pghost, const char *pgport,
-						   const char *pguser, enum trivalue prompt_password,
-						   const char *progname, bool echo);
+										  const char *pghost, const char *pgport,
+										  const char *pguser, enum trivalue prompt_password,
+										  const char *progname, bool echo);
 
 extern PGresult *executeQuery(PGconn *conn, const char *query,
-			 const char *progname, bool echo);
+							  const char *progname, bool echo);
 
 extern void executeCommand(PGconn *conn, const char *query,
-			   const char *progname, bool echo);
+						   const char *progname, bool echo);
 
 extern bool executeMaintenanceCommand(PGconn *conn, const char *query,
-						  bool echo);
+									  bool echo);
+
+extern void splitTableColumnsSpec(const char *spec, int encoding,
+								  char **table, const char **columns);
+
+extern void appendQualifiedRelation(PQExpBuffer buf, const char *name,
+									PGconn *conn, const char *progname, bool echo);
 
 extern void appendQualifiedRelation(PQExpBuffer buf, const char *name,
 						PGconn *conn, const char *progname, bool echo);
@@ -59,4 +65,4 @@ extern void SetCancelConn(PGconn *conn);
 extern void ResetCancelConn(void);
 
 
-#endif   /* COMMON_H */
+#endif							/* COMMON_H */

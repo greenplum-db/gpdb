@@ -3362,23 +3362,27 @@ rollback;
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_vol(5))) r order by 1,2,3;
 ERROR:  query plan with multiple segworker groups is not supported
 HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_113.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(5))) r order by 1,2,3;
 ERROR:  query plan with multiple segworker groups is not supported
 HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_116.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_vol(5))) r order by 1,2,3;
 ERROR:  query plan with multiple segworker groups is not supported
 HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_118.sql
 begin;
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_mod_int_vol(5))) r order by 1,2,3;
 ERROR:  query plan with multiple segworker groups is not supported
 HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 rollback;
 -- @description function_in_subqry_withfunc2_119.sql
 begin;

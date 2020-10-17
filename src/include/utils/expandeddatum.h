@@ -34,7 +34,7 @@
  * value if they fail partway through.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/expandeddatum.h
@@ -66,7 +66,7 @@
  */
 typedef Size (*EOM_get_flat_size_method) (ExpandedObjectHeader *eohptr);
 typedef void (*EOM_flatten_into_method) (ExpandedObjectHeader *eohptr,
-										  void *result, Size allocated_size);
+										 void *result, Size allocated_size);
 
 /* Struct of function pointers for an expanded object's methods */
 typedef struct ExpandedObjectMethods
@@ -126,7 +126,7 @@ struct ExpandedObjectHeader
  */
 #define EOH_HEADER_MAGIC (-1)
 #define VARATT_IS_EXPANDED_HEADER(PTR) \
-	(((ExpandedObjectHeader *) (PTR))->vl_len_ == EOH_HEADER_MAGIC)
+	(((varattrib_4b *) (PTR))->va_4byte.va_header == EOH_HEADER_MAGIC)
 
 /*
  * Generic support functions for expanded objects.
@@ -147,13 +147,13 @@ struct ExpandedObjectHeader
 
 extern ExpandedObjectHeader *DatumGetEOHP(Datum d);
 extern void EOH_init_header(ExpandedObjectHeader *eohptr,
-				const ExpandedObjectMethods *methods,
-				MemoryContext obj_context);
+							const ExpandedObjectMethods *methods,
+							MemoryContext obj_context);
 extern Size EOH_get_flat_size(ExpandedObjectHeader *eohptr);
 extern void EOH_flatten_into(ExpandedObjectHeader *eohptr,
-				 void *result, Size allocated_size);
+							 void *result, Size allocated_size);
 extern Datum MakeExpandedObjectReadOnlyInternal(Datum d);
 extern Datum TransferExpandedObject(Datum d, MemoryContext new_parent);
 extern void DeleteExpandedObject(Datum d);
 
-#endif   /* EXPANDEDDATUM_H */
+#endif							/* EXPANDEDDATUM_H */

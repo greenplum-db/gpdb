@@ -24,240 +24,239 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// fwd declaration
-	class CExpressionHandle;
-	class CColRefSet;
-	class CReqdPropPlan;
-	class CKeyCollection;
-	class CPartIndexMap;
-	class CPropConstraint;
-	class CPartInfo;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDrvdPropRelational
-	//
-	//	@doc:
-	//		Derived logical properties container.
-	//
-	//		These are properties than can be inferred from logical expressions or
-	//		Memo groups. This includes output columns, outer references, primary
-	//		keys. These properties hold regardless of the physical implementation
-	//		of an expression.
-	//
-	//---------------------------------------------------------------------------
-	class CDrvdPropRelational : public CDrvdProp
+// fwd declaration
+class CExpressionHandle;
+class CColRefSet;
+class CReqdPropPlan;
+class CKeyCollection;
+class CPartIndexMap;
+class CPropConstraint;
+class CPartInfo;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CDrvdPropRelational
+//
+//	@doc:
+//		Derived logical properties container.
+//
+//		These are properties than can be inferred from logical expressions or
+//		Memo groups. This includes output columns, outer references, primary
+//		keys. These properties hold regardless of the physical implementation
+//		of an expression.
+//
+//---------------------------------------------------------------------------
+class CDrvdPropRelational : public CDrvdProp
+{
+	friend class CExpression;
+
+	// See member variables (below) with the same name for description on what
+	// the property types respresent
+	enum EDrvdPropType
 	{
-		friend class CExpression;
+		EdptPcrsOutput = 0,
+		EdptPcrsOuter,
+		EdptPcrsNotNull,
+		EdptPcrsCorrelatedApply,
+		EdptPkc,
+		EdptPdrgpfd,
+		EdptMaxCard,
+		EdptPpartinfo,
+		EdptPpc,
+		EdptPfp,
+		EdptJoinDepth,
+		EdptFHasPartialIndexes,
+		EdptTableDescriptor,
+		EdptSentinel
+	};
 
-		// See member variables (below) with the same name for description on what
-		// the property types respresent
-		enum EDrvdPropType
-		{
-			EdptPcrsOutput = 0,
-			EdptPcrsOuter,
-			EdptPcrsNotNull,
-			EdptPcrsCorrelatedApply,
-			EdptPkc,
-			EdptPdrgpfd,
-			EdptMaxCard,
-			EdptPpartinfo,
-			EdptPpc,
-			EdptPfp,
-			EdptJoinDepth,
-			EdptFHasPartialIndexes,
-			EdptTableDescriptor,
-			EdptSentinel
-		};
+private:
+	CMemoryPool *m_mp;
 
-		private:
+	// bitset representing whether property has been derived
+	CBitSet *m_is_prop_derived;
 
-			CMemoryPool *m_mp;
+	// output columns
+	CColRefSet *m_pcrsOutput;
 
-			// bitset representing whether property has been derived
-			CBitSet *m_is_prop_derived;
+	// columns not defined in the underlying operator tree
+	CColRefSet *m_pcrsOuter;
 
-			// output columns
-			CColRefSet *m_pcrsOutput;
+	// output columns that do not allow null values
+	CColRefSet *m_pcrsNotNull;
 
-			// columns not defined in the underlying operator tree
-			CColRefSet *m_pcrsOuter;
-			
-			// output columns that do not allow null values
-			CColRefSet *m_pcrsNotNull;
+	// columns from the inner child of a correlated-apply expression that can be used above the apply expression
+	CColRefSet *m_pcrsCorrelatedApply;
 
-			// columns from the inner child of a correlated-apply expression that can be used above the apply expression
-			CColRefSet *m_pcrsCorrelatedApply;
+	// key collection
+	CKeyCollection *m_pkc;
 
-			// key collection
-			CKeyCollection *m_pkc;
-			
-			// functional dependencies
-			CFunctionalDependencyArray *m_pdrgpfd;
-			
-			// max card
-			CMaxCard m_maxcard;
-			
-			// join depth (number of relations in underlying tree)
-			ULONG m_ulJoinDepth;
+	// functional dependencies
+	CFunctionalDependencyArray *m_pdrgpfd;
 
-			// partition table consumers
-			CPartInfo *m_ppartinfo;
+	// max card
+	CMaxCard m_maxcard;
 
-			// constraint property
-			CPropConstraint *m_ppc;
+	// join depth (number of relations in underlying tree)
+	ULONG m_ulJoinDepth;
 
-			// function properties
-			CFunctionProp *m_pfp;
+	// partition table consumers
+	CPartInfo *m_ppartinfo;
 
-			// true if all logical operators in the group are of type CLogicalDynamicGet,
-			// and the dynamic get has partial indexes
-			BOOL m_fHasPartialIndexes;
+	// constraint property
+	CPropConstraint *m_ppc;
 
-			CTableDescriptor *m_table_descriptor;
+	// function properties
+	CFunctionProp *m_pfp;
 
-			// private copy ctor
-			CDrvdPropRelational(const CDrvdPropRelational &);
+	// true if all logical operators in the group are of type CLogicalDynamicGet,
+	// and the dynamic get has partial indexes
+	BOOL m_fHasPartialIndexes;
 
-			// helper for getting applicable FDs from child
-			static
-			CFunctionalDependencyArray *DeriveChildFunctionalDependencies(CMemoryPool *mp, ULONG child_index, CExpressionHandle &exprhdl);
+	CTableDescriptor *m_table_descriptor;
 
-			// helper for creating local FDs
-			static
-			CFunctionalDependencyArray *DeriveLocalFunctionalDependencies(CMemoryPool *mp, CExpressionHandle &exprhdl);
+	// private copy ctor
+	CDrvdPropRelational(const CDrvdPropRelational &);
 
-			// Have all the properties been derived?
-			//
-			// NOTE1: This is set ONLY when Derive() is called. If all the properties
-			// are independently derived, m_is_complete will remain false. In that
-			// case, even though Derive() would attempt to derive all the properties
-			// once again, it should be quick, since each individual member has been
-			// cached.
-			// NOTE2: Once these properties are detached from the
-			// corresponding expression used to derive it, this MUST be set to true,
-			// since after the detachment, there will be no way to derive the
-			// properties once again.
-			BOOL m_is_complete;
+	// helper for getting applicable FDs from child
+	static CFunctionalDependencyArray *DeriveChildFunctionalDependencies(
+		CMemoryPool *mp, ULONG child_index, CExpressionHandle &exprhdl);
 
-		protected:
-			// output columns
-			CColRefSet *DeriveOutputColumns(CExpressionHandle &);
+	// helper for creating local FDs
+	static CFunctionalDependencyArray *DeriveLocalFunctionalDependencies(
+		CMemoryPool *mp, CExpressionHandle &exprhdl);
 
-			// outer references
-			CColRefSet *DeriveOuterReferences(CExpressionHandle &);
+	// Have all the properties been derived?
+	//
+	// NOTE1: This is set ONLY when Derive() is called. If all the properties
+	// are independently derived, m_is_complete will remain false. In that
+	// case, even though Derive() would attempt to derive all the properties
+	// once again, it should be quick, since each individual member has been
+	// cached.
+	// NOTE2: Once these properties are detached from the
+	// corresponding expression used to derive it, this MUST be set to true,
+	// since after the detachment, there will be no way to derive the
+	// properties once again.
+	BOOL m_is_complete;
 
-			// nullable columns
-			CColRefSet *DeriveNotNullColumns(CExpressionHandle &);
+protected:
+	// output columns
+	CColRefSet *DeriveOutputColumns(CExpressionHandle &);
 
-			// columns from the inner child of a correlated-apply expression that can be used above the apply expression
-			CColRefSet *DeriveCorrelatedApplyColumns(CExpressionHandle &);
+	// outer references
+	CColRefSet *DeriveOuterReferences(CExpressionHandle &);
 
-			// key collection
-			CKeyCollection *DeriveKeyCollection(CExpressionHandle &);
+	// nullable columns
+	CColRefSet *DeriveNotNullColumns(CExpressionHandle &);
 
-			// functional dependencies
-			CFunctionalDependencyArray *DeriveFunctionalDependencies(CExpressionHandle &);
+	// columns from the inner child of a correlated-apply expression that can be used above the apply expression
+	CColRefSet *DeriveCorrelatedApplyColumns(CExpressionHandle &);
 
-			// max cardinality
-			CMaxCard DeriveMaxCard(CExpressionHandle &);
+	// key collection
+	CKeyCollection *DeriveKeyCollection(CExpressionHandle &);
 
-			// join depth
-			ULONG DeriveJoinDepth(CExpressionHandle &);
+	// functional dependencies
+	CFunctionalDependencyArray *DeriveFunctionalDependencies(
+		CExpressionHandle &);
 
-			// partition consumers
-			CPartInfo *DerivePartitionInfo(CExpressionHandle &);
+	// max cardinality
+	CMaxCard DeriveMaxCard(CExpressionHandle &);
 
-			// constraint property
-			CPropConstraint *DerivePropertyConstraint(CExpressionHandle &);
+	// join depth
+	ULONG DeriveJoinDepth(CExpressionHandle &);
 
-			// function properties
-			CFunctionProp *DeriveFunctionProperties(CExpressionHandle &);
+	// partition consumers
+	CPartInfo *DerivePartitionInfo(CExpressionHandle &);
 
-			// has partial indexes
-			BOOL DeriveHasPartialIndexes(CExpressionHandle &);
+	// constraint property
+	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &);
 
-			CTableDescriptor *DeriveTableDescriptor(CExpressionHandle &);
+	// function properties
+	CFunctionProp *DeriveFunctionProperties(CExpressionHandle &);
 
-		public:
+	// has partial indexes
+	BOOL DeriveHasPartialIndexes(CExpressionHandle &);
 
-			// ctor
-			CDrvdPropRelational(CMemoryPool *mp);
+	CTableDescriptor *DeriveTableDescriptor(CExpressionHandle &);
 
-			// dtor
-			virtual 
-			~CDrvdPropRelational();
+public:
+	// ctor
+	CDrvdPropRelational(CMemoryPool *mp);
 
-			// type of properties
-			virtual
-			EPropType Ept()
-			{
-				return EptRelational;
-			}
+	// dtor
+	virtual ~CDrvdPropRelational();
 
-			virtual
-			BOOL IsComplete() const { return m_is_complete; }
+	// type of properties
+	virtual EPropType
+	Ept()
+	{
+		return EptRelational;
+	}
 
-			// derivation function
-			void Derive(CMemoryPool *mp, CExpressionHandle &exprhdl, CDrvdPropCtxt *pdpctxt);
+	virtual BOOL
+	IsComplete() const
+	{
+		return m_is_complete;
+	}
 
-			// output columns
-			CColRefSet *GetOutputColumns() const;
+	// derivation function
+	void Derive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+				CDrvdPropCtxt *pdpctxt);
 
-			// outer references
-			CColRefSet *GetOuterReferences() const;
+	// output columns
+	CColRefSet *GetOutputColumns() const;
 
-			// nullable columns
-			CColRefSet *GetNotNullColumns() const;
+	// outer references
+	CColRefSet *GetOuterReferences() const;
 
-			// columns from the inner child of a correlated-apply expression that can be used above the apply expression
-			CColRefSet *GetCorrelatedApplyColumns() const;
+	// nullable columns
+	CColRefSet *GetNotNullColumns() const;
 
-			// key collection
-			CKeyCollection *GetKeyCollection() const;
-		
-			// functional dependencies
-			CFunctionalDependencyArray *GetFunctionalDependencies() const;
+	// columns from the inner child of a correlated-apply expression that can be used above the apply expression
+	CColRefSet *GetCorrelatedApplyColumns() const;
 
-			// max cardinality
-			CMaxCard GetMaxCard() const;
+	// key collection
+	CKeyCollection *GetKeyCollection() const;
 
-			// join depth
-			ULONG GetJoinDepth() const;
+	// functional dependencies
+	CFunctionalDependencyArray *GetFunctionalDependencies() const;
 
-			// partition consumers
-			CPartInfo *GetPartitionInfo() const;
+	// max cardinality
+	CMaxCard GetMaxCard() const;
 
-			// constraint property
-			CPropConstraint *GetPropertyConstraint() const;
+	// join depth
+	ULONG GetJoinDepth() const;
 
-			// function properties
-			CFunctionProp *GetFunctionProperties() const;
+	// partition consumers
+	CPartInfo *GetPartitionInfo() const;
 
-			// has partial indexes
-			BOOL HasPartialIndexes() const;
+	// constraint property
+	CPropConstraint *GetPropertyConstraint() const;
 
-			CTableDescriptor *GetTableDescriptor() const;
+	// function properties
+	CFunctionProp *GetFunctionProperties() const;
 
-			// shorthand for conversion
-			static
-			CDrvdPropRelational *GetRelationalProperties(CDrvdProp *pdp);
+	// has partial indexes
+	BOOL HasPartialIndexes() const;
 
-			// check for satisfying required plan properties
-			virtual
-			BOOL FSatisfies(const CReqdPropPlan *prpp) const;
+	CTableDescriptor *GetTableDescriptor() const;
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
+	// shorthand for conversion
+	static CDrvdPropRelational *GetRelationalProperties(CDrvdProp *pdp);
 
-	}; // class CDrvdPropRelational
+	// check for satisfying required plan properties
+	virtual BOOL FSatisfies(const CReqdPropPlan *prpp) const;
 
-}
+	// print function
+	virtual IOstream &OsPrint(IOstream &os) const;
+
+};	// class CDrvdPropRelational
+
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CDrvdPropRelational_H
+#endif	// !GPOPT_CDrvdPropRelational_H
 
 // EOF

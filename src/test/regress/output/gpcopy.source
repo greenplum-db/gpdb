@@ -134,26 +134,6 @@ DROP TABLE copy_regression_default1;
 DROP TABLE copy_regression_default2;
 DROP TABLE copy_regression_default3;
 -- ######################################################
--- COPY with OIDS
--- ######################################################
-CREATE TABLE copy_regression_oids(a text) WITH OIDS;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
-COPY copy_regression_oids from stdin with oids delimiter '|';
-COPY copy_regression_oids from stdin with oids csv;
-SELECT * FROM copy_regression_oids ORDER BY oid;
-      a      
--------------
- a text data
- a text data
- a text data
- a text data
-(4 rows)
-
-DROP TABLE copy_regression_oids;
--- ######################################################
 -- COPY OUT
 -- ######################################################
 CREATE TABLE copy_regression_out1(a text, b varchar, c int[], d bool) distributed by(a);
@@ -481,11 +461,11 @@ ERROR:  missing data for column "b"
 CONTEXT:  COPY copy_regression_error1, line 3: "3"
 -- convert error on QD (invalid type line 2)
 COPY copy_regression_error1 from stdin;
-ERROR:  invalid input syntax for integer: "two"
+ERROR:  invalid input syntax for type integer: "two"
 CONTEXT:  COPY copy_regression_error1, line 2, column two
 -- convert error on QE (invalid type line 5)
 COPY copy_regression_error1 from stdin;
-ERROR:  invalid input syntax for integer: "five"  (seg1 subraa4-mac:40001 pid=80440)
+ERROR:  invalid input syntax for type integer: "five"  (seg1 subraa4-mac:40001 pid=80440)
 CONTEXT:  COPY copy_regression_error1, line 5, column 5
 DROP TABLE copy_regression_error1;
 -- ######################################################
@@ -563,17 +543,17 @@ SELECT * FROM errcopy;
 (1 row)
 
 SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
- relname |                        errmsg                         |    rawdata    
----------+-------------------------------------------------------+---------------
- errcopy | invalid input syntax for integer: "1_text", column c  | 1,1,1_text
- errcopy | invalid input syntax for integer: "2_text", column c  | 2,2,2_text
- errcopy | invalid input syntax for integer: "3_text", column c  | 3,3,3_text
- errcopy | invalid input syntax for integer: "4_text", column c  | 4,4,4_text
- errcopy | invalid input syntax for integer: "6_text", column c  | 6,6,6_text
- errcopy | invalid input syntax for integer: "7_text", column c  | 7,7,7_text
- errcopy | invalid input syntax for integer: "8_text", column c  | 8,8,8_text
- errcopy | invalid input syntax for integer: "9_text", column c  | 9,9,9_text
- errcopy | invalid input syntax for integer: "10_text", column c | 10,10,10_text
+ relname |                           errmsg                           |    rawdata    
+---------+------------------------------------------------------------+---------------
+ errcopy | invalid input syntax for type integer: "1_text", column c  | 1,1,1_text
+ errcopy | invalid input syntax for type integer: "2_text", column c  | 2,2,2_text
+ errcopy | invalid input syntax for type integer: "3_text", column c  | 3,3,3_text
+ errcopy | invalid input syntax for type integer: "4_text", column c  | 4,4,4_text
+ errcopy | invalid input syntax for type integer: "6_text", column c  | 6,6,6_text
+ errcopy | invalid input syntax for type integer: "7_text", column c  | 7,7,7_text
+ errcopy | invalid input syntax for type integer: "8_text", column c  | 8,8,8_text
+ errcopy | invalid input syntax for type integer: "9_text", column c  | 9,9,9_text
+ errcopy | invalid input syntax for type integer: "10_text", column c | 10,10,10_text
 (9 rows)
 
 -- reject one row with extra column, one row with fewer columns
@@ -628,7 +608,7 @@ SELECT gp_truncate_error_log('errcopy');
 
 COPY errcopy from stdin delimiter E'\t' log errors segment reject limit 3 rows;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "1       4", column a
+DETAIL:  Last error was: invalid input syntax for type integer: "1       4", column a
 CONTEXT:  COPY errcopy, line 3, column a: "1       4"
 SELECT * FROM errcopy;
  a | b | c 
@@ -636,11 +616,11 @@ SELECT * FROM errcopy;
 (0 rows)
 
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
- relname | filename | bytenum |                             errmsg                              
----------+----------+---------+-----------------------------------------------------------------
- errcopy | <stdin>  |         | invalid input syntax for integer: "1       2       0", column a
- errcopy | <stdin>  |         | invalid input syntax for integer: "1       3       4", column a
- errcopy | <stdin>  |         | invalid input syntax for integer: "1       4", column a
+ relname | filename | bytenum |                                errmsg                                
+---------+----------+---------+----------------------------------------------------------------------
+ errcopy | <stdin>  |         | invalid input syntax for type integer: "1       2       0", column a
+ errcopy | <stdin>  |         | invalid input syntax for type integer: "1       3       4", column a
+ errcopy | <stdin>  |         | invalid input syntax for type integer: "1       4", column a
 (3 rows)
 
 -- abort and keep
@@ -679,7 +659,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 2 rows;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "b", column b  (seg0 172.17.0.2:40000 pid=8318)
+DETAIL:  Last error was: invalid input syntax for type integer: "b", column b  (seg0 172.17.0.2:40000 pid=8318)
 CONTEXT:  COPY segment_reject_limit_from, line 4, column 1
 SELECT * FROM segment_reject_limit_from;
  a | b 
@@ -687,10 +667,10 @@ SELECT * FROM segment_reject_limit_from;
 (0 rows)
 
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject_limit_from');
-          relname          |            filename            | bytenum |                     errmsg                      
----------------------------+--------------------------------+---------+-------------------------------------------------
- segment_reject_limit_from | /tmp/segment_reject_limit1.csv |         | invalid input syntax for integer: "a", column b
- segment_reject_limit_from | /tmp/segment_reject_limit1.csv |         | invalid input syntax for integer: "b", column b
+          relname          |            filename            | bytenum |                        errmsg                        
+---------------------------+--------------------------------+---------+------------------------------------------------------
+ segment_reject_limit_from | /tmp/segment_reject_limit1.csv |         | invalid input syntax for type integer: "a", column b
+ segment_reject_limit_from | /tmp/segment_reject_limit1.csv |         | invalid input syntax for type integer: "b", column b
 (2 rows)
 
 -- not exceed reject limit on segment
@@ -785,7 +765,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 SET gp_initial_bad_row_limit = 2;
 COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
 ERROR:  all 2 first rows in this segment were rejected
-DETAIL:  Aborting operation regardless of REJECT LIMIT value, last error was: invalid input syntax for integer: "error1", column a
+DETAIL:  Aborting operation regardless of REJECT LIMIT value, last error was: invalid input syntax for type integer: "error1", column a
 CONTEXT:  COPY test_first_segment_reject_limit, line 2, column a: "error1"
 -- should go through fine
 SET gp_initial_bad_row_limit = 6;
@@ -865,18 +845,11 @@ INSERT INTO test_copy_on_segment VALUES (2, 'f', 'g');
 INSERT INTO test_copy_on_segment VALUES (3, 'h', 'j');
 INSERT INTO test_copy_on_segment VALUES (4, 'i', 'l');
 INSERT INTO test_copy_on_segment VALUES (5, 'q', 'w');
-CREATE TABLE test_copy_on_segment_withoids (a int, b text, c text) WITH OIDS DISTRIBUTED BY (a,c);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
-INSERT INTO test_copy_on_segment_withoids VALUES (1, 's', 'd');
-INSERT INTO test_copy_on_segment_withoids VALUES (2, 'f', 'g');
-INSERT INTO test_copy_on_segment_withoids VALUES (3, 'h', 'j');
 COPY test_copy_on_segment TO '/tmp/invalid_filename.txt' ON SEGMENT;
 ERROR:  <SEGID> is required for file name
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
-COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 CREATE TABLE test_copy_from_on_segment_txt (LIKE test_copy_on_segment) DISTRIBUTED BY (b);
 COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename.txt' ON SEGMENT;
 ERROR:  <SEGID> is required for file name
@@ -915,24 +888,11 @@ SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
  5 | q | w
 (5 rows)
 
-CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_withoids) WITH OIDS DISTRIBUTED BY (a,c);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
-COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
-SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
- a | b | c 
----+---+---
- 1 | s | d
- 2 | f | g
- 3 | h | j
-(3 rows)
-
 COPY (select * from test_copy_on_segment) TO '/tmp/invalid_filename_select.txt' ON SEGMENT;
 ERROR:  <SEGID> is required for file name  (seg0 127.0.0.1:25432 pid=22593)
 COPY (select * from test_copy_on_segment) TO '/tmp/valid_filename_select<SEGID>.txt' ON SEGMENT;
 COPY (select * from test_copy_on_segment) TO '/tmp/valid_filename_select<SEGID>.bin' ON SEGMENT BINARY;
 COPY test_copy_on_segment TO '/tmp/valid_filename_select<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER;
-COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename_select<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',';
 delete from test_copy_from_on_segment_txt;
 COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename_select.txt' ON SEGMENT;
 ERROR:  <SEGID> is required for file name  (seg0 127.0.0.1:25432 pid=22593)
@@ -970,16 +930,6 @@ SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
  4 | i | l
  5 | q | w
 (5 rows)
-
-delete from  test_copy_from_on_segment_withoids;
-COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename_select<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',';
-SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
- a | b | c 
----+---+---
- 1 | s | d
- 2 | f | g
- 3 | h | j
-(3 rows)
 
 CREATE TABLE onek_copy_onsegment (
     unique1     int4,
@@ -1050,11 +1000,9 @@ DROP TABLE IF EXISTS test_copy_on_segment_array;
 DROP TABLE IF EXISTS test_copy_on_segment_array_1;
 DROP TABLE IF EXISTS test_copy_on_segment_2dim_array;
 DROP TABLE IF EXISTS test_copy_on_segment_2dim_array_1;
-DROP TABLE IF EXISTS test_copy_on_segment_withoids;
 DROP TABLE IF EXISTS test_copy_from_on_segment_txt;
 DROP TABLE IF EXISTS test_copy_from_on_segment_binary;
 DROP TABLE IF EXISTS test_copy_from_on_segment_csv;
-DROP TABLE IF EXISTS test_copy_from_on_segment_withoids;
 DROP TABLE IF EXISTS onek_copy_from_onsegment;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 -- Test for COPY FROM/TO with mulitple blocks data file
@@ -1289,8 +1237,6 @@ ERROR:  value of distribution key doesn't belong to segment with ID 0, it belong
 CONTEXT:  COPY copy_on_segment_check_distkey_partioned, line 3: "5"
 -- COPY FROM ON SEGMENT partitoned table distributed randomly
 CREATE TABLE COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY (a int) DISTRIBUTED RANDOMLY PARTITION BY range(a) ( START (0) END (10) EVERY (5));
-NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_1" for table "copy_on_segment_partion_dist_randomly"
-NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_2" for table "copy_on_segment_partion_dist_randomly"
 COPY COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY FROM PROGRAM 'echo <SEGID>' ON SEGMENT;
 -- COPY FROM partitoned table
 TRUNCATE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
@@ -1313,8 +1259,6 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
 CREATE TABLE COPY_FROM_PARTITION_TABLE (a text ,b int) PARTITION BY range(b) (START (0) END (10) EVERY(5));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "copy_from_partition_table_1_prt_1" for table "copy_from_partition_table"
-NOTICE:  CREATE TABLE will create partition "copy_from_partition_table_1_prt_2" for table "copy_from_partition_table"
 INSERT INTO COPY_FROM_PARTITION_TABLE values('aa',1);
 INSERT INTO COPY_FROM_PARTITION_TABLE values('bb',2);
 INSERT INTO COPY_FROM_PARTITION_TABLE values('cc',8);
@@ -1340,7 +1284,7 @@ CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION(a int,b int) DISTRIBUTED
     )
 ( START (0) END (10) EVERY (5));
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION SELECT generate_series(0,9),generate_series(0,9);
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
+COPY (SELECT * FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION ORDER BY a, b) to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
  count 
@@ -1348,7 +1292,10 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
     20
 (1 row)
 
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION0.csv'  CSV;
+COPY (VALUES
+  (2, 2),
+  (0, 0)
+) to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION0.csv'  CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_distkey_subpartition, line 2: "0,0"
@@ -1403,7 +1350,7 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 (1 row)
 
 \COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo $GP_SEGMENT_ID';
-ERROR:  invalid input syntax for integer: ""
+ERROR:  invalid input syntax for type integer: ""
 CONTEXT:  COPY copy_from_program_error, line 1, column 
 SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
  count 
@@ -1412,7 +1359,7 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 (1 row)
 
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo $GP_SEGMENT_I';
-ERROR:  invalid input syntax for integer: ""
+ERROR:  invalid input syntax for type integer: ""
 CONTEXT:  COPY copy_from_program_error, line 1, column 
 SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
  count 
@@ -1423,7 +1370,7 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_ID\n<SEGID>"' on segment;
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_I\n<SEGID>"' on segment;
-ERROR:  invalid input syntax for integer: ""  (seg0 172.17.0.2:40000 pid=27935)
+ERROR:  invalid input syntax for type integer: ""  (seg0 172.17.0.2:40000 pid=27935)
 CONTEXT:  COPY copy_from_program_error, line 1, column 
 ALTER TABLE COPY_FROM_PROGRAM_ERROR SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
@@ -1477,46 +1424,96 @@ CREATE TABLE sales (
           PARTITION nov17 START ('2017-11-01'::date) END ('2017-12-01'::date) WITH (tablename='sales_1_prt_nov17', appendonly=false ),
           PARTITION dec17 START ('2017-12-01'::date) END ('2018-01-01'::date) WITH (tablename='sales_1_prt_dec17', appendonly=false )
           );
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_jan17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_feb17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_mar17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_apr17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_may17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_jun17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_jul17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_aug17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_sep17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_oct17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_nov17" for table "sales"
-NOTICE:  CREATE TABLE will create partition "sales_1_prt_dec17" for table "sales"
 COPY sales (id, date, amt) FROM stdin;
--- execute external psql here to get the message of COPY
-\! psql -c "COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
+-- Set QUIET off, to also test the row counts that COPY returns
+\set QUIET 'off'
+COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT;
 COPY 26
-\! psql -c "COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
+TRUNCATE sales;
+TRUNCATE TABLE
+COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT;
 COPY 26
-CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t20.00\n"' ON MASTER FORMAT 'text';
-ALTER TABLE sales ALTER PARTITION dec17 EXCHANGE PARTITION dec17 WITH TABLE ext_dec17 WITHOUT VALIDATION;
-NOTICE:  exchanged partition "dec17" of partition "dec17" of relation "sales" with relation "ext_dec17"
+CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t21.00\n"' ON MASTER FORMAT 'text';
+CREATE EXTERNAL TABLE
+ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
+ALTER TABLE
 DROP TABLE ext_dec17;
-COPY sales TO PROGRAM 'cat > /dev/null' IGNORE EXTERNAL PARTITIONS;
+DROP TABLE
+COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
-COPY sales TO PROGRAM 'printf <SEGID> && cat > /dev/null' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
+COPY 24
+COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
+COPY 24
+-- Verify that the files don't contain the row from the external partition.
+\set QUIET 'on'
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_all' ON MASTER FORMAT 'text' (DELIMITER 'off');
+SELECT * FROM pg_temp.read_result;
+             line              
+-------------------------------
+ 1       01-01-2017      20.00
+ 1       01-01-2017      20.00
+ 11      11-01-2017      20.00
+ 11      11-01-2017      20.00
+ 15      05-01-2017      20.00
+ 15      05-01-2017      20.00
+ 18      08-01-2017      20.00
+ 18      08-01-2017      20.00
+ 2       02-01-2017      20.00
+ 2       02-01-2017      20.00
+ 25      05-01-2017      20.00
+ 25      05-01-2017      20.00
+ 3       03-01-2017      20.00
+ 3       03-01-2017      20.00
+ 4       04-01-2017      20.00
+ 4       04-01-2017      20.00
+ 5       05-01-2017      20.00
+ 5       05-01-2017      20.00
+ 7       07-01-2017      20.00
+ 7       07-01-2017      20.00
+ 8       08-01-2017      20.00
+ 8       08-01-2017      20.00
+ 9       09-01-2017      20.00
+ 9       09-01-2017      20.00
+(24 rows)
+
+DROP EXTERNAL TABLE pg_temp.read_result;
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_$GP_SEGMENT_ID' FORMAT 'text' (DELIMITER 'off');
+SELECT * FROM pg_temp.read_result;
+             line              
+-------------------------------
+ 1       01-01-2017      20.00
+ 1       01-01-2017      20.00
+ 11      11-01-2017      20.00
+ 11      11-01-2017      20.00
+ 15      05-01-2017      20.00
+ 15      05-01-2017      20.00
+ 18      08-01-2017      20.00
+ 18      08-01-2017      20.00
+ 2       02-01-2017      20.00
+ 2       02-01-2017      20.00
+ 25      05-01-2017      20.00
+ 25      05-01-2017      20.00
+ 3       03-01-2017      20.00
+ 3       03-01-2017      20.00
+ 4       04-01-2017      20.00
+ 4       04-01-2017      20.00
+ 5       05-01-2017      20.00
+ 5       05-01-2017      20.00
+ 7       07-01-2017      20.00
+ 7       07-01-2017      20.00
+ 8       08-01-2017      20.00
+ 8       08-01-2017      20.00
+ 9       09-01-2017      20.00
+ 9       09-01-2017      20.00
+(24 rows)
+
+DROP EXTERNAL TABLE pg_temp.read_result;
 DROP TABLE sales;
 CREATE TABLE ao_copy(c int) WITH (appendonly=true);
 COPY ao_copy TO '/tmp/ao<SEGID>.txt' ON SEGMENT;
 COPY ao_copy FROM '/tmp/ao<SEGID>.txt' ON SEGMENT;
 DROP TABLE ao_copy;
--- "unknown" types can be dumped and restored: these attributes are
--- NULL-terminated in memory (attlen == -2), so the COPY code needs to handle
--- them explicitly.
-CREATE TEMP TABLE type_unknown ( a unknown );
-WARNING:  column "a" has type "unknown"
-DETAIL:  Proceeding with relation creation anyway.
-COPY type_unknown FROM stdin;
-COPY type_unknown TO stdout;
-unknown
 --
 -- Test row counts
 --

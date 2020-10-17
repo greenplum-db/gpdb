@@ -158,9 +158,9 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
  rg1_memory_test | ResourceGroup   | active              | BEGIN; 
 (4 rows)
 
@@ -180,10 +180,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
 (4 rows)
 
 1q: ... <quitting>
@@ -419,10 +419,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
 (4 rows)
 
 11q: ... <quitting>
@@ -440,8 +440,8 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 -- now rg2 shall be able to get 10% free quota from sys
@@ -460,9 +460,9 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
 (3 rows)
 
 13q: ... <quitting>
@@ -545,10 +545,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
  rg2_memory_test | ResourceGroup   | active              | BEGIN; 
 (5 rows)
 
@@ -566,9 +566,9 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
  rg2_memory_test | ResourceGroup   | active              | BEGIN; 
 (4 rows)
 
@@ -590,9 +590,9 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
 (3 rows)
 
 13q: ... <quitting>
@@ -675,10 +675,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
  rg2_memory_test | ResourceGroup   | active              | BEGIN; 
 (5 rows)
 
@@ -701,11 +701,11 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg1_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg1_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
 (5 rows)
 
 11q: ... <quitting>
@@ -799,10 +799,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query                                  
 -----------------+-----------------+---------------------+----------------------------------------
- rg1_memory_test |                 | idle in transaction | SELECT hold_memory_by_percent(1,0.90); 
- rg2_memory_test |                 | idle in transaction | BEGIN;                                 
- rg2_memory_test |                 | idle in transaction | BEGIN;                                 
- rg2_memory_test |                 | idle in transaction | BEGIN;                                 
+ rg1_memory_test | Client          | idle in transaction | SELECT hold_memory_by_percent(1,0.90); 
+ rg2_memory_test | Client          | idle in transaction | BEGIN;                                 
+ rg2_memory_test | Client          | idle in transaction | BEGIN;                                 
+ rg2_memory_test | Client          | idle in transaction | BEGIN;                                 
  rg2_memory_test | ResourceGroup   | active              | BEGIN;                                 
 (5 rows)
 
@@ -819,10 +819,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query                                  
 -----------------+-----------------+---------------------+----------------------------------------
- rg1_memory_test |                 | idle in transaction | SELECT hold_memory_by_percent(1,0.90); 
- rg2_memory_test |                 | idle in transaction | BEGIN;                                 
- rg2_memory_test |                 | idle in transaction | BEGIN;                                 
- rg2_memory_test |                 | idle in transaction | BEGIN;                                 
+ rg1_memory_test | Client          | idle in transaction | SELECT hold_memory_by_percent(1,0.90); 
+ rg2_memory_test | Client          | idle in transaction | BEGIN;                                 
+ rg2_memory_test | Client          | idle in transaction | BEGIN;                                 
+ rg2_memory_test | Client          | idle in transaction | BEGIN;                                 
  rg2_memory_test | ResourceGroup   | active              | BEGIN;                                 
 (5 rows)
 
@@ -843,10 +843,10 @@ SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
  rsgname         | wait_event_type | state               | query  
 -----------------+-----------------+---------------------+--------
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
- rg2_memory_test |                 | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
+ rg2_memory_test | Client          | idle in transaction | BEGIN; 
 (4 rows)
 
 21q: ... <quitting>

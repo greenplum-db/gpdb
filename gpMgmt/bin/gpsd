@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2014 Pivotal inc.
 
 
@@ -101,6 +101,11 @@ def dumpStats(cur, inclHLL):
              'oid',
              'oid',
              'oid',
+             'oid',
+             'oid',
+             'oid',
+             'oid',
+             'oid',
              'real[]',
              'real[]',
              'real[]',
@@ -130,13 +135,16 @@ def dumpStats(cur, inclHLL):
             if val is None:
                 val = 'NULL'
             elif isinstance(val, (str, unicode)) and val[0] == '{':
-                val = val.replace("'", "''").replace('\\', '\\\\')
+                val = val.replace("'", "''")
                 val = "E'" + val + "'"
+
             if i == 25 and hll == True:
                 if inclHLL == True:
                     rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
                 else:
                     rowVals.append('\t{0}'.format('NULL::int4[]'))
+            elif i == 30 and str_val != "'None'":
+                rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
             else:
                 rowVals.append('\t{0}::{1}'.format(val, typ))
         print pstring.format(vals[0], vals[2], ',\n'.join(rowVals))
@@ -215,6 +223,7 @@ def main():
     sys.stdout.flush()
 
     try:
+        pgdb.set_typecast('anyarray', lambda v, c=str: v)
         with closing(pgdb.connect(**connectionInfo)) as connection:
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import tarfile
@@ -24,7 +24,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
 
         try:
             self.install(gppkg_file)
-        except ExecutionError, e:
+        except ExecutionError as e:
             Scp(name = "copy gppkg to standby",
                 srcFile = gppkg_file,
                 dstFile = archive_file,
@@ -47,7 +47,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
 
         try:
             self.remove(gppkg_file)
-        except ExecutionError, e:
+        except ExecutionError as e:
             GpScp(source_path = gppkg_file,
                   target_path = archive_file,
                   host_list = get_host_list()[1]).run()
@@ -69,7 +69,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
         self.uninstall_rpm_remotely(self.A_spec.get_filename(), standby)
         try:
             self.install(gppkg_file) 
-        except ExecutionError, e:
+        except ExecutionError as e:
             #Install the rpm 
             with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
                 tf.extract(self.A_spec.get_filename())
@@ -129,7 +129,7 @@ class MuckWithInternalsOnStandby(GppkgTestCase):
 
         try:
             self.remove(gppkg_file)
-        except ExecutionError, e:
+        except ExecutionError as e:
             self.uninstall_rpm_remotely(self.A_spec.get_filename(), standby)
             os.remove(self.A_spec.get_filename())
             RemoveRemoteFile(self.A_spec.get_filename(), standby).run()

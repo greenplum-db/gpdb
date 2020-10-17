@@ -37,7 +37,7 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 --
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' SEGMENT REJECT LIMIT 2;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "eleven", column a
+DETAIL:  Last error was: invalid input syntax for type integer: "eleven", column a
 CONTEXT:  COPY sreh_copy, line 11, column a: "eleven"
 SELECT * FROM sreh_copy ORDER BY a,b,c;
  a  | b  | c  
@@ -201,7 +201,7 @@ COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJ
 NOTICE:  found 9 data formatting errors (9 or more input rows), rejected related input data
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 2 PERCENT; --fail
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a
+DETAIL:  Last error was: invalid input syntax for type integer: "BAD", column a
 CONTEXT:  COPY sreh_copy, line 107, column a
 --
 -- test PERCENT reject limit logic with custom threshold 10 (only practical for test purposes)
@@ -209,7 +209,7 @@ CONTEXT:  COPY sreh_copy, line 107, column a
 set gp_reject_percent_threshold = 10;
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 10 PERCENT; --fail
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a
+DETAIL:  Last error was: invalid input syntax for type integer: "BAD", column a
 CONTEXT:  COPY sreh_copy, line 15, column a
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 20 PERCENT; --pass
 NOTICE:  found 9 data formatting errors (9 or more input rows), rejected related input data
@@ -284,11 +284,11 @@ FORMAT 'text' (delimiter '|')
 SEGMENT REJECT LIMIT 2;
 SELECT * FROM sreh_ext ORDER BY a;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "", column b  (seg1 slice1 @hostname@:11002 pid=68457)
+DETAIL:  Last error was: invalid input syntax for type integer: "", column b  (seg1 slice1 @hostname@:11002 pid=68457)
 CONTEXT:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
 INSERT INTO sreh_target SELECT * FROM sreh_ext;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "", column b  (seg1 slice1 @hostname@:11002 pid=68459)
+DETAIL:  Last error was: invalid input syntax for type integer: "", column b  (seg1 slice1 @hostname@:11002 pid=68459)
 CONTEXT:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
 SELECT count(*) FROM sreh_target;
  count 
@@ -323,18 +323,18 @@ NOTICE:  found 10 data formatting errors (10 or more input rows), rejected relat
 -- Verify the fields that we easily can.
 WITH error_log AS (SELECT * FROM gp_read_error_log('sreh_ext_err_tbl'))
   SELECT relname, filename LIKE 'gpfdist://@hostname@:8080/bad_data1.data [%]' as filename_ok, linenum, errmsg from error_log;
-     relname      | filename_ok | linenum |                        errmsg                         
-------------------+-------------+---------+-------------------------------------------------------
+     relname      | filename_ok | linenum |                           errmsg                           
+------------------+-------------+---------+------------------------------------------------------------
  sreh_ext_err_tbl | t           |       2 | missing data for column "b"
- sreh_ext_err_tbl | t           |       3 | invalid input syntax for integer: "", column b
+ sreh_ext_err_tbl | t           |       3 | invalid input syntax for type integer: "", column b
  sreh_ext_err_tbl | t           |       4 | extra data after last expected column, column b
- sreh_ext_err_tbl | t           |       7 | invalid input syntax for integer: "bad", column c
- sreh_ext_err_tbl | t           |       8 | invalid input syntax for integer: "bad", column a
- sreh_ext_err_tbl | t           |      11 | invalid input syntax for integer: "eleven", column a
+ sreh_ext_err_tbl | t           |       7 | invalid input syntax for type integer: "bad", column c
+ sreh_ext_err_tbl | t           |       8 | invalid input syntax for type integer: "bad", column a
+ sreh_ext_err_tbl | t           |      11 | invalid input syntax for type integer: "eleven", column a
  sreh_ext_err_tbl | t           |      12 | extra data after last expected column, column a
- sreh_ext_err_tbl | t           |      13 | invalid input syntax for integer: ",13,", column b
+ sreh_ext_err_tbl | t           |      13 | invalid input syntax for type integer: ",13,", column b
  sreh_ext_err_tbl | t           |      15 | missing data for column "b"
- sreh_ext_err_tbl | t           |      16 | invalid input syntax for integer: "sixteen", column a
+ sreh_ext_err_tbl | t           |      16 | invalid input syntax for type integer: "sixteen", column a
 (10 rows)
 
 CREATE EXTERNAL TABLE sreh_ext(a int, b int, c int)
@@ -481,7 +481,7 @@ FORMAT 'text' (delimiter '|')
 SEGMENT REJECT LIMIT 2 PERCENT;
 SELECT count(*) FROM sreh_ext_2percent; -- fail
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
+DETAIL:  Last error was: invalid input syntax for type integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
 CONTEXT:  External table sreh_ext_2percent, line 107 of gpfdist://@hostname@:8080/bad_data3.data, column a
 --
 -- test PERCENT reject limit logic with custom threshold 10 (only practical for test purposes)
@@ -489,7 +489,7 @@ CONTEXT:  External table sreh_ext_2percent, line 107 of gpfdist://@hostname@:808
 set gp_reject_percent_threshold = 10;
 SELECT count(*) FROM sreh_ext_10percent; -- fail
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
+DETAIL:  Last error was: invalid input syntax for type integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
 CONTEXT:  External table sreh_ext_10percent, line 15 of gpfdist://@hostname@:8080/bad_data3.data, column a
 CREATE EXTERNAL TABLE sreh_ext_20percent(a int, b int, c int)
 LOCATION ('gpfdist://@hostname@:8080/bad_data3.data' )

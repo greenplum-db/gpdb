@@ -64,7 +64,9 @@ select verify('co_t');
 -- Partitioned tables
 set client_min_messages='error';
 
-CREATE TABLE oid_check_pt1 (id int, date date, amt decimal(10,2) default 0.0) DISTRIBUTED BY (id)
+CREATE TABLE oid_check_pt1 (id int, date date, amt decimal(10,2) default 0.0)
+USING heap
+DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
       (PARTITION Jan08 START (date '2008-01-01') INCLUSIVE ,
       PARTITION Feb08 START (date '2008-02-01') INCLUSIVE ,
@@ -75,9 +77,9 @@ select verify('oid_check_pt1_1_prt_jan08');
 select verify('oid_check_pt1_1_prt_feb08');
 select verify('oid_check_pt1_1_prt_mar08');
 
-set gp_default_storage_options='appendonly=true';
-
-CREATE TABLE oid_check_ao_pt1 (id int, date date, amt decimal(10,2) default 0.0) DISTRIBUTED BY (id)
+CREATE TABLE oid_check_ao_pt1 (id int, date date, amt decimal(10,2) default 0.0)
+USING ao_row
+DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
       (PARTITION Jan08 START (date '2008-01-01') INCLUSIVE ,
       PARTITION Feb08 START (date '2008-02-01') INCLUSIVE ,
@@ -90,7 +92,7 @@ select verify('oid_check_ao_pt1_1_prt_mar08');
 
 CREATE TABLE oid_check_co_pt1 (id int, year int, month int CHECK (month > 0),
        day int CHECK (day > 0), region text default('abc'))
-WITH(ORIENTATION=COLUMN)
+USING ao_column
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
       SUBPARTITION BY RANGE (month)
@@ -114,8 +116,6 @@ alter table oid_check_ao_pt1 add default partition other_regions,
       	    	   alter column amt set not null;
 select verify('oid_check_ao_pt1');
 
-reset gp_default_storage_options;
-
 --
 -- pg_constraint
 --
@@ -129,13 +129,15 @@ $$
                where conrelid = $1::regclass)) foo;
 $$ language sql;
 
-CREATE TABLE constraint_pt1 (id int, date date, amt decimal(10,2)) DISTRIBUTED BY (id)
+CREATE TABLE constraint_pt1 (id int, date date, amt decimal(10,2),
+  CONSTRAINT amt_check CHECK (amt > 0)) DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
       (PARTITION Jan08 START (date '2008-01-01') INCLUSIVE ,
       PARTITION Feb08 START (date '2008-02-01') INCLUSIVE ,
       PARTITION Mar08 START (date '2008-03-01') INCLUSIVE
       END (date '2008-04-01') EXCLUSIVE);
-CREATE TABLE constraint_t1 (id int, date date, amt decimal(10,2)) DISTRIBUTED BY (id);
+CREATE TABLE constraint_t1 (id int, date date, amt decimal(10,2),
+  CONSTRAINT amt_check CHECK (amt > 0)) DISTRIBUTED BY (id);
 
 INSERT INTO constraint_pt1 SELECT i, '2008-01-13', i FROM generate_series(1,5)i;
 INSERT INTO constraint_pt1 SELECT i, '2008-02-13', i FROM generate_series(1,5)i;
@@ -159,14 +161,15 @@ SELECT * FROM constraint_pt1 ORDER BY date, id;
 
 -- exchange with appendonly
 CREATE TABLE constraint_pt2 (id int, date date, amt decimal(10,2)
-       CHECK (amt > 0)) DISTRIBUTED BY (id)
+       CONSTRAINT amt_check CHECK (amt > 0)) DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
       (PARTITION Jan08 START (date '2008-01-01') INCLUSIVE,
       PARTITION Feb08 START (date '2008-02-01') INCLUSIVE,
       PARTITION Mar08 START (date '2008-03-01') INCLUSIVE
       END (date '2008-04-01') EXCLUSIVE);
 
-CREATE TABLE constraint_t2 (id int, date date, amt decimal(10,2))
+CREATE TABLE constraint_t2 (id int, date date, amt decimal(10,2),
+       CONSTRAINT amt_check CHECK (amt > 0))
        WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);
 
 INSERT INTO constraint_pt2 SELECT i, '2008-01-13', i FROM generate_series(1,5)i;
@@ -188,7 +191,8 @@ select verify('constraint_t2');
 SELECT * FROM constraint_pt2 ORDER BY date, id;
 SELECT * FROM constraint_t2 ORDER BY date, id;
 
-CREATE TABLE constraint_t3 (id int, date date, amt decimal(10,2))
+CREATE TABLE constraint_t3 (id int, date date, amt decimal(10,2)
+       CONSTRAINT amt_check CHECK (amt > 0))
        WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);
 INSERT INTO constraint_t3 SELECT i, '2008-03-02', i FROM generate_series(11,15)i;
 
@@ -211,8 +215,8 @@ select verify('constraint_pt2_1_prt_feb08');
 
 -- exchange a subpartition
 SET client_min_messages='warning';
-CREATE TABLE constraint_pt3 (id int, year int, month int CHECK (month > 0),
-       day int CHECK (day > 0), region text)
+CREATE TABLE constraint_pt3 (id int, year int, month int CONSTRAINT month_check CHECK (month > 0),
+       day int CONSTRAINT day_check CHECK (day > 0), region text)
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
       SUBPARTITION BY RANGE (month)
@@ -235,11 +239,12 @@ INSERT INTO constraint_pt3 SELECT i, 2002, 4, i, 'asia' FROM generate_series(1,5
 INSERT INTO constraint_pt3 SELECT i, 2002, 4, i, 'europe' FROM generate_series(1,5)i;
 
 -- look at the constraints of the partition we plan to exchange
-SELECT conname,consrc from pg_constraint where conrelid =
+SELECT conname, pg_get_constraintdef(oid) from pg_constraint where conrelid =
        'constraint_pt3_1_prt_2_2_prt_3_3_prt_europe'::regclass;
 
 drop table if exists constraint_t3;
-CREATE TABLE constraint_t3 (id int, year int, month int, day int, region text)
+CREATE TABLE constraint_t3 (id int, year int, month int CONSTRAINT month_check CHECK (month > 0),
+       day int CONSTRAINT day_check CHECK (day > 0), region text)
        WITH (appendonly=true) DISTRIBUTED BY (id);
 
 ALTER TABLE constraint_pt3 ALTER PARTITION FOR ('2001')
@@ -351,18 +356,18 @@ select count(foo.*) from
 --
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 --end_ignore
 
 select count(foo.*) 
 from (
       select oid, lanname, lanplcallfoid, lanvalidator
       from pg_language
-      where lanname='plpythonu'
+      where lanname='plpython3u'
       union
       select oid, lanname, lanplcallfoid, lanvalidator
       from gp_dist_random('pg_language')
-      where lanname='plpythonu' ) foo;
+      where lanname='plpython3u' ) foo;
 
 --
 -- pg_rewrite

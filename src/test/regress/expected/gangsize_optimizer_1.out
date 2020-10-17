@@ -35,8 +35,8 @@ INFO:  (slice 5) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 2) Dispatch command to SINGLE content
 select hash_3_3_2.b, replicate_2_5.d, sum(replicate_2_1.d), sum(replicate_3_3.a) from (((random_2_0 left join replicate_2_1 on random_2_0.b <> replicate_2_1.d) left join hash_3_3_2 on random_2_0.c = hash_3_3_2.b) inner join (replicate_3_3 inner join hash_2_3_4 on replicate_3_3.d = hash_2_3_4.d) on hash_3_3_2.a <> hash_2_3_4.a) right join replicate_2_5 on random_2_0.d <> replicate_2_5.c group by hash_3_3_2.b, replicate_2_5.d order by 1,2;
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 4) Dispatch command to PARTIAL contents: 0 1
+INFO:  (slice 4) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 3) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 2) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
 select replicate_3_3.a, hash_2_3_4.d, sum(replicate_2_1.a), max(hash_3_3_2.d) from (((random_2_0 right join replicate_2_1 on random_2_0.d >= replicate_2_1.c) left join (hash_3_3_2 full join replicate_3_3 on hash_3_3_2.b = replicate_3_3.a) on replicate_2_1.a < hash_3_3_2.c) full join hash_2_3_4 on random_2_0.a >= hash_2_3_4.b) inner join replicate_2_5 on hash_3_3_2.c < replicate_2_5.d group by replicate_3_3.a, hash_2_3_4.d order by 1,2;

@@ -1851,53 +1851,53 @@ select * from orca.r offset 10;
 (10 rows)
 
 select sqrt(r.a) from orca.r;
-       sqrt       
-------------------
-                1
-  1.4142135623731
- 1.73205080756888
-                2
- 2.23606797749979
- 2.44948974278318
- 2.64575131106459
- 2.82842712474619
-                3
- 3.16227766016838
-  3.3166247903554
- 3.46410161513775
- 3.60555127546399
- 3.74165738677394
- 3.87298334620742
-                4
- 4.12310562561766
- 4.24264068711928
- 4.35889894354067
- 4.47213595499958
+        sqrt        
+--------------------
+                  1
+ 1.4142135623730951
+ 1.7320508075688772
+                  2
+   2.23606797749979
+  2.449489742783178
+ 2.6457513110645907
+ 2.8284271247461903
+                  3
+ 3.1622776601683795
+    3.3166247903554
+ 3.4641016151377544
+  3.605551275463989
+ 3.7416573867739413
+  3.872983346207417
+                  4
+  4.123105625617661
+  4.242640687119285
+  4.358898943540674
+   4.47213595499958
 (20 rows)
 
 select pow(r.b,r.a) from orca.r;
-         pow          
-----------------------
-                    0
-                    0
-                    1
-                    1
-                    1
-                   64
-                  128
-                  256
-                19683
-                59049
-               177147
-             16777216
-             67108864
-            268435456
-          30517578125
-         152587890625
-         762939453125
-      101559956668416
-      609359740010496
- 3.65615844006298e+15
+          pow          
+-----------------------
+                     0
+                     0
+                     1
+                     1
+                     1
+                    64
+                   128
+                   256
+                 19683
+                 59049
+                177147
+              16777216
+              67108864
+             268435456
+           30517578125
+          152587890625
+          762939453125
+       101559956668416
+       609359740010496
+ 3.656158440062976e+15
 (20 rows)
 
 select b from orca.r group by b having  count(*) > 2;
@@ -3483,13 +3483,13 @@ select * from orca.r left outer join orca.s on (r.a=s.c and r.b<s.d) where s.d i
 explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
                                             QUERY PLAN                                            
 --------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000030.55 rows=31 width=16)
-   ->  Nested Loop  (cost=10000000000.00..10000000030.55 rows=11 width=16)
-         Join Filter: NOT r.a IS DISTINCT FROM s.c
-         ->  Seq Scan on s  (cost=0.00..2.30 rows=10 width=8)
-         ->  Materialize  (cost=0.00..4.30 rows=20 width=8)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.00 rows=20 width=8)
-                     ->  Seq Scan on r  (cost=0.00..3.20 rows=7 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000005.86 rows=30 width=16)
+   ->  Nested Loop  (cost=10000000000.00..10000000005.46 rows=10 width=16)
+         Join Filter: (NOT (r.a IS DISTINCT FROM s.c))
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.33 rows=20 width=8)
+               ->  Seq Scan on r  (cost=0.00..1.07 rows=7 width=8)
+         ->  Materialize  (cost=0.00..1.15 rows=10 width=8)
+               ->  Seq Scan on s  (cost=0.00..1.10 rows=10 width=8)
  Optimizer: Postgres query optimizer
 (8 rows)
 
@@ -6382,7 +6382,7 @@ select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1,
        41 |   20
 (40 rows)
 
-select a , sum(a) over (order by a range '1'::float8 preceding) from orca.r order by 1,2;
+select a , sum(a) over (order by a range 1 preceding) from orca.r order by 1,2;
  a  | sum 
 ----+-----
   1 |   1
@@ -8109,9 +8109,7 @@ having exists (select 1 from orca.onek b where sum(distinct a.four) = b.four);
 create table orca.pp(a int) partition by range(a)(partition pp1 start(1) end(10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "pp_1_prt_pp1" for table "pp"
 create index pp_a on orca.pp(a);
-NOTICE:  building index for child partition "pp_1_prt_pp1"
 -- list partition tests
 -- test homogeneous partitions
 drop table if exists orca.t;
@@ -8119,8 +8117,6 @@ NOTICE:  table "t" does not exist, skipping
 create table orca.t ( a int, b char(2), to_be_drop int, c int, d char(2), e int)
 distributed by (a)
 partition by list(d) (partition part1 values('a'), partition part2 values('b'));
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part1" for table "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part2" for table "t"
 insert into orca.t
 	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
@@ -8166,34 +8162,6 @@ subpartition sp2 start(10) end(200) every(50)
 partition bb start(100) end(200) every (50) );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1" for table "multilevel_p"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1_2_prt_sp1_1" for table "multilevel_p_1_prt_aa_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1_2_prt_sp1_2" for table "multilevel_p_1_prt_aa_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1_2_prt_sp2_1" for table "multilevel_p_1_prt_aa_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1_2_prt_sp2_2" for table "multilevel_p_1_prt_aa_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1_2_prt_sp2_3" for table "multilevel_p_1_prt_aa_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_1_2_prt_sp2_4" for table "multilevel_p_1_prt_aa_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2" for table "multilevel_p"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2_2_prt_sp1_1" for table "multilevel_p_1_prt_aa_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2_2_prt_sp1_2" for table "multilevel_p_1_prt_aa_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2_2_prt_sp2_1" for table "multilevel_p_1_prt_aa_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2_2_prt_sp2_2" for table "multilevel_p_1_prt_aa_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2_2_prt_sp2_3" for table "multilevel_p_1_prt_aa_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_aa_2_2_prt_sp2_4" for table "multilevel_p_1_prt_aa_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1" for table "multilevel_p"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1_2_prt_sp1_1" for table "multilevel_p_1_prt_bb_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1_2_prt_sp1_2" for table "multilevel_p_1_prt_bb_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1_2_prt_sp2_1" for table "multilevel_p_1_prt_bb_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1_2_prt_sp2_2" for table "multilevel_p_1_prt_bb_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1_2_prt_sp2_3" for table "multilevel_p_1_prt_bb_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_1_2_prt_sp2_4" for table "multilevel_p_1_prt_bb_1"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2" for table "multilevel_p"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp1_1" for table "multilevel_p_1_prt_bb_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp1_2" for table "multilevel_p_1_prt_bb_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_1" for table "multilevel_p_1_prt_bb_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_2" for table "multilevel_p_1_prt_bb_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_3" for table "multilevel_p_1_prt_bb_2"
-NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_4" for table "multilevel_p_1_prt_bb_2"
 insert into orca.multilevel_p values (1,1), (100,200);
 select * from orca.multilevel_p;
   a  |  b  
@@ -8207,8 +8175,6 @@ drop table if exists orca.t;
 create table orca.t ( a int, b char(2), to_be_drop int, c int, d char(2), e int)
 distributed by (a)
 partition by list(d) (partition part1 values('a') with (appendonly=true, compresslevel=5, orientation=column), partition part2 values('b') with (appendonly=true, compresslevel=5, orientation=column));
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part1" for table "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part2" for table "t"
 insert into orca.t
 	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
@@ -8248,17 +8214,11 @@ drop table if exists orca.t;
 create table orca.t ( timest character varying(6), user_id numeric(16,0) not null, to_be_drop char(5), tag1 char(5), tag2 char(5))
 distributed by (user_id)
 partition by list (timest) (partition part201203 values('201203') with (appendonly=true, compresslevel=5, orientation=column), partition part201204 values('201204') with (appendonly=true, compresslevel=5, orientation=row), partition part201205 values('201205'));
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part201203" for table "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part201204" for table "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part201205" for table "t"
 insert into orca.t values('201203',0,'drop', 'tag1','tag2');
 alter table orca.t drop column to_be_drop;
 alter table orca.t add partition part201206 values('201206') with (appendonly=true, compresslevel=5, orientation=column);
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part201206" for table "t"
 alter table orca.t add partition part201207 values('201207') with (appendonly=true, compresslevel=5, orientation=row);
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part201207" for table "t"
 alter table orca.t add partition part201208 values('201208');
-NOTICE:  CREATE TABLE will create partition "t_1_prt_part201208" for table "t"
 insert into orca.t values('201203',1,'tag1','tag2');
 insert into orca.t values('201204',2,'tag1','tag2');
 insert into orca.t values('201205',1,'tag1','tag2');
@@ -8340,16 +8300,10 @@ NOTICE:  table "t_date" does not exist, skipping
 create table orca.t_date ( timest date, user_id numeric(16,0) not null, tag1 char(5), tag2 char(5))
 distributed by (user_id)
 partition by list (timest) (partition part201203 values('01-03-2012'::date), partition part201204 values('01-04-2012'::date), partition part201205 values('01-05-2012'::date));
-NOTICE:  CREATE TABLE will create partition "t_date_1_prt_part201203" for table "t_date"
-NOTICE:  CREATE TABLE will create partition "t_date_1_prt_part201204" for table "t_date"
-NOTICE:  CREATE TABLE will create partition "t_date_1_prt_part201205" for table "t_date"
 create index user_id_idx on orca.t_date_1_prt_part201203(user_id);
 alter table orca.t_date add partition part201206 values('01-06-2012'::date);
-NOTICE:  CREATE TABLE will create partition "t_date_1_prt_part201206" for table "t_date"
 alter table orca.t_date add partition part201207 values('01-07-2012'::date);
-NOTICE:  CREATE TABLE will create partition "t_date_1_prt_part201207" for table "t_date"
 alter table orca.t_date add partition part201208 values('01-08-2012'::date);
-NOTICE:  CREATE TABLE will create partition "t_date_1_prt_part201208" for table "t_date"
 insert into orca.t_date values('01-03-2012'::date,0,'tag1','tag2');
 insert into orca.t_date values('01-03-2012'::date,1,'tag1','tag2');
 insert into orca.t_date values('01-04-2012'::date,2,'tag1','tag2');
@@ -8368,8 +8322,6 @@ insert into orca.t_date values('01-03-2012'::date,9,'tag1','tag2');
 set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
-set optimizer_enumerate_plans=on;
-set optimizer_plan_id = 2;
 explain select * from orca.t_date where user_id=9;
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
@@ -8405,9 +8357,6 @@ drop index if exists orca.user_id_idx;
 create table orca.t_text ( timest date, user_id numeric(16,0) not null, tag1 char(5), tag2 char(5))
 distributed by (user_id)
 partition by list(tag1) (partition partgood values('good'::text), partition partbad values('bad'::text), partition partugly values('ugly'::text));
-NOTICE:  CREATE TABLE will create partition "t_text_1_prt_partgood" for table "t_text"
-NOTICE:  CREATE TABLE will create partition "t_text_1_prt_partbad" for table "t_text"
-NOTICE:  CREATE TABLE will create partition "t_text_1_prt_partugly" for table "t_text"
 create index user_id_idx on orca.t_text_1_prt_partgood(user_id);
 insert into orca.t_text values('01-03-2012'::date,0,'good','tag2');
 insert into orca.t_text values('01-03-2012'::date,1,'bad','tag2');
@@ -8426,19 +8375,17 @@ insert into orca.t_text values('01-03-2012'::date,8,'bad','tag2');
 insert into orca.t_text values('01-03-2012'::date,9,'ugly','tag2');
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
-set optimizer_enumerate_plans=on;
-set optimizer_plan_id = 2;
 explain select * from orca.t_text where user_id=9;
                                     QUERY PLAN                                    
 ----------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..7.19 rows=3 width=21)
-   ->  Append  (cost=0.00..7.19 rows=1 width=21)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..9.26 rows=3 width=21)
+   ->  Append  (cost=0.00..9.20 rows=3 width=21)
+         ->  Seq Scan on t_text_1_prt_partbad  (cost=0.00..3.06 rows=1 width=21)
+               Filter: (user_id = '9'::numeric)
          ->  Seq Scan on t_text_1_prt_partgood  (cost=0.00..3.06 rows=1 width=20)
-               Filter: user_id = 9::numeric
-         ->  Seq Scan on t_text_1_prt_partbad  (cost=0.00..2.06 rows=1 width=21)
-               Filter: user_id = 9::numeric
-         ->  Seq Scan on t_text_1_prt_partugly  (cost=0.00..2.06 rows=1 width=21)
-               Filter: user_id = 9::numeric
+               Filter: (user_id = '9'::numeric)
+         ->  Seq Scan on t_text_1_prt_partugly  (cost=0.00..3.06 rows=1 width=21)
+               Filter: (user_id = '9'::numeric)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -8459,9 +8406,6 @@ create table orca.t_ceeval_ints(user_id numeric(16,0), category_id int, tag1 cha
 distributed by (user_id)
 partition by list (category_id)
 	(partition part100 values('100') , partition part101 values('101'), partition part103 values('102'));
-NOTICE:  CREATE TABLE will create partition "t_ceeval_ints_1_prt_part100" for table "t_ceeval_ints"
-NOTICE:  CREATE TABLE will create partition "t_ceeval_ints_1_prt_part101" for table "t_ceeval_ints"
-NOTICE:  CREATE TABLE will create partition "t_ceeval_ints_1_prt_part103" for table "t_ceeval_ints"
 create index user_id_ceeval_ints on orca.t_ceeval_ints_1_prt_part101(user_id);
 insert into orca.t_ceeval_ints values(1, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(2, 100, 'tag1', 'tag2');
@@ -8472,8 +8416,6 @@ set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_use_external_constant_expression_evaluation_for_ints = on;
-set optimizer_enumerate_plans=on;
-set optimizer_plan_id = 2;
 explain select * from orca.t_ceeval_ints where user_id=4;
                                        QUERY PLAN                                       
 ----------------------------------------------------------------------------------------
@@ -9108,9 +9050,9 @@ INSERT INTO array_table values(8,array[3],'b');
 SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as foo GROUP BY f3 ORDER BY f3;
  f3 | myagg3  
 ----+---------
- a  | {1,4,7}
- b  | {5,2,8}
- c  | {3,6}
+ a  | {4,1,7}
+ b  | {8,2,5}
+ c  | {6,3}
 (3 rows)
 
 -- MPP-22453: wrong result in indexscan when the indexqual compares different data types
@@ -9137,7 +9079,6 @@ reset optimizer_enable_tablescan;
 create table mpp22791(a int, b int) partition by range(b) (default partition d);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "mpp22791_1_prt_d" for table "mpp22791"
 insert into mpp22791 values (1, 1), (2, 2), (3, 3);
 select * from mpp22791 where b > 1;
  a | b 
@@ -9164,8 +9105,6 @@ select 1 as x where 1 in (2, 3);
 create table orca.p1(a int) partition by range(a)(partition pp1 start(1) end(10), partition pp2 start(10) end(20));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "p1_1_prt_pp1" for table "p1"
-NOTICE:  CREATE TABLE will create partition "p1_1_prt_pp2" for table "p1"
 insert into orca.p1 select * from generate_series(2,15);
 select count(*) from (select gp_segment_id,ctid,tableoid from orca.p1 group by gp_segment_id,ctid,tableoid) as foo;
  count 
@@ -9214,6 +9153,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.000161451,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9239,6 +9183,11 @@ values (
   0::smallint,
   94::oid,
   95::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9270,6 +9219,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.0478164,0.0439146,0.0406856,0.0239755,0.0154186,0.0149073,0.0148804,0.0143422,0.0141808,0.0139386,0.0138848,0.0138848,0.0137502,0.0134812,0.0134004,0.0133197,0.0133197,0.013239,0.0131852,0.0130775,0.0130775,0.0130237,0.0129699,0.0129699,0.012943}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9295,6 +9249,11 @@ values (
   0::smallint,
   94::oid,
   95::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9326,6 +9285,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9351,6 +9315,11 @@ values (
   0::smallint,
   94::oid,
   95::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9382,6 +9351,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.26042,0.0859995,0.0709308,0.0616473,0.0567231,0.0303797,0.0109787,0.0106289,0.00990232,0.00987541,0.00979469,0.00944488,0.00820709,0.00718457,0.00626968,0.00621586,0.00616204,0.00600059,0.00586605,0.00557006,0.00516643,0.00511261,0.0050857,0.0050857,0.0047628}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9407,6 +9381,11 @@ values (
   0::smallint,
   1093::oid,
   1095::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9438,6 +9417,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9466,6 +9450,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9489,6 +9478,11 @@ values (
   0::smallint,
   0::smallint,
   0::smallint,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9522,6 +9516,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9547,6 +9546,11 @@ values (
   0::smallint,
   2060::oid,
   2062::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9578,6 +9582,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.0715766,0.0621317,0.00546242,0.0044399,0.000134542,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05}'::real[],
   NULL::real[],
   NULL::real[],
@@ -9603,6 +9612,11 @@ values (
   0::smallint,
   2060::oid,
   2062::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -9835,21 +9849,10 @@ create table orca.bm_dyn_test (i int, to_be_dropped char(5), j int, t text) dist
    partition part1 values(1),
    partition part2 values(2) with (appendonly=true, compresslevel=5, orientation=row),
    partition part3 values(3), partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part0" for table "bm_dyn_test"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part1" for table "bm_dyn_test"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part2" for table "bm_dyn_test"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part3" for table "bm_dyn_test"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part4" for table "bm_dyn_test"
 insert into orca.bm_dyn_test select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index bm_dyn_test_idx on orca.bm_dyn_test using bitmap (i);
-NOTICE:  building index for child partition "bm_dyn_test_1_prt_part0"
-NOTICE:  building index for child partition "bm_dyn_test_1_prt_part1"
-NOTICE:  building index for child partition "bm_dyn_test_1_prt_part2"
-NOTICE:  building index for child partition "bm_dyn_test_1_prt_part3"
-NOTICE:  building index for child partition "bm_dyn_test_1_prt_part4"
 alter table orca.bm_dyn_test drop column to_be_dropped;
 alter table orca.bm_dyn_test add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part5" for table "bm_dyn_test"
 insert into orca.bm_dyn_test values(2, 5, '2');
 set optimizer_enable_bitmapscan=on;
 -- gather on 1 segment because of direct dispatch
@@ -9899,16 +9902,10 @@ create table orca.bm_dyn_test_onepart (i int, to_be_dropped char(5), j int, t te
    partition part1 values(1),
    partition part2 values(2) with (appendonly=true, compresslevel=5, orientation=row),
    partition part3 values(3), partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_onepart_1_prt_part0" for table "bm_dyn_test_onepart"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_onepart_1_prt_part1" for table "bm_dyn_test_onepart"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_onepart_1_prt_part2" for table "bm_dyn_test_onepart"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_onepart_1_prt_part3" for table "bm_dyn_test_onepart"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_onepart_1_prt_part4" for table "bm_dyn_test_onepart"
 insert into orca.bm_dyn_test_onepart select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index bm_test_idx_part on orca.bm_dyn_test_onepart_1_prt_part2 using bitmap (i);
 alter table orca.bm_dyn_test_onepart drop column to_be_dropped;
 alter table orca.bm_dyn_test_onepart add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_onepart_1_prt_part5" for table "bm_dyn_test_onepart"
 insert into orca.bm_dyn_test_onepart values(2, 5, '2');
 set optimizer_enable_bitmapscan=on;
 set optimizer_enable_dynamictablescan = off;
@@ -9962,20 +9959,6 @@ distributed by (id) partition by range (year)
       subpartition usa values ('usa'),
       default subpartition other_regions )
   ( start (2018) end (2020) every (1) );
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1" for table "bm_dyn_test_multilvl_part"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1" for table "bm_dyn_test_multilvl_part_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2" for table "bm_dyn_test_multilvl_part_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2" for table "bm_dyn_test_multilvl_part"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1" for table "bm_dyn_test_multilvl_part_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2" for table "bm_dyn_test_multilvl_part_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2"
 insert into orca.bm_dyn_test_multilvl_part select i, 2018 + (i%2), i%2 + 1, 'usa' from generate_series(1,100)i;
 create index bm_multi_test_idx_part on orca.bm_dyn_test_multilvl_part using bitmap(year);
 analyze orca.bm_dyn_test_multilvl_part;
@@ -10013,21 +9996,10 @@ create table bm.het_bm (i int, to_be_dropped char(5), j int, t text) distributed
    partition part1 values(1),
    partition part2 values(2) with (appendonly=true, compresslevel=5, orientation=row),
    partition part3 values(3), partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part0" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part1" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part2" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part3" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part4" for table "het_bm"
 insert into bm.het_bm select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index het_bm_idx on bm.het_bm using bitmap (i);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
 alter table bm.het_bm drop column to_be_dropped;
 alter table bm.het_bm add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part5" for table "het_bm"
 insert into bm.het_bm values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=2 and t='2';
  i_sum | j_sum | t_sum 
@@ -10044,21 +10016,10 @@ create table bm.hom_bm_heap (i int, to_be_dropped char(5), j int, t text) distri
    partition part2 values(2),
    partition part3 values(3),
    partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part0" for table "hom_bm_heap"
-NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part1" for table "hom_bm_heap"
-NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part2" for table "hom_bm_heap"
-NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part3" for table "hom_bm_heap"
-NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part4" for table "hom_bm_heap"
 insert into bm.hom_bm_heap select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index hom_bm_heap_idx on bm.hom_bm_heap using bitmap (i);
-NOTICE:  building index for child partition "hom_bm_heap_1_prt_part0"
-NOTICE:  building index for child partition "hom_bm_heap_1_prt_part1"
-NOTICE:  building index for child partition "hom_bm_heap_1_prt_part2"
-NOTICE:  building index for child partition "hom_bm_heap_1_prt_part3"
-NOTICE:  building index for child partition "hom_bm_heap_1_prt_part4"
 alter table bm.hom_bm_heap drop column to_be_dropped;
 alter table bm.hom_bm_heap add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part5" for table "hom_bm_heap"
 insert into bm.hom_bm_heap values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_heap where i=2 and t='2';
  i_sum | j_sum | t_sum 
@@ -10077,21 +10038,10 @@ distributed by (i) partition by list(j)
    partition part2 values(2),
    partition part3 values(3),
    partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part0" for table "hom_bm_ao"
-NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part1" for table "hom_bm_ao"
-NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part2" for table "hom_bm_ao"
-NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part3" for table "hom_bm_ao"
-NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part4" for table "hom_bm_ao"
 insert into bm.hom_bm_ao select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index hom_bm_ao_idx on bm.hom_bm_ao using bitmap (i);
-NOTICE:  building index for child partition "hom_bm_ao_1_prt_part0"
-NOTICE:  building index for child partition "hom_bm_ao_1_prt_part1"
-NOTICE:  building index for child partition "hom_bm_ao_1_prt_part2"
-NOTICE:  building index for child partition "hom_bm_ao_1_prt_part3"
-NOTICE:  building index for child partition "hom_bm_ao_1_prt_part4"
 alter table bm.hom_bm_ao drop column to_be_dropped;
 alter table bm.hom_bm_ao add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part5" for table "hom_bm_ao"
 insert into bm.hom_bm_ao values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_ao where i=2 and t='2';
  i_sum | j_sum | t_sum 
@@ -10110,21 +10060,10 @@ distributed by (i) partition by list(j)
    partition part2 values(2),
    partition part3 values(3),
    partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part0" for table "hom_bm_aoco"
-NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part1" for table "hom_bm_aoco"
-NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part2" for table "hom_bm_aoco"
-NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part3" for table "hom_bm_aoco"
-NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part4" for table "hom_bm_aoco"
 insert into bm.hom_bm_aoco select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index hom_bm_aoco_idx on bm.hom_bm_aoco using bitmap (i);
-NOTICE:  building index for child partition "hom_bm_aoco_1_prt_part0"
-NOTICE:  building index for child partition "hom_bm_aoco_1_prt_part1"
-NOTICE:  building index for child partition "hom_bm_aoco_1_prt_part2"
-NOTICE:  building index for child partition "hom_bm_aoco_1_prt_part3"
-NOTICE:  building index for child partition "hom_bm_aoco_1_prt_part4"
 alter table bm.hom_bm_aoco drop column to_be_dropped;
 alter table bm.hom_bm_aoco add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part5" for table "hom_bm_aoco"
 insert into bm.hom_bm_aoco values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_aoco where i=2 and t='2';
  i_sum | j_sum | t_sum 
@@ -10139,28 +10078,12 @@ create table bm.het_bm (i int, to_be_dropped char(5), j int, t text) distributed
    partition part1 values(1),
    partition part2 values(2) with (appendonly=true, compresslevel=5, orientation=row),
    partition part3 values(3), partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part0" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part1" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part2" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part3" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part4" for table "het_bm"
 insert into bm.het_bm select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 -- Create index before dropping a column
 create index het_bm_i_idx on bm.het_bm using bitmap (i);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
 create index het_bm_j_idx on bm.het_bm using bitmap (j);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
 alter table bm.het_bm drop column to_be_dropped;
 alter table bm.het_bm add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part5" for table "het_bm"
 insert into bm.het_bm values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=2 and j=2;
  i_sum | j_sum | t_sum 
@@ -10178,19 +10101,7 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=
 drop index bm.het_bm_i_idx;
 drop index bm.het_bm_j_idx;
 create index het_bm_i_idx on bm.het_bm using bitmap (i);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
-NOTICE:  building index for child partition "het_bm_1_prt_part5"
 create index het_bm_j_idx on bm.het_bm using bitmap (j);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
-NOTICE:  building index for child partition "het_bm_1_prt_part5"
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where j=2 or j=3;
  i_sum | j_sum | t_sum 
 -------+-------+-------
@@ -10204,30 +10115,12 @@ create table bm.het_bm (i int, to_be_dropped char(5), j int, t text) distributed
    partition part1 values(1),
    partition part2 values(2) with (appendonly=true, compresslevel=5, orientation=row),
    partition part3 values(3), partition part4 values(4));
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part0" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part1" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part2" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part3" for table "het_bm"
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part4" for table "het_bm"
 insert into bm.het_bm select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 alter table bm.het_bm drop column to_be_dropped;
 alter table bm.het_bm add partition part5 values(5);
-NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part5" for table "het_bm"
 -- Create index after dropping a column but before we insert into newly created part
 create index het_bm_i_idx on bm.het_bm using bitmap (i);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
-NOTICE:  building index for child partition "het_bm_1_prt_part5"
 create index het_bm_j_idx on bm.het_bm using bitmap (j);
-NOTICE:  building index for child partition "het_bm_1_prt_part0"
-NOTICE:  building index for child partition "het_bm_1_prt_part1"
-NOTICE:  building index for child partition "het_bm_1_prt_part2"
-NOTICE:  building index for child partition "het_bm_1_prt_part3"
-NOTICE:  building index for child partition "het_bm_1_prt_part4"
-NOTICE:  building index for child partition "het_bm_1_prt_part5"
 insert into bm.het_bm values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where j=2 or j=3;
  i_sum | j_sum | t_sum 
@@ -10270,8 +10163,8 @@ where het_bm.i between 2 and 5;
 drop schema bm cascade;
 NOTICE:  drop cascades to 5 other objects
 DETAIL:  drop cascades to table bm.hom_bm_heap
-drop cascades to append only table bm.hom_bm_ao
-drop cascades to append only columnar table bm.hom_bm_aoco
+drop cascades to table bm.hom_bm_ao
+drop cascades to table bm.hom_bm_aoco
 drop cascades to table bm.het_bm
 drop cascades to table bm.outer_tab
 reset optimizer_enable_hashjoin;
@@ -10293,8 +10186,6 @@ CREATE TABLE my_tq_agg_opt_part (
 ) DISTRIBUTED BY (ets)
    PARTITION BY RANGE(bid_price)(PARTITION p1 START(0) END(200000),
                                  PARTITION p2 START(200000) END(900000));
-NOTICE:  CREATE TABLE will create partition "my_tq_agg_opt_part_1_prt_p1" for table "my_tq_agg_opt_part"
-NOTICE:  CREATE TABLE will create partition "my_tq_agg_opt_part_1_prt_p2" for table "my_tq_agg_opt_part"
 CREATE INDEX my_tq_agg_opt_part_ets_end_ts_ix_1 ON my_tq_agg_opt_part_1_prt_p1 USING btree (ets, end_ts);
 CREATE INDEX my_tq_agg_opt_part_ets_end_ts_ix_2 ON my_tq_agg_opt_part_1_prt_p2 USING btree (ets);
 CREATE FUNCTION plusone(numeric) RETURNS numeric AS $$
@@ -10342,24 +10233,24 @@ GROUP BY 1
 ORDER BY 1 asc ;
                                                                  QUERY PLAN                                                                  
 ---------------------------------------------------------------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=354843.35..355242.21 rows=1000 width=16)
+ Finalize GroupAggregate  (cost=39942.80..40017.80 rows=1000 width=16)
    Group Key: ((((tt.event_ts / 100000) / 5) * 5))
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=354843.35..355209.71 rows=3000 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=39942.80..39985.30 rows=3000 width=16)
          Merge Key: ((((tt.event_ts / 100000) / 5) * 5))
-         ->  Partial GroupAggregate  (cost=354843.35..355149.71 rows=1000 width=16)
-               Group Key: ((((tt.event_ts / 100000) / 5) * 5))
-               ->  Sort  (cost=354843.35..354927.97 rows=11283 width=8)
-                     Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
-                     ->  Hash Join  (cost=604.00..352296.76 rows=11283 width=8)
+         ->  Sort  (cost=39942.80..39945.30 rows=1000 width=16)
+               Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
+               ->  Partial HashAggregate  (cost=39875.47..39892.97 rows=1000 width=16)
+                     Group Key: (((tt.event_ts / 100000) / 5) * 5)
+                     ->  Hash Join  (cost=202.00..39819.05 rows=11283 width=8)
                            Hash Cond: ((tq.sym)::bpchar = tt.symbol)
                            Join Filter: ((tt.event_ts >= tq.ets) AND (tt.event_ts < tq.end_ts) AND (plusone(tq.bid_price) < tt.trade_price))
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1424.00 rows=13600 width=98)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..544.00 rows=13600 width=98)
                                  Hash Key: tq.sym
-                                 ->  Append  (cost=0.00..608.00 rows=13600 width=98)
-                                       ->  Seq Scan on my_tq_agg_opt_part_1_prt_p1 tq  (cost=0.00..304.00 rows=6800 width=98)
-                                       ->  Seq Scan on my_tq_agg_opt_part_1_prt_p2 tq_1  (cost=0.00..304.00 rows=6800 width=98)
-                           ->  Hash  (cost=324.00..324.00 rows=7467 width=108)
-                                 ->  Seq Scan on my_tt_agg_opt tt  (cost=0.00..324.00 rows=7467 width=108)
+                                 ->  Append  (cost=0.00..272.00 rows=13600 width=98)
+                                       ->  Seq Scan on my_tq_agg_opt_part_1_prt_p1 tq  (cost=0.00..102.00 rows=6800 width=98)
+                                       ->  Seq Scan on my_tq_agg_opt_part_1_prt_p2 tq_1  (cost=0.00..102.00 rows=6800 width=98)
+                           ->  Hash  (cost=108.67..108.67 rows=7467 width=108)
+                                 ->  Seq Scan on my_tt_agg_opt tt  (cost=0.00..108.67 rows=7467 width=108)
  Optimizer: Postgres query optimizer
 (19 rows)
 
@@ -10579,7 +10470,7 @@ drop role unpriv;
 drop table can_set_tag_target;
 drop table can_set_tag_audit;
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 -- Checking if ORCA uses parser's canSetTag for CREATE TABLE AS SELECT
 create or replace function canSetTag_Func(x int) returns int as $$
@@ -10587,7 +10478,7 @@ create or replace function canSetTag_Func(x int) returns int as $$
         return 0
     else:
         return x * 3
-$$ language plpythonu;
+$$ language plpython3u;
 create table canSetTag_input_data (domain integer, class integer, attr text, value integer)
    distributed by (domain);
 insert into canSetTag_input_data values(1, 1, 'A', 1);
@@ -10747,21 +10638,18 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- GroupAggregate  (cost=8018.50..16794.97 rows=10611 width=16)
-   Group Key: a, b
-   Group Key: a
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ MixedAggregate  (cost=0.00..3297.11 rows=10611 width=16)
+   Hash Key: a, b
+   Hash Key: a
+   Hash Key: b
    Group Key: ()
-   Sort Key: b
-     Group Key: b
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=8018.50..8233.75 rows=86100 width=8)
-         Merge Key: a, b
-         ->  Sort  (cost=8018.50..8233.75 rows=28700 width=8)
-               Sort Key: a, b
-               ->  Seq Scan on foo  (cost=0.00..961.00 rows=28700 width=8)
+   Planned Partitions: 4
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+         ->  Seq Scan on foo  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(12 rows)
+(9 rows)
 
 reset client_min_messages;
 reset log_statement;
@@ -11247,13 +11135,12 @@ SELECT a FROM ggg WHERE a IN (NULL, 'x');
 (3 rows)
 
 EXPLAIN SELECT a FROM ggg WHERE a NOT IN (NULL, '');
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=2)
-   ->  Seq Scan on ggg  (cost=0.00..1.01 rows=1 width=2)
-         Filter: a <> ALL ('{NULL,""}'::bpchar[])
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=0)
+   One-Time Filter: false
  Optimizer: Postgres query optimizer
-(4 rows)
+(3 rows)
 
 EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
                                  QUERY PLAN                                 
@@ -11355,11 +11242,7 @@ NOTICE:  table "touter" does not exist, skipping
 NOTICE:  table "tinner" does not exist, skipping
 CREATE TABLE touter(a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE tinnerbitmap(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
-NOTICE:  CREATE TABLE will create partition "tinnerbitmap_1_prt_1" for table "tinnerbitmap"
-NOTICE:  CREATE TABLE will create partition "tinnerbitmap_1_prt_2" for table "tinnerbitmap"
 CREATE TABLE tinnerbtree(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
-NOTICE:  CREATE TABLE will create partition "tinnerbtree_1_prt_1" for table "tinnerbtree"
-NOTICE:  CREATE TABLE will create partition "tinnerbtree_1_prt_2" for table "tinnerbtree"
 INSERT INTO touter SELECT i, i%6 FROM generate_series(1,10) i;
 INSERT INTO tinnerbitmap select i, i%6 FROM generate_series(1,1000) i;
 INSERT INTO tinnerbtree select i, i%6 FROM generate_series(1,1000) i;
@@ -11429,12 +11312,6 @@ SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a AND tinne
 CREATE TABLE ds_part ( a INT, b INT, c INT) PARTITION BY RANGE(c)( START(1) END (10) EVERY (2), DEFAULT PARTITION deflt);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_deflt" for table "ds_part"
-NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_2" for table "ds_part"
-NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_3" for table "ds_part"
-NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_4" for table "ds_part"
-NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_5" for table "ds_part"
-NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_6" for table "ds_part"
 CREATE TABLE non_part1 (c INT);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -11454,48 +11331,36 @@ SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f =
 (0 rows)
 
 explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=10000000004.33..10000000039.13 rows=7 width=20)
-   ->  Nested Loop Semi Join  (cost=10000000004.33..10000000039.13 rows=3 width=20)
-         ->  Hash Join  (cost=4.33..28.40 rows=2 width=20)
-               Hash Cond: (ds_part_1_prt_deflt.c = non_part2.e)
-               ->  Append  (cost=0.00..24.00 rows=2 width=12)
-                     ->  Result  (cost=0.00..17.87 rows=1 width=12)
-                           One-Time Filter: PartSelected
-                           ->  Seq Scan on ds_part_1_prt_deflt  (cost=0.00..17.87 rows=1 width=12)
-                                 Filter: (a = (b + 1))
-                     ->  Result  (cost=0.00..2.03 rows=1 width=12)
-                           One-Time Filter: PartSelected
-                           ->  Seq Scan on ds_part_1_prt_2  (cost=0.00..2.03 rows=1 width=12)
-                                 Filter: (a = (b + 1))
-                     ->  Result  (cost=0.00..1.03 rows=1 width=12)
-                           One-Time Filter: PartSelected
-                           ->  Seq Scan on ds_part_1_prt_3  (cost=0.00..1.03 rows=1 width=12)
-                                 Filter: (a = (b + 1))
-                     ->  Result  (cost=0.00..1.03 rows=1 width=12)
-                           One-Time Filter: PartSelected
-                           ->  Seq Scan on ds_part_1_prt_4  (cost=0.00..1.03 rows=1 width=12)
-                                 Filter: (a = (b + 1))
-                     ->  Result  (cost=0.00..1.03 rows=1 width=12)
-                           One-Time Filter: PartSelected
-                           ->  Seq Scan on ds_part_1_prt_5  (cost=0.00..1.03 rows=1 width=12)
-                                 Filter: (a = (b + 1))
-                     ->  Result  (cost=0.00..1.01 rows=1 width=12)
-                           One-Time Filter: PartSelected
-                           ->  Seq Scan on ds_part_1_prt_6  (cost=0.00..1.01 rows=1 width=12)
-                                 Filter: (a = (b + 1))
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000004.33..10000000039.45 rows=7 width=20)
+   ->  Nested Loop Semi Join  (cost=10000000004.33..10000000039.32 rows=3 width=20)
+         ->  Hash Join  (cost=4.33..28.41 rows=2 width=20)
+               Hash Cond: (ds_part_1_prt_2.c = non_part2.e)
+               ->  Append  (cost=0.00..24.03 rows=2 width=12)
+                     Partition Selectors: $0
+                     ->  Seq Scan on ds_part_1_prt_2  (cost=0.00..2.03 rows=1 width=12)
+                           Filter: (a = (b + 1))
+                     ->  Seq Scan on ds_part_1_prt_3  (cost=0.00..1.03 rows=1 width=12)
+                           Filter: (a = (b + 1))
+                     ->  Seq Scan on ds_part_1_prt_4  (cost=0.00..1.03 rows=1 width=12)
+                           Filter: (a = (b + 1))
+                     ->  Seq Scan on ds_part_1_prt_5  (cost=0.00..1.03 rows=1 width=12)
+                           Filter: (a = (b + 1))
+                     ->  Seq Scan on ds_part_1_prt_6  (cost=0.00..1.01 rows=1 width=12)
+                           Filter: (a = (b + 1))
+                     ->  Seq Scan on ds_part_1_prt_deflt  (cost=0.00..17.87 rows=1 width=12)
+                           Filter: (a = (b + 1))
                ->  Hash  (cost=4.29..4.29 rows=1 width=8)
-                     ->  Partition Selector for ds_part (dynamic scan id: 1)  (cost=0.00..4.29 rows=1 width=8)
-                           Filter: non_part2.e
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.29 rows=1 width=8)
+                     ->  Partition Selector (selector id: $0)  (cost=0.00..4.29 rows=1 width=8)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..4.29 rows=1 width=8)
                                  ->  Seq Scan on non_part2  (cost=0.00..4.25 rows=1 width=8)
                                        Filter: (f = 10)
          ->  Materialize  (cost=0.00..9.50 rows=100 width=0)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..8.00 rows=100 width=0)
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..8.00 rows=100 width=0)
                      ->  Seq Scan on non_part1  (cost=0.00..4.00 rows=34 width=0)
  Optimizer: Postgres query optimizer
-(39 rows)
+(27 rows)
 
 SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b FROM non_part1);
  a  | b  | c  | e  | f  | ?column? 
@@ -11684,18 +11549,18 @@ from noexp_hash, gpexp_hash;
 
 -- join should have a redistribute motion for gpexp_hash
 explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=8.47..8.48 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=8.44..8.47 rows=1 width=8)
-         ->  Partial Aggregate  (cost=8.44..8.45 rows=1 width=8)
-               ->  Hash Join  (cost=4.12..8.31 rows=17 width=0)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=3.60..3.61 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3.55..3.59 rows=2 width=8)
+         ->  Partial Aggregate  (cost=3.55..3.56 rows=1 width=8)
+               ->  Hash Join  (cost=1.56..3.49 rows=25 width=0)
                      Hash Cond: (n.a = x.a)
-                     ->  Seq Scan on noexp_hash n  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=3.50..3.50 rows=17 width=4)
-                           ->  Redistribute Motion 2:3  (slice1; segments: 2)  (cost=0.00..3.50 rows=25 width=4)
-                                 Hash Key: x.a
-                                 ->  Seq Scan on gpexp_hash x  (cost=0.00..2.50 rows=25 width=4)
+                     ->  Redistribute Motion 3:2  (slice2; segments: 3)  (cost=0.00..1.58 rows=25 width=4)
+                           Hash Key: n.a
+                           ->  Seq Scan on noexp_hash n  (cost=0.00..1.17 rows=17 width=4)
+                     ->  Hash  (cost=1.25..1.25 rows=25 width=4)
+                           ->  Seq Scan on gpexp_hash x  (cost=0.00..1.25 rows=25 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -11774,14 +11639,14 @@ insert into gpexp_repl values (20, 20);
 explain select count(*) from gpexp_hash h join gpexp_repl r on h.a=r.a;
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=5.47..5.48 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=5.44..5.47 rows=1 width=8)
-         ->  Partial Aggregate  (cost=5.44..5.45 rows=1 width=8)
-               ->  Hash Join  (cost=2.12..5.31 rows=25 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on gpexp_hash h  (cost=0.00..2.50 rows=25 width=4)
-                     ->  Hash  (cost=1.50..1.50 rows=17 width=4)
-                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+ Finalize Aggregate  (cost=3.61..3.62 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3.56..3.60 rows=2 width=8)
+         ->  Partial Aggregate  (cost=3.56..3.57 rows=1 width=8)
+               ->  Hash Join  (cost=1.56..3.50 rows=25 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.25..1.25 rows=25 width=4)
+                           ->  Seq Scan on gpexp_hash h  (cost=0.00..1.25 rows=25 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -11792,18 +11657,18 @@ select count(*) as expect_20 from gpexp_hash h join gpexp_repl r on h.a=r.a;
 (1 row)
 
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=7.47..7.48 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=7.44..7.47 rows=1 width=8)
-         ->  Partial Aggregate  (cost=7.44..7.45 rows=1 width=8)
-               ->  Hash Join  (cost=3.12..7.31 rows=17 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on noexp_hash h  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=2.50..2.50 rows=17 width=4)
-                           ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2.50 rows=50 width=4)
-                                 Hash Key: r.a
-                                 ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=3.87..3.88 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.81..3.86 rows=3 width=8)
+         ->  Partial Aggregate  (cost=3.81..3.82 rows=1 width=8)
+               ->  Hash Join  (cost=1.38..3.77 rows=17 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..2.17 rows=17 width=4)
+                           Hash Key: r.a
+                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.17..1.17 rows=17 width=4)
+                           ->  Seq Scan on noexp_hash h  (cost=0.00..1.17 rows=17 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -11816,17 +11681,9 @@ select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
 create table part1(a int, b int) partition by range(b) (start(1) end(5) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "part1_1_prt_1" for table "part1"
-NOTICE:  CREATE TABLE will create partition "part1_1_prt_2" for table "part1"
-NOTICE:  CREATE TABLE will create partition "part1_1_prt_3" for table "part1"
-NOTICE:  CREATE TABLE will create partition "part1_1_prt_4" for table "part1"
 create table part2(a int, b int) partition by range(b) (start(1) end(5) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "part2_1_prt_1" for table "part2"
-NOTICE:  CREATE TABLE will create partition "part2_1_prt_2" for table "part2"
-NOTICE:  CREATE TABLE will create partition "part2_1_prt_3" for table "part2"
-NOTICE:  CREATE TABLE will create partition "part2_1_prt_4" for table "part2"
 insert into part1 select i, (i % 2) + 1 from generate_series(1, 1000) i;
 insert into part2 select i, (i % 2) + 1 from generate_series(1, 100) i;
 -- make sure some child partitions have not been analyzed. This just means that
@@ -12049,21 +11906,21 @@ select disable_xform('CXformInnerJoin2HashJoin');
 EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=4.12..6.29 rows=4 width=0)
-   ->  Hash Semi Join  (cost=4.12..6.29 rows=2 width=0)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.07..3.17 rows=3 width=4)
+   ->  Hash Semi Join  (cost=2.07..3.13 rows=1 width=4)
          Hash Cond: (foo2.b = foo3.b)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=2.04..4.16 rows=2 width=4)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.02..2.07 rows=1 width=4)
                Hash Key: foo2.b
-               ->  Hash Join  (cost=2.04..4.10 rows=2 width=4)
-                     Hash Cond: (foo1.a = foo2.a)
-                     ->  Seq Scan on foo1  (cost=0.00..2.02 rows=1 width=4)
-                     ->  Hash  (cost=2.02..2.02 rows=1 width=8)
-                           ->  Seq Scan on foo2  (cost=0.00..2.02 rows=1 width=8)
-                                 Filter: (c = 3)
-         ->  Hash  (cost=2.06..2.06 rows=1 width=4)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.06 rows=1 width=4)
+               ->  Hash Join  (cost=1.02..2.05 rows=1 width=4)
+                     Hash Cond: (foo2.a = foo1.a)
+                     ->  Seq Scan on foo2  (cost=0.00..1.01 rows=1 width=8)
+                           Filter: (c = 3)
+                     ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+                           ->  Seq Scan on foo1  (cost=0.00..1.01 rows=1 width=4)
+         ->  Hash  (cost=1.03..1.03 rows=1 width=4)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
                      Hash Key: foo3.b
-                     ->  Seq Scan on foo3  (cost=0.00..2.02 rows=1 width=4)
+                     ->  Seq Scan on foo3  (cost=0.00..1.01 rows=1 width=4)
  Optimizer: Postgres query optimizer
 (16 rows)
 
@@ -12091,39 +11948,43 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into t55 select i, i from generate_series(1, 1000) i;
 set optimizer_join_order = query;
+-- force_explain
 explain verbose
 CREATE TABLE TP AS
 WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
 SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
-WHERE L1.lid = int4in(unknownout(meta.load_id));
+WHERE L1.lid = int4in(textout(meta.load_id));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- HashAggregate  (cost=15.68..15.78 rows=4 width=8)
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ GroupAggregate  (cost=5.25..5.31 rows=3 width=8)
    Output: l1.c, l1.lid
    Group Key: l1.c, l1.lid
-   ->  Hash Join  (cost=0.02..15.63 rows=4 width=8)
+   ->  Sort  (cost=5.25..5.26 rows=3 width=8)
          Output: l1.c, l1.lid
-         Hash Cond: (l1.lid = int4in(unknownout(meta.load_id)))
-         ->  Seq Scan on orca.t55 l1  (cost=0.00..13.00 rows=334 width=8)
+         Sort Key: l1.c, l1.lid
+         ->  Hash Join  (cost=0.02..5.22 rows=3 width=8)
                Output: l1.c, l1.lid
-         ->  Hash  (cost=0.01..0.01 rows=1 width=32)
-               Output: meta.load_id
-               ->  Subquery Scan on meta  (cost=0.00..0.01 rows=1 width=32)
+               Hash Cond: (l1.lid = int4in(textout(meta.load_id)))
+               ->  Seq Scan on orca.t55 l1  (cost=0.00..4.33 rows=333 width=8)
+                     Output: l1.c, l1.lid
+               ->  Hash  (cost=0.01..0.01 rows=1 width=32)
                      Output: meta.load_id
-                     ->  Result  (cost=0.00..0.01 rows=1 width=64)
-                           Output: '2020-01-01', '99'
+                     ->  Subquery Scan on meta  (cost=0.00..0.01 rows=1 width=32)
+                           Output: meta.load_id
+                           ->  Result  (cost=0.00..0.01 rows=1 width=64)
+                                 Output: '2020-01-01'::text, '99'::text
  Optimizer: Postgres query optimizer
  Settings: optimizer=off, optimizer_join_order=query
-(16 rows)
+(19 rows)
 
 CREATE TABLE TP AS
 WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
 SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
-WHERE L1.lid = int4in(unknownout(meta.load_id));
+WHERE L1.lid = int4in(textout(meta.load_id));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 reset optimizer_join_order;
@@ -12137,10 +11998,6 @@ SELECT * from tp;
 create table lossycastrangepart(a float, b float) partition by range(b) (start(0) end(40) every(10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "lossycastrangepart_1_prt_1" for table "lossycastrangepart"
-NOTICE:  CREATE TABLE will create partition "lossycastrangepart_1_prt_2" for table "lossycastrangepart"
-NOTICE:  CREATE TABLE will create partition "lossycastrangepart_1_prt_3" for table "lossycastrangepart"
-NOTICE:  CREATE TABLE will create partition "lossycastrangepart_1_prt_4" for table "lossycastrangepart"
 insert into lossycastrangepart (values (5.1,5.1), (9.9,9.9), (10.1,10.1), (9.1,9.1), (10.9,10.9), (11.1,11.1), (21.0,21.0)); 
 explain select * from lossycastrangepart where b::int = 10;
                                         QUERY PLAN                                         
@@ -12239,18 +12096,15 @@ select * from lossycastrangepart where b::int < 11;
 create table lossycastlistpart( a int, b float) partition by list(b) (partition l1 values(1.7, 2.1), partition l2 values(1.3, 2.7), partition l3 values(1.8, 2.8));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "lossycastlistpart_1_prt_l1" for table "lossycastlistpart"
-NOTICE:  CREATE TABLE will create partition "lossycastlistpart_1_prt_l2" for table "lossycastlistpart"
-NOTICE:  CREATE TABLE will create partition "lossycastlistpart_1_prt_l3" for table "lossycastlistpart"
 insert into lossycastlistpart (values (1.0,2.1), (1.0,1.3), (10.1,2.1), (9.1,2.7), (10.9,1.8), (11.1,2.8), (21.0,1.7));
 explain select * from lossycastlistpart where b::int < 2;
                                          QUERY PLAN                                          
 ---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3805.50 rows=77900 width=12)
-   ->  Append  (cost=0.00..3805.50 rows=25967 width=12)
-         ->  Seq Scan on lossycastlistpart_1_prt_l1  (cost=0.00..1268.50 rows=8656 width=12)
-               Filter: ((b)::integer < 2)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..5753.00 rows=77900 width=12)
+   ->  Append  (cost=0.00..4195.00 rows=25967 width=12)
          ->  Seq Scan on lossycastlistpart_1_prt_l2  (cost=0.00..1268.50 rows=8656 width=12)
+               Filter: ((b)::integer < 2)
+         ->  Seq Scan on lossycastlistpart_1_prt_l1  (cost=0.00..1268.50 rows=8656 width=12)
                Filter: ((b)::integer < 2)
          ->  Seq Scan on lossycastlistpart_1_prt_l3  (cost=0.00..1268.50 rows=8656 width=12)
                Filter: ((b)::integer < 2)
@@ -12266,11 +12120,11 @@ select * from lossycastlistpart where b::int < 2;
 explain select * from lossycastlistpart where b::int = 2;
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3805.50 rows=234 width=12)
-   ->  Append  (cost=0.00..3805.50 rows=78 width=12)
-         ->  Seq Scan on lossycastlistpart_1_prt_l1  (cost=0.00..1268.50 rows=26 width=12)
-               Filter: ((b)::integer = 2)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3811.34 rows=234 width=12)
+   ->  Append  (cost=0.00..3806.67 rows=78 width=12)
          ->  Seq Scan on lossycastlistpart_1_prt_l2  (cost=0.00..1268.50 rows=26 width=12)
+               Filter: ((b)::integer = 2)
+         ->  Seq Scan on lossycastlistpart_1_prt_l1  (cost=0.00..1268.50 rows=26 width=12)
                Filter: ((b)::integer = 2)
          ->  Seq Scan on lossycastlistpart_1_prt_l3  (cost=0.00..1268.50 rows=26 width=12)
                Filter: ((b)::integer = 2)
@@ -12286,3 +12140,780 @@ select * from lossycastlistpart where b::int = 2;
  11 | 1.8
 (4 rows)
 
+--Test lossy casted NEQ on range partitioned table
+drop table if exists sales;
+create table sales(id int, prod_id int, cust_id int, sales_ts timestamp)
+partition by range(sales_ts) (start (timestamp '2010-01-01 00:00:00') end(timestamp '2010-02-02 23:59:59')
+every (interval '1 day'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_1" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_2" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_3" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_4" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_5" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_6" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_7" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_8" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_9" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_10" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_11" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_12" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_13" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_14" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_15" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_16" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_17" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_18" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_19" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_20" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_21" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_22" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_23" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_24" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_25" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_26" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_27" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_28" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_29" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_30" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_31" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_32" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_33" for table "sales"
+insert into sales select i, i%100, i%1000, timestamp '2010-01-01 00:00:00' + i * interval '1 day' from generate_series(1,20) i;
+select * from sales where sales_ts::date != '2010-01-05' order by sales_ts;
+ id | prod_id | cust_id |         sales_ts         
+----+---------+---------+--------------------------
+  1 |       1 |       1 | Sat Jan 02 00:00:00 2010
+  2 |       2 |       2 | Sun Jan 03 00:00:00 2010
+  3 |       3 |       3 | Mon Jan 04 00:00:00 2010
+  5 |       5 |       5 | Wed Jan 06 00:00:00 2010
+  6 |       6 |       6 | Thu Jan 07 00:00:00 2010
+  7 |       7 |       7 | Fri Jan 08 00:00:00 2010
+  8 |       8 |       8 | Sat Jan 09 00:00:00 2010
+  9 |       9 |       9 | Sun Jan 10 00:00:00 2010
+ 10 |      10 |      10 | Mon Jan 11 00:00:00 2010
+ 11 |      11 |      11 | Tue Jan 12 00:00:00 2010
+ 12 |      12 |      12 | Wed Jan 13 00:00:00 2010
+ 13 |      13 |      13 | Thu Jan 14 00:00:00 2010
+ 14 |      14 |      14 | Fri Jan 15 00:00:00 2010
+ 15 |      15 |      15 | Sat Jan 16 00:00:00 2010
+ 16 |      16 |      16 | Sun Jan 17 00:00:00 2010
+ 17 |      17 |      17 | Mon Jan 18 00:00:00 2010
+ 18 |      18 |      18 | Tue Jan 19 00:00:00 2010
+ 19 |      19 |      19 | Wed Jan 20 00:00:00 2010
+ 20 |      20 |      20 | Thu Jan 21 00:00:00 2010
+(19 rows)
+
+-- test n-ary inner and left joins with outer references
+drop table if exists tcorr1, tcorr2;
+NOTICE:  table "tcorr1" does not exist, skipping
+NOTICE:  table "tcorr2" does not exist, skipping
+create table tcorr1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table tcorr2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into tcorr1 values (1,99);
+insert into tcorr2 values (1,1);
+set optimizer_trace_fallback to on;
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Nested Loop Semi Join  (cost=10000000001.10..10000000003.36 rows=3 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+   ->  Materialize  (cost=1.10..2.28 rows=1 width=4)
+         ->  Subquery Scan on "ANY_subquery"  (cost=1.10..2.27 rows=1 width=4)
+               Filter: ("out".b = "ANY_subquery"."coalesce")
+               ->  Hash Left Join  (cost=1.10..2.23 rows=3 width=4)
+                     Hash Cond: (tcorr1.a = (tcorr2.a + "out".a))
+                     ->  Materialize  (cost=0.00..1.06 rows=3 width=4)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
+                                 ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+                     ->  Hash  (cost=1.06..1.06 rows=3 width=4)
+                           ->  Materialize  (cost=0.00..1.06 rows=3 width=4)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
+                                       ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+explain
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+   ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Aggregate  (cost=1.12..1.13 rows=1 width=4)
+                 ->  Result  (cost=0.00..1.09 rows=3 width=4)
+                       Filter: (tcorr2.a = "out".a)
+                       ->  Materialize  (cost=0.00..1.06 rows=3 width=8)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+                                   ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+set optimizer_join_order to exhaustive2;
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Nested Loop Semi Join  (cost=10000000001.10..10000000003.36 rows=3 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+   ->  Materialize  (cost=1.10..2.28 rows=1 width=4)
+         ->  Subquery Scan on "ANY_subquery"  (cost=1.10..2.27 rows=1 width=4)
+               Filter: ("out".b = "ANY_subquery"."coalesce")
+               ->  Hash Left Join  (cost=1.10..2.23 rows=3 width=4)
+                     Hash Cond: (tcorr1.a = (tcorr2.a + "out".a))
+                     ->  Materialize  (cost=0.00..1.06 rows=3 width=4)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
+                                 ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+                     ->  Hash  (cost=1.06..1.06 rows=3 width=4)
+                           ->  Materialize  (cost=0.00..1.06 rows=3 width=4)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
+                                       ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+explain
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+   ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Aggregate  (cost=1.12..1.13 rows=1 width=4)
+                 ->  Result  (cost=0.00..1.09 rows=3 width=4)
+                       Filter: (tcorr2.a = "out".a)
+                       ->  Materialize  (cost=0.00..1.06 rows=3 width=8)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=8)
+                                   ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+reset optimizer_join_order;
+-- test selecting an outer ref from a scalar subquery
+-- expect 0 rows
+SELECT 1
+FROM   tcorr1
+WHERE  tcorr1.a IS NULL OR
+       tcorr1.a = (SELECT tcorr1.a
+                   FROM   (SELECT rtrim(tcorr1.a::text) AS userid,
+                                  rtrim(tcorr1.b::text) AS part_pls
+                           FROM   tcorr2) al
+                   WHERE  3 = tcorr1.a
+                  );
+ ?column? 
+----------
+(0 rows)
+
+-- expect 1 row, subquery returns a row
+select * from tcorr1 where b = (select tcorr1.b from tcorr2);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+-- expect 0 rows, subquery returns no rows
+select * from tcorr1 where b = (select tcorr1.b from tcorr2 where b=33);
+ a | b 
+---+---
+(0 rows)
+
+-- expect 1 row, subquery returns nothing, so a < 22 is true
+select * from tcorr1 where a < coalesce((select tcorr1.a from tcorr2 where a = 11), 22);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
+-- test join to index get apply xform
+drop table if exists foo, tbtree, tbitmap;
+NOTICE:  table "tbtree" does not exist, skipping
+NOTICE:  table "tbitmap" does not exist, skipping
+create table foo(a int, b int, c int) distributed by(a);
+create table tbtree(a int, b int, c int) distributed by(a);
+create table tbitmap(a int, b int, c int) distributed by(a);
+insert into foo select i*1000,i*1000,i*1000 from generate_series(1,10) i;
+insert into tbtree select i,i,i from generate_series(1,100000) i;
+insert into tbitmap select i,i,i from generate_series(1,100000) i;
+-- insert a duplicate value for a=2000
+insert into tbtree values (2000,-1,-1);
+insert into tbitmap values (2000,-1,-1);
+create index tbtreexa  on tbtree  using btree(a);
+create index tbitmapxa on tbitmap using bitmap(a);
+analyze foo;
+analyze tbtree;
+analyze tbitmap;
+set optimizer_join_order = query;
+set optimizer_enable_hashjoin = off;
+set optimizer_enable_groupagg = off;
+set optimizer_trace_fallback = on;
+set enable_sort = off;
+-- 1 simple btree
+explain (costs off)
+select * from foo join tbtree on foo.a=tbtree.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbtree.a = foo.a)
+         ->  Seq Scan on tbtree
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from foo join tbtree on foo.a=tbtree.a;
+   a   |   b   |   c   |   a   |   b   |   c   
+-------+-------+-------+-------+-------+-------
+  3000 |  3000 |  3000 |  3000 |  3000 |  3000
+  4000 |  4000 |  4000 |  4000 |  4000 |  4000
+  9000 |  9000 |  9000 |  9000 |  9000 |  9000
+ 10000 | 10000 | 10000 | 10000 | 10000 | 10000
+  1000 |  1000 |  1000 |  1000 |  1000 |  1000
+  2000 |  2000 |  2000 |  2000 |  2000 |  2000
+  6000 |  6000 |  6000 |  6000 |  6000 |  6000
+  7000 |  7000 |  7000 |  7000 |  7000 |  7000
+  8000 |  8000 |  8000 |  8000 |  8000 |  8000
+  2000 |  2000 |  2000 |  2000 |    -1 |    -1
+  5000 |  5000 |  5000 |  5000 |  5000 |  5000
+(11 rows)
+
+-- 2 simple bitmap
+explain (costs off)
+select * from foo join tbitmap on foo.a=tbitmap.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbitmap.a = foo.a)
+         ->  Seq Scan on tbitmap
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from foo join tbitmap on foo.a=tbitmap.a;
+   a   |   b   |   c   |   a   |   b   |   c   
+-------+-------+-------+-------+-------+-------
+  5000 |  5000 |  5000 |  5000 |  5000 |  5000
+  3000 |  3000 |  3000 |  3000 |  3000 |  3000
+  4000 |  4000 |  4000 |  4000 |  4000 |  4000
+  9000 |  9000 |  9000 |  9000 |  9000 |  9000
+ 10000 | 10000 | 10000 | 10000 | 10000 | 10000
+  1000 |  1000 |  1000 |  1000 |  1000 |  1000
+  2000 |  2000 |  2000 |  2000 |  2000 |  2000
+  6000 |  6000 |  6000 |  6000 |  6000 |  6000
+  7000 |  7000 |  7000 |  7000 |  7000 |  7000
+  8000 |  8000 |  8000 |  8000 |  8000 |  8000
+  2000 |  2000 |  2000 |  2000 |    -1 |    -1
+(11 rows)
+
+-- 3 btree with select pred
+explain (costs off)
+select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbtree.a = foo.a)
+         ->  Bitmap Heap Scan on tbtree
+               Recheck Cond: (a < 5000)
+               ->  Bitmap Index Scan on tbtreexa
+                     Index Cond: (a < 5000)
+         ->  Hash
+               ->  Seq Scan on foo
+                     Filter: (a < 5000)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
+  a   |  b   |  c   |  a   |  b   |  c   
+------+------+------+------+------+------
+ 1000 | 1000 | 1000 | 1000 | 1000 | 1000
+ 2000 | 2000 | 2000 | 2000 | 2000 | 2000
+ 2000 | 2000 | 2000 | 2000 |   -1 |   -1
+ 3000 | 3000 | 3000 | 3000 | 3000 | 3000
+ 4000 | 4000 | 4000 | 4000 | 4000 | 4000
+(5 rows)
+
+-- 4 bitmap with select pred
+explain (costs off)
+select * from foo join tbitmap on foo.a=tbitmap.a where tbitmap.a < 5000;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbitmap.a = foo.a)
+         ->  Bitmap Heap Scan on tbitmap
+               Recheck Cond: (a < 5000)
+               ->  Bitmap Index Scan on tbitmapxa
+                     Index Cond: (a < 5000)
+         ->  Hash
+               ->  Seq Scan on foo
+                     Filter: (a < 5000)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from foo join tbitmap on foo.a=tbitmap.a where tbitmap.a < 5000;
+  a   |  b   |  c   |  a   |  b   |  c   
+------+------+------+------+------+------
+ 1000 | 1000 | 1000 | 1000 | 1000 | 1000
+ 2000 | 2000 | 2000 | 2000 | 2000 | 2000
+ 2000 | 2000 | 2000 | 2000 |   -1 |   -1
+ 3000 | 3000 | 3000 | 3000 | 3000 | 3000
+ 4000 | 4000 | 4000 | 4000 | 4000 | 4000
+(5 rows)
+
+-- 5 btree with project
+explain (costs off)
+select * from foo join (select a, b+c as bc from tbtree) proj on foo.a=proj.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbtree.a = foo.a)
+         ->  Seq Scan on tbtree
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from foo join (select a, b+c as bc from tbtree) proj on foo.a=proj.a;
+   a   |   b   |   c   |   a   |  bc   
+-------+-------+-------+-------+-------
+  3000 |  3000 |  3000 |  3000 |  6000
+  4000 |  4000 |  4000 |  4000 |  8000
+  9000 |  9000 |  9000 |  9000 | 18000
+ 10000 | 10000 | 10000 | 10000 | 20000
+  5000 |  5000 |  5000 |  5000 | 10000
+  1000 |  1000 |  1000 |  1000 |  2000
+  2000 |  2000 |  2000 |  2000 |  4000
+  6000 |  6000 |  6000 |  6000 | 12000
+  7000 |  7000 |  7000 |  7000 | 14000
+  8000 |  8000 |  8000 |  8000 | 16000
+  2000 |  2000 |  2000 |  2000 |    -2
+(11 rows)
+
+-- 6 bitmap with project
+explain (costs off)
+select * from foo join (select a, b+c as bc from tbitmap) proj on foo.a=proj.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbitmap.a = foo.a)
+         ->  Seq Scan on tbitmap
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from foo join (select a, b+c as bc from tbitmap) proj on foo.a=proj.a;
+   a   |   b   |   c   |   a   |  bc   
+-------+-------+-------+-------+-------
+  3000 |  3000 |  3000 |  3000 |  6000
+  4000 |  4000 |  4000 |  4000 |  8000
+  9000 |  9000 |  9000 |  9000 | 18000
+ 10000 | 10000 | 10000 | 10000 | 20000
+  1000 |  1000 |  1000 |  1000 |  2000
+  2000 |  2000 |  2000 |  2000 |  4000
+  6000 |  6000 |  6000 |  6000 | 12000
+  7000 |  7000 |  7000 |  7000 | 14000
+  8000 |  8000 |  8000 |  8000 | 16000
+  2000 |  2000 |  2000 |  2000 |    -2
+  5000 |  5000 |  5000 |  5000 | 10000
+(11 rows)
+
+-- 7 btree with grby
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from tbtree group by a,b) grby on foo.a=grby.a;
+                 QUERY PLAN                  
+---------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbtree.a = foo.a)
+         ->  HashAggregate
+               Group Key: tbtree.a, tbtree.b
+               ->  Seq Scan on tbtree
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from foo join (select a, count(*) as cnt from tbtree group by a,b) grby on foo.a=grby.a;
+   a   |   b   |   c   |   a   | cnt 
+-------+-------+-------+-------+-----
+ 10000 | 10000 | 10000 | 10000 |   1
+  9000 |  9000 |  9000 |  9000 |   1
+  4000 |  4000 |  4000 |  4000 |   1
+  3000 |  3000 |  3000 |  3000 |   1
+  5000 |  5000 |  5000 |  5000 |   1
+  6000 |  6000 |  6000 |  6000 |   1
+  2000 |  2000 |  2000 |  2000 |   1
+  8000 |  8000 |  8000 |  8000 |   1
+  7000 |  7000 |  7000 |  7000 |   1
+  2000 |  2000 |  2000 |  2000 |   1
+  1000 |  1000 |  1000 |  1000 |   1
+(11 rows)
+
+-- 8 bitmap with grby
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from tbitmap group by a) grby on foo.a=grby.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbitmap.a = foo.a)
+         ->  HashAggregate
+               Group Key: tbitmap.a
+               ->  Seq Scan on tbitmap
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from foo join (select a, count(*) as cnt from tbitmap group by a) grby on foo.a=grby.a;
+   a   |   b   |   c   |   a   | cnt 
+-------+-------+-------+-------+-----
+  5000 |  5000 |  5000 |  5000 |   1
+  8000 |  8000 |  8000 |  8000 |   1
+  6000 |  6000 |  6000 |  6000 |   1
+  2000 |  2000 |  2000 |  2000 |   2
+  7000 |  7000 |  7000 |  7000 |   1
+  1000 |  1000 |  1000 |  1000 |   1
+ 10000 | 10000 | 10000 | 10000 |   1
+  3000 |  3000 |  3000 |  3000 |   1
+  9000 |  9000 |  9000 |  9000 |   1
+  4000 |  4000 |  4000 |  4000 |   1
+(10 rows)
+
+-- 9 btree with proj select grby select
+explain (costs off)
+select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbtree.a = foo.a)
+         ->  HashAggregate
+               Group Key: tbtree.a
+               Filter: (count(*) < 2)
+               ->  Bitmap Heap Scan on tbtree
+                     Recheck Cond: (a < 5000)
+                     ->  Bitmap Index Scan on tbtreexa
+                           Index Cond: (a < 5000)
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+  a   |  b   |  c   |  a   | cnt 
+------+------+------+------+-----
+ 1000 | 1000 | 1000 | 1000 |   6
+ 4000 | 4000 | 4000 | 4000 |   6
+ 3000 | 3000 | 3000 | 3000 |   6
+(3 rows)
+
+-- 10 bitmap with proj select grby select
+explain (costs off)
+select * from foo join (select a, count(*) + 5 as cnt from tbitmap where tbitmap.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbitmap.a = foo.a)
+         ->  HashAggregate
+               Group Key: tbitmap.a
+               Filter: (count(*) < 2)
+               ->  Bitmap Heap Scan on tbitmap
+                     Recheck Cond: (a < 5000)
+                     ->  Bitmap Index Scan on tbitmapxa
+                           Index Cond: (a < 5000)
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select * from foo join (select a, count(*) + 5 as cnt from tbitmap where tbitmap.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+  a   |  b   |  c   |  a   | cnt 
+------+------+------+------+-----
+ 4000 | 4000 | 4000 | 4000 |   6
+ 3000 | 3000 | 3000 | 3000 |   6
+ 1000 | 1000 | 1000 | 1000 |   6
+(3 rows)
+
+-- 11 bitmap with two groupbys
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from (select distinct a, b from tbitmap) grby1 group by a) grby2 on foo.a=grby2.a;
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbitmap.a = foo.a)
+         ->  HashAggregate
+               Group Key: tbitmap.a
+               ->  HashAggregate
+                     Group Key: tbitmap.a, tbitmap.b
+                     ->  Seq Scan on tbitmap
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from foo join (select a, count(*) as cnt from (select distinct a, b from tbitmap) grby1 group by a) grby2 on foo.a=grby2.a;
+   a   |   b   |   c   |   a   | cnt 
+-------+-------+-------+-------+-----
+  8000 |  8000 |  8000 |  8000 |   1
+  6000 |  6000 |  6000 |  6000 |   1
+  2000 |  2000 |  2000 |  2000 |   2
+  7000 |  7000 |  7000 |  7000 |   1
+  1000 |  1000 |  1000 |  1000 |   1
+ 10000 | 10000 | 10000 | 10000 |   1
+  3000 |  3000 |  3000 |  3000 |   1
+  9000 |  9000 |  9000 |  9000 |   1
+  4000 |  4000 |  4000 |  4000 |   1
+  5000 |  5000 |  5000 |  5000 |   1
+(10 rows)
+
+-- 12 btree with proj select 2*grby select
+explain (costs off)
+select * from foo join (select a, count(*) + cnt1 as cnt2 from (select a, count(*) as cnt1 from tbtree group by a) grby1
+                                                                where grby1.a < 5000 group by a, cnt1 having count(*) < 2) proj_sel_grby_sel
+                    on foo.a=proj_sel_grby_sel.a;
+                         QUERY PLAN                          
+-------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tbtree.a = foo.a)
+         ->  HashAggregate
+               Group Key: tbtree.a, count(*)
+               Filter: (count(*) < 2)
+               ->  HashAggregate
+                     Group Key: tbtree.a
+                     ->  Bitmap Heap Scan on tbtree
+                           Recheck Cond: (a < 5000)
+                           ->  Bitmap Index Scan on tbtreexa
+                                 Index Cond: (a < 5000)
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select * from foo join (select a, count(*) + cnt1 as cnt2 from (select a, count(*) as cnt1 from tbtree group by a) grby1
+                                                                where grby1.a < 5000 group by a, cnt1 having count(*) < 2) proj_sel_grby_sel
+                    on foo.a=proj_sel_grby_sel.a;
+  a   |  b   |  c   |  a   | cnt2 
+------+------+------+------+------
+ 2000 | 2000 | 2000 | 2000 |    3
+ 1000 | 1000 | 1000 | 1000 |    2
+ 3000 | 3000 | 3000 | 3000 |    2
+ 4000 | 4000 | 4000 | 4000 |    2
+(4 rows)
+
+-- 13 join pred accesses a projected column - no index scan
+explain (costs off)
+select * from foo join (select a, a::bigint*a::bigint as aa from tbtree) proj on foo.a=proj.a and foo.b=proj.aa;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((tbtree.a = foo.a) AND (((tbtree.a)::bigint * (tbtree.a)::bigint) = foo.b))
+         ->  Seq Scan on tbtree
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- 14 join pred accesses a projected column - no index scan
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from tbitmap group by a) grby on foo.a=grby.a and foo.b=grby.cnt;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((tbitmap.a = foo.a) AND ((count(*)) = foo.b))
+         ->  HashAggregate
+               Group Key: tbitmap.a
+               ->  Seq Scan on tbitmap
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- 15 the potential index join itself contains outer refs - no index scan
+explain (costs off)
+select *
+from foo l1 where b in (select ab
+                        from foo l2 join (select *, l1.a+tbtree.b as ab from tbtree) tbtree_derived
+                                    on l2.a=tbtree_derived.a and l2.b=tbtree_derived.b
+                        where l2.c = 1
+                       );
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- 16 group by columns are not a superset of the distribution columns - no index scan
+explain (costs off)
+select * from foo join (select b, count(*) as cnt from tbtree group by b) grby on foo.a=grby.cnt;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((count(*)) = foo.a)
+         ->  HashAggregate
+               Group Key: tbtree.b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: tbtree.b
+                     ->  Seq Scan on tbtree
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                     ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- 17 group by columns don't intersect - no index scan
+explain (costs off)
+select * from foo join (select min_a, count(*) as cnt from (select min(a) as min_a, b from tbitmap group by b) grby1 group by min_a) grby2 on foo.a=grby2.min_a;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (grby1.min_a = foo.a)
+         ->  HashAggregate
+               Group Key: grby1.min_a
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: grby1.min_a
+                     ->  Subquery Scan on grby1
+                           ->  HashAggregate
+                                 Group Key: tbitmap.b
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Hash Key: tbitmap.b
+                                       ->  Seq Scan on tbitmap
+         ->  Hash
+               ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+reset optimizer_join_order;
+reset optimizer_enable_hashjoin;
+reset optimizer_enable_groupagg;
+reset optimizer_trace_fallback;
+reset enable_sort;

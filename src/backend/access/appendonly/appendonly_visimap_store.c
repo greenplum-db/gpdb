@@ -13,7 +13,9 @@
  *------------------------------------------------------------------------------
 */
 #include "postgres.h"
+
 #include "access/genam.h"
+#include "access/table.h"
 #include "catalog/aovisimap.h"
 #include "catalog/indexing.h"
 #include "access/appendonly_visimap_store.h"
@@ -43,7 +45,7 @@ AppendOnlyVisimapStore_Finish(AppendOnlyVisimapStore *visiMapStore,
 
 	UnregisterSnapshot(visiMapStore->snapshot);
 	index_close(visiMapStore->visimapIndex, lockmode);
-	heap_close(visiMapStore->visimapRelation, lockmode);
+	table_close(visiMapStore->visimapRelation, lockmode);
 }
 
 /*
@@ -72,10 +74,8 @@ AppendOnlyVisimapStore_Init(AppendOnlyVisimapStore *visiMapStore,
 	visiMapStore->snapshot = RegisterSnapshot(snapshot);
 	visiMapStore->memoryContext = memoryContext;
 
-	visiMapStore->visimapRelation = heap_open(
-											  visimapRelid, lockmode);
-	visiMapStore->visimapIndex = index_open(
-											visimapIdxid, lockmode);
+	visiMapStore->visimapRelation = table_open(visimapRelid, lockmode);
+	visiMapStore->visimapIndex = index_open(visimapIdxid, lockmode);
 
 	heapTupleDesc =
 		RelationGetDescr(visiMapStore->visimapRelation);
@@ -149,14 +149,12 @@ AppendOnlyVisimapStore_Store(
 	 */
 	if (ItemPointerIsValid(&visiMapEntry->tupleTid))
 	{
-		simple_heap_update(visimapRelation, &visiMapEntry->tupleTid, tuple);
+		CatalogTupleUpdate(visimapRelation, &visiMapEntry->tupleTid, tuple);
 	}
 	else
 	{
-		simple_heap_insert(visimapRelation, tuple);
+		CatalogTupleInsert(visimapRelation, tuple);
 	}
-
-	CatalogUpdateIndexes(visimapRelation, tuple);
 
 	heap_freetuple(tuple);
 
@@ -181,14 +179,13 @@ AppendOnlyVisimapStore_Store(
  * Assumes that the store data structure has been initialized, but not finished.
  */
 bool
-AppendOnlyVisimapStore_Find(
-							AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_Find(AppendOnlyVisimapStore *visiMapStore,
 							int32 segmentFileNum,
 							int64 firstRowNum,
 							AppendOnlyVisimapEntry *visiMapEntry)
 {
 	ScanKey		scanKeys;
-	IndexScanDesc indexScan;
+	SysScanDesc indexScan;
 
 	Assert(visiMapStore);
 	Assert(visiMapEntry);
@@ -204,8 +201,7 @@ AppendOnlyVisimapStore_Find(
 	scanKeys[0].sk_argument = Int32GetDatum(segmentFileNum);
 	scanKeys[1].sk_argument = Int64GetDatum(firstRowNum);
 
-	indexScan = AppendOnlyVisimapStore_BeginScan(
-												 visiMapStore,
+	indexScan = AppendOnlyVisimapStore_BeginScan(visiMapStore,
 												 APPENDONLY_VISIMAP_INDEX_SCAN_KEY_NUM,
 												 scanKeys);
 
@@ -237,9 +233,8 @@ AppendOnlyVisimapStore_Find(
  *
  */
 static HeapTuple
-AppendOnlyVisimapStore_GetNextTuple(
-									AppendOnlyVisimapStore *visiMapStore,
-									IndexScanDesc indexScan,
+AppendOnlyVisimapStore_GetNextTuple(AppendOnlyVisimapStore *visiMapStore,
+									SysScanDesc indexScan,
 									ScanDirection scanDirection)
 {
 	Assert(visiMapStore);
@@ -247,7 +242,7 @@ AppendOnlyVisimapStore_GetNextTuple(
 	Assert(RelationIsValid(visiMapStore->visimapIndex));
 	Assert(indexScan);
 
-	return index_getnext(indexScan, scanDirection);
+	return systable_getnext_ordered(indexScan, scanDirection);
 }
 
 
@@ -262,9 +257,8 @@ AppendOnlyVisimapStore_GetNextTuple(
  * returns an entry, the (heap) tuple id is copied to the parameter.
  */
 bool
-AppendOnlyVisimapStore_GetNext(
-							   AppendOnlyVisimapStore *visiMapStore,
-							   IndexScanDesc indexScan,
+AppendOnlyVisimapStore_GetNext(AppendOnlyVisimapStore *visiMapStore,
+							   SysScanDesc indexScan,
 							   ScanDirection scanDirection,
 							   AppendOnlyVisimapEntry *visiMapEntry,
 							   ItemPointerData *tupleTid)
@@ -300,12 +294,11 @@ AppendOnlyVisimapStore_GetNext(
  * segment file.
  */
 void
-AppendOnlyVisimapStore_DeleteSegmentFile(
-										 AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_DeleteSegmentFile(AppendOnlyVisimapStore *visiMapStore,
 										 int segmentFileNum)
 {
 	ScanKeyData scanKey;
-	IndexScanDesc indexScan;
+	SysScanDesc indexScan;
 	ItemPointerData tid;
 
 	Assert(visiMapStore);
@@ -322,8 +315,7 @@ AppendOnlyVisimapStore_DeleteSegmentFile(
 				F_INT4EQ,
 				Int32GetDatum(segmentFileNum));
 
-	indexScan = AppendOnlyVisimapStore_BeginScan(
-												 visiMapStore,
+	indexScan = AppendOnlyVisimapStore_BeginScan(visiMapStore,
 												 1,
 												 &scanKey);
 
@@ -333,8 +325,7 @@ AppendOnlyVisimapStore_DeleteSegmentFile(
 										  NULL,
 										  &tid))
 	{
-		simple_heap_delete(visiMapStore->visimapRelation,
-						   &tid);
+		CatalogTupleDelete(visiMapStore->visimapRelation, &tid);
 	}
 	AppendOnlyVisimapStore_EndScan(visiMapStore, indexScan);
 }
@@ -343,13 +334,12 @@ AppendOnlyVisimapStore_DeleteSegmentFile(
  * Returns the number of hidden tuples in a given segment file
  */
 int64
-AppendOnlyVisimapStore_GetSegmentFileHiddenTupleCount(
-													  AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_GetSegmentFileHiddenTupleCount(AppendOnlyVisimapStore *visiMapStore,
 													  AppendOnlyVisimapEntry *visiMapEntry,
 													  int segmentFileNum)
 {
 	ScanKeyData scanKey;
-	IndexScanDesc indexScan;
+	SysScanDesc indexScan;
 	int64		hiddenTupcount = 0;
 
 	Assert(visiMapStore);
@@ -363,8 +353,7 @@ AppendOnlyVisimapStore_GetSegmentFileHiddenTupleCount(
 				F_INT4EQ,
 				Int32GetDatum(segmentFileNum));
 
-	indexScan = AppendOnlyVisimapStore_BeginScan(
-												 visiMapStore,
+	indexScan = AppendOnlyVisimapStore_BeginScan(visiMapStore,
 												 1,
 												 &scanKey);
 
@@ -382,11 +371,10 @@ AppendOnlyVisimapStore_GetSegmentFileHiddenTupleCount(
  * Returns the number of hidden tuples in a given releation
  */
 int64
-AppendOnlyVisimapStore_GetRelationHiddenTupleCount(
-												   AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_GetRelationHiddenTupleCount(AppendOnlyVisimapStore *visiMapStore,
 												   AppendOnlyVisimapEntry *visiMapEntry)
 {
-	IndexScanDesc indexScan;
+	SysScanDesc indexScan;
 	int64		hiddenTupcount = 0;
 
 	Assert(visiMapStore);
@@ -394,8 +382,7 @@ AppendOnlyVisimapStore_GetRelationHiddenTupleCount(
 	Assert(RelationIsValid(visiMapStore->visimapRelation));
 	Assert(RelationIsValid(visiMapStore->visimapIndex));
 
-	indexScan = AppendOnlyVisimapStore_BeginScan(
-												 visiMapStore,
+	indexScan = AppendOnlyVisimapStore_BeginScan(visiMapStore,
 												 0,
 												 NULL);
 
@@ -414,36 +401,30 @@ AppendOnlyVisimapStore_GetRelationHiddenTupleCount(
  *
  * Parameter keys may be NULL iff nkeys is zero.
  */
-IndexScanDesc
+SysScanDesc
 AppendOnlyVisimapStore_BeginScan(AppendOnlyVisimapStore *visiMapStore,
 								 int nkeys,
 								 ScanKey keys)
 {
-	IndexScanDesc scandesc;
-
 	Assert(visiMapStore);
 	Assert(RelationIsValid(visiMapStore->visimapRelation));
 
-	scandesc = index_beginscan(visiMapStore->visimapRelation,
-							   visiMapStore->visimapIndex,
-							   visiMapStore->snapshot,
-							   nkeys,
-							   0);
-	index_rescan(scandesc, keys, nkeys, NULL, 0);
-
-	return scandesc;
+	return  systable_beginscan_ordered(visiMapStore->visimapRelation,
+									   visiMapStore->visimapIndex,
+									   visiMapStore->snapshot,
+									   nkeys,
+									   keys);
 }
 
 /*
  * Ends a index scan over the visimap store.
  */
 void
-AppendOnlyVisimapStore_EndScan(
-							   AppendOnlyVisimapStore *visiMapStore,
-							   IndexScanDesc indexScan)
+AppendOnlyVisimapStore_EndScan(AppendOnlyVisimapStore *visiMapStore,
+							   SysScanDesc indexScan)
 {
 	Assert(visiMapStore);
 	Assert(indexScan);
 
-	index_endscan(indexScan);
+	systable_endscan_ordered(indexScan);
 }

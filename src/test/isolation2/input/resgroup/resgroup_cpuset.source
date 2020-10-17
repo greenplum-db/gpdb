@@ -1,11 +1,11 @@
 -- start_ignore
-DROP LANGUAGE IF EXISTS plpythonu;
+DROP LANGUAGE IF EXISTS plpython3u;
 DROP VIEW IF EXISTS busy;
 DROP VIEW IF EXISTS cancel_all;
 DROP TABLE IF EXISTS bigtable;
 -- end_ignore
 
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
@@ -24,7 +24,7 @@ conn = pg.connect(dbname="isolation2resgrouptest")
 pt = re.compile(r'con(\d+)')
 
 def check(expect_cpus, sess_ids):
-	procs = subprocess.check_output(['ps', '-eF']).split('\n')
+	procs = subprocess.check_output(['ps', '-eF']).decode().split('\n')
 	head, proc_stats = procs[0], procs[1:]
 	PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0]
 	cpus = [proc_stat.split()[PSR].strip()
@@ -59,13 +59,13 @@ for token in tokens:
 		expect_cpu.append(token)
 sess_ids = get_all_sess_ids_in_group(grp)
 
-for i in xrange(1000):
+for i in range(1000):
 	time.sleep(0.01)
 	if not check(expect_cpu, sess_ids):
 		return False
 
 return True
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 -- create a resource group that contains all the cpu cores
 CREATE FUNCTION create_allcores_group(grp TEXT) RETURNS BOOL AS $$
@@ -89,7 +89,7 @@ if line != "0":
 	return False
 
 return True
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 -- check whether the cpuset value in cgroup is valid according to the rule
 CREATE FUNCTION check_rules() RETURNS BOOL AS $$
@@ -156,7 +156,7 @@ if len(default_cpuset & groups_cpuset) > 0 and \
 	return False
 
 return True
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE TABLE bigtable AS
     SELECT i AS c1, 'abc' AS c2
@@ -298,7 +298,7 @@ DROP RESOURCE GROUP rg1_cpuset_test;
 DROP FUNCTION check_rules();
 DROP FUNCTION check_cpuset(TEXT, TEXT);
 DROP FUNCTION create_allcores_group(TEXT);
-DROP LANGUAGE plpythonu CASCADE;
+DROP LANGUAGE plpython3u CASCADE;
 DROP VIEW cancel_all;
 DROP VIEW busy;
 DROP TABLE bigtable;

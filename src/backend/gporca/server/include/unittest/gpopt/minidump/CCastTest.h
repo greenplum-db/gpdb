@@ -9,27 +9,21 @@
 
 namespace gpopt
 {
-	class CCastTest
-	{
-		private:
+class CCastTest
+{
+private:
+	// counter used to mark last successful test
+	static gpos::ULONG m_ulTestCounter;
 
-			// counter used to mark last successful test
-			static
-			gpos::ULONG m_ulTestCounter;
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
 
-		public:
+	static gpos::GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
+};	// class CCastTest
+}  // namespace gpopt
 
-			static
-			gpos::GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CCastTest
-}
-
-#endif // !GPOPT_CCastTest_H
+#endif	// !GPOPT_CCastTest_H
 
 // EOF
-

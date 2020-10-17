@@ -34,11 +34,10 @@ using namespace gpos;
 GPOS_RESULT
 CLoggerTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CLoggerTest::EresUnittest_Basic),
 		GPOS_UNITTEST_FUNC(CLoggerTest::EresUnittest_LoggerSyslog),
-		};
+	};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
@@ -88,4 +87,3 @@ CLoggerTest::EresUnittest_LoggerSyslog()
 
 
 // EOF
-

@@ -12,22 +12,18 @@ step begin: BEGIN;
 step explaini: EXPLAIN (COSTS OFF) EXECUTE getrow_idx;
 QUERY PLAN     
 
-Gather Motion 3:1  (slice1; segments: 3)
-  Merge Key: id
-  ->  Sort     
-        Sort Key: id
-        ->  Index Scan using test_dc_data on test_dc
-              Index Cond: (data = 34)
+Sort           
+  Sort Key: id 
+  ->  Index Scan using test_dc_data on test_dc
+        Index Cond: (data = 34)
 Optimizer: Postgres query optimizer
 step explains: EXPLAIN (COSTS OFF) EXECUTE getrow_seq;
 QUERY PLAN     
 
-Gather Motion 3:1  (slice1; segments: 3)
-  Merge Key: id, data
-  ->  Sort     
-        Sort Key: id, data
-        ->  Seq Scan on test_dc
-              Filter: ((data)::text = '34'::text)
+Sort           
+  Sort Key: id, data
+  ->  Seq Scan on test_dc
+        Filter: ((data)::text = '34'::text)
 Optimizer: Postgres query optimizer
 step select2: SELECT * FROM test_dc WHERE data=34 ORDER BY id,data;
 id             data           

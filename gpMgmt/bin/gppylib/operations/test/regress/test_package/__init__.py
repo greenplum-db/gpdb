@@ -460,7 +460,7 @@ class GppkgTestCase(unittest.TestCase):
         @param rpm_package_name: Name of rpm package of the form <name>-<version>-<release>
         @type rpm_package_name: str
         """
-        with self.assertRaisesRegexp(ExecutionError, "%s is not installed" % rpm_package_name):
+        with self.assertRaisesRegex(ExecutionError, "%s is not installed" % rpm_package_name):
             run_command("rpm -q %s --dbpath %s" % (rpm_package_name, RPM_DATABASE))
 
     def check_remote_rpm_install(self, rpm_package_name, host):
@@ -484,7 +484,7 @@ class GppkgTestCase(unittest.TestCase):
         @param host: Remote host
         @type host: str
         """
-        with self.assertRaisesRegexp(ExecutionError, "%s is not installed" % rpm_package_name):
+        with self.assertRaisesRegex(ExecutionError, "%s is not installed" % rpm_package_name):
             results = run_remote_command("rpm -q %s --dbpath %s" % (rpm_package_name, RPM_DATABASE), host)
 
     def install_rpm(self, rpm_filename, rpm_database = RPM_DATABASE, installation_prefix = GPHOME):

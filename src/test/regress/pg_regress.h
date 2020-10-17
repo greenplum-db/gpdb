@@ -1,14 +1,13 @@
 /*-------------------------------------------------------------------------
  * pg_regress.h --- regression test driver
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/pg_regress.h
  *-------------------------------------------------------------------------
  */
 
-#include "postgres_fe.h"
 #include <unistd.h>
 
 #ifndef WIN32
@@ -19,6 +18,8 @@
 #define INVALID_PID INVALID_HANDLE_VALUE
 #endif
 
+struct StringInfoData;			/* avoid including stringinfo.h here */
+
 /* simple list of strings */
 typedef struct _stringlist
 {
@@ -27,9 +28,9 @@ typedef struct _stringlist
 } _stringlist;
 
 typedef PID_TYPE(*test_function) (const char *,
-						  _stringlist **,
-						  _stringlist **,
-						  _stringlist **);
+								  _stringlist **,
+								  _stringlist **,
+								  _stringlist **);
 typedef void (*init_function) (int argc, char **argv);
 
 extern char *bindir;
@@ -37,6 +38,7 @@ extern char *libdir;
 extern char *datadir;
 extern char *host_platform;
 
+extern _stringlist *setup_tests;
 extern _stringlist *dblist;
 extern bool debug;
 extern char *inputdir;
@@ -49,10 +51,10 @@ extern bool resgroup_enabled;
 extern const char *basic_diff_opts;
 extern const char *pretty_diff_opts;
 
-int regression_main(int argc, char *argv[],
-				init_function ifunc, test_function tfunc);
+int			regression_main(int argc, char *argv[],
+							init_function ifunc, test_function tfunc);
 void		add_stringlist_item(_stringlist **listhead, const char *str);
 PID_TYPE	spawn_process(const char *cmdline);
-void		exit_nicely(int code);
-void		replace_string(char *string, char *replace, char *replacement);
+void		replace_string(struct StringInfoData *string,
+						   const char *replace, const char *replacement);
 bool		file_exists(const char *file);

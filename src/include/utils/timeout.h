@@ -4,7 +4,7 @@
  *	  Routines to multiplex SIGALRM interrupts for multiple timeout reasons.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/timeout.h
@@ -85,4 +85,4 @@ extern bool get_timeout_indicator(TimeoutId id, bool reset_indicator);
 extern TimestampTz get_timeout_start_time(TimeoutId id);
 extern TimestampTz get_timeout_finish_time(TimeoutId id);
 
-#endif   /* TIMEOUT_H */
+#endif							/* TIMEOUT_H */

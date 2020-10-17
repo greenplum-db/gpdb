@@ -3,7 +3,7 @@
  * async.c
  *	  Asynchronous notification: NOTIFY, LISTEN, UNLISTEN
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -139,7 +139,6 @@
 #include "utils/ps_status.h"
 #include "utils/snapmgr.h"
 #include "utils/timestamp.h"
-#include "utils/tqual.h"
 
 #include "tcop/idle_resource_cleaner.h"
 
@@ -249,7 +248,7 @@ typedef struct AsyncQueueControl
 	QueuePosition head;			/* head points to the next free location */
 	QueuePosition tail;			/* the global tail is equivalent to the pos of
 								 * the "slowest" backend */
-	TimestampTz lastQueueFillWarn;		/* time of last queue-full msg */
+	TimestampTz lastQueueFillWarn;	/* time of last queue-full msg */
 	QueueBackendStatus backend[FLEXIBLE_ARRAY_MEMBER];
 	/* backend[0] is not used; used entries are from [1] to [MaxBackends] */
 } AsyncQueueControl;
@@ -269,7 +268,7 @@ static SlruCtlData AsyncCtlData;
 
 #define AsyncCtl					(&AsyncCtlData)
 #define QUEUE_PAGESIZE				BLCKSZ
-#define QUEUE_FULL_WARN_INTERVAL	5000		/* warn at most once every 5s */
+#define QUEUE_FULL_WARN_INTERVAL	5000	/* warn at most once every 5s */
 
 /*
  * slru.c currently assumes that all filenames are four characters of hex
@@ -295,7 +294,7 @@ static SlruCtlData AsyncCtlData;
  * (ie, have committed a LISTEN on).  It is a simple list of channel names,
  * allocated in TopMemoryContext.
  */
-static List *listenChannels = NIL;		/* list of C strings */
+static List *listenChannels = NIL;	/* list of C strings */
 
 /*
  * State for pending LISTEN/UNLISTEN actions consists of an ordered list of
@@ -320,7 +319,7 @@ typedef struct
 	char		channel[FLEXIBLE_ARRAY_MEMBER]; /* nul-terminated string */
 } ListenAction;
 
-static List *pendingActions = NIL;		/* list of ListenAction */
+static List *pendingActions = NIL;	/* list of ListenAction */
 
 static List *upperPendingActions = NIL; /* list of upper-xact lists */
 
@@ -346,9 +345,9 @@ typedef struct Notification
 	char	   *payload;		/* payload string (can be empty) */
 } Notification;
 
-static List *pendingNotifies = NIL;		/* list of Notifications */
+static List *pendingNotifies = NIL; /* list of Notifications */
 
-static List *upperPendingNotifies = NIL;		/* list of upper-xact lists */
+static List *upperPendingNotifies = NIL;	/* list of upper-xact lists */
 
 /*
  * Inbound notifications are initially processed by HandleNotifyInterrupt(),
@@ -390,9 +389,9 @@ static void asyncQueueFillWarning(void);
 static bool SignalBackends(void);
 static void asyncQueueReadAllNotifications(void);
 static bool asyncQueueProcessPageEntries(volatile QueuePosition *current,
-							 QueuePosition stop,
-							 char *page_buffer,
-							 Snapshot snapshot);
+										 QueuePosition stop,
+										 char *page_buffer,
+										 Snapshot snapshot);
 static void asyncQueueAdvanceTail(void);
 static void ProcessIncomingNotify(void);
 static bool AsyncExistsPendingNotify(const char *channel, const char *payload);
@@ -858,7 +857,7 @@ PreCommit_Notify(void)
 			if (asyncQueueIsFull())
 				ereport(ERROR,
 						(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-					  errmsg("too many notifications in the NOTIFY queue")));
+						 errmsg("too many notifications in the NOTIFY queue")));
 			nextNotify = asyncQueueAddEntries(nextNotify);
 			LWLockRelease(AsyncQueueLock);
 		}
@@ -1191,7 +1190,7 @@ asyncQueueUnregister(void)
 {
 	bool		advanceTail;
 
-	Assert(listenChannels == NIL);		/* else caller error */
+	Assert(listenChannels == NIL);	/* else caller error */
 
 	if (!amRegisteredListener)	/* nothing to do */
 		return;
@@ -1643,7 +1642,7 @@ AtSubCommit_Notify(void)
 	List	   *parentPendingActions;
 	List	   *parentPendingNotifies;
 
-	parentPendingActions = (List *) linitial(upperPendingActions);
+	parentPendingActions = linitial_node(List, upperPendingActions);
 	upperPendingActions = list_delete_first(upperPendingActions);
 
 	Assert(list_length(upperPendingActions) ==
@@ -1654,7 +1653,7 @@ AtSubCommit_Notify(void)
 	 */
 	pendingActions = list_concat(parentPendingActions, pendingActions);
 
-	parentPendingNotifies = (List *) linitial(upperPendingNotifies);
+	parentPendingNotifies = linitial_node(List, upperPendingNotifies);
 	upperPendingNotifies = list_delete_first(upperPendingNotifies);
 
 	Assert(list_length(upperPendingNotifies) ==
@@ -1686,13 +1685,13 @@ AtSubAbort_Notify(void)
 	 */
 	while (list_length(upperPendingActions) > my_level - 2)
 	{
-		pendingActions = (List *) linitial(upperPendingActions);
+		pendingActions = linitial_node(List, upperPendingActions);
 		upperPendingActions = list_delete_first(upperPendingActions);
 	}
 
 	while (list_length(upperPendingNotifies) > my_level - 2)
 	{
-		pendingNotifies = (List *) linitial(upperPendingNotifies);
+		pendingNotifies = linitial_node(List, upperPendingNotifies);
 		upperPendingNotifies = list_delete_first(upperPendingNotifies);
 	}
 }
@@ -1835,7 +1834,7 @@ asyncQueueReadAllNotifications(void)
 				/* we only want to read as far as head */
 				copysize = QUEUE_POS_OFFSET(head) - curoffset;
 				if (copysize < 0)
-					copysize = 0;		/* just for safety */
+					copysize = 0;	/* just for safety */
 			}
 			else
 			{
@@ -1957,7 +1956,7 @@ asyncQueueProcessPageEntries(volatile QueuePosition *current,
 				 * Note that we must test XidInMVCCSnapshot before we test
 				 * TransactionIdDidCommit, else we might return a message from
 				 * a transaction that is not yet visible to snapshots; compare
-				 * the comments at the head of tqual.c.
+				 * the comments at the head of heapam_visibility.c.
 				 *
 				 * Also, while our own xact won't be listed in the snapshot,
 				 * we need not check for TransactionIdIsCurrentTransactionId
@@ -2108,7 +2107,7 @@ NotifyMyFrontEnd(const char *channel, const char *payload, int32 srcPid)
 		StringInfoData buf;
 
 		pq_beginmessage(&buf, 'A');
-		pq_sendint(&buf, srcPid, sizeof(int32));
+		pq_sendint32(&buf, srcPid);
 		pq_sendstring(&buf, channel);
 		if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
 			pq_sendstring(&buf, payload);

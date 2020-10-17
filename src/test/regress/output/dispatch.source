@@ -270,8 +270,8 @@ insert into dispatch_test_t3 values (3,1,2);
 CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
 -- check if segments has backend running
-CREATE OR REPLACE FUNCTION hasBackendsExist(int) RETURNS BOOL 
-AS '@abs_builddir@/regress@DLSUFFIX@', 'hasBackendsExist' LANGUAGE C;
+CREATE OR REPLACE FUNCTION hasBackendsExist(int) RETURNS SETOF BOOL
+AS '@abs_builddir@/regress@DLSUFFIX@', 'hasBackendsExist' LANGUAGE C EXECUTE ON ALL SEGMENTS;
 -- check if QD has reusable gangs
 CREATE OR REPLACE FUNCTION hasGangsExist() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'hasGangsExist' LANGUAGE C;
@@ -384,7 +384,7 @@ select cleanupAllGangs();
 (1 row)
 
 -- expect no zombie backends left on segments 
-select sum(case when hasBackendsExist(30)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
+select sum(case when h = 't' then 1 else 0 end) > 0 as hasbackends from hasbackendsexist(30) as h;
  hasbackends 
 -------------
  f
@@ -435,7 +435,7 @@ select * from hasGangsExist();
 (1 row)
 
 -- expect no zombie backends left on segments.
-select sum(case when hasBackendsExist(30)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
+select sum(case when h = 't' then 1 else 0 end) > 0 as hasbackends from hasbackendsexist(30) as h;
  hasbackends 
 -------------
  f
@@ -481,7 +481,7 @@ select * from hasGangsExist();
 (1 row)
 
 -- expect QEs exist.
-select sum(case when hasBackendsExist(0)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
+select sum(case when h = 't' then 1 else 0 end) > 0 as hasbackends from hasbackendsexist(0) as h;
  hasbackends 
 -------------
  t

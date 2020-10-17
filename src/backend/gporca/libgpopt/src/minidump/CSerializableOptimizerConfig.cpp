@@ -37,15 +37,9 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CSerializableOptimizerConfig::CSerializableOptimizerConfig
-	(
-	CMemoryPool *mp,
-	const COptimizerConfig *optimizer_config
-	)
-	:
-	CSerializable(),
-	m_mp(mp),
-	m_optimizer_config(optimizer_config)
+CSerializableOptimizerConfig::CSerializableOptimizerConfig(
+	CMemoryPool *mp, const COptimizerConfig *optimizer_config)
+	: CSerializable(), m_mp(mp), m_optimizer_config(optimizer_config)
 {
 	GPOS_ASSERT(NULL != optimizer_config);
 }
@@ -71,10 +65,7 @@ CSerializableOptimizerConfig::~CSerializableOptimizerConfig()
 //
 //---------------------------------------------------------------------------
 void
-CSerializableOptimizerConfig::Serialize
-	(
-	COstream &oos
-	)
+CSerializableOptimizerConfig::Serialize(COstream &oos)
 {
 	CXMLSerializer xml_serializer(m_mp, oos, false /*Indent*/);
 
@@ -85,4 +76,3 @@ CSerializableOptimizerConfig::Serialize
 }
 
 // EOF
-

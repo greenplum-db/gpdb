@@ -36,7 +36,7 @@ CJob::Reset()
 	m_fInit = false;
 #ifdef GPOS_DEBUG
 	m_ejs = EjsInit;
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 }
 
 
@@ -73,11 +73,8 @@ CJob::FResumeParent() const
 //		Print job description
 //
 //---------------------------------------------------------------------------
-IOstream&
-CJob::OsPrint
-	(
-	IOstream &os
-	)
+IOstream &
+CJob::OsPrint(IOstream &os)
 {
 	os << "ID=" << Id();
 
@@ -92,7 +89,6 @@ CJob::OsPrint
 	return os;
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF
-

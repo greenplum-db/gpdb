@@ -51,14 +51,13 @@ SELECT temp_relfilenode_primaries('temp_table');
                           2
 (4 rows)
 
--- Then after we drop the same table
-DROP TABLE temp_table;
+-- GPDB_12_MERGE_FIXME: Validate after we drop the same table, no
+-- files are left behind. Current function
+-- temp_relfilenode_primaries() relies on pg_class to find the
+-- relfilenode and hence is not suitable to perform this validation.
+-- DROP TABLE temp_table;
 -- The table's relfilenode is cleaned up on the master and the segment primaries
-SELECT temp_relfilenode_primaries('temp_table');
- temp_relfilenode_primaries 
-----------------------------
-(0 rows)
-
+-- SELECT temp_relfilenode_primaries('temp_table');
 DROP SCHEMA temp_relation CASCADE;
 NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to function temp_relfilenode_master(text)

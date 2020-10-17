@@ -171,7 +171,7 @@ gp_hll_decompress_dense_unpacked(GpHLLCounter hloglog)
 
 	/* decompress the data */
 	pglz_decompress(hloglog->data, VARSIZE_ANY(hloglog) - sizeof(GpHLLData),
-					(char *) &htemp->data, data_rawsize);
+					(char *) &htemp->data, data_rawsize, true);
 
 	hloglog = htemp;
 
@@ -724,7 +724,7 @@ gp_hll_decompress_dense(GpHLLCounter hloglog)
 
     /* decompress the data */
     pglz_decompress(hloglog->data, VARSIZE_ANY(hloglog) - sizeof(GpHLLData),
-					dest, data_rawsize);
+					dest, data_rawsize, true);
 
     /* copy the struct internals but not the data into a counter with enough 
      * space for the uncompressed data  */

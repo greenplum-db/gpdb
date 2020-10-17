@@ -3,7 +3,7 @@
  *
  * Definitions for the WAL record format.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xlogrecord.h
@@ -56,8 +56,8 @@ typedef struct XLogRecord
 
 /*
  * The high 4 bits in xl_info may be used freely by rmgr. The
- * XLR_SPECIAL_REL_UPDATE bit can be passed by XLogInsert caller. The rest
- * are set internally by XLogInsert.
+ * XLR_SPECIAL_REL_UPDATE and XLR_CHECK_CONSISTENCY bits can be passed by
+ * XLogInsert caller. The rest are set internally by XLogInsert.
  */
 #define XLR_INFO_MASK			0x0F
 #define XLR_RMGR_INFO_MASK		0xF0
@@ -69,6 +69,15 @@ typedef struct XLogRecord
  * track of modified blocks to recognize such special record types.
  */
 #define XLR_SPECIAL_REL_UPDATE	0x01
+
+/*
+ * Enforces consistency checks of replayed WAL at recovery. If enabled,
+ * each record will log a full-page write for each block modified by the
+ * record and will reuse it afterwards for consistency checks. The caller
+ * of XLogInsert can use this value if necessary, but if
+ * wal_consistency_checking is enabled for a rmgr this is set unconditionally.
+ */
+#define XLR_CHECK_CONSISTENCY	0x02
 
 /*
  * Header info for block data appended to an XLOG record.
@@ -98,15 +107,14 @@ typedef struct XLogRecordBlockHeader
  * Additional header information when a full-page image is included
  * (i.e. when BKPBLOCK_HAS_IMAGE is set).
  *
- * As a trivial form of data compression, the XLOG code is aware that
- * PG data pages usually contain an unused "hole" in the middle, which
- * contains only zero bytes.  If the length of "hole" > 0 then we have removed
- * such a "hole" from the stored data (and it's not counted in the
- * XLOG record's CRC, either).  Hence, the amount of block data actually
- * present is BLCKSZ - the length of "hole" bytes.
+ * The XLOG code is aware that PG data pages usually contain an unused "hole"
+ * in the middle, which contains only zero bytes.  Since we know that the
+ * "hole" is all zeros, we remove it from the stored data (and it's not counted
+ * in the XLOG record's CRC, either).  Hence, the amount of block data actually
+ * present is (BLCKSZ - <length of "hole" bytes>).
  *
- * When wal_compression is enabled, a full page image which "hole" was
- * removed is additionally compressed using PGLZ compression algorithm.
+ * Additionally, when wal_compression is enabled, we will try to compress full
+ * page images using the PGLZ compression algorithm, after removing the "hole".
  * This can reduce the WAL volume, but at some extra cost of CPU spent
  * on the compression during WAL logging. In this case, since the "hole"
  * length cannot be calculated by subtracting the number of page image bytes
@@ -136,7 +144,9 @@ typedef struct XLogRecordBlockImageHeader
 
 /* Information stored in bimg_info */
 #define BKPIMAGE_HAS_HOLE		0x01	/* page image has "hole" */
-#define BKPIMAGE_IS_COMPRESSED		0x02		/* page image is compressed */
+#define BKPIMAGE_IS_COMPRESSED		0x02	/* page image is compressed */
+#define BKPIMAGE_APPLY		0x04	/* page image should be restored during
+									 * replay */
 
 /*
  * Extra header information used when page image has "hole" and
@@ -185,7 +195,7 @@ typedef struct XLogRecordDataHeaderShort
 {
 	uint8		id;				/* XLR_BLOCK_ID_DATA_SHORT */
 	uint8		data_length;	/* number of payload bytes */
-}	XLogRecordDataHeaderShort;
+}			XLogRecordDataHeaderShort;
 
 #define SizeOfXLogRecordDataHeaderShort (sizeof(uint8) * 2)
 
@@ -193,7 +203,7 @@ typedef struct XLogRecordDataHeaderLong
 {
 	uint8		id;				/* XLR_BLOCK_ID_DATA_LONG */
 	/* followed by uint32 data_length, unaligned */
-}	XLogRecordDataHeaderLong;
+}			XLogRecordDataHeaderLong;
 
 #define SizeOfXLogRecordDataHeaderLong (sizeof(uint8) + sizeof(uint32))
 
@@ -214,4 +224,4 @@ typedef struct XLogRecordDataHeaderLong
 #define XLR_BLOCK_ID_DATA_LONG		254
 #define XLR_BLOCK_ID_ORIGIN			253
 
-#endif   /* XLOGRECORD_H */
+#endif							/* XLOGRECORD_H */

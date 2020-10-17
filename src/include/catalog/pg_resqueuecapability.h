@@ -20,15 +20,15 @@
 #define PG_RESQUEUECAPABILITY_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_resqueuecapability_d.h"
 
 /* ----------------
  *		pg_resqueuecapability definition.  cpp turns this into
  *		typedef struct FormData_pg_resqueuecapability
  * ----------------
  */
-#define ResQueueCapabilityRelationId	6060
 
-CATALOG(pg_resqueuecapability,6060) BKI_SHARED_RELATION
+CATALOG(pg_resqueuecapability,6060,ResQueueCapabilityRelationId) BKI_SHARED_RELATION
 {
 	Oid		resqueueid;	/* OID of the queue with this capability  */
 	int16	restypid;	/* resource type id (key to pg_resourcetype)  */
@@ -47,15 +47,5 @@ FOREIGN_KEY(restypid REFERENCES pg_resourcetype(restypid));
  * ----------------
  */
 typedef FormData_pg_resqueuecapability *Form_pg_resqueuecapability;
-
-
-/* ----------------
- *		compiler constants for pg_resqueuecapability
- * ----------------
- */
-#define Natts_pg_resqueuecapability				3
-#define Anum_pg_resqueuecapability_resqueueid	1
-#define Anum_pg_resqueuecapability_restypid		2
-#define Anum_pg_resqueuecapability_ressetting	3
 
 #endif   /* PG_RESQUEUECAPABILITY_H */

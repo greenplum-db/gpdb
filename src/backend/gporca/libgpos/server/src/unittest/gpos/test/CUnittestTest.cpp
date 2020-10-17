@@ -14,8 +14,8 @@
 
 #include "unittest/gpos/test/CUnittestTest.h"
 
-namespace gpos {
-
+namespace gpos
+{
 //---------------------------------------------------------------------------
 //	@function:
 //		CUnittestTest::EresSubtest

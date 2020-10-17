@@ -18,7 +18,6 @@ LINE 2: partition by list (b) (start ('a') );
 -- should work
 create table fff (a char(1), b char(2), d char(3)) distributed by (a)
 partition by list (b) (partition aa values ('2'));
-NOTICE:  CREATE TABLE will create partition "fff_1_prt_aa" for table "fff"
 drop table fff cascade;
 -- this is subtly wrong -- it defines 4 partitions
 -- the problem is the comma before "end", which causes us to
@@ -32,18 +31,18 @@ partition by range (b)
 partition aa start ('2007'), end ('2008'),
 partition bb start ('2008'), end ('2009')
 );
-ERROR:  invalid use of mixed named and unnamed RANGE boundary specifications
+ERROR:  cannot derive ending value of partition based upon starting of next partition
 LINE 5: partition aa start ('2007'), end ('2008'),
-                                     ^
+        ^
 create table ggg (a char(1), b int)
 distributed by (a)
 partition by range(b)
 (
 partition aa start ('2007'), end ('2008')
 );
-ERROR:  invalid use of mixed named and unnamed RANGE boundary specifications
+ERROR:  cannot derive ending value of partition based upon starting of next partition
 LINE 5: partition aa start ('2007'), end ('2008')
-                                     ^
+        ^
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 create table ggg (a char(1), b date, d char(3))
@@ -53,20 +52,25 @@ partition by range (b)
 partition aa start (date '2007-01-01') end (date '2008-01-01'),
 partition bb start (date '2008-01-01') end (date '2009-01-01')
 );
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 drop table ggg cascade;
--- don't allow nonconstant expressions, even simple ones...
+-- Expressions are allowed
 create table ggg (a char(1), b numeric, d numeric)
 distributed by (a)
-partition by range (b,d)
+partition by range (b)
 (
-partition aa start (2007,1) end (2008,2+2),
-partition bb start (2008,2) end (2009,3)
+partition aa start (2007) end (2007+1),
+partition bb start (2008) end (2009)
 );
-ERROR:  syntax error at or near "+"
-LINE 5: partition aa start (2007,1) end (2008,2+2),
-                                               ^
+drop table ggg cascade;
+-- Even volatile expressions are OK. They are evaluted immediately.
+create table ggg (a char(1), b numeric, d numeric)
+distributed by (a)
+partition by range (b)
+(
+partition aa start (2007) end (2008+(random()*9)::integer),
+partition bb start (2018) end (2019)
+);
+drop table ggg cascade;
 -- too many columns for RANGE partition
 create table ggg (a char(1), b numeric, d numeric)
 distributed by (a)
@@ -76,10 +80,29 @@ partition aa start (2007,1) end (2008,2),
 partition bb start (2008,2) end (2009,3)
 );
 ERROR:  too many columns for RANGE partition -- only one column is allowed
-LINE 3: partition by range (b,d)
-                     ^
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
+-- Mismatch between number of columns in PARTITION BY and in the START/END clauses
+create table pby_mismatch (a char(1), b numeric, d numeric)
+distributed by (a)
+partition by range (b)
+(
+  partition aa start (2007,1) end (2008),
+  partition bb start (2008,2) end (2009)
+);
+ERROR:  invalid number of START values
+LINE 5:   partition aa start (2007,1) end (2008),
+                       ^
+create table pby_mismatch (a char(1), b numeric, d numeric)
+distributed by (a)
+partition by range (b)
+(
+  partition aa start (2007) end (2008,1),
+  partition bb start (2008) end (2009,1)
+);
+ERROR:  invalid number of END values
+LINE 5:   partition aa start (2007) end (2008,1),
+                                    ^
 -- basic list partition
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
@@ -88,8 +111,6 @@ partition by LIST (b)
 partition aa values ('a', 'b', 'c', 'd'),
 partition bb values ('e', 'f', 'g')
 );
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 insert into ggg values ('x', 'a');
 insert into ggg values ('x', 'b');
 insert into ggg values ('x', 'c');
@@ -165,18 +186,6 @@ start (date '2005-01-01')
   partition boys values ('M'),
   partition girls values ('F')
 );
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_4" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_5" for table "rank_1_prt_girls"
 insert into rank values (1, 1, date '2001-01-15', 'M');
 insert into rank values (2, 1, date '2002-02-15', 'M');
 insert into rank values (3, 1, date '2003-03-15', 'M');
@@ -252,12 +261,6 @@ end (date '2009-01-01')
        (subpartition dd values ('1', '2', '3'),
 	    subpartition ee values ('4', '5', '6'))
 );
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee" for table "ggg_1_prt_bb"
 drop table ggg cascade;
 -- demo ends here
 -- LIST validation
@@ -274,24 +277,21 @@ partition by list (gender)
   partition girls values ('e'),
   partition bob values ('M')
 );
-ERROR:  duplicate partition name for partition "girls"
-LINE 7:   partition girls values ('b'),
-          ^
+ERROR:  relation "rank_1_prt_girls" already exists
 -- duplicate values
-CREATE TABLE rank (id int, rank int, year date, gender
-char(1)) DISTRIBUTED BY (id, gender, year)
-partition by list (rank,gender)
+CREATE TYPE rank_partkey AS (rank int, gender char(1));
+CREATE TABLE rank (id int, rankgender rank_partkey, year date)
+DISTRIBUTED BY (id, year)
+partition by list (rankgender)
 (
- values ((1, 'M')),
- values ((2, 'M')),
- values ((3, 'M')),
- values ((1, 'F')),
- partition ff values ((4, 'M')),
- partition bb values ((1, 'M'))
+ values (CAST ('(1,M)' AS rank_partkey)),
+ values (CAST ('(2,M)' AS rank_partkey)),
+ values (CAST ('(3,M)' AS rank_partkey)),
+ values (CAST ('(1,F)' AS rank_partkey)),
+ partition ff values (CAST ('(4,M)' AS rank_partkey)),
+ partition bb values (CAST ('(1,M)' AS rank_partkey))
 );
-ERROR:  duplicate VALUES in partition "bb"
-LINE 10:  partition bb values ((1, 'M'))
-                       ^
+ERROR:  partition "rank_1_prt_bb" would overlap partition "rank_1_prt_1"
 -- RANGE validation
 -- legal if end of aa not inclusive
 create table ggg (a char(1), b date, d char(3))
@@ -301,13 +301,6 @@ partition by range (b)
 partition aa start (date '2007-08-01') end (date '2008-01-01'),
 partition bb start (date '2008-01-01') end (date '2008-03-01')
 every (interval '10 days'));
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_1" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_3" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_4" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_5" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_6" for table "ggg"
 drop table ggg cascade;
 -- bad - legal if end of aa not inclusive
 create table ggg (a char(1), b date, d char(3))
@@ -317,9 +310,7 @@ partition by range (b)
 partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
 partition bb start (date '2008-01-01') end (date '2009-01-01')
 every (interval '10 days'));
-ERROR:  starting value of partition "bb_1" overlaps previous range
-LINE 6: partition bb start (date '2008-01-01') end (date '2009-01-01...
-                     ^
+ERROR:  partition "ggg_1_prt_bb_1" would overlap partition "ggg_1_prt_aa"
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- legal because start of bb not inclusive
@@ -330,13 +321,6 @@ partition by range (b)
 partition aa start (date '2007-08-01') end (date '2008-01-01') inclusive,
 partition bb start (date '2008-01-01') exclusive end (date '2008-03-01')
 every (interval '10 days'));
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_1" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_3" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_4" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_5" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_6" for table "ggg"
 drop table ggg cascade;
 -- legal if end of aa not inclusive
 create table ggg (a char(1), b date, d char(3))
@@ -346,8 +330,6 @@ partition by range (b)
 partition bb start (date '2008-01-01') end (date '2009-01-01'),
 partition aa start (date '2007-01-01') end (date '2008-01-01')
 );
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 drop table ggg cascade;
 -- bad - legal if end of aa not inclusive
 create table ggg (a char(1), b date, d char(3))
@@ -357,9 +339,7 @@ partition by range (b)
 partition bb start (date '2008-01-01') end (date '2009-01-01'),
 partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive
 );
-ERROR:  starting value of partition "bb" overlaps previous range
-LINE 5: partition bb start (date '2008-01-01') end (date '2009-01-01...
-                     ^
+ERROR:  partition "ggg_1_prt_aa" would overlap partition "ggg_1_prt_bb"
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- legal because start of bb not inclusive
@@ -370,8 +350,6 @@ partition by range (b)
 partition bb start (date '2008-01-01') exclusive end (date '2009-01-01'),
 partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive
 );
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 drop table ggg cascade;
 -- validate aa - start greater than end
 create table ggg (a char(1), b date, d char(3))
@@ -381,9 +359,8 @@ partition by range (b)
 partition bb start (date '2008-01-01') end (date '2009-01-01'),
 partition aa start (date '2007-01-01') end (date '2006-01-01')
 );
-ERROR:  START greater than END for partition "aa"
-LINE 6: partition aa start (date '2007-01-01') end (date '2006-01-01...
-                     ^
+ERROR:  empty range bound specified for partition "ggg_1_prt_aa"
+DETAIL:  Specified lower bound ('01-01-2007') is greater than or equal to upper bound ('01-01-2006').
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- formerly we could not set end of first partition because next is before
@@ -395,8 +372,6 @@ partition by range (b)
 partition bb start (date '2008-01-01') ,
 partition aa start (date '2007-01-01')
 );
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 drop table ggg cascade;
 -- test cross type coercion
 -- int -> char(N)
@@ -404,14 +379,12 @@ create table ggg (i int, a char(1))
 distributed by (i)
 partition by list(a)
 (partition aa values(1, 2));
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 drop table ggg cascade;
 -- int -> numeric
 create table ggg (i int, n numeric(20, 2))
 distributed by (i)
 partition by list(n)
 (partition aa values(1.22, 4.1));
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 drop table ggg cascade;
 -- EVERY
 --  the documentation example, rewritten with EVERY in a template
@@ -426,18 +399,6 @@ end (date '2006-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_4" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_5" for table "rank_1_prt_girls"
 insert into rank values (1, 1, date '2001-01-15', 'M');
 insert into rank values (2, 1, date '2002-02-15', 'M');
 insert into rank values (3, 1, date '2003-03-15', 'M');
@@ -501,15 +462,6 @@ create table ggg (id integer, a integer)
 distributed by (id)
 partition by range (a)
 (start (1) end (10) every (1));
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_3" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_4" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_5" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_6" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_7" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_8" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_9" for table "ggg"
 insert into ggg values (1, 1);
 insert into ggg values (2, 2);
 insert into ggg values (3, 3);
@@ -520,7 +472,8 @@ insert into ggg values (7, 7);
 insert into ggg values (8, 8);
 insert into ggg values (9, 9);
 insert into ggg values (10, 10);
-ERROR:  no partition for partitioning key  (seg2 127.0.0.1:25434 pid=6805)
+ERROR:  no partition of relation "ggg" found for row  (seg2 127.0.1.1:7004 pid=6503)
+DETAIL:  Partition key of the failing row contains (a) = (10).
 select * from ggg order by 1, 2;
  id | a 
 ----+---
@@ -560,6 +513,46 @@ select * from ggg_1_prt_4 order by 1, 2;
 (1 row)
 
 drop table ggg cascade;
+-- EVERY works by invoking the + operator. We haven't explictly documented
+-- that user can create his own, but better still test it.
+create domain funnytext as text;
+create function funnytext_plus (funnytext, integer) returns funnytext
+as $$ select (chr(ascii($1) + $2))::funnytext $$ language sql;
+create operator pg_catalog.+ (function=funnytext_plus, leftarg=funnytext, rightarg=integer);
+create table ggg (a char(1), t funnytext)
+distributed by (a)
+partition by range (t)
+(
+  start ('aaa') end ('foobar') every (1)
+);
+\d+ ggg
+                                 Partitioned table "public.ggg"
+ Column |     Type     | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+--------------+-----------+----------+---------+----------+--------------+-------------
+ a      | character(1) |           |          |         | extended |              | 
+ t      | funnytext    |           |          |         | extended |              | 
+Partition key: RANGE (t)
+Partitions: ggg_1_prt_1 FOR VALUES FROM ('aaa') TO ('b'),
+            ggg_1_prt_2 FOR VALUES FROM ('b') TO ('c'),
+            ggg_1_prt_3 FOR VALUES FROM ('c') TO ('d'),
+            ggg_1_prt_4 FOR VALUES FROM ('d') TO ('e'),
+            ggg_1_prt_5 FOR VALUES FROM ('e') TO ('f'),
+            ggg_1_prt_6 FOR VALUES FROM ('f') TO ('foobar')
+Distributed by: (a)
+
+drop table ggg cascade;
+-- What if the + operator returns NULL?
+create or replace function funnytext_plus (funnytext, integer) returns funnytext
+as $$ select NULL::funnytext $$ language sql;
+create table ggg (a char(1), t funnytext)
+distributed by (a)
+partition by range (t)
+(
+  start ('aaa') end ('foobar') every (1)
+);
+ERROR:  could not compute next partition boundary with EVERY, plus-operator returned NULL
+LINE 5:   start ('aaa') end ('foobar') every (1)
+                                              ^
 create table fff (a char(1), b char(2), d char(3)) distributed by (a)
 partition by list (b) (partition aa values ('2'));
 drop table fff cascade;
@@ -571,8 +564,6 @@ partition aa start (2007,1) end (2008,2),
 partition bb start (2008,2) end (2009,3)
 );
 ERROR:  too many columns for RANGE partition -- only one column is allowed
-LINE 3: partition by range (b,d)
-                     ^
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 create table ggg (a char(1), b date, d char(3))
@@ -582,19 +573,14 @@ partition by range (b)
 partition bb start (date '2008-01-01') end (date '2009-01-01'),
 partition aa start (date '2007-01-01') end (date '2006-01-01')
 );
-ERROR:  START greater than END for partition "aa"
-LINE 6: partition aa start (date '2007-01-01') end (date '2006-01-01...
-                     ^
+ERROR:  empty range bound specified for partition "ggg_1_prt_aa"
+DETAIL:  Specified lower bound ('01-01-2007') is greater than or equal to upper bound ('01-01-2006').
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- append only tests
 create table foz (i int, d date) with (appendonly = true) distributed by (i)
 partition by range (d) (start (date '2001-01-01') end (date '2005-01-01')
 every(interval '1 year'));
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_1" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_2" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_3" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_4" for table "foz"
 insert into foz select i, '2001-01-01'::date + ('1 day'::interval * i) from
 generate_series(1, 1000) i;
 select count(*) from foz;
@@ -644,10 +630,6 @@ drop table foz cascade;
 create table foz (i int, d date) distributed by (i)
 partition by range (d) (start (date '2001-01-01') end (date '2005-01-01')
 every(interval '1 year'));
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_1" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_2" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_3" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_4" for table "foz"
 COPY foz FROM stdin DELIMITER '|';
 select * from foz_1_prt_1;
  i |     d      
@@ -676,17 +658,14 @@ select * from foz_1_prt_4;
 
 -- Check behaviour of key for which there is no partition
 COPY foz FROM stdin DELIMITER '|';
-ERROR:  no partition for partitioning key
+ERROR:  no partition of relation "foz" found for row
+DETAIL:  Partition key of the failing row contains (d) = (01-01-2010).
 CONTEXT:  COPY foz, line 1: "6|2010-01-01"
 drop table foz cascade;
 -- Same test with append only
 create table foz (i int, d date) with (appendonly = true) distributed by (i)
 partition by range (d) (start (date '2001-01-01') end (date '2005-01-01')
 every(interval '1 year'));
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_1" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_2" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_3" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_4" for table "foz"
 COPY foz FROM stdin DELIMITER '|';
 select * from foz_1_prt_1;
  i |     d      
@@ -715,7 +694,8 @@ select * from foz_1_prt_4;
 
 -- Check behaviour of key for which there is no partition
 COPY foz FROM stdin DELIMITER '|';
-ERROR:  no partition for partitioning key
+ERROR:  no partition of relation "foz" found for row
+DETAIL:  Partition key of the failing row contains (d) = (01-01-2010).
 CONTEXT:  COPY foz, line 1: "6|2010-01-01"
 drop table foz cascade;
 -- complain if create table as select (CTAS)
@@ -746,12 +726,6 @@ end (date '2003-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys" for table "rank2"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_1" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_2" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls" for table "rank2"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_1" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_2" for table "rank2_1_prt_girls"
 drop table rank1 cascade;
 drop table rank2 cascade;
 -- alter table testing
@@ -764,77 +738,67 @@ partition aa start (date '2007-01-01') end (date '2008-01-01')
 partition bb start (date '2008-01-01') end (date '2009-01-01')
     with (appendonly=false)
 );
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_aa" for table "hhh"
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_bb" for table "hhh"
 -- already exists
-alter table hhh add partition aa;
-ERROR:  partition "aa" of relation "hhh" already exists
+alter table hhh add partition aa start ('2010-01-01') end ('2011-01-01');
+ERROR:  relation "hhh_1_prt_aa" already exists
 -- no partition spec
 alter table hhh add partition cc;
-ERROR:  missing boundary specification
+ERROR:  missing boundary specification in partition "cc" of type RANGE
 -- overlaps
 alter table hhh add partition cc start ('2008-01-01') end ('2010-01-01');
-ERROR:  new partition overlaps existing partition "bb"
+ERROR:  partition "hhh_1_prt_cc" would overlap partition "hhh_1_prt_bb"
 alter table hhh add partition cc end ('2008-01-01');
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "hhh_1_prt_cc" would overlap partition "hhh_1_prt_aa"
 -- reversed (start > end)
 alter table hhh add partition cc start ('2010-01-01') end ('2009-01-01');
-ERROR:  START greater than END for partition "cc"
+ERROR:  empty range bound specified for partition "hhh_1_prt_cc"
+DETAIL:  Specified lower bound ('01-01-2010') is greater than or equal to upper bound ('01-01-2009').
 -- works
 --alter table hhh add partition cc start ('2009-01-01') end ('2010-01-01');
 alter table hhh add partition cc end ('2010-01-01');
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_cc" for table "hhh"
 -- works - anonymous partition MPP-3350
 alter table hhh add partition end ('2010-02-01');
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r270615893" for table "hhh"
 -- MPP-3607 - ADD PARTITION with open intervals
 create table no_end1 (aa int, bb int) partition by range (bb)
 (partition foo start(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "no_end1_1_prt_foo" for table "no_end1"
 -- fail overlap
 alter table no_end1 add partition baz end (4);
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "no_end1_1_prt_baz" would overlap partition "no_end1_1_prt_foo"
 -- fail overlap (because prior partition has no end)
 alter table no_end1 add partition baz start (5);
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "no_end1_1_prt_baz" would overlap partition "no_end1_1_prt_foo"
 -- ok (terminates on foo start)
 alter table no_end1 add partition baz start (2);
-NOTICE:  CREATE TABLE will create partition "no_end1_1_prt_baz" for table "no_end1"
 -- ok (because ends before baz start)
 alter table no_end1 add partition baz2 end (1);
-NOTICE:  CREATE TABLE will create partition "no_end1_1_prt_baz2" for table "no_end1"
 create table no_start1 (aa int, bb int) partition by range (bb)
 (partition foo end(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "no_start1_1_prt_foo" for table "no_start1"
 -- fail overlap (because next partition has no start)
 alter table no_start1 add partition baz start (2);
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "no_start1_1_prt_baz" would overlap partition "no_start1_1_prt_foo"
 -- fail overlap (because next partition has no start)
 alter table no_start1 add partition baz end (1);
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "no_start1_1_prt_baz" would overlap partition "no_start1_1_prt_foo"
 -- ok (starts on foo end)
 alter table no_start1 add partition baz end (4);
-NOTICE:  CREATE TABLE will create partition "no_start1_1_prt_baz" for table "no_start1"
 -- ok (because starts after baz end)
 alter table no_start1 add partition baz2 start (5);
-NOTICE:  CREATE TABLE will create partition "no_start1_1_prt_baz2" for table "no_start1"
-select tablename, partitionlevel, parentpartitiontablename,
-partitionname, partitionrank, partitionboundary from pg_partitions
-where tablename = 'no_start1' or tablename = 'no_end1'
-order by tablename, partitionrank;
- tablename | partitionlevel | parentpartitiontablename | partitionname | partitionrank |        partitionboundary        
------------+----------------+--------------------------+---------------+---------------+---------------------------------
- no_end1   |              0 |                          | baz2          |             1 | PARTITION baz2  END (1)
- no_end1   |              0 |                          | baz           |             2 | PARTITION baz START (2) END (3)
- no_end1   |              0 |                          | foo           |             3 | PARTITION foo START (3)
- no_start1 |              0 |                          | foo           |             1 | PARTITION foo  END (3)
- no_start1 |              0 |                          | baz           |             2 | PARTITION baz START (3) END (4)
- no_start1 |              0 |                          | baz2          |             3 | PARTITION baz2 START (5)
-(6 rows)
+select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'no_start%' or relname like 'no_end%';
+       relname        |            pg_get_expr            
+----------------------+-----------------------------------
+ no_end1              | 
+ no_end1_1_prt_foo    | FOR VALUES FROM (3) TO (MAXVALUE)
+ no_end1_1_prt_baz    | FOR VALUES FROM (2) TO (3)
+ no_end1_1_prt_baz2   | FOR VALUES FROM (MINVALUE) TO (1)
+ no_start1            | 
+ no_start1_1_prt_foo  | FOR VALUES FROM (MINVALUE) TO (3)
+ no_start1_1_prt_baz  | FOR VALUES FROM (3) TO (4)
+ no_start1_1_prt_baz2 | FOR VALUES FROM (5) TO (MAXVALUE)
+(8 rows)
 
 drop table no_end1;
 drop table no_start1;
@@ -845,18 +809,18 @@ partition by range(bb)
 partition j2 end (date '2009-01-01'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "jjj_1_prt_j1" for table "jjj"
-NOTICE:  CREATE TABLE will create partition "jjj_1_prt_j2" for table "jjj"
 -- must have a name
 alter table jjj add default partition;
 ERROR:  syntax error at or near ";"
 LINE 1: alter table jjj add default partition;
                                              ^
-alter table jjj add default partition for (rank(1));
+alter table jjj add default partition for ('2008-01-01');
 ERROR:  can only ADD a partition by name
 -- cannot have boundary spec
 alter table jjj add default partition j3 end (date '2010-01-01');
-ERROR:  invalid use of boundary specification for DEFAULT partition "j3" of relation "jjj"
+ERROR:  syntax error at or near "end"
+LINE 1: alter table jjj add default partition j3 end (date '2010-01-...
+                                                 ^
 drop table jjj cascade;
 -- only one default partition
 create table jjj (aa int, bb date)
@@ -866,17 +830,11 @@ partition j2 end (date '2009-01-01'),
 default partition j3);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "jjj_1_prt_j3" for table "jjj"
-NOTICE:  CREATE TABLE will create partition "jjj_1_prt_j1" for table "jjj"
-NOTICE:  CREATE TABLE will create partition "jjj_1_prt_j2" for table "jjj"
 alter table jjj add default partition j3 ;
-ERROR:  partition "j3" of relation "jjj" already exists
+ERROR:  relation "jjj_1_prt_j3" already exists
 alter table jjj add default partition j4 ;
-ERROR:  DEFAULT partition "j3" for relation "jjj" already exists
--- cannot add if have default, must split
+ERROR:  partition "jjj_1_prt_j4" conflicts with existing default partition "jjj_1_prt_j3"
 alter table jjj add partition j5 end (date '2010-01-01');
-ERROR:  cannot add RANGE partition "j5" to relation "jjj" with DEFAULT partition "j3"
-HINT:  need to SPLIT partition "j3"
 drop table jjj cascade;
 alter table hhh alter partition cc set tablespace foo_p;
 ERROR:  tablespace "foo_p" does not exist
@@ -884,18 +842,13 @@ alter table hhh alter partition aa set tablespace foo_p;
 ERROR:  tablespace "foo_p" does not exist
 alter table hhh drop partition cc;
 alter table hhh drop partition cc cascade;
-ERROR:  partition "cc" of relation "hhh" does not exist
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh drop partition cc restrict;
-ERROR:  partition "cc" of relation "hhh" does not exist
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh drop partition if exists cc;
-NOTICE:  partition "cc" of relation "hhh" does not exist, skipping
 -- fail (mpp-3265)
-alter table hhh drop partition for (rank(0));
-ERROR:  partition for rank 0 of relation "hhh" does not exist
-alter table hhh drop partition for (rank(-55));
-ERROR:  partition for rank -55 of relation "hhh" does not exist
 alter table hhh drop partition for ('2001-01-01');
-ERROR:  partition for value ('2001-01-01') of relation "hhh" does not exist
+ERROR:  partition for specified value of hhh does not exist
 create table hhh_r1 (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
@@ -903,18 +856,6 @@ partition by range (b)
 partition aa start (date '2007-01-01') end (date '2008-01-01')
              every (interval '1 month')
 );
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_1" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_2" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_3" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_4" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_5" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_6" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_7" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_8" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_9" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_10" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_11" for table "hhh_r1"
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_12" for table "hhh_r1"
 create table hhh_l1 (a char(1), b date, d char(3))
 distributed by (a)
 partition by list (b)
@@ -923,22 +864,20 @@ partition aa values ('2007-01-01'),
 partition bb values ('2008-01-01'),
 partition cc values ('2009-01-01')
 );
-NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_aa" for table "hhh_l1"
-NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_bb" for table "hhh_l1"
-NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_cc" for table "hhh_l1"
 -- must have name or value for partition
 alter table hhh_l1 drop partition;
-ERROR:  missing name or value for DROP for relation "hhh_l1"
+ERROR:  syntax error at or near ";"
+LINE 1: alter table hhh_l1 drop partition;
+                                         ^
 alter table hhh_l1 drop partition aa;
 alter table hhh_l1 drop partition for ('2008-01-01');
-NOTICE:  dropped partition "bb" for relation "hhh_l1"
 -- same with range partitioning
 alter table hhh_r1 drop partition;
-ERROR:  missing name or value for DROP for relation "hhh_r1"
+ERROR:  syntax error at or near ";"
+LINE 1: alter table hhh_r1 drop partition;
+                                         ^
 alter table hhh_r1 drop partition for ('2007-04-01');
-NOTICE:  dropped partition "aa_4" for relation "hhh_r1"
-alter table hhh_r1 drop partition for(rank(1));
-NOTICE:  dropped partition "aa_1" for relation "hhh_r1"
+alter table hhh_r1 drop partition for ('2007-01-01');
 alter table hhh_r1 drop partition aa_2;
 alter table hhh_r1 drop partition aa_3;
 alter table hhh_r1 drop partition aa_5;
@@ -946,43 +885,40 @@ alter table hhh_r1 drop partition aa_6;
 -- more add partition tests
 -- start before first partition (fail because start equal end)
 alter table hhh_r1 add partition zaa start ('2007-07-01');
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "hhh_r1_1_prt_zaa" would overlap partition "hhh_r1_1_prt_aa_7"
 -- start before first partition (ok)
 alter table hhh_r1 add partition zaa start ('2007-06-01');
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_zaa" for table "hhh_r1"
 -- start > last (fail because start equal end)
 alter table hhh_r1 add partition bb start ('2008-01-01') end ('2008-01-01') ;
-ERROR:  START equal to END for partition "bb"
+ERROR:  empty range bound specified for partition "hhh_r1_1_prt_bb"
+DETAIL:  Specified lower bound ('01-01-2008') is greater than or equal to upper bound ('01-01-2008').
 -- start > last (ok)
 alter table hhh_r1 add partition bb start ('2008-01-01')
 end ('2008-02-01') inclusive;
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_bb" for table "hhh_r1"
 -- start > last (fail because start == last end inclusive)
 alter table hhh_r1 add partition cc start ('2008-02-01') end ('2008-03-01') ;
-ERROR:  new partition overlaps existing partition "bb"
+ERROR:  partition "hhh_r1_1_prt_cc" would overlap partition "hhh_r1_1_prt_bb"
 -- start > last (ok [and leave a gap])
 alter table hhh_r1 add partition cc start ('2008-04-01') end ('2008-05-01') ;
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_cc" for table "hhh_r1"
 -- overlap (fail)
 alter table hhh_r1 add partition dd start ('2008-01-01') end ('2008-05-01') ;
-ERROR:  new partition overlaps existing partition "bb"
+ERROR:  partition "hhh_r1_1_prt_dd" would overlap partition "hhh_r1_1_prt_bb"
 -- new partition in "gap" (ok)
 alter table hhh_r1 add partition dd start ('2008-03-01') end ('2008-04-01') ;
-NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_dd" for table "hhh_r1"
 -- overlap all partitions (fail)
 alter table hhh_r1 add partition ee start ('2006-01-01') end ('2009-01-01') ;
-ERROR:  new partition overlaps existing partition
+ERROR:  partition "hhh_r1_1_prt_ee" would overlap partition "hhh_r1_1_prt_zaa"
 -- start before first partition (fail because end in "gap" [and overlaps])
 alter table hhh_r1 add partition yaa start ('2007-05-01') end ('2007-07-01');
-ERROR:  new partition overlaps existing partition "aa_7"
+ERROR:  partition "hhh_r1_1_prt_yaa" would overlap partition "hhh_r1_1_prt_zaa"
 -- start before first partition (fail )
 alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') inclusive;
-ERROR:  new partition overlaps existing partition "aa_10"
+ERROR:  partition "hhh_r1_1_prt_yaa" would overlap partition "hhh_r1_1_prt_zaa"
 -- start before first partition (fail because end overlaps)
 alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') exclusive;
-ERROR:  new partition overlaps existing partition "aa_10"
+ERROR:  partition "hhh_r1_1_prt_yaa" would overlap partition "hhh_r1_1_prt_zaa"
 drop table hhh_r1 cascade;
 drop table hhh_l1 cascade;
 --  the documentation example, rewritten with EVERY in a template
@@ -999,24 +935,6 @@ partition boys values ('M'),
 partition girls values ('F'),
 default partition neuter
 );
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_4" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_5" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_1" for table "rank_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_2" for table "rank_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_3" for table "rank_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_4" for table "rank_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_5" for table "rank_1_prt_neuter"
 insert into rank values (1, 1, date '2001-01-15', 'M');
 insert into rank values (2, 1, date '2002-02-15', 'M');
 insert into rank values (3, 1, date '2003-03-15', 'M');
@@ -1043,7 +961,6 @@ select * from rank ;
 (10 rows)
 
 alter table rank DROP partition boys restrict;
-NOTICE:  dropped partition "boys" for relation "rank" and its children
 select * from rank ;
  id | rank |    year    | gender 
 ----+------+------------+--------
@@ -1056,61 +973,52 @@ select * from rank ;
 
 -- MPP-3722: complain if for(value) matches the default partition
 alter table rank truncate partition for('N');
-ERROR:  FOR expression matches DEFAULT partition "neuter" of relation "rank"
+ERROR:  FOR expression matches DEFAULT partition for specified value of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
 alter table rank DROP partition for('N');
-ERROR:  FOR expression matches DEFAULT partition "neuter" of relation "rank"
+ERROR:  FOR expression matches DEFAULT partition for specified value of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
 alter table rank DROP partition if exists for('N');
-ERROR:  FOR expression matches DEFAULT partition "neuter" of relation "rank"
+ERROR:  FOR expression matches DEFAULT partition for specified value of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
 alter table rank DROP default partition if exists ;
-NOTICE:  dropped partition "neuter" for relation "rank" and its children
 -- can't drop the final partition - must drop the table
 alter table rank DROP partition girls;
-ERROR:  cannot drop partition "girls" of relation "rank" -- only one remains
+ERROR:  cannot drop partition "rank_1_prt_girls" of "rank" -- only one remains
 HINT:  Use DROP TABLE "rank" to remove the table and the final partition
 -- MPP-4011: make FOR(value) work
 alter table rank alter partition for ('F') add default partition def1;
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_def1" for table "rank_1_prt_girls"
 alter table rank alter partition for ('F')
 truncate partition for ('2010-10-10');
-ERROR:  FOR expression matches DEFAULT partition "def1" of partition "girls" of relation "rank"
+ERROR:  FOR expression matches DEFAULT partition for specified value of relation "rank_1_prt_girls"
 HINT:  FOR expression may only specify a non-default partition in this context.
 alter table rank truncate partition for ('F');
-NOTICE:  truncated partition "girls" for relation "rank" and its children
 drop table rank cascade;
-alter table hhh exchange partition cc with table nosuchtable with validation;
-ERROR:  partition "cc" of relation "hhh" does not exist
-alter table hhh exchange partition cc with table nosuchtable without validation;
-ERROR:  partition "cc" of relation "hhh" does not exist
-alter table hhh exchange partition aa with table nosuchtable with validation;
-ERROR:  relation "nosuchtable" does not exist
-alter table hhh exchange partition aa with table nosuchtable without validation;
+alter table hhh exchange partition cc with table nosuchtable;
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
+alter table hhh exchange partition aa with table nosuchtable;
 ERROR:  relation "nosuchtable" does not exist
 alter table hhh rename partition cc to aa;
-ERROR:  partition "cc" of relation "hhh" does not exist
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh rename partition bb to aa;
-ERROR:  partition "aa" of relation "hhh" already exists
+ERROR:  relation "hhh_1_prt_aa" already exists
 alter table hhh rename partition aa to aa;
-ERROR:  partition "aa" of relation "hhh" already exists
+ERROR:  relation "hhh_1_prt_aa" already exists
 alter table hhh rename partition aa to "funky fresh";
 alter table hhh rename partition "funky fresh" to aa;
 -- use FOR PARTITION VALUE (with implicate date conversion)
 alter table hhh rename partition for ('2007-01-01') to "funky fresh";
-NOTICE:  renamed partition "aa" to "funky fresh" for relation "hhh"
 alter table hhh rename partition for ('2007-01-01') to aa;
-NOTICE:  renamed partition "funky fresh" to "aa" for relation "hhh"
 alter table hhh set subpartition template ();
 ERROR:  relation "hhh" does not have a level 1 subpartition template specification
 alter table hhh split partition cc at ('a');
-ERROR:  partition "cc" of relation "hhh" does not exist
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh split partition cc at ('a') into (partition gg, partition hh);
-ERROR:  partition "cc" of relation "hhh" does not exist
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh split partition aa at ('a');
 ERROR:  invalid input syntax for type date: "a"
 alter table hhh truncate partition cc;
-ERROR:  partition "cc" of relation "hhh" does not exist
+ERROR:  relation "public.hhh_1_prt_cc" does not exist
 alter table hhh truncate partition aa;
 insert into hhh values('a', date '2007-01-02', 'b');
 insert into hhh values('a', date '2007-02-01', 'b');
@@ -1257,11 +1165,9 @@ partition by range(bb)
 (partition j1 end (date '2008-01-01'),
 partition j2 end (date '2009-01-01'),
 default partition j3 end (date '2010-01-01'));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  invalid use of boundary specification for DEFAULT partition "j3"
+ERROR:  syntax error at or near "end"
 LINE 5: default partition j3 end (date '2010-01-01'));
-        ^
+                             ^
 -- more than one default partition
 create table jjj (aa int, bb date)
 partition by range(bb)
@@ -1282,11 +1188,6 @@ partition by range (d)
  partition foo start (date '2001-01-01') end (date '2005-01-01')
                every(interval '1 year')
 );
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_dsf" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_foo_1" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_foo_2" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_foo_3" for table "foz"
-NOTICE:  CREATE TABLE will create partition "foz_1_prt_foo_4" for table "foz"
 insert into foz values(1, '2003-04-01');
 insert into foz values(2, '2010-04-01');
 select * from foz;
@@ -1307,15 +1208,25 @@ drop table foz cascade;
 -- and determine the appropriate boundaries.
 create table d (i int, j int) distributed by (i) partition by range(j)
 ( start (10), start(5), start(50) end(60));
-NOTICE:  CREATE TABLE will create partition "d_1_prt_1" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_2" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_3" for table "d"
 insert into d values(1, 5);
 insert into d values(1, 10);
 insert into d values(1, 11);
 insert into d values(1, 55);
 insert into d values(1, 70);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+ERROR:  no partition of relation "d" found for row  (seg1 127.0.1.1:7003 pid=6502)
+DETAIL:  Partition key of the failing row contains (j) = (70).
+\d+ d
+                               Partitioned table "public.d"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ i      | integer |           |          |         | plain   |              | 
+ j      | integer |           |          |         | plain   |              | 
+Partition key: RANGE (j)
+Partitions: d_1_prt_1 FOR VALUES FROM (10) TO (50),
+            d_1_prt_2 FOR VALUES FROM (5) TO (10),
+            d_1_prt_3 FOR VALUES FROM (50) TO (60)
+Distributed by: (i)
+
 select * from d;
  i | j  
 ---+----
@@ -1326,17 +1237,17 @@ select * from d;
 (4 rows)
 
 select * from d_1_prt_1;
- i | j 
----+---
- 1 | 5
-(1 row)
-
-select * from d_1_prt_2;
  i | j  
 ---+----
  1 | 10
  1 | 11
 (2 rows)
+
+select * from d_1_prt_2;
+ i | j 
+---+---
+ 1 | 5
+(1 row)
 
 select * from d_1_prt_3;
  i | j  
@@ -1353,8 +1264,6 @@ create table d (i int, j int) partition by list(j)
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "d_1_prt_a" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
 insert into d values(1, 1);
 insert into d values(1, 2);
 insert into d values(1, NULL);
@@ -1382,12 +1291,11 @@ create table d (i int,  j int) partition by range(j)
 (partition a start (1) end(10), partition b start(11) end(20));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "d_1_prt_a" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
 insert into d values (1, 1);
 insert into d values (1, 2);
 insert into d values (1, NULL);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+ERROR:  no partition of relation "d" found for row  (seg1 127.0.1.1:7003 pid=6502)
+DETAIL:  Partition key of the failing row contains (j) = (null).
 drop table  d cascade;
 -- allow NULLs into the default partition
 create table d (i int,  j int) partition by range(j)
@@ -1395,9 +1303,6 @@ create table d (i int,  j int) partition by range(j)
 default partition abc);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "d_1_prt_abc" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_a" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
 insert into d values (1, 1);
 insert into d values (1, 2);
 insert into d values (1, NULL);
@@ -1409,41 +1314,53 @@ select * from d_1_prt_abc;
 
 drop table  d cascade;
 -- multicolumn list support
-create table d (a int, b int, c int) distributed by (a)
-partition by list(b, c)
-(partition a values(('1', '2'), ('3', '4')),
- partition b values(('100', '20')),
- partition c values(('1000', '1001'), ('1001', '1002'), ('1003', '1004')));
-NOTICE:  CREATE TABLE will create partition "d_1_prt_a" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_c" for table "d"
-insert into d values(1, 1, 2);
-insert into d values(1, 3, 4);
-insert into d values(1, 100, 20);
-insert into d values(1, 100, 2000);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
-insert into d values(1, '1000', '1001'), (1, '1001', '1002'), (1, '1003', '1004');
-insert into d values(1, 100, NULL);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+create type d_partkey as (b int, c int);
+create table d (a int, k d_partkey) distributed by (a)
+partition by list(k)
+(partition a values(CAST('(1,2)' as d_partkey), CAST('(3,4)' as d_partkey)),
+ partition b values(CAST('(100,20)' as d_partkey)),
+ partition c values(CAST('(1000,1001)' as d_partkey), CAST('(1001,1002)' as d_partkey), CAST('(1003,1004)' as d_partkey)));
+\d+ d
+                                Partitioned table "public.d"
+ Column |   Type    | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+-----------+-----------+----------+---------+----------+--------------+-------------
+ a      | integer   |           |          |         | plain    |              | 
+ k      | d_partkey |           |          |         | extended |              | 
+Partition key: LIST (k)
+Partitions: d_1_prt_a FOR VALUES IN ('(1,2)', '(3,4)'),
+            d_1_prt_b FOR VALUES IN ('(100,20)'),
+            d_1_prt_c FOR VALUES IN ('(1000,1001)', '(1001,1002)', '(1003,1004)')
+Distributed by: (a)
+
+insert into d values(1, (1, 2));
+insert into d values(1, (3, 4));
+insert into d values(1, (100, 20));
+insert into d values(1, (100, 2000));
+ERROR:  no partition of relation "d" found for row  (seg1 127.0.1.1:7003 pid=10417)
+DETAIL:  Partition key of the failing row contains (k) = ((100,2000)).
+insert into d values(1, ('1000', '1001')), (1, ('1001', '1002')), (1, ('1003', '1004'));
+insert into d values(1, (100, NULL));
+ERROR:  no partition of relation "d" found for row  (seg1 127.0.1.1:7003 pid=10417)
+DETAIL:  Partition key of the failing row contains (k) = ((100,)).
 select * from d_1_prt_a;
- a | b | c 
----+---+---
- 1 | 1 | 2
- 1 | 3 | 4
+ a |   k   
+---+-------
+ 1 | (1,2)
+ 1 | (3,4)
 (2 rows)
 
 select * from d_1_prt_b;
- a |  b  | c  
----+-----+----
- 1 | 100 | 20
+ a |    k     
+---+----------
+ 1 | (100,20)
 (1 row)
 
 select * from d_1_prt_c;
- a |  b   |  c   
----+------+------
- 1 | 1000 | 1001
- 1 | 1001 | 1002
- 1 | 1003 | 1004
+ a |      k      
+---+-------------
+ 1 | (1000,1001)
+ 1 | (1001,1002)
+ 1 | (1003,1004)
 (3 rows)
 
 drop table d cascade;
@@ -1456,8 +1373,6 @@ partition by range (i, j)
  start(1, '2011-01-01') end (100, '2012-01-01')
 );
 ERROR:  too many columns for RANGE partition -- only one column is allowed
-LINE 2: partition by range (i, j)
-                     ^
 -- should work
 insert into b values(1, '2008-06-11');
 ERROR:  relation "b" does not exist
@@ -1515,8 +1430,6 @@ start(4000.95, '2007-01-01 00:00:00', 'AAA')
   end (7000.95, '2007-02-02 15:00:00', 'BBB')
 );
 ERROR:  too many columns for RANGE partition -- only one column is allowed
-LINE 3: partition by range(n, t, s)
-                     ^
 -- should work
 insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
@@ -1602,16 +1515,12 @@ partition by list (p1)
 (
   values (0),
   values (1));
-NOTICE:  CREATE TABLE will create partition "s1_1_prt_1" for table "s1"
-NOTICE:  CREATE TABLE will create partition "s1_1_prt_2" for table "s1"
 create table s2 (d2 int, p2 int)
 distributed by (d2)
 partition by list (p2)
 (
   values (0),
   values (1));
-NOTICE:  CREATE TABLE will create partition "s2_1_prt_1" for table "s2"
-NOTICE:  CREATE TABLE will create partition "s2_1_prt_2" for table "s2"
 -- end_ignore
 -- VERIFY
 -- expect GPOPT fall back to Postgres query optimizer
@@ -1640,20 +1549,11 @@ subpartition by list (p2)
   (subpartition l1 values ('l1'),
    subpartition l2 values ('l2'))
 );
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m1" for table "test_part_relops_tmpl"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m1_2_prt_l1" for table "test_part_relops_tmpl_1_prt_m1"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m1_2_prt_l2" for table "test_part_relops_tmpl_1_prt_m1"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m2" for table "test_part_relops_tmpl"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m2_2_prt_l1" for table "test_part_relops_tmpl_1_prt_m2"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m2_2_prt_l2" for table "test_part_relops_tmpl_1_prt_m2"
 alter table test_part_relops_tmpl
 set subpartition template
 (
    subpartition l1 values('l1')
 );
-NOTICE:  adding level 1 subpartition template specification for relation "test_part_relops_tmpl"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_subpartition_template" for table "test_part_relops_tmpl"
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_subpartition_template_2_prt_l1" for table "test_part_relops_tmpl_1_prt_subpartition_template"
 -- previously, we do wrong in the function of `add_partition_rule`
 -- which invokes `transformRelOptions`, and transformRelOptions
 -- may return NULL in some cases. For example, the invokation of
@@ -1663,7 +1563,6 @@ NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_subpart
 -- null pointers.
 alter table test_part_relops_tmpl alter partition for ('m1') add partition l3 values ('l3')
 with (oids=false);
-NOTICE:  CREATE TABLE will create partition "test_part_relops_tmpl_1_prt_m1_2_prt_l3" for table "test_part_relops_tmpl_1_prt_m1"
 create table mpp_2914A(id int,  buyDate date, kind char(1))
 DISTRIBUTED BY (id)
 partition by list (kind)
@@ -1681,24 +1580,6 @@ subpartition template
         partition buyItNow values('b', 'B'),
         default partition catchall
 );
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction" for table "mpp_2914a"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_1" for table "mpp_2914a_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_2" for table "mpp_2914a_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_3" for table "mpp_2914a_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_4" for table "mpp_2914a_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_5" for table "mpp_2914a_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow" for table "mpp_2914a"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_1" for table "mpp_2914a_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_2" for table "mpp_2914a_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_3" for table "mpp_2914a_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_4" for table "mpp_2914a_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_5" for table "mpp_2914a_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall" for table "mpp_2914a"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_1" for table "mpp_2914a_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_2" for table "mpp_2914a_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_3" for table "mpp_2914a_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_4" for table "mpp_2914a_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_5" for table "mpp_2914a_1_prt_catchall"
 select count(*) from mpp_2914A;
  count 
 -------
@@ -1706,226 +1587,182 @@ select count(*) from mpp_2914A;
 (1 row)
 
 \d mpp_2914a*
-      Table "public.mpp_2914a"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Number of child tables: 3 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (kind)
-
-Table "public.mpp_2914a_1_prt_auction"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914a
-Number of child tables: 5 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (buydate)
-
-Table "public.mpp_2914a_1_prt_auction_2_prt_1"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_auction_2_prt_1_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
-    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914a_1_prt_auction
+          Partitioned table "public.mpp_2914a"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition key: LIST (kind)
+Number of partitions: 3 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_auction_2_prt_2"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_auction_2_prt_2_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
-    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914a_1_prt_auction
+   Partitioned table "public.mpp_2914a_1_prt_auction"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a FOR VALUES IN ('a', 'A')
+Partition key: RANGE (buydate)
+Number of partitions: 5 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_auction_2_prt_3"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_auction_2_prt_3_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
-    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914a_1_prt_auction
+     Table "public.mpp_2914a_1_prt_auction_2_prt_1"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_auction FOR VALUES FROM ('01-01-2001') TO ('01-01-2002')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_auction_2_prt_4"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_auction_2_prt_4_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
-    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914a_1_prt_auction
+     Table "public.mpp_2914a_1_prt_auction_2_prt_2"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_auction FOR VALUES FROM ('01-01-2002') TO ('01-01-2003')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_auction_2_prt_5"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_auction_2_prt_5_check" CHECK (buydate >= '01-01-2005'::date)
-    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914a_1_prt_auction
+     Table "public.mpp_2914a_1_prt_auction_2_prt_3"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_auction FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_buyitnow"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914a
-Number of child tables: 5 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (buydate)
-
-Table "public.mpp_2914a_1_prt_buyitnow_2_prt_1"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_buyitnow_2_prt_1_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
-    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914a_1_prt_buyitnow
+     Table "public.mpp_2914a_1_prt_auction_2_prt_4"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_auction FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_buyitnow_2_prt_2"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_buyitnow_2_prt_2_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
-    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914a_1_prt_buyitnow
+     Table "public.mpp_2914a_1_prt_auction_2_prt_5"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_auction FOR VALUES FROM ('01-01-2005') TO (MAXVALUE)
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_buyitnow_2_prt_3"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_buyitnow_2_prt_3_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
-    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914a_1_prt_buyitnow
+   Partitioned table "public.mpp_2914a_1_prt_buyitnow"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a FOR VALUES IN ('b', 'B')
+Partition key: RANGE (buydate)
+Number of partitions: 5 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_buyitnow_2_prt_4"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_buyitnow_2_prt_4_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
-    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914a_1_prt_buyitnow
+     Table "public.mpp_2914a_1_prt_buyitnow_2_prt_1"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_buyitnow FOR VALUES FROM ('01-01-2001') TO ('01-01-2002')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_buyitnow_2_prt_5"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_buyitnow_2_prt_5_check" CHECK (buydate >= '01-01-2005'::date)
-    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914a_1_prt_buyitnow
+     Table "public.mpp_2914a_1_prt_buyitnow_2_prt_2"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_buyitnow FOR VALUES FROM ('01-01-2002') TO ('01-01-2003')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_catchall"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Inherits: mpp_2914a
-Number of child tables: 5 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (buydate)
-
-Table "public.mpp_2914a_1_prt_catchall_2_prt_1"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_catchall_2_prt_1_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
-Inherits: mpp_2914a_1_prt_catchall
+     Table "public.mpp_2914a_1_prt_buyitnow_2_prt_3"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_buyitnow FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_catchall_2_prt_2"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_catchall_2_prt_2_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
-Inherits: mpp_2914a_1_prt_catchall
+     Table "public.mpp_2914a_1_prt_buyitnow_2_prt_4"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_buyitnow FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_catchall_2_prt_3"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_catchall_2_prt_3_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
-Inherits: mpp_2914a_1_prt_catchall
+     Table "public.mpp_2914a_1_prt_buyitnow_2_prt_5"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_buyitnow FOR VALUES FROM ('01-01-2005') TO (MAXVALUE)
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_catchall_2_prt_4"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_catchall_2_prt_4_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
-Inherits: mpp_2914a_1_prt_catchall
+   Partitioned table "public.mpp_2914a_1_prt_catchall"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a DEFAULT
+Partition key: RANGE (buydate)
+Number of partitions: 5 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914a_1_prt_catchall_2_prt_5"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914a_1_prt_catchall_2_prt_5_check" CHECK (buydate >= '01-01-2005'::date)
-Inherits: mpp_2914a_1_prt_catchall
+     Table "public.mpp_2914a_1_prt_catchall_2_prt_1"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_catchall FOR VALUES FROM ('01-01-2001') TO ('01-01-2002')
+Distributed by: (id)
+
+     Table "public.mpp_2914a_1_prt_catchall_2_prt_2"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_catchall FOR VALUES FROM ('01-01-2002') TO ('01-01-2003')
+Distributed by: (id)
+
+     Table "public.mpp_2914a_1_prt_catchall_2_prt_3"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_catchall FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+Distributed by: (id)
+
+     Table "public.mpp_2914a_1_prt_catchall_2_prt_4"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_catchall FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+Distributed by: (id)
+
+     Table "public.mpp_2914a_1_prt_catchall_2_prt_5"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914a_1_prt_catchall FOR VALUES FROM ('01-01-2005') TO (MAXVALUE)
 Distributed by: (id)
 
 create table mpp_2914B(id int,  buyDate date, kind char(1))
@@ -1958,24 +1795,6 @@ subpartition by range(buyDate)
                 subpartition y2005 start (date '2005-01-01')
         )
 );
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction" for table "mpp_2914b"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2001" for table "mpp_2914b_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2002" for table "mpp_2914b_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2003" for table "mpp_2914b_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2004" for table "mpp_2914b_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2005" for table "mpp_2914b_1_prt_auction"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow" for table "mpp_2914b"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2001" for table "mpp_2914b_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2002" for table "mpp_2914b_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2003" for table "mpp_2914b_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2004" for table "mpp_2914b_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2005" for table "mpp_2914b_1_prt_buyitnow"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall" for table "mpp_2914b"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2001" for table "mpp_2914b_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2002" for table "mpp_2914b_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2003" for table "mpp_2914b_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2004" for table "mpp_2914b_1_prt_catchall"
-NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2005" for table "mpp_2914b_1_prt_catchall"
 select count(*) from mpp_2914B;
  count 
 -------
@@ -1983,226 +1802,182 @@ select count(*) from mpp_2914B;
 (1 row)
 
 \d mpp_2914b*
-      Table "public.mpp_2914b"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Number of child tables: 3 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (kind)
-
-Table "public.mpp_2914b_1_prt_auction"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914b
-Number of child tables: 5 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (buydate)
-
-Table "public.mpp_2914b_1_prt_auction_2_prt_y2001"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_auction_2_prt_y2001_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
-    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914b_1_prt_auction
+          Partitioned table "public.mpp_2914b"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition key: LIST (kind)
+Number of partitions: 3 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_auction_2_prt_y2002"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_auction_2_prt_y2002_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
-    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914b_1_prt_auction
+   Partitioned table "public.mpp_2914b_1_prt_auction"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b FOR VALUES IN ('a', 'A')
+Partition key: RANGE (buydate)
+Number of partitions: 5 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_auction_2_prt_y2003"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_auction_2_prt_y2003_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
-    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914b_1_prt_auction
+   Table "public.mpp_2914b_1_prt_auction_2_prt_y2001"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_auction FOR VALUES FROM ('01-01-2001') TO ('01-01-2002')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_auction_2_prt_y2004"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_auction_2_prt_y2004_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
-    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914b_1_prt_auction
+   Table "public.mpp_2914b_1_prt_auction_2_prt_y2002"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_auction FOR VALUES FROM ('01-01-2002') TO ('01-01-2003')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_auction_2_prt_y2005"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_auction_2_prt_y2005_check" CHECK (buydate >= '01-01-2005'::date)
-    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
-Inherits: mpp_2914b_1_prt_auction
+   Table "public.mpp_2914b_1_prt_auction_2_prt_y2003"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_auction FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_buyitnow"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914b
-Number of child tables: 5 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (buydate)
-
-Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2001"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_buyitnow_2_prt_y2001_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
-    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914b_1_prt_buyitnow
+   Table "public.mpp_2914b_1_prt_auction_2_prt_y2004"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_auction FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2002"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_buyitnow_2_prt_y2002_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
-    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914b_1_prt_buyitnow
+   Table "public.mpp_2914b_1_prt_auction_2_prt_y2005"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_auction FOR VALUES FROM ('01-01-2005') TO (MAXVALUE)
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2003"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_buyitnow_2_prt_y2003_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
-    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914b_1_prt_buyitnow
+   Partitioned table "public.mpp_2914b_1_prt_buyitnow"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b FOR VALUES IN ('b', 'B')
+Partition key: RANGE (buydate)
+Number of partitions: 5 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2004"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_buyitnow_2_prt_y2004_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
-    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914b_1_prt_buyitnow
+   Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2001"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_buyitnow FOR VALUES FROM ('01-01-2001') TO ('01-01-2002')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2005"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_buyitnow_2_prt_y2005_check" CHECK (buydate >= '01-01-2005'::date)
-    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
-Inherits: mpp_2914b_1_prt_buyitnow
+   Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2002"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_buyitnow FOR VALUES FROM ('01-01-2002') TO ('01-01-2003')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_catchall"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Inherits: mpp_2914b
-Number of child tables: 5 (Use \d+ to list them.)
-Distributed by: (id)
-Partition by: (buydate)
-
-Table "public.mpp_2914b_1_prt_catchall_2_prt_y2001"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_catchall_2_prt_y2001_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
-Inherits: mpp_2914b_1_prt_catchall
+   Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2003"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_buyitnow FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_catchall_2_prt_y2002"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_catchall_2_prt_y2002_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
-Inherits: mpp_2914b_1_prt_catchall
+   Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2004"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_buyitnow FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_catchall_2_prt_y2003"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_catchall_2_prt_y2003_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
-Inherits: mpp_2914b_1_prt_catchall
+   Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2005"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_buyitnow FOR VALUES FROM ('01-01-2005') TO (MAXVALUE)
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_catchall_2_prt_y2004"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_catchall_2_prt_y2004_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
-Inherits: mpp_2914b_1_prt_catchall
+   Partitioned table "public.mpp_2914b_1_prt_catchall"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b DEFAULT
+Partition key: RANGE (buydate)
+Number of partitions: 5 (Use \d+ to list them.)
 Distributed by: (id)
 
-Table "public.mpp_2914b_1_prt_catchall_2_prt_y2005"
- Column  |     Type     | Modifiers 
----------+--------------+-----------
- id      | integer      | 
- buydate | date         | 
- kind    | character(1) | 
-Check constraints:
-    "mpp_2914b_1_prt_catchall_2_prt_y2005_check" CHECK (buydate >= '01-01-2005'::date)
-Inherits: mpp_2914b_1_prt_catchall
+   Table "public.mpp_2914b_1_prt_catchall_2_prt_y2001"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_catchall FOR VALUES FROM ('01-01-2001') TO ('01-01-2002')
+Distributed by: (id)
+
+   Table "public.mpp_2914b_1_prt_catchall_2_prt_y2002"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_catchall FOR VALUES FROM ('01-01-2002') TO ('01-01-2003')
+Distributed by: (id)
+
+   Table "public.mpp_2914b_1_prt_catchall_2_prt_y2003"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_catchall FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+Distributed by: (id)
+
+   Table "public.mpp_2914b_1_prt_catchall_2_prt_y2004"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_catchall FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+Distributed by: (id)
+
+   Table "public.mpp_2914b_1_prt_catchall_2_prt_y2005"
+ Column  |     Type     | Collation | Nullable | Default 
+---------+--------------+-----------+----------+---------
+ id      | integer      |           |          | 
+ buydate | date         |           |          | 
+ kind    | character(1) |           |          | 
+Partition of: mpp_2914b_1_prt_catchall FOR VALUES FROM ('01-01-2005') TO (MAXVALUE)
 Distributed by: (id)
 
 drop table mpp_2914a cascade;
@@ -2219,9 +1994,6 @@ partition aa start(1) end(100) inclusive,
 partition bb start(101) end(200) inclusive,
 partition cc start(201) end (300) inclusive
 );
-NOTICE:  CREATE TABLE will create partition "mpp10847_pkeyconstraints_1_prt_aa" for table "mpp10847_pkeyconstraints"
-NOTICE:  CREATE TABLE will create partition "mpp10847_pkeyconstraints_1_prt_bb" for table "mpp10847_pkeyconstraints"
-NOTICE:  CREATE TABLE will create partition "mpp10847_pkeyconstraints_1_prt_cc" for table "mpp10847_pkeyconstraints"
 insert into mpp10847_pkeyconstraints values (10000, 50, 50, 102);
 -- This is supposed to fail as you're not supposed to be able to use the same
 -- primary key in the same table. But GPDB cannot currently enforce that.
@@ -2259,55 +2031,13 @@ partition by range (message_create_date)
     START (timestamp '2011-09-01') END (timestamp '2011-09-10') EVERY (interval '1 day'),
     DEFAULT PARTITION outlying_dates
 );
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_outlying_dates" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_2" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_3" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_4" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_5" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_6" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_7" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_8" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_9" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_10" for table "dcl_messaging_test"
 -- partial index
 create index dcl_messaging_test_index13 on dcl_messaging_test(variable_13) where message_create_date > '2011-09-02';
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_outlying_dates"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_2"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_3"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_4"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_5"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_6"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_7"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_8"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_9"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_10"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_11"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_12"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_13"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_14"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_15"
 -- expression index
 create index dcl_messaging_test_index16 on dcl_messaging_test(upper(variable_16));
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_outlying_dates"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_2"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_3"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_4"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_5"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_6"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_7"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_8"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_9"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_10"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_11"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_12"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_13"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_14"
-NOTICE:  building index for child partition "dcl_messaging_test_1_prt_15"
 alter table dcl_messaging_test drop default partition;
-NOTICE:  dropped partition "outlying_dates" for relation "dcl_messaging_test"
 -- ADD case
 alter table dcl_messaging_test add partition start (timestamp '2011-09-10') inclusive end (timestamp '2011-09-11') exclusive;
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r1571743545" for table "dcl_messaging_test"
 -- EXCHANGE case
 create table dcl_candidate(like dcl_messaging_test including indexes) with (appendonly=true);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
@@ -2315,8 +2045,6 @@ insert into dcl_candidate(message_create_date) values (timestamp '2011-09-06');
 alter table dcl_messaging_test exchange partition for ('2011-09-06') with table dcl_candidate;
 -- SPLIT case
 alter table dcl_messaging_test split partition for (timestamp '2011-09-06') at (timestamp '2011-09-06 12:00:00') into (partition x1, partition x2);
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_x1" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_x2" for table "dcl_messaging_test"
 --
 -- Create table with 4 partitions
 CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
@@ -2325,51 +2053,47 @@ PARTITION BY RANGE (date)
 ( START (date '2008-01-01') INCLUSIVE
  END (date '2008-01-05') EXCLUSIVE
  EVERY (INTERVAL '1 day') );
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_1" for table "mpp13806"
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_2" for table "mpp13806"
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_3" for table "mpp13806"
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_4" for table "mpp13806"
 -- Add unbound partition right before the start succeeds
 alter table mpp13806 add partition test end (date '2008-01-01') exclusive;
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test" for table "mpp13806"
-select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
- partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
----------------------+---------------------+-------------------------+--------------------+-----------------------
- mpp13806_1_prt_test |                     | f                       | '01-01-2008'::date | f
- mpp13806_1_prt_1    | '01-01-2008'::date  | t                       | '01-02-2008'::date | f
- mpp13806_1_prt_2    | '01-02-2008'::date  | t                       | '01-03-2008'::date | f
- mpp13806_1_prt_3    | '01-03-2008'::date  | t                       | '01-04-2008'::date | f
- mpp13806_1_prt_4    | '01-04-2008'::date  | t                       | '01-05-2008'::date | f
-(5 rows)
+select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+       relname       |                   pg_get_expr                    
+---------------------+--------------------------------------------------
+ mpp13806            | 
+ mpp13806_1_prt_1    | FOR VALUES FROM ('01-01-2008') TO ('01-02-2008')
+ mpp13806_1_prt_2    | FOR VALUES FROM ('01-02-2008') TO ('01-03-2008')
+ mpp13806_1_prt_3    | FOR VALUES FROM ('01-03-2008') TO ('01-04-2008')
+ mpp13806_1_prt_4    | FOR VALUES FROM ('01-04-2008') TO ('01-05-2008')
+ mpp13806_1_prt_test | FOR VALUES FROM (MINVALUE) TO ('01-01-2008')
+(6 rows)
 
 -- Drop the partition
 alter TABLE mpp13806 drop partition test;
 -- Add unbound partition with a gap succeeds
 alter table mpp13806 add partition test end (date '2007-12-31') exclusive;
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test" for table "mpp13806"
-select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
- partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
----------------------+---------------------+-------------------------+--------------------+-----------------------
- mpp13806_1_prt_test |                     | f                       | '12-31-2007'::date | f
- mpp13806_1_prt_1    | '01-01-2008'::date  | t                       | '01-02-2008'::date | f
- mpp13806_1_prt_2    | '01-02-2008'::date  | t                       | '01-03-2008'::date | f
- mpp13806_1_prt_3    | '01-03-2008'::date  | t                       | '01-04-2008'::date | f
- mpp13806_1_prt_4    | '01-04-2008'::date  | t                       | '01-05-2008'::date | f
-(5 rows)
+select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+       relname       |                   pg_get_expr                    
+---------------------+--------------------------------------------------
+ mpp13806            | 
+ mpp13806_1_prt_1    | FOR VALUES FROM ('01-01-2008') TO ('01-02-2008')
+ mpp13806_1_prt_2    | FOR VALUES FROM ('01-02-2008') TO ('01-03-2008')
+ mpp13806_1_prt_3    | FOR VALUES FROM ('01-03-2008') TO ('01-04-2008')
+ mpp13806_1_prt_4    | FOR VALUES FROM ('01-04-2008') TO ('01-05-2008')
+ mpp13806_1_prt_test | FOR VALUES FROM (MINVALUE) TO ('12-31-2007')
+(6 rows)
 
 -- Fill the gap succeeds/adding immediately before the first partition succeeds
 alter table mpp13806 add partition test1 start (date '2007-12-31') inclusive end (date '2008-01-01') exclusive;
-NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test1" for table "mpp13806"
-select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
-  partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
-----------------------+---------------------+-------------------------+--------------------+-----------------------
- mpp13806_1_prt_test  |                     | f                       | '12-31-2007'::date | f
- mpp13806_1_prt_test1 | '12-31-2007'::date  | t                       | '01-01-2008'::date | f
- mpp13806_1_prt_1     | '01-01-2008'::date  | t                       | '01-02-2008'::date | f
- mpp13806_1_prt_2     | '01-02-2008'::date  | t                       | '01-03-2008'::date | f
- mpp13806_1_prt_3     | '01-03-2008'::date  | t                       | '01-04-2008'::date | f
- mpp13806_1_prt_4     | '01-04-2008'::date  | t                       | '01-05-2008'::date | f
-(6 rows)
+select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+       relname        |                   pg_get_expr                    
+----------------------+--------------------------------------------------
+ mpp13806             | 
+ mpp13806_1_prt_1     | FOR VALUES FROM ('01-01-2008') TO ('01-02-2008')
+ mpp13806_1_prt_2     | FOR VALUES FROM ('01-02-2008') TO ('01-03-2008')
+ mpp13806_1_prt_3     | FOR VALUES FROM ('01-03-2008') TO ('01-04-2008')
+ mpp13806_1_prt_4     | FOR VALUES FROM ('01-04-2008') TO ('01-05-2008')
+ mpp13806_1_prt_test  | FOR VALUES FROM (MINVALUE) TO ('12-31-2007')
+ mpp13806_1_prt_test1 | FOR VALUES FROM ('12-31-2007') TO ('01-01-2008')
+(7 rows)
 
 --
 -- Create two tables mpp14613_range (range partitioned) and
@@ -2394,26 +2118,6 @@ create table mpp14613_list(
  );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others" for table "mpp14613_list"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_subothers" for table "mpp14613_list_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_s1" for table "mpp14613_list_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_s2" for table "mpp14613_list_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2" for table "mpp14613_list"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2_2_prt_subothers" for table "mpp14613_list_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2_2_prt_s1" for table "mpp14613_list_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2_2_prt_s2" for table "mpp14613_list_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3" for table "mpp14613_list"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3_2_prt_subothers" for table "mpp14613_list_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3_2_prt_s1" for table "mpp14613_list_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3_2_prt_s2" for table "mpp14613_list_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4" for table "mpp14613_list"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4_2_prt_subothers" for table "mpp14613_list_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4_2_prt_s1" for table "mpp14613_list_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4_2_prt_s2" for table "mpp14613_list_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5" for table "mpp14613_list"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5_2_prt_subothers" for table "mpp14613_list_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5_2_prt_s1" for table "mpp14613_list_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5_2_prt_s2" for table "mpp14613_list_1_prt_5"
 create table mpp14613_range(
   a int,
   b int,
@@ -2433,76 +2137,10 @@ create table mpp14613_range(
  );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others" for table "mpp14613_range"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others_2_prt_subothers" for table "mpp14613_range_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others_2_prt_2" for table "mpp14613_range_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others_2_prt_3" for table "mpp14613_range_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2" for table "mpp14613_range"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2_2_prt_subothers" for table "mpp14613_range_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2_2_prt_2" for table "mpp14613_range_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2_2_prt_3" for table "mpp14613_range_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3" for table "mpp14613_range"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3_2_prt_subothers" for table "mpp14613_range_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3_2_prt_2" for table "mpp14613_range_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3_2_prt_3" for table "mpp14613_range_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4" for table "mpp14613_range"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4_2_prt_subothers" for table "mpp14613_range_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4_2_prt_2" for table "mpp14613_range_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4_2_prt_3" for table "mpp14613_range_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5" for table "mpp14613_range"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5_2_prt_subothers" for table "mpp14613_range_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5_2_prt_2" for table "mpp14613_range_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5_2_prt_3" for table "mpp14613_range_1_prt_5"
--- Check the partition and subpartition details
-select tablename,partitiontablename, partitionname from pg_partitions where tablename in ('mpp14613_list','mpp14613_range');
-   tablename    |             partitiontablename              | partitionname 
-----------------+---------------------------------------------+---------------
- mpp14613_list  | mpp14613_list_1_prt_others                  | others
- mpp14613_list  | mpp14613_list_1_prt_2                       | 
- mpp14613_list  | mpp14613_list_1_prt_3                       | 
- mpp14613_list  | mpp14613_list_1_prt_4                       | 
- mpp14613_list  | mpp14613_list_1_prt_5                       | 
- mpp14613_list  | mpp14613_list_1_prt_2_2_prt_subothers       | subothers
- mpp14613_list  | mpp14613_list_1_prt_2_2_prt_s1              | s1
- mpp14613_list  | mpp14613_list_1_prt_2_2_prt_s2              | s2
- mpp14613_list  | mpp14613_list_1_prt_3_2_prt_subothers       | subothers
- mpp14613_list  | mpp14613_list_1_prt_3_2_prt_s1              | s1
- mpp14613_list  | mpp14613_list_1_prt_3_2_prt_s2              | s2
- mpp14613_list  | mpp14613_list_1_prt_4_2_prt_subothers       | subothers
- mpp14613_list  | mpp14613_list_1_prt_4_2_prt_s1              | s1
- mpp14613_list  | mpp14613_list_1_prt_4_2_prt_s2              | s2
- mpp14613_list  | mpp14613_list_1_prt_5_2_prt_subothers       | subothers
- mpp14613_list  | mpp14613_list_1_prt_5_2_prt_s1              | s1
- mpp14613_list  | mpp14613_list_1_prt_5_2_prt_s2              | s2
- mpp14613_list  | mpp14613_list_1_prt_others_2_prt_subothers  | subothers
- mpp14613_list  | mpp14613_list_1_prt_others_2_prt_s1         | s1
- mpp14613_list  | mpp14613_list_1_prt_others_2_prt_s2         | s2
- mpp14613_range | mpp14613_range_1_prt_others                 | others
- mpp14613_range | mpp14613_range_1_prt_2                      | 
- mpp14613_range | mpp14613_range_1_prt_3                      | 
- mpp14613_range | mpp14613_range_1_prt_4                      | 
- mpp14613_range | mpp14613_range_1_prt_5                      | 
- mpp14613_range | mpp14613_range_1_prt_2_2_prt_subothers      | subothers
- mpp14613_range | mpp14613_range_1_prt_2_2_prt_2              | 
- mpp14613_range | mpp14613_range_1_prt_2_2_prt_3              | 
- mpp14613_range | mpp14613_range_1_prt_3_2_prt_subothers      | subothers
- mpp14613_range | mpp14613_range_1_prt_3_2_prt_2              | 
- mpp14613_range | mpp14613_range_1_prt_3_2_prt_3              | 
- mpp14613_range | mpp14613_range_1_prt_4_2_prt_subothers      | subothers
- mpp14613_range | mpp14613_range_1_prt_4_2_prt_2              | 
- mpp14613_range | mpp14613_range_1_prt_4_2_prt_3              | 
- mpp14613_range | mpp14613_range_1_prt_5_2_prt_subothers      | subothers
- mpp14613_range | mpp14613_range_1_prt_5_2_prt_2              | 
- mpp14613_range | mpp14613_range_1_prt_5_2_prt_3              | 
- mpp14613_range | mpp14613_range_1_prt_others_2_prt_subothers | subothers
- mpp14613_range | mpp14613_range_1_prt_others_2_prt_2         | 
- mpp14613_range | mpp14613_range_1_prt_others_2_prt_3         | 
-(40 rows)
-
 -- SPLIT partition
-alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
+alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition subothers);
 ERROR:  SPLIT PARTITION is not currently supported when leaf partition is list partitioned in multi level partition table
-alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
+alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition subothers);
 ERROR:  AT clause cannot be used when splitting a default RANGE partition
 -- ALTER TABLE ... ALTER PARTITION ... SPLIT DEFAULT PARTITION
 create table foo(
@@ -2524,53 +2162,22 @@ create table foo(
  );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_others" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_others_2_prt_subothers" for table "foo_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_others_2_prt_s1" for table "foo_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_others_2_prt_s2" for table "foo_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2_2_prt_subothers" for table "foo_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2_2_prt_s1" for table "foo_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2_2_prt_s2" for table "foo_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_3" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_3_2_prt_subothers" for table "foo_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_3_2_prt_s1" for table "foo_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_3_2_prt_s2" for table "foo_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_4" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_4_2_prt_subothers" for table "foo_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_4_2_prt_s1" for table "foo_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_4_2_prt_s2" for table "foo_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_5" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_5_2_prt_subothers" for table "foo_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_5_2_prt_s1" for table "foo_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_5_2_prt_s2" for table "foo_1_prt_5"
-alter table foo alter partition others split partition subothers at (10) into (partition b1, default partition);
-ERROR:  SPLIT PARTITION is not currently supported when leaf partition is list partitioned in multi level partition table
 alter table foo alter partition others split partition subothers at (10) into (partition b1, partition subothers);
 ERROR:  SPLIT PARTITION is not currently supported when leaf partition is list partitioned in multi level partition table
+alter table foo alter partition others split partition subothers at (10) into (partition b1, default partition);
+ERROR:  INTO can only have second partition by name
+LINE 1: ...artition others split partition subothers at (10) into (part...
+                                                             ^
 alter table foo alter partition others split default partition at (10) into (partition b1, default partition);
 ERROR:  SPLIT PARTITION is not currently supported when leaf partition is list partitioned in multi level partition table
 drop table foo;
--- Drop table as gpcheckcat will complaint of not having constraint for newly
--- created tables due to split.
-drop table mpp14613_list;
 --
 -- Drop index on a partitioned table. The indexes on the partitions are removed.
 --
 create table pt_indx_tab (c1 integer, c2 int, c3 text) partition by range (c1) (partition A start (integer '0') end (integer '5') every (integer '1'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_1" for table "pt_indx_tab"
-NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_2" for table "pt_indx_tab"
-NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_3" for table "pt_indx_tab"
-NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_4" for table "pt_indx_tab"
-NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_5" for table "pt_indx_tab"
 create unique index pt_indx_drop on pt_indx_tab(c1);
-NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_1"
-NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_2"
-NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_3"
-NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_4"
-NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_5"
 select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
  count 
 -------
@@ -2597,88 +2204,18 @@ select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
 (1 row)
 
 --
--- MPP-18162 CLONE (4.2.3) - List partitioning for multiple columns gives duplicate values error
---
-create table mpp18162a
-( i1 int, i2 int)
-distributed by (i1)
-partition by list (i1, i2) (
-  partition pi0 values ( (1,1) ),
-  partition pi1 values ( (1,2) ),
-  partition pi2 values ( (2,1) )
-);
-NOTICE:  CREATE TABLE will create partition "mpp18162a_1_prt_pi0" for table "mpp18162a"
-NOTICE:  CREATE TABLE will create partition "mpp18162a_1_prt_pi1" for table "mpp18162a"
-NOTICE:  CREATE TABLE will create partition "mpp18162a_1_prt_pi2" for table "mpp18162a"
-create table mpp18162b
-( i1 int, i2 int)
-distributed by (i1)
-partition by list (i1, i2) (
-  partition pi1 values ( (3,1), (1,3) ),
-  partition pi2 values ( (4,1), (1,4) )
-);
-NOTICE:  CREATE TABLE will create partition "mpp18162b_1_prt_pi1" for table "mpp18162b"
-NOTICE:  CREATE TABLE will create partition "mpp18162b_1_prt_pi2" for table "mpp18162b"
-create table mpp18162c
-( i1 text, i2 varchar(10))
-distributed by (i1)
-partition by list (i1, i2) (
-  partition pi0 values ( ('1','1') ),
-  partition pi1 values ( ('1','2') ),
-  partition pi2 values ( ('2','1') )
-);
-NOTICE:  CREATE TABLE will create partition "mpp18162c_1_prt_pi0" for table "mpp18162c"
-NOTICE:  CREATE TABLE will create partition "mpp18162c_1_prt_pi1" for table "mpp18162c"
-NOTICE:  CREATE TABLE will create partition "mpp18162c_1_prt_pi2" for table "mpp18162c"
-create table mpp18162d
-( i1 text, i2 varchar(10))
-distributed by (i1)
-partition by list (i1, i2) (
-  partition pi1 values ( ('3','1'), ('1','3') ),
-  partition pi2 values ( ('4','1'), ('1','4') )
-);
-NOTICE:  CREATE TABLE will create partition "mpp18162d_1_prt_pi1" for table "mpp18162d"
-NOTICE:  CREATE TABLE will create partition "mpp18162d_1_prt_pi2" for table "mpp18162d"
-create table mpp18162e
-( i1 date, i2 date)
-distributed by (i1)
-partition by list (i1, i2) (
-  partition pi1 values ( (date '2008-01-01',date '2008-02-01') ),
-  partition pi2 values ( (date '2008-02-01',date '2008-01-01') ),
-  partition pi3 values ( (date '2008-03-01',date '2008-04-01') ),
-  partition pi4 values ( (date '2008-04-01',date '2008-03-01') )
-);
-NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi1" for table "mpp18162e"
-NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi2" for table "mpp18162e"
-NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi3" for table "mpp18162e"
-NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi4" for table "mpp18162e"
-create table mpp18162f
-( i1 text, i2 varchar(10))
-distributed by (i1)
-partition by list (i1, i2) (
-  partition pi1 values ( (date '2008-01-01',date '2008-02-01'), (date '2008-02-01',date '2008-01-01') ),
-  partition pi2 values ( (date '2008-03-01',date '2008-04-01'), (date '2008-04-01',date '2008-03-01') )
-);
-NOTICE:  CREATE TABLE will create partition "mpp18162f_1_prt_pi1" for table "mpp18162f"
-NOTICE:  CREATE TABLE will create partition "mpp18162f_1_prt_pi2" for table "mpp18162f"
---
 -- Test changing the datatype of a column in a partitioning key column.
 -- (Not supported, throws an error).
 --
 create table mpp18179 (a int, b int, i int)
 distributed by (a)
-partition by list (a,b)
-   ( PARTITION ab1 VALUES ((1,1)),
-     PARTITION ab2 values ((1,2)),
+partition by list (b)
+   ( PARTITION ab1 VALUES (1),
+     PARTITION ab2 values (2),
      default partition other
    );
-NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_ab1" for table "mpp18179"
-NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_ab2" for table "mpp18179"
-NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_other" for table "mpp18179"
-alter table mpp18179 alter column a type varchar(20);
-ERROR:  cannot alter type of a column used in a partitioning key
 alter table mpp18179 alter column b type varchar(20);
-ERROR:  cannot alter type of a column used in a partitioning key
+ERROR:  cannot alter type of column named in partition key
 --
 -- Drop index on partitioned table, and recreate it.
 --
@@ -2688,17 +2225,13 @@ CREATE TABLE mpp7635_aoi_table2 (id INTEGER)
 ;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "mpp7635_aoi_table2_1_prt_1" for table "mpp7635_aoi_table2"
-NOTICE:  CREATE TABLE will create partition "mpp7635_aoi_table2_1_prt_2" for table "mpp7635_aoi_table2"
 INSERT INTO mpp7635_aoi_table2(id) VALUES (0);
 -- Create index
 CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING BITMAP (id);
-NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
-NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
 select * from pg_indexes where tablename like 'mpp7635%';
  schemaname |         tablename          |             indexname             | tablespace |                                               indexdef                                                
 ------------+----------------------------+-----------------------------------+------------+-------------------------------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2         | mpp7635_ix3                       |            | CREATE INDEX mpp7635_ix3 ON public.mpp7635_aoi_table2 USING bitmap (id)
+ public     | mpp7635_aoi_table2         | mpp7635_ix3                       |            | CREATE INDEX mpp7635_ix3 ON ONLY public.mpp7635_aoi_table2 USING bitmap (id)
  public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_aoi_table2_1_prt_1_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_1_id_idx ON public.mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
  public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
 (3 rows)
@@ -2712,12 +2245,10 @@ select * from pg_indexes where tablename like 'mpp7635%';
 
 -- Create it again.
 CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 (id);
-NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
-NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
 select * from pg_indexes where tablename like 'mpp7635%';
  schemaname |         tablename          |             indexname             | tablespace |                                               indexdef                                               
 ------------+----------------------------+-----------------------------------+------------+------------------------------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2         | mpp7635_ix3                       |            | CREATE INDEX mpp7635_ix3 ON public.mpp7635_aoi_table2 USING btree (id)
+ public     | mpp7635_aoi_table2         | mpp7635_ix3                       |            | CREATE INDEX mpp7635_ix3 ON ONLY public.mpp7635_aoi_table2 USING btree (id)
  public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_aoi_table2_1_prt_1_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_1_id_idx ON public.mpp7635_aoi_table2_1_prt_1 USING btree (id)
  public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx ON public.mpp7635_aoi_table2_1_prt_2 USING btree (id)
 (3 rows)
@@ -2732,10 +2263,6 @@ PARTITION BY RANGE (dat)
 PARTITION Nov09 START (200911) INCLUSIVE END (200912) EXCLUSIVE ,
 PARTITION Dec09 START (200912) INCLUSIVE END (201001) EXCLUSIVE ,
 DEFAULT PARTITION extra);
-NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
-NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_oct09" for table "mpp7863"
-NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_nov09" for table "mpp7863"
-NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_dec09" for table "mpp7863"
 insert into mpp7863 values(generate_series(1, 100),'200910');
 insert into mpp7863 values(generate_series(101, 200),'200911');
 insert into mpp7863 values(generate_series(201, 300),'200912');
@@ -2767,10 +2294,6 @@ select count(*) from mpp7863;
 (1 row)
 
 alter table mpp7863 split default partition start (201001) inclusive end (201002) exclusive into (partition jan10,default partition);
-NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_293486"
-NOTICE:  dropped partition "extra" for relation "mpp7863"
-NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_jan10" for table "mpp7863"
-NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
 select count(*) from mpp7863_1_prt_extra where dat is null;
  count 
 -------
@@ -2800,44 +2323,6 @@ select dat, count(*) from mpp7863 group by 1 order by 2,1;
           | 30000
 (6 rows)
 
--- Test that pg_get_expr() can be used on the pg_partition_rule columns that
--- store expressions, even by non-superusers. pg_get_expr() is restricted
--- to specific system catalogs, for security reasons.
-create role part_expr_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-CREATE TABLE part_expr_test_range (id int) DISTRIBUTED BY (id)
-PARTITION BY RANGE(id) (START (1::int) END (10::int) EVERY (5));
-NOTICE:  CREATE TABLE will create partition "part_expr_test_range_1_prt_1" for table "part_expr_test_range"
-NOTICE:  CREATE TABLE will create partition "part_expr_test_range_1_prt_2" for table "part_expr_test_range"
-CREATE TABLE part_expr_test_list (id int) DISTRIBUTED BY (id)
-PARTITION BY list(id) (partition p1 values(1, 2, 3));
-NOTICE:  CREATE TABLE will create partition "part_expr_test_list_1_prt_p1" for table "part_expr_test_list"
-set session authorization part_expr_role;
--- This should throw a "not allowed" error.
-select pg_get_expr('bogus', 'pg_class'::regclass);
-ERROR:  cannot accept a value of type pg_node_tree
-LINE 1: select pg_get_expr('bogus', 'pg_class'::regclass);
-                           ^
--- But this should
-select p.parrelid::regclass, pr.parchildrelid::regclass,
-       pg_get_expr(parrangestart, pr.parchildrelid),
-       pg_get_expr(parrangeend, pr.parchildrelid),
-       pg_get_expr(parrangeevery, pr.parchildrelid),
-       pg_get_expr(parlistvalues, pr.parchildrelid)
-from pg_partition_rule pr, pg_partition p
-where pr.paroid = p.oid
-and p.parrelid in ('part_expr_test_range'::regclass, 'part_expr_test_list'::regclass);
-       parrelid       |        parchildrelid         | pg_get_expr | pg_get_expr | pg_get_expr | pg_get_expr 
-----------------------+------------------------------+-------------+-------------+-------------+-------------
- part_expr_test_range | part_expr_test_range_1_prt_1 | 1           | 6           | 5           | 
- part_expr_test_range | part_expr_test_range_1_prt_2 | 6           | 10          | 5           | 
- part_expr_test_list  | part_expr_test_list_1_prt_p1 |             |             |             | 1, 2, 3
-(3 rows)
-
-reset session authorization;
-DROP TABLE part_expr_test_range;
-DROP TABLE part_expr_test_list;
-DROP ROLE part_expr_role;
 --
 -- Test handling of dropped columns in SPLIT PARTITION. (PR #9386)
 --
@@ -2858,8 +2343,6 @@ PARTITION BY RANGE (create_time)
   PARTITION p2019 START ('2019-01-01'::TIMESTAMP) END ('2020-01-01'::TIMESTAMP),
   DEFAULT PARTITION extra
 );
-NOTICE:  CREATE TABLE will create partition "users_test_1_prt_extra" for table "users_test"
-NOTICE:  CREATE TABLE will create partition "users_test_1_prt_p2019" for table "users_test"
 -- Drop useless column dd for some reason
 ALTER TABLE users_test DROP COLUMN dd;
 -- Assume we forgot/failed to split out new partitions beforehand
@@ -2869,10 +2352,6 @@ INSERT INTO users_test VALUES(3, 'C', 'C@abc.com', '1990-01-01', '2021-01-01 12:
 -- New partition arrives late
 ALTER TABLE users_test SPLIT DEFAULT PARTITION START ('2020-01-01'::TIMESTAMP) END ('2021-01-01'::TIMESTAMP)
  INTO (PARTITION p2020, DEFAULT PARTITION);
-NOTICE:  exchanged partition "extra" of relation "users_test" with relation "pg_temp_114588"
-NOTICE:  dropped partition "extra" for relation "users_test"
-NOTICE:  CREATE TABLE will create partition "users_test_1_prt_p2020" for table "users_test"
-NOTICE:  CREATE TABLE will create partition "users_test_1_prt_extra" for table "users_test"
 -- Expect A
 SELECT user_name FROM users_test_1_prt_p2019;
  user_name 
@@ -2901,12 +2380,10 @@ CREATE TABLE t_idx_col_contain_partkey(a int, b int) DISTRIBUTED BY (a)
 PARTITION BY list (b)
 (PARTITION t1 values (1),
  PARTITION t2 values (2));
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_t1" for table "t_idx_col_contain_partkey"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_t2" for table "t_idx_col_contain_partkey"
 -- the following statement should fail because index cols does not contain part key
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a);
-ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "t_idx_col_contain_partkey"
-HINT:  Include the partition key or create a part-wise UNIQUE index instead.
+ERROR:  insufficient columns in UNIQUE constraint definition
+DETAIL:  UNIQUE constraint on table "t_idx_col_contain_partkey" lacks column "b" which is part of the partition key.
 -- the following statement should work
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a, b);
 DROP INDEX uidx_t_idx_col_contain_partkey;
@@ -2935,35 +2412,413 @@ SUBPARTITION BY LIST (r_name) SUBPARTITION TEMPLATE
         PARTITION region2 start (3),
         PARTITION region3 start (5) end (8)
 );
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1" for table "t_idx_col_contain_partkey"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_africa" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_america" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_asia" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_europe" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_mideast" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_australia" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_antarctica" for table "t_idx_col_contain_partkey_1_prt_region1"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2" for table "t_idx_col_contain_partkey"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_africa" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_america" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_asia" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_europe" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_mideast" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_australia" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_antarctica" for table "t_idx_col_contain_partkey_1_prt_region2"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3" for table "t_idx_col_contain_partkey"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_africa" for table "t_idx_col_contain_partkey_1_prt_region3"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_america" for table "t_idx_col_contain_partkey_1_prt_region3"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_asia" for table "t_idx_col_contain_partkey_1_prt_region3"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_europe" for table "t_idx_col_contain_partkey_1_prt_region3"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_mideast" for table "t_idx_col_contain_partkey_1_prt_region3"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_australia" for table "t_idx_col_contain_partkey_1_prt_region3"
-NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_antarctica" for table "t_idx_col_contain_partkey_1_prt_region3"
 -- should fail, must contain all the partition keys of all levels
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey);
-ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "t_idx_col_contain_partkey"
-HINT:  Include the partition key or create a part-wise UNIQUE index instead.
+ERROR:  insufficient columns in UNIQUE constraint definition
+DETAIL:  UNIQUE constraint on table "t_idx_col_contain_partkey_1_prt_region1" lacks column "r_name" which is part of the partition key.
 -- should work
 CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey, r_name);
 DROP INDEX uidx_t_idx_col_contain_partkey;
 DROP TABLE t_idx_col_contain_partkey;
+--
+-- Test EXCHANGE PARTITION, when the new table has different CHECK constraints
+--
+CREATE TABLE constraint_mismatch_tbl (
+    id int,
+    date date,
+    amt decimal(10,2)
+    CONSTRAINT amt_check CHECK (amt > 0)
+) DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+   (PARTITION Jan08 START (date '2008-01-01'),
+    PARTITION Feb08 START (date '2008-02-01'),
+    PARTITION Mar08 START (date '2008-03-01') END (date '2008-04-01'));
+-- fail: new table doesn't have 'amt_check' constraint
+CREATE TABLE mismatch_exchange_tbl (
+    id int,
+    date date,
+    amt decimal(10,2)
+) DISTRIBUTED BY (id);
+INSERT INTO mismatch_exchange_tbl SELECT i, '2008-03-02', i FROM generate_series(11,15)i;
+ALTER TABLE constraint_mismatch_tbl EXCHANGE PARTITION mar08 WITH TABLE mismatch_exchange_tbl;
+ERROR:  child table is missing constraint "amt_check"
+-- fail: new table has a constraint called 'amt_check', but it's different from the parent's
+DROP TABLE mismatch_exchange_tbl;
+CREATE TABLE mismatch_exchange_tbl (
+    id int,
+    date date,
+    amt decimal(10,2)
+    CONSTRAINT amt_check CHECK (amt <> 0)
+) DISTRIBUTED BY (id);
+INSERT INTO mismatch_exchange_tbl SELECT i, '2008-03-02', i FROM generate_series(11,15)i;
+ALTER TABLE constraint_mismatch_tbl EXCHANGE PARTITION mar08 WITH TABLE mismatch_exchange_tbl;
+ERROR:  child table "mismatch_exchange_tbl" has different definition for check constraint "amt_check"
+-- success: new table has compatible 'amt_check' constraint
+DROP TABLE mismatch_exchange_tbl;
+CREATE TABLE mismatch_exchange_tbl (
+    id int,
+    date date,
+    amt decimal(10,2)
+    CONSTRAINT amt_check CHECK (amt > 0)
+) DISTRIBUTED BY (id);
+INSERT INTO mismatch_exchange_tbl SELECT i, '2008-03-02', i FROM generate_series(11,15)i;
+ALTER TABLE constraint_mismatch_tbl EXCHANGE PARTITION mar08 WITH TABLE mismatch_exchange_tbl;
+--
+-- END INCLUSIVE should work for CREATE, ADD PARTITION, and SPLIT PARTITION for
+-- the following data types. The INCLUSIVE END value will be converted to an
+-- EXCLUSIVE upper bound during transformation. If the INCLUSIVE END value is
+-- smaller than the maximum value of the data type, the exclusive upper bound
+-- will be the END INCLUSIVE value + '1', where '1' is the resolution of the
+-- data type. Otherwise, MAXVALUE will be stored as the upper bound.
+--
+-- END INCLUSIVE should work for bigint
+CREATE TABLE end_inclusive_bigint (a int, b bigint)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION pmax_create START (9223372036854775805) END (9223372036854775807) INCLUSIVE EVERY (1),
+        PARTITION p1 START (1) END (3) INCLUSIVE,
+        PARTITION p20 START (20),
+        DEFAULT PARTITION other
+        );
+ALTER TABLE end_inclusive_bigint SPLIT DEFAULT PARTITION START (7) END (10) INCLUSIVE INTO (PARTITION p7, DEFAULT PARTITION);
+\d+ end_inclusive_bigint
+                     Partitioned table "public.end_inclusive_bigint"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | bigint  |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_bigint_1_prt_p1 FOR VALUES FROM ('1') TO ('4'),
+            end_inclusive_bigint_1_prt_p20 FOR VALUES FROM ('20') TO ('9223372036854775805'),
+            end_inclusive_bigint_1_prt_p7 FOR VALUES FROM ('7') TO ('11'),
+            end_inclusive_bigint_1_prt_pmax_create_1 FOR VALUES FROM ('9223372036854775805') TO ('9223372036854775806'),
+            end_inclusive_bigint_1_prt_pmax_create_2 FOR VALUES FROM ('9223372036854775806') TO (MAXVALUE),
+            end_inclusive_bigint_1_prt_other DEFAULT
+Distributed by: (a)
+
+ALTER TABLE end_inclusive_bigint DROP PARTITION pmax_create_1;
+ALTER TABLE end_inclusive_bigint DROP PARTITION pmax_create_2;
+ALTER TABLE end_inclusive_bigint ADD PARTITION pmax_add START (9223372036854775805) END (9223372036854775807) INCLUSIVE;
+\d+ end_inclusive_bigint
+                     Partitioned table "public.end_inclusive_bigint"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | bigint  |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_bigint_1_prt_p1 FOR VALUES FROM ('1') TO ('4'),
+            end_inclusive_bigint_1_prt_p20 FOR VALUES FROM ('20') TO ('9223372036854775805'),
+            end_inclusive_bigint_1_prt_p7 FOR VALUES FROM ('7') TO ('11'),
+            end_inclusive_bigint_1_prt_pmax_add FOR VALUES FROM ('9223372036854775805') TO (MAXVALUE),
+            end_inclusive_bigint_1_prt_other DEFAULT
+Distributed by: (a)
+
+ALTER TABLE end_inclusive_bigint DROP PARTITION pmax_add;
+ALTER TABLE end_inclusive_bigint SPLIT DEFAULT PARTITION START (9223372036854775805) END (9223372036854775807) INCLUSIVE INTO (PARTITION pmax_split, DEFAULT PARTITION);
+\d+ end_inclusive_bigint
+                     Partitioned table "public.end_inclusive_bigint"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | bigint  |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_bigint_1_prt_p1 FOR VALUES FROM ('1') TO ('4'),
+            end_inclusive_bigint_1_prt_p20 FOR VALUES FROM ('20') TO ('9223372036854775805'),
+            end_inclusive_bigint_1_prt_p7 FOR VALUES FROM ('7') TO ('11'),
+            end_inclusive_bigint_1_prt_pmax_split FOR VALUES FROM ('9223372036854775805') TO (MAXVALUE),
+            end_inclusive_bigint_1_prt_other DEFAULT
+Distributed by: (a)
+
+-- END INCLUSIVE should work for int
+CREATE TABLE end_inclusive_int (a int, b int)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 END (3) INCLUSIVE,
+        PARTITION pmax END (2147483647) INCLUSIVE
+        );
+\d+ end_inclusive_int
+                       Partitioned table "public.end_inclusive_int"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_int_1_prt_p1 FOR VALUES FROM (MINVALUE) TO (4),
+            end_inclusive_int_1_prt_pmax FOR VALUES FROM (4) TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for smallint
+CREATE TABLE end_inclusive_smallint (a int, b smallint)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (1) END (3) INCLUSIVE,
+        PARTITION pmax START (4) END (32767) INCLUSIVE
+        );
+\d+ end_inclusive_smallint
+                     Partitioned table "public.end_inclusive_smallint"
+ Column |   Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+----------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer  |           |          |         | plain   |              | 
+ b      | smallint |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_smallint_1_prt_p1 FOR VALUES FROM ('1') TO ('4'),
+            end_inclusive_smallint_1_prt_pmax FOR VALUES FROM ('4') TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for date
+CREATE TABLE end_inclusive_date (a int, b date)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('2020-06-16') END ('2020-06-17') INCLUSIVE,
+        PARTITION pmax START ('2020-06-18') END ('infinity') INCLUSIVE
+        );
+\d+ end_inclusive_date
+                      Partitioned table "public.end_inclusive_date"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | date    |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_date_1_prt_p1 FOR VALUES FROM ('06-16-2020') TO ('06-18-2020'),
+            end_inclusive_date_1_prt_pmax FOR VALUES FROM ('06-18-2020') TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for time without time zone
+CREATE TABLE end_inclusive_time (a int, b time)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('00:00:00.000001') END ('01:00:00') INCLUSIVE,
+        PARTITION pmax START ('23:00:00') END ('24:00:00') INCLUSIVE
+        );
+\d+ end_inclusive_time
+                              Partitioned table "public.end_inclusive_time"
+ Column |          Type          | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+------------------------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer                |           |          |         | plain   |              | 
+ b      | time without time zone |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_time_1_prt_p1 FOR VALUES FROM ('00:00:00.000001') TO ('01:00:00.000001'),
+            end_inclusive_time_1_prt_pmax FOR VALUES FROM ('23:00:00') TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for time with time zone
+CREATE TABLE end_inclusive_timetz (a int, b time with time zone)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('00:00:00 EST') END ('01:00:00 PST') INCLUSIVE,
+        PARTITION pmax START ('23:00:00 EST') END ('24:00:00 PST') INCLUSIVE
+        );
+\d+ end_inclusive_timetz
+                           Partitioned table "public.end_inclusive_timetz"
+ Column |        Type         | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------------------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer             |           |          |         | plain   |              | 
+ b      | time with time zone |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_timetz_1_prt_p1 FOR VALUES FROM ('00:00:00-05') TO ('01:00:00.000001-08'),
+            end_inclusive_timetz_1_prt_pmax FOR VALUES FROM ('23:00:00-05') TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for timestamp without time zone
+CREATE TABLE end_inclusive_timestamp (a int, b timestamp)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('2020-06-16 00:00:00') END ('2020-06-16 01:00:00') INCLUSIVE,
+        PARTITION pmax START ('2020-06-16 23:00:00') END ('infinity') INCLUSIVE
+        );
+\d+ end_inclusive_timestamp
+                              Partitioned table "public.end_inclusive_timestamp"
+ Column |            Type             | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+-----------------------------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer                     |           |          |         | plain   |              | 
+ b      | timestamp without time zone |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_timestamp_1_prt_p1 FOR VALUES FROM ('Tue Jun 16 00:00:00 2020') TO ('Tue Jun 16 01:00:00.000001 2020'),
+            end_inclusive_timestamp_1_prt_pmax FOR VALUES FROM ('Tue Jun 16 23:00:00 2020') TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for timestamp with time zone
+CREATE TABLE end_inclusive_timestamptz (a int, b timestamp with time zone)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('2020-06-16 00:00:00 PST') END ('2020-06-16 01:00:00 PST') INCLUSIVE,
+        PARTITION pmax START ('2020-06-16 23:00:00 EST') END ('infinity') INCLUSIVE
+        );
+\d+ end_inclusive_timestamptz
+                           Partitioned table "public.end_inclusive_timestamptz"
+ Column |           Type           | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+--------------------------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer                  |           |          |         | plain   |              | 
+ b      | timestamp with time zone |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_timestamptz_1_prt_p1 FOR VALUES FROM ('Tue Jun 16 01:00:00 2020 PDT') TO ('Tue Jun 16 02:00:00.000001 2020 PDT'),
+            end_inclusive_timestamptz_1_prt_pmax FOR VALUES FROM ('Tue Jun 16 21:00:00 2020 PDT') TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should work for interval
+CREATE TABLE end_inclusive_interval (a int, b interval)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('1 year') END ('2 years') INCLUSIVE
+        );
+\d+ end_inclusive_interval
+                     Partitioned table "public.end_inclusive_interval"
+ Column |   Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+----------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer  |           |          |         | plain   |              | 
+ b      | interval |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_interval_1_prt_p1 FOR VALUES FROM ('@ 1 year') TO ('@ 2 years 0.000001 secs')
+Distributed by: (a)
+
+-- END INCLUSIVE with MAXVALUE should work with implicit START/END
+DROP TABLE end_inclusive_int;
+CREATE TABLE end_inclusive_int (a int, b int)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (1),
+        PARTITION pmax END (2147483647) INCLUSIVE,
+        PARTITION p2 START (2) END (5) INCLUSIVE
+        );
+\d+ end_inclusive_int
+                       Partitioned table "public.end_inclusive_int"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_int_1_prt_p1 FOR VALUES FROM (1) TO (2),
+            end_inclusive_int_1_prt_p2 FOR VALUES FROM (2) TO (6),
+            end_inclusive_int_1_prt_pmax FOR VALUES FROM (6) TO (MAXVALUE)
+Distributed by: (a)
+
+DROP TABLE end_inclusive_int;
+CREATE TABLE end_inclusive_int (a int, b int)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION pmax END (2147483647) INCLUSIVE,
+        PARTITION p1 START (1),
+        PARTITION p2 START (2) END (5) INCLUSIVE
+        );
+\d+ end_inclusive_int
+                       Partitioned table "public.end_inclusive_int"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer |           |          |         | plain   |              | 
+ b      | integer |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: end_inclusive_int_1_prt_p1 FOR VALUES FROM (1) TO (2),
+            end_inclusive_int_1_prt_p2 FOR VALUES FROM (2) TO (6),
+            end_inclusive_int_1_prt_pmax FOR VALUES FROM (6) TO (MAXVALUE)
+Distributed by: (a)
+
+-- END INCLUSIVE should fail when precision is specified
+CREATE TABLE end_inclusive_time_with_precision (a int, b time(5))
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START ('00:00:00') END ('01:00:00') INCLUSIVE
+        );
+ERROR:  END INCLUSIVE not supported when partition key has precision specification: time(5) without time zone
+HINT:  Specify an exclusive END value and remove the INCLUSIVE keyword
+-- END INCLUSIVE should fail for unsupported data types
+CREATE TABLE end_inclusive_numeric (a int, b numeric)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (1) END (3) INCLUSIVE
+        );
+ERROR:  END INCLUSIVE not supported for partition key data type: numeric
+HINT:  Specify an exclusive END value and remove the INCLUSIVE keyword
+-- Also check START EXCLUSIVE
+CREATE TABLE start_exclusive_smallint (a int, b smallint)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (0) EXCLUSIVE END (3) INCLUSIVE,
+        PARTITION pmax START (4) EXCLUSIVE
+        );
+\d+ start_exclusive_smallint
+                    Partitioned table "public.start_exclusive_smallint"
+ Column |   Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+----------+-----------+----------+---------+---------+--------------+-------------
+ a      | integer  |           |          |         | plain   |              | 
+ b      | smallint |           |          |         | plain   |              | 
+Partition key: RANGE (b)
+Partitions: start_exclusive_smallint_1_prt_p1 FOR VALUES FROM ('1') TO ('4'),
+            start_exclusive_smallint_1_prt_pmax FOR VALUES FROM ('5') TO (MAXVALUE)
+Distributed by: (a)
+
+-- If the START EXCLUSIVE value + 1 would overflow, you get an error
+CREATE TABLE start_exclusive_smallint_overflow (a int, b smallint)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (0) EXCLUSIVE END (3) INCLUSIVE,
+        PARTITION pmax START (32767) EXCLUSIVE
+        );
+ERROR:  START EXCLUSIVE is out of range
+LINE 6:         PARTITION pmax START (32767) EXCLUSIVE
+                                      ^
+-- Test for ALTER TABLE WITH/WITHOUT VALIDATION.
+-- It doesn't do anything anymore, but check that the syntax is accepted.
+CREATE TABLE validation_syntax_tbl (a int)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (a)
+        (
+        PARTITION p1 START (1) END (3)
+        );
+CREATE TABLE exchange_tbl (a int4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO exchange_tbl VALUES (100);
+ALTER TABLE validation_syntax_tbl EXCHANGE PARTITION p1 WITH TABLE exchange_tbl WITH VALIDATION;
+NOTICE:  specifying "WITH VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+ERROR:  partition constraint is violated by some row  (seg2 127.0.0.1:40002 pid=26267)
+ALTER TABLE validation_syntax_tbl EXCHANGE PARTITION p1 WITH TABLE exchange_tbl WITHOUT VALIDATION;
+NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+ERROR:  partition constraint is violated by some row  (seg2 127.0.0.1:40002 pid=26267)
+DROP TABLE exchange_tbl;
+DROP TABLE validation_syntax_tbl;
+--
+-- Test a case where the automatically created partition name clashes with
+-- another table or partition.
+-- Before GPDB 7, the automatic table name generation used check if the name is
+-- in use, and pick another name to avoid the clash. It's not as smart anymore.
+-- It's more tricky now, because e.g. the ALTER TABLE ALTER/DROP/ADD PARTITION
+-- commands rely on the deterministic naming of the partitions. If a user runs
+-- into this, the work around is to use different table/partition names, or
+-- use the upstream syntax and name each partition explicitly.
+--
+CREATE TABLE partitioned_table_with_very_long_name_123456789x
+(
+    col1 int4,
+    col2 int4
+)
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)
+  (partition partone start(1) end(100000001),
+   partition parttwo start(100000001) end(200000001),
+   partition partthree start(200000001) end(300000001));
+CREATE TABLE partitioned_table_with_very_long_name_123456789y
+(
+    col1 int4,
+    col2 int4
+)
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)
+  (partition partone start(1) end(100000001),
+   partition parttwo start(100000001) end(200000001),
+   partition partthree start(200000001) end(300000001));
+ERROR:  relation "partitioned_table_with_very_long_name_123456789_1_prt_partthree" already exists

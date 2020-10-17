@@ -19,71 +19,63 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
-	
-	// indices of nested loop join elements in the children array
-	enum ENLJoinParseHandlerChildIndices
-	{
-		EdxlParseHandlerNLJIndexProp = 0,
-		EdxlParseHandlerNLJIndexProjList,
-		EdxlParseHandlerNLJIndexFilter,
-		EdxlParseHandlerNLJIndexJoinFilter,
-		EdxlParseHandlerNLJIndexLeftChild,
-		EdxlParseHandlerNLJIndexRightChild,
-		EdxlParseHandlerNLJIndexNestLoopParams,
-		EdxlParseHandlerNLJIndexSentinel
-	};
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerNLJoin
-	//
-	//	@doc:
-	//		Parse handler for nested loop join operators
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerNLJoin : public CParseHandlerPhysicalOp
-	{
-		private:
+XERCES_CPP_NAMESPACE_USE
 
+// indices of nested loop join elements in the children array
+enum ENLJoinParseHandlerChildIndices
+{
+	EdxlParseHandlerNLJIndexProp = 0,
+	EdxlParseHandlerNLJIndexProjList,
+	EdxlParseHandlerNLJIndexFilter,
+	EdxlParseHandlerNLJIndexJoinFilter,
+	EdxlParseHandlerNLJIndexLeftChild,
+	EdxlParseHandlerNLJIndexRightChild,
+	EdxlParseHandlerNLJIndexNestLoopParams,
+	EdxlParseHandlerNLJIndexSentinel
+};
 
-			// the nested loop join operator
-			CDXLPhysicalNLJoin *m_dxl_op;
-			
-			// private copy ctor
-			CParseHandlerNLJoin(const CParseHandlerNLJoin &);
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerNLJoin
+//
+//	@doc:
+//		Parse handler for nested loop join operators
+//
+//---------------------------------------------------------------------------
+class CParseHandlerNLJoin : public CParseHandlerPhysicalOp
+{
+private:
+	// the nested loop join operator
+	CDXLPhysicalNLJoin *m_dxl_op;
 
-			// process the start of an element
-			void StartElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-				);
+	// private copy ctor
+	CParseHandlerNLJoin(const CParseHandlerNLJoin &);
 
-			// process the end of an element
-			void EndElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-				);
-			
-		public:
-			// ctor/dtor
-			CParseHandlerNLJoin
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-			
-	};
-}
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-#endif // !GPDXL_CParseHandlerNLJoin_H
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
+
+public:
+	// ctor/dtor
+	CParseHandlerNLJoin(CMemoryPool *mp,
+						CParseHandlerManager *parse_handler_mgr,
+						CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CParseHandlerNLJoin_H
 
 // EOF

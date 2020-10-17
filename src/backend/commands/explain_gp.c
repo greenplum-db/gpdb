@@ -13,6 +13,8 @@
  *-------------------------------------------------------------------------
  */
 
+#include <math.h>
+
 #include "portability/instr_time.h"
 
 #include "libpq-fe.h"
@@ -21,7 +23,6 @@
 #include "cdb/cdbdisp.h"                /* CheckDispatchResult() */
 #include "cdb/cdbdispatchresult.h"	/* CdbDispatchResults */
 #include "cdb/cdbexplain.h"		/* me */
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbpathlocus.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"		/* GpIdentity.segindex */
@@ -29,86 +30,40 @@
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "miscadmin.h"
 #include "utils/resscheduler.h"
+#include "utils/tuplesort.h"
 #include "utils/memutils.h"		/* MemoryContextGetPeakSpace() */
 #include "utils/vmem_tracker.h"
 
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 
-#define NUM_SORT_METHOD 5
-
-#define TOP_N_HEAP_SORT_STR "top-N heapsort"
-#define QUICK_SORT_STR "quicksort"
-#define EXTERNAL_SORT_STR "external sort"
-#define EXTERNAL_MERGE_STR "external merge"
-#define IN_PROGRESS_SORT_STR "sort still in progress"
-
-#define NUM_SORT_SPACE_TYPE 2
-#define MEMORY_STR_SORT_SPACE_TYPE "Memory"
-#define DISK_STR_SORT_SPACE_TYPE "Disk"
-
 /* Convert bytes into kilobytes */
 #define kb(x) (floor((x + 1023.0) / 1024.0))
-
-/*
- * Different sort method in GPDB.
- *
- * Make sure to update NUM_SORT_METHOD when this enum changes.
- * This enum value is used an index in the array sortSpaceUsed
- * in struct CdbExplain_NodeSummary.
- */
-typedef enum
-{
-	UNINITIALIZED_SORT = 0,
-	TOP_N_HEAP_SORT = 1,
-	QUICK_SORT = 2,
-	EXTERNAL_SORT = 3,
-	EXTERNAL_MERGE = 4,
-	IN_PROGRESS_SORT = 5
-} ExplainSortMethod;
-
-typedef enum
-{
-	UNINITIALIZED_SORT_SPACE_TYPE = 0,
-	MEMORY_SORT_SPACE_TYPE = 1,
-	DISK_SORT_SPACE_TYPE = 2
-} ExplainSortSpaceType;
-
-/*
- * Convert the above enum `ExplainSortMethod` to printable string for
- * Explain Analyze.
- * Note : No conversion available for `UNINITALIZED_SORT`. Caller has to index
- * this array by subtracting 1 from origin enum value.
- *
- * E.g. sort_method_enum_str[TOP_N_HEAP_SORT-1]
- */
-const char *sort_method_enum_str[] = {
-	TOP_N_HEAP_SORT_STR,
-	QUICK_SORT_STR,
-	EXTERNAL_SORT_STR,
-	EXTERNAL_MERGE_STR,
-	IN_PROGRESS_SORT_STR
-};
 
 /* EXPLAIN ANALYZE statistics for one plan node of a slice */
 typedef struct CdbExplain_StatInst
 {
 	NodeTag		pstype;			/* PlanState node type */
+
+	/* fields from Instrumentation struct */
 	instr_time	starttime;		/* Start time of current iteration of node */
 	instr_time	counter;		/* Accumulated runtime for this node */
 	double		firsttuple;		/* Time for first tuple of this cycle */
 	double		startup;		/* Total startup time (in seconds) */
 	double		total;			/* Total total time (in seconds) */
 	double		ntuples;		/* Total tuples produced */
+	double		ntuples2;
 	double		nloops;			/* # of run cycles for this node */
+	double		nfiltered1;
+	double		nfiltered2;
 	double		execmemused;	/* executor memory used (bytes) */
 	double		workmemused;	/* work_mem actually used (bytes) */
 	double		workmemwanted;	/* work_mem to avoid workfile i/o (bytes) */
 	bool		workfileCreated;	/* workfile created in this node */
 	instr_time	firststart;		/* Start time of first iteration of node */
 	int			numPartScanned; /* Number of part tables scanned */
-	ExplainSortMethod sortMethod;	/* Type of sort */
-	ExplainSortSpaceType sortSpaceType; /* Sort space type */
-	long		sortSpaceUsed;	/* Memory / Disk used by sort(KBytes) */
+
+	TuplesortInstrumentation sortstats; /* Sort stats, if this is a Sort node */
+	HashInstrumentation hashstats; /* Hash stats, if this is a Hash node */
 	int			bnotes;			/* Offset to beginning of node's extra text */
 	int			enotes;			/* Offset to end of node's extra text */
 } CdbExplain_StatInst;
@@ -328,69 +283,10 @@ static int cdbexplain_countLeafPartTables(PlanState *planstate);
 static void show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys,
 							 AttrNumber *keycols, const char *qlabel,
 							 List *ancestors, ExplainState *es);
-static void explain_partition_selector(PartitionSelector *ps,
-						   PlanState *parentstate,
-						   List *ancestors, ExplainState *es);
 static void
 gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                              struct EState *estate,
                              ExplainState *es);
-
-/*
- * Convert the sort method in string to corresponding
- * enum ExplainSortMethod.
- *
- * If you change please update tuplesort_get_stats / tuplesort_get_stats_mk
- * in tuplesort.c / tuplesort_mk.c
- */
-static ExplainSortMethod
-String2ExplainSortMethod(const char *sortMethod)
-{
-	if (sortMethod == NULL)
-	{
-		return UNINITIALIZED_SORT;
-	}
-	else if (strcmp(TOP_N_HEAP_SORT_STR, sortMethod) == 0)
-	{
-		return TOP_N_HEAP_SORT;
-	}
-	else if (strcmp(QUICK_SORT_STR, sortMethod) == 0)
-	{
-		return QUICK_SORT;
-	}
-	else if (strcmp(EXTERNAL_SORT_STR, sortMethod) == 0)
-	{
-		return EXTERNAL_SORT;
-	}
-	else if (strcmp(EXTERNAL_MERGE_STR, sortMethod) == 0)
-	{
-		return EXTERNAL_MERGE;
-	}
-	else if (strcmp(IN_PROGRESS_SORT_STR, sortMethod) == 0)
-	{
-		return IN_PROGRESS_SORT;
-	}
-	return UNINITIALIZED_SORT;
-}
-
-static ExplainSortSpaceType
-String2ExplainSortSpaceType(const char *sortSpaceType, ExplainSortMethod sortMethod)
-{
-	if (sortSpaceType == NULL ||
-		sortMethod == UNINITIALIZED_SORT)
-	{
-		return UNINITIALIZED_SORT_SPACE_TYPE;
-	}
-	else if (strcmp(MEMORY_STR_SORT_SPACE_TYPE, sortSpaceType) == 0)
-	{
-		return MEMORY_SORT_SPACE_TYPE;
-	}
-	else
-	{
-		Assert(strcmp(DISK_STR_SORT_SPACE_TYPE, sortSpaceType) == 0);
-		return DISK_SORT_SPACE_TYPE;
-	}
-}
 
 /*
  * cdbexplain_localExecStats
@@ -412,7 +308,7 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
-	Insist(planstate && planstate->instrument && showstatctx);
+	Assert(planstate && planstate->instrument && showstatctx);
 
 	memset(&ctx, 0, sizeof(ctx));
 
@@ -714,7 +610,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 										"the correct %s software version.",
 										PACKAGE_NAME)));
 
-			Insist(ctx.nStatInst == hdr->nInst);
+			Assert(ctx.nStatInst == hdr->nInst);
 		}
 
 		/* Save lowest and highest segment id for which we have stats. */
@@ -734,7 +630,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	planstate_walk_node(planstate, cdbexplain_recvStatWalker, &ctx);
 
 	/* Make sure we visited the right number of PlanState nodes. */
-	Insist(ctx.iStatInst == ctx.nStatInst);
+	Assert(ctx.iStatInst == ctx.nStatInst);
 
 	/* Transfer per-slice stats from message headers to the SliceSummary. */
 	for (imsgptr = 0; imsgptr < ctx.nmsgptr; imsgptr++)
@@ -839,7 +735,7 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	CdbExplain_SliceWorker *ssw;
 	int			iworker;
 
-	Insist(sliceIndex >= 0 &&
+	Assert(sliceIndex >= 0 &&
 		   sliceIndex < showstatctx->nslice);
 
 	/* Kludge:	QD can have more than one 'Slice 0' if plan is non-parallel. */
@@ -871,8 +767,8 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	/* Save a copy of this SliceWorker instance in the worker array. */
 	iworker = hdr->segindex - ss->segindex0;
 	ssw = &ss->workers[iworker];
-	Insist(iworker >= 0 && iworker < ss->nworker);
-	Insist(ssw->peakmemused == 0);	/* each worker should be seen just once */
+	Assert(iworker >= 0 && iworker < ss->nworker);
+	Assert(ssw->peakmemused == 0);	/* each worker should be seen just once */
 	*ssw = hdr->worker;
 
 	/* Rollup of per-worker stats into SliceSummary */
@@ -903,7 +799,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	CdbExplain_StatInst *si = &ctx->hdr.inst[0];
 	Instrumentation *instr = planstate->instrument;
 
-	Insist(instr);
+	Assert(instr);
 
 	/* We have to finalize statistics, since ExecutorEnd hasn't been called. */
 	InstrEndLoop(instr);
@@ -930,15 +826,29 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->startup = instr->startup;
 	si->total = instr->total;
 	si->ntuples = instr->ntuples;
+	si->ntuples2 = instr->ntuples2;
 	si->nloops = instr->nloops;
+	si->nfiltered1 = instr->nfiltered1;
+	si->nfiltered2 = instr->nfiltered2;
 	si->workmemused = instr->workmemused;
 	si->workmemwanted = instr->workmemwanted;
 	si->workfileCreated = instr->workfileCreated;
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
-	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
-	si->sortSpaceType = String2ExplainSortSpaceType(instr->sortSpaceType, si->sortMethod);
-	si->sortSpaceUsed = instr->sortSpaceUsed;
+
+	if (IsA(planstate, SortState))
+	{
+		SortState *sortstate = (SortState *) planstate;
+
+		si->sortstats = sortstate->sortstats;
+	}
+	if (IsA(planstate, HashState))
+	{
+		HashState *hashstate = (HashState *) planstate;
+
+		if (hashstate->hashtable)
+			ExecHashGetInstrumentation(&si->hashstats, hashstate->hashtable);
+	}
 }								/* cdbexplain_collectStatsFromNode */
 
 
@@ -1011,7 +921,7 @@ cdbexplain_depStatAcc_saveText(CdbExplain_DepStatAcc *acc,
 		int			notelen = rsi->enotes - rsi->bnotes;
 		const char *notes = (const char *) rsh + rsh->bnotes + rsi->bnotes;
 
-		Insist(rsh->bnotes + rsi->enotes < rsh->enotes &&
+		Assert(rsh->bnotes + rsi->enotes < rsh->enotes &&
 			   notes[notelen] == '\0');
 
 		/* Append to extratextbuf. */
@@ -1067,7 +977,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	int			imsgptr;
 	int			nInst;
 
-	Insist(instr &&
+	Assert(instr &&
 		   ctx->iStatInst < ctx->nStatInst);
 
 	/* Allocate NodeSummary block. */
@@ -1087,10 +997,13 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&workmemwanted);
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
-	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
+	for (int i = 0; i < NUM_SORT_METHOD; i++)
 	{
-		cdbexplain_depStatAcc_init0(&sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx]);
-		cdbexplain_depStatAcc_init0(&sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx]);
+		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
+		{
+			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
+			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
+		}
 	}
 
 	/* Initialize per-slice accumulators. */
@@ -1104,7 +1017,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		rsh = ctx->msgptrs[imsgptr];
 		rsi = &rsh->inst[ctx->iStatInst];
 
-		Insist(rsi->pstype == planstate->type &&
+		Assert(rsi->pstype == planstate->type &&
 			   ns->segindex0 <= rsh->segindex &&
 			   rsh->segindex < ns->segindex0 + ns->ninst);
 
@@ -1129,10 +1042,20 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
-		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITIALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE)
+		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
+		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
+		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
 		{
-			Assert(rsi->sortSpaceType <= NUM_SORT_SPACE_TYPE);
-			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortSpaceType - 1][rsi->sortMethod - 1], (double) rsi->sortSpaceUsed, rsh, rsi, nsi);
+			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortstats.spaceType][rsi->sortstats.sortMethod],
+									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
+		}
+
+		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
+		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
+		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
+		{
+			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortstats.spaceType][rsi->sortstats.sortMethod],
+									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
 		}
 
 		/* Update per-slice accumulators. */
@@ -1147,10 +1070,13 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->workmemwanted = workmemwanted.agg;
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
-	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
+	for (int i = 0; i < NUM_SORT_METHOD; i++)
 	{
-		ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx] = sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx].agg;
-		ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx] = sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx].agg;
+		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
+		{
+			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
+			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
+		}
 	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
@@ -1161,6 +1087,32 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	INSTR_TIME_ASSIGN(instr->firststart, ntuples.firststart_of_max_total);
 
 	/* Put winner's stats into qDisp PlanState's Instrument node. */
+	/*
+	 * GPDB_12_MERGE_FIXME: does it make sense to also print 'nfiltered1'
+	 * 'nfiltered2' from the "winner", i.e. the QE that returned most rows?
+	 * There's this test case in the upstream 'partition_prune' test:
+	 *
+	 * explain (analyze, costs off, summary off, timing off) select * from list_part where a = list_part_fn(1) + a;
+	 *                       QUERY PLAN                      
+	 * ------------------------------------------------------
+	 *  Append (actual rows=0 loops=1)
+	 *    ->  Seq Scan on list_part1 (actual rows=0 loops=1)
+	 *          Filter: (a = (list_part_fn(1) + a))
+	 *          Rows Removed by Filter: 1
+	 *    ->  Seq Scan on list_part2 (actual rows=0 loops=1)
+	 *          Filter: (a = (list_part_fn(1) + a))
+	 *          Rows Removed by Filter: 1
+	 *    ->  Seq Scan on list_part3 (actual rows=0 loops=1)
+	 *          Filter: (a = (list_part_fn(1) + a))
+	 *          Rows Removed by Filter: 1
+	 *    ->  Seq Scan on list_part4 (actual rows=0 loops=1)
+	 *          Filter: (a = (list_part_fn(1) + a))
+	 *          Rows Removed by Filter: 1
+	 * (13 rows)
+	 *
+	 * We don't print those "Rows Removed by Filter" rows in GPDB, because
+	 * they don't come from the "winner" QE.
+	 */
 	if (ntuples.agg.vcnt > 0)
 	{
 		instr->starttime = ntuples.nsimax->starttime;
@@ -1169,7 +1121,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		instr->startup = ntuples.nsimax->startup;
 		instr->total = ntuples.nsimax->total;
 		instr->ntuples = ntuples.nsimax->ntuples;
+		instr->ntuples2 = ntuples.nsimax->ntuples2;
 		instr->nloops = ntuples.nsimax->nloops;
+		instr->nfiltered1 = ntuples.nsimax->nfiltered1;
+		instr->nfiltered2 = ntuples.nsimax->nfiltered2;
 		instr->execmemused = ntuples.nsimax->execmemused;
 		instr->workmemused = ntuples.nsimax->workmemused;
 		instr->workmemwanted = ntuples.nsimax->workmemwanted;
@@ -1210,6 +1165,39 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		if (!saved ||
 			ntuples.agg.vmax > 1.05 * cdbexplain_agg_avg(&ntuples.agg))
 			cdbexplain_depStatAcc_saveText(&ntuples, ctx->extratextbuf, &saved);
+	}
+
+	/*
+	 * If this is a HashState, construct a SharedHashInfo with the stats from
+	 * all the QEs. In PostgreSQL, SharedHashInfo is used to show stats of all
+	 * the worker processes, we use it to show stats from all the QEs instead.
+	 *
+	 * GPDB_12_MERGE_FIXME: Should we do the same for Sort stats nowadays?
+	 */
+	if (IsA(planstate, HashState))
+	{
+		/* GPDB: Collect the results from all QE processes */
+		HashState *hashstate = (HashState *) planstate;
+		SharedHashInfo *shared_state;
+
+		size_t		size;
+
+		size = offsetof(SharedHashInfo, hinstrument) +
+			ctx->nmsgptr * sizeof(HashInstrumentation);
+		shared_state = palloc0(size);
+		shared_state->num_workers = ctx->nmsgptr;
+
+		/* Examine the statistics from each qExec. */
+		for (imsgptr = 0; imsgptr < ctx->nmsgptr; imsgptr++)
+		{
+			/* Locate PlanState node's StatInst received from this qExec. */
+			rsh = ctx->msgptrs[imsgptr];
+			rsi = &rsh->inst[ctx->iStatInst];
+
+			memcpy(&shared_state->hinstrument[imsgptr], &rsi->hashstats, sizeof(HashInstrumentation));
+		}
+
+		hashstate->shared_info = shared_state;
 	}
 }								/* cdbexplain_depositStatsToNode */
 
@@ -1490,10 +1478,10 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		}
 		else
 		{
-			ExplainPropertyLong("Executor Memory", (long) kb(ns->execmemused.vsum), es);
-			ExplainPropertyInteger("Executor Memory Segments", ns->execmemused.vcnt, es);
-			ExplainPropertyLong("Executor Max Memory", (long) kb(ns->execmemused.vmax), es);
-			ExplainPropertyInteger("Executor Max Memory Segment", ns->execmemused.imax, es);
+			ExplainPropertyInteger("Executor Memory", "kB", kb(ns->execmemused.vsum), es);
+			ExplainPropertyInteger("Executor Memory Segments", NULL, ns->execmemused.vcnt, es);
+			ExplainPropertyInteger("Executor Max Memory", "kB", kb(ns->execmemused.vmax), es);
+			ExplainPropertyInteger("Executor Max Memory Segment", NULL, ns->execmemused.imax, es);
 		}
 	}
 
@@ -1547,27 +1535,27 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		else
 		{
 			ExplainOpenGroup("work_mem", "work_mem", true, es);
-			ExplainPropertyLong("Used", (long) kb(ns->workmemused.vsum), es);
-			ExplainPropertyInteger("Segments", ns->workmemused.vcnt, es);
-			ExplainPropertyLong("Max Memory", (long) kb(ns->workmemused.vmax), es);
-			ExplainPropertyLong("Max Memory Segment", ns->workmemused.imax, es);
+			ExplainPropertyInteger("Used", "kB", kb(ns->workmemused.vsum), es);
+			ExplainPropertyInteger("Segments", NULL, ns->workmemused.vcnt, es);
+			ExplainPropertyInteger("Max Memory", "kB", kb(ns->workmemused.vmax), es);
+			ExplainPropertyInteger("Max Memory Segment", NULL, ns->workmemused.imax, es);
 
 			/*
 			 * Total number of segments in which this node reuses cached or
 			 * creates workfiles.
 			 */
 			if (nodeSupportWorkfileCaching(planstate))
-				ExplainPropertyInteger("Workfile Spilling", ns->totalWorkfileCreated.vcnt, es);
+				ExplainPropertyInteger("Workfile Spilling", NULL, ns->totalWorkfileCreated.vcnt, es);
 
 			if (ns->workmemwanted.vcnt > 0)
 			{
-				ExplainPropertyLong("Max Memory Wanted", (long) kb(ns->workmemwanted.vmax), es);
+				ExplainPropertyInteger("Max Memory Wanted", "kB", kb(ns->workmemwanted.vmax), es);
 
 				if (ns->ninst > 1)
 				{
-					ExplainPropertyInteger("Max Memory Wanted Segment", ns->workmemwanted.imax, es);
-					ExplainPropertyLong("Avg Memory Wanted", (long) kb(cdbexplain_agg_avg(&ns->workmemwanted)), es);
-					ExplainPropertyInteger("Segments Affected", ns->ninst, es);
+					ExplainPropertyInteger("Max Memory Wanted Segment", NULL, ns->workmemwanted.imax, es);
+					ExplainPropertyInteger("Avg Memory Wanted", "kB", kb(cdbexplain_agg_avg(&ns->workmemwanted)), es);
+					ExplainPropertyInteger("Segments Affected", NULL, ns->ninst, es);
 				}
 			}
 
@@ -1754,10 +1742,10 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 										 nsi->total, false);
 
 				ExplainOpenGroup("Segment", NULL, false, es);
-				ExplainPropertyInteger("Segment index", ns->segindex0 + i, es);
+				ExplainPropertyInteger("Segment index", NULL, ns->segindex0 + i, es);
 				ExplainPropertyText("Time To First Result", startbuf, es);
 				ExplainPropertyText("Time To Total Result", totalbuf, es);
-				ExplainPropertyFloat("Tuples", nsi->ntuples, 1, es);
+				ExplainPropertyFloat("Tuples", NULL, nsi->ntuples, 1, es);
 				ExplainCloseGroup("Segment", NULL, false, es);
 			}
 		}
@@ -1804,6 +1792,9 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 							struct EState *estate,
 							ExplainState *es)
 {
+	if (!es->summary)
+		return;
+
     gpexplain_formatSlicesOutput(showstatctx, estate, es);
 
 	if (!IsResManagerMemoryPolicyNone())
@@ -1812,7 +1803,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 			appendStringInfo(es->str, "Memory used:  %ldkB\n", (long) kb(stmt->query_mem));
 		else
-			ExplainPropertyLong("Memory used", (long) kb(stmt->query_mem), es);
+			ExplainPropertyInteger("Memory used", "kB", kb(stmt->query_mem), es);
 
 		if (showstatctx->workmemwanted_max > 0)
 		{
@@ -1833,7 +1824,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 				appendStringInfo(es->str, "Memory wanted:  %ldkB\n", mem_wanted);
 			else
-				ExplainPropertyLong("Memory wanted", mem_wanted, es);
+				ExplainPropertyInteger("Memory wanted", "kB", mem_wanted, es);
 		}
 
 		ExplainCloseGroup("Statement statistics", "Statement statistics", true, es);
@@ -1879,7 +1870,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
         else 
         {
             ExplainOpenGroup("Slice", NULL, true, es);
-            ExplainPropertyInteger("Slice", sliceIndex, es);
+            ExplainPropertyInteger("Slice", NULL, sliceIndex, es);
         }
 
         /* Worker counts */
@@ -1917,7 +1908,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             {
                 ExplainOpenGroup("Workers", "Workers", true, es);
                 if (ds->nError > 0)
-                    ExplainPropertyInteger("Errors", ds->nError, es);
+                    ExplainPropertyInteger("Errors", NULL, ds->nError, es);
             }
 
             if (ds->nCanceled > 0)
@@ -1930,7 +1921,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                 }
                 else
                 {
-                    ExplainPropertyInteger("Canceled", ds->nCanceled, es);
+                    ExplainPropertyInteger("Canceled", NULL, ds->nCanceled, es);
                 }
             }
 
@@ -1944,7 +1935,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                 }
                 else
                 {
-                    ExplainPropertyInteger("Not Dispatched", nNotDispatched, es);
+                    ExplainPropertyInteger("Not Dispatched", NULL, nNotDispatched, es);
                 }
             }
 
@@ -1958,7 +1949,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                 }
                 else
                 {
-                    ExplainPropertyInteger("Aborted", ds->nIgnorableError, es);
+                    ExplainPropertyInteger("Aborted", NULL, ds->nIgnorableError, es);
                 }
             }
 
@@ -1972,7 +1963,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                 }
                 else
                 {
-                    ExplainPropertyInteger("Ok", ds->nOk, es);
+                    ExplainPropertyInteger("Ok", NULL, ds->nOk, es);
                 }
             }
 
@@ -2014,7 +2005,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             }
             else
             {
-                ExplainPropertyInteger("Executor Memory", ss->peakmemused.vmax, es);
+                ExplainPropertyInteger("Executor Memory", "kB", ss->peakmemused.vmax, es);
             }
         }
         else if (ss->peakmemused.vcnt > 1)
@@ -2033,9 +2024,9 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             else
             {
                 ExplainOpenGroup("Executor Memory", "Executor Memory", true, es);
-                ExplainPropertyInteger("Average", cdbexplain_agg_avg(&ss->peakmemused), es);
-                ExplainPropertyInteger("Workers", ss->peakmemused.vcnt, es);
-                ExplainPropertyInteger("Maximum Memory Used", ss->peakmemused.vmax, es);
+                ExplainPropertyInteger("Average", "kB", cdbexplain_agg_avg(&ss->peakmemused), es);
+                ExplainPropertyInteger("Workers", NULL, ss->peakmemused.vcnt, es);
+                ExplainPropertyInteger("Maximum Memory Used", "kB", ss->peakmemused.vmax, es);
                 ExplainCloseGroup("Executor Memory", "Executor Memory", true, es);
             }
         }
@@ -2070,7 +2061,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                 }
                 else
                 {
-                    ExplainPropertyInteger("Virtual Memory", ss->vmem_reserved.vmax, es);
+                    ExplainPropertyInteger("Virtual Memory", "kB", ss->vmem_reserved.vmax, es);
                 }
             }
             else if (ss->vmem_reserved.vcnt > 1)
@@ -2089,9 +2080,9 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                 else
                 {
                     ExplainOpenGroup("Virtual Memory", "Virtual Memory", true, es);
-                    ExplainPropertyInteger("Average", cdbexplain_agg_avg(&ss->vmem_reserved), es);
-                    ExplainPropertyInteger("Workers", ss->vmem_reserved.vcnt, es);
-                    ExplainPropertyInteger("Maximum Memory Used", ss->vmem_reserved.vmax, es);
+                    ExplainPropertyInteger("Average", "kB", cdbexplain_agg_avg(&ss->vmem_reserved), es);
+                    ExplainPropertyInteger("Workers", NULL, ss->vmem_reserved.vcnt, es);
+                    ExplainPropertyInteger("Maximum Memory Used", "kB", ss->vmem_reserved.vmax, es);
                     ExplainCloseGroup("Virtual Memory", "Virtual Memory", true, es);
                 }
 
@@ -2115,7 +2106,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             }
             else
             {
-                ExplainPropertyInteger("Work Maximum Memory", ss->workmemused_max, es);
+                ExplainPropertyInteger("Work Maximum Memory", "kB", ss->workmemused_max, es);
             }
         }
 
@@ -2136,7 +2127,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
         }
         else
         {
-            ExplainPropertyInteger("Total memory used across slices", total_memory_across_slices, es);
+            ExplainPropertyInteger("Total memory used across slices", "bytes", total_memory_across_slices, es);
         }
     }
 }
@@ -2146,11 +2137,16 @@ cdbexplain_countLeafPartTables(PlanState *planstate)
 {
 	Assert(IsA(planstate, DynamicSeqScanState) ||
 		   IsA(planstate, DynamicIndexScanState));
+
+	return -1;
+	/* GPDB_12_MERGE_FIXME */
+#if 0
 	Scan	   *scan = (Scan *) planstate->plan;
 
 	Oid			root_oid = getrelid(scan->scanrelid, planstate->state->es_range_table);
 
 	return countLeafPartTables(root_oid);
+#endif
 }
 
 /*
@@ -2206,39 +2202,4 @@ show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys, AttrNumber *ke
 	    exprstr = deparse_expression((Node *)hashExpr, context, useprefix, true);
 		ExplainPropertyText("Hash Key", exprstr, es);
     }
-}
-
-/*
- * Explain a partition selector node, including partition elimination
- * expression and number of statically selected partitions, if available.
- */
-static void
-explain_partition_selector(PartitionSelector *ps, PlanState *parentstate,
-						   List *ancestors, ExplainState *es)
-{
-	if (ps->printablePredicate)
-	{
-		List	   *context;
-		bool		useprefix;
-		char	   *exprstr;
-
-		/* Set up deparsing context */
-		context = set_deparse_context_planstate(es->deparse_cxt,
-												(Node *) parentstate,
-												ancestors);
-		useprefix = list_length(es->rtable) > 1;
-
-		/* Deparse the expression */
-		exprstr = deparse_expression(ps->printablePredicate, context, useprefix, false);
-
-		ExplainPropertyText("Filter", exprstr, es);
-	}
-
-	if (ps->staticSelection)
-	{
-		int nPartsSelected = list_length(ps->staticPartOids);
-		int nPartsTotal = countLeafPartTables(ps->relid);
-
-		ExplainPropertyStringInfo("Partitions selected", es, "%d (out of %d)", nPartsSelected, nPartsTotal);
-	}
 }

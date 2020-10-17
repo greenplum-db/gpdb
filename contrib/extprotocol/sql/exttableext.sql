@@ -888,7 +888,7 @@ select max(cnt) - min(cnt)  > 20 from t;
     -- Write to WET
     -- insert should fail since MAX_FORMAT_STRING (4096) is exceeded
     INSERT INTO format_long_w (SELECT * FROM format_long);
-    -- ERROR:  formatter_export: buffer too small (gpformatter.c:182)  (seg2 rh55-qavm58:5532 pid=20093) 
+    -- ERROR:  formatter_export: buffer too small (gpformatter.c:183)  (seg2 rh55-qavm58:5532 pid=20093) 
 
 -- Test 72: Verify limit of MAX_FORMAT_STRING 4096 bytes does not apply to fixed length strings - varchar()
 -- MAX_FORMAT_STRING limit should not apply to fixed length strings (char or varchar)
@@ -1023,7 +1023,7 @@ select max(cnt) - min(cnt)  > 20 from t;
     -- Write to WET
     -- insert should fail since INT type is not supported
     INSERT INTO format_long_w (SELECT * FROM format_long);
-    -- ERROR:  formatter_export error: unsupported data type (gpformatter.c:100)  (seg2 rh55-qavm58:5532 pid=20668) (cdbdisp.c:1458)
+    -- ERROR:  formatter_export error: unsupported data type (gpformatter.c:101)  (seg2 rh55-qavm58:5532 pid=20668) (cdbdisp.c:1458)
 
     -- Read from RET using data file format_long_test13 create by previous test
     -- select should fail since INT type is not supported
@@ -1070,7 +1070,7 @@ select max(cnt) - min(cnt)  > 20 from t;
     -- Write to WET
     -- insert should failed because of dropped column value1
     INSERT INTO format_w (SELECT * FROM formatsource);
-    -- ERROR:  formatter_export: dropped columns (gpformatter.c:80)  (seg1 rh55-qavm57:5533 pid=20454) (cdbdisp.c:1458)
+    -- ERROR:  formatter_export: dropped columns (gpformatter.c:81)  (seg1 rh55-qavm57:5533 pid=20454) (cdbdisp.c:1458)
 
     -- Read from RET using data file format_long_test13 create by previous test
     select count(*) from format_r;

@@ -3,7 +3,7 @@ doc/src/sgml/ref/drop_resource_queue.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-DROPRESOURCEQUEUE">
+<refentry id="sql-dropresourcequeue">
  <indexterm zone="sql-dropresourcequeue">
   <primary>DROP RESOURCE QUEUE</primary>
  </indexterm>

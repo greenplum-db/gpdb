@@ -31,7 +31,7 @@ def impl(context, segment):
         raise Exception("invalid segment type")
 
     context.standby_hostname = 'mdw-2'
-    context.execute_steps(u"""
+    context.execute_steps("""
     Given the segments are synchronized
      Then replication connections can be made from the acting {segment}
 
@@ -49,7 +49,7 @@ def impl(context, segment):
         context.standby_port = os.environ.get('PGPORT')
         context.standby_data_dir = master_data_dir
         context.new_standby_data_dir = '%s_1' % master_data_dir
-        context.execute_steps(u"""
+        context.execute_steps("""
          When the master goes down
           And the user runs command "gpactivatestandby -a" from standby master
          Then gpactivatestandby should return a return code of 0
@@ -57,14 +57,14 @@ def impl(context, segment):
         os.environ['PGHOST'] = 'mdw-2'
 
     else: # mirrors
-        context.execute_steps(u"""
+        context.execute_steps("""
         Given user stops all primary processes
           And user can start transactions
          When the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of 0
         """)
 
-    context.execute_steps(u"""
+    context.execute_steps("""
      Then the segments are synchronized
       And the tablespace is valid
       And replication connections can be made from the acting {segment}
@@ -77,7 +77,7 @@ def impl(context, segment):
         # Re-initialize the standby with a new directory, since
         # the previous master cannot assume the role of standby
         # because it does not have the required recover.conf file.
-        context.execute_steps(u"""
+        context.execute_steps("""
          When the user runs command "gpinitstandby -a -s mdw-1 -S {datadir}" from standby master
          Then gpinitstandby should return a return code of 0
          """.format(datadir=context.new_standby_data_dir))
@@ -88,24 +88,24 @@ def impl(context, segment):
         else:
             os.environ['PGHOST'] = orig_PGHOST
         context.standby_hostname = 'mdw-1'
-        context.execute_steps(u"""
+        context.execute_steps("""
          When the master goes down on "mdw-2"
           And the user runs "gpactivatestandby -a"
          Then gpactivatestandby should return a return code of 0
         """)
 
-        context.execute_steps(u"""
+        context.execute_steps("""
          When the user runs "gpinitstandby -a -s mdw-2 -S {datadir}"
          Then gpinitstandby should return a return code of 0
          """.format(datadir=context.new_standby_data_dir))
 
     else: # mirrors
-        context.execute_steps(u"""
+        context.execute_steps("""
          When the user runs "gprecoverseg -ra"
          Then gprecoverseg should return a return code of 0
         """)
 
-    context.execute_steps(u"""
+    context.execute_steps("""
      Then the segments are synchronized
       And the tablespace is valid
       And the other tablespace is valid

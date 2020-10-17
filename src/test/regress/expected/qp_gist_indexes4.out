@@ -691,15 +691,13 @@ SELECT * FROM geometricTypes
 
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..272.74 rows=7 width=129)
-   ->  Bitmap Heap Scan on geometrictypes  (cost=100.30..272.74 rows=3 width=129)
-         Recheck Cond: ((c ~= '<(-3197,7903),3150>'::circle) AND (c << '<(7879,8779),7868>'::circle))
-         ->  Bitmap Index Scan on gt_index_c  (cost=0.00..100.30 rows=1 width=0)
-               Index Cond: ((c ~= '<(-3197,7903),3150>'::circle) AND (c << '<(7879,8779),7868>'::circle))
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.15..8.25 rows=6 width=129)
+   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.15..8.17 rows=2 width=129)
+         Index Cond: ((c ~= '<(-3197,7903),3150>'::circle) AND (c << '<(7879,8779),7868>'::circle))
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
@@ -710,15 +708,13 @@ SELECT * FROM geometricTypes
 
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..272.74 rows=7 width=129)
-   ->  Bitmap Heap Scan on geometrictypes  (cost=100.30..272.74 rows=3 width=129)
-         Recheck Cond: ((b ~= '(7352,7352),(7350,-3128)'::box) AND (b << '(8479,7579),(8441,-3121)'::box))
-         ->  Bitmap Index Scan on gt_index_b  (cost=0.00..100.30 rows=1 width=0)
-               Index Cond: ((b ~= '(7352,7352),(7350,-3128)'::box) AND (b << '(8479,7579),(8441,-3121)'::box))
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.15..8.25 rows=6 width=129)
+   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.15..8.17 rows=2 width=129)
+         Index Cond: ((b ~= '(7352,7352),(7350,-3128)'::box) AND (b << '(8479,7579),(8441,-3121)'::box))
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
@@ -729,15 +725,13 @@ SELECT * FROM geometricTypes
 
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
-                                                       QUERY PLAN                                                        
--------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=100.30..272.74 rows=7 width=129)
-   ->  Bitmap Heap Scan on geometrictypes  (cost=100.30..272.74 rows=3 width=129)
-         Recheck Cond: ((p ~= '((1252,8252),(1274,7975))'::polygon) AND (p << '((8778,6578),(8765,8265))'::polygon))
-         ->  Bitmap Index Scan on gt_index_p  (cost=0.00..100.30 rows=1 width=0)
-               Index Cond: ((p ~= '((1252,8252),(1274,7975))'::polygon) AND (p << '((8778,6578),(8765,8265))'::polygon))
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.15..8.25 rows=6 width=129)
+   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.15..8.17 rows=2 width=129)
+         Index Cond: ((p ~= '((1252,8252),(1274,7975))'::polygon) AND (p << '((8778,6578),(8765,8265))'::polygon))
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test12_partition.sql
@@ -755,8 +749,6 @@ CREATE TABLE geometricTypesPartition (seed INTEGER, c CIRCLE, b BOX, p POLYGON)
 PARTITION BY range(seed) (Start(1) end(3) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'seed' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "geometrictypespartition_1_prt_1" for table "geometrictypespartition"
-NOTICE:  CREATE TABLE will create partition "geometrictypespartition_1_prt_2" for table "geometrictypespartition"
 INSERT INTO geometricTypesPartition (seed, c, b, p) 
  SELECT x%2 + 1, 
    SeedToCircle(x), 
@@ -765,8 +757,6 @@ INSERT INTO geometricTypesPartition (seed, c, b, p)
   FROM generate_series(1, 3000)x
  ;
 CREATE INDEX gt_index_c_part ON geometricTypesPartition USING GIST (c);
-NOTICE:  building index for child partition "geometrictypespartition_1_prt_1"
-NOTICE:  building index for child partition "geometrictypespartition_1_prt_2"
 SET enable_seqscan = False;
 SET optimizer_enable_tablescan = False;
 SELECT * FROM geometricTypesPartition 

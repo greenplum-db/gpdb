@@ -29,7 +29,6 @@
 
 #include "postgres.h"
 
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 #include "cdb/partitionselection.h"
 #include "executor/executor.h"

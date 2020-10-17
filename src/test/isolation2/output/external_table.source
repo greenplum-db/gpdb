@@ -97,7 +97,7 @@ SELECT gp_inject_fault('interconnect_setup_palloc', 'resume', dbid) FROM gp_segm
 -- Check the result
 10<:  <... completed>
 ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 @hostname@:25432 pid=20500)
-DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i
+DETAIL:  Last error was: invalid input syntax for type integer: "error_1", column i
 CONTEXT:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 10: COMMIT;
 COMMIT

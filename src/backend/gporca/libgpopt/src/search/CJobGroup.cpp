@@ -27,10 +27,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 void
-CJobGroup::Init
-	(
-	CGroup *pgroup
-	)
+CJobGroup::Init(CGroup *pgroup)
 {
 	GPOS_ASSERT(!FInit());
 	GPOS_ASSERT(NULL != pgroup);
@@ -58,7 +55,6 @@ CJobGroup::PgexprFirstUnschedNonLogical()
 		{
 			// get first group expression
 			pgexpr = gp.PgexprSkipLogical(NULL /*pgexpr*/);
-
 		}
 		else
 		{
@@ -89,7 +85,6 @@ CJobGroup::PgexprFirstUnschedLogical()
 		{
 			// get first group expression
 			pgexpr = gp.PgexprFirst();
-
 		}
 		else
 		{
@@ -102,5 +97,3 @@ CJobGroup::PgexprFirstUnschedLogical()
 }
 
 // EOF
-
-

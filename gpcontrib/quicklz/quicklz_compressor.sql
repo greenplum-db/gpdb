@@ -7,15 +7,15 @@ LANGUAGE C VOLATILE AS '$libdir/quicklz_compressor.so', 'quicklz_destructor';
 COMMENT ON FUNCTION gp_quicklz_destructor(internal) is 'quicklz destructor';
 
 CREATE FUNCTION gp_quicklz_compress(internal, int4, internal, int4, internal, internal) RETURNS void
-LANGUAGE C IMMUTABLE AS '$libdir/quicklz_compressor.so', 'quicklz_compress';
+LANGUAGE C IMMUTABLE PARALLEL SAFE AS '$libdir/quicklz_compressor.so', 'quicklz_compress';
 COMMENT ON FUNCTION gp_quicklz_compress(internal, int4, internal, int4, internal, internal) is 'quicklz compressor';
 
 CREATE FUNCTION gp_quicklz_decompress(internal, int4, internal, int4, internal, internal) RETURNS void
-LANGUAGE C IMMUTABLE AS '$libdir/quicklz_compressor.so', 'quicklz_decompress';
+LANGUAGE C IMMUTABLE PARALLEL SAFE AS '$libdir/quicklz_compressor.so', 'quicklz_decompress';
 COMMENT ON FUNCTION gp_quicklz_decompress(internal, int4, internal, int4, internal, internal) is 'quicklz compressor';
 
 CREATE FUNCTION gp_quicklz_validator(internal) RETURNS void
-LANGUAGE C IMMUTABLE AS '$libdir/quicklz_compressor.so', 'quicklz_validator';
+LANGUAGE C IMMUTABLE PARALLEL SAFE AS '$libdir/quicklz_compressor.so', 'quicklz_validator';
 COMMENT ON FUNCTION gp_quicklz_validator(internal) is 'quicklz compression validator';
 
 -- There is no CREATE COMPRESSION command, so we have to insert the entry manually.

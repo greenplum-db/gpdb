@@ -1,7 +1,6 @@
 -- Test a recovered (in startup) prepared transaction does not block
 -- pg_rewind due to lock conflict of database template1 when it runs the single
 -- mode instance to ensure clean shutdown on the target postgres instance.
-include: helpers/server_helpers.sql;
 
 -- set GUCs to speed-up the test
 1: alter system set gp_fts_probe_retries to 2;
@@ -30,7 +29,9 @@ include: helpers/server_helpers.sql;
 -- with mode 5, but that conflicts with the mode 3 lock which is needed during
 -- postgres starting in InitPostgres() and thus pg_rewind hangs forever.
 !\retcode gprecoverseg -a;
+select wait_until_all_segments_synchronized();
 !\retcode gprecoverseg -ar;
+select wait_until_all_segments_synchronized();
 
 -- reset fts GUCs.
 3: alter system reset gp_fts_probe_retries;

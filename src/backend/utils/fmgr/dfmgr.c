@@ -3,7 +3,7 @@
  * dfmgr.c
  *	  Dynamic function manager code.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -16,11 +16,24 @@
 
 #include <sys/stat.h>
 
-#include "dynloader.h"
+#ifdef HAVE_DLOPEN
+#include <dlfcn.h>
+
+/*
+ * On macOS, <dlfcn.h> insists on including <stdbool.h>.  If we're not
+ * using stdbool, undef bool to undo the damage.
+ */
+#ifndef USE_STDBOOL
+#ifdef bool
+#undef bool
+#endif
+#endif
+#endif							/* HAVE_DLOPEN */
+
+#include "fmgr.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
 #include "storage/shmem.h"
-#include "utils/dynamic_loader.h"
 #include "utils/hsearch.h"
 
 
@@ -48,7 +61,7 @@ typedef struct df_files
 	ino_t		inode;			/* Inode number of file */
 #endif
 	void	   *handle;			/* a handle for pg_dl* functions */
-	char		filename[FLEXIBLE_ARRAY_MEMBER];		/* Full pathname of file */
+	char		filename[FLEXIBLE_ARRAY_MEMBER];	/* Full pathname of file */
 } DynamicFileList;
 
 static DynamicFileList *file_list = NULL;
@@ -65,7 +78,7 @@ char	   *Dynamic_library_path;
 
 static void *internal_load_library(const char *libname);
 static void incompatible_module_error(const char *libname,
-						  const Pg_magic_struct *module_magic_data);
+									  const Pg_magic_struct *module_magic_data) pg_attribute_noreturn();
 static void internal_unload_library(const char *libname);
 static bool file_exists(const char *name);
 static char *expand_dynamic_library_name(const char *name);
@@ -92,7 +105,7 @@ static const Pg_magic_struct magic_data = PG_MODULE_MAGIC_DATA;
  * at less cost than repeating load_external_function.
  */
 PGFunction
-load_external_function(char *filename, char *funcname,
+load_external_function(const char *filename, const char *funcname,
 					   bool signalNotFound, void **filehandle)
 {
 	char	   *fullname;
@@ -109,8 +122,8 @@ load_external_function(char *filename, char *funcname,
 	if (filehandle)
 		*filehandle = lib_handle;
 
-	/* Look up the function within the library */
-	retval = (PGFunction) pg_dlsym(lib_handle, funcname);
+	/* Look up the function within the library. */
+	retval = (PGFunction) dlsym(lib_handle, funcname);
 
 	if (retval == NULL && signalNotFound)
 		ereport(ERROR,
@@ -156,9 +169,9 @@ load_file(const char *filename, bool restricted)
  * Return (PGFunction) NULL if not found.
  */
 PGFunction
-lookup_external_function(void *filehandle, char *funcname)
+lookup_external_function(void *filehandle, const char *funcname)
 {
-	return (PGFunction) pg_dlsym(filehandle, funcname);
+	return (PGFunction) dlsym(filehandle, funcname);
 }
 
 
@@ -210,7 +223,7 @@ internal_load_library(const char *libname)
 		 * File not loaded yet.
 		 */
 		file_scanner = (DynamicFileList *)
-			malloc(offsetof(DynamicFileList, filename) +strlen(libname) + 1);
+			malloc(offsetof(DynamicFileList, filename) + strlen(libname) + 1);
 		if (file_scanner == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
@@ -224,10 +237,10 @@ internal_load_library(const char *libname)
 #endif
 		file_scanner->next = NULL;
 
-		file_scanner->handle = pg_dlopen(file_scanner->filename);
+		file_scanner->handle = dlopen(file_scanner->filename, RTLD_NOW | RTLD_GLOBAL);
 		if (file_scanner->handle == NULL)
 		{
-			load_error = (char *) pg_dlerror();
+			load_error = dlerror();
 			free((char *) file_scanner);
 			/* errcode_for_file_access might not be appropriate here? */
 			ereport(ERROR,
@@ -238,7 +251,7 @@ internal_load_library(const char *libname)
 
 		/* Check the magic function to determine compatibility */
 		magic_func = (PGModuleMagicFunction)
-			pg_dlsym(file_scanner->handle, PG_MAGIC_FUNCTION_NAME_STRING);
+			dlsym(file_scanner->handle, PG_MAGIC_FUNCTION_NAME_STRING);
 		if (magic_func)
 		{
 			const Pg_magic_struct *magic_data_ptr = (*magic_func) ();
@@ -249,8 +262,8 @@ internal_load_library(const char *libname)
 				/* copy data block before unlinking library */
 				Pg_magic_struct module_magic_data = *magic_data_ptr;
 
-				/* try to unlink library */
-				pg_dlclose(file_scanner->handle);
+				/* try to close library */
+				dlclose(file_scanner->handle);
 				free((char *) file_scanner);
 
 				/* issue suitable complaint */
@@ -259,20 +272,20 @@ internal_load_library(const char *libname)
 		}
 		else
 		{
-			/* try to unlink library */
-			pg_dlclose(file_scanner->handle);
+			/* try to close library */
+			dlclose(file_scanner->handle);
 			free((char *) file_scanner);
 			/* complain */
 			ereport(ERROR,
-				  (errmsg("incompatible library \"%s\": missing magic block",
-						  libname),
-				   errhint("Extension libraries are required to use the PG_MODULE_MAGIC macro.")));
+					(errmsg("incompatible library \"%s\": missing magic block",
+							libname),
+					 errhint("Extension libraries are required to use the PG_MODULE_MAGIC macro.")));
 		}
 
 		/*
 		 * If the library has a _PG_init() function, call it.
 		 */
-		PG_init = (PG_init_t) pg_dlsym(file_scanner->handle, "_PG_init");
+		PG_init = (PG_init_t) dlsym(file_scanner->handle, "_PG_init");
 		if (PG_init)
 			(*PG_init) ();
 
@@ -334,9 +347,9 @@ incompatible_module_error(const char *libname,
 	int lib_internal_version = 0;
 
 	/* module_magic_data is recent enough to provide its own header version */
-	if (module_magic_data->len > offsetof(Pg_magic_struct, headerversion))
+	if (module_magic_data->len > offsetof(Pg_magic_struct, product))
 	{
-		lib_internal_version = module_magic_data->headerversion;
+		lib_internal_version = module_magic_data->product;
 	}
 
 	/*
@@ -344,23 +357,25 @@ incompatible_module_error(const char *libname,
 	 * block might not even have the fields we expect.
 	 */
 	if (magic_data.version != module_magic_data->version ||
-		magic_data.product != module_magic_data->product ||
-		magic_data.headerversion != lib_internal_version)
+		magic_data.product != module_magic_data->product)
 	{
+		char		library_version[32];
+
+		if (module_magic_data->version >= 1000)
+			snprintf(library_version, sizeof(library_version), "%d",
+					 module_magic_data->version / 100);
+		else
+			snprintf(library_version, sizeof(library_version), "%d.%d",
+					 module_magic_data->version / 100,
+					 module_magic_data->version % 100);
 		ereport(ERROR,
 				(errmsg("incompatible library \"%s\": version mismatch",
 						libname),
-			  errdetail("Server version is %s %d.%d (header version: %d), library is %s %d.%d (header version: %d).",
-						magic_product,
-						magic_data.version / 100,
-						magic_data.version % 100,
-						magic_data.headerversion,
-						mod_magic_product,
-						module_magic_data->version / 100,
-						module_magic_data->version % 100,
-						lib_internal_version)
-				)
-		);
+				 errdetail("Server is version %s %d, library is version %s %s.",
+						   magic_product,
+						   magic_data.version / 100,
+						   mod_magic_product,
+						   library_version)));
 	}
 
 	/*
@@ -403,7 +418,7 @@ incompatible_module_error(const char *libname,
 		if (details.len)
 			appendStringInfoChar(&details, '\n');
 		appendStringInfo(&details,
-					   _("Server has FLOAT4PASSBYVAL = %s, library has %s."),
+						 _("Server has FLOAT4PASSBYVAL = %s, library has %s."),
 						 magic_data.float4byval ? "true" : "false",
 						 module_magic_data->float4byval ? "true" : "false");
 	}
@@ -412,14 +427,14 @@ incompatible_module_error(const char *libname,
 		if (details.len)
 			appendStringInfoChar(&details, '\n');
 		appendStringInfo(&details,
-					   _("Server has FLOAT8PASSBYVAL = %s, library has %s."),
+						 _("Server has FLOAT8PASSBYVAL = %s, library has %s."),
 						 magic_data.float8byval ? "true" : "false",
 						 module_magic_data->float8byval ? "true" : "false");
 	}
 
 	if (details.len == 0)
 		appendStringInfoString(&details,
-			  _("Magic block has unexpected length or padding difference."));
+							   _("Magic block has unexpected length or padding difference."));
 
 	ereport(ERROR,
 			(errmsg("incompatible library \"%s\": magic block mismatch",
@@ -477,19 +492,19 @@ internal_unload_library(const char *libname)
 			/*
 			 * If the library has a _PG_fini() function, call it.
 			 */
-			PG_fini = (PG_fini_t) pg_dlsym(file_scanner->handle, "_PG_fini");
+			PG_fini = (PG_fini_t) dlsym(file_scanner->handle, "_PG_fini");
 			if (PG_fini)
 				(*PG_fini) ();
 
 			clear_external_function_hash(file_scanner->handle);
-			pg_dlclose(file_scanner->handle);
+			dlclose(file_scanner->handle);
 			free((char *) file_scanner);
 			/* prv does not change */
 		}
 		else
 			prv = file_scanner;
 	}
-#endif   /* NOT_USED */
+#endif							/* NOT_USED */
 }
 
 static bool

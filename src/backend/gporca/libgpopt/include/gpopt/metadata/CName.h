@@ -15,73 +15,71 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringConst.h"
 
-#define GPOPT_NAME_QUOTE_BEGIN	"\""
-#define GPOPT_NAME_QUOTE_END	"\""
+#define GPOPT_NAME_QUOTE_BEGIN "\""
+#define GPOPT_NAME_QUOTE_END "\""
 
-#define GPOPT_NAME_SEPARATOR	GPOS_WSZ_LIT(".")
+#define GPOPT_NAME_SEPARATOR GPOS_WSZ_LIT(".")
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CName
-	//
-	//	@doc:
-	//		Names consist of a null terminated wide character string; 
-	//		No assumptions about format and encoding; only semantics 
-	//		enforced is zero termination of string;
-	//
-	//---------------------------------------------------------------------------
-	class CName
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CName
+//
+//	@doc:
+//		Names consist of a null terminated wide character string;
+//		No assumptions about format and encoding; only semantics
+//		enforced is zero termination of string;
+//
+//---------------------------------------------------------------------------
+class CName
+{
+private:
+	// actual name
+	const CWStringConst *m_str_name;
+
+	// keep track of copy status
+	BOOL m_fDeepCopy;
+
+	// deep copy function
+	void DeepCopy(CMemoryPool *mp, const CWStringConst *str);
+
+public:
+	// ctors
+	CName(CMemoryPool *, const CWStringBase *);
+	CName(const CWStringConst *, BOOL fOwnsMemory = false);
+	CName(const CName &);
+
+	CName(CMemoryPool *mp, const CName &);
+	CName(CMemoryPool *mp, const CName &, const CName &);
+
+	// dtor
+	~CName();
+
+	// accessors
+	const CWStringConst *
+	Pstr() const
 	{
-		private:
-			
-			// actual name
-			const CWStringConst *m_str_name;
+		return m_str_name;
+	}
 
-			// keep track of copy status
-			BOOL m_fDeepCopy;
-			
-			// deep copy function
-			void DeepCopy(CMemoryPool *mp, const CWStringConst *str);
-			
-		public:
-		
-			// ctors
-			CName(CMemoryPool *, const CWStringBase *);
-			CName(const CWStringConst *, BOOL fOwnsMemory = false);
-			CName(const CName &);
+	ULONG
+	Length() const
+	{
+		return m_str_name->Length();
+	}
 
-			CName(CMemoryPool *mp, const CName &);
-			CName(CMemoryPool *mp, const CName &, const CName &);
+	// comparison
+	BOOL Equals(const CName &) const;
 
-			// dtor
-			~CName();
+	// debug print
+	IOstream &OsPrint(IOstream &) const;
 
-			// accessors
-			const CWStringConst *Pstr() const
-			{
-				return m_str_name;
-			}
-			
-			ULONG Length() const
-			{
-				return m_str_name->Length();
-			}
+};	// class CName
+}  // namespace gpopt
 
-#ifdef GPOS_DEBUG
-			// comparison
-			BOOL Equals(const CName &) const;
-#endif // GPOS_DEBUG
-			
-			// debug print
-			IOstream &OsPrint(IOstream &) const;
-			
-	}; // class CName
-}
-
-#endif // !GPOPT_CName_H
+#endif	// !GPOPT_CName_H
 
 // EOF

@@ -35,11 +35,9 @@ using namespace gpos;
 GPOS_RESULT
 COstreamFileTest::EresUnittest()
 {
-
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(COstreamFileTest::EresUnittest_Basic),
-		};
+	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -100,10 +98,7 @@ COstreamFileTest::EresUnittest_Basic()
 //
 //---------------------------------------------------------------------------
 void
-COstreamFileTest::Unittest_WriteFileStream
-	(
-	const CHAR *szFile
-	)
+COstreamFileTest::Unittest_WriteFileStream(const CHAR *szFile)
 {
 	GPOS_ASSERT(NULL != szFile);
 
@@ -116,15 +111,7 @@ COstreamFileTest::Unittest_WriteFileStream
 	const WCHAR wsz[] = GPOS_WSZ_LIT("some regular string");
 	const INT hex = 0xdeadbeef;
 
-	osf
-		<< wc
-		<< c
-		<< ull
-		<< li
-		<< wsz
-		<< COstream::EsmHex
-		<< hex
-		;
+	osf << wc << c << ull << li << wsz << COstream::EsmHex << hex;
 }
 
 
@@ -137,10 +124,7 @@ COstreamFileTest::Unittest_WriteFileStream
 //
 //---------------------------------------------------------------------------
 void
-COstreamFileTest::Unittest_CheckOutputFile
-	(
-	const CHAR *szFile
-	)
+COstreamFileTest::Unittest_CheckOutputFile(const CHAR *szFile)
 {
 	GPOS_ASSERT(NULL != szFile);
 
@@ -150,14 +134,14 @@ COstreamFileTest::Unittest_CheckOutputFile
 	const ULONG ulReadBufferSize = 1024;
 	WCHAR wszReadBuffer[ulReadBufferSize];
 
-#ifdef GPOS_DEBUG
-	ULONG_PTR ulpRead =
-#endif // GPOS_DEBUG
-	fr.ReadBytesToBuffer((BYTE *) wszReadBuffer, GPOS_ARRAY_SIZE(wszReadBuffer));
+	ULONG_PTR ulpRead GPOS_ASSERTS_ONLY = fr.ReadBytesToBuffer(
+		(BYTE *) wszReadBuffer, GPOS_ARRAY_SIZE(wszReadBuffer));
 
-	CWStringConst strExpected(GPOS_WSZ_LIT("WC102-10some regular stringdeadbeef"));
+	CWStringConst strExpected(
+		GPOS_WSZ_LIT("WC102-10some regular stringdeadbeef"));
 
-	GPOS_ASSERT(ulpRead == (ULONG_PTR) strExpected.Length() * GPOS_SIZEOF(WCHAR));
+	GPOS_ASSERT(ulpRead ==
+				(ULONG_PTR) strExpected.Length() * GPOS_SIZEOF(WCHAR));
 	GPOS_ASSERT(strExpected.Equals(&strExpected));
 }
 
@@ -171,11 +155,7 @@ COstreamFileTest::Unittest_CheckOutputFile
 //
 //---------------------------------------------------------------------------
 void
-COstreamFileTest::Unittest_DeleteTmpFile
-	(
-	const CHAR *szDir,
-	const CHAR *szFile
-	)
+COstreamFileTest::Unittest_DeleteTmpFile(const CHAR *szDir, const CHAR *szFile)
 {
 	GPOS_ASSERT(NULL != szDir);
 	GPOS_ASSERT(NULL != szFile);
@@ -195,4 +175,3 @@ COstreamFileTest::Unittest_DeleteTmpFile
 
 
 // EOF
-

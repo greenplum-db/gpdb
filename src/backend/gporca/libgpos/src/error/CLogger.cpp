@@ -29,24 +29,13 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogger::CLogger
-	(
-	ErrorInfoLevel info_level
-	)
-	:
-	ILogger(),
-	m_entry_wrapper
-		(
-		m_entry,
-		GPOS_ARRAY_SIZE(m_entry)
-		),
-	m_msg_wrapper
-		(
-		m_msg,
-		GPOS_ARRAY_SIZE(m_msg)
-		),
-	m_info_level(info_level)
-{}
+CLogger::CLogger(ErrorInfoLevel info_level)
+	: ILogger(),
+	  m_entry_wrapper(m_entry, GPOS_ARRAY_SIZE(m_entry)),
+	  m_msg_wrapper(m_msg, GPOS_ARRAY_SIZE(m_msg)),
+	  m_info_level(info_level)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -58,7 +47,8 @@ CLogger::CLogger
 //
 //---------------------------------------------------------------------------
 CLogger::~CLogger()
-{}
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -70,13 +60,7 @@ CLogger::~CLogger()
 //
 //---------------------------------------------------------------------------
 void
-CLogger::Log
-	(
-	const WCHAR *msg,
-	ULONG severity,
-	const CHAR *filename,
-	ULONG line
-	)
+CLogger::Log(const WCHAR *msg, ULONG severity, const CHAR *filename, ULONG line)
 {
 	// format log message
 	Format(msg, severity, filename, line);
@@ -98,13 +82,15 @@ CLogger::Log
 		GPOS_CATCH_EX(ex)
 		{
 			// propagate assert failures
-			if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiAssert))
+			if (GPOS_MATCH_EX(ex, CException::ExmaSystem,
+							  CException::ExmiAssert))
 			{
 				GPOS_RETHROW(ex);
 			}
 
 			// ignore anything else but aborts
-			if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiAbort))
+			if (GPOS_MATCH_EX(ex, CException::ExmaSystem,
+							  CException::ExmiAbort))
 			{
 				// reset any currently handled exception
 				GPOS_RESET_EX;
@@ -134,13 +120,10 @@ CLogger::Log
 //
 //---------------------------------------------------------------------------
 void
-CLogger::Format
-	(
-	const WCHAR *msg,
-	ULONG severity,
-	const CHAR *, // filename
-	ULONG // line
-	)
+CLogger::Format(const WCHAR *msg, ULONG severity,
+				const CHAR *,  // filename
+				ULONG		   // line
+)
 {
 	m_entry_wrapper.Reset();
 	m_msg_wrapper.Reset();
@@ -157,13 +140,9 @@ CLogger::Format
 		AppendDate();
 
 		// append thread id and severity
-		m_entry_wrapper.AppendFormat
-			(
-			GPOS_WSZ_LIT(",THD%03d,%s,\"%ls\",\n"),
-			0, //thread id
-			sev,
-			m_msg_wrapper.GetBuffer()
-			);
+		m_entry_wrapper.AppendFormat(GPOS_WSZ_LIT(",THD%03d,%s,\"%ls\",\n"),
+									 0,	 //thread id
+									 sev, m_msg_wrapper.GetBuffer());
 	}
 	else
 	{
@@ -187,28 +166,16 @@ CLogger::AppendDate()
 	TIME tm;
 
 	// get local time
-	syslib::GetTimeOfDay(&tv, NULL/*timezone*/);
-#ifdef GPOS_DEBUG
-	TIME *t =
-#endif // GPOS_DEBUG
-	clib::Localtime_r(&tv.tv_sec, &tm);
+	syslib::GetTimeOfDay(&tv, NULL /*timezone*/);
+	TIME *t GPOS_ASSERTS_ONLY = clib::Localtime_r(&tv.tv_sec, &tm);
 
 	GPOS_ASSERT(NULL != t && "Failed to get local time");
 
 	// format: YYYY-MM-DD HH-MM-SS-UUUUUU TZ
-	m_entry_wrapper.AppendFormat
-		(
+	m_entry_wrapper.AppendFormat(
 		GPOS_WSZ_LIT("%04d-%02d-%02d %02d:%02d:%02d:%06d %s"),
-		tm.tm_year + 1900,
-		tm.tm_mon + 1,
-		tm.tm_mday,
-		tm.tm_hour,
-		tm.tm_min,
-		tm.tm_sec,
-		tv.tv_usec,
-		tm.tm_zone
-		)
-		;
+		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
+		tm.tm_sec, tv.tv_usec, tm.tm_zone);
 }
 
 
@@ -227,7 +194,8 @@ CLogger::ReportFailure()
 	if (0 < errno)
 	{
 		// get error description
-		clib::Strerror_r(errno, m_retrieved_msg, GPOS_ARRAY_SIZE(m_retrieved_msg));
+		clib::Strerror_r(errno, m_retrieved_msg,
+						 GPOS_ARRAY_SIZE(m_retrieved_msg));
 		m_retrieved_msg[GPOS_ARRAY_SIZE(m_retrieved_msg) - 1] = '\0';
 
 		m_entry_wrapper.Reset();
@@ -237,12 +205,8 @@ CLogger::ReportFailure()
 	}
 
 	// send generic failure message
-	CLoggerSyslog::Alert
-		(
-		GPOS_WSZ_LIT("Log write failure, check disc space and filesystem integrity")
-		)
-		;
+	CLoggerSyslog::Alert(GPOS_WSZ_LIT(
+		"Log write failure, check disc space and filesystem integrity"));
 }
 
 // EOF
-

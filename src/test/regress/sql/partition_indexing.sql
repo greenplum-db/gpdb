@@ -408,7 +408,7 @@ drop table mpp6379;
 
 -- Creating an index on a partitioned table makes the partitions
 -- automatically get the index
-create table idxpart (a int, b int, c text)
+create table gpidxpart (a int, b int, c text)
 partition by range (a)
 subpartition by range(b)
 subpartition template
@@ -417,14 +417,12 @@ subpartition template
 
 -- relhassubclass of a partitioned index is false before creating any partition.
 -- It will be set after the first partition is created.
-create index idxpart_idx on idxpart (a);
-select relhassubclass from pg_class where relname = 'idxpart_idx';
-drop index idxpart_idx;
+create index gpidxpart_idx on gpidxpart (a);
+select relhassubclass from pg_class where relname = 'gpidxpart_idx';
+drop index gpidxpart_idx;
 
 -- Even with partitions, relhassubclass should not be set if a partitioned
 -- index is created only on the parent.
-set sql_inheritance to off;
-create index idxpart_idx on idxpart(a);
-set sql_inheritance to on;
-select relhassubclass from pg_class where relname = 'idxpart_idx';
-drop index idxpart_idx;
+create index gpidxpart_idx on only gpidxpart(a);
+select relhassubclass from pg_class where relname = 'gpidxpart_idx';
+drop index gpidxpart_idx;

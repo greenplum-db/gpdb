@@ -4,7 +4,7 @@
  *	  Public interface to various tsearch modules, such as
  *	  parsers and dictionaries.
  *
- * Copyright (c) 1998-2016, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2019, PostgreSQL Global Development Group
  *
  * src/include/tsearch/ts_public.h
  *
@@ -65,7 +65,7 @@ typedef struct
  * Common useful things for tsearch subsystem
  */
 extern char *get_tsearch_config_filename(const char *basename,
-							const char *extension);
+										 const char *extension);
 
 /*
  * Often useful stopword list management
@@ -77,7 +77,7 @@ typedef struct
 } StopList;
 
 extern void readstoplist(const char *fname, StopList *s,
-			 char *(*wordop) (const char *));
+						 char *(*wordop) (const char *));
 extern bool searchstoplist(StopList *s, char *key);
 
 /*
@@ -129,4 +129,4 @@ typedef struct
 								 * getnext == true */
 } DictSubState;
 
-#endif   /* _PG_TS_PUBLIC_H_ */
+#endif							/* _PG_TS_PUBLIC_H_ */

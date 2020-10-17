@@ -140,15 +140,11 @@ makeCdbCopy(CopyState cstate, bool is_copy_in)
  * may pg_throw via elog/ereport.
  */
 void
-cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
-			 PartitionNode *partitions, int file_encoding)
+cdbCopyStart(CdbCopy *c, CopyStmt *stmt, int file_encoding)
 {
 	int			flags;
 
 	stmt = copyObject(stmt);
-
-	/* add in partitions for dispatch */
-	stmt->partitions = partitions;
 
 	/*
 	 * If the output needs to be in a different encoding, tell the segment.
@@ -193,7 +189,7 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
 
 			stmt->options = lappend(stmt->options,
 									makeDefElem("encoding",
-												(Node *) makeString(pstrdup(encname))));
+												(Node *) makeString(pstrdup(encname)), -1));
 		}
 	}
 

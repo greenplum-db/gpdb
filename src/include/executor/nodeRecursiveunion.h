@@ -4,7 +4,7 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeRecursiveunion.h
@@ -17,9 +17,8 @@
 #include "nodes/execnodes.h"
 
 extern RecursiveUnionState *ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags);
-extern TupleTableSlot *ExecRecursiveUnion(RecursiveUnionState *node);
 extern void ExecEndRecursiveUnion(RecursiveUnionState *node);
 extern void ExecReScanRecursiveUnion(RecursiveUnionState *node);
 extern void ExecSquelchRecursiveUnion(RecursiveUnionState *node);
 
-#endif   /* NODERECURSIVEUNION_H */
+#endif							/* NODERECURSIVEUNION_H */

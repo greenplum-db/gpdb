@@ -3,7 +3,7 @@
  *
  *		Object access hooks.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  */
 
@@ -118,22 +118,22 @@ typedef struct
 
 /* Plugin provides a hook function matching this signature. */
 typedef void (*object_access_hook_type) (ObjectAccessType access,
-													 Oid classId,
-													 Oid objectId,
-													 int subId,
-													 void *arg);
+										 Oid classId,
+										 Oid objectId,
+										 int subId,
+										 void *arg);
 
 /* Plugin sets this variable to a suitable hook function. */
 extern PGDLLIMPORT object_access_hook_type object_access_hook;
 
 /* Core code uses these functions to call the hook (see macros below). */
 extern void RunObjectPostCreateHook(Oid classId, Oid objectId, int subId,
-						bool is_internal);
+									bool is_internal);
 extern void RunObjectDropHook(Oid classId, Oid objectId, int subId,
-				  int dropflags);
+							  int dropflags);
 extern void RunObjectPostAlterHook(Oid classId, Oid objectId, int subId,
-					   Oid auxiliaryId, bool is_internal);
-extern bool RunNamespaceSearchHook(Oid objectId, bool ereport_on_volation);
+								   Oid auxiliaryId, bool is_internal);
+extern bool RunNamespaceSearchHook(Oid objectId, bool ereport_on_violation);
 extern void RunFunctionExecuteHook(Oid objectId);
 
 /*
@@ -182,4 +182,4 @@ extern void RunFunctionExecuteHook(Oid objectId);
 			RunFunctionExecuteHook(objectId);	\
 	} while(0)
 
-#endif   /* OBJECTACCESS_H */
+#endif							/* OBJECTACCESS_H */

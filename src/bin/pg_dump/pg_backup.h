@@ -11,7 +11,7 @@
  *		as this notice is not removed.
  *
  *	The author is not responsible for loss or damages that may
- *	result from it's use.
+ *	result from its use.
  *
  *
  * IDENTIFICATION
@@ -63,10 +63,10 @@ typedef struct _restoreOptions
 	int			createDB;		/* Issue commands to create the database */
 	int			noOwner;		/* Don't try to match original object owner */
 	int			noTablespace;	/* Don't issue tablespace-related commands */
-	int			disable_triggers;		/* disable triggers during data-only
-										 * restore */
-	int			use_setsessauth;/* Use SET SESSION AUTHORIZATION commands
-								 * instead of OWNER TO */
+	int			disable_triggers;	/* disable triggers during data-only
+									 * restore */
+	int			use_setsessauth;	/* Use SET SESSION AUTHORIZATION commands
+									 * instead of OWNER TO */
 	char	   *superuser;		/* Username to use as superuser */
 	char	   *use_role;		/* Issue SET ROLE to this */
 	int			postdataSchemaRestore;
@@ -75,7 +75,10 @@ typedef struct _restoreOptions
 	int			dump_inserts;
 	int			column_inserts;
 	int			if_exists;
-	int			no_security_labels;		/* Skip security label entries */
+	int			no_comments;	/* Skip comments */
+	int			no_publications;	/* Skip publication entries */
+	int			no_security_labels; /* Skip security label entries */
+	int			no_subscriptions;	/* Skip subscription entries */
 	int			strict_names;
 
 	const char *filename;
@@ -100,6 +103,7 @@ typedef struct _restoreOptions
 	SimpleStringList indexNames;
 	SimpleStringList functionNames;
 	SimpleStringList schemaNames;
+	SimpleStringList schemaExcludeNames;
 	SimpleStringList triggerNames;
 	SimpleStringList tableNames;
 
@@ -118,8 +122,9 @@ typedef struct _restoreOptions
 
 	bool	   *idWanted;		/* array showing which dump IDs to emit */
 
-	int			binary_upgrade;	/* GPDB: restoring for a binary upgrade */
 	int			enable_row_security;
+	int			sequence_data;	/* dump sequence data even in schema-only mode */
+	int			binary_upgrade;
 } RestoreOptions;
 
 typedef struct _dumpOptions
@@ -128,7 +133,6 @@ typedef struct _dumpOptions
 	const char *pghost;
 	const char *pgport;
 	const char *username;
-	bool		oids;
 
 	int			binary_upgrade;
 
@@ -138,13 +142,16 @@ typedef struct _dumpOptions
 	int			dumpSections;	/* bitmask of chosen sections */
 	bool		aclsSkip;
 	const char *lockWaitTimeout;
+	int			dump_inserts;	/* 0 = COPY, otherwise rows per INSERT */
 
 	/* flags for various command-line long options */
 	int			disable_dollar_quoting;
-	int			dump_inserts;
 	int			column_inserts;
 	int			if_exists;
+	int			no_comments;
 	int			no_security_labels;
+	int			no_publications;
+	int			no_subscriptions;
 	int			no_synchronized_snapshots;
 	int			no_unlogged_table_data;
 	int			serializable_deferrable;
@@ -153,6 +160,7 @@ typedef struct _dumpOptions
 	int			outputNoTablespaces;
 	int			use_setsessauth;
 	int			enable_row_security;
+	int			load_via_partition_root;
 
 	/* default, if no "inclusion" switches appear, is to dump everything */
 	bool		include_everything;
@@ -160,8 +168,12 @@ typedef struct _dumpOptions
 	int			outputClean;
 	int			outputCreateDB;
 	bool		outputBlobs;
+	bool		dontOutputBlobs;
 	int			outputNoOwner;
 	char	   *outputSuperuser;
+
+	int			sequence_data;	/* dump sequence data even in schema-only mode */
+	int			do_nothing;
 } DumpOptions;
 
 /*
@@ -174,16 +186,15 @@ typedef struct Archive
 	RestoreOptions *ropt;		/* options, if restoring */
 
 	int			verbose;
-	char	   *remoteVersionStr;		/* server's version string */
+	char	   *remoteVersionStr;	/* server's version string */
 	int			remoteVersion;	/* same in numeric form */
 	bool		isStandby;		/* is server a standby node */
 
-	int			minRemoteVersion;		/* allowable range */
+	int			minRemoteVersion;	/* allowable range */
 	int			maxRemoteVersion;
 
 	int			numWorkers;		/* number of parallel processes */
-	char	   *sync_snapshot_id;		/* sync snapshot id for parallel
-										 * operation */
+	char	   *sync_snapshot_id;	/* sync snapshot id for parallel operation */
 
 	/* info needed for string escaping */
 	int			encoding;		/* libpq code for client_encoding */
@@ -227,33 +238,21 @@ typedef int DumpId;
 
 typedef int (*DataDumperPtr) (Archive *AH, void *userArg);
 
-typedef void (*SetupWorkerPtr) (Archive *AH);
+typedef void (*SetupWorkerPtrType) (Archive *AH);
 
 /*
  * Main archiver interface.
  */
 
 extern void ConnectDatabase(Archive *AH,
-				const char *dbname,
-				const char *pghost,
-				const char *pgport,
-				const char *username,
-				trivalue prompt_password,
-				bool binary_upgrade);
+							const char *dbname,
+							const char *pghost,
+							const char *pgport,
+							const char *username,
+							trivalue prompt_password,
+							bool binary_upgrade);
 extern void DisconnectDatabase(Archive *AHX);
 extern PGconn *GetConnection(Archive *AHX);
-
-/* Called to add a TOC entry */
-extern void ArchiveEntry(Archive *AHX,
-			 CatalogId catalogId, DumpId dumpId,
-			 const char *tag,
-			 const char *namespace, const char *tablespace,
-			 const char *owner, bool withOids,
-			 const char *desc, teSection section,
-			 const char *defn,
-			 const char *dropStmt, const char *copyStmt,
-			 const DumpId *deps, int nDeps,
-			 DataDumperPtr dumpFn, void *dumpArg);
 
 extern void AmendArchiveEntry(Archive *AHX, DumpId dumpId, const char *defn);
 
@@ -276,8 +275,8 @@ extern Archive *OpenArchive(const char *FileSpec, const ArchiveFormat fmt);
 
 /* Create a new archive */
 extern Archive *CreateArchive(const char *FileSpec, const ArchiveFormat fmt,
-			  const int compression, ArchiveMode mode,
-			  SetupWorkerPtr setupDumpWorker);
+							  const int compression, bool dosync, ArchiveMode mode,
+							  SetupWorkerPtrType setupDumpWorker);
 
 /* The --list option */
 extern void PrintTOCSummary(Archive *AH);
@@ -298,4 +297,4 @@ extern int	archprintf(Archive *AH, const char *fmt,...) pg_attribute_printf(2, 3
 #define appendStringLiteralAH(buf,str,AH) \
 	appendStringLiteral(buf, str, (AH)->encoding, (AH)->std_strings)
 
-#endif   /* PG_BACKUP_H */
+#endif							/* PG_BACKUP_H */

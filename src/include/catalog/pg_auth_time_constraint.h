@@ -18,6 +18,7 @@
 #define PG_AUTH_TIME_CONSTRAINT_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_auth_time_constraint_d.h"
 #include "utils/date.h"
 
 /*
@@ -34,10 +35,7 @@
  *		typedef struct FormData_pg_auth_time_constraint
  * ----------------
  */
-#define AuthTimeConstraintRelationId	6070
-#define AuthTimeConstraint_Rowtype_Id	6071
-
-CATALOG(pg_auth_time_constraint,6070) BKI_SHARED_RELATION BKI_WITHOUT_OIDS BKI_ROWTYPE_OID(6071) BKI_SCHEMA_MACRO
+CATALOG(pg_auth_time_constraint,6070,AuthTimeConstraintRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(6071,AuthTimeConstraint_Rowtype_Id) BKI_SCHEMA_MACRO
 {
 	Oid		authid;		/* foreign key to pg_authid.oid, */
 	int16	start_day;	/* [0,6] denoting start of interval */
@@ -59,17 +57,5 @@ FOREIGN_KEY(authid REFERENCES pg_authid(oid));
  * ----------------
  */
 typedef FormData_pg_auth_time_constraint *Form_pg_auth_time_constraint;
-
-
-/* ----------------
- *		compiler constants for pg_auth_time_constraint
- * ----------------
- */
-#define Natts_pg_auth_time_constraint			5
-#define Anum_pg_auth_time_constraint_authid		1
-#define Anum_pg_auth_time_constraint_start_day	2
-#define Anum_pg_auth_time_constraint_start_time	3
-#define Anum_pg_auth_time_constraint_end_day	4
-#define Anum_pg_auth_time_constraint_end_time	5
 
 #endif   /* PG_AUTH_TIME_CONSTRAINT_H */

@@ -296,12 +296,12 @@ SELECT * FROM reset_test;
 -- table will not be dropped in the segments.
 DISCARD ALL;
 NOTICE:  command without clusterwide effect
-HINT:  Concider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
+HINT:  Consider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
 CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
 ERROR:  relation "reset_test" already exists  (seg0 127.0.1.1:7002 pid=26153)
 -- test for guc dev_opt_unsafe_truncate_in_subtransaction
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 CREATE OR REPLACE FUNCTION run_all_in_one() RETURNS VOID AS
 $$
@@ -319,14 +319,14 @@ $$
          plpy.execute('ALTER TABLE foobar RENAME TO unsafe_truncate')
 
          if before_truncate[0]['relfilenode'] == after_truncate[0]['relfilenode']:
-	     plpy.info('iteration:%d unsafe truncate performed' % (i))
+             plpy.info('iteration:%d unsafe truncate performed' % (i))
          else:
-	     plpy.info('iteration:%d safe truncate performed' % (i))
+             plpy.info('iteration:%d safe truncate performed' % (i))
 
-	 plpy.execute('SET dev_opt_unsafe_truncate_in_subtransaction TO ON')
+         plpy.execute('SET dev_opt_unsafe_truncate_in_subtransaction TO ON')
      plpy.execute('DROP TABLE unsafe_truncate')
      plpy.execute('RESET dev_opt_unsafe_truncate_in_subtransaction')
-$$ language plpythonu;
+$$ language plpython3u;
 select run_all_in_one();
 INFO:  iteration:1 safe truncate performed
 INFO:  iteration:2 unsafe truncate performed

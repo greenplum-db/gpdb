@@ -16,7 +16,6 @@
 #ifndef NODESplitUpdate_H
 #define NODESplitUpdate_H
 
-extern TupleTableSlot* ExecSplitUpdate(SplitUpdateState *node);
 extern SplitUpdateState* ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags);
 extern void ExecEndSplitUpdate(SplitUpdateState *node);
 

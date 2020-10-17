@@ -29,23 +29,17 @@ using namespace gpmd;
 //		Constructs a metadata relation
 //
 //---------------------------------------------------------------------------
-CDXLRelStats::CDXLRelStats
-	(
-	CMemoryPool *mp,
-	CMDIdRelStats *rel_stats_mdid,
-	CMDName *mdname,
-	CDouble rows,
-	BOOL is_empty
-	)
-	:
-	m_mp(mp),
-	m_rel_stats_mdid(rel_stats_mdid),
-	m_mdname(mdname),
-	m_rows(rows),
-	m_empty(is_empty)
+CDXLRelStats::CDXLRelStats(CMemoryPool *mp, CMDIdRelStats *rel_stats_mdid,
+						   CMDName *mdname, CDouble rows, BOOL is_empty)
+	: m_mp(mp),
+	  m_rel_stats_mdid(rel_stats_mdid),
+	  m_mdname(mdname),
+	  m_rows(rows),
+	  m_empty(is_empty)
 {
 	GPOS_ASSERT(rel_stats_mdid->IsValid());
-	m_dxl_str = CDXLUtils::SerializeMDObj(m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	m_dxl_str = CDXLUtils::SerializeMDObj(
+		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -128,21 +122,24 @@ CDXLRelStats::Rows() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLRelStats::Serialize
-	(
-	CXMLSerializer *xml_serializer
-	) const
+CDXLRelStats::Serialize(CXMLSerializer *xml_serializer) const
 {
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 
-						CDXLTokens::GetDXLTokenStr(EdxltokenRelationStats));
-	
-	m_rel_stats_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenMdid));
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName), m_mdname->GetMDName());
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenRows), m_rows);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenEmptyRelation), m_empty);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelationStats));
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 
-						CDXLTokens::GetDXLTokenStr(EdxltokenRelationStats));
+	m_rel_stats_mdid->Serialize(xml_serializer,
+								CDXLTokens::GetDXLTokenStr(EdxltokenMdid));
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName),
+								 m_mdname->GetMDName());
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenRows),
+								 m_rows);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenEmptyRelation), m_empty);
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelationStats));
 
 	GPOS_CHECK_ABORT;
 }
@@ -159,24 +156,20 @@ CDXLRelStats::Serialize
 //
 //---------------------------------------------------------------------------
 void
-CDXLRelStats::DebugPrint
-	(
-	IOstream &os
-	)
-	const
+CDXLRelStats::DebugPrint(IOstream &os) const
 {
 	os << "Relation id: ";
 	MDId()->OsPrint(os);
 	os << std::endl;
-	
+
 	os << "Relation name: " << (Mdname()).GetMDName()->GetBuffer() << std::endl;
-	
+
 	os << "Rows: " << Rows() << std::endl;
 
 	os << "Empty: " << IsEmpty() << std::endl;
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -187,11 +180,7 @@ CDXLRelStats::DebugPrint
 //
 //---------------------------------------------------------------------------
 CDXLRelStats *
-CDXLRelStats::CreateDXLDummyRelStats
-	(
-	CMemoryPool *mp,
-	IMDId *mdid
-	)
+CDXLRelStats::CreateDXLDummyRelStats(CMemoryPool *mp, IMDId *mdid)
 {
 	CMDIdRelStats *rel_stats_mdid = CMDIdRelStats::CastMdid(mdid);
 	CAutoP<CWStringDynamic> str;
@@ -199,10 +188,11 @@ CDXLRelStats::CreateDXLDummyRelStats
 	CAutoP<CMDName> mdname;
 	mdname = GPOS_NEW(mp) CMDName(mp, str.Value());
 	CAutoRef<CDXLRelStats> rel_stats_dxl;
-	rel_stats_dxl = GPOS_NEW(mp) CDXLRelStats(mp, rel_stats_mdid, mdname.Value(), CStatistics::DefaultColumnWidth, false /* is_empty */);
+	rel_stats_dxl = GPOS_NEW(mp)
+		CDXLRelStats(mp, rel_stats_mdid, mdname.Value(),
+					 CStatistics::DefaultColumnWidth, false /* is_empty */);
 	mdname.Reset();
 	return rel_stats_dxl.Reset();
 }
 
 // EOF
-

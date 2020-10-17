@@ -23,6 +23,9 @@ else
 	LDFLAGS_SL += -Wl,-bnoentry -Wl,-H512 -Wl,-bM:SRE
 endif
 
+# env var name to use in place of LD_LIBRARY_PATH
+ld_library_path_var = LIBPATH
+
 
 POSTGRES_IMP= postgres.imp
 
@@ -40,4 +43,4 @@ MKLDEXPORT=$(top_srcdir)/$(MKLDEXPORT_DIR)/mkldexport.sh
 
 # Rule for building a shared library from a single .o file
 %$(DLSUFFIX): %.o %.exp
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_SL) -o $@ $*.o -Wl,-bE:$*.exp $(BE_DLLLIBS)
+	$(CC) $(CFLAGS) $*.o $(LDFLAGS) $(LDFLAGS_SL) -o $@ -Wl,-bE:$*.exp $(BE_DLLLIBS)

@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Implementation of DXL logical select operator
-//		
+//
 //---------------------------------------------------------------------------
 
 
@@ -27,11 +27,7 @@ using namespace gpdxl;
 //		Construct a DXL Logical select node
 //
 //---------------------------------------------------------------------------
-CDXLLogicalSelect::CDXLLogicalSelect
-	(
-	CMemoryPool *mp
-	)
-	:CDXLLogical(mp)
+CDXLLogicalSelect::CDXLLogicalSelect(CMemoryPool *mp) : CDXLLogical(mp)
 {
 }
 
@@ -72,21 +68,19 @@ CDXLLogicalSelect::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalSelect::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLLogicalSelect::SerializeToDXL(CXMLSerializer *xml_serializer,
+								  const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
 	// serialize children
 	node->SerializeChildrenToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -99,26 +93,27 @@ CDXLLogicalSelect::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalSelect::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) const
+CDXLLogicalSelect::AssertValid(const CDXLNode *node,
+							   BOOL validate_children) const
 {
 	GPOS_ASSERT(2 == node->Arity());
 
 	CDXLNode *condition_dxl = (*node)[0];
 	CDXLNode *child_dxlnode = (*node)[1];
 
-	GPOS_ASSERT(EdxloptypeScalar ==  condition_dxl->GetOperator()->GetDXLOperatorType());
-	GPOS_ASSERT(EdxloptypeLogical == child_dxlnode->GetOperator()->GetDXLOperatorType());
-	
+	GPOS_ASSERT(EdxloptypeScalar ==
+				condition_dxl->GetOperator()->GetDXLOperatorType());
+	GPOS_ASSERT(EdxloptypeLogical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
+
 	if (validate_children)
 	{
-		condition_dxl->GetOperator()->AssertValid(condition_dxl, validate_children);
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		condition_dxl->GetOperator()->AssertValid(condition_dxl,
+												  validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

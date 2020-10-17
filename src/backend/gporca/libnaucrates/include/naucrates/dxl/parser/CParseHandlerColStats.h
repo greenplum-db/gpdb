@@ -18,82 +18,75 @@
 // fwd decl
 namespace gpmd
 {
-	class CMDIdColStats;
+class CMDIdColStats;
 }
 
 namespace gpdxl
 {
-	using namespace gpos;
-	using namespace gpmd;
-	using namespace gpnaucrates;
+using namespace gpos;
+using namespace gpmd;
+using namespace gpnaucrates;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerColStats
-	//
-	//	@doc:
-	//		Parse handler class for base relation column stats
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerColStats : public CParseHandlerMetadataObject
-	{
-		private:
-		
-			// mdid of the col stats object
-			CMDIdColStats *m_mdid;
-			
-			// name of the column
-			CMDName *m_md_name;
-			
-			// column width
-			CDouble m_width;
-			
-			// null fraction
-			CDouble m_null_freq;
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerColStats
+//
+//	@doc:
+//		Parse handler class for base relation column stats
+//
+//---------------------------------------------------------------------------
+class CParseHandlerColStats : public CParseHandlerMetadataObject
+{
+private:
+	// mdid of the col stats object
+	CMDIdColStats *m_mdid;
 
-			// ndistinct of remaining tuples
-			CDouble m_distinct_remaining;
+	// name of the column
+	CMDName *m_md_name;
 
-			// frequency of remaining tuples
-			CDouble m_freq_remaining;
+	// column width
+	CDouble m_width;
 
-			// is the column statistics missing in the database
-			BOOL m_is_column_stats_missing;
+	// null fraction
+	CDouble m_null_freq;
 
-			// private copy ctor
-			CParseHandlerColStats(const CParseHandlerColStats&);
+	// ndistinct of remaining tuples
+	CDouble m_distinct_remaining;
 
-			// process the start of an element
-			void StartElement
-				(
-				const XMLCh* const element_uri, 		// URI of element's namespace
- 				const XMLCh* const element_local_name,	// local part of element's name
-				const XMLCh* const element_qname,		// element's qname
-				const Attributes& attr				// element's attributes
-				);
+	// frequency of remaining tuples
+	CDouble m_freq_remaining;
 
-			// process the end of an element
-			void EndElement
-				(
-				const XMLCh* const element_uri, 		// URI of element's namespace
-				const XMLCh* const element_local_name,	// local part of element's name
-				const XMLCh* const element_qname		// element's qname
-				);
+	// is the column statistics missing in the database
+	BOOL m_is_column_stats_missing;
 
-		public:
+	// private copy ctor
+	CParseHandlerColStats(const CParseHandlerColStats &);
 
-			// ctor
-			CParseHandlerColStats
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_base
-				);
-	};
-}
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-#endif // !GPDXL_CParseHandlerColStats_H
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
+
+public:
+	// ctor
+	CParseHandlerColStats(CMemoryPool *mp,
+						  CParseHandlerManager *parse_handler_mgr,
+						  CParseHandlerBase *parse_handler_base);
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CParseHandlerColStats_H
 
 // EOF

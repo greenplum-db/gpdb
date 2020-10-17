@@ -1,5 +1,7 @@
 /fmgrtab.c
 /fmgroids.h
+/fmgrprotos.h
+/fmgr-stamp
 /probes.h
 /errcodes.h
 /pg_proc_combined.h

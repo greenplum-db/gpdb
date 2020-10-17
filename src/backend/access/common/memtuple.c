@@ -33,8 +33,6 @@
  *   	bit 31 is set if the memtuple is longer than 64K.
  *	bit 32 is if has null.
  *
- * Followed by optional 4 byte for Oid (depends on if mtbind_has_oid)
- * 
  * Followed by optional null bitmaps.  
  *
  * Align to bind.column_align, either 4 or 8.
@@ -61,7 +59,7 @@ static int
 compute_null_bitmap_extra_size(TupleDesc tupdesc, int col_align)
 {
 	int nbytes = (tupdesc->natts + 7) >> 3;
-	int avail_bytes = (tupdesc->tdhasoid || col_align == 4) ? 0 : 4;
+	int avail_bytes = (col_align == 4) ? 0 : 4;
 
 	Assert(col_align == 4 || col_align == 8);
 
@@ -204,7 +202,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 	int physical_col = 0;
 	int pass = 0;
 
-	uint32 cur_offset = (tupdesc->tdhasoid || col_align == 8) ? 8 : 4;
+	uint32 cur_offset = (col_align == 8) ? 8 : 4;
 	uint32 null_save_entries = compute_null_save_entries(tupdesc->natts);
 
 	/* alloc null save entries.  Zero it */
@@ -237,7 +235,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 	{
 		for(i=0; i<tupdesc->natts; ++i)
 		{
-			Form_pg_attribute attr = tupdesc->attrs[i];
+			Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
 			MemTupleAttrBinding *bind = &colbind->bindings[i];
 
 			if(pass == 0 && attr->attlen > 0 && attr->attalign == 'd')
@@ -421,15 +419,16 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 MemTupleBinding *create_memtuple_binding(TupleDesc tupdesc) 
 {
 	MemTupleBinding *pbind = (MemTupleBinding *) palloc(sizeof(MemTupleBinding));
-	int i = 0;
+	int			i;
 
 	pbind->tupdesc = tupdesc;
 	pbind->column_align = 4;
 	
-	for(i=0; i<tupdesc->natts; ++i)
+	for(i = 0; i < tupdesc->natts; ++i)
 	{
-		Form_pg_attribute attr = tupdesc->attrs[i];
-		if(attr->attlen > 0 && attr->attalign == 'd')
+		Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
+
+		if (attr->attlen > 0 && attr->attalign == 'd')
 			pbind->column_align = 8;
 	}
 
@@ -461,7 +460,7 @@ compute_memtuple_size_using_bind(Datum *values,
 
 		for(i = first_null_idx; i < tupdesc->natts; ++i)
 		{
-			Form_pg_attribute attr = tupdesc->attrs[i];
+			Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
 			MemTupleAttrBinding *bind = &colbind->bindings[i];
 
 			if (isnull[i] || attr->attisdropped)
@@ -483,7 +482,7 @@ compute_memtuple_size_using_bind(Datum *values,
 	for(i = 0; i < tupdesc->natts; ++i)
 	{
 		MemTupleAttrBinding *bind = &colbind->bindings[i];
-		Form_pg_attribute attr = tupdesc->attrs[i];
+		Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
 
 		if (isnull[i] || attr->attisdropped)
 			continue;
@@ -542,7 +541,7 @@ compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull,
 	*has_nulls = false;
 	for (i = 0; i < pbind->tupdesc->natts; ++i)
 	{
-		Form_pg_attribute attr = pbind->tupdesc->attrs[i];
+		Form_pg_attribute attr = TupleDescAttr(pbind->tupdesc, i);
 
 		/* treat dropped attibutes as null */
 		if (isnull[i] || attr->attisdropped)
@@ -594,7 +593,7 @@ static inline char* memtuple_get_attr_data_ptr(char *start, MemTupleAttrBinding 
 
 static inline unsigned char *memtuple_get_nullp(MemTuple mtup, MemTupleBinding *pbind)
 {
-	return mtup->PRIVATE_mt_bits + (mtbind_has_oid(pbind) ? sizeof(Oid) : 0);
+	return mtup->PRIVATE_mt_bits;
 }
 
 /*
@@ -619,6 +618,7 @@ memtuple_form(MemTupleBinding *pbind, Datum *values, bool *isnull)
 
 	return result;
 }
+
 
 /*
  * Form a memtuple from values and isnull, to a prespecified buffer
@@ -659,10 +659,6 @@ memtuple_form_to(MemTupleBinding *pbind,
 	if(len > MEMTUPLE_LEN_FITSHORT)
 		memtuple_set_islarge(mtup);
 
-	/* Clear Oid */ 
-	if(mtbind_has_oid(pbind))
-		MemTupleSetOid(mtup, pbind, InvalidOid);
-
 	if(hasnull)
 		nullp = memtuple_get_nullp(mtup, pbind);
 
@@ -690,7 +686,7 @@ memtuple_form_to(MemTupleBinding *pbind,
 	{
 		for(i=0; i<pbind->tupdesc->natts; ++i)
 		{
-			Form_pg_attribute attr = pbind->tupdesc->attrs[i];
+			Form_pg_attribute attr = TupleDescAttr(pbind->tupdesc, i);
 
 			if (isnull[i] || attr->attisdropped)
 			{
@@ -704,7 +700,7 @@ memtuple_form_to(MemTupleBinding *pbind,
 	/* Null bitmap is set up correctly, we can put in values now */
 	for(i=0; i<pbind->tupdesc->natts; ++i)
 	{
-		Form_pg_attribute attr = pbind->tupdesc->attrs[i];
+		Form_pg_attribute attr = TupleDescAttr(pbind->tupdesc, i);
 		MemTupleAttrBinding *bind = &(colbind->bindings[i]);
 
 		uint32 attr_len;
@@ -897,7 +893,7 @@ static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind
 	short *null_saves = (use_null_saves_aligned ? colbind->null_saves_aligned : colbind->null_saves);
 	Assert(null_saves);
 
-	ret = fetchatt(pbind->tupdesc->attrs[attnum], memtuple_get_attr_data_ptr(start, attrbind, null_saves, nullp));
+	ret = fetchatt(TupleDescAttr(pbind->tupdesc, attnum), memtuple_get_attr_data_ptr(start, attrbind, null_saves, nullp));
 
 	return ret;
 }
@@ -950,41 +946,6 @@ memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind,
 {
 	memtuple_get_values(mtup, pbind, datum, isnull, false /* aligned */);
 }
-
-/*
- * Get the Oid assigned to this tuple (when WITH OIDS is used).
- *
- * Note that similarly to HeapTupleGetOid this function will 
- * sometimes get called when no oid is assigned, in which case
- * we return InvalidOid. It is possible to make the check earlier
- * and avoid this call but for simplicity and compatibility with
- * the HeapTuple interface we keep it the same. 
- */
-Oid MemTupleGetOid(MemTuple mtup, MemTupleBinding *pbind)
-{
-	Assert(pbind);
-		
-	if(!mtbind_has_oid(pbind))
-		return InvalidOid;
-
-	return ((Oid *) mtup)[1];
-}
-
-/*
- * Like MemTuleGetOid(), but must only be used if the caller is sure that the
- * tuple has an OID (or at least it has space for it; it can be invalid).
- */
-Oid MemTupleGetOidDirect(MemTuple mtup)
-{
-	return ((Oid *) mtup)[1];
-}
-
-void MemTupleSetOid(MemTuple mtup, MemTupleBinding *pbind pg_attribute_unused(), Oid oid)
-{
-	Assert(pbind && mtbind_has_oid(pbind));
-	((Oid *) mtup)[1] = oid;
-}
-
 
 bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
 {

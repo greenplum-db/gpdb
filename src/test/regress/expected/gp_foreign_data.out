@@ -13,12 +13,12 @@ CREATE FOREIGN TABLE ft2 (
 	c1 int
 ) SERVER s0 OPTIONS (delimiter ',', mpp_execute 'any');
 \d+ ft2
-                            Foreign table "public.ft2"
- Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
---------+---------+-----------+-------------+---------+--------------+-------------
- c1     | integer |           |             | plain   |              | 
+                                       Foreign table "public.ft2"
+ Column |  Type   | Collation | Nullable | Default | FDW options | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
+ c1     | integer |           |          |         |             | plain   |              | 
 Server: s0
-FDW Options: (delimiter ',', mpp_execute 'any')
+FDW options: (delimiter ',', mpp_execute 'any')
 
 CREATE FOREIGN TABLE ft3 (
 	c1 int

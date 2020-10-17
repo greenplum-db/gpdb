@@ -4,7 +4,7 @@
  *	  routines to manage scans of inverted index relations
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -38,14 +38,10 @@ ginbeginscan(Relation rel, int nkeys, int norderbys)
 	so->nkeys = 0;
 	so->tempCtx = AllocSetContextCreate(CurrentMemoryContext,
 										"Gin scan temporary context",
-										ALLOCSET_DEFAULT_MINSIZE,
-										ALLOCSET_DEFAULT_INITSIZE,
-										ALLOCSET_DEFAULT_MAXSIZE);
+										ALLOCSET_DEFAULT_SIZES);
 	so->keyCtx = AllocSetContextCreate(CurrentMemoryContext,
 									   "Gin scan key context",
-									   ALLOCSET_DEFAULT_MINSIZE,
-									   ALLOCSET_DEFAULT_INITSIZE,
-									   ALLOCSET_DEFAULT_MAXSIZE);
+									   ALLOCSET_DEFAULT_SIZES);
 	initGinState(&so->ginstate, scan->indexRelation);
 
 	scan->opaque = so;
@@ -151,7 +147,7 @@ ginFillScanKey(GinScanOpaque so, OffsetNumber attnum,
 	key->nuserentries = nUserQueryValues;
 
 	key->scanEntry = (GinScanEntry *) palloc(sizeof(GinScanEntry) * nQueryValues);
-	key->entryRes = (bool *) palloc0(sizeof(bool) * nQueryValues);
+	key->entryRes = (GinTernaryValue *) palloc0(sizeof(GinTernaryValue) * nQueryValues);
 
 	key->query = query;
 	key->queryValues = queryValues;
@@ -299,6 +295,7 @@ ginNewScanKey(IndexScanDesc scan)
 		bool	   *partial_matches = NULL;
 		Pointer    *extra_data = NULL;
 		bool	   *nullFlags = NULL;
+		GinNullCategory *categories;
 		int32		searchMode = GIN_SEARCH_MODE_DEFAULT;
 
 		/*
@@ -314,11 +311,11 @@ ginNewScanKey(IndexScanDesc scan)
 		/* OK to call the extractQueryFn */
 		queryValues = (Datum *)
 			DatumGetPointer(FunctionCall7Coll(&so->ginstate.extractQueryFn[skey->sk_attno - 1],
-						   so->ginstate.supportCollation[skey->sk_attno - 1],
+											  so->ginstate.supportCollation[skey->sk_attno - 1],
 											  skey->sk_argument,
 											  PointerGetDatum(&nQueryValues),
-										   UInt16GetDatum(skey->sk_strategy),
-										   PointerGetDatum(&partial_matches),
+											  UInt16GetDatum(skey->sk_strategy),
+											  PointerGetDatum(&partial_matches),
 											  PointerGetDatum(&extra_data),
 											  PointerGetDatum(&nullFlags),
 											  PointerGetDatum(&searchMode)));
@@ -350,15 +347,12 @@ ginNewScanKey(IndexScanDesc scan)
 		}
 
 		/*
-		 * If the extractQueryFn didn't create a nullFlags array, create one,
-		 * assuming that everything's non-null.  Otherwise, run through the
-		 * array and make sure each value is exactly 0 or 1; this ensures
-		 * binary compatibility with the GinNullCategory representation. While
-		 * at it, detect whether any null keys are present.
+		 * Create GinNullCategory representation.  If the extractQueryFn
+		 * didn't create a nullFlags array, we assume everything is non-null.
+		 * While at it, detect whether any null keys are present.
 		 */
-		if (nullFlags == NULL)
-			nullFlags = (bool *) palloc0(nQueryValues * sizeof(bool));
-		else
+		categories = (GinNullCategory *) palloc0(nQueryValues * sizeof(GinNullCategory));
+		if (nullFlags)
 		{
 			int32		j;
 
@@ -366,17 +360,16 @@ ginNewScanKey(IndexScanDesc scan)
 			{
 				if (nullFlags[j])
 				{
-					nullFlags[j] = true;		/* not any other nonzero value */
+					categories[j] = GIN_CAT_NULL_KEY;
 					hasNullQuery = true;
 				}
 			}
 		}
-		/* now we can use the nullFlags as category codes */
 
 		ginFillScanKey(so, skey->sk_attno,
 					   skey->sk_strategy, searchMode,
 					   skey->sk_argument, nQueryValues,
-					   queryValues, (GinNullCategory *) nullFlags,
+					   queryValues, categories,
 					   partial_matches, extra_data);
 	}
 

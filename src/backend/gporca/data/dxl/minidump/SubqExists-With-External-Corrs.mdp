@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+    Test case: Two nested subqueries with correlations between all levels.
+
+    drop table if exists a, b, c;
+    create table a(i int, j int);
+    create table b(i int, j int);
+    create table c(i int, j int);
+
+    insert into a values (1,1);
+    insert into b values (1,1);
+    insert into c values (1,1);
+    set optimizer_enumerate_plans = on;
+
+    explain
+    select *
+    from b
+    where exists(select *
+                 from c c1 join a on c1.j=a.j and b.i = any (select c2.i
+                                                             from c c2
+                                                             where c2.j = a.j and c2.i <> 10));
+
+    Expect an unnested plan (no subplans, no correlated apply).
+
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
@@ -431,7 +456,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1239381">
+    <dxl:Plan Id="0" SpaceSize="1235575">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="9.230469" Rows="1.000000" Width="8"/>

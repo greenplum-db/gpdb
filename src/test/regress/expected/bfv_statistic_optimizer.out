@@ -228,9 +228,9 @@ select histogram_bounds from pg_stats where tablename = 'bfv_statistics_foo_real
 (1 row)
 
 select most_common_vals from pg_stats where tablename = 'bfv_statistics_foo_real' and attname = 'b';
-                                            most_common_vals                                            
---------------------------------------------------------------------------------------------------------
- {0,-Infinity,-2.49268e+07,Infinity,NaN,-8.30285e+07,-3.43385e+07,4.31,16397,74881,93901.6,7.79946e+06}
+                                                 most_common_vals                                                  
+-------------------------------------------------------------------------------------------------------------------
+ {0,-Infinity,-2.4926804e+07,Infinity,NaN,-8.302849e+07,-3.4338492e+07,4.31,16397.04,74881,93901.58,7.7994615e+06}
 (1 row)
 
 create table bfv_statistics_foo_numeric (a int4, b numeric) distributed randomly;
@@ -330,10 +330,6 @@ ANALYZE T25289_T3;
 CREATE TABLE T25289_T4 (c int, d int)
 WITH (APPENDONLY=ON) DISTRIBUTED BY (c)
 PARTITION BY RANGE(d) (START(1) END (5) EVERY(1));
-NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_1" for table "t25289_t4"
-NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_2" for table "t25289_t4"
-NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_3" for table "t25289_t4"
-NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_4" for table "t25289_t4"
 ANALYZE T25289_T4;
 --
 -- expect NO crash when the statistic slot for an attribute is broken
@@ -442,3 +438,29 @@ select count(*) from pg_class c, gp_dist_random('pg_statistic') s where c.oid = 
 (1 row)
 
 DROP TABLE test_statistic_1;
+-- Test that the histogram looks reasonable.
+--
+-- We once had a bug where the samples gathered from the segments were
+-- truncated, leading to highly biased samples.
+CREATE TABLE uniformtest(i int4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO uniformtest SELECT g/100 FROM generate_series(0, 9999) g;
+BEGIN;
+SET LOCAL default_statistics_target=10; -- don't need so many rows for testing
+ANALYZE uniformtest;
+COMMIT;
+-- ANALYZE collects a random sample, so the exact values chosen for the
+-- histogram are nondeterministic. But they should be roughly uniformly
+-- distributed across the range 0-99. Show some characteristic values.
+select case when avg(bound) between 40 and 60 then '40-60' else avg(bound)::text end as avg,
+       case when min(bound) <= 5              then '<= 5'  else min(bound)::text end as min,
+       case when max(bound) >= 95             then '>= 95' else max(bound)::text end as max
+from pg_stats s,
+     unnest(histogram_bounds::text::int4[]) as bound
+where tablename = 'uniformtest';
+  avg  | min  |  max  
+-------+------+-------
+ 40-60 | <= 5 | >= 95
+(1 row)
+

@@ -22,35 +22,36 @@
 
 namespace gpmd
 {
-	using namespace gpos;
+using namespace gpos;
 
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		IMDTypeGeneric
-	//
-	//	@doc:
-	//		Interface for generic types in the metadata cache
-	//
-	//---------------------------------------------------------------------------
-	class IMDTypeGeneric : public IMDType
-	{		
-		public:
 
-			// type id
-			static ETypeInfo GetTypeInfo()
-			{
-				return EtiGeneric;
-			}
+//---------------------------------------------------------------------------
+//	@class:
+//		IMDTypeGeneric
+//
+//	@doc:
+//		Interface for generic types in the metadata cache
+//
+//---------------------------------------------------------------------------
+class IMDTypeGeneric : public IMDType
+{
+public:
+	// type id
+	static ETypeInfo
+	GetTypeInfo()
+	{
+		return EtiGeneric;
+	}
 
-			// type id
-			virtual ETypeInfo GetDatumType() const
-			{
-				return IMDTypeGeneric::GetTypeInfo();
-			}
-	};
-}
+	// type id
+	virtual ETypeInfo
+	GetDatumType() const
+	{
+		return IMDTypeGeneric::GetTypeInfo();
+	}
+};
+}  // namespace gpmd
 
-#endif // !GPMD_IMDTypeGeneric_H
+#endif	// !GPMD_IMDTypeGeneric_H
 
 // EOF

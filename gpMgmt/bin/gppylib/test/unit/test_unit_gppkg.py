@@ -1,5 +1,5 @@
 from mock import *
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.programs.gppkg import GpPkgProgram
 
 import sys
@@ -31,7 +31,7 @@ class GpPkgProgramTestCase(GpTestCase):
 
         parser = GpPkgProgram.create_parser()
         options, args = parser.parse_args()
-        with self.assertRaisesRegexp(Exception, "Package sample has not been installed"):
+        with self.assertRaisesRegex(Exception, "Package sample has not been installed"):
             self.subject = GpPkgProgram(options, args)
             self.subject.run()
 
@@ -68,7 +68,7 @@ class GpPkgProgramTestCase(GpTestCase):
         parser = GpPkgProgram.create_parser()
         options, args = parser.parse_args()
         self.subject = GpPkgProgram(options, args)
-        with self.assertRaisesRegexp(Exception, "Remove request 'sampl' too broad. "
+        with self.assertRaisesRegex(Exception, "Remove request 'sampl' too broad. "
                                                 "Multiple packages match remove request: \( sample.gppkg, sample2.gppkg \)."):
             self.subject.run()
 

@@ -871,7 +871,7 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 #ifdef FRONTEND
 			fd->fd.filefd = open(fpath, openFlags, openMode);
 #else
-			fd->fd.filefd = OpenTransientFile((char *) fpath, openFlags, openMode);
+			fd->fd.filefd = OpenTransientFile((char *) fpath, openFlags);
 #endif
 		}
 		while (fd->fd.filefd < 0 && errno == EINTR);

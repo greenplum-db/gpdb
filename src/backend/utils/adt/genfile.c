@@ -4,7 +4,7 @@
  *		Functions for direct access to files
  *
  *
- * Copyright (c) 2004-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2019, PostgreSQL Global Development Group
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
@@ -21,6 +21,9 @@
 #include <dirent.h>
 
 #include "access/htup_details.h"
+#include "access/xlog_internal.h"
+#include "catalog/pg_authid.h"
+#include "catalog/pg_tablespace_d.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
@@ -29,6 +32,7 @@
 #include "storage/fd.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/syscache.h"
 #include "utils/timestamp.h"
 #include "utils/datetime.h"
 
@@ -57,6 +61,12 @@ typedef struct
  *
  * Filename may be absolute or relative to the DataDir, but we only allow
  * absolute paths that match DataDir or Log_directory.
+ *
+ * This does a privilege check against the 'pg_read_server_files' role, so
+ * this function is really only appropriate for callers who are only checking
+ * 'read' access.  Do not use this function if you are looking for a check
+ * for 'write' or 'program' access without updating it to access the type
+ * of check as an argument and checking the appropriate role membership.
  */
 static char *
 convert_and_check_filename(text *arg)
@@ -66,13 +76,22 @@ convert_and_check_filename(text *arg)
 	filename = text_to_cstring(arg);
 	canonicalize_path(filename);	/* filename can change length here */
 
+	/*
+	 * Members of the 'pg_read_server_files' role are allowed to access any
+	 * files on the server as the PG user, so no need to do any further checks
+	 * here.
+	 */
+	if (is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_SERVER_FILES))
+		return filename;
+
+	/* User isn't a member of the default role, so check if it's allowable */
 	if (is_absolute_path(filename))
 	{
 		/* Disallow '/a/b/data/..' */
 		if (path_contains_parent_reference(filename))
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-			(errmsg("reference to parent directory (\"..\") not allowed"))));
+					 (errmsg("reference to parent directory (\"..\") not allowed"))));
 
 		/*
 		 * Allow absolute paths if within DataDir or Log_directory, even
@@ -135,7 +154,7 @@ read_binary_file(const char *filename, int64 seek_offset, int64 bytes_to_read,
 				else
 					ereport(ERROR,
 							(errcode_for_file_access(),
-						errmsg("could not stat file \"%s\": %m", filename)));
+							 errmsg("could not stat file \"%s\": %m", filename)));
 			}
 
 			bytes_to_read = fst.st_size - seek_offset;
@@ -207,11 +226,13 @@ read_text_file(const char *filename, int64 seek_offset, int64 bytes_to_read,
 
 /*
  * Read a section of a file, returning it as text
+ *
+ * This function is kept to support adminpack 1.0.
  */
 Datum
 pg_read_file(PG_FUNCTION_ARGS)
 {
-	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	text	   *filename_t = PG_GETARG_TEXT_PP(0);
 	int64		seek_offset = 0;
 	int64		bytes_to_read = -1;
 	bool		missing_ok = false;
@@ -221,7 +242,49 @@ pg_read_file(PG_FUNCTION_ARGS)
 	if (!superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser to read files"))));
+				 (errmsg("must be superuser to read files with adminpack 1.0"),
+		/* translator: %s is a SQL function name */
+				  errhint("Consider using %s, which is part of core, instead.",
+						  "pg_file_read()"))));
+
+	/* handle optional arguments */
+	if (PG_NARGS() >= 3)
+	{
+		seek_offset = PG_GETARG_INT64(1);
+		bytes_to_read = PG_GETARG_INT64(2);
+
+		if (bytes_to_read < 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("requested length cannot be negative")));
+	}
+	if (PG_NARGS() >= 4)
+		missing_ok = PG_GETARG_BOOL(3);
+
+	filename = convert_and_check_filename(filename_t);
+
+	result = read_text_file(filename, seek_offset, bytes_to_read, missing_ok);
+	if (result)
+		PG_RETURN_TEXT_P(result);
+	else
+		PG_RETURN_NULL();
+}
+
+/*
+ * Read a section of a file, returning it as text
+ *
+ * No superuser check done here- instead privileges are handled by the
+ * GRANT system.
+ */
+Datum
+pg_read_file_v2(PG_FUNCTION_ARGS)
+{
+	text	   *filename_t = PG_GETARG_TEXT_PP(0);
+	int64		seek_offset = 0;
+	int64		bytes_to_read = -1;
+	bool		missing_ok = false;
+	char	   *filename;
+	text	   *result;
 
 	/* handle optional arguments */
 	if (PG_NARGS() >= 3)
@@ -252,17 +315,12 @@ pg_read_file(PG_FUNCTION_ARGS)
 Datum
 pg_read_binary_file(PG_FUNCTION_ARGS)
 {
-	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	text	   *filename_t = PG_GETARG_TEXT_PP(0);
 	int64		seek_offset = 0;
 	int64		bytes_to_read = -1;
 	bool		missing_ok = false;
 	char	   *filename;
 	bytea	   *result;
-
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser to read files"))));
 
 	/* handle optional arguments */
 	if (PG_NARGS() >= 3)
@@ -290,7 +348,7 @@ pg_read_binary_file(PG_FUNCTION_ARGS)
 
 
 /*
- * Wrapper functions for the 1 and 3 argument variants of pg_read_file()
+ * Wrapper functions for the 1 and 3 argument variants of pg_read_file_v2()
  * and pg_binary_read_file().
  *
  * These are necessary to pass the sanity check in opr_sanity, which checks
@@ -300,13 +358,13 @@ pg_read_binary_file(PG_FUNCTION_ARGS)
 Datum
 pg_read_file_off_len(PG_FUNCTION_ARGS)
 {
-	return pg_read_file(fcinfo);
+	return pg_read_file_v2(fcinfo);
 }
 
 Datum
 pg_read_file_all(PG_FUNCTION_ARGS)
 {
-	return pg_read_file(fcinfo);
+	return pg_read_file_v2(fcinfo);
 }
 
 Datum
@@ -327,7 +385,7 @@ pg_read_binary_file_all(PG_FUNCTION_ARGS)
 Datum
 pg_stat_file(PG_FUNCTION_ARGS)
 {
-	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	text	   *filename_t = PG_GETARG_TEXT_PP(0);
 	char	   *filename;
 	struct stat fst;
 	Datum		values[6];
@@ -335,11 +393,6 @@ pg_stat_file(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	TupleDesc	tupdesc;
 	bool		missing_ok = false;
-
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser to get file information"))));
 
 	/* check the optional argument */
 	if (PG_NARGS() == 2)
@@ -361,7 +414,7 @@ pg_stat_file(PG_FUNCTION_ARGS)
 	 * This record type had better match the output parameters declared for me
 	 * in pg_proc.h.
 	 */
-	tupdesc = CreateTemplateTupleDesc(6, false);
+	tupdesc = CreateTemplateTupleDesc(6);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1,
 					   "size", INT8OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2,
@@ -422,11 +475,6 @@ pg_ls_dir(PG_FUNCTION_ARGS)
 	directory_fctx *fctx;
 	MemoryContext oldcontext;
 
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser to get directory listings"))));
-
 	if (SRF_IS_FIRSTCALL())
 	{
 		bool		missing_ok = false;
@@ -445,7 +493,7 @@ pg_ls_dir(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		fctx = palloc(sizeof(directory_fctx));
-		fctx->location = convert_and_check_filename(PG_GETARG_TEXT_P(0));
+		fctx->location = convert_and_check_filename(PG_GETARG_TEXT_PP(0));
 
 		fctx->include_dot_dirs = include_dot_dirs;
 		fctx->dirdesc = AllocateDir(fctx->location);
@@ -521,7 +569,7 @@ pg_file_write(PG_FUNCTION_ARGS)
 
 		if (stat(filename, &fst) >= 0)
 			ereport(ERROR,
-					(ERRCODE_DUPLICATE_FILE,
+					(errcode(ERRCODE_DUPLICATE_FILE),
 					 errmsg("file \"%s\" exists", filename)));
 
 		f = fopen(filename, "wb");
@@ -592,7 +640,7 @@ pg_file_rename(PG_FUNCTION_ARGS)
 	if (rc >= 0 || errno != ENOENT)
 	{
 		ereport(ERROR,
-				(ERRCODE_DUPLICATE_FILE,
+				(errcode(ERRCODE_DUPLICATE_FILE),
 				 errmsg("cannot rename to target file \"%s\"",
 						fn3 ? fn3 : fn2)));
 	}
@@ -623,7 +671,7 @@ pg_file_rename(PG_FUNCTION_ARGS)
 			else
 			{
 				ereport(ERROR,
-						(ERRCODE_UNDEFINED_FILE,
+						(errcode(ERRCODE_UNDEFINED_FILE),
 						 errmsg("renaming \"%s\" to \"%s\" was reverted",
 								fn2, fn3)));
 			}
@@ -672,6 +720,30 @@ pg_file_unlink(PG_FUNCTION_ARGS)
 
 
 Datum
+pg_file_length(PG_FUNCTION_ARGS)
+{
+	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	char	   *filename;
+	struct stat fst;
+
+	requireSuperuser();
+
+	filename = convert_and_check_filename(filename_t);
+
+	if (stat(filename, &fst) < 0)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not stat file \"%s\": %m", filename)));
+
+	PG_RETURN_INT64((int64) fst.st_size);
+}
+
+
+/*
+ * GPDB_12_MERGE_FIXME: Perhaps this function can call into generic function
+ * pg_ls_dir_files() rather than re-implmenting much of the same pattern.
+ */
+Datum
 pg_logdir_ls(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
@@ -704,7 +776,7 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 
 		fctx = palloc(sizeof(directory_fctx));
 
-		tupdesc = CreateTemplateTupleDesc(2, false);
+		tupdesc = CreateTemplateTupleDesc(2);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "starttime",
 						   TIMESTAMPOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "filename",
@@ -809,21 +881,151 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 	SRF_RETURN_DONE(funcctx);
 }
 
-Datum
-pg_file_length(PG_FUNCTION_ARGS)
+
+/* Generic function to return a directory listing of files */
+static Datum
+pg_ls_dir_files(FunctionCallInfo fcinfo, const char *dir, bool missing_ok)
 {
-	text	   *filename_t = PG_GETARG_TEXT_P(0);
-	char	   *filename;
-	struct stat fst;
+	FuncCallContext *funcctx;
+	struct dirent *de;
+	directory_fctx *fctx;
 
-	requireSuperuser();
+	if (SRF_IS_FIRSTCALL())
+	{
+		MemoryContext oldcontext;
+		TupleDesc	tupdesc;
 
-	filename = convert_and_check_filename(filename_t);
+		funcctx = SRF_FIRSTCALL_INIT();
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-	if (stat(filename, &fst) < 0)
+		fctx = palloc(sizeof(directory_fctx));
+
+		tupdesc = CreateTemplateTupleDesc(3);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "name",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "size",
+						   INT8OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "modification",
+						   TIMESTAMPTZOID, -1, 0);
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		fctx->location = pstrdup(dir);
+		fctx->dirdesc = AllocateDir(fctx->location);
+
+		if (!fctx->dirdesc)
+		{
+			if (missing_ok && errno == ENOENT)
+			{
+				MemoryContextSwitchTo(oldcontext);
+				SRF_RETURN_DONE(funcctx);
+			}
+			else
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						 errmsg("could not open directory \"%s\": %m",
+								fctx->location)));
+		}
+
+		funcctx->user_fctx = fctx;
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+	fctx = (directory_fctx *) funcctx->user_fctx;
+
+	while ((de = ReadDir(fctx->dirdesc, fctx->location)) != NULL)
+	{
+		Datum		values[3];
+		bool		nulls[3];
+		char		path[MAXPGPATH * 2];
+		struct stat attrib;
+		HeapTuple	tuple;
+
+		/* Skip hidden files */
+		if (de->d_name[0] == '.')
+			continue;
+
+		/* Get the file info */
+		snprintf(path, sizeof(path), "%s/%s", fctx->location, de->d_name);
+		if (stat(path, &attrib) < 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not stat directory \"%s\": %m", dir)));
+
+		/* Ignore anything but regular files */
+		if (!S_ISREG(attrib.st_mode))
+			continue;
+
+		values[0] = CStringGetTextDatum(de->d_name);
+		values[1] = Int64GetDatum((int64) attrib.st_size);
+		values[2] = TimestampTzGetDatum(time_t_to_timestamptz(attrib.st_mtime));
+		memset(nulls, 0, sizeof(nulls));
+
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
+	}
+
+	FreeDir(fctx->dirdesc);
+	SRF_RETURN_DONE(funcctx);
+}
+
+/* Function to return the list of files in the log directory */
+Datum
+pg_ls_logdir(PG_FUNCTION_ARGS)
+{
+	return pg_ls_dir_files(fcinfo, Log_directory, false);
+}
+
+/* Function to return the list of files in the WAL directory */
+Datum
+pg_ls_waldir(PG_FUNCTION_ARGS)
+{
+	return pg_ls_dir_files(fcinfo, XLOGDIR, false);
+}
+
+/*
+ * Generic function to return the list of files in pgsql_tmp
+ */
+static Datum
+pg_ls_tmpdir(FunctionCallInfo fcinfo, Oid tblspc)
+{
+	char		path[MAXPGPATH];
+
+	if (!SearchSysCacheExists1(TABLESPACEOID, ObjectIdGetDatum(tblspc)))
 		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not stat file \"%s\": %m", filename)));
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("tablespace with OID %u does not exist",
+						tblspc)));
 
-	PG_RETURN_INT64((int64) fst.st_size);
+	TempTablespacePath(path, tblspc);
+	return pg_ls_dir_files(fcinfo, path, true);
+}
+
+/*
+ * Function to return the list of temporary files in the pg_default tablespace's
+ * pgsql_tmp directory
+ */
+Datum
+pg_ls_tmpdir_noargs(PG_FUNCTION_ARGS)
+{
+	return pg_ls_tmpdir(fcinfo, DEFAULTTABLESPACE_OID);
+}
+
+/*
+ * Function to return the list of temporary files in the specified tablespace's
+ * pgsql_tmp directory
+ */
+Datum
+pg_ls_tmpdir_1arg(PG_FUNCTION_ARGS)
+{
+	return pg_ls_tmpdir(fcinfo, PG_GETARG_OID(0));
+}
+
+/*
+ * Function to return the list of files in the WAL archive status directory.
+ */
+Datum
+pg_ls_archive_statusdir(PG_FUNCTION_ARGS)
+{
+	return pg_ls_dir_files(fcinfo, XLOGDIR "/archive_status", true);
 }

@@ -20,9 +20,6 @@
 
 #define EXPECT_EREPORT(LOG_LEVEL)     \
 	expect_any(errstart, elevel); \
-	expect_any(errstart, filename); \
-	expect_any(errstart, lineno); \
-	expect_any(errstart, funcname); \
 	expect_any(errstart, domain); \
 	if (LOG_LEVEL < ERROR) \
 	{ \
@@ -54,6 +51,7 @@ CreateSessionStateArray(int numEntries)
 	MaxBackends = numEntries;
 
 	IsUnderPostmaster = false;
+	bool found = false;
 
 	assert_true(NULL == AllSessionStateEntries);
 
@@ -61,7 +59,7 @@ CreateSessionStateArray(int numEntries)
 	fakeSessionStateArray = malloc(SessionState_ShmemSize());
 
 	will_return(ShmemInitStruct, fakeSessionStateArray);
-	will_assign_value(ShmemInitStruct, foundPtr, false);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
 
 	expect_any_count(ShmemInitStruct, name, 1);
 	expect_any_count(ShmemInitStruct, size, 1);
@@ -162,6 +160,7 @@ test__SessionState_ShmemInit__NoOpUnderPostmaster(void **state)
 	IsUnderPostmaster = true;
 
 	static SessionStateArray fakeSessionStateArray;
+	bool found = true;
 	/* Initilize with some non-zero values */
 	fakeSessionStateArray.maxSession = 0;
 	fakeSessionStateArray.numSession = 0;
@@ -169,7 +168,7 @@ test__SessionState_ShmemInit__NoOpUnderPostmaster(void **state)
 	fakeSessionStateArray.usedList = NULL;
 
 	will_return(ShmemInitStruct, &fakeSessionStateArray);
-	will_assign_value(ShmemInitStruct, foundPtr, true);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
 
 	expect_any_count(ShmemInitStruct, name, 1);
 	expect_any_count(ShmemInitStruct, size, 1);

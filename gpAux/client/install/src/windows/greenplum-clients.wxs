@@ -1112,10 +1112,8 @@ If you want to review or change any of your installation settings, click Back. C
                 <File Id="pg_dumpall.exe" Name="pg_dumpall.exe" Source="$(var.SRCDIR)\bin\pg_dumpall.exe" />
                 <File Id="gpfdist.exe" Name="gpfdist.exe" Source="$(var.SRCDIR)\bin\gpfdist.exe" />
                 <File Id="createdb.exe" Name="createdb.exe" Source="$(var.SRCDIR)\bin\createdb.exe" />
-                <File Id="createlang.exe" Name="createlang.exe" Source="$(var.SRCDIR)\bin\createlang.exe" />
                 <File Id="createuser.exe" Name="createuser.exe" Source="$(var.SRCDIR)\bin\createuser.exe" />
                 <File Id="dropdb.exe" Name="dropdb.exe" Source="$(var.SRCDIR)\bin\dropdb.exe" />
-                <File Id="droplang.exe" Name="droplang.exe" Source="$(var.SRCDIR)\bin\droplang.exe" />
                 <File Id="dropuser.exe" Name="dropuser.exe" Source="$(var.SRCDIR)\bin\dropuser.exe" />
                 <File Id="libapr.dll" Name="libapr-1.dll" Source="$(var.SRCDIR)\bin\libapr-1.dll" />
                 <File Id="libpq.dll" Name="libpq.dll" Source="$(var.SRCDIR)\bin\libpq.dll" />

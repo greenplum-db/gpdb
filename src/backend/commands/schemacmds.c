@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -16,7 +16,7 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
-#include "access/heapam.h"
+#include "access/table.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
@@ -47,9 +47,16 @@ static void AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerI
 
 /*
  * CREATE SCHEMA
+ *
+ * Note: caller should pass in location information for the whole
+ * CREATE SCHEMA statement, which in turn we pass down as the location
+ * of the component commands.  This comports with our general plan of
+ * reporting location/len for the whole command even when executing
+ * a subquery.
  */
 Oid
-CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
+CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString,
+					int stmt_location, int stmt_len)
 {
 	const char *schemaName = stmt->schemaname;
 	Oid			namespaceId;
@@ -115,7 +122,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	 */
 	aclresult = pg_database_aclcheck(MyDatabaseId, saved_uid, ACL_CREATE);
 	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_DATABASE,
+		aclcheck_error(aclresult, OBJECT_DATABASE,
 					   get_database_name(MyDatabaseId));
 
 	check_is_member_of_role(saved_uid, owner_uid);
@@ -192,7 +199,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	 */
 	if (saved_uid != owner_uid)
 		SetUserIdAndSecContext(owner_uid,
-							save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	/* Advance cmd counter to make the namespace visible */
 	CommandCounterIncrement();
@@ -235,14 +242,25 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	foreach(parsetree_item, parsetree_list)
 	{
 		Node	   *stmt = (Node *) lfirst(parsetree_item);
+		PlannedStmt *wrapper;
+
+		/* need to make a wrapper PlannedStmt */
+		wrapper = makeNode(PlannedStmt);
+		wrapper->commandType = CMD_UTILITY;
+		wrapper->canSetTag = false;
+		wrapper->utilityStmt = stmt;
+		wrapper->stmt_location = stmt_location;
+		wrapper->stmt_len = stmt_len;
 
 		/* do this step */
-		ProcessUtility(stmt,
+		ProcessUtility(wrapper,
 					   queryString,
 					   PROCESS_UTILITY_SUBCOMMAND,
 					   NULL,
+					   NULL,
 					   None_Receiver,
 					   NULL);
+
 		/* make sure later steps can see the object created here */
 		CommandCounterIncrement();
 	}
@@ -265,18 +283,18 @@ RemoveSchemaById(Oid schemaOid)
 	Relation	relation;
 	HeapTuple	tup;
 
-	relation = heap_open(NamespaceRelationId, RowExclusiveLock);
+	relation = table_open(NamespaceRelationId, RowExclusiveLock);
 
 	tup = SearchSysCache1(NAMESPACEOID,
 						  ObjectIdGetDatum(schemaOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for namespace %u", schemaOid);
 
-	simple_heap_delete(relation, &tup->t_self);
+	CatalogTupleDelete(relation, &tup->t_self);
 
 	ReleaseSysCache(tup);
 
-	heap_close(relation, RowExclusiveLock);
+	table_close(relation, RowExclusiveLock);
 
 	/*
 	 * Remove all persistent error logs belonging to the the schema.
@@ -296,8 +314,9 @@ RenameSchema(const char *oldname, const char *newname)
 	Relation	rel;
 	AclResult	aclresult;
 	ObjectAddress address;
+	Form_pg_namespace nspform;
 
-	rel = heap_open(NamespaceRelationId, RowExclusiveLock);
+	rel = table_open(NamespaceRelationId, RowExclusiveLock);
 
 	tup = SearchSysCacheCopy1(NAMESPACENAME, CStringGetDatum(oldname));
 	if (!HeapTupleIsValid(tup))
@@ -305,7 +324,8 @@ RenameSchema(const char *oldname, const char *newname)
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
 				 errmsg("schema \"%s\" does not exist", oldname)));
 
-	nspOid = HeapTupleGetOid(tup);
+	nspform = (Form_pg_namespace) GETSTRUCT(tup);
+	nspOid = nspform->oid;
 
 	/* make sure the new name doesn't exist */
 	if (OidIsValid(get_namespace_oid(newname, true)))
@@ -315,13 +335,13 @@ RenameSchema(const char *oldname, const char *newname)
 
 	/* must be owner */
 	if (!pg_namespace_ownercheck(nspOid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_NAMESPACE,
+		aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_SCHEMA,
 					   oldname);
 
 	/* must have CREATE privilege on database */
 	aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CREATE);
 	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_DATABASE,
+		aclcheck_error(aclresult, OBJECT_DATABASE,
 					   get_database_name(MyDatabaseId));
 
 	if (!allowSystemTableMods && IsReservedName(oldname))
@@ -341,11 +361,9 @@ RenameSchema(const char *oldname, const char *newname)
 						   GetReservedPrefix(newname))));
 	}
 
-
 	/* rename */
-	namestrcpy(&(((Form_pg_namespace) GETSTRUCT(tup))->nspname), newname);
-	simple_heap_update(rel, &tup->t_self, tup);
-	CatalogUpdateIndexes(rel, tup);
+	namestrcpy(&nspform->nspname, newname);
+	CatalogTupleUpdate(rel, &tup->t_self, tup);
 
 	/* MPP-6929: metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -355,11 +373,11 @@ RenameSchema(const char *oldname, const char *newname)
 						   "ALTER", "RENAME"
 				);
 
-	InvokeObjectPostAlterHook(NamespaceRelationId, HeapTupleGetOid(tup), 0);
+	InvokeObjectPostAlterHook(NamespaceRelationId, nspOid, 0);
 
 	ObjectAddressSet(address, NamespaceRelationId, nspOid);
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 	heap_freetuple(tup);
 
 	return address;
@@ -371,7 +389,7 @@ AlterSchemaOwner_oid(Oid oid, Oid newOwnerId)
 	HeapTuple	tup;
 	Relation	rel;
 
-	rel = heap_open(NamespaceRelationId, RowExclusiveLock);
+	rel = table_open(NamespaceRelationId, RowExclusiveLock);
 
 	tup = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(oid));
 	if (!HeapTupleIsValid(tup))
@@ -381,7 +399,7 @@ AlterSchemaOwner_oid(Oid oid, Oid newOwnerId)
 
 	ReleaseSysCache(tup);
 
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 }
 
 
@@ -395,8 +413,9 @@ AlterSchemaOwner(const char *name, Oid newOwnerId)
 	HeapTuple	tup;
 	Relation	rel;
 	ObjectAddress address;
+	Form_pg_namespace nspform;
 
-	rel = heap_open(NamespaceRelationId, RowExclusiveLock);
+	rel = table_open(NamespaceRelationId, RowExclusiveLock);
 
 	tup = SearchSysCache1(NAMESPACENAME, CStringGetDatum(name));
 	if (!HeapTupleIsValid(tup))
@@ -412,7 +431,8 @@ AlterSchemaOwner(const char *name, Oid newOwnerId)
 				 errdetail("Schema %s is reserved for system use.", name)));
 	}
 
-	nspOid = HeapTupleGetOid(tup);
+	nspform = (Form_pg_namespace) GETSTRUCT(tup);
+	nspOid = nspform->oid;
 
 	AlterSchemaOwner_internal(tup, rel, newOwnerId);
 
@@ -420,7 +440,7 @@ AlterSchemaOwner(const char *name, Oid newOwnerId)
 
 	ReleaseSysCache(tup);
 
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 
 	return address;
 }
@@ -430,6 +450,7 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
 {
 	Form_pg_namespace nspForm;
 
+	Assert(tup->t_tableOid == NamespaceRelationId);
 	Assert(RelationGetRelid(rel) == NamespaceRelationId);
 
 	nspForm = (Form_pg_namespace) GETSTRUCT(tup);
@@ -448,12 +469,10 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
 		bool		isNull;
 		HeapTuple	newtuple;
 		AclResult	aclresult;
-		Oid			nsoid;
 
 		/* Otherwise, must be owner of the existing object */
-		nsoid = HeapTupleGetOid(tup);
-		if (!pg_namespace_ownercheck(nsoid, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_NAMESPACE,
+		if (!pg_namespace_ownercheck(nspForm->oid, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_SCHEMA,
 						   NameStr(nspForm->nspname));
 
 		/* Must be able to become new owner */
@@ -471,7 +490,7 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
 		aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(),
 										 ACL_CREATE);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_DATABASE,
+			aclcheck_error(aclresult, OBJECT_DATABASE,
 						   get_database_name(MyDatabaseId));
 
 		memset(repl_null, false, sizeof(repl_null));
@@ -497,13 +516,12 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
 
 		newtuple = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val, repl_null, repl_repl);
 
-		simple_heap_update(rel, &newtuple->t_self, newtuple);
-		CatalogUpdateIndexes(rel, newtuple);
+		CatalogTupleUpdate(rel, &newtuple->t_self, newtuple);
 
 		/* MPP-6929: metadata tracking */
 		if (Gp_role == GP_ROLE_DISPATCH)
 			MetaTrackUpdObject(NamespaceRelationId,
-							   nsoid,
+							   nspForm->oid,
 							   GetUserId(),
 							   "ALTER", "OWNER"
 					);
@@ -511,10 +529,10 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
 		heap_freetuple(newtuple);
 
 		/* Update owner dependency reference */
-		changeDependencyOnOwner(NamespaceRelationId, HeapTupleGetOid(tup),
+		changeDependencyOnOwner(NamespaceRelationId, nspForm->oid,
 								newOwnerId);
 	}
 
 	InvokeObjectPostAlterHook(NamespaceRelationId,
-							  HeapTupleGetOid(tup), 0);
+							  nspForm->oid, 0);
 }

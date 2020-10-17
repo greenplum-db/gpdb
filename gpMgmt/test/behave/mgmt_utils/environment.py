@@ -13,7 +13,7 @@ from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
 from gppylib.db import dbconn
 
 def before_all(context):
-    if map(int, behave.__version__.split('.')) < [1,2,6]:
+    if list(map(int, behave.__version__.split('.'))) < [1,2,6]:
         raise Exception("Requires at least behave version 1.2.6 (found %s)" % behave.__version__)
 
 def before_feature(context, feature):
@@ -38,11 +38,11 @@ def before_feature(context, feature):
         context.dbname = 'incr_analyze'
 
         # setting up the tables that will be used
-        context.execute_steps(u"""
+        context.execute_steps("""
         Given there is a regular "ao" table "t1_ao" with column name list "x,y,z" and column type list "int,text,real" in schema "public"
         And there is a regular "heap" table "t2_heap" with column name list "x,y,z" and column type list "int,text,real" in schema "public"
         And there is a regular "ao" table "t3_ao" with column name list "a,b,c" and column type list "int,text,real" in schema "public"
-        And there is a hard coded ao partition table "sales" with 4 child partitions in schema "public"
+        And there is a hard coded partition table "sales" with 4 child partitions in schema "public"
         """)
 
     if 'gpreload' in feature.tags:
@@ -83,7 +83,7 @@ def after_feature(context, feature):
     if 'minirepro' in feature.tags:
         context.conn.close()
     if 'gpconfig' in feature.tags:
-        context.execute_steps(u'''
+        context.execute_steps('''
             Then the user runs "gpstop -ar"
             And gpstop should return a return code of 0
             ''')
@@ -124,11 +124,11 @@ def after_scenario(context, scenario):
         return
 
     if 'tablespaces' in context:
-        for tablespace in context.tablespaces.values():
+        for tablespace in list(context.tablespaces.values()):
             tablespace.cleanup()
 
     if 'gpstop' in scenario.effective_tags:
-        context.execute_steps(u'''
+        context.execute_steps('''
             # restart the cluster so that subsequent tests re-use the existing demo cluster
             Then the user runs "gpstart -a"
             And gpstart should return a return code of 0

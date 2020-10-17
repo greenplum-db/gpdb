@@ -92,9 +92,10 @@ reset enable_sort;
 -- when we would spill in the final stage of a two-stage agg inside the serial
 -- function.
 CREATE TABLE test_combinefn_null (a int8, b int, c char(32000));
-INSERT INTO test_combinefn_null SELECT i, (i | 7), i::text FROM generate_series(1, 1024) i;
+INSERT INTO test_combinefn_null SELECT i, (i | 15), i::text FROM generate_series(1, 1024) i;
 ANALYZE test_combinefn_null;
 SET statement_mem='2MB';
+set enable_sort=off;
 
 -- Test int8_avg_combine()
 SELECT $$

@@ -16,11 +16,9 @@
 #include "postgres.h"
 #include "miscadmin.h"
 
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
 #include "commands/tablecmds.h"
-#include "executor/execDML.h"
 #include "executor/instrument.h"
 #include "executor/nodeSplitUpdate.h"
 
@@ -79,10 +77,11 @@ SplitTupleTableSlot(TupleTableSlot *slot,
 	ListCell *deleteAtt = list_head(plannode->deleteColIdx);
 	ListCell *insertAtt = list_head(plannode->insertColIdx);
 
-	Datum *delete_values = slot_get_values(node->deleteTuple);
-	bool *delete_nulls = slot_get_isnull(node->deleteTuple);
-	Datum *insert_values = slot_get_values(node->insertTuple);
-	bool *insert_nulls = slot_get_isnull(node->insertTuple);
+	slot_getallattrs(slot);
+	Datum	   *delete_values = node->deleteTuple->tts_values;
+	bool	   *delete_nulls = node->deleteTuple->tts_isnull;
+	Datum	   *insert_values = node->insertTuple->tts_values;
+	bool	   *insert_nulls = node->insertTuple->tts_isnull;
 
 	/* Iterate through new TargetList and match old and new values. The action is also added in this containsTuple. */
 	foreach (element, targetList)
@@ -145,7 +144,7 @@ SplitTupleTableSlot(TupleTableSlot *slot,
 				insert_values[attno - 1] = values[var->varattno - 1];
 				insert_nulls[attno - 1] = nulls[var->varattno - 1];
 
-				Assert(var->vartype == slot->tts_tupleDescriptor->attrs[var->varattno - 1]->atttypid);
+				Assert(var->vartype == TupleDescAttr(slot->tts_tupleDescriptor, var->varattno - 1)->atttypid);
 			}
 			/* `Resjunk' values */
 		}
@@ -166,9 +165,10 @@ SplitTupleTableSlot(TupleTableSlot *slot,
 /**
  * Splits every TupleTableSlot into two TupleTableSlots: DELETE and INSERT.
  */
-TupleTableSlot*
-ExecSplitUpdate(SplitUpdateState *node)
+static TupleTableSlot *
+ExecSplitUpdate(PlanState *pstate)
 {
+	SplitUpdateState *node = castNode(SplitUpdateState, pstate);
 	PlanState *outerNode = outerPlanState(node);
 	SplitUpdate *plannode = (SplitUpdate *) node->ps.plan;
 
@@ -196,8 +196,8 @@ ExecSplitUpdate(SplitUpdateState *node)
 
 		/* `Split' update into delete and insert */
 		slot_getallattrs(slot);
-		Datum *values = slot_get_values(slot);
-		bool *nulls = slot_get_isnull(slot);
+		Datum	   *values = slot->tts_values;
+		bool	   *nulls = slot->tts_isnull;
 
 		ExecStoreAllNullTuple(node->deleteTuple);
 		ExecStoreAllNullTuple(node->insertTuple);
@@ -218,16 +218,15 @@ ExecSplitUpdate(SplitUpdateState *node)
 SplitUpdateState*
 ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 {
+	SplitUpdateState *splitupdatestate;
+
 	/* Check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK | EXEC_FLAG_REWIND)));
-
-	bool    has_oids;
-
-	SplitUpdateState *splitupdatestate;
 
 	splitupdatestate = makeNode(SplitUpdateState);
 	splitupdatestate->ps.plan = (Plan *)node;
 	splitupdatestate->ps.state = estate;
+	splitupdatestate->ps.ExecProcNode = ExecSplitUpdate;
 	splitupdatestate->processInsert = true;
 
 	/*
@@ -238,18 +237,13 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 
 	ExecAssignExprContext(estate, &splitupdatestate->ps);
 
-	ExecInitResultTupleSlot(estate, &splitupdatestate->ps);
-
-	splitupdatestate->insertTuple = ExecInitExtraTupleSlot(estate);
-	splitupdatestate->deleteTuple = ExecInitExtraTupleSlot(estate);
-
-	/* New TupleDescriptor for output TupleTableSlots (old_values + new_values, ctid, gp_segment, action).*/
-	if (!ExecContextForcesOids((PlanState *) splitupdatestate, &has_oids))
-		has_oids = false;
-
-	TupleDesc tupDesc = ExecTypeFromTL(node->plan.targetlist, has_oids);
-	ExecSetSlotDescriptor(splitupdatestate->insertTuple, tupDesc);
-	ExecSetSlotDescriptor(splitupdatestate->deleteTuple, tupDesc);
+	/*
+	 * New TupleDescriptor for output TupleTableSlots (old_values + new_values, ctid,
+	 * gp_segment, action).
+	 */
+	TupleDesc tupDesc = ExecTypeFromTL(node->plan.targetlist);
+	splitupdatestate->insertTuple = ExecInitExtraTupleSlot(estate, tupDesc, &TTSOpsVirtual);
+	splitupdatestate->deleteTuple = ExecInitExtraTupleSlot(estate, tupDesc, &TTSOpsVirtual);
 
 	/*
 	 * Look up the positions of the gp_segment_id in the subplan's target
@@ -263,8 +257,8 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	/*
 	 * DML nodes do not project.
 	 */
-	ExecAssignResultTypeFromTL(&splitupdatestate->ps);
-	ExecAssignProjectionInfo(&splitupdatestate->ps, NULL);
+	ExecInitResultTupleSlotTL(&splitupdatestate->ps, &TTSOpsVirtual);
+	splitupdatestate->ps.ps_ProjInfo = NULL;
 
 	/*
 	 * Initialize for computing hash key

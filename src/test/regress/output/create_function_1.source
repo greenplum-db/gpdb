@@ -33,8 +33,8 @@ CREATE FUNCTION check_foreign_key ()
 	LANGUAGE C READS SQL DATA;
 CREATE FUNCTION autoinc ()
 	RETURNS trigger
-	AS '@libdir@/regress@DLSUFFIX@'
-	LANGUAGE C READS SQL DATA;
+	AS '@libdir@/autoinc@DLSUFFIX@'
+	LANGUAGE C;
 CREATE FUNCTION trigger_return_old ()
         RETURNS trigger
         AS '@libdir@/regress@DLSUFFIX@'
@@ -55,11 +55,20 @@ CREATE FUNCTION test_atomic_ops()
     RETURNS bool
     AS '@libdir@/regress@DLSUFFIX@'
     LANGUAGE C;
+-- Tests creating a FDW handler
+CREATE FUNCTION test_fdw_handler()
+    RETURNS fdw_handler
+    AS '@libdir@/regress@DLSUFFIX@', 'test_fdw_handler'
+    LANGUAGE C;
+CREATE FUNCTION test_support_func(internal)
+    RETURNS internal
+    AS '@libdir@/regress@DLSUFFIX@', 'test_support_func'
+    LANGUAGE C STRICT;
 -- Things that shouldn't work:
 CREATE FUNCTION test1 (int) RETURNS int LANGUAGE SQL CONTAINS SQL
     AS 'SELECT ''not an integer'';';
 ERROR:  return type mismatch in function declared to return integer
-DETAIL:  Actual return type is unknown.
+DETAIL:  Actual return type is text.
 CONTEXT:  SQL function "test1"
 CREATE FUNCTION test1 (int) RETURNS int LANGUAGE SQL CONTAINS SQL
     AS 'not even SQL';

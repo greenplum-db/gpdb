@@ -18,49 +18,44 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
-	using namespace gpmd;
+using namespace gpos;
+using namespace gpmd;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerMetadataObject
-	//
-	//	@doc:
-	//		Base parse handler class for metadata objects
-	//
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerMetadataObject : public CParseHandlerBase 
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerMetadataObject
+//
+//	@doc:
+//		Base parse handler class for metadata objects
+//
+//
+//---------------------------------------------------------------------------
+class CParseHandlerMetadataObject : public CParseHandlerBase
+{
+private:
+	// private copy ctor
+	CParseHandlerMetadataObject(const CParseHandlerMetadataObject &);
 
-			// private copy ctor
-			CParseHandlerMetadataObject(const CParseHandlerMetadataObject&);
-			
-			
-		protected:
-			// the metadata object constructed by the parse handler
-			IMDCacheObject *m_imd_obj;
-						
-		public:
-			// ctor/dtor
-			CParseHandlerMetadataObject
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-			
-			virtual
-			~CParseHandlerMetadataObject();
-			
-			// returns constructed metadata object
-			IMDCacheObject *GetImdObj() const;	
-	};
-}
 
-#endif // !GPDXL_CParseHandlerMetadataObject_H
+protected:
+	// the metadata object constructed by the parse handler
+	IMDCacheObject *m_imd_obj;
+
+public:
+	// ctor/dtor
+	CParseHandlerMetadataObject(CMemoryPool *mp,
+								CParseHandlerManager *parse_handler_mgr,
+								CParseHandlerBase *parse_handler_root);
+
+	virtual ~CParseHandlerMetadataObject();
+
+	// returns constructed metadata object
+	IMDCacheObject *GetImdObj() const;
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CParseHandlerMetadataObject_H
 
 // EOF

@@ -2,20 +2,22 @@
 
 #include "access/heapam.h"
 #include "access/heapam_xlog.h"
-#include "access/nbtree.h"
-#include "access/gist_private.h"
-#include "access/gin.h"
+#include "access/nbtxlog.h"
+#include "access/gistxlog.h"
+#include "access/ginxlog.h"
 #include "commands/sequence.h"
 #include "postmaster/bgwriter.h"
 #include "replication/walsender_private.h"
 #include "replication/walsender.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_tablespace.h"
+#include "pgstat.h"
 #include "storage/fd.h"
+#include "storage/lwlock.h"
 #include "utils/builtins.h"
 #include "utils/hsearch.h"
 #include "utils/relmapper.h"
-#include "utils/tqual.h"
+#include "utils/varlena.h"
 
 /*
  * If a file comparison fails, how many times to retry before admitting
@@ -55,10 +57,9 @@ extern Datum gp_replica_check(PG_FUNCTION_ARGS);
 typedef struct RelfilenodeEntry
 {
 	Oid relfilenode;
-	int relam;
+	Oid relam;
 	int relkind;
 	char relname[NAMEDATALEN];
-	char relstorage;
 	List *segments;
 } RelfilenodeEntry;
 
@@ -70,7 +71,18 @@ typedef struct RelationTypeData
 
 #define MAX_INCLUDE_RELATION_TYPES 8
 
-static RelationTypeData relation_types[MAX_INCLUDE_RELATION_TYPES] = {
+/*
+ * GPDB_12_MERGE_FIXME: new access methods can be defined, which cannot be
+ * checked using the current way by comparing predefined access method OIDs.
+ * The AM handler functions need to be looked up and compared instead.
+ * E.g. to tell if it's an appendoptimized row oriented table, look up the
+ * handler function for that table's AM in pg_am_handler and compare it with
+ * AO_ROW_TABLE_AM_HANDLER_OID.
+ *
+ * If the tool is desired to be used against pre-defined access methods only,
+ * then no change would be needed.
+ */
+static RelationTypeData relation_types[MAX_INCLUDE_RELATION_TYPES+1] = {
 	{"btree", false},
 	{"hash", false},
 	{"gist", false},
@@ -78,12 +90,13 @@ static RelationTypeData relation_types[MAX_INCLUDE_RELATION_TYPES] = {
 	{"bitmap", false},
 	{"heap", false},
 	{"sequence", false},
-	{"ao", false}
+	{"ao", false},
+	{"unknown relam", false}
 };
 
 static void init_relation_types(char *include_relation_types);
-static RelationTypeData get_relation_type_data(int relam, char relstorage, int relkind);
-static void mask_block(char *pagedata, BlockNumber blkno, int relam, int relkind);
+static RelationTypeData get_relation_type_data(Oid relam, int relkind);
+static void mask_block(char *pagedata, BlockNumber blkno, Oid relam, int relkind);
 static bool compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *rentry);
 static bool sync_wait(void);
 static HTAB* get_relfilenode_map();
@@ -144,8 +157,9 @@ init_relation_types(char *include_relation_types)
 }
 
 static RelationTypeData
-get_relation_type_data(int relam, char relstorage, int relkind)
+get_relation_type_data(Oid relam, int relkind)
 {
+	/* GPDB_12_MERGE_FIXME: Why doesn't this just look up the AM name from pg_am? */
 	switch(relam)
 	{
 		case BTREE_AM_OID:
@@ -158,23 +172,23 @@ get_relation_type_data(int relam, char relstorage, int relkind)
 			return relation_types[3];
 		case BITMAP_AM_OID:
 			return relation_types[4];
-		default:
-			if (relstorage == RELSTORAGE_HEAP)
-				if (relkind == RELKIND_SEQUENCE)
-					return relation_types[6];
-				else
-					return relation_types[5];
-			else if (relstorage_is_ao(relstorage))
-				return relation_types[7];
+
+		case HEAP_TABLE_AM_OID:
+			if (relkind == RELKIND_SEQUENCE)
+				return relation_types[6];
 			else
-				ereport(ERROR,
-						(errmsg("invalid relam %d or relstorage %c",
-								relam, relstorage)));
+				return relation_types[5];
+		case AO_ROW_TABLE_AM_OID:
+		case AO_COLUMN_TABLE_AM_OID:
+			return relation_types[7];
+
+		default:
+			return relation_types[MAX_INCLUDE_RELATION_TYPES];
 	}
 }
 
 static void
-mask_block(char *pagedata, BlockNumber blockno, int relam, int relkind)
+mask_block(char *pagedata, BlockNumber blockno, Oid relam, int relkind)
 {
 	switch(relam)
 	{
@@ -303,7 +317,7 @@ retry:
 	{
 		ereport(WARNING,
 				(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch at blockno %d, gave up after %d retries",
-						get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+						get_relation_type_data(rentry->relam, rentry->relkind).name,
 						primaryfilepath, mirrorfilepath, rentry->relname, blockno, attempts)));
 		return false;
 	}
@@ -324,7 +338,7 @@ retry:
 	 * Attempt to open both files.
 	 */
 	primaryFileExists = true;
-	primaryFile = PathNameOpenFile(primaryfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
+	primaryFile = PathNameOpenFile(primaryfilepath, O_RDONLY | PG_BINARY);
 	if (primaryFile < 0)
 	{
 		if (errno == ENOENT)
@@ -334,7 +348,7 @@ retry:
 	}
 
 	mirrorFileExists = true;
-	mirrorFile = PathNameOpenFile(mirrorfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
+	mirrorFile = PathNameOpenFile(mirrorfilepath, O_RDONLY | PG_BINARY);
 	if (mirrorFile < 0)
 	{
 		if (errno == ENOENT)
@@ -375,30 +389,24 @@ retry:
 		int			primaryFileBytesRead;
 		int			mirrorFileBytesRead;
 		int			diff;
+		off_t		offset;
 		bool		do_check;
 
 		do_check = true;
 
 		CHECK_FOR_INTERRUPTS();
 
-		if (FileSeek(primaryFile, (int64) blockno * BLCKSZ, SEEK_SET) < 0)
-		{
-			elog(NOTICE, "seek in file \"%s\" failed: %m", primaryfilepath);
-			goto retry;
-		}
-		if (FileSeek(mirrorFile, (int64) blockno * BLCKSZ, SEEK_SET) < 0)
-		{
-			elog(NOTICE, "seek in file \"%s\" failed: %m", mirrorFileBuf);
-			goto retry;
-		}
+		offset = (off_t) blockno * BLCKSZ;
 
-		primaryFileBytesRead = FileRead(primaryFile, primaryFileBuf, sizeof(primaryFileBuf));
+		primaryFileBytesRead = FileRead(primaryFile, primaryFileBuf, sizeof(primaryFileBuf), offset,
+										WAIT_EVENT_DATA_FILE_READ);
 		if (primaryFileBytesRead < 0)
 		{
 			elog(NOTICE, "could not read from file \"%s\", block %u: %m", primaryfilepath, blockno);
 			goto retry;
 		}
-		mirrorFileBytesRead = FileRead(mirrorFile, mirrorFileBuf, sizeof(mirrorFileBuf));
+		mirrorFileBytesRead = FileRead(mirrorFile, mirrorFileBuf, sizeof(mirrorFileBuf), offset,
+									   WAIT_EVENT_DATA_FILE_READ);
 		if (mirrorFileBytesRead < 0)
 		{
 			elog(NOTICE, "could not read from file \"%s\", block %u: %m", mirrorfilepath, blockno);
@@ -410,7 +418,7 @@ retry:
 			/* length mismatch */
 			ereport(NOTICE,
 					(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch at blockno %u, primary length: %i, mirror length: %i",
-							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+							get_relation_type_data(rentry->relam, rentry->relkind).name,
 							primaryfilepath, mirrorfilepath, rentry->relname, blockno,
 							primaryFileBytesRead, mirrorFileBytesRead)));
 			goto retry;
@@ -419,7 +427,7 @@ retry:
 		if (primaryFileBytesRead == 0)
 			break; /* reached EOF */
 
-		if (rentry->relstorage == RELSTORAGE_HEAP)
+		if (rentry->relam == HEAP_TABLE_AM_OID)
 		{
 			if (primaryFileBytesRead != BLCKSZ)
 			{
@@ -461,7 +469,7 @@ retry:
 			/* different contents */
 			ereport(NOTICE,
 					(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch by %i at blockno %u",
-							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+							get_relation_type_data(rentry->relam, rentry->relkind).name,
 							primaryfilepath, mirrorfilepath, rentry->relname,
 							diff, blockno)));
 			goto retry;
@@ -498,7 +506,7 @@ static HTAB*
 get_relfilenode_map()
 {
 	Relation pg_class;
-	HeapScanDesc scan;
+	TableScanDesc scan;
 	HeapTuple tup = NULL;
 
 	HTAB *relfilenodemap;
@@ -512,16 +520,21 @@ get_relfilenode_map()
 
 	relfilenodemap = hash_create("relfilenode map", 50000, &relfilenodectl, hash_flags);
 
-	pg_class = heap_open(RelationRelationId, AccessShareLock);
-	scan = heap_beginscan_catalog(pg_class, 0, NULL);
+	pg_class = table_open(RelationRelationId, AccessShareLock);
+	scan = table_beginscan_catalog(pg_class, 0, NULL);
 	while((tup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		Form_pg_class classtuple = (Form_pg_class) GETSTRUCT(tup);
-		if ((classtuple->relkind == RELKIND_UNCATALOGED
-			 || classtuple->relkind == RELKIND_VIEW
+
+		/* GPDB_12_MERGE_FIXME: What was the point of the relstorage test here? */
+		if ((classtuple->relkind == RELKIND_VIEW
 			 || classtuple->relkind == RELKIND_COMPOSITE_TYPE)
-			|| (classtuple->relstorage != RELSTORAGE_HEAP
-				&& !relstorage_is_ao(classtuple->relstorage)))
+			/* || (classtuple->relstorage != RELSTORAGE_HEAP
+			   && !relstorage_is_ao(classtuple->relstorage)) */)
+			continue;
+
+		/* unlogged tables do not propagate to replica servers */
+		if (classtuple->relpersistence == RELPERSISTENCE_UNLOGGED)
 			continue;
 
 		/* unlogged tables do not propagate to replica servers */
@@ -532,7 +545,7 @@ get_relfilenode_map()
 		Oid rnode;
 		/* Its relmapped relation, need to fetch the mapping from relmap file */
 		if (classtuple->relfilenode == InvalidOid)
-			rnode = RelationMapOidToFilenode(HeapTupleGetOid(tup),
+			rnode = RelationMapOidToFilenode(classtuple->oid,
 											 classtuple->relisshared);
 		else
 			rnode = classtuple->relfilenode;
@@ -541,11 +554,10 @@ get_relfilenode_map()
 		rentry->relfilenode = rnode;
 		rentry->relam = classtuple->relam;
 		rentry->relkind = classtuple->relkind;
-		rentry->relstorage = classtuple->relstorage;
 		strlcpy(rentry->relname, NameStr(classtuple->relname), sizeof(rentry->relname));
 	}
-	heap_endscan(scan);
-	heap_close(pg_class, AccessShareLock);
+	table_endscan(scan);
+	table_close(pg_class, AccessShareLock);
 
 	return relfilenodemap;
 }
@@ -632,8 +644,12 @@ gp_replica_check(PG_FUNCTION_ARGS)
 			continue;
 		}
 
+		/* skip if relation has no AM (like a partitioned table or view) */
+		if (rentry->relam == InvalidOid)
+			continue;
+
 		/* skip if relation type not requested by user input */
-		if (!get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).include)
+		if (!get_relation_type_data(rentry->relam, rentry->relkind).include)
 			continue;
 
 		d_name_copy = strtok(NULL, ".");
@@ -681,10 +697,10 @@ gp_replica_check(PG_FUNCTION_ARGS)
 					}
 				}
 
-				if (!found && get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).include)
+				if (!found && get_relation_type_data(rentry->relam, rentry->relkind).include)
 					ereport(WARNING,
 							(errmsg("found extra %s file on mirror: %s/%s",
-									get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+									get_relation_type_data(rentry->relam, rentry->relkind).name,
 									mirrordirpath,
 									dent->d_name)));
 			}

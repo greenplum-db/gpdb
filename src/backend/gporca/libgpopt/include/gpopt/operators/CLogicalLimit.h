@@ -20,210 +20,185 @@
 
 namespace gpopt
 {
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CLogicalLimit
-	//
-	//	@doc:
-	//		Limit operator;
-	//		Scalar children compute (1) offset of start row, (2) number of rows
-	//
-	//---------------------------------------------------------------------------
-	class CLogicalLimit : public CLogical
+//---------------------------------------------------------------------------
+//	@class:
+//		CLogicalLimit
+//
+//	@doc:
+//		Limit operator;
+//		Scalar children compute (1) offset of start row, (2) number of rows
+//
+//---------------------------------------------------------------------------
+class CLogicalLimit : public CLogical
+{
+private:
+	// required sort order
+	COrderSpec *m_pos;
+
+	// global limit
+	BOOL m_fGlobal;
+
+	// does limit specify a number of rows?
+	BOOL m_fHasCount;
+
+	// the limit must be kept, even if it has no offset, nor count
+	BOOL m_top_limit_under_dml;
+
+	// private copy ctor
+	CLogicalLimit(const CLogicalLimit &);
+
+public:
+	// ctors
+	explicit CLogicalLimit(CMemoryPool *mp);
+	CLogicalLimit(CMemoryPool *mp, COrderSpec *pos, BOOL fGlobal,
+				  BOOL fHasCount, BOOL fTopLimitUnderDML);
+
+	// dtor
+	virtual ~CLogicalLimit();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
-		private:
-		
-			// required sort order
-			COrderSpec *m_pos;
-			
-			// global limit
-			BOOL m_fGlobal;
+		return EopLogicalLimit;
+	}
 
-			// does limit specify a number of rows?
-			BOOL m_fHasCount;
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CLogicalLimit";
+	}
 
-			// the limit must be kept, even if it has no offset, nor count
-			BOOL m_top_limit_under_dml;
+	// order spec
+	COrderSpec *
+	Pos() const
+	{
+		return m_pos;
+	}
 
-			// private copy ctor
-			CLogicalLimit(const CLogicalLimit &);
+	// global limit
+	BOOL
+	FGlobal() const
+	{
+		return m_fGlobal;
+	}
 
-		public:
+	// does limit specify a number of rows
+	BOOL
+	FHasCount() const
+	{
+		return m_fHasCount;
+	}
 
-			// ctors
-			explicit
-			CLogicalLimit(CMemoryPool *mp);
-			CLogicalLimit
-				(
-				CMemoryPool *mp,
-				COrderSpec *pos,
-				BOOL fGlobal,
-				BOOL fHasCount,
-				BOOL fTopLimitUnderDML
-				);
+	// must the limit be always kept
+	BOOL
+	IsTopLimitUnderDMLorCTAS() const
+	{
+		return m_top_limit_under_dml;
+	}
 
-			// dtor
-			virtual ~CLogicalLimit();
+	// match function
+	virtual BOOL Matches(COperator *) const;
 
-			// ident accessors
-			virtual 
-			EOperatorId Eopid() const 
-			{
-				return EopLogicalLimit;
-			}
-			
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CLogicalLimit";
-			}
-			
-			// order spec
-			COrderSpec *Pos() const
-			{
-				return m_pos;
-			}
-			
-			// global limit
-			BOOL FGlobal() const
-			{
-				return m_fGlobal;
-			}
+	// sensitivity to order of inputs
+	virtual BOOL
+	FInputOrderSensitive() const
+	{
+		return true;
+	}
 
-			// does limit specify a number of rows
-			BOOL FHasCount() const
-			{
-				return m_fHasCount;
-			}
+	// hash function
+	virtual ULONG HashValue() const;
 
-			// must the limit be always kept
-			BOOL IsTopLimitUnderDMLorCTAS() const
-			{
-				return m_top_limit_under_dml;
-			}
+	// return a copy of the operator with remapped columns
+	virtual COperator *PopCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// match function
-			virtual
-			BOOL Matches(COperator *) const;
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// sensitivity to order of inputs
-			virtual
-			BOOL FInputOrderSensitive() const
-			{
-				return true;
-			}
+	//-------------------------------------------------------------------------------------
+	// Derived Relational Properties
+	//-------------------------------------------------------------------------------------
 
-			// hash function
-			virtual
-			ULONG HashValue() const;
+	// derive output columns
+	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *mp,
+											CExpressionHandle &exprhdl);
 
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	// derive outer references
+	virtual CColRefSet *DeriveOuterReferences(CMemoryPool *mp,
+											  CExpressionHandle &exprhdl);
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
+	// dervive keys
+	virtual CKeyCollection *DeriveKeyCollection(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
-			//-------------------------------------------------------------------------------------
-			// Derived Relational Properties
-			//-------------------------------------------------------------------------------------
+	// derive max card
+	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const;
 
-			// derive output columns
-			virtual
-			CColRefSet *DeriveOutputColumns(CMemoryPool * mp,CExpressionHandle &exprhdl);
-				
-			// derive outer references
-			virtual
-			CColRefSet *DeriveOuterReferences(CMemoryPool *mp, CExpressionHandle &exprhdl);
+	// derive partition consumer info
+	virtual CPartInfo *
+	DerivePartitionInfo(CMemoryPool *,	// mp
+						CExpressionHandle &exprhdl) const
+	{
+		return PpartinfoPassThruOuter(exprhdl);
+	}
 
-			// dervive keys
-			virtual 
-			CKeyCollection *DeriveKeyCollection(CMemoryPool *mp, CExpressionHandle &exprhdl) const;			
-			
-			// derive max card
-			virtual
-			CMaxCard DeriveMaxCard(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	// derive constraint property
+	virtual CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *,	 //mp,
+							 CExpressionHandle &exprhdl) const
+	{
+		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
+	}
 
-			// derive partition consumer info
-			virtual
-			CPartInfo *DerivePartitionInfo
-				(
-				CMemoryPool *, // mp
-				CExpressionHandle &exprhdl
-				) 
-				const
-			{
-				return PpartinfoPassThruOuter(exprhdl);
-			}
-			
-			// derive constraint property
-			virtual
-			CPropConstraint *DerivePropertyConstraint
-				(
-				CMemoryPool *, //mp,
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
-			}
+	//-------------------------------------------------------------------------------------
+	// Required Relational Properties
+	//-------------------------------------------------------------------------------------
 
-			//-------------------------------------------------------------------------------------
-			// Required Relational Properties
-			//-------------------------------------------------------------------------------------
+	// compute required stat columns of the n-th child
+	virtual CColRefSet *PcrsStat(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								 CColRefSet *pcrsInput,
+								 ULONG child_index) const;
 
-			// compute required stat columns of the n-th child
-			virtual
-			CColRefSet *PcrsStat(CMemoryPool *mp, CExpressionHandle &exprhdl, CColRefSet *pcrsInput, ULONG child_index) const;
-			
-			//-------------------------------------------------------------------------------------
-			// Transformations
-			//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	// Transformations
+	//-------------------------------------------------------------------------------------
 
-			// candidate set of xforms
-			virtual
-			CXformSet *PxfsCandidates(CMemoryPool *) const;
+	// candidate set of xforms
+	virtual CXformSet *PxfsCandidates(CMemoryPool *) const;
 
-			// stat promise
-			virtual
-			EStatPromise Esp(CExpressionHandle &) const
-			{
-				return CLogical::EspHigh;
-			}
+	// stat promise
+	virtual EStatPromise
+	Esp(CExpressionHandle &) const
+	{
+		return CLogical::EspHigh;
+	}
 
-			// derive statistics
-			virtual
-			IStatistics *PstatsDerive
-						(
-						CMemoryPool *mp,
-						CExpressionHandle &exprhdl,
-						IStatisticsArray *stats_ctxt
-						)
-						const;
+	// derive statistics
+	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl,
+									  IStatisticsArray *stats_ctxt) const;
 
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-		
-			// conversion function
-			static
-			CLogicalLimit *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopLogicalLimit == pop->Eopid());
-				
-				return dynamic_cast<CLogicalLimit*>(pop);
-			}
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
 
-	}; // class CLogicalLimit
+	// conversion function
+	static CLogicalLimit *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopLogicalLimit == pop->Eopid());
 
-}
+		return dynamic_cast<CLogicalLimit *>(pop);
+	}
 
-#endif // !GPOPT_CLogicalLimit_H
+};	// class CLogicalLimit
+
+}  // namespace gpopt
+
+#endif	// !GPOPT_CLogicalLimit_H
 
 // EOF

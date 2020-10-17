@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
@@ -31,10 +31,9 @@ try:
     from gppylib.commands import dca
     from gppylib.utils import TableLogger
     from gppylib.gp_era import GpEraFile
-    from gppylib.operations.unix import CleanSharedMem
     from gppylib.operations.utils import ParallelOperation, RemoteOperation
     from gppylib.operations.rebalanceSegments import ReconfigDetectionSQLQueryCommand
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 DEFAULT_NUM_WORKERS = 64
@@ -202,7 +201,6 @@ class GpStop:
                         self._stop_master()
                         self._stop_standby()
                     self._stop_segments(segs)
-                    self._remove_shared_memory()  # this creates a new logfile - why?
                 finally:
                     # Reenable Ctrl-C
                     self.cleanup()
@@ -240,41 +238,6 @@ class GpStop:
         return 0
 
     ######
-    def _remove_shared_memory(self):
-        """
-        If segment processes fail to stop even after the alotted time limit of 2 minutes, we proceed
-        to forcibly terminate the processes. This might leave shared memory and semaphores uncleaned.
-        CleanSharedMem class uses the ipcrm command to remove shared memory.
-        ipcrm will only remove shared memory once all the processes that have attached to
-        the shared memory segment have exited. Hence it is safe to call this on all segments.
-        Semaphores however cannot be removed in this manner since we don't know which semaphores
-        are still being used. Hence we leave it to the user to clean up semaphores when it
-        is safe.
-        """
-
-        logger.info('Cleaning up leftover shared memory')
-        cluster_hosts = self.gparray.get_hostlist()
-
-        operations = []
-        for gphost in cluster_hosts:
-            operations.append(RemoteOperation(CleanSharedMem(self.gparray.getDbList()), gphost))
-
-        operations.append(
-            RemoteOperation(CleanSharedMem([self.gparray.master]), self.gparray.master.getSegmentHostName()))
-
-        if self.gparray.standbyMaster:
-            operations.append(RemoteOperation(CleanSharedMem([self.gparray.standbyMaster]),
-                                              self.gparray.standbyMaster.getSegmentHostName()))
-
-        ParallelOperation(operations).run()
-
-        for operation in operations:
-            try:
-                operation.get_ret()
-            except Exception as e:
-                logger.warning('Unable to clean shared memory (%s)' % str(e))
-
-    ######
     def cleanup(self):
         if self.pool:
             self.pool.haltWork()
@@ -298,7 +261,7 @@ class GpStop:
     ######
     def _is_hostname_valid(self):
         segments = self.gparray.getSegmentsByHostName( self.gparray.getDbList())
-        host_names = segments.keys()
+        host_names = list(segments.keys())
         if self.onlyThisHost not in host_names:
             logger.error("host '%s' is not found in gp_segment_configuration" % self.onlyThisHost)
             logger.error("hosts in cluster config: %s" % host_names)
@@ -509,7 +472,7 @@ class GpStop:
                                      ctxt=base.REMOTE,
                                      remoteHost=standby.hostname)
                 cmd.run(validateAfter=True)
-            except base.ExecutionError, e:
+            except base.ExecutionError as e:
                 logger.warning("Error occured while stopping the standby master: %s" % e)
 
             if not pg.DbStatus.remote('checking status of standby master instance', standby, standby.hostname):
@@ -522,7 +485,7 @@ class GpStop:
                                          timeout=self.timeout,
                                          ctxt=base.REMOTE, remoteHost=standby.hostname)
                     cmd.run(validateAfter=True)
-                except base.ExecutionError, e:
+                except base.ExecutionError as e:
                     logger.warning("Error occured while stopping the standby master: %s" % e)
 
                 if not pg.DbStatus.remote('checking status of standby master instance', standby, standby.hostname):
@@ -589,12 +552,12 @@ class GpStop:
     def _stopseg_cmds(self, includePrimaries, includeMirrors, segs):
         host_segs_map = {}
         for seg in segs:
-            if seg.getSegmentHostName() in host_segs_map.keys():
+            if seg.getSegmentHostName() in list(host_segs_map.keys()):
                 host_segs_map[seg.getSegmentHostName()].append(seg)
             else:
                 host_segs_map[seg.getSegmentHostName()] = [seg]
 
-        for hostname, gpdb_objs in host_segs_map.iteritems():
+        for hostname, gpdb_objs in host_segs_map.items():
             dbs = []
             for db in gpdb_objs:
                 role = db.getSegmentRole()

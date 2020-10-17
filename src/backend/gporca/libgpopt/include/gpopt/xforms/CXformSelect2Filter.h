@@ -16,59 +16,54 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformSelect2Filter
-	//
-	//	@doc:
-	//		Transform Select to Filter
-	//
-	//---------------------------------------------------------------------------
-	class CXformSelect2Filter : public CXformImplementation
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformSelect2Filter
+//
+//	@doc:
+//		Transform Select to Filter
+//
+//---------------------------------------------------------------------------
+class CXformSelect2Filter : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformSelect2Filter(const CXformSelect2Filter &);
+
+public:
+	// ctor
+	explicit CXformSelect2Filter(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformSelect2Filter()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfSelect2Filter;
+	}
 
-			// private copy ctor
-			CXformSelect2Filter(const CXformSelect2Filter &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformSelect2Filter";
+	}
 
-		public:
-		
-			// ctor
-			explicit
-			CXformSelect2Filter(CMemoryPool *mp);
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// dtor
-			virtual 
-			~CXformSelect2Filter() 
-			{}
+	// actual transform
+	void Transform(CXformContext *, CXformResult *, CExpression *) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfSelect2Filter;
-			}
-			
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CXformSelect2Filter";
-			}
+};	// class CXformSelect2Filter
 
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+}  // namespace gpopt
 
-			// actual transform
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformSelect2Filter
-
-}
-
-#endif // !GPOPT_CXformSelect2Filter_H
+#endif	// !GPOPT_CXformSelect2Filter_H
 
 // EOF

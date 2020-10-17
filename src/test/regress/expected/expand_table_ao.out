@@ -1,11 +1,10 @@
-\set has_oids true
 -- start_ignore
 create extension if not exists gp_debug_numsegments;
 -- end_ignore
 drop schema if exists test_expand_table_ao cascade;
 create schema test_expand_table_ao;
 set search_path=test_expand_table_ao,public;
-set gp_default_storage_options='appendonly=true,orientation=row';
+set default_table_access_method = ao_row;
 set allow_system_table_mods=true;
 -- Hash distributed tables
 select gp_debug_set_create_table_default_numsegments(2);
@@ -64,9 +63,7 @@ select gp_debug_set_create_table_default_numsegments(1);
  1
 (1 row)
 
-Create table t1(a int, b int, c int) with (OIDS=:has_oids) distributed by (a,b);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
+Create table t1(a int, b int, c int) distributed by (a,b);
 insert into t1 select i,i,0 from generate_series(1,100) I;
 Update t1 set c = gp_segment_id;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
@@ -77,8 +74,6 @@ Select gp_segment_id, count(*) from t1 group by gp_segment_id;
 
 begin;
 Alter table t1 expand table;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -95,8 +90,6 @@ Select gp_segment_id, count(*) from t1 group by gp_segment_id;
 (1 row)
 
 Alter table t1 expand table;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -177,9 +170,6 @@ select gp_debug_set_create_table_default_numsegments(1);
 (1 row)
 
 Create table t1(a int, b int, c int) distributed by (a) partition by list(b) (partition t1_1 values(1), partition t1_2 values(2), default partition other);
-NOTICE:  CREATE TABLE will create partition "t1_1_prt_t1_1" for table "t1"
-NOTICE:  CREATE TABLE will create partition "t1_1_prt_t1_2" for table "t1"
-NOTICE:  CREATE TABLE will create partition "t1_1_prt_other" for table "t1"
 insert into t1 select i,i,0 from generate_series(1,100) I;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
@@ -295,9 +285,7 @@ select gp_debug_set_create_table_default_numsegments(2);
  2
 (1 row)
 
-Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed randomly;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
+Create table r1(a int, b int, c int) distributed randomly;
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Update r1 set c = gp_segment_id;
 Select count(*) from r1;
@@ -314,8 +302,6 @@ Select count(*) > 0 from r1 where gp_segment_id=2;
 
 begin;
 Alter table r1 expand table;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from r1;
  count 
 -------
@@ -342,8 +328,6 @@ Select count(*) > 0 from r1 where gp_segment_id=2;
 (1 row)
 
 Alter table r1 expand table;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from r1;
  count 
 -------
@@ -370,9 +354,6 @@ select gp_debug_set_create_table_default_numsegments(2);
 (1 row)
 
 Create table r1(a int, b int, c int) distributed randomly partition by list(b) (partition r1_1 values(1), partition r1_2 values(2), default partition other);
-NOTICE:  CREATE TABLE will create partition "r1_1_prt_r1_1" for table "r1"
-NOTICE:  CREATE TABLE will create partition "r1_1_prt_r1_2" for table "r1"
-NOTICE:  CREATE TABLE will create partition "r1_1_prt_other" for table "r1"
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Select count(*) from r1;
  count 
@@ -484,9 +465,7 @@ select gp_debug_set_create_table_default_numsegments(1);
  1
 (1 row)
 
-Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed replicated;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
+Create table r1(a int, b int, c int) distributed replicated;
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Select count(*) from gp_dist_random('r1');
  count 
@@ -496,8 +475,6 @@ Select count(*) from gp_dist_random('r1');
 
 begin;
 Alter table r1 expand table;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from gp_dist_random('r1');
  count 
 -------
@@ -512,8 +489,6 @@ Select count(*) from gp_dist_random('r1');
 (1 row)
 
 Alter table r1 expand table;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from gp_dist_random('r1');
  count 
 -------
@@ -549,38 +524,6 @@ PARTITION BY RANGE (b)
             DEFAULT SUBPARTITION others_d)
 ( START (1) END (2) EVERY (1),
     DEFAULT PARTITION other_b);
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b" for table "part_t1"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others__3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2" for table "part_t1"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_one" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_two" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_three" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_one" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_two" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_three" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_3"
 insert into part_t1 select i,i%3,i%4,i%5,i from generate_series(1,100) I;
 Update part_t1 set e = gp_segment_id;
 Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
@@ -646,38 +589,6 @@ PARTITION BY RANGE (b)
             DEFAULT SUBPARTITION others_d)
 ( START (1) END (2) EVERY (1),
     DEFAULT PARTITION other_b);
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b" for table "part_t1"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others__3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2" for table "part_t1"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_one" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_two" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_three" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_one" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_two" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_three" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_3"
 insert into part_t1 select i,i%3,i%4,i%5,i from generate_series(1,100) I;
 Update part_t1 set e = gp_segment_id;
 Select count(*) from part_t1;
@@ -761,38 +672,6 @@ PARTITION BY RANGE (b)
             DEFAULT SUBPARTITION others_d)
 ( START (1) END (2) EVERY (1),
     DEFAULT PARTITION other_b);
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b" for table "part_t1"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others__3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3" for table "part_t1_1_prt_other_b"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_3_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2" for table "part_t1"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_others_c_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_one" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_two" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_three" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_2_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3" for table "part_t1_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_one" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_two" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_three" for table "part_t1_1_prt_2_2_prt_3"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_2_2_prt_3_3_prt_others_d" for table "part_t1_1_prt_2_2_prt_3"
 insert into part_t1 select i,i%3,i%4,i%5,i from generate_series(1,100) I;
 Update part_t1 set e = gp_segment_id;
 select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
@@ -809,8 +688,8 @@ select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
 
 alter table part_t1_1_prt_other_b_2_prt_2_3_prt_others_d expand table;
 ERROR:  cannot expand leaf or interior partition "part_t1_1_prt_other_b_2_prt_2_3_prt_others_d"
-DETAIL:  root/leaf/interior partitions need to have same numsegments
-HINT:  use "ALTER TABLE part_t1 EXPAND TABLE" instead
+DETAIL:  Root/leaf/interior partitions need to have same numsegments
+HINT:  Call ALTER TABLE EXPAND TABLE on the root table instead
 select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
  gp_segment_id | a  | b | c | d | e 
 ---------------+----+---+---+---+---

@@ -6,7 +6,7 @@
  * Joe Conway <mail@joeconway.com>
  *
  * contrib/fuzzystrmatch/fuzzystrmatch.c
- * Copyright (c) 2001-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2019, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
  * metaphone()
@@ -42,6 +42,7 @@
 
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
+#include "utils/varlena.h"
 
 PG_MODULE_MAGIC;
 
@@ -86,23 +87,11 @@ soundex_code(char letter)
 		phoned_word		--	The final phonized word.  (We'll allocate the
 							memory.)
 	Output
-		error	--	A simple error flag, returns TRUE or FALSE
+		error	--	A simple error flag, returns true or false
 
 	NOTES:	ALL non-alpha characters are ignored, this includes whitespace,
 	although non-alpha characters will break up phonemes.
 ****************************************************************************/
-
-
-/**************************************************************************
-	my constants -- constants I like
-
-	Probably redundant.
-
-***************************************************************************/
-
-#define META_ERROR			FALSE
-#define META_SUCCESS		TRUE
-#define META_FAILURE		FALSE
 
 
 /*	I add modifications to the traditional metaphone algorithm that you
@@ -115,7 +104,7 @@ soundex_code(char letter)
 #define  TH		'0'
 
 static char Lookahead(char *word, int how_far);
-static int	_metaphone(char *word, int max_phonemes, char **phoned_word);
+static void _metaphone(char *word, int max_phonemes, char **phoned_word);
 
 /* Metachar.h ... little bits about characters for metaphone */
 
@@ -271,7 +260,6 @@ metaphone(PG_FUNCTION_ARGS)
 	size_t		str_i_len = strlen(str_i);
 	int			reqlen;
 	char	   *metaph;
-	int			retval;
 
 	/* return an empty string if we receive one */
 	if (!(str_i_len > 0))
@@ -295,17 +283,8 @@ metaphone(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_ZERO_LENGTH_CHARACTER_STRING),
 				 errmsg("output cannot be empty string")));
 
-
-	retval = _metaphone(str_i, reqlen, &metaph);
-	if (retval == META_SUCCESS)
-		PG_RETURN_TEXT_P(cstring_to_text(metaph));
-	else
-	{
-		/* internal error */
-		elog(ERROR, "metaphone: failure");
-		/* keep the compiler quiet */
-		PG_RETURN_NULL();
-	}
+	_metaphone(str_i, reqlen, &metaph);
+	PG_RETURN_TEXT_P(cstring_to_text(metaph));
 }
 
 
@@ -361,7 +340,7 @@ Lookahead(char *word, int how_far)
 #define Isbreak(c)	(!isalpha((unsigned char) (c)))
 
 
-static int
+static void
 _metaphone(char *word,			/* IN */
 		   int max_phonemes,
 		   char **phoned_word)	/* OUT */
@@ -388,7 +367,7 @@ _metaphone(char *word,			/* IN */
 	/*-- Allocate memory for our phoned_phrase --*/
 	if (max_phonemes == 0)
 	{							/* Assume largest possible */
-		*phoned_word = palloc(sizeof(char) * strlen(word) +1);
+		*phoned_word = palloc(sizeof(char) * strlen(word) + 1);
 	}
 	else
 	{
@@ -403,7 +382,7 @@ _metaphone(char *word,			/* IN */
 		if (Curr_Letter == '\0')
 		{
 			End_Phoned_Word;
-			return META_SUCCESS;	/* For testing */
+			return;
 		}
 	}
 
@@ -720,8 +699,8 @@ _metaphone(char *word,			/* IN */
 
 	End_Phoned_Word;
 
-	return (META_SUCCESS);
-}	/* END metaphone */
+	return;
+}								/* END metaphone */
 
 
 /*
@@ -735,7 +714,7 @@ soundex(PG_FUNCTION_ARGS)
 	char		outstr[SOUNDEX_LEN + 1];
 	char	   *arg;
 
-	arg = text_to_cstring(PG_GETARG_TEXT_P(0));
+	arg = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
 	_soundex(arg, outstr);
 
@@ -801,8 +780,8 @@ difference(PG_FUNCTION_ARGS)
 	int			i,
 				result;
 
-	_soundex(text_to_cstring(PG_GETARG_TEXT_P(0)), sndx1);
-	_soundex(text_to_cstring(PG_GETARG_TEXT_P(1)), sndx2);
+	_soundex(text_to_cstring(PG_GETARG_TEXT_PP(0)), sndx1);
+	_soundex(text_to_cstring(PG_GETARG_TEXT_PP(1)), sndx2);
 
 	result = 0;
 	for (i = 0; i < SOUNDEX_LEN; i++)

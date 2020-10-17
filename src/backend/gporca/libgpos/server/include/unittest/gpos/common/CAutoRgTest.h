@@ -15,28 +15,25 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoRgTest
-	//
-	//	@doc:
-	//		Static unit tests for auto range
-	//
-	//---------------------------------------------------------------------------
-	class CAutoRgTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoRgTest
+//
+//	@doc:
+//		Static unit tests for auto range
+//
+//---------------------------------------------------------------------------
+class CAutoRgTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
 
-		public:
+};	// class CAutoRgTest
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
+}  // namespace gpos
 
-	}; // class CAutoRgTest
-
-}
-
-#endif // !GPOS_CAutoRgTest_H
+#endif	// !GPOS_CAutoRgTest_H
 
 // EOF
-

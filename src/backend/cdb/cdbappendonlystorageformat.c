@@ -700,7 +700,7 @@ AppendOnlyStorageFormat_BlockHeaderStr(
  *
  * Add an errdetail() line showing the Append-Only Storage block header.
  */
-int
+void
 errdetail_appendonly_storage_smallcontent_header(
 												 uint8 *headerPtr,
 												 bool usingChecksums,
@@ -716,8 +716,6 @@ errdetail_appendonly_storage_smallcontent_header(
 	errdetail("%s", str);
 
 	pfree(str);
-
-	return 0;
 }
 
 /*
@@ -725,7 +723,7 @@ errdetail_appendonly_storage_smallcontent_header(
  *
  * Add an errdetail() line showing the Append-Only Storage block header.
  */
-int
+void
 errdetail_appendonly_storage_largecontent_header(
 												 uint8 *headerPtr,
 												 bool usingChecksums,
@@ -740,8 +738,6 @@ errdetail_appendonly_storage_largecontent_header(
 	errdetail("%s", str);
 
 	pfree(str);
-
-	return 0;
 }
 
 
@@ -750,7 +746,7 @@ errdetail_appendonly_storage_largecontent_header(
  *
  * Add an errdetail() line showing the Append-Only Storage block header.
  */
-int
+void
 errdetail_appendonly_storage_nonbulkdensecontent_header(
 														uint8 *headerPtr,
 														bool usingChecksums,
@@ -766,8 +762,6 @@ errdetail_appendonly_storage_nonbulkdensecontent_header(
 	errdetail("%s", str);
 
 	pfree(str);
-
-	return 0;
 }
 
 /*
@@ -775,7 +769,7 @@ errdetail_appendonly_storage_nonbulkdensecontent_header(
  *
  * Add an errdetail() line showing the Append-Only Storage block header.
  */
-int
+void
 errdetail_appendonly_storage_bulkdensecontent_header(
 													 uint8 *headerPtr,
 													 bool usingChecksums,
@@ -791,8 +785,6 @@ errdetail_appendonly_storage_bulkdensecontent_header(
 	errdetail("%s", str);
 
 	pfree(str);
-
-	return 0;
 }
 
 /*
@@ -800,7 +792,7 @@ errdetail_appendonly_storage_bulkdensecontent_header(
  *
  * Add an errdetail() line showing the Append-Only Storage content (Small, Large, Dense) header.
  */
-int
+void
 errdetail_appendonly_storage_content_header(
 											uint8 *header,
 											bool usingChecksum,
@@ -815,21 +807,25 @@ errdetail_appendonly_storage_content_header(
 	switch (aoHeaderKind)
 	{
 		case AoHeaderKind_SmallContent:
-			return errdetail_appendonly_storage_smallcontent_header(header, usingChecksum, version);
+			errdetail_appendonly_storage_smallcontent_header(header, usingChecksum, version);
+			break;
 
 		case AoHeaderKind_LargeContent:
-			return errdetail_appendonly_storage_largecontent_header(header, usingChecksum, version);
+			errdetail_appendonly_storage_largecontent_header(header, usingChecksum, version);
+			break;
 
 		case AoHeaderKind_NonBulkDenseContent:
-			return errdetail_appendonly_storage_nonbulkdensecontent_header(header, usingChecksum, version);
+			errdetail_appendonly_storage_nonbulkdensecontent_header(header, usingChecksum, version);
+			break;
 
 		case AoHeaderKind_BulkDenseContent:
-			return errdetail_appendonly_storage_bulkdensecontent_header(header, usingChecksum, version);
+			errdetail_appendonly_storage_bulkdensecontent_header(header, usingChecksum, version);
+			break;
 
 		default:
-			return errdetail(
-							 "Append-Only storage header kind %d unknown",
-							 aoHeaderKind);
+			errdetail(
+				"Append-Only storage header kind %d unknown",
+				aoHeaderKind);
 	}
 }
 

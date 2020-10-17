@@ -34,14 +34,12 @@
 
 
 #include "catalog/genbki.h"
+#include "catalog/gp_id_d.h"
+
 /*
  * Defines for gp_id table
  */
-#define GpIdRelationName			"gp_id"
-
-#define GpIdRelationId	5101
-
-CATALOG(gp_id,5101) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(gp_id,5101,GpIdRelationId) BKI_SHARED_RELATION
 {
 	NameData	gpname;
 	int16		numsegments;
@@ -51,16 +49,9 @@ CATALOG(gp_id,5101) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 
 /* no foreign keys */
 
-#define Natts_gp_id				4
-#define Anum_gp_id_gpname		1
-#define Anum_gp_id_numsegments	2
-#define Anum_gp_id_dbid			3
-#define Anum_gp_id_content		4
-
 /*
  * The contract of the gp_id table is that it must have exactly one row on
  * every segment.  The contents of the row do not matter.
  */
-DATA(insert (Greenplum -1 -1 -1));
 
 #endif /*_GP_ID_H_*/

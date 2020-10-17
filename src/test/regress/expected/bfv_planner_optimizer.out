@@ -419,8 +419,8 @@ where x.a > random();
 ---- join qual
 explain (costs off) select * from
 t_hashdist,
-(select a from generate_series(1, 10) a) x,
-(select a from generate_series(1, 10) a) y
+(select a from generate_series(1, 1000) a) x,
+(select a from generate_series(1, 1000) a) y
 where x.a + y.a > random();
                                                             QUERY PLAN                                                             
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -557,7 +557,7 @@ explain (costs off) select * from t_hashdist cross join (select a, count(1) as s
 (10 rows)
 
 -- limit
-explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit 1) x;
+explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;
                      QUERY PLAN                     
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)

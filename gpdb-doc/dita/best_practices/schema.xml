@@ -318,7 +318,7 @@ gpadmin  15673 27471 28 12:05 ?        00:12:59 postgres: port 40003, sbaskin bd
         172.28.12.250(21813) con699238 seg45 cmd32 slice10 MPPEXEC SELECT
 root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
           </li>
-          <li>On the master, check the <codeph>pg_log</codeph> log file for the user in the previous
+          <li>On the master, check the <codeph>log</codeph> log file for the user in the previous
             command (<codeph>sbaskin</codeph>), connection (<codeph>con699238</codeph>, and command
               (<codeph>cmd32</codeph>). The line in the log file with these three values
               <i>should</i> be the line that contains the query, but occasionally, the command

@@ -5,7 +5,6 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '¿ë¾î'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create index Íªß©Ñ¦¿ë¾îindex1 on Íªß©Ñ¦¿ë¾î using btree (¿ë¾î);
 create index Íªß©Ñ¦¿ë¾îindex2 on Íªß©Ñ¦¿ë¾î using hash (ÝÂ×¾ÄÚµå);
-ERROR:  hash indexes are not supported
 insert into Íªß©Ñ¦¿ë¾î values('ÄÄÇ»ÅÍµð½ºÇÃ·¹ÀÌ', 'Ñ¦A01ß¾');
 insert into Íªß©Ñ¦¿ë¾î values('ÄÄÇ»ÅÍ±×·¡ÇÈ½º', 'ÝÂB10ñé');
 insert into Íªß©Ñ¦¿ë¾î values('ÄÄÇ»ÅÍÇÁ·Î±×·¡¸Ó', 'ìÑZ01ù»');

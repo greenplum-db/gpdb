@@ -10,7 +10,7 @@ GP_IGNORE: defined new match expression
 
 DROP TABLE IF EXISTS ao;
 DROP
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 CREATE
 
 ALTER RESOURCE GROUP admin_group SET CONCURRENCY 130;

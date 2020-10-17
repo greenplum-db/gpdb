@@ -5,7 +5,7 @@ from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
 
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 
 
 class GpCheckCatTestCase(GpTestCase):
@@ -62,7 +62,7 @@ class GpCheckCatTestCase(GpTestCase):
               """
 
         result_query = self.subject.get_fk_query_left_join("catname", "pkcatname", "fkeystr", "pkeystr", ["pkeys-1", "pkeys-2"], ["cat1pkeys-1", "cat1pkeys-2"])
-        self.assertEquals(expected_query, result_query)
+        self.assertEqual(expected_query, result_query)
 
     def test_get_fk_query_full_join_returns_the_correct_query(self):
         expected_query = """
@@ -95,14 +95,14 @@ class GpCheckCatTestCase(GpTestCase):
               GROUP BY pkeys-1, pkeys-2, pkcatname_pkeystr, missing_catalog, present_key
               """
         result_query = self.subject.get_fk_query_full_join("catname", "pkcatname", "fkeystr", "pkeystr", ["pkeys-1", "pkeys-2"], ["cat1pkeys-1", "cat1pkeys-2"], "filter")
-        self.assertEquals(expected_query, result_query)
+        self.assertEqual(expected_query, result_query)
 
     @patch('gpcheckcat_modules.foreign_key_check.ForeignKeyCheck.checkTableForeignKey')
     def test_runCheck(self, mock):
         tables = [self._get_mock_for_catalog_table("table1"), self._get_mock_for_catalog_table("table2")]
         self.subject.runCheck(tables)
 
-        self.assertEquals(len(self.subject.checkTableForeignKey.call_args_list), len(tables))
+        self.assertEqual(len(self.subject.checkTableForeignKey.call_args_list), len(tables))
 
         for table in tables:
             self.assertIn(call(table), self.subject.checkTableForeignKey.call_args_list)
@@ -124,20 +124,20 @@ class GpCheckCatTestCase(GpTestCase):
 
             issue_list = self.subject.checkTableForeignKey(catalog_table_mock)
 
-            self.assertEquals(len(issue_list) , 2)
-            self.assertEquals(issue_list[0], ('pg_class', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))
-            self.assertEquals(issue_list[1], ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))
-            self.assertEquals(self.db_connection.query.call_count, 2)
+            self.assertEqual(len(issue_list) , 2)
+            self.assertEqual(issue_list[0], ('pg_class', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))
+            self.assertEqual(issue_list[1], ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))
+            self.assertEqual(self.db_connection.query.call_count, 2)
 
             def __generate_pg_class_call(table, primary_key_cat_name, col_type, with_filter=True):
                 if with_filter:
-                    return call(table_name, '%s' % primary_key_cat_name, '%s' % col_type.keys()[0], 'oid',
+                    return call(table_name, '%s' % primary_key_cat_name, '%s' % list(col_type.keys())[0], 'oid',
                                 ['%s_pkey1' % (table_name), '%s_pkey2' % (table_name)],
                                 filter=self._get_filter(table_name),
                                 cat1pkeys=['cat1.pkey1 as %s_pkey1' % (table_name),
                                         'cat1.pkey2 as %s_pkey2' % (table_name)])
                 else:
-                    return call(table_name, '%s' % primary_key_cat_name, '%s' % col_type.keys()[0], 'oid',
+                    return call(table_name, '%s' % primary_key_cat_name, '%s' % list(col_type.keys())[0], 'oid',
                                 ['%s_pkey1' % (table_name), '%s_pkey2' % (table_name)],
                                 ['cat1.pkey1 as %s_pkey1' % (table_name),
                                  'cat1.pkey2 as %s_pkey2' % (table_name)])
@@ -157,15 +157,15 @@ class GpCheckCatTestCase(GpTestCase):
                 foreign_key_mock_calls_left.append(pg_class_call)
 
             if table_name in self.full_join_cat_tables:
-                self.assertEquals(fk_query_full_join_mock.call_count, 1)
-                self.assertEquals(fk_query_left_join_mock.call_count, 1)
+                self.assertEqual(fk_query_full_join_mock.call_count, 1)
+                self.assertEqual(fk_query_left_join_mock.call_count, 1)
                 fk_query_full_join_mock.assert_has_calls(foreign_key_mock_calls, any_order=False)
             else:
                 arbitrary_catalog_table_call = __generate_pg_class_call(table_name, 'arbitrary_catalog_table', col_type, with_filter=False)
                 foreign_key_mock_calls_left.append(arbitrary_catalog_table_call)
 
-                self.assertEquals(fk_query_left_join_mock.call_count, 2)
-                self.assertEquals(fk_query_full_join_mock.call_count, 0)
+                self.assertEqual(fk_query_left_join_mock.call_count, 2)
+                self.assertEqual(fk_query_full_join_mock.call_count, 0)
                 fk_query_left_join_mock.assert_has_calls(foreign_key_mock_calls_left, any_order=False)
 
             self.db_connection.query.call_count = 0
@@ -175,13 +175,13 @@ class GpCheckCatTestCase(GpTestCase):
     ####################### PRIVATE METHODS #######################
     def _get_filter(self, table_name):
         query_filters = {}
-        query_filters['pg_appendonly'] = "(relstorage='a' or relstorage='c')"
-        query_filters['pg_attribute'] = "true"
+        query_filters['pg_appendonly'] = "(select amname from pg_am am where am.oid = relam) IN ('ao_row', 'ao_column')"
+        query_filters['pg_attribute'] = "(relnatts > 0 or relnatts is NULL)"
         query_filters['pg_constraint'] = "((relchecks>0 or relhaspkey='t') and relkind = 'r')"
         query_filters['gp_distribution_policy'] = """(relnamespace not in(select oid from pg_namespace where nspname ~ 'pg_')
                                                            and relnamespace not in(select oid from pg_namespace where nspname ~ 'gp_')
                                                            and relnamespace!=(select oid from pg_namespace where nspname='information_schema')
-                                                           and relkind='r' and (relstorage='a' or relstorage='h' or relstorage='c'))"""
+                                                           and relkind='r')"""
         query_filters["pg_index"] = "(relkind='i')"
         if table_name in query_filters:
             return query_filters[table_name]
@@ -203,7 +203,7 @@ class GpCheckCatTestCase(GpTestCase):
                            'gp_distribution_policy': {}
                           }
 
-        if table_name not in table_col_types.keys():
+        if table_name not in list(table_col_types.keys()):
             table_name = 'pg_attribute'
 
         return table_col_types[table_name]

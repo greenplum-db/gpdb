@@ -56,7 +56,7 @@ test__BitmapCompression__Raw(void **state)
 		bitmap, blockCount,
 		output, sizeof(uint32) * 5);
 	assert_true(r < sizeof(uint32) * blockCount && r >= 0);
-	uint32 bitmap2[blockCount];
+	uint32 bitmap2[4];
 	memset(bitmap2, 1, sizeof(uint32) * blockCount);
 
 	BitmapDecompressState decomp_state;
@@ -91,7 +91,7 @@ test__BitmapCompression__ExplicitNoCompression(void **state)
 		output, sizeof(uint32) * 5);
 	assert_int_equal(r, (sizeof(uint32) * 4) + 2);
 
-	uint32 bitmap2[blockCount];
+	uint32 bitmap2[4];
 	memset(bitmap2, 1, sizeof(uint32) * blockCount);
 
 	BitmapDecompressState decomp_state;
@@ -156,7 +156,7 @@ test__BitmapCompression__ImplicitNoCompression(void **state)
 		output, 18);
 	assert_int_equal(r, (sizeof(uint32) * 4) + 2);
 
-	uint32 bitmap2[blockCount];
+	uint32 bitmap2[4];
 	memset(bitmap2, 1, sizeof(uint32) * blockCount);
 
 	BitmapDecompressState decomp_state;

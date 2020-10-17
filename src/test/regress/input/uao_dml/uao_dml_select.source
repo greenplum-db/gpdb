@@ -1,6 +1,6 @@
-create schema uao_dml_select_@orientation@;
-set search_path=uao_dml_select_@orientation@;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema uao_dml_select_@amname@;
+set search_path=uao_dml_select_@amname@;
+SET default_table_access_method=@amname@;
 
 -- @Description select with aggregate function
 --
@@ -17,7 +17,7 @@ CREATE TABLE city_uao (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao (
     code character(3) NOT NULL,
@@ -35,14 +35,14 @@ CREATE TABLE country_uao (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
 COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
@@ -98,7 +98,7 @@ CREATE TABLE sto_uao_emp_limit_offset (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_limit_offset values 
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -139,7 +139,7 @@ CREATE TABLE sto_uao_emp_crossjoin (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_crossjoin values
 (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -165,7 +165,7 @@ DROP TABLE IF EXISTS sto_uao_dept_crossjoin cascade;
 CREATE TABLE sto_uao_dept_crossjoin (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(13)) distributed by (deptno);
 
 insert into sto_uao_dept_crossjoin values
  (1,'ACCOUNTING','ST LOUIS')
@@ -189,7 +189,7 @@ CREATE TABLE sto_uao_emp_seldistinct (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_seldistinct values
 (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -228,7 +228,7 @@ CREATE TABLE city_uao (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao (
     code character(3) NOT NULL,
@@ -246,14 +246,14 @@ CREATE TABLE country_uao (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao (id, name, countrycode, district, population) FROM stdin;
 3793	New York	USA	New York	8008278
@@ -865,7 +865,7 @@ CREATE TABLE sto_uao_emp_groupby (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_groupby values 
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -889,7 +889,7 @@ DROP TABLE IF EXISTS sto_uao_dept_groupby;
 CREATE TABLE sto_uao_dept_groupby (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(13)) distributed by (deptno);
 
 insert into sto_uao_dept_groupby values 
  (1,'ACCOUNTING','ST LOUIS')
@@ -938,7 +938,7 @@ CREATE TABLE city_uao (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao (
     code character(3) NOT NULL,
@@ -956,14 +956,14 @@ CREATE TABLE country_uao (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
 COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
@@ -1004,7 +1004,7 @@ CREATE TABLE sto_uao_emp_rightjoin (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_rightjoin values
 (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -1029,7 +1029,7 @@ DROP TABLE IF EXISTS sto_uao_dept_rightjoin cascade;
 CREATE TABLE sto_uao_dept_rightjoin (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(13)) distributed by (deptno);
 
 insert into sto_uao_dept_rightjoin values
  (1,'ACCOUNTING','ST LOUIS')
@@ -1054,7 +1054,7 @@ CREATE TABLE city_uao (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao (
     code character(3) NOT NULL,
@@ -1072,14 +1072,14 @@ CREATE TABLE country_uao (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao (id, name, countrycode, district, population) FROM stdin;
 3793	New York	USA	New York	8008278
@@ -1689,7 +1689,7 @@ CREATE TABLE sto_uao_emp_limit_offset (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_limit_offset values 
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -1729,7 +1729,7 @@ CREATE TABLE city_uao_using (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao_using (
     code character(3) NOT NULL,
@@ -1747,14 +1747,14 @@ CREATE TABLE country_uao_using (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao_using (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao_using (id, name, countrycode, district, population) FROM stdin;
 1	Kabul	AFG	Kabol	1780000
@@ -1923,7 +1923,7 @@ CREATE TABLE sto_uao_emp_leftjoin (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_leftjoin values
 (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -1948,7 +1948,7 @@ DROP TABLE IF EXISTS sto_uao_dept_leftjoin cascade;
 CREATE TABLE sto_uao_dept_leftjoin (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(13)) distributed by (deptno);
 
 insert into sto_uao_dept_leftjoin values
  (1,'ACCOUNTING','ST LOUIS')
@@ -1982,7 +1982,7 @@ CREATE TABLE country_uao_subq (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 COPY country_uao_subq (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
 
@@ -2014,7 +2014,7 @@ CREATE TABLE city_uao_union (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao_union (
     code character(3) NOT NULL,
@@ -2032,14 +2032,14 @@ CREATE TABLE country_uao_union (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao_union (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao_union (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
 
@@ -2157,7 +2157,7 @@ CREATE TABLE city_uao (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao (
     code character(3) NOT NULL,
@@ -2175,14 +2175,14 @@ CREATE TABLE country_uao (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
 
@@ -2283,7 +2283,7 @@ CREATE TABLE sto_uao_emp_forview (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_forview values 
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -2307,7 +2307,7 @@ DROP TABLE IF EXISTS sto_uao_dept_forview cascade;
 CREATE TABLE sto_uao_dept_forview (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(13)) distributed by (deptno);
 
 insert into sto_uao_dept_forview values 
  (1,'ACCOUNTING','ST LOUIS')
@@ -2336,7 +2336,7 @@ CREATE TABLE city_uao_where (
     countrycode character(3) NOT NULL,
     district text NOT NULL,
     population integer NOT NULL
-) with (appendonly=true) distributed by(id);
+) distributed by(id);
 
 CREATE TABLE country_uao_where (
     code character(3) NOT NULL,
@@ -2354,14 +2354,14 @@ CREATE TABLE country_uao_where (
     headofstate text,
     capital integer,
     code2 character(2) NOT NULL
-) with (appendonly=true)  distributed by (code);
+) distributed by (code);
 
 CREATE TABLE countrylanguage_uao_where (
     countrycode character(3) NOT NULL,
     "language" text NOT NULL,
     isofficial boolean NOT NULL,
     percentage real NOT NULL
-)  with (appendonly=true) distributed by (countrycode,language);
+) distributed by (countrycode,language);
 
 COPY city_uao_where (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
 COPY country_uao_where (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
@@ -2413,7 +2413,7 @@ CREATE TABLE sto_uao_emp_wildcard (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_wildcard values
 (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -2439,7 +2439,7 @@ DROP TABLE IF EXISTS sto_uao_dept_wildcard cascade;
 CREATE TABLE sto_uao_dept_wildcard (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(13)) distributed by (deptno);
 
 insert into sto_uao_dept_wildcard values
  (1,'ACCOUNTING','ST LOUIS')
@@ -2456,7 +2456,7 @@ AND ename like 'H%' order by 1 asc LIMIT 15;
 
 DROP TABLE IF EXISTS uao_orders;
 CREATE TABLE uao_orders(order_id serial , customer_id integer, 
-      order_datetime timestamp, order_total numeric(10,2)) with (appendonly=true); 
+      order_datetime timestamp, order_total numeric(10,2));
 
 INSERT INTO uao_orders(customer_id, order_datetime, order_total)
 VALUES (1,'2009-05-01 10:00 AM', 500),

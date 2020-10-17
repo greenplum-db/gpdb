@@ -18,7 +18,6 @@
 #define APPENDONLYWRITER_H
 
 #include "access/aosegfiles.h"
-#include "nodes/relation.h"
 
 /*
  * Maximum concurrent number of writes into a single append only table.

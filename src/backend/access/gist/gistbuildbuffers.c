@@ -4,7 +4,7 @@
  *	  node buffer management functions for GiST buffering build algorithm.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -25,15 +25,15 @@
 
 static GISTNodeBufferPage *gistAllocateNewPageBuffer(GISTBuildBuffers *gfbb);
 static void gistAddLoadedBuffer(GISTBuildBuffers *gfbb,
-					GISTNodeBuffer *nodeBuffer);
+								GISTNodeBuffer *nodeBuffer);
 static void gistLoadNodeBuffer(GISTBuildBuffers *gfbb,
-				   GISTNodeBuffer *nodeBuffer);
+							   GISTNodeBuffer *nodeBuffer);
 static void gistUnloadNodeBuffer(GISTBuildBuffers *gfbb,
-					 GISTNodeBuffer *nodeBuffer);
+								 GISTNodeBuffer *nodeBuffer);
 static void gistPlaceItupToPage(GISTNodeBufferPage *pageBuffer,
-					IndexTuple item);
+								IndexTuple item);
 static void gistGetItupFromPage(GISTNodeBufferPage *pageBuffer,
-					IndexTuple *item);
+								IndexTuple *item);
 static long gistBuffersGetFreeBlock(GISTBuildBuffers *gfbb);
 static void gistBuffersReleaseBlock(GISTBuildBuffers *gfbb, long blocknum);
 
@@ -102,7 +102,7 @@ gistInitBuildBuffers(int pagesPerBuffer, int levelStep, int maxLevel)
 	 */
 	gfbb->loadedBuffersLen = 32;
 	gfbb->loadedBuffers = (GISTNodeBuffer **) palloc(gfbb->loadedBuffersLen *
-												   sizeof(GISTNodeBuffer *));
+													 sizeof(GISTNodeBuffer *));
 	gfbb->loadedBuffersCount = 0;
 
 	gfbb->rootlevel = maxLevel;
@@ -709,7 +709,7 @@ gistRelocateBuildBuffersOnSplit(GISTBuildBuffers *gfbb, GISTSTATE *giststate,
 					 * page seen so far.  Skip the remaining columns and move
 					 * on to the next page, if any.
 					 */
-					zero_penalty = false;		/* so outer loop won't exit */
+					zero_penalty = false;	/* so outer loop won't exit */
 					break;
 				}
 			}

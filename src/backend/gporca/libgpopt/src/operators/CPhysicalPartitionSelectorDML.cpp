@@ -29,16 +29,11 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalPartitionSelectorDML::CPhysicalPartitionSelectorDML
-	(
-	CMemoryPool *mp,
-	IMDId *mdid,
-	UlongToExprMap *phmulexprEqPredicates,
-	CColRef *pcrOid
-	)
-	:
-	CPhysicalPartitionSelector(mp, mdid, phmulexprEqPredicates),
-	m_pcrOid(pcrOid)
+CPhysicalPartitionSelectorDML::CPhysicalPartitionSelectorDML(
+	CMemoryPool *mp, IMDId *mdid, UlongToExprMap *phmulexprEqPredicates,
+	CColRef *pcrOid)
+	: CPhysicalPartitionSelector(mp, mdid, phmulexprEqPredicates),
+	  m_pcrOid(pcrOid)
 {
 	GPOS_ASSERT(NULL != pcrOid);
 }
@@ -52,22 +47,20 @@ CPhysicalPartitionSelectorDML::CPhysicalPartitionSelectorDML
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalPartitionSelectorDML::Matches
-	(
-	COperator *pop
-	)
-	const
+CPhysicalPartitionSelectorDML::Matches(COperator *pop) const
 {
 	if (Eopid() != pop->Eopid())
 	{
 		return false;
 	}
 
-	CPhysicalPartitionSelectorDML *popPartSelector = CPhysicalPartitionSelectorDML::PopConvert(pop);
+	CPhysicalPartitionSelectorDML *popPartSelector =
+		CPhysicalPartitionSelectorDML::PopConvert(pop);
 
 	return popPartSelector->MDId()->Equals(m_mdid) &&
-			popPartSelector->PcrOid() == m_pcrOid &&
-			FMatchExprMaps(popPartSelector->m_phmulexprEqPredicates, m_phmulexprEqPredicates);
+		   popPartSelector->PcrOid() == m_pcrOid &&
+		   FMatchExprMaps(popPartSelector->m_phmulexprEqPredicates,
+						  m_phmulexprEqPredicates);
 }
 
 //---------------------------------------------------------------------------
@@ -93,12 +86,8 @@ CPhysicalPartitionSelectorDML::HashValue() const
 //
 //---------------------------------------------------------------------------
 CPartFilterMap *
-CPhysicalPartitionSelectorDML::PpfmDerive
-	(
-	CMemoryPool *, //mp,
-	CExpressionHandle &exprhdl
-	)
-	const
+CPhysicalPartitionSelectorDML::PpfmDerive(CMemoryPool *,  //mp,
+										  CExpressionHandle &exprhdl) const
 {
 	return PpfmPassThruOuter(exprhdl);
 }
@@ -112,16 +101,13 @@ CPhysicalPartitionSelectorDML::PpfmDerive
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalPartitionSelectorDML::PdsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CDistributionSpec *pdsInput,
-	ULONG child_index,
-	CDrvdPropArray *, // pdrgpdpCtxt
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalPartitionSelectorDML::PdsRequired(CMemoryPool *mp,
+										   CExpressionHandle &exprhdl,
+										   CDistributionSpec *pdsInput,
+										   ULONG child_index,
+										   CDrvdPropArray *,  // pdrgpdpCtxt
+										   ULONG			  // ulOptReq
+) const
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -131,13 +117,15 @@ CPhysicalPartitionSelectorDML::PdsRequired
 	CDistributionSpec::EDistributionType edtRequired = pdsInput->Edt();
 	if (CDistributionSpec::EdtHashed == edtRequired)
 	{
-		CDistributionSpecHashed *pdshashed = CDistributionSpecHashed::PdsConvert(pdsInput);
+		CDistributionSpecHashed *pdshashed =
+			CDistributionSpecHashed::PdsConvert(pdsInput);
 		pcrs = pdshashed->PcrsUsed(m_mp);
 	}
 
 	if (CDistributionSpec::EdtRouted == edtRequired)
 	{
-		CDistributionSpecRouted *pdsrouted = CDistributionSpecRouted::PdsConvert(pdsInput);
+		CDistributionSpecRouted *pdsrouted =
+			CDistributionSpecRouted::PdsConvert(pdsInput);
 		pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
 		pcrs->Include(pdsrouted->Pcr());
 	}
@@ -161,16 +149,13 @@ CPhysicalPartitionSelectorDML::PdsRequired
 //
 //---------------------------------------------------------------------------
 COrderSpec *
-CPhysicalPartitionSelectorDML::PosRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	COrderSpec *posRequired,
-	ULONG child_index,
-	CDrvdPropArray *, // pdrgpdpCtxt
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalPartitionSelectorDML::PosRequired(CMemoryPool *mp,
+										   CExpressionHandle &exprhdl,
+										   COrderSpec *posRequired,
+										   ULONG child_index,
+										   CDrvdPropArray *,  // pdrgpdpCtxt
+										   ULONG			  // ulOptReq
+) const
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -200,13 +185,10 @@ CPhysicalPartitionSelectorDML::PosRequired
 //
 //---------------------------------------------------------------------------
 BOOL
-CPhysicalPartitionSelectorDML::FProvidesReqdCols
-	(
-	CExpressionHandle &exprhdl,
-	CColRefSet *pcrsRequired,
-	ULONG // ulOptReq
-	)
-	const
+CPhysicalPartitionSelectorDML::FProvidesReqdCols(CExpressionHandle &exprhdl,
+												 CColRefSet *pcrsRequired,
+												 ULONG	// ulOptReq
+) const
 {
 	GPOS_ASSERT(NULL != pcrsRequired);
 	GPOS_ASSERT(1 == exprhdl.Arity());
@@ -233,20 +215,18 @@ CPhysicalPartitionSelectorDML::FProvidesReqdCols
 //
 //---------------------------------------------------------------------------
 CPartitionPropagationSpec *
-CPhysicalPartitionSelectorDML::PppsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired,
-	ULONG child_index,
-	CDrvdPropArray *, //pdrgpdpCtxt,
-	ULONG //ulOptReq
-	)
+CPhysicalPartitionSelectorDML::PppsRequired(
+	CMemoryPool *mp, CExpressionHandle &exprhdl,
+	CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+	CDrvdPropArray *,  //pdrgpdpCtxt,
+	ULONG			   //ulOptReq
+)
 {
 	GPOS_ASSERT(0 == child_index);
 	GPOS_ASSERT(NULL != pppsRequired);
 
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired, child_index);
+	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
+										   child_index);
 }
 
 //---------------------------------------------------------------------------
@@ -258,13 +238,10 @@ CPhysicalPartitionSelectorDML::PppsRequired
 //
 //---------------------------------------------------------------------------
 CPartIndexMap *
-CPhysicalPartitionSelectorDML::PpimDerive
-	(
-	CMemoryPool *, //mp,
-	CExpressionHandle &exprhdl,
-	CDrvdPropCtxt * //pdpctxt
-	)
-	const
+CPhysicalPartitionSelectorDML::PpimDerive(CMemoryPool *,  //mp,
+										  CExpressionHandle &exprhdl,
+										  CDrvdPropCtxt *  //pdpctxt
+) const
 {
 	return PpimPassThruOuter(exprhdl);
 }
@@ -278,12 +255,8 @@ CPhysicalPartitionSelectorDML::PpimDerive
 //
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
-CPhysicalPartitionSelectorDML::EpetOrder
-	(
-	CExpressionHandle &exprhdl,
-	const CEnfdOrder *peo
-	)
-	const
+CPhysicalPartitionSelectorDML::EpetOrder(CExpressionHandle &exprhdl,
+										 const CEnfdOrder *peo) const
 {
 	GPOS_ASSERT(NULL != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
@@ -291,7 +264,7 @@ CPhysicalPartitionSelectorDML::EpetOrder
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();
 	if (peo->FCompatible(pos))
 	{
-		return  CEnfdProp::EpetUnnecessary;
+		return CEnfdProp::EpetUnnecessary;
 	}
 
 	// Sort has to go above if sort columns use any column
@@ -316,12 +289,8 @@ CPhysicalPartitionSelectorDML::EpetOrder
 //
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
-CPhysicalPartitionSelectorDML::EpetDistribution
-	(
-	CExpressionHandle &exprhdl,
-	const CEnfdDistribution *ped
-	)
-	const
+CPhysicalPartitionSelectorDML::EpetDistribution(
+	CExpressionHandle &exprhdl, const CEnfdDistribution *ped) const
 {
 	GPOS_ASSERT(NULL != ped);
 
@@ -329,8 +298,8 @@ CPhysicalPartitionSelectorDML::EpetDistribution
 	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 	if (ped->FCompatible(pds))
 	{
-		 // required distribution is already provided
-		 return CEnfdProp::EpetUnnecessary;
+		// required distribution is already provided
+		return CEnfdProp::EpetUnnecessary;
 	}
 
 	if (exprhdl.HasOuterRefs())
@@ -350,15 +319,9 @@ CPhysicalPartitionSelectorDML::EpetDistribution
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPhysicalPartitionSelectorDML::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPhysicalPartitionSelectorDML::OsPrint(IOstream &os) const
 {
-
-	os	<< SzId()
-		<< ", Part Table: ";
+	os << SzId() << ", Part Table: ";
 	m_mdid->OsPrint(os);
 
 	return os;

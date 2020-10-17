@@ -2,7 +2,7 @@ import imp, os
 from optparse import Values
 import tempfile
 import shutil
-from gp_unittest import *
+from .gp_unittest import *
 from mock import *
 
 class GpDeleteSystemTestCase(GpTestCase):
@@ -14,7 +14,7 @@ class GpDeleteSystemTestCase(GpTestCase):
         gpdeletesystem_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpdeletesystem")
         self.subject = imp.load_source('gpdeletesystem', gpdeletesystem_file)
         self.tmpDir = tempfile.mkdtemp()
-        os.chmod(self.tmpDir, 0777)
+        os.chmod(self.tmpDir, 0o777)
         self.options = Values()
         setattr(self.options, 'master_data_dir', self.tmpDir)
 
@@ -23,15 +23,15 @@ class GpDeleteSystemTestCase(GpTestCase):
 
     def test_check_dump_files_exist(self):
         os.mkdir(os.path.join(self.tmpDir, 'db_dumps'))
-        self.assertEquals(self.subject.check_for_dump_files(self.options), True)
+        self.assertEqual(self.subject.check_for_dump_files(self.options), True)
 
     def test_check_no_dump_files(self):
         os.mkdir(os.path.join(self.tmpDir, 'doesntmatch'))
-        self.assertEquals(self.subject.check_for_dump_files(self.options), False)
+        self.assertEqual(self.subject.check_for_dump_files(self.options), False)
 
     def test_check_backup_files_exist(self):
         os.mkdir(os.path.join(self.tmpDir, 'backups'))
-        self.assertEquals(self.subject.check_for_dump_files(self.options), True)
+        self.assertEqual(self.subject.check_for_dump_files(self.options), True)
 
     def test_delete_cluster_backups_exist_noforce_fails(self):
         setattr(self.options, 'force', '')
@@ -39,7 +39,7 @@ class GpDeleteSystemTestCase(GpTestCase):
         with self.assertRaises(self.subject.GpDeleteSystemException) as context:
             self.subject.delete_cluster(self.options)
 
-        self.assertTrue('Backup files exist' in context.exception)
+        self.assertTrue('Backup files exist' in context.exception.message)
 
     def test_delete_cluster_dumps_exist_noforce_fails(self):
         setattr(self.options, 'force', '')
@@ -47,7 +47,7 @@ class GpDeleteSystemTestCase(GpTestCase):
         with self.assertRaises(self.subject.GpDeleteSystemException) as context:
             self.subject.delete_cluster(self.options)
 
-        self.assertTrue('Backup files exist' in context.exception)
+        self.assertTrue('Backup files exist' in context.exception.message)
 
 
     @patch('gpdeletesystem.dbconn.DbURL', return_value=Mock())

@@ -24,6 +24,7 @@
 
 
 #include "catalog/genbki.h"
+#include "catalog/pg_resqueue_d.h"
 #include "parser/parsetree.h"
 #include "tcop/pquery.h"
 
@@ -32,10 +33,10 @@
  *		typedef struct FormData_pg_resqueue
  * ----------------
  */
-#define ResQueueRelationId	6026
 
-CATALOG(pg_resqueue,6026) BKI_SHARED_RELATION
+CATALOG(pg_resqueue,6026,ResQueueRelationId) BKI_SHARED_RELATION
 {
+	Oid			oid;				/* oid */
 	NameData	rsqname;			/* name of resource queue */
 	float4		rsqcountlimit;		/* max active count limit */
 	float4		rsqcostlimit;		/* max cost limit */
@@ -51,22 +52,5 @@ CATALOG(pg_resqueue,6026) BKI_SHARED_RELATION
  * ----------------
  */
 typedef FormData_pg_resqueue *Form_pg_resqueue;
-
-
-/* ----------------
- *		compiler constants for pg_resqueue
- * ----------------
- */
-#define Natts_pg_resqueue					5
-#define Anum_pg_resqueue_rsqname			1
-#define Anum_pg_resqueue_rsqcountlimit		2
-#define Anum_pg_resqueue_rsqcostlimit		3
-#define Anum_pg_resqueue_rsqovercommit		4
-#define Anum_pg_resqueue_rsqignorecostlimit	5
-
-/* Create initial default resource queue */
-DATA(insert OID = 6055 ( pg_default 20 -1 f 0 ));
-
-#define DEFAULTRESQUEUE_OID 6055
 
 #endif   /* PG_RESQUEUE_H */

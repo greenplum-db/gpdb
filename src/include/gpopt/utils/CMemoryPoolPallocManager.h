@@ -20,34 +20,32 @@
 
 namespace gpos
 {
-	// memory pool manager that uses GPDB memory contexts
-	class CMemoryPoolPallocManager : public CMemoryPoolManager
-	{
-		private:
+// memory pool manager that uses GPDB memory contexts
+class CMemoryPoolPallocManager : public CMemoryPoolManager
+{
+private:
+	// private no copy ctor
+	CMemoryPoolPallocManager(const CMemoryPoolPallocManager &);
 
-			// private no copy ctor
-			CMemoryPoolPallocManager(const CMemoryPoolPallocManager&);
+public:
+	// ctor
+	CMemoryPoolPallocManager(CMemoryPool *internal,
+							 EMemoryPoolType memory_pool_type);
 
-		public:
+	// allocate new memorypool
+	virtual CMemoryPool *NewMemoryPool();
 
-			// ctor
-			CMemoryPoolPallocManager(CMemoryPool *internal, EMemoryPoolType memory_pool_type);
+	// free allocation
+	void DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat);
 
-			// allocate new memorypool
-			virtual CMemoryPool *NewMemoryPool();
-
-			// free allocation
-			void DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat);
-
-			// get user requested size of allocation
-			ULONG UserSizeOfAlloc(const void* ptr);
+	// get user requested size of allocation
+	ULONG UserSizeOfAlloc(const void *ptr);
 
 
-			static
-			GPOS_RESULT Init();
-	};
-}
+	static GPOS_RESULT Init();
+};
+}  // namespace gpos
 
-#endif // !GPDXL_CMemoryPoolPallocManager_H
+#endif	// !GPDXL_CMemoryPoolPallocManager_H
 
 // EOF

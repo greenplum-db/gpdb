@@ -11,7 +11,7 @@
  * is that we have to work harder to clean up after ourselves when we modify
  * the query, since the derived data structures have to be updated too.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,22 +25,28 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/joininfo.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h"
 #include "optimizer/tlist.h"
-#include "optimizer/var.h"
 #include "utils/lsyscache.h"
 
 /* local functions */
 static bool join_is_removable(PlannerInfo *root, SpecialJoinInfo *sjinfo);
 static void remove_rel_from_query(PlannerInfo *root, int relid,
-					  Relids joinrelids);
+								  Relids joinrelids);
 static List *remove_rel_from_joinlist(List *joinlist, int relid, int *nremoved);
 static bool rel_supports_distinctness(PlannerInfo *root, RelOptInfo *rel);
 static bool rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel,
-					List *clause_list);
+								List *clause_list);
 static Oid	distinct_col_search(int colno, List *colnos, List *opids);
+static bool is_innerrel_unique_for(PlannerInfo *root,
+								   Relids joinrelids,
+								   Relids outerrelids,
+								   RelOptInfo *innerrel,
+								   JoinType jointype,
+								   List *restrictlist);
 
 
 /*
@@ -489,11 +495,94 @@ remove_rel_from_joinlist(List *joinlist, int relid, int *nremoved)
 
 
 /*
+ * reduce_unique_semijoins
+ *		Check for semijoins that can be simplified to plain inner joins
+ *		because the inner relation is provably unique for the join clauses.
+ *
+ * Ideally this would happen during reduce_outer_joins, but we don't have
+ * enough information at that point.
+ *
+ * To perform the strength reduction when applicable, we need only delete
+ * the semijoin's SpecialJoinInfo from root->join_info_list.  (We don't
+ * bother fixing the join type attributed to it in the query jointree,
+ * since that won't be consulted again.)
+ */
+void
+reduce_unique_semijoins(PlannerInfo *root)
+{
+	ListCell   *lc;
+	ListCell   *next;
+
+	/*
+	 * Scan the join_info_list to find semijoins.  We can't use foreach
+	 * because we may delete the current cell.
+	 */
+	for (lc = list_head(root->join_info_list); lc != NULL; lc = next)
+	{
+		SpecialJoinInfo *sjinfo = (SpecialJoinInfo *) lfirst(lc);
+		int			innerrelid;
+		RelOptInfo *innerrel;
+		Relids		joinrelids;
+		List	   *restrictlist;
+
+		next = lnext(lc);
+
+		/*
+		 * Must be a non-delaying semijoin to a single baserel, else we aren't
+		 * going to be able to do anything with it.  (It's probably not
+		 * possible for delay_upper_joins to be set on a semijoin, but we
+		 * might as well check.)
+		 */
+		if (sjinfo->jointype != JOIN_SEMI ||
+			sjinfo->delay_upper_joins)
+			continue;
+
+		if (!bms_get_singleton_member(sjinfo->min_righthand, &innerrelid))
+			continue;
+
+		innerrel = find_base_rel(root, innerrelid);
+
+		/*
+		 * Before we trouble to run generate_join_implied_equalities, make a
+		 * quick check to eliminate cases in which we will surely be unable to
+		 * prove uniqueness of the innerrel.
+		 */
+		if (!rel_supports_distinctness(root, innerrel))
+			continue;
+
+		/* Compute the relid set for the join we are considering */
+		joinrelids = bms_union(sjinfo->min_lefthand, sjinfo->min_righthand);
+
+		/*
+		 * Since we're only considering a single-rel RHS, any join clauses it
+		 * has must be clauses linking it to the semijoin's min_lefthand.  We
+		 * can also consider EC-derived join clauses.
+		 */
+		restrictlist =
+			list_concat(generate_join_implied_equalities(root,
+														 joinrelids,
+														 sjinfo->min_lefthand,
+														 innerrel),
+						innerrel->joininfo);
+
+		/* Test whether the innerrel is unique for those clauses. */
+		if (!innerrel_is_unique(root,
+								joinrelids, sjinfo->min_lefthand, innerrel,
+								JOIN_SEMI, restrictlist, true))
+			continue;
+
+		/* OK, remove the SpecialJoinInfo from the list. */
+		root->join_info_list = list_delete_ptr(root->join_info_list, sjinfo);
+	}
+}
+
+
+/*
  * rel_supports_distinctness
  *		Could the relation possibly be proven distinct on some set of columns?
  *
  * This is effectively a pre-checking function for rel_is_distinct_for().
- * It must return TRUE if rel_is_distinct_for() could possibly return TRUE
+ * It must return true if rel_is_distinct_for() could possibly return true
  * with this rel, but it should not expend a lot of cycles.  The idea is
  * that callers can avoid doing possibly-expensive processing to compute
  * rel_is_distinct_for()'s argument lists if the call could not possibly
@@ -565,6 +654,18 @@ rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel, List *clause_list)
 	 */
 	if (rel->reloptkind != RELOPT_BASEREL)
 		return false;
+
+	/*
+	 * Randomly distribute tables cannot guarantee uniqueness. You can't create
+	 * a unique index on on either, so this is normally redundant, but there is
+	 * one corner case: If you use gp_dist_random('table') on a replicated or
+	 * catalog table, the underlying table might have a unique index, but when
+	 * we're fetching the copies from all segments, the result will have
+	 * duplicates.
+	 */
+	if (GpPolicyIsRandomPartitioned(rel->cdbpolicy))
+		return false;
+
 	if (rel->rtekind == RTE_RELATION)
 	{
 		/*
@@ -594,7 +695,7 @@ rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel, List *clause_list)
 		 */
 		foreach(l, clause_list)
 		{
-			RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);
+			RestrictInfo *rinfo = lfirst_node(RestrictInfo, l);
 			Oid			op;
 			Var		   *var;
 
@@ -606,14 +707,21 @@ rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel, List *clause_list)
 			 * caller's mergejoinability test should have selected only
 			 * OpExprs.
 			 */
-			Assert(IsA(rinfo->clause, OpExpr));
-			op = ((OpExpr *) rinfo->clause)->opno;
+			op = castNode(OpExpr, rinfo->clause)->opno;
 
 			/* caller identified the inner side for us */
 			if (rinfo->outer_is_left)
 				var = (Var *) get_rightop(rinfo->clause);
 			else
 				var = (Var *) get_leftop(rinfo->clause);
+
+			/*
+			 * We may ignore any RelabelType node above the operand.  (There
+			 * won't be more than one, since eval_const_expressions() has been
+			 * applied already.)
+			 */
+			if (var && IsA(var, RelabelType))
+				var = (Var *) ((RelabelType *) var)->arg;
 
 			/*
 			 * If inner side isn't a Var referencing a subquery output column,
@@ -639,7 +747,7 @@ rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel, List *clause_list)
  *		on some set of output columns?
  *
  * This is effectively a pre-checking function for query_is_distinct_for().
- * It must return TRUE if query_is_distinct_for() could possibly return TRUE
+ * It must return true if query_is_distinct_for() could possibly return true
  * with this query, but it should not expend a lot of cycles.  The idea is
  * that callers can avoid doing possibly-expensive processing to compute
  * query_is_distinct_for()'s argument lists if the call could not possibly
@@ -648,6 +756,11 @@ rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel, List *clause_list)
 bool
 query_supports_distinctness(Query *query)
 {
+	/* SRFs break distinctness except with DISTINCT, see below */
+	if (query->hasTargetSRFs && query->distinctClause == NIL)
+		return false;
+
+	/* check for features we can prove distinctness with */
 	if (query->distinctClause != NIL ||
 		query->groupClause != NIL ||
 		query->groupingSets != NIL ||
@@ -686,20 +799,10 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
 	Assert(list_length(colnos) == list_length(opids));
 
 	/*
-	 * A set-returning function in the query's targetlist can result in
-	 * returning duplicate rows, if the SRF is evaluated after the
-	 * de-duplication step; so we play it safe and say "no" if there are any
-	 * SRFs.  (We could be certain that it's okay if SRFs appear only in the
-	 * specified columns, since those must be evaluated before de-duplication;
-	 * but it doesn't presently seem worth the complication to check that.)
-	 */
-	if (expression_returns_set((Node *) query->targetList))
-		return false;
-
-	/*
 	 * DISTINCT (including DISTINCT ON) guarantees uniqueness if all the
 	 * columns in the DISTINCT clause appear in colnos and operator semantics
-	 * match.
+	 * match.  This is true even if there are SRFs in the DISTINCT columns or
+	 * elsewhere in the tlist.
 	 */
 	if (query->distinctClause)
 	{
@@ -717,6 +820,16 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
 		if (l == NULL)			/* had matches for all? */
 			return true;
 	}
+
+	/*
+	 * Otherwise, a set-returning function in the query's targetlist can
+	 * result in returning duplicate rows, despite any grouping that might
+	 * occur before tlist evaluation.  (If all tlist SRFs are within GROUP BY
+	 * columns, it would be safe because they'd be expanded before grouping.
+	 * But it doesn't currently seem worth the effort to check for that.)
+	 */
+	if (query->hasTargetSRFs)
+		return false;
 
 	/*
 	 * Similarly, GROUP BY without GROUPING SETS guarantees uniqueness if all
@@ -781,9 +894,8 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
 	 */
 	if (query->setOperations)
 	{
-		SetOperationStmt *topop = (SetOperationStmt *) query->setOperations;
+		SetOperationStmt *topop = castNode(SetOperationStmt, query->setOperations);
 
-		Assert(IsA(topop, SetOperationStmt));
 		Assert(topop->op != SETOP_NONE);
 
 		if (!topop->all)
@@ -845,4 +957,189 @@ distinct_col_search(int colno, List *colnos, List *opids)
 			return lfirst_oid(lc2);
 	}
 	return InvalidOid;
+}
+
+
+/*
+ * innerrel_is_unique
+ *	  Check if the innerrel provably contains at most one tuple matching any
+ *	  tuple from the outerrel, based on join clauses in the 'restrictlist'.
+ *
+ * We need an actual RelOptInfo for the innerrel, but it's sufficient to
+ * identify the outerrel by its Relids.  This asymmetry supports use of this
+ * function before joinrels have been built.  (The caller is expected to
+ * also supply the joinrelids, just to save recalculating that.)
+ *
+ * The proof must be made based only on clauses that will be "joinquals"
+ * rather than "otherquals" at execution.  For an inner join there's no
+ * difference; but if the join is outer, we must ignore pushed-down quals,
+ * as those will become "otherquals".  Note that this means the answer might
+ * vary depending on whether IS_OUTER_JOIN(jointype); since we cache the
+ * answer without regard to that, callers must take care not to call this
+ * with jointypes that would be classified differently by IS_OUTER_JOIN().
+ *
+ * The actual proof is undertaken by is_innerrel_unique_for(); this function
+ * is a frontend that is mainly concerned with caching the answers.
+ * In particular, the force_cache argument allows overriding the internal
+ * heuristic about whether to cache negative answers; it should be "true"
+ * if making an inquiry that is not part of the normal bottom-up join search
+ * sequence.
+ */
+bool
+innerrel_is_unique(PlannerInfo *root,
+				   Relids joinrelids,
+				   Relids outerrelids,
+				   RelOptInfo *innerrel,
+				   JoinType jointype,
+				   List *restrictlist,
+				   bool force_cache)
+{
+	MemoryContext old_context;
+	ListCell   *lc;
+
+	/* Certainly can't prove uniqueness when there are no joinclauses */
+	if (restrictlist == NIL)
+		return false;
+
+	/*
+	 * Make a quick check to eliminate cases in which we will surely be unable
+	 * to prove uniqueness of the innerrel.
+	 */
+	if (!rel_supports_distinctness(root, innerrel))
+		return false;
+
+	/*
+	 * Query the cache to see if we've managed to prove that innerrel is
+	 * unique for any subset of this outerrel.  We don't need an exact match,
+	 * as extra outerrels can't make the innerrel any less unique (or more
+	 * formally, the restrictlist for a join to a superset outerrel must be a
+	 * superset of the conditions we successfully used before).
+	 */
+	foreach(lc, innerrel->unique_for_rels)
+	{
+		Relids		unique_for_rels = (Relids) lfirst(lc);
+
+		if (bms_is_subset(unique_for_rels, outerrelids))
+			return true;		/* Success! */
+	}
+
+	/*
+	 * Conversely, we may have already determined that this outerrel, or some
+	 * superset thereof, cannot prove this innerrel to be unique.
+	 */
+	foreach(lc, innerrel->non_unique_for_rels)
+	{
+		Relids		unique_for_rels = (Relids) lfirst(lc);
+
+		if (bms_is_subset(outerrelids, unique_for_rels))
+			return false;
+	}
+
+	/* No cached information, so try to make the proof. */
+	if (is_innerrel_unique_for(root, joinrelids, outerrelids, innerrel,
+							   jointype, restrictlist))
+	{
+		/*
+		 * Cache the positive result for future probes, being sure to keep it
+		 * in the planner_cxt even if we are working in GEQO.
+		 *
+		 * Note: one might consider trying to isolate the minimal subset of
+		 * the outerrels that proved the innerrel unique.  But it's not worth
+		 * the trouble, because the planner builds up joinrels incrementally
+		 * and so we'll see the minimally sufficient outerrels before any
+		 * supersets of them anyway.
+		 */
+		old_context = MemoryContextSwitchTo(root->planner_cxt);
+		innerrel->unique_for_rels = lappend(innerrel->unique_for_rels,
+											bms_copy(outerrelids));
+		MemoryContextSwitchTo(old_context);
+
+		return true;			/* Success! */
+	}
+	else
+	{
+		/*
+		 * None of the join conditions for outerrel proved innerrel unique, so
+		 * we can safely reject this outerrel or any subset of it in future
+		 * checks.
+		 *
+		 * However, in normal planning mode, caching this knowledge is totally
+		 * pointless; it won't be queried again, because we build up joinrels
+		 * from smaller to larger.  It is useful in GEQO mode, where the
+		 * knowledge can be carried across successive planning attempts; and
+		 * it's likely to be useful when using join-search plugins, too. Hence
+		 * cache when join_search_private is non-NULL.  (Yeah, that's a hack,
+		 * but it seems reasonable.)
+		 *
+		 * Also, allow callers to override that heuristic and force caching;
+		 * that's useful for reduce_unique_semijoins, which calls here before
+		 * the normal join search starts.
+		 */
+		if (force_cache || root->join_search_private)
+		{
+			old_context = MemoryContextSwitchTo(root->planner_cxt);
+			innerrel->non_unique_for_rels =
+				lappend(innerrel->non_unique_for_rels,
+						bms_copy(outerrelids));
+			MemoryContextSwitchTo(old_context);
+		}
+
+		return false;
+	}
+}
+
+/*
+ * is_innerrel_unique_for
+ *	  Check if the innerrel provably contains at most one tuple matching any
+ *	  tuple from the outerrel, based on join clauses in the 'restrictlist'.
+ */
+static bool
+is_innerrel_unique_for(PlannerInfo *root,
+					   Relids joinrelids,
+					   Relids outerrelids,
+					   RelOptInfo *innerrel,
+					   JoinType jointype,
+					   List *restrictlist)
+{
+	List	   *clause_list = NIL;
+	ListCell   *lc;
+
+	/*
+	 * Search for mergejoinable clauses that constrain the inner rel against
+	 * the outer rel.  If an operator is mergejoinable then it behaves like
+	 * equality for some btree opclass, so it's what we want.  The
+	 * mergejoinability test also eliminates clauses containing volatile
+	 * functions, which we couldn't depend on.
+	 */
+	foreach(lc, restrictlist)
+	{
+		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(lc);
+
+		/*
+		 * As noted above, if it's a pushed-down clause and we're at an outer
+		 * join, we can't use it.
+		 */
+		if (IS_OUTER_JOIN(jointype) &&
+			RINFO_IS_PUSHED_DOWN(restrictinfo, joinrelids))
+			continue;
+
+		/* Ignore if it's not a mergejoinable clause */
+		if (!restrictinfo->can_join ||
+			restrictinfo->mergeopfamilies == NIL)
+			continue;			/* not mergejoinable */
+
+		/*
+		 * Check if clause has the form "outer op inner" or "inner op outer",
+		 * and if so mark which side is inner.
+		 */
+		if (!clause_sides_match_join(restrictinfo, outerrelids,
+									 innerrel->relids))
+			continue;			/* no good for these input relations */
+
+		/* OK, add to list */
+		clause_list = lappend(clause_list, restrictinfo);
+	}
+
+	/* Let rel_is_distinct_for() do the hard work */
+	return rel_is_distinct_for(root, innerrel, clause_list);
 }

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -34,25 +34,21 @@ ExceptionalCondition(const char *conditionName,
 					 int lineNumber)
 {
     /* CDB: Try to tell the QD or client what happened. */
-    if (errstart(FATAL, fileName, lineNumber, NULL,TEXTDOMAIN))
-    {
-		if (!PointerIsValid(conditionName)
-			|| !PointerIsValid(fileName)
-			|| !PointerIsValid(errorType))
-			errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-					  errFatalReturn(gp_reraise_signal),
-					  errmsg("TRAP: ExceptionalCondition: bad arguments"));
-		else
-			errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-					  errFatalReturn(gp_reraise_signal),
-					  errmsg("Unexpected internal error"),
-					  errdetail("%s(\"%s\", File: \"%s\", Line: %d)\n",
-								errorType, conditionName, fileName, lineNumber)
-				);
+	if (!PointerIsValid(conditionName)
+		|| !PointerIsValid(fileName)
+		|| !PointerIsValid(errorType))
+		ereport(FATAL,
+				errFatalReturn(gp_reraise_signal),
+				errmsg("TRAP: ExceptionalCondition: bad arguments"));
+	else
+		ereport(FATAL,
+				errFatalReturn(gp_reraise_signal),
+				errmsg("Unexpected internal error"),
+				errdetail("%s(\"%s\", File: \"%s\", Line: %d)\n",
+						  errorType, conditionName, fileName, lineNumber));
 				
-		/* Usually this shouldn't be needed, but make sure the msg went out */
-		fflush(stderr);
-	}
+	/* Usually this shouldn't be needed, but make sure the msg went out */
+	fflush(stderr);
 
 #ifdef SLEEP_ON_ASSERT
 

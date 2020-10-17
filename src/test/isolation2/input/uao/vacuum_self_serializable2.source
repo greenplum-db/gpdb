@@ -2,8 +2,8 @@
 -- 
 DROP TABLE IF EXISTS ao;
 DROP TABLE IF EXISTS ao2;
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
-CREATE TABLE ao2 (a INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
+CREATE TABLE ao2 (a INT) USING @amname@;
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
 
 DELETE FROM ao WHERE a <= 30;

@@ -3,19 +3,19 @@
  * relfilenodemap.c
  *	  relfilenode to oid mapping cache.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  src/backend/utils/cache/relfilenode.c
+ *	  src/backend/utils/cache/relfilenodemap.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/htup_details.h"
+#include "access/table.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_tablespace.h"
@@ -29,7 +29,7 @@
 #include "utils/relfilenodemap.h"
 #include "utils/relmapper.h"
 
-/* Hash table for informations about each relfilenode <-> oid pair */
+/* Hash table for information about each relfilenode <-> oid pair */
 static HTAB *RelfilenodeMapHash = NULL;
 
 /* built first time through in InitializeRelfilenodeMap */
@@ -68,9 +68,9 @@ RelfilenodeMapInvalidateCallback(Datum arg, Oid relid)
 		 * all entries, otherwise just remove the specific relation's entry.
 		 * Always remove negative cache entries.
 		 */
-		if (relid == InvalidOid ||		/* complete reset */
-			entry->relid == InvalidOid ||		/* negative cache entry */
-			entry->relid == relid)		/* individual flushed relation */
+		if (relid == InvalidOid ||	/* complete reset */
+			entry->relid == InvalidOid ||	/* negative cache entry */
+			entry->relid == relid)	/* individual flushed relation */
 		{
 			if (hash_search(RelfilenodeMapHash,
 							(void *) &entry->key,
@@ -192,7 +192,7 @@ RelidByRelfilenode(Oid reltablespace, Oid relfilenode)
 		 */
 
 		/* check for plain relations by looking in pg_class */
-		relation = heap_open(RelationRelationId, AccessShareLock);
+		relation = table_open(RelationRelationId, AccessShareLock);
 
 		/* copy scankey to local copy, it will be modified during the scan */
 		memcpy(skey, relfilenode_skey, sizeof(skey));
@@ -212,33 +212,21 @@ RelidByRelfilenode(Oid reltablespace, Oid relfilenode)
 
 		while (HeapTupleIsValid(ntp = systable_getnext(scandesc)))
 		{
+			Form_pg_class classform = (Form_pg_class) GETSTRUCT(ntp);
+
 			if (found)
 				elog(ERROR,
 					 "unexpected duplicate for tablespace %u, relfilenode %u",
 					 reltablespace, relfilenode);
 			found = true;
 
-#ifdef USE_ASSERT_CHECKING
-			{
-				bool		isnull;
-				Oid			check;
-
-				check = fastgetattr(ntp, Anum_pg_class_reltablespace,
-									RelationGetDescr(relation),
-									&isnull);
-				Assert(!isnull && check == reltablespace);
-
-				check = fastgetattr(ntp, Anum_pg_class_relfilenode,
-									RelationGetDescr(relation),
-									&isnull);
-				Assert(!isnull && check == relfilenode);
-			}
-#endif
-			relid = HeapTupleGetOid(ntp);
+			Assert(classform->reltablespace == reltablespace);
+			Assert(classform->relfilenode == relfilenode);
+			relid = classform->oid;
 		}
 
 		systable_endscan(scandesc);
-		heap_close(relation, AccessShareLock);
+		table_close(relation, AccessShareLock);
 
 		/* check for tables that are mapped but not shared */
 		if (!found)

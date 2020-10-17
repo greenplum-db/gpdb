@@ -1,20 +1,32 @@
 SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
-         name         | setting 
-----------------------+---------
- enable_bitmapscan    | on
- enable_groupagg      | on
- enable_hashagg       | on
- enable_hashjoin      | on
- enable_indexonlyscan | on
- enable_indexscan     | on
- enable_material      | on
- enable_mergejoin     | off
- enable_nestloop      | off
- enable_seqscan       | on
- enable_sort          | on
- enable_tidscan       | on
-(12 rows)
+              name              | setting 
+--------------------------------+---------
+ enable_bitmapscan              | on
+ enable_gathermerge             | on
+ enable_groupagg                | on
+ enable_groupingsets_hash_disk  | off
+ enable_hashagg                 | on
+ enable_hashagg_disk            | on
+ enable_hashjoin                | on
+ enable_indexonlyscan           | on
+ enable_indexscan               | on
+ enable_material                | on
+ enable_mergejoin               | off
+ enable_nestloop                | off
+ enable_parallel_append         | on
+ enable_parallel_hash           | on
+ enable_partition_pruning       | on
+ enable_partitionwise_aggregate | off
+ enable_partitionwise_join      | off
+ enable_seqscan                 | on
+ enable_sort                    | on
+ enable_tidscan                 | on
+(20 rows)
 
+-- start_ignore
+create schema rangefuncs_cdb;
+set search_path to rangefuncs_cdb, public;
+-- end_ignore
 DROP TABLE IF EXISTS foo;
 NOTICE:  table "foo" does not exist, skipping
 CREATE TABLE foo(
@@ -812,7 +824,7 @@ SELECT dup(22);
 (1 row)
 
 SELECT dup('xyz');	-- fails
-ERROR:  could not determine polymorphic type because input has type "unknown"
+ERROR:  could not determine polymorphic type because input has type unknown
 SELECT dup('xyz'::text);
         dup        
 -------------------

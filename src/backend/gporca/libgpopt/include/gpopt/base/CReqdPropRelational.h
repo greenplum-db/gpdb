@@ -18,102 +18,91 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// forward declaration
-	class CExpression;
-	class CExpressionHandle;
-	class CColRefSet;
+// forward declaration
+class CExpression;
+class CExpressionHandle;
+class CColRefSet;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CReqdPropRelational
-	//
-	//	@doc:
-	//		Required relational properties container.
-	//
-	//---------------------------------------------------------------------------
-	class CReqdPropRelational : public CReqdProp
+//---------------------------------------------------------------------------
+//	@class:
+//		CReqdPropRelational
+//
+//	@doc:
+//		Required relational properties container.
+//
+//---------------------------------------------------------------------------
+class CReqdPropRelational : public CReqdProp
+{
+private:
+	// required stat columns
+	CColRefSet *m_pcrsStat;
+
+	// predicate on partition key
+	CExpression *m_pexprPartPred;
+
+	// private copy ctor
+	CReqdPropRelational(const CReqdPropRelational &);
+
+public:
+	// default ctor
+	CReqdPropRelational();
+
+	// ctor
+	explicit CReqdPropRelational(CColRefSet *pcrs);
+
+	// ctor
+	CReqdPropRelational(CColRefSet *pcrs, CExpression *pexprPartPred);
+
+	// dtor
+	virtual ~CReqdPropRelational();
+
+	// type of properties
+	virtual BOOL
+	FRelational() const
 	{
+		GPOS_ASSERT(!FPlan());
+		return true;
+	}
 
-		private:
+	// stat columns accessor
+	CColRefSet *
+	PcrsStat() const
+	{
+		return m_pcrsStat;
+	}
 
-			// required stat columns
-			CColRefSet *m_pcrsStat;
+	// partition predicate accessor
+	CExpression *
+	PexprPartPred() const
+	{
+		return m_pexprPartPred;
+	}
 
-			// predicate on partition key
-			CExpression *m_pexprPartPred;
+	// required properties computation function
+	virtual void Compute(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdProp *prpInput, ULONG child_index,
+						 CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
 
-			// private copy ctor
-			CReqdPropRelational(const CReqdPropRelational &);
+	// return difference from given properties
+	CReqdPropRelational *PrprelDifference(CMemoryPool *mp,
+										  CReqdPropRelational *prprel);
 
-		public:
+	// return true if property container is empty
+	BOOL IsEmpty() const;
 
-			// default ctor
-			CReqdPropRelational();
+	// shorthand for conversion
+	static CReqdPropRelational *GetReqdRelationalProps(CReqdProp *prp);
 
-			// ctor
-			explicit
-			CReqdPropRelational(CColRefSet *pcrs);
+	// print function
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// ctor
-			CReqdPropRelational(CColRefSet *pcrs, CExpression *pexprPartPred);
+};	// class CReqdPropRelational
 
-			// dtor
-			virtual
-			~CReqdPropRelational();
-
-			// type of properties
-			virtual
-			BOOL FRelational() const
-			{
-				GPOS_ASSERT(!FPlan());
-				return true;
-			}
-
-			// stat columns accessor
-			CColRefSet *PcrsStat() const
-			{
-				return m_pcrsStat;
-			}
-
-			// partition predicate accessor
-			CExpression *PexprPartPred() const
-			{
-				return m_pexprPartPred;
-			}
-
-			// required properties computation function
-			virtual
-			void Compute
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CReqdProp *prpInput,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				);
-
-			// return difference from given properties
-			CReqdPropRelational *PrprelDifference(CMemoryPool *mp, CReqdPropRelational *prprel);
-
-			// return true if property container is empty
-			BOOL IsEmpty() const;
-
-			// shorthand for conversion
-			static
-			CReqdPropRelational *GetReqdRelationalProps(CReqdProp *prp);
-
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
-
-	}; // class CReqdPropRelational
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CReqdPropRelational_H
+#endif	// !GPOPT_CReqdPropRelational_H
 
 // EOF

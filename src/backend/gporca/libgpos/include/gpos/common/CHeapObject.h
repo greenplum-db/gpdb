@@ -2,7 +2,7 @@
 //	Greenplum Database
 //	Copyright (C) 2011 EMC Corp.
 //
-//	@filename: 
+//	@filename:
 //		CHeapObject.h
 //
 //	@doc:
@@ -15,25 +15,22 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CHeapObject
-	//
-	//	@doc:
-	//		Constructor tests stack layout to ensure object is not allocated on stack;
-	//		constructor is protected to prevent direct instantiation of class;
-	//
-	//---------------------------------------------------------------------------
-	class CHeapObject
-	{
-		protected:
+//---------------------------------------------------------------------------
+//	@class:
+//		CHeapObject
+//
+//	@doc:
+//		Constructor tests stack layout to ensure object is not allocated on stack;
+//		constructor is protected to prevent direct instantiation of class;
+//
+//---------------------------------------------------------------------------
+class CHeapObject
+{
+protected:
+	CHeapObject();
+};
+}  // namespace gpos
 
-			CHeapObject();
-
-	};
-}
-
-#endif // !GPOS_CHeapObject_H
+#endif	// !GPOS_CHeapObject_H
 
 // EOF
-

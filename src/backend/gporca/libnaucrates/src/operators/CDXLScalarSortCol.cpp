@@ -27,20 +27,15 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLScalarSortCol::CDXLScalarSortCol
-	(
-	CMemoryPool *mp,
-	ULONG colid,
-	IMDId *mdid_sort_op,
-	CWStringConst *sort_op_name_str,
-	BOOL sort_nulls_first
-	)
-	:
-	CDXLScalar(mp),
-	m_colid(colid),
-	m_mdid_sort_op(mdid_sort_op),
-	m_sort_op_name_str(sort_op_name_str),
-	m_must_sort_nulls_first(sort_nulls_first)
+CDXLScalarSortCol::CDXLScalarSortCol(CMemoryPool *mp, ULONG colid,
+									 IMDId *mdid_sort_op,
+									 CWStringConst *sort_op_name_str,
+									 BOOL sort_nulls_first)
+	: CDXLScalar(mp),
+	  m_colid(colid),
+	  m_mdid_sort_op(mdid_sort_op),
+	  m_sort_op_name_str(sort_op_name_str),
+	  m_must_sort_nulls_first(sort_nulls_first)
 {
 	GPOS_ASSERT(m_mdid_sort_op->IsValid());
 }
@@ -139,21 +134,25 @@ CDXLScalarSortCol::IsSortedNullsFirst() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarSortCol::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *// dxlnode
-	)
-	const
+CDXLScalarSortCol::SerializeToDXL(CXMLSerializer *xml_serializer,
+								  const CDXLNode *	// dxlnode
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId), m_colid);
-	m_mdid_sort_op->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenSortOpId));	
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenSortOpName), m_sort_op_name_str);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenSortNullsFirst), m_must_sort_nulls_first);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId),
+								 m_colid);
+	m_mdid_sort_op->Serialize(xml_serializer,
+							  CDXLTokens::GetDXLTokenStr(EdxltokenSortOpId));
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenSortOpName), m_sort_op_name_str);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenSortNullsFirst),
+		m_must_sort_nulls_first);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -162,20 +161,17 @@ CDXLScalarSortCol::SerializeToDXL
 //		CDXLScalarSortCol::AssertValid
 //
 //	@doc:
-//		Checks whether operator node is well-structured 
+//		Checks whether operator node is well-structured
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarSortCol::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL // validate_children
-	) 
-	const
+CDXLScalarSortCol::AssertValid(const CDXLNode *dxlnode,
+							   BOOL	 // validate_children
+) const
 {
 	GPOS_ASSERT(0 == dxlnode->Arity());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 
 // EOF

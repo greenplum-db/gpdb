@@ -16,9 +16,12 @@
 
 #include "nodes/execnodes.h"
 
+/* GPDB_12_MERGE_FIXME */
+#if 0
 extern DynamicBitmapIndexScanState *ExecInitDynamicBitmapIndexScan(DynamicBitmapIndexScan *node, EState *estate, int eflags);
 extern Node *MultiExecDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecReScanDynamicBitmapIndex(DynamicBitmapIndexScanState *node);
+#endif
 
 #endif   /* NODEDYNAMICBITMAPINDEXSCAN_H */

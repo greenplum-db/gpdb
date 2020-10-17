@@ -2,7 +2,7 @@ create schema sisc_sort_spill;
 set search_path to sisc_sort_spill;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- set workfile is created to true if all segment did it.
@@ -26,7 +26,7 @@ for i in range(len(rv)):
         result.append(cur_row)
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 create table testsisc (i1 int, i2 int, i3 int, i4 int);
 insert into testsisc select i, i % 1000, i % 100000, i % 75 from
@@ -40,7 +40,6 @@ set gp_cte_sharing=on;
 -- a Sort that spills.
 set optimizer=off;
 
-set gp_enable_mk_sort=on;
 select avg(i3) from (
   with ctesisc as (select * from testsisc order by i2)
   select t1.i3, t2.i2
@@ -62,7 +61,6 @@ select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)
 limit 50000;');
 
 
-set gp_enable_mk_sort=off;
 select avg(i3) from (
   with ctesisc as (select * from testsisc order by i2)
   select t1.i3, t2.i2

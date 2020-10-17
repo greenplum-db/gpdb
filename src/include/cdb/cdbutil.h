@@ -17,7 +17,7 @@
 #ifndef CDBUTIL_H
 #define CDBUTIL_H
 
-#include "catalog/gp_segment_config.h"
+#include "catalog/gp_segment_configuration.h"
 #include "nodes/pg_list.h"
 #include "nodes/plannodes.h"
 

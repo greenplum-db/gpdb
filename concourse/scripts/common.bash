@@ -31,7 +31,7 @@ function configure() {
       # The full set of configure options which were used for building the
       # tree must be used here as well since the toplevel Makefile depends
       # on these options for deciding what to test. Since we don't ship
-      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca --with-openssl ${CONFIGURE_FLAGS}
+      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python PYTHON=python3 --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca --with-openssl ${CONFIGURE_FLAGS}
 
   popd
 }
@@ -57,19 +57,17 @@ function make_cluster() {
 
       delta=-3000
 
-      psql -tqA -d postgres -P pager=off -F ' ' \
-          -c "select dbid, content, port+\$delta as port, address from gp_segment_configuration order by 1" \
-      | while read -r dbid content port addr; do
-          ip=127.0.0.1
-          echo "\$dbid:\$content:\$ip:\$port"
-        done \
-      | paste -sd, - \
-      | xargs -rI'{}' gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"
+      psql -tqA -d postgres -P pager=off -F: -R, \
+          -c "select dbid, content, address, port+\$delta as port
+                from gp_segment_configuration
+               order by 1" \
+      | xargs -rI'{}' \
+        gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"
 
       # also have to enlarge gp_interconnect_tcp_listener_backlog
       gpconfig -c gp_interconnect_tcp_listener_backlog -v 1024
 
-      gpstop -raqi
+      gpstop -u
 EOF
   fi
 
@@ -87,7 +85,7 @@ function install_python_requirements_on_single_host() {
     local requirements_txt="$1"
 
     export PIP_CACHE_DIR=${PWD}/pip-cache-dir
-    pip --retries 10 install -r ${requirements_txt}
+    pip3 --retries 10 install -r ${requirements_txt}
 }
 
 function install_python_requirements_on_multi_host() {
@@ -99,10 +97,10 @@ function install_python_requirements_on_multi_host() {
     # Set PIP Download cache directory
     export PIP_CACHE_DIR=/home/gpadmin/pip-cache-dir
 
-    pip --retries 10 install --user -r ${requirements_txt}
+    pip3 --retries 10 install --user -r ${requirements_txt}
     while read -r host; do
        scp ${requirements_txt} "$host":/tmp/requirements.txt
-       ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip --retries 10 install --user -r /tmp/requirements.txt
+       ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user -r /tmp/requirements.txt
     done < /tmp/hostfile_all
 }
 

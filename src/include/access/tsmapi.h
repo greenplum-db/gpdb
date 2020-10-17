@@ -3,7 +3,7 @@
  * tsmapi.h
  *	  API for tablesample methods
  *
- * Copyright (c) 2015-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2015-2019, PostgreSQL Global Development Group
  *
  * src/include/access/tsmapi.h
  *
@@ -13,7 +13,7 @@
 #define TSMAPI_H
 
 #include "nodes/execnodes.h"
-#include "nodes/relation.h"
+#include "nodes/pathnodes.h"
 
 
 /*
@@ -21,24 +21,25 @@
  */
 
 typedef void (*SampleScanGetSampleSize_function) (PlannerInfo *root,
-														 RelOptInfo *baserel,
-															List *paramexprs,
-														  BlockNumber *pages,
-															  double *tuples);
+												  RelOptInfo *baserel,
+												  List *paramexprs,
+												  BlockNumber *pages,
+												  double *tuples);
 
 typedef void (*InitSampleScan_function) (SampleScanState *node,
-													 int eflags);
+										 int eflags);
 
 typedef void (*BeginSampleScan_function) (SampleScanState *node,
-													  Datum *params,
-													  int nparams,
-													  uint32 seed);
+										  Datum *params,
+										  int nparams,
+										  uint32 seed);
 
-typedef BlockNumber (*NextSampleBlock_function) (SampleScanState *node);
+typedef BlockNumber (*NextSampleBlock_function) (SampleScanState *node,
+												 BlockNumber nblocks);
 
 typedef OffsetNumber (*NextSampleTuple_function) (SampleScanState *node,
-														 BlockNumber blockno,
-													 OffsetNumber maxoffset);
+												  BlockNumber blockno,
+												  OffsetNumber maxoffset);
 
 typedef void (*EndSampleScan_function) (SampleScanState *node);
 
@@ -67,15 +68,15 @@ typedef struct TsmRoutine
 	SampleScanGetSampleSize_function SampleScanGetSampleSize;
 
 	/* Functions for executing a SampleScan on a physical table */
-	InitSampleScan_function InitSampleScan;		/* can be NULL */
+	InitSampleScan_function InitSampleScan; /* can be NULL */
 	BeginSampleScan_function BeginSampleScan;
 	NextSampleBlock_function NextSampleBlock;	/* can be NULL */
 	NextSampleTuple_function NextSampleTuple;
-	EndSampleScan_function EndSampleScan;		/* can be NULL */
+	EndSampleScan_function EndSampleScan;	/* can be NULL */
 } TsmRoutine;
 
 
 /* Functions in access/tablesample/tablesample.c */
 extern TsmRoutine *GetTsmRoutine(Oid tsmhandler);
 
-#endif   /* TSMAPI_H */
+#endif							/* TSMAPI_H */

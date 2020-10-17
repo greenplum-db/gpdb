@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import threading
 import time
@@ -183,7 +183,7 @@ if __name__ == '__main__':
 
     for dml, job in jobs:
         code, message = job.stop()
-        print '{dml}: {code}, message={message}, avgtime={avgtime}, maxtime={maxtime}'.format(
+        print('{dml}: {code}, message={message}, avgtime={avgtime}, maxtime={maxtime}'.format(
             dml=dml, code=code, message=message,
             avgtime=job.avgtime, maxtime=job.maxtime
-        )
+        ))

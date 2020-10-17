@@ -1,6 +1,6 @@
 import os
 
-from gp_unittest import *
+from gppylib.test.unit.gp_unittest import *
 from gppylib.mainUtils import PIDLockFile, PIDLockHeld
 
 

@@ -27,27 +27,25 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=9007.59..9016.89 rows=413 width=16)
-   Merge Key: ((((tt.event_ts / 100000) / 5) * 5))
-   ->  Sort  (cost=9007.59..9008.63 rows=138 width=16)
-         Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
-         ->  Finalize HashAggregate  (cost=8982.42..8989.65 rows=138 width=16)
-               Group Key: ((((tt.event_ts / 100000) / 5) * 5))
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=8930.18..8976.65 rows=413 width=16)
-                     Hash Key: ((((tt.event_ts / 100000) / 5) * 5))
-                     ->  Partial HashAggregate  (cost=8930.18..8951.87 rows=413 width=16)
-                           Group Key: (((tt.event_ts / 100000) / 5) * 5)
-                           ->  Hash Join  (cost=51.61..8704.48 rows=15132 width=8)
-                                 Hash Cond: (tt.symbol = (tq.sym)::bpchar)
-                                 Join Filter: ((tt.event_ts >= tq.ets) AND (tt.event_ts < tq.end_ts))
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..23.00 rows=420 width=25)
-                                       ->  Seq Scan on my_tt_agg_small tt  (cost=0.00..6.20 rows=140 width=25)
-                                 ->  Hash  (cost=26.27..26.27 rows=676 width=20)
-                                       ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..26.27 rows=676 width=20)
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=1262.14..1293.11 rows=413 width=16)
+   Group Key: ((((tt.event_ts / 100000) / 5) * 5))
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1262.14..1279.69 rows=1239 width=16)
+         Merge Key: ((((tt.event_ts / 100000) / 5) * 5))
+         ->  Sort  (cost=1262.14..1263.17 rows=413 width=16)
+               Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
+               ->  Partial HashAggregate  (cost=1236.97..1244.19 rows=413 width=16)
+                     Group Key: (((tt.event_ts / 100000) / 5) * 5)
+                     ->  Hash Join  (cost=17.20..1161.31 rows=15131 width=8)
+                           Hash Cond: (tt.symbol = (tq.sym)::bpchar)
+                           Join Filter: ((tt.event_ts >= tq.ets) AND (tt.event_ts < tq.end_ts))
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..8.00 rows=420 width=25)
+                                 ->  Seq Scan on my_tt_agg_small tt  (cost=0.00..2.40 rows=140 width=25)
+                           ->  Hash  (cost=8.76..8.76 rows=676 width=20)
+                                 ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..8.76 rows=676 width=20)
  Optimizer: Postgres query optimizer
-(18 rows)
+(16 rows)
 
 SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin, COUNT(*)
 FROM my_tt_agg_small tt, my_tq_agg_small tq
@@ -88,20 +86,20 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-                                                               QUERY PLAN                                                                
------------------------------------------------------------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=10000021150.62..10000021550.96 rows=413 width=16)
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=10000004659.04..10000004809.69 rows=413 width=16)
    Group Key: ((((tt.event_ts / 100000) / 5) * 5))
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=10000021150.62..10000021537.54 rows=1239 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000004659.04..10000004796.27 rows=1239 width=16)
          Merge Key: ((((tt.event_ts / 100000) / 5) * 5))
-         ->  Partial GroupAggregate  (cost=10000021150.62..10000021512.76 rows=413 width=16)
+         ->  Partial GroupAggregate  (cost=10000004659.04..10000004779.75 rows=413 width=16)
                Group Key: ((((tt.event_ts / 100000) / 5) * 5))
-               ->  Sort  (cost=10000021150.62..10000021264.10 rows=15132 width=8)
+               ->  Sort  (cost=10000004659.04..10000004696.87 rows=15131 width=8)
                      Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
-                     ->  Nested Loop  (cost=10000000000.15..10000017639.35 rows=15132 width=8)
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000023.00 rows=420 width=25)
-                                 ->  Seq Scan on my_tt_agg_small tt  (cost=10000000000.00..10000000006.20 rows=140 width=25)
-                           ->  Index Scan using my_tq_agg_small_ets_end_ts_ix on my_tq_agg_small tq  (cost=0.15..12.58 rows=38 width=20)
+                     ->  Nested Loop  (cost=10000000000.15..10000003608.53 rows=15131 width=8)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000008.00 rows=420 width=25)
+                                 ->  Seq Scan on my_tt_agg_small tt  (cost=10000000000.00..10000000002.40 rows=140 width=25)
+                           ->  Index Scan using my_tq_agg_small_ets_end_ts_ix on my_tq_agg_small tq  (cost=0.15..7.93 rows=38 width=20)
                                  Index Cond: ((tt.event_ts >= ets) AND (tt.event_ts < end_ts))
                                  Filter: (tt.symbol = (sym)::bpchar)
  Optimizer: Postgres query optimizer

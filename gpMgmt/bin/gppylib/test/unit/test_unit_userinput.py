@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys, os, getpass
 import unittest
@@ -30,7 +30,7 @@ class GppylibUserInputTestCase(unittest.TestCase):
 
         GppylibUserInputTestCase.mock_get_pass_stop()
 
-        self.assertEquals(result, 'foobar')
+        self.assertEqual(result, 'foobar')
 
     def test01_verify_too_short_password(self):
         """Verify non-matching password is rejected"""
@@ -42,7 +42,7 @@ class GppylibUserInputTestCase(unittest.TestCase):
 
         GppylibUserInputTestCase.mock_get_pass_stop()
 
-        self.assertEquals(result, 'coolio')
+        self.assertEqual(result, 'coolio')
  
     def test02_verify_max_attempts(self):
         """Verify max number of attempts to get password results in failure"""
@@ -66,7 +66,7 @@ class GppylibUserInputTestCase(unittest.TestCase):
 
         GppylibUserInputTestCase.mock_get_pass_stop()
 
-        self.assertEquals(result, 'ccc')
+        self.assertEqual(result, 'ccc')
  
  
 if __name__ == "__main__":

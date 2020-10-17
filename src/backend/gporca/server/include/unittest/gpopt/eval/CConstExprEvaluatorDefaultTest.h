@@ -9,7 +9,7 @@
 //		Unit tests for CConstExprEvaluatorDefault
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -22,24 +22,24 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CConstExprEvaluatorDefaultTest
-	//
-	//	@doc:
-	//		Unit tests for CConstExprEvaluatorDefault
-	//
-	//---------------------------------------------------------------------------
-	class CConstExprEvaluatorDefaultTest
-	{
-		public:
-			// run unittests
-			static GPOS_RESULT EresUnittest();
-	};
-}
+//---------------------------------------------------------------------------
+//	@class:
+//		CConstExprEvaluatorDefaultTest
+//
+//	@doc:
+//		Unit tests for CConstExprEvaluatorDefault
+//
+//---------------------------------------------------------------------------
+class CConstExprEvaluatorDefaultTest
+{
+public:
+	// run unittests
+	static GPOS_RESULT EresUnittest();
+};
+}  // namespace gpopt
 
-#endif // !GPOPT_CConstExprEvaluatorDefaultTest_H
+#endif	// !GPOPT_CConstExprEvaluatorDefaultTest_H
 
 // EOF

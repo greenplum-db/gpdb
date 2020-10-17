@@ -97,6 +97,8 @@ commit;
 begin;
 
 -- add a little data
+-- This only needs a lock on the parent table in the QD. On the segments, where the
+-- tuple is routed to the correct partition, the partitions are locked, too.
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);

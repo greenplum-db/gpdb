@@ -97,7 +97,7 @@
                     id="image_ojd_t1m_2r"/>
                 </entry>
                 <entry>Validate that the master data directory has no extremely large files in the
-                    <codeph>pg_log</codeph> directory.</entry>
+                    <codeph>log</codeph> directory.</entry>
               </row>
               <row>
                 <entry namest="c1" nameend="c2"><p><b>Offline Pre-Expansion Tasks</b></p>

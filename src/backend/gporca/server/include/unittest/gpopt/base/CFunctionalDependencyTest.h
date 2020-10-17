@@ -15,29 +15,27 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CFunctionalDependencyTest
-	//
-	//	@doc:
-	//		Static unit tests for functional dependencies
-	//
-	//---------------------------------------------------------------------------
-	class CFunctionalDependencyTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CFunctionalDependencyTest
+//
+//	@doc:
+//		Static unit tests for functional dependencies
+//
+//---------------------------------------------------------------------------
+class CFunctionalDependencyTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
 
-		public:
+};	// class CFunctionalDependencyTest
+}  // namespace gpopt
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-
-	}; // class CFunctionalDependencyTest
-}
-
-#endif // !GPOPT_CFunctionalDependencyTest_H
+#endif	// !GPOPT_CFunctionalDependencyTest_H
 
 
 // EOF

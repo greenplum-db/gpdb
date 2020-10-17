@@ -12,6 +12,8 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres.h"
+
 #include "catalog/storage_tablespace.h"
 #include "access/twophase_storage_tablespace.h"
 

@@ -13,7 +13,6 @@
  */
 #include "postgres.h"
 
-#include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
 #include "executor/executor.h"
 #include "executor/execDynamicScan.h"

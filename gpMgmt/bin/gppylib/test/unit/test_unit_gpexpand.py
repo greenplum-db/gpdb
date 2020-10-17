@@ -1,7 +1,7 @@
 import os
 import imp
 
-from gp_unittest import *
+from .gp_unittest import *
 from mock import *
 from gparray import Segment, GpArray
 from gppylib.db.dbconn import DbURL
@@ -33,8 +33,8 @@ class GpExpand(GpTestCase):
         self.gparray = self.createGpArrayWith2Primary2Mirrors()
         self.apply_patches([
             patch('gpexpand.GpArray.initFromCatalog', return_value=self.gparray),
-            patch('__builtin__.open', mock_open(), create=True),
-            patch('__builtin__.raw_input'),
+            patch('builtins.open', mock_open(), create=True),
+            patch('builtins.input'),
             patch('gpexpand.copy.deepcopy', return_value=Mock()),
             patch('gpexpand.dbconn.query', return_value=FakeCursor()),
             patch('gpexpand.GpExpandStatus', return_value=Mock()),
@@ -51,7 +51,7 @@ class GpExpand(GpTestCase):
             patch('gpexpand.get_default_logger', return_value=self.subject.logger),
             patch('gpexpand.HeapChecksum'),
         ])
-        self.raw_input_mock = self.get_mock_from_apply_patch("raw_input")
+        self.input_mock = self.get_mock_from_apply_patch("input")
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch("getConfigurationProvider")
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.previous_master_data_directory = os.getenv('MASTER_DATA_DIRECTORY', '')
@@ -113,15 +113,15 @@ class GpExpand(GpTestCase):
     # unit tests for interview_setup()
     #
     def test_user_aborts(self):
-        self.raw_input_mock.return_value = "N"
+        self.input_mock.return_value = "N"
         with self.assertRaises(SystemExit):
             self.subject.interview_setup(self.gparray, self.options)
         self.subject.logger.info.assert_any_call("User Aborted. Exiting...")
 
     def test_nonstandard_gpArray_user_aborts(self):
-        self.raw_input_mock.side_effect = ["Y", "N"]
+        self.input_mock.side_effect = ["Y", "N"]
         self.gparray.isStandardArray = Mock(return_value=(False, ""))
-        with patch('sys.stdout', new=io.BytesIO()) as mock_stdout:
+        with patch('sys.stdout', new=io.StringIO()) as mock_stdout:
             with self.assertRaises(SystemExit):
                 self.subject.interview_setup(self.gparray, self.options)
             self.assertIn('The current system appears to be non-standard.', mock_stdout.getvalue())

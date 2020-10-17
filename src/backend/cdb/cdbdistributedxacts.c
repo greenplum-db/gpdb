@@ -43,7 +43,7 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 
 		/* build tupdesc for result tuples */
 		/* this had better match gp_distributed_xacts view in system_views.sql */
-		tupdesc = CreateTemplateTupleDesc(5, false);
+		tupdesc = CreateTemplateTupleDesc(5);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "distributed_xid",
 						   XIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "distributed_id",

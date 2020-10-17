@@ -17,287 +17,226 @@
 
 namespace gpopt
 {
+// fwd declarations
+class CDistributionSpec;
 
-	// fwd declarations
-	class CDistributionSpec;
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalSequenceProject
+//
+//	@doc:
+//		Physical Sequence Project operator
+//
+//---------------------------------------------------------------------------
+class CPhysicalSequenceProject : public CPhysical
+{
+private:
+	// partition by keys
+	CDistributionSpec *m_pds;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalSequenceProject
-	//
-	//	@doc:
-	//		Physical Sequence Project operator
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalSequenceProject : public CPhysical
+	// order specs of child window functions
+	COrderSpecArray *m_pdrgpos;
+
+	// frames of child window functions
+	CWindowFrameArray *m_pdrgpwf;
+
+	// order spec to request from child
+	COrderSpec *m_pos;
+
+	// required columns in order/frame specs
+	CColRefSet *m_pcrsRequiredLocal;
+
+	// create local order spec
+	void CreateOrderSpec(CMemoryPool *mp);
+
+	// compute local required columns
+	void ComputeRequiredLocalColumns(CMemoryPool *mp);
+
+	// private copy ctor
+	CPhysicalSequenceProject(const CPhysicalSequenceProject &);
+
+public:
+	// ctor
+	CPhysicalSequenceProject(CMemoryPool *mp, CDistributionSpec *pds,
+							 COrderSpecArray *pdrgpos,
+							 CWindowFrameArray *pdrgpwf);
+
+	// dtor
+	virtual ~CPhysicalSequenceProject();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopPhysicalSequenceProject;
+	}
 
-		private:
+	// operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPhysicalSequenceProject";
+	}
 
-			// partition by keys
-			CDistributionSpec *m_pds;
+	// partition by keys
+	CDistributionSpec *
+	Pds() const
+	{
+		return m_pds;
+	}
 
-			// order specs of child window functions
-			COrderSpecArray *m_pdrgpos;
+	// order by keys
+	COrderSpecArray *
+	Pdrgpos() const
+	{
+		return m_pdrgpos;
+	}
 
-			// frames of child window functions
-			CWindowFrameArray *m_pdrgpwf;
+	// frame specifications
+	CWindowFrameArray *
+	Pdrgpwf() const
+	{
+		return m_pdrgpwf;
+	}
 
-			// order spec to request from child
-			COrderSpec *m_pos;
+	// match function
+	virtual BOOL Matches(COperator *pop) const;
 
-			// required columns in order/frame specs
-			CColRefSet *m_pcrsRequiredLocal;
+	// hashing function
+	virtual ULONG HashValue() const;
 
-			// create local order spec
-			void CreateOrderSpec(CMemoryPool *mp);
+	// sensitivity to order of inputs
+	virtual BOOL
+	FInputOrderSensitive() const
+	{
+		return true;
+	}
 
-			// compute local required columns
-			void ComputeRequiredLocalColumns(CMemoryPool *mp);
+	//-------------------------------------------------------------------------------------
+	// Required Plan Properties
+	//-------------------------------------------------------------------------------------
 
-			// private copy ctor
-			CPhysicalSequenceProject(const CPhysicalSequenceProject &);
+	// compute required output columns of the n-th child
+	virtual CColRefSet *PcrsRequired(
+		CMemoryPool *mp, CExpressionHandle &exprhdl, CColRefSet *pcrsRequired,
+		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
 
-		public:
+	// compute required ctes of the n-th child
+	virtual CCTEReq *PcteRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  CCTEReq *pcter, ULONG child_index,
+								  CDrvdPropArray *pdrgpdpCtxt,
+								  ULONG ulOptReq) const;
 
-			// ctor
-			CPhysicalSequenceProject
-				(
-				CMemoryPool *mp,
-				CDistributionSpec *pds,
-				COrderSpecArray *pdrgpos,
-				CWindowFrameArray *pdrgpwf
-				);
+	// compute required sort order of the n-th child
+	virtual COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+									COrderSpec *posRequired, ULONG child_index,
+									CDrvdPropArray *pdrgpdpCtxt,
+									ULONG ulOptReq) const;
 
-			// dtor
-			virtual
-			~CPhysicalSequenceProject();
+	// compute required distribution of the n-th child
+	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
+										   CExpressionHandle &exprhdl,
+										   CDistributionSpec *pdsRequired,
+										   ULONG child_index,
+										   CDrvdPropArray *pdrgpdpCtxt,
+										   ULONG ulOptReq) const;
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalSequenceProject;
-			}
+	// compute required rewindability of the n-th child
+	virtual CRewindabilitySpec *PrsRequired(CMemoryPool *mp,
+											CExpressionHandle &exprhdl,
+											CRewindabilitySpec *prsRequired,
+											ULONG child_index,
+											CDrvdPropArray *pdrgpdpCtxt,
+											ULONG ulOptReq) const;
 
-			// operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPhysicalSequenceProject";
-			}
+	// compute required partition propagation of the n-th child
+	virtual CPartitionPropagationSpec *PppsRequired(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
 
-			// partition by keys
-			CDistributionSpec *Pds() const
-			{
-				return m_pds;
-			}
+	// check if required columns are included in output columns
+	virtual BOOL FProvidesReqdCols(CExpressionHandle &exprhdl,
+								   CColRefSet *pcrsRequired,
+								   ULONG ulOptReq) const;
 
-			// order by keys
-			COrderSpecArray *Pdrgpos() const
-			{
-				return m_pdrgpos;
-			}
+	//-------------------------------------------------------------------------------------
+	// Derived Plan Properties
+	//-------------------------------------------------------------------------------------
 
-			// frame specifications
-			CWindowFrameArray *Pdrgpwf() const
-			{
-				return m_pdrgpwf;
-			}
+	// derive sort order
+	virtual COrderSpec *PosDerive(CMemoryPool *mp,
+								  CExpressionHandle &exprhdl) const;
 
-			// match function
-			virtual
-			BOOL Matches(COperator *pop) const;
+	// derive distribution
+	virtual CDistributionSpec *PdsDerive(CMemoryPool *mp,
+										 CExpressionHandle &exprhdl) const;
 
-			// hashing function
-			virtual
-			ULONG HashValue() const;
+	// derive rewindability
+	virtual CRewindabilitySpec *PrsDerive(CMemoryPool *mp,
+										  CExpressionHandle &exprhdl) const;
 
-			// sensitivity to order of inputs
-			virtual
-			BOOL FInputOrderSensitive() const
-			{
-				return true;
-			}
+	// derive partition index map
+	virtual CPartIndexMap *
+	PpimDerive(CMemoryPool *,  // mp
+			   CExpressionHandle &exprhdl,
+			   CDrvdPropCtxt *	//pdpctxt
+	) const
+	{
+		return PpimPassThruOuter(exprhdl);
+	}
 
-			//-------------------------------------------------------------------------------------
-			// Required Plan Properties
-			//-------------------------------------------------------------------------------------
+	// derive partition filter map
+	virtual CPartFilterMap *
+	PpfmDerive(CMemoryPool *,  // mp
+			   CExpressionHandle &exprhdl) const
+	{
+		return PpfmPassThruOuter(exprhdl);
+	}
 
-			// compute required output columns of the n-th child
-			virtual
-			CColRefSet *PcrsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CColRefSet *pcrsRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				);
+	//-------------------------------------------------------------------------------------
+	// Enforced Properties
+	//-------------------------------------------------------------------------------------
 
-			// compute required ctes of the n-th child
-			virtual
-			CCTEReq *PcteRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CCTEReq *pcter,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				)
-				const;
+	// return order property enforcing type for this operator
+	virtual CEnfdProp::EPropEnforcingType EpetOrder(
+		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
 
-			// compute required sort order of the n-th child
-			virtual
-			COrderSpec *PosRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				COrderSpec *posRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				)
-				const;
+	// return rewindability property enforcing type for this operator
+	virtual CEnfdProp::EPropEnforcingType EpetRewindability(
+		CExpressionHandle &,		// exprhdl
+		const CEnfdRewindability *	// per
+	) const;
 
-			// compute required distribution of the n-th child
-			virtual
-			CDistributionSpec *PdsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CDistributionSpec *pdsRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				)
-				const;
+	// return true if operator passes through stats obtained from children,
+	// this is used when computing stats during costing
+	virtual BOOL
+	FPassThruStats() const
+	{
+		return false;
+	}
 
-			// compute required rewindability of the n-th child
-			virtual
-			CRewindabilitySpec *PrsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CRewindabilitySpec *prsRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				)
-				const;
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
 
-			// compute required partition propagation of the n-th child
-			virtual
-			CPartitionPropagationSpec *PppsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CPartitionPropagationSpec *pppsRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				);
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// check if required columns are included in output columns
-			virtual
-			BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired, ULONG ulOptReq) const;
+	// conversion function
+	static CPhysicalSequenceProject *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopPhysicalSequenceProject == pop->Eopid());
 
-			//-------------------------------------------------------------------------------------
-			// Derived Plan Properties
-			//-------------------------------------------------------------------------------------
+		return dynamic_cast<CPhysicalSequenceProject *>(pop);
+	}
 
-			// derive sort order
-			virtual
-			COrderSpec *PosDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+};	// class CPhysicalSequenceProject
 
-			// derive distribution
-			virtual
-			CDistributionSpec *PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+}  // namespace gpopt
 
-			// derive rewindability
-			virtual
-			CRewindabilitySpec *PrsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
-
-			// derive partition index map
-			virtual
-			CPartIndexMap *PpimDerive
-				(
-				CMemoryPool *, // mp
-				CExpressionHandle &exprhdl,
-				CDrvdPropCtxt * //pdpctxt
-				)
-				const
-			{
-				return PpimPassThruOuter(exprhdl);
-			}
-
-			// derive partition filter map
-			virtual
-			CPartFilterMap *PpfmDerive
-				(
-				CMemoryPool *, // mp
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				return PpfmPassThruOuter(exprhdl);
-			}
-
-			//-------------------------------------------------------------------------------------
-			// Enforced Properties
-			//-------------------------------------------------------------------------------------
-
-			// return order property enforcing type for this operator
-			virtual
-			CEnfdProp::EPropEnforcingType EpetOrder
-				(
-				CExpressionHandle &exprhdl,
-				const CEnfdOrder *peo
-				) const;
-
-			// return rewindability property enforcing type for this operator
-			virtual
-			CEnfdProp::EPropEnforcingType EpetRewindability
-				(
-				CExpressionHandle &, // exprhdl
-				const CEnfdRewindability * // per
-				) const;
-
-			// return true if operator passes through stats obtained from children,
-			// this is used when computing stats during costing
-			virtual
-			BOOL FPassThruStats() const
-			{
-				return false;
-			}
-
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
-
-			// conversion function
-			static
-			CPhysicalSequenceProject *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopPhysicalSequenceProject == pop->Eopid());
-
-				return dynamic_cast<CPhysicalSequenceProject*>(pop);
-			}
-
-	}; // class CPhysicalSequenceProject
-
-}
-
-#endif // !GPOPT_CPhysicalSequenceProject_H
+#endif	// !GPOPT_CPhysicalSequenceProject_H
 
 // EOF

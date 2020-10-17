@@ -8,12 +8,12 @@ set search_path to sort_spill;
 SET
 
 -- start_ignore
-create language plpythonu;
-ERROR:  language "plpythonu" already exists
+create language plpython3u;
+ERROR:  language "plpython3u" already exists
 -- end_ignore
 
 -- set workfile is created to true if all segment did it.
-create or replace function sort_spill.is_workfile_created(explain_query text) returns setof int as $$ import re query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;" rv = plpy.execute(query) nsegments = int(rv[0]['nsegments']) rv = plpy.execute(explain_query) search_text = 'Work_mem used' result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] if search_text.lower() in cur_line.lower(): p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)') m = p.match(cur_line) workfile_created = int(m.group(2)) cur_row = int(workfile_created == nsegments) result.append(cur_row) return result $$ language plpythonu;
+create or replace function sort_spill.is_workfile_created(explain_query text) returns setof int as $$ import re query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;" rv = plpy.execute(query) nsegments = int(rv[0]['nsegments']) rv = plpy.execute(explain_query) search_text = 'Work_mem used' result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] if search_text.lower() in cur_line.lower(): p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)') m = p.match(cur_line) workfile_created = int(m.group(2)) cur_row = int(workfile_created == nsegments) result.append(cur_row) return result $$ language plpython3u;
 CREATE
 
 

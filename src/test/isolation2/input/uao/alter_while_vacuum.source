@@ -1,11 +1,11 @@
 -- @Description Ensures that an alter table while a vacuum operation is ok
 -- 
-CREATE TABLE alter_while_vacuum_@orientation@ (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
-INSERT INTO alter_while_vacuum_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+CREATE TABLE alter_while_vacuum_@amname@ (a INT, b INT) USING @amname@;
+INSERT INTO alter_while_vacuum_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
 
-DELETE FROM alter_while_vacuum_@orientation@ WHERE a < 12000;
-1: SELECT COUNT(*) FROM alter_while_vacuum_@orientation@;
-1>: ALTER TABLE alter_while_vacuum_@orientation@ ADD COLUMN d bigint DEFAULT 10;
-2: VACUUM alter_while_vacuum_@orientation@;
+DELETE FROM alter_while_vacuum_@amname@ WHERE a < 12000;
+1: SELECT COUNT(*) FROM alter_while_vacuum_@amname@;
+1>: ALTER TABLE alter_while_vacuum_@amname@ ADD COLUMN d bigint DEFAULT 10;
+2: VACUUM alter_while_vacuum_@amname@;
 1<:
-1: SELECT * FROM alter_while_vacuum_@orientation@ WHERE a < 12010;
+1: SELECT * FROM alter_while_vacuum_@amname@ WHERE a < 12010;

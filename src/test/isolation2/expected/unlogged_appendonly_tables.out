@@ -1,7 +1,3 @@
--- helpers:
-include: helpers/server_helpers.sql;
-CREATE
-
 -- expect: create table succeeds
 create unlogged table unlogged_appendonly_table_managers ( id int, name text ) with ( appendonly=true ) distributed by (id);
 CREATE

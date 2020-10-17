@@ -10,10 +10,6 @@
 #ifndef STORAGE_TABLESPACE_H
 #define STORAGE_TABLESPACE_H
 
-
-#include "postgres.h"
-
-
 extern void TablespaceStorageInit(void (*unlink_tablespace_dir)(Oid tablespace_dir, bool isRedo));
 
 extern void ScheduleTablespaceDirectoryDeletionForAbort(Oid tablespaceoid);
@@ -26,8 +22,6 @@ extern void UnscheduleTablespaceDirectoryDeletionForCommit(void);
 extern Oid GetPendingTablespaceForDeletionForCommit(void);
 extern void DoPendingTablespaceDeletionForCommit(void);
 
-
 extern void DoTablespaceDeletionForRedoXlog(Oid tablespace_oid_to_delete);
 
-
-#endif // STORAGE_TABLESPACE_H
+#endif	/* STORAGE_TABLESPACE_H */

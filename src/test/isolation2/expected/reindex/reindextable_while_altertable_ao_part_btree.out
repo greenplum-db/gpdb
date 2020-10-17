@@ -68,9 +68,8 @@ SET
 --------------------------------------------------------------+-----------------------
  reindex_crtabforalter_part_ao_btree_1_prt_sales_aug13_id_idx | 1                     
  reindex_crtabforalter_part_ao_btree_1_prt_sales_jul13_id_idx | 1                     
- reindex_crtabforalter_part_ao_btree_id_idx                   | 1                     
  reindex_crtabforalter_part_ao_btree_1_prt_sales_sep13_id_idx | 1                     
-(4 rows)
+(3 rows)
 
 3: select count(*) from pg_attribute where attname = 'amt' and attrelid = (select oid from pg_class where relname = 'reindex_crtabforalter_part_ao_btree');
  count 

@@ -8,8 +8,6 @@
 
 -- Check that are starting with a clean slate, standby must be in sync
 -- with master.
-include: helpers/server_helpers.sql;
-CREATE
 
 select application_name, state from pg_stat_replication;
  application_name | state     
@@ -26,7 +24,7 @@ select gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid) from gp_segm
 
 begin;
 BEGIN
-create or replace function wait_for_pg_stat_activity(timeout_secs int) returns void as $$ declare c int; /* in func */ i int; /* in func */ begin c := 0; /* in func */ i := 0; /* in func */ while c < 1 and i < timeout_secs*2 loop select count(*) into c from pg_stat_activity where wait_event_type = 'Replication'; /* in func */ perform pg_sleep(0.5); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ if c < 1 then raise exception 'timeout waiting for command to get blocked'; /* in func */ end if; /* in func */ end; /* in func */ $$ language plpgsql;
+create or replace function wait_for_pg_stat_activity(timeout_secs int) returns void as $$ declare c int; /* in func */ i int; /* in func */ begin c := 0; /* in func */ i := 0; /* in func */ while c < 1 and i < timeout_secs*2 loop select count(*) into c from pg_stat_activity where wait_event = 'SyncRep'; /* in func */ perform pg_sleep(0.5); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ if c < 1 then raise exception 'timeout waiting for command to get blocked'; /* in func */ end if; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
 
 -- Flush WAL to trigger the fault on standby.
@@ -50,10 +48,10 @@ select wait_for_pg_stat_activity(60);
 ---------------------------
                            
 (1 row)
-select datname, wait_event_type, query from pg_stat_activity where wait_event_type = 'Replication';
- datname        | wait_event_type | query                                                                  
-----------------+-----------------+------------------------------------------------------------------------
- isolation2test | Replication     | create table commit_blocking_on_standby_t1 (a int) distributed by (a); 
+select datname, wait_event, query from pg_stat_activity where wait_event = 'SyncRep';
+ datname        | wait_event | query                                                                  
+----------------+------------+------------------------------------------------------------------------
+ isolation2test | SyncRep    | create table commit_blocking_on_standby_t1 (a int) distributed by (a); 
 (1 row)
 
 select gp_inject_fault('walrecv_skip_flush', 'reset', dbid) from gp_segment_configuration where content=-1 and role='m';
@@ -111,8 +109,8 @@ select pg_terminate_backend(pid) from pg_stat_replication;
 (1 row)
 
 -- Should be set to 1 WAL segment by default.  Standby is considered
--- caught up if its flush_location is less than 1 WAL segment (64MB)
--- away from sent_location.
+-- caught up if its flush_lsn is less than 1 WAL segment (64MB)
+-- away from sent_lsn.
 show repl_catchup_within_range;
  repl_catchup_within_range 
 ---------------------------
@@ -163,7 +161,7 @@ select gp_inject_fault('wal_sender_loop', 'reset', dbid) from gp_segment_configu
 
 -- Once this fault is triggered, WAL sender should have set
 -- caughtup_within_range to true because difference between
--- sent_location and flush_location is within 1 WAL segment (64) MB.
+-- sent_lsn and flush_lsn is within 1 WAL segment (64) MB.
 select gp_wait_until_triggered_fault( 'wal_sender_after_caughtup_within_range', 1, dbid) from gp_segment_configuration where content=-1 and role='p';
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -180,10 +178,10 @@ select wait_for_pg_stat_activity(60);
 ---------------------------
                            
 (1 row)
-select datname, wait_event_type, query from pg_stat_activity where wait_event_type = 'Replication';
- datname        | wait_event_type | query                                                                  
-----------------+-----------------+------------------------------------------------------------------------
- isolation2test | Replication     | create table commit_blocking_on_standby_t2 (a int) distributed by (a); 
+select datname, wait_event, query from pg_stat_activity where wait_event = 'SyncRep';
+ datname        | wait_event | query                                                                  
+----------------+------------+------------------------------------------------------------------------
+ isolation2test | SyncRep    | create table commit_blocking_on_standby_t2 (a int) distributed by (a); 
 (1 row)
 
 -- Reset faults on primary as well as mirror.

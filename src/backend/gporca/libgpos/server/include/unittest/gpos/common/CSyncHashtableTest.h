@@ -23,183 +23,141 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CSyncHashtableTest
+//
+//	@doc:
+//		Wrapper class to avoid compiler confusion about template parameters
+//		Contains also unittests for accessor class
+//
+//---------------------------------------------------------------------------
+class CSyncHashtableTest
+{
+	// prototypes
+	struct SElem;
+
+private:
+	// types used by testing functions
+	typedef CSyncHashtable<SElem, ULONG> SElemHashtable;
+
+	typedef CSyncHashtableAccessByKey<SElem, ULONG> SElemHashtableAccessor;
+
+	typedef CSyncHashtableIter<SElem, ULONG> SElemHashtableIter;
+
+	typedef CSyncHashtableAccessByIter<SElem, ULONG> SElemHashtableIterAccessor;
+
+	// function pointer to a hash table task
+	typedef void *(*pfuncHashtableTask)(void *);
 
 	//---------------------------------------------------------------------------
 	//	@class:
-	//		CSyncHashtableTest
+	//		SElem
 	//
 	//	@doc:
-	//		Wrapper class to avoid compiler confusion about template parameters
-	//		Contains also unittests for accessor class
+	//		Local class for hashtable tests;
 	//
 	//---------------------------------------------------------------------------
-	class CSyncHashtableTest
+	struct SElem
 	{
+	private:
+		// element's unique id
+		ULONG m_id;
 
-		// prototypes
-		struct SElem;
+	public:
+		// generic link
+		SLink m_link;
 
-		private:
+		// hash key
+		ULONG m_ulKey;
 
-			// types used by testing functions
-			typedef CSyncHashtable<SElem, ULONG>
-				SElemHashtable;
+		// invalid key
+		static const ULONG m_ulInvalid;
 
-			typedef CSyncHashtableAccessByKey<SElem, ULONG>
-				SElemHashtableAccessor;
+		// invalid element
+		static const SElem m_elemInvalid;
 
-			typedef CSyncHashtableIter<SElem, ULONG>
-				SElemHashtableIter;
+		// simple hash function
+		static ULONG
+		HashValue(const ULONG &ul)
+		{
+			return ul;
+		}
 
-			typedef CSyncHashtableAccessByIter<SElem, ULONG>
-				SElemHashtableIterAccessor;
+		static ULONG
+		HashValue(const SElem &elem)
+		{
+			return elem.m_id;
+		}
 
-			// function pointer to a hash table task
-			typedef void * (*pfuncHashtableTask)(void *);
+		// equality for object-based comparison
+		BOOL
+		operator==(const SElem &elem) const
+		{
+			return elem.m_id == m_id;
+		}
 
-			//---------------------------------------------------------------------------
-			//	@class:
-			//		SElem
-			//
-			//	@doc:
-			//		Local class for hashtable tests;
-			//
-			//---------------------------------------------------------------------------
-			struct SElem
-			{
+		// key equality function for hashtable
+		static BOOL
+		FEqualKeys(const ULONG &ulkey, const ULONG &ulkeyOther)
+		{
+			return ulkey == ulkeyOther;
+		}
 
-				private:
+		// element equality function for hashtable
+		static BOOL
+		Equals(const SElem &elem, const SElem &elemOther)
+		{
+			return elem == elemOther;
+		}
 
-					// element's unique id
-					ULONG m_id;
+		// ctor
+		SElem(ULONG id, ULONG ulKey) : m_id(id), m_ulKey(ulKey)
+		{
+		}
 
-				public:
+		// copy ctor
+		SElem(const SElem &elem)
+		{
+			m_id = elem.m_id;
+			m_ulKey = elem.m_ulKey;
+		}
 
-					// generic link
-					SLink m_link;
-
-					// hash key
-					ULONG m_ulKey;
-
-					// invalid key
-					static
-					const ULONG m_ulInvalid;
-
-					// invalid element
-					static
-					const SElem m_elemInvalid;
-
-					// simple hash function
-					static ULONG HashValue
-						(
-						const ULONG &ul
-						)
-					{
-						return ul;
-					}
-
-					static ULONG HashValue
-						(
-						const SElem &elem
-						)
-					{
-						return elem.m_id;
-					}
-
-					// equality for object-based comparison
-					BOOL operator ==
-						(
-						const SElem &elem
-						)
-						const
-					{
-						return elem.m_id == m_id;
-					}
-
-					// key equality function for hashtable
-					static
-					BOOL FEqualKeys
-						(
-						const ULONG &ulkey,
-						const ULONG &ulkeyOther
-						)
-					{
-						return ulkey == ulkeyOther;
-					}
-
-					// element equality function for hashtable
-					static
-					BOOL Equals
-						(
-						const SElem &elem,
-						const SElem &elemOther
-						)
-					{
-						return elem == elemOther;
-					}
-
-					// ctor
-					SElem
-						(
-						ULONG id,
-						ULONG ulKey
-						)
-						:
-						m_id(id),
-						m_ulKey(ulKey)
-					{
-					}
-					
-					// copy ctor
-					SElem
-						(
-						const SElem &elem
-						)
-					{
-						m_id = elem.m_id;
-						m_ulKey = elem.m_ulKey;
-					}
-
-					SElem& operator = (const SElem&) = default;
+		SElem &operator=(const SElem &) = default;
 
 #ifdef GPOS_DEBUG
-					static
-					BOOL IsValid
-						(
-						const ULONG &ulKey
-						)
-					{
-						return !FEqualKeys(m_ulInvalid, ulKey);
-					}
-#endif // GPOS_DEBUG
+		static BOOL
+		IsValid(const ULONG &ulKey)
+		{
+			return !FEqualKeys(m_ulInvalid, ulKey);
+		}
+#endif	// GPOS_DEBUG
 
-					// dummy ctor
-					SElem()
-					{
-					}
+		// dummy ctor
+		SElem()
+		{
+		}
 
-					// Id accessor
-					ULONG Id() const
-					{
-						return m_id;
-					}
+		// Id accessor
+		ULONG
+		Id() const
+		{
+			return m_id;
+		}
 
-			}; // struct SElem
+	};	// struct SElem
 
-		public:
+public:
+	// actual unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
+	static GPOS_RESULT EresUnittest_Accessor();
+	static GPOS_RESULT EresUnittest_ComplexEquality();
+	static GPOS_RESULT EresUnittest_SameKeyIteration();
+	static GPOS_RESULT EresUnittest_NonConcurrentIteration();
+};
+}  // namespace gpos
 
-			// actual unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-			static GPOS_RESULT EresUnittest_Accessor();
-			static GPOS_RESULT EresUnittest_ComplexEquality();
-			static GPOS_RESULT EresUnittest_SameKeyIteration();
-			static GPOS_RESULT EresUnittest_NonConcurrentIteration();
-
-	};
-}
-
-#endif // !GPOS_CSyncHashtableTest_H
+#endif	// !GPOS_CSyncHashtableTest_H
 
 // EOF
-

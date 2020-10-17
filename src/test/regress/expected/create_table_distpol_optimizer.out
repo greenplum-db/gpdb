@@ -65,10 +65,8 @@ CREATE TABLE distpol_person (
 CREATE TABLE distpol_staff_member (
   salary    int4,
   manager   name
-) INHERITS (distpol_person) WITH OIDS;
+) INHERITS (distpol_person);
 NOTICE:  table has parent, setting distribution columns to match parent table
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 select distkey from gp_distribution_policy where localoid = 'distpol_staff_member'::regclass;
  distkey 
 ---------
@@ -92,8 +90,6 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging multiple inherited definitions of column "name"
 NOTICE:  merging multiple inherited definitions of column "age"
 NOTICE:  merging multiple inherited definitions of column "location"
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 select distkey from gp_distribution_policy where localoid = 'distpol_stud_emp'::regclass;
  distkey 
 ---------

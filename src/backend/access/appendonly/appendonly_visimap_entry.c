@@ -26,8 +26,7 @@
  * after this function has been called.
  */
 void
-AppendOnlyVisimapEntry_Finish(
-							  AppendOnlyVisimapEntry *visiMapEntry)
+AppendOnlyVisimapEntry_Finish(AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 
@@ -71,8 +70,7 @@ AppendOnlyVisimapEntry_Init(
  * call to AppendOnlyVisimapEntry_Init.
  */
 void
-AppendOnlyVisimapEntry_Reset(
-							 AppendOnlyVisimapEntry *visiMapEntry)
+AppendOnlyVisimapEntry_Reset(AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 
@@ -91,8 +89,7 @@ AppendOnlyVisimapEntry_Reset(
  * Note that the firstRowNum is not the rowNum of the tuple id.
  */
 void
-AppendOnlyVisimapEntry_New(
-						   AppendOnlyVisimapEntry *visiMapEntry,
+AppendOnlyVisimapEntry_New(AppendOnlyVisimapEntry *visiMapEntry,
 						   AOTupleId *tupleId)
 {
 	Assert(visiMapEntry);
@@ -130,8 +127,7 @@ AppendOnlyVisimap_GetAttrNotNull(HeapTuple t, TupleDesc td, int attr)
 }
 
 void
-AppendOnlyVisiMapEnty_ReadData(
-							   AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize)
+AppendOnlyVisiMapEnty_ReadData(AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize)
 {
 	int			newWordCount;
 
@@ -155,11 +151,10 @@ AppendOnlyVisiMapEnty_ReadData(
 		BitmapDecompress_GetBlockCount(&decompressState);
 	if (newWordCount > 0)
 	{
-		visiMapEntry->bitmap = palloc0(
-									   offsetof(Bitmapset, words) + (newWordCount * sizeof(bitmapword)));
+		visiMapEntry->bitmap = palloc0(offsetof(Bitmapset, words) +
+									   (newWordCount * sizeof(bitmapword)));
 		visiMapEntry->bitmap->nwords = newWordCount;
-		BitmapDecompress_Decompress(
-									&decompressState,
+		BitmapDecompress_Decompress(&decompressState,
 									visiMapEntry->bitmap->words,
 									newWordCount);
 	}
@@ -262,8 +257,7 @@ AppendOnlyVisimapEntry_GetHiddenTupleCount(
 }
 
 void
-AppendOnlyVisimapEntry_WriteData(
-								 AppendOnlyVisimapEntry *visiMapEntry)
+AppendOnlyVisimapEntry_WriteData(AppendOnlyVisimapEntry *visiMapEntry)
 {
 	int			bitmapSize,
 				compressedBitmapSize;
@@ -272,15 +266,14 @@ AppendOnlyVisimapEntry_WriteData(
 	Assert(CurrentMemoryContext == visiMapEntry->memoryContext);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 
-	bitmapSize = (visiMapEntry->bitmap ? (visiMapEntry->bitmap->nwords * sizeof(uint32)) : 0);
+	bitmapSize = (visiMapEntry->bitmap ? (visiMapEntry->bitmap->nwords * sizeof(bitmapword)) : 0);
 	bitmapSize += BITMAP_COMPRESSION_HEADER_SIZE;
 
 	Assert(visiMapEntry->data);
 	Assert(APPENDONLY_VISIMAP_DATA_BUFFER_SIZE >= bitmapSize);
 	visiMapEntry->data->version = 1;
 
-	compressedBitmapSize = Bitmap_Compress(
-										   BITMAP_COMPRESSION_TYPE_DEFAULT,
+	compressedBitmapSize = Bitmap_Compress(BITMAP_COMPRESSION_TYPE_DEFAULT,
 										   (visiMapEntry->bitmap ? visiMapEntry->bitmap->words : NULL),
 										   (visiMapEntry->bitmap ? visiMapEntry->bitmap->nwords : 0),
 										   visiMapEntry->data->data,
@@ -512,15 +505,14 @@ AppendOnlyVisimapEntry_GetMinimalSizeToCover(int64 offset)
  * This function is only modifying the bitmap. The caller needs to take
  * care that change is persisted.
  */
-HTSU_Result
-AppendOnlyVisimapEntry_HideTuple(
-								 AppendOnlyVisimapEntry *visiMapEntry,
+TM_Result
+AppendOnlyVisimapEntry_HideTuple(AppendOnlyVisimapEntry *visiMapEntry,
 								 AOTupleId *tupleId)
 {
 	int64		rowNum,
 				rowNumOffset;
 	MemoryContext oldContext;
-	HTSU_Result result;
+	TM_Result result;
 
 	Assert(visiMapEntry);
 	Assert(tupleId);
@@ -553,17 +545,17 @@ AppendOnlyVisimapEntry_HideTuple(
 	if (!bms_is_member(rowNumOffset, visiMapEntry->bitmap))
 	{
 		visiMapEntry->bitmap = bms_add_member(visiMapEntry->bitmap, rowNumOffset);
-		result = HeapTupleMayBeUpdated;
+		result = TM_Ok;
 	}
 	else if (visiMapEntry->dirty)
 	{
 		/* The bit was already set and it was this command */
-		result = HeapTupleSelfUpdated;
+		result = TM_SelfModified;
 	}
 	else
 	{
 		/* The bit was already set before */
-		result = HeapTupleUpdated;
+		result = TM_Updated;
 	}
 
 	MemoryContextSwitchTo(oldContext);

@@ -5,12 +5,12 @@
  *
  *	This is subtle stuff, so pay attention:
  *
- *	When a tuple is updated or deleted, our standard time qualification rules
+ *	When a tuple is updated or deleted, our standard visibility rules
  *	consider that it is *still valid* so long as we are in the same command,
  *	ie, until the next CommandCounterIncrement() or transaction commit.
- *	(See utils/time/tqual.c, and note that system catalogs are generally
- *	scanned under the most current snapshot available, rather than the
- *	transaction snapshot.)	At the command boundary, the old tuple stops
+ *	(See access/heap/heapam_visibility.c, and note that system catalogs are
+ *  generally scanned under the most current snapshot available, rather than
+ *  the transaction snapshot.)	At the command boundary, the old tuple stops
  *	being valid and the new version, if any, becomes valid.  Therefore,
  *	we cannot simply flush a tuple from the system caches during heap_update()
  *	or heap_delete().  The tuple is still good at that point; what's more,
@@ -51,9 +51,10 @@
  *	PrepareToInvalidateCacheTuple() routine provides the knowledge of which
  *	catcaches may need invalidation for a given tuple.
  *
- *	Also, whenever we see an operation on a pg_class or pg_attribute tuple,
- *	we register a relcache flush operation for the relation described by that
- *	tuple.
+ *	Also, whenever we see an operation on a pg_class, pg_attribute, or
+ *	pg_index tuple, we register a relcache flush operation for the relation
+ *	described by that tuple (as specified in CacheInvalidateHeapTuple()).
+ *	Likewise for pg_constraint tuples for foreign keys on relations.
  *
  *	We keep the relcache flush requests in lists separate from the catcache
  *	tuple flush requests.  This allows us to issue all the pending catcache
@@ -85,7 +86,7 @@
  *	problems can be overcome cheaply.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -95,9 +96,12 @@
  */
 #include "postgres.h"
 
+#include <limits.h>
+
 #include "access/htup_details.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/pg_constraint.h"
 #include "miscadmin.h"
 #include "storage/sinval.h"
 #include "storage/smgr.h"
@@ -110,7 +114,7 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
-#include "catalog/gp_policy.h"
+#include "catalog/gp_distribution_policy.h"
 #include "cdb/cdbvars.h"
 
 
@@ -122,7 +126,7 @@
  */
 typedef struct InvalidationChunk
 {
-	struct InvalidationChunk *next;		/* list link */
+	struct InvalidationChunk *next; /* list link */
 	int			nitems;			/* # items currently stored in chunk */
 	int			maxitems;		/* size of allocated array in this chunk */
 	SharedInvalidationMessage msgs[FLEXIBLE_ARRAY_MEMBER];
@@ -195,7 +199,9 @@ static struct SYSCACHECALLBACK
 	int16		link;			/* next callback index+1 for same cache */
 	SyscacheCallbackFunction function;
 	Datum		arg;
-}	syscache_callback_list[MAX_SYSCACHE_CALLBACKS];
+}			syscache_callback_list[MAX_SYSCACHE_CALLBACKS];
+
+static int16 syscache_callback_links[SysCacheSize];
 
 static int16 syscache_callback_links[SysCacheSize];
 
@@ -205,7 +211,7 @@ static struct RELCACHECALLBACK
 {
 	RelcacheCallbackFunction function;
 	Datum		arg;
-}	relcache_callback_list[MAX_RELCACHE_CALLBACKS];
+}			relcache_callback_list[MAX_RELCACHE_CALLBACKS];
 
 static int	relcache_callback_count = 0;
 
@@ -237,7 +243,7 @@ AddInvalidationMessage(InvalidationChunk **listHdr,
 		chunk = (InvalidationChunk *)
 			MemoryContextAlloc(CurTransactionContext,
 							   offsetof(InvalidationChunk, msgs) +
-						 FIRSTCHUNKSIZE * sizeof(SharedInvalidationMessage));
+							   FIRSTCHUNKSIZE * sizeof(SharedInvalidationMessage));
 		chunk->nitems = 0;
 		chunk->maxitems = FIRSTCHUNKSIZE;
 		chunk->next = *listHdr;
@@ -394,11 +400,15 @@ AddRelcacheInvalidationMessage(InvalidationListHeader *hdr,
 {
 	SharedInvalidationMessage msg;
 
-	/* Don't add a duplicate item */
-	/* We assume dbId need not be checked because it will never change */
+	/*
+	 * Don't add a duplicate item. We assume dbId need not be checked because
+	 * it will never change. InvalidOid for relId means all relations so we
+	 * don't need to add individual ones when it is present.
+	 */
 	ProcessMessageList(hdr->rclist,
 					   if (msg->rc.id == SHAREDINVALRELCACHE_ID &&
-						   msg->rc.relId == relId)
+						   (msg->rc.relId == relId ||
+							msg->rc.relId == InvalidOid))
 					   return);
 
 	/* OK, add the item */
@@ -469,7 +479,7 @@ ProcessInvalidationMessages(InvalidationListHeader *hdr,
  */
 static void
 ProcessInvalidationMessagesMulti(InvalidationListHeader *hdr,
-				 void (*func) (const SharedInvalidationMessage *msgs, int n))
+								 void (*func) (const SharedInvalidationMessage *msgs, int n))
 {
 	ProcessMessageListMulti(hdr->cclist, func(msgs, n));
 	ProcessMessageListMulti(hdr->rclist, func(msgs, n));
@@ -529,9 +539,9 @@ RegisterRelcacheInvalidation(Oid dbId, Oid relId)
 	 * If the relation being invalidated is one of those cached in a relcache
 	 * init file, mark that we need to zap that file at commit. For simplicity
 	 * invalidations for a specific database always invalidate the shared file
-	 * as well.
+	 * as well.  Also zap when we are invalidating whole relcache.
 	 */
-	if (OidIsValid(dbId) && RelationIdIsInInitFile(relId))
+	if (relId == InvalidOid || RelationIdIsInInitFile(relId))
 		transInvalInfo->RelcacheInitFileInval = true;
 }
 
@@ -618,13 +628,16 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 		{
 			int			i;
 
-			RelationCacheInvalidateEntry(msg->rc.relId);
+			if (msg->rc.relId == InvalidOid)
+				RelationCacheInvalidate();
+			else
+				RelationCacheInvalidateEntry(msg->rc.relId);
 
 			for (i = 0; i < relcache_callback_count; i++)
 			{
 				struct RELCACHECALLBACK *ccitem = relcache_callback_list + i;
 
-				(*ccitem->function) (ccitem->arg, msg->rc.relId);
+				ccitem->function(ccitem->arg, msg->rc.relId);
 			}
 		}
 	}
@@ -689,14 +702,14 @@ InvalidateSystemCaches(void)
 	{
 		struct SYSCACHECALLBACK *ccitem = syscache_callback_list + i;
 
-		(*ccitem->function) (ccitem->arg, ccitem->id, 0);
+		ccitem->function(ccitem->arg, ccitem->id, 0);
 	}
 
 	for (i = 0; i < relcache_callback_count; i++)
 	{
 		struct RELCACHECALLBACK *ccitem = relcache_callback_list + i;
 
-		(*ccitem->function) (ccitem->arg, InvalidOid);
+		ccitem->function(ccitem->arg, InvalidOid);
 	}
 }
 
@@ -827,7 +840,7 @@ MakeSharedInvalidMessagesArray(const SharedInvalidationMessage *msgs, int n)
 		 * We're so close to EOXact that we now we're going to lose it anyhow.
 		 */
 		SharedInvalidMessagesArray = palloc(maxSharedInvalidMessagesArray
-										* sizeof(SharedInvalidationMessage));
+											* sizeof(SharedInvalidationMessage));
 	}
 
 	if ((numSharedInvalidMessagesArray + n) > maxSharedInvalidMessagesArray)
@@ -837,7 +850,7 @@ MakeSharedInvalidMessagesArray(const SharedInvalidationMessage *msgs, int n)
 
 		SharedInvalidMessagesArray = repalloc(SharedInvalidMessagesArray,
 											  maxSharedInvalidMessagesArray
-										* sizeof(SharedInvalidationMessage));
+											  * sizeof(SharedInvalidationMessage));
 	}
 
 	/*
@@ -1195,7 +1208,8 @@ CacheInvalidateHeapTuple(Relation relation,
 									  RegisterCatcacheInvalidation);
 
 	/*
-	 * Now, is this tuple one of the primary definers of a relcache entry?
+	 * Now, is this tuple one of the primary definers of a relcache entry? See
+	 * comments in file header for deeper explanation.
 	 *
 	 * Note we ignore newtuple here; we assume an update cannot move a tuple
 	 * from being part of one relcache entry to being part of another.
@@ -1204,7 +1218,7 @@ CacheInvalidateHeapTuple(Relation relation,
 	{
 		Form_pg_class classtup = (Form_pg_class) GETSTRUCT(tuple);
 
-		relationId = HeapTupleGetOid(tuple);
+		relationId = classtup->oid;
 		if (classtup->relisshared)
 			databaseId = InvalidOid;
 		else
@@ -1230,7 +1244,7 @@ CacheInvalidateHeapTuple(Relation relation,
 	}
 	else if (tupleRelId == GpPolicyRelationId)
 	{
-		FormData_gp_policy *gptup = (FormData_gp_policy *) GETSTRUCT(tuple);
+		FormData_gp_distribution_policy *gptup = (FormData_gp_distribution_policy *) GETSTRUCT(tuple);
 
 		relationId = gptup->localoid;
 		databaseId = MyDatabaseId;
@@ -1254,6 +1268,23 @@ CacheInvalidateHeapTuple(Relation relation,
 		 */
 		relationId = indextup->indexrelid;
 		databaseId = MyDatabaseId;
+	}
+	else if (tupleRelId == ConstraintRelationId)
+	{
+		Form_pg_constraint constrtup = (Form_pg_constraint) GETSTRUCT(tuple);
+
+		/*
+		 * Foreign keys are part of relcache entries, too, so send out an
+		 * inval for the table that the FK applies to.
+		 */
+		if (constrtup->contype == CONSTRAINT_FOREIGN &&
+			OidIsValid(constrtup->conrelid))
+		{
+			relationId = constrtup->conrelid;
+			databaseId = MyDatabaseId;
+		}
+		else
+			return;
 	}
 	else
 		return;
@@ -1317,6 +1348,21 @@ CacheInvalidateRelcache(Relation relation)
 }
 
 /*
+ * CacheInvalidateRelcacheAll
+ *		Register invalidation of the whole relcache at the end of command.
+ *
+ * This is used by alter publication as changes in publications may affect
+ * large number of tables.
+ */
+void
+CacheInvalidateRelcacheAll(void)
+{
+	PrepareInvalidationState();
+
+	RegisterRelcacheInvalidation(InvalidOid, InvalidOid);
+}
+
+/*
  * CacheInvalidateRelcacheByTuple
  *		As above, but relation is identified by passing its pg_class tuple.
  */
@@ -1329,7 +1375,7 @@ CacheInvalidateRelcacheByTuple(HeapTuple classTuple)
 
 	PrepareInvalidationState();
 
-	relationId = HeapTupleGetOid(classTuple);
+	relationId = classtup->oid;
 	if (classtup->relisshared)
 		databaseId = InvalidOid;
 	else
@@ -1515,7 +1561,7 @@ CallSyscacheCallbacks(int cacheid, uint32 hashvalue)
 		struct SYSCACHECALLBACK *ccitem = syscache_callback_list + i;
 
 		Assert(ccitem->id == cacheid);
-		(*ccitem->function) (ccitem->arg, cacheid, hashvalue);
+		ccitem->function(ccitem->arg, cacheid, hashvalue);
 		i = ccitem->link - 1;
 	}
 }

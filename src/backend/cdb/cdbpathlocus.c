@@ -13,14 +13,15 @@
  */
 #include "postgres.h"
 
-#include "catalog/gp_policy.h"	/* GpPolicy */
+#include "catalog/gp_distribution_policy.h"	/* GpPolicy */
 #include "cdb/cdbhash.h"
-#include "cdb/cdbpullup.h"		/* cdbpullup_findDistributionKeyExprInTargetList() */
+#include "cdb/cdbpullup.h"		/* cdbpullup_findEclassInTargetList() */
 #include "nodes/makefuncs.h"	/* makeVar() */
 #include "nodes/nodeFuncs.h"	/* exprType() and exprTypmod() */
+#include "nodes/pathnodes.h"	/* RelOptInfo */
 #include "nodes/plannodes.h"	/* Plan */
-#include "nodes/relation.h"		/* RelOptInfo */
 #include "optimizer/clauses.h"
+#include "optimizer/optimizer.h" /* contain_volatile_functions() */
 #include "optimizer/pathnode.h" /* Path */
 #include "optimizer/paths.h"	/* cdb_make_distkey_for_expr() */
 #include "optimizer/tlist.h"	/* tlist_member() */
@@ -165,7 +166,7 @@ cdb_build_distribution_keys(PlannerInfo *root, Index rti, GpPolicy *policy)
 										  opcintype,
 										  exprCollation((Node *) expr),
 										  0,
-										  NULL,
+										  bms_make_singleton(rti),
 										  true);
 
 		/* Create a distribution key for it. */
@@ -367,6 +368,7 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
  */
 CdbPathLocus
 cdbpathlocus_from_exprs(struct PlannerInfo *root,
+						RelOptInfo *rel,
 						List *hash_on_exprs,
 						List *hash_opfamilies,
 						List *hash_sortrefs,
@@ -383,7 +385,7 @@ cdbpathlocus_from_exprs(struct PlannerInfo *root,
 		int			sortref = lfirst_int(lsr);
 		DistributionKey *distkey;
 
-		distkey = cdb_make_distkey_for_expr(root, expr, opfamily, sortref);
+		distkey = cdb_make_distkey_for_expr(root, rel, expr, opfamily, sortref);
 		distkeys = lappend(distkeys, distkey);
 	}
 
@@ -418,14 +420,61 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 		List	   *usable_subtlist = NIL;
 		List	   *new_vars = NIL;
 		ListCell   *lc;
+		ListCell   *lc2 = NULL;
+		RelOptInfo *parentrel = NULL;
 
+		/*
+		 * If the subquery we're pulling up is a child of an append rel,
+		 * the pathkey should refer to the parent rel's Vars, not the child.
+		 * Normally, the planner puts the parent and child expressions in an
+		 * equivalence class for any potentially useful expressions, but that's
+		 * done earlier in the planning already.
+		 */
+		if (rel->reloptkind == RELOPT_OTHER_MEMBER_REL)
+		{
+			Index		parent_relid = 0;
+
+			/* GPDB_12_MERGE_FIXME: we could use root->append_rel_array here? */
+			foreach (lc, root->append_rel_list)
+			{
+				AppendRelInfo *appendrel = lfirst(lc);
+
+				if (appendrel->child_relid == rel->relid)
+				{
+					parent_relid = appendrel->parent_relid;
+					break;
+				}
+			}
+
+			if (parent_relid <= 0)
+			{
+				/* shouldn't happen, but let's try to do something sane */
+				Assert(false);
+				CdbPathLocus_MakeStrewn(&locus, numsegments);
+				return locus;
+			}
+			parentrel = root->simple_rel_array[parent_relid];
+			Assert(list_length(parentrel->reltarget->exprs) == list_length(rel->reltarget->exprs));
+		}
+
+		if (parentrel)
+			lc2 = list_head(parentrel->reltarget->exprs);
 		foreach (lc, rel->reltarget->exprs)
 		{
-			Var		   *var = (Var *) lfirst(lc);
-			Node	   *subexpr;
+			Expr	   *expr = (Expr *) lfirst(lc);
+			Var		   *var;
+			Expr	   *subexpr;
+			Expr	   *parentexpr = NULL;
 
-			if (!IsA(var, Var))
+			if (parentrel)
+			{
+				parentexpr = lfirst(lc2);
+				lc2 = lnext(lc2);
+			}
+
+			if (!IsA(expr, Var))
 				continue;
+			var = (Var *) expr;
 
 			/* ignore whole-row vars */
 			if (var->varattno == 0)
@@ -433,11 +482,11 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 
 			subexpr = list_nth(subpath->pathtarget->exprs, var->varattno - 1);
 			usable_subtlist = lappend(usable_subtlist,
-									  makeTargetEntry((Expr *) subexpr,
+									  makeTargetEntry(subexpr,
 													  list_length(usable_subtlist) + 1,
 													  NULL,
 													  false));
-			new_vars = lappend(new_vars, var);
+			new_vars = lappend(new_vars, parentrel ? parentexpr : expr);
 		}
 
 		foreach (dk_cell, subpath->locus.distkey)

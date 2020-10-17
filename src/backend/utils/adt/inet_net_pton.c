@@ -23,7 +23,6 @@ static const char rcsid[] = "Id: inet_net_pton.c,v 1.4.2.3 2004/03/17 00:40:11 m
 
 #include "postgres.h"
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -74,7 +73,7 @@ inet_net_pton(int af, const char *src, void *dst, size_t size)
 				inet_cidr_pton_ipv6(src, dst, size);
 		default:
 			errno = EAFNOSUPPORT;
-			return (-1);
+			return -1;
 	}
 }
 
@@ -190,7 +189,7 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
 			goto emsgsize;
 	}
 
-	/* Firey death and destruction unless we prefetched EOS. */
+	/* Fiery death and destruction unless we prefetched EOS. */
 	if (ch != '\0')
 		goto enoent;
 
@@ -229,15 +228,15 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
 			goto emsgsize;
 		*dst++ = '\0';
 	}
-	return (bits);
+	return bits;
 
 enoent:
 	errno = ENOENT;
-	return (-1);
+	return -1;
 
 emsgsize:
 	errno = EMSGSIZE;
-	return (-1);
+	return -1;
 }
 
 /*
@@ -310,7 +309,7 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
 			goto emsgsize;
 	}
 
-	/* Firey death and destruction unless we prefetched EOS. */
+	/* Fiery death and destruction unless we prefetched EOS. */
 	if (ch != '\0')
 		goto enoent;
 
@@ -339,11 +338,11 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
 
 enoent:
 	errno = ENOENT;
-	return (-1);
+	return -1;
 
 emsgsize:
 	errno = EMSGSIZE;
-	return (-1);
+	return -1;
 }
 
 static int
@@ -364,19 +363,19 @@ getbits(const char *src, int *bitsp)
 		if (pch != NULL)
 		{
 			if (n++ != 0 && val == 0)	/* no leading zeros */
-				return (0);
+				return 0;
 			val *= 10;
 			val += (pch - digits);
 			if (val > 128)		/* range */
-				return (0);
+				return 0;
 			continue;
 		}
-		return (0);
+		return 0;
 	}
 	if (n == 0)
-		return (0);
+		return 0;
 	*bitsp = val;
-	return (1);
+	return 1;
 }
 
 static int
@@ -398,32 +397,32 @@ getv4(const char *src, u_char *dst, int *bitsp)
 		if (pch != NULL)
 		{
 			if (n++ != 0 && val == 0)	/* no leading zeros */
-				return (0);
+				return 0;
 			val *= 10;
 			val += (pch - digits);
 			if (val > 255)		/* range */
-				return (0);
+				return 0;
 			continue;
 		}
 		if (ch == '.' || ch == '/')
 		{
 			if (dst - odst > 3) /* too many octets? */
-				return (0);
+				return 0;
 			*dst++ = val;
 			if (ch == '/')
-				return (getbits(src, bitsp));
+				return getbits(src, bitsp);
 			val = 0;
 			n = 0;
 			continue;
 		}
-		return (0);
+		return 0;
 	}
 	if (n == 0)
-		return (0);
+		return 0;
 	if (dst - odst > 3)			/* too many octets? */
-		return (0);
+		return 0;
 	*dst++ = val;
-	return (1);
+	return 1;
 }
 
 static int
@@ -553,13 +552,13 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
 	 */
 	memcpy(dst, tmp, NS_IN6ADDRSZ);
 
-	return (bits);
+	return bits;
 
 enoent:
 	errno = ENOENT;
-	return (-1);
+	return -1;
 
 emsgsize:
 	errno = EMSGSIZE;
-	return (-1);
+	return -1;
 }

@@ -27,10 +27,9 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CFileDescriptor::CFileDescriptor()
-	:
-	m_file_descriptor(GPOS_FILE_DESCR_INVALID)
-{}
+CFileDescriptor::CFileDescriptor() : m_file_descriptor(GPOS_FILE_DESCR_INVALID)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -42,12 +41,8 @@ CFileDescriptor::CFileDescriptor()
 //
 //---------------------------------------------------------------------------
 void
-CFileDescriptor::OpenFile
-	(
-	const CHAR *file_path,
-	ULONG mode,
-	ULONG permission_bits
-	)
+CFileDescriptor::OpenFile(const CHAR *file_path, ULONG mode,
+						  ULONG permission_bits)
 {
 	GPOS_ASSERT(!IsFileOpen());
 
@@ -134,4 +129,3 @@ CFileDescriptor::CloseFile()
 }
 
 // EOF
-

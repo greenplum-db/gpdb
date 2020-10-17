@@ -45,7 +45,7 @@ ao_invalid_segment_file_test(uint8 xl_info)
 	record.xl_info = xl_info;
 	record.xl_rmid = RM_APPEND_ONLY_ID;
 
-	mockrecord = XLogReaderAllocate(NULL, NULL);
+	mockrecord = XLogReaderAllocate(DEFAULT_XLOG_SEG_SIZE, NULL, NULL);
 
 	if (xl_info == XLOG_APPENDONLY_INSERT)
 	{
@@ -61,7 +61,6 @@ ao_invalid_segment_file_test(uint8 xl_info)
 	/* mock to not find AO segment file */
 	expect_any(PathNameOpenFile, fileName);
 	expect_any(PathNameOpenFile, fileFlags);
-	expect_any(PathNameOpenFile, fileMode);
 	will_return(PathNameOpenFile, -1);
 
 	/* XLogAOSegmentFile should be called with our mock relfilenode and segment file number */

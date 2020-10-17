@@ -25,7 +25,6 @@
 #include "catalog/pg_proc_callback.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
-#include "utils/tqual.h"
 
 /* ---------------------
  * deleteProcCallbacks() - Remove callbacks from pg_proc_callback
@@ -46,7 +45,7 @@ deleteProcCallbacks(Oid profnoid)
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	Insist(OidIsValid(profnoid));
+	Assert(OidIsValid(profnoid));
 
 	/*
 	 * This is equivalent to:
@@ -92,11 +91,11 @@ addProcCallback(Oid profnoid, Oid procallback, char promethod)
 	Datum		values[Natts_pg_proc_callback];
 	HeapTuple   tup;
 	
-	Insist(OidIsValid(profnoid));
-	Insist(OidIsValid(procallback));
+	Assert(OidIsValid(profnoid));
+	Assert(OidIsValid(procallback));
 
 	/* open pg_proc_callback */
-	rel = heap_open(ProcCallbackRelationId, RowExclusiveLock);
+	rel = table_open(ProcCallbackRelationId, RowExclusiveLock);
 
 	/* Build the tuple and insert it */
 	nulls[Anum_pg_proc_callback_profnoid - 1]	  = false;
@@ -109,10 +108,9 @@ addProcCallback(Oid profnoid, Oid procallback, char promethod)
 	tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 	
 	/* Insert tuple into the relation */
-	simple_heap_insert(rel, tup);
-	CatalogUpdateIndexes(rel, tup);
+	CatalogTupleInsert(rel, tup);
 
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 }
 
 
@@ -133,7 +131,7 @@ lookupProcCallback(Oid profnoid, char promethod)
 	HeapTuple	tup;
 	Oid         result;
 
-	Insist(OidIsValid(profnoid));
+	Assert(OidIsValid(profnoid));
 
 	/* open pg_proc_callback */
 	rel = heap_open(ProcCallbackRelationId, AccessShareLock);

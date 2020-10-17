@@ -44,6 +44,7 @@
 #define ECPG_UNKNOWN_DESCRIPTOR_ITEM	-242
 #define ECPG_VAR_NOT_NUMERIC		-243
 #define ECPG_VAR_NOT_CHAR		-244
+#define ECPG_INVALID_CURSOR		-245
 
 /* finally the backend error messages, they start at 400 */
 #define ECPG_PGSQL			-400
@@ -76,4 +77,4 @@
  /* WARNING:  BlankPortalAssignName: portal * already exists */
 #define ECPG_WARNING_PORTAL_EXISTS	   -605
 
-#endif   /* !_ECPG_ERRNO_H */
+#endif							/* !_ECPG_ERRNO_H */

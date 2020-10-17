@@ -61,6 +61,8 @@ PG_FUNCTION_INFO_V1(test_send);
 PG_FUNCTION_INFO_V1(test_receive_and_verify);
 PG_FUNCTION_INFO_V1(test_xlog_ao);
 
+static WalReceiverConn *test_connection = NULL;
+
 /*
  * Module load callback.
  *
@@ -78,15 +80,23 @@ Datum
 test_connect(PG_FUNCTION_ARGS)
 {
 	char *conninfo = TextDatumGetCString(PG_GETARG_DATUM(0));
+	char	   *err;
+	MemoryContext oldcxt;
 
-	walrcv_connect(conninfo);
+	oldcxt = MemoryContextSwitchTo(TopMemoryContext);
+	test_connection = walrcv_connect(conninfo, false, "walrcv_test", &err);
+	MemoryContextSwitchTo(oldcxt);
+
 	PG_RETURN_BOOL(true);
 }
 
 Datum
 test_disconnect(PG_FUNCTION_ARGS)
 {
-	walrcv_disconnect();
+	if (!test_connection)
+		elog(ERROR, "not connected");
+	walrcv_disconnect(test_connection);
+	test_connection = NULL;
 
 	PG_RETURN_BOOL(true);
 }
@@ -94,6 +104,8 @@ test_disconnect(PG_FUNCTION_ARGS)
 Datum
 test_send(PG_FUNCTION_ARGS)
 {
+	if (!test_connection)
+		elog(ERROR, "not connected");
 	test_XLogWalRcvSendReply();
 
 	PG_RETURN_BOOL(true);
@@ -109,15 +121,22 @@ test_receive_and_verify(PG_FUNCTION_ARGS)
 	char   *buf;
 	pgsocket wait_fd;
 	int     len;
-	TimeLineID  startpointTLI;
+	WalRcvStreamOptions options;
 
-	/* For now hard-coding it to 1 */
-	startpointTLI = 1;
-	walrcv_startstreaming(startpointTLI, startpoint, NULL);
+	if (!test_connection)
+		elog(ERROR, "not connected");
+
+	memset(&options, 0, sizeof(options));
+	options.logical = false;
+	options.slotname = NULL;
+	options.startpoint = startpoint;
+	/* for now hard-coding it to 1 */
+	options.proto.physical.startpointTLI = 1;
+	walrcv_startstreaming(test_connection, &options);
 
 	for (int i=0; i < NUM_RETRIES; i++)
 	{
-		len = walrcv_receive(&buf, &wait_fd);
+		len = walrcv_receive(test_connection, &buf, &wait_fd);
 		if (len > 0)
 		{
 			XLogRecPtr logStreamStart = InvalidXLogRecPtr;
@@ -178,8 +197,7 @@ test_XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len,
 				/* read the fields */
 				dataStart = pq_getmsgint64(&incoming_message);
 				walEnd = pq_getmsgint64(&incoming_message);
-				sendTime = IntegerTimestampToTimestampTz(
-										  pq_getmsgint64(&incoming_message));
+				sendTime = pq_getmsgint64(&incoming_message);
 				*logStreamStart = dataStart;
 
 				test_PrintLog("wal start records", dataStart, sendTime);
@@ -202,8 +220,7 @@ test_XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len,
 
 				/* read the fields */
 				walEnd = pq_getmsgint64(&incoming_message);
-				sendTime = IntegerTimestampToTimestampTz(
-										  pq_getmsgint64(&incoming_message));
+				sendTime = pq_getmsgint64(&incoming_message);
 				replyRequested = pq_getmsgbyte(&incoming_message);
 
 				elog(INFO, "keep alive: %X/%X at %s",
@@ -234,10 +251,10 @@ test_XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 	{
 		int			segbytes;
 
-		startoff = recptr % XLogSegSize;
+		startoff = recptr % wal_segment_size;
 
-		if (startoff + nbytes > XLogSegSize)
-			segbytes = XLogSegSize - startoff;
+		if (startoff + nbytes > wal_segment_size)
+			segbytes = wal_segment_size - startoff;
 		else
 			segbytes = nbytes;
 
@@ -264,10 +281,10 @@ test_XLogWalRcvSendReply(void)
 	pq_sendint64(&reply_message, LogstreamResult.Write);
 	pq_sendint64(&reply_message, LogstreamResult.Flush);
 	pq_sendint64(&reply_message, LogstreamResult.Flush);
-	pq_sendint64(&reply_message, GetCurrentIntegerTimestamp());
+	pq_sendint64(&reply_message, GetCurrentTimestamp());
 	pq_sendbyte(&reply_message, false);
 
-	walrcv_send(reply_message.data, reply_message.len);
+	walrcv_send(test_connection, reply_message.data, reply_message.len);
 }
 
 /*
@@ -301,6 +318,7 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 	{
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
+		WalReceiverConn *conn;
 
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -310,7 +328,7 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 		*/
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-		tupdesc = CreateTemplateTupleDesc(nattr, false);
+		tupdesc = CreateTemplateTupleDesc(nattr);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "recordlen", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "record_type", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "recordlen", INT4OID, -1, 0);
@@ -332,17 +350,25 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 		pgsocket	  wait_fd;
 		int           len;
 		uint32        xrecoff;
+		char	   *err;
+		WalRcvStreamOptions options;
 
 		xrecoff = (uint32)startpoint;
 
-		walrcv_connect(conninfo);
+		conn = walrcv_connect(conninfo, false, "walrcv_test_ao_xlog", &err);
 		/* Get current timeline ID */
-		walrcv_identify_system(&startpointTLI);
-		walrcv_startstreaming(startpointTLI, startpoint, NULL);
+		walrcv_identify_system(conn, &startpointTLI);
+
+		memset(&options, 0, sizeof(options));
+		options.logical = false;
+		options.slotname = NULL;
+		options.startpoint = startpoint;
+		options.proto.physical.startpointTLI = startpointTLI;
+		walrcv_startstreaming(conn, &options);
 
 		for (int i = 0; i < NUM_RETRIES; i++)
 		{
-			len = walrcv_receive(&buf, &wait_fd);
+			len = walrcv_receive(conn, &buf, &wait_fd);
 			if (len > 0)
 			{
 				funcctx->max_calls = check_ao_record_present(buf[0], &buf[1],
@@ -357,7 +383,7 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 			}
 		}
 
-		walrcv_disconnect();
+		walrcv_disconnect(conn);
 
 		MemoryContextSwitchTo(oldcontext);
 	}
@@ -425,15 +451,14 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 	/* read the fields */
 	dataStart = pq_getmsgint64(&incoming_message);
 	walEnd = pq_getmsgint64(&incoming_message);
-	sendTime = IntegerTimestampToTimestampTz(
-		pq_getmsgint64(&incoming_message));
+	sendTime = pq_getmsgint64(&incoming_message);
 	buf += hdrlen;
 	len -= hdrlen;
 
 	test_PrintLog("wal start record", dataStart, sendTime);
 	test_PrintLog("wal end record", walEnd, sendTime);
 
-	xlogreader = XLogReaderAllocate(&read_local_xlog_page, NULL);
+	xlogreader = XLogReaderAllocate(wal_segment_size, &read_local_xlog_page, NULL);
 
 	/*
 	 * Find the first valid record at or after the given starting point.

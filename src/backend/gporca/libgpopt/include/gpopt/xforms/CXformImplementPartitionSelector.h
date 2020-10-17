@@ -16,68 +16,61 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementPartitionSelector
-	//
-	//	@doc:
-	//		Implement PartitionSelector
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementPartitionSelector : public CXformImplementation
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementPartitionSelector
+//
+//	@doc:
+//		Implement PartitionSelector
+//
+//---------------------------------------------------------------------------
+class CXformImplementPartitionSelector : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementPartitionSelector(const CXformImplementPartitionSelector &);
+
+public:
+	// ctor
+	explicit CXformImplementPartitionSelector(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformImplementPartitionSelector()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementPartitionSelector;
+	}
 
-			// private copy ctor
-			CXformImplementPartitionSelector(const CXformImplementPartitionSelector &);
+	// xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementPartitionSelector";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  //exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// ctor
-			explicit
-			CXformImplementPartitionSelector(CMemoryPool *mp);
+	// actual transform
+	virtual void Transform(CXformContext *, CXformResult *,
+						   CExpression *) const;
 
-			// dtor
-			virtual
-			~CXformImplementPartitionSelector()
-			{}
+};	// class CXformImplementPartitionSelector
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementPartitionSelector;
-			}
+}  // namespace gpopt
 
-			// xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementPartitionSelector";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & //exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
-
-			// actual transform
-			virtual
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformImplementPartitionSelector
-
-}
-
-#endif // !GPOPT_CXformImplementPartitionSelector_H
+#endif	// !GPOPT_CXformImplementPartitionSelector_H
 
 // EOF

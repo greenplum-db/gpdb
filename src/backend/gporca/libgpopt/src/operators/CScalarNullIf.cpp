@@ -33,24 +33,20 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CScalarNullIf::CScalarNullIf
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_op,
-	IMDId *mdid_type
-	)
-	:
-	CScalar(mp),
-	m_mdid_op(mdid_op),
-	m_mdid_type(mdid_type),
-	m_returns_null_on_null_input(false),
-	m_fBoolReturnType(false)
+CScalarNullIf::CScalarNullIf(CMemoryPool *mp, IMDId *mdid_op, IMDId *mdid_type)
+	: CScalar(mp),
+	  m_mdid_op(mdid_op),
+	  m_mdid_type(mdid_type),
+	  m_returns_null_on_null_input(false),
+	  m_fBoolReturnType(false)
 {
 	GPOS_ASSERT(mdid_op->IsValid());
 	GPOS_ASSERT(mdid_type->IsValid());
 
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	m_returns_null_on_null_input = CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(md_accessor, m_mdid_op);
+	m_returns_null_on_null_input =
+		CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(md_accessor,
+														  m_mdid_op);
 	m_fBoolReturnType = CMDAccessorUtils::FBoolType(md_accessor, m_mdid_type);
 }
 
@@ -81,8 +77,9 @@ CScalarNullIf::~CScalarNullIf()
 ULONG
 CScalarNullIf::HashValue() const
 {
-	return gpos::CombineHashes(COperator::HashValue(),
-			gpos::CombineHashes(m_mdid_op->HashValue(),m_mdid_type->HashValue()));
+	return gpos::CombineHashes(
+		COperator::HashValue(),
+		gpos::CombineHashes(m_mdid_op->HashValue(), m_mdid_type->HashValue()));
 }
 
 //---------------------------------------------------------------------------
@@ -94,13 +91,9 @@ CScalarNullIf::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarNullIf::Matches
-	(
-	COperator *pop
-	)
-	const
+CScalarNullIf::Matches(COperator *pop) const
 {
-	if(pop->Eopid() != Eopid())
+	if (pop->Eopid() != Eopid())
 	{
 		return false;
 	}
@@ -109,7 +102,7 @@ CScalarNullIf::Matches
 
 	// match if operators and return types are identical
 	return m_mdid_op->Equals(popScNullIf->MdIdOp()) &&
-			m_mdid_type->Equals(popScNullIf->MdidType());
+		   m_mdid_type->Equals(popScNullIf->MdidType());
 }
 
 
@@ -122,11 +115,7 @@ CScalarNullIf::Matches
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalarNullIf::Eber
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
-	const
+CScalarNullIf::Eber(ULongPtrArray *pdrgpulChildren) const
 {
 	if (m_returns_null_on_null_input)
 	{
@@ -138,6 +127,4 @@ CScalarNullIf::Eber
 
 
 
-
 // EOF
-

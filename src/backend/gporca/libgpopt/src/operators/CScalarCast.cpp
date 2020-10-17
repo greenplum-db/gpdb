@@ -33,20 +33,14 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CScalarCast::CScalarCast
-	(
-	CMemoryPool *mp,
-	IMDId *return_type_mdid,
-	IMDId *mdid_func,
-	BOOL is_binary_coercible
-	)
-	:
-	CScalar(mp),
-	m_return_type_mdid(return_type_mdid),
-	m_func_mdid(mdid_func),
-	m_is_binary_coercible(is_binary_coercible),
-	m_returns_null_on_null_input(false),
-	m_fBoolReturnType(false)
+CScalarCast::CScalarCast(CMemoryPool *mp, IMDId *return_type_mdid,
+						 IMDId *mdid_func, BOOL is_binary_coercible)
+	: CScalar(mp),
+	  m_return_type_mdid(return_type_mdid),
+	  m_func_mdid(mdid_func),
+	  m_is_binary_coercible(is_binary_coercible),
+	  m_returns_null_on_null_input(false),
+	  m_fBoolReturnType(false)
 {
 	if (NULL != m_func_mdid && m_func_mdid->IsValid())
 	{
@@ -54,7 +48,8 @@ CScalarCast::CScalarCast
 		const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
 
 		m_returns_null_on_null_input = pmdfunc->IsStrict();
-		m_fBoolReturnType = CMDAccessorUtils::FBoolType(md_accessor, m_return_type_mdid);
+		m_fBoolReturnType =
+			CMDAccessorUtils::FBoolType(md_accessor, m_return_type_mdid);
 	}
 }
 
@@ -68,11 +63,7 @@ CScalarCast::CScalarCast
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarCast::Matches
-	(
-	COperator *pop
-	)
-	const
+CScalarCast::Matches(COperator *pop) const
 {
 	if (pop->Eopid() == Eopid())
 	{
@@ -80,11 +71,12 @@ CScalarCast::Matches
 
 		// match if the return type oids are identical
 		return pscop->MdidType()->Equals(m_return_type_mdid) &&
-				((!IMDId::IsValid(pscop->FuncMdId()) && !IMDId::IsValid(m_func_mdid)) || pscop->FuncMdId()->Equals(m_func_mdid));
+			   ((!IMDId::IsValid(pscop->FuncMdId()) &&
+				 !IMDId::IsValid(m_func_mdid)) ||
+				pscop->FuncMdId()->Equals(m_func_mdid));
 	}
 
 	return false;
 }
 
 // EOF
-

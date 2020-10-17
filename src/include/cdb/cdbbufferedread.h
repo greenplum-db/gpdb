@@ -70,6 +70,9 @@ typedef struct BufferedRead
     char				 *filePathName;
     int64                fileLen;
 
+	/* current read position */
+	off_t				 fileOff;
+
 	/*
 	 * Temporary limit support for random reading.
 	 */

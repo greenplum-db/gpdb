@@ -14,33 +14,32 @@
 
 namespace gpos
 {
-	enum ETraceFlag
-	{
-		// reserve range 0-99999 for GPOS
+enum ETraceFlag
+{
+	// reserve range 0-99999 for GPOS
 
-		// test flag
-		EtraceTest = 0,
+	// test flag
+	EtraceTest = 0,
 
-		// disable printing memory leaks
-		EtraceDisablePrintMemoryLeak = 100,
+	// disable printing memory leaks
+	EtraceDisablePrintMemoryLeak = 100,
 
-		// dump leaked memory
-		EtracePrintMemoryLeakDump = 101,
+	// dump leaked memory
+	EtracePrintMemoryLeakDump = 101,
 
-		// print stack trace of leaked memory allocation
-		EtracePrintMemoryLeakStackTrace = 102,
+	// print stack trace of leaked memory allocation
+	EtracePrintMemoryLeakStackTrace = 102,
 
-		// test memory pools for internal leaks
-		EtraceTestMemoryPools = 103,
+	// test memory pools for internal leaks
+	EtraceTestMemoryPools = 103,
 
-		// print exception on raise to stderr
-		EtracePrintExceptionOnRaise = 104,
+	// print exception on raise to stderr
+	EtracePrintExceptionOnRaise = 104,
 
-		EtraceSentinel
-	};
+	EtraceSentinel
+};
 }
 
-#endif // ! GPOS_traceflags_H
+#endif	// ! GPOS_traceflags_H
 
 // EOF
-

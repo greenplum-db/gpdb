@@ -9,26 +9,15 @@
 #undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
-#define errfinish errfinish_impl
-
-static int
-errfinish_impl(int dummy pg_attribute_unused(),...)
+static void
+_errfinish_impl()
 {
 	PG_RE_THROW();
 }
 
 static void expect_ereport(int expect_elevel)
 {
-	expect_any(errmsg, fmt);
-	will_be_called(errmsg);
-
-	expect_any(errcode, sqlerrcode);
-	will_be_called(errcode);
-
 	expect_value(errstart, elevel, expect_elevel);
-	expect_any(errstart, filename);
-	expect_any(errstart, lineno);
-	expect_any(errstart, funcname);
 	expect_any(errstart, domain);
 	if (expect_elevel < ERROR)
 	{
@@ -36,7 +25,7 @@ static void expect_ereport(int expect_elevel)
 	}
     else
     {
-		will_return(errstart, true);
+		will_return_with_sideeffect(errstart, false, &_errfinish_impl, NULL);
     }
 }
 

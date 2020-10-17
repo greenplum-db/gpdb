@@ -57,12 +57,54 @@ select sum(distinct d) from olap_test_single;
 -- GROUPING SETS
 --
 
+set gp_motion_cost_per_row=1.0;
+
 -- If the query produces a relatively small number of groups in comparison to
 -- the number of input rows, two-stage aggregation will be picked.
+
+-- GPDB_12_MERGE_FIXME: We support hashing for GROUPING SETS now. The planner
+-- considers that cheaper than the two-stage grouping agg that was chosen
+-- before. Disable hashagg to force the same plan as before. We should
+-- implement two-stage Hash Agg for grouping sets; that would probably be
+-- the real optimal plan here, and what the planner would choose, if it
+-- was supported.
+set enable_hashagg=off;
 explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
 select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
+reset enable_hashagg;
 
 -- If the query produces a relatively large number of groups in comparison to
 -- the number of input rows, one-stage aggregation will be picked.
 explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a), (b, d));
 -- do not execute this query as it would produce too many tuples.
+
+-- Test that when the second-stage Agg doesn't try to preserve the
+-- GROUPINGSET_ID(), used internally in the plan, in the result order. We had
+-- a bug like that at one point.
+--
+-- The notable thing in the plan is that the Sort node has GROUPINGSET_ID() in
+-- the Sort Key, as needed for the Finalize GroupAggregate, but in the Motion
+-- above the Finalize GroupAggregate, the GROUPINGSET_ID() has been dropped
+-- from the Merge Key.
+set enable_hashagg=off;
+explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)) limit 200;
+reset enable_hashagg;
+
+--
+-- Test an optimization in the grouping planner for CREATE TABLE AS, where
+-- partial aggregation results are redistributed directly according to the
+-- target table's distribution keys, if they're a subset of the GROUP BY
+-- columns.
+--
+create table foo_ctas(a int, b int) distributed randomly;
+insert into foo_ctas select g%5, g%2 from generate_series(1, 100) g;
+
+explain create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
+create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
+
+-- Currently, the planner misses this optimization with INSERT, so this
+-- needs an extra Redistribute Motion.
+explain insert into bar_ctas select * from foo_ctas group by a, b;
+
+drop table foo_ctas;
+drop table bar_ctas;

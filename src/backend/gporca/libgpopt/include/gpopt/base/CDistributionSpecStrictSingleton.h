@@ -21,83 +21,72 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDistributionSpecStrictSingleton
-	//
-	//	@doc:
-	//		Class for representing singleton distribution specification.
-	//
-	//---------------------------------------------------------------------------
-	class CDistributionSpecStrictSingleton : public CDistributionSpecSingleton
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CDistributionSpecStrictSingleton
+//
+//	@doc:
+//		Class for representing singleton distribution specification.
+//
+//---------------------------------------------------------------------------
+class CDistributionSpecStrictSingleton : public CDistributionSpecSingleton
+{
+private:
+	// copy ctor
+	CDistributionSpecStrictSingleton(const CDistributionSpecStrictSingleton &);
+
+public:
+	// ctor
+	explicit CDistributionSpecStrictSingleton(ESegmentType esegtype);
+
+	// distribution type accessor
+	virtual EDistributionType
+	Edt() const
 	{
-			
-		private:
+		return CDistributionSpec::EdtStrictSingleton;
+	}
 
-			// copy ctor
-			CDistributionSpecStrictSingleton(const CDistributionSpecStrictSingleton &);
+	// return true if distribution spec can be required
+	virtual BOOL
+	FRequirable() const
+	{
+		return false;
+	}
 
-		public:
-		
-			// ctor
-			explicit 
-			CDistributionSpecStrictSingleton(ESegmentType esegtype);
-			
-			// distribution type accessor
-			virtual 
-			EDistributionType Edt() const
-			{
-				return CDistributionSpec::EdtStrictSingleton;
-			}
+	// does this distribution satisfy the given one
+	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
 
-			// return true if distribution spec can be required
-			virtual
-			BOOL FRequirable() const
-			{
-				return false;
-			}
+	// append enforcers to dynamic array for the given plan properties
+	virtual void
+	AppendEnforcers(CMemoryPool *,		  // mp
+					CExpressionHandle &,  // exprhdl
+					CReqdPropPlan *,	  // prpp
+					CExpressionArray *,	  // pdrgpexpr
+					CExpression *		  // pexpr
+	)
+	{
+		GPOS_ASSERT(!"attempt to enforce strict SINGLETON distribution");
+	}
 
-			// does this distribution satisfy the given one
-			virtual 
-			BOOL FSatisfies(const CDistributionSpec *pds) const;
-			
-			// append enforcers to dynamic array for the given plan properties
-			virtual
-			void AppendEnforcers
-				(
-				CMemoryPool *, // mp
-				CExpressionHandle &, // exprhdl
-				CReqdPropPlan *, // prpp
-				CExpressionArray *, // pdrgpexpr 
-				CExpression * // pexpr
-				)
-			{
-				GPOS_ASSERT(!"attempt to enforce strict SINGLETON distribution");
-			}
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
+	// conversion function
+	static CDistributionSpecStrictSingleton *
+	PdssConvert(CDistributionSpec *pds)
+	{
+		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(EdtStrictSingleton == pds->Edt());
 
-			// conversion function
-			static
-			CDistributionSpecStrictSingleton *PdssConvert
-				(
-				CDistributionSpec *pds
-				)
-			{
-				GPOS_ASSERT(NULL != pds);
-				GPOS_ASSERT(EdtStrictSingleton == pds->Edt());
+		return dynamic_cast<CDistributionSpecStrictSingleton *>(pds);
+	}
 
-				return dynamic_cast<CDistributionSpecStrictSingleton*>(pds);
-			}
+};	// class CDistributionSpecStrictSingleton
 
-	}; // class CDistributionSpecStrictSingleton
+}  // namespace gpopt
 
-}
-
-#endif // !GPOPT_CDistributionSpecStrictSingleton_H
+#endif	// !GPOPT_CDistributionSpecStrictSingleton_H
 
 // EOF

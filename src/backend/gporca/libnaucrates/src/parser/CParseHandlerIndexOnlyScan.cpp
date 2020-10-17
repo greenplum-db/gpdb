@@ -9,7 +9,7 @@
 //		Implementation of the SAX parse handler class for the index only scan operator
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -29,14 +29,10 @@ XERCES_CPP_NAMESPACE_USE
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerIndexOnlyScan::CParseHandlerIndexOnlyScan
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerIndexScan(mp, parse_handler_mgr, parse_handler_root)
+CParseHandlerIndexOnlyScan::CParseHandlerIndexOnlyScan(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerIndexScan(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 
@@ -49,15 +45,13 @@ CParseHandlerIndexOnlyScan::CParseHandlerIndexOnlyScan
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerIndexOnlyScan::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname
-	const Attributes& attrs
-	)
+CParseHandlerIndexOnlyScan::StartElement(const XMLCh *const,  // element_uri,
+										 const XMLCh *const element_local_name,
+										 const XMLCh *const,  // element_qname
+										 const Attributes &attrs)
 {
-	StartElementHelper(element_local_name, attrs, EdxltokenPhysicalIndexOnlyScan);
+	StartElementHelper(element_local_name, attrs,
+					   EdxltokenPhysicalIndexOnlyScan);
 }
 
 //---------------------------------------------------------------------------
@@ -69,12 +63,10 @@ CParseHandlerIndexOnlyScan::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerIndexOnlyScan::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerIndexOnlyScan::EndElement(const XMLCh *const,	// element_uri,
+									   const XMLCh *const element_local_name,
+									   const XMLCh *const  // element_qname
+)
 {
 	EndElementHelper(element_local_name, EdxltokenPhysicalIndexOnlyScan);
 }

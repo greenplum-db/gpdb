@@ -28,20 +28,15 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogical::EStatPromise
-CLogicalMaxOneRow::Esp
-	(
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalMaxOneRow::Esp(CExpressionHandle &exprhdl) const
 {
 	// low promise for stat derivation if logical expression has outer-refs
 	// or is part of an Apply expression
 	if (exprhdl.HasOuterRefs() ||
-		 (NULL != exprhdl.Pgexpr() &&
-			CXformUtils::FGenerateApply(exprhdl.Pgexpr()->ExfidOrigin()))
-		)
+		(NULL != exprhdl.Pgexpr() &&
+		 CXformUtils::FGenerateApply(exprhdl.Pgexpr()->ExfidOrigin())))
 	{
-		 return EspLow;
+		return EspLow;
 	}
 
 	return EspHigh;
@@ -56,14 +51,8 @@ CLogicalMaxOneRow::Esp
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CLogicalMaxOneRow::PcrsStat
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CColRefSet *pcrsInput,
-	ULONG child_index
-	)
-	const
+CLogicalMaxOneRow::PcrsStat(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							CColRefSet *pcrsInput, ULONG child_index) const
 {
 	GPOS_ASSERT(0 == child_index);
 
@@ -85,11 +74,7 @@ CLogicalMaxOneRow::PcrsStat
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalMaxOneRow::PxfsCandidates
-	(
-	CMemoryPool *mp
-	)
-	const
+CLogicalMaxOneRow::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 	(void) xform_set->ExchangeSet(CXform::ExfMaxOneRow2Assert);
@@ -106,19 +91,14 @@ CLogicalMaxOneRow::PxfsCandidates
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CLogicalMaxOneRow::PstatsDerive
-			(
-			CMemoryPool *mp,
-			CExpressionHandle &exprhdl,
-			IStatisticsArray * // stats_ctxt
-			)
-			const
+CLogicalMaxOneRow::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								IStatisticsArray *	// stats_ctxt
+) const
 {
 	// no more than one row can be produced by operator, scale down input statistics accordingly
 	IStatistics *stats = exprhdl.Pstats(0);
-	return  stats->ScaleStats(mp, CDouble(1.0 / stats->Rows()));
+	return stats->ScaleStats(mp, CDouble(1.0 / stats->Rows()));
 }
 
 
 // EOF
-

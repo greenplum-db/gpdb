@@ -48,7 +48,7 @@
 ##  at the top of the file so anchors are usable as early as possible.
 anchors:
 - &default_platform
-  PLATFORM: centos7
+  PLATFORM: centos7-gpdb7
 
 - &ccp_default_params
   action: create
@@ -91,11 +91,11 @@ anchors:
         action: destroy
 
 - &ccp_gen_cluster_default_params
-  AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-  AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-  AWS_DEFAULT_REGION: {{aws-region}}
+  AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+  AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+  AWS_DEFAULT_REGION: ((aws-region))
   BUCKET_PATH: clusters-google/
-  BUCKET_NAME: {{tf-bucket-name}}
+  BUCKET_NAME: ((tf-bucket-name))
   CLOUD_PROVIDER: google
   <<: *default_platform
 
@@ -105,7 +105,7 @@ anchors:
       config:
         platform: linux
         image_resource:
-          type: docker-image
+          type: registry-image
           source:
             repository: pivotaldata/ccp
             tag: "7"
@@ -115,49 +115,49 @@ anchors:
         run:
           path: 'ccp_src/google/ccp_failed_test.sh'
         params:
-          GOOGLE_CREDENTIALS: {{google-service-account-key}}
-          GOOGLE_PROJECT_ID: {{google-project-id}}
-          GOOGLE_ZONE: {{google-zone}}
-          GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-          AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-          AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-          AWS_DEFAULT_REGION: {{tf-machine-region}}
+          GOOGLE_CREDENTIALS: ((google-service-account-key))
+          GOOGLE_PROJECT_ID: ((google-project-id))
+          GOOGLE_ZONE: ((google-zone))
+          GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+          AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+          AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+          AWS_DEFAULT_REGION: ((tf-machine-region))
           BUCKET_PATH: clusters-google/
-          BUCKET_NAME: {{tf-bucket-name}}
+          BUCKET_NAME: ((tf-bucket-name))
 
 - &set_failed_two_clusters_common
   platform: linux
   image_resource:
-    type: docker-image
+    type: registry-image
     source:
       repository: pivotaldata/ccp
       tag: "7"
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
-    GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    GOOGLE_PROJECT_ID: {{google-project-id}}
-    GOOGLE_ZONE: {{google-zone}}
-    GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-    AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-    AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-    AWS_DEFAULT_REGION: {{tf-machine-region}}
+    GOOGLE_CREDENTIALS: ((google-service-account-key))
+    GOOGLE_PROJECT_ID: ((google-project-id))
+    GOOGLE_ZONE: ((google-zone))
+    GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+    AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+    AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+    AWS_DEFAULT_REGION: ((tf-machine-region))
     BUCKET_PATH: clusters-google/
-    BUCKET_NAME: {{tf-bucket-name}}
+    BUCKET_NAME: ((tf-bucket-name))
 
 - &terraform_cluster
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key))
     vars:
-      project_id: {{google-project-id}}
+      project_id: ((google-project-id))
     storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
+      region_name: ((aws-region))
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
       bucket: gpdb5-pipeline-dynamic-terraform
@@ -190,6 +190,7 @@ groups:
 - name: all
   jobs:
   - concourse_unit_tests
+  - check_format
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
 {% endif %}
@@ -198,7 +199,6 @@ groups:
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
-  - test_gpdb_clients_windows
 {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
@@ -271,6 +271,7 @@ groups:
   jobs:
   - gate_release_candidate_start
   - Release_Candidate
+  - Build_Release_Candidate_RPMs
   - Publish Server Builds
 
 {% endif %}
@@ -286,7 +287,6 @@ groups:
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
-  - test_gpdb_clients_windows
 {% endif %}
 
 {% if "ICW" in test_sections %}
@@ -399,12 +399,12 @@ groups:
 
 resource_types:
 - name: terraform
-  type: docker-image
+  type: registry-image
   source:
     repository: ljfranklin/terraform-resource
     tag: 0.11.14
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 ## ======================================================================
@@ -419,9 +419,9 @@ resources:
 - name: ccp_src
   type: git
   source:
-    branch: {{ccp-git-branch}}
-    private_key: {{ccp-git-key}}
-    uri: {{ccp-git-remote}}
+    branch: ((ccp-git-branch))
+    private_key: ((ccp-git-key))
+    uri: ((ccp-git-remote))
 
 {% if "centos7" in os_types or
       "ICW"     in test_sections %}
@@ -435,13 +435,18 @@ resources:
   <<: *terraform_cluster
 
 - name: alpine-docker
-  type: docker-image
+  type: registry-image
   source:
     repository: alpine
     tag: latest
 
+- name: clang_toolchain
+  type: registry-image
+  source:
+    repository: gcr.io/data-orca/clang-toolchain
+
 - name: ccp-image
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ccp
     tag: '7'
@@ -460,8 +465,8 @@ resources:
 - name: gpdb_src
   type: git
   source:
-    branch: {{gpdb-git-branch}}
-    uri: {{gpdb-git-remote}}
+    branch: ((gpdb-git-branch))
+    uri: ((gpdb-git-remote))
     ignore_paths:
     - gpdb-doc/*
     - README*
@@ -500,7 +505,7 @@ resources:
 {% endif %}
 {% if "centos7" in os_types %}
 - name: gpdb7-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-build
     tag: latest
@@ -508,7 +513,7 @@ resources:
 {% endif %}
 {% if "centos7" in os_types or "CLI" in test_sections %}
 - name: gpdb7-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-test
     tag: latest
@@ -516,14 +521,14 @@ resources:
 {% endif %}
 
 - name: gpdb7-ubuntu18.04-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-build
     tag: latest
 
 {% if "ubuntu18.04" in os_types %}
 - name: gpdb7-ubuntu18.04-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-test
     tag: latest
@@ -534,10 +539,10 @@ resources:
 - name: bin_gpdb_centos7_icw_green
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    access_key_id: ((bucket-access-key-id))
+    bucket: ((bucket-name))
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
     versioned_file: bin_gpdb_centos7/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_rc
@@ -546,6 +551,13 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/master/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+
+- name: gpdb_rpm_installer_centos7
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/master/greenplum-db-(.*)-rhel7-x86_64((rc-build-type-gcs)).rpm
 
 - name: bin_gpdb_ubuntu18.04_rc
   type: gcs
@@ -568,6 +580,21 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/master/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
+
+- name: greenplum-database-release
+  type: git
+  icon: git
+  source:
+    branch: master
+    uri: https://github.com/greenplum-db/greenplum-database-release.git
+
+- name: license_file
+  type: gcs
+  icon: google
+  source:
+    bucket: ((gcs-bucket-for-oss))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: osl/released/gpdb6/open_source_license_greenplum-database-6.0.0-97773a0-(.*).txt
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -622,26 +649,6 @@ resources:
 {% endif %}
 
 {% if "win" in os_types %}
-- name: terraform_windows
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    vars:
-      project: {{google-project-id}}
-      region: {{google-region}}
-      region_zone: {{google-zone}}
-    storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
-      # This is not parameterized, on purpose. All tfstates will go to this spot,
-      # and different teams will place there clusters' tfstate files under different paths
-      bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: gp-clients-windows-tests-google/
-
 - name: bin_gpdb_clients_windows
   type: gcs
   source:
@@ -649,26 +656,20 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
 
-- name: bin_gpdb_clients_windows_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/master/clients-rc-*-windows_x86_64((rc-build-type-gcs)).msi
 {% endif %}
 {% if "AA" in test_sections %}
 - name: madlib_src
   type: git
   source:
-    branch: {{madlib-git-branch}}
-    uri: {{madlib-git-remote}}
+    branch: ((madlib-git-branch))
+    uri: ((madlib-git-remote))
 
 - name: madlib_ci
   type: git
   source:
-    branch: {{madlib-ci-git-branch}}
-    uri: {{madlib-ci-git-remote}}
-    private_key: {{madlib-ci-git-key}}
+    branch: ((madlib-ci-git-branch))
+    uri: ((madlib-ci-git-remote))
+    private_key: ((madlib-ci-git-key))
 
 - name: madlib_gppkg
   type: gcs
@@ -711,8 +712,8 @@ resources:
   source:
     location: America/Los_Angeles
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
-    start: {{reduced-frequency-trigger-start}}
-    stop: {{reduced-frequency-trigger-stop}}
+    start: ((reduced-frequency-trigger-start))
+    stop: ((reduced-frequency-trigger-stop))
 
 
 ## ======================================================================
@@ -764,6 +765,16 @@ jobs:
               bats -t scripts/*.bats
             fi
 
+- name: check_format
+  plan:
+    - in_parallel:
+      - get: gpdb_src
+        trigger: true
+      - get: clang_toolchain
+    - task: check_format
+      image: clang_toolchain
+      file: gpdb_src/concourse/tasks/check_format.yml
+
 ## ======================================================================
 ##   ____                      _ _
 ##  / ___|___  _ __ ___  _ __ (_) | ___
@@ -781,6 +792,8 @@ jobs:
       - get: reduced-frequency-trigger
         trigger: ((reduced-frequency-trigger-flag))
       - get: gpdb_src
+        passed:
+          - check_format
         trigger: ((gpdb_src-trigger-flag))
       - get: gpdb7-centos7-build
       - get: libquicklz-installer
@@ -791,7 +804,7 @@ jobs:
     image: gpdb7-centos7-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
-      CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+      CONFIGURE_FLAGS: ((configure_flags_with_extensions))
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
       BLD_TARGETS: "clients"
@@ -814,6 +827,8 @@ jobs:
         - get: reduced-frequency-trigger
           trigger: ((reduced-frequency-trigger-flag))
         - get: gpdb_src
+          passed:
+            - check_format
           trigger: ((gpdb_src-trigger-flag))
         - get: gpdb7-ubuntu18.04-build
         - get: libquicklz-installer
@@ -822,7 +837,7 @@ jobs:
       image: gpdb7-ubuntu18.04-build
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
       params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
         TARGET_OS: ubuntu
         TARGET_OS_VERSION: "18.04"
         BLD_TARGETS: "clients"
@@ -850,51 +865,13 @@ jobs:
     file: gpdb_src/concourse/tasks/compile_gpdb_remote_windows.yml
     image: gpdb7-centos7-build
     params:
-      REMOTE_HOST: {{remote_win_host_build}}
-      REMOTE_PORT: {{remote_win_port_build}}
-      REMOTE_USER: {{remote_win_user_build}}
-      REMOTE_KEY: {{remote_win_key_build}}
+      REMOTE_HOST: ((remote_win_host_build))
+      REMOTE_PORT: ((remote_win_port_build))
+      REMOTE_USER: ((remote_win_user_build))
+      REMOTE_KEY: ((remote_win_key_build))
   - put: bin_gpdb_clients_windows
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
-
-- name: test_gpdb_clients_windows
-  plan:
-  - in_parallel:
-      steps:
-      - get: ccp_src
-      - get: gpdb_src
-        trigger: true
-        passed: [compile_gpdb_centos7]
-      - get: gpdb7-centos7-test
-      - get: bin_gpdb_clients_windows
-        passed: [compile_gpdb_clients_windows]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos7
-  - put: terraform_windows
-    params:
-      action: create
-      delete_on_failure: true
-      generate_random_name: true
-      terraform_source: ccp_src/gpdb_windows_client_test/
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/windows_remote_test.yml
-    image: gpdb7-centos7-test
-    params:
-      REMOTE_PORT: {{remote_win_port_test}}
-      REMOTE_USER: {{remote_win_user_test}}
-      REMOTE_KEY: {{remote_win_key_test}}
-  ensure:
-    put: terraform_windows
-    params:
-      action: destroy
-      env_name_file: terraform_windows/name
-      terraform_source: ccp_src/gpdb_windows_client_test/
-      vars:
-        aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
-        aws_ebs_volume_type: standard
-    get_params:
-      action: destroy
 {% endif %}
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -917,12 +894,15 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_centos7
   plan:
@@ -936,13 +916,16 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: {{test-binary-swap}}
-      CONFIGURE_FLAGS: {{configure_flags}}
+      TEST_BINARY_SWAP: ((test-binary-swap))
+      CONFIGURE_FLAGS: ((configure_flags))
       DUMP_DB: "true"
   - put: icw_planner_centos7_dump
     params:
@@ -960,12 +943,15 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
       TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_icproxy_centos7
   plan:
@@ -979,12 +965,15 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_gporca_ictcp_centos7
   plan:
@@ -998,6 +987,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
@@ -1018,12 +1010,15 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_ubuntu18.04
   plan:
@@ -1037,12 +1032,15 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_gporca_icproxy_ubuntu18.04
   plan:
@@ -1056,12 +1054,15 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_icproxy_ubuntu18.04
   plan:
@@ -1075,12 +1076,15 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 {% endif %}
 - name: gate_icw_end
@@ -1195,13 +1199,13 @@ jobs:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        PLATFORM: centos7
+        PLATFORM: centos7-gpdb7
         instance_type: n1-standard-2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      PLATFORM: centos7
+      PLATFORM: centos7-gpdb7
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
@@ -1298,7 +1302,7 @@ jobs:
               vars:
                 <<: *ccp_default_vars
                 instance_type: n1-standard-2
-                PLATFORM: centos7
+                PLATFORM: centos7-gpdb7
                 [[ test.additional_ccp_vars ]]
           - task: gen_cluster
             file: ccp_src/ci/tasks/gen_cluster.yml
@@ -1389,13 +1393,13 @@ jobs:
               vars:
                 <<: *ccp_default_vars
                 instance_type: n1-standard-2
-                PLATFORM: ubuntu18.04
+                PLATFORM: ubuntu18.04-gpdb7
                 [[ test.additional_ccp_vars ]]
           - task: gen_cluster
             file: ccp_src/ci/tasks/gen_cluster.yml
             params:
               <<: *ccp_gen_cluster_default_params
-              PLATFORM: ubuntu18.04
+              PLATFORM: ubuntu18.04-gpdb7
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
@@ -1465,7 +1469,7 @@ jobs:
             vars:
               <<: *ccp_default_vars
               instance_type: n1-standard-2
-              PLATFORM: centos7
+              PLATFORM: centos7-gpdb7
               subnet: dynamic
               cluster_suffix: '-1'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
@@ -1483,7 +1487,7 @@ jobs:
             <<: *ccp_default_params
             vars:
               instance_type: n1-standard-2
-              PLATFORM: centos7
+              PLATFORM: centos7-gpdb7
               subnet: toolshed
               cluster_suffix: '-2'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
@@ -1605,9 +1609,9 @@ jobs:
   - in_parallel:
       steps:
       - get: gpdb_src
-        passed: [icw_gporca_centos7]
+        passed: [icw_planner_centos7]
       - get: bin_gpdb_centos7
-        passed: [icw_gporca_centos7]
+        passed: [icw_planner_centos7]
         trigger: [[ test_trigger ]]
       - get: icw_planner_centos7_dump
         passed: [icw_planner_centos7]
@@ -1618,13 +1622,13 @@ jobs:
       vars:
         <<: *ccp_default_vars
         instance_type: n1-standard-2
-        PLATFORM: centos7
+        PLATFORM: centos7-gpdb7
         number_of_nodes: 2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      PLATFORM: centos7
+      PLATFORM: centos7-gpdb7
     input_mapping:
       gpdb_binary: bin_gpdb_centos7
   - task: set_gpinitsystem_config
@@ -1648,10 +1652,10 @@ jobs:
         params:
           submodules:
           - gpMgmt/bin/pythonSrc/ext
-        passed: [icw_gporca_centos7]
+        passed: [icw_planner_centos7]
       - get: gpdb_binary
         resource: bin_gpdb_centos7
-        passed: [icw_gporca_centos7]
+        passed: [icw_planner_centos7]
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
@@ -1663,7 +1667,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         instance_type: n1-standard-4
-        PLATFORM: centos7
+        PLATFORM: centos7-gpdb7
         number_of_nodes: 5
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
@@ -1803,6 +1807,7 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed:
+        - check_format
         - compile_gpdb_centos7
         - compile_gpdb_ubuntu18.04
         - icw_gporca_centos7
@@ -1816,7 +1821,6 @@ jobs:
         - icw_planner_ubuntu18.04
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
-        - test_gpdb_clients_windows
         - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]
@@ -1868,9 +1872,6 @@ jobs:
       - get: bin_gpdb_clients_ubuntu18.04
         passed:
         - compile_gpdb_ubuntu18.04
-      - get: bin_gpdb_clients_windows
-        passed:
-        - test_gpdb_clients_windows
 
 - name: Publish Server Builds
   plan:
@@ -1917,8 +1918,6 @@ jobs:
       - get: bin_gpdb_clients_ubuntu18.04
         trigger: true
         passed: [gate_release_candidate_start]
-      - get: bin_gpdb_clients_windows
-        passed: [gate_release_candidate_start]
       - get: gpdb7-centos7-build
   - in_parallel:
       steps:
@@ -1942,9 +1941,56 @@ jobs:
       - put: bin_gpdb_clients_ubuntu18.04_rc
         params:
           file: "release_candidates/clients-rc-*ubuntu18.04*.tar.gz"
-      - put: bin_gpdb_clients_windows_rc
+
+- name: Build_Release_Candidate_RPMs
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [gate_release_candidate_start]
+      - get: bin_gpdb_centos7
+        trigger: true
+        passed: [gate_release_candidate_start]
+      - get: gpdb7-centos7-build
+      - get: greenplum-database-release
+      - get: license_file
+  - task: create_gpdb_rpm_package_centos7
+    file: greenplum-database-release/ci/concourse/tasks/build_gpdb_rpm.yml
+    image: gpdb7-centos7-build
+    input_mapping:
+      bin_gpdb: bin_gpdb_centos7
+    output_mapping:
+      gpdb_rpm_installer: gpdb_rpm_centos7
+    params:
+      PLATFORM: "rhel7"
+      GPDB_NAME: greenplum-db-7
+      GPDB_RELEASE: 1
+      GPDB_LICENSE: Pivotal Software EULA
+      GPDB_URL: https://github.com/greenplum-db/gpdb
+      GPDB_OSS: false
+  - task: rename_rc_artifacts
+    image: gpdb7-centos7-build
+    config:
+      platform: linux
+      inputs:
+        - name: gpdb_src
+        - name: gpdb_rpm_centos7
+      outputs:
+        - name: renamed_gpdb_rpm_centos7
+      params:
+        RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
+            cp -v gpdb_rpm_centos7/*.rpm renamed_gpdb_rpm_centos7/greenplum-db-${gpdb_semver}-rhel7-x86_64${RC_BUILD_TYPE_GCS}.rpm
+  - in_parallel:
+      steps:
+      - put: gpdb_rpm_installer_centos7
         params:
-          file: "release_candidates/clients-rc-*-windows*.msi"
+          file: renamed_gpdb_rpm_centos7/*.rpm
 
 {% endif %}
 
@@ -1981,8 +2027,8 @@ jobs:
         file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
         image: gpdb7-centos7-test
         params:
-          gpcloud_access_key_id: {{gpcloud-access-key-id}}
-          gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+          gpcloud_access_key_id: ((gpcloud-access-key-id))
+          gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
       - task: gpcheckcloud_tests_gpcloud_centos
         input_mapping:
@@ -1990,8 +2036,8 @@ jobs:
         file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
         image: gpdb7-centos7-test
         params:
-          gpcloud_access_key_id: {{gpcloud-access-key-id}}
-          gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+          gpcloud_access_key_id: ((gpcloud-access-key-id))
+          gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
 {% endif %}
 {% endif %}

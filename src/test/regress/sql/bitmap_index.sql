@@ -191,7 +191,6 @@ create unique index ijk_ij on ijk(i,j);
 -- should OK.
 create unique index ijk_ijk on ijk(i,j,k);
 
-set gp_enable_mk_sort=on;
 drop table if exists ijk;
 create table ijk(i int, j int, k int) distributed by (i);
 insert into ijk values (1, 1, 3);
@@ -207,7 +206,6 @@ create unique index ijk_ij on ijk(i,j);
 -- should OK.
 create unique index ijk_ijk on ijk(i,j,k);
 
-set gp_enable_mk_sort=off;
 drop table ijk;
 
 --
@@ -248,6 +246,27 @@ drop index oversize_test_idx;
 insert into oversize_test values (array_to_string(array(select generate_series(1, 10000)), '123456789'));
 CREATE INDEX oversize_test_idx ON oversize_test USING BITMAP (c1);
 
+--
+-- Test Index Only Scans.
+--
+-- Bitmap indexes don't really support index only scans at the moment. But the
+-- planner can still choose an Index Only Scan, if the query doesn't need any
+-- of the attributes from the index.
+create table bm_indexonly_test (i int, t text);
+insert into bm_indexonly_test select g, 'foo' || g from generate_series(1, 5) g;
+create index on bm_indexonly_test using bitmap (i, t);
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+set enable_indexscan=on;
+set enable_indexonlyscan=on;
+
+-- if bitmap indexes supported Index Only Scans, properly, this could use one.
+explain (costs off) select i, t from bm_indexonly_test where i = 1;
+select i, t from bm_indexonly_test where i = 1;
+
+-- even without proper support, the planner chooses an Index Only Scan for this.
+explain (costs off) select 'foobar' from bm_indexonly_test;
+select 'foobar' from bm_indexonly_test;
 
 --
 -- Test unlogged table

@@ -22,12 +22,13 @@
 #define HTUPFIFO_H
 
 #include "access/htup.h"
+#include "access/memtup.h"
 
 /* An entry in the HeapTuple FIFO.	Entries are formed into queues. */
 typedef struct htf_entry_data
 {
 	/* The tuple itself. */
-	GenericTuple tup;
+	MinimalTuple tup;
 
 	/* The next entry in the FIFO. */
 	struct htf_entry_data *p_next;
@@ -50,7 +51,7 @@ typedef struct htup_fifo_state
 extern htup_fifo htfifo_create(void);
 extern void htfifo_destroy(htup_fifo htf);
 
-extern void htfifo_addtuple(htup_fifo htf, GenericTuple htup);
-extern GenericTuple htfifo_gettuple(htup_fifo htf);
+extern void htfifo_addtuple(htup_fifo htf, MinimalTuple htup);
+extern MinimalTuple htfifo_gettuple(htup_fifo htf);
 
 #endif   /* HTUPFIFO_H */

@@ -21,7 +21,6 @@
 
 #include "miscadmin.h"
 #include "utils/guc.h"
-#include "catalog/gp_segment_config.h"
 #include "cdb/cdbvars.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
@@ -143,6 +142,18 @@ int gp_fts_mark_mirror_down_grace_period = 30;
 int			gp_fts_replication_attempt_count = 10;
 
 /*
+ * Polling interval for the dtx recovery. Checking in dtx recovery starts every
+ * time this expires.
+ */
+int			gp_dtx_recovery_interval = 60;
+
+/*
+ * Gather prepared transactions that live longer than the time to find possible
+ * orphaned prepared transactions.
+ */
+int			gp_dtx_recovery_prepared_period = 300;
+
+/*
  * When we have certain types of failures during gang creation which indicate
  * that a segment is in recovery mode we may be able to retry.
  */
@@ -240,7 +251,7 @@ int			gp_segments_for_planner = 0;
 
 int			gp_hashagg_default_nbatches = 32;
 
-bool		gp_adjust_selectivity_for_outerjoins = TRUE;
+bool		gp_adjust_selectivity_for_outerjoins = true;
 bool		gp_selectivity_damping_for_scans = false;
 bool		gp_selectivity_damping_for_joins = false;
 double		gp_selectivity_damping_factor = 1;
@@ -253,17 +264,11 @@ int			gp_hashagg_groups_per_bucket = 5;
 int			gp_motion_slice_noop = 0;
 
 /* Greenplum Database Experimental Feature GUCs */
-bool		gp_enable_explain_allstat = FALSE;
-bool		gp_enable_motion_deadlock_sanity = FALSE;	/* planning time sanity
+bool		gp_enable_explain_allstat = false;
+bool		gp_enable_motion_deadlock_sanity = false;	/* planning time sanity
 														 * check */
 
-#ifdef USE_ASSERT_CHECKING
-bool		gp_mk_sort_check = false;
-#endif
-int			gp_sort_flags = 0;
-int			gp_sort_max_distinct = 20000;
-
-bool		gp_enable_tablespace_auto_mkdir = FALSE;
+bool		gp_enable_tablespace_auto_mkdir = false;
 
 /* Enable check for compatibility of encoding and locale in createdb */
 bool		gp_encoding_check_locale_compatibility = true;
@@ -578,15 +583,6 @@ increment_command_count()
 	 * they are always synced here.
 	 */
 	MyProc->queryCommandId = gp_command_count;
-}
-
-int
-get_dbid_string_length()
-{
-	char *dbid_string = psprintf("%d", GpIdentity.dbid);
-	int length = strlen(dbid_string);
-	pfree(dbid_string);
-	return length;
 }
 
 Datum mpp_execution_segment(PG_FUNCTION_ARGS);

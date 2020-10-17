@@ -2,7 +2,7 @@
  * config_info.h
  *		Common code for pg_config output
  *
- *	Copyright (c) 2016, PostgreSQL Global Development Group
+ *	Copyright (c) 2016-2019, PostgreSQL Global Development Group
  *
  *	src/include/common/config_info.h
  */
@@ -16,6 +16,6 @@ typedef struct ConfigData
 } ConfigData;
 
 extern ConfigData *get_configdata(const char *my_exec_path,
-			   size_t *configdata_len);
+								  size_t *configdata_len);
 
-#endif   /* COMMON_CONFIG_INFO_H */
+#endif							/* COMMON_CONFIG_INFO_H */

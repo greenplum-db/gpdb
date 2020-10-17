@@ -29,12 +29,15 @@
 #include "storage/proc.h"
 #include "storage/shmem.h"
 
+#include "access/genam.h"
+#include "access/table.h"
 #include "access/xact.h"
 #include "catalog/indexing.h"
 #include "libpq/pqsignal.h"
 #include "cdb/cdbvars.h"
 #include "libpq-int.h"
 #include "cdb/cdbfts.h"
+#include "pgstat.h"
 #include "postmaster/fts.h"
 #include "postmaster/ftsprobe.h"
 #include "postmaster/postmaster.h"
@@ -42,9 +45,10 @@
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 
 #include "catalog/gp_configuration_history.h"
-#include "catalog/gp_segment_config.h"
+#include "catalog/gp_segment_configuration.h"
 
 #include "tcop/tcopprot.h" /* quickdie() */
 
@@ -121,7 +125,7 @@ FtsProbeMain(Datum main_arg)
 	BackgroundWorkerUnblockSignals();
 
 	/* Connect to our database */
-	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL);
+	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL, 0);
 
 	/* main loop */
 	FtsLoop();
@@ -181,8 +185,8 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 		bool histnulls[Natts_gp_configuration_history] = { false };
 		char desc[SQL_CMD_BUF_SIZE];
 
-		histrel = heap_open(GpConfigHistoryRelationId,
-							RowExclusiveLock);
+		histrel = table_open(GpConfigHistoryRelationId,
+							 RowExclusiveLock);
 
 		histvals[Anum_gp_configuration_history_time-1] =
 				TimestampTzGetDatum(GetCurrentTimestamp());
@@ -199,12 +203,11 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 		histvals[Anum_gp_configuration_history_desc-1] =
 				CStringGetTextDatum(desc);
 		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
-		simple_heap_insert(histrel, histtuple);
-		CatalogUpdateIndexes(histrel, histtuple);
+		CatalogTupleInsert(histrel, histtuple);
 
 		SIMPLE_FAULT_INJECTOR("fts_update_config");
 
-		heap_close(histrel, RowExclusiveLock);
+		table_close(histrel, RowExclusiveLock);
 	}
 
 	/*
@@ -223,8 +226,8 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 		ScanKeyData scankey;
 		SysScanDesc sscan;
 
-		configrel = heap_open(GpSegmentConfigRelationId,
-							  RowExclusiveLock);
+		configrel = table_open(GpSegmentConfigRelationId,
+							   RowExclusiveLock);
 
 		ScanKeyInit(&scankey,
 					Anum_gp_segment_configuration_dbid,
@@ -256,13 +259,12 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 
 		newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
 									 configvals, confignulls, repls);
-		simple_heap_update(configrel, &configtuple->t_self, newtuple);
-		CatalogUpdateIndexes(configrel, newtuple);
+		CatalogTupleUpdate(configrel, &configtuple->t_self, newtuple);
 
 		systable_endscan(sscan);
 		pfree(newtuple);
 
-		heap_close(configrel, RowExclusiveLock);
+		table_close(configrel, RowExclusiveLock);
 	}
 }
 
@@ -395,7 +397,8 @@ void FtsLoop()
 
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
-					   timeout * 1000L);
+					   timeout * 1000L,
+					   WAIT_EVENT_FTS_PROBE_MAIN);
 
 		SIMPLE_FAULT_INJECTOR("ftsLoop_after_latch");
 

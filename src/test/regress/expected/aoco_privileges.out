@@ -45,7 +45,7 @@ SELECT has_table_privilege('user_with_no_privileges', 'aoco_privileges_table', '
 
 SET ROLE user_with_no_privileges;
 SELECT * FROM aoco_privileges_table;
-ERROR:  permission denied for relation aoco_privileges_table
+ERROR:  permission denied for table aoco_privileges_table
 RESET ROLE;
 -- Now change ownership to the new owner
 ALTER TABLE aoco_privileges_table OWNER TO new_aoco_table_owner;
@@ -110,7 +110,7 @@ SELECT has_table_privilege('aoco_privileges_table', 'SELECT');
 (1 row)
 
 SELECT * FROM aoco_privileges_table;
-ERROR:  permission denied for relation aoco_privileges_table
+ERROR:  permission denied for table aoco_privileges_table
 -- Revoke privileges
 RESET ROLE;
 REVOKE ALL ON aoco_privileges_table FROM user_with_privileges_from_first_owner;

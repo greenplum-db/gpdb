@@ -10,7 +10,7 @@
  *	  Over time, this has also become the preferred place for widely known
  *	  resource-limitation stuff, such as work_mem and check_stack_depth().
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/miscadmin.h
@@ -25,11 +25,9 @@
 
 #include <signal.h>
 
+#include "datatype/timestamp.h" /* for TimestampTZ */
 #include "pgtime.h"				/* for pg_time_t */
 
-
-#define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
-#define PG_BACKEND_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 
 #define InvalidPid				(-1)
 
@@ -80,15 +78,15 @@
 
 /* in globals.c */
 /* these are marked volatile because they are set by signal handlers: */
-extern PGDLLIMPORT volatile bool InterruptPending;
-extern PGDLLIMPORT volatile bool QueryCancelPending;
-extern PGDLLIMPORT volatile bool QueryCancelCleanup; /* GPDB only */
-extern PGDLLIMPORT volatile bool QueryFinishPending;
-extern PGDLLIMPORT volatile bool ProcDiePending;
-extern PGDLLIMPORT volatile bool IdleInTransactionSessionTimeoutPending;
+extern PGDLLIMPORT volatile sig_atomic_t InterruptPending;
+extern PGDLLIMPORT volatile sig_atomic_t QueryCancelPending;
+extern PGDLLIMPORT volatile sig_atomic_t QueryCancelCleanup; /* GPDB only */
+extern PGDLLIMPORT volatile sig_atomic_t QueryFinishPending;
+extern PGDLLIMPORT volatile sig_atomic_t ProcDiePending;
+extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
 
-extern volatile bool ClientConnectionLost;
+extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;
 
 /* these are marked volatile because they are examined by signal handlers: */
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
@@ -149,7 +147,7 @@ do { \
 	if (InterruptPending) \
 		ProcessInterrupts(__FILE__, __LINE__); \
 } while(0)
-#endif   /* WIN32 */
+#endif							/* WIN32 */
 
 
 #define HOLD_INTERRUPTS() \
@@ -208,27 +206,30 @@ do { \
  * from utils/init/globals.c
  */
 extern PGDLLIMPORT pid_t PostmasterPid;
-extern bool IsPostmasterEnvironment;
+extern PGDLLIMPORT bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
-extern bool IsBackgroundWorker;
+extern PGDLLIMPORT bool IsBackgroundWorker;
 extern PGDLLIMPORT bool IsBinaryUpgrade;
 extern bool ConvertMasterDataDirToSegment;
 
 extern PGDLLIMPORT bool ExitOnAnyError;
 
 extern PGDLLIMPORT char *DataDir;
+extern PGDLLIMPORT int data_directory_mode;
 
 extern PGDLLIMPORT int NBuffers;
 extern PGDLLIMPORT int MaxBackends;
 extern PGDLLIMPORT int MaxConnections;
 extern PGDLLIMPORT int max_worker_processes;
+extern PGDLLIMPORT int max_parallel_workers;
 extern int gp_workfile_max_entries;
 
 extern PGDLLIMPORT int MyProcPid;
 extern PGDLLIMPORT pg_time_t MyStartTime;
+extern PGDLLIMPORT TimestampTz MyStartTimestamp;
 extern PGDLLIMPORT struct Port *MyProcPort;
 extern PGDLLIMPORT struct Latch *MyLatch;
-extern long MyCancelKey;
+extern int32 MyCancelKey;
 extern int	MyPMChildSlot;
 
 extern char OutputFileName[];
@@ -314,16 +315,16 @@ extern PGDLLIMPORT bool allowSystemTableMods;
 extern PGDLLIMPORT int planner_work_mem;
 extern PGDLLIMPORT int work_mem;
 extern PGDLLIMPORT int maintenance_work_mem;
+extern PGDLLIMPORT int max_parallel_maintenance_workers;
 extern PGDLLIMPORT int statement_mem;
 extern PGDLLIMPORT int max_statement_mem;
 extern PGDLLIMPORT int gp_vmem_limit_per_query;
-extern PGDLLIMPORT int replacement_sort_tuples;
 
 extern int	VacuumCostPageHit;
 extern int	VacuumCostPageMiss;
 extern int	VacuumCostPageDirty;
 extern int	VacuumCostLimit;
-extern int	VacuumCostDelay;
+extern double VacuumCostDelay;
 
 extern int	VacuumPageHit;
 extern int	VacuumPageMiss;
@@ -331,6 +332,8 @@ extern int	VacuumPageDirty;
 
 extern int	VacuumCostBalance;
 extern bool VacuumCostActive;
+
+extern double vacuum_cleanup_index_scale_factor;
 
 extern int gp_vmem_protect_limit;
 extern int gp_vmem_protect_gang_cache_limit;
@@ -413,6 +416,7 @@ extern void SetSessionAuthorization(Oid userid, bool is_superuser);
 extern Oid	GetCurrentRoleId(void);
 extern void SetCurrentRoleId(Oid roleid, bool is_superuser);
 
+extern void checkDataDir(void);
 extern void SetDataDir(const char *dir);
 extern void ChangeToDataDir(void);
 
@@ -513,7 +517,7 @@ extern bool FindMyDatabase(const char *dbname, Oid *db_id, Oid *db_tablespace);
 extern void pg_split_opts(char **argv, int *argcp, const char *optstr);
 extern void InitializeMaxBackends(void);
 extern void InitPostgres(const char *in_dbname, Oid dboid, const char *username,
-			 Oid useroid, char *out_dbname);
+						 Oid useroid, char *out_dbname, bool override_allow_connections);
 extern void BaseInit(void);
 
 /* in utils/init/miscinit.c */
@@ -523,34 +527,9 @@ extern char *session_preload_libraries_string;
 extern char *shared_preload_libraries_string;
 extern char *local_preload_libraries_string;
 
-/*
- * As of 9.1, the contents of the data-directory lock file are:
- *
- * line #
- *		1	postmaster PID (or negative of a standalone backend's PID)
- *		2	data directory path
- *		3	postmaster start timestamp (time_t representation)
- *		4	port number
- *		5	first Unix socket directory path (empty if none)
- *		6	first listen_address (IP address or "*"; empty if no TCP port)
- *		7	shared memory key (not present on Windows)
- *
- * Lines 6 and up are added via AddToDataDirLockFile() after initial file
- * creation.
- *
- * The socket lock file, if used, has the same contents as lines 1-5.
- */
-#define LOCK_FILE_LINE_PID			1
-#define LOCK_FILE_LINE_DATA_DIR		2
-#define LOCK_FILE_LINE_START_TIME	3
-#define LOCK_FILE_LINE_PORT			4
-#define LOCK_FILE_LINE_SOCKET_DIR	5
-#define LOCK_FILE_LINE_LISTEN_ADDR	6
-#define LOCK_FILE_LINE_SHMEM_KEY	7
-
 extern void CreateDataDirLockFile(bool amPostmaster);
 extern void CreateSocketLockFile(const char *socketfile, bool amPostmaster,
-					 const char *socketDir);
+								 const char *socketDir);
 extern void TouchSocketLockFiles(void);
 extern void AddToDataDirLockFile(int target_line, const char *str);
 extern bool RecheckDataDirLockFile(void);
@@ -564,4 +543,4 @@ extern bool has_rolreplication(Oid roleid);
 extern bool BackupInProgress(void);
 extern void CancelBackup(void);
 
-#endif   /* MISCADMIN_H */
+#endif							/* MISCADMIN_H */

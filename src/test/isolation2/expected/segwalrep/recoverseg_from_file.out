@@ -7,14 +7,11 @@
 -- adding a new mirror. When dbid in gp_segment_configuration is not
 -- continous, the inconsistent issue will happen
 
-include: helpers/server_helpers.sql;
-CREATE
-
 --
 -- generate_recover_config_file:
 --   generate config file used by recoverseg -i
 --
-create or replace function generate_recover_config_file(datadir text, port text) returns void as $$ import io import os myhost = os.uname()[1] inplaceConfig = myhost + '|' + port + '|' + datadir configStr = inplaceConfig + ' ' + inplaceConfig  f = open("/tmp/recover_config_file", "w") f.write(configStr) f.close() $$ language plpythonu;
+create or replace function generate_recover_config_file(datadir text, port text) returns void as $$ import io import os myhost = os.uname()[1] inplaceConfig = myhost + '|' + port + '|' + datadir configStr = inplaceConfig + ' ' + inplaceConfig  f = open("/tmp/recover_config_file", "w") f.write(configStr) f.close() $$ language plpython3u;
 CREATE
 
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;

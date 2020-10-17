@@ -299,9 +299,7 @@ $ sudo apt install openjdk-&lt;<varname>version</varname>>-jdk</codeblock><p>For
             EXTENSION</codeph> command to register the language. For example, this command enables
           PL/Java in the <codeph>testdb</codeph> database:<codeblock>$ psql -d testdb -c 'CREATE EXTENSION pljava;'</codeblock>
           <note>The PL/Java <codeph>install.sql</codeph> script, used in previous releases to
-            register the language, is deprecated. Also using the deprecated
-              <codeph>createlang</codeph> command to register PL/Java generates an
-          error.</note></li>
+            register the language, is deprecated.</note></li>
         <li id="pv160325">Copy your Java archives (JAR files) to the same directory on all Greenplum
           Database hosts. This example uses the Greenplum Database <codeph>gpscp</codeph> utility to
           copy the file <codeph>myclasses.jar</codeph> to the directory
@@ -352,9 +350,7 @@ $ sudo apt install openjdk-&lt;<varname>version</varname>>-jdk</codeblock><p>For
           language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent objects,
           including functions that you created with PL/Java. </p>
         <note>The PL/Java <codeph>uninstall.sql</codeph> script, used in previous releases to remove
-          the language registration, is deprecated. Also using the deprecated
-            <codeph>droplang</codeph> command to remove support for PL/Java generates an
-          error.</note>
+          the language registration, is deprecated.</note>
       </body>
     </topic>
     <topic xml:lang="en" id="topic_tgt_nfg_mjb">

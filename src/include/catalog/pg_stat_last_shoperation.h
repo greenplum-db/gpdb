@@ -19,14 +19,13 @@
 #define PG_STAT_LAST_SHOPERATION_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_stat_last_shoperation_d.h"
 
 /* here is the "shared" version */
 
 #define timestamptz Datum
 
-#define StatLastShOpRelationId 6056
-
-CATALOG(pg_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(pg_stat_last_shoperation,6056,StatLastShOpRelationId)  BKI_SHARED_RELATION
 {
 	/* unique key */
 	Oid			classid;		/* OID of table containing object */
@@ -54,18 +53,5 @@ FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
  * ----------------
  */
 typedef FormData_pg_statlastshop *Form_pg_statlastshop;
-
-/* ----------------
- *		compiler constants for pg_stat_last_shoperation
- * ----------------
- */
-#define Natts_pg_statlastshop				7
-#define Anum_pg_statlastshop_classid		1
-#define Anum_pg_statlastshop_objid			2
-#define Anum_pg_statlastshop_staactionname	3
-#define Anum_pg_statlastshop_stasysid		4
-#define Anum_pg_statlastshop_stausename		5
-#define Anum_pg_statlastshop_stasubtype		6
-#define Anum_pg_statlastshop_statime		7
 
 #endif   /* PG_STAT_LAST_SHOPERATION_H */

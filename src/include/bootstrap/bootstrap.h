@@ -4,7 +4,7 @@
  *	  include file for the bootstrapping code
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/bootstrap/bootstrap.h
@@ -39,27 +39,25 @@ extern void closerel(char *name);
 extern void boot_openrel(char *name);
 
 extern void DefineAttr(char *name, char *type, int attnum, int nullness);
-extern void InsertOneTuple(Oid objectid);
+extern void InsertOneTuple(void);
 extern void InsertOneValue(char *value, int i);
 extern void InsertOneNull(int i);
-
-extern char *MapArrayTypeName(const char *s);
 
 extern void index_register(Oid heap, Oid ind, IndexInfo *indexInfo);
 extern void build_indices(void);
 
 extern void boot_get_type_io_data(Oid typid,
-					  int16 *typlen,
-					  bool *typbyval,
-					  char *typalign,
-					  char *typdelim,
-					  Oid *typioparam,
-					  Oid *typinput,
-					  Oid *typoutput);
+								  int16 *typlen,
+								  bool *typbyval,
+								  char *typalign,
+								  char *typdelim,
+								  Oid *typioparam,
+								  Oid *typinput,
+								  Oid *typoutput);
 
 extern int	boot_yyparse(void);
 
 extern int	boot_yylex(void);
 extern void boot_yyerror(const char *str) pg_attribute_noreturn();
 
-#endif   /* BOOTSTRAP_H */
+#endif							/* BOOTSTRAP_H */

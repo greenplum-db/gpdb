@@ -78,19 +78,6 @@ DELETE FROM TIMESTAMPTZ_TBL;
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('-infinity');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('infinity');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('epoch');
--- Obsolete special values
-INSERT INTO TIMESTAMPTZ_TBL VALUES ('invalid');
-ERROR:  date/time value "invalid" is no longer supported
-LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('invalid');
-                                            ^
-INSERT INTO TIMESTAMPTZ_TBL VALUES ('undefined');
-ERROR:  date/time value "undefined" is no longer supported
-LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('undefined');
-                                            ^
-INSERT INTO TIMESTAMPTZ_TBL VALUES ('current');
-ERROR:  date/time value "current" is no longer supported
-LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('current');
-                                            ^
 -- Postgres v6.0 standard output format
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Mon Feb 10 17:32:01 1997 PST');
 -- Variations on Postgres v6.1 standard output format
@@ -647,6 +634,24 @@ SELECT '' AS date_trunc_week, date_trunc( 'week', timestamp with time zone '2004
  date_trunc_week |          week_trunc          
 -----------------+------------------------------
                  | Mon Feb 23 00:00:00 2004 PST
+(1 row)
+
+SELECT '' AS date_trunc_at_tz, date_trunc('day', timestamp with time zone '2001-02-16 20:38:40+00', 'Australia/Sydney') as sydney_trunc;  -- zone name
+ date_trunc_at_tz |         sydney_trunc         
+------------------+------------------------------
+                  | Fri Feb 16 05:00:00 2001 PST
+(1 row)
+
+SELECT '' AS date_trunc_at_tz, date_trunc('day', timestamp with time zone '2001-02-16 20:38:40+00', 'GMT') as gmt_trunc;  -- fixed-offset abbreviation
+ date_trunc_at_tz |          gmt_trunc           
+------------------+------------------------------
+                  | Thu Feb 15 16:00:00 2001 PST
+(1 row)
+
+SELECT '' AS date_trunc_at_tz, date_trunc('day', timestamp with time zone '2001-02-16 20:38:40+00', 'VET') as vet_trunc;  -- variable-offset abbreviation
+ date_trunc_at_tz |          vet_trunc           
+------------------+------------------------------
+                  | Thu Feb 15 20:00:00 2001 PST
 (1 row)
 
 -- Test casting within a BETWEEN qualifier
@@ -1771,54 +1776,68 @@ SELECT '' AS to_char_11, to_char(d1, 'FMIYYY FMIYY FMIY FMI FMIW FMIDDD FMID')
             | 2001 1 1 1 1 1 1
 (66 rows)
 
--- Check OF with various zone offsets, particularly fractional hours
+-- Check OF, TZH, TZM with various zone offsets, particularly fractional hours
 SET timezone = '00:00';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- +00
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+ OF  | TZH:TZM 
+-----+---------
+ +00 | +00:00
 (1 row)
 
 SET timezone = '+02:00';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- -02
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+ OF  | TZH:TZM 
+-----+---------
+ -02 | -02:00
 (1 row)
 
 SET timezone = '-13:00';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- +13
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+ OF  | TZH:TZM 
+-----+---------
+ +13 | +13:00
 (1 row)
 
 SET timezone = '-00:30';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- +00:30
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+   OF   | TZH:TZM 
+--------+---------
+ +00:30 | +00:30
 (1 row)
 
 SET timezone = '00:30';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- -00:30
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+   OF   | TZH:TZM 
+--------+---------
+ -00:30 | -00:30
 (1 row)
 
 SET timezone = '-04:30';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- +04:30
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+   OF   | TZH:TZM 
+--------+---------
+ +04:30 | +04:30
 (1 row)
 
 SET timezone = '04:30';
-SELECT to_char(now(), 'OF');
- to_char 
----------
- -04:30
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+   OF   | TZH:TZM 
+--------+---------
+ -04:30 | -04:30
+(1 row)
+
+SET timezone = '-04:15';
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+   OF   | TZH:TZM 
+--------+---------
+ +04:15 | +04:15
+(1 row)
+
+SET timezone = '04:15';
+SELECT to_char(now(), 'OF') as "OF", to_char(now(), 'TZH:TZM') as "TZH:TZM";
+   OF   | TZH:TZM 
+--------+---------
+ -04:15 | -04:15
 (1 row)
 
 RESET timezone;
@@ -1892,7 +1911,7 @@ WITH tzs (tz) AS (VALUES
 
 -- these should fail
 SELECT make_timestamptz(1973, 07, 15, 08, 15, 55.33, '2');
-ERROR:  invalid input syntax for numeric time zone: "2"
+ERROR:  invalid input syntax for type numeric time zone: "2"
 HINT:  Numeric time zones must have "-" or "+" as first character.
 SELECT make_timestamptz(2014, 12, 10, 10, 10, 10, '+16');
 ERROR:  numeric time zone "+16" out of range
@@ -2583,37 +2602,23 @@ SELECT '2014-10-25 23:00:00 UTC'::timestamptz AT TIME ZONE 'MSK';
 (1 row)
 
 --
--- Test that the pg_timezone_names and pg_timezone_abbrevs views are
--- more-or-less working.  We can't test their contents in any great detail
--- without the outputs changing anytime IANA updates the underlying data,
--- but it seems reasonable to expect at least one entry per major meridian.
--- (At the time of writing, the actual counts are around 38 because of
--- zones using fractional GMT offsets, so this is a pretty loose test.)
+-- Test that AT TIME ZONE isn't misoptimized when using an index (bug #14504)
 --
-select count(distinct utc_offset) >= 24 as ok from pg_timezone_names;
- ok 
-----
- t
-(1 row)
+create temp table tmptz (f1 timestamptz primary key);
+insert into tmptz values ('2017-01-18 00:00+00');
+explain (costs off)
+select * from tmptz where f1 at time zone 'utc' = '2017-01-18 00:00';
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on tmptz
+         Filter: (timezone('utc'::text, f1) = 'Wed Jan 18 00:00:00 2017'::timestamp without time zone)
+ Optimizer: Postgres query optimizer
+(4 rows)
 
-select count(distinct utc_offset) >= 24 as ok from pg_timezone_abbrevs;
- ok 
-----
- t
-(1 row)
-
--- Let's check the non-default timezone abbreviation sets, too
-set timezone_abbreviations = 'Australia';
-select count(distinct utc_offset) >= 24 as ok from pg_timezone_abbrevs;
- ok 
-----
- t
-(1 row)
-
-set timezone_abbreviations = 'India';
-select count(distinct utc_offset) >= 24 as ok from pg_timezone_abbrevs;
- ok 
-----
- t
+select * from tmptz where f1 at time zone 'utc' = '2017-01-18 00:00';
+              f1              
+------------------------------
+ Tue Jan 17 16:00:00 2017 PST
 (1 row)
 

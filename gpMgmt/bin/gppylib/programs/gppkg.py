@@ -20,7 +20,7 @@ try:
     from gppylib.operations.unix import ListFilesByPattern
 
     import platform
-except ImportError, ex:
+except ImportError as ex:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(ex))
 
 logger = gplog.get_default_logger()
@@ -194,7 +194,7 @@ class GpPkgProgram:
                 cmd.run(validateAfter=True)
                 cmd = Command(name='Check for fakeroot', cmdStr='fakeroot --version')
                 cmd.run(validateAfter=True)
-            except Exception, ex:
+            except Exception as ex:
                 raise ExceptionNoStackTraceNeeded('fakeroot and dpkg are both required by gppkg')
         else:
             try:
@@ -206,7 +206,7 @@ class GpPkgProgram:
                 if not rpm_version_string.startswith('4.'):
                     raise ExceptionNoStackTraceNeeded('gppkg requires rpm version 4.x')
 
-            except ExecutionError, ex:
+            except ExecutionError as ex:
                 results = ex.cmd.get_results().stderr.strip()
                 if len(results) != 0 and 'not found' in results:
                     raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH')

@@ -124,8 +124,6 @@ ERROR:  function max() does not exist
 LINE 1: SELECT max(*) FILTER (WHERE i < 5) FROM filter_test;
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
--- Use old sort implementation
-set gp_enable_mk_sort=off;
 -- TEST MAX(i)
 SELECT max(i) FROM filter_test;
  max 
@@ -395,9 +393,9 @@ select count(i) from filter_test;
 
 -- TEST with multi-parameter aggs
 select covar_pop(i,j) from filter_test;
-    covar_pop     
-------------------
- 2.08163265306122
+     covar_pop      
+--------------------
+ 2.0816326530612246
 (1 row)
 
 select covar_pop(i,j) from filter_test where i < 5;

@@ -5,7 +5,6 @@
 
 CREATE TABLE mksort_limit_test_table(dkey INT, jkey INT, rval REAL, tval TEXT default repeat('abcdefghijklmnopqrstuvwxyz', 300)) DISTRIBUTED BY (dkey);
 INSERT INTO mksort_limit_test_table VALUES(generate_series(1, 10000), generate_series(10001, 20000), sqrt(generate_series(10001, 20000)));
-SET gp_enable_mk_sort = on;
 
 --Should fit LESS (because of overhead) than (20 * 1024 * 1024) / (26 * 300 + 12) => 2684 tuples in memory, after that spills to disk
 SET statement_mem="20MB";

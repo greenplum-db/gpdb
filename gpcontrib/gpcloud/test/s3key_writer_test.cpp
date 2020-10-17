@@ -10,6 +10,8 @@ using ::testing::Invoke;
 using ::testing::Return;
 using ::testing::Throw;
 
+extern volatile bool QueryCancelPending;
+
 class S3KeyWriterTest : public testing::Test, public S3KeyWriter {
    public:
     S3KeyWriterTest() : testParams("s3://abc/def") {

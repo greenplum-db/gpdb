@@ -4,7 +4,7 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeIndexonlyscan.h
@@ -15,12 +15,22 @@
 #define NODEINDEXONLYSCAN_H
 
 #include "nodes/execnodes.h"
+#include "access/parallel.h"
 
 extern IndexOnlyScanState *ExecInitIndexOnlyScan(IndexOnlyScan *node, EState *estate, int eflags);
-extern TupleTableSlot *ExecIndexOnlyScan(IndexOnlyScanState *node);
 extern void ExecEndIndexOnlyScan(IndexOnlyScanState *node);
 extern void ExecIndexOnlyMarkPos(IndexOnlyScanState *node);
 extern void ExecIndexOnlyRestrPos(IndexOnlyScanState *node);
 extern void ExecReScanIndexOnlyScan(IndexOnlyScanState *node);
 
-#endif   /* NODEINDEXONLYSCAN_H */
+/* Support functions for parallel index-only scans */
+extern void ExecIndexOnlyScanEstimate(IndexOnlyScanState *node,
+									  ParallelContext *pcxt);
+extern void ExecIndexOnlyScanInitializeDSM(IndexOnlyScanState *node,
+										   ParallelContext *pcxt);
+extern void ExecIndexOnlyScanReInitializeDSM(IndexOnlyScanState *node,
+											 ParallelContext *pcxt);
+extern void ExecIndexOnlyScanInitializeWorker(IndexOnlyScanState *node,
+											  ParallelWorkerContext *pwcxt);
+
+#endif							/* NODEINDEXONLYSCAN_H */

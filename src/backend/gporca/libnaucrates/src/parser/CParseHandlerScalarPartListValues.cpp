@@ -19,52 +19,61 @@ using namespace gpdxl;
 XERCES_CPP_NAMESPACE_USE
 
 // Ctor
-CParseHandlerScalarPartListValues::CParseHandlerScalarPartListValues
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root)
+CParseHandlerScalarPartListValues::CParseHandlerScalarPartListValues(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 
 // Invoked by Xerces to process an opening tag
 void
-CParseHandlerScalarPartListValues::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerScalarPartListValues::StartElement(
+	const XMLCh *const,	 // element_uri,
+	const XMLCh *const element_local_name,
+	const XMLCh *const,	 // element_qname,
+	const Attributes &attrs)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarPartListValues), element_local_name))
+	if (0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarPartListValues),
+				 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
-	ULONG partition_level = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenPartLevel, EdxltokenScalarPartListValues);
-	IMDId *mdid_result = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenGPDBScalarOpResultTypeId, EdxltokenScalarPartListValues);
-	IMDId *mdid_element = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenArrayElementType, EdxltokenScalarPartListValues);
-	m_dxl_node = GPOS_NEW(m_mp) CDXLNode (m_mp, GPOS_NEW(m_mp) CDXLScalarPartListValues(m_mp, partition_level, mdid_result, mdid_element));
+	ULONG partition_level = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenPartLevel,
+		EdxltokenScalarPartListValues);
+	IMDId *mdid_result = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+		EdxltokenGPDBScalarOpResultTypeId, EdxltokenScalarPartListValues);
+	IMDId *mdid_element = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+		EdxltokenArrayElementType, EdxltokenScalarPartListValues);
+	m_dxl_node = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarPartListValues(
+						   m_mp, partition_level, mdid_result, mdid_element));
 }
 
 // Invoked by Xerces to process a closing tag
 void
-CParseHandlerScalarPartListValues::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerScalarPartListValues::EndElement(
+	const XMLCh *const,	 // element_uri,
+	const XMLCh *const element_local_name,
+	const XMLCh *const	// element_qname
+)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarPartListValues), element_local_name))
+	if (0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarPartListValues),
+				 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	GPOS_ASSERT(NULL != m_dxl_node);

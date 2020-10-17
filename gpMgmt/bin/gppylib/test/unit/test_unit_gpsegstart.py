@@ -54,7 +54,7 @@ class GpSegStart(GpTestCase):
         for result in gpsegstart.overall_status.results:
             self.assertTrue(result.reasoncode == gp.SEGSTART_SUCCESS)
 
-    @patch.object(PgControlData, "get_results", return_value=CommandResult(0, '/tmp/f1', '', True, False))
+    @patch.object(PgControlData, "get_results", return_value=CommandResult(0, b'/tmp/f1', b'', True, False))
     @patch.object(PgControlData, "get_value", return_value="1")
     def test_startSegments_when_checksums_match(self, mock1, mock2):
         self.args_list.append("--master-checksum-version")
@@ -71,7 +71,7 @@ class GpSegStart(GpTestCase):
         for result in gpsegstart.overall_status.results:
             self.assertTrue(result.reasoncode == gp.SEGSTART_SUCCESS)
 
-    @patch.object(PgControlData, "get_results", return_value=CommandResult(0, '/tmp/f1', '', True, False))
+    @patch.object(PgControlData, "get_results", return_value=CommandResult(0, b'/tmp/f1', b'', True, False))
     @patch.object(PgControlData, "get_value", return_value="1")
     def test_startSegments_when_checksums_mismatch(self, mock1, mock2):
         self.args_list.append("--master-checksum-version")
@@ -88,7 +88,7 @@ class GpSegStart(GpTestCase):
         for result in gpsegstart.overall_status.results:
             self.assertTrue(result.reasoncode == gp.SEGSTART_ERROR_CHECKSUM_MISMATCH)
 
-    @patch.object(PgControlData, "get_results", return_value=CommandResult(1, '/tmp/f1', '', True, False))
+    @patch.object(PgControlData, "get_results", return_value=CommandResult(1, b'/tmp/f1', b'', True, False))
     def test_startSegments_when_pg_controldata_failed(self, mock1):
         self.args_list.append("--master-checksum-version")
         self.args_list.append("1")
@@ -104,9 +104,9 @@ class GpSegStart(GpTestCase):
         for result in gpsegstart.overall_status.results:
             self.assertTrue(result.reasoncode == gp.SEGSTART_ERROR_PG_CONTROLDATA_FAILED)
 
-    @patch.object(PgControlData, "get_results", return_value=CommandResult(0, '/tmp/f1', '', True, False))
+    @patch.object(PgControlData, "get_results", return_value=CommandResult(0, b'/tmp/f1', b'', True, False))
     @patch.object(PgControlData, "get_value", return_value="1")
-    @patch.object(gp.SegmentStart, "get_results", return_value=CommandResult(1, '/tmp/f1', '', True, False))
+    @patch.object(gp.SegmentStart, "get_results", return_value=CommandResult(1, b'/tmp/f1', b'', True, False))
     def test_startSegments_when_pg_ctl_failed(self, mock1, mock2, mock_get_results):
         self.args_list.append("--master-checksum-version")
         self.args_list.append("1")

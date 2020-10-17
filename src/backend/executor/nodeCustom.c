@@ -3,7 +3,7 @@
  * nodeCustom.c
  *		Routines to handle execution of custom scan node
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * ------------------------------------------------------------------------
@@ -14,11 +14,17 @@
 #include "executor/executor.h"
 #include "executor/nodeCustom.h"
 #include "nodes/execnodes.h"
+#include "nodes/extensible.h"
 #include "nodes/plannodes.h"
+#include "miscadmin.h"
 #include "parser/parsetree.h"
 #include "utils/hsearch.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+
+
+static TupleTableSlot *ExecCustomScan(PlanState *pstate);
+
 
 CustomScanState *
 ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
@@ -35,8 +41,8 @@ ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
 	 * methods field correctly at this time.  Other standard fields should be
 	 * set to zero.
 	 */
-	css = (CustomScanState *) cscan->methods->CreateCustomScanState(cscan);
-	Assert(IsA(css, CustomScanState));
+	css = castNode(CustomScanState,
+				   cscan->methods->CreateCustomScanState(cscan));
 
 	/* ensure flags is filled correctly */
 	css->flags = cscan->flags;
@@ -44,28 +50,13 @@ ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
 	/* fill up fields of ScanState */
 	css->ss.ps.plan = &cscan->scan.plan;
 	css->ss.ps.state = estate;
+	css->ss.ps.ExecProcNode = ExecCustomScan;
 
 	/* create expression context for node */
 	ExecAssignExprContext(estate, &css->ss.ps);
 
-	/* initialize child expressions */
-	css->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) cscan->scan.plan.targetlist,
-					 (PlanState *) css);
-	css->ss.ps.qual = (List *)
-		ExecInitExpr((Expr *) cscan->scan.plan.qual,
-					 (PlanState *) css);
-
-	/* 
-	 * tuple table initialization
-	 * CustomScan could be any executor node, hence ss_ScanTupleSlot should be
-	 * initialized using ExecInitExtraTupleSlot instead of ExecInitScanTupleSlot
-	 */
-	css->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
-	ExecInitResultTupleSlot(estate, &css->ss.ps);
-
 	/*
-	 * open the base relation, if any, and acquire an appropriate lock on it
+	 * open the scan relation, if any
 	 */
 	if (scanrelid > 0)
 	{
@@ -82,23 +73,28 @@ ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
 	{
 		TupleDesc	scan_tupdesc;
 
-		scan_tupdesc = ExecTypeFromTL(cscan->custom_scan_tlist, false);
-		ExecAssignScanType(&css->ss, scan_tupdesc);
+		scan_tupdesc = ExecTypeFromTL(cscan->custom_scan_tlist);
+		ExecInitScanTupleSlot(estate, &css->ss, scan_tupdesc, &TTSOpsVirtual);
 		/* Node's targetlist will contain Vars with varno = INDEX_VAR */
 		tlistvarno = INDEX_VAR;
 	}
 	else
 	{
-		ExecAssignScanType(&css->ss, RelationGetDescr(scan_rel));
+		ExecInitScanTupleSlot(estate, &css->ss, RelationGetDescr(scan_rel),
+							  &TTSOpsVirtual);
 		/* Node's targetlist will contain Vars with varno = scanrelid */
 		tlistvarno = scanrelid;
 	}
 
 	/*
-	 * Initialize result tuple type and projection info.
+	 * Initialize result slot, type and projection.
 	 */
-	ExecAssignResultTypeFromTL(&css->ss.ps);
+	ExecInitResultTupleSlotTL(&css->ss.ps, &TTSOpsVirtual);
 	ExecAssignScanProjectionInfoWithVarno(&css->ss, tlistvarno);
+
+	/* initialize child expressions */
+	css->ss.ps.qual =
+		ExecInitQual(cscan->scan.plan.qual, (PlanState *) css);
 
 	/*
 	 * The callback of custom-scan provider applies the final initialization
@@ -109,9 +105,13 @@ ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
 	return css;
 }
 
-TupleTableSlot *
-ExecCustomScan(CustomScanState *node)
+static TupleTableSlot *
+ExecCustomScan(PlanState *pstate)
 {
+	CustomScanState *node = castNode(CustomScanState, pstate);
+
+	CHECK_FOR_INTERRUPTS();
+
 	Assert(node->methods->ExecCustomScan != NULL);
 	return node->methods->ExecCustomScan(node);
 }
@@ -128,10 +128,6 @@ ExecEndCustomScan(CustomScanState *node)
 	/* Clean out the tuple table */
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
-
-	/* Close the heap relation */
-	if (node->ss.ss_currentRelation)
-		ExecCloseScanRelation(node->ss.ss_currentRelation);
 }
 
 void
@@ -193,7 +189,23 @@ ExecCustomScanInitializeDSM(CustomScanState *node, ParallelContext *pcxt)
 }
 
 void
-ExecCustomScanInitializeWorker(CustomScanState *node, shm_toc *toc)
+ExecCustomScanReInitializeDSM(CustomScanState *node, ParallelContext *pcxt)
+{
+	const CustomExecMethods *methods = node->methods;
+
+	if (methods->ReInitializeDSMCustomScan)
+	{
+		int			plan_node_id = node->ss.ps.plan->plan_node_id;
+		void	   *coordinate;
+
+		coordinate = shm_toc_lookup(pcxt->toc, plan_node_id, false);
+		methods->ReInitializeDSMCustomScan(node, pcxt, coordinate);
+	}
+}
+
+void
+ExecCustomScanInitializeWorker(CustomScanState *node,
+							   ParallelWorkerContext *pwcxt)
 {
 	const CustomExecMethods *methods = node->methods;
 
@@ -202,7 +214,16 @@ ExecCustomScanInitializeWorker(CustomScanState *node, shm_toc *toc)
 		int			plan_node_id = node->ss.ps.plan->plan_node_id;
 		void	   *coordinate;
 
-		coordinate = shm_toc_lookup(toc, plan_node_id);
-		methods->InitializeWorkerCustomScan(node, toc, coordinate);
+		coordinate = shm_toc_lookup(pwcxt->toc, plan_node_id, false);
+		methods->InitializeWorkerCustomScan(node, pwcxt->toc, coordinate);
 	}
+}
+
+void
+ExecShutdownCustomScan(CustomScanState *node)
+{
+	const CustomExecMethods *methods = node->methods;
+
+	if (methods->ShutdownCustomScan)
+		methods->ShutdownCustomScan(node);
 }

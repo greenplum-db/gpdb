@@ -17,13 +17,13 @@
 #define PGDLLIMPORT __declspec (dllimport)
 #else
 #define PGDLLIMPORT
-#endif   /* __CYGWIN__ */
-#endif   /* PGDLLIMPORT */
+#endif							/* __CYGWIN__ */
+#endif							/* PGDLLIMPORT */
 
 #define SQLERRMC_LEN	150
 
 #ifdef __cplusplus
-extern		"C"
+extern "C"
 {
 #endif
 
@@ -114,7 +114,7 @@ static int fe(enum e x)
 	return (int)x;
 }
 
-static void sqlnotice(char *notice, short trans)
+static void sqlnotice(const char *notice, short trans)
 {
 	if (!notice)
 		notice = "-empty-";

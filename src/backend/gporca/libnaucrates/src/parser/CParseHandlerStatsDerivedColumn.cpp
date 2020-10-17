@@ -29,20 +29,16 @@ XERCES_CPP_NAMESPACE_USE
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerStatsDerivedColumn::CParseHandlerStatsDerivedColumn
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_colid(0),
-	m_width(CStatistics::DefaultColumnWidth),
-	m_null_freq(0.0),
-	m_distinct_remaining(0.0),
-	m_freq_remaining(0.0),
-	m_dxl_stats_derived_col(NULL)
+CParseHandlerStatsDerivedColumn::CParseHandlerStatsDerivedColumn(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_colid(0),
+	  m_width(CStatistics::DefaultColumnWidth),
+	  m_null_freq(0.0),
+	  m_distinct_remaining(0.0),
+	  m_freq_remaining(0.0),
+	  m_dxl_stats_derived_col(NULL)
 {
 }
 
@@ -68,70 +64,80 @@ CParseHandlerStatsDerivedColumn::~CParseHandlerStatsDerivedColumn()
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerStatsDerivedColumn::StartElement
-	(
-	const XMLCh* const element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerStatsDerivedColumn::StartElement(
+	const XMLCh *const element_uri, const XMLCh *const element_local_name,
+	const XMLCh *const element_qname, const Attributes &attrs)
 {
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenStatsDerivedColumn), element_local_name))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenStatsDerivedColumn),
+				 element_local_name))
 	{
 		// must have not seen a bucket yet
 		GPOS_ASSERT(0 == this->Length());
 
 		// parse column id
-		m_colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong
-											(
-											m_parse_handler_mgr->GetDXLMemoryManager(),
-											attrs,
-											EdxltokenColId,
-											EdxltokenStatsDerivedColumn
-											);
+		m_colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenColId,
+			EdxltokenStatsDerivedColumn);
 
 		// parse column width
-		m_width = CDXLOperatorFactory::ExtractConvertAttrValueToDouble
-											(
-											m_parse_handler_mgr->GetDXLMemoryManager(),
-											attrs,
-											EdxltokenWidth,
-											EdxltokenStatsDerivedColumn
-											);
+		m_width = CDXLOperatorFactory::ExtractConvertAttrValueToDouble(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenWidth,
+			EdxltokenStatsDerivedColumn);
 
-		const XMLCh *parsed_null_freq = attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNullFreq));
+		const XMLCh *parsed_null_freq =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNullFreq));
 		if (NULL != parsed_null_freq)
 		{
-			m_null_freq = CDXLOperatorFactory::ConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), parsed_null_freq, EdxltokenColNullFreq, EdxltokenColumnStats);
+			m_null_freq = CDXLOperatorFactory::ConvertAttrValueToDouble(
+				m_parse_handler_mgr->GetDXLMemoryManager(), parsed_null_freq,
+				EdxltokenColNullFreq, EdxltokenColumnStats);
 		}
 
-		const XMLCh *parsed_distinct_remaining = attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNdvRemain));
+		const XMLCh *parsed_distinct_remaining =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNdvRemain));
 		if (NULL != parsed_distinct_remaining)
 		{
-			m_distinct_remaining = CDXLOperatorFactory::ConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), parsed_distinct_remaining, EdxltokenColNdvRemain, EdxltokenColumnStats);
+			m_distinct_remaining =
+				CDXLOperatorFactory::ConvertAttrValueToDouble(
+					m_parse_handler_mgr->GetDXLMemoryManager(),
+					parsed_distinct_remaining, EdxltokenColNdvRemain,
+					EdxltokenColumnStats);
 		}
 
-		const XMLCh *parsed_freq_remaining = attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColFreqRemain));
+		const XMLCh *parsed_freq_remaining =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColFreqRemain));
 		if (NULL != parsed_freq_remaining)
 		{
-			m_freq_remaining = CDXLOperatorFactory::ConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), parsed_freq_remaining, EdxltokenColFreqRemain, EdxltokenColumnStats);
+			m_freq_remaining = CDXLOperatorFactory::ConvertAttrValueToDouble(
+				m_parse_handler_mgr->GetDXLMemoryManager(),
+				parsed_freq_remaining, EdxltokenColFreqRemain,
+				EdxltokenColumnStats);
 		}
 	}
-	else if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenColumnStatsBucket), element_local_name))
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenColumnStatsBucket),
+					  element_local_name))
 	{
 		// install a parse handler for the given element
-		CParseHandlerBase *parse_handler_base = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenColumnStatsBucket), m_parse_handler_mgr, this);
+		CParseHandlerBase *parse_handler_base =
+			CParseHandlerFactory::GetParseHandler(
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenColumnStatsBucket),
+				m_parse_handler_mgr, this);
 		m_parse_handler_mgr->ActivateParseHandler(parse_handler_base);
 
 		// store parse handler
 		this->Append(parse_handler_base);
 
-		parse_handler_base->startElement(element_uri, element_local_name, element_qname, attrs);
+		parse_handler_base->startElement(element_uri, element_local_name,
+										 element_qname, attrs);
 	}
 	else
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 }
 
@@ -144,32 +150,40 @@ CParseHandlerStatsDerivedColumn::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerStatsDerivedColumn::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerStatsDerivedColumn::EndElement(
+	const XMLCh *const,	 // element_uri,
+	const XMLCh *const element_local_name,
+	const XMLCh *const	// element_qname
+)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenStatsDerivedColumn), element_local_name))
+	if (0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenStatsDerivedColumn),
+				 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
-	CDXLBucketArray *dxl_stats_bucket_array = GPOS_NEW(m_mp) CDXLBucketArray(m_mp);
+	CDXLBucketArray *dxl_stats_bucket_array =
+		GPOS_NEW(m_mp) CDXLBucketArray(m_mp);
 
 	const ULONG num_of_buckets = this->Length();
 	// add constructed children from child parse handlers
 	for (ULONG idx = 0; idx < num_of_buckets; idx++)
 	{
-		CParseHandlerColStatsBucket *col_stats_bucket_parse_handler = dynamic_cast<CParseHandlerColStatsBucket*>((*this)[idx]);
-		CDXLBucket *dxl_bucket = col_stats_bucket_parse_handler->GetDXLBucketAt();
+		CParseHandlerColStatsBucket *col_stats_bucket_parse_handler =
+			dynamic_cast<CParseHandlerColStatsBucket *>((*this)[idx]);
+		CDXLBucket *dxl_bucket =
+			col_stats_bucket_parse_handler->GetDXLBucketAt();
 		dxl_bucket->AddRef();
 		dxl_stats_bucket_array->Append(dxl_bucket);
 	}
 
-	m_dxl_stats_derived_col = GPOS_NEW(m_mp) CDXLStatsDerivedColumn(m_colid, m_width, m_null_freq, m_distinct_remaining, m_freq_remaining, dxl_stats_bucket_array);
+	m_dxl_stats_derived_col = GPOS_NEW(m_mp) CDXLStatsDerivedColumn(
+		m_colid, m_width, m_null_freq, m_distinct_remaining, m_freq_remaining,
+		dxl_stats_bucket_array);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

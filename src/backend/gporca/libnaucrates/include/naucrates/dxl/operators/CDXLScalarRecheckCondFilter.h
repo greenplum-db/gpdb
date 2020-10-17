@@ -9,7 +9,7 @@
 //		Filter for rechecking an index condition on the operator upstream of the index scan
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -24,71 +24,57 @@
 
 namespace gpdxl
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLScalarRecheckCondFilter
+//
+//	@doc:
+//		Filter for rechecking an index condition on the operator upstream of the bitmap index scan
+//
+//---------------------------------------------------------------------------
+class CDXLScalarRecheckCondFilter : public CDXLScalarFilter
+{
+private:
+	// private copy ctor
+	CDXLScalarRecheckCondFilter(CDXLScalarRecheckCondFilter &);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLScalarRecheckCondFilter
-	//
-	//	@doc:
-	//		Filter for rechecking an index condition on the operator upstream of the bitmap index scan
-	//
-	//---------------------------------------------------------------------------
-	class CDXLScalarRecheckCondFilter : public CDXLScalarFilter
+public:
+	// ctor
+	explicit CDXLScalarRecheckCondFilter(CMemoryPool *mp) : CDXLScalarFilter(mp)
 	{
-		private:
-			// private copy ctor
-			CDXLScalarRecheckCondFilter(CDXLScalarRecheckCondFilter &);
+	}
 
-		public:
-			// ctor
-			explicit
-			CDXLScalarRecheckCondFilter
-				(
-				CMemoryPool *mp
-				)
-				:
-				CDXLScalarFilter(mp)
-			{
-			}
+	// operator identity
+	virtual Edxlopid
+	GetDXLOperator() const
+	{
+		return EdxlopScalarRecheckCondFilter;
+	}
 
-			// operator identity
-			virtual
-			Edxlopid GetDXLOperator() const
-			{
-				return EdxlopScalarRecheckCondFilter;
-			}
+	// operator name
+	virtual const CWStringConst *GetOpNameStr() const;
 
-			// operator name
-			virtual
-			const CWStringConst *GetOpNameStr() const;
+	// does the operator return a boolean result
+	virtual BOOL
+	HasBoolResult(CMDAccessor *	 //md_accessor
+	) const
+	{
+		GPOS_ASSERT(!"Invalid function call for a container operator");
+		return false;
+	}
 
-			// does the operator return a boolean result
-			virtual
-			BOOL HasBoolResult
-					(
-					CMDAccessor *//md_accessor
-					)
-					const
-			{
-				GPOS_ASSERT(!"Invalid function call for a container operator");
-				return false;
-			}
+	// conversion function
+	static CDXLScalarRecheckCondFilter *
+	Cast(CDXLOperator *dxl_op)
+	{
+		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(EdxlopScalarRecheckCondFilter == dxl_op->GetDXLOperator());
 
-			// conversion function
-			static
-			CDXLScalarRecheckCondFilter *Cast
-				(
-				CDXLOperator *dxl_op
-				)
-			{
-				GPOS_ASSERT(NULL != dxl_op);
-				GPOS_ASSERT(EdxlopScalarRecheckCondFilter == dxl_op->GetDXLOperator());
+		return dynamic_cast<CDXLScalarRecheckCondFilter *>(dxl_op);
+	}
+};
+}  // namespace gpdxl
 
-				return dynamic_cast<CDXLScalarRecheckCondFilter*>(dxl_op);
-			}
-	};
-}
-
-#endif // !GPDXL_CDXLScalarRecheckCondFilter_H
+#endif	// !GPDXL_CDXLScalarRecheckCondFilter_H
 
 // EOF

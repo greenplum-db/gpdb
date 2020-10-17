@@ -79,7 +79,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
         if rows is None:
             self.fail(
                 'Expected one of the query fragments {!r} to be in the query {!r}.'.format(
-                    self._pg_rows.keys(), query
+                    list(self._pg_rows.keys()), query
                 )
             )
 
@@ -104,10 +104,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
         return (
             kwargs.get('application_name', 'gp_walreceiver'),
             kwargs.get('state', 'streaming'),
-            kwargs.get('sent_location', '0/0'),
-            kwargs.get('flush_location', '0/0'),
+            kwargs.get('sent_lsn', '0/0'),
+            kwargs.get('flush_lsn', '0/0'),
             kwargs.get('flush_left', 0),
-            kwargs.get('replay_location', '0/0'),
+            kwargs.get('replay_lsn', '0/0'),
             kwargs.get('replay_left', 0),
             kwargs.get('backend_start', None)
         )
@@ -128,9 +128,9 @@ class ReplicationInfoTestCase(unittest.TestCase):
         self.primary.status = gparray.STATUS_DOWN
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_adds_unknowns_if_connection_cannot_be_made(self, mock_connect):
@@ -138,9 +138,9 @@ class ReplicationInfoTestCase(unittest.TestCase):
         mock_connect.side_effect = pgdb.InternalError('connection failure forced by unit test')
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -149,9 +149,9 @@ class ReplicationInfoTestCase(unittest.TestCase):
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -163,9 +163,9 @@ class ReplicationInfoTestCase(unittest.TestCase):
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -173,10 +173,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
         # Set up the row definition.
         self.mock_pg_stat_replication(mock_query, [
             self.stub_replication_entry(
-                sent_location='0/1000',
-                flush_location='0/0800',
+                sent_lsn='0/1000',
+                flush_lsn='0/0800',
                 flush_left=2048,
-                replay_location='0/0000',
+                replay_lsn='0/0000',
                 replay_left=4096,
             )
         ])
@@ -184,9 +184,9 @@ class ReplicationInfoTestCase(unittest.TestCase):
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
         self.assertEqual('Streaming', self.data.getStrValue(self.mirror, VALUE__MIRROR_STATUS))
-        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('0/0800 (2048 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('0/0000 (4096 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('0/0800 (2048 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('0/0000 (4096 bytes left)', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -194,19 +194,19 @@ class ReplicationInfoTestCase(unittest.TestCase):
         # Set up the row definition.
         self.mock_pg_stat_replication(mock_query, [
             self.stub_replication_entry(
-                sent_location='0/1000',
-                flush_location='0/1000',
+                sent_lsn='0/1000',
+                flush_lsn='0/1000',
                 flush_left=0,
-                replay_location='0/1000',
+                replay_lsn='0/1000',
                 replay_left=0,
             )
         ])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
-        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('0/1000', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -214,19 +214,19 @@ class ReplicationInfoTestCase(unittest.TestCase):
         # Set up the row definition.
         self.mock_pg_stat_replication(mock_query, [
             self.stub_replication_entry(
-                sent_location=None,
-                flush_location=None,
+                sent_lsn=None,
+                flush_lsn=None,
                 flush_left=None,
-                replay_location=None,
+                replay_lsn=None,
                 replay_left=None,
             )
         ])
 
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LOCATION))
-        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LOCATION))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_FLUSH_LSN))
+        self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_REPLAY_LSN))
 
     @mock.patch('gppylib.db.dbconn.query', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
@@ -244,10 +244,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
             self.stub_replication_entry(
                 application_name='some_backup_utility',
                 state='backup',
-                sent_location='0/0', # this matches the real-world behavior but is unimportant to the test
-                flush_location=None,
+                sent_lsn='0/0', # this matches the real-world behavior but is unimportant to the test
+                flush_lsn=None,
                 flush_left=None,
-                replay_location=None,
+                replay_lsn=None,
                 replay_left=None,
             )
         ])
@@ -263,10 +263,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
             self.stub_replication_entry(
                 application_name='some_backup_utility',
                 state='backup',
-                sent_location='0/0', # this matches the real-world behavior but is unimportant to the test
-                flush_location=None,
+                sent_lsn='0/0', # this matches the real-world behavior but is unimportant to the test
+                flush_lsn=None,
                 flush_left=None,
-                replay_location=None,
+                replay_lsn=None,
                 replay_left=None,
                 backend_start='1970-01-01 00:00:00.000000-00'
             )
@@ -283,10 +283,10 @@ class ReplicationInfoTestCase(unittest.TestCase):
             self.stub_replication_entry(
                 application_name='some_backup_utility',
                 state='backup',
-                sent_location='0/0', # this matches the real-world behavior but is unimportant to the test
-                flush_location=None,
+                sent_lsn='0/0', # this matches the real-world behavior but is unimportant to the test
+                flush_lsn=None,
                 flush_left=None,
-                replay_location=None,
+                replay_lsn=None,
                 replay_left=None,
             ),
             self.stub_replication_entry(

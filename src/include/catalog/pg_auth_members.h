@@ -1,18 +1,18 @@
 /*-------------------------------------------------------------------------
  *
  * pg_auth_members.h
- *	  definition of the system "authorization identifier members" relation
- *	  (pg_auth_members) along with the relation's initial contents.
+ *	  definition of the "authorization identifier members" system catalog
+ *	  (pg_auth_members).
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_auth_members.h
  *
  * NOTES
- *	  the genbki.pl script reads this file and generates .bki
- *	  information from the DATA() statements.
+ *	  The Catalog.pm module reads this file and derives schema
+ *	  information.
  *
  *-------------------------------------------------------------------------
  */
@@ -20,16 +20,14 @@
 #define PG_AUTH_MEMBERS_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_auth_members_d.h"
 
 /* ----------------
  *		pg_auth_members definition.  cpp turns this into
  *		typedef struct FormData_pg_auth_members
  * ----------------
  */
-#define AuthMemRelationId	1261
-#define AuthMemRelation_Rowtype_Id	2843
-
-CATALOG(pg_auth_members,1261) BKI_SHARED_RELATION BKI_WITHOUT_OIDS BKI_ROWTYPE_OID(2843) BKI_SCHEMA_MACRO
+CATALOG(pg_auth_members,1261,AuthMemRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(2843,AuthMemRelation_Rowtype_Id) BKI_SCHEMA_MACRO
 {
 	Oid			roleid;			/* ID of a role */
 	Oid			member;			/* ID of a member of that role */
@@ -52,14 +50,4 @@ FOREIGN_KEY(member  REFERENCES pg_authid(oid));
  */
 typedef FormData_pg_auth_members *Form_pg_auth_members;
 
-/* ----------------
- *		compiler constants for pg_auth_members
- * ----------------
- */
-#define Natts_pg_auth_members				4
-#define Anum_pg_auth_members_roleid			1
-#define Anum_pg_auth_members_member			2
-#define Anum_pg_auth_members_grantor		3
-#define Anum_pg_auth_members_admin_option	4
-
-#endif   /* PG_AUTH_MEMBERS_H */
+#endif							/* PG_AUTH_MEMBERS_H */

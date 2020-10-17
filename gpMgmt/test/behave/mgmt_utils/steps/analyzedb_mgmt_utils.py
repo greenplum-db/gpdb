@@ -48,24 +48,24 @@ def impl(context, storage_type, tablename, col_name_list, col_type_list, scheman
     check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type=storage_type)
 
 
-@given('there is a hard coded ao partition table "{tablename}" with 4 child partitions in schema "{schemaname}"')
+@given('there is a hard coded partition table "{tablename}" with 4 child partitions in schema "{schemaname}"')
 def impl(context, tablename, schemaname):
     if not check_schema_exists(context, schemaname, context.dbname):
         raise Exception("Schema %s does not exist in database %s" % (schemaname, context.dbname))
     drop_table_if_exists(context, '.'.join([schemaname, tablename]), context.dbname)
     with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
         dbconn.execSQL(conn, CREATE_PARTITION_TABLE_SQL % (schemaname, tablename))
-    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type='ao')
+    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type=None)
 
 
-@given('there is a hard coded multi-level ao partition table "{tablename}" with 4 mid-level and 16 leaf-level partitions in schema "{schemaname}"')
+@given('there is a hard coded multi-level partition table "{tablename}" with 4 mid-level and 16 leaf-level partitions in schema "{schemaname}"')
 def impl(context, tablename, schemaname):
     if not check_schema_exists(context, schemaname, context.dbname):
         raise Exception("Schema %s does not exist in database %s" % (schemaname, context.dbname))
     drop_table_if_exists(context, '.'.join([schemaname, tablename]), context.dbname)
     with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
         dbconn.execSQL(conn, CREATE_MULTI_PARTITION_TABLE_SQL % (schemaname, tablename))
-    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type='ao')
+    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type=None)
 
 
 @given('no state files exist for database "{dbname}"')
@@ -318,7 +318,7 @@ def get_list_of_analyze_dirs(dbname):
         return []
 
     ordered_list = [os.path.join(analyze_dir, x) for x in sorted(os.listdir(analyze_dir), reverse=True)]
-    return filter(os.path.isdir, ordered_list)
+    return list(filter(os.path.isdir, ordered_list))
 
 
 def get_latest_analyze_dir(dbname):

@@ -4,7 +4,7 @@
  *		Convert a wait/waitpid(2) result code to a human-readable string
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -21,8 +21,6 @@
 #endif
 
 #include <signal.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/wait.h>
 
 /*
@@ -58,29 +56,64 @@ wait_result_to_str(int exitstatus)
 		}
 	}
 	else if (WIFSIGNALED(exitstatus))
+	{
 #if defined(WIN32)
 		snprintf(str, sizeof(str),
 				 _("child process was terminated by exception 0x%X"),
 				 WTERMSIG(exitstatus));
-#elif defined(HAVE_DECL_SYS_SIGLIST) && HAVE_DECL_SYS_SIGLIST
-	{
-		char		str2[256];
-
-		snprintf(str2, sizeof(str2), "%d: %s", WTERMSIG(exitstatus),
-				 WTERMSIG(exitstatus) < NSIG ?
-				 sys_siglist[WTERMSIG(exitstatus)] : "(unknown)");
-		snprintf(str, sizeof(str),
-				 _("child process was terminated by signal %s"), str2);
-	}
 #else
 		snprintf(str, sizeof(str),
-				 _("child process was terminated by signal %d"),
-				 WTERMSIG(exitstatus));
+				 _("child process was terminated by signal %d: %s"),
+				 WTERMSIG(exitstatus), pg_strsignal(WTERMSIG(exitstatus)));
 #endif
+	}
 	else
 		snprintf(str, sizeof(str),
 				 _("child process exited with unrecognized status %d"),
 				 exitstatus);
 
 	return pstrdup(str);
+}
+
+/*
+ * Return true if a wait(2) result indicates that the child process
+ * died due to the specified signal.
+ *
+ * The reason this is worth having a wrapper function for is that
+ * there are two cases: the signal might have been received by our
+ * immediate child process, or there might've been a shell process
+ * between us and the child that died.  The shell will, per POSIX,
+ * report the child death using exit code 128 + signal number.
+ *
+ * If there is no possibility of an intermediate shell, this function
+ * need not (and probably should not) be used.
+ */
+bool
+wait_result_is_signal(int exit_status, int signum)
+{
+	if (WIFSIGNALED(exit_status) && WTERMSIG(exit_status) == signum)
+		return true;
+	if (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == 128 + signum)
+		return true;
+	return false;
+}
+
+/*
+ * Return true if a wait(2) result indicates that the child process
+ * died due to any signal.  We consider either direct child death
+ * or a shell report of child process death as matching the condition.
+ *
+ * If include_command_not_found is true, also return true for shell
+ * exit codes indicating "command not found" and the like
+ * (specifically, exit codes 126 and 127; see above).
+ */
+bool
+wait_result_is_any_signal(int exit_status, bool include_command_not_found)
+{
+	if (WIFSIGNALED(exit_status))
+		return true;
+	if (WIFEXITED(exit_status) &&
+		WEXITSTATUS(exit_status) > (include_command_not_found ? 125 : 128))
+		return true;
+	return false;
 }

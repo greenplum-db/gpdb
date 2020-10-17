@@ -5,7 +5,7 @@ DROP ROLE IF EXISTS role2_cpu_test;
 DROP RESOURCE GROUP rg1_cpu_test;
 DROP RESOURCE GROUP rg2_cpu_test;
 
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 
 --
@@ -30,7 +30,7 @@ CREATE OR REPLACE FUNCTION fetch_sample() RETURNS text AS $$
         INSERT INTO cpu_usage_samples VALUES ('{value}')
     '''.format(value=json_text))
     return json_text
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 -- verify_cpu_usage: calculate each QE's average cpu usage using all the data in
 -- the table cpu_usage_sample. And compare the average value to the expected value.
@@ -38,6 +38,7 @@ $$ LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION verify_cpu_usage(groupname TEXT, expect_cpu_usage INT, err_rate INT)
 RETURNS BOOL AS $$
     import json
+    import functools
 
     def add_vector(vec1, vec2):
         r = dict()
@@ -49,7 +50,7 @@ RETURNS BOOL AS $$
         all_info = plpy.execute('''
             SELECT sample::json->'{name}' AS cpu FROM cpu_usage_samples
         '''.format(name=groupname))
-        usage_sum = reduce(add_vector,
+        usage_sum = functools.reduce(add_vector,
                            [json.loads(row['cpu']) for row in all_info])
         usage = [(float(v) / all_info.nrows())
                  for k, v in usage_sum.items() if k != "-1"]
@@ -57,14 +58,14 @@ RETURNS BOOL AS $$
         return abs(avg - expect_cpu_usage) <= err_rate
 
     return verify_cpu_usage()
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION busy() RETURNS void AS $$
     import os
     import signal
 
     n = 15
-    for i in xrange(n):
+    for i in range(n):
         if os.fork() == 0:
 			# children must quit without invoking the atexit hooks
             signal.signal(signal.SIGINT,  lambda a, b: os._exit(0))
@@ -76,7 +77,7 @@ CREATE OR REPLACE FUNCTION busy() RETURNS void AS $$
                 pass
 
     os.wait()
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE VIEW cancel_all AS
     SELECT pg_cancel_backend(pid)
@@ -90,7 +91,7 @@ CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_rate_limit=20, memor
 --
 -- check gpdb cgroup configuration
 --
-DO LANGUAGE PLPYTHONU $$
+DO LANGUAGE PLPYTHON3U $$
     import subprocess
 
     cgroot = '@cgroup_mnt_point@'
@@ -100,7 +101,7 @@ DO LANGUAGE PLPYTHONU $$
         return int(open(fullpath).readline())
 
     def run_command(cmd):
-        return subprocess.check_output(cmd.split())
+        return subprocess.check_output(cmd.split()).decode()
 
     def show_guc(guc):
         return plpy.execute('SHOW {}'.format(guc))[0][guc]
@@ -320,4 +321,4 @@ DROP ROLE role1_cpu_test;
 DROP ROLE role2_cpu_test;
 DROP RESOURCE GROUP rg1_cpu_test;
 DROP RESOURCE GROUP rg2_cpu_test;
-DROP LANGUAGE plpythonu CASCADE;
+DROP LANGUAGE plpython3u CASCADE;

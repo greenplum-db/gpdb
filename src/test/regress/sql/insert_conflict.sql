@@ -141,7 +141,7 @@ insert into insertconflicttest values (12, 'Date') on conflict (lower(fruit), ke
 drop index comp_key_index;
 
 --
--- Partial index tests, no inference predicate specificied
+-- Partial index tests, no inference predicate specified
 --
 create unique index part_comp_key_index on insertconflicttest(key, fruit) where key < 5;
 create unique index expr_part_comp_key_index on insertconflicttest(key, lower(fruit)) where key < 5;
@@ -260,12 +260,11 @@ drop table insertconflicttest;
 --
 -- Verify that EXCLUDED does not allow system column references. These
 -- do not make sense because EXCLUDED isn't an already stored tuple
--- (and thus doesn't have a ctid, oids are not assigned yet, etc).
+-- (and thus doesn't have a ctid etc).
 --
-create table syscolconflicttest(key int4, data text) WITH OIDS;
+create table syscolconflicttest(key int4, data text);
 insert into syscolconflicttest values (1);
 insert into syscolconflicttest values (1) on conflict (key) do update set data = excluded.ctid::text;
-insert into syscolconflicttest values (1) on conflict (key) do update set data = excluded.oid::text;
 drop table syscolconflicttest;
 
 --
@@ -292,6 +291,24 @@ on conflict (b) where coalesce(a, 1) > 1 do nothing;
 
 drop table insertconflict;
 -- end_ignore
+
+--
+-- test insertion through view
+--
+
+create table insertconflict (f1 int primary key, f2 text);
+create view insertconflictv as
+  select * from insertconflict with cascaded check option;
+
+insert into insertconflictv values (1,'foo')
+  on conflict (f1) do update set f2 = excluded.f2;
+select * from insertconflict;
+insert into insertconflictv values (1,'bar')
+  on conflict (f1) do update set f2 = excluded.f2;
+select * from insertconflict;
+
+drop view insertconflictv;
+drop table insertconflict;
 
 
 -- ******************************************************************
@@ -365,28 +382,6 @@ insert into excluded values(1, '2') on conflict (key) do update set data = 3 RET
 drop table excluded;
 
 
--- Check tables w/o oids are handled correctly
-create table testoids(key int primary key, data text) without oids;
--- first without oids
-insert into testoids values(1, '1') on conflict (key) do update set data = excluded.data RETURNING *;
-insert into testoids values(1, '2') on conflict (key) do update set data = excluded.data RETURNING *;
--- add oids
-alter table testoids set with oids;
--- update existing row, that didn't have an oid
-insert into testoids values(1, '3') on conflict (key) do update set data = excluded.data RETURNING *;
--- insert a new row
-insert into testoids values(2, '1') on conflict (key) do update set data = excluded.data RETURNING *;
--- and update it
-insert into testoids values(2, '2') on conflict (key) do update set data = excluded.data RETURNING *;
--- remove oids again, test
-alter table testoids set without oids;
-insert into testoids values(1, '4') on conflict (key) do update set data = excluded.data RETURNING *;
-insert into testoids values(3, '1') on conflict (key) do update set data = excluded.data RETURNING *;
-insert into testoids values(3, '2') on conflict (key) do update set data = excluded.data RETURNING *;
-
-DROP TABLE testoids;
-
-
 -- check that references to columns after dropped columns are handled correctly
 create table dropcol(key int primary key, drop1 int, keep1 text, drop2 numeric, keep2 float);
 insert into dropcol(key, drop1, keep1, drop2, keep2) values(1, 1, '1', '1', 1);
@@ -434,6 +429,179 @@ insert into twoconstraints values(2, '((0,0),(1,2))')
 select * from twoconstraints;
 drop table twoconstraints;
 -- end_ignore
+
+-- check handling of self-conflicts at various isolation levels
+
+create table selfconflict (f1 int primary key, f2 int);
+
+begin transaction isolation level read committed;
+insert into selfconflict values (1,1), (1,2) on conflict do nothing;
+commit;
+
+begin transaction isolation level repeatable read;
+insert into selfconflict values (2,1), (2,2) on conflict do nothing;
+commit;
+
+begin transaction isolation level serializable;
+insert into selfconflict values (3,1), (3,2) on conflict do nothing;
+commit;
+
+begin transaction isolation level read committed;
+insert into selfconflict values (4,1), (4,2) on conflict(f1) do update set f2 = 0;
+commit;
+
+begin transaction isolation level repeatable read;
+insert into selfconflict values (5,1), (5,2) on conflict(f1) do update set f2 = 0;
+commit;
+
+begin transaction isolation level serializable;
+insert into selfconflict values (6,1), (6,2) on conflict(f1) do update set f2 = 0;
+commit;
+
+select * from selfconflict;
+
+drop table selfconflict;
+
+-- check ON CONFLICT handling with partitioned tables
+create table parted_conflict_test (a int unique, b char) partition by list (a);
+create table parted_conflict_test_1 partition of parted_conflict_test for values in (1, 2);
+
+-- no indexes required here
+insert into parted_conflict_test values (1, 'a') on conflict do nothing;
+
+-- index on a required, which does exist in parent
+insert into parted_conflict_test values (1, 'a') on conflict (a) do nothing;
+insert into parted_conflict_test values (1, 'a') on conflict (a) do update set b = excluded.b;
+
+-- targeting partition directly will work
+insert into parted_conflict_test_1 values (1, 'a') on conflict (a) do nothing;
+insert into parted_conflict_test_1 values (1, 'b') on conflict (a) do update set b = excluded.b;
+
+-- start_ignore
+-- Greenplum could not update the distribution column on conflict
+-- index on b required, which doesn't exist in parent
+insert into parted_conflict_test values (2, 'b') on conflict (b) do update set a = excluded.a;
+
+-- targeting partition directly will work
+insert into parted_conflict_test_1 values (2, 'b') on conflict (b) do update set a = excluded.a;
+
+-- should see (2, 'b')
+select * from parted_conflict_test order by a;
+-- end_ignore
+
+-- now check that DO UPDATE works correctly for target partition with
+-- different attribute numbers
+create table parted_conflict_test_2 (b char, a int unique);
+alter table parted_conflict_test attach partition parted_conflict_test_2 for values in (3);
+truncate parted_conflict_test;
+insert into parted_conflict_test values (3, 'a') on conflict (a) do update set b = excluded.b;
+insert into parted_conflict_test values (3, 'b') on conflict (a) do update set b = excluded.b;
+
+-- should see (3, 'b')
+select * from parted_conflict_test order by a;
+
+-- case where parent will have a dropped column, but the partition won't
+alter table parted_conflict_test drop b, add b char;
+create table parted_conflict_test_3 partition of parted_conflict_test for values in (4);
+truncate parted_conflict_test;
+insert into parted_conflict_test (a, b) values (4, 'a') on conflict (a) do update set b = excluded.b;
+insert into parted_conflict_test (a, b) values (4, 'b') on conflict (a) do update set b = excluded.b where parted_conflict_test.b = 'a';
+
+-- should see (4, 'b')
+select * from parted_conflict_test order by a;
+
+-- case with multi-level partitioning
+create table parted_conflict_test_4 partition of parted_conflict_test for values in (5) partition by list (a);
+create table parted_conflict_test_4_1 partition of parted_conflict_test_4 for values in (5);
+truncate parted_conflict_test;
+insert into parted_conflict_test (a, b) values (5, 'a') on conflict (a) do update set b = excluded.b;
+insert into parted_conflict_test (a, b) values (5, 'b') on conflict (a) do update set b = excluded.b where parted_conflict_test.b = 'a';
+
+-- should see (5, 'b')
+select * from parted_conflict_test order by a;
+
+-- test with multiple rows
+truncate parted_conflict_test;
+insert into parted_conflict_test (a, b) values (1, 'a'), (2, 'a'), (4, 'a') on conflict (a) do update set b = excluded.b where excluded.b = 'b';
+insert into parted_conflict_test (a, b) values (1, 'b'), (2, 'c'), (4, 'b') on conflict (a) do update set b = excluded.b where excluded.b = 'b';
+
+-- should see (1, 'b'), (2, 'a'), (4, 'b')
+select * from parted_conflict_test order by a;
+
+drop table parted_conflict_test;
+
+-- test behavior of inserting a conflicting tuple into an intermediate
+-- partitioning level
+create table parted_conflict (a int primary key, b text) partition by range (a);
+create table parted_conflict_1 partition of parted_conflict for values from (0) to (1000) partition by range (a);
+create table parted_conflict_1_1 partition of parted_conflict_1 for values from (0) to (500);
+insert into parted_conflict values (40, 'forty');
+insert into parted_conflict_1 values (40, 'cuarenta')
+  on conflict (a) do update set b = excluded.b;
+drop table parted_conflict;
+
+-- same thing, but this time try to use an index that's created not in the
+-- partition
+create table parted_conflict (a int, b text) partition by range (a);
+create table parted_conflict_1 partition of parted_conflict for values from (0) to (1000) partition by range (a);
+create table parted_conflict_1_1 partition of parted_conflict_1 for values from (0) to (500);
+create unique index on only parted_conflict_1 (a);
+create unique index on only parted_conflict (a);
+alter index parted_conflict_a_idx attach partition parted_conflict_1_a_idx;
+insert into parted_conflict values (40, 'forty');
+insert into parted_conflict_1 values (40, 'cuarenta')
+  on conflict (a) do update set b = excluded.b;
+drop table parted_conflict;
+
+-- test whole-row Vars in ON CONFLICT expressions
+create table parted_conflict (a int, b text, c int) partition by range (a);
+create table parted_conflict_1 (drp text, c int, a int, b text);
+alter table parted_conflict_1 set distributed by (a);
+alter table parted_conflict_1 drop column drp;
+create unique index on parted_conflict (a, b);
+alter table parted_conflict attach partition parted_conflict_1 for values from (0) to (1000);
+truncate parted_conflict;
+insert into parted_conflict values (50, 'cincuenta', 1);
+-- start_ignore
+-- Greenplum could not update the distribution column on conflict
+insert into parted_conflict values (50, 'cincuenta', 2)
+  on conflict (a, b) do update set (a, b, c) = row(excluded.*)
+  where parted_conflict = (50, text 'cincuenta', 1) and
+        excluded = (50, text 'cincuenta', 2);
+
+-- should see (50, 'cincuenta', 2)
+select * from parted_conflict order by a;
+-- end_ignore
+
+-- test with statement level triggers
+create or replace function parted_conflict_update_func() returns trigger as $$
+declare
+    r record;
+begin
+ for r in select * from inserted loop
+	raise notice 'a = %, b = %, c = %', r.a, r.b, r.c;
+ end loop;
+ return new;
+end;
+$$ language plpgsql;
+
+create trigger parted_conflict_update
+    after update on parted_conflict
+    referencing new table as inserted
+    for each statement
+    execute procedure parted_conflict_update_func();
+
+truncate parted_conflict;
+
+insert into parted_conflict values (0, 'cero', 1);
+
+-- Greenplum: this won't trigger, because the INSERT/UPDATE happens on the QEs,
+-- but FOR STATEMENT triggers could not be triggered on a QE
+insert into parted_conflict values(0, 'cero', 1)
+  on conflict (a,b) do update set c = parted_conflict.c + 1;
+
+drop table parted_conflict;
+drop function parted_conflict_update_func();
 
 -- check that modification of replicated tables containing volatile functions is not supported.
 create table rpt_volatile(i int unique) distributed replicated;

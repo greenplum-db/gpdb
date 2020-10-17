@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
@@ -7,7 +7,7 @@ from gppylib.test.unit.gp_unittest import *
 import logging
 import os
 import shutil
-import StringIO
+import io
 import tempfile
 from gppylib.commands import base
 from mock import patch, MagicMock, Mock
@@ -44,7 +44,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         toBuild = []
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(toBuild)
-        self.assertEquals(segs, expected_output)
+        self.assertEqual(segs, expected_output)
 
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', return_value=True)
@@ -52,7 +52,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
     def test_get_running_postgres_segments_all_pid_postmaster(self, mock1, mock2, mock3):
         mock_segs = [Mock(), Mock()]
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
-        self.assertEquals(segs, mock_segs)
+        self.assertEqual(segs, mock_segs)
 
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[True, False])
@@ -62,7 +62,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         expected_output = []
         expected_output.append(mock_segs[0])
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
-        self.assertEquals(segs, expected_output)
+        self.assertEqual(segs, expected_output)
 
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[True, False])
@@ -72,7 +72,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         expected_output = []
         expected_output.append(mock_segs[0])
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
-        self.assertEquals(segs, expected_output)
+        self.assertEqual(segs, expected_output)
 
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[False, False])
@@ -81,7 +81,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         mock_segs = [Mock(), Mock()]
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
-        self.assertEquals(segs, expected_output)
+        self.assertEqual(segs, expected_output)
 
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[False, False])
@@ -90,33 +90,22 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         mock_segs = [Mock(), Mock()]
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
-        self.assertEquals(segs, expected_output)
+        self.assertEqual(segs, expected_output)
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=0, stdout='/tmp/seg0', stderr='', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=0, stdout=b'/tmp/seg0', stderr=b'', completed=True, halt=False))
     def test_dereference_remote_symlink_valid_symlink(self, mock1, mock2):
         datadir = '/tmp/link/seg0'
         host = 'h1'
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=1, stdout='', stderr='', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=1, stdout=b'', stderr=b'', completed=True, halt=False))
     def test_dereference_remote_symlink_unable_to_determine_symlink(self, mock1, mock2):
         datadir = '/tmp/seg0'
         host = 'h1'
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
         self.logger.warning.assert_any_call('Unable to determine if /tmp/seg0 is symlink. Assuming it is not symlink')
-
-    def test_ensureSharedMemCleaned_no_segments(self):
-        self.buildMirrorSegs._GpMirrorListToBuild__ensureSharedMemCleaned(Mock(), [])
-        self.assertEquals(self.logger.call_count, 0)
-
-    @patch('gppylib.operations.utils.ParallelOperation.run')
-    @patch('gppylib.gparray.Segment.getSegmentHostName', side_effect=['foo1', 'foo2'])
-    def test_ensureSharedMemCleaned(self, mock1, mock2):
-        self.buildMirrorSegs._GpMirrorListToBuild__ensureSharedMemCleaned(Mock(), [Mock(), Mock()])
-        self.logger.info.assert_any_call('Ensuring that shared memory is cleaned up for stopped segments')
-        self.assertEquals(self.logger.warning.call_count, 0)
 
     @patch('gppylib.operations.buildMirrorSegments.read_era')
     @patch('gppylib.operations.startSegments.StartSegmentsOperation')
@@ -163,7 +152,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same port 1111"):
+        with self.assertRaisesRegex(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same port 1111"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_data_directories_differ(self):
@@ -175,7 +164,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'"):
+        with self.assertRaisesRegex(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
 class SegmentProgressTestCase(GpTestCase):
@@ -203,7 +192,7 @@ class SegmentProgressTestCase(GpTestCase):
         cmd2.dbid = 4
         cmd2.get_results.return_value.stdout = "string 2\n"
 
-        outfile = StringIO.StringIO()
+        outfile = io.StringIO()
         self.pool.join.return_value = True
         self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], outfile=outfile)
 
@@ -220,7 +209,7 @@ class SegmentProgressTestCase(GpTestCase):
 
         cmd.get_results.side_effect = [Mock(stdout="string 1"), Mock(stdout="string 2")]
 
-        outfile = StringIO.StringIO()
+        outfile = io.StringIO()
         self.pool.join.side_effect = [False, True]
         self.buildMirrorSegs._join_and_show_segment_progress([cmd], outfile=outfile)
 
@@ -241,7 +230,7 @@ class SegmentProgressTestCase(GpTestCase):
         cmd2.dbid = 4
         cmd2.get_results.side_effect = [Mock(stdout="string 3"), Mock(stdout="string 4")]
 
-        outfile = StringIO.StringIO()
+        outfile = io.StringIO()
         self.pool.join.side_effect = [False, True]
         self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], inplace=True, outfile=outfile)
 
@@ -267,7 +256,7 @@ class SegmentProgressTestCase(GpTestCase):
         cmd2.get_results.return_value.stderr = ''
         cmd2.run.side_effect = base.ExecutionError("Some exception", cmd2)
 
-        outfile = StringIO.StringIO()
+        outfile = io.StringIO()
         self.pool.join.return_value = True
         self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], outfile=outfile)
 

@@ -86,7 +86,8 @@ create aggregate my_percentile_disc(float8 ORDER BY anyelement) (
   stype = internal,
   sfunc = ordered_set_transition,
   finalfunc = percentile_disc_final,
-  finalfunc_extra = true
+  finalfunc_extra = true,
+  finalfunc_modify = read_write
 );
 
 create aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any") (
@@ -161,13 +162,80 @@ CREATE AGGREGATE myavg (numeric)
 	finalfunc = numeric_avg,
 	serialfunc = numeric_avg_serialize,
 	deserialfunc = numeric_avg_deserialize,
-	combinefunc = numeric_avg_combine
+	combinefunc = numeric_avg_combine,
+	finalfunc_modify = shareable  -- just to test a non-default setting
 );
 
 -- Ensure all these functions made it into the catalog
-SELECT aggfnoid,aggtransfn,aggcombinefn,aggtranstype,aggserialfn,aggdeserialfn
+SELECT aggfnoid, aggtransfn, aggcombinefn, aggtranstype::regtype,
+       aggserialfn, aggdeserialfn, aggfinalmodify
 FROM pg_aggregate
 WHERE aggfnoid = 'myavg'::REGPROC;
+
+DROP AGGREGATE myavg (numeric);
+
+-- create or replace aggregate
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	finalfunc = numeric_avg
+);
+
+CREATE OR REPLACE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	finalfunc = numeric_avg,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_deserialize,
+	combinefunc = numeric_avg_combine,
+	finalfunc_modify = shareable  -- just to test a non-default setting
+);
+
+-- Ensure all these functions made it into the catalog again
+SELECT aggfnoid, aggtransfn, aggcombinefn, aggtranstype::regtype,
+       aggserialfn, aggdeserialfn, aggfinalmodify
+FROM pg_aggregate
+WHERE aggfnoid = 'myavg'::REGPROC;
+
+-- can change stype:
+CREATE OR REPLACE AGGREGATE myavg (numeric)
+(
+	stype = numeric,
+	sfunc = numeric_add
+);
+SELECT aggfnoid, aggtransfn, aggcombinefn, aggtranstype::regtype,
+       aggserialfn, aggdeserialfn, aggfinalmodify
+FROM pg_aggregate
+WHERE aggfnoid = 'myavg'::REGPROC;
+
+-- can't change return type:
+CREATE OR REPLACE AGGREGATE myavg (numeric)
+(
+	stype = numeric,
+	sfunc = numeric_add,
+	finalfunc = numeric_out
+);
+
+-- can't change to a different kind:
+CREATE OR REPLACE AGGREGATE myavg (order by numeric)
+(
+	stype = numeric,
+	sfunc = numeric_add
+);
+
+-- can't change plain function to aggregate:
+create function sum4(int8,int8,int8,int8) returns int8 as
+'select $1 + $2 + $3 + $4' language sql strict immutable;
+
+CREATE OR REPLACE AGGREGATE sum3 (int8,int8,int8)
+(
+	stype = int8,
+	sfunc = sum4
+);
+
+drop function sum4(int8,int8,int8,int8);
 
 DROP AGGREGATE myavg (numeric);
 
@@ -209,6 +277,25 @@ CREATE AGGREGATE wrongreturntype (float8)
     minvfunc = float8mi_int
 );
 
+-- invalid: non-lowercase quoted identifiers
+
+CREATE AGGREGATE case_agg ( -- old syntax
+	"Sfunc1" = int4pl,
+	"Basetype" = int4,
+	"Stype1" = int4,
+	"Initcond1" = '0',
+	"Parallel" = safe
+);
+
+CREATE AGGREGATE case_agg(float8)
+(
+	"Stype" = internal,
+	"Sfunc" = ordered_set_transition,
+	"Finalfunc" = percentile_disc_final,
+	"Finalfunc_extra" = true,
+	"Finalfunc_modify" = read_write,
+	"Parallel" = safe
+);
 
 
 -- Negative test: "ordered aggregate prefunc is not supported"
@@ -236,3 +323,4 @@ select string_concat(t) from (select * from aggtest2 limit 2000) tmp;
 drop table aggtest2;
 drop aggregate string_concat(text);
 drop function str_concat(text, text);
+

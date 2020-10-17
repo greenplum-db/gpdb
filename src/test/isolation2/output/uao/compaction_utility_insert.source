@@ -2,7 +2,7 @@
 --
 DROP TABLE IF EXISTS foo;
 DROP
-CREATE TABLE foo (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=@orientation@) distributed randomly;
+CREATE TABLE foo (a INT, b INT, c CHAR(128)) USING @amname@ distributed randomly;
 CREATE
 CREATE INDEX foo_index ON foo(b);
 CREATE

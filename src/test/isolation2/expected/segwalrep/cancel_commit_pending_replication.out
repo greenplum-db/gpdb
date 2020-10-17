@@ -9,7 +9,7 @@ select gp_inject_fault('wal_sender_loop', 'reset', 2);
  Success:        
 (1 row)
 
-create or replace function wait_for_replication(iterations int) returns bool as $$ begin /* in func */ for i in 1 .. iterations loop /* in func */ if exists (select wait_event_type from pg_stat_activity where sess_id in (select sess_id from store_session_id) and wait_event_type = 'Replication') then /* in func */ return true; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ end loop; /* in func */ return false; /* in func */ end; /* in func */ $$ language plpgsql VOLATILE;
+create or replace function wait_for_replication(iterations int) returns bool as $$ begin /* in func */ for i in 1 .. iterations loop /* in func */ if exists (select wait_event from pg_stat_activity where sess_id in (select sess_id from store_session_id) and wait_event = 'SyncRep') then /* in func */ return true; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ end loop; /* in func */ return false; /* in func */ end; /* in func */ $$ language plpgsql VOLATILE;
 CREATE
 
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
@@ -57,7 +57,7 @@ select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
 -----------------
  Success:        
 (1 row)
--- loop to reach wait_event_type=Replication
+-- loop to reach wait_event=SyncRep
 0U: select wait_for_replication(1200);
  wait_for_replication 
 ----------------------
@@ -69,7 +69,7 @@ select gp_inject_fault_infinite('sync_rep_query_cancel', 'skip', 2);
 --------------------------
  Success:                 
 (1 row)
-0U: select pg_cancel_backend(pid) from pg_stat_activity where wait_event_type='Replication' and sess_id in (select sess_id from store_session_id);
+0U: select pg_cancel_backend(pid) from pg_stat_activity where wait_event='SyncRep' and sess_id in (select sess_id from store_session_id);
  pg_cancel_backend 
 -------------------
  t                 
@@ -81,10 +81,10 @@ select gp_wait_until_triggered_fault('sync_rep_query_cancel', 1, 2);
  Success:                      
 (1 row)
 -- EXPECT: the query is still in waiting mode, to verify the cancel is ignored.
-0U: select wait_event_type from pg_stat_activity where sess_id in (select sess_id from store_session_id);
- wait_event_type 
------------------
- Replication     
+0U: select wait_event from pg_stat_activity where sess_id in (select sess_id from store_session_id);
+ wait_event 
+------------
+ SyncRep    
 (1 row)
 -- resume the primary on content 0
 select gp_inject_fault('wal_sender_loop', 'reset', 2);

@@ -16,14 +16,12 @@
 #define PG_APPENDONLY_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_appendonly_d.h"
 
 /*
  * pg_appendonly definition.
  */
-
-#define AppendOnlyRelationId  6105
-
-CATALOG(pg_appendonly,6105) BKI_WITHOUT_OIDS
+CATALOG(pg_appendonly,6105,AppendOnlyRelationId)
 {
 	Oid				relid;				/* relation id */
 	int32			blocksize;			/* the max block size of this relation */
@@ -55,23 +53,6 @@ FOREIGN_KEY(relid REFERENCES pg_class(oid));
 * ----------------
 */
 typedef FormData_pg_appendonly *Form_pg_appendonly;
-
-#define Natts_pg_appendonly					12
-#define Anum_pg_appendonly_relid			1
-#define Anum_pg_appendonly_blocksize		2
-#define Anum_pg_appendonly_safefswritesize	3
-#define Anum_pg_appendonly_compresslevel	4
-#define Anum_pg_appendonly_checksum			5
-#define Anum_pg_appendonly_compresstype		6
-#define Anum_pg_appendonly_columnstore      7
-#define Anum_pg_appendonly_segrelid         8
-#define Anum_pg_appendonly_blkdirrelid      9
-#define Anum_pg_appendonly_blkdiridxid      10
-#define Anum_pg_appendonly_visimaprelid     11
-#define Anum_pg_appendonly_visimapidxid     12
-
-
-/* No initial contents. */
 
 /*
  * AORelationVersion defines valid values for the version of AppendOnlyEntry.

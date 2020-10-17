@@ -15,68 +15,70 @@
  * so that they can be referenced by using CREATE FUNCTION command in SQL,
  * like below:
  *
- *CREATE OR REPLACE FUNCTION gp_distribution_policy_heap_table_check(oid, smallint[])
+ *CREATE OR REPLACE FUNCTION gp_distribution_policy_table_check(oid, smallint[])
  * RETURNS bool
- * AS '$libdir/gp_distribution_policy.so','gp_distribution_policy_heap_table_check'
+ * AS '$libdir/gp_distribution_policy.so','gp_distribution_policy_table_check'
  * LANGUAGE C VOLATILE STRICT; *
  */
 
 #include "postgres.h"
 
+#include "access/table.h"
+#include "access/tableam.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "access/table.h"
 #include "utils/builtins.h"
 #include "utils/snapmgr.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
 #include "utils/lsyscache.h"
 #include "miscadmin.h"
-#include "catalog/gp_policy.h"
-#include "utils/array.h"
-#include "utils/tqual.h"
 
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
 #endif
 
-extern Datum gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS);
+extern Datum gp_distribution_policy_table_check(PG_FUNCTION_ARGS);
 
-PG_FUNCTION_INFO_V1(gp_distribution_policy_heap_table_check);
+PG_FUNCTION_INFO_V1(gp_distribution_policy_table_check);
 
 /* 
  * Verifies the correct data distribution (given a GpPolicy) 
- * of a heap table in a segment. 
+ * of a table in a segment.
  */
 Datum
-gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
+gp_distribution_policy_table_check(PG_FUNCTION_ARGS)
 {
 	Oid			relOid = PG_GETARG_OID(0);
 	bool		result = true;
+	TupleTableSlot *slot;
 
 	/* Open relation in segment */
-	Relation rel = heap_open(relOid, AccessShareLock);
+	Relation rel = table_open(relOid, AccessShareLock);
 
 	GpPolicy *policy = rel->rd_cdbpolicy;
 
-	/* Validate that the relation is a heap table */
-	if (!RelationIsHeap(rel))
+	/* Validate that the relation is a table */
+	if (rel->rd_rel->relkind != RELKIND_RELATION &&
+		rel->rd_rel->relkind != RELKIND_MATVIEW)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				errmsg("input relation is not a heap table")));
+				 errmsg("input relation is not a table")));
 	}
 
-	HeapScanDesc scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
-	HeapTuple    tuple = heap_getnext(scandesc, ForwardScanDirection);
-	TupleDesc	desc = RelationGetDescr(rel);
+	slot = table_slot_create(rel, NULL);
+
+	TableScanDesc scandesc = table_beginscan(rel, GetActiveSnapshot(), 0, NULL);
 
 	/* Initialize hash function and structure */
 	CdbHash *hash;
 
 	hash = makeCdbHashForRelation(rel);
 
-	while (HeapTupleIsValid(tuple))
+	while (table_scan_getnextslot(scandesc, ForwardScanDirection, slot))
 	{
 		CHECK_FOR_INTERRUPTS();
 
@@ -89,7 +91,7 @@ gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
 			bool		isNull;
 			Datum		attr;
 
-			attr = heap_getattr(tuple, attnum, desc, &isNull);
+			attr = slot_getattr(slot, attnum, &isNull);
 
 			cdbhash(hash, i + 1, attr, isNull);
 		}
@@ -100,12 +102,11 @@ gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
 			result = false;
 			break;
 		}
-
-		tuple = heap_getnext(scandesc, ForwardScanDirection);
 	}
 
-	heap_endscan(scandesc);
-	heap_close(rel, AccessShareLock);
+	table_endscan(scandesc);
+	ExecDropSingleTupleTableSlot(slot);
+	table_close(rel, AccessShareLock);
 	
 	PG_RETURN_BOOL(result);
 }

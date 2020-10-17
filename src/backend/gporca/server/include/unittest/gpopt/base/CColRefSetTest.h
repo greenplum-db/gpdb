@@ -15,29 +15,27 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CColRefSetTest
-	//
-	//	@doc:
-	//		Static unit tests for column reference set
-	//
-	//---------------------------------------------------------------------------
-	class CColRefSetTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CColRefSetTest
+//
+//	@doc:
+//		Static unit tests for column reference set
+//
+//---------------------------------------------------------------------------
+class CColRefSetTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
 
-		public:
+};	// class CColRefSetTest
+}  // namespace gpopt
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-
-	}; // class CColRefSetTest
-}
-
-#endif // !GPOS_CColRefSetTest_H
+#endif	// !GPOS_CColRefSetTest_H
 
 
 // EOF

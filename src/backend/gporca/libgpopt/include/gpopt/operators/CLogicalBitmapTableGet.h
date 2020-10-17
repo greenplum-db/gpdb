@@ -9,7 +9,7 @@
 //		Logical operator for table access via bitmap indexes.
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -24,216 +24,189 @@
 
 namespace gpopt
 {
-	// fwd declarations
-	class CColRefSet;
-	class CTableDescriptor;
+// fwd declarations
+class CColRefSet;
+class CTableDescriptor;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CLogicalBitmapTableGet
-	//
-	//	@doc:
-	//		Logical operator for table access via bitmap indexes.
-	//
-	//---------------------------------------------------------------------------
-	class CLogicalBitmapTableGet : public CLogical
+//---------------------------------------------------------------------------
+//	@class:
+//		CLogicalBitmapTableGet
+//
+//	@doc:
+//		Logical operator for table access via bitmap indexes.
+//
+//---------------------------------------------------------------------------
+class CLogicalBitmapTableGet : public CLogical
+{
+private:
+	// table descriptor
+	CTableDescriptor *m_ptabdesc;
+
+	// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
+	ULONG m_ulOriginOpId;
+
+	// alias for table
+	const CName *m_pnameTableAlias;
+
+	// output columns
+	CColRefArray *m_pdrgpcrOutput;
+
+	// private copy ctor
+	CLogicalBitmapTableGet(const CLogicalBitmapTableGet &);
+
+public:
+	// ctor
+	CLogicalBitmapTableGet(CMemoryPool *mp, CTableDescriptor *ptabdesc,
+						   ULONG ulOriginOpId, const CName *pnameTableAlias,
+						   CColRefArray *pdrgpcrOutput);
+
+	// ctor
+	// only for transformations
+	explicit CLogicalBitmapTableGet(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CLogicalBitmapTableGet();
+
+	// table descriptor
+	CTableDescriptor *
+	Ptabdesc() const
 	{
-		private:
-			// table descriptor
-			CTableDescriptor *m_ptabdesc;
+		return m_ptabdesc;
+	}
 
-			// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
-			ULONG m_ulOriginOpId;
+	// table alias
+	const CName *
+	PnameTableAlias()
+	{
+		return m_pnameTableAlias;
+	}
 
-			// alias for table
-			const CName *m_pnameTableAlias;
+	// array of output column references
+	CColRefArray *
+	PdrgpcrOutput() const
+	{
+		return m_pdrgpcrOutput;
+	}
 
-			// output columns
-			CColRefArray *m_pdrgpcrOutput;
+	// identifier
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopLogicalBitmapTableGet;
+	}
 
-			// private copy ctor
-			CLogicalBitmapTableGet(const CLogicalBitmapTableGet &);
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CLogicalBitmapTableGet";
+	}
 
-		public:
-			// ctor
-			CLogicalBitmapTableGet
-				(
-				CMemoryPool *mp,
-				CTableDescriptor *ptabdesc,
-				ULONG ulOriginOpId,
-				const CName *pnameTableAlias,
-				CColRefArray *pdrgpcrOutput
-				);
+	// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
+	ULONG
+	UlOriginOpId() const
+	{
+		return m_ulOriginOpId;
+	}
 
-			// ctor
-			// only for transformations
-			explicit
-			CLogicalBitmapTableGet(CMemoryPool *mp);
+	// operator specific hash function
+	virtual ULONG HashValue() const;
 
-			// dtor
-			virtual
-			~CLogicalBitmapTableGet();
+	// match function
+	virtual BOOL Matches(COperator *pop) const;
 
-			// table descriptor
-			CTableDescriptor *Ptabdesc() const
-			{
-				return m_ptabdesc;
-			}
+	// sensitivity to order of inputs
+	virtual BOOL
+	FInputOrderSensitive() const
+	{
+		return true;
+	}
 
-			// table alias
-			const CName *PnameTableAlias()
-			{
-				return m_pnameTableAlias;
-			}
+	// return a copy of the operator with remapped columns
+	virtual COperator *PopCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// array of output column references
-			CColRefArray *PdrgpcrOutput() const
-			{
-				return m_pdrgpcrOutput;
-			}
+	// derive output columns
+	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *mp,
+											CExpressionHandle &exprhdl);
 
-			// identifier
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopLogicalBitmapTableGet;
-			}
+	// derive outer references
+	virtual CColRefSet *DeriveOuterReferences(CMemoryPool *mp,
+											  CExpressionHandle &exprhdl);
 
-			// return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CLogicalBitmapTableGet";
-			}
+	// derive partition consumer info
+	virtual CPartInfo *
+	DerivePartitionInfo(CMemoryPool *mp,
+						CExpressionHandle &	 //exprhdl
+	) const
+	{
+		return GPOS_NEW(mp) CPartInfo(mp);
+	}
 
-			// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
-			ULONG UlOriginOpId() const
-			{
-				return m_ulOriginOpId;
-			}
+	// derive constraint property
+	virtual CPropConstraint *DerivePropertyConstraint(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
-			// operator specific hash function
-			virtual
-			ULONG HashValue() const;
+	// derive join depth
+	virtual ULONG
+	DeriveJoinDepth(CMemoryPool *,		 // mp
+					CExpressionHandle &	 // exprhdl
+	) const
+	{
+		return 1;
+	}
 
-			// match function
-			virtual
-			BOOL Matches(COperator *pop) const;
+	// derive table descriptor
+	virtual CTableDescriptor *
+	DeriveTableDescriptor(CMemoryPool *,	   // mp
+						  CExpressionHandle &  // exprhdl
+	) const
+	{
+		return m_ptabdesc;
+	}
 
-			// sensitivity to order of inputs
-			virtual
-			BOOL FInputOrderSensitive() const
-			{
-				return true;
-			}
+	// compute required stat columns of the n-th child
+	virtual CColRefSet *
+	PcrsStat(CMemoryPool *mp,
+			 CExpressionHandle &,  // exprhdl
+			 CColRefSet *,		   //pcrsInput
+			 ULONG				   // child_index
+	) const
+	{
+		return GPOS_NEW(mp) CColRefSet(mp);
+	}
 
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	// candidate set of xforms
+	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
 
-			// derive output columns
-			virtual
-			CColRefSet *DeriveOutputColumns(CMemoryPool *mp, CExpressionHandle &exprhdl);
+	// derive statistics
+	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl,
+									  IStatisticsArray *stats_ctxt) const;
 
-			// derive outer references
-			virtual
-			CColRefSet *DeriveOuterReferences(CMemoryPool *mp, CExpressionHandle &exprhdl);
+	// stat promise
+	virtual EStatPromise
+	Esp(CExpressionHandle &) const
+	{
+		return CLogical::EspHigh;
+	}
 
-			// derive partition consumer info
-			virtual
-			CPartInfo *DerivePartitionInfo
-				(
-				CMemoryPool *mp,
-				CExpressionHandle & //exprhdl
-				)
-				const
-			{
-				return GPOS_NEW(mp) CPartInfo(mp);
-			}
+	// debug print
+	virtual IOstream &OsPrint(IOstream &) const;
 
-			// derive constraint property
-			virtual
-			CPropConstraint *DerivePropertyConstraint(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	// conversion
+	static CLogicalBitmapTableGet *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopLogicalBitmapTableGet == pop->Eopid());
 
-			// derive join depth
-			virtual
-			ULONG DeriveJoinDepth
-				(
-				CMemoryPool *, // mp
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return 1;
-			}
+		return dynamic_cast<CLogicalBitmapTableGet *>(pop);
+	}
 
-			// derive table descriptor
-			virtual
-			CTableDescriptor *DeriveTableDescriptor
-				(
-				CMemoryPool *, // mp
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return m_ptabdesc;
-			}
+};	// class CLogicalBitmapTableGet
+}  // namespace gpopt
 
-			// compute required stat columns of the n-th child
-			virtual
-			CColRefSet *PcrsStat
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &, // exprhdl
-				CColRefSet *, //pcrsInput
-				ULONG // child_index
-				)
-				const
-			{
-				return GPOS_NEW(mp) CColRefSet(mp);
-			}
-
-			// candidate set of xforms
-			virtual
-			CXformSet *PxfsCandidates(CMemoryPool *mp) const;
-
-			// derive statistics
-			virtual
-			IStatistics *PstatsDerive
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				IStatisticsArray *stats_ctxt
-				)
-				const;
-
-			// stat promise
-			virtual
-			EStatPromise Esp(CExpressionHandle &) const
-			{
-				return CLogical::EspHigh;
-			}
-
-			// debug print
-			virtual
-			IOstream &OsPrint(IOstream &) const;
-
-			// conversion
-			static
-			CLogicalBitmapTableGet *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopLogicalBitmapTableGet == pop->Eopid());
-
-				return dynamic_cast<CLogicalBitmapTableGet *>(pop);
-			}
-
-	};  // class CLogicalBitmapTableGet
-}
-
-#endif // !GPOPT_CLogicalBitmapTableGet_H
+#endif	// !GPOPT_CLogicalBitmapTableGet_H
 
 // EOF

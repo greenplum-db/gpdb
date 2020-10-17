@@ -3,7 +3,7 @@
  * pgtz.c
  *	  Timezone Library Integration Functions
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/timezone/pgtz.c
@@ -32,8 +32,8 @@ pg_tz	   *log_timezone = NULL;
 
 
 static bool scan_directory_ci(const char *dirname,
-				  const char *fname, int fnamelen,
-				  char *canonname, int canonnamelen);
+							  const char *fname, int fnamelen,
+							  char *canonname, int canonnamelen);
 
 
 /*
@@ -156,15 +156,8 @@ scan_directory_ci(const char *dirname, const char *fname, int fnamelen,
 	struct dirent *direntry;
 
 	dirdesc = AllocateDir(dirname);
-	if (!dirdesc)
-	{
-		ereport(LOG,
-				(errcode_for_file_access(),
-				 errmsg("could not open directory \"%s\": %m", dirname)));
-		return false;
-	}
 
-	while ((direntry = ReadDir(dirdesc, dirname)) != NULL)
+	while ((direntry = ReadDirExtended(dirdesc, dirname, LOG)) != NULL)
 	{
 		/*
 		 * Ignore . and .., plus any other "hidden" files.  This is a security
@@ -466,7 +459,7 @@ pg_tzenumerate_next(pg_tzenum *dir)
 			/* Step into the subdirectory */
 			if (dir->depth >= MAX_TZDIR_DEPTH - 1)
 				ereport(ERROR,
-					 (errmsg_internal("timezone directory stack overflow")));
+						(errmsg_internal("timezone directory stack overflow")));
 			dir->depth++;
 			dir->dirname[dir->depth] = pstrdup(fullname);
 			dir->dirdesc[dir->depth] = AllocateDir(fullname);

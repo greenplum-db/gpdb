@@ -19,57 +19,45 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerScalarCoalesce
-	//
-	//	@doc:
-	//		Parse handler for parsing a coalesce operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerScalarCoalesce : public CParseHandlerScalarOp
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerScalarCoalesce
+//
+//	@doc:
+//		Parse handler for parsing a coalesce operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerScalarCoalesce : public CParseHandlerScalarOp
+{
+private:
+	// return type
+	IMDId *m_mdid_type;
 
-			// return type
-			IMDId *m_mdid_type;
+	// private copy ctor
+	CParseHandlerScalarCoalesce(const CParseHandlerScalarCoalesce &);
 
-			// private copy ctor
-			CParseHandlerScalarCoalesce(const CParseHandlerScalarCoalesce &);
+	// process the start of an element
+	void StartElement(const XMLCh *const element_uri,
+					  const XMLCh *const element_local_name,
+					  const XMLCh *const element_qname, const Attributes &attr);
 
-			// process the start of an element
-			void StartElement
-					(
-					const XMLCh* const element_uri,
-					const XMLCh* const element_local_name,
-					const XMLCh* const element_qname,
-					const Attributes& attr
-					);
+	// process the end of an element
+	void EndElement(const XMLCh *const element_uri,
+					const XMLCh *const element_local_name,
+					const XMLCh *const element_qname);
 
-			// process the end of an element
-			void EndElement
-					(
-					const XMLCh* const element_uri,
-					const XMLCh* const element_local_name,
-					const XMLCh* const element_qname
-					);
+public:
+	// ctor
+	CParseHandlerScalarCoalesce(CMemoryPool *mp,
+								CParseHandlerManager *parse_handler_mgr,
+								CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
 
-		public:
-			// ctor
-			CParseHandlerScalarCoalesce
-					(
-					CMemoryPool *mp,
-					CParseHandlerManager *parse_handler_mgr,
-					CParseHandlerBase *parse_handler_root
-					);
-
-		};
-}
-
-#endif // !GPDXL_CParseHandlerScalarCoalesce_H
+#endif	// !GPDXL_CParseHandlerScalarCoalesce_H
 
 //EOF

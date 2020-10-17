@@ -17,7 +17,7 @@ CDebugCounter class, see file ../libgpos/include/gpos/common/CDebugCounter.h
 # "DebugCounterEvent".
 #
 # The log file is either specified by the user, or we grep the log files
-# $MASTER_DATA_DIRECTORY/pg_log/*.csv
+# $MASTER_DATA_DIRECTORY/log/*.csv
 #
 # The log may contain multiple "runs". A run is a series of log entries made by
 # the same process. Note that this tool doesn't support concurrent processes logging.
@@ -229,7 +229,7 @@ def main():
 		else:
 			print("$MASTER_DATA_DIRECTORY environment variable is not defined, exiting")
 			exit()
-		grep_command = grep_command + master_data_dir + '/pg_log/*.csv'
+		grep_command = grep_command + master_data_dir + '/log/*.csv'
 	else:
 		grep_command = grep_command + logfile
 

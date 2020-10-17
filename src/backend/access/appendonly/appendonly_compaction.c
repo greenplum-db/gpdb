@@ -35,6 +35,7 @@
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_am.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
@@ -49,6 +50,7 @@
 #include "utils/guc.h"
 #include "utils/snapmgr.h"
 #include "miscadmin.h"
+
 
 /*
  * Drops a segment file.
@@ -124,8 +126,13 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 	AppendOnlyVisimap visiMap;
 	int64		hiddenTupcount;
 	double		hideRatio;
+    Oid         visimaprelid;
+    Oid         visimapidxid;
 
 	Assert(RelationIsAppendOptimized(aoRelation));
+    GetAppendOnlyEntryAuxOids(aoRelation->rd_id, appendOnlyMetaDataSnapshot,
+                              NULL, NULL, NULL,
+                              &visimaprelid, &visimapidxid);
 
 	if (!gp_appendonly_compaction)
 	{
@@ -139,8 +146,8 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 	}
 
 	AppendOnlyVisimap_Init(&visiMap,
-						   aoRelation->rd_appendonly->visimaprelid,
-						   aoRelation->rd_appendonly->visimapidxid,
+						   visimaprelid,
+						   visimapidxid,
 						   ShareLock,
 						   appendOnlyMetaDataSnapshot);
 	hiddenTupcount = AppendOnlyVisimap_GetSegmentFileHiddenTupleCount(
@@ -271,8 +278,8 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 					EState *estate)
 {
 	MemTuple	tuple;
+	bool		shouldFree;
 	AOTupleId  *oldAoTupleId;
-	Oid			tupleOid;
 	AOTupleId	newAoTupleId;
 
 	Assert(resultRelInfo);
@@ -280,24 +287,29 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 	Assert(mt_bind);
 	Assert(estate);
 
-	oldAoTupleId = (AOTupleId *) slot_get_ctid(slot);
+	oldAoTupleId = (AOTupleId *) &slot->tts_tid;
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = TupGetMemTuple(slot);
-	tupleOid = MemTupleGetOid(tuple, mt_bind);
+	tuple = ExecFetchSlotMemTuple(slot, &shouldFree, mt_bind);
 	appendonly_insert(insertDesc,
 					  tuple,
-					  tupleOid,
 					  &newAoTupleId);
+	slot->tts_tid = *((ItemPointerData *) &newAoTupleId);
 
 	/* insert index' tuples if needed */
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate,
-							  false, NULL, NIL);
+		ExecInsertIndexTuples(slot,
+							  estate,
+							  false, /* noDupError */
+							  NULL, /* specConflict */
+							  NIL /* arbiterIndexes */);
 		ResetPerTupleExprContext(estate);
 	}
+
+	if (shouldFree)
+		pfree(tuple);
 
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
@@ -307,26 +319,26 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 }
 
 void
-AppendOnlyThrowAwayTuple(Relation rel,
-						 TupleTableSlot *slot,
-						 MemTupleBinding *mt_bind)
+AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot)
 {
-	MemTuple	tuple;
 	AOTupleId  *oldAoTupleId;
 
 	Assert(slot);
-	Assert(mt_bind);
 
-	oldAoTupleId = (AOTupleId *) slot_get_ctid(slot);
+	oldAoTupleId = (AOTupleId *) &slot->tts_tid;
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
+	/* GPDB_12_MERGE_FIXME: loop through all attributes, call toast_delete_datum()
+	 * on any toasted datums, like toast_delete does for heap tuples */
+#if 0
 	tuple = TupGetMemTuple(slot);
 	if (MemTupleHasExternal(tuple, mt_bind))
 	{
 		toast_delete_memtup(rel, tuple, mt_bind);
 	}
-
+#endif
+	
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
 				(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
@@ -358,6 +370,9 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	AOTupleId  *aoTupleId;
 	int64		tupleCount = 0;
 	int64		tuplePerPage = INT_MAX;
+    Oid         visimaprelid;
+    Oid         visimapidxid;
+    Oid         blkdirrelid;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoRows(aorel));
@@ -370,9 +385,13 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	}
 	relname = RelationGetRelationName(aorel);
 
+	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
+							  NULL, &blkdirrelid, NULL,
+							  &visimaprelid, &visimapidxid);
+
 	AppendOnlyVisimap_Init(&visiMap,
-						   aorel->rd_appendonly->visimaprelid,
-						   aorel->rd_appendonly->visimapidxid,
+						   visimaprelid,
+						   visimapidxid,
 						   ShareUpdateExclusiveLock,
 						   appendOnlyMetaDataSnapshot);
 
@@ -391,7 +410,8 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 										 &compact_segno, 1, 0, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
-	slot = MakeSingleTupleTableSlot(tupDesc);
+	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
+	slot->tts_tableOid = RelationGetRelid(aorel);
 	mt_bind = create_memtuple_binding(tupDesc);
 
 	/*
@@ -411,12 +431,12 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	/*
 	 * Go through all visible tuples and move them to a new segfile.
 	 */
-	while (appendonly_getnext(scanDesc, ForwardScanDirection, slot))
+	while (appendonly_getnextslot(&scanDesc->rs_base, ForwardScanDirection, slot))
 	{
 		/* Check interrupts as this may take time. */
 		CHECK_FOR_INTERRUPTS();
 
-		aoTupleId = (AOTupleId *) slot_get_ctid(slot);
+		aoTupleId = (AOTupleId *) &slot->tts_tid;
 		if (AppendOnlyVisimap_IsVisible(&scanDesc->visibilityMap, aoTupleId))
 		{
 			AppendOnlyMoveTuple(slot,
@@ -429,9 +449,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel,
-									 slot,
-									 mt_bind);
+			AppendOnlyThrowAwayTuple(aorel, slot);
 		}
 
 		/*
@@ -449,7 +467,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	AppendOnlyVisimap_DeleteSegmentFile(&visiMap, compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(aorel->rd_appendonly->blkdirrelid))
+	if (OidIsValid(blkdirrelid))
 	{
 		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
 												   appendOnlyMetaDataSnapshot,
@@ -469,7 +487,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	ExecDropSingleTupleTableSlot(slot);
 	destroy_memtuple_binding(mt_bind);
 
-	appendonly_endscan(scanDesc);
+	appendonly_endscan(&scanDesc->rs_base);
 }
 
 /*
@@ -488,6 +506,7 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	bool		got_accessexclusive_lock = false;
 	TransactionId cutoff_xid = InvalidTransactionId;
+	Oid			segrelid;
 
 	Assert(RelationIsAppendOptimized(aorel));
 
@@ -499,14 +518,16 @@ AppendOnlyRecycleDeadSegments(Relation aorel)
 	 */
 	LockRelationForExtension(aorel, ExclusiveLock);
 
+	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
+							  &segrelid, NULL, NULL, NULL, NULL);
 	/*
 	 * Now pick a segment that is not in use, and is not over the allowed
 	 * size threshold (90% full).
 	 */
-	pg_aoseg_rel = heap_open(aorel->rd_appendonly->segrelid, AccessShareLock);
+	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
-	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, true, appendOnlyMetaDataSnapshot, 0, NULL);
+	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, false, appendOnlyMetaDataSnapshot, 0, NULL);
 	while ((tuple = systable_getnext(aoscan)) != NULL)
 	{
 		bool		visible_to_all;
@@ -616,6 +637,7 @@ AppendOnlyTruncateToEOF(Relation aorel)
 	SysScanDesc aoscan;
 	HeapTuple	tuple;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	Oid			segrelid;
 
 	Assert(RelationIsAppendOptimized(aorel));
 
@@ -627,14 +649,17 @@ AppendOnlyTruncateToEOF(Relation aorel)
 	 */
 	LockRelationForExtension(aorel, ExclusiveLock);
 
+	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
+							  &segrelid, NULL, NULL, NULL, NULL);
+
 	/*
 	 * Now pick a segment that is not in use, and is not over the allowed
 	 * size threshold (90% full).
 	 */
-	pg_aoseg_rel = heap_open(aorel->rd_appendonly->segrelid, AccessShareLock);
+	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
-	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, true, appendOnlyMetaDataSnapshot, 0, NULL);
+	aoscan = systable_beginscan(pg_aoseg_rel, InvalidOid, false, appendOnlyMetaDataSnapshot, 0, NULL);
 	while ((tuple = systable_getnext(aoscan)) != NULL)
 	{
 		int			segno;
@@ -735,7 +760,7 @@ AppendOnlyCompact(Relation aorel,
 		}
 		if (*insert_segno != -1)
 		{
-			insertDesc = appendonly_insert_init(aorel, *insert_segno, false);
+			insertDesc = appendonly_insert_init(aorel, *insert_segno);
 			AppendOnlySegmentFileFullCompaction(aorel,
 												insertDesc,
 												fsinfo,

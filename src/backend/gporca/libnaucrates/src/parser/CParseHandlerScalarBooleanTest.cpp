@@ -6,7 +6,7 @@
 //		CParseHandlerScalarBooleanTest.cpp
 //
 //	@doc:
-//		
+//
 //		Implementation of the SAX parse handler class for parsing scalar BooleanTest.
 //---------------------------------------------------------------------------
 
@@ -30,15 +30,11 @@ XERCES_CPP_NAMESPACE_USE
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerScalarBooleanTest::CParseHandlerScalarBooleanTest
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	m_dxl_boolean_test_type(EdxlbooleantestSentinel)
+CParseHandlerScalarBooleanTest::CParseHandlerScalarBooleanTest(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
+	  m_dxl_boolean_test_type(EdxlbooleantestSentinel)
 {
 }
 
@@ -51,39 +47,38 @@ CParseHandlerScalarBooleanTest::CParseHandlerScalarBooleanTest
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerScalarBooleanTest::StartElement
-	(
-	const XMLCh* const element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerScalarBooleanTest::StartElement(
+	const XMLCh *const element_uri, const XMLCh *const element_local_name,
+	const XMLCh *const element_qname, const Attributes &attrs)
 {
 	EdxlBooleanTestType dxl_boolean_test_type =
-			CParseHandlerScalarBooleanTest::GetDxlBooleanTestType(element_local_name);
+		CParseHandlerScalarBooleanTest::GetDxlBooleanTestType(
+			element_local_name);
 
 	if (EdxlbooleantestSentinel == dxl_boolean_test_type)
 	{
-		if(NULL == m_dxl_node)
+		if (NULL == m_dxl_node)
 		{
-			GPOS_RAISE
-				(
-				gpdxl::ExmaDXL,
-				gpdxl::ExmiDXLUnexpectedTag,
-				CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name)->GetBuffer()
-				);
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+					   CDXLUtils::CreateDynamicStringFromXMLChArray(
+						   m_parse_handler_mgr->GetDXLMemoryManager(),
+						   element_local_name)
+						   ->GetBuffer());
 		}
 		else
 		{
 			CParseHandlerBase *child_parse_handler =
-					CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalar), m_parse_handler_mgr, this);
+				CParseHandlerFactory::GetParseHandler(
+					m_mp, CDXLTokens::XmlstrToken(EdxltokenScalar),
+					m_parse_handler_mgr, this);
 
 			m_parse_handler_mgr->ActivateParseHandler(child_parse_handler);
 
 			// store parse handlers
 			this->Append(child_parse_handler);
 
-			child_parse_handler->startElement(element_uri, element_local_name, element_qname, attrs);
+			child_parse_handler->startElement(element_uri, element_local_name,
+											  element_qname, attrs);
 		}
 
 		return;
@@ -92,7 +87,9 @@ CParseHandlerScalarBooleanTest::StartElement
 	m_dxl_boolean_test_type = dxl_boolean_test_type;
 	// parse and create scalar BooleanTest
 	CDXLScalarBooleanTest *dxl_op =
-			(CDXLScalarBooleanTest*) CDXLOperatorFactory::MakeDXLBooleanTest(m_parse_handler_mgr->GetDXLMemoryManager(), m_dxl_boolean_test_type);
+		(CDXLScalarBooleanTest *) CDXLOperatorFactory::MakeDXLBooleanTest(
+			m_parse_handler_mgr->GetDXLMemoryManager(),
+			m_dxl_boolean_test_type);
 
 	// construct node from the created child nodes
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
@@ -107,30 +104,30 @@ CParseHandlerScalarBooleanTest::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerScalarBooleanTest::EndElement
-(
-		const XMLCh* const, // element_uri,
-		const XMLCh* const element_local_name,
-		const XMLCh* const // element_qname
+CParseHandlerScalarBooleanTest::EndElement(
+	const XMLCh *const,	 // element_uri,
+	const XMLCh *const element_local_name,
+	const XMLCh *const	// element_qname
 )
 {
+	EdxlBooleanTestType dxl_boolean_test_type =
+		CParseHandlerScalarBooleanTest::GetDxlBooleanTestType(
+			element_local_name);
 
-	EdxlBooleanTestType dxl_boolean_test_type = CParseHandlerScalarBooleanTest::GetDxlBooleanTestType(element_local_name);
-
-	if (EdxlbooleantestSentinel == dxl_boolean_test_type )
+	if (EdxlbooleantestSentinel == dxl_boolean_test_type)
 	{
-		GPOS_RAISE
-			(
-			gpdxl::ExmaDXL,
-			gpdxl::ExmiDXLUnexpectedTag,
-			CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name)->GetBuffer()
-			);
+		GPOS_RAISE(
+			gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+			CDXLUtils::CreateDynamicStringFromXMLChArray(
+				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name)
+				->GetBuffer());
 	}
-	
+
 	GPOS_ASSERT(dxl_boolean_test_type == m_dxl_boolean_test_type);
 	GPOS_ASSERT(1 == this->Length());
 
-	CParseHandlerScalarOp *pph = dynamic_cast<CParseHandlerScalarOp*>((*this)[0]);
+	CParseHandlerScalarOp *pph =
+		dynamic_cast<CParseHandlerScalarOp *>((*this)[0]);
 	AddChildFromParseHandler(pph);
 
 	// deactivate handler
@@ -146,37 +143,47 @@ CParseHandlerScalarBooleanTest::EndElement
 //
 //---------------------------------------------------------------------------
 EdxlBooleanTestType
-CParseHandlerScalarBooleanTest::GetDxlBooleanTestType
-	(
-	const XMLCh *xmlszBooleanTestType
-	)
+CParseHandlerScalarBooleanTest::GetDxlBooleanTestType(
+	const XMLCh *xmlszBooleanTestType)
 {
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsTrue), xmlszBooleanTestType))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsTrue),
+				 xmlszBooleanTestType))
 	{
 		return EdxlbooleantestIsTrue;
 	}
 
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsNotTrue), xmlszBooleanTestType))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsNotTrue),
+				 xmlszBooleanTestType))
 	{
 		return EdxlbooleantestIsNotTrue;
 	}
 
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsFalse), xmlszBooleanTestType))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsFalse),
+				 xmlszBooleanTestType))
 	{
 		return EdxlbooleantestIsFalse;
 	}
 
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsNotFalse), xmlszBooleanTestType))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsNotFalse),
+				 xmlszBooleanTestType))
 	{
 		return EdxlbooleantestIsNotFalse;
 	}
 
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsUnknown), xmlszBooleanTestType))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsUnknown),
+				 xmlszBooleanTestType))
 	{
 		return EdxlbooleantestIsUnknown;
 	}
 
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsNotUnknown), xmlszBooleanTestType))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarBoolTestIsNotUnknown),
+				 xmlszBooleanTestType))
 	{
 		return EdxlbooleantestIsNotUnknown;
 	}

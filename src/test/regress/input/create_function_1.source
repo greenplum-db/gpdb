@@ -34,8 +34,8 @@ CREATE FUNCTION check_foreign_key ()
 
 CREATE FUNCTION autoinc ()
 	RETURNS trigger
-	AS '@libdir@/regress@DLSUFFIX@'
-	LANGUAGE C READS SQL DATA;
+	AS '@libdir@/autoinc@DLSUFFIX@'
+	LANGUAGE C;
 
 CREATE FUNCTION trigger_return_old ()
         RETURNS trigger
@@ -61,6 +61,17 @@ CREATE FUNCTION test_atomic_ops()
     RETURNS bool
     AS '@libdir@/regress@DLSUFFIX@'
     LANGUAGE C;
+
+-- Tests creating a FDW handler
+CREATE FUNCTION test_fdw_handler()
+    RETURNS fdw_handler
+    AS '@libdir@/regress@DLSUFFIX@', 'test_fdw_handler'
+    LANGUAGE C;
+
+CREATE FUNCTION test_support_func(internal)
+    RETURNS internal
+    AS '@libdir@/regress@DLSUFFIX@', 'test_support_func'
+    LANGUAGE C STRICT;
 
 -- Things that shouldn't work:
 

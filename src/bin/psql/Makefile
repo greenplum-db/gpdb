@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin/psql
 #
-# Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/psql/Makefile
@@ -18,29 +18,20 @@ include $(top_builddir)/src/Makefile.global
 
 REFDOCDIR= $(top_srcdir)/doc/src/sgml/ref
 
-override CPPFLAGS := -DFRONTEND -I. -I$(srcdir) -I$(libpq_srcdir) $(CPPFLAGS)
-LDFLAGS += -L$(top_builddir)/src/fe_utils -lpgfeutils -lpq
+override CPPFLAGS := -I. -I$(srcdir) -I$(libpq_srcdir) $(CPPFLAGS)
+LDFLAGS_INTERNAL += -L$(top_builddir)/src/fe_utils -lpgfeutils $(libpq_pgport)
 
-# necessary to get flex to play nice with large files on 32bit solaris sparc
-ifeq ($(PORTNAME), solaris)
-#ifeq ($(host_cpu), sparc)
-ifneq ($(enable_largefile), no)
-override CFLAGS := -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE=1
-endif
-#endif
-endif
-
-OBJS=	command.o common.o help.o input.o stringutils.o mainloop.o copy.o \
-	startup.o prompt.o variables.o large_obj.o describe.o \
-	crosstabview.o tab-complete.o \
-	sql_help.o psqlscanslash.o \
+OBJS=	command.o common.o copy.o crosstabview.o \
+	describe.o help.o input.o large_obj.o mainloop.o \
+	prompt.o psqlscanslash.o sql_help.o startup.o stringutils.o \
+	tab-complete.o variables.o \
 	$(WIN32RES)
 
 
 all: psql
 
 psql: $(OBJS) | submake-libpq submake-libpgport submake-libpgfeutils
-	$(CC) $(CFLAGS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 help.o: sql_help.h
 
@@ -53,11 +44,7 @@ sql_help.h: create_help.pl $(wildcard $(REFDOCDIR)/*.sgml)
 
 psqlscanslash.c: FLEXFLAGS = -Cfe -p -p
 psqlscanslash.c: FLEX_NO_BACKUP=yes
-
-# Latest flex causes warnings in this file.
-ifeq ($(GCC),yes)
-psqlscanslash.o: CFLAGS += -Wno-error
-endif
+psqlscanslash.c: FLEX_FIX_WARNING=yes
 
 distprep: sql_help.h sql_help.c psqlscanslash.c
 

@@ -16,57 +16,47 @@
 
 namespace gpnaucrates
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDatumTest
-	//
-	//	@doc:
-	//		Static unit tests for datum
-	//
-	//---------------------------------------------------------------------------
-	class CDatumTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CDatumTest
+//
+//	@doc:
+//		Static unit tests for datum
+//
+//---------------------------------------------------------------------------
+class CDatumTest
+{
+private:
+	// create an oid datum
+	static IDatum *CreateOidDatum(CMemoryPool *mp, BOOL is_null);
 
-		private:
-			// create an oid datum
-			static
-			IDatum *CreateOidDatum(CMemoryPool *mp, BOOL is_null);
+	// create an int2 datum
+	static IDatum *CreateInt2Datum(CMemoryPool *mp, BOOL is_null);
 
-			// create an int2 datum
-			static
-			IDatum *CreateInt2Datum(CMemoryPool *mp, BOOL is_null);
+	// create an int4 datum
+	static IDatum *CreateInt4Datum(CMemoryPool *mp, BOOL is_null);
 
-			// create an int4 datum
-			static
-			IDatum *CreateInt4Datum(CMemoryPool *mp, BOOL is_null);
-		
-			// create an int8 datum
-			static
-			IDatum *CreateInt8Datum(CMemoryPool *mp, BOOL is_null);
+	// create an int8 datum
+	static IDatum *CreateInt8Datum(CMemoryPool *mp, BOOL is_null);
 
-			// create a bool datum
-			static
-			IDatum *CreateBoolDatum(CMemoryPool *mp, BOOL is_null);
+	// create a bool datum
+	static IDatum *CreateBoolDatum(CMemoryPool *mp, BOOL is_null);
 
-			// create a generic datum
-			static
-			IDatum *CreateGenericDatum(CMemoryPool *mp, BOOL is_null);
+	// create a generic datum
+	static IDatum *CreateGenericDatum(CMemoryPool *mp, BOOL is_null);
 
-		public:
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-			// unittests
-			static 
-			GPOS_RESULT EresUnittest();
-			
-			static 
-			GPOS_RESULT EresUnittest_Basics();
+	static GPOS_RESULT EresUnittest_Basics();
 
-	}; // class CDatumTest
-}
+};	// class CDatumTest
+}  // namespace gpnaucrates
 
-#endif // !GPNAUCRATES_CDatumTest_H
+#endif	// !GPNAUCRATES_CDatumTest_H
 
 
 // EOF

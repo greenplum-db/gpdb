@@ -120,6 +120,68 @@ select pg_typeof('{1,2,3}'::dia || 42); -- should be int[] not dia
 drop domain dia;
 
 
+-- Test domains over composites
+
+create type comptype as (r float8, i float8);
+create domain dcomptype as comptype;
+-- GPDB: just marking the column as 'unique' fails, because a unique column
+-- needs to be part of the distribution key, and composite types can't be used
+-- as distribution keys because they have no hash opclasses.
+create table dcomptable (d1 dcomptype unique) distributed replicated;
+
+insert into dcomptable values (row(1,2)::dcomptype);
+insert into dcomptable values (row(3,4)::comptype);
+insert into dcomptable values (row(1,2)::dcomptype);  -- fail on uniqueness
+insert into dcomptable (d1.r) values(11);
+
+select * from dcomptable;
+select (d1).r, (d1).i, (d1).* from dcomptable;
+update dcomptable set d1.r = (d1).r + 1 where (d1).i > 0;
+select * from dcomptable;
+
+alter domain dcomptype add constraint c1 check ((value).r <= (value).i);
+alter domain dcomptype add constraint c2 check ((value).r > (value).i);  -- fail
+
+select row(2,1)::dcomptype;  -- fail
+insert into dcomptable values (row(1,2)::comptype);
+insert into dcomptable values (row(2,1)::comptype);  -- fail
+insert into dcomptable (d1.r) values(99);
+insert into dcomptable (d1.r, d1.i) values(99, 100);
+insert into dcomptable (d1.r, d1.i) values(100, 99);  -- fail
+update dcomptable set d1.r = (d1).r + 1 where (d1).i > 0;  -- fail
+update dcomptable set d1.r = (d1).r - 1, d1.i = (d1).i + 1 where (d1).i > 0;
+select * from dcomptable;
+
+explain (verbose, costs off)
+  update dcomptable set d1.r = (d1).r - 1, d1.i = (d1).i + 1 where (d1).i > 0;
+create rule silly as on delete to dcomptable do instead
+  update dcomptable set d1.r = (d1).r - 1, d1.i = (d1).i + 1 where (d1).i > 0;
+\d+ dcomptable
+
+drop table dcomptable;
+drop type comptype cascade;
+
+
+-- check altering and dropping columns used by domain constraints
+create type comptype as (r float8, i float8);
+create domain dcomptype as comptype;
+alter domain dcomptype add constraint c1 check ((value).r > 0);
+comment on constraint c1 on domain dcomptype is 'random commentary';
+
+select row(0,1)::dcomptype;  -- fail
+
+alter type comptype alter attribute r type varchar;  -- fail
+alter type comptype alter attribute r type bigint;
+
+alter type comptype drop attribute r;  -- fail
+alter type comptype drop attribute i;
+
+select conname, obj_description(oid, 'pg_constraint') from pg_constraint
+  where contypid = 'dcomptype'::regtype;  -- check comment is still there
+
+drop type comptype cascade;
+
+
 -- Test domains over arrays of composite
 
 create type comptype as (r float8, i float8);
@@ -169,6 +231,49 @@ create rule silly as on delete to dcomptable do instead
 
 drop table dcomptable;
 drop type comptype cascade;
+
+
+-- Test arrays over domains
+
+create domain posint as int check (value > 0);
+
+create table pitable (f1 posint[]);
+insert into pitable values(array[42]);
+insert into pitable values(array[-1]);  -- fail
+insert into pitable values('{0}');  -- fail
+update pitable set f1[1] = f1[1] + 1;
+update pitable set f1[1] = 0;  -- fail
+select * from pitable;
+drop table pitable;
+
+create domain vc4 as varchar(4);
+create table vc4table (f1 vc4[]);
+insert into vc4table values(array['too long']);  -- fail
+insert into vc4table values(array['too long']::vc4[]);  -- cast truncates
+select * from vc4table;
+drop table vc4table;
+drop type vc4;
+
+-- You can sort of fake arrays-of-arrays by putting a domain in between
+create domain dposinta as posint[];
+create table dposintatable (f1 dposinta[]);
+insert into dposintatable values(array[array[42]]);  -- fail
+insert into dposintatable values(array[array[42]::posint[]]); -- still fail
+insert into dposintatable values(array[array[42]::dposinta]); -- but this works
+select f1, f1[1], (f1[1])[1] from dposintatable;
+select pg_typeof(f1) from dposintatable;
+select pg_typeof(f1[1]) from dposintatable;
+select pg_typeof(f1[1][1]) from dposintatable;
+select pg_typeof((f1[1])[1]) from dposintatable;
+update dposintatable set f1[2] = array[99];
+select f1, f1[1], (f1[2])[1] from dposintatable;
+-- it'd be nice if you could do something like this, but for now you can't:
+update dposintatable set f1[2][1] = array[97];
+-- maybe someday we can make this syntax work:
+update dposintatable set (f1[2])[1] = array[98];
+
+drop table dposintatable;
+drop domain posint cascade;
 
 
 -- Test not-null restrictions
@@ -228,7 +333,7 @@ create domain ddef1 int4 DEFAULT 3;
 create domain ddef2 oid DEFAULT '12';
 -- Type mixing, function returns int8
 create domain ddef3 text DEFAULT 5;
-create sequence ddef4_seq;
+create sequence ddef4_seq cache 1;
 create domain ddef4 int4 DEFAULT nextval('ddef4_seq');
 create domain ddef5 numeric(8,2) NOT NULL DEFAULT '12.12';
 
@@ -463,6 +568,14 @@ insert into ddtest2 values('{(-1)}');
 alter domain posint add constraint c1 check(value >= 0);
 drop table ddtest2;
 
+-- Likewise for domains within domains over composite
+create domain ddtest1d as ddtest1;
+create table ddtest2(f1 ddtest1d);
+insert into ddtest2 values('(-1)');
+alter domain posint add constraint c1 check(value >= 0);
+drop table ddtest2;
+drop domain ddtest1d;
+
 -- Likewise for domains within domains over array of composite
 create domain ddtest1d as ddtest1[];
 create table ddtest2(f1 ddtest1d);
@@ -574,6 +687,26 @@ drop function array_elem_check(int);
 create domain di as int;
 
 create function dom_check(int) returns di as $$
+declare d di;
+begin
+  d := $1::di;
+  return d;
+end
+$$ language plpgsql immutable;
+
+select dom_check(0);
+
+alter domain di add constraint pos check (value > 0);
+
+select dom_check(0); -- fail
+
+alter domain di drop constraint pos;
+
+select dom_check(0);
+
+-- implicit cast during assignment is a separate code path, test that too
+
+create or replace function dom_check(int) returns di as $$
 declare d di;
 begin
   d := $1;

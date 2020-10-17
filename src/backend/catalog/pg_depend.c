@@ -3,7 +3,7 @@
  * pg_depend.c
  *	  routines to support manipulation of the pg_depend relation
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,8 +15,8 @@
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/htup_details.h"
+#include "access/table.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_constraint.h"
@@ -27,7 +27,6 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
 
 
 static bool isObjectPinned(const ObjectAddress *object, Relation rel);
@@ -75,7 +74,7 @@ recordMultipleDependencies(const ObjectAddress *depender,
 	if (IsBootstrapProcessingMode())
 		return;
 
-	dependDesc = heap_open(DependRelationId, RowExclusiveLock);
+	dependDesc = table_open(DependRelationId, RowExclusiveLock);
 
 	/* Don't open indexes unless we need to make an update */
 	indstate = NULL;
@@ -107,13 +106,11 @@ recordMultipleDependencies(const ObjectAddress *depender,
 
 			tup = heap_form_tuple(dependDesc->rd_att, values, nulls);
 
-			simple_heap_insert(dependDesc, tup);
-
-			/* keep indexes current */
+			/* fetch index info only when we know we need it */
 			if (indstate == NULL)
 				indstate = CatalogOpenIndexes(dependDesc);
 
-			CatalogIndexInsert(indstate, tup);
+			CatalogTupleInsertWithInfo(dependDesc, tup, indstate);
 
 			heap_freetuple(tup);
 		}
@@ -122,7 +119,7 @@ recordMultipleDependencies(const ObjectAddress *depender,
 	if (indstate != NULL)
 		CatalogCloseIndexes(indstate);
 
-	heap_close(dependDesc, RowExclusiveLock);
+	table_close(dependDesc, RowExclusiveLock);
 }
 
 /*
@@ -199,7 +196,7 @@ deleteDependencyRecordsFor(Oid classId, Oid objectId,
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	depRel = heap_open(DependRelationId, RowExclusiveLock);
+	depRel = table_open(DependRelationId, RowExclusiveLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_classid,
@@ -216,16 +213,16 @@ deleteDependencyRecordsFor(Oid classId, Oid objectId,
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		if (skipExtensionDeps &&
-		  ((Form_pg_depend) GETSTRUCT(tup))->deptype == DEPENDENCY_EXTENSION)
+			((Form_pg_depend) GETSTRUCT(tup))->deptype == DEPENDENCY_EXTENSION)
 			continue;
 
-		simple_heap_delete(depRel, &tup->t_self);
+		CatalogTupleDelete(depRel, &tup->t_self);
 		count++;
 	}
 
 	systable_endscan(scan);
 
-	heap_close(depRel, RowExclusiveLock);
+	table_close(depRel, RowExclusiveLock);
 
 	return count;
 }
@@ -249,7 +246,7 @@ deleteDependencyRecordsForClass(Oid classId, Oid objectId,
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	depRel = heap_open(DependRelationId, RowExclusiveLock);
+	depRel = table_open(DependRelationId, RowExclusiveLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_classid,
@@ -269,14 +266,14 @@ deleteDependencyRecordsForClass(Oid classId, Oid objectId,
 
 		if (depform->refclassid == refclassId && depform->deptype == deptype)
 		{
-			simple_heap_delete(depRel, &tup->t_self);
+			CatalogTupleDelete(depRel, &tup->t_self);
 			count++;
 		}
 	}
 
 	systable_endscan(scan);
 
-	heap_close(depRel, RowExclusiveLock);
+	table_close(depRel, RowExclusiveLock);
 
 	return count;
 }
@@ -289,9 +286,12 @@ deleteDependencyRecordsForClass(Oid classId, Oid objectId,
  * newRefObjectId is the new referenced object (must be of class refClassId).
  *
  * Note the lack of objsubid parameters.  If there are subobject references
- * they will all be readjusted.
+ * they will all be readjusted.  Also, there is an expectation that we are
+ * dealing with NORMAL dependencies: if we have to replace an (implicit)
+ * dependency on a pinned object with an explicit dependency on an unpinned
+ * one, the new one will be NORMAL.
  *
- * Returns the number of records updated.
+ * Returns the number of records updated -- zero indicates a problem.
  */
 long
 changeDependencyFor(Oid classId, Oid objectId,
@@ -304,35 +304,52 @@ changeDependencyFor(Oid classId, Oid objectId,
 	SysScanDesc scan;
 	HeapTuple	tup;
 	ObjectAddress objAddr;
+	ObjectAddress depAddr;
+	bool		oldIsPinned;
 	bool		newIsPinned;
 
-	depRel = heap_open(DependRelationId, RowExclusiveLock);
+	depRel = table_open(DependRelationId, RowExclusiveLock);
 
 	/*
-	 * If oldRefObjectId is pinned, there won't be any dependency entries on
-	 * it --- we can't cope in that case.  (This isn't really worth expending
-	 * code to fix, in current usage; it just means you can't rename stuff out
-	 * of pg_catalog, which would likely be a bad move anyway.)
+	 * Check to see if either oldRefObjectId or newRefObjectId is pinned.
+	 * Pinned objects should not have any dependency entries pointing to them,
+	 * so in these cases we should add or remove a pg_depend entry, or do
+	 * nothing at all, rather than update an entry as in the normal case.
 	 */
 	objAddr.classId = refClassId;
 	objAddr.objectId = oldRefObjectId;
 	objAddr.objectSubId = 0;
 
-	if (isObjectPinned(&objAddr, depRel))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		errmsg("cannot remove dependency on %s because it is a system object",
-			   getObjectDescription(&objAddr))));
+	oldIsPinned = isObjectPinned(&objAddr, depRel);
 
-	/*
-	 * We can handle adding a dependency on something pinned, though, since
-	 * that just means deleting the dependency entry.
-	 */
 	objAddr.objectId = newRefObjectId;
 
 	newIsPinned = isObjectPinned(&objAddr, depRel);
 
-	/* Now search for dependency records */
+	if (oldIsPinned)
+	{
+		table_close(depRel, RowExclusiveLock);
+
+		/*
+		 * If both are pinned, we need do nothing.  However, return 1 not 0,
+		 * else callers will think this is an error case.
+		 */
+		if (newIsPinned)
+			return 1;
+
+		/*
+		 * There is no old dependency record, but we should insert a new one.
+		 * Assume a normal dependency is wanted.
+		 */
+		depAddr.classId = classId;
+		depAddr.objectId = objectId;
+		depAddr.objectSubId = 0;
+		recordDependencyOn(&depAddr, &objAddr, DEPENDENCY_NORMAL);
+
+		return 1;
+	}
+
+	/* There should be existing dependency record(s), so search. */
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_classid,
 				BTEqualStrategyNumber, F_OIDEQ,
@@ -353,7 +370,7 @@ changeDependencyFor(Oid classId, Oid objectId,
 			depform->refobjid == oldRefObjectId)
 		{
 			if (newIsPinned)
-				simple_heap_delete(depRel, &tup->t_self);
+				CatalogTupleDelete(depRel, &tup->t_self);
 			else
 			{
 				/* make a modifiable copy */
@@ -362,8 +379,7 @@ changeDependencyFor(Oid classId, Oid objectId,
 
 				depform->refobjid = newRefObjectId;
 
-				simple_heap_update(depRel, &tup->t_self, tup);
-				CatalogUpdateIndexes(depRel, tup);
+				CatalogTupleUpdate(depRel, &tup->t_self, tup);
 
 				heap_freetuple(tup);
 			}
@@ -374,7 +390,151 @@ changeDependencyFor(Oid classId, Oid objectId,
 
 	systable_endscan(scan);
 
-	heap_close(depRel, RowExclusiveLock);
+	table_close(depRel, RowExclusiveLock);
+
+	return count;
+}
+
+/*
+ * Adjust all dependency records to come from a different object of the same type
+ *
+ * classId/oldObjectId specify the old referencing object.
+ * newObjectId is the new referencing object (must be of class classId).
+ *
+ * Returns the number of records updated.
+ */
+long
+changeDependenciesOf(Oid classId, Oid oldObjectId,
+					 Oid newObjectId)
+{
+	long		count = 0;
+	Relation	depRel;
+	ScanKeyData key[2];
+	SysScanDesc scan;
+	HeapTuple	tup;
+
+	depRel = table_open(DependRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_depend_classid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classId));
+	ScanKeyInit(&key[1],
+				Anum_pg_depend_objid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oldObjectId));
+
+	scan = systable_beginscan(depRel, DependDependerIndexId, true,
+							  NULL, 2, key);
+
+	while (HeapTupleIsValid((tup = systable_getnext(scan))))
+	{
+		Form_pg_depend depform = (Form_pg_depend) GETSTRUCT(tup);
+
+		/* make a modifiable copy */
+		tup = heap_copytuple(tup);
+		depform = (Form_pg_depend) GETSTRUCT(tup);
+
+		depform->objid = newObjectId;
+
+		CatalogTupleUpdate(depRel, &tup->t_self, tup);
+
+		heap_freetuple(tup);
+
+		count++;
+	}
+
+	systable_endscan(scan);
+
+	table_close(depRel, RowExclusiveLock);
+
+	return count;
+}
+
+/*
+ * Adjust all dependency records to point to a different object of the same type
+ *
+ * refClassId/oldRefObjectId specify the old referenced object.
+ * newRefObjectId is the new referenced object (must be of class refClassId).
+ *
+ * Returns the number of records updated.
+ */
+long
+changeDependenciesOn(Oid refClassId, Oid oldRefObjectId,
+					 Oid newRefObjectId)
+{
+	long		count = 0;
+	Relation	depRel;
+	ScanKeyData key[2];
+	SysScanDesc scan;
+	HeapTuple	tup;
+	ObjectAddress objAddr;
+	bool		newIsPinned;
+
+	depRel = table_open(DependRelationId, RowExclusiveLock);
+
+	/*
+	 * If oldRefObjectId is pinned, there won't be any dependency entries on
+	 * it --- we can't cope in that case.  (This isn't really worth expending
+	 * code to fix, in current usage; it just means you can't rename stuff out
+	 * of pg_catalog, which would likely be a bad move anyway.)
+	 */
+	objAddr.classId = refClassId;
+	objAddr.objectId = oldRefObjectId;
+	objAddr.objectSubId = 0;
+
+	if (isObjectPinned(&objAddr, depRel))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot remove dependency on %s because it is a system object",
+						getObjectDescription(&objAddr))));
+
+	/*
+	 * We can handle adding a dependency on something pinned, though, since
+	 * that just means deleting the dependency entry.
+	 */
+	objAddr.objectId = newRefObjectId;
+
+	newIsPinned = isObjectPinned(&objAddr, depRel);
+
+	/* Now search for dependency records */
+	ScanKeyInit(&key[0],
+				Anum_pg_depend_refclassid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(refClassId));
+	ScanKeyInit(&key[1],
+				Anum_pg_depend_refobjid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oldRefObjectId));
+
+	scan = systable_beginscan(depRel, DependReferenceIndexId, true,
+							  NULL, 2, key);
+
+	while (HeapTupleIsValid((tup = systable_getnext(scan))))
+	{
+		Form_pg_depend depform = (Form_pg_depend) GETSTRUCT(tup);
+
+		if (newIsPinned)
+			CatalogTupleDelete(depRel, &tup->t_self);
+		else
+		{
+			/* make a modifiable copy */
+			tup = heap_copytuple(tup);
+			depform = (Form_pg_depend) GETSTRUCT(tup);
+
+			depform->refobjid = newRefObjectId;
+
+			CatalogTupleUpdate(depRel, &tup->t_self, tup);
+
+			heap_freetuple(tup);
+		}
+
+		count++;
+	}
+
+	systable_endscan(scan);
+
+	table_close(depRel, RowExclusiveLock);
 
 	return count;
 }
@@ -455,7 +615,7 @@ getExtensionOfObject(Oid classId, Oid objectId)
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	depRel = heap_open(DependRelationId, AccessShareLock);
+	depRel = table_open(DependRelationId, AccessShareLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_classid,
@@ -483,7 +643,7 @@ getExtensionOfObject(Oid classId, Oid objectId)
 
 	systable_endscan(scan);
 
-	heap_close(depRel, AccessShareLock);
+	table_close(depRel, AccessShareLock);
 
 	return result;
 }
@@ -491,16 +651,16 @@ getExtensionOfObject(Oid classId, Oid objectId)
 /*
  * Detect whether a sequence is marked as "owned" by a column
  *
- * An ownership marker is an AUTO dependency from the sequence to the
+ * An ownership marker is an AUTO or INTERNAL dependency from the sequence to the
  * column.  If we find one, store the identity of the owning column
- * into *tableId and *colId and return TRUE; else return FALSE.
+ * into *tableId and *colId and return true; else return false.
  *
  * Note: if there's more than one such pg_depend entry then you get
  * a random one of them returned into the out parameters.  This should
  * not happen, though.
  */
 bool
-sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId)
+sequenceIsOwned(Oid seqId, char deptype, Oid *tableId, int32 *colId)
 {
 	bool		ret = false;
 	Relation	depRel;
@@ -508,7 +668,7 @@ sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId)
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	depRel = heap_open(DependRelationId, AccessShareLock);
+	depRel = table_open(DependRelationId, AccessShareLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_classid,
@@ -527,7 +687,7 @@ sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId)
 		Form_pg_depend depform = (Form_pg_depend) GETSTRUCT(tup);
 
 		if (depform->refclassid == RelationRelationId &&
-			depform->deptype == DEPENDENCY_AUTO)
+			depform->deptype == deptype)
 		{
 			*tableId = depform->refobjid;
 			*colId = depform->refobjsubid;
@@ -538,37 +698,25 @@ sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId)
 
 	systable_endscan(scan);
 
-	heap_close(depRel, AccessShareLock);
+	table_close(depRel, AccessShareLock);
 
 	return ret;
 }
 
 /*
- * Remove any existing "owned" markers for the specified sequence.
- *
- * Note: we don't provide a special function to install an "owned"
- * marker; just use recordDependencyOn().
- */
-void
-markSequenceUnowned(Oid seqId)
-{
-	deleteDependencyRecordsForClass(RelationRelationId, seqId,
-									RelationRelationId, DEPENDENCY_AUTO);
-}
-
-/*
- * Collect a list of OIDs of all sequences owned by the specified relation.
+ * Collect a list of OIDs of all sequences owned by the specified relation,
+ * and column if specified.
  */
 List *
-getOwnedSequences(Oid relid)
+getOwnedSequences(Oid relid, AttrNumber attnum)
 {
 	List	   *result = NIL;
 	Relation	depRel;
-	ScanKeyData key[2];
+	ScanKeyData key[3];
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	depRel = heap_open(DependRelationId, AccessShareLock);
+	depRel = table_open(DependRelationId, AccessShareLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_refclassid,
@@ -578,23 +726,28 @@ getOwnedSequences(Oid relid)
 				Anum_pg_depend_refobjid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(relid));
+	if (attnum)
+		ScanKeyInit(&key[2],
+					Anum_pg_depend_refobjsubid,
+					BTEqualStrategyNumber, F_INT4EQ,
+					Int32GetDatum(attnum));
 
 	scan = systable_beginscan(depRel, DependReferenceIndexId, true,
-							  NULL, 2, key);
+							  NULL, attnum ? 3 : 2, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		Form_pg_depend deprec = (Form_pg_depend) GETSTRUCT(tup);
 
 		/*
-		 * We assume any auto dependency of a sequence on a column must be
-		 * what we are looking for.  (We need the relkind test because indexes
-		 * can also have auto dependencies on columns.)
+		 * We assume any auto or internal dependency of a sequence on a column
+		 * must be what we are looking for.  (We need the relkind test because
+		 * indexes can also have auto dependencies on columns.)
 		 */
 		if (deprec->classid == RelationRelationId &&
 			deprec->objsubid == 0 &&
 			deprec->refobjsubid != 0 &&
-			deprec->deptype == DEPENDENCY_AUTO &&
+			(deprec->deptype == DEPENDENCY_AUTO || deprec->deptype == DEPENDENCY_INTERNAL) &&
 			get_rel_relkind(deprec->objid) == RELKIND_SEQUENCE)
 		{
 			result = lappend_oid(result, deprec->objid);
@@ -603,16 +756,31 @@ getOwnedSequences(Oid relid)
 
 	systable_endscan(scan);
 
-	heap_close(depRel, AccessShareLock);
+	table_close(depRel, AccessShareLock);
 
 	return result;
 }
 
+/*
+ * Get owned sequence, error if not exactly one.
+ */
+Oid
+getOwnedSequence(Oid relid, AttrNumber attnum)
+{
+	List	   *seqlist = getOwnedSequences(relid, attnum);
+
+	if (list_length(seqlist) > 1)
+		elog(ERROR, "more than one owned sequence found");
+	else if (list_length(seqlist) < 1)
+		elog(ERROR, "no owned sequence found");
+
+	return linitial_oid(seqlist);
+}
 
 /*
  * get_constraint_index
- *		Given the OID of a unique or primary-key constraint, return the
- *		OID of the underlying unique index.
+ *		Given the OID of a unique, primary-key, or exclusion constraint,
+ *		return the OID of the underlying index.
  *
  * Return InvalidOid if the index couldn't be found; this suggests the
  * given OID is bogus, but we leave it to caller to decide what to do.
@@ -627,7 +795,7 @@ get_constraint_index(Oid constraintId)
 	HeapTuple	tup;
 
 	/* Search the dependency table for the dependent index */
-	depRel = heap_open(DependRelationId, AccessShareLock);
+	depRel = table_open(DependRelationId, AccessShareLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_refclassid,
@@ -651,29 +819,38 @@ get_constraint_index(Oid constraintId)
 
 		/*
 		 * We assume any internal dependency of an index on the constraint
-		 * must be what we are looking for.  (The relkind test is just
-		 * paranoia; there shouldn't be any such dependencies otherwise.)
+		 * must be what we are looking for.
 		 */
 		if (deprec->classid == RelationRelationId &&
 			deprec->objsubid == 0 &&
-			deprec->deptype == DEPENDENCY_INTERNAL &&
-			get_rel_relkind(deprec->objid) == RELKIND_INDEX)
+			deprec->deptype == DEPENDENCY_INTERNAL)
 		{
+			char		relkind = get_rel_relkind(deprec->objid);
+
+			/*
+			 * This is pure paranoia; there shouldn't be any other relkinds
+			 * dependent on a constraint.
+			 */
+			if (relkind != RELKIND_INDEX &&
+				relkind != RELKIND_PARTITIONED_INDEX)
+				continue;
+
 			indexId = deprec->objid;
 			break;
 		}
 	}
 
 	systable_endscan(scan);
-	heap_close(depRel, AccessShareLock);
+	table_close(depRel, AccessShareLock);
 
 	return indexId;
 }
 
 /*
  * get_index_constraint
- *		Given the OID of an index, return the OID of the owning unique or
- *		primary-key constraint, or InvalidOid if no such constraint.
+ *		Given the OID of an index, return the OID of the owning unique,
+ *		primary-key, or exclusion constraint, or InvalidOid if there
+ *		is no owning constraint.
  */
 Oid
 get_index_constraint(Oid indexId)
@@ -685,7 +862,7 @@ get_index_constraint(Oid indexId)
 	HeapTuple	tup;
 
 	/* Search the dependency table for the index */
-	depRel = heap_open(DependRelationId, AccessShareLock);
+	depRel = table_open(DependRelationId, AccessShareLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_depend_classid,
@@ -721,7 +898,62 @@ get_index_constraint(Oid indexId)
 	}
 
 	systable_endscan(scan);
-	heap_close(depRel, AccessShareLock);
+	table_close(depRel, AccessShareLock);
 
 	return constraintId;
+}
+
+/*
+ * get_index_ref_constraints
+ *		Given the OID of an index, return the OID of all foreign key
+ *		constraints which reference the index.
+ */
+List *
+get_index_ref_constraints(Oid indexId)
+{
+	List	   *result = NIL;
+	Relation	depRel;
+	ScanKeyData key[3];
+	SysScanDesc scan;
+	HeapTuple	tup;
+
+	/* Search the dependency table for the index */
+	depRel = table_open(DependRelationId, AccessShareLock);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_depend_refclassid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationRelationId));
+	ScanKeyInit(&key[1],
+				Anum_pg_depend_refobjid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(indexId));
+	ScanKeyInit(&key[2],
+				Anum_pg_depend_refobjsubid,
+				BTEqualStrategyNumber, F_INT4EQ,
+				Int32GetDatum(0));
+
+	scan = systable_beginscan(depRel, DependReferenceIndexId, true,
+							  NULL, 3, key);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		Form_pg_depend deprec = (Form_pg_depend) GETSTRUCT(tup);
+
+		/*
+		 * We assume any normal dependency from a constraint must be what we
+		 * are looking for.
+		 */
+		if (deprec->classid == ConstraintRelationId &&
+			deprec->objsubid == 0 &&
+			deprec->deptype == DEPENDENCY_NORMAL)
+		{
+			result = lappend_oid(result, deprec->objid);
+		}
+	}
+
+	systable_endscan(scan);
+	table_close(depRel, AccessShareLock);
+
+	return result;
 }

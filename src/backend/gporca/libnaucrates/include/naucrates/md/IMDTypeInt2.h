@@ -19,44 +19,46 @@
 // fwd decl
 namespace gpnaucrates
 {
-	class IDatumInt2;
+class IDatumInt2;
 }
 
 namespace gpmd
 {
-	using namespace gpos;
-	using namespace gpnaucrates;
+using namespace gpos;
+using namespace gpnaucrates;
 
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		IMDTypeInt2
-	//
-	//	@doc:
-	//		Interface for INT2 types in the metadata cache
-	//
-	//---------------------------------------------------------------------------
-	class IMDTypeInt2 : public IMDType
+
+//---------------------------------------------------------------------------
+//	@class:
+//		IMDTypeInt2
+//
+//	@doc:
+//		Interface for INT2 types in the metadata cache
+//
+//---------------------------------------------------------------------------
+class IMDTypeInt2 : public IMDType
+{
+public:
+	// type id
+	static ETypeInfo
+	GetTypeInfo()
 	{
-		public:
-			// type id
-			static ETypeInfo GetTypeInfo()
-			{
-				return EtiInt2;
-			}
-			
-			virtual ETypeInfo GetDatumType() const
-			{
-				return IMDTypeInt2::GetTypeInfo();
-			} 
-			
-			// factory function for INT2 datums
-			virtual IDatumInt2 *CreateInt2Datum(CMemoryPool *mp, SINT value, BOOL is_null) const = 0;
-		
-	};
+		return EtiInt2;
+	}
 
-}
+	virtual ETypeInfo
+	GetDatumType() const
+	{
+		return IMDTypeInt2::GetTypeInfo();
+	}
 
-#endif // !GPMD_IMDTypeInt2_H
+	// factory function for INT2 datums
+	virtual IDatumInt2 *CreateInt2Datum(CMemoryPool *mp, SINT value,
+										BOOL is_null) const = 0;
+};
+
+}  // namespace gpmd
+
+#endif	// !GPMD_IMDTypeInt2_H
 
 // EOF

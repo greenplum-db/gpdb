@@ -4,7 +4,7 @@
  *	  POSTGRES heap access XLOG definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/heapam_xlog.h
@@ -32,7 +32,7 @@
 #define XLOG_HEAP_INSERT		0x00
 #define XLOG_HEAP_DELETE		0x10
 #define XLOG_HEAP_UPDATE		0x20
-/* 0x030 is free, was XLOG_HEAP_MOVE */
+#define XLOG_HEAP_TRUNCATE		0x30
 #define XLOG_HEAP_HOT_UPDATE	0x40
 #define XLOG_HEAP_CONFIRM		0x50
 #define XLOG_HEAP_LOCK			0x60
@@ -93,6 +93,7 @@
 #define XLH_DELETE_CONTAINS_OLD_TUPLE			(1<<1)
 #define XLH_DELETE_CONTAINS_OLD_KEY				(1<<2)
 #define XLH_DELETE_IS_SUPER						(1<<3)
+#define XLH_DELETE_IS_PARTITION_MOVE			(1<<4)
 
 /* convenience macro for checking whether any form of old tuple was logged */
 #define XLH_DELETE_CONTAINS_OLD						\
@@ -108,6 +109,27 @@ typedef struct xl_heap_delete
 } xl_heap_delete;
 
 #define SizeOfHeapDelete	(offsetof(xl_heap_delete, flags) + sizeof(uint8))
+
+/*
+ * xl_heap_truncate flag values, 8 bits are available.
+ */
+#define XLH_TRUNCATE_CASCADE					(1<<0)
+#define XLH_TRUNCATE_RESTART_SEQS				(1<<1)
+
+/*
+ * For truncate we list all truncated relids in an array, followed by all
+ * sequence relids that need to be restarted, if any.
+ * All rels are always within the same database, so we just list dbid once.
+ */
+typedef struct xl_heap_truncate
+{
+	Oid			dbId;
+	uint32		nrelids;
+	uint8		flags;
+	Oid			relids[FLEXIBLE_ARRAY_MEMBER];
+} xl_heap_truncate;
+
+#define SizeOfHeapTruncate	(offsetof(xl_heap_truncate, relids))
 
 /*
  * We don't store the whole fixed part (HeapTupleHeaderData) of an inserted
@@ -189,7 +211,7 @@ typedef struct xl_heap_update
 {
 	TransactionId old_xmax;		/* xmax of the old tuple */
 	OffsetNumber old_offnum;	/* old tuple's offset */
-	uint8		old_infobits_set;		/* infomask bits to set on old tuple */
+	uint8		old_infobits_set;	/* infomask bits to set on old tuple */
 	uint8		flags;
 	TransactionId new_xmax;		/* xmax of the new tuple */
 	OffsetNumber new_offnum;	/* new tuple's offset */
@@ -339,13 +361,7 @@ typedef struct xl_heap_new_cid
 	TransactionId top_xid;
 	CommandId	cmin;
 	CommandId	cmax;
-
-	/*
-	 * don't really need the combocid since we have the actual values right in
-	 * this struct, but the padding makes it free and its useful for
-	 * debugging.
-	 */
-	CommandId	combocid;
+	CommandId	combocid;		/* just for debugging */
 
 	/*
 	 * Store the relfilenode/ctid pair to facilitate lookups.
@@ -368,11 +384,12 @@ typedef struct xl_heap_rewrite_mapping
 } xl_heap_rewrite_mapping;
 
 extern void HeapTupleHeaderAdvanceLatestRemovedXid(HeapTupleHeader tuple,
-									   TransactionId *latestRemovedXid);
+												   TransactionId *latestRemovedXid);
 
 extern void heap_redo(XLogReaderState *record);
 extern void heap_desc(StringInfo buf, XLogReaderState *record);
 extern const char *heap_identify(uint8 info);
+extern void heap_mask(char *pagedata, BlockNumber blkno);
 extern void heap2_redo(XLogReaderState *record);
 extern void heap2_desc(StringInfo buf, XLogReaderState *record);
 extern const char *heap2_identify(uint8 info);
@@ -380,25 +397,25 @@ extern void heap_xlog_logical_rewrite(XLogReaderState *r);
 extern void heap_mask(char *pagedata, BlockNumber blkno);
 
 extern XLogRecPtr log_heap_cleanup_info(RelFileNode rnode,
-					  TransactionId latestRemovedXid);
+										TransactionId latestRemovedXid);
 extern XLogRecPtr log_heap_clean(Relation reln, Buffer buffer,
-			   OffsetNumber *redirected, int nredirected,
-			   OffsetNumber *nowdead, int ndead,
-			   OffsetNumber *nowunused, int nunused,
-			   TransactionId latestRemovedXid);
+								 OffsetNumber *redirected, int nredirected,
+								 OffsetNumber *nowdead, int ndead,
+								 OffsetNumber *nowunused, int nunused,
+								 TransactionId latestRemovedXid);
 extern XLogRecPtr log_heap_freeze(Relation reln, Buffer buffer,
-				TransactionId cutoff_xid, xl_heap_freeze_tuple *tuples,
-				int ntuples);
+								  TransactionId cutoff_xid, xl_heap_freeze_tuple *tuples,
+								  int ntuples);
 extern bool heap_prepare_freeze_tuple(HeapTupleHeader tuple,
-						  TransactionId relfrozenxid,
-						  TransactionId relminmxid,
-						  TransactionId cutoff_xid,
-						  TransactionId cutoff_multi,
-						  xl_heap_freeze_tuple *frz,
-						  bool *totally_frozen);
+									  TransactionId relfrozenxid,
+									  TransactionId relminmxid,
+									  TransactionId cutoff_xid,
+									  TransactionId cutoff_multi,
+									  xl_heap_freeze_tuple *frz,
+									  bool *totally_frozen);
 extern void heap_execute_freeze_tuple(HeapTupleHeader tuple,
-						  xl_heap_freeze_tuple *xlrec_tp);
+									  xl_heap_freeze_tuple *xlrec_tp);
 extern XLogRecPtr log_heap_visible(RelFileNode rnode, Buffer heap_buffer,
-				 Buffer vm_buffer, TransactionId cutoff_xid, uint8 flags);
+								   Buffer vm_buffer, TransactionId cutoff_xid, uint8 flags);
 
-#endif   /* HEAPAM_XLOG_H */
+#endif							/* HEAPAM_XLOG_H */

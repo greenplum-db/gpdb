@@ -18,53 +18,40 @@ using namespace gpos;
 
 namespace gpdxl
 {
-	class CDXLSections
-	{
-		public:		
-			// DXL document header and footer
-			static
-			const WCHAR *m_wszDocumentHeader;
-			static
-			const WCHAR *m_wszDocumentFooter;
-			
-			// Thread header and footer
-			static
-			const WCHAR *m_wszThreadHeaderTemplate;
-			static
-			const WCHAR *m_wszThreadFooter;
-						
-			// Optimizer config header and footer
-			static
-			const WCHAR *m_wszOptimizerConfigHeader;
-			static
-			const WCHAR *m_wszOptimizerConfigFooter;
-		
-			// Metadata section header and footer
-			static
-			const WCHAR *m_wszMetadataHeaderPrefix;
-			static
-			const WCHAR *m_wszMetadataHeaderSuffix;
-			static
-			const WCHAR *m_wszMetadataFooter;
-			
-			// trace flags section prefix
-			static
-			const WCHAR *m_wszTraceFlagsSectionPrefix;
-			
-			// trace flags section suffix
-			static
-			const WCHAR *m_wszTraceFlagsSectionSuffix;
-			
-			// stack trace section header
-			static
-			const WCHAR *m_wszStackTraceHeader;
-			
-			// stack trace section footer
-			static
-			const WCHAR *m_wszStackTraceFooter;
-	};
-}
+class CDXLSections
+{
+public:
+	// DXL document header and footer
+	static const WCHAR *m_wszDocumentHeader;
+	static const WCHAR *m_wszDocumentFooter;
 
-#endif // !GPDXL_CDXLSections_H
+	// Thread header and footer
+	static const WCHAR *m_wszThreadHeaderTemplate;
+	static const WCHAR *m_wszThreadFooter;
+
+	// Optimizer config header and footer
+	static const WCHAR *m_wszOptimizerConfigHeader;
+	static const WCHAR *m_wszOptimizerConfigFooter;
+
+	// Metadata section header and footer
+	static const WCHAR *m_wszMetadataHeaderPrefix;
+	static const WCHAR *m_wszMetadataHeaderSuffix;
+	static const WCHAR *m_wszMetadataFooter;
+
+	// trace flags section prefix
+	static const WCHAR *m_wszTraceFlagsSectionPrefix;
+
+	// trace flags section suffix
+	static const WCHAR *m_wszTraceFlagsSectionSuffix;
+
+	// stack trace section header
+	static const WCHAR *m_wszStackTraceHeader;
+
+	// stack trace section footer
+	static const WCHAR *m_wszStackTraceFooter;
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CDXLSections_H
 
 // EOF

@@ -3,7 +3,7 @@
  * execJunk.c
  *	  Junk attribute support stuff....
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -53,12 +53,11 @@
  * Initialize the Junk filter.
  *
  * The source targetlist is passed in.  The output tuple descriptor is
- * built from the non-junk tlist entries, plus the passed specification
- * of whether to include room for an OID or not.
+ * built from the non-junk tlist entries.
  * An optional resultSlot can be passed as well.
  */
 JunkFilter *
-ExecInitJunkFilter(List *targetList, bool hasoid, TupleTableSlot *slot)
+ExecInitJunkFilter(List *targetList, TupleTableSlot *slot)
 {
 	JunkFilter *junkfilter;
 	TupleDesc	cleanTupType;
@@ -70,7 +69,7 @@ ExecInitJunkFilter(List *targetList, bool hasoid, TupleTableSlot *slot)
 	/*
 	 * Compute the tuple descriptor for the cleaned tuple.
 	 */
-	cleanTupType = ExecCleanTypeFromTL(targetList, hasoid);
+	cleanTupType = ExecCleanTypeFromTL(targetList);
 
 	/*
 	 * Use the given slot, or make a new slot if we weren't given one.
@@ -78,7 +77,7 @@ ExecInitJunkFilter(List *targetList, bool hasoid, TupleTableSlot *slot)
 	if (slot)
 		ExecSetSlotDescriptor(slot, cleanTupType);
 	else
-		slot = MakeSingleTupleTableSlot(cleanTupType);
+		slot = MakeSingleTupleTableSlot(cleanTupType, &TTSOpsVirtual);
 
 	/*
 	 * Now calculate the mapping between the original tuple's attributes and
@@ -149,7 +148,7 @@ ExecInitJunkFilterConversion(List *targetList,
 	if (slot)
 		ExecSetSlotDescriptor(slot, cleanTupType);
 	else
-		slot = MakeSingleTupleTableSlot(cleanTupType);
+		slot = MakeSingleTupleTableSlot(cleanTupType, &TTSOpsVirtual);
 
 	/*
 	 * Calculate the mapping between the original tuple's attributes and the
@@ -168,7 +167,7 @@ ExecInitJunkFilterConversion(List *targetList,
 		t = list_head(targetList);
 		for (i = 0; i < cleanLength; i++)
 		{
-			if (cleanTupType->attrs[i]->attisdropped)
+			if (TupleDescAttr(cleanTupType, i)->attisdropped)
 				continue;		/* map entry is already zero */
 			for (;;)
 			{
@@ -275,8 +274,8 @@ ExecFilterJunk(JunkFilter *junkfilter, TupleTableSlot *slot)
 	 * Extract all the values of the old tuple.
 	 */
 	slot_getallattrs(slot);
-	old_values = slot_get_values(slot); 
-	old_isnull = slot_get_isnull(slot);
+	old_values = slot->tts_values;
+	old_isnull = slot->tts_isnull;
 
 	/*
 	 * get info from the junk filter
@@ -290,8 +289,8 @@ ExecFilterJunk(JunkFilter *junkfilter, TupleTableSlot *slot)
 	 * Prepare to build a virtual result tuple.
 	 */
 	ExecClearTuple(resultSlot);
-	values = slot_get_values(resultSlot); 
-	isnull = slot_get_isnull(resultSlot); 
+	values = resultSlot->tts_values;
+	isnull = resultSlot->tts_isnull;
 
 	/*
 	 * Transpose data into proper fields of the new tuple.

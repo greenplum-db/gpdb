@@ -10,15 +10,6 @@
 --   * regr_slope
 --   * regr_r2
 
--- start_matchsubs
--- m|Failed on request of size \d+ bytes|
--- s|Failed on request of size \d+ bytes|Failed on request of size BIGALLOC bytes|
---
--- m/(ERROR|WARNING|CONTEXT|NOTICE):.*\(float\.c\:\d+\)/
--- s/\(float\.c:\d+\)//
---
--- end_matchsubs
-
 CREATE TABLE weibull
 (
 	id INTEGER NOT NULL,
@@ -87,61 +78,4 @@ select
     regr_r2(y,x2)::real as r2
 from weibull;
 
--- Accumulation/combination order shouldn't matter to the result. These should
--- produce the same result.
-select float8_regr_accum(float8_regr_accum(array[0,0,0,0,0,0], 1, 2),  2, 1);
-select float8_regr_accum(float8_regr_accum(array[0,0,0,0,0,0], 2, 1),  1, 2);
-
--- Component testing of the individual aggregate callback functions
---  * null handling
---  * malformed state
---  * check for invalid in-place updates of first parameter
-select float8_regr_accum(null, 1, 2);
-select float8_regr_accum(array[0,0,0,0,0,0], 1, null);
-select float8_regr_accum(array[0,0,0,0,0,0], null, 2);
-select float8_regr_sxx(null);
-select float8_regr_sxx(array[0,0,0,0,0,0]);
-select float8_regr_sxx(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_syy(null);
-select float8_regr_syy(array[0,0,0,0,0,0]);
-select float8_regr_syy(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_sxy(null);
-select float8_regr_sxy(array[0,0,0,0,0,0]);
-select float8_regr_sxy(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_avgx(null);
-select float8_regr_avgx(array[0,0,0,0,0,0]);
-select float8_regr_avgx(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_avgy(null);
-select float8_regr_avgy(array[0,0,0,0,0,0]);
-select float8_regr_avgy(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_r2(null);
-select float8_regr_r2(array[0,0,0,0,0,0]);
-select float8_regr_r2(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_slope(null);
-select float8_regr_slope(array[0,0,0,0,0,0]);
-select float8_regr_slope(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-select float8_regr_intercept(null);
-select float8_regr_intercept(array[0,0,0,0,0,0]);
-select float8_regr_intercept(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
-
-select float8_regr_accum('{}'::float8[], 1, 2);
-select float8_regr_sxx('{}'::float8[]);
-select float8_regr_syy('{}'::float8[]);
-select float8_regr_sxy('{}'::float8[]);
-select float8_regr_avgx('{}'::float8[]);
-select float8_regr_avgy('{}'::float8[]);
-select float8_regr_slope('{}'::float8[]);
-select float8_regr_r2('{}'::float8[]);
-select float8_regr_intercept('{}'::float8[]);
-
-CREATE TABLE regr_test as 
-   select array[0,0,0,0,0,0]::float8[] as x, array[2,0,0,0,0,0,0,0,0,0] as y
-DISTRIBUTED RANDOMLY;
-
-select float8_regr_accum(x, 0, 3), 
-       float8_regr_accum(x, 0, 2), 
-       x 
-from regr_test;
-
-DROP TABLE regr_test;
 DROP TABLE weibull;

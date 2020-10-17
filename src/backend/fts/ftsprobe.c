@@ -148,6 +148,7 @@ static bool
 ftsConnectStart(fts_segment_info *ftsInfo)
 {
 	char conninfo[1024];
+	char *hostip;
 
 	/*
 	 * No events should be pending on the connection that hasn't started
@@ -162,8 +163,9 @@ ftsConnectStart(fts_segment_info *ftsInfo)
 				ftsInfo->state == FTS_SYNCREP_OFF_SEGMENT,
 				SEGMENT_IS_ACTIVE_PRIMARY(ftsInfo->primary_cdbinfo));
 
+	hostip = ftsInfo->primary_cdbinfo->config->hostip;
 	snprintf(conninfo, 1024, "host=%s port=%d gpconntype=%s",
-			 ftsInfo->primary_cdbinfo->config->hostip, ftsInfo->primary_cdbinfo->config->port,
+			 hostip ? hostip : "", ftsInfo->primary_cdbinfo->config->port,
 			 GPCONN_TYPE_FTS);
 	ftsInfo->conn = PQconnectStart(conninfo);
 

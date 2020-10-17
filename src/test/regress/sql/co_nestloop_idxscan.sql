@@ -61,6 +61,15 @@ set optimizer = off;
 -- The outher plan of the Nested Loop Semi Join should be Seq Scan on bar b.
 -- The inner plain should be a Bitmap Heap Scan on foo f.
 -- So the Bitmap Heap Scan will call ExecReScanBitmapHeapScan for new outer slot.
+set enable_sort=off;
+set enable_hashagg=off;
+explain select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
+select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
+
+-- Also test a similar plan that uses RowIdExpr for duplicate elimination instead of
+-- Nested Loop Semi Join.
+reset enable_sort;
+reset enable_hashagg;
 explain select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
 select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_nestloop_idxscan.foo f where f.id in (1, 2, 3, 4, 5, 6));
 

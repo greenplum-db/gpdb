@@ -145,7 +145,7 @@ PG_LANG=false
 endif
 
 ifneq (false, ${PG_LANG})
-CONFIGFLAGS+= --with-perl --with-python
+CONFIGFLAGS+= --with-perl --with-python PYTHON=python3
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif
@@ -250,7 +250,7 @@ perl_archlibexp:=$(shell perl -MConfig -e 'print $$Config{archlibexp}')
 
 # set default build steps
 define BUILD_STEPS
-	@rm -rf $(INSTLOC)
+	@$(MAKE) -C $(BUILDDIR)/src/backend generated-headers
 	cd $(BUILDDIR) && PYGRESQL_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../../lib -Wl,--enable-new-dtags' QUICKLZ_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../lib -Wl,--enable-new-dtags' $(MAKE) $(PARALLEL_MAKE_OPTS) install
 	cd $(BUILDDIR)/src/pl/plpython && $(MAKE) clean && echo 'LDFLAGS += -Wl,-rpath,\$$$$ORIGIN/../../ext/python/lib/ -Wl,--enable-new-dtags' >> Makefile && $(MAKE) $(PARALLEL_MAKE_OPTS) install && cd $(BUILDDIR)
 	cd $(BUILDDIR)/src/pl/plperl && $(MAKE) clean && echo "LDFLAGS += -Wl,-rpath,$(perl_archlibexp)/CORE -Wl,--enable-new-dtags" >> GNUmakefile && echo "LDFLAGS_SL += -Wl,-rpath,$(perl_archlibexp)/CORE -Wl,--enable-new-dtags" >> GNUmakefile && $(MAKE) $(PARALLEL_MAKE_OPTS) install && cd $(BUILDDIR)
@@ -421,8 +421,6 @@ define tmpCLIENTS_FILESET_BIN
 	psql
 	createdb
 	dropdb
-	createlang
-	droplang
 	createuser
 	dropuser
 endef
@@ -432,7 +430,7 @@ CLIENTS_FILESET_BIN = $(strip $(tmpCLIENTS_FILESET_BIN))
 define tmpCLIENTS_FILESET_BINEXT
 	pg.py
 	pgdb.py
-	_pg.so
+	_pg*.so
 	yaml
 endef
 CLIENTS_FILESET_BINEXT = $(strip $(tmpCLIENTS_FILESET_BINEXT))

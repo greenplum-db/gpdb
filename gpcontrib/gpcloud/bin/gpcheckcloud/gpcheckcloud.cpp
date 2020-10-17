@@ -6,7 +6,7 @@ char eolString[EOL_CHARS_MAX_LEN + 1] = "\n";  // LF by default
 
 string s3extErrorMessage;
 
-volatile bool QueryCancelPending = false;
+volatile sig_atomic_t QueryCancelPending = false;
 
 static bool uploadS3(const char *urlWithOptions, const char *fileToUpload);
 static bool downloadS3(const char *urlWithOptions);

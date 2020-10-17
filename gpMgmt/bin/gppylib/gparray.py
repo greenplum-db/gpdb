@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
@@ -127,16 +127,22 @@ class Segment:
             self.status
             )
 
-    #
-    # Note that this is not an ideal comparison -- it uses the string representation
-    #   for comparison
-    #
-    def __cmp__(self,other):
-        left = repr(self)
-        right = repr(other)
-        if left < right: return -1
-        elif left > right: return 1
-        else: return 0
+    def __equal(self, other, ignoreAttr=[]):
+        if not isinstance(other, Segment):
+            return NotImplemented
+        for key in list(vars(other)):
+            if key in ignoreAttr:
+                continue
+            if vars(other)[key] != vars(self)[key]:
+                return False
+        return True
+
+    def __eq__(self, other):
+        return self.__equal(other)
+
+
+    def __hash__(self):
+        return hash(self.dbid)
 
     #
     # Moved here from system/configurationImplGpdb.py
@@ -149,21 +155,7 @@ class Segment:
         This method is used by updateSystemConfig() to know when a catalog
         change will cause removing and re-adding a mirror segment.
         """
-        firstMode = self.getSegmentMode()
-        firstStatus = self.getSegmentStatus()
-        try:
-
-            # make the elements we don't want to compare match and see if they are then equal
-            self.setSegmentMode(other.getSegmentMode())
-            self.setSegmentStatus(other.getSegmentStatus())
-
-            return self == other
-        finally:
-            #
-            # restore mode and status after comaprison
-            #
-            self.setSegmentMode(firstMode)
-            self.setSegmentStatus(firstStatus)
+        return self.__equal(other, ['mode','status'])
 
 
     # --------------------------------------------------------------------
@@ -566,7 +558,7 @@ def createSegmentRows( hostlist
                 else:
                     address = mirror_host
 
-                if not mirror_port.has_key(mirror_host):
+                if mirror_host not in mirror_port:
                     mirror_port[mirror_host] = mirror_portbase
 
                 rows.append( SegmentRow( content = content
@@ -700,7 +692,7 @@ def createSegmentRowsFromSegmentList( newHostlist
                 else:
                     address = mirror_host
 
-                if not mirror_port.has_key(mirror_host):
+                if mirror_host not in mirror_port:
                     mirror_port[mirror_host] = mirror_portbase
 
                 rows.append( SegmentRow( content = content
@@ -922,7 +914,7 @@ class GpArray:
                 first = False
                 if suffixList != firstSuffixList:
                     raise Exception("The address list for %s doesn't not have the same pattern as %s." % (str(suffixList), str(firstSuffixList)))
-        except Exception, e:
+        except Exception as e:
             # Assume any exception implies a non-standard array
             return False, str(e)
 
@@ -1074,7 +1066,7 @@ class GpArray:
             arr.append(seg)
 
         result = {}
-        for contentId, arr in contentIdToSegments.iteritems():
+        for contentId, arr in contentIdToSegments.items():
             if len(arr) == 1:
                 pass
             elif len(arr) != 2:
@@ -1545,8 +1537,8 @@ class GpArray:
             if expect_all_segments_to_have_mirror:
                 valid_content.append((i, False))
 
-        valid_content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
-        content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
+        valid_content.sort()
+        content.sort()
 
         if valid_content != content:
             raise Exception('Invalid content ids')
@@ -1559,7 +1551,7 @@ class GpArray:
             datadir = db.getSegmentDataDirectory()
             hostname = db.getSegmentHostName()
             port = db.getSegmentPort()
-            if datadirs.has_key(hostname):
+            if hostname in datadirs:
                 if datadir in datadirs[hostname]:
                     raise Exception('Data directory %s used multiple times on host %s' % (datadir, hostname))
                 else:
@@ -1569,7 +1561,7 @@ class GpArray:
                 datadirs[hostname].append(datadir)
 
             # Check ports
-            if used_ports.has_key(hostname):
+            if hostname in used_ports:
                 if db.port in used_ports[hostname]:
                     raise Exception('Port %d is used multiple times on host %s' % (port, hostname))
                 else:
@@ -1676,8 +1668,8 @@ class GpArray:
         interface_count = len(interface_list)
 
         mirror_dict = {}
-        # must be sorted by isprimary, then hostname
-        rows.sort(lambda a,b: (cmp(b.isprimary, a.isprimary) or cmp(a.host,b.host)))
+        # must be sorted by isprimary (primaries before mirrors), then hostname (ascending order)
+        rows.sort(key=(lambda a: (0 if a.isprimary == 't' else 1, a.host)))
         current_host = rows[0].host
         curr_dbid = self.get_max_dbid(True) + 1
         curr_content = self.get_max_contentid(True) + 1
@@ -1794,7 +1786,7 @@ def get_segment_hosts(master_port):
     """
     gparray = GpArray.initFromCatalog( dbconn.DbURL(port=master_port), utility=True )
     segments = GpArray.getSegmentsByHostName( gparray.getDbList() )
-    return segments.keys()
+    return list(segments.keys())
 
 
 def get_session_ids(master_port):

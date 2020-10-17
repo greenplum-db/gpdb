@@ -16,35 +16,21 @@
 
 using namespace gpos;
 
-const CHAR*
-CException::m_severity[] =
-{
-	"INVALID",
-	"PANIC",
-	"FATAL",
-	"ERROR",
-	"WARNING",
-	"NOTICE",
-	"TRACE"
-};
+const CHAR *CException::m_severity[] = {"INVALID", "PANIC",	 "FATAL", "ERROR",
+										"WARNING", "NOTICE", "TRACE"};
 
 
 // invalid exception
-const CException CException::m_invalid_exception
-					(
-					CException::ExmaInvalid,
-					CException::ExmiInvalid
-					);
+const CException CException::m_invalid_exception(CException::ExmaInvalid,
+												 CException::ExmiInvalid);
 
 // standard SQL error codes
-const CException::ErrCodeElem
-CException::m_errcode[] =
-{
-	{ExmiSQLDefault, "XX000"},					// internal error
-	{ExmiSQLNotNullViolation, "23502"},			// not null violation
-	{ExmiSQLCheckConstraintViolation, "23514"},	// check constraint violation
-	{ExmiSQLMaxOneRow, "P0003"},				// max one row
-	{ExmiSQLTest, "XXXXX"}						// test sql state
+const CException::ErrCodeElem CException::m_errcode[] = {
+	{ExmiSQLDefault, "XX000"},					 // internal error
+	{ExmiSQLNotNullViolation, "23502"},			 // not null violation
+	{ExmiSQLCheckConstraintViolation, "23514"},	 // check constraint violation
+	{ExmiSQLMaxOneRow, "P0003"},				 // max one row
+	{ExmiSQLTest, "XXXXX"}						 // test sql state
 };
 
 
@@ -58,38 +44,25 @@ CException::m_errcode[] =
 //		dynamically
 //
 //---------------------------------------------------------------------------
-CException::CException
-	(
-	ULONG major,
-	ULONG minor,
-	const CHAR *filename,
-	ULONG line
-	)
-	:
-	m_major(major),
-	m_minor(minor),
-	m_filename(const_cast<CHAR*>(filename)),
-	m_line(line)
+CException::CException(ULONG major, ULONG minor, const CHAR *filename,
+					   ULONG line)
+	: m_major(major),
+	  m_minor(minor),
+	  m_filename(const_cast<CHAR *>(filename)),
+	  m_line(line)
 {
 	m_severity_level = CException::ExsevSentinel;
 	m_sql_state = GetSQLState(major, minor);
 }
 
 // ctor
-CException::CException
-(
-	ULONG major,
-	ULONG minor,
-	const CHAR *filename,
-	ULONG line,
-	ULONG severity_level
-	)
-	:
-	m_major(major),
-	m_minor(minor),
-	m_filename(const_cast<CHAR*>(filename)),
-	m_line(line),
-	m_severity_level(severity_level)
+CException::CException(ULONG major, ULONG minor, const CHAR *filename,
+					   ULONG line, ULONG severity_level)
+	: m_major(major),
+	  m_minor(minor),
+	  m_filename(const_cast<CHAR *>(filename)),
+	  m_line(line),
+	  m_severity_level(severity_level)
 {
 	m_sql_state = GetSQLState(major, minor);
 }
@@ -103,16 +76,8 @@ CException::CException
 //		in lookup structures etc.
 //
 //---------------------------------------------------------------------------
-CException::CException
-	(
-	ULONG major,
-	ULONG minor
-	)
-	:
-	m_major(major),
-	m_minor(minor),
-	m_filename(NULL),
-	m_line(0)
+CException::CException(ULONG major, ULONG minor)
+	: m_major(major), m_minor(minor), m_filename(NULL), m_line(0)
 {
 	m_severity_level = CException::ExsevSentinel;
 	m_sql_state = GetSQLState(major, minor);
@@ -124,25 +89,19 @@ CException::CException
 //		CException::Raise
 //
 //	@doc:
-//		Actual point where an exception is thrown; encapsulated in a function 
+//		Actual point where an exception is thrown; encapsulated in a function
 //		(a) to facilitate debugging, i.e. function to set a breakpoint
 //		(b) to allow for additional debugging tools such as stack dumps etc.
 //			at a later point in time
 //
 //---------------------------------------------------------------------------
 void
-CException::Raise
-	(
-	const CHAR *filename,
-	ULONG line,
-	ULONG major,
-	ULONG minor,
-	...
-	)
+CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
+				  ...)
 {
 	// manufacture actual exception object
 	CException exc(major, minor, filename, line);
-	
+
 	// during bootstrap there's no context object otherwise, record
 	// all details in the context object
 	if (NULL != ITask::Self())
@@ -164,15 +123,8 @@ CException::Raise
 
 
 void
-CException::Raise
-(
-	const CHAR *filename,
-	ULONG line,
-	ULONG major,
-	ULONG minor,
-	ULONG severity_level
-	...
-	)
+CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
+				  ULONG severity_level...)
 {
 	// manufacture actual exception object
 	CException exc(major, minor, filename, line, severity_level);
@@ -207,11 +159,7 @@ CException::Raise
 //
 //---------------------------------------------------------------------------
 void
-CException::Reraise
-	(
-	CException exc,
-	BOOL propagate
-	)
+CException::Reraise(CException exc, BOOL propagate)
 {
 	if (NULL != ITask::Self())
 	{
@@ -242,21 +190,18 @@ CException::Reraise
 //
 //---------------------------------------------------------------------------
 void
-CException::Raise
-	(
-	CException exc
-	)
+CException::Raise(CException exc)
 {
 #ifdef GPOS_DEBUG
 	if (NULL != ITask::Self())
 	{
 		IErrorContext *err_ctxt = ITask::Self()->GetErrCtxt();
 		GPOS_ASSERT_IMP(err_ctxt->IsPending(),
-				err_ctxt->GetException() == exc &&
-				"Rethrow inconsistent with current error context");
+						err_ctxt->GetException() == exc &&
+							"Rethrow inconsistent with current error context");
 	}
-#endif // GPOS_DEBUG
-	
+#endif	// GPOS_DEBUG
+
 	throw exc;
 }
 
@@ -269,11 +214,7 @@ CException::Raise
 //
 //---------------------------------------------------------------------------
 const CHAR *
-CException::GetSQLState
-	(
-	ULONG major,
-	ULONG minor
-	)
+CException::GetSQLState(ULONG major, ULONG minor)
 {
 	const CHAR *sql_state = m_errcode[0].m_sql_state;
 	if (ExmaSQL == major)
@@ -289,9 +230,8 @@ CException::GetSQLState
 			}
 		}
 	}
-	
+
 	return sql_state;
 }
 
 // EOF
-

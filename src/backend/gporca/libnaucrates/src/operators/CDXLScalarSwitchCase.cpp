@@ -27,12 +27,7 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLScalarSwitchCase::CDXLScalarSwitchCase
-	(
-	CMemoryPool *mp
-	)
-	:
-	CDXLScalar(mp)
+CDXLScalarSwitchCase::CDXLScalarSwitchCase(CMemoryPool *mp) : CDXLScalar(mp)
 {
 }
 
@@ -73,18 +68,16 @@ CDXLScalarSwitchCase::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarSwitchCase::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLScalarSwitchCase::SerializeToDXL(CXMLSerializer *xml_serializer,
+									 const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -97,12 +90,8 @@ CDXLScalarSwitchCase::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarSwitchCase::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	)
-	const
+CDXLScalarSwitchCase::AssertValid(const CDXLNode *dxlnode,
+								  BOOL validate_children) const
 {
 	const ULONG arity = dxlnode->Arity();
 	GPOS_ASSERT(2 == arity);
@@ -110,14 +99,16 @@ CDXLScalarSwitchCase::AssertValid
 	for (ULONG idx = 0; idx < arity; ++idx)
 	{
 		CDXLNode *dxlnode_arg = (*dxlnode)[idx];
-		GPOS_ASSERT(EdxloptypeScalar == dxlnode_arg->GetOperator()->GetDXLOperatorType());
+		GPOS_ASSERT(EdxloptypeScalar ==
+					dxlnode_arg->GetOperator()->GetDXLOperatorType());
 
 		if (validate_children)
 		{
-			dxlnode_arg->GetOperator()->AssertValid(dxlnode_arg, validate_children);
+			dxlnode_arg->GetOperator()->AssertValid(dxlnode_arg,
+													validate_children);
 		}
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

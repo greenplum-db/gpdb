@@ -1,8 +1,5 @@
 -- This test assumes 3 primaries and 3 mirrors from a gpdemo segwalrep cluster
 
-include: helpers/server_helpers.sql;
-CREATE
-
 -- make sure we are in-sync for the primary we will be testing with
 select content, role, preferred_role, mode, status from gp_segment_configuration;
  content | role | preferred_role | mode | status 
@@ -99,10 +96,11 @@ INSERT 1
 
 -- bring the mirror back up
 -1U: select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'm' and content = 0;
- pg_ctl_start     
-------------------
- server starting
+ pg_ctl_start                                     
+--------------------------------------------------
  
+ waiting for server to start done
+server started
 (1 row)
 
 -- should unblock and commit now that mirror is back up and in-sync

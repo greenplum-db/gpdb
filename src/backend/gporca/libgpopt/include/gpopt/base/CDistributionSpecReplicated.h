@@ -6,7 +6,7 @@
 //		CDistributionSpecReplicated.h
 //
 //	@doc:
-//		Description of a replicated distribution; 
+//		Description of a replicated distribution;
 //		Can be used as required or derived property;
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CDistributionSpecReplicated_H
@@ -19,74 +19,72 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDistributionSpecReplicated
-	//
-	//	@doc:
-	//		Class for representing replicated distribution specification.
-	//
-	//---------------------------------------------------------------------------
-	class CDistributionSpecReplicated : public CDistributionSpec
+//---------------------------------------------------------------------------
+//	@class:
+//		CDistributionSpecReplicated
+//
+//	@doc:
+//		Class for representing replicated distribution specification.
+//
+//---------------------------------------------------------------------------
+class CDistributionSpecReplicated : public CDistributionSpec
+{
+private:
+	// private copy ctor
+	CDistributionSpecReplicated(const CDistributionSpecReplicated &);
+
+public:
+	// ctor
+	CDistributionSpecReplicated()
 	{
-		private:
+	}
 
-			// private copy ctor
-			CDistributionSpecReplicated(const CDistributionSpecReplicated &);
-			
-		public:
-			// ctor
-			CDistributionSpecReplicated()
-			{}
-			
-			// accessor
-			virtual 
-			EDistributionType Edt() const
-			{
-				return CDistributionSpec::EdtReplicated;
-			}
-			
-			// does this distribution satisfy the given one
-			virtual 
-			BOOL FSatisfies(const CDistributionSpec *pds) const;
-			
-			// append enforcers to dynamic array for the given plan properties
-			virtual
-			void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl, CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr, CExpression *pexpr);
+	// accessor
+	virtual EDistributionType
+	Edt() const
+	{
+		return CDistributionSpec::EdtReplicated;
+	}
 
-			// return distribution partitioning type
-			virtual
-			EDistributionPartitioningType Edpt() const
-			{
-				return EdptNonPartitioned;
-			}
+	// does this distribution satisfy the given one
+	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const
-			{
-				return os << "REPLICATED ";
-			}
-			
-			// conversion function
-			static
-			CDistributionSpecReplicated *PdsConvert
-				(
-				CDistributionSpec *pds
-				)
-			{
-				GPOS_ASSERT(NULL != pds);
-				GPOS_ASSERT(EdtReplicated == pds->Edt());
+	// append enforcers to dynamic array for the given plan properties
+	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								 CReqdPropPlan *prpp,
+								 CExpressionArray *pdrgpexpr,
+								 CExpression *pexpr);
 
-				return dynamic_cast<CDistributionSpecReplicated*>(pds);
-			}
+	// return distribution partitioning type
+	virtual EDistributionPartitioningType
+	Edpt() const
+	{
+		return EdptNonPartitioned;
+	}
 
-	}; // class CDistributionSpecReplicated
+	// print
+	virtual IOstream &
+	OsPrint(IOstream &os) const
+	{
+		return os << "REPLICATED ";
+	}
 
-}
+	// conversion function
+	static CDistributionSpecReplicated *
+	PdsConvert(CDistributionSpec *pds)
+	{
+		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(EdtReplicated == pds->Edt());
 
-#endif // !GPOPT_CDistributionSpecReplicated_H
+		return dynamic_cast<CDistributionSpecReplicated *>(pds);
+	}
+
+};	// class CDistributionSpecReplicated
+
+}  // namespace gpopt
+
+#endif	// !GPOPT_CDistributionSpecReplicated_H
 
 // EOF

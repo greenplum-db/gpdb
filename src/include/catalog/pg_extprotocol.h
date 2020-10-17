@@ -16,6 +16,7 @@
 #define PG_EXTPROTOCOL_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_extprotocol_d.h"
 #include "nodes/pg_list.h"
 #include "utils/acl.h"
 
@@ -24,18 +25,17 @@
  *		typedef struct FormData_pg_extprotocol
  * ----------------
  */
-#define ExtprotocolRelationId	7175
-
-CATALOG(pg_extprotocol,7175)
+CATALOG(pg_extprotocol,7175,ExtprotocolRelationId)
 {
-	NameData	ptcname;		
-	Oid			ptcreadfn;		
-	Oid			ptcwritefn;		
-	Oid			ptcvalidatorfn;	
-	Oid			ptcowner;		
-	bool		ptctrusted;		
+	Oid			oid;			/* oid */
+	NameData	ptcname;
+	Oid			ptcreadfn;
+	Oid			ptcwritefn;
+	Oid			ptcvalidatorfn;
+	Oid			ptcowner;
+	bool		ptctrusted;
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
-	aclitem		ptcacl[1];		
+	aclitem		ptcacl[1];
 #endif
 } FormData_pg_extprotocol;
 
@@ -50,20 +50,6 @@ FOREIGN_KEY(ptcvalidatorfn REFERENCES pg_proc(oid));
  * ----------------
  */
 typedef FormData_pg_extprotocol *Form_pg_extprotocol;
-
-
-/* ----------------
- *		compiler constants for pg_extprotocol
- * ----------------
- */
-#define Natts_pg_extprotocol				7
-#define Anum_pg_extprotocol_ptcname			1
-#define Anum_pg_extprotocol_ptcreadfn		2
-#define Anum_pg_extprotocol_ptcwritefn		3
-#define Anum_pg_extprotocol_ptcvalidatorfn	4
-#define Anum_pg_extprotocol_ptcowner		5
-#define Anum_pg_extprotocol_ptctrusted		6
-#define Anum_pg_extprotocol_ptcacl			7
 
 /*
  * Different type of functions that can be 

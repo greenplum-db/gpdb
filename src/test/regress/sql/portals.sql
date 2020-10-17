@@ -2,6 +2,7 @@ set optimizer_print_missing_stats = off;
 --
 -- Cursor regression tests
 --
+
 BEGIN;
 
 DECLARE foo1 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2;
@@ -164,9 +165,9 @@ COMMIT;
 
 FETCH FROM foo25;
 
---FETCH BACKWARD FROM foo25;
+--FETCH BACKWARD FROM foo25; -- backwards scans not supported in GPDB
 
---FETCH ABSOLUTE -1 FROM foo25;
+--FETCH ABSOLUTE -1 FROM foo25; -- backwards scans not supported in GPDB
 
 SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
 
@@ -207,6 +208,7 @@ ROLLBACK;
 -- in particular we want to see what happens during commit of a holdable
 -- cursor
 --
+
 create temp table tt1(f1 int);
 
 create function count_tt1_v() returns int8 as
@@ -312,17 +314,17 @@ DECLARE c1 CURSOR FOR SELECT f1, f2 FROM uctest;
 FETCH c1;
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
-UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
 -- insensitive cursor should not show effects of updates or deletes
---FETCH RELATIVE 0 FROM c1;
-DELETE FROM uctest WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+--FETCH RELATIVE 0 FROM c1; -- backwards scans not supported in GPDB
+DELETE FROM uctest WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
 DELETE FROM uctest WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
---FETCH RELATIVE 0 FROM c1;
+--FETCH RELATIVE 0 FROM c1; -- backwards scans not supported in GPDB
 ROLLBACK;
 SELECT f1, f2 FROM uctest;
 
@@ -331,9 +333,9 @@ DECLARE c1 CURSOR FOR SELECT f1, f2 FROM uctest FOR UPDATE;
 FETCH c1;
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
-UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
-DELETE FROM uctest WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+DELETE FROM uctest WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
 DELETE FROM uctest WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
@@ -424,6 +426,7 @@ BEGIN;
 DECLARE c1 CURSOR FOR SELECT * FROM LOWER('TEST');
 FETCH ALL FROM c1;
 COMMIT;
+
 -- Check WHERE CURRENT OF with an index-only scan
 BEGIN;
 EXPLAIN (costs off)

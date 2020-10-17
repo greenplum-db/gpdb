@@ -4,7 +4,7 @@
  *	  Definitions for using the POSTGRES copy command.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/copy.h
@@ -14,8 +14,10 @@
 #ifndef COPY_H
 #define COPY_H
 
+#include "commands/trigger.h"
 #include "nodes/execnodes.h"
 #include "nodes/parsenodes.h"
+#include "parser/parse_node.h"
 #include "tcop/dest.h"
 #include "executor/executor.h"
 #include "cdb/cdbhash.h"
@@ -34,7 +36,7 @@ typedef enum CopyDest
 } CopyDest;
 
 /* CopyStateData is private in commands/copy.c */
-typedef int (*copy_data_source_cb) (void *outbuf, int datasize, void *extra);
+typedef int (*copy_data_source_cb) (void *outbuf, int minread, int maxread, void *extra);
 
 /*
  *	Represents the end-of-line terminator type of the input
@@ -103,7 +105,7 @@ typedef enum
  * characters, else we might find a false match to a trailing byte. In
  * supported server encodings, there is no possibility of a false match, and
  * it's faster to make useless comparisons to trailing bytes than it is to
- * invoke pg_encoding_mblen() to skip over them. encoding_embeds_ascii is TRUE
+ * invoke pg_encoding_mblen() to skip over them. encoding_embeds_ascii is true
  * when we have to do it the hard way.
  */
 typedef struct CopyStateData
@@ -113,14 +115,14 @@ typedef struct CopyStateData
 	FILE	   *copy_file;		/* used if copy_dest == COPY_FILE */
 	StringInfo	fe_msgbuf;		/* used for all dests during COPY TO, only for
 								 * dest == COPY_NEW_FE in COPY FROM */
-	bool		fe_eof;			/* true if detected end of copy data */
+	bool		is_copy_from;	/* COPY TO, or COPY FROM? */
+	bool		reached_eof;	/* true if we read to end of copy data (not
+								 * all copy_dest types maintain this) */
 	EolType		eol_type;		/* EOL type of input */
 	char	   *eol_str;		/* optional NEWLINE from command. before eol_type is defined */
 	int			file_encoding;	/* file or remote side's character encoding */
-	bool		need_transcoding;		/* file encoding diff from server? */
+	bool		need_transcoding;	/* file encoding diff from server? */
 	bool		encoding_embeds_ascii;	/* ASCII can be non-first byte? */
-	FmgrInfo   *enc_conversion_proc; /* conv proc from exttbl encoding to 
-										server or the other way around */
 
 	/* parameters from the COPY command */
 	Relation	rel;			/* relation to copy to or from */
@@ -129,36 +131,36 @@ typedef struct CopyStateData
 	List	   *attnamelist;	/* list of attributes by name */
 	char	   *filename;		/* filename, or NULL for STDIN/STDOUT */
 	bool		is_program;		/* is 'filename' a program to popen? */
-	bool		binary;			/* binary format? */
 	copy_data_source_cb data_source_cb; /* function for reading data */
 	void	   *data_source_cb_extra;
-	bool		oids;			/* include OIDs? */
+	bool		binary;			/* binary format? */
 	bool		freeze;			/* freeze rows on loading? */
 	bool		csv_mode;		/* Comma Separated Value format? */
 	bool		header_line;	/* CSV header line? */
 	char	   *null_print;		/* NULL marker string (server encoding!) */
 	int			null_print_len; /* length of same */
-	char	   *null_print_client;		/* same converted to file encoding */
+	char	   *null_print_client;	/* same converted to file encoding */
 	char	   *delim;			/* column delimiter (must be 1 byte) */
 	char	   *quote;			/* CSV quote char (must be 1 byte) */
 	char	   *escape;			/* CSV escape char (must be 1 byte) */
 	List	   *force_quote;	/* list of column names */
 	bool		force_quote_all;	/* FORCE_QUOTE *? */
-	bool	   *force_quote_flags;		/* per-column CSV FQ flags */
+	bool	   *force_quote_flags;	/* per-column CSV FQ flags */
 	List	   *force_notnull;	/* list of column names */
 	bool	   *force_notnull_flags;	/* per-column CSV FNN flags */
 	List	   *force_null;		/* list of column names */
-	bool	   *force_null_flags;		/* per-column CSV FN flags */
+	bool	   *force_null_flags;	/* per-column CSV FN flags */
 	bool		convert_selectively;	/* do selective binary conversion? */
 	List	   *convert_select; /* list of column names (can be NIL) */
 	bool	   *convert_select_flags;	/* per-column CSV/TEXT CS flags */
+	Node	   *whereClause;	/* WHERE condition (or NULL) */
 	bool		fill_missing;	/* missing attrs at end of line are NULL */
 
 	SingleRowErrorDesc *sreh;
 
 	/* these are just for error messages, see CopyFromErrorCallback */
 	const char *cur_relname;	/* table name for error messages */
-	int64		cur_lineno;		/* line number for error messages.  Negative means it isn't available. */
+	uint64		cur_lineno;		/* line number for error messages */
 	const char *cur_attname;	/* current att for error messages */
 	const char *cur_attval;		/* current att value for error messages */
 
@@ -178,15 +180,16 @@ typedef struct CopyStateData
 	 * Working state for COPY FROM
 	 */
 	AttrNumber	num_defaults;
-	bool		file_has_oids;
 	FmgrInfo	oid_in_function;
-	Oid			oid_typioparam;
 	FmgrInfo   *in_functions;	/* array of input functions for each attrs */
 	Oid		   *typioparams;	/* array of element types for in_functions */
 	int		   *defmap;			/* array of default att numbers */
 	ExprState **defexprs;		/* array of default att expressions */
-	bool		volatile_defexprs;		/* is any of defexprs volatile? */
+	bool		volatile_defexprs;	/* is any of defexprs volatile? */
 	List	   *range_table;
+	ExprState  *qualexpr;
+
+	TransitionCaptureState *transition_capture;
 
 	StringInfo	dispatch_msgbuf; /* used in COPY_DISPATCH mode, to construct message
 								  * to send to QE. */
@@ -219,7 +222,7 @@ typedef struct CopyStateData
 	 * can display it in error messages if appropriate.
 	 */
 	StringInfoData line_buf;
-	bool		line_buf_converted;		/* converted to server encoding? */
+	bool		line_buf_converted; /* converted to server encoding? */
 	bool		line_buf_valid; /* contains the row being processed? */
 
 	/*
@@ -235,13 +238,14 @@ typedef struct CopyStateData
 	int			raw_buf_len;	/* total # of bytes stored */
 
 	/* Greenplum Database specific variables */
+	FmgrInfo   *enc_conversion_proc; /* conv proc from exttbl encoding to
+										server or the other way around */
 	bool		escape_off;		/* treat backslashes as non-special? */
 	int			first_qe_processed_field;
 	List	   *qd_attnumlist;
 	List	   *qe_attnumlist;
 	bool		stopped_processing_at_delim;
 
-	PartitionNode *partitions; /* partitioning meta data from dispatcher */
 	bool          skip_ext_partition;  /* skip external partition */
 
 	bool		on_segment; /* QE save data files locally */
@@ -280,35 +284,38 @@ typedef struct
 #define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 #endif
 
-extern Oid DoCopy(const CopyStmt *stmt, const char *queryString,
-	   uint64 *processed);
+extern void DoCopy(ParseState *state, const CopyStmt *stmt,
+				   int stmt_location, int stmt_len,
+				   uint64 *processed);
 
-extern void ProcessCopyOptions(CopyState cstate, bool is_from, List *options,
-				   int num_columns, bool is_copy);
-extern CopyState BeginCopyFrom(Relation rel, const char *filename,
-			  bool is_program, copy_data_source_cb data_source_cb,
-			  void *data_source_cb_extra,
-			  List *attnamelist, List *options);
-extern CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-						   const char *queryString, const Oid queryRelId, List *attnamelist, List *options,
+extern void ProcessCopyOptions(ParseState *pstate, CopyState cstate, bool is_from, List *options,
+                               int num_columns,
+                               bool is_copy);
+extern CopyState BeginCopyFrom(ParseState *pstate, Relation rel, const char *filename,
+							   bool is_program, copy_data_source_cb data_source_cb,
+							   void *data_source_cb_extra,
+							   List *attnamelist, List *options);
+extern CopyState BeginCopy(ParseState *pstate, bool is_from, Relation rel,
+						   RawStmt *raw_query, Oid queryRelId,
+						   List *attnamelist, List *options,
 						   TupleDesc tupDesc);
-extern CopyState
-BeginCopyToOnSegment(QueryDesc *queryDesc);
+extern CopyState BeginCopyToOnSegment(QueryDesc *queryDesc);
 extern void EndCopyToOnSegment(CopyState cstate);
 extern CopyState BeginCopyToForeignTable(Relation forrel, List *options);
 extern void EndCopyFrom(CopyState cstate);
 extern bool NextCopyFrom(CopyState cstate, ExprContext *econtext,
-						 Datum *values, bool *nulls, Oid *tupleOid);
+						 Datum *values, bool *nulls);
 extern bool NextCopyFromRawFields(CopyState cstate,
-					  char ***fields, int *nfields);
+								  char ***fields, int *nfields);
 extern void CopyFromErrorCallback(void *arg);
+
+extern uint64 CopyFrom(CopyState cstate);
 
 extern DestReceiver *CreateCopyDestReceiver(void);
 
 extern List *CopyGetAttnums(TupleDesc tupDesc, Relation rel, List *attnamelist);
 
-extern void CopyOneRowTo(CopyState cstate, Oid tupleOid,
-						 Datum *values, bool *nulls);
+extern void CopyOneRowTo(CopyState cstate, TupleTableSlot *slot);
 extern void CopyOneCustomRowTo(CopyState cstate, bytea *value);
 extern void CopySendEndOfRow(CopyState cstate);
 extern char *limit_printout_length(const char *str);
@@ -318,24 +325,11 @@ extern void truncateEolStr(char *str, EolType eol_type);
 /*
  * This is used to hold information about the target's distribution policy,
  * during COPY FROM.
- *
- * For a regular, non-partitioned table, 'policy' and 'cdbHash' are filled in,
- * and 'relid' and 'hashmap' are unused.
- *
- * For a partitioned table, there is one "main" GpDistributionData for the
- * whole operation, and a separate GpDistributionData object for each
- * partition. The per-table objects are stored in the 'hashmap' of the main
- * GpDistributionData object, keyed by the partition's OID. 'policy' and
- * 'cdbHash' in the main GpDistributionData are unused.
  */
 typedef struct GpDistributionData
 {
-	Oid			relid;		/* hash key, must be first */
-
 	GpPolicy   *policy;		/* partitioning policy for this table */
 	CdbHash	   *cdbHash;	/* corresponding CdbHash object */
-
-	HTAB	   *hashmap;
 } GpDistributionData;
 
-#endif /* COPY_H */
+#endif							/* COPY_H */

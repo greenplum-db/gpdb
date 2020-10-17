@@ -29,12 +29,12 @@ IWorker *
 IWorker::Self()
 {
 	IWorker *worker = NULL;
-	
+
 	if (NULL != CWorkerPoolManager::WorkerPoolManager())
 	{
 		worker = CWorkerPoolManager::WorkerPoolManager()->Self();
 	}
-	
+
 	return worker;
 }
 
@@ -48,11 +48,7 @@ IWorker::Self()
 //
 //---------------------------------------------------------------------------
 void
-IWorker::CheckAbort
-	(
-	const CHAR *file,
-	ULONG line_num
-	)
+IWorker::CheckAbort(const CHAR *file, ULONG line_num)
 {
 	IWorker *worker = Self();
 	if (NULL != worker)
@@ -62,4 +58,3 @@ IWorker::CheckAbort
 }
 
 // EOF
-

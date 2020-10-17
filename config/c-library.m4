@@ -42,7 +42,8 @@ if test "$ac_cv_member_struct_tm_tm_zone" = yes; then
 fi
 AC_CACHE_CHECK(for tzname, ac_cv_var_tzname,
 [AC_LINK_IFELSE([AC_LANG_PROGRAM(
-[[#include <time.h>
+[[#include <stdlib.h>
+#include <time.h>
 #ifndef tzname /* For SGI.  */
 extern char *tzname[]; /* RS6000 and others reject char **tzname.  */
 #endif
@@ -110,8 +111,12 @@ fi
 AC_DEFUN([PGAC_UNION_SEMUN],
 [AC_CHECK_TYPES([union semun], [], [],
 [#include <sys/types.h>
+#ifdef HAVE_SYS_IPC_H
 #include <sys/ipc.h>
-#include <sys/sem.h>])])# PGAC_UNION_SEMUN
+#endif
+#ifdef HAVE_SYS_SEM_H
+#include <sys/sem.h>
+#endif])])# PGAC_UNION_SEMUN
 
 
 # PGAC_STRUCT_SOCKADDR_UN
@@ -134,9 +139,7 @@ AC_DEFUN([PGAC_STRUCT_SOCKADDR_UN],
 AC_DEFUN([PGAC_STRUCT_SOCKADDR_STORAGE],
 [AC_CHECK_TYPES([struct sockaddr_storage], [], [],
 [#include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif
 ])])# PGAC_STRUCT_SOCKADDR_STORAGE
 
 # PGAC_STRUCT_SOCKADDR_STORAGE_MEMBERS
@@ -153,9 +156,7 @@ AC_DEFUN([PGAC_STRUCT_SOCKADDR_STORAGE_MEMBERS],
 		   struct sockaddr_storage.__ss_len,
 		   struct sockaddr.sa_len], [], [],
 [#include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif
 ])])# PGAC_STRUCT_SOCKADDR_STORAGE_MEMBERS
 
 
@@ -170,130 +171,10 @@ AC_DEFUN([PGAC_STRUCT_ADDRINFO],
 ])])# PGAC_STRUCT_ADDRINFO
 
 
-# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER
-# ---------------------------------------
-# Determine which length modifier snprintf uses for long long int.  We
-# handle ll, q, and I64.  The result is in shell variable
-# LONG_LONG_INT_MODIFIER.
-#
-# MinGW uses '%I64d', though gcc throws an warning with -Wall,
-# while '%lld' doesn't generate a warning, but doesn't work.
-#
-AC_DEFUN([PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER],
-[AC_MSG_CHECKING([snprintf length modifier for long long int])
-AC_CACHE_VAL(pgac_cv_snprintf_long_long_int_modifier,
-[for pgac_modifier in 'll' 'q' 'I64'; do
-AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdio.h>
-typedef long long int ac_int64;
-#define INT64_FORMAT "%${pgac_modifier}d"
-
-ac_int64 a = 20000001;
-ac_int64 b = 40000005;
-
-int does_int64_snprintf_work()
-{
-  ac_int64 c;
-  char buf[100];
-
-  if (sizeof(ac_int64) != 8)
-    return 0;			/* doesn't look like the right size */
-
-  c = a * b;
-  snprintf(buf, 100, INT64_FORMAT, c);
-  if (strcmp(buf, "800000140000005") != 0)
-    return 0;			/* either multiply or snprintf is busted */
-  return 1;
-}
-main() {
-  exit(! does_int64_snprintf_work());
-}]])],
-[pgac_cv_snprintf_long_long_int_modifier=$pgac_modifier; break],
-[],
-[pgac_cv_snprintf_long_long_int_modifier=cross; break])
-done])dnl AC_CACHE_VAL
-
-LONG_LONG_INT_MODIFIER=''
-
-case $pgac_cv_snprintf_long_long_int_modifier in
-  cross) AC_MSG_RESULT([cannot test (not on host machine)]);;
-  ?*)    AC_MSG_RESULT([$pgac_cv_snprintf_long_long_int_modifier])
-         LONG_LONG_INT_MODIFIER=$pgac_cv_snprintf_long_long_int_modifier;;
-  *)     AC_MSG_RESULT(none);;
-esac])# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER
-
-
-# PGAC_FUNC_SNPRINTF_ARG_CONTROL
-# ---------------------------------------
-# Determine if snprintf supports %1$ argument selection, e.g. %5$ selects
-# the fifth argument after the printf format string.
-# This is not in the C99 standard, but in the Single Unix Specification (SUS).
-# It is used in our language translation strings.
-#
-AC_DEFUN([PGAC_FUNC_SNPRINTF_ARG_CONTROL],
-[AC_MSG_CHECKING([whether snprintf supports argument control])
-AC_CACHE_VAL(pgac_cv_snprintf_arg_control,
-[AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdio.h>
-#include <string.h>
-
-int main()
-{
-  char buf[100];
-
-  /* can it swap arguments? */
-  snprintf(buf, 100, "%2\$d %1\$d", 3, 4);
-  if (strcmp(buf, "4 3") != 0)
-    return 1;
-  return 0;
-}]])],
-[pgac_cv_snprintf_arg_control=yes],
-[pgac_cv_snprintf_arg_control=no],
-[pgac_cv_snprintf_arg_control=cross])
-])dnl AC_CACHE_VAL
-AC_MSG_RESULT([$pgac_cv_snprintf_arg_control])
-])# PGAC_FUNC_SNPRINTF_ARG_CONTROL
-
-# PGAC_FUNC_SNPRINTF_SIZE_T_SUPPORT
-# ---------------------------------------
-# Determine if snprintf supports the z length modifier for printing
-# size_t-sized variables. That's supported by C99 and POSIX but not
-# all platforms play ball, so we must test whether it's working.
-#
-AC_DEFUN([PGAC_FUNC_SNPRINTF_SIZE_T_SUPPORT],
-[AC_MSG_CHECKING([whether snprintf supports the %z modifier])
-AC_CACHE_VAL(pgac_cv_snprintf_size_t_support,
-[AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdio.h>
-#include <string.h>
-
-int main()
-{
-  char bufz[100];
-  char buf64[100];
-
-  /*
-   * Print the largest unsigned number fitting in a size_t using both %zu
-   * and the previously-determined format for 64-bit integers.  Note that
-   * we don't run this code unless we know snprintf handles 64-bit ints.
-   */
-  bufz[0] = '\0';  /* in case snprintf fails to emit anything */
-  snprintf(bufz, sizeof(bufz), "%zu", ~((size_t) 0));
-  snprintf(buf64, sizeof(buf64), "%" INT64_MODIFIER "u",
-    (unsigned PG_INT64_TYPE) ~((size_t) 0));
-  if (strcmp(bufz, buf64) != 0)
-    return 1;
-  return 0;
-}]])],
-[pgac_cv_snprintf_size_t_support=yes],
-[pgac_cv_snprintf_size_t_support=no],
-[pgac_cv_snprintf_size_t_support=cross])
-])dnl AC_CACHE_VAL
-AC_MSG_RESULT([$pgac_cv_snprintf_size_t_support])
-])# PGAC_FUNC_SNPRINTF_SIZE_T_SUPPORT
-
-
 # PGAC_TYPE_LOCALE_T
 # ------------------
-# Check for the locale_t type and find the right header file.  Mac OS
-# X needs xlocale.h; standard is locale.h, but glibc also has an
+# Check for the locale_t type and find the right header file.  macOS
+# needs xlocale.h; standard is locale.h, but glibc also has an
 # xlocale.h file that we should not use.
 #
 AC_DEFUN([PGAC_TYPE_LOCALE_T],

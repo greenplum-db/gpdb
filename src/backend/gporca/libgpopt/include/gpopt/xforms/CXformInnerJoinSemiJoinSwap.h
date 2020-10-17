@@ -19,68 +19,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformInnerJoinSemiJoinSwap
-	//
-	//	@doc:
-	//		Swap cascaded inner join and semi-join
-	//
-	//---------------------------------------------------------------------------
-	class CXformInnerJoinSemiJoinSwap : public CXformJoinSwap<CLogicalInnerJoin, CLogicalLeftSemiJoin>
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformInnerJoinSemiJoinSwap
+//
+//	@doc:
+//		Swap cascaded inner join and semi-join
+//
+//---------------------------------------------------------------------------
+class CXformInnerJoinSemiJoinSwap
+	: public CXformJoinSwap<CLogicalInnerJoin, CLogicalLeftSemiJoin>
+{
+private:
+	// private copy ctor
+	CXformInnerJoinSemiJoinSwap(const CXformInnerJoinSemiJoinSwap &);
+
+public:
+	// ctor
+	explicit CXformInnerJoinSemiJoinSwap(CMemoryPool *mp)
+		: CXformJoinSwap<CLogicalInnerJoin, CLogicalLeftSemiJoin>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformInnerJoinSemiJoinSwap()
+	{
+	}
 
-			// private copy ctor
-			CXformInnerJoinSemiJoinSwap(const CXformInnerJoinSemiJoinSwap &);
+	// Compatibility function
+	virtual BOOL
+	FCompatible(CXform::EXformId exfid)
+	{
+		return ExfSemiJoinInnerJoinSwap != exfid;
+	}
 
-		public:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfInnerJoinSemiJoinSwap;
+	}
 
-			// ctor
-			explicit
-			CXformInnerJoinSemiJoinSwap
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformJoinSwap<CLogicalInnerJoin, CLogicalLeftSemiJoin>(mp)
-			{}
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformInnerJoinSemiJoinSwap";
+	}
 
-			// dtor
-			virtual
-			~CXformInnerJoinSemiJoinSwap()
-			{}
+};	// class CXformInnerJoinSemiJoinSwap
 
-			// Compatibility function
-			virtual
-			BOOL FCompatible
-				(
-				CXform::EXformId exfid
-				)
-			{
-				return ExfSemiJoinInnerJoinSwap != exfid;
-			}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfInnerJoinSemiJoinSwap;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformInnerJoinSemiJoinSwap";
-			}
-
-	}; // class CXformInnerJoinSemiJoinSwap
-
-}
-
-#endif // !GPOPT_CXformInnerJoinSemiJoinSwap_H
+#endif	// !GPOPT_CXformInnerJoinSemiJoinSwap_H
 
 // EOF

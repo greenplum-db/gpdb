@@ -16,66 +16,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPatternMultiTree
-	//
-	//	@doc:
-	//		Pattern that matches a variable number of trees
-	//
-	//---------------------------------------------------------------------------
-	class CPatternMultiTree : public CPattern
+//---------------------------------------------------------------------------
+//	@class:
+//		CPatternMultiTree
+//
+//	@doc:
+//		Pattern that matches a variable number of trees
+//
+//---------------------------------------------------------------------------
+class CPatternMultiTree : public CPattern
+{
+private:
+	// private copy ctor
+	CPatternMultiTree(const CPatternMultiTree &);
+
+public:
+	// ctor
+	explicit CPatternMultiTree(CMemoryPool *mp) : CPattern(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CPatternMultiTree()
+	{
+	}
 
-			// private copy ctor
-			CPatternMultiTree(const CPatternMultiTree &);
+	// check if operator is a pattern leaf
+	virtual BOOL
+	FLeaf() const
+	{
+		return false;
+	}
 
-		public:
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopPatternMultiTree;
+	}
 
-			// ctor
-			explicit
-			CPatternMultiTree
-				(
-				CMemoryPool *mp
-				)
-				:
-				CPattern(mp)
-			{}
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPatternMultiTree";
+	}
 
-			// dtor
-			virtual
-			~CPatternMultiTree() {}
+};	// class CPatternMultiTree
 
-			// check if operator is a pattern leaf
-			virtual
-			BOOL FLeaf() const
-			{
-				return false;
-			}
-
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPatternMultiTree;
-			}
-
-			// return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPatternMultiTree";
-			}
-
-	}; // class CPatternMultiTree
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CPatternMultiTree_H
+#endif	// !GPOPT_CPatternMultiTree_H
 
 // EOF

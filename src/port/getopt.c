@@ -1,7 +1,5 @@
 /* src/port/getopt.c */
 
-/* This is used by psql under Win32 */
-
 /*
  * Copyright (c) 1987, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,14 +34,15 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)getopt.c	8.3 (Berkeley) 4/27/95";
-#endif   /* LIBC_SCCS and not lint */
+#endif							/* LIBC_SCCS and not lint */
 
 
 /*
- * On some versions of Solaris, opterr and friends are defined in core libc
- * rather than in a separate getopt module.  Define these variables only
- * if configure found they aren't there by default.  (We assume that testing
- * opterr is sufficient for all of these.)
+ * On OpenBSD and some versions of Solaris, opterr and friends are defined in
+ * core libc rather than in a separate getopt module.  Define these variables
+ * only if configure found they aren't there by default; otherwise, this
+ * module and its callers will just use libc's variables.  (We assume that
+ * testing opterr is sufficient for all of these.)
  */
 #ifndef HAVE_INT_OPTERR
 
@@ -69,7 +68,7 @@ char	   *optarg;				/* argument associated with option */
  * returning -1.)
  */
 int
-getopt(int nargc, char *const * nargv, const char *ostr)
+getopt(int nargc, char *const *nargv, const char *ostr)
 {
 	static char *place = EMSG;	/* option letter processing */
 	char	   *oli;			/* option letter list index */

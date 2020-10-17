@@ -1,15 +1,15 @@
 /* src/interfaces/ecpg/preproc/ecpg.c */
 
 /* Main for ecpg, the PostgreSQL embedded SQL precompiler. */
-/* Copyright (c) 1996-2016, PostgreSQL Global Development Group */
+/* Copyright (c) 1996-2019, PostgreSQL Global Development Group */
 
 #include "postgres_fe.h"
 
 #include <unistd.h>
-#include <string.h>
+
 #include "getopt_long.h"
 
-#include "extern.h"
+#include "preproc_extern.h"
 
 int			ret_value = 0;
 bool		autocommit = false,
@@ -28,6 +28,7 @@ struct _include_path *include_paths = NULL;
 struct cursor *cur = NULL;
 struct typedefs *types = NULL;
 struct _defines *defines = NULL;
+struct declared_name_st *g_declared_list = NULL;
 
 static void
 help(const char *progname)
@@ -41,7 +42,7 @@ help(const char *progname)
 	printf(_("  -c             automatically generate C code from embedded SQL code;\n"
 			 "                 this affects EXEC SQL TYPE\n"));
 	printf(_("  -C MODE        set compatibility mode; MODE can be one of\n"
-			 "                 \"INFORMIX\", \"INFORMIX_SE\"\n"));
+			 "                 \"INFORMIX\", \"INFORMIX_SE\", \"ORACLE\"\n"));
 #ifdef YYDEBUG
 	printf(_("  -d             generate parser debug output\n"));
 #endif
@@ -51,7 +52,7 @@ help(const char *progname)
 	printf(_("  -I DIRECTORY   search DIRECTORY for include files\n"));
 	printf(_("  -o OUTFILE     write result to OUTFILE\n"));
 	printf(_("  -r OPTION      specify run-time behavior; OPTION can be:\n"
-	 "                 \"no_indicator\", \"prepare\", \"questionmarks\"\n"));
+			 "                 \"no_indicator\", \"prepare\", \"questionmarks\"\n"));
 	printf(_("  --regression   run in regression testing mode\n"));
 	printf(_("  -t             turn on autocommit of transactions\n"));
 	printf(_("  -V, --version  output version information, then exit\n"));
@@ -98,17 +99,59 @@ add_preprocessor_define(char *define)
 		/* symbol has a value */
 		for (tmp = ptr - 1; *tmp == ' '; tmp--);
 		tmp[1] = '\0';
-		defines->old = define_copy;
-		defines->new = ptr + 1;
+		defines->olddef = define_copy;
+		defines->newdef = ptr + 1;
 	}
 	else
 	{
-		defines->old = define_copy;
-		defines->new = mm_strdup("1");
+		defines->olddef = define_copy;
+		defines->newdef = mm_strdup("1");
 	}
 	defines->pertinent = true;
 	defines->used = NULL;
 	defines->next = pd;
+}
+
+static void
+free_argument(struct arguments *arg)
+{
+	if (arg == NULL)
+		return;
+
+	free_argument(arg->next);
+
+	/*
+	 * Don't free variables in it because the original codes don't free it
+	 * either variables are static structures instead of allocating
+	 */
+	free(arg);
+}
+
+static void
+free_cursor(struct cursor *c)
+{
+	if (c == NULL)
+		return;
+
+	free_cursor(c->next);
+	free_argument(c->argsinsert);
+	free_argument(c->argsresult);
+
+	free(c->name);
+	free(c->function);
+	free(c->command);
+	free(c->prepared_name);
+	free(c);
+}
+
+static void
+free_declared_stmt(struct declared_name_st *st)
+{
+	if (st == NULL)
+		return;
+
+	free_declared_stmt(st->next);
+	free(st);
 }
 
 #define ECPG_GETOPT_LONG_REGRESSION		1
@@ -137,7 +180,7 @@ main(int argc, char *const argv[])
 	if (find_my_exec(argv[0], my_exec_path) < 0)
 	{
 		fprintf(stderr, _("%s: could not locate my own executable path\n"), argv[0]);
-		return (ILLEGAL_OPTION);
+		return ILLEGAL_OPTION;
 	}
 
 	if (argc > 1)
@@ -149,8 +192,21 @@ main(int argc, char *const argv[])
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
 		{
-			printf("ecpg (PostgreSQL %s) %d.%d.%d\n", PG_VERSION,
-				   MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
+			printf("ecpg (PostgreSQL) %s\n", PG_VERSION);
+			exit(0);
+		}
+	}
+
+	if (argc > 1)
+	{
+		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+		{
+			help(progname);
+			exit(0);
+		}
+		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+		{
+			printf("ecpg (PostgreSQL %s) %s\n", PG_VERSION, GP_VERSION);
 			exit(0);
 		}
 	}
@@ -190,9 +246,8 @@ main(int argc, char *const argv[])
 				break;
 			case 'h':
 				header_mode = true;
-				/* this must include "-c" to make sense */
-				/* so do not place a "break;" here */
-				/* fallthrough */
+				/* this must include "-c" to make sense, so fall through */
+				/* FALLTHROUGH */
 			case 'c':
 				auto_create_c = true;
 				break;
@@ -200,15 +255,19 @@ main(int argc, char *const argv[])
 				system_includes = true;
 				break;
 			case 'C':
-				if (strncmp(optarg, "INFORMIX", strlen("INFORMIX")) == 0)
+				if (pg_strcasecmp(optarg, "INFORMIX") == 0 || pg_strcasecmp(optarg, "INFORMIX_SE") == 0)
 				{
 					char		pkginclude_path[MAXPGPATH];
 					char		informix_path[MAXPGPATH];
 
-					compat = (strcmp(optarg, "INFORMIX") == 0) ? ECPG_COMPAT_INFORMIX : ECPG_COMPAT_INFORMIX_SE;
+					compat = (pg_strcasecmp(optarg, "INFORMIX") == 0) ? ECPG_COMPAT_INFORMIX : ECPG_COMPAT_INFORMIX_SE;
 					get_pkginclude_path(my_exec_path, pkginclude_path);
 					snprintf(informix_path, MAXPGPATH, "%s/informix/esql", pkginclude_path);
 					add_include_path(informix_path);
+				}
+				else if (strncmp(optarg, "ORACLE", strlen("ORACLE")) == 0)
+				{
+					compat = ECPG_COMPAT_ORACLE;
 				}
 				else
 				{
@@ -254,8 +313,9 @@ main(int argc, char *const argv[])
 
 	if (verbose)
 	{
-		fprintf(stderr, _("%s, the PostgreSQL embedded C preprocessor, version %d.%d.%d\n"),
-				progname, MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
+		fprintf(stderr,
+				_("%s, the PostgreSQL embedded C preprocessor, version %s\n"),
+				progname, PG_VERSION);
 		fprintf(stderr, _("EXEC SQL INCLUDE ... search starts here:\n"));
 		for (ip = include_paths; ip != NULL; ip = ip->next)
 			fprintf(stderr, " %s\n", ip->path);
@@ -267,7 +327,7 @@ main(int argc, char *const argv[])
 	{
 		fprintf(stderr, _("%s: no input files specified\n"), progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), argv[0]);
-		return (ILLEGAL_OPTION);
+		return ILLEGAL_OPTION;
 	}
 	else
 	{
@@ -345,29 +405,18 @@ main(int argc, char *const argv[])
 				struct typedefs *typeptr;
 
 				/* remove old cursor definitions if any are still there */
-				for (ptr = cur; ptr != NULL;)
+				if (cur)
 				{
-					struct cursor *this = ptr;
-					struct arguments *l1,
-							   *l2;
-
-					free(ptr->command);
-					free(ptr->connection);
-					free(ptr->name);
-					for (l1 = ptr->argsinsert; l1; l1 = l2)
-					{
-						l2 = l1->next;
-						free(l1);
-					}
-					for (l1 = ptr->argsresult; l1; l1 = l2)
-					{
-						l2 = l1->next;
-						free(l1);
-					}
-					ptr = ptr->next;
-					free(this);
+					free_cursor(cur);
+					cur = NULL;
 				}
-				cur = NULL;
+
+				/* remove old declared statements if any are still there */
+				if (g_declared_list)
+				{
+					free_declared_stmt(g_declared_list);
+					g_declared_list = NULL;
+				}
 
 				/* remove non-pertinent old defines as well */
 				while (defines && !defines->pertinent)
@@ -375,8 +424,8 @@ main(int argc, char *const argv[])
 					defptr = defines;
 					defines = defines->next;
 
-					free(defptr->new);
-					free(defptr->old);
+					free(defptr->newdef);
+					free(defptr->olddef);
 					free(defptr);
 				}
 
@@ -388,8 +437,8 @@ main(int argc, char *const argv[])
 					{
 						defptr->next = this->next;
 
-						free(this->new);
-						free(this->old);
+						free(this->newdef);
+						free(this->olddef);
 						free(this);
 					}
 				}
@@ -432,7 +481,7 @@ main(int argc, char *const argv[])
 				if (regression_mode)
 					fprintf(base_yyout, "/* Processed by ecpg (regression mode) */\n");
 				else
-					fprintf(base_yyout, "/* Processed by ecpg (%d.%d.%d) */\n", MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
+					fprintf(base_yyout, "/* Processed by ecpg (%s) */\n", GP_VERSION);
 
 				if (header_mode == false)
 				{
@@ -476,12 +525,25 @@ main(int argc, char *const argv[])
 				}
 			}
 
-			if (output_filename && out_option == 0) {
+			if (output_filename && out_option == 0)
+			{
 				free(output_filename);
 				output_filename = NULL;
 			}
 
 			free(input_filename);
+		}
+
+		if (g_declared_list)
+		{
+			free_declared_stmt(g_declared_list);
+			g_declared_list = NULL;
+		}
+
+		if (cur)
+		{
+			free_cursor(cur);
+			cur = NULL;
 		}
 	}
 	return ret_value;

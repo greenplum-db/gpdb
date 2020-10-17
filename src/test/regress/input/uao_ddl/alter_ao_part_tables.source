@@ -1,9 +1,9 @@
-create schema alter_ao_part_tables_@orientation@;
-set search_path="$user",alter_ao_part_tables_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_part_tables_@amname@;
+set search_path="$user",alter_ao_part_tables_@amname@,public;
+SET default_table_access_method=@amname@;
 BEGIN;
 Create table sto_alt_ao_part(a int, b int, c int, d int)
- with(appendonly=true) distributed by (a)
+ distributed by (a)
  partition by range(b) subpartition by range(c)
  subpartition template
   (default subpartition subothers, start (1) end(7) every (4))
@@ -15,7 +15,7 @@ Insert into sto_alt_ao_part values(2,3,generate_series(1,9),3);
 select count(*) from sto_alt_ao_part;
 
 Create table sto_altap2 (a int, b int, c varchar(20))
- with(appendonly=true) distributed by (a) partition by range(a)
+ distributed by (a) partition by range(a)
  (default partition others,
   partition p1 start(1) end(5),
   partition p2 start(5) end(10),
@@ -26,7 +26,7 @@ Insert into sto_altap2 values(generate_series(1,20), 12, 'A');
 select count(*) from sto_altap2;
 
 create table sto_altap3 (col1 bigint, col2 date, col3 text, col4 int)
- with(appendonly=true) distributed randomly
+ distributed randomly
  partition by range(col2) subpartition by list (col3)
  subpartition template (
   default subpartition subothers,
@@ -47,12 +47,14 @@ select count(*) from sto_altap3;
 
 -- Alter table rename default partition
 Alter table sto_alt_ao_part rename default partition to new_others;
+select * from pg_partition_tree('sto_alt_ao_part');
 Insert into sto_alt_ao_part values(1,10,3,4);
 Update sto_alt_ao_part set d = -a where b = 10;
 select * from sto_alt_ao_part;
 
 -- Alter table rename partition
 Alter table sto_altap3 RENAME PARTITION FOR ('2008-01-01') TO jan08;
+select * from pg_partition_tree('sto_altap3');
 Update sto_altap3 set col4 = 5 where col1 = 1;
 select count(*) from sto_altap3;
 
@@ -62,7 +64,7 @@ Update sto_alt_ao_part set d = 5 where b = 4;
 select * from sto_alt_ao_part;
 
 -- Alter table drop partition
-Alter table sto_alt_ao_part drop partition for (rank(1));
+Alter table sto_alt_ao_part drop partition for (1);
 Update sto_alt_ao_part set d = 4 where b = 4;
 select * from sto_alt_ao_part;
 
@@ -74,8 +76,7 @@ select * from sto_alt_ao_part;
 
 -- Alter table add ao partition
 
-Alter table sto_alt_ao_part add partition p1 start(9) end(13)
-with(appendonly=true);
+Alter table sto_alt_ao_part add partition p1 start(9) end(13);
 Insert into sto_alt_ao_part values(1,10,3,4);
 Update sto_alt_ao_part set d = -a where b = 10;
 select * from sto_alt_ao_part;
@@ -102,11 +103,9 @@ Update sto_altap2 set b = 5 where a = 1 or a = 4;
 select * from sto_altap2 order by a;
 
 Alter table sto_alt_ao_part alter partition p1 split partition
- FOR (RANK(1)) at(2) into (partition splita,partition splitb);
--- TODO: The following update causes "ERROR: moving tuple from
--- partition ... to partition ... is not supported".  Enable the
--- update statement after this bug is fixed.
--- Update sto_alt_ao_part set d = 0 where b = 10;
+ FOR (1) at(2) into (partition splita,partition splitb);
+-- Update partitioning key
+Update sto_alt_ao_part set d = 0 where b = 10;
 select * from sto_alt_ao_part;
 
 -- Alter table split default partition
@@ -128,13 +127,22 @@ set gp_select_invisible=false;
 -- Check that visimaps were created properly
 select distinct a.visimaprelid is not NULL, a.visimapidxid is not NULL
  from pg_appendonly a inner join pg_class c on a.relid = c.oid and
- c.relname like 'sto_alt%' and c.relstorage in ('a', 'c');
+ c.relname like 'sto_alt%';
 
 -- Drop partition table, check pg_appendonly
 drop table sto_altap2;
 select distinct a.visimaprelid is NULL, a.visimapidxid is NULL
  from pg_appendonly a inner join pg_class c on a.relid = c.oid and
  c.relname like 'sto_altap2%';
+
+-- Validate that the state needed by appendoptimized AM is correctly
+-- initialized when the query involves partitioned tables with a
+-- subplan.
+insert into sto_alt_ao_part values (1,4,4,4);
+select * from sto_alt_ao_part;
+update sto_alt_ao_part set c = c - 1 where b in (select c from sto_alt_ao_part_1_prt_3);
+select * from sto_alt_ao_part;
+
 COMMIT;
 
 -- Vacuum full to test compaction

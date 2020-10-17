@@ -19,58 +19,52 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformSemiJoinInnerJoinSwap
-	//
-	//	@doc:
-	//		Swap cascaded semi-join and inner join
-	//
-	//---------------------------------------------------------------------------
-	class CXformSemiJoinInnerJoinSwap : public CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalInnerJoin>
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformSemiJoinInnerJoinSwap
+//
+//	@doc:
+//		Swap cascaded semi-join and inner join
+//
+//---------------------------------------------------------------------------
+class CXformSemiJoinInnerJoinSwap
+	: public CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalInnerJoin>
+{
+private:
+	// private copy ctor
+	CXformSemiJoinInnerJoinSwap(const CXformSemiJoinInnerJoinSwap &);
+
+public:
+	// ctor
+	explicit CXformSemiJoinInnerJoinSwap(CMemoryPool *mp)
+		: CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalInnerJoin>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformSemiJoinInnerJoinSwap()
+	{
+	}
 
-			// private copy ctor
-			CXformSemiJoinInnerJoinSwap(const CXformSemiJoinInnerJoinSwap &);
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfSemiJoinInnerJoinSwap;
+	}
 
-		public:
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformSemiJoinInnerJoinSwap";
+	}
 
-			// ctor
-			explicit
-			CXformSemiJoinInnerJoinSwap
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalInnerJoin>(mp)
-			{}
+};	// class CXformSemiJoinInnerJoinSwap
 
-			// dtor
-			virtual
-			~CXformSemiJoinInnerJoinSwap()
-			{}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfSemiJoinInnerJoinSwap;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformSemiJoinInnerJoinSwap";
-			}
-
-	}; // class CXformSemiJoinInnerJoinSwap
-
-}
-
-#endif // !GPOPT_CXformSemiJoinInnerJoinSwap_H
+#endif	// !GPOPT_CXformSemiJoinInnerJoinSwap_H
 
 // EOF

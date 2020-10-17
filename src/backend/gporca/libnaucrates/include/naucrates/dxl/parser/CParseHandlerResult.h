@@ -20,59 +20,53 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerResult
-	//
-	//	@doc:
-	//		Parse handler for parsing a result operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerResult : public CParseHandlerPhysicalOp
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerResult
+//
+//	@doc:
+//		Parse handler for parsing a result operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerResult : public CParseHandlerPhysicalOp
+{
+private:
+	// the result operator
+	CDXLPhysicalResult *m_dxl_op;
 
-			// the result operator
-			CDXLPhysicalResult *m_dxl_op;
+	// private copy ctor
+	CParseHandlerResult(const CParseHandlerResult &);
 
-			// private copy ctor
-			CParseHandlerResult(const CParseHandlerResult &);
+	// set up initial handlers
+	void SetupInitialHandlers();
 
-			// set up initial handlers
-			void SetupInitialHandlers();
+	// process the start of an element
+	void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-			// process the start of an element
-			void StartElement
-				(
-				const XMLCh* const element_uri, 		// URI of element's namespace
-				const XMLCh* const element_local_name,	// local part of element's name
-				const XMLCh* const element_qname,		// element's qname
-				const Attributes& attr				// element's attributes
-				);
+	// process the end of an element
+	void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
 
-			// process the end of an element
-			void EndElement
-				(
-				const XMLCh* const element_uri, 		// URI of element's namespace
-				const XMLCh* const element_local_name,	// local part of element's name
-				const XMLCh* const element_qname		// element's qname
-				);
+public:
+	// ctor
+	CParseHandlerResult(CMemoryPool *mp,
+						CParseHandlerManager *parse_handler_mgr,
+						CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
 
-		public:
-			// ctor
-			CParseHandlerResult
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-	};
-}
-
-#endif // !GPDXL_CParseHandlerResult_H
+#endif	// !GPDXL_CParseHandlerResult_H
 
 // EOF

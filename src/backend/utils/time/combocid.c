@@ -34,7 +34,7 @@
  * reader processes can access the writer's shared array to look up combo
  * CIDs.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -166,8 +166,8 @@ HeapTupleHeaderGetCmax(HeapTupleHeader tup)
  * into its t_cid field.
  *
  * If we don't need a combo CID, *cmax is unchanged and *iscombo is set to
- * FALSE.  If we do need one, *cmax is replaced by a combo CID and *iscombo
- * is set to TRUE.
+ * false.  If we do need one, *cmax is replaced by a combo CID and *iscombo
+ * is set to true.
  *
  * The reason this is separate from the actual HeapTupleHeaderSetCmax()
  * operation is that this could fail due to out-of-memory conditions.  Hence
@@ -634,5 +634,4 @@ AtEOXact_ComboCid_Dsm_Detach(void)
 		shared_usedComboCids = 0;
 		shared_sizeComboCids = 0;
 	}
-
 }

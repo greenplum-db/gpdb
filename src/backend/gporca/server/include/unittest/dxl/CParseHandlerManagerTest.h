@@ -19,28 +19,27 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerManagerTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	
-	class CParseHandlerManagerTest
-	{
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerManagerTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
+class CParseHandlerManagerTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
 
-	}; // class CParseHandlerManagerTest
-}
+};	// class CParseHandlerManagerTest
+}  // namespace gpdxl
 
-#endif // GPOPT_CParseHandlerManagerTest_H
+#endif	// GPOPT_CParseHandlerManagerTest_H
 
 // EOF

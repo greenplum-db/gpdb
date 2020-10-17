@@ -8,8 +8,8 @@
 //	@doc:
 //		Class for representing DXL short integer datum
 //
-//	@owner: 
-//		
+//	@owner:
+//
 //
 //	@test:
 //
@@ -23,72 +23,60 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// fwd decl
-	class CXMLSerializer;
+// fwd decl
+class CXMLSerializer;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLDatumInt2
-	//
-	//	@doc:
-	//		Class for representing DXL short integer datums
-	//
-	//---------------------------------------------------------------------------
-	class CDXLDatumInt2 : public CDXLDatum
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLDatumInt2
+//
+//	@doc:
+//		Class for representing DXL short integer datums
+//
+//---------------------------------------------------------------------------
+class CDXLDatumInt2 : public CDXLDatum
+{
+private:
+	// int2 value
+	SINT m_val;
+
+	// private copy ctor
+	CDXLDatumInt2(const CDXLDatumInt2 &);
+
+public:
+	// ctor
+	CDXLDatumInt2(CMemoryPool *mp, IMDId *mdid_type, BOOL is_null, SINT val);
+
+	// dtor
+	virtual ~CDXLDatumInt2(){};
+
+	// accessor of int value
+	SINT Value() const;
+
+	// serialize the datum as the given element
+	virtual void Serialize(CXMLSerializer *xml_serializer);
+
+	// datum type
+	virtual EdxldatumType
+	GetDatumType() const
 	{
-		private:
-		// int2 value
-			SINT m_val;
+		return CDXLDatum::EdxldatumInt2;
+	}
 
-			// private copy ctor
-			CDXLDatumInt2(const CDXLDatumInt2 &);
+	// conversion function
+	static CDXLDatumInt2 *
+	Cast(CDXLDatum *dxl_datum)
+	{
+		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(CDXLDatum::EdxldatumInt2 == dxl_datum->GetDatumType());
 
-		public:
-			// ctor
-			CDXLDatumInt2
-				(
-				CMemoryPool *mp,
-				IMDId *mdid_type,
-				BOOL is_null,
-				SINT val
-				);
+		return dynamic_cast<CDXLDatumInt2 *>(dxl_datum);
+	}
+};
+}  // namespace gpdxl
 
-			// dtor
-			virtual
-			~CDXLDatumInt2(){};
-
-		// accessor of int value
-			SINT Value() const;
-
-			// serialize the datum as the given element
-			virtual
-			void Serialize(CXMLSerializer *xml_serializer);
-
-			// datum type
-			virtual
-			EdxldatumType GetDatumType() const
-			{
-				return CDXLDatum::EdxldatumInt2;
-			}
-
-			// conversion function
-			static
-			CDXLDatumInt2 *Cast
-				(
-				CDXLDatum *dxl_datum
-				)
-			{
-			GPOS_ASSERT(NULL != dxl_datum);
-			GPOS_ASSERT(CDXLDatum::EdxldatumInt2 == dxl_datum->GetDatumType());
-
-				return dynamic_cast<CDXLDatumInt2*>(dxl_datum);
-			}
-	};
-}
-
-#endif // !GPDXL_CDXLDatumInt2_H
+#endif	// !GPDXL_CDXLDatumInt2_H
 
 // EOF
-

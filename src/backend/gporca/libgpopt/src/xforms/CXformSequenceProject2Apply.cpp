@@ -26,23 +26,16 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformSequenceProject2Apply::CXformSequenceProject2Apply
-	(
-	CMemoryPool *mp
-	)
-	:
-	// pattern
-	CXformSubqueryUnnest
-		(
-		GPOS_NEW(mp) CExpression
-				(
-				mp,
-				GPOS_NEW(mp) CLogicalSequenceProject(mp),
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)),	// relational child
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))	// project list
-				)
-		)
-{}
+CXformSequenceProject2Apply::CXformSequenceProject2Apply(CMemoryPool *mp)
+	:  // pattern
+	  CXformSubqueryUnnest(GPOS_NEW(mp) CExpression(
+		  mp, GPOS_NEW(mp) CLogicalSequenceProject(mp),
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // relational child
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))  // project list
+		  ))
+{
+}
 
 // EOF
-

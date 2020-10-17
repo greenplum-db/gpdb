@@ -66,10 +66,11 @@ tup2str(TupleTableSlot *slot)
 
 	for (i = 0; i < natts; ++i)
 	{
+		Form_pg_attribute att = TupleDescAttr(typeinfo, i);
 		origattr = slot_getattr(slot, i + 1, &isnull);
 		if (isnull)
 			continue;
-		getTypeOutputInfo(typeinfo->attrs[i]->atttypid,
+		getTypeOutputInfo(att->atttypid,
 						  &typoutput, &typisvarlena);
 
 		/*
@@ -83,7 +84,7 @@ tup2str(TupleTableSlot *slot)
 
 		value = OidOutputFunctionCall(typoutput, attr);
 
-		printatt((unsigned) i + 1, typeinfo->attrs[i], value, 
+		printatt((unsigned) i + 1, att, value,
 				 &buf[strlen(buf)]);
 
 		pfree(value);
@@ -209,12 +210,13 @@ void dump_tupdesc(TupleDesc tupdesc, const char *fname)
 	FILE *ofile = fopen(fname, "w+");
     int i;
 
-    fprintf(ofile, "TupleDesc: natts %d, hasoid %s\n", tupdesc->natts, tupdesc->tdhasoid ? "true" : "false");
+    fprintf(ofile, "TupleDesc: natts %d\n", tupdesc->natts);
     fprintf(ofile, "Name\t\tattlen\tattbyval\tattalign\n");
     fprintf(ofile, "==================================\n");
     for (i=0; i<tupdesc->natts; ++i)
     {
-        Form_pg_attribute attr = tupdesc->attrs[i]; 
+        Form_pg_attribute attr = TupleDescAttr(tupdesc, i);
+
         fprintf(ofile, "%s, %d, %s, %c\n", 
                     attr->attname.data, attr->attlen,
                     attr->attbyval ? "true" : "false",
@@ -235,16 +237,15 @@ void dump_mt_bind(MemTupleBinding *mt_bind, const char *fname)
 
     fprintf(ofile, "Mt_bind: column_align %d, nbm_extra_size %d\n",
             mt_bind->column_align, mt_bind->null_bitmap_extra_size);
-    fprintf(ofile, "TupleDesc: natts %d, hasoid %s\n", 
-                    mt_bind->tupdesc->natts, 
-                    mt_bind->tupdesc->tdhasoid ? "true" : "false");
+    fprintf(ofile, "TupleDesc: natts %d\n",
+                    mt_bind->tupdesc->natts);
 
     fprintf(ofile, " Small binding: vastart %d\n", mt_bind->bind.var_start);
     fprintf(ofile, "Name\t\tattlen\tattbyval\tattalign\toffset\tlen\tflag\tnb\tnm\tns\n");
     fprintf(ofile, "==================================\n");
     for (i=0; i<mt_bind->tupdesc->natts; ++i)
     {
-        Form_pg_attribute attr = mt_bind->tupdesc->attrs[i]; 
+        Form_pg_attribute attr = TupleDescAttr(mt_bind->tupdesc, i); 
 
         fprintf(ofile, "%s, %d, %s, %c, %d, %d, %d, %d, %d, %d\n", 
                     attr->attname.data, attr->attlen,
@@ -264,7 +265,7 @@ void dump_mt_bind(MemTupleBinding *mt_bind, const char *fname)
     fprintf(ofile, "==================================\n");
     for (i=0; i<mt_bind->tupdesc->natts; ++i)
     {
-        Form_pg_attribute attr = mt_bind->tupdesc->attrs[i]; 
+        Form_pg_attribute attr = TupleDescAttr(mt_bind->tupdesc, i); 
 
         fprintf(ofile, "%s, %d, %s, %c, %d, %d, %d, %d, %d, %d\n", 
                     attr->attname.data, attr->attlen,

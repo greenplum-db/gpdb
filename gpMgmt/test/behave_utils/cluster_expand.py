@@ -1,10 +1,7 @@
 import glob
 from datetime import datetime, timedelta
-try:
-    from subprocess32 import Popen, PIPE
-except:
-    from subprocess import Popen, PIPE
-from utils import run_gpcommand
+from subprocess import Popen, PIPE
+from .utils import run_gpcommand
 
 from gppylib.commands.base import Command
 from gppylib.db import dbconn
@@ -44,32 +41,31 @@ class Gpexpand:
         # Cannot guarantee that this is not flaky either.
 
         # Would you like to initiate a new System Expansion Yy|Nn (default=N):
-        p1.stdin.write("y\n")
+        p1.stdin.write(b"y\n")
 
         # **Enter a blank line to only add segments to existing hosts**[]:
-        p1.stdin.write("%s\n" % (",".join(hosts) if hosts else ""))
+        p1.stdin.write(("%s\n" % (",".join(hosts) if hosts else "")).encode())
 
         if has_mirrors:
             #What type of mirroring strategy would you like? spread|grouped (default=grouped):
-            p1.stdin.write("\n")
+            p1.stdin.write(b"\n")
 
         #How many new primary segments per host do you want to add? (default=0):
-        p1.stdin.write("%s\n" % num_of_segments)
+        p1.stdin.write(("%s\n" % num_of_segments).encode())
 
         # Enter new primary data directory #<number primary segment>
         for directory in directory_pairs:
             primary, mirror = directory
-            p1.stdin.write("%s\n" % primary)
+            p1.stdin.write(("%s\n" % primary).encode())
             if mirror:
-                p1.stdin.write("%s\n" % mirror)
+                p1.stdin.write(("%s\n" % mirror).encode())
 
         output, err = p1.communicate()
 
         return output, p1.wait()
 
     def initialize_segments(self, additional_params=''):
-        fns = filter(lambda fn: not fn.endswith(".ts"),
-                     glob.glob('%s/gpexpand_inputfile*' % self.working_directory))
+        fns = [fn for fn in glob.glob('%s/gpexpand_inputfile*' % self.working_directory) if not fn.endswith(".ts")]
         input_files = sorted(fns)
         return run_gpcommand(self.context, "gpexpand -i %s %s" % (input_files[-1], additional_params))
 

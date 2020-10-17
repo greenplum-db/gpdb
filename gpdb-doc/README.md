@@ -1,10 +1,10 @@
 # Greenplum Database End-User Documentation
 
-The latest check-ins to this repo are automatically built and published to [http://docs-greenplum-db-staging.cfapps.io](http://docs-greenplum-db-staging.cfapps.io).
+The latest Greenplum Database documentation is available at [https://docs.greenplum.org](https://docs.greenplum.org).
 
-Greenplum Database provides the full source for end-user documentation in DITA XML format. You can build the DITA XML into HTML output using [Bookbinder](https://github.com/cloudfoundry-incubator/bookbinder) and the DITA Open Toolkit (DITA-OT).  
+Greenplum Database provides the full source for end-user documentation. The documentation is in a combination of DITA XML and markdown formats. You can build source documentation into HTML output using [Bookbinder](https://github.com/cloudfoundry-incubator/bookbinder) and the DITA Open Toolkit (DITA-OT).  
 
-Bookbinder is a Ruby gem that binds together a unified documentation web application from markdown, html, and/or DITA source material. The source material for bookbinder must be stored either in local directories or in GitHub repositories. Bookbinder runs [middleman](http://middlemanapp.com/) to produce a Rackup app that can be deployed locally or as a Web application.
+Bookbinder is a Ruby gem that binds together a unified documentation web application from markdown, html, and DITA source material. The source material for bookbinder must be stored either in local directories or in GitHub repositories. Bookbinder runs [middleman](http://middlemanapp.com/) to produce a Rackup app that can be deployed locally or as a Web application.
 
 This document contains instructions for building the local Greenplum Database documentation. It contains the sections:
 
@@ -107,6 +107,5 @@ $ cf push Greenplum Database-docs-build -p . -n my-gpdb-docs -d example.com
 
 Bookbinder provides additional functionality to construct books from multiple Github repos, to perform variable substitution, and also to automatically build documentation in a continuous integration pipeline.  For more information, see [https://github.com/cloudfoundry-incubator/bookbinder](https://github.com/cloudfoundry-incubator/bookbinder).
 
-The latest check-ins to this repo are automatically built and published to [http://docs-greenplum-db-staging.cfapps.io](http://docs-greenplum-db-staging.cfapps.io).
+For more information about publishing applications to Cloud Foundry, see [Deploying an Application](https://docs.pivotal.io/pivotalcf/devguide/deploy-apps/deploy-app.html).
 
-For more information about publishing applications to Cloud Foundry, see [Deploying an Application](http://docs.pivotal.io/pivotalcf/devguide/deploy-apps/deploy-app.html).

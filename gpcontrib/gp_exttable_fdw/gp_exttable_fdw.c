@@ -29,6 +29,7 @@
 #include "access/external.h"
 #include "access/reloptions.h"
 #include "access/relscan.h"
+#include "access/table.h"
 #include "cdb/cdbvars.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_extprotocol.h"
@@ -38,15 +39,17 @@
 #include "foreign/fdwapi.h"
 #include "funcapi.h"
 #include "nodes/execnodes.h"
-#include "nodes/relation.h"
-#include "optimizer/clauses.h"
+#include "nodes/makefuncs.h"
+#include "nodes/pathnodes.h"
 #include "optimizer/cost.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/restrictinfo.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/partcache.h"
 #include "utils/syscache.h"
 #include "utils/uri.h"
 
@@ -55,12 +58,12 @@ PG_MODULE_MAGIC;
 #define GP_EXTTABLE_ATTRNUM 12
 
 extern Datum gp_exttable_fdw_handler(PG_FUNCTION_ARGS);
-extern Datum gp_exttable_validator(PG_FUNCTION_ARGS);
+extern Datum gp_exttable_permission_check(PG_FUNCTION_ARGS);
 
 extern Datum pg_exttable(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gp_exttable_fdw_handler);
-PG_FUNCTION_INFO_V1(gp_exttable_validator);
+PG_FUNCTION_INFO_V1(gp_exttable_permission_check);
 PG_FUNCTION_INFO_V1(pg_exttable);
 
 /*
@@ -215,8 +218,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* Build tuple descriptor */
-		TupleDesc	tupdesc =
-		CreateTemplateTupleDesc(GP_EXTTABLE_ATTRNUM, false);
+		TupleDesc	tupdesc = CreateTemplateTupleDesc(GP_EXTTABLE_ATTRNUM);
 
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "reloid", OIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "urilocation", TEXTARRAYOID, -1, 1);
@@ -236,7 +238,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 		extserver = get_foreign_server_oid(GP_EXTTABLE_SERVER_NAME, false);
 
 		/* Retrieve external table in foreign table catalog */
-		pg_foreign_table_rel = heap_open(ForeignTableRelationId, AccessShareLock);
+		pg_foreign_table_rel = table_open(ForeignTableRelationId, AccessShareLock);
 
 		ScanKeyInit(&ftkey,
 					Anum_pg_foreign_table_ftserver,
@@ -264,7 +266,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 			ftentries = lappend(ftentries, entry);
 		}
 		systable_endscan(ftscan);
-		heap_close(pg_foreign_table_rel, AccessShareLock);
+		table_close(pg_foreign_table_rel, AccessShareLock);
 
 		context = (PGExtTableEntriesContext *)palloc0(sizeof(PGExtTableEntriesContext));
 		context->entryIdx = 0;
@@ -358,7 +360,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 
 /* FDW validator for external tables */
 Datum
-gp_exttable_validator(PG_FUNCTION_ARGS)
+gp_exttable_permission_check(PG_FUNCTION_ARGS)
 {
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 
@@ -488,7 +490,7 @@ gp_exttable_validator(PG_FUNCTION_ARGS)
 							aclresult = pg_extprotocol_aclcheck(ptcId, ownerId, mode);
 
 							if (aclresult != ACLCHECK_OK)
-								aclcheck_error(aclresult, ACL_KIND_EXTPROTOCOL, protname);
+								aclcheck_error(aclresult, OBJECT_EXTPROTOCOL, protname);
 						}
 					}
 					else
@@ -668,8 +670,6 @@ ExternalConstraintCheck(TupleTableSlot *slot, FileScanDesc scandesc, EState *est
 	uint16			ncheck = constr->num_check;
 	ExprContext		*econtext = NULL;
 	MemoryContext	oldContext = NULL;
-	List	*qual = NULL;
-	int		i = 0;
 
 	/* No constraints */
 	if (ncheck == 0)
@@ -685,12 +685,13 @@ ExternalConstraintCheck(TupleTableSlot *slot, FileScanDesc scandesc, EState *est
 	{
 		oldContext = MemoryContextSwitchTo(estate->es_query_cxt);
 		scandesc->fs_constraintExprs =
-			(List **) palloc(ncheck * sizeof(List *));
-		for (i = 0; i < ncheck; i++)
+			(ExprState **) palloc(ncheck * sizeof(ExprState *));
+		for (int i = 0; i < ncheck; i++)
 		{
 			/* ExecQual wants implicit-AND form */
-			qual = make_ands_implicit(stringToNode(check[i].ccbin));
-			scandesc->fs_constraintExprs[i] = (List *)
+			List	   *qual = make_ands_implicit(stringToNode(check[i].ccbin));
+
+			scandesc->fs_constraintExprs[i] =
 				ExecPrepareExpr((Expr *) qual, estate);
 		}
 		MemoryContextSwitchTo(oldContext);
@@ -706,15 +707,54 @@ ExternalConstraintCheck(TupleTableSlot *slot, FileScanDesc scandesc, EState *est
 	econtext->ecxt_scantuple = slot;
 
 	/* And evaluate the constraints */
-	for (i = 0; i < ncheck; i++)
+	for (int i = 0; i < ncheck; i++)
 	{
-		qual = scandesc->fs_constraintExprs[i];
+		ExprState *qual = scandesc->fs_constraintExprs[i];
 
-		if (!ExecQual(qual, econtext, true))
+		if (!ExecCheck(qual, econtext))
 			return false;
 	}
 
 	return true;
+}
+
+/*
+ * Check whether a row matches the partition constraint.
+ */
+static bool
+ExternalPartitionCheck(TupleTableSlot *slot, FileScanDesc scandesc, EState *estate)
+{
+	Relation	rel = scandesc->fs_rd;
+	ExprContext *econtext;
+
+	/*
+	 * Build expression nodetrees for rel's constraint expressions.
+	 * Keep them in the per-query memory context so they'll survive throughout the query.
+	 */
+	if (scandesc->fs_partitionCheckExpr == NULL)
+	{
+		List	   *partition_check;
+		MemoryContext	oldContext;
+
+		oldContext = MemoryContextSwitchTo(estate->es_query_cxt);
+
+		partition_check = RelationGetPartitionQual(rel);
+
+		scandesc->fs_partitionCheckExpr = ExecPrepareCheck(partition_check, estate);
+
+		MemoryContextSwitchTo(oldContext);
+	}
+
+	/*
+	 * We will use the EState's per-tuple context for evaluating constraint
+	 * expressions (creating it if it's not already there).
+	 */
+	econtext = GetPerTupleExprContext(estate);
+
+	/* Arrange for econtext's scan tuple to be the tuple under test */
+	econtext->ecxt_scantuple = slot;
+
+	return ExecCheck(scandesc->fs_partitionCheckExpr, econtext);
 }
 
 static TupleTableSlot *
@@ -747,8 +787,26 @@ exttable_IterateForeignScan(ForeignScanState *node)
 			break;
 		}
 
-		ExecStoreHeapTuple(tuple, slot, InvalidBuffer, true);
+		ExecStoreHeapTuple(tuple, slot, true);
 
+		/*
+		 * If this is a partition in a partitioned table, check each row against
+		 * the partition qual, and skip rows that don't belong in this partition.
+		 * Foreign tables are not required to enforce that, but that has been
+		 * the historical behavior for external tables.
+		 */
+		if (fdw_state->ess_ScanDesc->fs_isPartition &&
+			!ExternalPartitionCheck(slot, fdw_state->ess_ScanDesc, estate))
+			continue;
+
+		/*
+		 * Similarly, check CHECK constraints and skip rows that don't satisfy
+		 * them. Foreign tables are not required required to enforce CHECK
+		 * constraints either, they are merely hints to the optimizer, but it
+		 * is allowed. (In GPDB 6 and below, partition quals were stored in the
+		 * catalogs as CHECK constraints, so this was needed to check the
+		 * partition quals.)
+		 */
 		if (fdw_state->ess_ScanDesc->fs_hasConstraints &&
 			!ExternalConstraintCheck(slot, fdw_state->ess_ScanDesc, estate))
 			continue;
@@ -773,7 +831,7 @@ exttable_EndForeignScan(ForeignScanState *node)
 {
 	exttable_fdw_state *fdw_state = (exttable_fdw_state *) node->fdw_state;
 
-	if (node->is_squelched)
+	if (node->ss.ps.squelched)
 		external_stopscan(fdw_state->ess_ScanDesc);
 
 	external_endscan(fdw_state->ess_ScanDesc);
@@ -828,7 +886,6 @@ exttable_ExecForeignInsert(EState *estate,
 						   TupleTableSlot *planSlot)
 {
 	ExternalInsertDescData *extInsertDesc;
-	HeapTuple	tuple;
 
 	/* Open the external resouce on first call. */
 	extInsertDesc = (ExternalInsertDescData *) rinfo->ri_FdwState;
@@ -839,13 +896,7 @@ exttable_ExecForeignInsert(EState *estate,
 		rinfo->ri_FdwState = extInsertDesc;
 	}
 
-	/*
-	 * get the heap tuple out of the tuple table slot, making sure we have a
-	 * writable copy. (external_insert() can scribble on the tuple)
-	 */
-	tuple = ExecMaterializeSlot(slot);
-
-	(void) external_insert(extInsertDesc, tuple);
+	(void) external_insert(extInsertDesc, slot);
 
 	return slot;
 }

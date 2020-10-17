@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
@@ -14,7 +14,7 @@ try:
     import pgdb
     from gppylib.commands.unix import UserId
 
-except ImportError, e:
+except ImportError as e:
     sys.exit('Error: unable to import module: ' + str(e))
 
 from gppylib import gplog
@@ -22,7 +22,7 @@ from gppylib import gplog
 logger = gplog.get_default_logger()
 
 
-class ConnectionError(StandardError): pass
+class ConnectionError(Exception): pass
 
 class Pgpass():
     """ Class for handling .pgpass file.
@@ -38,10 +38,10 @@ class Pgpass():
             return
 
         st_info = os.stat(PGPASSFILE)
-        mode = str(oct(st_info[stat.ST_MODE] & 0777))
+        mode = str(oct(st_info[stat.ST_MODE] & 0o777))
 
         if mode != "0600":
-            print 'WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE
+            print('WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE)
             self.valid_pgpass = False
             return
 
@@ -62,7 +62,7 @@ class Pgpass():
                                  'password': password }
                         self.entries.append(entry)
                     except:
-                        print 'Invalid line in .pgpass file.  Line number %d' % lineno
+                        print('Invalid line in .pgpass file.  Line number %d' % lineno)
                     lineno += 1
             except IOError:
                 pass
@@ -104,7 +104,7 @@ class DbURL:
         else:
             self.pghost = hostname
 
-        if port is 0:
+        if port == 0:
             self.pgport = int(os.environ.get('PGPORT', '5432'))
         else:
             self.pgport = int(port)
@@ -166,7 +166,6 @@ class Connection(pgdb.Connection):
         # due to limitations in pg implementation. Wrap with with a
         # namedtuple for ease of use.
         def handle_notice(notice):
-            self._notices.append(notice)
             received = {}
             for attr in dir(notice):
                 if attr.startswith('__'):
@@ -255,7 +254,7 @@ def connect(dburl, utility=False, verbose=False,
             connection = pgdb.connect(**conninfo)
             break
 
-        except pgdb.OperationalError, e:
+        except pgdb.OperationalError as e:
             if 'timeout expired' in str(e):
                 logger.warning('Timeout expired connecting to %s, attempt %d/%d' % (dburl.pgdb, i+1, retries))
                 continue

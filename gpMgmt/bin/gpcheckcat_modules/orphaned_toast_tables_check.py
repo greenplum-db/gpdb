@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import itertools
 
@@ -170,15 +170,15 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
         # list by (table, issue type) before performing the grouping, for the
         # same reason that you need to perform `sort` in a `sort | uniq`
         # pipeline.
-        def issue_key(issue):
+        def sort_key(issue):
+            return issue.table.oid
+
+        def group_key(issue):
             return (issue.table.oid, type(issue))
 
-        def key_sort(this, that):
-            return cmp(hash(issue_key(this)), hash(issue_key(that)))
+        sorted_issues = sorted(self._issues, key=sort_key)
 
-        sorted_issues = sorted(self._issues, key_sort)
-
-        for _, group in itertools.groupby(sorted_issues, issue_key):
+        for _, group in itertools.groupby(sorted_issues, group_key):
             issues = list(group)
             yield issues[0], { i.row['content_id'] for i in issues }
 
@@ -202,7 +202,7 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
             if issue.repair_script:
                 content_id_to_segment_map[issue.row['content_id']]['repair_statements'].append(issue.repair_script)
 
-        segments_with_repair_statements = filter(lambda segment: len(segment['repair_statements']) > 0, content_id_to_segment_map.values())
+        segments_with_repair_statements = [segment for segment in list(content_id_to_segment_map.values()) if len(segment['repair_statements']) > 0]
         for segment in segments_with_repair_statements:
             segment['repair_statements'] = ["SET allow_system_table_mods=true;"] + segment['repair_statements']
 
@@ -211,7 +211,7 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
     @staticmethod
     def _get_content_id_to_segment_map(segments):
         content_id_to_segment = {}
-        for segment in segments.values():
+        for segment in list(segments.values()):
             segment['repair_statements'] = []
             content_id_to_segment[segment['content']] = segment
 

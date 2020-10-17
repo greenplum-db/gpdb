@@ -6,7 +6,7 @@
  * Note: this file contains only definitions that are private to the
  * timezone library.  Public definitions are in pgtime.h.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/timezone/pgtz.h
@@ -74,8 +74,8 @@ struct pg_tz
 extern int	pg_open_tzfile(const char *name, char *canonname);
 
 /* in localtime.c */
-extern int tzload(const char *name, char *canonname, struct state *sp,
-	   bool doextend);
+extern int	tzload(const char *name, char *canonname, struct state *sp,
+				   bool doextend);
 extern bool tzparse(const char *name, struct state *sp, bool lastditch);
 
-#endif   /* _PGTZ_H */
+#endif							/* _PGTZ_H */

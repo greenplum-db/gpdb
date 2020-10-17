@@ -45,38 +45,31 @@ using namespace gpnaucrates;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CCostContext::CCostContext
-	(
-	CMemoryPool *mp,
-	COptimizationContext *poc,
-	ULONG ulOptReq,
-	CGroupExpression *pgexpr
-	)
-	:
-	m_mp(mp),
-	m_cost(GPOPT_INVALID_COST),
-	m_estate(estUncosted),
-	m_pgexpr(pgexpr),
-	m_pgexprForStats(NULL),
-	m_pdrgpoc(NULL),
-	m_pdpplan(NULL),
-	m_ulOptReq(ulOptReq),
-	m_fPruned(false),
-	m_pstats(NULL),
-	m_poc(poc)
+CCostContext::CCostContext(CMemoryPool *mp, COptimizationContext *poc,
+						   ULONG ulOptReq, CGroupExpression *pgexpr)
+	: m_mp(mp),
+	  m_cost(GPOPT_INVALID_COST),
+	  m_estate(estUncosted),
+	  m_pgexpr(pgexpr),
+	  m_pgexprForStats(NULL),
+	  m_pdrgpoc(NULL),
+	  m_pdpplan(NULL),
+	  m_ulOptReq(ulOptReq),
+	  m_fPruned(false),
+	  m_pstats(NULL),
+	  m_poc(poc)
 {
 	GPOS_ASSERT(NULL != poc);
 	GPOS_ASSERT(NULL != pgexpr);
-	GPOS_ASSERT_IMP
-		(
+	GPOS_ASSERT_IMP(
 		pgexpr->Pop()->FPhysical(),
-		ulOptReq < CPhysical::PopConvert(pgexpr->Pop())->UlOptRequests()
-		);
+		ulOptReq < CPhysical::PopConvert(pgexpr->Pop())->UlOptRequests());
 
 	if (!m_pgexpr->Pop()->FScalar() &&
 		!CPhysical::PopConvert(m_pgexpr->Pop())->FPassThruStats())
 	{
-		CGroupExpression *pgexprForStats = m_pgexpr->Pgroup()->PgexprBestPromise(m_mp, m_pgexpr);
+		CGroupExpression *pgexprForStats =
+			m_pgexpr->Pgroup()->PgexprBestPromise(m_mp, m_pgexpr);
 		if (NULL != pgexprForStats)
 		{
 			pgexprForStats->AddRef();
@@ -155,8 +148,7 @@ CCostContext::FNeedsNewStats() const
 
 	CEnfdPartitionPropagation *pepp = Poc()->Prpp()->Pepp();
 
-	if (GPOS_FTRACE(EopttraceDeriveStatsForDPE) &&
-		CUtils::FPhysicalScan(pop) &&
+	if (GPOS_FTRACE(EopttraceDeriveStatsForDPE) && CUtils::FPhysicalScan(pop) &&
 		CPhysicalScan::PopConvert(pop)->FDynamicScan() &&
 		!pepp->PpfmDerived()->IsEmpty())
 	{
@@ -212,12 +204,10 @@ CCostContext::DeriveStats()
 	exprhdl.DeriveCostContextStats();
 	if (NULL == exprhdl.Pstats())
 	{
-		GPOS_RAISE
-			(
-			gpopt::ExmaGPOPT,
-			gpopt::ExmiNoPlanFound,
-			GPOS_WSZ_LIT("Could not compute cost since statistics for the group no derived")
-			);
+		GPOS_RAISE(
+			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
+			GPOS_WSZ_LIT(
+				"Could not compute cost since statistics for the group no derived"));
 	}
 
 	exprhdl.Pstats()->AddRef();
@@ -234,10 +224,7 @@ CCostContext::DeriveStats()
 //
 //---------------------------------------------------------------------------
 void
-CCostContext::DerivePlanProps
-	(
-	CMemoryPool *mp
-	)
+CCostContext::DerivePlanProps(CMemoryPool *mp)
 {
 	GPOS_ASSERT(NULL != m_pdrgpoc);
 
@@ -267,11 +254,7 @@ CCostContext::DerivePlanProps
 //
 //---------------------------------------------------------------------------
 BOOL
-CCostContext::operator ==
-	(
-	const CCostContext &cc
-	)
-	const
+CCostContext::operator==(const CCostContext &cc) const
 {
 	return Equals(cc, *this);
 }
@@ -286,16 +269,14 @@ CCostContext::operator ==
 //
 //---------------------------------------------------------------------------
 BOOL
-CCostContext::IsValid
-	(
-	CMemoryPool *mp
-	)
+CCostContext::IsValid(CMemoryPool *mp)
 {
 	GPOS_ASSERT(NULL != m_poc);
 	GPOS_ASSERT(NULL != m_pdrgpoc);
 
 	// obtain relational properties from group
-	CDrvdPropRelational *pdprel = CDrvdPropRelational::GetRelationalProperties(Pgexpr()->Pgroup()->Pdp());
+	CDrvdPropRelational *pdprel =
+		CDrvdPropRelational::GetRelationalProperties(Pgexpr()->Pgroup()->Pdp());
 	GPOS_ASSERT(NULL != pdprel);
 
 	// derive plan properties
@@ -311,13 +292,19 @@ CCostContext::IsValid
 		IOstream &os = at.Os();
 
 		os << std::endl << "PROPERTY MISMATCH:" << std::endl;
-		os << std::endl << "GROUP ID: " << Pgexpr()->Pgroup()->Id() << std::endl;
+		os << std::endl
+		   << "GROUP ID: " << Pgexpr()->Pgroup()->Id() << std::endl;
 		os << std::endl << "GEXPR:" << std::endl;
 		Pgexpr()->OsPrint(at.Os());
-		os << std::endl << "REQUIRED PROPERTIES:" << std::endl << *(m_poc->Prpp());
-		os << std::endl << "DERIVED PROPERTIES:" << std::endl << *pdprel << std::endl << *m_pdpplan;
+		os << std::endl
+		   << "REQUIRED PROPERTIES:" << std::endl
+		   << *(m_poc->Prpp());
+		os << std::endl
+		   << "DERIVED PROPERTIES:" << std::endl
+		   << *pdprel << std::endl
+		   << *m_pdpplan;
 	}
-#endif //GPOS_DEBUG
+#endif	//GPOS_DEBUG
 
 	return fValid;
 }
@@ -336,13 +323,11 @@ CCostContext::IsValid
 //
 //---------------------------------------------------------------------------
 void
-CCostContext::BreakCostTiesForJoinPlans
-	(
-	const CCostContext *pccFst,
-	const CCostContext *pccSnd,
-	CONST_COSTCTXT_PTR *ppccPrefered, // output: preferred cost context
-	BOOL *pfTiesResolved // output: if true, tie resolution has succeeded
-	)
+CCostContext::BreakCostTiesForJoinPlans(
+	const CCostContext *pccFst, const CCostContext *pccSnd,
+	CONST_COSTCTXT_PTR *ppccPrefered,  // output: preferred cost context
+	BOOL *pfTiesResolved  // output: if true, tie resolution has succeeded
+)
 {
 	GPOS_ASSERT(NULL != pccFst);
 	GPOS_ASSERT(NULL != pccSnd);
@@ -364,16 +349,20 @@ CCostContext::BreakCostTiesForJoinPlans
 
 	*pfTiesResolved = false;
 	*ppccPrefered = NULL;
-	CDouble dRowsOuterFst = (*pccFst->Pdrgpoc())[0]->PccBest()->Pstats()->Rows();
-	CDouble dRowsInnerFst = (*pccFst->Pdrgpoc())[1]->PccBest()->Pstats()->Rows();
+	CDouble dRowsOuterFst =
+		(*pccFst->Pdrgpoc())[0]->PccBest()->Pstats()->Rows();
+	CDouble dRowsInnerFst =
+		(*pccFst->Pdrgpoc())[1]->PccBest()->Pstats()->Rows();
 	if (dRowsOuterFst != dRowsInnerFst)
 	{
 		// two children of first plan have different row estimates
 		return;
 	}
 
-	CDouble dRowsOuterSnd = (*pccSnd->Pdrgpoc())[0]->PccBest()->Pstats()->Rows();
-	CDouble dRowsInnerSnd = (*pccSnd->Pdrgpoc())[1]->PccBest()->Pstats()->Rows();
+	CDouble dRowsOuterSnd =
+		(*pccSnd->Pdrgpoc())[0]->PccBest()->Pstats()->Rows();
+	CDouble dRowsInnerSnd =
+		(*pccSnd->Pdrgpoc())[1]->PccBest()->Pstats()->Rows();
 	if (dRowsOuterSnd != dRowsInnerSnd)
 	{
 		// two children of second plan have different row estimates
@@ -388,8 +377,12 @@ CCostContext::BreakCostTiesForJoinPlans
 
 	// both plans have equal estimated rows for both children, break tie based on join depth
 	*pfTiesResolved = true;
-	ULONG ulOuterJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->Pgexpr())[0]->Pdp())->GetJoinDepth();
-	ULONG ulInnerJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->Pgexpr())[1]->Pdp())->GetJoinDepth();
+	ULONG ulOuterJoinDepthFst = CDrvdPropRelational::GetRelationalProperties(
+									(*pccFst->Pgexpr())[0]->Pdp())
+									->GetJoinDepth();
+	ULONG ulInnerJoinDepthFst = CDrvdPropRelational::GetRelationalProperties(
+									(*pccFst->Pgexpr())[1]->Pdp())
+									->GetJoinDepth();
 	if (ulInnerJoinDepthFst < ulOuterJoinDepthFst)
 	{
 		*ppccPrefered = pccFst;
@@ -411,11 +404,7 @@ CCostContext::BreakCostTiesForJoinPlans
 //
 //---------------------------------------------------------------------------
 BOOL
-CCostContext::FBetterThan
-	(
-	const CCostContext *pcc
-	)
-	const
+CCostContext::FBetterThan(const CCostContext *pcc) const
 {
 	GPOS_ASSERT(NULL != pcc);
 	GPOS_ASSERT(*m_poc == *(pcc->Poc()));
@@ -428,7 +417,8 @@ CCostContext::FBetterThan
 	// 3-stage scalar aggs and 2-stage scalar aggs.
 	if (GPOS_FTRACE(EopttraceForceThreeStageScalarDQA))
 	{
-		if (CUtils::FPhysicalAgg(Pgexpr()->Pop()) && CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
+		if (CUtils::FPhysicalAgg(Pgexpr()->Pop()) &&
+			CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
 		{
 			// we are only interested in aggs generated by CXformSplitDQA. If the trace flag is turned on
 			// we want to favor 3-stage agg over 2-stage scalar DQA agg. So whenever there is comparison
@@ -436,14 +426,16 @@ CCostContext::FBetterThan
 			// for 2-stage vs 2-stage or 3-stage vs 3-stage, we let costing decide.
 			// single stage agg do not get optimized when multi-stage aggs are present,
 			// refer to COptimizationContext::FOptimizeAgg.
-			if (IsTwoStageScalarDQACostCtxt(this) && IsThreeStageScalarDQACostCtxt(pcc))
+			if (IsTwoStageScalarDQACostCtxt(this) &&
+				IsThreeStageScalarDQACostCtxt(pcc))
 			{
 				return false;
 			}
 			// if the comparison is between 3-stage agg and 2-stage scalar DQA aggs generated from CXformSplitDQA,
 			// always mark 3-stage agg as having the better cost context.
 			// note: CXformSplitDQA will never generate a mix of scalar and non-scalar DQAs.
-			if (IsThreeStageScalarDQACostCtxt(this) && IsTwoStageScalarDQACostCtxt(pcc))
+			if (IsThreeStageScalarDQACostCtxt(this) &&
+				IsTwoStageScalarDQACostCtxt(pcc))
 			{
 				return true;
 			}
@@ -496,11 +488,13 @@ CCostContext::FBetterThan
 		}
 	}
 
-	if(COperator::EopPhysicalSpool == pcc->Pgexpr()->Pop()->Eopid() &&
-	   COperator::EopPhysicalSpool == Pgexpr()->Pop()->Eopid())
+	if (COperator::EopPhysicalSpool == pcc->Pgexpr()->Pop()->Eopid() &&
+		COperator::EopPhysicalSpool == Pgexpr()->Pop()->Eopid())
 	{
-		CPhysicalSpool *current_best_ctxt = CPhysicalSpool::PopConvert(Pgexpr()->Pop());
-		CPhysicalSpool *new_ctxt = CPhysicalSpool::PopConvert(pcc->Pgexpr()->Pop());
+		CPhysicalSpool *current_best_ctxt =
+			CPhysicalSpool::PopConvert(Pgexpr()->Pop());
+		CPhysicalSpool *new_ctxt =
+			CPhysicalSpool::PopConvert(pcc->Pgexpr()->Pop());
 
 		// if the request does not need to be conscious of motion, then always prefer a
 		// streaming spool since a blocking one will be unnecessary
@@ -511,23 +505,20 @@ CCostContext::FBetterThan
 				return true;
 			}
 		}
-   }
+	}
 
 	return false;
 }
 
 BOOL
-CCostContext::IsTwoStageScalarDQACostCtxt
-	(
-	const CCostContext *pcc
-	)
-	const
+CCostContext::IsTwoStageScalarDQACostCtxt(const CCostContext *pcc) const
 {
-	if(CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
+	if (CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
 	{
 		CPhysicalAgg *popAgg = CPhysicalAgg::PopConvert(pcc->Pgexpr()->Pop());
 		// 2 stage scalar agg are only generated by split dqa xform
-		GPOS_ASSERT_IMP(popAgg->IsTwoStageScalarDQA(), popAgg->IsAggFromSplitDQA());
+		GPOS_ASSERT_IMP(popAgg->IsTwoStageScalarDQA(),
+						popAgg->IsAggFromSplitDQA());
 		return (popAgg->IsAggFromSplitDQA() && popAgg->IsTwoStageScalarDQA());
 	}
 
@@ -535,17 +526,14 @@ CCostContext::IsTwoStageScalarDQACostCtxt
 }
 
 BOOL
-CCostContext::IsThreeStageScalarDQACostCtxt
-	(
-	const CCostContext *pcc
-	)
-	const
+CCostContext::IsThreeStageScalarDQACostCtxt(const CCostContext *pcc) const
 {
-	if(CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
+	if (CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
 	{
 		CPhysicalAgg *popAgg = CPhysicalAgg::PopConvert(pcc->Pgexpr()->Pop());
 		// 3 stage scalar agg are only generated by split dqa xform
-		GPOS_ASSERT_IMP(popAgg->IsThreeStageScalarDQA(), popAgg->IsAggFromSplitDQA());
+		GPOS_ASSERT_IMP(popAgg->IsThreeStageScalarDQA(),
+						popAgg->IsAggFromSplitDQA());
 		return (popAgg->IsAggFromSplitDQA() && popAgg->IsThreeStageScalarDQA());
 	}
 
@@ -582,11 +570,7 @@ CCostContext::IsThreeStageScalarDQACostCtxt
 //
 //---------------------------------------------------------------------------
 CCost
-CCostContext::CostCompute
-	(
-	CMemoryPool *mp,
-	CCostArray *pdrgpcostChildren
-	)
+CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 {
 	// derive context stats
 	DeriveStats();
@@ -598,7 +582,8 @@ CCostContext::CostCompute
 	}
 
 	m_pstats->AddRef();
-	ICostModel::SCostingInfo ci(mp, arity, GPOS_NEW(mp) ICostModel::CCostingStats(m_pstats));
+	ICostModel::SCostingInfo ci(
+		mp, arity, GPOS_NEW(mp) ICostModel::CCostingStats(m_pstats));
 
 	ICostModel *pcm = COptCtxt::PoctxtFromTLS()->GetCostModel();
 
@@ -619,7 +604,10 @@ CCostContext::CostCompute
 
 	DOUBLE num_rebinds = m_pstats->NumRebinds().Get();
 	ci.SetRebinds(num_rebinds);
-	GPOS_ASSERT_IMP(!exprhdl.HasOuterRefs(), GPOPT_DEFAULT_REBINDS == (ULONG) (num_rebinds) && "invalid number of rebinds when there are no outer references");
+	GPOS_ASSERT_IMP(
+		!exprhdl.HasOuterRefs(),
+		GPOPT_DEFAULT_REBINDS == (ULONG)(num_rebinds) &&
+			"invalid number of rebinds when there are no outer references");
 
 	// extract children costing info
 	for (ULONG ul = 0; ul < arity; ul++)
@@ -631,24 +619,30 @@ CCostContext::CostCompute
 		IStatistics *child_stats = pccChild->Pstats();
 
 		child_stats->AddRef();
-		ci.SetChildStats(ul, GPOS_NEW(mp) ICostModel::CCostingStats(child_stats));
+		ci.SetChildStats(ul,
+						 GPOS_NEW(mp) ICostModel::CCostingStats(child_stats));
 
 		DOUBLE dRowsChild = child_stats->Rows().Get();
-		if (CDistributionSpec::EdptPartitioned == pccChild->Pdpplan()->Pds()->Edpt())
+		if (CDistributionSpec::EdptPartitioned ==
+			pccChild->Pdpplan()->Pds()->Edpt())
 		{
 			// scale statistics row estimate by number of segments
 			dRowsChild = pccChild->DRowsPerHost().Get();
 		}
 		ci.SetChildRows(ul, dRowsChild);
 
-		DOUBLE dWidthChild = child_stats->Width(mp, pocChild->Prpp()->PcrsRequired()).Get();
+		DOUBLE dWidthChild =
+			child_stats->Width(mp, pocChild->Prpp()->PcrsRequired()).Get();
 		ci.SetChildWidth(ul, dWidthChild);
 
 		DOUBLE dRebindsChild = child_stats->NumRebinds().Get();
 		ci.SetChildRebinds(ul, dRebindsChild);
-		GPOS_ASSERT_IMP(!exprhdl.HasOuterRefs(ul), GPOPT_DEFAULT_REBINDS == (ULONG) (dRebindsChild) && "invalid number of rebinds when there are no outer references");
+		GPOS_ASSERT_IMP(
+			!exprhdl.HasOuterRefs(ul),
+			GPOPT_DEFAULT_REBINDS == (ULONG)(dRebindsChild) &&
+				"invalid number of rebinds when there are no outer references");
 
-		DOUBLE dCostChild =  (*pdrgpcostChildren)[ul]->Get();
+		DOUBLE dCostChild = (*pdrgpcostChildren)[ul]->Get();
 		ci.SetChildCost(ul, dCostChild);
 	}
 
@@ -671,14 +665,16 @@ CCostContext::DRowsPerHost() const
 	COptCtxt *poptctxt = COptCtxt::PoctxtFromTLS();
 	const ULONG ulHosts = poptctxt->GetCostModel()->UlHosts();
 
-	CDistributionSpec *pds =  Pdpplan()->Pds();
+	CDistributionSpec *pds = Pdpplan()->Pds();
 	if (CDistributionSpec::EdtHashed == pds->Edt())
 	{
-		CDistributionSpecHashed *pdshashed = CDistributionSpecHashed::PdsConvert(pds);
+		CDistributionSpecHashed *pdshashed =
+			CDistributionSpecHashed::PdsConvert(pds);
 		CExpressionArray *pdrgpexpr = pdshashed->Pdrgpexpr();
 		CColRefSet *pcrsUsed = CUtils::PcrsExtractColumns(m_mp, pdrgpexpr);
 
-		const CColRefSet *pcrsReqdStats = this->Poc()->GetReqdRelationalProps()->PcrsStat();
+		const CColRefSet *pcrsReqdStats =
+			this->Poc()->GetReqdRelationalProps()->PcrsStat();
 		if (!pcrsReqdStats->ContainsAll(pcrsUsed))
 		{
 			// statistics not available for distribution columns, therefore
@@ -693,8 +689,10 @@ CCostContext::DRowsPerHost() const
 		pcrsUsed->ExtractColIds(m_mp, pdrgpul);
 		pcrsUsed->Release();
 
-		CStatisticsConfig *stats_config = poptctxt->GetOptimizerConfig()->GetStatsConf();
-		CDouble dNDVs = CStatisticsUtils::Groups(m_mp, Pstats(), stats_config, pdrgpul, NULL /*keys*/);
+		CStatisticsConfig *stats_config =
+			poptctxt->GetOptimizerConfig()->GetStatsConf();
+		CDouble dNDVs = CStatisticsUtils::Groups(m_mp, Pstats(), stats_config,
+												 pdrgpul, NULL /*keys*/);
 		pdrgpul->Release();
 
 		if (dNDVs < ulHosts)
@@ -720,13 +718,10 @@ CCostContext::DRowsPerHost() const
 //
 //---------------------------------------------------------------------------
 IOstream &
-CCostContext::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CCostContext::OsPrint(IOstream &os) const
 {
-	os << "main ctxt (stage " << m_poc->UlSearchStageIndex() << ")" << m_poc->Id() << "." << m_ulOptReq;
+	os << "main ctxt (stage " << m_poc->UlSearchStageIndex() << ")"
+	   << m_poc->Id() << "." << m_ulOptReq;
 
 	if (NULL != m_pdrgpoc)
 	{
@@ -746,14 +741,14 @@ CCostContext::OsPrint
 
 	if (NULL != m_pstats)
 	{
-		os <<", rows:" << m_pstats->Rows();
+		os << ", rows:" << m_pstats->Rows();
 		if (FOwnsStats())
 		{
-			os <<" (owned)";
+			os << " (owned)";
 		}
 		else
 		{
-			os <<" (group)";
+			os << " (group)";
 		}
 	}
 
@@ -770,4 +765,3 @@ CCostContext::OsPrint
 }
 
 // EOF
-

@@ -15,27 +15,25 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CColumnFactoryTest
-	//
-	//	@doc:
-	//		unittests
-	//
-	//---------------------------------------------------------------------------
-	class CColumnFactoryTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CColumnFactoryTest
+//
+//	@doc:
+//		unittests
+//
+//---------------------------------------------------------------------------
+class CColumnFactoryTest
+{
+public:
+	// actual unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
+};
+}  // namespace gpopt
 
-		public:
-
-			// actual unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-	};
-}
-
-#endif // !GPOPT_CColumnFactoryTest_H
+#endif	// !GPOPT_CColumnFactoryTest_H
 
 // EOF

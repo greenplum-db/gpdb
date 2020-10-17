@@ -1,8 +1,5 @@
-include: helpers/gp_management_utils_helpers.sql;
-
-
--- When pg_basebackup runs with --slot and stream as xlog-method
-select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+-- When pg_basebackup runs with --slot and stream as wal-method
+select pg_basebackup(address, dbid, port, true, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
 
 -- Then a replication slot gets created on that segment with the slot
 -- name and the slot's restart_lsn is not NULL, indicating that the
@@ -11,10 +8,10 @@ select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablesp
 0U: select slot_name, slot_type, active, restart_lsn is not NULL as slot_was_used from pg_get_replication_slots() where slot_name = 'some_replication_slot';
 
 -- When another basebackup is run with the same slot name
-select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablespace@/some_other_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, false, 'some_replication_slot', '@testtablespace@/some_other_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
 
 -- Then the backup should exist on the filesystem, ready for mirroring
-!\retcode cat @testtablespace@/some_other_isolation2_pg_basebackup/recovery.conf;
+!\retcode cat @testtablespace@/some_other_isolation2_pg_basebackup/postgresql.auto.conf;
 
 -- And the replication slot information should be unchanged
 0U: select slot_name, slot_type, active, restart_lsn is not NULL as slot_was_used from pg_get_replication_slots() where slot_name = 'some_replication_slot';
@@ -25,7 +22,7 @@ select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablesp
 !\retcode rm -rf @testtablespace@/some_other_isolation2_pg_basebackup;
 
 -- When pg_basebackup runs without --slot
-select pg_basebackup(address, dbid, port, null, '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, false, null, '@testtablespace@/some_isolation2_pg_basebackup', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
 
 -- Then there should NOT be a replication slot
 0U: select count(1) from pg_get_replication_slots() where slot_name = 'some_replication_slot';

@@ -7,9 +7,9 @@
 //
 //	@doc:
 //		Implementation of DXL logical window operator
-//		
-//	@owner: 
-//		
+//
+//	@owner:
+//
 //
 //	@test:
 //
@@ -34,14 +34,9 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLLogicalWindow::CDXLLogicalWindow
-	(
-	CMemoryPool *mp,
-	CDXLWindowSpecArray *window_spec_array
-	)
-	:
-	CDXLLogical(mp),
-	m_window_spec_array(window_spec_array)
+CDXLLogicalWindow::CDXLLogicalWindow(CMemoryPool *mp,
+									 CDXLWindowSpecArray *window_spec_array)
+	: CDXLLogical(mp), m_window_spec_array(window_spec_array)
 {
 	GPOS_ASSERT(NULL != m_window_spec_array);
 	GPOS_ASSERT(0 < m_window_spec_array->Size());
@@ -97,11 +92,7 @@ CDXLLogicalWindow::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 CDXLWindowSpec *
-CDXLLogicalWindow::GetWindowKeyAt
-	(
-	ULONG idx
-	)
-	const
+CDXLLogicalWindow::GetWindowKeyAt(ULONG idx) const
 {
 	GPOS_ASSERT(idx <= m_window_spec_array->Size());
 	return (*m_window_spec_array)[idx];
@@ -116,32 +107,35 @@ CDXLLogicalWindow::GetWindowKeyAt
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalWindow::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLLogicalWindow::SerializeToDXL(CXMLSerializer *xml_serializer,
+								  const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
 	// serialize the list of window specifications
-	const CWStringConst *window_spec_list_str = CDXLTokens::GetDXLTokenStr(EdxltokenWindowSpecList);
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), window_spec_list_str);
+	const CWStringConst *window_spec_list_str =
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowSpecList);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		window_spec_list_str);
 	const ULONG size = m_window_spec_array->Size();
 	for (ULONG idx = 0; idx < size; idx++)
 	{
 		CDXLWindowSpec *window_spec = (*m_window_spec_array)[idx];
 		window_spec->SerializeToDXL(xml_serializer);
 	}
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), window_spec_list_str);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		window_spec_list_str);
 
 	// serialize children
 	node->SerializeChildrenToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -154,37 +148,39 @@ CDXLLogicalWindow::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalWindow::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) const
+CDXLLogicalWindow::AssertValid(const CDXLNode *node,
+							   BOOL validate_children) const
 {
 	GPOS_ASSERT(2 == node->Arity());
 
 	CDXLNode *proj_list_dxlnode = (*node)[0];
 	CDXLNode *child_dxlnode = (*node)[1];
 
-	GPOS_ASSERT(EdxlopScalarProjectList == proj_list_dxlnode->GetOperator()->GetDXLOperator());
-	GPOS_ASSERT(EdxloptypeLogical == child_dxlnode->GetOperator()->GetDXLOperatorType());
+	GPOS_ASSERT(EdxlopScalarProjectList ==
+				proj_list_dxlnode->GetOperator()->GetDXLOperator());
+	GPOS_ASSERT(EdxloptypeLogical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
 
 	if (validate_children)
 	{
-		proj_list_dxlnode->GetOperator()->AssertValid(proj_list_dxlnode, validate_children);
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		proj_list_dxlnode->GetOperator()->AssertValid(proj_list_dxlnode,
+													  validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 
 	const ULONG arity = proj_list_dxlnode->Arity();
 	for (ULONG idx = 0; idx < arity; ++idx)
 	{
 		CDXLNode *proj_elem = (*proj_list_dxlnode)[idx];
-		GPOS_ASSERT(EdxlopScalarIdent != proj_elem->GetOperator()->GetDXLOperator());
+		GPOS_ASSERT(EdxlopScalarIdent !=
+					proj_elem->GetOperator()->GetDXLOperator());
 	}
 
 	GPOS_ASSERT(NULL != m_window_spec_array);
 	GPOS_ASSERT(0 < m_window_spec_array->Size());
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

@@ -11,6 +11,9 @@ cdbdispatchresult.t: \
 	$(MOCK_DIR)/backend/libpq/pqexpbuffer_mock.o \
 	$(MOCK_DIR)/backend/cdb/cdbrelsize_mock.o \
 	$(MOCK_DIR)/backend/cdb/cdbsrlz_mock.o \
+	$(MOCK_DIR)/backend/access/hash/hash_mock.o \
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o \
+
 
 cdbgang.t: \
 	$(MOCK_DIR)/backend/catalog/namespace_mock.o \
@@ -21,6 +24,8 @@ cdbgang.t: \
 	$(MOCK_DIR)/backend/utils/misc/superuser_mock.o \
 	$(MOCK_DIR)/backend/libpq/fe-connect_mock.o \
 	$(MOCK_DIR)/backend/utils/mmgr/redzone_handler_mock.o \
-	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o
+	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o \
+	$(MOCK_DIR)/backend/access/hash/hash_mock.o \
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o \
 
 include $(top_srcdir)/src/backend/mock.mk

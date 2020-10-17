@@ -2,7 +2,7 @@
  *
  * isinf.c
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -22,6 +22,7 @@
 #if HAVE_IEEEFP_H
 #include <ieeefp.h>
 #endif
+
 int
 isinf(double d)
 {
@@ -44,9 +45,9 @@ isinf(double d)
 #if HAVE_FP_CLASS_H
 #include <fp_class.h>
 #endif
+
 int
-isinf(x)
-double		x;
+isinf(double x)
 {
 #if HAVE_FP_CLASS
 	int			fpclass = fp_class(x);
@@ -60,7 +61,9 @@ double		x;
 		return -1;
 	return 0;
 }
+
 #elif defined(HAVE_CLASS)
+
 int
 isinf(double x)
 {
@@ -72,6 +75,7 @@ isinf(double x)
 		return -1;
 	return 0;
 }
+
 #endif
 
 #endif

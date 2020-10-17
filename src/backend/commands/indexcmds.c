@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -18,19 +18,19 @@
 #include "postgres.h"
 
 #include "access/amapi.h"
+#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/reloptions.h"
 #include "access/sysattr.h"
 #include "access/tupconvert.h"
+#include "access/tableam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_constraint.h"
-#include "catalog/pg_constraint_fn.h"
 #include "catalog/pg_inherits.h"
-#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_tablespace.h"
@@ -38,41 +38,44 @@
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
+#include "commands/event_trigger.h"
+#include "commands/progress.h"
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
-#include "optimizer/planner.h"
-#include "optimizer/var.h"
-#include "parser/parse_clause.h"
+#include "optimizer/optimizer.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
+#include "partitioning/partdesc.h"
+#include "pgstat.h"
 #include "rewrite/rewriteManip.h"
 #include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
+#include "storage/sinvaladt.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/partcache.h"
+#include "utils/pg_rusage.h"
+#include "utils/regproc.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 
+#include "catalog/aoblkdir.h"
 #include "catalog/pg_constraint.h"
-#include "catalog/pg_inherits_fn.h"
 #include "catalog/oid_dispatch.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdboidsync.h"
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdbvars.h"
 #include "libpq-fe.h"
@@ -88,12 +91,26 @@ static void ComputeIndexAttrs(IndexInfo *indexInfo,
 				  List *attList,
 				  List *exclusionOpNames,
 				  Oid relId,
-				  char *accessMethodName, Oid accessMethodId,
+				  const char *accessMethodName, Oid accessMethodId,
 				  bool amcanorder,
 				  bool isconstraint);
 static char *ChooseIndexNameAddition(List *colnames);
 static void RangeVarCallbackForReindexIndex(const RangeVar *relation,
-								Oid relId, Oid oldRelId, void *arg);
+											Oid relId, Oid oldRelId, void *arg);
+static bool ReindexRelationConcurrently(Oid relationOid, int options);
+static void ReindexPartitionedIndex(Relation parentIdx);
+static void update_relispartition(Oid relationId, bool newval);
+
+static void ReindexRelationList(List *relids, int options, bool concurrent, bool multiple);
+
+/*
+ * callback argument type for RangeVarCallbackForReindexIndex()
+ */
+struct ReindexIndexCallbackState
+{
+	bool		concurrent;		/* flag from statement */
+	Oid			locked_table_oid;	/* tracks previously locked table */
+};
 
 
 /*
@@ -174,8 +191,7 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
 		if (!indexForm->indcheckxmin)
 		{
 			indexForm->indcheckxmin = true;
-			simple_heap_update(pg_index, &indexTuple->t_self, indexTuple);
-			CatalogUpdateIndexes(pg_index, indexTuple);
+			CatalogTupleUpdate(pg_index, &indexTuple->t_self, indexTuple);
 		}
 
 		heap_freetuple(indexTuple);
@@ -207,8 +223,10 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
  * indexes.  We acknowledge this when all operator classes, collations and
  * exclusion operators match.  Though we could further permit intra-opfamily
  * changes for btree and hash indexes, that adds subtle complexity with no
- * concrete benefit for core types.
-
+ * concrete benefit for core types. Note, that INCLUDE columns aren't
+ * checked by this function, for them it's enough that table rewrite is
+ * skipped.
+ *
  * When a comparison or exclusion operator has a polymorphic input type, the
  * actual input types must also match.  This defends against the possibility
  * that operators could vary behavior in response to get_fn_expr_argtype().
@@ -220,7 +238,7 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
  */
 bool
 CheckIndexCompatible(Oid oldId,
-					 char *accessMethodName,
+					 const char *accessMethodName,
 					 List *attributeList,
 					 List *exclusionOpNames)
 {
@@ -267,8 +285,8 @@ CheckIndexCompatible(Oid oldId,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("access method \"%s\" does not exist",
 						accessMethodName)));
-	accessMethodId = HeapTupleGetOid(tuple);
 	accessMethodForm = (Form_pg_am) GETSTRUCT(tuple);
+	accessMethodId = accessMethodForm->oid;
 	amRoutine = GetIndexAmRoutine(accessMethodForm->amhandler);
 	ReleaseSysCache(tuple);
 
@@ -279,16 +297,22 @@ CheckIndexCompatible(Oid oldId,
 	 * the new index, so we can test whether it's compatible with the existing
 	 * one.  Note that ComputeIndexAttrs might fail here, but that's OK:
 	 * DefineIndex would have called this function with the same arguments
-	 * later on, and it would have failed then anyway.
+	 * later on, and it would have failed then anyway.  Our attributeList
+	 * contains only key attributes, thus we're filling ii_NumIndexAttrs and
+	 * ii_NumIndexKeyAttrs with same value.
 	 */
 	indexInfo = makeNode(IndexInfo);
+	indexInfo->ii_NumIndexAttrs = numberOfAttributes;
+	indexInfo->ii_NumIndexKeyAttrs = numberOfAttributes;
 	indexInfo->ii_Expressions = NIL;
 	indexInfo->ii_ExpressionsState = NIL;
-	indexInfo->ii_PredicateState = NIL;
+	indexInfo->ii_PredicateState = NULL;
 	indexInfo->ii_ExclusionOps = NULL;
 	indexInfo->ii_ExclusionProcs = NULL;
 	indexInfo->ii_ExclusionStrats = NULL;
 	indexInfo->ii_Am = accessMethodId;
+	indexInfo->ii_AmCache = NULL;
+	indexInfo->ii_Context = CurrentMemoryContext;
 	typeObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
 	collationObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
 	classObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
@@ -311,16 +335,16 @@ CheckIndexCompatible(Oid oldId,
 	 * We don't assess expressions or predicates; assume incompatibility.
 	 * Also, if the index is invalid for any reason, treat it as incompatible.
 	 */
-	if (!(heap_attisnull(tuple, Anum_pg_index_indpred) &&
-		  heap_attisnull(tuple, Anum_pg_index_indexprs) &&
-		  IndexIsValid(indexForm)))
+	if (!(heap_attisnull(tuple, Anum_pg_index_indpred, NULL) &&
+		  heap_attisnull(tuple, Anum_pg_index_indexprs, NULL) &&
+		  indexForm->indisvalid))
 	{
 		ReleaseSysCache(tuple);
 		return false;
 	}
 
 	/* Any change in operator class or collation breaks compatibility. */
-	old_natts = indexForm->indnatts;
+	old_natts = indexForm->indnkeyatts;
 	Assert(old_natts == numberOfAttributes);
 
 	d = SysCacheGetAttr(INDEXRELID, tuple, Anum_pg_index_indcollation, &isnull);
@@ -346,7 +370,7 @@ CheckIndexCompatible(Oid oldId,
 	for (i = 0; i < old_natts; i++)
 	{
 		if (IsPolymorphicType(get_opclass_input_type(classObjectId[i])) &&
-			irel->rd_att->attrs[i]->atttypid != typeObjectId[i])
+			TupleDescAttr(irel->rd_att, i)->atttypid != typeObjectId[i])
 		{
 			ret = false;
 			break;
@@ -374,7 +398,7 @@ CheckIndexCompatible(Oid oldId,
 
 				op_input_types(indexInfo->ii_ExclusionOps[i], &left, &right);
 				if ((IsPolymorphicType(left) || IsPolymorphicType(right)) &&
-					irel->rd_att->attrs[i]->atttypid != typeObjectId[i])
+					TupleDescAttr(irel->rd_att, i)->atttypid != typeObjectId[i])
 				{
 					ret = false;
 					break;
@@ -387,6 +411,104 @@ CheckIndexCompatible(Oid oldId,
 	return ret;
 }
 
+
+/*
+ * WaitForOlderSnapshots
+ *
+ * Wait for transactions that might have an older snapshot than the given xmin
+ * limit, because it might not contain tuples deleted just before it has
+ * been taken. Obtain a list of VXIDs of such transactions, and wait for them
+ * individually. This is used when building an index concurrently.
+ *
+ * We can exclude any running transactions that have xmin > the xmin given;
+ * their oldest snapshot must be newer than our xmin limit.
+ * We can also exclude any transactions that have xmin = zero, since they
+ * evidently have no live snapshot at all (and any one they might be in
+ * process of taking is certainly newer than ours).  Transactions in other
+ * DBs can be ignored too, since they'll never even be able to see the
+ * index being worked on.
+ *
+ * We can also exclude autovacuum processes and processes running manual
+ * lazy VACUUMs, because they won't be fazed by missing index entries
+ * either.  (Manual ANALYZEs, however, can't be excluded because they
+ * might be within transactions that are going to do arbitrary operations
+ * later.)
+ *
+ * Also, GetCurrentVirtualXIDs never reports our own vxid, so we need not
+ * check for that.
+ *
+ * If a process goes idle-in-transaction with xmin zero, we do not need to
+ * wait for it anymore, per the above argument.  We do not have the
+ * infrastructure right now to stop waiting if that happens, but we can at
+ * least avoid the folly of waiting when it is idle at the time we would
+ * begin to wait.  We do this by repeatedly rechecking the output of
+ * GetCurrentVirtualXIDs.  If, during any iteration, a particular vxid
+ * doesn't show up in the output, we know we can forget about it.
+ */
+static void
+WaitForOlderSnapshots(TransactionId limitXmin, bool progress)
+{
+	int			n_old_snapshots;
+	int			i;
+	VirtualTransactionId *old_snapshots;
+
+	old_snapshots = GetCurrentVirtualXIDs(limitXmin, true, false,
+										  PROC_IS_AUTOVACUUM | PROC_IN_VACUUM,
+										  &n_old_snapshots);
+	if (progress)
+		pgstat_progress_update_param(PROGRESS_WAITFOR_TOTAL, n_old_snapshots);
+
+	for (i = 0; i < n_old_snapshots; i++)
+	{
+		if (!VirtualTransactionIdIsValid(old_snapshots[i]))
+			continue;			/* found uninteresting in previous cycle */
+
+		if (i > 0)
+		{
+			/* see if anything's changed ... */
+			VirtualTransactionId *newer_snapshots;
+			int			n_newer_snapshots;
+			int			j;
+			int			k;
+
+			newer_snapshots = GetCurrentVirtualXIDs(limitXmin,
+													true, false,
+													PROC_IS_AUTOVACUUM | PROC_IN_VACUUM,
+													&n_newer_snapshots);
+			for (j = i; j < n_old_snapshots; j++)
+			{
+				if (!VirtualTransactionIdIsValid(old_snapshots[j]))
+					continue;	/* found uninteresting in previous cycle */
+				for (k = 0; k < n_newer_snapshots; k++)
+				{
+					if (VirtualTransactionIdEquals(old_snapshots[j],
+												   newer_snapshots[k]))
+						break;
+				}
+				if (k >= n_newer_snapshots) /* not there anymore */
+					SetInvalidVirtualTransactionId(old_snapshots[j]);
+			}
+			pfree(newer_snapshots);
+		}
+
+		if (VirtualTransactionIdIsValid(old_snapshots[i]))
+		{
+			if (progress)
+			{
+				PGPROC	   *holder = BackendIdGetProc(old_snapshots[i].backendId);
+
+				pgstat_progress_update_param(PROGRESS_WAITFOR_CURRENT_PID,
+											 holder->pid);
+			}
+			VirtualXactLock(old_snapshots[i], true);
+		}
+
+		if (progress)
+			pgstat_progress_update_param(PROGRESS_WAITFOR_DONE, i + 1);
+	}
+}
+
+
 /*
  * DefineIndex
  *		Creates a new index.
@@ -396,11 +518,21 @@ CheckIndexCompatible(Oid oldId,
  * 'stmt': IndexStmt describing the properties of the new index.
  * 'indexRelationId': normally InvalidOid, but during bootstrap can be
  *		nonzero to specify a preselected OID for the index.
+ * 'parentIndexId': the OID of the parent index; InvalidOid if not the child
+ *		of a partitioned index.
+ * 'parentConstraintId': the OID of the parent constraint; InvalidOid if not
+ *		the child of a constraint (only used when recursing)
  * 'is_alter_table': this is due to an ALTER rather than a CREATE operation.
  * 'check_rights': check for CREATE rights in namespace and tablespace.  (This
  *		should be true except when ALTER is deleting/recreating an index.)
+ * 'check_not_in_use': check for table not already in use in current session.
+ *		This should be true unless caller is holding the table open, in which
+ *		case the caller had better have checked it earlier.
  * 'skip_build': make the catalog entries but don't create the index files
  * 'quiet': suppress the NOTICE chatter ordinarily provided for constraints.
+ *
+ * GPDB:
+ * 'is_new_table': is the parent relation new, guaranteed to still be empty?
  *
  * Returns the object address of the created index.
  */
@@ -408,10 +540,14 @@ ObjectAddress
 DefineIndex(Oid relationId,
 			IndexStmt *stmt,
 			Oid indexRelationId,
+			Oid parentIndexId,
+			Oid parentConstraintId,
 			bool is_alter_table,
 			bool check_rights,
+			bool check_not_in_use,
 			bool skip_build,
-			bool quiet)
+			bool quiet,
+			bool is_new_table)
 {
 	char	   *indexRelationName;
 	char	   *accessMethodName;
@@ -423,8 +559,8 @@ DefineIndex(Oid relationId,
 	Oid			tablespaceId;
 	Oid			createdConstraintId = InvalidOid;
 	List	   *indexColNames;
+	List	   *allIndexParams;
 	Relation	rel;
-	Relation	indexRelation;
 	HeapTuple	tuple;
 	Form_pg_am	accessMethodForm;
 	IndexAmRoutine *amRoutine;
@@ -434,15 +570,17 @@ DefineIndex(Oid relationId,
 	Datum		reloptions;
 	int16	   *coloptions;
 	IndexInfo  *indexInfo;
+	bits16		flags;
+	bits16		constr_flags;
 	int			numberOfAttributes;
+	int			numberOfKeyAttributes;
 	TransactionId limitXmin;
-	VirtualTransactionId *old_snapshots;
 	ObjectAddress address;
-	int			n_old_snapshots;
 	LockRelId	heaprelid;
 	LOCKTAG		heaplocktag;
 	LOCKMODE	lockmode;
 	Snapshot	snapshot;
+	int			save_nestlevel = -1;
 	bool		shouldDispatch;
 	int			i;
 
@@ -451,10 +589,72 @@ DefineIndex(Oid relationId,
 	else
 		shouldDispatch = false;
 
+	if (parentIndexId)
+	{
+		/*
+		 * If we're recursing for partitions, don't dispatch this command
+		 * separately. We will dispatch the parent command.
+		 */
+		shouldDispatch = false;
+	}
+
 	/*
-	 * count attributes in index
+	 * Also don't dispatch this if it's part of an ALTER TABLE. We will dispatch
+	 * the whole ALTER TABLE command later.
 	 */
-	numberOfAttributes = list_length(stmt->indexParams);
+	if (is_alter_table)
+		shouldDispatch = false;
+
+	/*
+	 * Some callers need us to run with an empty default_tablespace; this is a
+	 * necessary hack to be able to reproduce catalog state accurately when
+	 * recreating indexes after table-rewriting ALTER TABLE.
+	 */
+	if (stmt->reset_default_tblspc)
+	{
+		save_nestlevel = NewGUCNestLevel();
+		(void) set_config_option("default_tablespace", "",
+								 PGC_USERSET, PGC_S_SESSION,
+								 GUC_ACTION_SAVE, true, 0, false);
+	}
+
+	/*
+	 * Start progress report.  If we're building a partition, this was already
+	 * done.
+	 */
+	if (!OidIsValid(parentIndexId))
+	{
+		pgstat_progress_start_command(PROGRESS_COMMAND_CREATE_INDEX,
+									  relationId);
+		pgstat_progress_update_param(PROGRESS_CREATEIDX_COMMAND,
+									 stmt->concurrent ?
+									 PROGRESS_CREATEIDX_COMMAND_CREATE_CONCURRENTLY :
+									 PROGRESS_CREATEIDX_COMMAND_CREATE);
+	}
+
+	/*
+	 * No index OID to report yet
+	 */
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_INDEX_OID,
+								 InvalidOid);
+
+	/*
+	 * count key attributes in index
+	 */
+	numberOfKeyAttributes = list_length(stmt->indexParams);
+
+	/*
+	 * Calculate the new list of index columns including both key columns and
+	 * INCLUDE columns.  Later we can determine which of these are key
+	 * columns, and which are just part of the INCLUDE list by checking the
+	 * list position.  A list item in a position less than ii_NumIndexKeyAttrs
+	 * is part of the key columns, and anything equal to and over is part of
+	 * the INCLUDE columns.
+	 */
+	allIndexParams = list_concat(list_copy(stmt->indexParams),
+								 list_copy(stmt->indexIncludingParams));
+	numberOfAttributes = list_length(allIndexParams);
+
 	if (numberOfAttributes <= 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
@@ -475,21 +675,46 @@ DefineIndex(Oid relationId,
 	 * this will typically require the caller to have already locked the
 	 * relation.  To avoid lock upgrade hazards, that lock should be at least
 	 * as strong as the one we take here.
+	 *
+	 * NB: If the lock strength here ever changes, code that is run by
+	 * parallel workers under the control of certain particular ambuild
+	 * functions will need to be updated, too.
 	 */
-	if (RangeVarIsAppendOptimizedTable(stmt->relation))
-		lockmode = ShareRowExclusiveLock;
-	else
-		lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
-	rel = heap_open(relationId, lockmode);
-
-	relationId = RelationGetRelid(rel);
-	namespaceId = RelationGetNamespace(rel);
-		
-	/* Note: during bootstrap may see uncataloged relation */
-	if (rel->rd_rel->relkind != RELKIND_RELATION &&
-		rel->rd_rel->relkind != RELKIND_MATVIEW)
+	/*
+	 * GPDB_12_MERGE_FIXME: Appendoptimized tables need block directory
+	 * relation for index access.  Creating and maintaining block directory is
+	 * expensive, because it needs to be kept up to date whenever new data is
+	 * inserted in the table.  We delay the block directory creation until it
+	 * is really needed - the first index creation.  Once created, all indexes
+	 * share the same block directory.  We need stronger lock
+	 * (ShareRowExclusiveLock) that blocks index creation from another
+	 * transaction (not to be confused with create index concurrently) as well
+	 * as concurrent insert for appendoptimized tables, if the block directory
+	 * needs to be created.  If the block directory already exists, we can use
+	 * the same lock as heap tables but this is not currently implemented
+	 * (hence the fixme).
+	 */
 	{
-		if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		rel = table_open(relationId, NoLock);
+		if (RelationIsAppendOptimized(rel))
+			lockmode = ShareRowExclusiveLock;
+		else
+			lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
+		table_close(rel, NoLock);
+	}
+	rel = table_open(relationId, lockmode);
+
+	namespaceId = RelationGetNamespace(rel);
+
+	/* Ensure that it makes sense to index this kind of relation */
+	switch (rel->rd_rel->relkind)
+	{
+		case RELKIND_RELATION:
+		case RELKIND_MATVIEW:
+		case RELKIND_PARTITIONED_TABLE:
+			/* OK */
+			break;
+		case RELKIND_FOREIGN_TABLE:
 
 			/*
 			 * Custom error message for FOREIGN TABLE since the term is close
@@ -499,11 +724,13 @@ DefineIndex(Oid relationId,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("cannot create index on foreign table \"%s\"",
 							RelationGetRelationName(rel))));
-		else
+			break;
+		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("\"%s\" is not a table or materialized view",
 							RelationGetRelationName(rel))));
+			break;
 	}
 
 	/*
@@ -514,7 +741,7 @@ DefineIndex(Oid relationId,
 	 * catalog entries.  The actual indexes are built by recursing for each
 	 * partition.
 	 */
-	partitioned = (rel_part_status(relationId) != PART_STATUS_NONE);
+	partitioned = rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE;
 	if (partitioned)
 	{
 		if (stmt->concurrent)
@@ -525,7 +752,7 @@ DefineIndex(Oid relationId,
 		if (stmt->excludeOpNames)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("cannot create exclusion constraint on partitioned table \"%s\"",
+					 errmsg("cannot create exclusion constraints on partitioned table \"%s\"",
 							RelationGetRelationName(rel))));
 	}
 
@@ -536,6 +763,15 @@ DefineIndex(Oid relationId,
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot create indexes on temporary tables of other sessions")));
+
+	/*
+	 * Unless our caller vouches for having checked this already, insist that
+	 * the table not be in use by our own session, either.  Otherwise we might
+	 * fail to make entries in the new index (for instance, if an INSERT or
+	 * UPDATE is in progress and has already made its list of target indexes).
+	 */
+	if (check_not_in_use)
+		CheckTableNotInUse(rel, "CREATE INDEX");
 
 	/*
 	 * Verify we (still) have CREATE rights in the rel's namespace.
@@ -550,7 +786,7 @@ DefineIndex(Oid relationId,
 		aclresult = pg_namespace_aclcheck(namespaceId, GetUserId(),
 										  ACL_CREATE);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
+			aclcheck_error(aclresult, OBJECT_SCHEMA,
 						   get_namespace_name(namespaceId));
 	}
 
@@ -559,25 +795,30 @@ DefineIndex(Oid relationId,
 	 * (which may in turn default to database's default).
 	 *
 	 * Note: This code duplicates code in tablecmds.c
+	 *
+	 * MPP-8238 : inconsistent tablespaces between segments and master. In the
+	 * QD, store the resolved tablespace name in the command, so that it's
+	 * dispatched. In QE, skip the check for 'partitioned': because we got
+	 * the value from the QD, it should be ok.
 	 */
 	if (stmt->tableSpace)
 	{
 		tablespaceId = get_tablespace_oid(stmt->tableSpace, false);
+		if (partitioned && tablespaceId == MyDatabaseTableSpace &&
+			Gp_role != GP_ROLE_EXECUTE)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot specify default tablespace for partitioned relations")));
 	}
 	else
 	{
-		tablespaceId = GetDefaultTablespace(rel->rd_rel->relpersistence);
+		tablespaceId = GetDefaultTablespace(rel->rd_rel->relpersistence,
+											partitioned);
 		/* note InvalidOid is OK in this case */
 
 		/* Need the real tablespace id for dispatch */
 		if (!OidIsValid(tablespaceId)) 
 			tablespaceId = MyDatabaseTableSpace;
-
-		/* 
-		 * MPP-8238 : inconsistent tablespaces between segments and master 
-		 */
-		if (shouldDispatch)
-			stmt->tableSpace = get_tablespace_name(tablespaceId);
 	}
 
 	/* Check tablespace permissions */
@@ -589,7 +830,7 @@ DefineIndex(Oid relationId,
 		aclresult = pg_tablespace_aclcheck(tablespaceId, GetUserId(),
 										   ACL_CREATE);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_TABLESPACE,
+			aclcheck_error(aclresult, OBJECT_TABLESPACE,
 						   get_tablespace_name(tablespaceId));
 	}
 
@@ -608,19 +849,33 @@ DefineIndex(Oid relationId,
 	/*
 	 * Choose the index column names.
 	 */
-	indexColNames = ChooseIndexColumnNames(stmt->indexParams);
+	indexColNames = ChooseIndexColumnNames(allIndexParams);
 
 	/*
 	 * Select name for index if caller didn't specify
+	 *
+	 * In GPDB, we need to coordinate the index name between the QD and the
+	 * QEs. In the QD, after creating the child index, we stash the chosen
+	 * index name in the "oid assignments" list that's normally used to sync
+	 * OIDs between QD and QEs. Here, in the QE, we fetch the stashed name
+	 * from the list.
 	 */
 	indexRelationName = stmt->idxname;
 	if (indexRelationName == NULL)
-		indexRelationName = ChooseIndexName(RelationGetRelationName(rel),
+	{
+		if (OidIsValid(parentIndexId) && Gp_role == GP_ROLE_EXECUTE)
+			indexRelationName = GetPreassignedIndexNameForChildIndex(parentIndexId,
+																	 relationId);
+		else
+		{
+			indexRelationName = ChooseIndexName(RelationGetRelationName(rel),
 											namespaceId,
 											indexColNames,
 											stmt->excludeOpNames,
 											stmt->primary,
 											stmt->isconstraint);
+		}
+	}
 
 	/*
 	 * look up the access method, verify it can handle the requested features
@@ -647,34 +902,33 @@ DefineIndex(Oid relationId,
 					 errmsg("access method \"%s\" does not exist",
 							accessMethodName)));
 	}
-	accessMethodId = HeapTupleGetOid(tuple);
 	accessMethodForm = (Form_pg_am) GETSTRUCT(tuple);
+	accessMethodId = accessMethodForm->oid;
 	amRoutine = GetIndexAmRoutine(accessMethodForm->amhandler);
 
-	if (accessMethodId == HASH_AM_OID)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("hash indexes are not supported")));
-	if (strcmp(accessMethodName, "hash") == 0 &&
-		RelationNeedsWAL(rel))
-		ereport(WARNING,
-				(errmsg("hash indexes are not WAL-logged and their use is discouraged")));
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_ACCESS_METHOD_OID,
+								 accessMethodId);
 
 	if (stmt->unique && !amRoutine->amcanunique)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			   errmsg("access method \"%s\" does not support unique indexes",
-					  accessMethodName)));
+				 errmsg("access method \"%s\" does not support unique indexes",
+						accessMethodName)));
+	if (stmt->indexIncludingParams != NIL && !amRoutine->amcaninclude)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("access method \"%s\" does not support included columns",
+						accessMethodName)));
 	if (numberOfAttributes > 1 && !amRoutine->amcanmulticol)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		  errmsg("access method \"%s\" does not support multicolumn indexes",
-				 accessMethodName)));
+				 errmsg("access method \"%s\" does not support multicolumn indexes",
+						accessMethodName)));
 	if (stmt->excludeOpNames && amRoutine->amgettuple == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		errmsg("access method \"%s\" does not support exclusion constraints",
-			   accessMethodName)));
+				 errmsg("access method \"%s\" does not support exclusion constraints",
+						accessMethodName)));
 
     if  (stmt->unique && RelationIsAppendOptimized(rel))
         ereport(ERROR,
@@ -707,10 +961,11 @@ DefineIndex(Oid relationId,
 	 */
 	indexInfo = makeNode(IndexInfo);
 	indexInfo->ii_NumIndexAttrs = numberOfAttributes;
+	indexInfo->ii_NumIndexKeyAttrs = numberOfKeyAttributes;
 	indexInfo->ii_Expressions = NIL;	/* for now */
 	indexInfo->ii_ExpressionsState = NIL;
 	indexInfo->ii_Predicate = make_ands_implicit((Expr *) stmt->whereClause);
-	indexInfo->ii_PredicateState = NIL;
+	indexInfo->ii_PredicateState = NULL;
 	indexInfo->ii_ExclusionOps = NULL;
 	indexInfo->ii_ExclusionProcs = NULL;
 	indexInfo->ii_ExclusionStrats = NULL;
@@ -719,7 +974,10 @@ DefineIndex(Oid relationId,
 	indexInfo->ii_ReadyForInserts = !stmt->concurrent;
 	indexInfo->ii_Concurrent = stmt->concurrent;
 	indexInfo->ii_BrokenHotChain = false;
+	indexInfo->ii_ParallelWorkers = 0;
 	indexInfo->ii_Am = accessMethodId;
+	indexInfo->ii_AmCache = NULL;
+	indexInfo->ii_Context = CurrentMemoryContext;
 
 	typeObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
 	collationObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
@@ -727,7 +985,7 @@ DefineIndex(Oid relationId,
 	coloptions = (int16 *) palloc(numberOfAttributes * sizeof(int16));
 	ComputeIndexAttrs(indexInfo,
 					  typeObjectId, collationObjectId, classObjectId,
-					  coloptions, stmt->indexParams,
+					  coloptions, allIndexParams,
 					  stmt->excludeOpNames, relationId,
 					  accessMethodName, accessMethodId,
 					  amcanorder, stmt->isconstraint);
@@ -736,19 +994,8 @@ DefineIndex(Oid relationId,
 	 * Extra checks when creating a PRIMARY KEY index.
 	 */
 	if (stmt->primary)
-		index_check_primary_key(rel, indexInfo, is_alter_table);
+		index_check_primary_key(rel, indexInfo, is_alter_table, stmt);
 
-	/*
-	 * if the table is partitioned, a constraint must be
-	 * compatible with the partitioning key.
-	 */
-	if (partitioned && (stmt->unique || stmt->primary))
-		index_check_partitioning_compatible(rel,
-											indexInfo->ii_KeyAttrNumbers,
-											indexInfo->ii_ExclusionOps,
-											indexInfo->ii_NumIndexAttrs,
-											stmt->primary);
-	
 	/*
 	 * Check that the index is compatible with the distribution policy.
 	 *
@@ -766,101 +1013,107 @@ DefineIndex(Oid relationId,
 	 * CREATE TABLE clause, but we have no way of knowing whether it was
 	 * specified explicitly or not.
 	 */
-	if (rel->rd_cdbpolicy)
+	if (rel->rd_cdbpolicy && (stmt->primary || stmt->unique || stmt->excludeOpNames))
 	{
-		if (stmt->primary ||
-			stmt->unique ||
-			stmt->excludeOpNames)
+		index_check_policy_compatible_context ctx;
+
+		/* Don't allow indexes on system attributes. */
+		for (int i = 0; i < indexInfo->ii_NumIndexKeyAttrs; i++)
 		{
-			bool		compatible;
+			if (indexInfo->ii_IndexAttrNumbers[i] < 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("cannot create constraint or unique index on system column")));
+		}
+		memset(&ctx, 0, sizeof(ctx));
+		ctx.for_alter_dist_policy = false;
+		ctx.is_constraint = stmt->isconstraint;
+		ctx.is_unique = stmt->unique;
+		ctx.is_primarykey = stmt->primary;
+		ctx.constraint_name = indexRelationName;
+		(void) index_check_policy_compatible(rel->rd_cdbpolicy,
+											 RelationGetDescr(rel),
+											 indexInfo->ii_IndexAttrNumbers,
+											 classObjectId,
+											 indexInfo->ii_ExclusionOps,
+											 indexInfo->ii_NumIndexKeyAttrs,
+											 true, /* report_error */
+											 &ctx);
+	}
 
-			/* Don't allow indexes on system attributes. Except OIDs. */
-			for (i = 0; i < indexInfo->ii_NumIndexAttrs; i++)
+	/*
+	 * If this table is partitioned and we're creating a unique index or a
+	 * primary key, make sure that the indexed columns are part of the
+	 * partition key.  Otherwise it would be possible to violate uniqueness by
+	 * putting values that ought to be unique in different partitions.
+	 *
+	 * We could lift this limitation if we had global indexes, but those have
+	 * their own problems, so this is a useful feature combination.
+	 */
+	if (partitioned && (stmt->unique || stmt->primary))
+	{
+		PartitionKey key = rel->rd_partkey;
+		int			i;
+
+		/*
+		 * A partitioned table can have unique indexes, as long as all the
+		 * columns in the partition key appear in the unique key.  A
+		 * partition-local index can enforce global uniqueness iff the PK
+		 * value completely determines the partition that a row is in.
+		 *
+		 * Thus, verify that all the columns in the partition key appear in
+		 * the unique key definition.
+		 */
+		for (i = 0; i < key->partnatts; i++)
+		{
+			bool		found = false;
+			int			j;
+			const char *constraint_type;
+
+			if (stmt->primary)
+				constraint_type = "PRIMARY KEY";
+			else if (stmt->unique)
+				constraint_type = "UNIQUE";
+			else if (stmt->excludeOpNames != NIL)
+				constraint_type = "EXCLUDE";
+			else
 			{
-				if (indexInfo->ii_KeyAttrNumbers[i] < 0 &&
-					indexInfo->ii_KeyAttrNumbers[i] != ObjectIdAttributeNumber)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("cannot create constraint or unique index on system column")));
+				elog(ERROR, "unknown constraint type");
+				constraint_type = NULL; /* keep compiler quiet */
 			}
-
-			compatible =
-				index_check_policy_compatible(rel->rd_cdbpolicy,
-											  RelationGetDescr(rel),
-											  indexInfo->ii_KeyAttrNumbers,
-											  classObjectId,
-											  indexInfo->ii_ExclusionOps,
-											  indexInfo->ii_NumIndexAttrs,
-											  false, /* report_error */
-											  NULL);
 
 			/*
-			 * If the constraint isn't compatible with the current distribution policy,
-			 * try to change the distribution policy to match the constraint.
-			 *
-			 * The table must be empty, and it mustn't have any other constraints,
-			 * and the index mustn't contain expressions.
+			 * It may be possible to support UNIQUE constraints when partition
+			 * keys are expressions, but is it worth it?  Give up for now.
 			 */
-			if (!compatible &&
-				!GpPolicyIsRandomPartitioned(rel->rd_cdbpolicy) &&
-				(Gp_role == GP_ROLE_EXECUTE || cdbRelMaxSegSize(rel) == 0) &&
-				!relationHasPrimaryKey(rel) &&
-				!relationHasUniqueIndex(rel) &&
-				list_length(indexInfo->ii_Expressions) == 0)
+			if (key->partattrs[i] == 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("unsupported %s constraint with partition key definition",
+								constraint_type),
+						 errdetail("%s constraints cannot be used when partition keys include expressions.",
+								   constraint_type)));
+
+			for (j = 0; j < indexInfo->ii_NumIndexKeyAttrs; j++)
 			{
-				compatible =
-					change_policy_to_match_index(rel,
-												 indexInfo->ii_KeyAttrNumbers,
-												 classObjectId,
-												 indexInfo->ii_ExclusionOps,
-												 indexInfo->ii_NumIndexAttrs);
-				if (compatible && Gp_role == GP_ROLE_DISPATCH)
+				if (key->partattrs[i] == indexInfo->ii_IndexAttrNumbers[j])
 				{
-					if (stmt->primary)
-						elog(NOTICE, "updating distribution policy to match new PRIMARY KEY");
-					else if (stmt->excludeOpNames)
-						elog(NOTICE, "updating distribution policy to match new exclusion constraint");
-					else
-					{
-						Assert(stmt->unique);
-						if (stmt->isconstraint)
-							elog(NOTICE, "updating distribution policy to match new UNIQUE constraint");
-						else
-							elog(NOTICE, "updating distribution policy to match new UNIQUE index");
-					}
+					found = true;
+					break;
 				}
 			}
-
-			if (!compatible)
+			if (!found)
 			{
-				/*
-				 * Not compatible, and couldn't change the distribution policy to match.
-				 * Report the error to the user. Do that by calling
-				 * index_check_policy_compatible() again, but pass report_error=true so
-				 * that it will throw an error. index_check_policy_compatible() can
-				 * give a better error message than we could here.
-				 */
-				index_check_policy_compatible_context ctx;
+				Form_pg_attribute att;
 
-				memset(&ctx, 0, sizeof(ctx));
-				ctx.for_alter_dist_policy = false;
-				ctx.is_constraint = stmt->isconstraint;
-				ctx.is_unique = stmt->unique;
-				ctx.is_primarykey = stmt->primary;
-				ctx.constraint_name = indexRelationName;
-				(void) index_check_policy_compatible(rel->rd_cdbpolicy,
-													 RelationGetDescr(rel),
-													 indexInfo->ii_KeyAttrNumbers,
-													 classObjectId,
-													 indexInfo->ii_ExclusionOps,
-													 indexInfo->ii_NumIndexAttrs,
-													 true, /* report_error */
-													 &ctx);
-				/*
-				 * index_check_policy_compatible() should not return, because the earlier
-				 * call already determined that it's incompatible. But just in case..
-				 */
-				elog(ERROR, "constraint is not compatible with distribution key");
+				att = TupleDescAttr(RelationGetDescr(rel), key->partattrs[i] - 1);
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("insufficient columns in %s constraint definition",
+								constraint_type),
+						 errdetail("%s constraint on table \"%s\" lacks column \"%s\" which is part of the partition key.",
+								   constraint_type, RelationGetRelationName(rel),
+								   NameStr(att->attname))));
 			}
 		}
 	}
@@ -869,17 +1122,17 @@ DefineIndex(Oid relationId,
 		quiet = true;
 
 	/*
-	 * We disallow indexes on system columns other than OID.  They would not
-	 * necessarily get updated correctly, and they don't seem useful anyway.
+	 * We disallow indexes on system columns.  They would not necessarily get
+	 * updated correctly, and they don't seem useful anyway.
 	 */
 	for (i = 0; i < indexInfo->ii_NumIndexAttrs; i++)
 	{
-		AttrNumber	attno = indexInfo->ii_KeyAttrNumbers[i];
+		AttrNumber	attno = indexInfo->ii_IndexAttrNumbers[i];
 
-		if (attno < 0 && attno != ObjectIdAttributeNumber)
+		if (attno < 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			   errmsg("index creation on system columns is not supported")));
+					 errmsg("index creation on system columns is not supported")));
 	}
 
 	/*
@@ -894,12 +1147,11 @@ DefineIndex(Oid relationId,
 
 		for (i = FirstLowInvalidHeapAttributeNumber + 1; i < 0; i++)
 		{
-			if (i != ObjectIdAttributeNumber &&
-				bms_is_member(i - FirstLowInvalidHeapAttributeNumber,
+			if (bms_is_member(i - FirstLowInvalidHeapAttributeNumber,
 							  indexattrs))
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("index creation on system columns is not supported")));
+						 errmsg("index creation on system columns is not supported")));
 		}
 	}
 
@@ -920,14 +1172,14 @@ DefineIndex(Oid relationId,
 		else
 		{
 			elog(ERROR, "unknown constraint type");
-			constraint_type = NULL;		/* keep compiler quiet */
+			constraint_type = NULL; /* keep compiler quiet */
 		}
 
 		ereport(DEBUG1,
-		  (errmsg("%s %s will create implicit index \"%s\" for table \"%s\"",
-				  is_alter_table ? "ALTER TABLE / ADD" : "CREATE TABLE /",
-				  constraint_type,
-				  indexRelationName, RelationGetRelationName(rel))));
+				(errmsg("%s %s will create implicit index \"%s\" for table \"%s\"",
+						is_alter_table ? "ALTER TABLE / ADD" : "CREATE TABLE /",
+						constraint_type,
+						indexRelationName, RelationGetRelationName(rel))));
 	}
 
 	if (shouldDispatch)
@@ -948,48 +1200,90 @@ DefineIndex(Oid relationId,
 	 * index.  The caller should also decline any index build.
 	 */
 	Assert(!OidIsValid(stmt->oldNode) || (skip_build && !stmt->concurrent));
-	
+
 	/*
-	 * Make the catalog entries for the index, including constraints. Then, if
-	 * not skip_build || concurrent, actually build the index.
+	 * Create block directory if this is an appendoptimized
+	 * relation
 	 */
+	AlterTableCreateAoBlkdirTable(RelationGetRelid(rel));
+
+	/*
+	 * Make the catalog entries for the index, including constraints. This
+	 * step also actually builds the index, except if caller requested not to
+	 * or in concurrent mode, in which case it'll be done later, or doing a
+	 * partitioned index (because those don't have storage).
+	 */
+	flags = constr_flags = 0;
+	if (stmt->isconstraint)
+		flags |= INDEX_CREATE_ADD_CONSTRAINT;
+	if (skip_build || stmt->concurrent || partitioned)
+		flags |= INDEX_CREATE_SKIP_BUILD;
+	if (stmt->if_not_exists)
+		flags |= INDEX_CREATE_IF_NOT_EXISTS;
+	if (stmt->concurrent)
+		flags |= INDEX_CREATE_CONCURRENT;
+	if (partitioned)
+		flags |= INDEX_CREATE_PARTITIONED;
+	if (stmt->primary)
+		flags |= INDEX_CREATE_IS_PRIMARY;
+
+	/*
+	 * If the table is partitioned, and recursion was declined but partitions
+	 * exist, mark the index as invalid.
+	 */
+	if (partitioned && stmt->relation && !stmt->relation->inh)
+	{
+		PartitionDesc pd = RelationGetPartitionDesc(rel);
+
+		if (pd->nparts != 0)
+			flags |= INDEX_CREATE_INVALID;
+	}
+
+	if (stmt->deferrable)
+		constr_flags |= INDEX_CONSTR_CREATE_DEFERRABLE;
+	if (stmt->initdeferred)
+		constr_flags |= INDEX_CONSTR_CREATE_INIT_DEFERRED;
+
 	indexRelationId =
-		index_create(rel, indexRelationName, indexRelationId, stmt->parentIndexId,
-					 stmt->parentConstraintId,
+		index_create(rel, indexRelationName, indexRelationId, parentIndexId,
+					 parentConstraintId,
 					 stmt->oldNode, indexInfo, indexColNames,
 					 accessMethodId, tablespaceId,
 					 collationObjectId, classObjectId,
-					 coloptions, reloptions, stmt->primary,
-					 stmt->isconstraint, stmt->deferrable, stmt->initdeferred,
-					 allowSystemTableMods,
-					 skip_build || stmt->concurrent,
-					 stmt->concurrent, !check_rights,
-					 stmt->if_not_exists,
+					 coloptions, reloptions,
+					 flags, constr_flags,
+					 allowSystemTableMods, !check_rights,
 					 &createdConstraintId);
 
 	ObjectAddressSet(address, RelationRelationId, indexRelationId);
 
+	/*
+	 * Revert to original default_tablespace.  Must do this before any return
+	 * from this function, but after index_create, so this is a good time.
+	 */
+	if (save_nestlevel >= 0)
+		AtEOXact_GUC(true, save_nestlevel);
+
 	if (!OidIsValid(indexRelationId))
 	{
-		heap_close(rel, NoLock);
+		table_close(rel, NoLock);
+
+		/* If this is the top-level index, we're done */
+		if (!OidIsValid(parentIndexId))
+			pgstat_progress_end_command();
+
 		return address;
 	}
 
-	if (shouldDispatch)
+	/*
+	 * In the QD, remember the chosen index name and stash it with the
+	 * chosen OIDs, so that it's dispatched to the QE later.
+	 */
+	if (OidIsValid(parentIndexId) && Gp_role == GP_ROLE_DISPATCH)
 	{
-		/* make sure the QE uses the same index name that we chose */
-		stmt->idxname = indexRelationName;
-		stmt->oldNode = InvalidOid;
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR |
-									DF_WITH_SNAPSHOT |
-									DF_NEED_TWO_PHASE,
-									GetAssignedOidsForDispatch(),
-									NULL);
-
-		/* Set indcheckxmin in the master, if it was set on any segment */
-		if (!indexInfo->ii_BrokenHotChain)
-			cdb_sync_indcheckxmin_with_segments(indexRelationId);
+		RememberPreassignedIndexNameForChildIndex(parentIndexId,
+												  relationId,
+												  indexRelationName);
 	}
 
 	/* Add any requested comment */
@@ -1003,23 +1297,26 @@ DefineIndex(Oid relationId,
 		 * Unless caller specified to skip this step (via ONLY), process each
 		 * partition to make sure they all contain a corresponding index.
 		 *
-		 * GPDB: Upstream uses stmt->relation here to determine whether to continue
-		 * recusing in DefineIndex. However, GPDB always sets stmt->relation
-		 * because it needs to be dispatched to the QEs.
+		 * If we're called internally (no stmt->relation), recurse always.
 		 */
-		if (interpretInhOption(stmt->relation->inhOpt) && (Gp_role == GP_ROLE_DISPATCH))
+		if (!stmt->relation || stmt->relation->inh)
 		{
-			List *my_part_oids = find_inheritance_children(RelationGetRelid(rel), NoLock);
+			PartitionDesc partdesc = RelationGetPartitionDesc(rel);
+			int			nparts = partdesc->nparts;
+			Oid		   *part_oids = palloc(sizeof(Oid) * nparts);
+			bool		invalidate_parent = false;
 			TupleDesc	parentDesc;
 			Oid		   *opfamOids;
-			ListCell   *lc;
 
-			parentDesc = CreateTupleDescCopy(RelationGetDescr(rel));
-			opfamOids = palloc(sizeof(Oid) * numberOfAttributes);
-			for (i = 0; i < numberOfAttributes; i++)
+			pgstat_progress_update_param(PROGRESS_CREATEIDX_PARTITIONS_TOTAL,
+										 nparts);
+
+			memcpy(part_oids, partdesc->oids, sizeof(Oid) * nparts);
+
+			parentDesc = RelationGetDescr(rel);
+			opfamOids = palloc(sizeof(Oid) * numberOfKeyAttributes);
+			for (i = 0; i < numberOfKeyAttributes; i++)
 				opfamOids[i] = get_opclass_family(classObjectId[i]);
-
-			heap_close(rel, NoLock);
 
 			/*
 			 * For each partition, scan all existing indexes; if one matches
@@ -1029,25 +1326,43 @@ DefineIndex(Oid relationId,
 			 * If none matches, build a new index by calling ourselves
 			 * recursively with the same options (except for the index name).
 			 */
-			foreach(lc, my_part_oids)
+			for (i = 0; i < nparts; i++)
 			{
-				Oid			childRelid = lfirst_oid(lc);
-				Relation childrel;
-				List   *childidxs;
-				ListCell *cell;
+				Oid			childRelid = part_oids[i];
+				Relation	childrel;
+				List	   *childidxs;
+				ListCell   *cell;
 				AttrNumber *attmap;
-				bool	found = false;
-				int		maplen;
-				char	   *childnamespace_name;
+				bool		found = false;
+				int			maplen;
 
-				childrel = heap_open(childRelid, lockmode);
+				childrel = table_open(childRelid, lockmode);
+
+				/*
+				 * Don't try to create indexes on foreign tables, though. Skip
+				 * those if a regular index, or fail if trying to create a
+				 * constraint index.
+				 */
+				if (childrel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+				{
+					if (stmt->unique || stmt->primary)
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+								 errmsg("cannot create unique index on partitioned table \"%s\"",
+										RelationGetRelationName(rel)),
+								 errdetail("Table \"%s\" contains partitions that are foreign tables.",
+										   RelationGetRelationName(rel))));
+
+					table_close(childrel, lockmode);
+					continue;
+				}
+
 				childidxs = RelationGetIndexList(childrel);
 				attmap =
 					convert_tuples_by_name_map(RelationGetDescr(childrel),
-											   parentDesc);
+											   parentDesc,
+											   gettext_noop("could not convert row type"));
 				maplen = parentDesc->natts;
-
-				childnamespace_name = get_namespace_name(RelationGetNamespace(childrel));
 
 				foreach(cell, childidxs)
 				{
@@ -1068,7 +1383,7 @@ DefineIndex(Oid relationId,
 										 opfamOids,
 										 attmap, maplen))
 					{
-						Oid		cldConstrOid = InvalidOid;
+						Oid			cldConstrOid = InvalidOid;
 
 						/*
 						 * Found a match.
@@ -1095,37 +1410,11 @@ DefineIndex(Oid relationId,
 						IndexSetParentIndex(cldidx, indexRelationId);
 						if (createdConstraintId != InvalidOid)
 							ConstraintSetParentConstraint(cldConstrOid,
-														  createdConstraintId);
+														  createdConstraintId,
+														  childRelid);
 
-						if (shouldDispatch)
-						{
-							AlterTableCmd *altertableCmd = makeNode(AlterTableCmd);
-							altertableCmd->subtype = AT_PartAttachIndex;
-
-							AlterPartitionId *alterpartId = makeNode(AlterPartitionId);
-							alterpartId->idtype = AT_AP_IDRangeVar;
-							alterpartId->partiddef = (Node*) makeRangeVar(get_namespace_name(cldidx->rd_rel->relnamespace),
-																		  RelationGetRelationName(cldidx), -1);
-
-							AlterPartitionCmd * alterpartCmd = makeNode(AlterPartitionCmd);
-							alterpartCmd->partid = (Node*) alterpartId;
-
-							altertableCmd->def = (Node*) alterpartCmd;
-
-							AlterTableStmt *alterstmt = makeNode(AlterTableStmt);
-							alterstmt->relation = makeRangeVar(get_namespace_name(namespaceId),
-																	   indexRelationName, -1);
-							alterstmt->relkind = OBJECT_INDEX;
-
-							alterstmt->cmds = lappend(alterstmt->cmds, altertableCmd);
-
-							CdbDispatchUtilityStatement((Node *) alterstmt,
-														DF_CANCEL_ON_ERROR |
-														DF_WITH_SNAPSHOT |
-														DF_NEED_TWO_PHASE,
-														GetAssignedOidsForDispatch(),
-														NULL);
-						}
+						if (!cldidx->rd_index->indisvalid)
+							invalidate_parent = true;
 
 						found = true;
 						/* keep lock till commit */
@@ -1137,7 +1426,7 @@ DefineIndex(Oid relationId,
 				}
 
 				list_free(childidxs);
-				heap_close(childrel, NoLock);
+				table_close(childrel, NoLock);
 
 				/*
 				 * If no matching index was found, create our own.
@@ -1147,6 +1436,18 @@ DefineIndex(Oid relationId,
 					IndexStmt  *childStmt = copyObject(stmt);
 					bool		found_whole_row;
 					ListCell   *lc;
+
+					/*
+					 * We can't use the same index name for the child index,
+					 * so clear idxname to let the recursive invocation choose
+					 * a new name.  Likewise, the existing target relation
+					 * field is wrong, and if indexOid or oldNode are set,
+					 * they mustn't be applied to the child either.
+					 */
+					childStmt->idxname = NULL;
+					childStmt->relation = NULL;
+					childStmt->indexOid = InvalidOid;
+					childStmt->oldNode = InvalidOid;
 
 					/*
 					 * Adjust any Vars (both in expressions and in the index's
@@ -1166,6 +1467,7 @@ DefineIndex(Oid relationId,
 							ielem->expr =
 								map_variable_attnos((Node *) ielem->expr,
 													1, 0, attmap, maplen,
+													InvalidOid,
 													&found_whole_row);
 							if (found_whole_row)
 								elog(ERROR, "cannot convert whole-row table reference");
@@ -1174,51 +1476,102 @@ DefineIndex(Oid relationId,
 					childStmt->whereClause =
 						map_variable_attnos(stmt->whereClause, 1, 0,
 											attmap, maplen,
-											&found_whole_row);
+											InvalidOid, &found_whole_row);
 					if (found_whole_row)
 						elog(ERROR, "cannot convert whole-row table reference");
 
-					childStmt->relation = makeRangeVar(childnamespace_name,
-													   get_rel_name(childRelid), -1);
-					childStmt->idxname = NULL;
-					/*
-					 * GPDB: Because we need to dispatch these values to the
-					 * segments, put the parentIndexId and the
-					 * parentConstraintId in the IndexStmt. In upstream
-					 * Postgres these fields are parameters to DefineIndex.
-					 */
-					childStmt->parentIndexId = indexRelationId;
-					childStmt->parentConstraintId = createdConstraintId;
-
 					DefineIndex(childRelid, childStmt,
-								InvalidOid,			/* no predefined OID */
-								is_alter_table, check_rights,
-								skip_build, quiet);
+								InvalidOid, /* no predefined OID */
+								indexRelationId,	/* this is our child */
+								createdConstraintId,
+								is_alter_table, check_rights, check_not_in_use,
+								skip_build, quiet, is_new_table);
 				}
 
+				pgstat_progress_update_param(PROGRESS_CREATEIDX_PARTITIONS_DONE,
+											 i + 1);
 				pfree(attmap);
 			}
+
+			/*
+			 * The pg_index row we inserted for this index was marked
+			 * indisvalid=true.  But if we attached an existing index that is
+			 * invalid, this is incorrect, so update our row to invalid too.
+			 */
+			if (invalidate_parent)
+			{
+				Relation	pg_index = table_open(IndexRelationId, RowExclusiveLock);
+				HeapTuple	tup,
+							newtup;
+
+				tup = SearchSysCache1(INDEXRELID,
+									  ObjectIdGetDatum(indexRelationId));
+				if (!HeapTupleIsValid(tup))
+					elog(ERROR, "cache lookup failed for index %u",
+						 indexRelationId);
+				newtup = heap_copytuple(tup);
+				((Form_pg_index) GETSTRUCT(newtup))->indisvalid = false;
+				CatalogTupleUpdate(pg_index, &tup->t_self, newtup);
+				ReleaseSysCache(tup);
+				table_close(pg_index, RowExclusiveLock);
+				heap_freetuple(newtup);
+			}
 		}
-		/*
-		 * In postgres the base relation of partitioned tables does not have
-		 * storage. In GPDB the base relation DOES have storage so we probably need to
-		 * finish up here?
-		 */
-		else
+
+		stmt->idxname = indexRelationName;
+		if (shouldDispatch)
 		{
-			heap_close(rel, NoLock);
+			/* make sure the QE uses the same index name that we chose */
+			stmt->oldNode = InvalidOid;
+			Assert(stmt->relation != NULL);
+
+			stmt->tableSpace = get_tablespace_name(tablespaceId);
+
+			CdbDispatchUtilityStatement((Node *) stmt,
+										DF_CANCEL_ON_ERROR |
+										DF_WITH_SNAPSHOT |
+										DF_NEED_TWO_PHASE,
+										GetAssignedOidsForDispatch(),
+										NULL);
 		}
+
 		/*
 		 * Indexes on partitioned tables are not themselves built, so we're
 		 * done here.
 		 */
+		table_close(rel, NoLock);
+		if (!OidIsValid(parentIndexId))
+			pgstat_progress_end_command();
 		return address;
+	}
+
+	stmt->idxname = indexRelationName;
+	if (shouldDispatch)
+	{
+		/* make sure the QE uses the same index name that we chose */
+		stmt->oldNode = InvalidOid;
+		Assert(stmt->relation != NULL);
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR |
+									DF_WITH_SNAPSHOT |
+									DF_NEED_TWO_PHASE,
+									GetAssignedOidsForDispatch(),
+									NULL);
+
+		/* Set indcheckxmin in the master, if it was set on any segment */
+		if (!indexInfo->ii_BrokenHotChain)
+			cdb_sync_indcheckxmin_with_segments(indexRelationId);
 	}
 
 	if (!stmt->concurrent)
 	{
 		/* Close the heap and we're done, in the non-concurrent case */
-		heap_close(rel, NoLock);
+		table_close(rel, NoLock);
+
+		/* If this is the top-level index, we're done. */
+		if (!OidIsValid(parentIndexId))
+			pgstat_progress_end_command();
+
 		return address;
 	}
 
@@ -1236,7 +1589,7 @@ DefineIndex(Oid relationId,
 	/* save lockrelid and locktag for below, then close rel */
 	heaprelid = rel->rd_lockInfo.lockRelId;
 	SET_LOCKTAG_RELATION(heaplocktag, heaprelid.dbId, heaprelid.relId);
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 
 	/*
 	 * For a concurrent build, it's important to make the catalog entries
@@ -1267,6 +1620,12 @@ DefineIndex(Oid relationId,
 	StartTransactionCommand();
 
 	/*
+	 * The index is now visible, so we can report the OID.
+	 */
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_INDEX_OID,
+								 indexRelationId);
+
+	/*
 	 * Phase 2 of concurrent index build (see comments for validate_index()
 	 * for an overview of how this works)
 	 *
@@ -1282,7 +1641,9 @@ DefineIndex(Oid relationId,
 	 * exclusive lock on our table.  The lock code will detect deadlock and
 	 * error out properly.
 	 */
-	WaitForLockers(heaplocktag, ShareLock);
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_1);
+	WaitForLockers(heaplocktag, ShareLock, true);
 
 	/*
 	 * At this moment we are sure that there are no transactions with the
@@ -1302,34 +1663,11 @@ DefineIndex(Oid relationId,
 	 * HOT-chain or the extension of the chain is HOT-safe for this index.
 	 */
 
-	/* Open and lock the parent heap relation */
-	rel = heap_openrv(stmt->relation, ShareUpdateExclusiveLock);
-
-	/* And the target index relation */
-	indexRelation = index_open(indexRelationId, RowExclusiveLock);
-
 	/* Set ActiveSnapshot since functions in the indexes may need it */
 	PushActiveSnapshot(GetTransactionSnapshot());
 
-	/* We have to re-build the IndexInfo struct, since it was lost in commit */
-	indexInfo = BuildIndexInfo(indexRelation);
-	Assert(!indexInfo->ii_ReadyForInserts);
-	indexInfo->ii_Concurrent = true;
-	indexInfo->ii_BrokenHotChain = false;
-
-	/* Now build the index */
-	index_build(rel, indexRelation, indexInfo, stmt->primary, false);
-
-	/* Close both the relations, but keep the locks */
-	heap_close(rel, NoLock);
-	index_close(indexRelation, NoLock);
-
-	/*
-	 * Update the pg_index row to mark the index as ready for inserts. Once we
-	 * commit this transaction, any new transactions that open the table must
-	 * insert new entries into the index for insertions and non-HOT updates.
-	 */
-	index_set_state_flags(indexRelationId, INDEX_CREATE_SET_READY);
+	/* Perform concurrent build of index */
+	index_concurrently_build(relationId, indexRelationId);
 
 	/* we can do away with our snapshot */
 	PopActiveSnapshot();
@@ -1346,7 +1684,9 @@ DefineIndex(Oid relationId,
 	 * We once again wait until no transaction can have the table open with
 	 * the index marked as read-only for updates.
 	 */
-	WaitForLockers(heaplocktag, ShareLock);
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_2);
+	WaitForLockers(heaplocktag, ShareLock, true);
 
 	/*
 	 * Now take the "reference snapshot" that will be used by validate_index()
@@ -1401,74 +1741,11 @@ DefineIndex(Oid relationId,
 	 * The index is now valid in the sense that it contains all currently
 	 * interesting tuples.  But since it might not contain tuples deleted just
 	 * before the reference snap was taken, we have to wait out any
-	 * transactions that might have older snapshots.  Obtain a list of VXIDs
-	 * of such transactions, and wait for them individually.
-	 *
-	 * We can exclude any running transactions that have xmin > the xmin of
-	 * our reference snapshot; their oldest snapshot must be newer than ours.
-	 * We can also exclude any transactions that have xmin = zero, since they
-	 * evidently have no live snapshot at all (and any one they might be in
-	 * process of taking is certainly newer than ours).  Transactions in other
-	 * DBs can be ignored too, since they'll never even be able to see this
-	 * index.
-	 *
-	 * We can also exclude autovacuum processes and processes running manual
-	 * lazy VACUUMs, because they won't be fazed by missing index entries
-	 * either.  (Manual ANALYZEs, however, can't be excluded because they
-	 * might be within transactions that are going to do arbitrary operations
-	 * later.)
-	 *
-	 * Also, GetCurrentVirtualXIDs never reports our own vxid, so we need not
-	 * check for that.
-	 *
-	 * If a process goes idle-in-transaction with xmin zero, we do not need to
-	 * wait for it anymore, per the above argument.  We do not have the
-	 * infrastructure right now to stop waiting if that happens, but we can at
-	 * least avoid the folly of waiting when it is idle at the time we would
-	 * begin to wait.  We do this by repeatedly rechecking the output of
-	 * GetCurrentVirtualXIDs.  If, during any iteration, a particular vxid
-	 * doesn't show up in the output, we know we can forget about it.
+	 * transactions that might have older snapshots.
 	 */
-	old_snapshots = GetCurrentVirtualXIDs(limitXmin, true, false,
-										  PROC_IS_AUTOVACUUM /* not in GPDB: | PROC_IN_VACUUM */,
-										  &n_old_snapshots);
-
-	for (i = 0; i < n_old_snapshots; i++)
-	{
-		if (!VirtualTransactionIdIsValid(old_snapshots[i]))
-			continue;			/* found uninteresting in previous cycle */
-
-		if (i > 0)
-		{
-			/* see if anything's changed ... */
-			VirtualTransactionId *newer_snapshots;
-			int			n_newer_snapshots;
-			int			j;
-			int			k;
-
-			newer_snapshots = GetCurrentVirtualXIDs(limitXmin,
-													true, false,
-													PROC_IS_AUTOVACUUM /* not in GPDB: | PROC_IN_VACUUM */,
-													&n_newer_snapshots);
-			for (j = i; j < n_old_snapshots; j++)
-			{
-				if (!VirtualTransactionIdIsValid(old_snapshots[j]))
-					continue;	/* found uninteresting in previous cycle */
-				for (k = 0; k < n_newer_snapshots; k++)
-				{
-					if (VirtualTransactionIdEquals(old_snapshots[j],
-												   newer_snapshots[k]))
-						break;
-				}
-				if (k >= n_newer_snapshots)		/* not there anymore */
-					SetInvalidVirtualTransactionId(old_snapshots[j]);
-			}
-			pfree(newer_snapshots);
-		}
-
-		if (VirtualTransactionIdIsValid(old_snapshots[i]))
-			VirtualXactLock(old_snapshots[i], true);
-	}
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_3);
+	WaitForOlderSnapshots(limitXmin, true);
 
 	/*
 	 * Index can now be marked valid -- update its pg_index entry
@@ -1489,6 +1766,8 @@ DefineIndex(Oid relationId,
 	 * Last thing to do is release the session-level lock on the parent table.
 	 */
 	UnlockRelationIdForSession(&heaprelid, ShareUpdateExclusiveLock);
+
+	pgstat_progress_end_command();
 
 	return address;
 }
@@ -1547,12 +1826,13 @@ CheckPredicate(Expr *predicate)
 	if (CheckMutability(predicate))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-		   errmsg("functions in index predicate must be marked IMMUTABLE")));
+				 errmsg("functions in index predicate must be marked IMMUTABLE")));
 }
 
 /*
  * Compute per-index-column information, including indexed column numbers
- * or index expressions, opclasses, and indoptions.
+ * or index expressions, opclasses, and indoptions. Note, all output vectors
+ * should be allocated for all columns, including "including" ones.
  */
 static void
 ComputeIndexAttrs(IndexInfo *indexInfo,
@@ -1563,7 +1843,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 				  List *attList,	/* list of IndexElem's */
 				  List *exclusionOpNames,
 				  Oid relId,
-				  char *accessMethodName,
+				  const char *accessMethodName,
 				  Oid accessMethodId,
 				  bool amcanorder,
 				  bool isconstraint)
@@ -1571,16 +1851,15 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 	ListCell   *nextExclOp;
 	ListCell   *lc;
 	int			attn;
+	int			nkeycols = indexInfo->ii_NumIndexKeyAttrs;
 
 	/* Allocate space for exclusion operator info, if needed */
 	if (exclusionOpNames)
 	{
-		int			ncols = list_length(attList);
-
-		Assert(list_length(exclusionOpNames) == ncols);
-		indexInfo->ii_ExclusionOps = (Oid *) palloc(sizeof(Oid) * ncols);
-		indexInfo->ii_ExclusionProcs = (Oid *) palloc(sizeof(Oid) * ncols);
-		indexInfo->ii_ExclusionStrats = (uint16 *) palloc(sizeof(uint16) * ncols);
+		Assert(list_length(exclusionOpNames) == nkeycols);
+		indexInfo->ii_ExclusionOps = (Oid *) palloc(sizeof(Oid) * nkeycols);
+		indexInfo->ii_ExclusionProcs = (Oid *) palloc(sizeof(Oid) * nkeycols);
+		indexInfo->ii_ExclusionStrats = (uint16 *) palloc(sizeof(uint16) * nkeycols);
 		nextExclOp = list_head(exclusionOpNames);
 	}
 	else
@@ -1613,8 +1892,8 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 				if (isconstraint)
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_COLUMN),
-						  errmsg("column \"%s\" named in key does not exist",
-								 attribute->name)));
+							 errmsg("column \"%s\" named in key does not exist",
+									attribute->name)));
 				else
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_COLUMN),
@@ -1622,7 +1901,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 									attribute->name)));
 			}
 			attform = (Form_pg_attribute) GETSTRUCT(atttuple);
-			indexInfo->ii_KeyAttrNumbers[attn] = attform->attnum;
+			indexInfo->ii_IndexAttrNumbers[attn] = attform->attnum;
 			atttype = attform->atttypid;
 			attcollation = attform->attcollation;
 			ReleaseSysCache(atttuple);
@@ -1633,6 +1912,11 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 			Node	   *expr = attribute->expr;
 
 			Assert(expr != NULL);
+
+			if (attn >= nkeycols)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("expressions are not supported in included columns")));
 			atttype = exprType(expr);
 			attcollation = exprCollation(expr);
 
@@ -1656,11 +1940,11 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 				 * User wrote "(column)" or "(column COLLATE something)".
 				 * Treat it like simple attribute anyway.
 				 */
-				indexInfo->ii_KeyAttrNumbers[attn] = ((Var *) expr)->varattno;
+				indexInfo->ii_IndexAttrNumbers[attn] = ((Var *) expr)->varattno;
 			}
 			else
 			{
-				indexInfo->ii_KeyAttrNumbers[attn] = 0; /* marks expression */
+				indexInfo->ii_IndexAttrNumbers[attn] = 0;	/* marks expression */
 				indexInfo->ii_Expressions = lappend(indexInfo->ii_Expressions,
 													expr);
 
@@ -1684,6 +1968,37 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 		}
 
 		typeOidP[attn] = atttype;
+
+		/*
+		 * Included columns have no collation, no opclass and no ordering
+		 * options.
+		 */
+		if (attn >= nkeycols)
+		{
+			if (attribute->collation)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("including column does not support a collation")));
+			if (attribute->opclass)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("including column does not support an operator class")));
+			if (attribute->ordering != SORTBY_DEFAULT)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("including column does not support ASC/DESC options")));
+			if (attribute->nulls_ordering != SORTBY_NULLS_DEFAULT)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("including column does not support NULLS FIRST/LAST options")));
+
+			classOidP[attn] = InvalidOid;
+			colOptionP[attn] = 0;
+			collationOidP[attn] = InvalidOid;
+			attn++;
+
+			continue;
+		}
 
 		/*
 		 * Apply collation override if any
@@ -1719,10 +2034,10 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 		/*
 		 * Identify the opclass to use.
 		 */
-		classOidP[attn] = GetIndexOpClass(attribute->opclass,
-										  atttype,
-										  accessMethodName,
-										  accessMethodId);
+		classOidP[attn] = ResolveOpClass(attribute->opclass,
+										 atttype,
+										 accessMethodName,
+										 accessMethodId);
 
 		/*
 		 * Identify the exclusion operator, if any.
@@ -1829,14 +2144,18 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 
 /*
  * Resolve possibly-defaulted operator class specification
+ *
+ * Note: This is used to resolve operator class specification in index and
+ * partition key definitions.
  */
 Oid
-GetIndexOpClass(List *opclass, Oid attrType,
-				char *accessMethodName, Oid accessMethodId)
+ResolveOpClass(List *opclass, Oid attrType,
+			   const char *accessMethodName, Oid accessMethodId)
 {
 	char	   *schemaname;
 	char	   *opcname;
 	HeapTuple	tuple;
+	Form_pg_opclass opform;
 	Oid			opClassId,
 				opInputType;
 
@@ -1927,14 +2246,15 @@ GetIndexOpClass(List *opclass, Oid attrType,
 	 * Verify that the index operator class accepts this datatype.  Note we
 	 * will accept binary compatibility.
 	 */
-	opClassId = HeapTupleGetOid(tuple);
-	opInputType = ((Form_pg_opclass) GETSTRUCT(tuple))->opcintype;
+	opform = (Form_pg_opclass) GETSTRUCT(tuple);
+	opClassId = opform->oid;
+	opInputType = opform->opcintype;
 
 	if (!IsBinaryCoercible(attrType, opInputType))
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("operator class \"%s\" does not accept data type %s",
-					  NameListToString(opclass), format_type_be(attrType))));
+						NameListToString(opclass), format_type_be(attrType))));
 
 	ReleaseSysCache(tuple);
 
@@ -1977,7 +2297,7 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
 	 * we need a tiebreaker.)  If we find more than one exact match, then
 	 * someone put bogus entries in pg_opclass.
 	 */
-	rel = heap_open(OperatorClassRelationId, AccessShareLock);
+	rel = table_open(OperatorClassRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_opclass_opcmethod,
@@ -1997,7 +2317,7 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
 		if (opclass->opcintype == type_id)
 		{
 			nexact++;
-			result = HeapTupleGetOid(tup);
+			result = opclass->oid;
 		}
 		else if (nexact == 0 &&
 				 IsBinaryCoercible(type_id, opclass->opcintype))
@@ -2005,26 +2325,26 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
 			if (IsPreferredType(tcategory, opclass->opcintype))
 			{
 				ncompatiblepreferred++;
-				result = HeapTupleGetOid(tup);
+				result = opclass->oid;
 			}
 			else if (ncompatiblepreferred == 0)
 			{
 				ncompatible++;
-				result = HeapTupleGetOid(tup);
+				result = opclass->oid;
 			}
 		}
 	}
 
 	systable_endscan(scan);
 
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	/* raise error if pg_opclass contains inconsistent data */
 	if (nexact > 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
-		errmsg("there are multiple default operator classes for data type %s",
-			   format_type_be(type_id))));
+				 errmsg("there are multiple default operator classes for data type %s",
+						format_type_be(type_id))));
 
 	if (nexact == 1 ||
 		ncompatiblepreferred == 1 ||
@@ -2037,7 +2357,8 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
 /*
  *	makeObjectName()
  *
- *	Create a name for an implicitly created index, sequence, constraint, etc.
+ *	Create a name for an implicitly created index, sequence, constraint,
+ *	extended statistics, etc.
  *
  *	The parameters are typically: the original table name, the original field
  *	name, and a "type" string (such as "seq" or "pkey").    The field name
@@ -2077,6 +2398,12 @@ makeObjectName(const char *name1, const char *name2, const char *label)
 		overhead += strlen(label) + 1;
 
 	availchars = NAMEDATALEN - 1 - overhead;
+
+	/* GPDB_12_MERGE_FIXME: we're hitting this assertion with some SPLIT PARTITION
+	 * commands in regression tests.
+	 */
+	if (availchars <= 0)
+		elog(ERROR, "partition name too long");
 	Assert(availchars > 0);		/* else caller chose a bad label */
 
 	/*
@@ -2126,6 +2453,12 @@ makeObjectName(const char *name1, const char *name2, const char *label)
  * except that the label can't be NULL; digits will be appended to the label
  * if needed to create a name that is unique within the specified namespace.
  *
+ * If isconstraint is true, we also avoid choosing a name matching any
+ * existing constraint in the same namespace.  (This is stricter than what
+ * Postgres itself requires, but the SQL standard says that constraint names
+ * should be unique within schemas, so we follow that for autogenerated
+ * constraint names.)
+ *
  * Note: it is theoretically possible to get a collision anyway, if someone
  * else chooses the same name concurrently.  This is fairly unlikely to be
  * a problem in practice, especially if one is holding an exclusive lock on
@@ -2140,15 +2473,20 @@ makeObjectName(const char *name1, const char *name2, const char *label)
  */
 char *
 ChooseRelationName(const char *name1, const char *name2,
-				   const char *label, Oid namespaceid)
+				   const char *label, Oid namespaceid,
+				   bool isconstraint)
 {
-	return ChooseRelationNameWithCache(name1, name2, label, namespaceid, NULL);
+	return ChooseRelationNameWithCache(name1, name2, label, namespaceid, isconstraint,
+									   NULL);
 }
 
+/* GPDB_12_MERGE_FIXME: this cache seems to be unused now. I guess we reverted
+ * the stuff that used it. Is this still needed? */
 char *
 ChooseRelationNameWithCache(const char *name1, const char *name2,
-				   const char *label, Oid namespaceid,
-				   HTAB *cache)
+							const char *label, Oid namespaceid,
+							bool isconstraint,
+							HTAB *cache)
 {
 	int			pass = 0;
 	char	   *relname = NULL;
@@ -2169,7 +2507,11 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 			hash_search(cache, (void *) relname, HASH_FIND, &found);
 
 		if (!found && !OidIsValid(get_relname_relid(relname, namespaceid)))
-			break;
+		{
+			if (!isconstraint ||
+				!ConstraintNameExists(relname, namespaceid))
+				break;
+		}
 
 		/* found a conflict, so try a new name component */
 		pfree(relname);
@@ -2204,28 +2546,32 @@ ChooseIndexName(const char *tabname, Oid namespaceId,
 		indexname = ChooseRelationName(tabname,
 									   NULL,
 									   "pkey",
-									   namespaceId);
+									   namespaceId,
+									   true);
 	}
 	else if (exclusionOpNames != NIL)
 	{
 		indexname = ChooseRelationName(tabname,
 									   ChooseIndexNameAddition(colnames),
 									   "excl",
-									   namespaceId);
+									   namespaceId,
+									   true);
 	}
 	else if (isconstraint)
 	{
 		indexname = ChooseRelationName(tabname,
 									   ChooseIndexNameAddition(colnames),
 									   "key",
-									   namespaceId);
+									   namespaceId,
+									   true);
 	}
 	else
 	{
 		indexname = ChooseRelationName(tabname,
 									   ChooseIndexNameAddition(colnames),
 									   "idx",
-									   namespaceId);
+									   namespaceId,
+									   false);
 	}
 
 	return indexname;
@@ -2238,6 +2584,9 @@ ChooseIndexName(const char *tabname, Oid namespaceId,
  *
  * We know that less than NAMEDATALEN characters will actually be used,
  * so we can truncate the result once we've generated that many.
+ *
+ * XXX See also ChooseForeignKeyConstraintNameAddition and
+ * ChooseExtendedStatisticNameAddition.
  */
 static char *
 ChooseIndexNameAddition(List *colnames)
@@ -2289,9 +2638,9 @@ ChooseIndexColumnNames(List *indexElems)
 
 		/* Get the preliminary name from the IndexElem */
 		if (ielem->indexcolname)
-			origname = ielem->indexcolname;		/* caller-specified name */
+			origname = ielem->indexcolname; /* caller-specified name */
 		else if (ielem->name)
-			origname = ielem->name;		/* simple column reference */
+			origname = ielem->name; /* simple column reference */
 		else
 			origname = "expr";	/* default name for expression */
 
@@ -2331,34 +2680,49 @@ ChooseIndexColumnNames(List *indexElems)
  * ReindexIndex
  *		Recreate a specific index.
  */
-Oid
+void
 ReindexIndex(ReindexStmt *stmt)
 {
+	RangeVar   *indexRelation = stmt->relation;
+	int			options = stmt->options;
+	bool		concurrent = stmt->concurrent;
+	struct ReindexIndexCallbackState state;
 	Oid			indOid;
-	Oid			heapOid = InvalidOid;
 	Relation	irel;
 	char		persistence;
-	int 		options = stmt->options;
 
 	/*
 	 * Find and lock index, and check permissions on table; use callback to
 	 * obtain lock on table first, to avoid deadlock hazard.  The lock level
 	 * used here must match the index lock obtained in reindex_index().
 	 */
-	indOid = RangeVarGetRelidExtended(stmt->relation, AccessExclusiveLock,
-									  false, false,
+	state.concurrent = concurrent;
+	state.locked_table_oid = InvalidOid;
+	indOid = RangeVarGetRelidExtended(indexRelation,
+									  concurrent ? ShareUpdateExclusiveLock : AccessExclusiveLock,
+									  0,
 									  RangeVarCallbackForReindexIndex,
-									  (void *) &heapOid);
+									  &state);
 
 	/*
 	 * Obtain the current persistence of the existing index.  We already hold
 	 * lock on the index.
 	 */
 	irel = index_open(indOid, NoLock);
+
+	if (irel->rd_rel->relkind == RELKIND_PARTITIONED_INDEX)
+	{
+		ReindexPartitionedIndex(irel);
+		return;
+	}
+
 	persistence = irel->rd_rel->relpersistence;
 	index_close(irel, NoLock);
 
-	reindex_index(indOid, false, persistence, options);
+	if (concurrent)
+		ReindexRelationConcurrently(indOid, options);
+	else
+		reindex_index(indOid, false, persistence, options);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -2368,93 +2732,6 @@ ReindexIndex(ReindexStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
-
-	return indOid;
-}
-
-/*
- * Perform REINDEX on each relation of the relids list.  The function
- * opens and closes a transaction per relation.  This is designed for
- * QD/utility, and is not useful for QE.
- */
-static void
-ReindexRelationList(List *relids, int options, bool multiple)
-{
-	ListCell   *lc;
-
-	Assert(Gp_role != GP_ROLE_EXECUTE);
-
-	/*
-	 * Commit ongoing transaction so that we can start a new
-	 * transaction per relation.
-	 */
-	PopActiveSnapshot();
-	CommitTransactionCommand();
-
-	SIMPLE_FAULT_INJECTOR("reindex_db");
-
-	foreach (lc, relids)
-	{
-		Oid			relid = lfirst_oid(lc);
-		Relation	rel = NULL;
-
-		StartTransactionCommand();
-		/* functions in indexes may want a snapshot set */
-		PushActiveSnapshot(GetTransactionSnapshot());
-
-		/*
-		 * Try to open the relation. If the try fails it may mean that
-		 * someone dropped the relation before we started processing
-		 * (reindexing) it. This should be tolerable. Move on to the next
-		 * one.
-		 */
-		rel = try_heap_open(relid, ShareLock, false);
-
-		if (rel != NULL)
-		{
-			ReindexStmt	   *stmt;
-
-			stmt = makeNode(ReindexStmt);
-
-			stmt->relid = relid;
-			stmt->kind = REINDEX_OBJECT_TABLE;
-
-			/* perform reindex locally */
-			if (!reindex_relation(relid,
-								  REINDEX_REL_PROCESS_TOAST |
-								  REINDEX_REL_CHECK_CONSTRAINTS, options))
-			{
-				if (!multiple)
-					ereport(NOTICE,
-							(errmsg("table \"%s\" has no indexes",
-									RelationGetRelationName(rel))));
-				else if (options & REINDEXOPT_VERBOSE)
-					ereport(INFO,
-							(errmsg("table \"%s.%s\" was reindexed",
-									get_namespace_name(get_rel_namespace(relid)),
-									get_rel_name(relid))));
-			}
-			/* no need to dispatch if the relation has no indexes. */
-			else if (Gp_role == GP_ROLE_DISPATCH)
-				CdbDispatchUtilityStatement((Node *) stmt,
-											DF_CANCEL_ON_ERROR |
-											DF_WITH_SNAPSHOT,
-											GetAssignedOidsForDispatch(), /* FIXME */
-											NULL);
-
-			/* keep lock until end of transaction (which comes soon) */
-			heap_close(rel, NoLock);
-		}
-
-		PopActiveSnapshot();
-		CommitTransactionCommand();
-	}
-
-	/*
-	 * We committed the transaction above, so start a new one before
-	 * returning.
-	 */
-	StartTransactionCommand();
 }
 
 /*
@@ -2467,7 +2744,15 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
 								Oid relId, Oid oldRelId, void *arg)
 {
 	char		relkind;
-	Oid		   *heapOid = (Oid *) arg;
+	struct ReindexIndexCallbackState *state = arg;
+	LOCKMODE	table_lockmode;
+
+	/*
+	 * Lock level here should match table lock in reindex_index() for
+	 * non-concurrent case and table locks used by index_concurrently_*() for
+	 * concurrent case.
+	 */
+	table_lockmode = state->concurrent ? ShareUpdateExclusiveLock : ShareLock;
 
 	/*
 	 * If we previously locked some other index's heap, and the name we're
@@ -2476,9 +2761,8 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
 	 */
 	if (relId != oldRelId && OidIsValid(oldRelId))
 	{
-		/* lock level here should match reindex_index() heap lock */
-		UnlockRelationOid(*heapOid, ShareLock);
-		*heapOid = InvalidOid;
+		UnlockRelationOid(state->locked_table_oid, table_lockmode);
+		state->locked_table_oid = InvalidOid;
 	}
 
 	/* If the relation does not exist, there's nothing more to do. */
@@ -2493,26 +2777,30 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
 	relkind = get_rel_relkind(relId);
 	if (!relkind)
 		return;
-	if (relkind != RELKIND_INDEX)
+	if (relkind != RELKIND_INDEX &&
+		relkind != RELKIND_PARTITIONED_INDEX)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not an index", relation->relname)));
 
 	/* Check permissions */
 	if (!pg_class_ownercheck(relId, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS, relation->relname);
+		aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_INDEX, relation->relname);
 
 	/* Lock heap before index to avoid deadlock. */
 	if (relId != oldRelId)
 	{
+		Oid			table_oid = IndexGetRelation(relId, true);
+
 		/*
-		 * Lock level here should match reindex_index() heap lock. If the OID
-		 * isn't valid, it means the index as concurrently dropped, which is
-		 * not a problem for us; just return normally.
+		 * If the OID isn't valid, it means the index was concurrently
+		 * dropped, which is not a problem for us; just return normally.
 		 */
-		*heapOid = IndexGetRelation(relId, true);
-		if (OidIsValid(*heapOid))
-			LockRelationOid(*heapOid, ShareLock);
+		if (OidIsValid(table_oid))
+		{
+			LockRelationOid(table_oid, table_lockmode);
+			state->locked_table_oid = table_oid;
+		}
 	}
 }
 
@@ -2523,12 +2811,11 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
 Oid
 ReindexTable(ReindexStmt *stmt)
 {
-	MemoryContext	private_context, oldcontext;
-	List	   *prels = NIL, *relids = NIL;
-	ListCell   *lc;
-	int options = stmt->options;
-
+	RangeVar   *relation = stmt->relation;
+	int			options = stmt->options;
+	bool		concurrent = stmt->concurrent;
 	Oid			heapOid;
+	bool		result;
 
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
@@ -2540,71 +2827,72 @@ ReindexTable(ReindexStmt *stmt)
 	}
 
 	/* The lock level used here should match reindex_relation(). */
-	heapOid = RangeVarGetRelidExtended(stmt->relation, ShareLock, false, false,
+	heapOid = RangeVarGetRelidExtended(relation,
+									   concurrent ? ShareUpdateExclusiveLock : ShareLock,
+									   0,
 									   RangeVarCallbackOwnsTable, NULL);
 
 	/*
-	 * Gather child partition relations.
+	 * PostgreSQL doesn't allow REINDEX on a partitioned table, but we support
+	 * it in Greenplum.
+	 *
+	 *
 	 */
-	if (rel_is_partitioned(heapOid))
+	if (get_rel_relkind(heapOid) == RELKIND_PARTITIONED_TABLE)
 	{
-		PartitionNode *pn;
+		// FIXME transasction block check?
+		List	   *prels;
 
-		pn = get_parts(heapOid, 0 /* level */, 0 /* parent */, false /* inctemplate */,
-					   true /* includesubparts */);
-		prels = all_partition_relids(pn);
-	}
-	else if (rel_is_child_partition(heapOid))
-		prels = find_all_inheritors(heapOid, NoLock, NULL);
+		prels = find_all_inheritors(heapOid,
+									concurrent ? ShareUpdateExclusiveLock : ShareLock,
+									NULL);
 
-	/*
-	 * Create a memory context that will survive forced transaction commits we
-	 * do below.  Since it is a child of PortalContext, it will go away
-	 * eventually even if we suffer an error; there's no need for special
-	 * abort cleanup logic.
-	 */
-	private_context = AllocSetContextCreate(PortalContext,
-											"ReindexTable",
-											ALLOCSET_DEFAULT_MINSIZE,
-											ALLOCSET_DEFAULT_INITSIZE,
-											ALLOCSET_DEFAULT_MAXSIZE);
-	oldcontext = MemoryContextSwitchTo(private_context);
-	relids = lappend_oid(relids, heapOid);
-	relids = list_concat_unique_oid(relids, prels);
-	MemoryContextSwitchTo(oldcontext);
-
-	/* various checks on each partition */
-	foreach (lc, prels)
-	{
-		Oid			heapOid = lfirst_oid(lc);
-		HeapTuple	tuple;
-		Form_pg_class pg_class_tuple;
-
-		tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(heapOid));
-		if (!HeapTupleIsValid(tuple))		/* shouldn't happen */
-			elog(ERROR, "cache lookup failed for relation %u", heapOid);
-
-		pg_class_tuple = (Form_pg_class) GETSTRUCT(tuple);
-		if (pg_class_tuple->relkind != RELKIND_RELATION &&
-			pg_class_tuple->relkind != RELKIND_TOASTVALUE)
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							errmsg("\"%s\" is not a table",
-								   NameStr(pg_class_tuple->relname))));
-
-		/*
-		 * Check appropriate permissions
-		 */
-		if (!pg_class_ownercheck(heapOid, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
-						   NameStr(pg_class_tuple->relname));
-
-		ReleaseSysCache(tuple);
+		ReindexRelationList(prels, options | REINDEX_REL_RECURSING_PARTITIONED_TABLE,
+							concurrent, false);
+		return heapOid;
 	}
 
-	ReindexRelationList(relids, options, false);
+	if (concurrent)
+	{
+		result = ReindexRelationConcurrently(heapOid, options);
 
-	MemoryContextDelete(private_context);
+		if (!result)
+			ereport(NOTICE,
+					(errmsg("table \"%s\" has no indexes that can be reindexed concurrently",
+							relation->relname)));
+	}
+	else
+	{
+		result = reindex_relation(heapOid,
+								  REINDEX_REL_PROCESS_TOAST |
+								  REINDEX_REL_CHECK_CONSTRAINTS,
+								  options);
+		if (!result)
+			ereport(NOTICE,
+					(errmsg("table \"%s\" has no indexes to reindex",
+							relation->relname)));
+	}
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		ReindexStmt	   *qestmt;
+
+		qestmt = makeNode(ReindexStmt);
+
+		qestmt->kind = REINDEX_OBJECT_TABLE;
+		qestmt->relation = NULL;
+		qestmt->options = options;
+		qestmt->concurrent = concurrent;
+		qestmt->relid = heapOid;
+
+		PushActiveSnapshot(GetTransactionSnapshot());
+		CdbDispatchUtilityStatement((Node *) qestmt,
+									DF_CANCEL_ON_ERROR |
+									DF_WITH_SNAPSHOT,
+									GetAssignedOidsForDispatch(),
+									NULL);
+		PopActiveSnapshot();
+	}
 
 	return heapOid;
 }
@@ -2619,23 +2907,31 @@ ReindexTable(ReindexStmt *stmt)
  */
 void
 ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
-					  int options)
+					  int options, bool concurrent)
 {
 	Oid			objectOid;
 	Relation	relationRelation;
-	HeapScanDesc scan;
+	TableScanDesc scan;
 	ScanKeyData scan_keys[1];
 	HeapTuple	tuple;
 	MemoryContext private_context;
 	MemoryContext old;
 	List	   *relids = NIL;
 	int			num_keys;
+	bool		concurrent_warning = false;
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 	AssertArg(objectName);
 	Assert(objectKind == REINDEX_OBJECT_SCHEMA ||
 		   objectKind == REINDEX_OBJECT_SYSTEM ||
 		   objectKind == REINDEX_OBJECT_DATABASE);
+
+	if (objectKind == REINDEX_OBJECT_SYSTEM && concurrent)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot reindex system catalogs concurrently")));
+
+	SIMPLE_FAULT_INJECTOR("reindex_db");
 
 	/*
 	 * Get OID of object to reindex, being the database currently being used
@@ -2648,7 +2944,7 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 		objectOid = get_namespace_oid(objectName, false);
 
 		if (!pg_namespace_ownercheck(objectOid, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_NAMESPACE,
+			aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_SCHEMA,
 						   objectName);
 	}
 	else
@@ -2660,7 +2956,7 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("can only reindex the currently open database")));
 		if (!pg_database_ownercheck(objectOid, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_DATABASE,
+			aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_DATABASE,
 						   objectName);
 	}
 
@@ -2672,9 +2968,7 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 	 */
 	private_context = AllocSetContextCreate(PortalContext,
 											"ReindexMultipleTables",
-											ALLOCSET_DEFAULT_MINSIZE,
-											ALLOCSET_DEFAULT_INITSIZE,
-											ALLOCSET_DEFAULT_MAXSIZE);
+											ALLOCSET_SMALL_SIZES);
 
 	/*
 	 * Define the search keys to find the objects to reindex. For a schema, we
@@ -2698,16 +2992,22 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 	 * We only consider plain relations and materialized views here (toast
 	 * rels will be processed indirectly by reindex_relation).
 	 */
-	relationRelation = heap_open(RelationRelationId, AccessShareLock);
-	scan = heap_beginscan_catalog(relationRelation, num_keys, scan_keys);
+	relationRelation = table_open(RelationRelationId, AccessShareLock);
+	scan = table_beginscan_catalog(relationRelation, num_keys, scan_keys);
 	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		Form_pg_class classtuple = (Form_pg_class) GETSTRUCT(tuple);
-		Oid			relid = HeapTupleGetOid(tuple);
+		Oid			relid = classtuple->oid;
 
 		/*
 		 * Only regular tables and matviews can have indexes, so ignore any
 		 * other kind of relation.
+		 *
+		 * It is tempting to also consider partitioned tables here, but that
+		 * has the problem that if the children are in the same schema, they
+		 * would be processed twice.  Maybe we could have a separate list of
+		 * partitioned tables, and expand that afterwards into relids,
+		 * ignoring any duplicates.
 		 */
 		if (classtuple->relkind != RELKIND_RELATION &&
 			classtuple->relkind != RELKIND_MATVIEW)
@@ -2722,6 +3022,33 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 		if (objectKind == REINDEX_OBJECT_SYSTEM &&
 			!IsSystemClass(relid, classtuple))
 			continue;
+
+		/*
+		 * The table can be reindexed if the user is superuser, the table
+		 * owner, or the database/schema owner (but in the latter case, only
+		 * if it's not a shared relation).  pg_class_ownercheck includes the
+		 * superuser case, and depending on objectKind we already know that
+		 * the user has permission to run REINDEX on this database or schema
+		 * per the permission checks at the beginning of this routine.
+		 */
+		if (classtuple->relisshared &&
+			!pg_class_ownercheck(relid, GetUserId()))
+			continue;
+
+		/*
+		 * Skip system tables, since index_create() would reject indexing them
+		 * concurrently (and it would likely fail if we tried).
+		 */
+		if (concurrent &&
+			IsCatalogRelationOid(relid))
+		{
+			if (!concurrent_warning)
+				ereport(WARNING,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot reindex system catalogs concurrently, skipping all")));
+			concurrent_warning = true;
+			continue;
+		}
 
 		/* Save the list of relation OIDs in private context */
 		old = MemoryContextSwitchTo(private_context);
@@ -2740,12 +3067,734 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 
 		MemoryContextSwitchTo(old);
 	}
-	heap_endscan(scan);
-	heap_close(relationRelation, AccessShareLock);
+	table_endscan(scan);
+	table_close(relationRelation, AccessShareLock);
 
-	ReindexRelationList(relids, options, true);
+	ReindexRelationList(relids, options, concurrent, true);
 
 	MemoryContextDelete(private_context);
+
+}
+
+/*
+ * Perform REINDEX on each relation of the relids list.  The function
+ * opens and closes a transaction per relation.  This is designed for
+ * QD/utility, and is not useful for QE.
+ */
+static void
+ReindexRelationList(List *relids, int options, bool concurrent, bool multiple)
+{
+	ListCell   *l;
+
+	/* Now reindex each rel in a separate transaction */
+	PopActiveSnapshot();
+	CommitTransactionCommand();
+	foreach(l, relids)
+	{
+		Oid			relid = lfirst_oid(l);
+		bool		result;
+
+		StartTransactionCommand();
+		/* functions in indexes may want a snapshot set */
+		PushActiveSnapshot(GetTransactionSnapshot());
+
+		if (concurrent)
+		{
+			result = ReindexRelationConcurrently(relid, options);
+			/* ReindexRelationConcurrently() does the verbose output */
+		}
+		else
+		{
+			result = reindex_relation(relid,
+									  REINDEX_REL_PROCESS_TOAST |
+									  REINDEX_REL_CHECK_CONSTRAINTS,
+									  options);
+
+			if (result && (options & REINDEXOPT_VERBOSE))
+				ereport(INFO,
+						(errmsg("table \"%s.%s\" was reindexed",
+								get_namespace_name(get_rel_namespace(relid)),
+								get_rel_name(relid))));
+
+			PopActiveSnapshot();
+		}
+
+		/* Dispatch a separate REINDEX command for each table. */
+		if (result && Gp_role == GP_ROLE_DISPATCH)
+		{
+			ReindexStmt	   *stmt;
+
+			stmt = makeNode(ReindexStmt);
+
+			stmt->kind = REINDEX_OBJECT_TABLE;
+			stmt->relation = NULL;
+			stmt->options = options;
+			stmt->concurrent = concurrent;
+			stmt->relid = relid;
+
+			PushActiveSnapshot(GetTransactionSnapshot());
+			CdbDispatchUtilityStatement((Node *) stmt,
+										DF_CANCEL_ON_ERROR |
+										DF_WITH_SNAPSHOT,
+										GetAssignedOidsForDispatch(),
+										NULL);
+			PopActiveSnapshot();
+		}
+
+		CommitTransactionCommand();
+	}
+	StartTransactionCommand();
+}
+
+
+/*
+ * ReindexRelationConcurrently - process REINDEX CONCURRENTLY for given
+ * relation OID
+ *
+ * 'relationOid' can either belong to an index, a table or a materialized
+ * view.  For tables and materialized views, all its indexes will be rebuilt,
+ * excluding invalid indexes and any indexes used in exclusion constraints,
+ * but including its associated toast table indexes.  For indexes, the index
+ * itself will be rebuilt.  If 'relationOid' belongs to a partitioned table
+ * then we issue a warning to mention these are not yet supported.
+ *
+ * The locks taken on parent tables and involved indexes are kept until the
+ * transaction is committed, at which point a session lock is taken on each
+ * relation.  Both of these protect against concurrent schema changes.
+ *
+ * Returns true if any indexes have been rebuilt (including toast table's
+ * indexes, when relevant), otherwise returns false.
+ */
+static bool
+ReindexRelationConcurrently(Oid relationOid, int options)
+{
+	List	   *heapRelationIds = NIL;
+	List	   *indexIds = NIL;
+	List	   *newIndexIds = NIL;
+	List	   *relationLocks = NIL;
+	List	   *lockTags = NIL;
+	ListCell   *lc,
+			   *lc2;
+	MemoryContext private_context;
+	MemoryContext oldcontext;
+	char		relkind;
+	char	   *relationName = NULL;
+	char	   *relationNamespace = NULL;
+	PGRUsage	ru0;
+
+	/*
+	 * Create a memory context that will survive forced transaction commits we
+	 * do below.  Since it is a child of PortalContext, it will go away
+	 * eventually even if we suffer an error; there's no need for special
+	 * abort cleanup logic.
+	 */
+	private_context = AllocSetContextCreate(PortalContext,
+											"ReindexConcurrent",
+											ALLOCSET_SMALL_SIZES);
+
+	if (options & REINDEXOPT_VERBOSE)
+	{
+		/* Save data needed by REINDEX VERBOSE in private context */
+		oldcontext = MemoryContextSwitchTo(private_context);
+
+		relationName = get_rel_name(relationOid);
+		relationNamespace = get_namespace_name(get_rel_namespace(relationOid));
+
+		pg_rusage_init(&ru0);
+
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	relkind = get_rel_relkind(relationOid);
+
+	/*
+	 * Extract the list of indexes that are going to be rebuilt based on the
+	 * list of relation Oids given by caller.
+	 */
+	switch (relkind)
+	{
+		case RELKIND_RELATION:
+		case RELKIND_MATVIEW:
+		case RELKIND_TOASTVALUE:
+			{
+				/*
+				 * In the case of a relation, find all its indexes including
+				 * toast indexes.
+				 */
+				Relation	heapRelation;
+
+				/* Save the list of relation OIDs in private context */
+				oldcontext = MemoryContextSwitchTo(private_context);
+
+				/* Track this relation for session locks */
+				heapRelationIds = lappend_oid(heapRelationIds, relationOid);
+
+				MemoryContextSwitchTo(oldcontext);
+
+				if (IsCatalogRelationOid(relationOid))
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("cannot reindex system catalogs concurrently")));
+
+				/* Open relation to get its indexes */
+				heapRelation = table_open(relationOid, ShareUpdateExclusiveLock);
+
+				/* Add all the valid indexes of relation to list */
+				foreach(lc, RelationGetIndexList(heapRelation))
+				{
+					Oid			cellOid = lfirst_oid(lc);
+					Relation	indexRelation = index_open(cellOid,
+														   ShareUpdateExclusiveLock);
+
+					if (!indexRelation->rd_index->indisvalid)
+						ereport(WARNING,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 errmsg("cannot reindex invalid index \"%s.%s\" concurrently, skipping",
+										get_namespace_name(get_rel_namespace(cellOid)),
+										get_rel_name(cellOid))));
+					else if (indexRelation->rd_index->indisexclusion)
+						ereport(WARNING,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 errmsg("cannot reindex exclusion constraint index \"%s.%s\" concurrently, skipping",
+										get_namespace_name(get_rel_namespace(cellOid)),
+										get_rel_name(cellOid))));
+					else
+					{
+						/* Save the list of relation OIDs in private context */
+						oldcontext = MemoryContextSwitchTo(private_context);
+
+						indexIds = lappend_oid(indexIds, cellOid);
+
+						MemoryContextSwitchTo(oldcontext);
+					}
+
+					index_close(indexRelation, NoLock);
+				}
+
+				/* Also add the toast indexes */
+				if (OidIsValid(heapRelation->rd_rel->reltoastrelid))
+				{
+					Oid			toastOid = heapRelation->rd_rel->reltoastrelid;
+					Relation	toastRelation = table_open(toastOid,
+														   ShareUpdateExclusiveLock);
+
+					/* Save the list of relation OIDs in private context */
+					oldcontext = MemoryContextSwitchTo(private_context);
+
+					/* Track this relation for session locks */
+					heapRelationIds = lappend_oid(heapRelationIds, toastOid);
+
+					MemoryContextSwitchTo(oldcontext);
+
+					foreach(lc2, RelationGetIndexList(toastRelation))
+					{
+						Oid			cellOid = lfirst_oid(lc2);
+						Relation	indexRelation = index_open(cellOid,
+															   ShareUpdateExclusiveLock);
+
+						if (!indexRelation->rd_index->indisvalid)
+							ereport(WARNING,
+									(errcode(ERRCODE_INDEX_CORRUPTED),
+									 errmsg("cannot reindex invalid index \"%s.%s\" concurrently, skipping",
+											get_namespace_name(get_rel_namespace(cellOid)),
+											get_rel_name(cellOid))));
+						else
+						{
+							/*
+							 * Save the list of relation OIDs in private
+							 * context
+							 */
+							oldcontext = MemoryContextSwitchTo(private_context);
+
+							indexIds = lappend_oid(indexIds, cellOid);
+
+							MemoryContextSwitchTo(oldcontext);
+						}
+
+						index_close(indexRelation, NoLock);
+					}
+
+					table_close(toastRelation, NoLock);
+				}
+
+				table_close(heapRelation, NoLock);
+				break;
+			}
+		case RELKIND_INDEX:
+			{
+				Oid			heapId = IndexGetRelation(relationOid, false);
+
+				if (IsCatalogRelationOid(heapId))
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("cannot reindex system catalogs concurrently")));
+
+				/* Save the list of relation OIDs in private context */
+				oldcontext = MemoryContextSwitchTo(private_context);
+
+				/* Track the heap relation of this index for session locks */
+				heapRelationIds = list_make1_oid(heapId);
+
+				/*
+				 * Save the list of relation OIDs in private context.  Note
+				 * that invalid indexes are allowed here.
+				 */
+				indexIds = lappend_oid(indexIds, relationOid);
+
+				MemoryContextSwitchTo(oldcontext);
+				break;
+			}
+		case RELKIND_PARTITIONED_TABLE:
+			/* see reindex_relation() */
+			ereport(WARNING,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("REINDEX of partitioned tables is not yet implemented, skipping \"%s\"",
+							get_rel_name(relationOid))));
+			return false;
+		default:
+			/* Return error if type of relation is not supported */
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					 errmsg("cannot reindex this type of relation concurrently")));
+			break;
+	}
+
+	/* Definitely no indexes, so leave */
+	if (indexIds == NIL)
+	{
+		PopActiveSnapshot();
+		return false;
+	}
+
+	Assert(heapRelationIds != NIL);
+
+	/*-----
+	 * Now we have all the indexes we want to process in indexIds.
+	 *
+	 * The phases now are:
+	 *
+	 * 1. create new indexes in the catalog
+	 * 2. build new indexes
+	 * 3. let new indexes catch up with tuples inserted in the meantime
+	 * 4. swap index names
+	 * 5. mark old indexes as dead
+	 * 6. drop old indexes
+	 *
+	 * We process each phase for all indexes before moving to the next phase,
+	 * for efficiency.
+	 */
+
+	/*
+	 * Phase 1 of REINDEX CONCURRENTLY
+	 *
+	 * Create a new index with the same properties as the old one, but it is
+	 * only registered in catalogs and will be built later.  Then get session
+	 * locks on all involved tables.  See analogous code in DefineIndex() for
+	 * more detailed comments.
+	 */
+
+	foreach(lc, indexIds)
+	{
+		char	   *concurrentName;
+		Oid			indexId = lfirst_oid(lc);
+		Oid			newIndexId;
+		Relation	indexRel;
+		Relation	heapRel;
+		Relation	newIndexRel;
+		LockRelId  *lockrelid;
+
+		indexRel = index_open(indexId, ShareUpdateExclusiveLock);
+		heapRel = table_open(indexRel->rd_index->indrelid,
+							 ShareUpdateExclusiveLock);
+
+		pgstat_progress_start_command(PROGRESS_COMMAND_CREATE_INDEX,
+									  RelationGetRelid(heapRel));
+		pgstat_progress_update_param(PROGRESS_CREATEIDX_COMMAND,
+									 PROGRESS_CREATEIDX_COMMAND_REINDEX_CONCURRENTLY);
+		pgstat_progress_update_param(PROGRESS_CREATEIDX_INDEX_OID,
+									 indexId);
+		pgstat_progress_update_param(PROGRESS_CREATEIDX_ACCESS_METHOD_OID,
+									 indexRel->rd_rel->relam);
+
+		/* Choose a temporary relation name for the new index */
+		concurrentName = ChooseRelationName(get_rel_name(indexId),
+											NULL,
+											"ccnew",
+											get_rel_namespace(indexRel->rd_index->indrelid),
+											false);
+
+		/* Create new index definition based on given index */
+		newIndexId = index_concurrently_create_copy(heapRel,
+													indexId,
+													concurrentName);
+
+		/* Now open the relation of the new index, a lock is also needed on it */
+		newIndexRel = index_open(indexId, ShareUpdateExclusiveLock);
+
+		/*
+		 * Save the list of OIDs and locks in private context
+		 */
+		oldcontext = MemoryContextSwitchTo(private_context);
+
+		newIndexIds = lappend_oid(newIndexIds, newIndexId);
+
+		/*
+		 * Save lockrelid to protect each relation from drop then close
+		 * relations. The lockrelid on parent relation is not taken here to
+		 * avoid multiple locks taken on the same relation, instead we rely on
+		 * parentRelationIds built earlier.
+		 */
+		lockrelid = palloc(sizeof(*lockrelid));
+		*lockrelid = indexRel->rd_lockInfo.lockRelId;
+		relationLocks = lappend(relationLocks, lockrelid);
+		lockrelid = palloc(sizeof(*lockrelid));
+		*lockrelid = newIndexRel->rd_lockInfo.lockRelId;
+		relationLocks = lappend(relationLocks, lockrelid);
+
+		MemoryContextSwitchTo(oldcontext);
+
+		index_close(indexRel, NoLock);
+		index_close(newIndexRel, NoLock);
+		table_close(heapRel, NoLock);
+	}
+
+	/*
+	 * Save the heap lock for following visibility checks with other backends
+	 * might conflict with this session.
+	 */
+	foreach(lc, heapRelationIds)
+	{
+		Relation	heapRelation = table_open(lfirst_oid(lc), ShareUpdateExclusiveLock);
+		LockRelId  *lockrelid;
+		LOCKTAG    *heaplocktag;
+
+		/* Save the list of locks in private context */
+		oldcontext = MemoryContextSwitchTo(private_context);
+
+		/* Add lockrelid of heap relation to the list of locked relations */
+		lockrelid = palloc(sizeof(*lockrelid));
+		*lockrelid = heapRelation->rd_lockInfo.lockRelId;
+		relationLocks = lappend(relationLocks, lockrelid);
+
+		heaplocktag = (LOCKTAG *) palloc(sizeof(LOCKTAG));
+
+		/* Save the LOCKTAG for this parent relation for the wait phase */
+		SET_LOCKTAG_RELATION(*heaplocktag, lockrelid->dbId, lockrelid->relId);
+		lockTags = lappend(lockTags, heaplocktag);
+
+		MemoryContextSwitchTo(oldcontext);
+
+		/* Close heap relation */
+		table_close(heapRelation, NoLock);
+	}
+
+	/* Get a session-level lock on each table. */
+	foreach(lc, relationLocks)
+	{
+		LockRelId  *lockrelid = (LockRelId *) lfirst(lc);
+
+		LockRelationIdForSession(lockrelid, ShareUpdateExclusiveLock);
+	}
+
+	PopActiveSnapshot();
+	CommitTransactionCommand();
+	StartTransactionCommand();
+
+	/*
+	 * Phase 2 of REINDEX CONCURRENTLY
+	 *
+	 * Build the new indexes in a separate transaction for each index to avoid
+	 * having open transactions for an unnecessary long time.  But before
+	 * doing that, wait until no running transactions could have the table of
+	 * the index open with the old list of indexes.  See "phase 2" in
+	 * DefineIndex() for more details.
+	 */
+
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_1);
+	WaitForLockersMultiple(lockTags, ShareLock, true);
+	CommitTransactionCommand();
+
+	forboth(lc, indexIds, lc2, newIndexIds)
+	{
+		Relation	indexRel;
+		Oid			oldIndexId = lfirst_oid(lc);
+		Oid			newIndexId = lfirst_oid(lc2);
+		Oid			heapId;
+
+		CHECK_FOR_INTERRUPTS();
+
+		/* Start new transaction for this index's concurrent build */
+		StartTransactionCommand();
+
+		/* Set ActiveSnapshot since functions in the indexes may need it */
+		PushActiveSnapshot(GetTransactionSnapshot());
+
+		/*
+		 * Index relation has been closed by previous commit, so reopen it to
+		 * get its information.
+		 */
+		indexRel = index_open(oldIndexId, ShareUpdateExclusiveLock);
+		heapId = indexRel->rd_index->indrelid;
+		index_close(indexRel, NoLock);
+
+		/* Perform concurrent build of new index */
+		index_concurrently_build(heapId, newIndexId);
+
+		PopActiveSnapshot();
+		CommitTransactionCommand();
+	}
+	StartTransactionCommand();
+
+	/*
+	 * Phase 3 of REINDEX CONCURRENTLY
+	 *
+	 * During this phase the old indexes catch up with any new tuples that
+	 * were created during the previous phase.  See "phase 3" in DefineIndex()
+	 * for more details.
+	 */
+
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_2);
+	WaitForLockersMultiple(lockTags, ShareLock, true);
+	CommitTransactionCommand();
+
+	foreach(lc, newIndexIds)
+	{
+		Oid			newIndexId = lfirst_oid(lc);
+		Oid			heapId;
+		TransactionId limitXmin;
+		Snapshot	snapshot;
+
+		CHECK_FOR_INTERRUPTS();
+
+		StartTransactionCommand();
+
+		heapId = IndexGetRelation(newIndexId, false);
+
+		/*
+		 * Take the "reference snapshot" that will be used by validate_index()
+		 * to filter candidate tuples.
+		 */
+		snapshot = RegisterSnapshot(GetTransactionSnapshot());
+		PushActiveSnapshot(snapshot);
+
+		validate_index(heapId, newIndexId, snapshot);
+
+		/*
+		 * We can now do away with our active snapshot, we still need to save
+		 * the xmin limit to wait for older snapshots.
+		 */
+		limitXmin = snapshot->xmin;
+
+		PopActiveSnapshot();
+		UnregisterSnapshot(snapshot);
+
+		/*
+		 * To ensure no deadlocks, we must commit and start yet another
+		 * transaction, and do our wait before any snapshot has been taken in
+		 * it.
+		 */
+		CommitTransactionCommand();
+		StartTransactionCommand();
+
+		/*
+		 * The index is now valid in the sense that it contains all currently
+		 * interesting tuples.  But since it might not contain tuples deleted
+		 * just before the reference snap was taken, we have to wait out any
+		 * transactions that might have older snapshots.
+		 */
+		pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+									 PROGRESS_CREATEIDX_PHASE_WAIT_3);
+		WaitForOlderSnapshots(limitXmin, true);
+
+		CommitTransactionCommand();
+	}
+
+	/*
+	 * Phase 4 of REINDEX CONCURRENTLY
+	 *
+	 * Now that the new indexes have been validated, swap each new index with
+	 * its corresponding old index.
+	 *
+	 * We mark the new indexes as valid and the old indexes as not valid at
+	 * the same time to make sure we only get constraint violations from the
+	 * indexes with the correct names.
+	 */
+
+	StartTransactionCommand();
+
+	forboth(lc, indexIds, lc2, newIndexIds)
+	{
+		char	   *oldName;
+		Oid			oldIndexId = lfirst_oid(lc);
+		Oid			newIndexId = lfirst_oid(lc2);
+		Oid			heapId;
+
+		CHECK_FOR_INTERRUPTS();
+
+		heapId = IndexGetRelation(oldIndexId, false);
+
+		/* Choose a relation name for old index */
+		oldName = ChooseRelationName(get_rel_name(oldIndexId),
+									 NULL,
+									 "ccold",
+									 get_rel_namespace(heapId),
+									 false);
+
+		/*
+		 * Swap old index with the new one.  This also marks the new one as
+		 * valid and the old one as not valid.
+		 */
+		index_concurrently_swap(newIndexId, oldIndexId, oldName);
+
+		/*
+		 * Invalidate the relcache for the table, so that after this commit
+		 * all sessions will refresh any cached plans that might reference the
+		 * index.
+		 */
+		CacheInvalidateRelcacheByRelid(heapId);
+
+		/*
+		 * CCI here so that subsequent iterations see the oldName in the
+		 * catalog and can choose a nonconflicting name for their oldName.
+		 * Otherwise, this could lead to conflicts if a table has two indexes
+		 * whose names are equal for the first NAMEDATALEN-minus-a-few
+		 * characters.
+		 */
+		CommandCounterIncrement();
+	}
+
+	/* Commit this transaction and make index swaps visible */
+	CommitTransactionCommand();
+	StartTransactionCommand();
+
+	/*
+	 * Phase 5 of REINDEX CONCURRENTLY
+	 *
+	 * Mark the old indexes as dead.  First we must wait until no running
+	 * transaction could be using the index for a query.  See also
+	 * index_drop() for more details.
+	 */
+
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_4);
+	WaitForLockersMultiple(lockTags, AccessExclusiveLock, true);
+
+	foreach(lc, indexIds)
+	{
+		Oid			oldIndexId = lfirst_oid(lc);
+		Oid			heapId;
+
+		CHECK_FOR_INTERRUPTS();
+		heapId = IndexGetRelation(oldIndexId, false);
+		index_concurrently_set_dead(heapId, oldIndexId);
+	}
+
+	/* Commit this transaction to make the updates visible. */
+	CommitTransactionCommand();
+	StartTransactionCommand();
+
+	/*
+	 * Phase 6 of REINDEX CONCURRENTLY
+	 *
+	 * Drop the old indexes.
+	 */
+
+	pgstat_progress_update_param(PROGRESS_CREATEIDX_PHASE,
+								 PROGRESS_CREATEIDX_PHASE_WAIT_4);
+	WaitForLockersMultiple(lockTags, AccessExclusiveLock, true);
+
+	PushActiveSnapshot(GetTransactionSnapshot());
+
+	{
+		ObjectAddresses *objects = new_object_addresses();
+
+		foreach(lc, indexIds)
+		{
+			Oid			oldIndexId = lfirst_oid(lc);
+			ObjectAddress object;
+
+			object.classId = RelationRelationId;
+			object.objectId = oldIndexId;
+			object.objectSubId = 0;
+
+			add_exact_object_address(&object, objects);
+		}
+
+		/*
+		 * Use PERFORM_DELETION_CONCURRENT_LOCK so that index_drop() uses the
+		 * right lock level.
+		 */
+		performMultipleDeletions(objects, DROP_RESTRICT,
+								 PERFORM_DELETION_CONCURRENT_LOCK | PERFORM_DELETION_INTERNAL);
+	}
+
+	PopActiveSnapshot();
+	CommitTransactionCommand();
+
+	/*
+	 * Finally, release the session-level lock on the table.
+	 */
+	foreach(lc, relationLocks)
+	{
+		LockRelId  *lockrelid = (LockRelId *) lfirst(lc);
+
+		UnlockRelationIdForSession(lockrelid, ShareUpdateExclusiveLock);
+	}
+
+	/* Start a new transaction to finish process properly */
+	StartTransactionCommand();
+
+	/* Log what we did */
+	if (options & REINDEXOPT_VERBOSE)
+	{
+		if (relkind == RELKIND_INDEX)
+			ereport(INFO,
+					(errmsg("index \"%s.%s\" was reindexed",
+							relationNamespace, relationName),
+					 errdetail("%s.",
+							   pg_rusage_show(&ru0))));
+		else
+		{
+			foreach(lc, newIndexIds)
+			{
+				Oid			indOid = lfirst_oid(lc);
+
+				ereport(INFO,
+						(errmsg("index \"%s.%s\" was reindexed",
+								get_namespace_name(get_rel_namespace(indOid)),
+								get_rel_name(indOid))));
+				/* Don't show rusage here, since it's not per index. */
+			}
+
+			ereport(INFO,
+					(errmsg("table \"%s.%s\" was reindexed",
+							relationNamespace, relationName),
+					 errdetail("%s.",
+							   pg_rusage_show(&ru0))));
+		}
+	}
+
+	MemoryContextDelete(private_context);
+
+	pgstat_progress_end_command();
+
+	return true;
+}
+
+/*
+ *	ReindexPartitionedIndex
+ *		Reindex each child of the given partitioned index.
+ *
+ * Not yet implemented.
+ */
+static void
+ReindexPartitionedIndex(Relation parentIdx)
+{
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("REINDEX is not yet implemented for partitioned indexes")));
 }
 
 /*
@@ -2758,14 +3807,16 @@ void
 IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
 {
 	Relation	pg_inherits;
-	ScanKeyData	key[2];
-	SysScanDesc	scan;
+	ScanKeyData key[2];
+	SysScanDesc scan;
 	Oid			partRelid = RelationGetRelid(partitionIdx);
 	HeapTuple	tuple;
 	bool		fix_dependencies;
 
 	/* Make sure this is an index */
-	Assert(partitionIdx->rd_rel->relkind == RELKIND_INDEX);
+	Assert(partitionIdx->rd_rel->relkind == RELKIND_INDEX ||
+		   partitionIdx->rd_rel->relkind == RELKIND_PARTITIONED_INDEX);
+
 	/*
 	 * Scan pg_inherits for rows linking our index to some parent.
 	 */
@@ -2787,15 +3838,15 @@ IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
 		if (parentOid == InvalidOid)
 		{
 			/*
-			 * No pg_inherits row, and no parent wanted: nothing to do in
-			 * this case.
+			 * No pg_inherits row, and no parent wanted: nothing to do in this
+			 * case.
 			 */
 			fix_dependencies = false;
 		}
 		else
 		{
-			Datum	values[Natts_pg_inherits];
-			bool	isnull[Natts_pg_inherits];
+			Datum		values[Natts_pg_inherits];
+			bool		isnull[Natts_pg_inherits];
 
 			/*
 			 * No pg_inherits row exists, and we want a parent for this index,
@@ -2803,29 +3854,27 @@ IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
 			 */
 			values[Anum_pg_inherits_inhrelid - 1] = ObjectIdGetDatum(partRelid);
 			values[Anum_pg_inherits_inhparent - 1] =
-					ObjectIdGetDatum(parentOid);
+				ObjectIdGetDatum(parentOid);
 			values[Anum_pg_inherits_inhseqno - 1] = Int32GetDatum(1);
 			memset(isnull, false, sizeof(isnull));
 
 			tuple = heap_form_tuple(RelationGetDescr(pg_inherits),
 									values, isnull);
-
-			simple_heap_insert(pg_inherits, tuple);
-			CatalogUpdateIndexes(pg_inherits, tuple);
+			CatalogTupleInsert(pg_inherits, tuple);
 
 			fix_dependencies = true;
 		}
 	}
 	else
 	{
-		Form_pg_inherits	inhForm = (Form_pg_inherits) GETSTRUCT(tuple);
+		Form_pg_inherits inhForm = (Form_pg_inherits) GETSTRUCT(tuple);
 
 		if (parentOid == InvalidOid)
 		{
 			/*
 			 * There exists a pg_inherits row, which we want to clear; do so.
 			 */
-			simple_heap_delete(pg_inherits, &tuple->t_self);
+			CatalogTupleDelete(pg_inherits, &tuple->t_self);
 			fix_dependencies = true;
 		}
 		else
@@ -2855,40 +3904,63 @@ IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
 	if (OidIsValid(parentOid))
 		SetRelationHasSubclass(parentOid, true);
 
+	/* set relispartition correctly on the partition */
+	update_relispartition(partRelid, OidIsValid(parentOid));
+
 	if (fix_dependencies)
 	{
-		ObjectAddress partIdx;
-
 		/*
-		 * Insert/delete pg_depend rows.  If setting a parent, add an
-		 * INTERNAL_AUTO dependency to the parent index; if making standalone,
-		 * remove all existing rows and put back the regular dependency on the
-		 * table.
+		 * Insert/delete pg_depend rows.  If setting a parent, add PARTITION
+		 * dependencies on the parent index and the table; if removing a
+		 * parent, delete PARTITION dependencies.
 		 */
-		ObjectAddressSet(partIdx, RelationRelationId, partRelid);
-
 		if (OidIsValid(parentOid))
 		{
-			ObjectAddress	parentIdx;
+			ObjectAddress partIdx;
+			ObjectAddress parentIdx;
+			ObjectAddress partitionTbl;
 
+			ObjectAddressSet(partIdx, RelationRelationId, partRelid);
 			ObjectAddressSet(parentIdx, RelationRelationId, parentOid);
-			recordDependencyOn(&partIdx, &parentIdx, DEPENDENCY_INTERNAL_AUTO);
+			ObjectAddressSet(partitionTbl, RelationRelationId,
+							 partitionIdx->rd_index->indrelid);
+			recordDependencyOn(&partIdx, &parentIdx,
+							   DEPENDENCY_PARTITION_PRI);
+			recordDependencyOn(&partIdx, &partitionTbl,
+							   DEPENDENCY_PARTITION_SEC);
 		}
 		else
 		{
-			ObjectAddress	partitionTbl;
-
-			ObjectAddressSet(partitionTbl, RelationRelationId,
-							 partitionIdx->rd_index->indrelid);
-
 			deleteDependencyRecordsForClass(RelationRelationId, partRelid,
 											RelationRelationId,
-											DEPENDENCY_INTERNAL_AUTO);
-
-			recordDependencyOn(&partIdx, &partitionTbl, DEPENDENCY_AUTO);
+											DEPENDENCY_PARTITION_PRI);
+			deleteDependencyRecordsForClass(RelationRelationId, partRelid,
+											RelationRelationId,
+											DEPENDENCY_PARTITION_SEC);
 		}
 
 		/* make our updates visible */
 		CommandCounterIncrement();
 	}
+}
+
+/*
+ * Subroutine of IndexSetParentIndex to update the relispartition flag of the
+ * given index to the given value.
+ */
+static void
+update_relispartition(Oid relationId, bool newval)
+{
+	HeapTuple	tup;
+	Relation	classRel;
+
+	classRel = table_open(RelationRelationId, RowExclusiveLock);
+	tup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(relationId));
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for relation %u", relationId);
+	Assert(((Form_pg_class) GETSTRUCT(tup))->relispartition != newval);
+	((Form_pg_class) GETSTRUCT(tup))->relispartition = newval;
+	CatalogTupleUpdate(classRel, &tup->t_self, tup);
+	heap_freetuple(tup);
+	table_close(classRel, RowExclusiveLock);
 }

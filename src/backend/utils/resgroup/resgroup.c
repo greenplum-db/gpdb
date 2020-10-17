@@ -36,11 +36,15 @@
 
 #include "postgres.h"
 
+#include <math.h>
+
 #include "libpq-fe.h"
-#include "tcop/tcopprot.h"
 #include "access/genam.h"
+#include "access/table.h"
+#include "tcop/tcopprot.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resgroup.h"
+#include "catalog/pg_resgroupcapability.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
@@ -67,7 +71,6 @@
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/session_state.h"
-#include "utils/tqual.h"
 #include "utils/vmem_tracker.h"
 
 #define InvalidSlotId	(-1)
@@ -88,6 +91,7 @@ int							gp_resgroup_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
 bool						gp_log_resgroup_memory = false;
 int							gp_resgroup_memory_policy_auto_fixed_mem;
 bool						gp_resgroup_print_operator_memory_limits = false;
+bool						gp_resgroup_debug_wait_queue = true;
 int							memory_spill_ratio = 20;
 int							gp_resource_group_queuing_timeout = 0;
 
@@ -235,8 +239,10 @@ struct ResGroupControl
 	 * Safe memory threshold:
 	 * if remained global shared memory is less than this threshold,
 	 * then the resource group memory usage is in red zone.
+	 * Note that safeChunksThreshold100 is 100 times bigger than the real safe chunks.
+	 * This is used to avoid rounding problem caused by runaway_detector_activation_percent
 	 */
-	pg_atomic_uint32 safeChunksThreshold;
+	pg_atomic_uint32 safeChunksThreshold100;
 	pg_atomic_uint32 freeChunks;			/* memory chunks not allocated to any group,
 											will be used for the query which group share
 											memory is not enough*/
@@ -278,8 +284,8 @@ static ResGroupProcData *self = &__self;
 
 /* If we are waiting on a group, this points to the associated group */
 static ResGroupData *groupAwaited = NULL;
-static int64 groupWaitStart;
-static int64 groupWaitEnd;
+static TimestampTz groupWaitStart;
+static TimestampTz groupWaitEnd;
 
 /* the resource group self is running in bypass mode */
 static ResGroupData *bypassedGroup = NULL;
@@ -352,6 +358,7 @@ static bool procIsWaiting(const PGPROC *proc);
 static void procWakeup(PGPROC *proc);
 static int slotGetId(const ResGroupSlotData *slot);
 static void groupWaitQueueValidate(const ResGroupData *group);
+static void groupWaitProcValidate(PGPROC *proc, PROC_QUEUE *head);
 static void groupWaitQueuePush(ResGroupData *group, PGPROC *proc);
 static PGPROC *groupWaitQueuePop(ResGroupData *group);
 static void groupWaitQueueErase(ResGroupData *group, PGPROC *proc);
@@ -368,6 +375,7 @@ static void resgroupDumpSlots(StringInfo str);
 static void resgroupDumpFreeSlots(StringInfo str);
 
 static void sessionSetSlot(ResGroupSlotData *slot);
+static void sessionResetSlot(void);
 static ResGroupSlotData *sessionGetSlot(void);
 
 static void bindGroupOperation(ResGroupData *group);
@@ -494,7 +502,7 @@ ResGroupControlInit(void)
     pResGroupControl->loaded = false;
     pResGroupControl->nGroups = MaxResourceGroups;
 	pResGroupControl->totalChunks = 0;
-	pg_atomic_init_u32(&pResGroupControl->safeChunksThreshold, 0);
+	pg_atomic_init_u32(&pResGroupControl->safeChunksThreshold100, 0);
 	pg_atomic_init_u32(&pResGroupControl->freeChunks, 0);
 	pResGroupControl->chunkSizeInBits = BITS_IN_MB;
 
@@ -569,8 +577,8 @@ InitResGroups(void)
 	 * Serialization is done by LW_EXCLUSIVE ResGroupLock. However, we must obtain all DB
 	 * locks before obtaining LWlock to prevent deadlock.
 	 */
-	relResGroup = heap_open(ResGroupRelationId, AccessShareLock);
-	relResGroupCapability = heap_open(ResGroupCapabilityRelationId, AccessShareLock);
+	relResGroup = table_open(ResGroupRelationId, AccessShareLock);
+	relResGroupCapability = table_open(ResGroupCapabilityRelationId, AccessShareLock);
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
 	if (pResGroupControl->loaded)
@@ -579,8 +587,8 @@ InitResGroups(void)
 	/* These initialization must be done before createGroup() */
 	decideTotalChunks(&pResGroupControl->totalChunks, &pResGroupControl->chunkSizeInBits);
 	pg_atomic_write_u32(&pResGroupControl->freeChunks, pResGroupControl->totalChunks);
-	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold,
-						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent) / 100);
+	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold100,
+						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent));
 	if (pResGroupControl->totalChunks == 0)
 		ereport(PANIC,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
@@ -603,9 +611,9 @@ InitResGroups(void)
 	sscan = systable_beginscan(relResGroup, InvalidOid, false, NULL, 0, NULL);
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
+		Oid			groupId = ((Form_pg_resgroup) GETSTRUCT(tuple))->oid;
 		ResGroupData	*group;
 		int cpuRateLimit;
-		Oid groupId = HeapTupleGetOid(tuple);
 
 		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
 		cpuRateLimit = caps.cpuRateLimit;
@@ -712,8 +720,8 @@ exit:
 	 * release lock here to guarantee we have no lock held when acquiring
 	 * resource group slot
 	 */
-	heap_close(relResGroup, AccessShareLock);
-	heap_close(relResGroupCapability, AccessShareLock);
+	table_close(relResGroup, AccessShareLock);
+	table_close(relResGroupCapability, AccessShareLock);
 }
 
 /*
@@ -1298,7 +1306,7 @@ removeGroup(Oid groupId)
 {
 	ResGroupData *group;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(OidIsValid(groupId));
 
 	group = groupHashRemove(groupId);
@@ -1324,7 +1332,7 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 	ResGroupData	*group;
 	int32			chunks;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(OidIsValid(groupId));
 
 	group = groupHashNew(groupId);
@@ -1363,7 +1371,7 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 static void
 bindGroupOperation(ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	if (group->caps.memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER)
 		group->groupMemOps = &resgroup_memory_operations_vmtracker;
@@ -1574,7 +1582,7 @@ selfDetachResGroup(ResGroupData *group, ResGroupSlotData *slot)
 static void
 initSlot(ResGroupSlotData *slot, ResGroupData *group, int32 slotMemQuota)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(!slotIsInUse(slot));
 	Assert(group->groupId != InvalidOid);
 
@@ -1633,7 +1641,7 @@ slotpoolAllocSlot(void)
 {
 	ResGroupSlotData *slot;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(pResGroupControl->freeSlot != NULL);
 
 	slot = pResGroupControl->freeSlot;
@@ -1649,7 +1657,7 @@ slotpoolAllocSlot(void)
 static void
 slotpoolFreeSlot(ResGroupSlotData *slot)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(slotIsInUse(slot));
 	Assert(slot->nProcs == 0);
 
@@ -1680,7 +1688,7 @@ groupGetSlot(ResGroupData *group)
 	ResGroupCaps		*caps;
 	int32				slotMemQuota;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(groupIsNotDropped(group));
 
@@ -1716,7 +1724,7 @@ groupPutSlot(ResGroupData *group, ResGroupSlotData *slot)
 {
 	int32		released;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(group->memQuotaUsed >= 0);
 	Assert(slotIsInUse(slot));
 
@@ -1750,7 +1758,7 @@ groupReserveMemQuota(ResGroupData *group)
 	ResGroupCaps	*caps;
 	int32			slotMemQuota;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(pResGroupControl->segmentsOnMaster > 0);
 
@@ -1781,7 +1789,7 @@ groupReserveMemQuota(ResGroupData *group)
 static void
 groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	group->memQuotaUsed -= slot->memQuota;
 	Assert(group->memQuotaUsed >= 0);
@@ -1964,7 +1972,7 @@ groupApplyMemCaps(ResGroupData *group)
 	int32				released;
 	const ResGroupCaps	*caps = &group->caps;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	group->memExpected = groupGetMemExpected(caps);
 
@@ -2003,7 +2011,7 @@ mempoolReserve(Oid groupId, int32 chunks)
 	int32 newFreeChunks;
 	int32 reserved = 0;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	/* Compare And Save to avoid concurrency problem without using lock */
 	while (true)
@@ -2022,8 +2030,17 @@ mempoolReserve(Oid groupId, int32 chunks)
 	/* also update the safeChunksThreshold which is used in runaway detector */
 	if (reserved != 0)
 	{
-		pg_atomic_sub_fetch_u32(&pResGroupControl->safeChunksThreshold,
-								reserved * (100 - runaway_detector_activation_percent) / 100);
+		uint32	safeChunksThreshold100;
+		int		safeChunksDelta100;
+		
+		safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
+		safeChunksDelta100 = reserved * (100 - runaway_detector_activation_percent);
+
+		if (safeChunksThreshold100 < safeChunksDelta100)
+			elog(ERROR, "safeChunksThreshold: %u should be positive after mempool reserved: %d",
+				 safeChunksThreshold100, safeChunksDelta100);
+
+		pg_atomic_sub_fetch_u32(&pResGroupControl->safeChunksThreshold100, safeChunksDelta100);
 	}
 	LOG_RESGROUP_DEBUG(LOG, "allocate %u out of %u chunks to group %d",
 					   reserved, oldFreeChunks, groupId);
@@ -2041,15 +2058,15 @@ mempoolRelease(Oid groupId, int32 chunks)
 {
 	int32 newFreeChunks;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(chunks >= 0);
 
 	newFreeChunks = pg_atomic_add_fetch_u32(&pResGroupControl->freeChunks,
 											chunks);
 
 	/* also update the safeChunksThreshold which is used in runaway detector */
-	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold,
-							chunks * (100 - runaway_detector_activation_percent) / 100);
+	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold100,
+							chunks * (100 - runaway_detector_activation_percent));
 
 	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
 					   chunks, newFreeChunks - chunks, groupId);
@@ -2068,7 +2085,7 @@ groupRebalanceQuota(ResGroupData *group, int32 chunks, const ResGroupCaps *caps)
 	int32 delta;
 	int32 memQuotaGranted = groupGetMemQuotaExpected(caps);
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	delta = memQuotaGranted - group->memQuotaGranted;
 	if (delta >= 0)
@@ -2227,7 +2244,7 @@ slotGetMemSpill(const ResGroupCaps *caps)
 static void
 wakeupSlots(ResGroupData *group, bool grant)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	while (!groupWaitQueueIsEmpty(group))
 	{
@@ -2264,7 +2281,7 @@ notifyGroupsOnMem(Oid skipGroupId)
 {
 	int				i;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	for (i = 0; i < MaxResourceGroups; i++)
 	{
@@ -2348,7 +2365,7 @@ mempoolAutoRelease(ResGroupData *group)
 	int32		nfreeSlots;
 	ResGroupCaps *caps = &group->caps;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	/* nfreeSlots is the number of free slots */
 	nfreeSlots = caps->concurrency - group->nRunning;
@@ -2407,7 +2424,7 @@ mempoolAutoReserve(ResGroupData *group, const ResGroupCaps *caps)
 static void
 addTotalQueueDuration(ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	if (group == NULL)
 		return;
 
@@ -2422,7 +2439,7 @@ addTotalQueueDuration(ResGroupData *group)
 static void
 groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot, bool isMoveQuery)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(!selfIsAssigned() || isMoveQuery);
 
 	groupPutSlot(group, slot);
@@ -2459,24 +2476,24 @@ SerializeResGroupInfo(StringInfo str)
 	}
 
 	itmp = htonl(self->groupId);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
 	itmp = htonl(caps->concurrency);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->cpuRateLimit);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memLimit);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memSharedQuota);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memSpillRatio);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memAuditor);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
 	cpuset_len = strlen(caps->cpuset);
 	itmp = htonl(cpuset_len);
-	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	appendBinaryStringInfo(str, caps->cpuset, cpuset_len);
 
 	itmp = htonl(bypassedSlot.groupId);
@@ -2721,8 +2738,7 @@ UnassignResGroup(bool releaseSlot)
 		 * Reset resource group slot for current session. Note MySessionState
 		 * could be reset as NULL in shmem_exit() before.
 		 */
-		if (MySessionState != NULL)
-			MySessionState->resGroupSlot = NULL;
+		sessionResetSlot();
 	}
 
 	LWLockRelease(ResGroupLock);
@@ -2855,7 +2871,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	PGPROC *proc = MyProc;
 	const char *queueStr = " queuing";
 
-	Assert(!LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(!selfIsAssigned() || isMoveQuery);
 
 	/* set ps status to waiting */
@@ -2871,12 +2887,10 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	}
 
 	/*
-	 * The eventId is never used, because groupId is an Oid, but
-	 * pgstat_report_wait_start() wants an uint16 eventId.
-	 *
-	 * We set that information by the groupId via the backend entry.
+	 * The low bits of 'wait_event_info' argument to WaitLatch are
+	 * not enough to store a full Oid, so we set groupId out-of-band,
+	 * via the backend entry.
 	 */
-	pgstat_report_wait_start(WAIT_RESOURCE_GROUP, 0);
 	pgstat_report_resgroup(group->groupId);
 
 	/*
@@ -2885,7 +2899,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	 * This is used for interrupt cleanup, similar to lockAwaited in ProcSleep
 	 */
 	groupAwaited = group;
-	groupWaitStart = GetCurrentIntegerTimestamp();
+	groupWaitStart = GetCurrentTimestamp();
 
 	/*
 	 * Make sure we have released all locks before going to sleep, to eliminate
@@ -2904,24 +2918,25 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 
 			if (gp_resource_group_queuing_timeout > 0)
 			{
-				curTime = GetCurrentIntegerTimestamp();
+				curTime = GetCurrentTimestamp();
 				timeout = gp_resource_group_queuing_timeout - (curTime - groupWaitStart) / 1000;
 				if (timeout < 0)
 					ereport(ERROR,
 							(errcode(ERRCODE_QUERY_CANCELED),
 							 errmsg("canceling statement due to resource group waiting timeout")));
 
-				WaitLatch(&proc->procLatch, WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH, (long)timeout);
+				WaitLatch(&proc->procLatch, WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+						  (long) timeout, PG_WAIT_RESOURCE_GROUP);
 			}
 			else
 			{
-				WaitLatch(&proc->procLatch, WL_LATCH_SET | WL_POSTMASTER_DEATH, -1);
+				WaitLatch(&proc->procLatch, WL_LATCH_SET | WL_POSTMASTER_DEATH, -1,
+						  PG_WAIT_RESOURCE_GROUP);
 			}
 		}
 	}
 	PG_CATCH();
 	{
-		pgstat_report_wait_end();
 		/* reset ps status */
 		if (update_process_title)
 		{
@@ -2935,8 +2950,6 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	PG_END_TRY();
 
 	groupAwaited = NULL;
-
-	pgstat_report_wait_end();
 
 	/* reset ps status */
 	if (update_process_title)
@@ -2960,7 +2973,7 @@ groupHashNew(Oid groupId)
 	bool		found;
 	ResGroupHashEntry *entry;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(groupId != InvalidOid);
 
 	for (i = 0; i < pResGroupControl->nGroups; i++)
@@ -3030,7 +3043,7 @@ groupHashRemove(Oid groupId)
 	ResGroupHashEntry	*entry;
 	ResGroupData		*group;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	entry = (ResGroupHashEntry*)hash_search(pResGroupControl->htbl,
 											(void *) &groupId,
@@ -3077,7 +3090,7 @@ groupWaitCancel(bool isMoveQuery)
 		return;
 
 	pgstat_report_wait_end();
-	groupWaitEnd = GetCurrentIntegerTimestamp();
+	groupWaitEnd = GetCurrentTimestamp();
 
 	Assert(!selfIsAssigned() || isMoveQuery);
 
@@ -3121,8 +3134,7 @@ groupWaitCancel(bool isMoveQuery)
 		 * Reset resource group slot for current session. Note MySessionState
 		 * could be reset as NULL in shmem_exit() before.
 		 */
-		if (MySessionState != NULL)
-			MySessionState->resGroupSlot = NULL;
+		sessionResetSlot();
 
 		group->totalExecuted++;
 
@@ -3426,7 +3438,7 @@ slotGetId(const ResGroupSlotData *slot)
 static void
 lockResGroupForDrop(ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(group->nRunning == 0);
 	Assert(group->nRunningBypassed == 0);
@@ -3436,7 +3448,7 @@ lockResGroupForDrop(ResGroupData *group)
 static void
 unlockResGroupForDrop(ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(group->nRunning == 0);
 	Assert(group->nRunningBypassed == 0);
@@ -3471,13 +3483,57 @@ groupWaitQueueValidate(const ResGroupData *group)
 {
 	const PROC_QUEUE	*waitQueue;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	waitQueue = &group->waitProcs;
+
+	if (gp_resgroup_debug_wait_queue)
+	{
+		if (waitQueue->size == 0)
+		{
+			if (waitQueue->links.next != &waitQueue->links ||
+				waitQueue->links.prev != &waitQueue->links)
+				elog(PANIC, "resource group wait queue is corrupted");
+		}
+		else
+		{
+			PGPROC *nextProc = (PGPROC *)waitQueue->links.next;
+			PGPROC *prevProc = (PGPROC *)waitQueue->links.prev;
+
+			if (!nextProc->mppIsWriter ||
+				!prevProc->mppIsWriter ||
+				nextProc->links.prev != &waitQueue->links ||
+				prevProc->links.next != &waitQueue->links)
+				elog(PANIC, "resource group wait queue is corrupted");
+		}
+
+		return;
+	}
 
 	AssertImply(waitQueue->size == 0,
 				waitQueue->links.next == &waitQueue->links &&
 				waitQueue->links.prev == &waitQueue->links);
+}
+
+static void
+groupWaitProcValidate(PGPROC *proc, PROC_QUEUE *head)
+{
+	PGPROC *nextProc = (PGPROC *)proc->links.next;
+	PGPROC *prevProc = (PGPROC *)proc->links.prev;
+
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
+
+	if (!gp_resgroup_debug_wait_queue)
+		return;
+
+	if (!proc->mppIsWriter ||
+		((PROC_QUEUE *)nextProc != head && !nextProc->mppIsWriter) ||
+		((PROC_QUEUE *)prevProc != head && !prevProc->mppIsWriter) ||
+		nextProc->links.prev != &proc->links ||
+		prevProc->links.next != &proc->links)
+		elog(PANIC, "resource group wait queue is corrupted");
+
+	return;
 }
 
 /*
@@ -3489,7 +3545,7 @@ groupWaitQueuePush(ResGroupData *group, PGPROC *proc)
 	PROC_QUEUE			*waitQueue;
 	PGPROC				*headProc;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(!procIsWaiting(proc));
 	Assert(proc->resSlot == NULL);
 
@@ -3499,6 +3555,7 @@ groupWaitQueuePush(ResGroupData *group, PGPROC *proc)
 	headProc = (PGPROC *) &waitQueue->links;
 
 	SHMQueueInsertBefore(&headProc->links, &proc->links);
+	groupWaitProcValidate(proc, waitQueue);
 
 	waitQueue->size++;
 
@@ -3514,7 +3571,7 @@ groupWaitQueuePop(ResGroupData *group)
 	PROC_QUEUE			*waitQueue;
 	PGPROC				*proc;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(!groupWaitQueueIsEmpty(group));
 
 	groupWaitQueueValidate(group);
@@ -3522,6 +3579,7 @@ groupWaitQueuePop(ResGroupData *group)
 	waitQueue = &group->waitProcs;
 
 	proc = (PGPROC *) waitQueue->links.next;
+	groupWaitProcValidate(proc, waitQueue);
 	Assert(groupWaitQueueFind(group, proc));
 	Assert(proc->resSlot == NULL);
 
@@ -3540,7 +3598,7 @@ groupWaitQueueErase(ResGroupData *group, PGPROC *proc)
 {
 	PROC_QUEUE			*waitQueue;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(!groupWaitQueueIsEmpty(group));
 	Assert(groupWaitQueueFind(group, proc));
 	Assert(proc->resSlot == NULL);
@@ -3549,6 +3607,7 @@ groupWaitQueueErase(ResGroupData *group, PGPROC *proc)
 
 	waitQueue = &group->waitProcs;
 
+	groupWaitProcValidate(proc, waitQueue);
 	SHMQueueDelete(&proc->links);
 
 	waitQueue->size--;
@@ -3562,7 +3621,7 @@ groupWaitQueueIsEmpty(const ResGroupData *group)
 {
 	const PROC_QUEUE	*waitQueue;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	groupWaitQueueValidate(group);
 
@@ -3588,7 +3647,7 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 	PGPROC				*iter;
 	Size				offset;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	groupWaitQueueValidate(group);
 
@@ -3668,6 +3727,9 @@ shouldBypassQuery(const char *query_string)
 	foreach(parsetree_item, parsetree_list)
 	{
 		parsetree = (Node *) lfirst(parsetree_item);
+
+		if (nodeTag(parsetree) == T_RawStmt)
+			parsetree = ((RawStmt *)parsetree)->stmt;
 
 		if (nodeTag(parsetree) != T_VariableSetStmt &&
 			nodeTag(parsetree) != T_VariableShowStmt)
@@ -3856,7 +3918,37 @@ sessionSetSlot(ResGroupSlotData *slot)
 	Assert(slot != NULL);
 	Assert(MySessionState->resGroupSlot == NULL);
 
+	/*
+	 * SessionStateLock is required since runaway detector will traverse
+	 * the current session array and check corresponding resGroupSlot with
+	 * shared lock on SessionStateLock.
+	 */
+	LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
+
 	MySessionState->resGroupSlot = (void *) slot;
+
+	LWLockRelease(SessionStateLock);
+}
+
+/*
+ * Reset resource group slot for current session to NULL.
+ */
+static void
+sessionResetSlot(void)
+{
+	/*
+	 * SessionStateLock is required since runaway detector will traverse
+	 * the current session array and check corresponding resGroupSlot with
+	 * shared lock on SessionStateLock.
+	 */
+	if (MySessionState != NULL)
+	{
+		LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
+
+		MySessionState->resGroupSlot = NULL;
+
+		LWLockRelease(SessionStateLock);
+	}
 }
 
 /*
@@ -3880,7 +3972,7 @@ groupMemOnAlterForVmtracker(Oid groupId, ResGroupData *group)
 {
 	bool shouldNotify;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	shouldNotify = groupApplyMemCaps(group);
 
@@ -3896,7 +3988,7 @@ groupMemOnAlterForVmtracker(Oid groupId, ResGroupData *group)
 static void
 groupMemOnDropForVmtracker(Oid groupId, ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	mempoolRelease(groupId, group->memQuotaGranted + group->memSharedGranted);
 	group->memQuotaGranted = 0;
@@ -3912,7 +4004,7 @@ groupMemOnNotifyForVmtracker(ResGroupData *group)
 {
 	int32			delta;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
@@ -3973,7 +4065,7 @@ groupMemOnDumpForVmtracker(ResGroupData *group, StringInfo str)
 static void
 groupMemOnAlterForCgroup(Oid groupId, ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	/*
 	 * If memGap is positive, it indicates this group should
@@ -4007,7 +4099,7 @@ groupApplyCgroupMemInc(ResGroupData *group)
 	int32 memory_inc;
 	int fd;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(group->memGap < 0);
 
 	memory_inc = mempoolReserve(group->groupId, group->memGap * -1);
@@ -4036,7 +4128,7 @@ groupApplyCgroupMemDec(ResGroupData *group)
 	int32 memory_dec;
 	int fd;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(group->memGap > 0);
 
 	fd = ResGroupOps_LockGroup(group->groupId, comp, true);
@@ -4063,7 +4155,7 @@ groupMemOnDropForCgroup(Oid groupId, ResGroupData *group)
 {
 	int32 memory_expected;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	memory_expected = groupGetMemExpected(&group->caps);
 
@@ -4077,7 +4169,7 @@ groupMemOnDropForCgroup(Oid groupId, ResGroupData *group)
 static void
 groupMemOnNotifyForCgroup(ResGroupData *group)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 
 	if (group->memGap < 0)
 		groupApplyCgroupMemInc(group);
@@ -4400,7 +4492,7 @@ bool
 IsGroupInRedZone(void)
 {
 	uint32				remainGlobalSharedMem;
-	uint32				safeChunksThreshold;
+	uint32				safeChunksThreshold100;
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
 
@@ -4411,8 +4503,8 @@ IsGroupInRedZone(void)
 	 * safe: global shared memory is not in redzone
 	 */
 	remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
-	safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
-	if (remainGlobalSharedMem >= safeChunksThreshold)
+	safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
+	if (remainGlobalSharedMem * 100 >= safeChunksThreshold100)
 		return false;
 
 	AssertImply(slot != NULL, group != NULL);
@@ -4443,14 +4535,14 @@ ResGroupGetMemoryRunawayInfo(StringInfo str)
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
 	uint32				remainGlobalSharedMem = 0;
-	uint32				safeChunksThreshold = 0;
+	uint32				safeChunksThreshold100 = 0;
 
 	if (group)
 	{
 		Assert(selfIsAssigned());
 
 		remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
-		safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
+		safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
 
 		appendStringInfo(str,
 						 "current group id is %u, "
@@ -4464,7 +4556,7 @@ ResGroupGetMemoryRunawayInfo(StringInfo str)
 						 VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted),
 						 VmemTracker_ConvertVmemChunksToMB(slot->memQuota),
 						 VmemTracker_ConvertVmemChunksToMB(remainGlobalSharedMem),
-						 VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold));
+						 VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold100 / 100));
 	}
 	else
 	{

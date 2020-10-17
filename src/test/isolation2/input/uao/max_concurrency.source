@@ -1,7 +1,7 @@
 -- @Description Insert into a ao relation with 127 concurrent transactions
 -- 
 DROP TABLE IF EXISTS ao;
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 
 ALTER RESOURCE GROUP admin_group SET CONCURRENCY 130;
 

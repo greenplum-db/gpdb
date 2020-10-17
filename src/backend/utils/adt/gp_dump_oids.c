@@ -12,14 +12,15 @@
  */
 #include "postgres.h"
 
-#include "catalog/pg_inherits_fn.h"
+#include "catalog/pg_inherits.h"
 #include "catalog/pg_proc.h"
 #include "tcop/tcopprot.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/planmain.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/hsearch.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 
 static List *proc_oids_for_dump = NIL;
 static bool is_proc_oids_valid = false;
@@ -115,13 +116,14 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 	flat_query_list = NIL;
 	foreach(lc, raw_parsetree_list)
 	{
-		Node	   *parsetree = (Node *) lfirst(lc);
+		RawStmt    *parsetree = lfirst_node(RawStmt, lc);
 		List	   *queryTree_sublist;
 
 		queryTree_sublist = pg_analyze_and_rewrite(parsetree,
 												   sqlText,
 												   NULL,
-												   0);
+												   0,
+												   NULL);
 		flat_query_list = list_concat(flat_query_list,
 									  list_copy(queryTree_sublist));
 	}

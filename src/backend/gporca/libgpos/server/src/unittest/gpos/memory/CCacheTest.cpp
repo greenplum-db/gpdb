@@ -25,10 +25,10 @@
 
 using namespace gpos;
 
-#define GPOS_CACHE_THREADS	10
-#define GPOS_CACHE_ELEMENTS	20
-#define GPOS_CACHE_DUPLICATES	5
-#define GPOS_CACHE_DUPLICATES_TO_DELETE		3
+#define GPOS_CACHE_THREADS 10
+#define GPOS_CACHE_ELEMENTS 20
+#define GPOS_CACHE_DUPLICATES 5
+#define GPOS_CACHE_DUPLICATES_TO_DELETE 3
 
 // static variable
 static BOOL fUnique = true;
@@ -44,23 +44,21 @@ static BOOL fUnique = true;
 GPOS_RESULT
 CCacheTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_Basic),
 		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_Refcount),
 		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_Eviction),
 		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_Iteration),
 		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_DeepObject),
-		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_IterativeDeletion)
-		};
+		GPOS_UNITTEST_FUNC(CCacheTest::EresUnittest_IterativeDeletion)};
 
 	fUnique = true;
-	GPOS_RESULT eres =  CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
+	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
 	if (GPOS_OK == eres)
 	{
 		fUnique = false;
-		eres =  CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
+		eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 	}
 
 	return eres;
@@ -76,11 +74,8 @@ CCacheTest::EresUnittest()
 //
 //---------------------------------------------------------------------------
 BOOL
-CCacheTest::SSimpleObject::FMyEqual
-	(
-	ULONG* const & pvKey,
-	ULONG* const & pvKeySecond
-	)
+CCacheTest::SSimpleObject::FMyEqual(ULONG *const &pvKey,
+									ULONG *const &pvKeySecond)
 {
 	BOOL fReturn = false;
 
@@ -110,10 +105,7 @@ CCacheTest::SSimpleObject::FMyEqual
 //
 //---------------------------------------------------------------------------
 ULONG
-CCacheTest::CDeepObject::UlMyHash
-	(
-	CDeepObject::CDeepObjectList * const & plist
-	)
+CCacheTest::CDeepObject::UlMyHash(CDeepObject::CDeepObjectList *const &plist)
 {
 	ULONG ulKey = 0;
 	SDeepObjectEntry *pdoe = plist->First();
@@ -137,11 +129,9 @@ CCacheTest::CDeepObject::UlMyHash
 //
 //---------------------------------------------------------------------------
 BOOL
-CCacheTest::CDeepObject::FMyEqual
-	(
-			CDeepObject::CDeepObjectList* const & plist,
-			CDeepObject::CDeepObjectList* const & plistSecond
-	)
+CCacheTest::CDeepObject::FMyEqual(
+	CDeepObject::CDeepObjectList *const &plist,
+	CDeepObject::CDeepObjectList *const &plistSecond)
 {
 	BOOL fReturn = false;
 	if (NULL == plist && NULL == plistSecond)
@@ -192,14 +182,9 @@ CCacheTest::CDeepObject::FMyEqual
 //
 //---------------------------------------------------------------------------
 void
-CCacheTest::CDeepObject::AddEntry
-	(
-	CMemoryPool *mp,
-	ULONG ulKey,
-	ULONG ulVal
-	)
+CCacheTest::CDeepObject::AddEntry(CMemoryPool *mp, ULONG ulKey, ULONG ulVal)
 {
-	m_list.Prepend(GPOS_NEW(mp) SDeepObjectEntry (ulKey, ulVal));
+	m_list.Prepend(GPOS_NEW(mp) SDeepObjectEntry(ulKey, ulVal));
 }
 
 
@@ -214,16 +199,12 @@ CCacheTest::CDeepObject::AddEntry
 GPOS_RESULT
 CCacheTest::EresUnittest_Basic()
 {
-	CAutoP<CCache<SSimpleObject*, ULONG*> > apcache;
-	apcache = CCacheFactory::CreateCache<SSimpleObject*, ULONG*>
-				(
-				fUnique,
-				UNLIMITED_CACHE_QUOTA,
-				SSimpleObject::UlMyHash,
-				SSimpleObject::FMyEqual
-				);
+	CAutoP<CCache<SSimpleObject *, ULONG *> > apcache;
+	apcache = CCacheFactory::CreateCache<SSimpleObject *, ULONG *>(
+		fUnique, UNLIMITED_CACHE_QUOTA, SSimpleObject::UlMyHash,
+		SSimpleObject::FMyEqual);
 
-	CCache<SSimpleObject*, ULONG* > *pcache = apcache.Value();
+	CCache<SSimpleObject *, ULONG *> *pcache = apcache.Value();
 
 	//insertion - scope for accessor
 	{
@@ -231,31 +212,26 @@ CCacheTest::EresUnittest_Basic()
 
 		SSimpleObject *pso = GPOS_NEW(ca.Pmp()) SSimpleObject(1, 2);
 
-#ifdef GPOS_DEBUG
-		SSimpleObject *psoReturned =
-#endif // GPOS_DEBUG
+		SSimpleObject *psoReturned GPOS_ASSERTS_ONLY =
 			ca.Insert(&(pso->m_ulKey), pso);
 
 		//release the ownership from pso, but ccacheentry still has the ownership
 		pso->Release();
 
-		GPOS_ASSERT(psoReturned == pso &&
-				    "Incorrect cache entry was inserted");
+		GPOS_ASSERT(psoReturned == pso && "Incorrect cache entry was inserted");
 		GPOS_ASSERT(1 == pcache->Size());
 
 		// insert duplicate while not allowed
 		if (pcache->AllowsDuplicateKeys())
 		{
 			CSimpleObjectCacheAccessor ca(pcache);
-			SSimpleObject *psoDuplicate = GPOS_NEW(ca.Pmp()) SSimpleObject(1, 5);
+			SSimpleObject *psoDuplicate =
+				GPOS_NEW(ca.Pmp()) SSimpleObject(1, 5);
 
-#ifdef GPOS_DEBUG
-			SSimpleObject *psoReturned =
-#endif // GPOS_DEBUG
+			SSimpleObject *psoReturned GPOS_ASSERTS_ONLY =
 				ca.Insert(&(psoDuplicate->m_ulKey), psoDuplicate);
 
-			GPOS_ASSERT(psoReturned == pso &&
-						"Duplicate insertion must fail");
+			GPOS_ASSERT(psoReturned == pso && "Duplicate insertion must fail");
 			GPOS_ASSERT(1 == pcache->Size());
 
 			// delete original cache object
@@ -275,7 +251,8 @@ CCacheTest::EresUnittest_Basic()
 				pso->Release();
 			}
 
-			GPOS_ASSERT_IMP(!pcache->AllowsDuplicateKeys(), NULL != pso && 2 == pso->m_ulValue);
+			GPOS_ASSERT_IMP(!pcache->AllowsDuplicateKeys(),
+							NULL != pso && 2 == pso->m_ulValue);
 			GPOS_ASSERT_IMP(pcache->AllowsDuplicateKeys(), NULL == pso);
 		}
 
@@ -305,7 +282,6 @@ CCacheTest::EresUnittest_Basic()
 			pso = ca.Val();
 
 			GPOS_ASSERT(NULL == pso);
-
 		}
 
 		// at this point, we still maintain a valid cached object held by the
@@ -331,55 +307,58 @@ CCacheTest::EresUnittest_Basic()
 GPOS_RESULT
 CCacheTest::EresUnittest_Refcount()
 {
-	CAutoP<CCache<SSimpleObject*, ULONG*> > apcache;
-	apcache = CCacheFactory::CreateCache<SSimpleObject*, ULONG*>
-				(
-				fUnique,
-				UNLIMITED_CACHE_QUOTA,
-				SSimpleObject::UlMyHash,
-				SSimpleObject::FMyEqual
-				);
+	CAutoP<CCache<SSimpleObject *, ULONG *> > apcache;
+	apcache = CCacheFactory::CreateCache<SSimpleObject *, ULONG *>(
+		fUnique, UNLIMITED_CACHE_QUOTA, SSimpleObject::UlMyHash,
+		SSimpleObject::FMyEqual);
 
-	CCache<SSimpleObject*, ULONG* > *pcache = apcache.Value();
+	CCache<SSimpleObject *, ULONG *> *pcache = apcache.Value();
 	SSimpleObject *pso = NULL;
 	//Scope of the accessor when we insert
 	{
 		CSimpleObjectCacheAccessor ca(pcache);
-		CMemoryPool* mp = ca.Pmp();
+		CMemoryPool *mp = ca.Pmp();
 
 		pso = GPOS_NEW(mp) SSimpleObject(1, 2);
 		GPOS_ASSERT(1 == pso->RefCount());
 
-	#ifdef GPOS_DEBUG
+#ifdef GPOS_DEBUG
 		SSimpleObject *psoReturned =
-	#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 			ca.Insert(&(pso->m_ulKey), pso);
 
 		// 1 by CRefCount, 2 by CCacheEntry constructor and 3 by CCache Accessor
 		GPOS_ASSERT(3 == pso->RefCount() && "Expected refcount to be 3");
-		GPOS_ASSERT(psoReturned == pso &&
-					"Incorrect cache entry was inserted");
-
+		GPOS_ASSERT(psoReturned == pso && "Incorrect cache entry was inserted");
 	}
 
-	GPOS_ASSERT(2 == pso->RefCount() &&  "Expected refcount to be 2 because CCacheAccessor goes out of scope");
+	GPOS_ASSERT(
+		2 == pso->RefCount() &&
+		"Expected refcount to be 2 because CCacheAccessor goes out of scope");
 
 	{
 		//Create new access for lookup
 		CSimpleObjectCacheAccessor ca(pcache);
 
-		GPOS_ASSERT(2 == pso->RefCount() && "Expected pso and CCacheEntry to have ownership");
+		GPOS_ASSERT(2 == pso->RefCount() &&
+					"Expected pso and CCacheEntry to have ownership");
 
 		//Ideally Lookup should return valid object. Until CCache evict and no one has reference to it, this object can't be deleted
 		ca.Lookup(&(pso->m_ulKey));
 
 		// 1 by CRefCount, 2 by CCacheEntry constructor, 3 by CCache Accessor, 4 by Lookup
-		GPOS_ASSERT(4 == pso->RefCount() && "Expected pso, CCacheEntry CCacheAccessor, and customer to have ownership");
+		GPOS_ASSERT(
+			4 == pso->RefCount() &&
+			"Expected pso, CCacheEntry CCacheAccessor, and customer to have ownership");
 		// Ideally it shouldn't delete itself because CCache is still holding this object
 		pso->Release();
-		GPOS_ASSERT(3 == pso->RefCount() && "Expected CCacheEntry, CCacheAccessor and customer to have ownership");
+		GPOS_ASSERT(
+			3 == pso->RefCount() &&
+			"Expected CCacheEntry, CCacheAccessor and customer to have ownership");
 	}
-	GPOS_ASSERT(2 == pso->RefCount() && "Expected refcount to be 1. CCacheEntry and customer have the ownership");
+	GPOS_ASSERT(
+		2 == pso->RefCount() &&
+		"Expected refcount to be 1. CCacheEntry and customer have the ownership");
 
 	// release object since there is no customer to release it after lookup and before CCache's cleanup
 	pso->Release();
@@ -397,7 +376,8 @@ CCacheTest::EresUnittest_Refcount()
 //
 //---------------------------------------------------------------------------
 ULLONG
-CCacheTest::InsertOneElement(CCache<SSimpleObject*, ULONG*> *pCache, ULONG ulKey)
+CCacheTest::InsertOneElement(CCache<SSimpleObject *, ULONG *> *pCache,
+							 ULONG ulKey)
 {
 	ULLONG ulTotalAllocatedSize = 0;
 	SSimpleObject *pso = NULL;
@@ -406,13 +386,17 @@ CCacheTest::InsertOneElement(CCache<SSimpleObject*, ULONG*> *pCache, ULONG ulKey
 		CMemoryPool *mp = ca.Pmp();
 		pso = GPOS_NEW(mp) SSimpleObject(ulKey, ulKey);
 		ca.Insert(&(pso->m_ulKey), pso);
-		GPOS_ASSERT(3 == pso->RefCount() && "Expected pso, cacheentry and cacheaccessor to have ownership");
+		GPOS_ASSERT(
+			3 == pso->RefCount() &&
+			"Expected pso, cacheentry and cacheaccessor to have ownership");
 		//Remove the ownership of pso. Still CCacheEntry has the ownership
 		pso->Release();
-		GPOS_ASSERT(2 == pso->RefCount() && "Expected pso and cacheentry to have ownership");
+		GPOS_ASSERT(2 == pso->RefCount() &&
+					"Expected pso and cacheentry to have ownership");
 		ulTotalAllocatedSize = mp->TotalAllocatedSize();
 	}
-	GPOS_ASSERT(1 == pso->RefCount() && "Expected only cacheentry to have ownership");
+	GPOS_ASSERT(1 == pso->RefCount() &&
+				"Expected only cacheentry to have ownership");
 	return ulTotalAllocatedSize;
 }
 
@@ -426,7 +410,8 @@ CCacheTest::InsertOneElement(CCache<SSimpleObject*, ULONG*> *pCache, ULONG ulKey
 //		Returns the key of the last inserted element
 //---------------------------------------------------------------------------
 ULONG
-CCacheTest::ULFillCacheWithoutEviction(CCache<SSimpleObject*, ULONG*> *pCache, ULONG ulKeyStart)
+CCacheTest::ULFillCacheWithoutEviction(CCache<SSimpleObject *, ULONG *> *pCache,
+									   ULONG ulKeyStart)
 {
 #ifdef GPOS_DEBUG
 	// initial size of the cache
@@ -441,8 +426,9 @@ CCacheTest::ULFillCacheWithoutEviction(CCache<SSimpleObject*, ULONG*> *pCache, U
 	ULLONG ullNewEvictionCounter = pCache->GetEvictionCounter();
 #endif
 
-	GPOS_ASSERT((ullOneElemCacheSize > ullInitialCacheSize || ullOldEvictionCounter < ullNewEvictionCounter)
-			&& "Cache size didn't change upon insertion");
+	GPOS_ASSERT((ullOneElemCacheSize > ullInitialCacheSize ||
+				 ullOldEvictionCounter < ullNewEvictionCounter) &&
+				"Cache size didn't change upon insertion");
 
 	ULLONG ullCacheCapacity = pCache->GetCacheQuota() / ullOneElemSize;
 
@@ -454,20 +440,20 @@ CCacheTest::ULFillCacheWithoutEviction(CCache<SSimpleObject*, ULONG*> *pCache, U
 		GPOS_CHECK_ABORT;
 	}
 
-#ifdef GPOS_DEBUG
-	ULLONG ullSizeBeforeEviction =
-#endif // GPOS_DEBUG
-			pCache->TotalAllocatedSize();
+	ULLONG ullSizeBeforeEviction GPOS_ASSERTS_ONLY =
+		pCache->TotalAllocatedSize();
 
 	// Check the size of the cache. Nothing should be evicted if the cache was initially empty
 #ifdef GPOS_DEBUG
 	ULLONG ullExpectedCacheSize = (ullCacheCapacity + 1) * ullOneElemSize;
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
-	GPOS_ASSERT_IMP(0 == ullInitialCacheSize, ullSizeBeforeEviction == ullExpectedCacheSize &&
+	GPOS_ASSERT_IMP(
+		0 == ullInitialCacheSize,
+		ullSizeBeforeEviction == ullExpectedCacheSize &&
 			ullSizeBeforeEviction + ullOneElemSize > ullInitialCacheSize);
 
-	return (ULONG) (ullCacheCapacity + ulKeyStart);
+	return (ULONG)(ullCacheCapacity + ulKeyStart);
 }
 
 //---------------------------------------------------------------------------
@@ -478,12 +464,14 @@ CCacheTest::ULFillCacheWithoutEviction(CCache<SSimpleObject*, ULONG*> *pCache, U
 //		Checks if after eviction we have more entries from newer generation than the older generation
 //---------------------------------------------------------------------------
 void
-CCacheTest::CheckGenerationSanityAfterEviction(CCache<SSimpleObject*, ULONG*>* pCache, ULLONG
+CCacheTest::CheckGenerationSanityAfterEviction(
+	CCache<SSimpleObject *, ULONG *> *pCache,
+	ULLONG
 #ifdef GPOS_DEBUG
 		ullOneElemSize
 #endif
-		, ULONG ulOldGenBeginKey,
-		ULONG ulOldGenEndKey, ULONG ulNewGenEndKey)
+	,
+	ULONG ulOldGenBeginKey, ULONG ulOldGenEndKey, ULONG ulNewGenEndKey)
 {
 	ULONG uloldGenEntryCount = 0;
 	ULONG ulNewGenEntryCount = 0;
@@ -492,7 +480,7 @@ CCacheTest::CheckGenerationSanityAfterEviction(CCache<SSimpleObject*, ULONG*>* p
 	{
 		CSimpleObjectCacheAccessor ca(pCache);
 		ca.Lookup(&ulKey);
-		SSimpleObject* pso = ca.Val();
+		SSimpleObject *pso = ca.Val();
 		if (NULL != pso)
 		{
 			// release object since there is no customer to release it after lookup and before CCache's cleanup
@@ -514,7 +502,9 @@ CCacheTest::CheckGenerationSanityAfterEviction(CCache<SSimpleObject*, ULONG*>* p
 #endif
 
 	// total in-cache entries must be at least as many as the minimum number of in-cache entries after an eviction
-	GPOS_ASSERT(uloldGenEntryCount + ulNewGenEntryCount >= (ULONG)((double)ullCacheCapacity * (1 - pCache->GetEvictionFactor())));
+	GPOS_ASSERT(
+		uloldGenEntryCount + ulNewGenEntryCount >=
+		(ULONG)((double) ullCacheCapacity * (1 - pCache->GetEvictionFactor())));
 	// there should be at least as many new gen entries as the old gen entries as they get to live longer
 	GPOS_ASSERT(ulNewGenEntryCount >= uloldGenEntryCount);
 }
@@ -529,11 +519,12 @@ CCacheTest::CheckGenerationSanityAfterEviction(CCache<SSimpleObject*, ULONG*>* p
 void
 CCacheTest::TestEvictionForOneCacheSize(ULLONG ullCacheQuota)
 {
-	CAutoP<CCache<SSimpleObject*, ULONG*> > apCache;
-	apCache = CCacheFactory::CreateCache<SSimpleObject*, ULONG*>(false, /* not an unique cache */
-			ullCacheQuota, SSimpleObject::UlMyHash, SSimpleObject::FMyEqual);
+	CAutoP<CCache<SSimpleObject *, ULONG *> > apCache;
+	apCache = CCacheFactory::CreateCache<SSimpleObject *, ULONG *>(
+		false, /* not an unique cache */
+		ullCacheQuota, SSimpleObject::UlMyHash, SSimpleObject::FMyEqual);
 
-	CCache<SSimpleObject*, ULONG*>* pCache = apCache.Value();
+	CCache<SSimpleObject *, ULONG *> *pCache = apCache.Value();
 	ULONG ulLastKeyFirstGen = ULFillCacheWithoutEviction(pCache, 0);
 
 #ifdef GPOS_DEBUG
@@ -549,15 +540,17 @@ CCacheTest::TestEvictionForOneCacheSize(ULLONG ullCacheQuota)
 	// Make sure cache is now smaller, due to eviction
 	GPOS_ASSERT(ullPostEvictionSize < ullSizeBeforeEviction);
 	// Now insert another batch of elements to fill the cache
-	ULONG ulLastKeySecondGen = ULFillCacheWithoutEviction(pCache, ulLastKeyFirstGen + 2);
+	ULONG ulLastKeySecondGen =
+		ULFillCacheWithoutEviction(pCache, ulLastKeyFirstGen + 2);
 	// Another batch of insert to the cache's filling should evict all the second generation keys
-	ULONG ulLastKeyThirdGen = ULFillCacheWithoutEviction(pCache, ulLastKeySecondGen + 1);
+	ULONG ulLastKeyThirdGen =
+		ULFillCacheWithoutEviction(pCache, ulLastKeySecondGen + 1);
 
 	CSimpleObjectCacheAccessor caBeforeEviction(pCache);
 	// this is now pinned as the accessor is not going out of scope; pinned entry is used later for checking non-eviction
 	caBeforeEviction.Lookup(&ulLastKeyThirdGen);
 
-	SSimpleObject* psoBeforeEviction = caBeforeEviction.Val();
+	SSimpleObject *psoBeforeEviction = caBeforeEviction.Val();
 
 	if (NULL != psoBeforeEviction)
 	{
@@ -571,7 +564,7 @@ CCacheTest::TestEvictionForOneCacheSize(ULLONG ullCacheQuota)
 		CSimpleObjectCacheAccessor ca(pCache);
 		ca.Lookup(&ulKey);
 
-		SSimpleObject* pso = ca.Val();
+		SSimpleObject *pso = ca.Val();
 
 		if (NULL != pso)
 		{
@@ -584,33 +577,39 @@ CCacheTest::TestEvictionForOneCacheSize(ULLONG ullCacheQuota)
 
 
 	// now ensure that newer gen items are outliving older gen during cache eviction
-	CheckGenerationSanityAfterEviction(pCache, ullOneElemSize, ulLastKeyFirstGen + 2,
-			ulLastKeySecondGen, ulLastKeyThirdGen);
+	CheckGenerationSanityAfterEviction(pCache, ullOneElemSize,
+									   ulLastKeyFirstGen + 2,
+									   ulLastKeySecondGen, ulLastKeyThirdGen);
 
-	ULLONG ullNewQuota = static_cast<ULLONG>(static_cast<double>(ullCacheQuota) * 0.5);
+	ULLONG ullNewQuota =
+		static_cast<ULLONG>(static_cast<double>(ullCacheQuota) * 0.5);
 	// drastically reduce the size of the cache
 	pCache->SetCacheQuota(ullNewQuota);
 	GPOS_ASSERT(pCache->GetCacheQuota() == ullNewQuota);
 	// now ensure that newer gen items are outliving older gen during cache eviction
-	CheckGenerationSanityAfterEviction(pCache, ullOneElemSize, ulLastKeyFirstGen + 2,
-			ulLastKeySecondGen, ulLastKeyThirdGen);
+	CheckGenerationSanityAfterEviction(pCache, ullOneElemSize,
+									   ulLastKeyFirstGen + 2,
+									   ulLastKeySecondGen, ulLastKeyThirdGen);
 
 	// now check pinning would retain the entry, no matter how many eviction is triggered
 
 	// Another batch of insert to the cache's filling should evict all the third generation keys
-	ULONG ulLastKeyFourthGen = ULFillCacheWithoutEviction(pCache, ulLastKeyThirdGen + 1);
+	ULONG ulLastKeyFourthGen =
+		ULFillCacheWithoutEviction(pCache, ulLastKeyThirdGen + 1);
 
 	// Another batch of insert to the cache's filling should evict all the forth generation keys
-	ULONG ulLastKeyFifthGen = ULFillCacheWithoutEviction(pCache, ulLastKeyFourthGen + 1);
+	ULONG ulLastKeyFifthGen =
+		ULFillCacheWithoutEviction(pCache, ulLastKeyFourthGen + 1);
 
 	// Another batch of insert to the cache's filling should evict all the fifth generation keys
 	ULFillCacheWithoutEviction(pCache, ulLastKeyFifthGen + 1);
-	for (ULONG ulKey = ulLastKeySecondGen + 1; ulKey <= ulLastKeyFourthGen; ulKey++)
+	for (ULONG ulKey = ulLastKeySecondGen + 1; ulKey <= ulLastKeyFourthGen;
+		 ulKey++)
 	{
 		CSimpleObjectCacheAccessor ca(pCache);
 		ca.Lookup(&ulKey);
 
-		SSimpleObject* pso = ca.Val();
+		SSimpleObject *pso = ca.Val();
 
 		if (NULL != pso)
 		{
@@ -651,10 +650,7 @@ CCacheTest::EresUnittest_Eviction()
 //
 //---------------------------------------------------------------------------
 GPOS_RESULT
-CCacheTest::EresInsertDuplicates
-	(
-			CCache<SSimpleObject*, ULONG*> *pcache
-	)
+CCacheTest::EresInsertDuplicates(CCache<SSimpleObject *, ULONG *> *pcache)
 {
 	ULONG ulDuplicates = 1;
 	if (!pcache->AllowsDuplicateKeys())
@@ -669,10 +665,8 @@ CCacheTest::EresInsertDuplicates
 			CSimpleObjectCacheAccessor ca(pcache);
 			SSimpleObject *pso = GPOS_NEW(ca.Pmp()) SSimpleObject(i, j);
 
-#ifdef GPOS_DEBUG
-			SSimpleObject *psoReturned =
-#endif // GPOS_DEBUG
-					ca.Insert(&(pso->m_ulKey), pso);
+			SSimpleObject *psoReturned GPOS_ASSERTS_ONLY =
+				ca.Insert(&(pso->m_ulKey), pso);
 
 			GPOS_ASSERT(NULL != psoReturned);
 
@@ -685,8 +679,13 @@ CCacheTest::EresInsertDuplicates
 		CAutoMemoryPool amp;
 		CMemoryPool *mp = amp.Pmp();
 		CAutoTrace at(mp);
-		at.Os() << std::endl << "Total memory consumption by cache: " << pcache->TotalAllocatedSize() << " bytes";
-		at.Os() << std::endl << "Total memory consumption by memory manager: " << CMemoryPoolManager::GetMemoryPoolMgr()->TotalAllocatedSize() << " bytes";
+		at.Os() << std::endl
+				<< "Total memory consumption by cache: "
+				<< pcache->TotalAllocatedSize() << " bytes";
+		at.Os() << std::endl
+				<< "Total memory consumption by memory manager: "
+				<< CMemoryPoolManager::GetMemoryPoolMgr()->TotalAllocatedSize()
+				<< " bytes";
 	}
 
 	return GPOS_OK;
@@ -702,10 +701,7 @@ CCacheTest::EresInsertDuplicates
 //
 //---------------------------------------------------------------------------
 GPOS_RESULT
-CCacheTest::EresRemoveDuplicates
-	(
-			CCache<SSimpleObject*, ULONG*> *pcache
-	)
+CCacheTest::EresRemoveDuplicates(CCache<SSimpleObject *, ULONG *> *pcache)
 {
 	for (ULONG i = 0; i < GPOS_CACHE_ELEMENTS; i++)
 	{
@@ -714,7 +710,7 @@ CCacheTest::EresRemoveDuplicates
 		CSimpleObjectCacheAccessor ca(pcache);
 		ca.Lookup(&i);
 		ULONG count = 0;
-		SSimpleObject* pso = ca.Val();
+		SSimpleObject *pso = ca.Val();
 		GPOS_ASSERT(NULL != pso);
 
 		if (NULL != pso)
@@ -728,7 +724,7 @@ CCacheTest::EresRemoveDuplicates
 			GPOS_CHECK_ABORT;
 
 			GPOS_ASSERT(pso->m_ulValue < GPOS_CACHE_DUPLICATES &&
-					    "Incorrect entry was found");
+						"Incorrect entry was found");
 
 			if (pso->m_ulValue < GPOS_CACHE_DUPLICATES_TO_DELETE)
 			{
@@ -739,8 +735,7 @@ CCacheTest::EresRemoveDuplicates
 			pso = ca.Next();
 		}
 		GPOS_ASSERT(count == GPOS_CACHE_DUPLICATES_TO_DELETE &&
-				    "Incorrect number of deleted entries");
-
+					"Incorrect number of deleted entries");
 	}
 
 	return GPOS_OK;
@@ -765,16 +760,14 @@ CCacheTest::EresUnittest_DeepObject()
 	pdoDummy->AddEntry(amp.Pmp(), 1, 1);
 	pdoDummy->AddEntry(amp.Pmp(), 2, 2);
 
-	CAutoP<CCache<CDeepObject*, CDeepObject::CDeepObjectList*> > apcache;
-	apcache = CCacheFactory::CreateCache<CDeepObject*, CDeepObject::CDeepObjectList*>
-			(
-			fUnique,
-			UNLIMITED_CACHE_QUOTA,
-			&CDeepObject::UlMyHash,
-			&CDeepObject::FMyEqual
-			);
+	CAutoP<CCache<CDeepObject *, CDeepObject::CDeepObjectList *> > apcache;
+	apcache = CCacheFactory::CreateCache<CDeepObject *,
+										 CDeepObject::CDeepObjectList *>(
+		fUnique, UNLIMITED_CACHE_QUOTA, &CDeepObject::UlMyHash,
+		&CDeepObject::FMyEqual);
 
-	CCache<CDeepObject*, CDeepObject::CDeepObjectList*> *pcache = apcache.Value();
+	CCache<CDeepObject *, CDeepObject::CDeepObjectList *> *pcache =
+		apcache.Value();
 
 	// insertion - scope for accessor
 	{
@@ -784,14 +777,11 @@ CCacheTest::EresUnittest_DeepObject()
 		pdo->AddEntry(mp, 1, 1);
 		pdo->AddEntry(mp, 2, 2);
 
-#ifdef GPOS_DEBUG
-		CDeepObject *pdoReturned =
-#endif // GPOS_DEBUG
-			ca.Insert(pdo->Key(), pdo);
+		CDeepObject *pdoReturned GPOS_ASSERTS_ONLY = ca.Insert(pdo->Key(), pdo);
 		pdo->Release();
 
 		GPOS_ASSERT(NULL != pdoReturned &&
-				    "Incorrect cache entry was inserted");
+					"Incorrect cache entry was inserted");
 
 		// insert duplicate while not allowed
 		if (pcache->AllowsDuplicateKeys())
@@ -802,13 +792,10 @@ CCacheTest::EresUnittest_DeepObject()
 			pdoDuplicate->AddEntry(mp, 1, 5);
 			pdoDuplicate->AddEntry(mp, 2, 5);
 
-#ifdef GPOS_DEBUG
-			CDeepObject *pdoReturned  =
-#endif // GPOS_DEBUG
+			CDeepObject *pdoReturned GPOS_ASSERTS_ONLY =
 				ca.Insert(pdoDuplicate->Key(), pdoDuplicate);
 
-			GPOS_ASSERT(pdoReturned == pdo &&
-						"Duplicate insertion must fail");
+			GPOS_ASSERT(pdoReturned == pdo && "Duplicate insertion must fail");
 
 			// delete original cache object
 			ca.MarkForDeletion();
@@ -831,8 +818,7 @@ CCacheTest::EresUnittest_DeepObject()
 			GPOS_ASSERT_IMP(!pcache->AllowsDuplicateKeys(), NULL != pdo);
 			GPOS_ASSERT_IMP(!pcache->AllowsDuplicateKeys(),
 							3 == CDeepObject::UlMyHash(pdo->Key()) &&
-							"Incorrect cache entry");
-
+								"Incorrect cache entry");
 		}
 
 		// delete - scope for accessor
@@ -858,7 +844,6 @@ CCacheTest::EresUnittest_DeepObject()
 			ca.Lookup(pdoDummy->Key());
 			pdo = ca.Val();
 			GPOS_ASSERT(NULL == pdo);
-
 		}
 
 		// at this point, we still maintain a valid cached object held by the
@@ -883,16 +868,12 @@ CCacheTest::EresUnittest_DeepObject()
 GPOS_RESULT
 CCacheTest::EresUnittest_Iteration()
 {
-	CAutoP<CCache<SSimpleObject*, ULONG*> > apcache;
-	apcache = CCacheFactory::CreateCache<SSimpleObject*, ULONG*>
-				(
-				fUnique,
-				UNLIMITED_CACHE_QUOTA,
-				SSimpleObject::UlMyHash,
-				SSimpleObject::FMyEqual
-				);
+	CAutoP<CCache<SSimpleObject *, ULONG *> > apcache;
+	apcache = CCacheFactory::CreateCache<SSimpleObject *, ULONG *>(
+		fUnique, UNLIMITED_CACHE_QUOTA, SSimpleObject::UlMyHash,
+		SSimpleObject::FMyEqual);
 
-	CCache<SSimpleObject*, ULONG*> *pcache = apcache.Value();
+	CCache<SSimpleObject *, ULONG *> *pcache = apcache.Value();
 
 	CCacheTest::EresInsertDuplicates(pcache);
 
@@ -902,7 +883,7 @@ CCacheTest::EresUnittest_Iteration()
 	{
 		ulDuplicates = GPOS_CACHE_DUPLICATES;
 	}
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	for (ULONG i = 0; i < GPOS_CACHE_ELEMENTS; i++)
 	{
@@ -911,7 +892,7 @@ CCacheTest::EresUnittest_Iteration()
 		CSimpleObjectCacheAccessor ca(pcache);
 		ca.Lookup(&i);
 		ULONG count = 0;
-		SSimpleObject* pso = ca.Val();
+		SSimpleObject *pso = ca.Val();
 		GPOS_ASSERT(NULL != pso);
 
 		// release object since there is no customer to release it after lookup and before CCache's cleanup
@@ -922,14 +903,12 @@ CCacheTest::EresUnittest_Iteration()
 			GPOS_CHECK_ABORT;
 
 			GPOS_ASSERT(ulDuplicates > pso->m_ulValue &&
-					    "Incorrect entry was found");
+						"Incorrect entry was found");
 
 			count++;
 			pso = ca.Next();
 		}
-		GPOS_ASSERT(count == ulDuplicates &&
-				    "Incorrect number of duplicates");
-
+		GPOS_ASSERT(count == ulDuplicates && "Incorrect number of duplicates");
 	}
 
 	return GPOS_OK;
@@ -949,16 +928,12 @@ CCacheTest::EresUnittest_IterativeDeletion()
 {
 	GPOS_ASSERT(GPOS_CACHE_DUPLICATES >= GPOS_CACHE_DUPLICATES_TO_DELETE);
 
-	CAutoP<CCache<SSimpleObject*, ULONG*> > apcache;
-	apcache = CCacheFactory::CreateCache<SSimpleObject*, ULONG*>
-				(
-				fUnique,
-				UNLIMITED_CACHE_QUOTA,
-				SSimpleObject::UlMyHash,
-				SSimpleObject::FMyEqual
-				);
+	CAutoP<CCache<SSimpleObject *, ULONG *> > apcache;
+	apcache = CCacheFactory::CreateCache<SSimpleObject *, ULONG *>(
+		fUnique, UNLIMITED_CACHE_QUOTA, SSimpleObject::UlMyHash,
+		SSimpleObject::FMyEqual);
 
-	CCache<SSimpleObject*, ULONG*> *pcache = apcache.Value();
+	CCache<SSimpleObject *, ULONG *> *pcache = apcache.Value();
 
 	CCacheTest::EresInsertDuplicates(pcache);
 
@@ -977,7 +952,7 @@ CCacheTest::EresUnittest_IterativeDeletion()
 	}
 
 	ULONG ulRemaining = ulDuplicates - ulDuplicatesToDelete;
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// count remaining duplicate entries
 	for (ULONG i = 0; i < GPOS_CACHE_ELEMENTS; i++)
@@ -1007,8 +982,7 @@ CCacheTest::EresUnittest_IterativeDeletion()
 		}
 
 		GPOS_ASSERT(count == ulRemaining &&
-				    "Incorrect number of remaining duplicates");
-
+					"Incorrect number of remaining duplicates");
 	}
 
 	return GPOS_OK;

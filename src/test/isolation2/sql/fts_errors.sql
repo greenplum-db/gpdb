@@ -20,8 +20,6 @@
 !\retcode gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly;
 !\retcode gpstop -u;
 
-include: helpers/server_helpers.sql;
-
 -- Helper function
 CREATE or REPLACE FUNCTION wait_until_segments_are_down(num_segs int)
 RETURNS bool AS

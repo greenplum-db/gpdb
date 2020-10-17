@@ -307,73 +307,142 @@ SELECT * FROM dml_timestamptz ORDER BY 1;
 (1 row)
 
 --
+-- Tests for implicit conversions between "unknown" and other types.
+--
+-- Test "unknown" from sub queries - MPP-2510
+select foo || 'bar'::text from (select 'bar' as foo) a;
+ ?column? 
+----------
+ barbar
+(1 row)
+
+select foo || 'bar'::text from (select 'bar'::text as foo) a;
+ ?column? 
+----------
+ barbar
+(1 row)
+
+select * from ( select 'a' as a) x join (select 'b' as b) y on a=b;
+ a | b 
+---+---
+(0 rows)
+
+-- Test "unknown" with typmod MPP-2658
+create table unknown_test (v varchar(20), n numeric(20, 2), t timestamp(2));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'v' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into unknown_test select '100', '123.23', '2008-01-01 11:11:11';
+select 'foo'::varchar(10) || bar from (select 'bar' as bar) moo;
+ ?column? 
+----------
+ foobar
+(1 row)
+
+select '123'::numeric(4,1) + bar from (select '123' as bar) baz;
+ERROR:  operator does not exist: numeric + text
+LINE 1: select '123'::numeric(4,1) + bar from (select '123' as bar) ...
+                                   ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+drop table unknown_test;
+-- Test nested "unknown"s from MPP-2689
+select 'foo'::text || foo from ( select foo from (select 4.5, foo from ( select
+1, 'foo' as foo) a ) b ) c;
+ ?column? 
+----------
+ foofoo
+(1 row)
+
+select 'foo'::text || foo from ( select foo from
+ (select foo || bar as foo from ( select 'bar' as bar, 'foo' as foo) a ) b ) c;
+ ?column?  
+-----------
+ foofoobar
+(1 row)
+
+create domain u_d as text;
+prepare p1 as select $1::u_d || foo from (select 'foo' as foo) a;
+prepare p2 as select 'foo' || foo
+from (select $1::u_d || bar as foo from (select 'bar' as bar) a ) b;
+select 'a' as a, 'b' as b, 'c' as c, 1 as d union select * from (select 'a' as a, 'b' as b, 'c' as c, 1 as d)d;
+ a | b | c | d 
+---+---+---+---
+ a | b | c | 1
+(1 row)
+
+select * from (select 'a' as a, 'b' as b, 'c' as c, 1 as d)d union select 'a' as a, 'b' as b, 'c' as c, 1 as d;
+ a | b | c | d 
+---+---+---+---
+ a | b | c | 1
+(1 row)
+
+--
 -- Float8: test if you can dump/restore subnormal (1e-323) values using COPY
 --
 CREATE TABLE FLOATS(a float8);
 INSERT INTO FLOATS select 1e-307::float8 / 10^i FROM generate_series(1,16) i;
 SELECT * FROM FLOATS ORDER BY a;
-           a           
------------------------
- 9.88131291682493e-324
- 9.88131291682493e-323
- 9.98012604599318e-322
- 9.99988867182683e-321
- 9.99988867182683e-320
-   9.999987484956e-319
- 1.00000023069254e-317
- 9.99999983659714e-317
- 9.99999998481684e-316
- 9.99999999963881e-315
- 1.00000000001329e-313
- 9.99999999998465e-313
- 9.99999999999948e-312
- 9.99999999999997e-311
-                1e-309
-                1e-308
+   a    
+--------
+ 1e-323
+ 1e-322
+ 1e-321
+ 1e-320
+ 1e-319
+ 1e-318
+ 1e-317
+ 1e-316
+ 1e-315
+ 1e-314
+ 1e-313
+ 1e-312
+ 1e-311
+ 1e-310
+ 1e-309
+ 1e-308
 (16 rows)
 
 SELECT float8in(float8out(a)) FROM FLOATS ORDER BY a;
-       float8in        
------------------------
- 9.88131291682493e-324
- 9.88131291682493e-323
- 9.98012604599318e-322
- 9.99988867182683e-321
- 9.99988867182683e-320
-   9.999987484956e-319
- 1.00000023069254e-317
- 9.99999983659714e-317
- 9.99999998481684e-316
- 9.99999999963881e-315
- 1.00000000001329e-313
- 9.99999999998465e-313
- 9.99999999999948e-312
- 9.99999999999997e-311
-                1e-309
-                1e-308
+ float8in 
+----------
+   1e-323
+   1e-322
+   1e-321
+   1e-320
+   1e-319
+   1e-318
+   1e-317
+   1e-316
+   1e-315
+   1e-314
+   1e-313
+   1e-312
+   1e-311
+   1e-310
+   1e-309
+   1e-308
 (16 rows)
 
 COPY FLOATS TO '/tmp/floats';
 TRUNCATE FLOATS;
 COPY FLOATS FROM '/tmp/floats';
 SELECT * FROM FLOATS ORDER BY a;
-           a           
------------------------
- 9.88131291682493e-324
- 9.88131291682493e-323
- 9.98012604599318e-322
- 9.99988867182683e-321
- 9.99988867182683e-320
-   9.999987484956e-319
- 1.00000023069254e-317
- 9.99999983659714e-317
- 9.99999998481684e-316
- 9.99999999963881e-315
- 1.00000000001329e-313
- 9.99999999998465e-313
- 9.99999999999948e-312
- 9.99999999999997e-311
-                1e-309
-                1e-308
+   a    
+--------
+ 1e-323
+ 1e-322
+ 1e-321
+ 1e-320
+ 1e-319
+ 1e-318
+ 1e-317
+ 1e-316
+ 1e-315
+ 1e-314
+ 1e-313
+ 1e-312
+ 1e-311
+ 1e-310
+ 1e-309
+ 1e-308
 (16 rows)
 

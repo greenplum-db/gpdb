@@ -13,12 +13,14 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
-#include "miscadmin.h"
 
 #include "libpq-fe.h"
+#include "miscadmin.h"
 #include "pqexpbuffer.h"
 
-#include "catalog/gp_segment_config.h"
+#include "access/genam.h"
+#include "access/table.h"
+#include "catalog/gp_segment_configuration.h"
 #include "catalog/pg_proc.h"
 #include "catalog/indexing.h"
 #include "cdb/cdbdisp_query.h"
@@ -28,6 +30,7 @@
 #include "postmaster/startup.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/rel.h"
 
 #define MASTER_ONLY 0x1
 #define UTILITY_MODE 0x2
@@ -88,7 +91,7 @@ standby_exists()
 static int16
 get_maxdbid()
 {
-	Relation	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
+	Relation	rel = table_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	int16		dbid = 0;
 	HeapTuple	tuple;
 	SysScanDesc sscan;
@@ -100,7 +103,7 @@ get_maxdbid()
 				   ((Form_gp_segment_configuration) GETSTRUCT(tuple))->dbid);
 	}
 	systable_endscan(sscan);
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 
 	return dbid;
 }
@@ -243,7 +246,7 @@ mirroring_sanity_check(int flags, const char *func)
 static void
 add_segment_config(GpSegConfigEntry *i)
 {
-	Relation	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
+	Relation	rel = table_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	Datum		values[Natts_gp_segment_configuration];
 	bool		nulls[Natts_gp_segment_configuration];
 	HeapTuple	tuple;
@@ -271,10 +274,9 @@ add_segment_config(GpSegConfigEntry *i)
 	tuple = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
 	/* insert a new tuple */
-	simple_heap_insert(rel, tuple);
-	CatalogUpdateIndexes(rel, tuple);
+	CatalogTupleInsert(rel, tuple);
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 }
 
 /*
@@ -299,7 +301,7 @@ remove_segment_config(int16 dbid)
 	HeapTuple	tuple;
 	Relation	rel;
 
-	rel = heap_open(GpSegmentConfigRelationId, RowExclusiveLock);
+	rel = table_open(GpSegmentConfigRelationId, RowExclusiveLock);
 
 	ScanKeyInit(&scankey,
 				Anum_gp_segment_configuration_dbid,
@@ -310,14 +312,14 @@ remove_segment_config(int16 dbid)
 							   NULL, 1, &scankey);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
-		simple_heap_delete(rel, &tuple->t_self);
+		CatalogTupleDelete(rel, &tuple->t_self);
 		numDel++;
 	}
 	systable_endscan(sscan);
 
 	Assert(numDel > 0);
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 }
 
 static void
@@ -709,7 +711,7 @@ static void
 segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
 {
 	/* we use AccessExclusiveLock to prevent races */
-	Relation	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
+	Relation	rel = table_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	HeapTuple	tuple;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
@@ -724,7 +726,7 @@ segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
 							   NULL, 1, &scankey);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
-		simple_heap_delete(rel, &tuple->t_self);
+		CatalogTupleDelete(rel, &tuple->t_self);
 		numDel++;
 	}
 	systable_endscan(sscan);
@@ -750,12 +752,11 @@ segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
 	((Form_gp_segment_configuration) GETSTRUCT(tuple))->role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 	((Form_gp_segment_configuration) GETSTRUCT(tuple))->preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 
-	simple_heap_update(rel, &tuple->t_self, tuple);
-	CatalogUpdateIndexes(rel, tuple);
+	CatalogTupleUpdate(rel, &tuple->t_self, tuple);
 
 	systable_endscan(sscan);
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 }
 
 /*

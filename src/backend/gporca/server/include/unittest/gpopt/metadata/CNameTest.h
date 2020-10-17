@@ -15,28 +15,27 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CNameTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	class CNameTest
-	{
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CNameTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
+class CNameTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
+	static GPOS_RESULT EresUnittest_Ownership();
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-			static GPOS_RESULT EresUnittest_Ownership();
+};	// class CNameTest
+}  // namespace gpopt
 
-	}; // class CNameTest
-}
-
-#endif // !GPOPT_CNameTest_H
+#endif	// !GPOPT_CNameTest_H
 
 // EOF

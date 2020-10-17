@@ -26,14 +26,9 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalSubqueryScan::CDXLPhysicalSubqueryScan
-	(
-	CMemoryPool *mp,
-	CMDName *mdname
-	)
-	:
-	CDXLPhysical(mp),
-	m_mdname_alias(mdname)
+CDXLPhysicalSubqueryScan::CDXLPhysicalSubqueryScan(CMemoryPool *mp,
+												   CMDName *mdname)
+	: CDXLPhysical(mp), m_mdname_alias(mdname)
 {
 }
 
@@ -104,25 +99,24 @@ CDXLPhysicalSubqueryScan::MdName()
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalSubqueryScan::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLPhysicalSubqueryScan::SerializeToDXL(CXMLSerializer *xml_serializer,
+										 const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenAlias), m_mdname_alias->GetMDName());
-	
+
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenAlias),
+								 m_mdname_alias->GetMDName());
+
 	// serialize properties
 	dxlnode->SerializePropertiesToDXL(xml_serializer);
-	
+
 	// serialize children
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
-		
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);		
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -131,35 +125,33 @@ CDXLPhysicalSubqueryScan::SerializeToDXL
 //		CDXLPhysicalSubqueryScan::AssertValid
 //
 //	@doc:
-//		Checks whether operator node is well-structured 
+//		Checks whether operator node is well-structured
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalSubqueryScan::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	) 
-	const
+CDXLPhysicalSubqueryScan::AssertValid(const CDXLNode *dxlnode,
+									  BOOL validate_children) const
 {
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(dxlnode, validate_children);
-	
+
 	// subquery scan has 3 children
 	GPOS_ASSERT(EdxlsubqscanIndexSentinel == dxlnode->Arity());
-	
+
 	CDXLNode *child_dxlnode = (*dxlnode)[EdxlsubqscanIndexChild];
-	GPOS_ASSERT(EdxloptypePhysical == child_dxlnode->GetOperator()->GetDXLOperatorType());
-	
+	GPOS_ASSERT(EdxloptypePhysical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
+
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
-	
+
 	// assert validity of table descriptor
 	GPOS_ASSERT(NULL != m_mdname_alias);
 	GPOS_ASSERT(m_mdname_alias->GetMDName()->IsValid());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

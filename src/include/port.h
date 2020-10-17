@@ -3,7 +3,7 @@
  * port.h
  *	  Header for src/port/ compatibility functions.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/port.h
@@ -16,6 +16,15 @@
 #include <ctype.h>
 #include <netdb.h>
 #include <pwd.h>
+
+/*
+ * Windows has enough specialized port stuff that we push most of it off
+ * into another file.
+ * Note: Some CYGWIN includes might #define WIN32.
+ */
+#if defined(WIN32) && !defined(__CYGWIN__)
+#include "port/win32_port.h"
+#endif
 
 /* socket has a different definition on WIN32 */
 #ifndef WIN32
@@ -39,7 +48,7 @@ extern char *first_dir_separator(const char *filename);
 extern char *last_dir_separator(const char *filename);
 extern char *first_path_var_separator(const char *pathlist);
 extern void join_path_components(char *ret_path,
-					 const char *head, const char *tail);
+								 const char *head, const char *tail);
 extern void canonicalize_path(char *path);
 extern void make_native_path(char *path);
 extern void cleanup_path(char *path);
@@ -96,13 +105,12 @@ extern void set_pglocale_pgservice(const char *argv0, const char *app);
 
 /* Portable way to find binaries (in exec.c) */
 extern int	find_my_exec(const char *argv0, char *retpath);
-extern int find_other_exec(const char *argv0, const char *target,
-				const char *versionstr, char *retpath);
+extern int	find_other_exec(const char *argv0, const char *target,
+							const char *versionstr, char *retpath);
 
-/* Windows security token manipulation (in exec.c) */
-#ifdef WIN32
-extern BOOL AddUserToTokenDacl(HANDLE hToken);
-#endif
+/* Doesn't belong here, but this is used with find_other_exec(), so... */
+#define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
+#define PG_BACKEND_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 
 
 #if defined(WIN32) || defined(__CYGWIN__)
@@ -128,7 +136,12 @@ extern unsigned char pg_tolower(unsigned char ch);
 extern unsigned char pg_ascii_toupper(unsigned char ch);
 extern unsigned char pg_ascii_tolower(unsigned char ch);
 
-#ifdef USE_REPL_SNPRINTF
+/*
+ * Beginning in v12, we always replace snprintf() and friends with our own
+ * implementation.  This symbol is no longer consulted by the core code,
+ * but keep it defined anyway in case any extensions are looking at it.
+ */
+#define USE_REPL_SNPRINTF 1
 
 /*
  * Versions of libintl >= 0.13 try to replace printf() and friends with
@@ -141,6 +154,9 @@ extern unsigned char pg_ascii_tolower(unsigned char ch);
 #ifdef snprintf
 #undef snprintf
 #endif
+#ifdef vsprintf
+#undef vsprintf
+#endif
 #ifdef sprintf
 #undef sprintf
 #endif
@@ -150,67 +166,57 @@ extern unsigned char pg_ascii_tolower(unsigned char ch);
 #ifdef fprintf
 #undef fprintf
 #endif
+#ifdef vprintf
+#undef vprintf
+#endif
 #ifdef printf
 #undef printf
 #endif
 
 extern int	pg_vsnprintf(char *str, size_t count, const char *fmt, va_list args);
 extern int	pg_snprintf(char *str, size_t count, const char *fmt,...) pg_attribute_printf(3, 4);
+extern int	pg_vsprintf(char *str, const char *fmt, va_list args);
 extern int	pg_sprintf(char *str, const char *fmt,...) pg_attribute_printf(2, 3);
 extern int	pg_vfprintf(FILE *stream, const char *fmt, va_list args);
 extern int	pg_fprintf(FILE *stream, const char *fmt,...) pg_attribute_printf(2, 3);
+extern int	pg_vprintf(const char *fmt, va_list args);
 extern int	pg_printf(const char *fmt,...) pg_attribute_printf(1, 2);
 
 /*
- *	The GCC-specific code below prevents the pg_attribute_printf above from
- *	being replaced, and this is required because gcc doesn't know anything
- *	about pg_printf.
+ * We use __VA_ARGS__ for printf to prevent replacing references to
+ * the "printf" format archetype in format() attribute declarations.
+ * That unfortunately means that taking a function pointer to printf
+ * will not do what we'd wish.  (If you need to do that, you must name
+ * pg_printf explicitly.)  For printf's sibling functions, use
+ * parameterless macros so that function pointers will work unsurprisingly.
  */
-#ifdef __GNUC__
-#define vsnprintf(...)	pg_vsnprintf(__VA_ARGS__)
-#define snprintf(...)	pg_snprintf(__VA_ARGS__)
-#define sprintf(...)	pg_sprintf(__VA_ARGS__)
-#define vfprintf(...)	pg_vfprintf(__VA_ARGS__)
-#define fprintf(...)	pg_fprintf(__VA_ARGS__)
-#define printf(...)		pg_printf(__VA_ARGS__)
-#else
 #define vsnprintf		pg_vsnprintf
 #define snprintf		pg_snprintf
+#define vsprintf		pg_vsprintf
 #define sprintf			pg_sprintf
 #define vfprintf		pg_vfprintf
 #define fprintf			pg_fprintf
-#define printf			pg_printf
-#endif
-#endif   /* USE_REPL_SNPRINTF */
+#define vprintf			pg_vprintf
+#define printf(...)		pg_printf(__VA_ARGS__)
 
-#if defined(WIN32)
-/*
- * Versions of libintl >= 0.18? try to replace setlocale() with a macro
- * to their own versions.  Remove the macro, if it exists, because it
- * ends up calling the wrong version when the backend and libintl use
- * different versions of msvcrt.
- */
-#if defined(setlocale)
-#undef setlocale
-#endif
+/* This is also provided by snprintf.c */
+extern int	pg_strfromd(char *str, size_t count, int precision, double value);
 
-/*
- * Define our own wrapper macro around setlocale() to work around bugs in
- * Windows' native setlocale() function.
- */
-extern char *pgwin32_setlocale(int category, const char *locale);
+/* Replace strerror() with our own, somewhat more robust wrapper */
+extern char *pg_strerror(int errnum);
+#define strerror pg_strerror
 
-#define setlocale(a,b) pgwin32_setlocale(a,b)
-#endif   /* WIN32 */
+/* Likewise for strerror_r(); note we prefer the GNU API for that */
+extern char *pg_strerror_r(int errnum, char *buf, size_t buflen);
+#define strerror_r pg_strerror_r
+#define PG_STRERROR_R_BUFLEN 256	/* Recommended buffer size for strerror_r */
+
+/* Wrap strsignal(), or provide our own version if necessary */
+extern const char *pg_strsignal(int signum);
 
 /* Portable prompt handling */
-extern char *simple_prompt(const char *prompt, int maxlen, bool echo);
-
-#ifdef WIN32
-#define PG_SIGNAL_COUNT 32
-#define kill(pid,sig)	pgkill(pid,sig)
-extern int	pgkill(int pid, int sig);
-#endif
+extern void simple_prompt(const char *prompt, char *destination, size_t destlen,
+						  bool echo);
 
 extern int	pclose_check(FILE *stream);
 
@@ -231,13 +237,13 @@ extern int	pgrename(const char *from, const char *to);
 extern int	pgunlink(const char *path);
 
 /* Include this first so later includes don't see these defines */
-#ifdef WIN32_ONLY_COMPILER
+#ifdef _MSC_VER
 #include <io.h>
 #endif
 
 #define rename(from, to)		pgrename(from, to)
 #define unlink(path)			pgunlink(path)
-#endif   /* defined(WIN32) || defined(__CYGWIN__) */
+#endif							/* defined(WIN32) || defined(__CYGWIN__) */
 
 /*
  *	Win32 also doesn't have symlinks, but we can emulate them with
@@ -251,30 +257,13 @@ extern int	pgunlink(const char *path);
 #if defined(WIN32) && !defined(__CYGWIN__)
 extern int	pgsymlink(const char *oldpath, const char *newpath);
 extern int	pgreadlink(const char *path, char *buf, size_t size);
-extern bool pgwin32_is_junction(char *path);
+extern bool pgwin32_is_junction(const char *path);
 
 #define symlink(oldpath, newpath)	pgsymlink(oldpath, newpath)
 #define readlink(path, buf, size)	pgreadlink(path, buf, size)
 #endif
 
 extern bool rmtree(const char *path, bool rmtopdir);
-
-/*
- * stat() is not guaranteed to set the st_size field on win32, so we
- * redefine it to our own implementation that is.
- *
- * We must pull in sys/stat.h here so the system header definition
- * goes in first, and we redefine that, and not the other way around.
- *
- * Some frontends don't need the size from stat, so if UNSAFE_STAT_OK
- * is defined we don't bother with this.
- */
-#if defined(WIN32) && !defined(__CYGWIN__) && !defined(UNSAFE_STAT_OK)
-#include <sys/stat.h>
-extern int	pgwin32_safestat(const char *path, struct stat * buf);
-
-#define stat(a,b) pgwin32_safestat(a,b)
-#endif
 
 #if defined(WIN32) && !defined(__CYGWIN__)
 
@@ -285,11 +274,8 @@ extern int	pgwin32_safestat(const char *path, struct stat * buf);
 #define		O_DIRECT	0x80000000
 extern int	pgwin32_open(const char *, int,...);
 extern FILE *pgwin32_fopen(const char *, const char *);
-
-#ifndef FRONTEND
 #define		open(a,b,c) pgwin32_open(a,b,c)
 #define		fopen(a,b) pgwin32_fopen(a,b)
-#endif
 
 /*
  * Mingw-w64 headers #define popen and pclose to _popen and _pclose.  We want
@@ -317,7 +303,7 @@ extern FILE *pgwin32_popen(const char *command, const char *type);
 /* New versions of MingW have gettimeofday, old mingw and msvc don't */
 #ifndef HAVE_GETTIMEOFDAY
 /* Last parameter not used */
-extern int	gettimeofday(struct timeval * tp, struct timezone * tzp);
+extern int	gettimeofday(struct timeval *tp, struct timezone *tzp);
 #endif
 #else							/* !WIN32 */
 
@@ -326,7 +312,7 @@ extern int	gettimeofday(struct timeval * tp, struct timezone * tzp);
  *	close() does them all.
  */
 #define closesocket close
-#endif   /* WIN32 */
+#endif							/* WIN32 */
 
 /*
  * On Windows, setvbuf() does not support _IOLBF mode, and interprets that
@@ -350,7 +336,7 @@ extern int	gettimeofday(struct timeval * tp, struct timezone * tzp);
 extern char *crypt(const char *key, const char *setting);
 #endif
 
-/* WIN32 handled in port/win32.h */
+/* WIN32 handled in port/win32_port.h */
 #ifndef WIN32
 #define pgoff_t off_t
 #ifdef __NetBSD__
@@ -361,6 +347,7 @@ extern off_t ftello(FILE *stream);
 
 extern double pg_erand48(unsigned short xseed[3]);
 extern long pg_lrand48(void);
+extern long pg_jrand48(unsigned short xseed[3]);
 extern void pg_srand48(long seed);
 
 #ifndef HAVE_FLS
@@ -378,6 +365,31 @@ extern int	getpeereid(int sock, uid_t *uid, gid_t *gid);
 
 #ifndef HAVE_ISINF
 extern int	isinf(double x);
+#else
+/*
+ * Glibc doesn't use the builtin for clang due to a *gcc* bug in a version
+ * newer than the gcc compatibility clang claims to have. This would cause a
+ * *lot* of superfluous function calls, therefore revert when using clang. In
+ * C++ there's issues with libc++ (not libstdc++), so disable as well.
+ */
+#if defined(__clang__) && !defined(__cplusplus)
+/* needs to be separate to not confuse other compilers */
+#if __has_builtin(__builtin_isinf)
+/* need to include before, to avoid getting overwritten */
+#include <math.h>
+#undef isinf
+#define isinf __builtin_isinf
+#endif							/* __has_builtin(isinf) */
+#endif							/* __clang__ && !__cplusplus */
+#endif							/* !HAVE_ISINF */
+
+#ifndef HAVE_STRTOF
+extern float strtof(const char *nptr, char **endptr);
+#endif
+
+#ifdef HAVE_BUGGY_STRTOF
+extern float pg_strtof(const char *nptr, char **endptr);
+#define strtof(a,b) (pg_strtof((a),(b)))
 #endif
 
 #ifndef HAVE_MKDTEMP
@@ -391,7 +403,24 @@ extern double rint(double x);
 #ifndef HAVE_INET_ATON
 #include <netinet/in.h>
 #include <arpa/inet.h>
-extern int	inet_aton(const char *cp, struct in_addr * addr);
+extern int	inet_aton(const char *cp, struct in_addr *addr);
+#endif
+
+/*
+ * Windows and older Unix don't have pread(2) and pwrite(2).  We have
+ * replacement functions, but they have slightly different semantics so we'll
+ * use a name with a pg_ prefix to avoid confusion.
+ */
+#ifdef HAVE_PREAD
+#define pg_pread pread
+#else
+extern ssize_t pg_pread(int fd, void *buf, size_t nbyte, off_t offset);
+#endif
+
+#ifdef HAVE_PWRITE
+#define pg_pwrite pwrite
+#else
+extern ssize_t pg_pwrite(int fd, const void *buf, size_t nbyte, off_t offset);
 #endif
 
 #if !HAVE_DECL_STRLCAT
@@ -402,7 +431,11 @@ extern size_t strlcat(char *dst, const char *src, size_t siz);
 extern size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
-#if !defined(HAVE_RANDOM) && !defined(__BORLANDC__)
+#if !HAVE_DECL_STRNLEN
+extern size_t strnlen(const char *str, size_t maxlen);
+#endif
+
+#if !defined(HAVE_RANDOM)
 extern long random(void);
 #endif
 
@@ -418,22 +451,43 @@ extern void srandom(unsigned int seed);
 #define SSL_get_current_compression(x) 0
 #endif
 
-/* thread.h */
-extern char *pqStrerror(int errnum, char *strerrbuf, size_t buflen);
-
-#ifndef WIN32
-extern int pqGetpwuid(uid_t uid, struct passwd * resultbuf, char *buffer,
-		   size_t buflen, struct passwd ** result);
+#ifndef HAVE_DLOPEN
+extern void *dlopen(const char *file, int mode);
+extern void *dlsym(void *handle, const char *symbol);
+extern int	dlclose(void *handle);
+extern char *dlerror(void);
 #endif
 
-extern int pqGethostbyname(const char *name,
-				struct hostent * resultbuf,
-				char *buffer, size_t buflen,
-				struct hostent ** result,
-				int *herrno);
+/*
+ * In some older systems, the RTLD_NOW flag isn't defined and the mode
+ * argument to dlopen must always be 1.
+ */
+#if !HAVE_DECL_RTLD_NOW
+#define RTLD_NOW 1
+#endif
+
+/*
+ * The RTLD_GLOBAL flag is wanted if available, but it doesn't exist
+ * everywhere.  If it doesn't exist, set it to 0 so it has no effect.
+ */
+#if !HAVE_DECL_RTLD_GLOBAL
+#define RTLD_GLOBAL 0
+#endif
+
+/* thread.h */
+#ifndef WIN32
+extern int	pqGetpwuid(uid_t uid, struct passwd *resultbuf, char *buffer,
+					   size_t buflen, struct passwd **result);
+#endif
+
+extern int	pqGethostbyname(const char *name,
+							struct hostent *resultbuf,
+							char *buffer, size_t buflen,
+							struct hostent **result,
+							int *herrno);
 
 extern void pg_qsort(void *base, size_t nel, size_t elsize,
-		 int (*cmp) (const void *, const void *));
+					 int (*cmp) (const void *, const void *));
 extern int	pg_qsort_strcmp(const void *a, const void *b);
 
 #define qsort(a,b,c,d) pg_qsort(a,b,c,d)
@@ -441,7 +495,7 @@ extern int	pg_qsort_strcmp(const void *a, const void *b);
 typedef int (*qsort_arg_comparator) (const void *a, const void *b, void *arg);
 
 extern void qsort_arg(void *base, size_t nel, size_t elsize,
-		  qsort_arg_comparator cmp, void *arg);
+					  qsort_arg_comparator cmp, void *arg);
 
 /* port/chklocale.c */
 extern int	pg_get_encoding_from_locale(const char *ctype, bool write_message);
@@ -452,7 +506,16 @@ extern int	pg_codepage_to_encoding(UINT cp);
 
 /* port/inet_net_ntop.c */
 extern char *inet_net_ntop(int af, const void *src, int bits,
-			  char *dst, size_t size);
+						   char *dst, size_t size);
+
+/* port/pg_strong_random.c */
+extern bool pg_strong_random(void *buf, size_t len);
+
+/*
+ * pg_backend_random used to be a wrapper for pg_strong_random before
+ * Postgres 12 for the backend code.
+ */
+#define pg_backend_random pg_strong_random
 
 /* port/pg_strong_random.c */
 #ifdef HAVE_STRONG_RANDOM
@@ -468,11 +531,18 @@ extern int	pg_mkdir_p(char *path, int omode);
 /* port/pqsignal.c */
 typedef void (*pqsigfunc) (int signo);
 extern pqsigfunc pqsignal(int signo, pqsigfunc func);
+#ifndef WIN32
+extern pqsigfunc pqsignal_no_restart(int signo, pqsigfunc func);
+#else
+#define pqsignal_no_restart(signo, func) pqsignal(signo, func)
+#endif
 
 /* port/quotes.c */
 extern char *escape_single_quotes_ascii(const char *src);
 
-/* port/wait_error.c */
+/* common/wait_error.c */
 extern char *wait_result_to_str(int exit_status);
+extern bool wait_result_is_signal(int exit_status, int signum);
+extern bool wait_result_is_any_signal(int exit_status, bool include_command_not_found);
 
-#endif   /* PG_PORT_H */
+#endif							/* PG_PORT_H */

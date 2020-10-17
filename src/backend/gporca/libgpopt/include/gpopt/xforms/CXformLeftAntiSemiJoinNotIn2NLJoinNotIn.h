@@ -16,65 +16,57 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformLeftAntiSemiJoinNotIn2NLJoinNotIn
-	//
-	//	@doc:
-	//		Transform left anti semi join to left anti semi NLJ (NotIn semantics)
-	//
-	//---------------------------------------------------------------------------
-	class CXformLeftAntiSemiJoinNotIn2NLJoinNotIn : public CXformImplementation
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformLeftAntiSemiJoinNotIn2NLJoinNotIn
+//
+//	@doc:
+//		Transform left anti semi join to left anti semi NLJ (NotIn semantics)
+//
+//---------------------------------------------------------------------------
+class CXformLeftAntiSemiJoinNotIn2NLJoinNotIn : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(
+		const CXformLeftAntiSemiJoinNotIn2NLJoinNotIn &);
+
+public:
+	// ctor
+	explicit CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformLeftAntiSemiJoinNotIn2NLJoinNotIn()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfLeftAntiSemiJoinNotIn2NLJoinNotIn;
+	}
 
-			// private copy ctor
-			CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(const CXformLeftAntiSemiJoinNotIn2NLJoinNotIn &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformLeftAntiSemiJoinNotIn2NLJoinNotIn";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformLeftAntiSemiJoinNotIn2NLJoinNotIn() {}
+};	// class CXformLeftAntiSemiJoinNotIn2NLJoinNotIn
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfLeftAntiSemiJoinNotIn2NLJoinNotIn;
-			}
+}  // namespace gpopt
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformLeftAntiSemiJoinNotIn2NLJoinNotIn";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					)
-					const;
-
-	}; // class CXformLeftAntiSemiJoinNotIn2NLJoinNotIn
-
-}
-
-#endif // !GPOPT_CXformLeftAntiSemiJoinNotIn2NLJoinNotIn_H
+#endif	// !GPOPT_CXformLeftAntiSemiJoinNotIn2NLJoinNotIn_H
 
 // EOF

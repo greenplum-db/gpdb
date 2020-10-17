@@ -8,12 +8,11 @@
 
 namespace gpopt
 {
-	class CPullUpProjectElementTest
-	{
-		public:
-			static
-			gpos::GPOS_RESULT EresUnittest();
-	};
-}
+class CPullUpProjectElementTest
+{
+public:
+	static gpos::GPOS_RESULT EresUnittest();
+};
+}  // namespace gpopt
 
-#endif //GPOPT_CPullUpProjectElementTest_H
+#endif	//GPOPT_CPullUpProjectElementTest_H

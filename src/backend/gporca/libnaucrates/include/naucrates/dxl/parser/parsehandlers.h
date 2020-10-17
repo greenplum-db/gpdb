@@ -212,6 +212,6 @@
 
 #include "naucrates/dxl/parser/CParseHandlerNLJIndexParamList.h"
 #include "naucrates/dxl/parser/CParseHandlerNLJIndexParam.h"
-#endif // !GPDXL_parsehandlers_H
+#endif	// !GPDXL_parsehandlers_H
 
 // EOF

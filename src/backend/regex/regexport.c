@@ -15,7 +15,7 @@
  * allows the caller to decide how big is too big to bother with.
  *
  *
- * Portions Copyright (c) 2013-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2013-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1998, 1999 Henry Spencer
  *
  * IDENTIFICATION
@@ -27,12 +27,6 @@
 #include "regex/regguts.h"
 
 #include "regex/regexport.h"
-
-#include "miscadmin.h"
-
-static void scancolormap(struct colormap * cm, int co,
-			 union tree * t, int level, chr partial,
-			 pg_wchar **chars, int *chars_len);
 
 
 /*
@@ -96,7 +90,7 @@ pg_reg_getfinalstate(const regex_t *regex)
  * arcs_len (possibly 0) are emitted into arcs[].
  */
 static void
-traverse_lacons(struct cnfa * cnfa, int st,
+traverse_lacons(struct cnfa *cnfa, int st,
 				int *arcs_count,
 				regex_arc_t *arcs, int arcs_len)
 {
@@ -229,10 +223,7 @@ pg_reg_colorisend(const regex_t *regex, int co)
  *
  * Note: we return -1 if the color number is invalid, or if it is a special
  * color (WHITE or a pseudocolor), or if the number of members is uncertain.
- * The latter case cannot arise right now but is specified to allow for future
- * improvements (see musings about run-time handling of higher character codes
- * in regex/README).  Callers should not try to extract the members if -1 is
- * returned.
+ * Callers should not try to extract the members if -1 is returned.
  */
 int
 pg_reg_getnumcharacters(const regex_t *regex, int co)
@@ -244,10 +235,21 @@ pg_reg_getnumcharacters(const regex_t *regex, int co)
 
 	if (co <= 0 || co > cm->max)	/* we reject 0 which is WHITE */
 		return -1;
-	if (cm->cd[co].flags & PSEUDO)		/* also pseudocolors (BOS etc) */
+	if (cm->cd[co].flags & PSEUDO)	/* also pseudocolors (BOS etc) */
 		return -1;
 
-	return cm->cd[co].nchrs;
+	/*
+	 * If the color appears anywhere in the high colormap, treat its number of
+	 * members as uncertain.  In principle we could determine all the specific
+	 * chrs corresponding to each such entry, but it would be expensive
+	 * (particularly if character class tests are required) and it doesn't
+	 * seem worth it.
+	 */
+	if (cm->cd[co].nuchrs != 0)
+		return -1;
+
+	/* OK, return the known number of member chrs */
+	return cm->cd[co].nschrs;
 }
 
 /*
@@ -264,6 +266,7 @@ pg_reg_getcharacters(const regex_t *regex, int co,
 					 pg_wchar *chars, int chars_len)
 {
 	struct colormap *cm;
+	chr			c;
 
 	assert(regex != NULL && regex->re_magic == REMAGIC);
 	cm = &((struct guts *) regex->re_guts)->cmap;
@@ -273,62 +276,17 @@ pg_reg_getcharacters(const regex_t *regex, int co,
 	if (cm->cd[co].flags & PSEUDO)
 		return;
 
-	/* Recursively search the colormap tree */
-	scancolormap(cm, co, cm->tree, 0, 0, &chars, &chars_len);
-}
-
-/*
- * Recursively scan the colormap tree to find chrs belonging to color "co".
- * See regex/README for info about the tree structure.
- *
- * t: tree block to scan
- * level: level (from 0) of t
- * partial: partial chr code for chrs within t
- * chars, chars_len: output area
- */
-static void
-scancolormap(struct colormap * cm, int co,
-			 union tree * t, int level, chr partial,
-			 pg_wchar **chars, int *chars_len)
-{
-	int			i;
-
-	if (level < NBYTS - 1)
+	/*
+	 * We need only examine the low character map; there should not be any
+	 * matching entries in the high map.
+	 */
+	for (c = CHR_MIN; c <= MAX_SIMPLE_CHR; c++)
 	{
-		/* non-leaf node */
-		for (i = 0; i < BYTTAB; i++)
+		if (cm->locolormap[c - CHR_MIN] == co)
 		{
-			/*
-			 * We do not support search for chrs of color 0 (WHITE), so
-			 * all-white subtrees need not be searched.  These can be
-			 * recognized because they are represented by the fill blocks in
-			 * the colormap struct.  This typically allows us to avoid
-			 * scanning large regions of higher-numbered chrs.
-			 */
-			if (t->tptr[i] == &cm->tree[level + 1])
-				continue;
-
-			/* Recursively scan next level down */
-			scancolormap(cm, co,
-						 t->tptr[i], level + 1,
-						 (partial | (chr) i) << BYTBITS,
-						 chars, chars_len);
-		}
-	}
-	else
-	{
-		/* leaf node */
-		for (i = 0; i < BYTTAB; i++)
-		{
-			if (t->tcolor[i] == co)
-			{
-				if (*chars_len > 0)
-				{
-					**chars = partial | (chr) i;
-					(*chars)++;
-					(*chars_len)--;
-				}
-			}
+			*chars++ = c;
+			if (--chars_len == 0)
+				break;
 		}
 	}
 }

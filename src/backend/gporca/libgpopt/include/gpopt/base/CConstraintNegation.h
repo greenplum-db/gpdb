@@ -17,101 +17,91 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	using namespace gpmd;
+using namespace gpos;
+using namespace gpmd;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CConstraintNegation
-	//
-	//	@doc:
-	//		Representation of a negation constraint
-	//
-	//---------------------------------------------------------------------------
-	class CConstraintNegation : public CConstraint
+//---------------------------------------------------------------------------
+//	@class:
+//		CConstraintNegation
+//
+//	@doc:
+//		Representation of a negation constraint
+//
+//---------------------------------------------------------------------------
+class CConstraintNegation : public CConstraint
+{
+private:
+	// child constraint
+	CConstraint *m_pcnstr;
+
+	// hidden copy ctor
+	CConstraintNegation(const CConstraintNegation &);
+
+public:
+	// ctor
+	CConstraintNegation(CMemoryPool *mp, CConstraint *pcnstr);
+
+	// dtor
+	virtual ~CConstraintNegation();
+
+	// constraint type accessor
+	virtual EConstraintType
+	Ect() const
 	{
-		private:
+		return CConstraint::EctNegation;
+	}
 
-			// child constraint
-			CConstraint *m_pcnstr;
+	// child constraint
+	CConstraint *
+	PcnstrChild() const
+	{
+		return m_pcnstr;
+	}
 
-			// hidden copy ctor
-			CConstraintNegation(const CConstraintNegation&);
+	// is this constraint a contradiction
+	virtual BOOL
+	FContradiction() const
+	{
+		return m_pcnstr->IsConstraintUnbounded();
+	}
 
-		public:
+	// is this constraint unbounded
+	virtual BOOL
+	IsConstraintUnbounded() const
+	{
+		return m_pcnstr->FContradiction();
+	}
 
-			// ctor
-			CConstraintNegation(CMemoryPool *mp, CConstraint *pcnstr);
+	// scalar expression
+	virtual CExpression *PexprScalar(CMemoryPool *mp);
 
-			// dtor
-			virtual
-			~CConstraintNegation();
+	// check if there is a constraint on the given column
+	virtual BOOL
+	FConstraint(const CColRef *colref) const
+	{
+		return m_pcnstr->FConstraint(colref);
+	}
 
-			// constraint type accessor
-			virtual
-			EConstraintType Ect() const
-			{
-				return CConstraint::EctNegation;
-			}
+	// return a copy of the constraint with remapped columns
+	virtual CConstraint *PcnstrCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// child constraint
-			CConstraint *PcnstrChild() const
-			{
-				return m_pcnstr;
-			}
+	// return constraint on a given column
+	virtual CConstraint *Pcnstr(CMemoryPool *mp, const CColRef *colref);
 
-			// is this constraint a contradiction
-			virtual
-			BOOL FContradiction() const
-			{
-				return m_pcnstr->IsConstraintUnbounded();
-			}
+	// return constraint on a given column set
+	virtual CConstraint *Pcnstr(CMemoryPool *mp, CColRefSet *pcrs);
 
-			// is this constraint unbounded
-			virtual
-			BOOL IsConstraintUnbounded() const
-			{
-				return m_pcnstr->FContradiction();
-			}
+	// return a clone of the constraint for a different column
+	virtual CConstraint *PcnstrRemapForColumn(CMemoryPool *mp,
+											  CColRef *colref) const;
 
-			// scalar expression
-			virtual
-			CExpression *PexprScalar(CMemoryPool *mp);
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// check if there is a constraint on the given column
-			virtual
-			BOOL FConstraint
-					(
-					const CColRef *colref
-					)
-					const
-			{
-				return m_pcnstr->FConstraint(colref);
-			}
+};	// class CConstraintNegation
+}  // namespace gpopt
 
-			// return a copy of the constraint with remapped columns
-			virtual
-			CConstraint *PcnstrCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
-
-			// return constraint on a given column
-			virtual
-			CConstraint *Pcnstr(CMemoryPool *mp, const CColRef *colref);
-
-			// return constraint on a given column set
-			virtual
-			CConstraint *Pcnstr(CMemoryPool *mp, CColRefSet *pcrs);
-
-			// return a clone of the constraint for a different column
-			virtual
-			CConstraint *PcnstrRemapForColumn(CMemoryPool *mp, CColRef *colref) const;
-
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
-
-	}; // class CConstraintNegation
-}
-
-#endif // !GPOPT_CConstraintNegation_H
+#endif	// !GPOPT_CConstraintNegation_H
 
 // EOF

@@ -1,13 +1,3 @@
--- start_matchsubs
-
--- m/ERROR:  moving tuple from partition .* to partition .* not supported/
--- s/ERROR:  moving tuple from partition .* to partition .* not supported/ERROR:  cross-partition or multi-update to a row/
-
--- m/ERROR:  multiple updates to a row by the same query is not allowed/
--- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
-
--- end_matchsubs
-
 -- First create a bunch of test tables
 
 -- start_matchsubs
@@ -79,22 +69,7 @@ partition by range(a) (
 	start(1) end(101) every(100),
 	default partition def);
 
-CREATE TABLE dml_ao_pt_p (
-	a int ,
-	b int,
-	c text ,
-	d numeric)
-WITH (appendonly = true)
-DISTRIBUTED BY (a,b)
-partition by list(a,d) (
-	partition one VALUES ((1,1),(1,2),(1,3),(1,4),(1,5)),
-	partition two VALUES((2,1),(2,2),(2,3),(2,4),(2,5)),
-	default partition def);
-
 INSERT INTO dml_ao_pt_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
-INSERT INTO dml_ao_pt_p SELECT generate_series(1,100), generate_series(1,100) * 3,'p', generate_series(1,100) % 6;
-INSERT INTO dml_ao_pt_p VALUES(generate_series(1,10),NULL,'pn',NULL);
-INSERT INTO dml_ao_pt_p VALUES(NULL,1,'pn',NULL),(1,NULL,'pn',0),(NULL,NULL,'pn',0),(0,1,'pn',NULL),(NULL,NULL,'pn',NULL);
 INSERT INTO dml_ao_pt_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) % 6;
 INSERT INTO dml_ao_pt_s VALUES(generate_series(1,10),NULL,'sn',NULL);
 INSERT INTO dml_ao_pt_s VALUES(NULL,1,'sn',NULL),(1,NULL,'sn',0),(NULL,NULL,'sn',0),(0,1,'sn',NULL),(NULL,NULL,'sn',NULL);
@@ -179,22 +154,7 @@ partition by range(a) (
 	start(1) end(100) every(10),
 	default partition def);
 
-CREATE TABLE dml_co_pt_p (
-	a int ,
-	b int,
-	c text ,
-	d numeric)
-WITH (appendonly = true, orientation = column)
-DISTRIBUTED BY (a,b)
-partition by list(a,d) (
-	partition one VALUES ((1,1),(1,2),(1,3),(1,4),(1,5)),
-	partition two VALUES((2,1),(2,2),(2,3),(2,4),(2,5)),
-	default partition def);
-
 INSERT INTO dml_co_pt_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
-INSERT INTO dml_co_pt_p SELECT generate_series(1,100), generate_series(1,100) * 3,'p', generate_series(1,100) % 6;
-INSERT INTO dml_co_pt_p VALUES(generate_series(1,10),NULL,'pn',NULL);
-INSERT INTO dml_co_pt_p VALUES(NULL,1,'pn',NULL),(1,NULL,'pn',0),(NULL,NULL,'pn',0),(0,1,'pn',NULL),(NULL,NULL,'pn',NULL);
 INSERT INTO dml_co_pt_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) % 6;
 INSERT INTO dml_co_pt_s VALUES(generate_series(1,10),NULL,'sn',NULL);
 INSERT INTO dml_co_pt_s VALUES(NULL,1,'sn',NULL),(1,NULL,'sn',0),(NULL,NULL,'sn',0),(0,1,'sn',NULL),(NULL,NULL,'sn',NULL);
@@ -303,9 +263,9 @@ CREATE TABLE dml_heap_pt_p (
 	c text ,
 	d numeric)
 DISTRIBUTED BY (a,b)
-partition by list(a,d) (
-	partition one VALUES ((1,1),(1,2),(1,3),(1,4),(1,5)),
-	partition two VALUES((2,1),(2,2),(2,3),(2,4),(2,5)),
+partition by list(d) (
+	partition one VALUES (1, 2, 3),
+	partition two VALUES (4, 5),
 	default partition def);
 
 
@@ -1374,15 +1334,6 @@ UPDATE dml_heap_pt_r SET a = a;
 SELECT COUNT(*) FROM (SELECT DISTINCT(a) FROM dml_heap_pt_r)foo;
 rollback;
 
---Update and generate_series
-begin;
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
-UPDATE dml_heap_pt_r SET a = generate_series(1,10), c ='n';
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
-rollback;
-
 --Update distcol where join on target table non dist key
 begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
@@ -1512,7 +1463,10 @@ rollback;
 
 --Negative test update partition key (no default partition)
 SELECT SUM(b) FROM dml_heap_pt_r;
+-- it's arbitary which row throws the error first, so omit the error DETAIL
+\set VERBOSITY terse
 UPDATE dml_heap_pt_r SET b = dml_heap_pt_r.a + 3000000 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a;
+\set VERBOSITY default
 SELECT SUM(b) FROM dml_heap_pt_r;
 
 --Insert with generate_series

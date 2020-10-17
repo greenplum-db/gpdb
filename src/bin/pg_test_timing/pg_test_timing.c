@@ -25,6 +25,7 @@ main(int argc, char *argv[])
 {
 	uint64		loop_count;
 
+	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_test_timing"));
 	progname = get_progname(argv[0]);
 
 	handle_args(argc, argv);
@@ -51,7 +52,7 @@ handle_args(int argc, char *argv[])
 	{
 		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
 		{
-			printf("Usage: %s [-d DURATION]\n", progname);
+			printf(_("Usage: %s [-d DURATION]\n"), progname);
 			exit(0);
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
@@ -71,7 +72,7 @@ handle_args(int argc, char *argv[])
 				break;
 
 			default:
-				fprintf(stderr, "Try \"%s --help\" for more information.\n",
+				fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 						progname);
 				exit(1);
 				break;
@@ -81,23 +82,26 @@ handle_args(int argc, char *argv[])
 	if (argc > optind)
 	{
 		fprintf(stderr,
-				"%s: too many command-line arguments (first is \"%s\")\n",
+				_("%s: too many command-line arguments (first is \"%s\")\n"),
 				progname, argv[optind]);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n",
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
 		exit(1);
 	}
 
 	if (test_duration > 0)
 	{
-		printf("Testing timing overhead for %d seconds.\n", test_duration);
+		printf(ngettext("Testing timing overhead for %d second.\n",
+						"Testing timing overhead for %d seconds.\n",
+						test_duration),
+			   test_duration);
 	}
 	else
 	{
 		fprintf(stderr,
-			"%s: duration must be a positive integer (duration is \"%d\")\n",
+				_("%s: duration must be a positive integer (duration is \"%d\")\n"),
 				progname, test_duration);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n",
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
 		exit(1);
 	}
@@ -133,8 +137,8 @@ test_timing(int32 duration)
 		/* Did time go backwards? */
 		if (diff < 0)
 		{
-			printf("Detected clock going backwards in time.\n");
-			printf("Time warp: %d microseconds\n", diff);
+			fprintf(stderr, _("Detected clock going backwards in time.\n"));
+			fprintf(stderr, _("Time warp: %d ms\n"), diff);
 			exit(1);
 		}
 
@@ -157,7 +161,7 @@ test_timing(int32 duration)
 
 	INSTR_TIME_SUBTRACT(end_time, start_time);
 
-	printf("Per loop time including overhead: %0.2f nsec\n",
+	printf(_("Per loop time including overhead: %0.2f ns\n"),
 		   INSTR_TIME_GET_DOUBLE(end_time) * 1e9 / loop_count);
 
 	return loop_count;
@@ -168,13 +172,22 @@ output(uint64 loop_count)
 {
 	int64		max_bit = 31,
 				i;
+	char	   *header1 = _("< us");
+	char	   *header2 = /* xgettext:no-c-format */ _("% of total");
+	char	   *header3 = _("count");
+	int			len1 = strlen(header1);
+	int			len2 = strlen(header2);
+	int			len3 = strlen(header3);
 
 	/* find highest bit value */
 	while (max_bit > 0 && histogram[max_bit] == 0)
 		max_bit--;
 
-	printf("Histogram of timing durations:\n");
-	printf("%6s   %10s %10s\n", "< usec", "% of total", "count");
+	printf(_("Histogram of timing durations:\n"));
+	printf("%*s   %*s %*s\n",
+		   Max(6, len1), header1,
+		   Max(10, len2), header2,
+		   Max(10, len3), header3);
 
 	for (i = 0; i <= max_bit; i++)
 	{
@@ -182,7 +195,9 @@ output(uint64 loop_count)
 
 		/* lame hack to work around INT64_FORMAT deficiencies */
 		snprintf(buf, sizeof(buf), INT64_FORMAT, histogram[i]);
-		printf("%6ld    %9.5f %10s\n", 1l << i,
-			   (double) histogram[i] * 100 / loop_count, buf);
+		printf("%*ld    %*.5f %*s\n",
+			   Max(6, len1), 1l << i,
+			   Max(10, len2) - 1, (double) histogram[i] * 100 / loop_count,
+			   Max(10, len3), buf);
 	}
 }

@@ -29,11 +29,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDrvdProp *
-CScalar::PdpCreate
-	(
-	CMemoryPool *mp
-	)
-	const
+CScalar::PdpCreate(CMemoryPool *mp) const
 {
 	return GPOS_NEW(mp) CDrvdPropScalar(mp);
 }
@@ -48,11 +44,8 @@ CScalar::PdpCreate
 //
 //---------------------------------------------------------------------------
 CReqdProp *
-CScalar::PrpCreate
-	(
-	CMemoryPool * // mp
-	)
-	const
+CScalar::PrpCreate(CMemoryPool *  // mp
+) const
 {
 	GPOS_ASSERT(!"Cannot compute required properties on scalar");
 	return NULL;
@@ -68,10 +61,7 @@ CScalar::PrpCreate
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalar::FHasSubquery
-	(
-	CExpressionHandle &exprhdl
-	)
+CScalar::FHasSubquery(CExpressionHandle &exprhdl)
 {
 	// if operator is a subquery, return immediately
 	if (CUtils::FSubquery(exprhdl.Pop()))
@@ -105,10 +95,7 @@ CScalar::FHasSubquery
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalar::EberConjunction
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
+CScalar::EberConjunction(ULongPtrArray *pdrgpulChildren)
 {
 	GPOS_ASSERT(NULL != pdrgpulChildren);
 	GPOS_ASSERT(1 < pdrgpulChildren->Size());
@@ -126,7 +113,7 @@ CScalar::EberConjunction
 	const ULONG ulChildren = pdrgpulChildren->Size();
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
-		EBoolEvalResult eber = (EBoolEvalResult) *((*pdrgpulChildren)[ul]);
+		EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[ul]);
 
 		if (EberFalse == eber)
 		{
@@ -134,8 +121,10 @@ CScalar::EberConjunction
 		}
 
 		fAllChildrenTrue = fAllChildrenTrue && (EberTrue == eber);
-		fAllChildrenAnyOrTrue = fAllChildrenAnyOrTrue && (EberAny == eber || EberTrue == eber);
-		fAllChildrenNullOrTrue = fAllChildrenNullOrTrue && (EberNull == eber || EberTrue == eber);
+		fAllChildrenAnyOrTrue =
+			fAllChildrenAnyOrTrue && (EberAny == eber || EberTrue == eber);
+		fAllChildrenNullOrTrue =
+			fAllChildrenNullOrTrue && (EberNull == eber || EberTrue == eber);
 	}
 
 	if (fAllChildrenTrue)
@@ -167,10 +156,7 @@ CScalar::EberConjunction
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalar::EberDisjunction
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
+CScalar::EberDisjunction(ULongPtrArray *pdrgpulChildren)
 {
 	GPOS_ASSERT(NULL != pdrgpulChildren);
 	GPOS_ASSERT(1 < pdrgpulChildren->Size());
@@ -183,7 +169,7 @@ CScalar::EberDisjunction
 	const ULONG ulChildren = pdrgpulChildren->Size();
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
-		EBoolEvalResult eber = (EBoolEvalResult) *((*pdrgpulChildren)[ul]);
+		EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[ul]);
 		switch (eber)
 		{
 			case EberTrue:
@@ -255,17 +241,14 @@ CScalar::EberDisjunction
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalar::EberNullOnAnyNullChild
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
+CScalar::EberNullOnAnyNullChild(ULongPtrArray *pdrgpulChildren)
 {
 	GPOS_ASSERT(NULL != pdrgpulChildren);
 
 	const ULONG ulChildren = pdrgpulChildren->Size();
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
-		EBoolEvalResult eber = (EBoolEvalResult) *((*pdrgpulChildren)[ul]);
+		EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[ul]);
 		if (EberNull == eber)
 		{
 			return EberNull;
@@ -285,17 +268,14 @@ CScalar::EberNullOnAnyNullChild
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalar::EberNullOnAllNullChildren
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
+CScalar::EberNullOnAllNullChildren(ULongPtrArray *pdrgpulChildren)
 {
 	GPOS_ASSERT(NULL != pdrgpulChildren);
 
 	const ULONG ulChildren = pdrgpulChildren->Size();
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
-		EBoolEvalResult eber = (EBoolEvalResult) *((*pdrgpulChildren)[ul]);
+		EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[ul]);
 		if (EberNull != eber)
 		{
 			return EberAny;
@@ -315,11 +295,7 @@ CScalar::EberNullOnAllNullChildren
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalar::EberEvaluate
-	(
-	CMemoryPool *mp,
-	CExpression *pexprScalar
-	)
+CScalar::EberEvaluate(CMemoryPool *mp, CExpression *pexprScalar)
 {
 	GPOS_CHECK_STACK_SIZE;
 	GPOS_ASSERT(NULL != pexprScalar);
@@ -361,10 +337,7 @@ CScalar::EberEvaluate
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalar::FHasNonScalarFunction
-	(
-	CExpressionHandle &exprhdl
-	)
+CScalar::FHasNonScalarFunction(CExpressionHandle &exprhdl)
 {
 	// if operator is a subquery, return immediately
 	if (CUtils::FSubquery(exprhdl.Pop()))
@@ -398,24 +371,22 @@ CScalar::FHasNonScalarFunction
 //
 //---------------------------------------------------------------------------
 CPartInfo *
-CScalar::PpartinfoDeriveCombineScalar
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl
-	)
+CScalar::PpartinfoDeriveCombineScalar(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl)
 {
 	const ULONG arity = exprhdl.Arity();
 	GPOS_ASSERT(0 < arity);
 
 	CPartInfo *ppartinfo = GPOS_NEW(mp) CPartInfo(mp);
-	
+
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		if (exprhdl.FScalarChild(ul))
 		{
 			CPartInfo *ppartinfoChild = exprhdl.DeriveScalarPartitionInfo(ul);
 			GPOS_ASSERT(NULL != ppartinfoChild);
-			CPartInfo *ppartinfoCombined = CPartInfo::PpartinfoCombine(mp, ppartinfo, ppartinfoChild);
+			CPartInfo *ppartinfoCombined =
+				CPartInfo::PpartinfoCombine(mp, ppartinfo, ppartinfoChild);
 			ppartinfo->Release();
 			ppartinfo = ppartinfoCombined;
 		}
@@ -425,10 +396,7 @@ CScalar::PpartinfoDeriveCombineScalar
 }
 
 BOOL
-CScalar::FHasScalarArrayCmp
-	(
-	CExpressionHandle &exprhdl
-	)
+CScalar::FHasScalarArrayCmp(CExpressionHandle &exprhdl)
 {
 	// if operator is a ScalarArrayCmp, return immediately
 	if (COperator::EopScalarArrayCmp == exprhdl.Pop()->Eopid())
@@ -453,4 +421,3 @@ CScalar::FHasScalarArrayCmp
 }
 
 // EOF
-

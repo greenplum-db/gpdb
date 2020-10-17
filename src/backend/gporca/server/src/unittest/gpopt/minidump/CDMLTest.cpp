@@ -23,11 +23,10 @@
 
 using namespace gpopt;
 
-ULONG CDMLTest::m_ulDMLTestCounter = 0;  // start from first test
+ULONG CDMLTest::m_ulDMLTestCounter = 0;	 // start from first test
 
 // minidump files
-const CHAR *rgszDMLFileNames[] =
-	{
+const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/Insert.mdp",
 	"../data/dxl/minidump/MultipleUpdateWithJoinOnDistCol.mdp",
 	"../data/dxl/minidump/UpdatingNonDistributionColumnFunc.mdp",
@@ -97,7 +96,7 @@ const CHAR *rgszDMLFileNames[] =
 	"../data/dxl/minidump/DML-With-Join-With-Universal-Child.mdp",
 	"../data/dxl/minidump/DML-With-CorrelatedNLJ-With-Universal-Child.mdp",
 	"../data/dxl/minidump/DML-Function-With-SQL-Access.mdp",
-	};
+};
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -110,10 +109,9 @@ const CHAR *rgszDMLFileNames[] =
 GPOS_RESULT
 CDMLTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(EresUnittest_RunTests),
-		};
+	};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
@@ -134,12 +132,9 @@ CDMLTest::EresUnittest()
 GPOS_RESULT
 CDMLTest::EresUnittest_RunTests()
 {
-	return CTestUtils::EresUnittest_RunTests
-						(
-						rgszDMLFileNames,
-						&m_ulDMLTestCounter,
-						GPOS_ARRAY_SIZE(rgszDMLFileNames)
-						);
+	return CTestUtils::EresUnittest_RunTests(rgszDMLFileNames,
+											 &m_ulDMLTestCounter,
+											 GPOS_ARRAY_SIZE(rgszDMLFileNames));
 }
 
 // EOF

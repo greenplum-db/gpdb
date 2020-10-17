@@ -46,7 +46,7 @@ export BOTO_CONFIG=$(pwd)/boto.cfg
 # Set PIP Download cache directory
 export PIP_CACHE_DIR="${PWD}/pip-cache-dir"
 
-pip --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
+pip3 --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
 
 # Trim a trailing slash from the source directory if it has one
 SOURCE_DIRECTORY="${1%/}"

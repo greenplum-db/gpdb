@@ -3,7 +3,7 @@ doc/src/sgml/ref/end.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-END">
+<refentry id="sql-end">
  <indexterm zone="sql-end">
   <primary>END</primary>
  </indexterm>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-END [ WORK | TRANSACTION ]
+END [ WORK | TRANSACTION ] [ AND [ NO ] CHAIN ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -33,7 +33,7 @@ END [ WORK | TRANSACTION ]
    made by the transaction become visible to others and are guaranteed
    to be durable if a crash occurs.  This command is a
    <productname>PostgreSQL</productname> extension
-   that is equivalent to <xref linkend="sql-commit">.
+   that is equivalent to <xref linkend="sql-commit"/>.
   </para>
  </refsect1>
 
@@ -50,6 +50,18 @@ END [ WORK | TRANSACTION ]
      </para>
     </listitem>
    </varlistentry>
+
+   <varlistentry>
+    <term><literal>AND CHAIN</literal></term>
+    <listitem>
+     <para>
+      If <literal>AND CHAIN</literal> is specified, a new transaction is
+      immediately started with the same transaction characteristics (see <xref
+      linkend="sql-set-transaction"/>) as the just finished one.  Otherwise,
+      no new transaction is started.
+     </para>
+    </listitem>
+   </varlistentry>
   </variablelist>
  </refsect1>
 
@@ -57,12 +69,12 @@ END [ WORK | TRANSACTION ]
   <title>Notes</title>
 
   <para>
-   Use <xref linkend="SQL-ROLLBACK"> to
+   Use <xref linkend="sql-rollback"/> to
    abort a transaction.
   </para>
 
   <para>
-   Issuing <command>END</> when not inside a transaction does
+   Issuing <command>END</command> when not inside a transaction does
    no harm, but it will provoke a warning message.
   </para>
  </refsect1>
@@ -83,7 +95,7 @@ END;
   <para>
    <command>END</command> is a <productname>PostgreSQL</productname>
    extension that provides functionality equivalent to <xref
-   linkend="sql-commit">, which is
+   linkend="sql-commit"/>, which is
    specified in the SQL standard.
   </para>
  </refsect1>
@@ -92,9 +104,9 @@ END;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-begin"></member>
-   <member><xref linkend="sql-commit"></member>
-   <member><xref linkend="sql-rollback"></member>
+   <member><xref linkend="sql-begin"/></member>
+   <member><xref linkend="sql-commit"/></member>
+   <member><xref linkend="sql-rollback"/></member>
   </simplelist>
  </refsect1>
 </refentry>

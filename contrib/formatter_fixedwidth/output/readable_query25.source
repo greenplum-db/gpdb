@@ -25,11 +25,11 @@ NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related
 (6 rows)
 
 SELECT relname,linenum,errmsg FROM gp_read_error_log('tbl_ext_fixedwidth') ORDER BY linenum;
-      relname       | linenum |                 errmsg                  
---------------------+---------+-----------------------------------------
- tbl_ext_fixedwidth |       3 | invalid input syntax for integer: "s32"
- tbl_ext_fixedwidth |       4 | invalid input syntax for integer: "7v2"
- tbl_ext_fixedwidth |       5 | invalid input syntax for integer: "y32"
- tbl_ext_fixedwidth |       6 | invalid input syntax for integer: "7d2"
+      relname       | linenum |                    errmsg                    
+--------------------+---------+----------------------------------------------
+ tbl_ext_fixedwidth |       3 | invalid input syntax for type integer: "s32"
+ tbl_ext_fixedwidth |       4 | invalid input syntax for type integer: "7v2"
+ tbl_ext_fixedwidth |       5 | invalid input syntax for type integer: "y32"
+ tbl_ext_fixedwidth |       6 | invalid input syntax for type integer: "7d2"
 (4 rows)
 

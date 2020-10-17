@@ -16,55 +16,47 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerPhysicalCTEProducer
-	//
-	//	@doc:
-	//		Parse handler for parsing a physical CTE producer operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerPhysicalCTEProducer : public CParseHandlerPhysicalOp
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerPhysicalCTEProducer
+//
+//	@doc:
+//		Parse handler for parsing a physical CTE producer operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerPhysicalCTEProducer : public CParseHandlerPhysicalOp
+{
+private:
+	// private copy ctor
+	CParseHandlerPhysicalCTEProducer(const CParseHandlerPhysicalCTEProducer &);
 
-			// private copy ctor
-			CParseHandlerPhysicalCTEProducer(const CParseHandlerPhysicalCTEProducer &);
+	// process the start of an element
+	virtual void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-			// process the start of an element
-			virtual
-			void StartElement
-					(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-					);
+	// process the end of an element
+	virtual void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
 
-			// process the end of an element
-			virtual
-			void EndElement
-					(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-					);
+public:
+	// ctor
+	CParseHandlerPhysicalCTEProducer(CMemoryPool *mp,
+									 CParseHandlerManager *parse_handler_mgr,
+									 CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
 
-		public:
-			// ctor
-			CParseHandlerPhysicalCTEProducer
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-	};
-}
-
-#endif // !GPDXL_CParseHandlerPhysicalCTEProducer_H
+#endif	// !GPDXL_CParseHandlerPhysicalCTEProducer_H
 
 // EOF

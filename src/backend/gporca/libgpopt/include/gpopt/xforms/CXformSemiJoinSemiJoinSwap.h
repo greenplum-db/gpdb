@@ -18,68 +18,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformSemiJoinSemiJoinSwap
-	//
-	//	@doc:
-	//		Swap two cascaded semi-joins
-	//
-	//---------------------------------------------------------------------------
-	class CXformSemiJoinSemiJoinSwap : public CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalLeftSemiJoin>
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformSemiJoinSemiJoinSwap
+//
+//	@doc:
+//		Swap two cascaded semi-joins
+//
+//---------------------------------------------------------------------------
+class CXformSemiJoinSemiJoinSwap
+	: public CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalLeftSemiJoin>
+{
+private:
+	// private copy ctor
+	CXformSemiJoinSemiJoinSwap(const CXformSemiJoinSemiJoinSwap &);
+
+public:
+	// ctor
+	explicit CXformSemiJoinSemiJoinSwap(CMemoryPool *mp)
+		: CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalLeftSemiJoin>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformSemiJoinSemiJoinSwap()
+	{
+	}
 
-			// private copy ctor
-			CXformSemiJoinSemiJoinSwap(const CXformSemiJoinSemiJoinSwap &);
+	// Compatibility function
+	virtual BOOL
+	FCompatible(CXform::EXformId exfid)
+	{
+		return ExfSemiJoinSemiJoinSwap != exfid;
+	}
 
-		public:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfSemiJoinSemiJoinSwap;
+	}
 
-			// ctor
-			explicit
-			CXformSemiJoinSemiJoinSwap
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalLeftSemiJoin>(mp)
-			{}
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformSemiJoinSemiJoinSwap";
+	}
 
-			// dtor
-			virtual
-			~CXformSemiJoinSemiJoinSwap()
-			{}
+};	// class CXformSemiJoinSemiJoinSwap
 
-			// Compatibility function
-			virtual
-			BOOL FCompatible
-				(
-				CXform::EXformId exfid
-				)
-			{
-				return ExfSemiJoinSemiJoinSwap != exfid;
-			}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfSemiJoinSemiJoinSwap;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformSemiJoinSemiJoinSwap";
-			}
-
-	}; // class CXformSemiJoinSemiJoinSwap
-
-}
-
-#endif // !GPOPT_CXformSemiJoinSemiJoinSwap_H
+#endif	// !GPOPT_CXformSemiJoinSemiJoinSwap_H
 
 // EOF

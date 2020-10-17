@@ -3,7 +3,7 @@ doc/src/sgml/ref/create_domain.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATEDOMAIN">
+<refentry id="sql-createdomain">
  <indexterm zone="sql-createdomain">
   <primary>CREATE DOMAIN</primary>
  </indexterm>
@@ -24,12 +24,12 @@ PostgreSQL documentation
 CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replaceable class="parameter">data_type</replaceable>
     [ COLLATE <replaceable>collation</replaceable> ]
     [ DEFAULT <replaceable>expression</replaceable> ]
-    [ <replaceable class="PARAMETER">constraint</replaceable> [ ... ] ]
+    [ <replaceable class="parameter">constraint</replaceable> [ ... ] ]
 
-<phrase>where <replaceable class="PARAMETER">constraint</replaceable> is:</phrase>
+<phrase>where <replaceable class="parameter">constraint</replaceable> is:</phrase>
 
-[ CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ]
-{ NOT NULL | NULL | CHECK (<replaceable class="PARAMETER">expression</replaceable>) }
+[ CONSTRAINT <replaceable class="parameter">constraint_name</replaceable> ]
+{ NOT NULL | NULL | CHECK (<replaceable class="parameter">expression</replaceable>) }
 </synopsis>
  </refsynopsisdiv>
 
@@ -80,7 +80,7 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
      </varlistentry>
 
      <varlistentry>
-      <term><replaceable class="PARAMETER">data_type</replaceable></term>
+      <term><replaceable class="parameter">data_type</replaceable></term>
       <listitem>
        <para>
         The underlying data type of the domain. This can include array
@@ -95,7 +95,7 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
        <para>
         An optional collation for the domain.  If no collation is
         specified, the underlying data type's default collation is used.
-        The underlying type must be collatable if <literal>COLLATE</>
+        The underlying type must be collatable if <literal>COLLATE</literal>
         is specified.
        </para>
       </listitem>
@@ -126,7 +126,7 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
      </varlistentry>
 
      <varlistentry>
-      <term><literal>CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable></literal></term>
+      <term><literal>CONSTRAINT <replaceable class="parameter">constraint_name</replaceable></literal></term>
       <listitem>
        <para>
         An optional name for a constraint.  If not specified,
@@ -161,9 +161,9 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
      </varlistentry>
 
    <varlistentry>
-    <term><literal>CHECK (<replaceable class="PARAMETER">expression</replaceable>)</literal></term>
+    <term><literal>CHECK (<replaceable class="parameter">expression</replaceable>)</literal></term>
     <listitem>
-     <para><literal>CHECK</> clauses specify integrity constraints or tests
+     <para><literal>CHECK</literal> clauses specify integrity constraints or tests
       which values of the domain must satisfy.
       Each constraint must be an expression
       producing a Boolean result.  It should use the key word <literal>VALUE</literal>
@@ -181,7 +181,7 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
      <para>
       When a domain has multiple <literal>CHECK</literal> constraints,
       they will be tested in alphabetical order by name.
-      (<productname>PostgreSQL</> versions before 9.5 did not honor any
+      (<productname>PostgreSQL</productname> versions before 9.5 did not honor any
       particular firing order for <literal>CHECK</literal> constraints.)
      </para>
     </listitem>
@@ -193,7 +193,7 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
   <title>Notes</title>
 
   <para>
-   Domain constraints, particularly <literal>NOT NULL</>, are checked when
+   Domain constraints, particularly <literal>NOT NULL</literal>, are checked when
    converting a value to the domain type.  It is possible for a column that
    is nominally of the domain type to read as null despite there being such
    a constraint.  For example, this can happen in an outer-join query, if
@@ -211,8 +211,32 @@ INSERT INTO tab (domcol) VALUES ((SELECT domcol FROM tab WHERE false));
    It is very difficult to avoid such problems, because of SQL's general
    assumption that a null value is a valid value of every data type.  Best practice
    therefore is to design a domain's constraints so that a null value is allowed,
-   and then to apply column <literal>NOT NULL</> constraints to columns of
+   and then to apply column <literal>NOT NULL</literal> constraints to columns of
    the domain type as needed, rather than directly to the domain type.
+  </para>
+
+  <para>
+   <productname>PostgreSQL</productname> assumes that
+   <literal>CHECK</literal> constraints' conditions are immutable, that is,
+   they will always give the same result for the same input value.  This
+   assumption is what justifies examining <literal>CHECK</literal>
+   constraints only when a value is first converted to be of a domain type,
+   and not at other times.  (This is essentially the same as the treatment
+   of table <literal>CHECK</literal> constraints, as described in
+   <xref linkend="ddl-constraints-check-constraints"/>.)
+  </para>
+
+  <para>
+   An example of a common way to break this assumption is to reference a
+   user-defined function in a <literal>CHECK</literal> expression, and then
+   change the behavior of that
+   function.  <productname>PostgreSQL</productname> does not disallow that,
+   but it will not notice if there are stored values of the domain type that
+   now violate the <literal>CHECK</literal> constraint. That would cause a
+   subsequent database dump and reload to fail.  The recommended way to
+   handle such a change is to drop the constraint (using <command>ALTER
+   DOMAIN</command>), adjust the function definition, and re-add the
+   constraint, thereby rechecking it against stored data.
   </para>
  </refsect1>
 
@@ -242,7 +266,7 @@ CREATE TABLE us_snail_addy (
 </programlisting></para>
  </refsect1>
 
- <refsect1 id="SQL-CREATEDOMAIN-compatibility">
+ <refsect1 id="sql-createdomain-compatibility">
   <title>Compatibility</title>
 
   <para>
@@ -251,12 +275,12 @@ CREATE TABLE us_snail_addy (
   </para>
  </refsect1>
 
- <refsect1 id="SQL-CREATEDOMAIN-see-also">
+ <refsect1 id="sql-createdomain-see-also">
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alterdomain"></member>
-   <member><xref linkend="sql-dropdomain"></member>
+   <member><xref linkend="sql-alterdomain"/></member>
+   <member><xref linkend="sql-dropdomain"/></member>
   </simplelist>
  </refsect1>
 

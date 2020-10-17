@@ -10,6 +10,7 @@ SET client_min_messages TO 'warning';
 DROP USER IF EXISTS regress_rls_alice;
 DROP USER IF EXISTS regress_rls_bob;
 DROP USER IF EXISTS regress_rls_carol;
+DROP USER IF EXISTS regress_rls_dave;
 DROP USER IF EXISTS regress_rls_exempt_user;
 DROP ROLE IF EXISTS regress_rls_group1;
 DROP ROLE IF EXISTS regress_rls_group2;
@@ -24,6 +25,7 @@ SET client_min_messages TO 'notice';
 CREATE USER regress_rls_alice NOLOGIN;
 CREATE USER regress_rls_bob NOLOGIN;
 CREATE USER regress_rls_carol NOLOGIN;
+CREATE USER regress_rls_dave NOLOGIN;
 CREATE USER regress_rls_exempt_user BYPASSRLS NOLOGIN;
 CREATE ROLE regress_rls_group1 NOLOGIN;
 CREATE ROLE regress_rls_group2 NOLOGIN;
@@ -82,13 +84,34 @@ INSERT INTO document VALUES
     ( 5, 44, 2, 'regress_rls_bob', 'my second manga'),
     ( 6, 22, 1, 'regress_rls_carol', 'great science fiction'),
     ( 7, 33, 2, 'regress_rls_carol', 'great technology book'),
-    ( 8, 44, 1, 'regress_rls_carol', 'great manga');
+    ( 8, 44, 1, 'regress_rls_carol', 'great manga'),
+    ( 9, 22, 1, 'regress_rls_dave', 'awesome science fiction'),
+    (10, 33, 2, 'regress_rls_dave', 'awesome technology book');
 
 ALTER TABLE document ENABLE ROW LEVEL SECURITY;
 
 -- user's security level must be higher than or equal to document's
-CREATE POLICY p1 ON document
+CREATE POLICY p1 ON document AS PERMISSIVE
     USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user));
+
+-- try to create a policy of bogus type
+CREATE POLICY p1 ON document AS UGLY
+    USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user));
+
+-- but Dave isn't allowed to anything at cid 50 or above
+-- this is to make sure that we sort the policies by name first
+-- when applying WITH CHECK, a later INSERT by Dave should fail due
+-- to p1r first
+CREATE POLICY p2r ON document AS RESTRICTIVE TO regress_rls_dave
+    USING (cid <> 44 AND cid < 50);
+
+-- and Dave isn't allowed to see manga documents
+CREATE POLICY p1r ON document AS RESTRICTIVE TO regress_rls_dave
+    USING (cid <> 44);
+
+\dp
+\d document
+SELECT * FROM pg_policies WHERE schemaname = 'regress_rls_schema' AND tablename = 'document' ORDER BY policyname;
 
 -- viewpoint from regress_rls_bob
 SET SESSION AUTHORIZATION regress_rls_bob;
@@ -111,6 +134,20 @@ SELECT * FROM document TABLESAMPLE BERNOULLI(50) REPEATABLE(0)
 
 EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
 EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dtitle);
+
+-- viewpoint from regress_rls_dave
+SET SESSION AUTHORIZATION regress_rls_dave;
+SELECT * FROM document WHERE f_leak(dtitle) ORDER BY did;
+SELECT * FROM document NATURAL JOIN category WHERE f_leak(dtitle) ORDER BY did;
+
+EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
+EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dtitle);
+
+-- 44 would technically fail for both p2r and p1r, but we should get an error
+-- back from p1r for this because it sorts first
+INSERT INTO document VALUES (100, 44, 1, 'regress_rls_dave', 'testing sorting of policies'); -- fail
+-- Just to see a p2r error
+INSERT INTO document VALUES (100, 55, 1, 'regress_rls_dave', 'testing sorting of policies'); -- fail
 
 -- only owner can change policies
 ALTER POLICY p1 ON document USING (true);    --fail
@@ -143,7 +180,7 @@ ALTER TABLE category ENABLE ROW LEVEL SECURITY;
 
 -- cannot delete PK referenced by invisible FK
 SET SESSION AUTHORIZATION regress_rls_bob;
-SELECT * FROM document d FULL OUTER JOIN category c on d.cid = c.cid;
+SELECT * FROM document d FULL OUTER JOIN category c on d.cid = c.cid ORDER BY d.did, c.cid;
 -- GPDB: referential integrity checks are not enforced
 -- start_ignore
 -- DELETE FROM category WHERE cid = 33;    -- fails with FK violation
@@ -151,8 +188,8 @@ SELECT * FROM document d FULL OUTER JOIN category c on d.cid = c.cid;
 
 -- can insert FK referencing invisible PK
 SET SESSION AUTHORIZATION regress_rls_carol;
-SELECT * FROM document d FULL OUTER JOIN category c on d.cid = c.cid;
-INSERT INTO document VALUES (10, 33, 1, current_user, 'hoge');
+SELECT * FROM document d FULL OUTER JOIN category c on d.cid = c.cid ORDER BY d.did, c.cid;
+INSERT INTO document VALUES (11, 33, 1, current_user, 'hoge');
 
 -- UNIQUE or PRIMARY KEY constraint violation DOES reveal presence of row
 SET SESSION AUTHORIZATION regress_rls_bob;
@@ -203,11 +240,11 @@ SET SESSION AUTHORIZATION regress_rls_alice;
 
 SET row_security TO ON;
 
-CREATE TABLE t1 (a int, junk1 text, b text) WITH OIDS;
+CREATE TABLE t1 (id int not null primary key, a int, junk1 text, b text);
 ALTER TABLE t1 DROP COLUMN junk1;    -- just a disturbing factor
 GRANT ALL ON t1 TO public;
 
-COPY t1 FROM stdin WITH (oids);
+COPY t1 FROM stdin WITH ;
 101	1	aba
 102	2	bbb
 103	3	ccc
@@ -217,18 +254,18 @@ COPY t1 FROM stdin WITH (oids);
 CREATE TABLE t2 (c float) INHERITS (t1);
 GRANT ALL ON t2 TO public;
 
-COPY t2 FROM stdin WITH (oids);
+COPY t2 FROM stdin;
 201	1	abc	1.1
 202	2	bcd	2.2
 203	3	cde	3.3
 204	4	def	4.4
 \.
 
-CREATE TABLE t3 (c text, b text, a int) WITH OIDS;
+CREATE TABLE t3 (id int not null primary key, c text, b text, a int);
 ALTER TABLE t3 INHERIT t1;
 GRANT ALL ON t3 TO public;
 
-COPY t3(a,b,c) FROM stdin WITH (oids);
+COPY t3(id, a,b,c) FROM stdin;
 301	1	xxx	X
 302	2	yyy	Y
 303	3	zzz	Z
@@ -249,7 +286,7 @@ SELECT * FROM t1 WHERE f_leak(b);
 EXPLAIN (COSTS OFF) SELECT * FROM t1 WHERE f_leak(b);
 
 -- reference to system column
-SELECT oid, * FROM t1;
+SELECT tableoid::regclass, * FROM t1;
 EXPLAIN (COSTS OFF) SELECT *, t1 FROM t1;
 
 -- reference to whole-row reference
@@ -264,8 +301,8 @@ SELECT * FROM t1 WHERE f_leak(b) FOR SHARE;
 EXPLAIN (COSTS OFF) SELECT * FROM t1 WHERE f_leak(b) FOR SHARE;
 
 -- union all query
-SELECT a, b, oid FROM t2 UNION ALL SELECT a, b, oid FROM t3;
-EXPLAIN (COSTS OFF) SELECT a, b, oid FROM t2 UNION ALL SELECT a, b, oid FROM t3;
+SELECT a, b, tableoid::regclass FROM t2 UNION ALL SELECT a, b, tableoid::regclass FROM t3;
+EXPLAIN (COSTS OFF) SELECT a, b, tableoid::regclass FROM t2 UNION ALL SELECT a, b, tableoid::regclass FROM t3;
 
 -- superuser is allowed to bypass RLS checks
 RESET SESSION AUTHORIZATION;
@@ -278,6 +315,157 @@ SET SESSION AUTHORIZATION regress_rls_exempt_user;
 SET row_security TO OFF;
 SELECT * FROM t1 WHERE f_leak(b);
 EXPLAIN (COSTS OFF) SELECT * FROM t1 WHERE f_leak(b);
+
+--
+-- Partitioned Tables
+--
+
+SET SESSION AUTHORIZATION regress_rls_alice;
+
+CREATE TABLE part_document (
+    did         int,
+    cid         int,
+    dlevel      int not null,
+    dauthor     name,
+    dtitle      text
+) PARTITION BY RANGE (cid);
+GRANT ALL ON part_document TO public;
+
+-- Create partitions for document categories
+CREATE TABLE part_document_fiction PARTITION OF part_document FOR VALUES FROM (11) to (12);
+CREATE TABLE part_document_satire PARTITION OF part_document FOR VALUES FROM (55) to (56);
+CREATE TABLE part_document_nonfiction PARTITION OF part_document FOR VALUES FROM (99) to (100);
+
+GRANT ALL ON part_document_fiction TO public;
+GRANT ALL ON part_document_satire TO public;
+GRANT ALL ON part_document_nonfiction TO public;
+
+INSERT INTO part_document VALUES
+    ( 1, 11, 1, 'regress_rls_bob', 'my first novel'),
+    ( 2, 11, 2, 'regress_rls_bob', 'my second novel'),
+    ( 3, 99, 2, 'regress_rls_bob', 'my science textbook'),
+    ( 4, 55, 1, 'regress_rls_bob', 'my first satire'),
+    ( 5, 99, 2, 'regress_rls_bob', 'my history book'),
+    ( 6, 11, 1, 'regress_rls_carol', 'great science fiction'),
+    ( 7, 99, 2, 'regress_rls_carol', 'great technology book'),
+    ( 8, 55, 2, 'regress_rls_carol', 'great satire'),
+    ( 9, 11, 1, 'regress_rls_dave', 'awesome science fiction'),
+    (10, 99, 2, 'regress_rls_dave', 'awesome technology book');
+
+ALTER TABLE part_document ENABLE ROW LEVEL SECURITY;
+
+-- Create policy on parent
+-- user's security level must be higher than or equal to document's
+CREATE POLICY pp1 ON part_document AS PERMISSIVE
+    USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user));
+
+-- Dave is only allowed to see cid < 55
+CREATE POLICY pp1r ON part_document AS RESTRICTIVE TO regress_rls_dave
+    USING (cid < 55);
+
+\d+ part_document
+SELECT * FROM pg_policies WHERE schemaname = 'regress_rls_schema' AND tablename like '%part_document%' ORDER BY policyname;
+
+-- viewpoint from regress_rls_bob
+SET SESSION AUTHORIZATION regress_rls_bob;
+SET row_security TO ON;
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
+
+-- viewpoint from regress_rls_carol
+SET SESSION AUTHORIZATION regress_rls_carol;
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
+
+-- viewpoint from regress_rls_dave
+SET SESSION AUTHORIZATION regress_rls_dave;
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
+
+-- pp1 ERROR
+INSERT INTO part_document VALUES (100, 11, 5, 'regress_rls_dave', 'testing pp1'); -- fail
+-- pp1r ERROR
+INSERT INTO part_document VALUES (100, 99, 1, 'regress_rls_dave', 'testing pp1r'); -- fail
+
+-- Show that RLS policy does not apply for direct inserts to children
+-- This should fail with RLS POLICY pp1r violation.
+INSERT INTO part_document VALUES (100, 55, 1, 'regress_rls_dave', 'testing RLS with partitions'); -- fail
+-- But this should succeed.
+INSERT INTO part_document_satire VALUES (100, 55, 1, 'regress_rls_dave', 'testing RLS with partitions'); -- success
+-- We still cannot see the row using the parent
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+-- But we can if we look directly
+SELECT * FROM part_document_satire WHERE f_leak(dtitle) ORDER BY did;
+
+-- Turn on RLS and create policy on child to show RLS is checked before constraints
+SET SESSION AUTHORIZATION regress_rls_alice;
+ALTER TABLE part_document_satire ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pp3 ON part_document_satire AS RESTRICTIVE
+    USING (cid < 55);
+-- This should fail with RLS violation now.
+SET SESSION AUTHORIZATION regress_rls_dave;
+INSERT INTO part_document_satire VALUES (101, 55, 1, 'regress_rls_dave', 'testing RLS with partitions'); -- fail
+-- And now we cannot see directly into the partition either, due to RLS
+SELECT * FROM part_document_satire WHERE f_leak(dtitle) ORDER BY did;
+-- The parent looks same as before
+-- viewpoint from regress_rls_dave
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
+
+-- viewpoint from regress_rls_carol
+SET SESSION AUTHORIZATION regress_rls_carol;
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
+
+-- only owner can change policies
+ALTER POLICY pp1 ON part_document USING (true);    --fail
+DROP POLICY pp1 ON part_document;                  --fail
+
+SET SESSION AUTHORIZATION regress_rls_alice;
+ALTER POLICY pp1 ON part_document USING (dauthor = current_user);
+
+-- viewpoint from regress_rls_bob again
+SET SESSION AUTHORIZATION regress_rls_bob;
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+
+-- viewpoint from rls_regres_carol again
+SET SESSION AUTHORIZATION regress_rls_carol;
+SELECT * FROM part_document WHERE f_leak(dtitle) ORDER BY did;
+
+EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
+
+-- database superuser does bypass RLS policy when enabled
+RESET SESSION AUTHORIZATION;
+SET row_security TO ON;
+SELECT * FROM part_document ORDER BY did;
+SELECT * FROM part_document_satire ORDER by did;
+
+-- database non-superuser with bypass privilege can bypass RLS policy when disabled
+SET SESSION AUTHORIZATION regress_rls_exempt_user;
+SET row_security TO OFF;
+SELECT * FROM part_document ORDER BY did;
+SELECT * FROM part_document_satire ORDER by did;
+
+-- RLS policy does not apply to table owner when RLS enabled.
+SET SESSION AUTHORIZATION regress_rls_alice;
+SET row_security TO ON;
+SELECT * FROM part_document ORDER by did;
+SELECT * FROM part_document_satire ORDER by did;
+
+-- When RLS disabled, other users get ERROR.
+SET SESSION AUTHORIZATION regress_rls_dave;
+SET row_security TO OFF;
+SELECT * FROM part_document ORDER by did;
+SELECT * FROM part_document_satire ORDER by did;
+
+-- Check behavior with a policy that uses a SubPlan not an InitPlan.
+SET SESSION AUTHORIZATION regress_rls_alice;
+SET row_security TO ON;
+CREATE POLICY pp3 ON part_document AS RESTRICTIVE
+    USING ((SELECT dlevel <= seclv FROM uaccount WHERE pguser = current_user));
+
+SET SESSION AUTHORIZATION regress_rls_carol;
+INSERT INTO part_document VALUES (100, 11, 5, 'regress_rls_carol', 'testing pp3'); -- fail
 
 ----- Dependencies -----
 SET SESSION AUTHORIZATION regress_rls_alice;
@@ -337,13 +525,8 @@ SELECT * FROM rec1;    -- fail, mutual recursion via views
 -- Mutual recursion via .s.b views
 --
 SET SESSION AUTHORIZATION regress_rls_bob;
--- Suppress NOTICE messages when doing a cascaded drop.
-SET client_min_messages TO 'warning';
 
 DROP VIEW rec1v, rec2v CASCADE;
--- RESET client_min_messages; RESET doesn't work well in GPDB, it doesn't reset
--- GUCs in QEs.
-SET client_min_messages TO 'notice';
 
 CREATE VIEW rec1v WITH (security_barrier) AS SELECT * FROM rec1;
 CREATE VIEW rec2v WITH (security_barrier) AS SELECT * FROM rec2;
@@ -437,9 +620,9 @@ EXPLAIN (COSTS OFF) UPDATE only t1 SET b = b || '_updt' WHERE f_leak(b);
 UPDATE only t1 SET b = b || '_updt' WHERE f_leak(b);
 
 -- returning clause with system column
-UPDATE only t1 SET b = b WHERE f_leak(b) RETURNING oid, *, t1;
+UPDATE only t1 SET b = b WHERE f_leak(b) RETURNING tableoid::regclass, *, t1;
 UPDATE t1 SET b = b WHERE f_leak(b) RETURNING *;
-UPDATE t1 SET b = b WHERE f_leak(b) RETURNING oid, *, t1;
+UPDATE t1 SET b = b WHERE f_leak(b) RETURNING tableoid::regclass, *, t1;
 
 -- updates with from clause
 EXPLAIN (COSTS OFF) UPDATE t2 SET b=t2.b FROM t3
@@ -486,8 +669,8 @@ SET row_security TO ON;
 EXPLAIN (COSTS OFF) DELETE FROM only t1 WHERE f_leak(b);
 EXPLAIN (COSTS OFF) DELETE FROM t1 WHERE f_leak(b);
 
-DELETE FROM only t1 WHERE f_leak(b) RETURNING oid, *, t1;
-DELETE FROM t1 WHERE f_leak(b) RETURNING oid, *, t1;
+DELETE FROM only t1 WHERE f_leak(b) RETURNING tableoid::regclass, *, t1;
+DELETE FROM t1 WHERE f_leak(b) RETURNING tableoid::regclass, *, t1;
 
 --
 -- S.b. view on top of Row-level security
@@ -527,6 +710,7 @@ SELECT * FROM b1;
 
 SET SESSION AUTHORIZATION regress_rls_alice;
 DROP POLICY p1 ON document;
+DROP POLICY p1r ON document;
 
 CREATE POLICY p1 ON document FOR SELECT USING (true);
 CREATE POLICY p2 ON document FOR INSERT WITH CHECK (dauthor = current_user);
@@ -603,7 +787,7 @@ SET SESSION AUTHORIZATION regress_rls_bob;
 INSERT INTO document VALUES (79, (SELECT cid from category WHERE cname = 'technology'), 1, 'regress_rls_bob', 'technology book, can only insert')
     ON CONFLICT (did) DO UPDATE SET dtitle = EXCLUDED.dtitle RETURNING *;
 
--- UPDATE path is taken here.  Existing tuple passes, since it's cid
+-- UPDATE path is taken here.  Existing tuple passes, since its cid
 -- corresponds to "novel", but default USING qual is enforced against
 -- post-UPDATE tuple too (as always when updating with a policy that lacks an
 -- explicit WCO), and so this fails:
@@ -662,10 +846,10 @@ EXPLAIN (COSTS OFF) SELECT * FROM z1 WHERE f_leak(b);
 PREPARE plancache_test AS SELECT * FROM z1 WHERE f_leak(b);
 EXPLAIN (COSTS OFF) EXECUTE plancache_test;
 
-PREPARE plancache_test2 AS WITH q AS (SELECT * FROM z1 WHERE f_leak(b)) SELECT * FROM q,z2;
+PREPARE plancache_test2 AS WITH q AS MATERIALIZED (SELECT * FROM z1 WHERE f_leak(b)) SELECT * FROM q,z2;
 EXPLAIN (COSTS OFF) EXECUTE plancache_test2;
 
-PREPARE plancache_test3 AS WITH q AS (SELECT * FROM z2) SELECT * FROM q,z1 WHERE f_leak(z1.b);
+PREPARE plancache_test3 AS WITH q AS MATERIALIZED (SELECT * FROM z2) SELECT * FROM q,z1 WHERE f_leak(z1.b);
 EXPLAIN (COSTS OFF) EXECUTE plancache_test3;
 
 SET ROLE regress_rls_group1;
@@ -847,13 +1031,8 @@ DROP TABLE test_qual_pushdown;
 -- Plancache invalidate on user change.
 --
 RESET SESSION AUTHORIZATION;
--- Suppress NOTICE messages when doing a cascaded drop.
-SET client_min_messages TO 'warning';
 
 DROP TABLE t1 CASCADE;
--- RESET client_min_messages; RESET doesn't work well in GPDB, it doesn't reset
--- GUCs in QEs.
-SET client_min_messages TO 'notice';
 
 CREATE TABLE t1 (a integer);
 
@@ -896,8 +1075,9 @@ INSERT INTO t1 (SELECT x, md5(x::text) FROM generate_series(0,20) x);
 
 SET SESSION AUTHORIZATION regress_rls_bob;
 
-WITH cte1 AS (SELECT * FROM t1 WHERE f_leak(b)) SELECT * FROM cte1;
-EXPLAIN (COSTS OFF) WITH cte1 AS (SELECT * FROM t1 WHERE f_leak(b)) SELECT * FROM cte1;
+WITH cte1 AS MATERIALIZED (SELECT * FROM t1 WHERE f_leak(b)) SELECT * FROM cte1;
+EXPLAIN (COSTS OFF)
+WITH cte1 AS MATERIALIZED (SELECT * FROM t1 WHERE f_leak(b)) SELECT * FROM cte1;
 
 WITH cte1 AS (UPDATE t1 SET a = a + 1 RETURNING *) SELECT * FROM cte1; --fail
 WITH cte1 AS (UPDATE t1 SET a = a RETURNING *) SELECT * FROM cte1; --ok
@@ -1508,10 +1688,11 @@ DROP TABLE r1;
 --
 SET SESSION AUTHORIZATION regress_rls_alice;
 SET row_security = on;
-CREATE TABLE r1 (a int);
+CREATE TABLE r1 (a int PRIMARY KEY) DISTRIBUTED REPLICATED;
 
 CREATE POLICY p1 ON r1 FOR SELECT USING (a < 20);
 CREATE POLICY p2 ON r1 FOR UPDATE USING (a < 20) WITH CHECK (true);
+CREATE POLICY p3 ON r1 FOR INSERT WITH CHECK (true);
 INSERT INTO r1 VALUES (10);
 ALTER TABLE r1 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE r1 FORCE ROW LEVEL SECURITY;
@@ -1532,6 +1713,17 @@ ALTER TABLE r1 FORCE ROW LEVEL SECURITY;
 
 -- Error
 UPDATE r1 SET a = 30 RETURNING *;
+
+-- UPDATE path of INSERT ... ON CONFLICT DO UPDATE should also error out
+INSERT INTO r1 VALUES (10)
+    ON CONFLICT (a) DO UPDATE SET a = 30 RETURNING *;
+
+-- Should still error out without RETURNING (use of arbiter always requires
+-- SELECT permissions)
+INSERT INTO r1 VALUES (10)
+    ON CONFLICT (a) DO UPDATE SET a = 30;
+INSERT INTO r1 VALUES (10)
+    ON CONFLICT ON CONSTRAINT r1_pkey DO UPDATE SET a = 30;
 
 DROP TABLE r1;
 
@@ -1572,6 +1764,7 @@ CREATE ROLE regress_rls_dob_role1;
 CREATE ROLE regress_rls_dob_role2;
 
 CREATE TABLE dob_t1 (c1 int);
+CREATE TABLE dob_t2 (c1 int) PARTITION BY RANGE (c1);
 
 CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1 USING (true);
 DROP OWNED BY regress_rls_dob_role1;
@@ -1581,23 +1774,70 @@ CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role2 USING 
 DROP OWNED BY regress_rls_dob_role1;
 DROP POLICY p1 ON dob_t1; -- should succeed
 
+CREATE POLICY p1 ON dob_t2 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true);
+DROP OWNED BY regress_rls_dob_role1;
+DROP POLICY p1 ON dob_t2; -- should succeed
+
 DROP USER regress_rls_dob_role1;
 DROP USER regress_rls_dob_role2;
+
+-- Bug #15708: view + table with RLS should check policies as view owner
+CREATE TABLE ref_tbl (a int);
+INSERT INTO ref_tbl VALUES (1);
+
+CREATE TABLE rls_tbl (a int);
+INSERT INTO rls_tbl VALUES (10);
+ALTER TABLE rls_tbl ENABLE ROW LEVEL SECURITY;
+CREATE POLICY p1 ON rls_tbl USING (EXISTS (SELECT 1 FROM ref_tbl));
+
+GRANT SELECT ON ref_tbl TO regress_rls_bob;
+GRANT SELECT ON rls_tbl TO regress_rls_bob;
+
+CREATE VIEW rls_view AS SELECT * FROM rls_tbl;
+ALTER VIEW rls_view OWNER TO regress_rls_bob;
+GRANT SELECT ON rls_view TO regress_rls_alice;
+
+SET SESSION AUTHORIZATION regress_rls_alice;
+SELECT * FROM ref_tbl; -- Permission denied
+SELECT * FROM rls_tbl; -- Permission denied
+SELECT * FROM rls_view; -- OK
+RESET SESSION AUTHORIZATION;
+
+DROP VIEW rls_view;
+DROP TABLE rls_tbl;
+DROP TABLE ref_tbl;
+
+-- Leaky operator test
+CREATE TABLE rls_tbl (a int);
+INSERT INTO rls_tbl SELECT x/10 FROM generate_series(1, 100) x;
+ANALYZE rls_tbl;
+
+ALTER TABLE rls_tbl ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON rls_tbl TO regress_rls_alice;
+
+SET SESSION AUTHORIZATION regress_rls_alice;
+CREATE FUNCTION op_leak(int, int) RETURNS bool
+    AS 'BEGIN RAISE NOTICE ''op_leak => %, %'', $1, $2; RETURN $1 < $2; END'
+    LANGUAGE plpgsql;
+CREATE OPERATOR <<< (procedure = op_leak, leftarg = int, rightarg = int,
+                     restrict = scalarltsel);
+SELECT * FROM rls_tbl WHERE a <<< 1000;
+DROP OPERATOR <<< (int, int);
+DROP FUNCTION op_leak(int, int);
+RESET SESSION AUTHORIZATION;
+DROP TABLE rls_tbl;
 
 --
 -- Clean up objects
 --
 RESET SESSION AUTHORIZATION;
 
--- Suppress NOTICE messages when doing a cascaded drop.
-SET client_min_messages TO 'warning';
-
 DROP SCHEMA regress_rls_schema CASCADE;
-RESET client_min_messages;
 
 DROP USER regress_rls_alice;
 DROP USER regress_rls_bob;
 DROP USER regress_rls_carol;
+DROP USER regress_rls_dave;
 DROP USER regress_rls_exempt_user;
 DROP ROLE regress_rls_group1;
 DROP ROLE regress_rls_group2;

@@ -25,12 +25,7 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPartKeys::CPartKeys
-	(
-	CColRef2dArray *pdrgpdrgpcr
-	)
-	:
-	m_pdrgpdrgpcr(pdrgpdrgpcr)
+CPartKeys::CPartKeys(CColRef2dArray *pdrgpdrgpcr) : m_pdrgpdrgpcr(pdrgpdrgpcr)
 {
 	GPOS_ASSERT(NULL != pdrgpdrgpcr);
 	m_num_of_part_levels = pdrgpdrgpcr->Size();
@@ -58,11 +53,7 @@ CPartKeys::~CPartKeys()
 //
 //---------------------------------------------------------------------------
 CColRef *
-CPartKeys::PcrKey
-	(
-	ULONG ulLevel
-	)
-	const
+CPartKeys::PcrKey(ULONG ulLevel) const
 {
 	GPOS_ASSERT(ulLevel < m_num_of_part_levels);
 	CColRefArray *colref_array = (*m_pdrgpdrgpcr)[ulLevel];
@@ -78,11 +69,7 @@ CPartKeys::PcrKey
 //
 //---------------------------------------------------------------------------
 BOOL
-CPartKeys::FOverlap
-	(
-	CColRefSet *pcrs
-	)
-	const
+CPartKeys::FOverlap(CColRefSet *pcrs) const
 {
 	for (ULONG ul = 0; ul < m_num_of_part_levels; ul++)
 	{
@@ -105,10 +92,7 @@ CPartKeys::FOverlap
 //
 //---------------------------------------------------------------------------
 CPartKeys *
-CPartKeys::PpartkeysCopy
-	(
-	CMemoryPool *mp
-	)
+CPartKeys::PpartkeysCopy(CMemoryPool *mp)
 {
 	CColRef2dArray *pdrgpdrgpcrCopy = GPOS_NEW(mp) CColRef2dArray(mp);
 
@@ -137,11 +121,8 @@ CPartKeys::PpartkeysCopy
 //
 //---------------------------------------------------------------------------
 CPartKeysArray *
-CPartKeys::PdrgppartkeysCopy
-	(
-	CMemoryPool *mp,
-	const CPartKeysArray *pdrgppartkeys
-	)
+CPartKeys::PdrgppartkeysCopy(CMemoryPool *mp,
+							 const CPartKeysArray *pdrgppartkeys)
 {
 	GPOS_ASSERT(NULL != pdrgppartkeys);
 
@@ -165,19 +146,16 @@ CPartKeys::PdrgppartkeysCopy
 //
 //---------------------------------------------------------------------------
 CPartKeys *
-CPartKeys::PpartkeysRemap
-	(
-	CMemoryPool *mp,
-	UlongToColRefMap *colref_mapping
-	)
-	const
+CPartKeys::PpartkeysRemap(CMemoryPool *mp,
+						  UlongToColRefMap *colref_mapping) const
 {
 	GPOS_ASSERT(NULL != colref_mapping);
 	CColRef2dArray *pdrgpdrgpcr = GPOS_NEW(mp) CColRef2dArray(mp);
 
 	for (ULONG ul = 0; ul < m_num_of_part_levels; ul++)
 	{
-		CColRef *colref = CUtils::PcrRemap(PcrKey(ul), colref_mapping, false /*must_exist*/);
+		CColRef *colref =
+			CUtils::PcrRemap(PcrKey(ul), colref_mapping, false /*must_exist*/);
 
 		CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
 		colref_array->Append(colref);
@@ -197,11 +175,7 @@ CPartKeys::PpartkeysRemap
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPartKeys::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPartKeys::OsPrint(IOstream &os) const
 {
 	os << "(";
 	for (ULONG ul = 0; ul < m_num_of_part_levels; ul++)

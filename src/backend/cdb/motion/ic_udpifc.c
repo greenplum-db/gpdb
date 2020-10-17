@@ -25,17 +25,23 @@
 #include "postgres.h"
 
 #include <pthread.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "access/transam.h"
 #include "access/xact.h"
+#include "common/ip.h"
 #include "nodes/execnodes.h"
 #include "nodes/pg_list.h"
 #include "nodes/print.h"
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
-#include "libpq/ip.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "pgstat.h"
 #include "postmaster/postmaster.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
@@ -50,12 +56,6 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbicudpfaultinjection.h"
-
-#include <fcntl.h>
-#include <limits.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -3814,6 +3814,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		 * error through the main QD-QE libpq connection. For that, ask
 		 * the dispatcher for a file descriptor to wait on for that.
 		 *
+		 * GPDB_12_MERGE_FIXME:
 		 * XXX: We currently only get a single FD to wait on. That catches
 		 * the common case that *all* the QEs report the same error more or
 		 * less at the same time. WaitLatchOrSocket doesn't allow waiting for
@@ -3836,7 +3837,8 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		}
 		(void) WaitLatchOrSocket(&ic_control_info.latch,
 								 wakeEvents, waitFd,
-								 MAIN_THREAD_COND_TIMEOUT_MS);
+								 MAIN_THREAD_COND_TIMEOUT_MS,
+								 WAIT_EVENT_INTERCONNECT);
 
 		/* check the potential errors in rx thread. */
 		checkRxThreadError();
@@ -4577,6 +4579,8 @@ xmit_retry:
 			   (struct sockaddr *) &conn->peer, conn->peer_len);
 	if (n < 0)
 	{
+		int			save_errno = errno;
+
 		if (errno == EINTR)
 			goto xmit_retry;
 
@@ -4602,7 +4606,7 @@ xmit_retry:
 						errmsg("Interconnect error writing an outgoing packet: %m"),
 						errdetail("error during sendto() call (error:%d).\n"
 								  "For Remote Connection: contentId=%d at %s",
-								  errno, conn->remoteContentId,
+								  save_errno, conn->remoteContentId,
 								  conn->remoteHostAndPort)));
 		/* not reached */
 	}

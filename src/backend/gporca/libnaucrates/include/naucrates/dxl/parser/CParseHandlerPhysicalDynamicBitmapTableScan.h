@@ -19,65 +19,61 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerPhysicalDynamicBitmapTableScan
-	//
-	//	@doc:
-	//		Parse handler for parsing dynamic bitmap table scan operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerPhysicalDynamicBitmapTableScan : public CParseHandlerPhysicalAbstractBitmapScan
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerPhysicalDynamicBitmapTableScan
+//
+//	@doc:
+//		Parse handler for parsing dynamic bitmap table scan operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerPhysicalDynamicBitmapTableScan
+	: public CParseHandlerPhysicalAbstractBitmapScan
+{
+private:
+	// private copy ctor
+	CParseHandlerPhysicalDynamicBitmapTableScan(
+		const CParseHandlerPhysicalDynamicBitmapTableScan &);
+
+	// part index id
+	ULONG m_part_index_id;
+
+	// printable partition index id
+	ULONG m_part_index_id_printable;
+
+	// process the start of an element
+	virtual void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
+
+	// process the end of an element
+	virtual void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
+
+public:
+	// ctor
+	CParseHandlerPhysicalDynamicBitmapTableScan(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root)
+		: CParseHandlerPhysicalAbstractBitmapScan(mp, parse_handler_mgr,
+												  parse_handler_root),
+		  m_part_index_id(0),
+		  m_part_index_id_printable(0)
 	{
-		private:
-			// private copy ctor
-			CParseHandlerPhysicalDynamicBitmapTableScan(const CParseHandlerPhysicalDynamicBitmapTableScan &);
+	}
+};
+}  // namespace gpdxl
 
-			// part index id
-			ULONG m_part_index_id;
-
-			// printable partition index id
-			ULONG m_part_index_id_printable;
-
-			// process the start of an element
-			virtual
-			void StartElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-				);
-
-			// process the end of an element
-			virtual
-			void EndElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-				);
-
-		public:
-			// ctor
-			CParseHandlerPhysicalDynamicBitmapTableScan
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				)
-				:
-				CParseHandlerPhysicalAbstractBitmapScan(mp, parse_handler_mgr, parse_handler_root),
-				m_part_index_id(0),
-				m_part_index_id_printable(0)
-			{}
-	};
-}
-
-#endif  // !GPDXL_CParseHandlerPhysicalDynamicBitmapTableScan_H
+#endif	// !GPDXL_CParseHandlerPhysicalDynamicBitmapTableScan_H
 
 // EOF

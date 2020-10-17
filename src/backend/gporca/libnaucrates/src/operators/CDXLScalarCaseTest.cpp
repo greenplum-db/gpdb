@@ -27,14 +27,8 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLScalarCaseTest::CDXLScalarCaseTest
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_type
-	)
-	:
-	CDXLScalar(mp),
-	m_mdid_type(mdid_type)
+CDXLScalarCaseTest::CDXLScalarCaseTest(CMemoryPool *mp, IMDId *mdid_type)
+	: CDXLScalar(mp), m_mdid_type(mdid_type)
 {
 	GPOS_ASSERT(m_mdid_type->IsValid());
 }
@@ -103,18 +97,18 @@ CDXLScalarCaseTest::MdidType() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarCaseTest::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode * //dxlnode
-	)
-	const
+CDXLScalarCaseTest::SerializeToDXL(CXMLSerializer *xml_serializer,
+								   const CDXLNode *	 //dxlnode
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	m_mdid_type->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	m_mdid_type->Serialize(xml_serializer,
+						   CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 //---------------------------------------------------------------------------
@@ -126,13 +120,10 @@ CDXLScalarCaseTest::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLScalarCaseTest::HasBoolResult
-	(
-	CMDAccessor *md_accessor
-	)
-	const
+CDXLScalarCaseTest::HasBoolResult(CMDAccessor *md_accessor) const
 {
-	return (IMDType::EtiBool == md_accessor->RetrieveType(m_mdid_type)->GetDatumType());
+	return (IMDType::EtiBool ==
+			md_accessor->RetrieveType(m_mdid_type)->GetDatumType());
 }
 
 #ifdef GPOS_DEBUG
@@ -145,16 +136,13 @@ CDXLScalarCaseTest::HasBoolResult
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarCaseTest::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL // validate_children
-	)
-	const
+CDXLScalarCaseTest::AssertValid(const CDXLNode *dxlnode,
+								BOOL  // validate_children
+) const
 {
 	GPOS_ASSERT(0 == dxlnode->Arity());
 	GPOS_ASSERT(m_mdid_type->IsValid());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

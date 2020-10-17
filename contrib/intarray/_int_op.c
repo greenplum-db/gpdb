@@ -49,8 +49,8 @@ _int_different(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(!DatumGetBool(
 								 DirectFunctionCall2(
 													 _int_same,
-									   PointerGetDatum(PG_GETARG_POINTER(0)),
-										PointerGetDatum(PG_GETARG_POINTER(1))
+													 PointerGetDatum(PG_GETARG_POINTER(0)),
+													 PointerGetDatum(PG_GETARG_POINTER(1))
 													 )
 								 ));
 }
@@ -74,19 +74,19 @@ _int_same(PG_FUNCTION_ARGS)
 	da = ARRPTR(a);
 	db = ARRPTR(b);
 
-	result = FALSE;
+	result = false;
 
 	if (na == nb)
 	{
 		SORT(a);
 		SORT(b);
-		result = TRUE;
+		result = true;
 
 		for (n = 0; n < na; n++)
 		{
 			if (da[n] != db[n])
 			{
-				result = FALSE;
+				result = false;
 				break;
 			}
 		}
@@ -110,7 +110,7 @@ _int_overlap(PG_FUNCTION_ARGS)
 	CHECKARRVALID(a);
 	CHECKARRVALID(b);
 	if (ARRISEMPTY(a) || ARRISEMPTY(b))
-		return FALSE;
+		return false;
 
 	SORT(a);
 	SORT(b);
@@ -200,9 +200,9 @@ Datum
 sort(PG_FUNCTION_ARGS)
 {
 	ArrayType  *a = PG_GETARG_ARRAYTYPE_P_COPY(0);
-	text	   *dirstr = (fcinfo->nargs == 2) ? PG_GETARG_TEXT_P(1) : NULL;
-	int32		dc = (dirstr) ? VARSIZE(dirstr) - VARHDRSZ : 0;
-	char	   *d = (dirstr) ? VARDATA(dirstr) : NULL;
+	text	   *dirstr = (fcinfo->nargs == 2) ? PG_GETARG_TEXT_PP(1) : NULL;
+	int32		dc = (dirstr) ? VARSIZE_ANY_EXHDR(dirstr) : 0;
+	char	   *d = (dirstr) ? VARDATA_ANY(dirstr) : NULL;
 	int			dir = -1;
 
 	CHECKARRVALID(a);

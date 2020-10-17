@@ -29,27 +29,22 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMDCheckConstraintGPDB::CMDCheckConstraintGPDB
-	(
-	CMemoryPool *mp,
-	IMDId *mdid,
-	CMDName *mdname,
-	IMDId *rel_mdid,
-	CDXLNode *dxlnode
-	)
-	:
-	m_mp(mp),
-	m_mdid(mdid),
-	m_mdname(mdname),
-	m_rel_mdid(rel_mdid),
-	m_dxl_node(dxlnode)
+CMDCheckConstraintGPDB::CMDCheckConstraintGPDB(CMemoryPool *mp, IMDId *mdid,
+											   CMDName *mdname, IMDId *rel_mdid,
+											   CDXLNode *dxlnode)
+	: m_mp(mp),
+	  m_mdid(mdid),
+	  m_mdname(mdname),
+	  m_rel_mdid(rel_mdid),
+	  m_dxl_node(dxlnode)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(rel_mdid->IsValid());
 	GPOS_ASSERT(NULL != mdname);
 	GPOS_ASSERT(NULL != dxlnode);
 
-	m_dxl_str = CDXLUtils::SerializeMDObj(m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	m_dxl_str = CDXLUtils::SerializeMDObj(
+		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -78,13 +73,9 @@ CMDCheckConstraintGPDB::~CMDCheckConstraintGPDB()
 //
 //---------------------------------------------------------------------------
 CExpression *
-CMDCheckConstraintGPDB::GetCheckConstraintExpr
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	CColRefArray *colref_array
-	)
-	const
+CMDCheckConstraintGPDB::GetCheckConstraintExpr(CMemoryPool *mp,
+											   CMDAccessor *md_accessor,
+											   CColRefArray *colref_array) const
 {
 	GPOS_ASSERT(NULL != colref_array);
 
@@ -93,13 +84,15 @@ CMDCheckConstraintGPDB::GetCheckConstraintExpr
 	const ULONG len = colref_array->Size();
 	GPOS_ASSERT(len > 0);
 
-	const ULONG arity = mdrel->NonDroppedColsCount() - mdrel->SystemColumnsCount();
+	const ULONG arity =
+		mdrel->NonDroppedColsCount() - mdrel->SystemColumnsCount();
 	GPOS_ASSERT(arity == len);
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// translate the DXL representation of the check constraint expression
 	CTranslatorDXLToExpr dxltr(mp, md_accessor);
-	return dxltr.PexprTranslateScalar(m_dxl_node, colref_array, mdrel->NonDroppedColsArray());
+	return dxltr.PexprTranslateScalar(m_dxl_node, colref_array,
+									  mdrel->NonDroppedColsArray());
 }
 
 //---------------------------------------------------------------------------
@@ -111,24 +104,25 @@ CMDCheckConstraintGPDB::GetCheckConstraintExpr
 //
 //---------------------------------------------------------------------------
 void
-CMDCheckConstraintGPDB::Serialize
-	(
-	CXMLSerializer *xml_serializer
-	)
-	const
+CMDCheckConstraintGPDB::Serialize(CXMLSerializer *xml_serializer) const
 {
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
-						CDXLTokens::GetDXLTokenStr(EdxltokenCheckConstraint));
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenCheckConstraint));
 
-	m_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenMdid));
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName), m_mdname->GetMDName());
-	m_rel_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenRelationMdid));
+	m_mdid->Serialize(xml_serializer,
+					  CDXLTokens::GetDXLTokenStr(EdxltokenMdid));
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName),
+								 m_mdname->GetMDName());
+	m_rel_mdid->Serialize(xml_serializer,
+						  CDXLTokens::GetDXLTokenStr(EdxltokenRelationMdid));
 
 	// serialize the scalar expression
 	m_dxl_node->SerializeToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
-						CDXLTokens::GetDXLTokenStr(EdxltokenCheckConstraint));
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenCheckConstraint));
 }
 
 #ifdef GPOS_DEBUG
@@ -141,23 +135,20 @@ CMDCheckConstraintGPDB::Serialize
 //
 //---------------------------------------------------------------------------
 void
-CMDCheckConstraintGPDB::DebugPrint
-	(
-	IOstream &os
-	)
-	const
+CMDCheckConstraintGPDB::DebugPrint(IOstream &os) const
 {
 	os << "Constraint Id: ";
 	MDId()->OsPrint(os);
 	os << std::endl;
 
-	os << "Constraint Name: " << (Mdname()).GetMDName()->GetBuffer() << std::endl;
+	os << "Constraint Name: " << (Mdname()).GetMDName()->GetBuffer()
+	   << std::endl;
 
 	os << "Relation id: ";
 	GetRelMdId()->OsPrint(os);
 	os << std::endl;
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

@@ -42,13 +42,13 @@
 (exited with code 0)
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 CREATE
 -- end_ignore
 
 create or replace function pg_ctl(datadir text, command text) returns text as $$ import subprocess 
 cmd = 'pg_ctl -D %s ' % datadir if command in ('stop'): cmd = cmd + '-w -m immediate %s' % command else: return 'Invalid command input' 
-return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpythonu;
+return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpython3u;
 CREATE
 
 -- no segment down.

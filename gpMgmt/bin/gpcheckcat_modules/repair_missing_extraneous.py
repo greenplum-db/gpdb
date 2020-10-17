@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from gppylib.utils import escapeDoubleQuoteInSQLString
 
 class RepairMissingExtraneous:
@@ -65,7 +65,7 @@ class RepairMissingExtraneous:
 
             for seg_id in seg_ids:
 
-                if not oids_to_segment_mapping.has_key(seg_id):
+                if seg_id not in oids_to_segment_mapping:
                     oids_to_segment_mapping[seg_id] = set()
 
                 oids_to_segment_mapping[seg_id].add(oid)

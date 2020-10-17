@@ -297,7 +297,7 @@
         <dxl:ProjList>
           <dxl:ProjElem ColId="18" Alias="sum">
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final">
-              <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.20.1.0"/>
+              <dxl:Ident ColId="19" ColName="ColRef_0019" TypeMdid="0.20.1.0"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
@@ -307,8 +307,8 @@
             <dxl:Cost StartupCost="0" TotalCost="25.974609" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
-            <dxl:ProjElem ColId="20" Alias="ColRef_0020">
-              <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.20.1.0"/>
+            <dxl:ProjElem ColId="19" Alias="ColRef_0019">
+              <dxl:Ident ColId="19" ColName="ColRef_0019" TypeMdid="0.20.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
@@ -319,7 +319,7 @@
             </dxl:Properties>
             <dxl:GroupingColumns/>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="20" Alias="ColRef_0020">
+              <dxl:ProjElem ColId="19" Alias="ColRef_0019">
                 <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial">
                   <dxl:SubPlan TypeMdid="0.23.1.0" SubPlanType="ScalarSubPlan">
                     <dxl:TestExpr/>

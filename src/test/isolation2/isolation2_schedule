@@ -1,12 +1,10 @@
-test: setup
-
+test: autovacuum-analyze
 test: lockmodes
 # Put test prepare_limit near to test lockmodes since both of them reboot the
 # cluster during testing. Usually the 2nd reboot should be faster.
 test: prepare_limit
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock
-test: dml_on_root_locks_all_parts
 
 test: select_dropped_table
 test: update_hash_col_utilitymode execute_on_utilitymode
@@ -38,7 +36,6 @@ test: gdd/extended_protocol_test
 test: gdd/avoid-qd-deadlock
 test: gdd/delete-deadlock-root-leaf-concurrent-op
 test: gdd/update-deadlock-root-leaf-concurrent-op
-test: gdd/dml_locks_only_targeted_table_in_query
 
 # this resets the gp_global_deadlock_detector_period guc hence should
 # be last in the group.
@@ -75,6 +72,7 @@ test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
 test: vacuum_recently_dead_tuple_due_to_distributed_snapshot
+test: vacuum_full_interrupt
 test: distributedlog-bug
 test: invalidated_toast_index
 test: distributed_snapshot
@@ -84,7 +82,6 @@ test: ao_upgrade
 # below test utilizes fault injectors so it needs to be in a group by itself
 test: external_table
 
-# This test validates that for AO we delay fsync to checkpointer on mirror.
 test: fsync_ao
 
 # Tests on Append-Optimized tables (row-oriented).
@@ -135,7 +132,7 @@ test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
-test: segwalrep/master_xlog_switch
+test: segwalrep/master_wal_switch
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
@@ -206,8 +203,6 @@ test: fts_manual_probe
 
 # Reindex tests
 test: reindex/abort_reindex
-test: reindex/createidx_while_reindex_ao_partition
-test: reindex/createidx_while_reindex_ao_gist reindex/createidx_while_reindex_heap_gist reindex/createidx_while_reindex_aoco_gist
 test: reindex/createidx_while_reindex_idx_ao_btree reindex/createidx_while_reindex_idx_heap_btree reindex/createidx_while_reindex_idx_aoco_btree
 test: reindex/createidx_while_reindex_idx_ao_bitmap reindex/createidx_while_reindex_idx_heap_bitmap reindex/createidx_while_reindex_idx_aoco_bitmap
 test: reindex/reindextable_while_addpart_ao_part_btree reindex/reindextable_while_addpart_heap_part_btree reindex/reindextable_while_addpart_aoco_part_btree
@@ -221,6 +216,9 @@ test: reindex/serializable_reindex_with_drop_index_ao reindex/serializable_reind
 test: reindex/repeatable_read_reindex_with_insert_heap
 test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_analyze_while_reindex_ao_btree
 test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast
+
+# test workfile_mgr
+test: workfile_mgr_test
 
 # Cancel test
 test: cancel_plpython

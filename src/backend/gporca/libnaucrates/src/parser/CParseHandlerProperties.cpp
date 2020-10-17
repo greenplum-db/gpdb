@@ -27,16 +27,12 @@ XERCES_CPP_NAMESPACE_USE
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerProperties::CParseHandlerProperties
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_dxl_properties(NULL),
-	m_dxl_stats_derived_relation(NULL)
+CParseHandlerProperties::CParseHandlerProperties(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_dxl_properties(NULL),
+	  m_dxl_stats_derived_relation(NULL)
 {
 }
 
@@ -78,40 +74,50 @@ CParseHandlerProperties::GetProperties() const
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerProperties::StartElement
-	(
-	const XMLCh* const element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerProperties::StartElement(const XMLCh *const element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const element_qname,
+									  const Attributes &attrs)
 {
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenProperties), element_local_name))
+	if (0 ==
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenProperties),
+								 element_local_name))
 	{
 		// create and install cost and output column parsers
-		CParseHandlerBase *parse_handler_root = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenCost), m_parse_handler_mgr, this);
+		CParseHandlerBase *parse_handler_root =
+			CParseHandlerFactory::GetParseHandler(
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenCost),
+				m_parse_handler_mgr, this);
 		m_parse_handler_mgr->ActivateParseHandler(parse_handler_root);
 
 		// store parse handler
 		this->Append(parse_handler_root);
 	}
-	else if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenStatsDerivedRelation), element_local_name))
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenStatsDerivedRelation),
+					  element_local_name))
 	{
 		GPOS_ASSERT(1 == this->Length());
 
 		// create and install derived relation statistics parsers
-		CParseHandlerBase *parse_handler_stats = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenStatsDerivedRelation), m_parse_handler_mgr, this);
+		CParseHandlerBase *parse_handler_stats =
+			CParseHandlerFactory::GetParseHandler(
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenStatsDerivedRelation),
+				m_parse_handler_mgr, this);
 		m_parse_handler_mgr->ActivateParseHandler(parse_handler_stats);
 
 		// store parse handler
 		this->Append(parse_handler_stats);
 
-		parse_handler_stats->startElement(element_uri, element_local_name, element_qname, attrs);
+		parse_handler_stats->startElement(element_uri, element_local_name,
+										  element_qname, attrs);
 	}
 	else
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 }
 
@@ -124,32 +130,37 @@ CParseHandlerProperties::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerProperties::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerProperties::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const element_local_name,
+									const XMLCh *const	// element_qname
+)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenProperties), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenProperties),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
-	
+
 	GPOS_ASSERT((1 == this->Length()) || (2 == this->Length()));
-	
+
 	// assemble the properties container from the cost
-	CParseHandlerCost *parse_handler_cost = dynamic_cast<CParseHandlerCost *>((*this)[0]);
+	CParseHandlerCost *parse_handler_cost =
+		dynamic_cast<CParseHandlerCost *>((*this)[0]);
 
 	CDXLOperatorCost *cost = parse_handler_cost->GetDXLOperatorCost();
 	cost->AddRef();
-	
+
 	if (2 == this->Length())
 	{
-		CParseHandlerStatsDerivedRelation *parse_handler_stats = dynamic_cast<CParseHandlerStatsDerivedRelation *>((*this)[1]);
+		CParseHandlerStatsDerivedRelation *parse_handler_stats =
+			dynamic_cast<CParseHandlerStatsDerivedRelation *>((*this)[1]);
 
-		CDXLStatsDerivedRelation *dxl_stats_derived_relation = parse_handler_stats->GetDxlStatsDrvdRelation();
+		CDXLStatsDerivedRelation *dxl_stats_derived_relation =
+			parse_handler_stats->GetDxlStatsDrvdRelation();
 		dxl_stats_derived_relation->AddRef();
 		m_dxl_stats_derived_relation = dxl_stats_derived_relation;
 	}
@@ -161,4 +172,3 @@ CParseHandlerProperties::EndElement
 }
 
 // EOF
-

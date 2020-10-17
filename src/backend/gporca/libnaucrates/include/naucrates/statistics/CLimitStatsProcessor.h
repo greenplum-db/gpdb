@@ -17,19 +17,18 @@
 
 namespace gpnaucrates
 {
-	using namespace gpos;
+using namespace gpos;
 
-	class CLimitStatsProcessor
-	{
-		public:
+class CLimitStatsProcessor
+{
+public:
+	// limit
+	static CStatistics *CalcLimitStats(CMemoryPool *mp,
+									   const CStatistics *input_stats,
+									   CDouble input_limit_rows);
+};
+}  // namespace gpnaucrates
 
-		// limit
-		static
-		CStatistics *CalcLimitStats(CMemoryPool *mp, const CStatistics *input_stats, CDouble input_limit_rows);
-	};
-}
-
-#endif // !GPNAUCRATES_CLimitStatsProcessor_H
+#endif	// !GPNAUCRATES_CLimitStatsProcessor_H
 
 // EOF
-

@@ -16,7 +16,6 @@ from gppylib.gparray import GpArray
 from gppylib.operations import startSegments
 from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
-from gppylib.operations.unix import CleanSharedMem
 from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
@@ -26,9 +25,9 @@ logger = gplog.get_default_logger()
 gDatabaseDirectories = [
     # this list occur inside initdb.c
     "global",
-    "pg_log",
-    "pg_xlog",
-    "pg_clog",
+    "log",
+    "pg_wal",
+    "pg_xact",
     "pg_changetracking",
     "pg_subtrans",
     "pg_twophase",
@@ -253,7 +252,6 @@ class GpMirrorListToBuild:
                 copyDirectives.append(d)
 
         self.__ensureStopped(gpEnv, toStopDirectives)
-        self.__ensureSharedMemCleaned(gpEnv, toStopDirectives)
         self.__ensureMarkedDown(gpEnv, toEnsureMarkedDown)
         if not self.__forceoverwrite:
             self.__cleanUpSegmentDirectories(cleanupDirectives)
@@ -294,8 +292,8 @@ class GpMirrorListToBuild:
 
             # Add to rewindInfo to execute pg_rewind later if we are not
             # using full recovery. We will run pg_rewind on incremental recovery
-            # if the target mirror does not have recovery.conf file because
-            # segment failover happened. The check for recovery.conf file will
+            # if the target mirror does not have standby.signal file because
+            # segment failover happened. The check for standby.signal file will
             # happen in the same remote SegmentRewind Command call.
             if not toRecover.isFullSynchronization() \
                and seg.getSegmentRole() == gparray.ROLE_MIRROR:
@@ -354,7 +352,7 @@ class GpMirrorListToBuild:
 
         rewindFailedSegments = []
         # Run pg_rewind on all the targets
-        for rewindSeg in rewindInfo.values():
+        for rewindSeg in list(rewindInfo.values()):
             # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
             # pg_rewind wants that to make incremental recovery successful finally.
             self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (rewindSeg.sourceHostname, rewindSeg.sourcePort))
@@ -420,7 +418,7 @@ class GpMirrorListToBuild:
         A detected problem causes an Exception to be raised
         """
 
-        for hostName, segmentArr in GpArray.getSegmentsByHostName(gpArray.getDbList()).iteritems():
+        for hostName, segmentArr in GpArray.getSegmentsByHostName(gpArray.getDbList()).items():
             usedPorts = {}
             usedDataDirectories = {}
             for segment in segmentArr:
@@ -555,7 +553,7 @@ class GpMirrorListToBuild:
         #
         self.__logger.info('Validating remote directories')
         cmds = []
-        for hostName in destSegmentByHost.keys():
+        for hostName in list(destSegmentByHost.keys()):
             cmds.append(createConfigureNewSegmentCommand(hostName, 'validate blank segments', True))
         for cmd in cmds:
             self.__pool.addCommand(cmd)
@@ -597,7 +595,7 @@ class GpMirrorListToBuild:
         cmds = []
         progressCmds = []
         removeCmds= []
-        for hostName in destSegmentByHost.keys():
+        for hostName in list(destSegmentByHost.keys()):
             for segment in destSegmentByHost[hostName]:
                 if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
                     progressCmds.append(
@@ -675,29 +673,6 @@ class GpMirrorListToBuild:
             return datadir
         return results.stdout.strip()
 
-    def __ensureSharedMemCleaned(self, gpEnv, directives):
-        """
-
-        @param directives a list of the GpStopSegmentDirectoryDirective values indicating which segments to cleanup 
-
-        """
-
-        if len(directives) == 0:
-            return
-
-        self.__logger.info('Ensuring that shared memory is cleaned up for stopped segments')
-        segments = [d.getSegment() for d in directives]
-        segmentsByHost = GpArray.getSegmentsByHostName(segments)
-        operation_list = [RemoteOperation(CleanSharedMem(segments), host=hostName) for hostName, segments in
-                          segmentsByHost.items()]
-        ParallelOperation(operation_list).run()
-
-        for operation in operation_list:
-            try:
-                operation.get_ret()
-            except Exception as e:
-                self.__logger.warning('Unable to clean up shared memory for stopped segments on host (%s)' % operation.host)
-
     def __ensureStopped(self, gpEnv, directives):
         """
 
@@ -713,7 +688,7 @@ class GpMirrorListToBuild:
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
         cmds = []
-        for hostName, segments in segmentByHost.iteritems():
+        for hostName, segments in segmentByHost.items():
             cmd = gp.GpSegStopCmd("remote segment stop on host '%s'" % hostName,
                                   gpEnv.getGpHome(), gpEnv.getGpVersion(),
                                   mode='fast', dbs=segments, verbose=gplog.logging_is_verbose(),
@@ -768,7 +743,7 @@ class GpMirrorListToBuild:
                 break
             else:
                 if last_seg_up_count != seg_up_count:
-                    print "\n",
+                    print("\n", end=' ')
                     self.__logger.info("%d of %d segments have been marked down." %
                                 (initial_seg_up_count - seg_up_count, initial_seg_up_count))
                     last_seg_up_count = seg_up_count
@@ -781,7 +756,7 @@ class GpMirrorListToBuild:
                 time_elapsed += 5
 
         if seg_up_count == 0:
-            print "\n",
+            print("\n", end=' ')
             self.__logger.info("%d of %d segments have been marked down." %
                         (initial_seg_up_count, initial_seg_up_count))
         else:
@@ -796,7 +771,7 @@ class GpMirrorListToBuild:
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
         cmds = []
-        for hostName, segments in segmentByHost.iteritems():
+        for hostName, segments in segmentByHost.items():
             cmds.append(gp.GpCleanSegmentDirectories("clean segment directories on %s" % hostName,
                                                      segments, gp.REMOTE, hostName))
 
@@ -813,7 +788,7 @@ class GpMirrorListToBuild:
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(segments)
 
         cmds = []
-        for hostName in segmentByHost.keys():
+        for hostName in list(segmentByHost.keys()):
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             cmd = gp.ConfigureNewSegment("update gpid file",

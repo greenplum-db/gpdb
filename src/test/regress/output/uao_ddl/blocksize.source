@@ -1,9 +1,9 @@
-create schema blocksize_@orientation@;
-set search_path="$user",blocksize_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema blocksize_@amname@;
+set search_path="$user",blocksize_@amname@,public;
+SET default_table_access_method=@amname@;
 -- Insert/update/delete on UAO tables with different blocksizes
 BEGIN;
-CREATE TABLE uao_blocksize_8k with (appendonly=true, BLOCKSIZE=8192) AS (
+CREATE TABLE uao_blocksize_8k with (BLOCKSIZE=8192) AS (
 SELECT GENERATE_SERIES::numeric sno
 	 , (random() * 10000000)::numeric + 10000000 val1
 	 , timeofday()::varchar(50) val2
@@ -74,7 +74,7 @@ select count(*) AS all_tuples from uao_blocksize_8k;
 set gp_select_invisible = false;
 -- create select uao table with BLOCKSIZE=2048K
 CREATE TABLE uao_blocksize_2048k
- with (appendonly=true, BLOCKSIZE=2097152) AS (
+ with (BLOCKSIZE=2097152) AS (
 SELECT GENERATE_SERIES::numeric sno
 	 , (random() * 10000000)::numeric + 10000000 val1
 	 , timeofday()::varchar(50) val2

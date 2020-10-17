@@ -13,7 +13,7 @@
  *		as this notice is not removed.
  *
  *	The author is not responsible for loss or damages that may
- *	result from it's use.
+ *	result from its use.
  *
  *
  * IDENTIFICATION
@@ -62,39 +62,48 @@ typedef struct _z_stream
 typedef z_stream *z_streamp;
 #endif
 
-/* Current archive version number (the format we can output) */
-#define K_VERS_MAJOR 1
-#define K_VERS_MINOR 13
-#define K_VERS_REV 0
-
 /* Data block types */
 #define BLK_DATA 1
 #define BLK_BLOBS 3
 
+/* Encode version components into a convenient integer <maj><min><rev> */
+#define MAKE_ARCHIVE_VERSION(major, minor, rev) (((major) * 256 + (minor)) * 256 + (rev))
+
+#define ARCHIVE_MAJOR(version) (((version) >> 16) & 255)
+#define ARCHIVE_MINOR(version) (((version) >>  8) & 255)
+#define ARCHIVE_REV(version)   (((version)		) & 255)
+
 /* Historical version numbers (checked in code) */
-#define K_VERS_1_0 (( (1 * 256 + 0) * 256 + 0) * 256 + 0)
-#define K_VERS_1_2 (( (1 * 256 + 2) * 256 + 0) * 256 + 0)		/* Allow No ZLIB */
-#define K_VERS_1_3 (( (1 * 256 + 3) * 256 + 0) * 256 + 0)		/* BLOBs */
-#define K_VERS_1_4 (( (1 * 256 + 4) * 256 + 0) * 256 + 0)		/* Date & name in header */
-#define K_VERS_1_5 (( (1 * 256 + 5) * 256 + 0) * 256 + 0)		/* Handle dependencies */
-#define K_VERS_1_6 (( (1 * 256 + 6) * 256 + 0) * 256 + 0)		/* Schema field in TOCs */
-#define K_VERS_1_7 (( (1 * 256 + 7) * 256 + 0) * 256 + 0)		/* File Offset size in
-																 * header */
-#define K_VERS_1_8 (( (1 * 256 + 8) * 256 + 0) * 256 + 0)		/* change interpretation
-																 * of ID numbers and
-																 * dependencies */
-#define K_VERS_1_9 (( (1 * 256 + 9) * 256 + 0) * 256 + 0)		/* add default_with_oids
-																 * tracking */
-#define K_VERS_1_10 (( (1 * 256 + 10) * 256 + 0) * 256 + 0)		/* add tablespace */
-#define K_VERS_1_11 (( (1 * 256 + 11) * 256 + 0) * 256 + 0)		/* add toc section
-																 * indicator */
-#define K_VERS_1_12 (( (1 * 256 + 12) * 256 + 0) * 256 + 0)		/* add separate BLOB
-																 * entries */
-#define K_VERS_1_13 (( (1 * 256 + 13) * 256 + 0) * 256 + 0)		/* change search_path
-																 * behavior */
+#define K_VERS_1_0	MAKE_ARCHIVE_VERSION(1, 0, 0)
+#define K_VERS_1_2	MAKE_ARCHIVE_VERSION(1, 2, 0)	/* Allow No ZLIB */
+#define K_VERS_1_3	MAKE_ARCHIVE_VERSION(1, 3, 0)	/* BLOBs */
+#define K_VERS_1_4	MAKE_ARCHIVE_VERSION(1, 4, 0)	/* Date & name in header */
+#define K_VERS_1_5	MAKE_ARCHIVE_VERSION(1, 5, 0)	/* Handle dependencies */
+#define K_VERS_1_6	MAKE_ARCHIVE_VERSION(1, 6, 0)	/* Schema field in TOCs */
+#define K_VERS_1_7	MAKE_ARCHIVE_VERSION(1, 7, 0)	/* File Offset size in
+													 * header */
+#define K_VERS_1_8	MAKE_ARCHIVE_VERSION(1, 8, 0)	/* change interpretation
+													 * of ID numbers and
+													 * dependencies */
+#define K_VERS_1_9	MAKE_ARCHIVE_VERSION(1, 9, 0)	/* add default_with_oids
+													 * tracking */
+#define K_VERS_1_10 MAKE_ARCHIVE_VERSION(1, 10, 0)	/* add tablespace */
+#define K_VERS_1_11 MAKE_ARCHIVE_VERSION(1, 11, 0)	/* add toc section
+													 * indicator */
+#define K_VERS_1_12 MAKE_ARCHIVE_VERSION(1, 12, 0)	/* add separate BLOB
+													 * entries */
+#define K_VERS_1_13 MAKE_ARCHIVE_VERSION(1, 13, 0)	/* change search_path
+													 * behavior */
+#define K_VERS_1_14 MAKE_ARCHIVE_VERSION(1, 14, 0)	/* add tableam */
+
+/* Current archive version number (the format we can output) */
+#define K_VERS_MAJOR 1
+#define K_VERS_MINOR 14
+#define K_VERS_REV 0
+#define K_VERS_SELF MAKE_ARCHIVE_VERSION(K_VERS_MAJOR, K_VERS_MINOR, K_VERS_REV);
 
 /* Newest format we can read */
-#define K_VERS_MAX (( (1 * 256 + 13) * 256 + 255) * 256 + 0)
+#define K_VERS_MAX	MAKE_ARCHIVE_VERSION(K_VERS_MAJOR, K_VERS_MINOR, 255)
 
 
 /* Flags to indicate disposition of offsets stored in files */
@@ -113,23 +122,19 @@ typedef z_stream *z_streamp;
 
 typedef struct _archiveHandle ArchiveHandle;
 typedef struct _tocEntry TocEntry;
-struct ParallelArgs;
 struct ParallelState;
 
 #define READ_ERROR_EXIT(fd) \
 	do { \
 		if (feof(fd)) \
-			exit_horribly(modulename, \
-						  "could not read from input file: end of file\n"); \
+			fatal("could not read from input file: end of file"); \
 		else \
-			exit_horribly(modulename, \
-					"could not read from input file: %s\n", strerror(errno)); \
+			fatal("could not read from input file: %m"); \
 	} while (0)
 
 #define WRITE_ERROR_EXIT \
 	do { \
-		exit_horribly(modulename, "could not write to output file: %s\n", \
-					  strerror(errno)); \
+		fatal("could not write to output file: %m"); \
 	} while (0)
 
 typedef enum T_Action
@@ -138,40 +143,36 @@ typedef enum T_Action
 	ACT_RESTORE
 } T_Action;
 
-typedef void (*ClosePtr) (ArchiveHandle *AH);
-typedef void (*ReopenPtr) (ArchiveHandle *AH);
-typedef void (*ArchiveEntryPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*ClosePtrType) (ArchiveHandle *AH);
+typedef void (*ReopenPtrType) (ArchiveHandle *AH);
+typedef void (*ArchiveEntryPtrType) (ArchiveHandle *AH, TocEntry *te);
 
-typedef void (*StartDataPtr) (ArchiveHandle *AH, TocEntry *te);
-typedef void (*WriteDataPtr) (ArchiveHandle *AH, const void *data, size_t dLen);
-typedef void (*EndDataPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*StartDataPtrType) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*WriteDataPtrType) (ArchiveHandle *AH, const void *data, size_t dLen);
+typedef void (*EndDataPtrType) (ArchiveHandle *AH, TocEntry *te);
 
-typedef void (*StartBlobsPtr) (ArchiveHandle *AH, TocEntry *te);
-typedef void (*StartBlobPtr) (ArchiveHandle *AH, TocEntry *te, Oid oid);
-typedef void (*EndBlobPtr) (ArchiveHandle *AH, TocEntry *te, Oid oid);
-typedef void (*EndBlobsPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*StartBlobsPtrType) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*StartBlobPtrType) (ArchiveHandle *AH, TocEntry *te, Oid oid);
+typedef void (*EndBlobPtrType) (ArchiveHandle *AH, TocEntry *te, Oid oid);
+typedef void (*EndBlobsPtrType) (ArchiveHandle *AH, TocEntry *te);
 
-typedef int (*WriteBytePtr) (ArchiveHandle *AH, const int i);
-typedef int (*ReadBytePtr) (ArchiveHandle *AH);
-typedef void (*WriteBufPtr) (ArchiveHandle *AH, const void *c, size_t len);
-typedef void (*ReadBufPtr) (ArchiveHandle *AH, void *buf, size_t len);
-typedef void (*SaveArchivePtr) (ArchiveHandle *AH);
-typedef void (*WriteExtraTocPtr) (ArchiveHandle *AH, TocEntry *te);
-typedef void (*ReadExtraTocPtr) (ArchiveHandle *AH, TocEntry *te);
-typedef void (*PrintExtraTocPtr) (ArchiveHandle *AH, TocEntry *te);
-typedef void (*PrintTocDataPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef int (*WriteBytePtrType) (ArchiveHandle *AH, const int i);
+typedef int (*ReadBytePtrType) (ArchiveHandle *AH);
+typedef void (*WriteBufPtrType) (ArchiveHandle *AH, const void *c, size_t len);
+typedef void (*ReadBufPtrType) (ArchiveHandle *AH, void *buf, size_t len);
+typedef void (*WriteExtraTocPtrType) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*ReadExtraTocPtrType) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*PrintExtraTocPtrType) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*PrintTocDataPtrType) (ArchiveHandle *AH, TocEntry *te);
 
-typedef void (*ClonePtr) (ArchiveHandle *AH);
-typedef void (*DeClonePtr) (ArchiveHandle *AH);
+typedef void (*PrepParallelRestorePtrType) (ArchiveHandle *AH);
+typedef void (*ClonePtrType) (ArchiveHandle *AH);
+typedef void (*DeClonePtrType) (ArchiveHandle *AH);
 
-typedef char *(*WorkerJobRestorePtr) (ArchiveHandle *AH, TocEntry *te);
-typedef char *(*WorkerJobDumpPtr) (ArchiveHandle *AH, TocEntry *te);
-typedef char *(*MasterStartParallelItemPtr) (ArchiveHandle *AH, TocEntry *te,
-														 T_Action act);
-typedef int (*MasterEndParallelItemPtr) (ArchiveHandle *AH, TocEntry *te,
-											  const char *str, T_Action act);
+typedef int (*WorkerJobDumpPtrType) (ArchiveHandle *AH, TocEntry *te);
+typedef int (*WorkerJobRestorePtrType) (ArchiveHandle *AH, TocEntry *te);
 
-typedef size_t (*CustomOutPtr) (ArchiveHandle *AH, const void *buf, size_t len);
+typedef size_t (*CustomOutPtrType) (ArchiveHandle *AH, const void *buf, size_t len);
 
 typedef enum
 {
@@ -236,18 +237,13 @@ typedef enum
 struct _archiveHandle
 {
 	Archive		public;			/* Public part of archive */
-	char		vmaj;			/* Version of file */
-	char		vmin;
-	char		vrev;
-	int			version;		/* Conveniently formatted version */
+	int			version;		/* Version of file */
 
 	char	   *archiveRemoteVersion;	/* When reading an archive, the
 										 * version of the dumped DB */
-	char	   *archiveDumpVersion;		/* When reading an archive, the
-										 * version of the dumper */
+	char	   *archiveDumpVersion; /* When reading an archive, the version of
+									 * the dumper */
 
-	int			debugLevel;		/* Used for logging (currently only by
-								 * --verbose) */
 	size_t		intSize;		/* Size of an integer in the archive */
 	size_t		offSize;		/* Size of a file offset in the archive -
 								 * Added V1.7 */
@@ -268,42 +264,40 @@ struct _archiveHandle
 	size_t		lookaheadLen;	/* Length of data in lookahead */
 	pgoff_t		lookaheadPos;	/* Current read position in lookahead buffer */
 
-	ArchiveEntryPtr ArchiveEntryPtr;	/* Called for each metadata object */
-	StartDataPtr StartDataPtr;	/* Called when table data is about to be
-								 * dumped */
-	WriteDataPtr WriteDataPtr;	/* Called to send some table data to the
-								 * archive */
-	EndDataPtr EndDataPtr;		/* Called when table data dump is finished */
-	WriteBytePtr WriteBytePtr;	/* Write a byte to output */
-	ReadBytePtr ReadBytePtr;	/* Read a byte from an archive */
-	WriteBufPtr WriteBufPtr;	/* Write a buffer of output to the archive */
-	ReadBufPtr ReadBufPtr;		/* Read a buffer of input from the archive */
-	ClosePtr ClosePtr;			/* Close the archive */
-	ReopenPtr ReopenPtr;		/* Reopen the archive */
-	WriteExtraTocPtr WriteExtraTocPtr;	/* Write extra TOC entry data
-										 * associated with the current archive
-										 * format */
-	ReadExtraTocPtr ReadExtraTocPtr;	/* Read extr info associated with
-										 * archie format */
-	PrintExtraTocPtr PrintExtraTocPtr;	/* Extra TOC info for format */
-	PrintTocDataPtr PrintTocDataPtr;
+	ArchiveEntryPtrType ArchiveEntryPtr;	/* Called for each metadata object */
+	StartDataPtrType StartDataPtr;	/* Called when table data is about to be
+									 * dumped */
+	WriteDataPtrType WriteDataPtr;	/* Called to send some table data to the
+									 * archive */
+	EndDataPtrType EndDataPtr;	/* Called when table data dump is finished */
+	WriteBytePtrType WriteBytePtr;	/* Write a byte to output */
+	ReadBytePtrType ReadBytePtr;	/* Read a byte from an archive */
+	WriteBufPtrType WriteBufPtr;	/* Write a buffer of output to the archive */
+	ReadBufPtrType ReadBufPtr;	/* Read a buffer of input from the archive */
+	ClosePtrType ClosePtr;		/* Close the archive */
+	ReopenPtrType ReopenPtr;	/* Reopen the archive */
+	WriteExtraTocPtrType WriteExtraTocPtr;	/* Write extra TOC entry data
+											 * associated with the current
+											 * archive format */
+	ReadExtraTocPtrType ReadExtraTocPtr;	/* Read extra info associated with
+											 * archive format */
+	PrintExtraTocPtrType PrintExtraTocPtr;	/* Extra TOC info for format */
+	PrintTocDataPtrType PrintTocDataPtr;
 
-	StartBlobsPtr StartBlobsPtr;
-	EndBlobsPtr EndBlobsPtr;
-	StartBlobPtr StartBlobPtr;
-	EndBlobPtr EndBlobPtr;
+	StartBlobsPtrType StartBlobsPtr;
+	EndBlobsPtrType EndBlobsPtr;
+	StartBlobPtrType StartBlobPtr;
+	EndBlobPtrType EndBlobPtr;
 
-	MasterStartParallelItemPtr MasterStartParallelItemPtr;
-	MasterEndParallelItemPtr MasterEndParallelItemPtr;
+	SetupWorkerPtrType SetupWorkerPtr;
+	WorkerJobDumpPtrType WorkerJobDumpPtr;
+	WorkerJobRestorePtrType WorkerJobRestorePtr;
 
-	SetupWorkerPtr SetupWorkerPtr;
-	WorkerJobDumpPtr WorkerJobDumpPtr;
-	WorkerJobRestorePtr WorkerJobRestorePtr;
+	PrepParallelRestorePtrType PrepParallelRestorePtr;
+	ClonePtrType ClonePtr;		/* Clone format-specific fields */
+	DeClonePtrType DeClonePtr;	/* Clean up cloned fields */
 
-	ClonePtr ClonePtr;			/* Clone format-specific fields */
-	DeClonePtr DeClonePtr;		/* Clean up cloned fields */
-
-	CustomOutPtr CustomOutPtr;	/* Alternative script output routine */
+	CustomOutPtrType CustomOutPtr;	/* Alternative script output routine */
 
 	/* Stuff for direct DB connection */
 	char	   *archdbname;		/* DB name *read* from archive */
@@ -341,6 +335,7 @@ struct _archiveHandle
 								 * values for compression: -1
 								 * Z_DEFAULT_COMPRESSION 0	COMPRESSION_NONE
 								 * 1-9 levels for gzip compression */
+	bool		dosync;			/* data requested to be synced on sight */
 	ArchiveMode mode;			/* File mode - r or w */
 	void	   *formatData;		/* Header data specific to file format */
 
@@ -348,7 +343,7 @@ struct _archiveHandle
 	char	   *currUser;		/* current username, or NULL if unknown */
 	char	   *currSchema;		/* current schema, or NULL */
 	char	   *currTablespace; /* current tablespace, or NULL */
-	bool		currWithOids;	/* current default_with_oids setting */
+	char	   *currTableAm;	/* current table access method, or NULL */
 
 	void	   *lo_buf;
 	size_t		lo_buf_used;
@@ -375,8 +370,8 @@ struct _tocEntry
 	char	   *namespace;		/* null or empty string if not in a schema */
 	char	   *tablespace;		/* null if not in a tablespace; empty string
 								 * means use database default */
+	char	   *tableam;		/* table access method, only for TABLE tags */
 	char	   *owner;
-	bool		withOids;		/* Used only by "TABLE" tags */
 	char	   *desc;
 	char	   *defn;
 	char	   *dropStmt;
@@ -389,12 +384,13 @@ struct _tocEntry
 	void	   *formatData;		/* TOC Entry data specific to file format */
 
 	/* working state while dumping/restoring */
+	pgoff_t		dataLength;		/* item's data size; 0 if none or unknown */
 	teReqs		reqs;			/* do we need schema and/or data of object */
 	bool		created;		/* set for DATA member if TABLE was created */
 
 	/* working state (needed only for parallel restore) */
-	struct _tocEntry *par_prev; /* list links for pending/ready items; */
-	struct _tocEntry *par_next; /* these are NULL if not in either list */
+	struct _tocEntry *pending_prev; /* list links for pending-items list; */
+	struct _tocEntry *pending_next; /* NULL if not in that list */
 	int			depCount;		/* number of dependencies not yet restored */
 	DumpId	   *revDeps;		/* dumpIds of objects depending on this one */
 	int			nRevDeps;		/* number of such dependencies */
@@ -402,10 +398,33 @@ struct _tocEntry
 	int			nLockDeps;		/* number of such dependencies */
 };
 
-extern int	parallel_restore(struct ParallelArgs *args);
+extern int	parallel_restore(ArchiveHandle *AH, TocEntry *te);
 extern void on_exit_close_archive(Archive *AHX);
 
-extern void warn_or_exit_horribly(ArchiveHandle *AH, const char *modulename, const char *fmt,...) pg_attribute_printf(3, 4);
+extern void warn_or_exit_horribly(ArchiveHandle *AH, const char *fmt,...) pg_attribute_printf(2, 3);
+
+/* Options for ArchiveEntry */
+typedef struct _archiveOpts
+{
+	const char *tag;
+	const char *namespace;
+	const char *tablespace;
+	const char *tableam;
+	const char *owner;
+	const char *description;
+	teSection	section;
+	const char *createStmt;
+	const char *dropStmt;
+	const char *copyStmt;
+	const DumpId *deps;
+	int			nDeps;
+	DataDumperPtr dumpFn;
+	void	   *dumpArg;
+} ArchiveOpts;
+#define ARCHIVE_OPTS(...) &(ArchiveOpts){__VA_ARGS__}
+/* Called to add a TOC entry */
+extern TocEntry *ArchiveEntry(Archive *AHX, CatalogId catalogId,
+							  DumpId dumpId, ArchiveOpts *opts);
 
 extern void WriteHead(ArchiveHandle *AH);
 extern void ReadHead(ArchiveHandle *AH);
@@ -450,12 +469,10 @@ extern void InitArchiveFmt_Tar(ArchiveHandle *AH);
 
 extern bool isValidTarHeader(char *header);
 
-extern int	ReconnectToServer(ArchiveHandle *AH, const char *dbname, const char *newUser);
+extern void ReconnectToServer(ArchiveHandle *AH, const char *dbname, const char *newUser);
 extern void DropBlobIfExists(ArchiveHandle *AH, Oid oid);
 
 void		ahwrite(const void *ptr, size_t size, size_t nmemb, ArchiveHandle *AH);
 int			ahprintf(ArchiveHandle *AH, const char *fmt,...) pg_attribute_printf(2, 3);
-
-void		ahlog(ArchiveHandle *AH, int level, const char *fmt,...) pg_attribute_printf(3, 4);
 
 #endif

@@ -13,7 +13,8 @@
  */
 #ifndef CDBDTXCONTEXTINFO_H
 #define CDBDTXCONTEXTINFO_H
-#include "utils/tqual.h"
+
+#include "utils/snapshot.h"
 
 #define DtxContextInfo_StaticInit {0,InvalidDistributedTransactionId,false,false,DistributedSnapshot_StaticInit,0,0,0}
 

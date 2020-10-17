@@ -1,11 +1,13 @@
 /*
  * findoidjoins.c
  *
- * Copyright (c) 2002-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2019, PostgreSQL Global Development Group
  *
  * src/tools/findoidjoins/findoidjoins.c
  */
 #include "postgres_fe.h"
+
+#include "catalog/pg_class_d.h"
 
 #include "fe_utils/connect.h"
 #include "libpq-fe.h"
@@ -58,10 +60,12 @@ main(int argc, char **argv)
 	printfPQExpBuffer(&sql, "%s",
 					  "SET search_path = public;"
 					  "SELECT c.relname, (SELECT nspname FROM "
-		"pg_catalog.pg_namespace n WHERE n.oid = c.relnamespace) AS nspname "
+					  "pg_catalog.pg_namespace n WHERE n.oid = c.relnamespace) AS nspname "
 					  "FROM pg_catalog.pg_class c "
-					  "WHERE c.relkind = 'r' "
-					  "AND c.relhasoids "
+					  "WHERE c.relkind = " CppAsString2(RELKIND_RELATION)
+					  " AND EXISTS(SELECT * FROM pg_attribute a"
+					  "            WHERE a.attrelid = c.oid AND a.attname = 'oid' "
+					  "                  AND a.atttypid = 'oid'::regtype)"
 					  "ORDER BY nspname, c.relname"
 		);
 
@@ -80,9 +84,10 @@ main(int argc, char **argv)
 					  "(SELECT nspname FROM pg_catalog.pg_namespace n WHERE n.oid = c.relnamespace) AS nspname, "
 					  "a.attname "
 					  "FROM pg_catalog.pg_class c, pg_catalog.pg_attribute a "
-					  "WHERE a.attnum > 0 AND c.relkind = 'r' "
-					  "AND a.attrelid = c.oid "
-					  "AND a.atttypid IN ('pg_catalog.oid'::regtype, "
+					  "WHERE a.attnum > 0"
+					  " AND c.relkind = " CppAsString2(RELKIND_RELATION)
+					  " AND a.attrelid = c.oid"
+					  " AND a.atttypid IN ('pg_catalog.oid'::regtype, "
 					  " 'pg_catalog.regclass'::regtype, "
 					  " 'pg_catalog.regoper'::regtype, "
 					  " 'pg_catalog.regoperator'::regtype, "
@@ -155,9 +160,10 @@ main(int argc, char **argv)
 					  "(SELECT nspname FROM pg_catalog.pg_namespace n WHERE n.oid = c.relnamespace) AS nspname, "
 					  "a.attname "
 					  "FROM pg_catalog.pg_class c, pg_catalog.pg_attribute a "
-					  "WHERE a.attnum > 0 AND c.relkind = 'r' "
-					  "AND a.attrelid = c.oid "
-					  "AND a.atttypid IN ('pg_catalog.oid[]'::regtype, "
+					  "WHERE a.attnum > 0"
+					  " AND c.relkind = " CppAsString2(RELKIND_RELATION)
+					  " AND a.attrelid = c.oid"
+					  " AND a.atttypid IN ('pg_catalog.oid[]'::regtype, "
 					  " 'pg_catalog.regclass[]'::regtype, "
 					  " 'pg_catalog.regoper[]'::regtype, "
 					  " 'pg_catalog.regoperator[]'::regtype, "

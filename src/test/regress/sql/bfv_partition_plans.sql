@@ -5,7 +5,7 @@ set search_path=bfv_partition_plans;
 -- Initial setup for all the partitioning test for this suite
 --
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function count_operator(query text, operator text) returns int as
@@ -19,7 +19,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
@@ -33,7 +33,7 @@ for i in range(len(rv)):
         break
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 
 -- Test UPDATE that moves row from one partition to another. The partitioning
@@ -41,6 +41,7 @@ language plpythonu;
 create table mpp3061 (i int) partition by range(i) (start(1) end(5) every(1));
 insert into mpp3061 values(1);
 update mpp3061 set i = 2 where i = 1;
+select tableoid::regclass, * from mpp3061 where i = 2;
 drop table mpp3061;
 
 --
@@ -156,8 +157,8 @@ create table mpp23288(a int, b int)
   partition by range (a)
   (
       PARTITION pfirst  END(5) INCLUSIVE,
-      PARTITION pinter  START(5) EXCLUSIVE END (10) INCLUSIVE,
-      PARTITION plast   START (10) EXCLUSIVE
+      PARTITION pinter  START(6) END (10) INCLUSIVE,
+      PARTITION plast   START (11)
   );
 
 insert into mpp23288(a) select generate_series(1,20);
@@ -212,7 +213,10 @@ analyze mpp24151_t;
 -- TEST
 set optimizer_enable_dynamictablescan = off;
 
-select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','Result');
+-- GPDB_12_MERGE_FIXME: With the big refactoring t how Partition Selectors are
+-- implemented during the v12 merge, I'm not sure if this test is testing anything
+-- useful anymore. And/or it redundant with the tests in 'dpe'?
+select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','->  Partition Selector');
 select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
 
 -- CLEANUP

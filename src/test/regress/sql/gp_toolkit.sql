@@ -18,7 +18,7 @@ CREATE TABLE toolkit_aopart (
             N_COMMENT VARCHAR(152)
             )
 partition by range (n_nationkey)
-subpartition by range (n_regionkey) subpartition template (start('0') end('1') inclusive,start('1') exclusive
+subpartition by range (n_regionkey) subpartition template (start('0') end('2') exclusive,start('2') inclusive
 )
 (
 partition p1 start('0') end('10') WITH (appendonly=true,checksum=true,compresslevel=9), partition p2 start('10') end('25') WITH (checksum=false,appendonly=true,compresslevel=7)
@@ -49,17 +49,6 @@ select aunnspname from gp_toolkit.__gp_user_namespaces where aunnspname='tktest'
 drop schema tktest;
 
 select aunnspname from gp_toolkit.__gp_user_namespaces where aunnspname='tktest';
-select  autnspname, autrelname, autrelkind, autreltuples, autrelpages, autrelacl from gp_toolkit.__gp_user_data_tables where autrelname like 'toolkit%' order by 2;
-
-create table toolkit_a (a int);
-create table toolkit_b (b int);
-
-select  autnspname, autrelname, autrelkind, autreltuples, autrelpages, autrelacl from gp_toolkit.__gp_user_data_tables where autrelname like 'toolkit%' order by 2;
-
-drop table toolkit_a;
-drop table toolkit_b;
-
-select  autnspname, autrelname, autrelkind, autreltuples, autrelpages, autrelacl from gp_toolkit.__gp_user_data_tables where autrelname like 'toolkit%' order by 2;
 
 -- Test log reading functions
 
@@ -234,7 +223,7 @@ create table gptoolkit_user_table_ao (
             N_COMMENT VARCHAR(152)
             )
 partition by range (n_nationkey)
-subpartition by range (n_regionkey) subpartition template (start('0') end('1') inclusive,start('1') exclusive
+subpartition by range (n_regionkey) subpartition template (start('0') end('2') exclusive,start('2') inclusive
 )
 (
 partition p1 start('0') end('10') WITH (appendonly=true,checksum=true,compresslevel=9), partition p2 start('10') end('25') WITH (checksum=false,appendonly=true,compresslevel=7)
@@ -345,14 +334,6 @@ select sodddatname,
        sodddatsize > 30000000 as "db size over 30MB",
        sodddatsize < 5000000000 as "db size below 5 GB"
 from gp_toolkit.gp_size_of_database where sodddatname='regression';
-
--- gp_size_of_partition_and_indexes_disk
-select pg.relname,
-       sopaidpartitiontablesize > 50000 as tblsz_over50k,
-       sopaidpartitiontablesize < 5000000 as tblsz_under5mb,
-       sopaidpartitionindexessize
-from pg_class pg,gp_toolkit.gp_size_of_partition_and_indexes_disk gsopai
-where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table_ao%';
 
 -- This also depends on the number of segments
 select count(*) > 0 from gp_toolkit.__gp_number_of_segments;

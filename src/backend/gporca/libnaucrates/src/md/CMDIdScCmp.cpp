@@ -23,25 +23,20 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMDIdScCmp::CMDIdScCmp
-	(
-	CMDIdGPDB *left_mdid,
-	CMDIdGPDB *right_mdid,
-	IMDType::ECmpType cmp_type
-	)
-	:
-	m_mdid_left(left_mdid),
-	m_mdid_right(right_mdid),
-	m_comparision_type(cmp_type),
-	m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
+CMDIdScCmp::CMDIdScCmp(CMDIdGPDB *left_mdid, CMDIdGPDB *right_mdid,
+					   IMDType::ECmpType cmp_type)
+	: m_mdid_left(left_mdid),
+	  m_mdid_right(right_mdid),
+	  m_comparision_type(cmp_type),
+	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
 	GPOS_ASSERT(left_mdid->IsValid());
 	GPOS_ASSERT(right_mdid->IsValid());
 	GPOS_ASSERT(IMDType::EcmptOther != cmp_type);
-	
+
 	GPOS_ASSERT(left_mdid->Sysid().Equals(right_mdid->Sysid()));
-	
-	// serialize mdid into static string 
+
+	// serialize mdid into static string
 	Serialize();
 }
 
@@ -71,18 +66,11 @@ void
 CMDIdScCmp::Serialize()
 {
 	// serialize mdid as SystemType.mdidLeft;mdidRight;CmpType
-	m_str.AppendFormat
-			(
-			GPOS_WSZ_LIT("%d.%d.%d.%d;%d.%d.%d;%d"), 
-			MdidType(), 
-					   m_mdid_left->Oid(),
-			m_mdid_left->VersionMajor(),
-			m_mdid_left->VersionMinor(),
-					   m_mdid_right->Oid(),
-			m_mdid_right->VersionMajor(),
-			m_mdid_right->VersionMinor(),
-			m_comparision_type
-			);
+	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d;%d.%d.%d;%d"), MdidType(),
+					   m_mdid_left->Oid(), m_mdid_left->VersionMajor(),
+					   m_mdid_left->VersionMinor(), m_mdid_right->Oid(),
+					   m_mdid_right->VersionMajor(),
+					   m_mdid_right->VersionMinor(), m_comparision_type);
 }
 
 //---------------------------------------------------------------------------
@@ -138,11 +126,9 @@ CMDIdScCmp::GetRightMdid() const
 ULONG
 CMDIdScCmp::HashValue() const
 {
-	return gpos::CombineHashes
-								(
-								MdidType(), 
-								gpos::CombineHashes(m_mdid_left->HashValue(), m_mdid_right->HashValue())
-								);
+	return gpos::CombineHashes(MdidType(),
+							   gpos::CombineHashes(m_mdid_left->HashValue(),
+												   m_mdid_right->HashValue()));
 }
 
 //---------------------------------------------------------------------------
@@ -154,22 +140,18 @@ CMDIdScCmp::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDIdScCmp::Equals
-	(
-	const IMDId *mdid
-	) 
-	const
+CMDIdScCmp::Equals(const IMDId *mdid) const
 {
 	if (NULL == mdid || EmdidScCmp != mdid->MdidType())
 	{
 		return false;
 	}
-	
+
 	const CMDIdScCmp *pmdidScCmp = CMDIdScCmp::CastMdid(mdid);
-	
+
 	return m_mdid_left->Equals(pmdidScCmp->GetLeftMdid()) &&
-			m_mdid_right->Equals(pmdidScCmp->GetRightMdid()) &&
-			m_comparision_type == pmdidScCmp->ParseCmpType(); 
+		   m_mdid_right->Equals(pmdidScCmp->GetRightMdid()) &&
+		   m_comparision_type == pmdidScCmp->ParseCmpType();
 }
 
 //---------------------------------------------------------------------------
@@ -181,12 +163,8 @@ CMDIdScCmp::Equals
 //
 //---------------------------------------------------------------------------
 void
-CMDIdScCmp::Serialize
-	(
-	CXMLSerializer * xml_serializer,
-	const CWStringConst *attribute_str
-	)
-	const
+CMDIdScCmp::Serialize(CXMLSerializer *xml_serializer,
+					  const CWStringConst *attribute_str) const
 {
 	xml_serializer->AddAttribute(attribute_str, &m_str);
 }
@@ -200,11 +178,7 @@ CMDIdScCmp::Serialize
 //
 //---------------------------------------------------------------------------
 IOstream &
-CMDIdScCmp::OsPrint
-	(
-	IOstream &os
-	) 
-	const
+CMDIdScCmp::OsPrint(IOstream &os) const
 {
 	os << "(" << m_str.GetBuffer() << ")";
 	return os;

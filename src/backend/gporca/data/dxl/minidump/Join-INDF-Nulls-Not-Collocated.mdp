@@ -182,9 +182,7 @@ select * from foo, (select NULL a from bar) other where foo.a is not distinct fr
             <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
-        <dxl:IndexInfoList>
-          <dxl:IndexInfo Mdid="0.38326.1.0" IsPartial="false"/>
-        </dxl:IndexInfoList>
+        <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>

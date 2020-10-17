@@ -11,10 +11,8 @@
             <topicref href="ref/analyzedb.xml"/>
             <topicref href="ref/clusterdb.xml"/>
             <topicref href="ref/createdb.xml"/>
-            <topicref href="ref/createlang.xml"/>
             <topicref href="ref/createuser.xml"/>
             <topicref href="ref/dropdb.xml"/>
-            <topicref href="ref/droplang.xml"/>
             <topicref href="ref/dropuser.xml"/>
             <topicref href="ref/gpactivatestandby.xml"/>
             <topicref href="ref/gpaddmirrors.xml"/>
@@ -63,8 +61,8 @@
             <topicref href="ref/plcontainer.xml"/>
             <topicref href="ref/plcontainer-configuration.xml"/>
             <topicref href="ref/psql.xml"/>
-            <topicref href="../../pxf/5-14/ref/pxf.html" scope="external" navtitle="pxf"/>
-            <topicref href="../../pxf/5-14/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
+            <topicref href="../../pxf/5-15/ref/pxf.html" scope="external" navtitle="pxf"/>
+            <topicref href="../../pxf/5-15/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
             <topicref href="ref/reindexdb.xml"/>
             <topicref href="ref/vacuumdb.xml"/>
         </topicref>

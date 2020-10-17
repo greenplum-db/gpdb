@@ -73,6 +73,7 @@ class ByValStructs(object):
             'Complex',
             'DbDirNode',
             'DirectDispatchCalculationInfo',
+            'FullTransactionId',
             'instr_time',
             'Interval',
             'ItemPointerData',

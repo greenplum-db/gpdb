@@ -171,7 +171,7 @@ UPDATE 1
 1: end;
 END
 2<:  <... completed>
-ERROR:  concurrent updates distribution keys on the same row is not allowed  (seg1 127.0.1.1:7003 pid=108408)
+ERROR:  EvalPlanQual can not handle subPlan with Motion node  (seg1 127.0.1.1:7003 pid=34629)
 2: end;
 END
 0: select * from tab_update_hashcol;
@@ -239,3 +239,87 @@ DROP
 0: drop table tab_update_epq2;
 DROP
 0q: ... <quitting>
+
+-- split update is to implement updating on hash keys,
+-- it deletes the tuple and insert a new tuple in a
+-- new segment, so it is not easy for other transaction
+-- to follow the update link to fetch the new tuple. The
+-- other transaction should raise error for such case.
+-- the following case should be tested with GDD enabled.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/8919
+
+0:create table t_splitupdate_raise_error (a int, b int) distributed by (a);
+CREATE
+0:insert into t_splitupdate_raise_error values (1, 1);
+INSERT 1
+
+-- test delete will throw error
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: delete from t_splitupdate_raise_error;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg1 127.0.1.1:7003 pid=34629)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- test norm update will throw error
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: update t_splitupdate_raise_error set b = 999;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg0 127.0.1.1:7002 pid=43842)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- test select for update will throw error
+-- Currently, select for update will reduce lock-level
+-- under some very simple cases, see checkCanOptSelectLockingClause
+-- for details.
+
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+-- TODO: turn off orca, we should fix this until ORCA
+-- can generate lockrows plannode.
+2: set optimizer = off;
+SET
+2&: select * from t_splitupdate_raise_error for update;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg0 slice1 127.0.1.1:7002 pid=43866)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+0:drop table t_splitupdate_raise_error;
+DROP

@@ -13,7 +13,9 @@
 //
 //---------------------------------------------------------------------------
 
+extern "C" {
 #include "postgres.h"
+}
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
 
 using namespace gpdxl;
@@ -27,14 +29,8 @@ using namespace gpos;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLTranslateContextBaseTable::CDXLTranslateContextBaseTable
-	(
-	CMemoryPool *mp
-	)
-	:
-	m_mp(mp),
-	m_oid(InvalidOid),
-	m_rel_index(0)
+CDXLTranslateContextBaseTable::CDXLTranslateContextBaseTable(CMemoryPool *mp)
+	: m_mp(mp), m_oid(InvalidOid), m_rel_index(0)
 {
 	// initialize hash table
 	m_colid_to_attno_map = GPOS_NEW(m_mp) UlongToIntMap(m_mp);
@@ -63,10 +59,7 @@ CDXLTranslateContextBaseTable::~CDXLTranslateContextBaseTable()
 //
 //---------------------------------------------------------------------------
 void
-CDXLTranslateContextBaseTable::SetOID
-	(
-	OID oid
-	)
+CDXLTranslateContextBaseTable::SetOID(OID oid)
 {
 	GPOS_ASSERT(oid != InvalidOid);
 	m_oid = oid;
@@ -81,10 +74,7 @@ CDXLTranslateContextBaseTable::SetOID
 //
 //---------------------------------------------------------------------------
 void
-CDXLTranslateContextBaseTable::SetRelIndex
-	(
-	Index rel_index
-	)
+CDXLTranslateContextBaseTable::SetRelIndex(Index rel_index)
 {
 	GPOS_ASSERT(0 < rel_index);
 	m_rel_index = rel_index;
@@ -129,11 +119,7 @@ CDXLTranslateContextBaseTable::GetRelIndex() const
 //
 //---------------------------------------------------------------------------
 INT
-CDXLTranslateContextBaseTable::GetAttnoForColId
-	(
-	ULONG colid
-	)
-	const
+CDXLTranslateContextBaseTable::GetAttnoForColId(ULONG colid) const
 {
 	const INT *pi = m_colid_to_attno_map->Find(&colid);
 	if (NULL != pi)
@@ -155,11 +141,7 @@ CDXLTranslateContextBaseTable::GetAttnoForColId
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLTranslateContextBaseTable::InsertMapping
-	(
-	ULONG dxl_colid,
-	INT att_no
-	)
+CDXLTranslateContextBaseTable::InsertMapping(ULONG dxl_colid, INT att_no)
 {
 	// copy key and value
 	ULONG *key = GPOS_NEW(m_mp) ULONG(dxl_colid);

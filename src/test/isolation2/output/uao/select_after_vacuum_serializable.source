@@ -4,9 +4,9 @@ DROP TABLE IF EXISTS ao;
 DROP
 DROP TABLE IF EXISTS ao2;
 DROP
-CREATE TABLE ao (a INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT) USING @amname@;
 CREATE
-CREATE TABLE ao2 (a INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao2 (a INT) USING @amname@;
 CREATE
 insert into ao select generate_series(1,1000);
 INSERT 1000

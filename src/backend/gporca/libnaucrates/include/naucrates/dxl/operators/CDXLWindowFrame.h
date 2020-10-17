@@ -18,106 +18,102 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
-	using namespace gpmd;
+using namespace gpos;
+using namespace gpmd;
 
-	enum EdxlFrameSpec
+enum EdxlFrameSpec
+{
+	EdxlfsRow = 0,
+	EdxlfsRange,
+	EdxlfsSentinel
+};
+
+enum EdxlFrameExclusionStrategy
+{
+	EdxlfesNone = 0,
+	EdxlfesNulls,
+	EdxlfesCurrentRow,
+	EdxlfesGroup,
+	EdxlfesTies,
+	EdxlfesSentinel
+};
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLWindowFrame
+//
+//	@doc:
+//		Class for representing DXL window frame
+//
+//---------------------------------------------------------------------------
+class CDXLWindowFrame : public CRefCount
+{
+private:
+	// memory pool;
+	CMemoryPool *m_mp;
+
+	// row or range based window specification method
+	EdxlFrameSpec m_dxl_win_frame_spec;
+
+	// exclusion strategy
+	EdxlFrameExclusionStrategy m_dxl_frame_exclusion_strategy;
+
+	// private copy ctor
+	CDXLWindowFrame(const CDXLWindowFrame &);
+
+	// scalar value representing the boundary leading
+	CDXLNode *m_dxlnode_leading;
+
+	// scalar value representing the boundary trailing
+	CDXLNode *m_dxlnode_trailing;
+
+public:
+	// ctor
+	CDXLWindowFrame(CMemoryPool *mp, EdxlFrameSpec edxlfs,
+					EdxlFrameExclusionStrategy frame_exc_strategy,
+					CDXLNode *pdxlnLeading, CDXLNode *pdxlnTrailing);
+
+	//dtor
+	virtual ~CDXLWindowFrame();
+
+	EdxlFrameSpec
+	ParseDXLFrameSpec() const
 	{
-		EdxlfsRow = 0,
-		EdxlfsRange,
-		EdxlfsSentinel
-	};
+		return m_dxl_win_frame_spec;
+	}
 
-	enum EdxlFrameExclusionStrategy
+	// exclusion strategy
+	EdxlFrameExclusionStrategy
+	ParseFrameExclusionStrategy() const
 	{
-		EdxlfesNone = 0,
-		EdxlfesNulls,
-		EdxlfesCurrentRow,
-		EdxlfesGroup,
-		EdxlfesTies,
-		EdxlfesSentinel
-	};
+		return m_dxl_frame_exclusion_strategy;
+	}
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLWindowFrame
-	//
-	//	@doc:
-	//		Class for representing DXL window frame
-	//
-	//---------------------------------------------------------------------------
-	class CDXLWindowFrame : public CRefCount
+	// return window boundary trailing
+	CDXLNode *
+	PdxlnTrailing() const
 	{
-		private:
+		return m_dxlnode_trailing;
+	}
 
-			// memory pool;
-			CMemoryPool *m_mp;
+	// return window boundary leading
+	CDXLNode *
+	PdxlnLeading() const
+	{
+		return m_dxlnode_leading;
+	}
 
-			// row or range based window specification method
-			EdxlFrameSpec m_dxl_win_frame_spec;
+	// return the string representation of the exclusion strategy
+	const CWStringConst *PstrES(EdxlFrameExclusionStrategy edxles) const;
 
-			// exclusion strategy
-			EdxlFrameExclusionStrategy m_dxl_frame_exclusion_strategy;
+	// return the string representation of the frame specification (row or range)
+	const CWStringConst *PstrFS(EdxlFrameSpec edxlfs) const;
 
-			// private copy ctor
-			CDXLWindowFrame(const CDXLWindowFrame&);
+	// serialize operator in DXL format
+	virtual void SerializeToDXL(CXMLSerializer *xml_serializer) const;
+};
+}  // namespace gpdxl
 
-		// scalar value representing the boundary leading
-			CDXLNode *m_dxlnode_leading;
-
-		// scalar value representing the boundary trailing
-			CDXLNode *m_dxlnode_trailing;
-
-		public:
-			// ctor
-			CDXLWindowFrame
-				(
-				CMemoryPool *mp,
-				EdxlFrameSpec edxlfs,
-				EdxlFrameExclusionStrategy frame_exc_strategy,
-				CDXLNode *pdxlnLeading,
-				CDXLNode *pdxlnTrailing
-				);
-
-			//dtor
-			virtual
-			~CDXLWindowFrame();
-
-			EdxlFrameSpec ParseDXLFrameSpec() const
-			{
-				return  m_dxl_win_frame_spec;
-			}
-
-			// exclusion strategy
-			EdxlFrameExclusionStrategy ParseFrameExclusionStrategy() const
-			{
-				return m_dxl_frame_exclusion_strategy;
-			}
-
-			// return window boundary trailing
-			CDXLNode *PdxlnTrailing() const
-			{
-				return m_dxlnode_trailing;
-			}
-
-			// return window boundary leading
-			CDXLNode *PdxlnLeading() const
-			{
-				return m_dxlnode_leading;
-			}
-			
-			// return the string representation of the exclusion strategy
-			const CWStringConst *PstrES(EdxlFrameExclusionStrategy edxles) const;
-			
-			// return the string representation of the frame specification (row or range)
-			const CWStringConst *PstrFS(EdxlFrameSpec edxlfs) const;
-
-			// serialize operator in DXL format
-			virtual
-			void SerializeToDXL(CXMLSerializer *xml_serializer) const;
-	};
-}
-
-#endif // !GPDXL_CDXLWindowFrame_H
+#endif	// !GPDXL_CDXLWindowFrame_H
 
 // EOF

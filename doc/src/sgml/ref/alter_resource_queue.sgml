@@ -3,7 +3,7 @@ doc/src/sgml/ref/alter_resource_queue.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-ALTERRESOURCEQUEUE">
+<refentry id="sql-alterresourcequeue">
  <indexterm zone="sql-alterresourcequeue">
   <primary>ALTER RESOURCE QUEUE</primary>
  </indexterm>

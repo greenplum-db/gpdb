@@ -27,15 +27,13 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Exfp
-	(
-	CExpressionHandle &exprhdl
-	)
-	const
+CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Exfp(
+	CExpressionHandle &exprhdl) const
 {
 	// if there are no outer references, or if all outer refs do not reference outer
 	// child, the transformation is applicable
-	if (!exprhdl.HasOuterRefs(1 /*child_index*/) || CUtils::FInnerUsesExternalColsOnly(exprhdl))
+	if (!exprhdl.HasOuterRefs(1 /*child_index*/) ||
+		CUtils::FInnerUsesExternalColsOnly(exprhdl))
 	{
 		return CXform::ExfpHigh;
 	}
@@ -53,13 +51,8 @@ CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Exfp
 //
 //---------------------------------------------------------------------------
 void
-CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Transform(
+	CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -70,4 +63,3 @@ CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Transform
 
 
 // EOF
-

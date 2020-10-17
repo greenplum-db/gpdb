@@ -2,7 +2,7 @@ create schema sort_schema;
 set search_path to sort_schema;
  
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
  
 -- Check if analyze output has Sort Method
@@ -18,14 +18,12 @@ create language plpythonu;
          result.append(1)
  return result
  $$
- language plpythonu;
+ language plpython3u;
  
- set gp_enable_mk_sort = on;
  select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g limit 100;');
  
  select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g;');
  
- set gp_enable_mk_sort = off;
  select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g limit 100;');
  
  select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g;');
@@ -33,14 +31,11 @@ create language plpythonu;
  create table sort_a(i int, j int);
  insert into sort_a values(1, 2);
  
- set gp_enable_mk_sort = on;
  select sort_schema.has_sortmethod('explain analyze select i from sort_a order by i;');
  
- set gp_enable_mk_sort = off;
  select sort_schema.has_sortmethod('explain analyze select i from sort_a order by i;');
 
-set gp_enable_mk_sort = on;
-create table gpsort_alltypes(dist_col int, col1 bigint, col2 bigserial, col3 bit, col4 bit varying(10), col5 bool, col6 char, col7 varchar(10), col8 cidr, col9 circle, col10 date, col11 numeric(5,2), col12 float8, col13 inet, col14 int4, col15 interval, col16 lseg, col17 macaddr, col18 money, col19 path, col20 point, col21 polygon, col22 float4, col23 serial4, col24 smallint, col25 text, col26 time, col27 timetz, col28 timestamp, col29 timestamptz) with oids distributed by (dist_col);
+create table gpsort_alltypes(dist_col int, col1 bigint, col2 bigserial, col3 bit, col4 bit varying(10), col5 bool, col6 char, col7 varchar(10), col8 cidr, col9 circle, col10 date, col11 numeric(5,2), col12 float8, col13 inet, col14 int4, col15 interval, col16 lseg, col17 macaddr, col18 money, col19 path, col20 point, col21 polygon, col22 float4, col23 serial4, col24 smallint, col25 text, col26 time, col27 timetz, col28 timestamp, col29 timestamptz) distributed by (dist_col);
 
 insert into gpsort_alltypes values(1, 1234567891011,13942492347494,'1','0001','yes', 'a', 'abcdefgh', '192.168.100.1', circle '((0,0),1)', '2007-01-01', 123.45, 12323423424.324, inet '192.168.1.1', 123123, interval '24 hours',lseg '((0,0),(1,1))', macaddr '12:34:56:78:90:ab', '$1000.00',  path '((0,0),(1,1),(2,2))', point '(0,0)',polygon '((0,0),(1,1))',213234.23,1,7123,'abcdsafasfasfasfasfdasfasfdasf2asdfhsadfsfs','04:00:00','04:00:00 EST','2007-01-01 04:00:00','2007-01-01 04:00:00 EST');
 insert into gpsort_alltypes values(1, 10987654321,212394723492342,'0','0010','y', 'b', 'xyz', '192.168.100.2', circle '((0,0),2)', '2007-02-01', 23.45, 1232324.324, inet '192.168.1.2', 123124, interval '12 hours',lseg '((0,0),(1,2))', macaddr '12:34:56:78:90:00', '$5000.00',  path '((0,0),(4,4),(3,3))', point '(0,1)',polygon '((-1,-2),(1,1))',213.23234,2,2343,'2342abcddfasfasf234234234','04:30:00','04:30:00 EST','2007-02-01 04:30:00','2007-02-01 04:30:00 EST');
@@ -119,3 +114,19 @@ insert into colltest VALUES ('a'), ('A'), ('b'), ('B'), ('c'), ('C'), ('d'), ('D
 
 select * from colltest order by t COLLATE "C";
 select * from colltest order by t COLLATE "C" NULLS FIRST;
+
+
+--
+-- Test strxfrm()/strcoll() sort order inconsistency in a
+-- merge join with russian characters and default collation
+--
+set enable_hashjoin = off;
+
+with t as (
+    select * from (values ('б б'), ('бб ')) as t1(b)
+    full join (values ('б б'), ('бб ')) as t2(b)
+    using (b)
+)
+select count(*) from t;
+
+reset enable_hashjoin;

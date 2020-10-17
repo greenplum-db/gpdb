@@ -15,27 +15,24 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CHashMapIterTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
+class CHashMapIterTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CHashMapIterTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	class CHashMapIterTest
-	{
-		public:
+};	// class CHashMapIterTest
+}  // namespace gpos
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-
-	}; // class CHashMapIterTest
-}
-
-#endif // !GPOS_CHashMapIterTest_H
+#endif	// !GPOS_CHashMapIterTest_H
 
 // EOF
-

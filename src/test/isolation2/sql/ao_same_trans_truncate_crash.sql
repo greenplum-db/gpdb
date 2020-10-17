@@ -1,5 +1,3 @@
-include: helpers/server_helpers.sql;
-
 -- setup
 -- Set fsync on since we need to test the fsync code logic.
 !\retcode gpconfig -c fsync -v on --skipvalidation;

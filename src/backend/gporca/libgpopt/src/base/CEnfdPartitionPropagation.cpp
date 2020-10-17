@@ -28,16 +28,10 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CEnfdPartitionPropagation::CEnfdPartitionPropagation
-	(
-	CPartitionPropagationSpec *ppps,
-	EPartitionPropagationMatching eppm,
-	CPartFilterMap *ppfm
-	)
-	:
-	m_ppps(ppps),
-	m_eppm(eppm),
-	m_ppfmDerived(ppfm)
+CEnfdPartitionPropagation::CEnfdPartitionPropagation(
+	CPartitionPropagationSpec *ppps, EPartitionPropagationMatching eppm,
+	CPartFilterMap *ppfm)
+	: m_ppps(ppps), m_eppm(eppm), m_ppfmDerived(ppfm)
 
 {
 	GPOS_ASSERT(NULL != ppps);
@@ -85,13 +79,9 @@ CEnfdPartitionPropagation::HashValue() const
 //
 //---------------------------------------------------------------------------
 CEnfdProp::EPropEnforcingType
-CEnfdPartitionPropagation::Epet
-	(
-	CExpressionHandle &exprhdl,
-	CPhysical *popPhysical,
-	BOOL fPropagationReqd
-	)
-	const
+CEnfdPartitionPropagation::Epet(CExpressionHandle &exprhdl,
+								CPhysical *popPhysical,
+								BOOL fPropagationReqd) const
 {
 	if (fPropagationReqd)
 	{
@@ -110,48 +100,46 @@ CEnfdPartitionPropagation::Epet
 // 		Is required partition propagation resolved by the given part index map
 //
 //---------------------------------------------------------------------------
-BOOL 
-CEnfdPartitionPropagation::FResolved
-	(
-	CMemoryPool *mp,
-	CPartIndexMap *ppim
-	)
-	const
+BOOL
+CEnfdPartitionPropagation::FResolved(CMemoryPool *mp, CPartIndexMap *ppim) const
 {
 	GPOS_ASSERT(NULL != ppim);
-	
+
 	CPartIndexMap *ppimReqd = m_ppps->Ppim();
 	if (!ppimReqd->FContainsUnresolved())
 	{
 		return true;
 	}
-	
+
 	ULongPtrArray *pdrgpulPartIndexIds = ppimReqd->PdrgpulScanIds(mp);
 	const ULONG length = pdrgpulPartIndexIds->Size();
-			
+
 	BOOL fResolved = true;
 	for (ULONG ul = 0; ul < length && fResolved; ul++)
 	{
 		ULONG part_idx_id = *((*pdrgpulPartIndexIds)[ul]);
 		GPOS_ASSERT(CPartIndexMap::EpimConsumer == ppimReqd->Epim(part_idx_id));
-		
+
 		// check whether part index id has been resolved in the derived map
 		fResolved = false;
 		if (ppim->Contains(part_idx_id))
 		{
 			CPartIndexMap::EPartIndexManipulator epim = ppim->Epim(part_idx_id);
-			ULONG ulExpectedPropagators = ppim->UlExpectedPropagators(part_idx_id);
+			ULONG ulExpectedPropagators =
+				ppim->UlExpectedPropagators(part_idx_id);
 
 			fResolved = CPartIndexMap::EpimResolver == epim ||
 						CPartIndexMap::EpimPropagator == epim ||
-						(CPartIndexMap::EpimConsumer == epim && 0 < ulExpectedPropagators &&
-								ppimReqd->UlExpectedPropagators(part_idx_id) == ulExpectedPropagators);
+						(CPartIndexMap::EpimConsumer == epim &&
+						 0 < ulExpectedPropagators &&
+						 ppimReqd->UlExpectedPropagators(part_idx_id) ==
+							 ulExpectedPropagators);
 		}
 	}
-	
+
 	// cleanup
 	pdrgpulPartIndexIds->Release();
-	
+
 	return fResolved;
 }
 
@@ -163,18 +151,13 @@ CEnfdPartitionPropagation::FResolved
 // 		Is required partition propagation in the scope defined by the given part index map
 //
 //---------------------------------------------------------------------------
-BOOL 
-CEnfdPartitionPropagation::FInScope
-	(
-	CMemoryPool *mp,
-	CPartIndexMap *ppim
-	)
-	const
+BOOL
+CEnfdPartitionPropagation::FInScope(CMemoryPool *mp, CPartIndexMap *ppim) const
 {
 	GPOS_ASSERT(NULL != ppim);
-	
+
 	CPartIndexMap *ppimReqd = m_ppps->Ppim();
-	
+
 	ULongPtrArray *pdrgpulPartIndexIds = ppimReqd->PdrgpulScanIds(mp);
 	const ULONG length = pdrgpulPartIndexIds->Size();
 
@@ -183,20 +166,20 @@ CEnfdPartitionPropagation::FInScope
 		pdrgpulPartIndexIds->Release();
 		return true;
 	}
-	
+
 	BOOL fInScope = true;
 	for (ULONG ul = 0; ul < length && fInScope; ul++)
 	{
 		ULONG part_idx_id = *((*pdrgpulPartIndexIds)[ul]);
 		GPOS_ASSERT(CPartIndexMap::EpimConsumer == ppimReqd->Epim(part_idx_id));
-		
+
 		// check whether part index id exists in the derived part consumers
 		fInScope = ppim->Contains(part_idx_id);
 	}
-	
+
 	// cleanup
 	pdrgpulPartIndexIds->Release();
-	
+
 	return fInScope;
 }
 
@@ -209,13 +192,10 @@ CEnfdPartitionPropagation::FInScope
 //
 //---------------------------------------------------------------------------
 IOstream &
-CEnfdPartitionPropagation::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CEnfdPartitionPropagation::OsPrint(IOstream &os) const
 {
-	return os << (*m_ppps) << " match: " << SzPropagationMatching(m_eppm) << " ";
+	return os << (*m_ppps) << " match: " << SzPropagationMatching(m_eppm)
+			  << " ";
 }
 
 
@@ -228,17 +208,12 @@ CEnfdPartitionPropagation::OsPrint
 //
 //---------------------------------------------------------------------------
 const CHAR *
-CEnfdPartitionPropagation::SzPropagationMatching
-	(
-	EPartitionPropagationMatching eppm
-	)
+CEnfdPartitionPropagation::SzPropagationMatching(
+	EPartitionPropagationMatching eppm)
 {
 	GPOS_ASSERT(EppmSentinel > eppm);
-	const CHAR *rgszPropagationMatching[EppmSentinel] =
-	{
-		"satisfy"
-	};
-	
+	const CHAR *rgszPropagationMatching[EppmSentinel] = {"satisfy"};
+
 	return rgszPropagationMatching[eppm];
 }
 

@@ -149,11 +149,11 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
 (1 row)
 
 SAVEPOINT first_sp;
-SET vacuum_cost_delay TO 80;
+SET vacuum_cost_delay TO 80.1;
 SHOW vacuum_cost_delay;
  vacuum_cost_delay 
 -------------------
- 80ms
+ 80100us
 (1 row)
 
 SET datestyle = 'German, DMY';
@@ -183,7 +183,7 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
 (1 row)
 
 SAVEPOINT second_sp;
-SET vacuum_cost_delay TO 90;
+SET vacuum_cost_delay TO '900us';
 SET datestyle = 'SQL, YMD';
 SHOW datestyle;
  DateStyle 
@@ -222,7 +222,7 @@ ROLLBACK TO third_sp;
 SHOW vacuum_cost_delay;
  vacuum_cost_delay 
 -------------------
- 90ms
+ 900us
 (1 row)
 
 SHOW datestyle;
@@ -506,6 +506,11 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
  Sun Aug 13 12:34:56 2006 PDT
 (1 row)
 
+-- Test some simple error cases
+SET seq_page_cost TO 'NaN';
+ERROR:  invalid value for parameter "seq_page_cost": "NaN"
+SET vacuum_cost_delay TO '10s';
+ERROR:  10000 ms is outside the valid range for parameter "vacuum_cost_delay" (0 .. 100)
 --
 -- Test DISCARD TEMP
 --
@@ -573,7 +578,7 @@ SELECT current_user = 'regress_guc_user';
 -- discard everything
 DISCARD ALL;
 NOTICE:  command without clusterwide effect
-HINT:  Concider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
+HINT:  Consider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
 -- look again
 SELECT pg_listening_channels();
  pg_listening_channels 
@@ -792,6 +797,10 @@ NOTICE:  text search configuration "no_such_config" does not exist
 select func_with_bad_set();
 ERROR:  invalid value for parameter "default_text_search_config": "no_such_config"
 reset check_function_bodies;
+set default_with_oids to f;
+-- Should not allow to set it to true.
+set default_with_oids to t;
+ERROR:  tables declared WITH OIDS are not supported
 SET "request.header.user-agent" = 'curl/7.29.0';
 SHOW "request.header.user-agent";
  request.header.user-agent 

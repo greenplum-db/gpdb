@@ -3,7 +3,7 @@
  * ts_parse.c
  *		main parse functions for tsearch
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -205,11 +205,11 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 				ld->dictState.isend = ld->dictState.getnext = false;
 				ld->dictState.private_state = NULL;
 				res = (TSLexeme *) DatumGetPointer(FunctionCall4(
-															 &(dict->lexize),
-											 PointerGetDatum(dict->dictData),
-												 PointerGetDatum(curValLemm),
-												Int32GetDatum(curValLenLemm),
-											  PointerGetDatum(&ld->dictState)
+																 &(dict->lexize),
+																 PointerGetDatum(dict->dictData),
+																 PointerGetDatum(curValLemm),
+																 Int32GetDatum(curValLenLemm),
+																 PointerGetDatum(&ld->dictState)
 																 ));
 
 				if (ld->dictState.getnext)
@@ -295,10 +295,10 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
 			res = (TSLexeme *) DatumGetPointer(FunctionCall4(
 															 &(dict->lexize),
-											 PointerGetDatum(dict->dictData),
-											   PointerGetDatum(curVal->lemm),
-											  Int32GetDatum(curVal->lenlemm),
-											  PointerGetDatum(&ld->dictState)
+															 PointerGetDatum(dict->dictData),
+															 PointerGetDatum(curVal->lemm),
+															 Int32GetDatum(curVal->lenlemm),
+															 PointerGetDatum(&ld->dictState)
 															 ));
 
 			if (ld->dictState.getnext)

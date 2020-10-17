@@ -15,13 +15,13 @@
 
 #include "storage/proc.h"
 #include "utils/combocid.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 typedef struct SnapshotDump
 {
 	uint32 segmateSync;
 	DistributedTransactionId distributedXid;
-	TransactionId localXid;
+	FullTransactionId localXid;
 	dsm_handle  handle;
 	dsm_segment *segment;
 } SnapshotDump;
@@ -47,7 +47,7 @@ typedef struct SharedSnapshotSlot
 	volatile int    cur_dump_id;
 	volatile SnapshotDump    dump[SNAPSHOTDUMPARRAYSZ];
 	/* for debugging only */
-	TransactionId	xid;
+	FullTransactionId	fullXid;
 	TimestampTz		startTimestamp;
 } SharedSnapshotSlot;
 

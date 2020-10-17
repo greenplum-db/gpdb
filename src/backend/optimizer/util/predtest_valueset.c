@@ -17,7 +17,7 @@
 #include "access/hash.h"
 #include "catalog/pg_type.h"
 #include "optimizer/clauses.h"
-#include "optimizer/predtest.h"
+#include "optimizer/predtest_valueset.h"
 #include "utils/lsyscache.h"
 #include "nodes/makefuncs.h"
 #include "utils/datum.h"

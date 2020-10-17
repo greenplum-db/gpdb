@@ -108,17 +108,17 @@ const CSystemId default_sysid(IMDId::EmdidGPDB, GPOS_WSZ_STR_LENGTH("GPDB"));
 //
 //---------------------------------------------------------------------------
 SOptContext::SOptContext()
-	:
-	m_query_dxl(NULL),
-	m_query(NULL),
-	m_plan_dxl(NULL),
-	m_plan_stmt(NULL),
-	m_should_generate_plan_stmt(false),
-	m_should_serialize_plan_dxl(false),
-	m_is_unexpected_failure(false),
-	m_should_error_out(false),
-	m_error_msg(NULL)
-{}
+	: m_query_dxl(NULL),
+	  m_query(NULL),
+	  m_plan_dxl(NULL),
+	  m_plan_stmt(NULL),
+	  m_should_generate_plan_stmt(false),
+	  m_should_serialize_plan_dxl(false),
+	  m_is_unexpected_failure(false),
+	  m_should_error_out(false),
+	  m_error_msg(NULL)
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -130,32 +130,28 @@ SOptContext::SOptContext()
 //
 //---------------------------------------------------------------------------
 void
-SOptContext::Free
-	(
-	SOptContext::EPin input,
-	SOptContext::EPin output
-	)
+SOptContext::Free(SOptContext::EPin input, SOptContext::EPin output)
 {
 	if (NULL != m_query_dxl && epinQueryDXL != input && epinQueryDXL != output)
 	{
 		gpdb::GPDBFree(m_query_dxl);
 	}
-	
+
 	if (NULL != m_query && epinQuery != input && epinQuery != output)
 	{
 		gpdb::GPDBFree(m_query);
 	}
-	
+
 	if (NULL != m_plan_dxl && epinPlanDXL != input && epinPlanDXL != output)
 	{
 		gpdb::GPDBFree(m_plan_dxl);
 	}
-	
+
 	if (NULL != m_plan_stmt && epinPlStmt != input && epinPlStmt != output)
 	{
 		gpdb::GPDBFree(m_plan_stmt);
 	}
-	
+
 	if (NULL != m_error_msg && epinErrorMsg != input && epinErrorMsg != output)
 	{
 		gpdb::GPDBFree(m_error_msg);
@@ -171,14 +167,10 @@ SOptContext::Free
 //		error message.
 //
 //---------------------------------------------------------------------------
-CHAR*
-SOptContext::CloneErrorMsg
-	(
-	MemoryContext context
-	)
+CHAR *
+SOptContext::CloneErrorMsg(MemoryContext context)
 {
-	if (NULL == context ||
-		NULL == m_error_msg)
+	if (NULL == context || NULL == m_error_msg)
 	{
 		return NULL;
 	}
@@ -195,14 +187,11 @@ SOptContext::CloneErrorMsg
 //
 //---------------------------------------------------------------------------
 SOptContext *
-SOptContext::Cast
-	(
-	void *ptr
-	)
+SOptContext::Cast(void *ptr)
 {
 	GPOS_ASSERT(NULL != ptr);
 
-	return reinterpret_cast<SOptContext*>(ptr);
+	return reinterpret_cast<SOptContext *>(ptr);
 }
 
 //---------------------------------------------------------------------------
@@ -214,10 +203,7 @@ SOptContext::Cast
 //
 //---------------------------------------------------------------------------
 CHAR *
-COptTasks::CreateMultiByteCharStringFromWCString
-	(
-	const WCHAR *wcstr
-	)
+COptTasks::CreateMultiByteCharStringFromWCString(const WCHAR *wcstr)
 {
 	GPOS_ASSERT(NULL != wcstr);
 
@@ -243,11 +229,7 @@ COptTasks::CreateMultiByteCharStringFromWCString
 //
 //---------------------------------------------------------------------------
 void
-COptTasks::Execute
-	(
-	void *(*func) (void *) ,
-	void *func_arg
-	)
+COptTasks::Execute(void *(*func)(void *), void *func_arg)
 {
 	Assert(func);
 
@@ -284,9 +266,8 @@ COptTasks::Execute
 }
 
 void
-COptTasks::LogExceptionMessageAndDelete(CHAR* err_buf, ULONG severity_level)
+COptTasks::LogExceptionMessageAndDelete(CHAR *err_buf, ULONG severity_level)
 {
-
 	if ('\0' != err_buf[0])
 	{
 		int gpdb_severity_level;
@@ -296,7 +277,8 @@ COptTasks::LogExceptionMessageAndDelete(CHAR* err_buf, ULONG severity_level)
 		else
 			gpdb_severity_level = LOG;
 
-		elog(gpdb_severity_level, "%s", CreateMultiByteCharStringFromWCString((WCHAR *)err_buf));
+		elog(gpdb_severity_level, "%s",
+			 CreateMultiByteCharStringFromWCString((WCHAR *) err_buf));
 	}
 
 	pfree(err_buf);
@@ -312,17 +294,11 @@ COptTasks::LogExceptionMessageAndDelete(CHAR* err_buf, ULONG severity_level)
 //
 //---------------------------------------------------------------------------
 PlannedStmt *
-COptTasks::ConvertToPlanStmtFromDXL
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	const Query *orig_query,
-	const CDXLNode *dxlnode,
-	bool can_set_tag,
-	DistributionHashOpsKind distribution_hashops
-	)
+COptTasks::ConvertToPlanStmtFromDXL(
+	CMemoryPool *mp, CMDAccessor *md_accessor, const Query *orig_query,
+	const CDXLNode *dxlnode, bool can_set_tag,
+	DistributionHashOpsKind distribution_hashops)
 {
-
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != dxlnode);
 
@@ -334,18 +310,15 @@ COptTasks::ConvertToPlanStmtFromDXL
 	CIdGenerator motion_id_generator(1 /* ulStartId */);
 	CIdGenerator param_id_generator(0 /* ulStartId */);
 
-	CContextDXLToPlStmt dxl_to_plan_stmt_ctxt
-							(
-							mp,
-							&plan_id_generator,
-							&motion_id_generator,
-							&param_id_generator,
-							distribution_hashops
-							);
-	
+	CContextDXLToPlStmt dxl_to_plan_stmt_ctxt(
+		mp, &plan_id_generator, &motion_id_generator, &param_id_generator,
+		distribution_hashops);
+
 	// translate DXL -> PlannedStmt
-	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(mp, md_accessor, &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
-	return dxl_to_plan_stmt_translator.GetPlannedStmtFromDXL(dxlnode, orig_query, can_set_tag);
+	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(
+		mp, md_accessor, &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
+	return dxl_to_plan_stmt_translator.GetPlannedStmtFromDXL(
+		dxlnode, orig_query, can_set_tag);
 }
 
 
@@ -358,11 +331,7 @@ COptTasks::ConvertToPlanStmtFromDXL
 //
 //---------------------------------------------------------------------------
 CSearchStageArray *
-COptTasks::LoadSearchStrategy
-	(
-	CMemoryPool *mp,
-	char *path
-	)
+COptTasks::LoadSearchStrategy(CMemoryPool *mp, char *path)
 {
 	CSearchStageArray *search_strategy_arr = NULL;
 	CParseHandlerDXL *dxl_parse_handler = NULL;
@@ -371,7 +340,8 @@ COptTasks::LoadSearchStrategy
 	{
 		if (NULL != path)
 		{
-			dxl_parse_handler = CDXLUtils::GetParseHandlerForDXLFile(mp, path, NULL);
+			dxl_parse_handler =
+				CDXLUtils::GetParseHandlerForDXLFile(mp, path, NULL);
 			if (NULL != dxl_parse_handler)
 			{
 				elog(DEBUG2, "\n[OPT]: Using search strategy in (%s)", path);
@@ -383,7 +353,8 @@ COptTasks::LoadSearchStrategy
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError)) {
+		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
+		{
 			GPOS_RETHROW(ex);
 		}
 		elog(DEBUG2, "\n[OPT]: Using default search strategy");
@@ -405,11 +376,7 @@ COptTasks::LoadSearchStrategy
 //
 //---------------------------------------------------------------------------
 COptimizerConfig *
-COptTasks::CreateOptimizerConfig
-	(
-	CMemoryPool *mp,
-	ICostModel *cost_model
-	)
+COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 {
 	// get chosen plan number, cost threshold
 	ULLONG plan_id = (ULLONG) optimizer_plan_id;
@@ -421,31 +388,31 @@ COptTasks::CreateOptimizerConfig
 	DOUBLE damping_factor_groupby = (DOUBLE) optimizer_damping_factor_groupby;
 
 	ULONG cte_inlining_cutoff = (ULONG) optimizer_cte_inlining_bound;
-	ULONG join_arity_for_associativity_commutativity = (ULONG) optimizer_join_arity_for_associativity_commutativity;
-	ULONG array_expansion_threshold = (ULONG) optimizer_array_expansion_threshold;
+	ULONG join_arity_for_associativity_commutativity =
+		(ULONG) optimizer_join_arity_for_associativity_commutativity;
+	ULONG array_expansion_threshold =
+		(ULONG) optimizer_array_expansion_threshold;
 	ULONG join_order_threshold = (ULONG) optimizer_join_order_threshold;
 	ULONG broadcast_threshold = (ULONG) optimizer_penalize_broadcast_threshold;
-	ULONG push_group_by_below_setop_threshold = (ULONG) optimizer_push_group_by_below_setop_threshold;
+	ULONG push_group_by_below_setop_threshold =
+		(ULONG) optimizer_push_group_by_below_setop_threshold;
 
-	return GPOS_NEW(mp) COptimizerConfig
-						(
-						GPOS_NEW(mp) CEnumeratorConfig(mp, plan_id, num_samples, cost_threshold),
-						GPOS_NEW(mp) CStatisticsConfig(mp, damping_factor_filter, damping_factor_join, damping_factor_groupby, MAX_STATS_BUCKETS),
-						GPOS_NEW(mp) CCTEConfig(cte_inlining_cutoff),
-						cost_model,
-						GPOS_NEW(mp) CHint
-								(
-								gpos::int_max /* optimizer_parts_to_force_sort_on_insert */,
-								join_arity_for_associativity_commutativity,
-								array_expansion_threshold,
-								join_order_threshold,
-								broadcast_threshold,
-								false, /* don't create Assert nodes for constraints, we'll
+	return GPOS_NEW(mp) COptimizerConfig(
+		GPOS_NEW(mp)
+			CEnumeratorConfig(mp, plan_id, num_samples, cost_threshold),
+		GPOS_NEW(mp)
+			CStatisticsConfig(mp, damping_factor_filter, damping_factor_join,
+							  damping_factor_groupby, MAX_STATS_BUCKETS),
+		GPOS_NEW(mp) CCTEConfig(cte_inlining_cutoff), cost_model,
+		GPOS_NEW(mp)
+			CHint(gpos::int_max /* optimizer_parts_to_force_sort_on_insert */,
+				  join_arity_for_associativity_commutativity,
+				  array_expansion_threshold, join_order_threshold,
+				  broadcast_threshold,
+				  false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
-								push_group_by_below_setop_threshold
-								),
-						GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK))
-						);
+				  push_group_by_below_setop_threshold),
+		GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK)));
 }
 
 //---------------------------------------------------------------------------
@@ -457,10 +424,7 @@ COptTasks::CreateOptimizerConfig
 //
 //---------------------------------------------------------------------------
 void
-COptTasks::SetCostModelParams
-	(
-	ICostModel *cost_model
-	)
+COptTasks::SetCostModelParams(ICostModel *cost_model)
 {
 	GPOS_ASSERT(NULL != cost_model);
 
@@ -470,14 +434,17 @@ COptTasks::SetCostModelParams
 		ICostModelParams::SCostParam *cost_param = NULL;
 		if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
 		{
-			cost_param = cost_model->GetCostModelParams()->PcpLookup(CCostModelParamsGPDB::EcpNLJFactor);
+			cost_param = cost_model->GetCostModelParams()->PcpLookup(
+				CCostModelParamsGPDB::EcpNLJFactor);
 		}
 		else
 		{
-			cost_param = cost_model->GetCostModelParams()->PcpLookup(CCostModelParamsGPDBLegacy::EcpNLJFactor);
+			cost_param = cost_model->GetCostModelParams()->PcpLookup(
+				CCostModelParamsGPDBLegacy::EcpNLJFactor);
 		}
 		CDouble nlj_factor(optimizer_nestloop_factor);
-		cost_model->GetCostModelParams()->SetParam(cost_param->Id(), nlj_factor, nlj_factor - 0.5, nlj_factor + 0.5);
+		cost_model->GetCostModelParams()->SetParam(
+			cost_param->Id(), nlj_factor, nlj_factor - 0.5, nlj_factor + 0.5);
 	}
 
 	if (optimizer_sort_factor > 1.0 || optimizer_sort_factor < 1.0)
@@ -486,10 +453,14 @@ COptTasks::SetCostModelParams
 		ICostModelParams::SCostParam *cost_param = NULL;
 		if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
 		{
-			cost_param = cost_model->GetCostModelParams()->PcpLookup(CCostModelParamsGPDB::EcpSortTupWidthCostUnit);
+			cost_param = cost_model->GetCostModelParams()->PcpLookup(
+				CCostModelParamsGPDB::EcpSortTupWidthCostUnit);
 
 			CDouble sort_factor(optimizer_sort_factor);
-			cost_model->GetCostModelParams()->SetParam(cost_param->Id(), cost_param->Get() * optimizer_sort_factor, cost_param->GetLowerBoundVal() * optimizer_sort_factor, cost_param->GetUpperBoundVal() * optimizer_sort_factor);
+			cost_model->GetCostModelParams()->SetParam(
+				cost_param->Id(), cost_param->Get() * optimizer_sort_factor,
+				cost_param->GetLowerBoundVal() * optimizer_sort_factor,
+				cost_param->GetUpperBoundVal() * optimizer_sort_factor);
 		}
 	}
 }
@@ -504,11 +475,7 @@ COptTasks::SetCostModelParams
 //
 //---------------------------------------------------------------------------
 ICostModel *
-COptTasks::GetCostModel
-	(
-	CMemoryPool *mp,
-	ULONG num_segments
-	)
+COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 {
 	ICostModel *cost_model = NULL;
 	if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
@@ -533,11 +500,8 @@ COptTasks::GetCostModel
 //		task that does the optimizes query to physical DXL
 //
 //---------------------------------------------------------------------------
-void*
-COptTasks::OptimizeTask
-	(
-	void *ptr
-	)
+void *
+COptTasks::OptimizeTask(void *ptr)
 {
 	GPOS_ASSERT(NULL != ptr);
 	SOptContext *opt_ctxt = SOptContext::Cast(ptr);
@@ -568,14 +532,16 @@ COptTasks::OptimizeTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() !=
+			 (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
 
 
 	// load search strategy
-	CSearchStageArray *search_strategy_arr = LoadSearchStrategy(mp, optimizer_search_strategy_path);
+	CSearchStageArray *search_strategy_arr =
+		LoadSearchStrategy(mp, optimizer_search_strategy_path);
 
 	CBitSet *trace_flags = NULL;
 	CBitSet *enabled_trace_flags = NULL;
@@ -588,15 +554,19 @@ COptTasks::OptimizeTask
 	GPOS_TRY
 	{
 		// set trace flags
-		trace_flags = CConfigParamMapping::PackConfigParamInBitset(mp, CXform::ExfSentinel);
-		SetTraceflags(mp, trace_flags, &enabled_trace_flags, &disabled_trace_flags);
+		trace_flags = CConfigParamMapping::PackConfigParamInBitset(
+			mp, CXform::ExfSentinel);
+		SetTraceflags(mp, trace_flags, &enabled_trace_flags,
+					  &disabled_trace_flags);
 
 		// set up relcache MD provider
-		CMDProviderRelcache *relcache_provider = GPOS_NEW(mp) CMDProviderRelcache(mp);
+		CMDProviderRelcache *relcache_provider =
+			GPOS_NEW(mp) CMDProviderRelcache(mp);
 
 		{
 			// scope for MD accessor
-			CMDAccessor mda(mp, CMDCache::Pcache(), default_sysid, relcache_provider);
+			CMDAccessor mda(mp, CMDCache::Pcache(), default_sysid,
+							relcache_provider);
 
 			ULONG num_segments = gpdb::GetGPSegmentCount();
 			ULONG num_segments_for_costing = optimizer_segments;
@@ -606,53 +576,53 @@ COptTasks::OptimizeTask
 			}
 
 			CAutoP<CTranslatorQueryToDXL> query_to_dxl_translator;
-			query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance
-							(
-							mp,
-							&mda,
-							(Query*) opt_ctxt->m_query
-							);
+			query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance(
+				mp, &mda, (Query *) opt_ctxt->m_query);
 
 			ICostModel *cost_model = GetCostModel(mp, num_segments_for_costing);
-			COptimizerConfig *optimizer_config = CreateOptimizerConfig(mp, cost_model);
+			COptimizerConfig *optimizer_config =
+				CreateOptimizerConfig(mp, cost_model);
 			CConstExprEvaluatorProxy expr_eval_proxy(mp, &mda);
 			IConstExprEvaluator *expr_evaluator =
-					GPOS_NEW(mp) CConstExprEvaluatorDXL(mp, &mda, &expr_eval_proxy);
+				GPOS_NEW(mp) CConstExprEvaluatorDXL(mp, &mda, &expr_eval_proxy);
 
-			CDXLNode *query_dxl = query_to_dxl_translator->TranslateQueryToDXL();
-			CDXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->GetQueryOutputCols();
-			CDXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->GetCTEs();
+			CDXLNode *query_dxl =
+				query_to_dxl_translator->TranslateQueryToDXL();
+			CDXLNodeArray *query_output_dxlnode_array =
+				query_to_dxl_translator->GetQueryOutputCols();
+			CDXLNodeArray *cte_dxlnode_array =
+				query_to_dxl_translator->GetCTEs();
 			GPOS_ASSERT(NULL != query_output_dxlnode_array);
 
-			BOOL is_master_only = !optimizer_enable_motions ||
-						(!optimizer_enable_motions_masteronly_queries && !query_to_dxl_translator->HasDistributedTables());
+			BOOL is_master_only =
+				!optimizer_enable_motions ||
+				(!optimizer_enable_motions_masteronly_queries &&
+				 !query_to_dxl_translator->HasDistributedTables());
 			// See NoteDistributionPolicyOpclasses() in src/backend/gpopt/translate/CTranslatorQueryToDXL.cpp
-			BOOL use_legacy_opfamilies = (query_to_dxl_translator->GetDistributionHashOpsKind() == DistrUseLegacyHashOps);
+			BOOL use_legacy_opfamilies =
+				(query_to_dxl_translator->GetDistributionHashOpsKind() ==
+				 DistrUseLegacyHashOps);
 			CAutoTraceFlag atf1(EopttraceDisableMotions, is_master_only);
-			CAutoTraceFlag atf2(EopttraceUseLegacyOpfamilies, use_legacy_opfamilies);
+			CAutoTraceFlag atf2(EopttraceUseLegacyOpfamilies,
+								use_legacy_opfamilies);
 
-			plan_dxl = COptimizer::PdxlnOptimize
-									(
-									mp,
-									&mda,
-									query_dxl,
-									query_output_dxlnode_array,
-									cte_dxlnode_array,
-									expr_evaluator,
-									num_segments,
-									gp_session_id,
-									gp_command_count,
-									search_strategy_arr,
-									optimizer_config
-									);
+			plan_dxl = COptimizer::PdxlnOptimize(
+				mp, &mda, query_dxl, query_output_dxlnode_array,
+				cte_dxlnode_array, expr_evaluator, num_segments, gp_session_id,
+				gp_command_count, search_strategy_arr, optimizer_config);
 
 			if (opt_ctxt->m_should_serialize_plan_dxl)
 			{
 				// serialize DXL to xml
 				CWStringDynamic plan_str(mp);
 				COstreamString oss(&plan_str);
-				CDXLUtils::SerializePlan(mp, oss, plan_dxl, optimizer_config->GetEnumeratorCfg()->GetPlanId(), optimizer_config->GetEnumeratorCfg()->GetPlanSpaceSize(), true /*serialize_header_footer*/, true /*indentation*/);
-				opt_ctxt->m_plan_dxl = CreateMultiByteCharStringFromWCString(plan_str.GetBuffer());
+				CDXLUtils::SerializePlan(
+					mp, oss, plan_dxl,
+					optimizer_config->GetEnumeratorCfg()->GetPlanId(),
+					optimizer_config->GetEnumeratorCfg()->GetPlanSpaceSize(),
+					true /*serialize_header_footer*/, true /*indentation*/);
+				opt_ctxt->m_plan_dxl =
+					CreateMultiByteCharStringFromWCString(plan_str.GetBuffer());
 			}
 
 			// translate DXL->PlStmt only when needed
@@ -660,7 +630,11 @@ COptTasks::OptimizeTask
 			{
 				// always use opt_ctxt->m_query->can_set_tag as the query_to_dxl_translator->Pquery() is a mutated Query object
 				// that may not have the correct can_set_tag
-			  opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(mp, &mda, opt_ctxt->m_query, plan_dxl, opt_ctxt->m_query->canSetTag, query_to_dxl_translator->GetDistributionHashOpsKind()));
+				opt_ctxt->m_plan_stmt =
+					(PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(
+						mp, &mda, opt_ctxt->m_query, plan_dxl,
+						opt_ctxt->m_query->canSetTag,
+						query_to_dxl_translator->GetDistributionHashOpsKind()));
 			}
 
 			CStatisticsConfig *stats_conf = optimizer_config->GetStatsConf();
@@ -694,7 +668,8 @@ COptTasks::OptimizeTask
 
 		opt_ctxt->m_should_error_out = ShouldErrorOut(ex);
 		opt_ctxt->m_is_unexpected_failure = IsLoggableFailure(ex);
-		opt_ctxt->m_error_msg = CreateMultiByteCharStringFromWCString(errctxt->GetErrorMsg());
+		opt_ctxt->m_error_msg =
+			CreateMultiByteCharStringFromWCString(errctxt->GetErrorMsg());
 
 		GPOS_RETHROW(ex);
 	}
@@ -723,13 +698,9 @@ COptTasks::OptimizeTask
 //
 //---------------------------------------------------------------------------
 void
-COptTasks::PrintMissingStatsWarning
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	IMdIdArray *col_stats,
-	MdidHashSet *rel_stats
-	)
+COptTasks::PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor,
+									IMdIdArray *col_stats,
+									MdidHashSet *rel_stats)
 {
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != col_stats);
@@ -765,11 +736,13 @@ COptTasks::PrintMissingStatsWarning
 			CMDName mdname = rel->GetMdCol(pos)->Mdname();
 
 			char msgbuf[NAMEDATALEN * 2 + 100];
-			snprintf(msgbuf, sizeof(msgbuf), "Missing statistics for column: %s.%s", CreateMultiByteCharStringFromWCString(rel->Mdname().GetMDName()->GetBuffer()), CreateMultiByteCharStringFromWCString(mdname.GetMDName()->GetBuffer()));
-			GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
-						   LOG,
-						   msgbuf,
-						   NULL);
+			snprintf(msgbuf, sizeof(msgbuf),
+					 "Missing statistics for column: %s.%s",
+					 CreateMultiByteCharStringFromWCString(
+						 rel->Mdname().GetMDName()->GetBuffer()),
+					 CreateMultiByteCharStringFromWCString(
+						 mdname.GetMDName()->GetBuffer()));
+			GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION, LOG, msgbuf, NULL);
 		}
 	}
 
@@ -777,15 +750,16 @@ COptTasks::PrintMissingStatsWarning
 	{
 		int length = NAMEDATALEN * rel_stats->Size() + 200;
 		char msgbuf[length];
-		snprintf(msgbuf, sizeof(msgbuf), "One or more columns in the following table(s) do not have statistics: %s", CreateMultiByteCharStringFromWCString(wcstr.GetBuffer()));
-		GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
-					   NOTICE,
-					   msgbuf,
-					   "For non-partitioned tables, run analyze <table_name>(<column_list>)."
-					   " For partitioned tables, run analyze rootpartition <table_name>(<column_list>)."
-					   " See log for columns missing statistics.");
+		snprintf(
+			msgbuf, sizeof(msgbuf),
+			"One or more columns in the following table(s) do not have statistics: %s",
+			CreateMultiByteCharStringFromWCString(wcstr.GetBuffer()));
+		GpdbEreport(
+			ERRCODE_SUCCESSFUL_COMPLETION, NOTICE, msgbuf,
+			"For non-partitioned tables, run analyze <table_name>(<column_list>)."
+			" For partitioned tables, run analyze rootpartition <table_name>(<column_list>)."
+			" See log for columns missing statistics.");
 	}
-
 }
 
 //---------------------------------------------------------------------------
@@ -797,10 +771,7 @@ COptTasks::PrintMissingStatsWarning
 //
 //---------------------------------------------------------------------------
 char *
-COptTasks::Optimize
-	(
-	Query *query
-	)
+COptTasks::Optimize(Query *query)
 {
 	Assert(query);
 
@@ -825,17 +796,13 @@ COptTasks::Optimize
 //
 //---------------------------------------------------------------------------
 PlannedStmt *
-COptTasks::GPOPTOptimizedPlan
-	(
-	Query *query,
-	SOptContext *gpopt_context
-	)
+COptTasks::GPOPTOptimizedPlan(Query *query, SOptContext *gpopt_context)
 {
 	Assert(query);
 	Assert(gpopt_context);
 
 	gpopt_context->m_query = query;
-	gpopt_context->m_should_generate_plan_stmt= true;
+	gpopt_context->m_should_generate_plan_stmt = true;
 	Execute(&OptimizeTask, gpopt_context);
 	return gpopt_context->m_plan_stmt;
 }
@@ -849,11 +816,7 @@ COptTasks::GPOPTOptimizedPlan
 //
 //---------------------------------------------------------------------------
 bool
-COptTasks::SetXform
-	(
-	char *xform_str,
-	bool should_disable
-	)
+COptTasks::SetXform(char *xform_str, bool should_disable)
 {
 	CXform *xform = CXformFactory::Pxff()->Pxf(xform_str);
 	if (NULL != xform)

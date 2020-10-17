@@ -17,6 +17,7 @@ test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 	AppendOnlyVisiMapDeleteData val;
 	AppendOnlyVisimapDelete visiMapDelete;
 	AppendOnlyVisimap visiMap;
+	int found = true;
 
 	visiMapDelete.visiMap = &visiMap;
 	visiMap.visimapEntry.segmentFileNum = 2;
@@ -48,7 +49,7 @@ test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 	expect_value(hash_search, action, HASH_FIND);
 	expect_any(hash_search, keyPtr);
 	expect_any(hash_search, foundPtr);
-	will_assign_value(hash_search, foundPtr, true);
+	will_assign_value(hash_search, foundPtr, found);
 	will_return(hash_search, &val);
 
 	expect_any(hash_destroy, hashp);

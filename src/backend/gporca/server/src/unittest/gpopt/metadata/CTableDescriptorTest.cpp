@@ -40,10 +40,8 @@
 GPOS_RESULT
 CTableDescriptorTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CTableDescriptorTest::EresUnittest_Basic)
-		};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CTableDescriptorTest::EresUnittest_Basic)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -69,17 +67,13 @@ CTableDescriptorTest::EresUnittest_Basic()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	CWStringConst strName(GPOS_WSZ_LIT("MyTable"));
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 1, 1);
-	CTableDescriptor *ptabdesc = CTestUtils::PtabdescCreate(mp, 10, mdid, CName(&strName));
+	CTableDescriptor *ptabdesc =
+		CTestUtils::PtabdescCreate(mp, 10, mdid, CName(&strName));
 
 #ifdef GPOS_DEBUG
 	CWStringDynamic str(mp);
@@ -87,7 +81,7 @@ CTableDescriptorTest::EresUnittest_Basic()
 	ptabdesc->OsPrint(oss);
 
 	GPOS_TRACE(str.GetBuffer());
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	ptabdesc->Release();
 

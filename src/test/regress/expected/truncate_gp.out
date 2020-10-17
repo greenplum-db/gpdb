@@ -1,15 +1,15 @@
 -- Mask out segment file name
 -- start_matchsubs
 -- m/segfile.*,/
--- s/segfile.*,/segfile###,/
+-- s/segfile:\d+\/\d+/segfile###/
 -- end_matchsubs
 -- start_ignore
-CREATE EXTENSION plpythonu;
+CREATE EXTENSION plpython3u;
 -- end_ignore
 --- Fucntion which lists the table segment file size on each segment.
 CREATE OR REPLACE FUNCTION stat_table_segfile_size(datname text, tabname text)
     RETURNS TABLE (dbid int2, relfilenode_dboid_relative_path text, size int)
-    VOLATILE LANGUAGE plpythonu
+    VOLATILE LANGUAGE plpython3u
 AS
 $fn$
 import os
@@ -63,15 +63,12 @@ truncate truncate_with_create_ao;
 end; 
 -- the ao table segment file size after truncate should be zero
 select stat_table_segfile_size('regression', 'truncate_with_create_ao');
-   stat_table_segfile_size   
------------------------------
+  stat_table_segfile_size  
+---------------------------
  (2,segfile:16384/19161,0)
- (2,segfile:16384/19161.1,0)
  (3,segfile:16384/19161,0)
- (3,segfile:16384/19161.1,0)
  (4,segfile:16384/19160,0)
- (4,segfile:16384/19160.1,0)
-(6 rows)
+(3 rows)
 
 -- test truncate table and create table are in the same transaction for aocs table
 begin;
@@ -84,15 +81,12 @@ select stat_table_segfile_size('regression', 'truncate_with_create_aocs');
     stat_table_segfile_size    
 -------------------------------
  (2,segfile:16384/19196,0)
- (2,segfile:16384/19196.1,0)
- (2,segfile:16384/19196.129,0)
+ (2,segfile:16384/19196.128,0)
  (3,segfile:16384/19196,0)
- (3,segfile:16384/19196.1,0)
- (3,segfile:16384/19196.129,0)
+ (3,segfile:16384/19196.128,0)
  (4,segfile:16384/19194,0)
- (4,segfile:16384/19194.1,0)
- (4,segfile:16384/19194.129,0)
-(9 rows)
+ (4,segfile:16384/19194.128,0)
+(6 rows)
 
 -- test truncate table and create table are in the same transaction for heap table
 begin;                                                                          

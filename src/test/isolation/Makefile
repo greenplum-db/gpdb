@@ -30,6 +30,13 @@ atmsort.pm:
 explain.pm:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/explain.pm
 
+# Though we don't install these binaries, build them during installation
+# (including temp-install).  Otherwise, "make -j check-world" and "make -j
+# installcheck-world" would spawn multiple, concurrent builds in this
+# directory.  Later builds would overwrite files while earlier builds are
+# reading them, causing occasional failures.
+install: | all
+
 submake-regress:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o
 
@@ -62,18 +69,22 @@ maintainer-clean: distclean
 install-tests:
 	$(MAKE) -C $(top_builddir)/contrib/pageinspect install
 
+# Unlike in most 'installcheck' tests, drop the database on success. The tests
+# are run in utility mode, so the database is inconsistent between QD and the
+# segments, and we don't want to leave that behind to confuse other tests.
 installcheck: all gpdiff.pl gpstringsubs.pl install-tests
-	./pg_isolation_regress --bindir='$(bindir)' $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --init-file=$(srcdir)/init_file --load-extension=pageinspect --schedule=$(srcdir)/isolation_schedule
+	$(pg_isolation_regress_installcheck) --init-file=$(srcdir)/init_file --load-extension=pageinspect --schedule=$(srcdir)/isolation_schedule
+	$(bindir)/dropdb --if-exists isolation_regression
 
 check: all
-	$(with_temp_install) ./pg_isolation_regress --temp-instance=./tmp_check $(TEMP_CONF) --inputdir=$(srcdir) --bindir= $(EXTRA_REGRESS_OPTS) --schedule=$(srcdir)/isolation_schedule
+	$(pg_isolation_regress_check) --schedule=$(srcdir)/isolation_schedule
 
 # Versions of the check tests that include the prepared_transactions test
 # It only makes sense to run these if set up to use prepared transactions,
 # via TEMP_CONFIG for the check case, or via the postgresql.conf for the
 # installcheck case.
 installcheck-prepared-txns: all temp-install
-	./pg_isolation_regress --bindir='$(bindir)' $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --schedule=$(srcdir)/isolation_schedule prepared-transactions
+	$(pg_isolation_regress_installcheck) --schedule=$(srcdir)/isolation_schedule prepared-transactions
 
 check-prepared-txns: all temp-install
-	./pg_isolation_regress --temp-instance=./tmp_check $(TEMP_CONF) $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --schedule=$(srcdir)/isolation_schedule prepared-transactions
+	$(pg_isolation_regress_check) --schedule=$(srcdir)/isolation_schedule prepared-transactions

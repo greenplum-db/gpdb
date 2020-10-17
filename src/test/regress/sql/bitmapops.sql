@@ -2,6 +2,9 @@
 
 SET default_statistics_target=1000;
 
+-- Encourage index use
+SET seq_page_cost=100;
+
 
 -- Generate enough data that we can test the lossy bitmaps.
 

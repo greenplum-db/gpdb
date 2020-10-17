@@ -1,5 +1,3 @@
-include: helpers/server_helpers.sql;
-
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
@@ -14,9 +12,9 @@ include: helpers/server_helpers.sql;
 2&:CHECKPOINT;
 3:INSERT INTO t VALUES (1, 0);
 
--- Force WAL to switch xlog files explicitly
+-- Force WAL to switch wal files explicitly
 -- start_ignore
-1U:SELECT pg_switch_xlog();
+1U:SELECT pg_switch_wal();
 -- end_ignore
 3:INSERT INTO t SELECT 0, i FROM generate_series(1, 25)i;
 

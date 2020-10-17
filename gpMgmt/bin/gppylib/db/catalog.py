@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -7,8 +7,9 @@
 """
 import copy
 
-import dbconn, pg
-from  gppylib import gplog
+import pg
+from gppylib import gplog
+from gppylib.db import dbconn
 
 logger=gplog.get_default_logger()
 
@@ -39,7 +40,7 @@ def getDatabaseList(conn):
 def getUserConnectionInfo(conn):
     """dont count ourselves"""
     header = ["pid", "usename", "application_name", "client_addr", "client_hostname", "client_port", "backend_start", "query"]
-    sql = """SELECT pid, usename, application_name, client_addr, client_hostname, client_port, backend_start, query FROM pg_stat_activity WHERE pid != pg_backend_pid() ORDER BY usename"""
+    sql = """SELECT pid, usename, application_name, client_addr, client_hostname, client_port, backend_start, query FROM pg_stat_activity WHERE pid != pg_backend_pid() and backend_type = 'client backend' ORDER BY usename"""
     return header, basicSQLExec(conn,sql)
 
 def doesSchemaExist(conn,schemaname):

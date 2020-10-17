@@ -23,13 +23,10 @@ using namespace gpopt;
 //		Ctor - for patterns
 //
 //---------------------------------------------------------------------------
-CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply
-	(
-	CMemoryPool *mp
-	)
-	:
-	CLogicalInnerApply(mp)
-{}
+CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply(CMemoryPool *mp)
+	: CLogicalInnerApply(mp)
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -39,15 +36,11 @@ CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply
-	(
-	CMemoryPool *mp,
-	CColRefArray *pdrgpcrInner,
-	EOperatorId eopidOriginSubq
-	)
-	:
-	CLogicalInnerApply(mp, pdrgpcrInner, eopidOriginSubq)
-{}
+CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply(
+	CMemoryPool *mp, CColRefArray *pdrgpcrInner, EOperatorId eopidOriginSubq)
+	: CLogicalInnerApply(mp, pdrgpcrInner, eopidOriginSubq)
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -58,11 +51,7 @@ CLogicalInnerCorrelatedApply::CLogicalInnerCorrelatedApply
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalInnerCorrelatedApply::PxfsCandidates
-	(
-	CMemoryPool *mp
-	)
-	const
+CLogicalInnerCorrelatedApply::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 	(void) xform_set->ExchangeSet(CXform::ExfImplementInnerCorrelatedApply);
@@ -79,15 +68,12 @@ CLogicalInnerCorrelatedApply::PxfsCandidates
 //
 //---------------------------------------------------------------------------
 BOOL
-CLogicalInnerCorrelatedApply::Matches
-	(
-	COperator *pop
-	)
-	const
+CLogicalInnerCorrelatedApply::Matches(COperator *pop) const
 {
 	if (pop->Eopid() == Eopid())
 	{
-		return m_pdrgpcrInner->Equals(CLogicalInnerCorrelatedApply::PopConvert(pop)->PdrgPcrInner());
+		return m_pdrgpcrInner->Equals(
+			CLogicalInnerCorrelatedApply::PopConvert(pop)->PdrgPcrInner());
 	}
 
 	return false;
@@ -102,17 +88,14 @@ CLogicalInnerCorrelatedApply::Matches
 //
 //---------------------------------------------------------------------------
 COperator *
-CLogicalInnerCorrelatedApply::PopCopyWithRemappedColumns
-	(
-	CMemoryPool *mp,
-	UlongToColRefMap *colref_mapping,
-	BOOL must_exist
-	)
+CLogicalInnerCorrelatedApply::PopCopyWithRemappedColumns(
+	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
 {
-	CColRefArray *pdrgpcrInner = CUtils::PdrgpcrRemap(mp, m_pdrgpcrInner, colref_mapping, must_exist);
+	CColRefArray *pdrgpcrInner =
+		CUtils::PdrgpcrRemap(mp, m_pdrgpcrInner, colref_mapping, must_exist);
 
-	return GPOS_NEW(mp) CLogicalInnerCorrelatedApply(mp, pdrgpcrInner, m_eopidOriginSubq);
+	return GPOS_NEW(mp)
+		CLogicalInnerCorrelatedApply(mp, pdrgpcrInner, m_eopidOriginSubq);
 }
 
 // EOF
-

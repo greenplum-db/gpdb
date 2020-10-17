@@ -7,16 +7,11 @@
 /* pgtypes_interval.h includes ecpg_config.h */
 #include <pgtypes_interval.h>
 
-#ifdef HAVE_INT64_TIMESTAMP
 typedef int64 timestamp;
 typedef int64 TimestampTz;
-#else
-typedef double timestamp;
-typedef double TimestampTz;
-#endif
 
 #ifdef __cplusplus
-extern		"C"
+extern "C"
 {
 #endif
 
@@ -25,7 +20,7 @@ extern char *PGTYPEStimestamp_to_asc(timestamp);
 extern int	PGTYPEStimestamp_sub(timestamp *, timestamp *, interval *);
 extern int	PGTYPEStimestamp_fmt_asc(timestamp *, char *, int, const char *);
 extern void PGTYPEStimestamp_current(timestamp *);
-extern int	PGTYPEStimestamp_defmt_asc(char *, const char *, timestamp *);
+extern int	PGTYPEStimestamp_defmt_asc(const char *, const char *, timestamp *);
 extern int	PGTYPEStimestamp_add_interval(timestamp * tin, interval * span, timestamp * tout);
 extern int	PGTYPEStimestamp_sub_interval(timestamp * tin, interval * span, timestamp * tout);
 
@@ -33,4 +28,4 @@ extern int	PGTYPEStimestamp_sub_interval(timestamp * tin, interval * span, times
 }
 #endif
 
-#endif   /* PGTYPES_TIMESTAMP */
+#endif							/* PGTYPES_TIMESTAMP */

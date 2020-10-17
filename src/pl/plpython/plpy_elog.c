@@ -23,14 +23,14 @@ PyObject   *PLy_exc_spi_error = NULL;
 
 
 static void PLy_traceback(PyObject *e, PyObject *v, PyObject *tb,
-			  char **xmsg, char **tbmsg, int *tb_depth);
+						  char **xmsg, char **tbmsg, int *tb_depth);
 static void PLy_get_spi_error_data(PyObject *exc, int *sqlerrcode, char **detail,
-					   char **hint, char **query, int *position,
-				   char **schema_name, char **table_name, char **column_name,
-					   char **datatype_name, char **constraint_name);
+								   char **hint, char **query, int *position,
+								   char **schema_name, char **table_name, char **column_name,
+								   char **datatype_name, char **constraint_name);
 static void PLy_get_error_data(PyObject *exc, int *sqlerrcode, char **detail,
-	  char **hint, char **schema_name, char **table_name, char **column_name,
-				   char **datatype_name, char **constraint_name);
+							   char **hint, char **schema_name, char **table_name, char **column_name,
+							   char **datatype_name, char **constraint_name);
 static char *get_source_line(const char *src, int lineno);
 
 static void get_string_attr(PyObject *obj, char *attrname, char **str);
@@ -45,8 +45,9 @@ static bool set_string_attr(PyObject *obj, char *attrname, char *str);
  * in the context.
  */
 void
-PLy_elog(int elevel, const char *fmt,...)
+PLy_elog_impl(int elevel, const char *fmt,...)
 {
+	int			save_errno = errno;
 	char	   *xmsg;
 	char	   *tbmsg;
 	int			tb_depth;
@@ -106,6 +107,7 @@ PLy_elog(int elevel, const char *fmt,...)
 			va_list		ap;
 			int			needed;
 
+			errno = save_errno;
 			va_start(ap, fmt);
 			needed = appendStringInfoVA(&emsg, dgettext(TEXTDOMAIN, fmt), ap);
 			va_end(ap);
@@ -132,7 +134,7 @@ PLy_elog(int elevel, const char *fmt,...)
 	{
 		ereport(elevel,
 				(errcode(sqlerrcode ? sqlerrcode : ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-			  errmsg_internal("%s", primary ? primary : "no exception data"),
+				 errmsg_internal("%s", primary ? primary : "no exception data"),
 				 (detail) ? errdetail_internal("%s", detail) : 0,
 				 (tb_depth > 0 && tbmsg) ? errcontext("%s", tbmsg) : 0,
 				 (hint) ? errhint("%s", hint) : 0,
@@ -146,8 +148,8 @@ PLy_elog(int elevel, const char *fmt,...)
 													column_name) : 0,
 				 (datatype_name) ? err_generic_string(PG_DIAG_DATATYPE_NAME,
 													  datatype_name) : 0,
-			  (constraint_name) ? err_generic_string(PG_DIAG_CONSTRAINT_NAME,
-													 constraint_name) : 0));
+				 (constraint_name) ? err_generic_string(PG_DIAG_CONSTRAINT_NAME,
+														constraint_name) : 0));
 	}
 	PG_CATCH();
 	{
@@ -252,7 +254,7 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb,
 
 	*tb_depth = 0;
 	initStringInfo(&tbstr);
-	/* Mimick Python traceback reporting as close as possible. */
+	/* Mimic Python traceback reporting as close as possible. */
 	appendStringInfoString(&tbstr, "Traceback (most recent call last):");
 	while (tb != NULL && tb != Py_None)
 	{
@@ -327,11 +329,11 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb,
 
 			if (proname == NULL)
 				appendStringInfo(
-				&tbstr, "\n  PL/Python anonymous code block, line %ld, in %s",
+								 &tbstr, "\n  PL/Python anonymous code block, line %ld, in %s",
 								 plain_lineno - 1, fname);
 			else
 				appendStringInfo(
-					&tbstr, "\n  PL/Python function \"%s\", line %ld, in %s",
+								 &tbstr, "\n  PL/Python function \"%s\", line %ld, in %s",
 								 proname, plain_lineno - 1, fname);
 
 			/*

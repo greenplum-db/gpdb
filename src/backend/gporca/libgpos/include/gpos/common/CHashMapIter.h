@@ -17,109 +17,105 @@
 #include "gpos/common/CDynamicPtrArray.h"
 
 namespace gpos
-{	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CHashMapIter
-	//
-	//	@doc:
-	//		Hash map iterator
-	//
-	//---------------------------------------------------------------------------
-	template <class K, class T, 
-				ULONG (*HashFn)(const K*), 
-				BOOL (*EqFn)(const K*, const K*),
-				void (*DestroyKFn)(K*),
-				void (*DestroyTFn)(T*)>
-	class CHashMapIter : public CStackObject
+{
+//---------------------------------------------------------------------------
+//	@class:
+//		CHashMapIter
+//
+//	@doc:
+//		Hash map iterator
+//
+//---------------------------------------------------------------------------
+template <class K, class T, ULONG (*HashFn)(const K *),
+		  BOOL (*EqFn)(const K *, const K *), void (*DestroyKFn)(K *),
+		  void (*DestroyTFn)(T *)>
+class CHashMapIter : public CStackObject
+{
+	// short hand for hashmap type
+	typedef CHashMap<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> TMap;
+
+private:
+	// map to iterate
+	const TMap *m_map;
+
+	// current hashchain
+	ULONG m_chain_idx;
+
+	// current key
+	ULONG m_key_idx;
+
+	// is initialized?
+	BOOL m_is_initialized;
+
+	// private copy ctor
+	CHashMapIter(
+		const CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> &);
+
+	// method to return the current element
+	const typename TMap::CHashMapElem *
+	Get() const
 	{
-	
-		// short hand for hashmap type
-		typedef CHashMap<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> TMap;
-	
-		private:
+		typename TMap::CHashMapElem *elem = NULL;
+		K *k = (*(m_map->m_keys))[m_key_idx - 1];
+		elem = m_map->Lookup(k);
 
-			// map to iterate
-			const TMap *m_map;
+		return elem;
+	}
 
-			// current hashchain
-			ULONG m_chain_idx;
+public:
+	// ctor
+	CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn>(TMap *ptm)
+		: m_map(ptm), m_chain_idx(0), m_key_idx(0)
+	{
+		GPOS_ASSERT(NULL != ptm);
+	}
 
-			// current key
-			ULONG m_key_idx;
+	// dtor
+	virtual ~CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn>()
+	{
+	}
 
-			// is initialized?
-			BOOL m_is_initialized;
+	// advance iterator to next element
+	BOOL
+	Advance()
+	{
+		if (m_key_idx < m_map->m_keys->Size())
+		{
+			m_key_idx++;
+			return true;
+		}
 
-			// private copy ctor
-			CHashMapIter(const CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> &);
-			
-			// method to return the current element
-			const typename TMap::CHashMapElem *Get() const
-            {
-                typename TMap::CHashMapElem *elem = NULL;
-                K *k = (*(m_map->m_keys))[m_key_idx-1];
-                elem = m_map->Lookup(k);
+		return false;
+	}
 
-                return elem;
-            }
+	// current key
+	const K *
+	Key() const
+	{
+		const typename TMap::CHashMapElem *elem = Get();
+		if (NULL != elem)
+		{
+			return elem->Key();
+		}
+		return NULL;
+	}
 
-		public:
-		
-			// ctor
-			CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> (TMap *ptm)
-            :
-            m_map(ptm),
-            m_chain_idx(0),
-            m_key_idx(0)
-            {
-                GPOS_ASSERT(NULL != ptm);
-            }
+	// current value
+	const T *
+	Value() const
+	{
+		const typename TMap::CHashMapElem *elem = Get();
+		if (NULL != elem)
+		{
+			return elem->Value();
+		}
+		return NULL;
+	}
 
-			// dtor
-			virtual
-			~CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn> ()
-			{}
+};	// class CHashMapIter
 
-			// advance iterator to next element
-			BOOL Advance()
-            {
-                if (m_key_idx < m_map->m_keys->Size())
-                {
-                    m_key_idx++;
-                    return true;
-                }
+}  // namespace gpos
 
-                return false;
-            }
-			
-			// current key
-			const K *Key() const
-            {
-                const typename TMap::CHashMapElem *elem = Get();
-                if (NULL != elem)
-                {
-                    return elem->Key();
-                }
-                return NULL;
-            }
-
-			// current value
-			const T *Value() const
-            {
-                const typename TMap::CHashMapElem *elem = Get();
-                if (NULL != elem)
-                {
-                    return elem->Value();
-                }
-                return NULL;
-            }
-
-	}; // class CHashMapIter
-
-}
-
-#endif // !GPOS_CHashMapIter_H
+#endif	// !GPOS_CHashMapIter_H
 
 // EOF
-

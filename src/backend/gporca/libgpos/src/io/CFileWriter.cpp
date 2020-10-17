@@ -27,11 +27,9 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CFileWriter::CFileWriter()
-	:
-	CFileDescriptor(),
-	m_file_size(0)
-{}
+CFileWriter::CFileWriter() : CFileDescriptor(), m_file_size(0)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -43,15 +41,12 @@ CFileWriter::CFileWriter()
 //
 //---------------------------------------------------------------------------
 void
-CFileWriter::Open
-	(
-	const CHAR *file_path,
-	ULONG permission_bits
-	)
+CFileWriter::Open(const CHAR *file_path, ULONG permission_bits)
 {
 	GPOS_ASSERT(NULL != file_path);
 
-	OpenFile(file_path, O_CREAT | O_WRONLY | O_RDONLY | O_TRUNC, permission_bits);
+	OpenFile(file_path, O_CREAT | O_WRONLY | O_RDONLY | O_TRUNC,
+			 permission_bits);
 
 	GPOS_ASSERT(0 == ioutils::FileSize(file_path));
 
@@ -85,13 +80,10 @@ CFileWriter::Close()
 //
 //---------------------------------------------------------------------------
 void
-CFileWriter::Write
-	(
-	const BYTE *read_buffer,
-	const ULONG_PTR write_size
-	)
+CFileWriter::Write(const BYTE *read_buffer, const ULONG_PTR write_size)
 {
-	GPOS_ASSERT(CFileDescriptor::IsFileOpen() && "Attempt to write to invalid file descriptor");
+	GPOS_ASSERT(CFileDescriptor::IsFileOpen() &&
+				"Attempt to write to invalid file descriptor");
 	GPOS_ASSERT(0 < write_size);
 	GPOS_ASSERT(NULL != read_buffer);
 
@@ -102,7 +94,8 @@ CFileWriter::Write
 		INT_PTR current_byte;
 
 		// write to file
-		current_byte = ioutils::Write(GetFileDescriptor(), read_buffer, bytes_left_to_write);
+		current_byte = ioutils::Write(GetFileDescriptor(), read_buffer,
+									  bytes_left_to_write);
 
 		// check for error
 		if (-1 == current_byte)
@@ -128,4 +121,3 @@ CFileWriter::Write
 }
 
 // EOF
-

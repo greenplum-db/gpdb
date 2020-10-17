@@ -18,7 +18,7 @@
 using namespace gpos;
 
 // host system callback function to report abort requests
-bool (*CWorker::abort_requested_by_system) (void);
+bool (*CWorker::abort_requested_by_system)(void);
 
 
 //---------------------------------------------------------------------------
@@ -29,26 +29,20 @@ bool (*CWorker::abort_requested_by_system) (void);
 //		ctor
 //
 //---------------------------------------------------------------------------
-CWorker::CWorker
-	(
-	ULONG stack_size,
-	ULONG_PTR stack_start
-	)
-	:
-	m_task(NULL),
-	m_stack_size(stack_size),
-	m_stack_start(stack_start)
+CWorker::CWorker(ULONG stack_size, ULONG_PTR stack_start)
+	: m_task(NULL), m_stack_size(stack_size), m_stack_start(stack_start)
 {
-	GPOS_ASSERT(stack_size >= 2 * 1024 && "Worker has to have at least 2KB stack");
+	GPOS_ASSERT(stack_size >= 2 * 1024 &&
+				"Worker has to have at least 2KB stack");
 
 	// register worker
 	GPOS_ASSERT(NULL == Self() && "Found registered worker!");
-	
+
 	CWorkerPoolManager::WorkerPoolManager()->RegisterWorker(this);
 	GPOS_ASSERT(this == CWorkerPoolManager::WorkerPoolManager()->Self());
 }
 
-			
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CWorker::~CWorker
@@ -103,20 +97,17 @@ CWorker::Execute(CTask *task)
 //
 //---------------------------------------------------------------------------
 void
-CWorker::CheckForAbort
-	(
-	const CHAR *,
-	ULONG
-	)
+CWorker::CheckForAbort(const CHAR *, ULONG)
 {
 	// check if there is a task assigned to worker,
 	// task is still running and CFA is not suspended
 	if (NULL != m_task && m_task->IsRunning() && !m_task->IsAbortSuspended())
 	{
 		GPOS_ASSERT(!m_task->GetErrCtxt()->IsPending() &&
-		            "Check-For-Abort while an exception is pending");
+					"Check-For-Abort while an exception is pending");
 
-		if ((NULL != abort_requested_by_system && abort_requested_by_system()) ||
+		if ((NULL != abort_requested_by_system &&
+			 abort_requested_by_system()) ||
 			m_task->IsCanceled())
 		{
 			// raise exception
@@ -141,10 +132,10 @@ BOOL
 CWorker::CheckStackSize(ULONG request) const
 {
 	ULONG_PTR ptr = 0;
-	
+
 	// get current stack size
-	ULONG_PTR size = m_stack_start - (ULONG_PTR)&ptr;
-	
+	ULONG_PTR size = m_stack_start - (ULONG_PTR) &ptr;
+
 	// check if we have exceeded stack space
 	if (size >= m_stack_size)
 	{
@@ -162,4 +153,3 @@ CWorker::CheckStackSize(ULONG request) const
 
 
 // EOF
-

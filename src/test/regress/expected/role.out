@@ -75,7 +75,7 @@ set role superuser;
 revoke all privileges on TABLE t1, t1_view FROM u1;
 set role u1;
 select * from t1_view order by 1;
-ERROR:  permission denied for relation t1_view
+ERROR:  permission denied for view t1_view
 reset role;
 drop view t1_view;
 drop table t1;

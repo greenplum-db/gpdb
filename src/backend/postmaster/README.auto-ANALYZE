@@ -1,0 +1,159 @@
+Enable auto-ANALYZE through autovacuum daemon on Master(QD) in GPDB.
+
+The basic idea for only enabling auto-ANALYZE through Master’s autovacuum
+daemon is to collect pgstat info into Master when executing queries. Start
+the Master’s autovacuum launcher process. Fire an autovacuum work process for
+a database on Master when the naptime reaches. Then the autovacuum worker
+will iterate through all tables/materialized views under a specified database,
+and execute ANALYZE for tables which reached the analyze threshold. Note the
+ANALYZE statement issued in the autovacuum worker on Master is the same as
+executing it through query on QD. ie. The auto-ANALYZE is coordinated by the
+master and segments do not start it’s own autovacuum launcher and autovacuum
+worker.
+
+Implementations
+=================================================
+### Collect pgstat on master for relations.
+Since the auto-ANALYZE is fired from Master, we need to collect pgstat info
+into master. GPDB used to call `auto_stats` for queries that may process tuples
+for different command types like INSERT/UPDATE/COPY/… to execute ANALYZE based
+on the `auto_stats` configuration(it’ll add overhead for a simple command,
+more details please refer to the discussion
+https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/gqordopb6Gg).
+
+The normal pgstat logic(from Postgres upstream) only updates table stats in the
+table modification level(like `heap_insert`, `heap_update`, `heap_delete` ...).
+On Master, since there’s no data existing for these distributed tables, the
+pgstat will never get updated before.
+Now we bring in another function `gp_pgstat_report_tabstat` which should be
+called at the end of command execution when tuples are processed like
+`auto_stats`.
+GPDB collects processed tuples from all segments, and passes the count to
+report pgstat for the processed table with the current command on Master.
+`gp_pgstat_report_tabstat` will choose to report INSERT/UPDATE/DELETE based
+on command type.
+
+We wrap the `auto_stats` and `gp_pgstat_report_tabstat` in a function called
+`collect_tabstat`. And put it as where `auto_stats` used to be.
+In the `collect_tabstat`, when `autovacuum` is enabled on Master (now for
+ANALYZE only). It’ll call `gp_pgstat_report_tabstat` to collect pgstat to
+support auto-ANALYZE. Currently this is not supported for the partition table,
+because we don't have accurate pgstat on QD for parent tables and child tables.
+So still execute `auto_stats` for the partition table. For relation who's
+storage parameter `autovacuum_enable=false` with autovacuum enabled, neither
+autovacuum ANALYZE nor `auto_stat`s will execute for it. Users need to manually
+run ANALYZE for it. This is the same with Postgres. If the `autovacuum` is not
+enabled on Master, `auto_stats` will be executed. `collect_tabstat` only gets
+called on QD.
+
+
+### Make the autovacuum guc work to start the autovacuum launcher.
+We used to disable modifying autovacuum ANALYZE related GUCs. Now, only enable
+`autovacuum`, `autovacuum_naptime`, `autovacuum_analyze_threshold`,
+`autovacuum_analyze_scale_factor`.
+
+### Recognize databases that need vacuum(template0 only) or analyze under the autovacuum launcher.
+As in PR https://github.com/greenplum-db/gpdb/pull/4548. We support force xid
+wraparound VACUUM through autovacuum for template0 only. This is by checking
+the database’s `datallowconn` field. If it’s false, it means not allowing users
+to connect it directly. That’s also the reason why we enable force xid wraparound
+VACUUM for template0. In `get_database_list` under autovacuum.c, it used to only
+return the databases whos `datallowconn=false`. Note the force xid wraparound
+VACUUM for template0 could be run on both **Master** and **segments**.
+
+Then we reuse the `datallowconn` for auto-ANALYZE logic. If the current
+database’s `datallowconn` sets to true, we only perform ANALYZE in autovacuum
+workers on Master. Now in `get_database_list`, we check if the
+`datallowconn=true`, autovacuum is enabled and current autovacuum daemon is
+Master’s, we perverse the `datallowconn` in the returned database list. The new
+logic limit only the **Master’s** autovacuum daemon has the ability to fire
+autovacuum workers on databases other than template0( so if enable autovacuum
+on segments, it still only executes force xid wraparound on template0).
+Also a new field `wi_for_analyze` in `WorkerInfoData` is added to pass this
+into the autovacuum worker. Then if the target database’s `datallowconn=true`
+for a new autovacuum worker, the worker’s `wi_for_analyze` will be set to true,
+and the started worker will only execute ANALYZE logic. Other tables xid
+wraparound VACUUM are ignored.
+
+We also optimize the logic of `do_start_worker`, it used to always choose the
+force xid wraparound database as the target for a new autovacuum worker. Since
+we only enable auto-ANALYZE for databases except template0, the old logic will
+be trapped into a database who needs to execute xid wraparound. But autovacuum
+workers never execute VACUUM on it.
+
+### Change autovacuum worker’s Gp_role for ANALYZE.
+Since auto-ANALYZE is coordinated by the Master and segments do not start it’s
+own autovacuum launcher and autovacuum worker. We need Master’s autovacuum
+workers which do auto-ANALYZE on a database have `Gp_role = GP_ROLE_DISPATCH`.
+So it’ll do the ANALYZE on master to calculate statistics with right behavior,
+for example, acquire sample rows from segments.
+But for VACUUM on template0, we still keep it running as `GP_ROLE_UTILITY`.
+
+### Autovacuum workers for ANALYZE should not block other commands.
+In postgres, the autovacuum workers generally don't block other commands.
+If a process attempts to acquire a lock that conflicts with the SHARE UPDATE
+EXCLUSIVE lock held by autovacuum, lock acquisition will interrupt the
+autovacuum.
+This feature should also work for the auto-ANALYZE’s autovacuum workers.
+A test is added to ensure this(src/test/isolation2/input/autovacuum-analyze.source).
+
+A simple example is:
+```sql
+CREATE TABLE anaabort(id int);
+INSERT INTO anaabort select i from generate_series(1, 1000) as i;
+
+-- assume the autovacuum worker is executing ANALYZE on the table
+
+T1: BEGIN;
+T1: LOCK TABLE anaabort in EXCLUSIVE mode; -- abort the autovacuum worker
+T1: ...
+T1: END;
+
+-- Then the autovacuum worker's ANALYZE command should abort and the
+-- pg_statistic should not get updated.
+SELECT count(*) FROM pg_statistic where starelid = 'anaabort'::regclass;
+ count 
+-------
+ 0     
+(1 row)
+```
+
+Limitations
+==================================================
+
+### Partition table support
+Current implementation does not collect pgstat for partition tables. So the
+auto-ANALYZE will not execute for them.
+The reason is we can not collect accurate pgstat for the partition table.
+
+For examples:
+- Insert into the child table, it updates the pgstat for the child table, but
+the root table's pgstat does not get updated on master. (Although we can
+simply add it to the root table)
+- Insert into the root table, it updates the pgstat for the root table on master,
+but underly child tables' pgstat not get updated, since GPDB only gets
+processed tuple count on master at each command execution end phase where
+`collect_tabstat` gets called. We need to collect tuple count for each child
+table on segments into master.
+
+Once we did the PG12 merge, we could try to resolve it.
+And for Postgres, it only collects pgstat for child tables, this makes
+auto-ANALYZE only executed for child tables. User still needs to manually
+ANALYZE on the parent table. See related discussions in pg-hackers:
+- https://www.postgresql.org/message-id/2674.1262040064@sss.pgh.pa.us
+- https://www.postgresql.org/message-id/CAM-w4HMQKC8hw7nB9TW3OV%2BhkB5OUcPtvr_U_EiSOjByoa-e4Q%40mail.gmail.com
+
+
+### Cost-based delay
+In Postgres, the cost-base delay feature is used to limit the VACUUM and
+ANALYZE IO cost. Since the IO cost is not collected to master, so feature
+is not working in cluster wide. But we can still use it to limit IO cost for
+each segment.
+We plan to support the disk io limit in the resource group. Once it is ready,
+we will see if the  resource group can help here.
+
+
+### VACUUM under autovacuum
+Now, GPDB only supports xid wrap around VACUUM on template0 through the
+autovacuum. Since we still have different opinions for the auto-vacuum
+implementation, current PR does not include the vacuum part.

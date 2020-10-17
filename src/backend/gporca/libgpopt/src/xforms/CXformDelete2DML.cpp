@@ -28,22 +28,14 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformDelete2DML::CXformDelete2DML
-	(
-	CMemoryPool *mp
-	)
-	:
-	CXformExploration
-		(
-		 // pattern
-		GPOS_NEW(mp) CExpression
-				(
-				mp,
-				GPOS_NEW(mp) CLogicalDelete(mp),
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp))
-				)
-		)
-{}
+CXformDelete2DML::CXformDelete2DML(CMemoryPool *mp)
+	: CXformExploration(
+		  // pattern
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CLogicalDelete(mp),
+			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp))))
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -54,11 +46,8 @@ CXformDelete2DML::CXformDelete2DML
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformDelete2DML::Exfp
-	(
-	CExpressionHandle & // exprhdl
-	)
-	const
+CXformDelete2DML::Exfp(CExpressionHandle &	// exprhdl
+) const
 {
 	return CXform::ExfpHigh;
 }
@@ -72,13 +61,8 @@ CXformDelete2DML::Exfp
 //
 //---------------------------------------------------------------------------
 void
-CXformDelete2DML::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformDelete2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+							CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -104,17 +88,9 @@ CXformDelete2DML::Transform
 	pexprChild->AddRef();
 
 	// create logical DML
-	CExpression *pexprAlt =
-		CXformUtils::PexprLogicalDMLOverProject
-						(
-						mp,
-						pexprChild,
-						CLogicalDML::EdmlDelete,
-						ptabdesc,
-						colref_array,
-						pcrCtid,
-						pcrSegmentId
-						);
+	CExpression *pexprAlt = CXformUtils::PexprLogicalDMLOverProject(
+		mp, pexprChild, CLogicalDML::EdmlDelete, ptabdesc, colref_array,
+		pcrCtid, pcrSegmentId);
 
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);

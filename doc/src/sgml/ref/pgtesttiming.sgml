@@ -27,7 +27,7 @@
   <title>Description</title>
 
  <para>
-  <application>pg_test_timing</> is a tool to measure the timing overhead
+  <application>pg_test_timing</application> is a tool to measure the timing overhead
   on your system and confirm that the system time never moves backwards.
   Systems that are slow to collect timing data can give less accurate
   <command>EXPLAIN ANALYZE</command> results.
@@ -57,8 +57,8 @@
      </varlistentry>
 
      <varlistentry>
-      <term><option>-V</></term>
-      <term><option>--version</></term>
+      <term><option>-V</option></term>
+      <term><option>--version</option></term>
       <listitem>
        <para>
         Print the <application>pg_test_timing</application> version and exit.
@@ -67,8 +67,8 @@
      </varlistentry>
 
      <varlistentry>
-      <term><option>-?</></term>
-      <term><option>--help</></term>
+      <term><option>-?</option></term>
+      <term><option>--help</option></term>
       <listitem>
        <para>
         Show help about <application>pg_test_timing</application> command line
@@ -94,24 +94,24 @@
    nanoseconds. This example from an Intel i7-860 system using a TSC clock
    source shows excellent performance:
 
-<screen>
+<screen><![CDATA[
 Testing timing overhead for 3 seconds.
-Per loop time including overhead: 35.96 nsec
+Per loop time including overhead: 35.96 ns
 Histogram of timing durations:
-< usec   % of total      count
+  < us   % of total      count
      1     96.40465   80435604
      2      3.59518    2999652
      4      0.00015        126
      8      0.00002         13
     16      0.00000          2
-</screen>
+]]></screen>
   </para>
 
   <para>
    Note that different units are used for the per loop time than the
-   histogram. The loop can have resolution within a few nanoseconds (nsec),
+   histogram. The loop can have resolution within a few nanoseconds (ns),
    while the individual timing calls can only resolve down to one microsecond
-   (usec).
+   (us).
   </para>
 
  </refsect2>
@@ -152,25 +152,25 @@ EXPLAIN ANALYZE SELECT COUNT(*) FROM t;
    possible from switching to the slower acpi_pm time source, on the same
    system used for the fast results above:
 
-<screen>
+<screen><![CDATA[
 # cat /sys/devices/system/clocksource/clocksource0/available_clocksource
 tsc hpet acpi_pm
 # echo acpi_pm > /sys/devices/system/clocksource/clocksource0/current_clocksource
 # pg_test_timing
-Per loop time including overhead: 722.92 nsec
+Per loop time including overhead: 722.92 ns
 Histogram of timing durations:
-< usec   % of total      count
+  < us   % of total      count
      1     27.84870    1155682
      2     72.05956    2990371
      4      0.07810       3241
      8      0.01357        563
     16      0.00007          3
-</screen>
+]]></screen>
   </para>
 
   <para>
    In this configuration, the sample <command>EXPLAIN ANALYZE</command> above
-   takes 115.9 ms.  That's 1061 nsec of timing overhead, again a small multiple
+   takes 115.9 ms.  That's 1061 ns of timing overhead, again a small multiple
    of what's measured directly by this utility.  That much timing overhead
    means the actual query itself is only taking a tiny fraction of the
    accounted for time, most of it is being consumed in overhead instead.  In
@@ -201,7 +201,7 @@ kern.timecounter.hardware: ACPI-fast -> TSC
    implementation, which can have good resolution when it's backed by fast
    enough timing hardware, as in this example:
 
-<screen>
+<screen><![CDATA[
 $ cat /sys/devices/system/clocksource/clocksource0/available_clocksource
 jiffies
 $ dmesg | grep time.c
@@ -211,14 +211,14 @@ $ pg_test_timing
 Testing timing overhead for 3 seconds.
 Per timing duration including loop overhead: 97.75 ns
 Histogram of timing durations:
-< usec   % of total      count
+  < us   % of total      count
      1     90.23734   27694571
      2      9.75277    2993204
      4      0.00981       3010
      8      0.00007         22
     16      0.00000          1
     32      0.00000          1
-</screen></para>
+]]></screen></para>
 
  </refsect2>
 
@@ -294,7 +294,7 @@ Histogram of timing durations:
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-explain"></member>
+   <member><xref linkend="sql-explain"/></member>
   </simplelist>
  </refsect1>
 </refentry>

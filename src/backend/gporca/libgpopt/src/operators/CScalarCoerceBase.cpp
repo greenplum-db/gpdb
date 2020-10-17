@@ -30,20 +30,14 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CScalarCoerceBase::CScalarCoerceBase
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_type,
-	INT type_modifier,
-	ECoercionForm ecf,
-	INT location
-	)
-	:
-	CScalar(mp),
-	m_result_type_mdid(mdid_type),
-	m_type_modifier(type_modifier),
-	m_ecf(ecf),
-	m_location(location)
+CScalarCoerceBase::CScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type,
+									 INT type_modifier, ECoercionForm ecf,
+									 INT location)
+	: CScalar(mp),
+	  m_result_type_mdid(mdid_type),
+	  m_type_modifier(type_modifier),
+	  m_ecf(ecf),
+	  m_location(location)
 {
 	GPOS_ASSERT(NULL != mdid_type);
 	GPOS_ASSERT(mdid_type->IsValid());
@@ -72,7 +66,7 @@ CScalarCoerceBase::~CScalarCoerceBase()
 //		Return type of the scalar expression
 //
 //---------------------------------------------------------------------------
-IMDId*
+IMDId *
 CScalarCoerceBase::MdidType() const
 {
 	return m_result_type_mdid;
@@ -132,16 +126,14 @@ CScalarCoerceBase::Location() const
 //		return a copy of the operator with remapped columns
 //
 //---------------------------------------------------------------------------
-COperator*
-CScalarCoerceBase::PopCopyWithRemappedColumns
-	(
-	CMemoryPool *, //mp,
-	UlongToColRefMap *, //colref_mapping,
-	BOOL //must_exist
-	)
+COperator *
+CScalarCoerceBase::PopCopyWithRemappedColumns(
+	CMemoryPool *,		 //mp,
+	UlongToColRefMap *,	 //colref_mapping,
+	BOOL				 //must_exist
+)
 {
 	return PopCopyDefault();
 }
 
 // EOF
-

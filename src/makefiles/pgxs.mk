@@ -38,10 +38,24 @@
 #   SCRIPTS -- script files (not binaries) to install into $PREFIX/bin
 #   SCRIPTS_built -- script files (not binaries) to install into $PREFIX/bin,
 #     which need to be built first
+#   HEADERS -- files to install into $(includedir_server)/$MODULEDIR/$MODULE_big
+#   HEADERS_built -- as above but built first (but NOT cleaned)
+#   HEADERS_$(MODULE) -- files to install into
+#     $(includedir_server)/$MODULEDIR/$MODULE; the value of $MODULE must be
+#     listed in MODULES or MODULE_big
+#   HEADERS_built_$(MODULE) -- as above but built first (also NOT cleaned)
 #   REGRESS -- list of regression test cases (without suffix)
 #   REGRESS_OPTS -- additional switches to pass to pg_regress
+#   TAP_TESTS -- switch to enable TAP tests
+#   ISOLATION -- list of isolation test cases
+#   ISOLATION_OPTS -- additional switches to pass to pg_isolation_regress
+#   NO_INSTALLCHECK -- don't define an installcheck target, useful e.g. if
+#     tests require special configuration, or don't use pg_regress
 #   EXTRA_CLEAN -- extra files to remove in 'make clean'
-#   PG_CPPFLAGS -- will be added to CPPFLAGS
+#   PG_CPPFLAGS -- will be prepended to CPPFLAGS
+#   PG_CFLAGS -- will be appended to CFLAGS
+#   PG_CXXFLAGS -- will be appended to CXXFLAGS
+#   PG_LDFLAGS -- will be prepended to LDFLAGS
 #   PG_LIBS -- will be added to PROGRAM link line
 #   PG_LIBS_INTERNAL -- same, for references to libraries within build tree
 #   SHLIB_LINK -- will be added to MODULE_big link line
@@ -60,6 +74,12 @@ endif
 
 
 ifdef PGXS
+
+# External extensions must assume generated headers are available
+NO_GENERATED_HEADERS=yes
+# The temp-install rule won't work, either
+NO_TEMP_INSTALL=yes
+
 # We assume that we are in src/makefiles/, so top is ...
 top_builddir := $(dir $(PGXS))../..
 include $(top_builddir)/src/Makefile.global
@@ -73,7 +93,8 @@ endif
 ifeq ($(FLEX),)
 FLEX = flex
 endif
-endif
+
+endif # PGXS
 
 
 override CPPFLAGS := -I. -I$(srcdir) $(CPPFLAGS)
@@ -85,13 +106,16 @@ endif
 ifdef MODULEDIR
 datamoduledir := $(MODULEDIR)
 docmoduledir := $(MODULEDIR)
+incmoduledir := $(MODULEDIR)
 else
 ifdef EXTENSION
 datamoduledir := extension
 docmoduledir := extension
+incmoduledir := extension
 else
 datamoduledir := contrib
 docmoduledir := contrib
+incmoduledir := contrib
 endif
 endif
 
@@ -111,8 +135,100 @@ endif
 ifdef PG_CPPFLAGS
 override CPPFLAGS := $(PG_CPPFLAGS) $(CPPFLAGS)
 endif
+ifdef PG_CFLAGS
+override CFLAGS := $(CFLAGS) $(PG_CFLAGS)
+endif
+ifdef PG_CXXFLAGS
+override CXXFLAGS := $(CXXFLAGS) $(PG_CXXFLAGS)
+endif
+ifdef PG_LDFLAGS
+override LDFLAGS := $(PG_LDFLAGS) $(LDFLAGS)
+endif
 
-all: $(PROGRAM) $(DATA_built) $(SCRIPTS_built) $(addsuffix $(DLSUFFIX), $(MODULES)) $(addsuffix .control, $(EXTENSION))
+# logic for HEADERS_* stuff
+
+# get list of all names used with or without built_ prefix
+# note that use of HEADERS_built_foo will get both "foo" and "built_foo",
+# we cope with that later when filtering this list against MODULES.
+# If someone wants to name a module "built_foo", they can do that and it
+# works, but if they have MODULES = foo built_foo  then they will need to
+# force building of all headers and use HEADERS_built_foo and
+# HEADERS_built_built_foo.
+HEADER_alldirs := $(patsubst HEADERS_%,%,$(filter HEADERS_%, $(.VARIABLES)))
+HEADER_alldirs += $(patsubst HEADERS_built_%,%,$(filter HEADERS_built_%, $(.VARIABLES)))
+
+# collect all names of built headers to use as a dependency
+HEADER_allbuilt :=
+
+ifdef MODULE_big
+
+# we can unconditionally add $(MODULE_big) here, because we will strip it
+# back out below if it turns out not to actually define any headers.
+HEADER_dirs := $(MODULE_big)
+HEADER_unbuilt_$(MODULE_big) = $(HEADERS)
+HEADER_built_$(MODULE_big) = $(HEADERS_built)
+HEADER_allbuilt += $(HEADERS_built)
+# treat "built" as an exclusion below as well as "built_foo"
+HEADER_xdirs := built built_$(MODULE_big)
+
+else # not MODULE_big, so check MODULES
+
+# HEADERS is an error in the absence of MODULE_big to provide a dir name
+ifdef HEADERS
+$(error HEADERS requires MODULE_big to be set)
+endif
+# make list of modules that have either HEADERS_foo or HEADERS_built_foo
+HEADER_dirs := $(foreach m,$(MODULES),$(if $(filter $(m) built_$(m),$(HEADER_alldirs)),$(m)))
+# make list of conflicting names to exclude
+HEADER_xdirs := $(addprefix built_,$(HEADER_dirs))
+
+endif # MODULE_big or MODULES
+
+# HEADERS_foo requires that "foo" is in MODULES as a sanity check
+ifneq (,$(filter-out $(HEADER_dirs) $(HEADER_xdirs),$(HEADER_alldirs)))
+$(error $(patsubst %,HEADERS_%,$(filter-out $(HEADER_dirs) $(HEADER_xdirs),$(HEADER_alldirs))) defined with no module)
+endif
+
+# assign HEADER_unbuilt_foo and HEADER_built_foo, but make sure
+# that "built" takes precedence in the case of conflict, by removing
+# conflicting module names when matching the unbuilt name
+$(foreach m,$(filter-out $(HEADER_xdirs),$(HEADER_dirs)),$(eval HEADER_unbuilt_$(m) += $$(HEADERS_$(m))))
+$(foreach m,$(HEADER_dirs),$(eval HEADER_built_$(m) += $$(HEADERS_built_$(m))))
+$(foreach m,$(HEADER_dirs),$(eval HEADER_allbuilt += $$(HEADERS_built_$(m))))
+
+# expand out the list of headers for each dir, attaching source prefixes
+header_file_list = $(HEADER_built_$(1)) $(addprefix $(srcdir)/,$(HEADER_unbuilt_$(1)))
+$(foreach m,$(HEADER_dirs),$(eval HEADER_files_$(m) := $$(call header_file_list,$$(m))))
+
+# note that the caller's HEADERS* vars have all been expanded now, and
+# later changes will have no effect.
+
+# remove entries in HEADER_dirs that produced an empty list of files,
+# to ensure we don't try and install them
+HEADER_dirs := $(foreach m,$(HEADER_dirs),$(if $(strip $(HEADER_files_$(m))),$(m)))
+
+# Functions for generating install/uninstall commands; the blank lines
+# before the "endef" are required, don't lose them
+# $(call install_headers,dir,headers)
+define install_headers
+$(MKDIR_P) '$(DESTDIR)$(includedir_server)/$(incmoduledir)/$(1)/'
+$(INSTALL_DATA) $(2) '$(DESTDIR)$(includedir_server)/$(incmoduledir)/$(1)/'
+
+endef
+# $(call uninstall_headers,dir,headers)
+define uninstall_headers
+rm -f $(addprefix '$(DESTDIR)$(includedir_server)/$(incmoduledir)/$(1)'/, $(notdir $(2)))
+
+endef
+
+# end of HEADERS_* stuff
+
+
+all: $(PROGRAM) $(DATA_built) $(HEADER_allbuilt) $(SCRIPTS_built) $(addsuffix $(DLSUFFIX), $(MODULES)) $(addsuffix .control, $(EXTENSION))
+
+ifeq ($(with_llvm), yes)
+all: $(addsuffix .bc, $(MODULES)) $(patsubst %.o,%.bc, $(OBJS))
+endif
 
 ifdef MODULE_big
 # shared library parameters
@@ -136,6 +252,9 @@ ifneq (,$(DATA_TSEARCH))
 endif # DATA_TSEARCH
 ifdef MODULES
 	$(INSTALL_SHLIB) $(addsuffix $(DLSUFFIX), $(MODULES)) '$(DESTDIR)$(pkglibdir)/'
+ifeq ($(with_llvm), yes)
+	$(foreach mod, $(MODULES), $(call install_llvm_module,$(mod),$(mod).bc))
+endif # with_llvm
 endif # MODULES
 ifdef DOCS
 ifdef docdir
@@ -151,8 +270,14 @@ endif # SCRIPTS
 ifdef SCRIPTS_built
 	$(INSTALL_SCRIPT) $(SCRIPTS_built) '$(DESTDIR)$(bindir)/'
 endif # SCRIPTS_built
-
+ifneq (,$(strip $(HEADER_dirs)))
+	$(foreach dir,$(HEADER_dirs),$(call install_headers,$(dir),$(HEADER_files_$(dir))))
+endif # HEADERS
 ifdef MODULE_big
+ifeq ($(with_llvm), yes)
+	$(call install_llvm_module,$(MODULE_big),$(OBJS))
+endif # with_llvm
+
 install: install-lib
 endif # MODULE_big
 
@@ -196,7 +321,10 @@ ifneq (,$(DATA_TSEARCH))
 endif
 ifdef MODULES
 	rm -f $(addprefix '$(DESTDIR)$(pkglibdir)'/, $(addsuffix $(DLSUFFIX), $(MODULES)))
-endif
+ifeq ($(with_llvm), yes)
+	$(foreach mod, $(MODULES), $(call uninstall_llvm_module,$(mod)))
+endif # with_llvm
+endif # MODULES
 ifdef DOCS
 	rm -f $(addprefix '$(DESTDIR)$(docdir)/$(docmoduledir)'/, $(DOCS))
 endif
@@ -209,15 +337,23 @@ endif
 ifdef SCRIPTS_built
 	rm -f $(addprefix '$(DESTDIR)$(bindir)'/, $(SCRIPTS_built))
 endif
+ifneq (,$(strip $(HEADER_dirs)))
+	$(foreach dir,$(HEADER_dirs),$(call uninstall_headers,$(dir),$(HEADER_files_$(dir))))
+endif # HEADERS
 
 ifdef MODULE_big
+ifeq ($(with_llvm), yes)
+	$(call uninstall_llvm_module,$(MODULE_big))
+endif # with_llvm
+
 uninstall: uninstall-lib
 endif # MODULE_big
 
 
 clean:
 ifdef MODULES
-	rm -f $(addsuffix $(DLSUFFIX), $(MODULES)) $(addsuffix .o, $(MODULES)) $(if $(PGFILEDESC),$(WIN32RES))
+	rm -f $(addsuffix $(DLSUFFIX), $(MODULES)) $(addsuffix .o, $(MODULES)) $(if $(PGFILEDESC),$(WIN32RES)) \
+	    $(addsuffix .bc, $(MODULES))
 endif
 ifdef DATA_built
 	rm -f $(DATA_built)
@@ -229,7 +365,7 @@ ifdef PROGRAM
 	rm -f $(PROGRAM)$(X)
 endif
 ifdef OBJS
-	rm -f $(OBJS)
+	rm -f $(OBJS) $(patsubst %.o,%.bc, $(OBJS))
 endif
 ifdef EXTRA_CLEAN
 	rm -rf $(EXTRA_CLEAN)
@@ -241,6 +377,12 @@ ifeq ($(PORTNAME), win)
 	rm -f regress.def
 endif
 endif # REGRESS
+ifdef TAP_TESTS
+	rm -rf tmp_check/
+endif
+ifdef ISOLATION
+	rm -rf output_iso/ tmp_check_iso/
+endif
 
 ifdef MODULE_big
 clean: clean-lib
@@ -251,12 +393,7 @@ distclean maintainer-clean: clean
 
 ifdef REGRESS
 
-# Select database to use for running the tests
-ifneq ($(USE_MODULE_DB),)
-  REGRESS_OPTS += --dbname=$(CONTRIB_TESTDB_MODULE)
-else
-  REGRESS_OPTS += --dbname=$(CONTRIB_TESTDB)
-endif
+REGRESS_OPTS += --dbname=$(CONTRIB_TESTDB)
 
 # When doing a VPATH build, must copy over the data files so that the
 # driver script can find them.  We have to use an absolute path for
@@ -275,28 +412,55 @@ $(test_files_build): $(abs_builddir)/%: $(srcdir)/%
 	$(MKDIR_P) $(dir $@)
 	ln -s $< $@
 endif # VPATH
+endif # REGRESS
 
 .PHONY: submake
 submake:
 ifndef PGXS
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress$(X)
+	$(MAKE) -C $(top_builddir)/src/test/isolation all
 endif
 
-# against installed postmaster
-installcheck: submake $(REGRESS_PREP)
-	$(pg_regress_installcheck) $(REGRESS_OPTS) $(REGRESS)
+ifdef ISOLATION
+ISOLATION_OPTS += --dbname=$(ISOLATION_TESTDB)
+endif
 
+# Standard rules to run regression tests including multiple test suites.
+# Runs against an installed postmaster.
+ifndef NO_INSTALLCHECK
+installcheck: submake $(REGRESS_PREP)
+ifdef REGRESS
+	$(pg_regress_installcheck) $(REGRESS_OPTS) $(REGRESS)
+endif
+ifdef ISOLATION
+	$(pg_isolation_regress_installcheck) $(ISOLATION_OPTS) $(ISOLATION)
+endif
+ifdef TAP_TESTS
+	$(prove_installcheck)
+endif
+endif # NO_INSTALLCHECK
+
+# Runs independently of any installation
 ifdef PGXS
 check:
 	@echo '"$(MAKE) check" is not supported.'
 	@echo 'Do "$(MAKE) install", then "$(MAKE) installcheck" instead.'
 else
 check: submake $(REGRESS_PREP)
+ifdef REGRESS
 	$(pg_regress_check) $(REGRESS_OPTS) $(REGRESS)
-
-temp-install: EXTRA_INSTALL+=$(subdir)
 endif
-endif # REGRESS
+ifdef ISOLATION
+	$(pg_isolation_regress_check) $(ISOLATION_OPTS) $(ISOLATION)
+endif
+ifdef TAP_TESTS
+	$(prove_check)
+endif
+endif # PGXS
+
+ifndef NO_TEMP_INSTALL
+checkprep: EXTRA_INSTALL+=$(subdir)
+endif
 
 
 # STANDARD RULES

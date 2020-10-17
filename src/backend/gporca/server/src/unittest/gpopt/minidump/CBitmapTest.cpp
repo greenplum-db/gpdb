@@ -26,8 +26,7 @@ using namespace gpopt;
 ULONG CBitmapTest::m_ulBitmapTestCounter = 0;  // start from first test
 
 // minidump files
-const CHAR *rgszBitmapFileNames[] =
-	{
+const CHAR *rgszBitmapFileNames[] = {
 	"../data/dxl/minidump/BitmapIndexScan.mdp",
 	"../data/dxl/minidump/BitmapIndexScanCost.mdp",
 	"../data/dxl/minidump/DynamicBitmapIndexScan.mdp",
@@ -59,7 +58,7 @@ const CHAR *rgszBitmapFileNames[] =
 	"../data/dxl/minidump/PredicateWithLongConjunction.mdp",
 	"../data/dxl/minidump/MultipleIndexPredicate.mdp",
 	"../data/dxl/minidump/BitmapIndexScanChooseIndex.mdp",
-	};
+};
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -72,10 +71,9 @@ const CHAR *rgszBitmapFileNames[] =
 GPOS_RESULT
 CBitmapTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(EresUnittest_RunTests),
-		};
+	};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
@@ -96,12 +94,9 @@ CBitmapTest::EresUnittest()
 GPOS_RESULT
 CBitmapTest::EresUnittest_RunTests()
 {
-	return CTestUtils::EresUnittest_RunTests
-						(
-						rgszBitmapFileNames,
-						&m_ulBitmapTestCounter,
-						GPOS_ARRAY_SIZE(rgszBitmapFileNames)
-						);
+	return CTestUtils::EresUnittest_RunTests(
+		rgszBitmapFileNames, &m_ulBitmapTestCounter,
+		GPOS_ARRAY_SIZE(rgszBitmapFileNames));
 }
 
 // EOF

@@ -122,6 +122,23 @@ select sum(total) from (select sum(value) as total from with_test1 group by i) m
 
 --end_equivalent
 -- pathkeys
+explain (costs off)
+with my_order as (select * from with_test1 order by i)
+select i, count(*)
+from my_order
+group by i order by i;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: with_test1.i
+   ->  GroupAggregate
+         Group Key: with_test1.i
+         ->  Sort
+               Sort Key: with_test1.i
+               ->  Seq Scan on with_test1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
 with my_order as (select * from with_test1 order by i)
 select i, count(*)
 from my_order
@@ -1378,10 +1395,10 @@ LINE 2: with my_group_sum(i, total) as (select i, sum(total) from wi...
         ^
 -- Test behavior with an unknown-type literal in the WITH
 WITH q AS (SELECT 'foo' AS x)
-SELECT x, x IS OF (unknown) as is_unknown FROM q;
-  x  | is_unknown 
------+------------
- foo | t
+SELECT x, x IS OF (unknown) as is_unknown, x IS OF (text) as is_text FROM q;
+  x  | is_unknown | is_text 
+-----+------------+---------
+ foo | f          | t
 (1 row)
 
 with cte(foo) as ( select 42 ) select * from ((select foo from cte)) q;
@@ -2213,8 +2230,8 @@ UNION ALL
 SELECT count(a1.i)
   FROM a1
   INNER JOIN a2 ON a2.i = a1.i;
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Subquery Scan on "*SELECT* 1"
@@ -2228,17 +2245,16 @@ SELECT count(a1.i)
                                        ->  Seq Scan on foo foo_1
          ->  Redistribute Motion 1:3  (slice2; segments: 1)
                Hash Key: (count(share1_ref2.i))
-               ->  Finalize Aggregate
+               ->  Aggregate
                      ->  Gather Motion 3:1  (slice3; segments: 3)
-                           ->  Partial Aggregate
-                                 ->  Hash Join
-                                       Hash Cond: (share1_ref2.i = a2_1.i)
-                                       ->  Shared Scan (share slice:id 3:1)
-                                       ->  Hash
-                                             ->  Subquery Scan on a2_1
-                                                   ->  Shared Scan (share slice:id 3:0)
+                           ->  Hash Join
+                                 Hash Cond: (share1_ref2.i = a2_1.i)
+                                 ->  Shared Scan (share slice:id 3:1)
+                                 ->  Hash
+                                       ->  Subquery Scan on a2_1
+                                             ->  Shared Scan (share slice:id 3:0)
  Optimizer: Postgres query optimizer
-(23 rows)
+(22 rows)
 
 -- Another cross-slice ShareInputScan test. There is one producing slice,
 -- and two consumers in second slice. Make sure the Share Input Scan
@@ -2268,9 +2284,9 @@ UNION ALL
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  HashAggregate
-               Group Key: ('a'::text), cte.j
+               Group Key: 'a'::text, cte.j
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: ('a'::text), cte.j
+                     Hash Key: 'a'::text, cte.j
                      ->  Subquery Scan on cte
                            ->  Shared Scan (share slice:id 2:0)
                                  ->  Seq Scan on foo

@@ -15,6 +15,9 @@ DROP TABLE IF EXISTS csvtable;
 DROP TABLE
 DROP TABLE IF EXISTS texttable1;
 DROP TABLE
+DROP TABLE IF EXISTS testSpecialChar;
+NOTICE:  table "testspecialchar" does not exist, skipping
+DROP TABLE
 reset client_min_messages;
 RESET
 CREATE TABLE texttable (
@@ -34,4 +37,6 @@ CREATE TABLE
 CREATE TABLE test.csvtable (
 	    year int, make text, model text, decription text, price decimal)
             DISTRIBUTED BY (year);
+CREATE TABLE
+create table testSpecialChar("Field1" bigint, "Field#2" text) distributed by ("Field1");
 CREATE TABLE

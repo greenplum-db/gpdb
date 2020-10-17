@@ -109,7 +109,10 @@ IndexApply-InnerSelect-Basic IndexApply-InnerSelect-PartTable IndexApply-PartKey
 IndexApply-InnerSelect-Heterogeneous-DTS IndexApply-Heterogeneous-BothSidesPartitioned
 IndexApply-InnerSelect-PartTable2 IndexApply-ForPartialIndex CastedScalarIf-On-Index-Key
 IndexApply-MultiDistKey-WithComplexPreds IndexApply-MultiDistKeys-Bitmap
-IndexApply-MultiDistKeys-Bitmap-WithComplexPreds;
+IndexApply-MultiDistKeys-Bitmap-WithComplexPreds
+BitmapIndexNLJWithProject BitmapIndexNLOJWithProject
+BitmapIndexNLJWithProjectNoFilt BtreeIndexNLJWithProjectNoPart
+BitmapIndexNLOJWithProjectNonPart BtreeIndexNLOJWithProject;
 
 CDynamicIndexScanTest:
 DynamicIndexScan-Homogenous DynamicIndexScan-BoolTrue DynamicIndexScan-BoolFalse
@@ -200,7 +203,7 @@ CPartTableLossyCastTest:
 RangePartLossyCastLTEqOnEndPartitionRange RangePartLossyCastLTOnEndPartitionRange
 RangePartLossyCastEqOnEndPartitionRange RangePartLossyCastLTEqInPartitionRange
 RangePartLossyCastLTInPartitionRange RangePartLossyCastEqInPartitionRange
-ListPartLossyCastLT ListPartLossyCastEq;
+ListPartLossyCastLT ListPartLossyCastEq ListPartLossyCastNEq MultiLevelPartLossyCastNEq;
 
 CPartTblDPETest:
 PartTbl-AvoidRangePred-DPE PartTbl-DPE-Correlated-NLOuter
@@ -317,7 +320,11 @@ COpfamiliesTest:
 JoinCitextVarchar JoinDefaultOpfamiliesUsingNonDefaultOpfamilyOp
 MultiColumnAggWithDefaultOpfamilies JoinTinterval FullJoin-NonDefaultOpfamily
 JoinAbsEqWithoutOpfamilies 3WayJoinUsingOperatorsOfNonDefaultOpfamily
+Distinct-LegacyOpfamily;
 
+CSubquery2Test:
+Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJoin Subq2OuterRefMultiLevelInOn
+Index-Join-With-Subquery-In-Pred
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

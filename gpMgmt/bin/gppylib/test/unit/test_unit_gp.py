@@ -1,6 +1,6 @@
 from gparray import Segment, GpArray
 
-from gp_unittest import *
+from .gp_unittest import *
 
 
 class GpConfig(GpTestCase):

@@ -16,29 +16,28 @@
 #include "gpos/types.h"
 #include "gpos/common/clibtypes.h"
 
-namespace gpos {
+namespace gpos
+{
+namespace syslib
+{
+// get the date and time
+void GetTimeOfDay(TIMEVAL *tv, TIMEZONE *tz);
 
-	namespace syslib {
+// get system and user time
+void GetRusage(RUSAGE *usage);
 
-		// get the date and time
-		void GetTimeOfDay(TIMEVAL *tv, TIMEZONE *tz);
+// open a connection to the system logger for a program
+void OpenLog(const CHAR *ident, INT option, INT facility);
 
-		// get system and user time
-		void GetRusage(RUSAGE *usage);
+// generate a log message
+void SysLog(INT priority, const CHAR *format);
 
-		// open a connection to the system logger for a program
-		void OpenLog(const CHAR *ident, INT option, INT facility);
-
-		// generate a log message
-		void SysLog(INT priority, const CHAR *format);
-
-		// close the descriptor being used to write to the system logger
-		void CloseLog();
+// close the descriptor being used to write to the system logger
+void CloseLog();
 
 
-	} //namespace syslib
-}
+}  //namespace syslib
+}  // namespace gpos
 
 #endif
 // EOF
-

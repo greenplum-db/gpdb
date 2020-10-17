@@ -23,9 +23,9 @@ extern "C" {
 using namespace gpos;
 
 // ctor
-CMemoryPoolPallocManager::CMemoryPoolPallocManager(CMemoryPool *internal, EMemoryPoolType)
-	:
-	CMemoryPoolManager(internal, EMemoryPoolExternal)
+CMemoryPoolPallocManager::CMemoryPoolPallocManager(CMemoryPool *internal,
+												   EMemoryPoolType)
+	: CMemoryPoolManager(internal, EMemoryPoolExternal)
 {
 }
 
@@ -37,14 +37,15 @@ CMemoryPoolPallocManager::NewMemoryPool()
 }
 
 void
-CMemoryPoolPallocManager::DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat)
+CMemoryPoolPallocManager::DeleteImpl(void *ptr,
+									 CMemoryPool::EAllocationType eat)
 {
 	CMemoryPoolPalloc::DeleteImpl(ptr, eat);
 }
 
 // get user requested size of allocation
 ULONG
-CMemoryPoolPallocManager::UserSizeOfAlloc(const void* ptr)
+CMemoryPoolPallocManager::UserSizeOfAlloc(const void *ptr)
 {
 	return CMemoryPoolPalloc::UserSizeOfAlloc(ptr);
 }
@@ -52,7 +53,8 @@ CMemoryPoolPallocManager::UserSizeOfAlloc(const void* ptr)
 GPOS_RESULT
 CMemoryPoolPallocManager::Init()
 {
-	return CMemoryPoolManager::SetupGlobalMemoryPoolManager<CMemoryPoolPallocManager, CMemoryPoolPalloc>();
+	return CMemoryPoolManager::SetupGlobalMemoryPoolManager<
+		CMemoryPoolPallocManager, CMemoryPoolPalloc>();
 }
 
 // EOF

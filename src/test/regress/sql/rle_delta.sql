@@ -11,6 +11,8 @@ set intervalstyle='sql_standard';
 
 set gp_default_storage_options='checksum=off';
 
+\set HIDE_TABLEAM off
+
 --
 -- Table with rle_type different levels + delta columns
 --

@@ -27,7 +27,7 @@
  * the backend's "backend/libpq" is quite separate from "interfaces/libpq".
  * All that remains is similarities of names to trap the unwary...
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *	src/backend/libpq/pqcomm.c
@@ -82,22 +82,41 @@
 #ifdef HAVE_NETINET_TCP_H
 #include <netinet/tcp.h>
 #endif
-#include <arpa/inet.h>
 #ifdef HAVE_UTIME_H
 #include <utime.h>
 #endif
-#ifdef WIN32_ONLY_COMPILER		/* mstcpip.h is missing on mingw */
+#ifdef _MSC_VER					/* mstcpip.h is missing on mingw */
 #include <mstcpip.h>
 #endif
 
-#include "libpq/ip.h"
+#include "common/ip.h"
 #include "libpq/libpq.h"
 #include "miscadmin.h"
+#include "port/pg_bswap.h"
 #include "storage/ipc.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "cdb/cdbvars.h"
 #include "tcop/tcopprot.h"
+
+/*
+ * Cope with the various platform-specific ways to spell TCP keepalive socket
+ * options.  This doesn't cover Windows, which as usual does its own thing.
+ */
+#if defined(TCP_KEEPIDLE)
+/* TCP_KEEPIDLE is the name of this option on Linux and *BSD */
+#define PG_TCP_KEEPALIVE_IDLE TCP_KEEPIDLE
+#define PG_TCP_KEEPALIVE_IDLE_STR "TCP_KEEPIDLE"
+#elif defined(TCP_KEEPALIVE_THRESHOLD)
+/* TCP_KEEPALIVE_THRESHOLD is the name of this option on Solaris >= 11 */
+#define PG_TCP_KEEPALIVE_IDLE TCP_KEEPALIVE_THRESHOLD
+#define PG_TCP_KEEPALIVE_IDLE_STR "TCP_KEEPALIVE_THRESHOLD"
+#elif defined(TCP_KEEPALIVE) && defined(__darwin__)
+/* TCP_KEEPALIVE is the name of this option on macOS */
+/* Caution: Solaris has this symbol but it means something different */
+#define PG_TCP_KEEPALIVE_IDLE TCP_KEEPALIVE
+#define PG_TCP_KEEPALIVE_IDLE_STR "TCP_KEEPALIVE"
+#endif
 
 /*
  * Cope with the various platform-specific ways to spell TCP keepalive socket
@@ -167,14 +186,13 @@ static void socket_startcopyout(void);
 static void socket_endcopyout(bool errorAbort);
 static int	internal_putbytes(const char *s, size_t len);
 static int	internal_flush(void);
-static void socket_set_nonblocking(bool nonblocking);
 
 #ifdef HAVE_UNIX_SOCKETS
 static int	Lock_AF_UNIX(char *unixSocketDir, char *unixSocketPath);
 static int	Setup_AF_UNIX(char *sock_path);
-#endif   /* HAVE_UNIX_SOCKETS */
+#endif							/* HAVE_UNIX_SOCKETS */
 
-static PQcommMethods PqCommSocketMethods = {
+static const PQcommMethods PqCommSocketMethods = {
 	socket_comm_reset,
 	socket_flush,
 	socket_flush_if_writable,
@@ -185,7 +203,7 @@ static PQcommMethods PqCommSocketMethods = {
 	socket_endcopyout
 };
 
-PQcommMethods *PqCommMethods = &PqCommSocketMethods;
+const PQcommMethods *PqCommMethods = &PqCommSocketMethods;
 
 WaitEventSet *FeBeWaitSet;
 
@@ -274,7 +292,7 @@ socket_close(int code, Datum arg)
 
 		if (MyProcPort->gss->cred != GSS_C_NO_CREDENTIAL)
 			gss_release_cred(&min_s, &MyProcPort->gss->cred);
-#endif   /* ENABLE_GSS */
+#endif							/* ENABLE_GSS */
 
 		/*
 		 * GSS and SSPI share the port->gss struct.  Since nowhere else does a
@@ -282,7 +300,7 @@ socket_close(int code, Datum arg)
 		 * BackendInitialize().
 		 */
 		free(MyProcPort->gss);
-#endif   /* ENABLE_GSS || ENABLE_SSPI */
+#endif							/* ENABLE_GSS || ENABLE_SSPI */
 
 		/*
 		 * Cleanly shut down SSL layer.  Nowhere else does a postmaster child
@@ -358,6 +376,8 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 	char		portNumberStr[32];
 	const char *familyDesc;
 	char		familyDescBuf[64];
+	const char *addrDesc;
+	char		addrBuf[NI_MAXHOST];
 	char	   *service;
 	struct addrinfo *addrs = NULL,
 			   *addr;
@@ -399,7 +419,7 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 		service = unixSocketPath;
 	}
 	else
-#endif   /* HAVE_UNIX_SOCKETS */
+#endif							/* HAVE_UNIX_SOCKETS */
 	{
 		snprintf(portNumberStr, sizeof(portNumberStr), "%d", portNumber);
 		service = portNumberStr;
@@ -414,8 +434,8 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 							hostName, service, gai_strerror(ret))));
 		else
 			ereport(LOG,
-				 (errmsg("could not translate service \"%s\" to address: %s",
-						 service, gai_strerror(ret))));
+					(errmsg("could not translate service \"%s\" to address: %s",
+							service, gai_strerror(ret))));
 		if (addrs)
 			pg_freeaddrinfo_all(hint.ai_family, addrs);
 		return STATUS_ERROR;
@@ -446,7 +466,7 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 			break;
 		}
 
-		/* set up family name for possible error messages */
+		/* set up address family name for log messages */
 		switch (addr->ai_family)
 		{
 			case AF_INET:
@@ -470,13 +490,28 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 				break;
 		}
 
+		/* set up text form of address for log messages */
+#ifdef HAVE_UNIX_SOCKETS
+		if (addr->ai_family == AF_UNIX)
+			addrDesc = unixSocketPath;
+		else
+#endif
+		{
+			pg_getnameinfo_all((const struct sockaddr_storage *) addr->ai_addr,
+							   addr->ai_addrlen,
+							   addrBuf, sizeof(addrBuf),
+							   NULL, 0,
+							   NI_NUMERICHOST);
+			addrDesc = addrBuf;
+		}
+
 		if ((fd = socket(addr->ai_family, SOCK_STREAM, 0)) == PGINVALID_SOCKET)
 		{
 			ereport(LOG,
 					(errcode_for_socket_access(),
-			/* translator: %s is IPv4, IPv6, or Unix */
-					 errmsg("could not create %s socket: %m",
-							familyDesc)));
+			/* translator: first %s is IPv4, IPv6, or Unix */
+					 errmsg("could not create %s socket for address \"%s\": %m",
+							familyDesc, addrDesc)));
 			continue;
 		}
 
@@ -500,8 +535,9 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 			{
 				ereport(LOG,
 						(errcode_for_socket_access(),
-						 errmsg("setsockopt(%s) failed: %m",
-								"SO_REUSEADDR")));
+				/* translator: first %s is IPv4, IPv6, or Unix */
+						 errmsg("setsockopt(SO_REUSEADDR) failed for %s address \"%s\": %m",
+								familyDesc, addrDesc)));
 				closesocket(fd);
 				continue;
 			}
@@ -516,8 +552,9 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 			{
 				ereport(LOG,
 						(errcode_for_socket_access(),
-						 errmsg("setsockopt(%s) failed: %m",
-								"IPV6_V6ONLY")));
+				/* translator: first %s is IPv4, IPv6, or Unix */
+						 errmsg("setsockopt(IPV6_V6ONLY) failed for %s address \"%s\": %m",
+								familyDesc, addrDesc)));
 				closesocket(fd);
 				continue;
 			}
@@ -535,16 +572,16 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 		{
 			ereport(LOG,
 					(errcode_for_socket_access(),
-			/* translator: %s is IPv4, IPv6, or Unix */
-					 errmsg("could not bind %s socket: %m",
-							familyDesc),
+			/* translator: first %s is IPv4, IPv6, or Unix */
+					 errmsg("could not bind %s address \"%s\": %m",
+							familyDesc, addrDesc),
 					 (IS_AF_UNIX(addr->ai_family)) ?
-				  errhint("Is another postmaster already running on port %d?"
-						  " If not, remove socket file \"%s\" and retry.",
-						  (int) portNumber, service) :
-				  errhint("Is another postmaster already running on port %d?"
-						  " If not, wait a few seconds and retry.",
-						  (int) portNumber)));
+					 errhint("Is another postmaster already running on port %d?"
+							 " If not, remove socket file \"%s\" and retry.",
+							 (int) portNumber, service) :
+					 errhint("Is another postmaster already running on port %d?"
+							 " If not, wait a few seconds and retry.",
+							 (int) portNumber)));
 			closesocket(fd);
 			continue;
 		}
@@ -574,12 +611,25 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 		{
 			ereport(LOG,
 					(errcode_for_socket_access(),
-			/* translator: %s is IPv4, IPv6, or Unix */
-					 errmsg("could not listen on %s socket: %m",
-							familyDesc)));
+			/* translator: first %s is IPv4, IPv6, or Unix */
+					 errmsg("could not listen on %s address \"%s\": %m",
+							familyDesc, addrDesc)));
 			closesocket(fd);
 			continue;
 		}
+
+#ifdef HAVE_UNIX_SOCKETS
+		if (addr->ai_family == AF_UNIX)
+			ereport(LOG,
+					(errmsg("listening on Unix socket \"%s\"",
+							addrDesc)));
+		else
+#endif
+			ereport(LOG,
+			/* translator: first %s is IPv4 or IPv6 */
+					(errmsg("listening on %s address \"%s\", port %d",
+							familyDesc, addrDesc, (int) portNumber)));
+
 		ListenSocket[listen_index] = fd;
 		added++;
 	}
@@ -687,7 +737,7 @@ Setup_AF_UNIX(char *sock_path)
 	}
 	return STATUS_OK;
 }
-#endif   /* HAVE_UNIX_SOCKETS */
+#endif							/* HAVE_UNIX_SOCKETS */
 
 
 /*
@@ -706,7 +756,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 	/* accept connection and fill in the client (remote) address */
 	port->raddr.salen = sizeof(port->raddr.addr);
 	if ((port->sock = accept(server_fd,
-							 (struct sockaddr *) & port->raddr.addr,
+							 (struct sockaddr *) &port->raddr.addr,
 							 &port->raddr.salen)) == PGINVALID_SOCKET)
 	{
 		ereport(LOG,
@@ -724,20 +774,10 @@ StreamConnection(pgsocket server_fd, Port *port)
 		return STATUS_ERROR;
 	}
 
-#ifdef SCO_ACCEPT_BUG
-
-	/*
-	 * UnixWare 7+ and OpenServer 5.0.4 are known to have this bug, but it
-	 * shouldn't hurt to catch it for all versions of those platforms.
-	 */
-	if (port->raddr.addr.ss_family == 0)
-		port->raddr.addr.ss_family = AF_UNIX;
-#endif
-
 	/* fill in the server (local) address */
 	port->laddr.salen = sizeof(port->laddr.addr);
 	if (getsockname(port->sock,
-					(struct sockaddr *) & port->laddr.addr,
+					(struct sockaddr *) &port->laddr.addr,
 					&port->laddr.salen) < 0)
 	{
 		elog(LOG, "getsockname() failed: %m");
@@ -815,7 +855,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 		if (getsockopt(port->sock, SOL_SOCKET, SO_SNDBUF, (char *) &oldopt,
 					   &optlen) < 0)
 		{
-			elog(LOG, "getsockopt(SO_SNDBUF) failed: %m");
+			elog(LOG, "getsockopt(%s) failed: %m", "SO_SNDBUF");
 			return STATUS_ERROR;
 		}
 		newopt = PQ_SEND_BUFFER_SIZE * 4;
@@ -824,7 +864,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 			if (setsockopt(port->sock, SOL_SOCKET, SO_SNDBUF, (char *) &newopt,
 						   sizeof(newopt)) < 0)
 			{
-				elog(LOG, "setsockopt(SO_SNDBUF) failed: %m");
+				elog(LOG, "setsockopt(%s) failed: %m", "SO_SNDBUF");
 				return STATUS_ERROR;
 			}
 		}
@@ -840,6 +880,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 		(void) pq_setkeepalivesidle(tcp_keepalives_idle, port);
 		(void) pq_setkeepalivesinterval(tcp_keepalives_interval, port);
 		(void) pq_setkeepalivescount(tcp_keepalives_count, port);
+		(void) pq_settcpusertimeout(tcp_user_timeout, port);
 	}
 
 	return STATUS_OK;
@@ -892,8 +933,8 @@ TouchSocketFiles(void)
 #else							/* !HAVE_UTIME */
 #ifdef HAVE_UTIMES
 		utimes(sock_path, NULL);
-#endif   /* HAVE_UTIMES */
-#endif   /* HAVE_UTIME */
+#endif							/* HAVE_UTIMES */
+#endif							/* HAVE_UTIME */
 	}
 }
 
@@ -929,7 +970,7 @@ RemoveSocketFiles(void)
 /* --------------------------------
  *			  socket_set_nonblocking - set socket blocking/non-blocking
  *
- * Sets the socket non-blocking if nonblocking is TRUE, or sets it
+ * Sets the socket non-blocking if nonblocking is true, or sets it
  * blocking otherwise.
  * --------------------------------
  */
@@ -1362,7 +1403,7 @@ pq_getmessage(StringInfo s, int maxlen)
 		return EOF;
 	}
 
-	len = ntohl(len);
+	len = pg_ntoh32(len);
 
 	if (len < 4 ||
 		(maxlen > 0 && len > maxlen))
@@ -1654,7 +1695,7 @@ socket_putmessage(char msgtype, const char *s, size_t len)
 	{
 		uint32		n32;
 
-		n32 = htonl((uint32) (len + 4));
+		n32 = pg_hton32((uint32) (len + 4));
 		if (internal_putbytes((char *) &n32, 4))
 			goto fail;
 	}
@@ -1678,7 +1719,7 @@ fail:
 static void
 socket_putmessage_noblock(char msgtype, const char *s, size_t len)
 {
-	int res		PG_USED_FOR_ASSERTS_ONLY;
+	int			res PG_USED_FOR_ASSERTS_ONLY;
 	int			required;
 
 	/*
@@ -1803,7 +1844,7 @@ pq_getkeepalivesidle(Port *port)
 #else							/* WIN32 */
 		/* We can't get the defaults on Windows, so return "don't know" */
 		port->default_keepalives_idle = -1;
-#endif   /* WIN32 */
+#endif							/* WIN32 */
 	}
 
 	return port->default_keepalives_idle;
@@ -1829,7 +1870,7 @@ pq_setkeepalivesidle(int idle, Port *port)
 		if (pq_getkeepalivesidle(port) < 0)
 		{
 			if (idle == 0)
-				return STATUS_OK;		/* default is set but unknown */
+				return STATUS_OK;	/* default is set but unknown */
 			else
 				return STATUS_ERROR;
 		}
@@ -1880,12 +1921,12 @@ pq_getkeepalivesinterval(Port *port)
 					   &size) < 0)
 		{
 			elog(LOG, "getsockopt(%s) failed: %m", "TCP_KEEPINTVL");
-			port->default_keepalives_interval = -1;		/* don't know */
+			port->default_keepalives_interval = -1; /* don't know */
 		}
 #else
 		/* We can't get the defaults on Windows, so return "don't know" */
 		port->default_keepalives_interval = -1;
-#endif   /* WIN32 */
+#endif							/* WIN32 */
 	}
 
 	return port->default_keepalives_interval;
@@ -1910,7 +1951,7 @@ pq_setkeepalivesinterval(int interval, Port *port)
 		if (pq_getkeepalivesinterval(port) < 0)
 		{
 			if (interval == 0)
-				return STATUS_OK;		/* default is set but unknown */
+				return STATUS_OK;	/* default is set but unknown */
 			else
 				return STATUS_ERROR;
 		}
@@ -1960,7 +2001,7 @@ pq_getkeepalivescount(Port *port)
 					   &size) < 0)
 		{
 			elog(LOG, "getsockopt(%s) failed: %m", "TCP_KEEPCNT");
-			port->default_keepalives_count = -1;		/* don't know */
+			port->default_keepalives_count = -1;	/* don't know */
 		}
 	}
 
@@ -1985,7 +2026,7 @@ pq_setkeepalivescount(int count, Port *port)
 		if (pq_getkeepalivescount(port) < 0)
 		{
 			if (count == 0)
-				return STATUS_OK;		/* default is set but unknown */
+				return STATUS_OK;	/* default is set but unknown */
 			else
 				return STATUS_ERROR;
 		}
@@ -2006,6 +2047,78 @@ pq_setkeepalivescount(int count, Port *port)
 	if (count != 0)
 	{
 		elog(LOG, "setsockopt(%s) not supported", "TCP_KEEPCNT");
+		return STATUS_ERROR;
+	}
+#endif
+
+	return STATUS_OK;
+}
+
+int
+pq_gettcpusertimeout(Port *port)
+{
+#ifdef TCP_USER_TIMEOUT
+	if (port == NULL || IS_AF_UNIX(port->laddr.addr.ss_family))
+		return 0;
+
+	if (port->tcp_user_timeout != 0)
+		return port->tcp_user_timeout;
+
+	if (port->default_tcp_user_timeout == 0)
+	{
+		ACCEPT_TYPE_ARG3 size = sizeof(port->default_tcp_user_timeout);
+
+		if (getsockopt(port->sock, IPPROTO_TCP, TCP_USER_TIMEOUT,
+					   (char *) &port->default_tcp_user_timeout,
+					   &size) < 0)
+		{
+			elog(LOG, "getsockopt(%s) failed: %m", "TCP_USER_TIMEOUT");
+			port->default_tcp_user_timeout = -1;	/* don't know */
+		}
+	}
+
+	return port->default_tcp_user_timeout;
+#else
+	return 0;
+#endif
+}
+
+int
+pq_settcpusertimeout(int timeout, Port *port)
+{
+	if (port == NULL || IS_AF_UNIX(port->laddr.addr.ss_family))
+		return STATUS_OK;
+
+#ifdef TCP_USER_TIMEOUT
+	if (timeout == port->tcp_user_timeout)
+		return STATUS_OK;
+
+	if (port->default_tcp_user_timeout <= 0)
+	{
+		if (pq_gettcpusertimeout(port) < 0)
+		{
+			if (timeout == 0)
+				return STATUS_OK;	/* default is set but unknown */
+			else
+				return STATUS_ERROR;
+		}
+	}
+
+	if (timeout == 0)
+		timeout = port->default_tcp_user_timeout;
+
+	if (setsockopt(port->sock, IPPROTO_TCP, TCP_USER_TIMEOUT,
+				   (char *) &timeout, sizeof(timeout)) < 0)
+	{
+		elog(LOG, "setsockopt(%s) failed: %m", "TCP_USER_TIMEOUT");
+		return STATUS_ERROR;
+	}
+
+	port->tcp_user_timeout = timeout;
+#else
+	if (timeout != 0)
+	{
+		elog(LOG, "setsockopt(%s) not supported", "TCP_USER_TIMEOUT");
 		return STATUS_ERROR;
 	}
 #endif

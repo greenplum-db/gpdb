@@ -2,7 +2,7 @@
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-DROPPROTOCOL">
+<refentry id="sql-dropprotocol">
  <indexterm zone="sql-dropprotocol">
   <primary>DROP PROTOCOL</primary>
  </indexterm>

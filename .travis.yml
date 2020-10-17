@@ -23,6 +23,8 @@ addons:
             - libperl-dev
             - libuv1-dev
             - g++-8
+            - python3
+            - python3-dev
             - python-dev
             - python-yaml
             - libapr1-dev
@@ -118,12 +120,38 @@ matrix:
                   sources: *common_sources
                   packages: *common_packages
 
+        - stage: check-format
+          os: linux
+          dist: bionic
+          addons:
+            apt:
+              sources:
+                - *common_sources
+                - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
+                  key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+              packages:
+                - clang-format-10
+                - parallel
+          before_install: ~
+          install: ~
+          before_script: ~
+          after_script: ~
+          script:
+            - env CLANG_FORMAT=clang-format-10 src/tools/fmt gen
+            - git diff --exit-code
+            - env CLANG_FORMAT=clang-format-10 src/tools/fmt chk
+
+stages:
+  - check-format
+  - test
+
 ## ----------------------------------------------------------------------
 ## Build tools
 ## ----------------------------------------------------------------------
 
 python:
     - "2.7"
+    - "3.6"
 
 # For linux, to prevent a possible crash in gpstop, disable RemoveIPC. See:
 # https://www.postgresql.org/docs/current/kernel-resources.html#SYSTEMD-REMOVEIPC
@@ -131,6 +159,7 @@ python:
 before_install:
     - eval "${OVERRIDE_CC}"
     - eval "${OVERRIDE_CXX}"
+    - ccache --max-size 4G
     # ccache 3.2 (from Ubuntu Xenial) has CCACHE_CPP2 default to off (this
     # setting defaults to on starting from ccache 3.3). That default leads to
     # unlegible compiler warning outputs because GCC and Clang will emit

@@ -21,40 +21,39 @@
 // fwd decl
 namespace gpos
 {
-	class CWStringDynamic;
+class CWStringDynamic;
 }
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXMLSerializerTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	
-	class CXMLSerializerTest
-	{
-		private:
-			// helper function for using the XML serializer to generate a document
-			// with or without indentation
-			static CWStringDynamic *Pstr(CMemoryPool *mp, BOOL indentation);
-			
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CXMLSerializerTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-			static GPOS_RESULT EresUnittest_NoIndent();
-			static GPOS_RESULT EresUnittest_Base64();
+class CXMLSerializerTest
+{
+private:
+	// helper function for using the XML serializer to generate a document
+	// with or without indentation
+	static CWStringDynamic *Pstr(CMemoryPool *mp, BOOL indentation);
 
-	}; // class CXMLSerializerTest
-}
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
+	static GPOS_RESULT EresUnittest_NoIndent();
+	static GPOS_RESULT EresUnittest_Base64();
 
-#endif // !GPOPT_CXMLSerializerTest_H
+};	// class CXMLSerializerTest
+}  // namespace gpdxl
+
+#endif	// !GPOPT_CXMLSerializerTest_H
 
 // EOF

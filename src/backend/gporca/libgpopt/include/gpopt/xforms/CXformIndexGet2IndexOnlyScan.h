@@ -16,69 +16,57 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformIndexGet2IndexOnlyScan
-	//
-	//	@doc:
-	//		Transform Index Get to Index Scan
-	//
-	//---------------------------------------------------------------------------
-	class CXformIndexGet2IndexOnlyScan : public CXformImplementation
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformIndexGet2IndexOnlyScan
+//
+//	@doc:
+//		Transform Index Get to Index Scan
+//
+//---------------------------------------------------------------------------
+class CXformIndexGet2IndexOnlyScan : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformIndexGet2IndexOnlyScan(const CXformIndexGet2IndexOnlyScan &);
+
+public:
+	// ctor
+	explicit CXformIndexGet2IndexOnlyScan(CMemoryPool *);
+
+	// dtor
+	virtual ~CXformIndexGet2IndexOnlyScan()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfIndexGet2IndexOnlyScan;
+	}
 
-			// private copy ctor
-			CXformIndexGet2IndexOnlyScan(const CXformIndexGet2IndexOnlyScan &);
+	// xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformIndexGet2IndexOnlyScan";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &	//exprhdl
+	) const;
 
-			// ctor
-			explicit
-			CXformIndexGet2IndexOnlyScan(CMemoryPool *);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformIndexGet2IndexOnlyScan() {}
+};	// class CXformIndexGet2IndexOnlyScan
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfIndexGet2IndexOnlyScan;
-			}
+}  // namespace gpopt
 
-			// xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformIndexGet2IndexOnlyScan";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle &//exprhdl
-				)
-				const;
-
-			// actual transform
-			void Transform
-				(
-				CXformContext *pxfctxt,
-				CXformResult *pxfres,
-				CExpression *pexpr
-				)
-				const;
-
-	}; // class CXformIndexGet2IndexOnlyScan
-
-}
-
-#endif // !GPOPT_CXformIndexGet2IndexOnlyScan_H
+#endif	// !GPOPT_CXformIndexGet2IndexOnlyScan_H
 
 // EOF

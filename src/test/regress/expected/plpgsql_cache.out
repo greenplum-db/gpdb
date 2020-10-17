@@ -53,8 +53,6 @@ create table cache_tab
 partition part1 start (int '1') end (int '10')); 
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_def" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_part1" for table "cache_tab"
 insert into cache_tab values(1, 2);
 insert into cache_tab values(2, 3);
 insert into cache_tab values(3, 4);
@@ -255,8 +253,6 @@ create table cache_tab
 partition part1 start (int '1') end (int '10')); 
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_def" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_part1" for table "cache_tab"
 insert into cache_tab values(1, 'foo1');
 create function cache_test() returns int as $$
 declare 
@@ -301,8 +297,6 @@ create table cache_tab
 partition part1 start (int '1') end (int '10')); 
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_def" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_part1" for table "cache_tab"
 insert into cache_tab values(0, 100);
 insert into cache_tab values(1, 100);
 insert into cache_tab values(2, 100);
@@ -358,8 +352,6 @@ create table cache_tab
 partition part1 start (int '1') end (int '10')); 
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_def" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_part1" for table "cache_tab"
 insert into cache_tab values(1, 100);
 insert into cache_tab values(2, 100);
 insert into cache_tab values(3, 100);
@@ -384,8 +376,6 @@ create table cache_tab
 partition part1 start (int '1') end (int '10')); 
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_def" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_part1" for table "cache_tab"
 insert into cache_tab values(1, 100);
 select cache_test();
  cache_test 
@@ -816,16 +806,6 @@ create table cache_tab
   c2 int,
   distkey int
 ) distributed by (distkey) partition by range(c1) (start (1) end(11) every(1));
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_1" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_2" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_3" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_4" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_5" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_6" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_7" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_8" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_9" for table "cache_tab"
-NOTICE:  CREATE TABLE will create partition "cache_tab_1_prt_10" for table "cache_tab"
 insert into cache_tab select g, g, 0 from generate_series(1, 10) g;
 -- A helper function that prints the parameter as a NOTICE. Claim a very
 -- small cost, to encourage the planner to evaluate this function first,
@@ -835,7 +815,7 @@ insert into cache_tab select g, g, 0 from generate_series(1, 10) g;
 -- We use a temporary sequence to distinguish between two calls with the same
 -- value in the expected output; gpdiff masks out duplicated NOTICEs, the
 -- sequence makes them different.
-create sequence notice_value_seq;
+create sequence notice_value_seq cache 1;
 create or replace function pg_temp.notice_value(t text) returns bool as
 $$
 begin

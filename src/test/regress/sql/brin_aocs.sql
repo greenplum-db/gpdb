@@ -420,11 +420,11 @@ UPDATE brintest_aocs SET int8col = int8col * int4col;
 UPDATE brintest_aocs SET textcol = '' WHERE textcol IS NOT NULL;
 
 -- Vaccum again so that a new segment file is created.
-VACUUM brintest_ao;
-INSERT INTO brintest_ao SELECT * FROM brintest_ao;
+VACUUM brintest_aocs;
+INSERT INTO brintest_aocs SELECT * FROM brintest_aocs;
 -- We should have two segment files per Greenplum segment (QE).
 -- start_ignore
-SELECT segment_id, segno, tupcount, state FROM gp_toolkit.__gp_aoseg('brintest_ao');
+SELECT segment_id, segno, tupcount, state FROM gp_toolkit.__gp_aoseg('brintest_aocs');
 -- end_ignore
 
 -- Tests for brin_summarize_new_values

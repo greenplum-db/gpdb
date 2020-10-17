@@ -1,6 +1,6 @@
-create schema temp_on_commit_delete_rows_@orientation@;
-set search_path="$user",temp_on_commit_delete_rows_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema temp_on_commit_delete_rows_@amname@;
+set search_path="$user",temp_on_commit_delete_rows_@amname@,public;
+SET default_table_access_method=@amname@;
 --
 -- Test ON COMMIT DELETE ROWS action against AO/AOCS tables.
 --
@@ -16,7 +16,7 @@ $$ language sql;
 
 begin;
 create temp table temp_delrows(a int, b int)
- with (appendonly=true) on commit delete rows distributed by(a);
+ on commit delete rows distributed by(a);
 insert into temp_delrows select i, i from generate_series(1,20)i;
 create index idelrows on temp_delrows using bitmap(a);
 update temp_delrows set b = -a;

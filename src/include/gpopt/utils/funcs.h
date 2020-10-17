@@ -11,8 +11,7 @@
 #define GPOPT_funcs_H
 
 
-extern "C"
-{
+extern "C" {
 
 #include "postgres.h"
 #include "fmgr.h"
@@ -21,7 +20,6 @@ extern "C"
 extern Datum DisableXform(PG_FUNCTION_ARGS);
 extern Datum EnableXform(PG_FUNCTION_ARGS);
 extern Datum LibraryVersion();
-
 }
 
-#endif // GPOPT_funcs_H
+#endif	// GPOPT_funcs_H

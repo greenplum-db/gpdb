@@ -128,3 +128,65 @@ DROP TABLE t_concurrent_update;
 0: drop table tab_update_epq1;
 0: drop table tab_update_epq2;
 0q:
+
+-- split update is to implement updating on hash keys,
+-- it deletes the tuple and insert a new tuple in a
+-- new segment, so it is not easy for other transaction
+-- to follow the update link to fetch the new tuple. The
+-- other transaction should raise error for such case.
+-- the following case should be tested with GDD enabled.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/8919
+
+0:create table t_splitupdate_raise_error (a int, b int) distributed by (a);
+0:insert into t_splitupdate_raise_error values (1, 1);
+
+-- test delete will throw error
+1: begin;
+1: update t_splitupdate_raise_error set a = a + 1;
+
+2: begin;
+2&: delete from t_splitupdate_raise_error;
+
+1: end;
+2<:
+
+2: abort;
+1q:
+2q:
+
+-- test norm update will throw error
+1: begin;
+1: update t_splitupdate_raise_error set a = a + 1;
+
+2: begin;
+2&: update t_splitupdate_raise_error set b = 999;
+
+1: end;
+2<:
+
+2: abort;
+1q:
+2q:
+
+-- test select for update will throw error
+-- Currently, select for update will reduce lock-level
+-- under some very simple cases, see checkCanOptSelectLockingClause
+-- for details.
+
+1: begin;
+1: update t_splitupdate_raise_error set a = a + 1;
+
+2: begin;
+-- TODO: turn off orca, we should fix this until ORCA
+-- can generate lockrows plannode.
+2: set optimizer = off;
+2&: select * from t_splitupdate_raise_error for update;
+
+1: end;
+2<:
+
+2: abort;
+1q:
+2q:
+
+0:drop table t_splitupdate_raise_error;

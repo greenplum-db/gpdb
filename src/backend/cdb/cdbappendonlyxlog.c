@@ -23,6 +23,7 @@
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "cdb/cdbappendonlyxlog.h"
+#include "pgstat.h"
 #include "storage/fd.h"
 #include "utils/faultinjector.h"
 #include "utils/faultinjector_lists.h"
@@ -61,7 +62,6 @@ ao_insert_replay(XLogReaderState *record)
 	char	   *dbPath;
 	char		path[MAXPGPATH];
 	int			written_len;
-	int64		seek_offset;
 	File		file;
 	int			fileFlags;
 	xl_ao_insert *xlrec = (xl_ao_insert *) XLogRecGetData(record);
@@ -82,25 +82,15 @@ ao_insert_replay(XLogReaderState *record)
 	/* When writing from the beginning of the file, it might not exist yet. Create it. */
 	if (xlrec->target.offset == 0)
 		fileFlags |= O_CREAT;
-	file = PathNameOpenFile(path, fileFlags, 0600);
+	file = PathNameOpenFile(path, fileFlags);
 	if (file < 0)
 	{
 		XLogAOSegmentFile(xlrec->target.node, xlrec->target.segment_filenum);
 		return;
 	}
 
-	seek_offset = FileSeek(file, xlrec->target.offset, SEEK_SET);
-	if (seek_offset != xlrec->target.offset)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("seeked to position " INT64_FORMAT " but expected to seek to position " INT64_FORMAT " in file \"%s\": %m",
-						seek_offset,
-						xlrec->target.offset,
-						path)));
-	}
-
-	written_len = FileWrite(file, buffer, len);
+	written_len = FileWrite(file, buffer, len, xlrec->target.offset,
+							WAIT_EVENT_COPY_FILE_WRITE);
 	if (written_len < 0 || written_len != len)
 	{
 		ereport(ERROR,
@@ -151,7 +141,7 @@ ao_truncate_replay(XLogReaderState *record)
 	else
 		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, xlrec->target.node.relNode, xlrec->target.segment_filenum);
 
-	file = PathNameOpenFile(path, O_RDWR | PG_BINARY, 0600);
+	file = PathNameOpenFile(path, O_RDWR | PG_BINARY);
 	if (file < 0)
 	{
 		/*
@@ -171,7 +161,7 @@ ao_truncate_replay(XLogReaderState *record)
 		return;
 	}
 
-	if (FileTruncate(file, xlrec->target.offset) != 0)
+	if (FileTruncate(file, xlrec->target.offset, WAIT_EVENT_DATA_FILE_TRUNCATE) != 0)
 	{
 		ereport(WARNING,
 				(errcode_for_file_access(),

@@ -7,9 +7,9 @@
 //
 //	@doc:
 //		Implementation of DXL logical set operator
-//		
-//	@owner: 
-//		
+//
+//	@owner:
+//
 //
 //	@test:
 //
@@ -34,26 +34,21 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLLogicalSetOp::CDXLLogicalSetOp
-	(
-	CMemoryPool *mp,
-	EdxlSetOpType edxlsetoptype,
+CDXLLogicalSetOp::CDXLLogicalSetOp(CMemoryPool *mp, EdxlSetOpType edxlsetoptype,
 								   CDXLColDescrArray *col_descr_array,
-	ULongPtr2dArray *input_colids_arrays,
-	BOOL fCastAcrossInputs
-	)
-	:
-	CDXLLogical(mp),
-	m_set_operation_dxl_type(edxlsetoptype),
-	m_col_descr_array(col_descr_array),
-	m_input_colids_arrays(input_colids_arrays),
-	m_cast_across_input_req(fCastAcrossInputs)
+								   ULongPtr2dArray *input_colids_arrays,
+								   BOOL fCastAcrossInputs)
+	: CDXLLogical(mp),
+	  m_set_operation_dxl_type(edxlsetoptype),
+	  m_col_descr_array(col_descr_array),
+	  m_input_colids_arrays(input_colids_arrays),
+	  m_cast_across_input_req(fCastAcrossInputs)
 {
 	GPOS_ASSERT(NULL != m_col_descr_array);
 	GPOS_ASSERT(NULL != m_input_colids_arrays);
 	GPOS_ASSERT(EdxlsetopSentinel > edxlsetoptype);
-	
-#ifdef GPOS_DEBUG	
+
+#ifdef GPOS_DEBUG
 	const ULONG num_of_cols = m_col_descr_array->Size();
 	const ULONG length = m_input_colids_arrays->Size();
 	for (ULONG idx = 0; idx < length; idx++)
@@ -62,7 +57,7 @@ CDXLLogicalSetOp::CDXLLogicalSetOp
 		GPOS_ASSERT(num_of_cols == input_colids_array->Size());
 	}
 
-#endif	
+#endif
 }
 
 //---------------------------------------------------------------------------
@@ -107,22 +102,22 @@ CDXLLogicalSetOp::GetOpNameStr() const
 	switch (m_set_operation_dxl_type)
 	{
 		case EdxlsetopUnion:
-				return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalUnion);
+			return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalUnion);
 
 		case EdxlsetopUnionAll:
-				return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalUnionAll);
+			return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalUnionAll);
 
 		case EdxlsetopIntersect:
-				return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalIntersect);
+			return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalIntersect);
 
 		case EdxlsetopIntersectAll:
-				return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalIntersectAll);
+			return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalIntersectAll);
 
 		case EdxlsetopDifference:
-				return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalDifference);
+			return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalDifference);
 
 		case EdxlsetopDifferenceAll:
-				return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalDifferenceAll);
+			return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalDifferenceAll);
 
 		default:
 			GPOS_ASSERT(!"Unrecognized set operator type");
@@ -139,25 +134,28 @@ CDXLLogicalSetOp::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalSetOp::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLLogicalSetOp::SerializeToDXL(CXMLSerializer *xml_serializer,
+								 const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
 	// serialize the array of input colid arrays
-	CWStringDynamic *input_colids_array_str = CDXLUtils::Serialize(m_mp, m_input_colids_arrays);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenInputCols), input_colids_array_str);
+	CWStringDynamic *input_colids_array_str =
+		CDXLUtils::Serialize(m_mp, m_input_colids_arrays);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenInputCols),
+								 input_colids_array_str);
 	GPOS_DELETE(input_colids_array_str);
-	
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenCastAcrossInputs), m_cast_across_input_req);
+
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenCastAcrossInputs),
+		m_cast_across_input_req);
 
 	// serialize output columns
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenColumns));
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenColumns));
 	GPOS_ASSERT(NULL != m_col_descr_array);
 
 	const ULONG length = m_col_descr_array->Size();
@@ -166,12 +164,15 @@ CDXLLogicalSetOp::SerializeToDXL
 		CDXLColDescr *col_descr_dxl = (*m_col_descr_array)[idx];
 		col_descr_dxl->SerializeToDXL(xml_serializer);
 	}
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenColumns));
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenColumns));
 
 	// serialize children
 	node->SerializeChildrenToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 //---------------------------------------------------------------------------
@@ -183,11 +184,7 @@ CDXLLogicalSetOp::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLLogicalSetOp::IsColDefined
-	(
-	ULONG colid
-	)
-	const
+CDXLLogicalSetOp::IsColDefined(ULONG colid) const
 {
 	const ULONG size = Arity();
 	for (ULONG descr_id = 0; descr_id < size; descr_id++)
@@ -212,11 +209,8 @@ CDXLLogicalSetOp::IsColDefined
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalSetOp::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) const
+CDXLLogicalSetOp::AssertValid(const CDXLNode *node,
+							  BOOL validate_children) const
 {
 	GPOS_ASSERT(2 <= node->Arity());
 	GPOS_ASSERT(NULL != m_col_descr_array);
@@ -230,15 +224,17 @@ CDXLLogicalSetOp::AssertValid
 	for (ULONG idx = 0; idx < num_of_child; ++idx)
 	{
 		CDXLNode *child_dxlnode = (*node)[idx];
-		GPOS_ASSERT(EdxloptypeLogical == child_dxlnode->GetOperator()->GetDXLOperatorType());
+		GPOS_ASSERT(EdxloptypeLogical ==
+					child_dxlnode->GetOperator()->GetDXLOperatorType());
 
 		if (validate_children)
 		{
-			child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+			child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+													  validate_children);
 		}
 	}
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

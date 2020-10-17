@@ -239,12 +239,21 @@ SELECT trigger_unique();
 -- But EntryDB and QEs cannot run DDLs which needs to do dispatch.
 -- We introduce new function location 'EXECUTE ON INITPLAN' to run
 -- the function on initplan to overcome the above issue.
+
+-- Helper function to count the number of temporary files in
+-- pgsql_tmp.
 CREATE or replace FUNCTION get_temp_file_num() returns text as
 $$
 import os
-fileNum = len([name for name in os.listdir(os.environ['MASTER_DATA_DIRECTORY'] + '/base/pgsql_tmp') if name.startswith('FUNCTION_SCAN')])
-return fileNum
-$$ language plpythonu;
+fileNum = 0
+dirNum = 0
+for root, directories, filenames in os.walk('base/pgsql_tmp'):
+  for filename in filenames:
+    fileNum += 1
+  for dir in directories:
+    dirNum += 1
+return '{} files and {} directories'.format(fileNum, dirNum)
+$$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION get_country()
  RETURNS TABLE (
@@ -328,7 +337,9 @@ SELECT count(*) FROM t3_function_scan;
 DROP TABLE IF EXISTS t4_function_scan;
 CREATE TABLE t4_function_scan AS SELECT 444, (1 / (0* random()))::text UNION ALL SELECT * FROM get_country();
 
--- Temp file number after running INITPLAN function, number should not changed.
+-- Temp file number after running INITPLAN function. All the files should've
+-- been cleaned up, but it's normal that the temp directory to hold them is
+-- still around.
 SELECT get_temp_file_num();
 
 -- test join case with two INITPLAN functions

@@ -2,7 +2,7 @@
 //	Greenplum Database
 //	Copyright (C) 2011 EMC Corp.
 //
-//	@filename: 
+//	@filename:
 //		CStackObject.h
 //
 //	@doc:
@@ -16,24 +16,22 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CStackObject
-	//
-	//	@doc:
-	//		Constructor tests stack layout to ensure object is allocated on stack;
-	//		constructor is protected to prevent direct instantiation of class;
-	//
-	//---------------------------------------------------------------------------
-	class CStackObject
-	{
-		protected:
+//---------------------------------------------------------------------------
+//	@class:
+//		CStackObject
+//
+//	@doc:
+//		Constructor tests stack layout to ensure object is allocated on stack;
+//		constructor is protected to prevent direct instantiation of class;
+//
+//---------------------------------------------------------------------------
+class CStackObject
+{
+protected:
+	CStackObject();
+};
+}  // namespace gpos
 
-			CStackObject();
-	};
-}
-
-#endif // !GPOS_CStackObject_H
+#endif	// !GPOS_CStackObject_H
 
 // EOF
-

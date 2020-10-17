@@ -17,38 +17,34 @@
 
 namespace gpos
 {
-	class CTask;
+class CTask;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoSuspendAbort
-	//
-	//	@doc:
-	//		Auto object for suspending and resuming task cancellation
-	//
-	//---------------------------------------------------------------------------
-	class CAutoSuspendAbort : public CStackObject
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoSuspendAbort
+//
+//	@doc:
+//		Auto object for suspending and resuming task cancellation
+//
+//---------------------------------------------------------------------------
+class CAutoSuspendAbort : public CStackObject
+{
+private:
+	// pointer to task in current execution context
+	CTask *m_task;
 
-			// pointer to task in current execution context
-			CTask *m_task;
+public:
+	// ctor - suspends CFA
+	CAutoSuspendAbort();
 
-		public:
+	// dtor - resumes CFA
+	virtual ~CAutoSuspendAbort();
 
-			// ctor - suspends CFA
-			CAutoSuspendAbort();
+};	// class CAutoSuspendAbort
 
-			// dtor - resumes CFA
-			virtual
-			~CAutoSuspendAbort();
+}  // namespace gpos
 
-	}; // class CAutoSuspendAbort
-
-}
-
-#endif // GPOS_CAutoSuspendAbort_H
+#endif	// GPOS_CAutoSuspendAbort_H
 
 
 // EOF
-

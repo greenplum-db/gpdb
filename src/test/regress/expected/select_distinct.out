@@ -130,28 +130,31 @@ SELECT DISTINCT p.age FROM person* p ORDER BY age using >;
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(*) FROM
   (SELECT DISTINCT two, four, two FROM tenk1) ss;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Finalize Aggregate
    Output: count(*)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: (PARTIAL count(*))
          ->  Partial Aggregate
                Output: PARTIAL count(*)
-               ->  Finalize HashAggregate
+               ->  Finalize GroupAggregate
                      Output: tenk1.two, tenk1.four, tenk1.two
                      Group Key: tenk1.two, tenk1.four, tenk1.two
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     ->  Sort
                            Output: tenk1.two, tenk1.four, tenk1.two
-                           Hash Key: tenk1.two, tenk1.four, tenk1.two
-                           ->  Partial HashAggregate
+                           Sort Key: tenk1.two, tenk1.four
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Output: tenk1.two, tenk1.four, tenk1.two
-                                 Group Key: tenk1.two, tenk1.four, tenk1.two
-                                 ->  Seq Scan on public.tenk1
+                                 Hash Key: tenk1.two, tenk1.four, tenk1.two
+                                 ->  Partial HashAggregate
                                        Output: tenk1.two, tenk1.four, tenk1.two
+                                       Group Key: tenk1.two, tenk1.four, tenk1.two
+                                       ->  Seq Scan on public.tenk1
+                                             Output: tenk1.two, tenk1.four, tenk1.two
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
-(19 rows)
+(22 rows)
 
 SELECT count(*) FROM
   (SELECT DISTINCT two, four, two FROM tenk1) ss;
@@ -160,6 +163,73 @@ SELECT count(*) FROM
      4
 (1 row)
 
+--
+-- Compare results between plans using sorting and plans using hash
+-- aggregation. Force spilling in both cases by setting work_mem low.
+--
+SET work_mem='64kB';
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+-- Produce results with sorting.
+SET enable_hashagg=FALSE;
+SET optimizer_enable_hashagg=FALSE;
+SET jit_above_cost=0;
+EXPLAIN (costs off)
+SELECT DISTINCT g%1000 FROM generate_series(0,9999) g;
+                   QUERY PLAN                   
+------------------------------------------------
+ GroupAggregate
+   Group Key: ((g % 1000))
+   ->  Sort
+         Sort Key: ((g % 1000))
+         ->  Function Scan on generate_series g
+(4 rows)
+
+CREATE TABLE distinct_group_1 AS
+SELECT DISTINCT g%1000 FROM generate_series(0,9999) g;
+SET jit_above_cost TO DEFAULT;
+CREATE TABLE distinct_group_2 AS
+SELECT DISTINCT (g%1000)::text FROM generate_series(0,9999) g;
+SET enable_hashagg=TRUE;
+SET optimizer_enable_hashagg=TRUE;
+-- Produce results with hash aggregation.
+SET enable_sort=FALSE;
+SET jit_above_cost=0;
+EXPLAIN (costs off)
+SELECT DISTINCT g%1000 FROM generate_series(0,9999) g;
+                QUERY PLAN                
+------------------------------------------
+ HashAggregate
+   Group Key: (g % 1000)
+   ->  Function Scan on generate_series g
+(3 rows)
+
+CREATE TABLE distinct_hash_1 AS
+SELECT DISTINCT g%1000 FROM generate_series(0,9999) g;
+SET jit_above_cost TO DEFAULT;
+CREATE TABLE distinct_hash_2 AS
+SELECT DISTINCT (g%1000)::text FROM generate_series(0,9999) g;
+SET enable_sort=TRUE;
+SET work_mem TO DEFAULT;
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+-- Compare results
+(SELECT * FROM distinct_hash_1 EXCEPT SELECT * FROM distinct_group_1)
+  UNION ALL
+(SELECT * FROM distinct_group_1 EXCEPT SELECT * FROM distinct_hash_1);
+ ?column? 
+----------
+(0 rows)
+
+(SELECT * FROM distinct_hash_1 EXCEPT SELECT * FROM distinct_group_1)
+  UNION ALL
+(SELECT * FROM distinct_group_1 EXCEPT SELECT * FROM distinct_hash_1);
+ ?column? 
+----------
+(0 rows)
+
+DROP TABLE distinct_hash_1;
+DROP TABLE distinct_hash_2;
+DROP TABLE distinct_group_1;
+DROP TABLE distinct_group_2;
 --
 -- Also, some tests of IS DISTINCT FROM, which doesn't quite deserve its
 -- very own regression file.

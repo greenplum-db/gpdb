@@ -2,7 +2,7 @@
 -- ERRORS
 --
 
--- bad in postquel, but ok in postsql
+-- bad in postquel, but ok in PostgreSQL
 select 1;
 
 
@@ -91,7 +91,7 @@ alter table emp rename column nonesuchatt to newnonesuchatt;
 alter table emp rename column salary to manager;
 
 -- conflict
-alter table emp rename column salary to oid;
+alter table emp rename column salary to ctid;
 
 
 --

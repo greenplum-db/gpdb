@@ -21,7 +21,7 @@ openssl x509 -req -in $1ca.csr -CA $1root.crt -CAkey $1root.key \
     -days 365 -out $1ca.crt -sha256 -CAcreateserial
 
 openssl req -new -newkey rsa:2048 -nodes \
-    -subj "/C=US/ST=California/L=Palo Alto/O=Pivotal/CN=127.0.0.1" \
+    -subj "/C=US/ST=California/L=Palo Alto/O=Pivotal/CN=localhost" \
     -keyout $1.key  -out $1.csr
 
 openssl x509 -req -in $1.csr -CA $1ca.crt -CAkey $1ca.key \

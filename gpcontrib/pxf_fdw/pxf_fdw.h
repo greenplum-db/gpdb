@@ -10,8 +10,8 @@
 
 #include "access/formatter.h"
 #include "commands/copy.h"
+#include "nodes/pathnodes.h"
 #include "nodes/pg_list.h"
-#include "nodes/relation.h"
 #include "utils/rel.h"
 
 #ifndef PXF_FDW_H

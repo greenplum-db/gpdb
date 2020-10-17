@@ -16,139 +16,121 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CScalarBooleanTest
-	//
-	//	@doc:
-	//		Scalar boolean test operator
-	//
-	//---------------------------------------------------------------------------
-	class CScalarBooleanTest : public CScalar
+//---------------------------------------------------------------------------
+//	@class:
+//		CScalarBooleanTest
+//
+//	@doc:
+//		Scalar boolean test operator
+//
+//---------------------------------------------------------------------------
+class CScalarBooleanTest : public CScalar
+{
+public:
+	// different boolean test types
+	enum EBoolTest
 	{
+		EbtIsTrue = 0,
+		EbtIsNotTrue,
+		EbtIsFalse,
+		EbtIsNotFalse,
+		EbtIsUnknown,
+		EbtIsNotUnknown,
 
-		public:
+		EbtSentinel
+	};
 
-			// different boolean test types
-			enum EBoolTest
-			{
-				EbtIsTrue = 0,
-				EbtIsNotTrue,
-				EbtIsFalse,
-				EbtIsNotFalse,
-				EbtIsUnknown,
-				EbtIsNotUnknown,
+	static const WCHAR m_rgwszBoolTest[EbtSentinel][30];
 
-				EbtSentinel
-			};
+	// mapping operator type and child value into the corresponding result value
+	static const BYTE m_rgBoolEvalMap[][3];
 
-			static
-			const WCHAR m_rgwszBoolTest[EbtSentinel][30];
+private:
+	// boolean test
+	EBoolTest m_ebt;
 
-			// mapping operator type and child value into the corresponding result value
-			static
-			const BYTE m_rgBoolEvalMap[][3];
+	// private copy ctor
+	CScalarBooleanTest(const CScalarBooleanTest &);
 
-		private:
+public:
+	// ctor
+	CScalarBooleanTest(CMemoryPool *mp, EBoolTest ebt) : CScalar(mp), m_ebt(ebt)
+	{
+		GPOS_ASSERT(0 <= ebt && EbtSentinel > ebt);
+	}
 
-			// boolean test
-			EBoolTest m_ebt;
+	// dtor
+	virtual ~CScalarBooleanTest()
+	{
+	}
 
-			// private copy ctor
-			CScalarBooleanTest(const CScalarBooleanTest &);
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopScalarBooleanTest;
+	}
 
-		public:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CScalarBooleanTest";
+	}
 
-			// ctor
-			CScalarBooleanTest
-				(
-				CMemoryPool *mp,
-				EBoolTest ebt
-				)
-				:
-				CScalar(mp),
-				m_ebt(ebt)
-			{
-				GPOS_ASSERT(0 <= ebt && EbtSentinel > ebt);
-			}
+	// accessor of boolean test type
+	EBoolTest
+	Ebt() const
+	{
+		return m_ebt;
+	}
 
-			// dtor
-			virtual
-			~CScalarBooleanTest() {}
+	// match function
+	BOOL Matches(COperator *pop) const;
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopScalarBooleanTest;
-			}
+	// sensitivity to order of inputs
+	BOOL
+	FInputOrderSensitive() const
+	{
+		return false;
+	}
 
-			// return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CScalarBooleanTest";
-			}
+	// return a copy of the operator with remapped columns
+	virtual COperator *
+	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
+							   UlongToColRefMap *,	//colref_mapping,
+							   BOOL					//must_exist
+	)
+	{
+		return PopCopyDefault();
+	}
 
-			// accessor of boolean test type
-			EBoolTest Ebt() const
-			{
-				return m_ebt;
-			}
+	// the type of the scalar expression
+	virtual IMDId *MdidType() const;
 
-			// match function
-			BOOL Matches(COperator *pop) const;
+	// boolean expression evaluation
+	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
 
-			// sensitivity to order of inputs
-			BOOL FInputOrderSensitive() const
-			{
-				return false;
-			}
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns
-						(
-						CMemoryPool *, //mp,
-						UlongToColRefMap *, //colref_mapping,
-						BOOL //must_exist
-						)
-			{
-				return PopCopyDefault();
-			}
+	// conversion function
+	static CScalarBooleanTest *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopScalarBooleanTest == pop->Eopid());
 
-			// the type of the scalar expression
-			virtual
-			IMDId *MdidType() const;
+		return dynamic_cast<CScalarBooleanTest *>(pop);
+	}
 
-			// boolean expression evaluation
-			virtual
-			EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+};	// class CScalarBooleanTest
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
-
-			// conversion function
-			static
-			CScalarBooleanTest *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopScalarBooleanTest == pop->Eopid());
-
-				return dynamic_cast<CScalarBooleanTest*>(pop);
-			}
-
-	}; // class CScalarBooleanTest
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CScalarBooleanTest_H
+#endif	// !GPOPT_CScalarBooleanTest_H
 
 // EOF

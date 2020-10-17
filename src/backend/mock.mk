@@ -13,11 +13,12 @@ override CPPFLAGS+= -I$(top_srcdir)/src/backend/libpq \
 					-I$(top_srcdir)/src/test/unit/mock/ \
 					-I. -I$(top_builddir)/src/port \
 					-DDLSUFFIX=$(DLSUFFIX) \
+					-DUNITTEST \
 					-I$(top_srcdir)/src/backend/utils/stat
 
 # TODO: add ldl for quick hack; we need to figure out why
 # postgres in src/backend/Makefile doesn't need this and -pthread.
-MOCK_LIBS := -ldl $(filter-out -ledit, $(LIBS)) $(LDAP_LIBS_BE)
+MOCK_LIBS := -ldl $(filter-out -ledit, $(LIBS)) $(LDAP_LIBS_BE) $(ICU_LIBS)
 
 # These files are not linked into test programs.
 EXCL_OBJS=\

@@ -15,37 +15,31 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CBitmapTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CBitmapTest
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CBitmapTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CBitmapTest
+{
+private:
+	// counter used to mark last successful test
+	static ULONG m_ulBitmapTestCounter;
 
-			// counter used to mark last successful test
-			static
-			ULONG m_ulBitmapTestCounter;
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-		public:
+	static GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			GPOS_RESULT EresUnittest();
+};	// class CBitmapTest
+}  // namespace gpopt
 
-			static
-			GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CBitmapTest
-}
-
-#endif // !GPOPT_CBitmapTest_H
+#endif	// !GPOPT_CBitmapTest_H
 
 // EOF
-

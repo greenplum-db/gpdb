@@ -3,7 +3,7 @@ doc/src/sgml/ref/drop_function.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-DROPFUNCTION">
+<refentry id="sql-dropfunction">
  <indexterm zone="sql-dropfunction">
   <primary>DROP FUNCTION</primary>
  </indexterm>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [, ...] ] )
+DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> [ ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [, ...] ] ) ] [, ...]
     [ CASCADE | RESTRICT ]
 </synopsis>
  </refsynopsisdiv>
@@ -56,7 +56,8 @@ DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ( 
     <term><replaceable class="parameter">name</replaceable></term>
     <listitem>
      <para>
-      The name (optionally schema-qualified) of an existing function.
+      The name (optionally schema-qualified) of an existing function.  If no
+      argument list is specified, the name must be unique in its schema.
      </para>
     </listitem>
    </varlistentry>
@@ -66,14 +67,14 @@ DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ( 
 
     <listitem>
      <para>
-      The mode of an argument: <literal>IN</>, <literal>OUT</>,
-      <literal>INOUT</>, or <literal>VARIADIC</>.
-      If omitted, the default is <literal>IN</>.
+      The mode of an argument: <literal>IN</literal>, <literal>OUT</literal>,
+      <literal>INOUT</literal>, or <literal>VARIADIC</literal>.
+      If omitted, the default is <literal>IN</literal>.
       Note that <command>DROP FUNCTION</command> does not actually pay
-      any attention to <literal>OUT</> arguments, since only the input
+      any attention to <literal>OUT</literal> arguments, since only the input
       arguments are needed to determine the function's identity.
-      So it is sufficient to list the <literal>IN</>, <literal>INOUT</>,
-      and <literal>VARIADIC</> arguments.
+      So it is sufficient to list the <literal>IN</literal>, <literal>INOUT</literal>,
+      and <literal>VARIADIC</literal> arguments.
      </para>
     </listitem>
    </varlistentry>
@@ -109,7 +110,7 @@ DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ( 
       Automatically drop objects that depend on the function (such as
       operators or triggers),
       and in turn all objects that depend on those objects
-      (see <xref linkend="ddl-depend">).
+      (see <xref linkend="ddl-depend"/>).
      </para>
     </listitem>
    </varlistentry>
@@ -126,7 +127,7 @@ DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ( 
   </variablelist>
  </refsect1>
 
- <refsect1 id="SQL-DROPFUNCTION-examples">
+ <refsect1 id="sql-dropfunction-examples">
   <title>Examples</title>
 
   <para>
@@ -135,14 +136,46 @@ DROP FUNCTION [ IF EXISTS ] <replaceable class="parameter">name</replaceable> ( 
 <programlisting>
 DROP FUNCTION sqrt(integer);
 </programlisting></para>
+
+  <para>
+   Drop multiple functions in one command:
+<programlisting>
+DROP FUNCTION sqrt(integer), sqrt(bigint);
+</programlisting></para>
+
+  <para>
+   If the function name is unique in its schema, it can be referred to without
+   an argument list:
+<programlisting>
+DROP FUNCTION update_employee_salaries;
+</programlisting>
+   Note that this is different from
+<programlisting>
+DROP FUNCTION update_employee_salaries();
+</programlisting>
+   which refers to a function with zero arguments, whereas the first variant
+   can refer to a function with any number of arguments, including zero, as
+   long as the name is unique.
+  </para>
  </refsect1>
 
- <refsect1 id="SQL-DROPFUNCTION-compatibility">
+ <refsect1 id="sql-dropfunction-compatibility">
   <title>Compatibility</title>
 
   <para>
-   A <command>DROP FUNCTION</command> statement is defined in the SQL
-   standard, but it is not compatible with this command.
+   This command conforms to the SQL standard, with
+   these <productname>PostgreSQL</productname> extensions:
+   <itemizedlist>
+    <listitem>
+     <para>The standard only allows one function to be dropped per command.</para>
+    </listitem>
+    <listitem>
+     <para>The <literal>IF EXISTS</literal> option</para>
+    </listitem>
+    <listitem>
+     <para>The ability to specify argument modes and names</para>
+    </listitem>
+   </itemizedlist>
   </para>
  </refsect1>
 
@@ -150,8 +183,10 @@ DROP FUNCTION sqrt(integer);
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createfunction"></member>
-   <member><xref linkend="sql-alterfunction"></member>
+   <member><xref linkend="sql-createfunction"/></member>
+   <member><xref linkend="sql-alterfunction"/></member>
+   <member><xref linkend="sql-dropprocedure"/></member>
+   <member><xref linkend="sql-droproutine"/></member>
   </simplelist>
  </refsect1>
 

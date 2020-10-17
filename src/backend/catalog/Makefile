@@ -2,6 +2,9 @@
 #
 # Makefile for backend/catalog
 #
+# Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
 # src/backend/catalog/Makefile
 #
 #-------------------------------------------------------------------------
@@ -11,11 +14,12 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
-       objectaccess.o objectaddress.o pg_aggregate.o pg_collation.o \
+       objectaccess.o objectaddress.o partition.o pg_aggregate.o pg_collation.o \
        pg_constraint.o pg_conversion.o \
        pg_depend.o pg_enum.o pg_inherits.o pg_largeobject.o pg_namespace.o \
-       pg_operator.o pg_proc.o pg_range.o pg_db_role_setting.o pg_shdepend.o \
-       pg_type.o storage.o toasting.o
+       pg_operator.o pg_proc.o pg_publication.o pg_range.o \
+	   pg_db_role_setting.o pg_shdepend.o pg_subscription.o pg_type.o \
+	   storage.o toasting.o
 
 OBJS += pg_extprotocol.o \
        pg_proc_callback.o \
@@ -23,7 +27,8 @@ OBJS += pg_extprotocol.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        pg_appendonly.o \
        oid_dispatch.o aocatalog.o storage_tablespace.o storage_database.o \
-       storage_tablespace_twophase.o storage_tablespace_xact.o
+       storage_tablespace_twophase.o storage_tablespace_xact.o \
+       gp_partition_template.o
 
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
@@ -32,17 +37,16 @@ CATALOG_JSON:= $(addprefix $(top_srcdir)/gpMgmt/bin/gppylib/data/, $(addsuffix .
 
 include $(top_srcdir)/src/backend/common.mk
 
-all: $(BKIFILES) schemapg.h $(CATALOG_JSON) postgres.description postgres.shdescription
-
-# Note: there are some undocumented dependencies on the ordering in which
-# the catalog header files are assembled into postgres.bki.  In particular,
-# indexing.h had better be last, and toasting.h just before it.
-
-POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
-	pg_type.h pg_attribute.h pg_class.h \
+# Note: the order of this list determines the order in which the catalog
+# header files are assembled into postgres.bki.  BKI_BOOTSTRAP catalogs
+# must appear first, and there are reputedly other, undocumented ordering
+# dependencies.
+CATALOG_HEADERS := \
+	pg_proc.h pg_type.h pg_attribute.h pg_class.h \
 	pg_attrdef.h pg_constraint.h pg_inherits.h pg_index.h pg_operator.h \
 	pg_opfamily.h pg_opclass.h pg_am.h pg_amop.h pg_amproc.h \
 	pg_language.h pg_largeobject_metadata.h pg_largeobject.h pg_aggregate.h \
+	pg_statistic_ext.h pg_statistic_ext_data.h \
 	pg_statistic.h pg_rewrite.h pg_trigger.h pg_event_trigger.h pg_description.h \
 	pg_cast.h pg_enum.h pg_namespace.h pg_conversion.h pg_depend.h \
 	pg_database.h pg_db_role_setting.h pg_tablespace.h pg_pltemplate.h \
@@ -52,65 +56,84 @@ POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
 	pg_foreign_data_wrapper.h pg_foreign_server.h pg_user_mapping.h \
 	pg_resqueue.h pg_resqueuecapability.h pg_resourcetype.h \
 	pg_resgroup.h pg_resgroupcapability.h \
-	gp_configuration_history.h gp_id.h gp_policy.h gp_version.h \
-	gp_segment_config.h \
+	gp_configuration_history.h gp_id.h gp_distribution_policy.h gp_version_at_initdb.h \
+	gp_segment_configuration.h \
 	pg_appendonly.h \
 	gp_fastsequence.h pg_extprotocol.h \
-	pg_partition.h pg_partition_rule.h \
 	pg_attribute_encoding.h \
 	pg_auth_time_constraint.h \
 	pg_compression.h \
 	pg_proc_callback.h \
-	pg_partition_encoding.h \
 	pg_type_encoding.h \
 	pg_stat_last_operation.h pg_stat_last_shoperation.h \
 	pg_foreign_table.h pg_policy.h pg_replication_origin.h \
 	pg_default_acl.h pg_init_privs.h pg_seclabel.h pg_shseclabel.h \
-	pg_collation.h pg_range.h pg_transform.h \
-	toasting.h indexing.h \
-    )
+	pg_collation.h pg_partitioned_table.h pg_range.h pg_transform.h \
+	pg_sequence.h pg_publication.h pg_publication_rel.h pg_subscription.h \
+	pg_subscription_rel.h gp_partition_template.h
 
-POSTGRES_BKI_SRCS := pg_proc_combined.h $(POSTGRES_BKI_SRCS)
+GENERATED_HEADERS := $(CATALOG_HEADERS:%.h=%_d.h) schemapg.h
 
+# In the list of headers used to assemble postgres.bki, indexing.h needs
+# be last, and toasting.h just before it.  This ensures we don't try to
+# create indexes or toast tables before their catalogs exist.
+POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/,\
+	$(CATALOG_HEADERS) toasting.h indexing.h \
+	)
 
-# location of Catalog.pm
-catalogdir = $(top_srcdir)/src/backend/catalog
+# The .dat files we need can just be listed alphabetically.
+POSTGRES_BKI_DATA = $(addprefix $(top_srcdir)/src/include/catalog/,\
+	pg_aggregate.dat pg_am.dat pg_amop.dat pg_amproc.dat pg_authid.dat \
+	pg_cast.dat pg_class.dat pg_collation.dat pg_conversion.dat \
+	pg_database.dat pg_language.dat \
+	pg_namespace.dat pg_opclass.dat pg_operator.dat pg_opfamily.dat \
+	pg_pltemplate.dat pg_proc.dat pg_range.dat pg_tablespace.dat \
+	pg_ts_config.dat pg_ts_config_map.dat pg_ts_dict.dat pg_ts_parser.dat \
+	pg_ts_template.dat pg_type.dat \
+	gp_version_at_initdb.dat pg_resgroup.dat pg_resgroupcapability.dat \
+	pg_compression.dat \
+	)
 
-# locations of headers that genbki.pl needs to read
-pg_includes = -I$(top_srcdir)/src/include/catalog -I$(top_builddir)/src/include/catalog
+all: distprep generated-header-symlinks
 
-# see notes in src/backend/parser/Makefile about multiple output files
-postgres.description: postgres.bki
-	touch $@
+distprep: bki-stamp
 
-postgres.shdescription: postgres.bki
-	touch $@
-
-schemapg.h: postgres.bki
-	touch $@
-
-# In Greenplum, contents of the pg_proc catalog is in two files, pg_proc.h
-# and pg_proc_gp.h. Combine them into a single file, so that genbki.pl can
-# process it.
-pg_proc_combined.h: $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h
-	cat $^ > $@
+.PHONY: generated-header-symlinks
 
 catalog_json: $(CATALOG_JSON)
 
 $(CATALOG_JSON): process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h
 	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > $@
 
-# Technically, this should depend on Makefile.global, but then
-# postgres.bki would need to be rebuilt after every configure run,
-# even in distribution tarballs.  So this is cheating a bit, but it
-# will achieve the goal of updating the version number when it
-# changes.
-postgres.bki: genbki.pl Catalog.pm $(POSTGRES_BKI_SRCS) $(top_srcdir)/configure $(top_srcdir)/src/include/catalog/duplicate_oids
-	cd $(top_srcdir)/src/include/catalog && $(PERL) ./duplicate_oids
-	$(PERL) -I $(catalogdir) $< $(pg_includes) --set-version=$(PG_MAJORVERSION) $(POSTGRES_BKI_SRCS)
+generated-header-symlinks: $(top_builddir)/src/include/catalog/header-stamp
 
+# bki-stamp records the last time we ran genbki.pl.  We don't rely on
+# the timestamps of the individual output files, because the Perl script
+# won't update them if they didn't change (to avoid unnecessary recompiles).
+# Technically, this should depend on Makefile.global which supplies
+# $(MAJORVERSION); but then genbki.pl would need to be re-run after every
+# configure run, even in distribution tarballs.  So depending on configure.in
+# instead is cheating a bit, but it will achieve the goal of updating the
+# version number when it changes.
+bki-stamp: genbki.pl Catalog.pm $(POSTGRES_BKI_SRCS) $(POSTGRES_BKI_DATA) $(top_srcdir)/configure.in
+	$(PERL) $< --include-path=$(top_srcdir)/src/include/ \
+		--set-version=$(PG_MAJORVERSION) $(POSTGRES_BKI_SRCS)
+	touch $@
+
+# The generated headers must all be symlinked into builddir/src/include/,
+# using absolute links for the reasons explained in src/backend/Makefile.
+# We use header-stamp to record that we've done this because the symlinks
+# themselves may appear older than bki-stamp.
+$(top_builddir)/src/include/catalog/header-stamp: bki-stamp
+	prereqdir=`cd '$(dir $<)' >/dev/null && pwd` && \
+	cd '$(dir $@)' && for file in $(GENERATED_HEADERS); do \
+	  rm -f $$file && $(LN_S) "$$prereqdir/$$file" . ; \
+	done
+	touch $@
+
+# Note: installation of generated headers is handled elsewhere
 .PHONY: install-data
-install-data: $(BKIFILES) installdirs
+install-data: bki-stamp installdirs
 	$(INSTALL_DATA) $(call vpathsearch,postgres.bki) '$(DESTDIR)$(datadir)/postgres.bki'
 	$(INSTALL_DATA) $(call vpathsearch,postgres.description) '$(DESTDIR)$(datadir)/postgres.description'
 	$(INSTALL_DATA) $(call vpathsearch,postgres.shdescription) '$(DESTDIR)$(datadir)/postgres.shdescription'
@@ -128,10 +151,10 @@ installdirs:
 uninstall-data:
 	rm -f $(addprefix '$(DESTDIR)$(datadir)'/, $(BKIFILES) system_views.sql information_schema.sql cdb_init.d/cdb_schema.sql sql_features.txt)
 
-# postgres.bki, postgres.description, postgres.shdescription, and schemapg.h
-# are in the distribution tarball, so they are not cleaned here.
+# postgres.bki, postgres.description, postgres.shdescription,
+# and the generated headers are in the distribution tarball,
+# so they are not cleaned here.
 clean:
-	rm -f pg_proc_combined.h
 
 maintainer-clean: clean
-	rm -f $(BKIFILES)
+	rm -f bki-stamp $(BKIFILES) $(GENERATED_HEADERS)

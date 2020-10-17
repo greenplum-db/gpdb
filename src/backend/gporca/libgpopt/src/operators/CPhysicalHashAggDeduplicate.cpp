@@ -28,34 +28,16 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalHashAggDeduplicate::CPhysicalHashAggDeduplicate
-	(
-	CMemoryPool *mp,
-	CColRefArray *colref_array,
-	CColRefArray *pdrgpcrMinimal,
-	COperator::EGbAggType egbaggtype,
-	CColRefArray *pdrgpcrKeys,
-	BOOL fGeneratesDuplicates,
-	BOOL fMultiStage,
-	BOOL isAggFromSplitDQA,
-	CLogicalGbAgg::EAggStage aggStage,
-	BOOL should_enforce_distribution
-	)
-	:
-	CPhysicalHashAgg
-	(
-	mp,
-	colref_array,
-	pdrgpcrMinimal,
-	egbaggtype,
-	fGeneratesDuplicates,
-	NULL /*pdrgpcrGbMinusDistinct*/,
-	fMultiStage,
-	isAggFromSplitDQA ,
-	aggStage,
-	should_enforce_distribution
-	),
-	m_pdrgpcrKeys(pdrgpcrKeys)
+CPhysicalHashAggDeduplicate::CPhysicalHashAggDeduplicate(
+	CMemoryPool *mp, CColRefArray *colref_array, CColRefArray *pdrgpcrMinimal,
+	COperator::EGbAggType egbaggtype, CColRefArray *pdrgpcrKeys,
+	BOOL fGeneratesDuplicates, BOOL fMultiStage, BOOL isAggFromSplitDQA,
+	CLogicalGbAgg::EAggStage aggStage, BOOL should_enforce_distribution)
+	: CPhysicalHashAgg(mp, colref_array, pdrgpcrMinimal, egbaggtype,
+					   fGeneratesDuplicates, NULL /*pdrgpcrGbMinusDistinct*/,
+					   fMultiStage, isAggFromSplitDQA, aggStage,
+					   should_enforce_distribution),
+	  m_pdrgpcrKeys(pdrgpcrKeys)
 {
 	GPOS_ASSERT(NULL != pdrgpcrKeys);
 }
@@ -82,30 +64,25 @@ CPhysicalHashAggDeduplicate::~CPhysicalHashAggDeduplicate()
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPhysicalHashAggDeduplicate::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPhysicalHashAggDeduplicate::OsPrint(IOstream &os) const
 {
 	if (m_fPattern)
 	{
 		return COperator::OsPrint(os);
 	}
 
-	os	<< SzId()
-		<< "( ";
+	os << SzId() << "( ";
 	CLogicalGbAgg::OsPrintGbAggType(os, Egbaggtype());
-	os	<< " )"
-		<< " Grp Cols: [";
+	os << " )"
+	   << " Grp Cols: [";
 
 	CUtils::OsPrintDrgPcr(os, PdrgpcrGroupingCols());
-	os	<< "]"
-		<< ", Key Cols:[";
+	os << "]"
+	   << ", Key Cols:[";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrKeys);
-	os	<< "]";
+	os << "]";
 
-	os	<< ", Generates Duplicates :[ " << FGeneratesDuplicates() << " ] ";
+	os << ", Generates Duplicates :[ " << FGeneratesDuplicates() << " ] ";
 
 	return os;
 }

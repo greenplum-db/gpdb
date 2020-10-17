@@ -3,7 +3,7 @@
  * path.c
  *	  portable path handling routines
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -37,6 +37,7 @@
 
 #include "pg_config_paths.h"
 
+
 #ifndef WIN32
 #define IS_PATH_VAR_SEP(ch) ((ch) == ':')
 #else
@@ -44,7 +45,7 @@
 #endif
 
 static void make_relative_path(char *ret_path, const char *target_path,
-				   const char *bin_path, const char *my_exec_path);
+							   const char *bin_path, const char *my_exec_path);
 static void trim_directory(char *path);
 static void trim_trailing_separator(char *path);
 
@@ -81,9 +82,6 @@ skip_drive(const char *path)
  *	has_drive_prefix
  *
  * Return true if the given pathname has a drive prefix.
- *
- * GPDB_92_MERGE_FIXEME: To keep compiler happy, return
- * false directly if not WIN32.
  */
 bool
 has_drive_prefix(const char *path)
@@ -108,7 +106,7 @@ first_dir_separator(const char *filename)
 
 	for (p = skip_drive(filename); *p; p++)
 		if (IS_DIR_SEP(*p))
-			return (char *) p;
+			return unconstify(char *, p);
 	return NULL;
 }
 
@@ -126,7 +124,7 @@ first_path_var_separator(const char *pathlist)
 	/* skip_drive is not needed */
 	for (p = pathlist; *p; p++)
 		if (IS_PATH_VAR_SEP(*p))
-			return (char *) p;
+			return unconstify(char *, p);
 	return NULL;
 }
 
@@ -145,7 +143,7 @@ last_dir_separator(const char *filename)
 	for (p = skip_drive(filename); *p; p++)
 		if (IS_DIR_SEP(*p))
 			ret = p;
-	return (char *) ret;
+	return unconstify(char *, ret);
 }
 
 
@@ -173,8 +171,6 @@ make_native_path(char *filename)
 	for (p = filename; *p; p++)
 		if (*p == '/')
 			*p = '\\';
-#else
-	UnusedArg(filename);
 #endif
 }
 
@@ -479,7 +475,7 @@ get_progname(const char *argv0)
 #if defined(__CYGWIN__) || defined(WIN32)
 	/* strip ".exe" suffix, regardless of case */
 	if (strlen(progname) > sizeof(EXE) - 1 &&
-	pg_strcasecmp(progname + strlen(progname) - (sizeof(EXE) - 1), EXE) == 0)
+		pg_strcasecmp(progname + strlen(progname) - (sizeof(EXE) - 1), EXE) == 0)
 		progname[strlen(progname) - (sizeof(EXE) - 1)] = '\0';
 #endif
 

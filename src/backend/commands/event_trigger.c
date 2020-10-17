@@ -3,7 +3,7 @@
  * event_trigger.c
  *	  PostgreSQL EVENT TRIGGER support code.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -14,7 +14,9 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
+#include "access/table.h"
 #include "access/xact.h"
+#include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/objectaccess.h"
@@ -43,7 +45,6 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
 #include "utils/syscache.h"
 #include "tcop/utility.h"
 
@@ -57,8 +58,8 @@ typedef struct EventTriggerQueryState
 	bool		in_sql_drop;
 
 	/* table_rewrite */
-	Oid			table_rewrite_oid;		/* InvalidOid, or set for
-										 * table_rewrite event */
+	Oid			table_rewrite_oid;	/* InvalidOid, or set for table_rewrite
+									 * event */
 	int			table_rewrite_reason;	/* AT_REWRITE reason */
 
 	/* Support for command collection */
@@ -85,7 +86,7 @@ typedef enum
 } event_trigger_command_tag_check_result;
 
 /* XXX merge this with ObjectTypeMap? */
-static event_trigger_support_data event_trigger_support[] = {
+static const event_trigger_support_data event_trigger_support[] = {
 	{"ACCESS METHOD", true},
 	{"AGGREGATE", true},
 	{"CAST", true},
@@ -106,11 +107,16 @@ static event_trigger_support_data event_trigger_support[] = {
 	{"OPERATOR CLASS", true},
 	{"OPERATOR FAMILY", true},
 	{"POLICY", true},
+	{"PROCEDURE", true},
+	{"PUBLICATION", true},
 	{"ROLE", false},
+	{"ROUTINE", true},
 	{"RULE", true},
 	{"SCHEMA", true},
 	{"SEQUENCE", true},
 	{"SERVER", true},
+	{"STATISTICS", true},
+	{"SUBSCRIPTION", true},
 	{"TABLE", true},
 	{"TABLESPACE", false},
 	{"TRANSFORM", true},
@@ -147,20 +153,20 @@ typedef struct SQLDropObject
 } SQLDropObject;
 
 static void AlterEventTriggerOwner_internal(Relation rel,
-								HeapTuple tup,
-								Oid newOwnerId);
+											HeapTuple tup,
+											Oid newOwnerId);
 static event_trigger_command_tag_check_result check_ddl_tag(const char *tag);
 static event_trigger_command_tag_check_result check_table_rewrite_ddl_tag(
-							const char *tag);
+																		  const char *tag);
 static void error_duplicate_filter_variable(const char *defname);
 static Datum filter_list_to_array(List *filterlist);
-static Oid insert_event_trigger_tuple(char *trigname, char *eventname,
-						   Oid evtOwner, Oid funcoid, List *tags);
+static Oid	insert_event_trigger_tuple(const char *trigname, const char *eventname,
+									   Oid evtOwner, Oid funcoid, List *tags);
 static void validate_ddl_tags(const char *filtervar, List *taglist);
 static void validate_table_rewrite_tags(const char *filtervar, List *taglist);
 static void EventTriggerInvoke(List *fn_oid_list, EventTriggerData *trigdata);
-static const char *stringify_grantobjtype(GrantObjectType objtype);
-static const char *stringify_adefprivs_objtype(GrantObjectType objtype);
+static const char *stringify_grant_objtype(ObjectType objtype);
+static const char *stringify_adefprivs_objtype(ObjectType objtype);
 
 /*
  * Create an event trigger.
@@ -212,7 +218,7 @@ CreateEventTrigger(CreateEventTrigStmt *stmt)
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-			   errmsg("unrecognized filter variable \"%s\"", def->defname)));
+					 errmsg("unrecognized filter variable \"%s\"", def->defname)));
 	}
 
 	/* Validate tag list, if any. */
@@ -282,7 +288,7 @@ static event_trigger_command_tag_check_result
 check_ddl_tag(const char *tag)
 {
 	const char *obtypename;
-	event_trigger_support_data *etsd;
+	const event_trigger_support_data *etsd;
 
 	/*
 	 * Handle some idiosyncratic special cases.
@@ -374,7 +380,7 @@ error_duplicate_filter_variable(const char *defname)
  * Insert the new pg_event_trigger row and record dependencies.
  */
 static Oid
-insert_event_trigger_tuple(char *trigname, char *eventname, Oid evtOwner,
+insert_event_trigger_tuple(const char *trigname, const char *eventname, Oid evtOwner,
 						   Oid funcoid, List *taglist)
 {
 	Relation	tgrel;
@@ -388,9 +394,12 @@ insert_event_trigger_tuple(char *trigname, char *eventname, Oid evtOwner,
 				referenced;
 
 	/* Open pg_event_trigger. */
-	tgrel = heap_open(EventTriggerRelationId, RowExclusiveLock);
+	tgrel = table_open(EventTriggerRelationId, RowExclusiveLock);
 
 	/* Build the new pg_trigger tuple. */
+	trigoid = GetNewOidWithIndex(tgrel, EventTriggerOidIndexId,
+								 Anum_pg_event_trigger_oid);
+	values[Anum_pg_event_trigger_oid - 1] = ObjectIdGetDatum(trigoid);
 	memset(nulls, false, sizeof(nulls));
 	namestrcpy(&evtnamedata, trigname);
 	values[Anum_pg_event_trigger_evtname - 1] = NameGetDatum(&evtnamedata);
@@ -408,8 +417,7 @@ insert_event_trigger_tuple(char *trigname, char *eventname, Oid evtOwner,
 
 	/* Insert heap tuple. */
 	tuple = heap_form_tuple(tgrel->rd_att, values, nulls);
-	trigoid = simple_heap_insert(tgrel, tuple);
-	CatalogUpdateIndexes(tgrel, tuple);
+	CatalogTupleInsert(tgrel, tuple);
 	heap_freetuple(tuple);
 
 	/* Depend on owner. */
@@ -431,7 +439,7 @@ insert_event_trigger_tuple(char *trigname, char *eventname, Oid evtOwner,
 	InvokeObjectPostCreateHook(EventTriggerRelationId, trigoid, 0);
 
 	/* Close pg_event_trigger. */
-	heap_close(tgrel, RowExclusiveLock);
+	table_close(tgrel, RowExclusiveLock);
 
 	return trigoid;
 }
@@ -482,17 +490,17 @@ RemoveEventTriggerById(Oid trigOid)
 	Relation	tgrel;
 	HeapTuple	tup;
 
-	tgrel = heap_open(EventTriggerRelationId, RowExclusiveLock);
+	tgrel = table_open(EventTriggerRelationId, RowExclusiveLock);
 
 	tup = SearchSysCache1(EVENTTRIGGEROID, ObjectIdGetDatum(trigOid));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for event trigger %u", trigOid);
 
-	simple_heap_delete(tgrel, &tup->t_self);
+	CatalogTupleDelete(tgrel, &tup->t_self);
 
 	ReleaseSysCache(tup);
 
-	heap_close(tgrel, RowExclusiveLock);
+	table_close(tgrel, RowExclusiveLock);
 }
 
 /*
@@ -507,7 +515,7 @@ AlterEventTrigger(AlterEventTrigStmt *stmt)
 	Form_pg_event_trigger evtForm;
 	char		tgenabled = stmt->tgenabled;
 
-	tgrel = heap_open(EventTriggerRelationId, RowExclusiveLock);
+	tgrel = table_open(EventTriggerRelationId, RowExclusiveLock);
 
 	tup = SearchSysCacheCopy1(EVENTTRIGGERNAME,
 							  CStringGetDatum(stmt->trigname));
@@ -517,25 +525,24 @@ AlterEventTrigger(AlterEventTrigStmt *stmt)
 				 errmsg("event trigger \"%s\" does not exist",
 						stmt->trigname)));
 
-	trigoid = HeapTupleGetOid(tup);
+	evtForm = (Form_pg_event_trigger) GETSTRUCT(tup);
+	trigoid = evtForm->oid;
 
 	if (!pg_event_trigger_ownercheck(trigoid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EVENT_TRIGGER,
+		aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_EVENT_TRIGGER,
 					   stmt->trigname);
 
 	/* tuple is a copy, so we can modify it below */
-	evtForm = (Form_pg_event_trigger) GETSTRUCT(tup);
 	evtForm->evtenabled = tgenabled;
 
-	simple_heap_update(tgrel, &tup->t_self, tup);
-	CatalogUpdateIndexes(tgrel, tup);
+	CatalogTupleUpdate(tgrel, &tup->t_self, tup);
 
 	InvokeObjectPostAlterHook(EventTriggerRelationId,
 							  trigoid, 0);
 
 	/* clean up */
 	heap_freetuple(tup);
-	heap_close(tgrel, RowExclusiveLock);
+	table_close(tgrel, RowExclusiveLock);
 
 	return trigoid;
 }
@@ -548,10 +555,11 @@ AlterEventTriggerOwner(const char *name, Oid newOwnerId)
 {
 	Oid			evtOid;
 	HeapTuple	tup;
+	Form_pg_event_trigger evtForm;
 	Relation	rel;
 	ObjectAddress address;
 
-	rel = heap_open(EventTriggerRelationId, RowExclusiveLock);
+	rel = table_open(EventTriggerRelationId, RowExclusiveLock);
 
 	tup = SearchSysCacheCopy1(EVENTTRIGGERNAME, CStringGetDatum(name));
 
@@ -560,7 +568,8 @@ AlterEventTriggerOwner(const char *name, Oid newOwnerId)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("event trigger \"%s\" does not exist", name)));
 
-	evtOid = HeapTupleGetOid(tup);
+	evtForm = (Form_pg_event_trigger) GETSTRUCT(tup);
+	evtOid = evtForm->oid;
 
 	AlterEventTriggerOwner_internal(rel, tup, newOwnerId);
 
@@ -568,7 +577,7 @@ AlterEventTriggerOwner(const char *name, Oid newOwnerId)
 
 	heap_freetuple(tup);
 
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 
 	return address;
 }
@@ -582,20 +591,20 @@ AlterEventTriggerOwner_oid(Oid trigOid, Oid newOwnerId)
 	HeapTuple	tup;
 	Relation	rel;
 
-	rel = heap_open(EventTriggerRelationId, RowExclusiveLock);
+	rel = table_open(EventTriggerRelationId, RowExclusiveLock);
 
 	tup = SearchSysCacheCopy1(EVENTTRIGGEROID, ObjectIdGetDatum(trigOid));
 
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-			   errmsg("event trigger with OID %u does not exist", trigOid)));
+				 errmsg("event trigger with OID %u does not exist", trigOid)));
 
 	AlterEventTriggerOwner_internal(rel, tup, newOwnerId);
 
 	heap_freetuple(tup);
 
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 }
 
 /*
@@ -611,29 +620,28 @@ AlterEventTriggerOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
 	if (form->evtowner == newOwnerId)
 		return;
 
-	if (!pg_event_trigger_ownercheck(HeapTupleGetOid(tup), GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EVENT_TRIGGER,
+	if (!pg_event_trigger_ownercheck(form->oid, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_EVENT_TRIGGER,
 					   NameStr(form->evtname));
 
 	/* New owner must be a superuser */
 	if (!superuser_arg(newOwnerId))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-		  errmsg("permission denied to change owner of event trigger \"%s\"",
-				 NameStr(form->evtname)),
-			 errhint("The owner of an event trigger must be a superuser.")));
+				 errmsg("permission denied to change owner of event trigger \"%s\"",
+						NameStr(form->evtname)),
+				 errhint("The owner of an event trigger must be a superuser.")));
 
 	form->evtowner = newOwnerId;
-	simple_heap_update(rel, &tup->t_self, tup);
-	CatalogUpdateIndexes(rel, tup);
+	CatalogTupleUpdate(rel, &tup->t_self, tup);
 
 	/* Update owner dependency reference */
 	changeDependencyOnOwner(EventTriggerRelationId,
-							HeapTupleGetOid(tup),
+							form->oid,
 							newOwnerId);
 
 	InvokeObjectPostAlterHook(EventTriggerRelationId,
-							  HeapTupleGetOid(tup), 0);
+							  form->oid, 0);
 }
 
 /*
@@ -647,7 +655,8 @@ get_event_trigger_oid(const char *trigname, bool missing_ok)
 {
 	Oid			oid;
 
-	oid = GetSysCacheOid1(EVENTTRIGGERNAME, CStringGetDatum(trigname));
+	oid = GetSysCacheOid1(EVENTTRIGGERNAME, Anum_pg_event_trigger_oid,
+						  CStringGetDatum(trigname));
 	if (!OidIsValid(oid) && !missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -747,7 +756,7 @@ EventTriggerCommonSetup(Node *parsetree,
 
 	/*
 	 * Filter list of event triggers by command tag, and copy them into our
-	 * memory context.  Once we start running the command trigers, or indeed
+	 * memory context.  Once we start running the command triggers, or indeed
 	 * once we do anything at all that touches the catalogs, an invalidation
 	 * might leave cachelist pointing at garbage, so we must do this before we
 	 * can do much else.
@@ -839,6 +848,19 @@ EventTriggerDDLCommandEnd(Node *parsetree)
 	if (!IsUnderPostmaster)
 		return;
 
+	/*
+	 * Also do nothing if our state isn't set up, which it won't be if there
+	 * weren't any relevant event triggers at the start of the current DDL
+	 * command.  This test might therefore seem optional, but it's important
+	 * because EventTriggerCommonSetup might find triggers that didn't exist
+	 * at the time the command started.  Although this function itself
+	 * wouldn't crash, the event trigger functions would presumably call
+	 * pg_event_trigger_ddl_commands which would fail.  Better to do nothing
+	 * until the next command.
+	 */
+	if (!currentEventTriggerState)
+		return;
+
 	runlist = EventTriggerCommonSetup(parsetree,
 									  EVT_DDLCommandEnd, "ddl_command_end",
 									  &trigdata);
@@ -890,9 +912,10 @@ EventTriggerSQLDrop(Node *parsetree)
 									  &trigdata);
 
 	/*
-	 * Nothing to do if run list is empty.  Note this shouldn't happen,
+	 * Nothing to do if run list is empty.  Note this typically can't happen,
 	 * because if there are no sql_drop events, then objects-to-drop wouldn't
 	 * have been collected in the first place and we would have quit above.
+	 * But it could occur if event triggers were dropped partway through.
 	 */
 	if (runlist == NIL)
 		return;
@@ -939,8 +962,6 @@ EventTriggerTableRewrite(Node *parsetree, Oid tableOid, int reason)
 	List	   *runlist;
 	EventTriggerData trigdata;
 
-	elog(DEBUG1, "EventTriggerTableRewrite(%u)", tableOid);
-
 	/*
 	 * Event Triggers are completely disabled in standalone mode.  There are
 	 * (at least) two reasons for this:
@@ -958,6 +979,16 @@ EventTriggerTableRewrite(Node *parsetree, Oid tableOid, int reason)
 	 * scenarios depend on code that's otherwise untested isn't appetizing.)
 	 */
 	if (!IsUnderPostmaster)
+		return;
+
+	/*
+	 * Also do nothing if our state isn't set up, which it won't be if there
+	 * weren't any relevant event triggers at the start of the current DDL
+	 * command.  This test might therefore seem optional, but it's
+	 * *necessary*, because EventTriggerCommonSetup might find triggers that
+	 * didn't exist at the time the command started.
+	 */
+	if (!currentEventTriggerState)
 		return;
 
 	runlist = EventTriggerCommonSetup(parsetree,
@@ -1023,17 +1054,15 @@ EventTriggerInvoke(List *fn_oid_list, EventTriggerData *trigdata)
 	 */
 	context = AllocSetContextCreate(CurrentMemoryContext,
 									"event trigger context",
-									ALLOCSET_DEFAULT_MINSIZE,
-									ALLOCSET_DEFAULT_INITSIZE,
-									ALLOCSET_DEFAULT_MAXSIZE);
+									ALLOCSET_DEFAULT_SIZES);
 	oldcontext = MemoryContextSwitchTo(context);
 
 	/* Call each event trigger. */
 	foreach(lc, fn_oid_list)
 	{
+		LOCAL_FCINFO(fcinfo, 0);
 		Oid			fnoid = lfirst_oid(lc);
 		FmgrInfo	flinfo;
-		FunctionCallInfoData fcinfo;
 		PgStat_FunctionCallUsage fcusage;
 
 		elog(DEBUG1, "EventTriggerInvoke %u", fnoid);
@@ -1053,10 +1082,10 @@ EventTriggerInvoke(List *fn_oid_list, EventTriggerData *trigdata)
 		fmgr_info(fnoid, &flinfo);
 
 		/* Call the function, passing no arguments but setting a context. */
-		InitFunctionCallInfoData(fcinfo, &flinfo, 0,
+		InitFunctionCallInfoData(*fcinfo, &flinfo, 0,
 								 InvalidOid, (Node *) trigdata, NULL);
-		pgstat_init_function_usage(&fcinfo, &fcusage);
-		FunctionCallInvoke(&fcinfo);
+		pgstat_init_function_usage(fcinfo, &fcusage);
+		FunctionCallInvoke(fcinfo);
 		pgstat_end_function_usage(&fcusage, true);
 
 		/* Reclaim memory. */
@@ -1110,9 +1139,15 @@ EventTriggerSupportsObjectType(ObjectType obtype)
 		case OBJECT_OPERATOR:
 		case OBJECT_OPFAMILY:
 		case OBJECT_POLICY:
+		case OBJECT_PROCEDURE:
+		case OBJECT_PUBLICATION:
+		case OBJECT_PUBLICATION_REL:
+		case OBJECT_ROUTINE:
 		case OBJECT_RULE:
 		case OBJECT_SCHEMA:
 		case OBJECT_SEQUENCE:
+		case OBJECT_SUBSCRIPTION:
+		case OBJECT_STATISTIC_EXT:
 		case OBJECT_TABCONSTRAINT:
 		case OBJECT_TABLE:
 		case OBJECT_TRANSFORM:
@@ -1132,8 +1167,15 @@ EventTriggerSupportsObjectType(ObjectType obtype)
 		case OBJECT_RESQUEUE:
 		case OBJECT_RESGROUP:
 			return false;
+
+			/*
+			 * There's intentionally no default: case here; we want the
+			 * compiler to warn if a new ObjectType hasn't been handled above.
+			 */
 	}
-	return true;
+
+	/* Shouldn't get here, but if we do, say "no support" */
+	return false;
 }
 
 /*
@@ -1165,12 +1207,13 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 		case OCLASS_OPERATOR:
 		case OCLASS_OPCLASS:
 		case OCLASS_OPFAMILY:
+		case OCLASS_AM:
 		case OCLASS_AMOP:
 		case OCLASS_AMPROC:
 		case OCLASS_REWRITE:
 		case OCLASS_TRIGGER:
 		case OCLASS_SCHEMA:
-		case OCLASS_TRANSFORM:
+		case OCLASS_STATISTIC_EXT:
 		case OCLASS_TSPARSER:
 		case OCLASS_TSDICT:
 		case OCLASS_TSTEMPLATE:
@@ -1181,42 +1224,21 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 		case OCLASS_DEFACL:
 		case OCLASS_EXTENSION:
 		case OCLASS_POLICY:
-		case OCLASS_AM:
+		case OCLASS_PUBLICATION:
+		case OCLASS_PUBLICATION_REL:
+		case OCLASS_SUBSCRIPTION:
+		case OCLASS_TRANSFORM:
 			return true;
 		case OCLASS_EXTPROTOCOL:
-			return true;
+			return false;
+
+			/*
+			 * There's intentionally no default: case here; we want the
+			 * compiler to warn if a new OCLASS hasn't been handled above.
+			 */
 	}
 
 	return true;
-}
-
-bool
-EventTriggerSupportsGrantObjectType(GrantObjectType objtype)
-{
-	switch (objtype)
-	{
-		case ACL_OBJECT_DATABASE:
-		case ACL_OBJECT_TABLESPACE:
-			/* no support for global objects */
-			return false;
-
-		case ACL_OBJECT_COLUMN:
-		case ACL_OBJECT_RELATION:
-		case ACL_OBJECT_SEQUENCE:
-		case ACL_OBJECT_DOMAIN:
-		case ACL_OBJECT_FDW:
-		case ACL_OBJECT_FOREIGN_SERVER:
-		case ACL_OBJECT_FUNCTION:
-		case ACL_OBJECT_LANGUAGE:
-		case ACL_OBJECT_LARGEOBJECT:
-		case ACL_OBJECT_NAMESPACE:
-		case ACL_OBJECT_TYPE:
-		case ACL_OBJECT_EXTPROTOCOL:
-			return true;
-		default:
-			Assert(false);
-			return true;
-	}
 }
 
 /*
@@ -1241,9 +1263,7 @@ EventTriggerBeginCompleteQuery(void)
 
 	cxt = AllocSetContextCreate(TopMemoryContext,
 								"event trigger state",
-								ALLOCSET_DEFAULT_MINSIZE,
-								ALLOCSET_DEFAULT_INITSIZE,
-								ALLOCSET_DEFAULT_MAXSIZE);
+								ALLOCSET_DEFAULT_SIZES);
 	state = MemoryContextAlloc(cxt, sizeof(EventTriggerQueryState));
 	state->cxt = cxt;
 	slist_init(&(state->SQLDropList));
@@ -1356,8 +1376,10 @@ EventTriggerSQLDropAddObject(const ObjectAddress *object, bool original, bool no
 		Relation	catalog;
 		HeapTuple	tuple;
 
-		catalog = heap_open(obj->address.classId, AccessShareLock);
-		tuple = get_catalog_object_by_oid(catalog, obj->address.objectId);
+		catalog = table_open(obj->address.classId, AccessShareLock);
+		tuple = get_catalog_object_by_oid(catalog,
+										  get_object_attnum_oid(object->classId),
+										  obj->address.objectId);
 
 		if (tuple)
 		{
@@ -1384,7 +1406,7 @@ EventTriggerSQLDropAddObject(const ObjectAddress *object, bool original, bool no
 					else if (isAnyTempNamespace(namespaceId))
 					{
 						pfree(obj);
-						heap_close(catalog, AccessShareLock);
+						table_close(catalog, AccessShareLock);
 						MemoryContextSwitchTo(oldcxt);
 						return;
 					}
@@ -1410,7 +1432,7 @@ EventTriggerSQLDropAddObject(const ObjectAddress *object, bool original, bool no
 			}
 		}
 
-		heap_close(catalog, AccessShareLock);
+		table_close(catalog, AccessShareLock);
 	}
 	else
 	{
@@ -1454,8 +1476,8 @@ pg_event_trigger_dropped_objects(PG_FUNCTION_ARGS)
 		!currentEventTriggerState->in_sql_drop)
 		ereport(ERROR,
 				(errcode(ERRCODE_E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED),
-		 errmsg("%s can only be called in a sql_drop event trigger function",
-				"pg_event_trigger_dropped_objects()")));
+				 errmsg("%s can only be called in a sql_drop event trigger function",
+						"pg_event_trigger_dropped_objects()")));
 
 	/* check to see if caller supports us returning a tuplestore */
 	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
@@ -1696,11 +1718,6 @@ EventTriggerCollectSimpleCommand(ObjectAddress address,
  * Note we don't collect the command immediately; instead we keep it in
  * currentCommand, and only when we're done processing the subcommands we will
  * add it to the command list.
- *
- * XXX -- this API isn't considering the possibility of an ALTER TABLE command
- * being called reentrantly by an event trigger function.  Do we need stackable
- * commands at this level?	Perhaps at least we should detect the condition and
- * raise an error.
  */
 void
 EventTriggerAlterTableStart(Node *parsetree)
@@ -1725,6 +1742,7 @@ EventTriggerAlterTableStart(Node *parsetree)
 	command->d.alterTable.subcmds = NIL;
 	command->parsetree = copyObject(parsetree);
 
+	command->parent = currentEventTriggerState->currentCommand;
 	currentEventTriggerState->currentCommand = command;
 
 	MemoryContextSwitchTo(oldcxt);
@@ -1765,6 +1783,7 @@ EventTriggerCollectAlterTableSubcmd(Node *subcmd, ObjectAddress address)
 		return;
 
 	Assert(IsA(subcmd, AlterTableCmd));
+	Assert(currentEventTriggerState->currentCommand != NULL);
 	Assert(OidIsValid(currentEventTriggerState->currentCommand->d.alterTable.objectId));
 
 	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
@@ -1790,10 +1809,14 @@ EventTriggerCollectAlterTableSubcmd(Node *subcmd, ObjectAddress address)
 void
 EventTriggerAlterTableEnd(void)
 {
+	CollectedCommand *parent;
+
 	/* ignore if event trigger context not set, or collection disabled */
 	if (!currentEventTriggerState ||
 		currentEventTriggerState->commandCollectionInhibited)
 		return;
+
+	parent = currentEventTriggerState->currentCommand->parent;
 
 	/* If no subcommands, don't collect */
 	if (list_length(currentEventTriggerState->currentCommand->d.alterTable.subcmds) != 0)
@@ -1805,7 +1828,7 @@ EventTriggerAlterTableEnd(void)
 	else
 		pfree(currentEventTriggerState->currentCommand);
 
-	currentEventTriggerState->currentCommand = NULL;
+	currentEventTriggerState->currentCommand = parent;
 }
 
 /*
@@ -1880,7 +1903,7 @@ EventTriggerCollectAlterOpFam(AlterOpFamilyStmt *stmt, Oid opfamoid,
 					 OperatorFamilyRelationId, opfamoid);
 	command->d.opfam.operators = operators;
 	command->d.opfam.procedures = procedures;
-	command->parsetree = copyObject(stmt);
+	command->parsetree = (Node *) copyObject(stmt);
 
 	currentEventTriggerState->commandList =
 		lappend(currentEventTriggerState->commandList, command);
@@ -1913,7 +1936,7 @@ EventTriggerCollectCreateOpClass(CreateOpClassStmt *stmt, Oid opcoid,
 					 OperatorClassRelationId, opcoid);
 	command->d.createopc.operators = operators;
 	command->d.createopc.procedures = procedures;
-	command->parsetree = copyObject(stmt);
+	command->parsetree = (Node *) copyObject(stmt);
 
 	currentEventTriggerState->commandList =
 		lappend(currentEventTriggerState->commandList, command);
@@ -1948,7 +1971,7 @@ EventTriggerCollectAlterTSConfig(AlterTSConfigurationStmt *stmt, Oid cfgId,
 	command->d.atscfg.dictIds = palloc(sizeof(Oid) * ndicts);
 	memcpy(command->d.atscfg.dictIds, dictIds, sizeof(Oid) * ndicts);
 	command->d.atscfg.ndicts = ndicts;
-	command->parsetree = copyObject(stmt);
+	command->parsetree = (Node *) copyObject(stmt);
 
 	currentEventTriggerState->commandList =
 		lappend(currentEventTriggerState->commandList, command);
@@ -1978,7 +2001,7 @@ EventTriggerCollectAlterDefPrivs(AlterDefaultPrivilegesStmt *stmt)
 	command->type = SCT_AlterDefaultPrivileges;
 	command->d.defprivs.objtype = stmt->action->objtype;
 	command->in_extension = creating_extension;
-	command->parsetree = copyObject(stmt);
+	command->parsetree = (Node *) copyObject(stmt);
 
 	currentEventTriggerState->commandList =
 		lappend(currentEventTriggerState->commandList, command);
@@ -2103,18 +2126,19 @@ pg_event_trigger_ddl_commands(PG_FUNCTION_ARGS)
 							Oid			schema_oid;
 							bool		isnull;
 
-							catalog = heap_open(addr.classId, AccessShareLock);
+							catalog = table_open(addr.classId, AccessShareLock);
 							objtup = get_catalog_object_by_oid(catalog,
+															   get_object_attnum_oid(addr.classId),
 															   addr.objectId);
 							if (!HeapTupleIsValid(objtup))
 								elog(ERROR, "cache lookup failed for object %u/%u",
 									 addr.classId, addr.objectId);
 							schema_oid =
 								heap_getattr(objtup, nspAttnum,
-										 RelationGetDescr(catalog), &isnull);
+											 RelationGetDescr(catalog), &isnull);
 							if (isnull)
 								elog(ERROR,
-								 "invalid null namespace in object %u/%u/%d",
+									 "invalid null namespace in object %u/%u/%d",
 									 addr.classId, addr.objectId, addr.objectSubId);
 							/* XXX not quite get_namespace_name_or_temp */
 							if (isAnyTempNamespace(schema_oid))
@@ -2122,7 +2146,7 @@ pg_event_trigger_ddl_commands(PG_FUNCTION_ARGS)
 							else
 								schema = get_namespace_name(schema_oid);
 
-							heap_close(catalog, AccessShareLock);
+							table_close(catalog, AccessShareLock);
 						}
 					}
 
@@ -2161,7 +2185,7 @@ pg_event_trigger_ddl_commands(PG_FUNCTION_ARGS)
 				values[i++] = CStringGetTextDatum(CreateCommandTag(cmd->parsetree));
 				/* object_type */
 				values[i++] = CStringGetTextDatum(stringify_adefprivs_objtype(
-												   cmd->d.defprivs.objtype));
+																			  cmd->d.defprivs.objtype));
 				/* schema */
 				nulls[i++] = true;
 				/* identity */
@@ -2183,8 +2207,8 @@ pg_event_trigger_ddl_commands(PG_FUNCTION_ARGS)
 				values[i++] = CStringGetTextDatum(cmd->d.grant.istmt->is_grant ?
 												  "GRANT" : "REVOKE");
 				/* object_type */
-				values[i++] = CStringGetTextDatum(stringify_grantobjtype(
-											   cmd->d.grant.istmt->objtype));
+				values[i++] = CStringGetTextDatum(stringify_grant_objtype(
+																		  cmd->d.grant.istmt->objtype));
 				/* schema */
 				nulls[i++] = true;
 				/* identity */
@@ -2206,69 +2230,170 @@ pg_event_trigger_ddl_commands(PG_FUNCTION_ARGS)
 }
 
 /*
- * Return the GrantObjectType as a string, as it would appear in GRANT and
+ * Return the ObjectType as a string, as it would appear in GRANT and
  * REVOKE commands.
  */
 static const char *
-stringify_grantobjtype(GrantObjectType objtype)
+stringify_grant_objtype(ObjectType objtype)
 {
 	switch (objtype)
 	{
-		case ACL_OBJECT_COLUMN:
+		case OBJECT_COLUMN:
 			return "COLUMN";
-		case ACL_OBJECT_RELATION:
+		case OBJECT_TABLE:
 			return "TABLE";
-		case ACL_OBJECT_SEQUENCE:
+		case OBJECT_SEQUENCE:
 			return "SEQUENCE";
-		case ACL_OBJECT_DATABASE:
+		case OBJECT_DATABASE:
 			return "DATABASE";
-		case ACL_OBJECT_DOMAIN:
+		case OBJECT_DOMAIN:
 			return "DOMAIN";
-		case ACL_OBJECT_FDW:
+		case OBJECT_FDW:
 			return "FOREIGN DATA WRAPPER";
-		case ACL_OBJECT_FOREIGN_SERVER:
+		case OBJECT_FOREIGN_SERVER:
 			return "FOREIGN SERVER";
-		case ACL_OBJECT_FUNCTION:
+		case OBJECT_FUNCTION:
 			return "FUNCTION";
-		case ACL_OBJECT_LANGUAGE:
+		case OBJECT_LANGUAGE:
 			return "LANGUAGE";
-		case ACL_OBJECT_LARGEOBJECT:
+		case OBJECT_LARGEOBJECT:
 			return "LARGE OBJECT";
-		case ACL_OBJECT_NAMESPACE:
+		case OBJECT_SCHEMA:
 			return "SCHEMA";
-		case ACL_OBJECT_TABLESPACE:
+		case OBJECT_PROCEDURE:
+			return "PROCEDURE";
+		case OBJECT_ROUTINE:
+			return "ROUTINE";
+		case OBJECT_TABLESPACE:
 			return "TABLESPACE";
-		case ACL_OBJECT_TYPE:
+		case OBJECT_TYPE:
 			return "TYPE";
-		default:
-			elog(ERROR, "unrecognized type %d", objtype);
-			return "???";		/* keep compiler quiet */
+			/* these currently aren't used */
+		case OBJECT_ACCESS_METHOD:
+		case OBJECT_AGGREGATE:
+		case OBJECT_AMOP:
+		case OBJECT_AMPROC:
+		case OBJECT_ATTRIBUTE:
+		case OBJECT_CAST:
+		case OBJECT_COLLATION:
+		case OBJECT_CONVERSION:
+		case OBJECT_DEFAULT:
+		case OBJECT_DEFACL:
+		case OBJECT_DOMCONSTRAINT:
+		case OBJECT_EVENT_TRIGGER:
+		case OBJECT_EXTENSION:
+		case OBJECT_FOREIGN_TABLE:
+		case OBJECT_INDEX:
+		case OBJECT_MATVIEW:
+		case OBJECT_OPCLASS:
+		case OBJECT_OPERATOR:
+		case OBJECT_OPFAMILY:
+		case OBJECT_POLICY:
+		case OBJECT_PUBLICATION:
+		case OBJECT_PUBLICATION_REL:
+		case OBJECT_ROLE:
+		case OBJECT_RULE:
+		case OBJECT_STATISTIC_EXT:
+		case OBJECT_SUBSCRIPTION:
+		case OBJECT_TABCONSTRAINT:
+		case OBJECT_TRANSFORM:
+		case OBJECT_TRIGGER:
+		case OBJECT_TSCONFIGURATION:
+		case OBJECT_TSDICTIONARY:
+		case OBJECT_TSPARSER:
+		case OBJECT_TSTEMPLATE:
+		case OBJECT_USER_MAPPING:
+		case OBJECT_VIEW:
+		case OBJECT_EXTPROTOCOL:
+		case OBJECT_RESQUEUE:
+		case OBJECT_RESGROUP:
+			elog(ERROR, "unsupported object type: %d", (int) objtype);
 	}
+
+	return "???";				/* keep compiler quiet */
 }
 
 /*
- * Return the GrantObjectType as a string; as above, but use the spelling
- * in ALTER DEFAULT PRIVILEGES commands instead.
+ * Return the ObjectType as a string; as above, but use the spelling
+ * in ALTER DEFAULT PRIVILEGES commands instead.  Generally this is just
+ * the plural.
  */
 static const char *
-stringify_adefprivs_objtype(GrantObjectType objtype)
+stringify_adefprivs_objtype(ObjectType objtype)
 {
 	switch (objtype)
 	{
-		case ACL_OBJECT_RELATION:
+		case OBJECT_COLUMN:
+			return "COLUMNS";
+		case OBJECT_TABLE:
 			return "TABLES";
-			break;
-		case ACL_OBJECT_FUNCTION:
-			return "FUNCTIONS";
-			break;
-		case ACL_OBJECT_SEQUENCE:
+		case OBJECT_SEQUENCE:
 			return "SEQUENCES";
-			break;
-		case ACL_OBJECT_TYPE:
+		case OBJECT_DATABASE:
+			return "DATABASES";
+		case OBJECT_DOMAIN:
+			return "DOMAINS";
+		case OBJECT_FDW:
+			return "FOREIGN DATA WRAPPERS";
+		case OBJECT_FOREIGN_SERVER:
+			return "FOREIGN SERVERS";
+		case OBJECT_FUNCTION:
+			return "FUNCTIONS";
+		case OBJECT_LANGUAGE:
+			return "LANGUAGES";
+		case OBJECT_LARGEOBJECT:
+			return "LARGE OBJECTS";
+		case OBJECT_SCHEMA:
+			return "SCHEMAS";
+		case OBJECT_PROCEDURE:
+			return "PROCEDURES";
+		case OBJECT_ROUTINE:
+			return "ROUTINES";
+		case OBJECT_TABLESPACE:
+			return "TABLESPACES";
+		case OBJECT_TYPE:
 			return "TYPES";
-			break;
-		default:
-			elog(ERROR, "unrecognized type %d", objtype);
-			return "???";		/* keep compiler quiet */
+			/* these currently aren't used */
+		case OBJECT_ACCESS_METHOD:
+		case OBJECT_AGGREGATE:
+		case OBJECT_AMOP:
+		case OBJECT_AMPROC:
+		case OBJECT_ATTRIBUTE:
+		case OBJECT_CAST:
+		case OBJECT_COLLATION:
+		case OBJECT_CONVERSION:
+		case OBJECT_DEFAULT:
+		case OBJECT_DEFACL:
+		case OBJECT_DOMCONSTRAINT:
+		case OBJECT_EVENT_TRIGGER:
+		case OBJECT_EXTENSION:
+		case OBJECT_FOREIGN_TABLE:
+		case OBJECT_INDEX:
+		case OBJECT_MATVIEW:
+		case OBJECT_OPCLASS:
+		case OBJECT_OPERATOR:
+		case OBJECT_OPFAMILY:
+		case OBJECT_POLICY:
+		case OBJECT_PUBLICATION:
+		case OBJECT_PUBLICATION_REL:
+		case OBJECT_ROLE:
+		case OBJECT_RULE:
+		case OBJECT_STATISTIC_EXT:
+		case OBJECT_SUBSCRIPTION:
+		case OBJECT_TABCONSTRAINT:
+		case OBJECT_TRANSFORM:
+		case OBJECT_TRIGGER:
+		case OBJECT_TSCONFIGURATION:
+		case OBJECT_TSDICTIONARY:
+		case OBJECT_TSPARSER:
+		case OBJECT_TSTEMPLATE:
+		case OBJECT_USER_MAPPING:
+		case OBJECT_VIEW:
+		case OBJECT_EXTPROTOCOL:
+		case OBJECT_RESQUEUE:
+		case OBJECT_RESGROUP:
+			elog(ERROR, "unsupported object type: %d", (int) objtype);
 	}
+
+	return "???";				/* keep compiler quiet */
 }

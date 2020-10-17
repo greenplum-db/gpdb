@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)crypt.c	8.1.1.1 (Berkeley) 8/18/93";
 #else
 __RCSID("$NetBSD: crypt.c,v 1.18 2001/03/01 14:37:35 wiz Exp $");
 #endif
-#endif   /* not lint */
+#endif							/* not lint */
 
 #include "c.h"
 
@@ -287,7 +287,7 @@ typedef union
 	{ C_block tblk; permute(cpp,&tblk,p,8); LOAD (d,d0,d1,tblk); }
 #define PERM3264(d,d0,d1,cpp,p)				\
 	{ C_block tblk; permute(cpp,&tblk,p,4); LOAD (d,d0,d1,tblk); }
-#endif   /* LARGEDATA */
+#endif							/* LARGEDATA */
 
 STATIC		init_des(void);
 STATIC		init_perm(C_block[64 / CHUNKBITS][1 << CHUNKBITS], unsigned char[64], int, int);
@@ -302,11 +302,7 @@ STATIC		prtab(char *, unsigned char *, int);
 
 #ifndef LARGEDATA
 STATIC
-permute(cp, out, p, chars_in)
-unsigned char *cp;
-C_block    *out;
-C_block    *p;
-int			chars_in;
+permute(unsigned char *cp, C_block *out, C_block *p, int chars_in)
 {
 	DCL_BLOCK(D, D0, D1);
 	C_block    *tp;
@@ -325,12 +321,12 @@ int			chars_in;
 	} while (--chars_in > 0);
 	STORE(D, D0, D1, *out);
 }
-#endif   /* LARGEDATA */
+#endif							/* LARGEDATA */
 
 
 /* =====  (mostly) Standard DES Tables ==================== */
 
-static const unsigned char IP[] = {		/* initial permutation */
+static const unsigned char IP[] = { /* initial permutation */
 	58, 50, 42, 34, 26, 18, 10, 2,
 	60, 52, 44, 36, 28, 20, 12, 4,
 	62, 54, 46, 38, 30, 22, 14, 6,
@@ -343,7 +339,7 @@ static const unsigned char IP[] = {		/* initial permutation */
 
 /* The final permutation is the inverse of IP - no table is necessary */
 
-static const unsigned char ExpandTr[] = {		/* expansion operation */
+static const unsigned char ExpandTr[] = {	/* expansion operation */
 	32, 1, 2, 3, 4, 5,
 	4, 5, 6, 7, 8, 9,
 	8, 9, 10, 11, 12, 13,
@@ -366,7 +362,7 @@ static const unsigned char PC1[] = {	/* permuted choice table 1 */
 	21, 13, 5, 28, 20, 12, 4,
 };
 
-static const unsigned char Rotates[] = {		/* PC1 rotation schedule */
+static const unsigned char Rotates[] = {	/* PC1 rotation schedule */
 	1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1,
 };
 
@@ -456,7 +452,7 @@ static const unsigned char itoa64[] =	/* 0..63 => ascii-64 */
 /* =====  Tables that are initialized at run time  ==================== */
 
 
-static unsigned char a64toi[128];		/* ascii-64 => 0..63 */
+static unsigned char a64toi[128];	/* ascii-64 => 0..63 */
 
 /* Initial key schedule permutation */
 static C_block PC1ROT[64 / CHUNKBITS][1 << CHUNKBITS];
@@ -481,7 +477,7 @@ static C_block constdatablock;	/* encryption constant */
 static char cryptresult[1 + 4 + 4 + 11 + 1];	/* encrypted result */
 
 extern char *__md5crypt(const char *, const char *);	/* XXX */
-extern char *__bcrypt(const char *, const char *);		/* XXX */
+extern char *__bcrypt(const char *, const char *);	/* XXX */
 
 
 /*
@@ -489,9 +485,7 @@ extern char *__bcrypt(const char *, const char *);		/* XXX */
  * followed by an encryption produced by the "key" and "setting".
  */
 char *
-crypt(key, setting)
-const char *key;
-const char *setting;
+crypt(const char *key, const char *setting)
 {
 	char	   *encp;
 	int32_t		i;
@@ -523,7 +517,7 @@ const char *setting;
 			key++;
 		keyblock.b[i] = t;
 	}
-	if (des_setkey((char *) keyblock.b))		/* also initializes "a64toi" */
+	if (des_setkey((char *) keyblock.b))	/* also initializes "a64toi" */
 		return (NULL);
 
 	encp = &cryptresult[0];
@@ -630,8 +624,7 @@ static volatile int des_ready = 0;
  * Set up the key schedule from the key.
  */
 static int
-des_setkey(key)
-const char *key;
+des_setkey(const char *key)
 {
 	DCL_BLOCK(K, K0, K1);
 	C_block    *ptabp;
@@ -663,11 +656,7 @@ const char *key;
  * compiler and machine architecture.
  */
 static int
-des_cipher(in, out, salt, num_iter)
-const char *in;
-char	   *out;
-long		salt;
-int			num_iter;
+des_cipher(const char *in, char *out, long salt, int num_iter)
 {
 	/* variables that we want in registers, most important first */
 #if defined(pdp11)
@@ -714,7 +703,7 @@ int			num_iter;
 	R1 = (R1 >> 1) & 0x55555555L;
 	L1 = R0 | R1;				/* L1 is the odd-numbered input bits */
 	STORE(L, L0, L1, B);
-	PERM3264(L, L0, L1, B.b, (C_block *) IE3264);		/* even bits */
+	PERM3264(L, L0, L1, B.b, (C_block *) IE3264);	/* even bits */
 	PERM3264(R, R0, R1, B.b + 4, (C_block *) IE3264);	/* odd bits */
 
 	if (num_iter >= 0)
@@ -807,7 +796,7 @@ int			num_iter;
  * done at compile time, if the compiler were capable of that sort of thing.
  */
 STATIC
-init_des()
+init_des(void)
 {
 	int			i,
 				j;
@@ -972,11 +961,10 @@ init_des()
  * "perm" must be all-zeroes on entry to this routine.
  */
 STATIC
-init_perm(perm, p, chars_in, chars_out)
-C_block		perm[64 / CHUNKBITS][1 << CHUNKBITS];
-unsigned char p[64];
-int			chars_in,
-			chars_out;
+init_perm(C_block perm[64 / CHUNKBITS][1 << CHUNKBITS],
+		  unsigned char p[64],
+		  int chars_in,
+		  int chars_out)
 {
 	int			i,
 				j,
@@ -1003,8 +991,7 @@ int			chars_in,
  */
 #ifdef NOT_USED
 int
-setkey(key)
-const char *key;
+setkey(const char *key)
 {
 	int			i,
 				j,
@@ -1028,9 +1015,7 @@ const char *key;
  * "encrypt" routine (for backwards compatibility)
  */
 static int
-encrypt(block, flag)
-char	   *block;
-int			flag;
+encrypt(char *block, int flag)
 {
 	int			i,
 				j,
@@ -1064,10 +1049,7 @@ int			flag;
 
 #ifdef DEBUG
 STATIC
-prtab(s, t, num_rows)
-char	   *s;
-unsigned char *t;
-int			num_rows;
+prtab(char *s, unsigned char *t, int num_rows)
 {
 	int			i,
 				j;

@@ -19,6 +19,8 @@ insert into misc_jiras.t1 select i % 13, md5(i::text), i % 3
 -- value to trigger the spilling.
 set work_mem to '64kB';
 
+set extra_float_digits=0; -- the last decimal digits are somewhat random
+
 select sum(cc) from (
     select c1
          , c2

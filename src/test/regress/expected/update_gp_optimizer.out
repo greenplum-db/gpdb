@@ -39,11 +39,6 @@ create table todelete (a int, b int) distributed by (a);
 create table target (a int, b int, c int)
         distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "target_1_prt_extra" for table "target"
-NOTICE:  CREATE TABLE will create partition "target_1_prt_2" for table "target"
-NOTICE:  CREATE TABLE will create partition "target_1_prt_3" for table "target"
-NOTICE:  CREATE TABLE will create partition "target_1_prt_4" for table "target"
-NOTICE:  CREATE TABLE will create partition "target_1_prt_5" for table "target"
 insert into todelete select g, g % 4 from generate_series(1, 10) g;
 insert into target select g, 0, 3 from generate_series(1, 5) g;
 insert into target select g, 0, 1 from generate_series(1, 5) g;
@@ -65,7 +60,6 @@ select * from target;
 -- Also test an update with a qual that doesn't match any partition. The
 -- Append degenerates into a dummy Result with false One-Time Filter.
 alter table target drop default partition;
-NOTICE:  dropped partition "extra" for relation "target"
 update target set b = 10 where c = 10;
 drop table todelete;
 drop table target;
@@ -123,46 +117,39 @@ EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
                 (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
     ) t1
 WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
-                                                                                       QUERY PLAN                                                                                        
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
  Update on keo1
-   ->  Result
-         ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3)
-               ->  Split
-                     ->  Hash Join
-                           Hash Cond: ((keo1_2.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
+   InitPlan 3 (returns $2)  (slice1)
+     ->  Finalize Aggregate
+           InitPlan 2 (returns $1)  (slice3)
+             ->  Gather Motion 3:1  (slice4; segments: 3)
+                   InitPlan 1 (returns $0)  (slice5)
+                     ->  Finalize Aggregate
+                           ->  Gather Motion 3:1  (slice6; segments: 3)
+                                 ->  Partial Aggregate
+                                       ->  Seq Scan on keo4
+                   ->  Seq Scan on keo4 keo4_1
+                         Filter: ((keo_para_budget_date)::text = $0)
+           ->  Gather Motion 3:1  (slice2; segments: 3)
+                 ->  Partial Aggregate
+                       ->  Seq Scan on keo3
+                             Filter: ((bky_per)::text = ($1)::text)
+   ->  Explicit Redistribute Motion 3:3  (slice7; segments: 3)
+         ->  Hash Join
+               Hash Cond: ((b.projects_pk)::text = (a.user_vie_project_code_pk)::text)
+               ->  Seq Scan on keo2 b
+               ->  Hash
+                     ->  Broadcast Motion 3:3  (slice8; segments: 3)
                            ->  Hash Join
-                                 Hash Cond: ((keo1_1.user_vie_project_code_pk)::text = (keo1_2.user_vie_project_code_pk)::text)
-                                 ->  Seq Scan on keo1 keo1_1
+                                 Hash Cond: ((keo1.user_vie_project_code_pk)::text = (a.user_vie_project_code_pk)::text)
+                                 ->  Seq Scan on keo1
                                  ->  Hash
-                                       ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                                             ->  Hash Join
-                                                   Hash Cond: ((keo1_2.user_vie_fiscal_year_period_sk)::text = (max((keo3.sky_per)::text)))
-                                                   ->  Gather Motion 3:1  (slice3; segments: 3)
-                                                         ->  Seq Scan on keo1 keo1_2
-                                                   ->  Hash
-                                                         ->  Aggregate
-                                                               ->  Hash Join
-                                                                     Hash Cond: ((keo3.bky_per)::text = (keo4.keo_para_required_period)::text)
-                                                                     ->  Gather Motion 3:1  (slice4; segments: 3)
-                                                                           ->  Seq Scan on keo3
-                                                                     ->  Hash
-                                                                           ->  Assert
-                                                                                 Assert Cond: ((row_number() OVER (?)) = 1)
-                                                                                 ->  WindowAgg
-                                                                                       ->  Hash Join
-                                                                                             Hash Cond: ((keo4.keo_para_budget_date)::text = (min((keo4_1.keo_para_budget_date)::text)))
-                                                                                             ->  Gather Motion 3:1  (slice5; segments: 3)
-                                                                                                   ->  Seq Scan on keo4
-                                                                                             ->  Hash
-                                                                                                   ->  Aggregate
-                                                                                                         ->  Gather Motion 3:1  (slice6; segments: 3)
-                                                                                                               ->  Seq Scan on keo4 keo4_1
-                           ->  Hash
-                                 ->  Broadcast Motion 3:3  (slice7; segments: 3)
-                                       ->  Seq Scan on keo2
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(37 rows)
+                                       ->  Broadcast Motion 3:3  (slice9; segments: 3)
+                                             ->  Seq Scan on keo1 a
+                                                   Filter: ((user_vie_fiscal_year_period_sk)::text = $2)
+ Optimizer: Postgres query optimizer
+(30 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -460,10 +447,10 @@ drop table if exists s;
 NOTICE:  table "s" does not exist, skipping
 drop table if exists update_dist;
 NOTICE:  table "update_dist" does not exist, skipping
-drop table if exists ao_table;
-NOTICE:  table "ao_table" does not exist, skipping
-drop table if exists aoco_table;
-NOTICE:  table "aoco_table" does not exist, skipping
+drop table if exists update_ao_table;
+NOTICE:  table "update_ao_table" does not exist, skipping
+drop table if exists update_aoco_table;
+NOTICE:  table "update_aoco_table" does not exist, skipping
 -- end_ignore
 -- Update normal table distribution key
 create table update_dist(a int) distributed by (a);
@@ -606,9 +593,9 @@ select * from s;
 (5 rows)
 
 -- Update ao table distribution key
-create table ao_table (a int, b int) WITH (appendonly=true) distributed by (a);
-insert into ao_table select g, g from generate_series(1, 5) g;
-select * from ao_table;
+create table update_ao_table (a int, b int) WITH (appendonly=true) distributed by (a);
+insert into update_ao_table select g, g from generate_series(1, 5) g;
+select * from update_ao_table;
  a | b 
 ---+---
  1 | 1
@@ -618,8 +605,8 @@ select * from ao_table;
  5 | 5
 (5 rows)
 
-update ao_table set a = a + 1 where b = 3;
-select * from ao_table;
+update update_ao_table set a = a + 1 where b = 3;
+select * from update_ao_table;
  a | b 
 ---+---
  1 | 1
@@ -630,9 +617,9 @@ select * from ao_table;
 (5 rows)
 
 -- Update aoco table distribution key
-create table aoco_table (a int, b int) WITH (appendonly=true, orientation=column) distributed by (a);
-insert into aoco_table select g,g from generate_series(1, 5) g;
-select * from aoco_table;
+create table update_aoco_table (a int, b int) WITH (appendonly=true, orientation=column) distributed by (a);
+insert into update_aoco_table select g,g from generate_series(1, 5) g;
+select * from update_aoco_table;
  a | b 
 ---+---
  1 | 1
@@ -642,8 +629,8 @@ select * from aoco_table;
  5 | 5
 (5 rows)
 
-update aoco_table set a = a + 1 where b = 3;
-select * from aoco_table;
+update update_aoco_table set a = a + 1 where b = 3;
+select * from update_aoco_table;
  a | b 
 ---+---
  1 | 1
@@ -735,7 +722,6 @@ WITH (appendonly=false) DISTRIBUTED BY (a_dist) PARTITION BY RANGE(c_part)
           (
           PARTITION p20190305 START (1) END (2) WITH (tablename='update_gp_foo_1_prt_p20190305', appendonly=false)
           );
-NOTICE:  CREATE TABLE will create partition "update_gp_foo_1_prt_p20190305" for table "update_gp_foo"
 CREATE TABLE update_gp_foo1 (
         a_dist int,
         b int,
@@ -746,7 +732,6 @@ WITH (appendonly=false) DISTRIBUTED BY (a_dist) PARTITION BY RANGE(c_part)
           (
           PARTITION p20190305 START (1) END (2) WITH (tablename='update_gp_foo1_1_prt_p20190305', appendonly=false)
           );
-NOTICE:  CREATE TABLE will create partition "update_gp_foo1_1_prt_p20190305" for table "update_gp_foo1"
 INSERT INTO update_gp_foo VALUES (12, 40, 1, 50);
 INSERT INTO update_gp_foo1 VALUES (12, 3, 1, 50);
 UPDATE update_gp_foo
@@ -779,12 +764,47 @@ create table t_insert_on_conflict_update_distkey(a int, b int) distributed repli
 create unique index uidx_t_insert_on_conflict_update_distkey on t_insert_on_conflict_update_distkey(a, b);
 -- the following statement should succeed because replicated table does not contain distkey
 insert into t_insert_on_conflict_update_distkey values (1, 1) on conflict(a, b) do update set a = 1;
+-- Some tests on a partitioned table.
+CREATE TABLE update_gp_rangep (a int, b int, orig_a int) DISTRIBUTED BY (b) PARTITION BY RANGE (a);
+CREATE TABLE update_gp_rangep_1_to_10  PARTITION OF update_gp_rangep FOR VALUES FROM  (1) TO (10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE update_gp_rangep_10_to_20 PARTITION OF update_gp_rangep FOR VALUES FROM (10) TO (20);
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO update_gp_rangep SELECT g, g, g FROM generate_series(1, 4) g;
+-- Simple case: Same partition, same node.
+UPDATE update_gp_rangep SET a = 9 WHERE a = 1;
+-- Distribution key update, same partition.
+UPDATE update_gp_rangep SET b = 1 WHERE a = 2;
+-- Move row to different partition, but no change in distribution key
+UPDATE update_gp_rangep SET a = 10 WHERE a = 3;
+-- Move row to different partition and also change distribution key
+UPDATE update_gp_rangep SET a = 11, b = 1 WHERE a = 4;
+SELECT tableoid::regclass, * FROM update_gp_rangep ORDER BY orig_a;
+         tableoid          | a  | b | orig_a 
+---------------------------+----+---+--------
+ update_gp_rangep_1_to_10  |  9 | 1 |      1
+ update_gp_rangep_1_to_10  |  2 | 1 |      2
+ update_gp_rangep_10_to_20 | 10 | 3 |      3
+ update_gp_rangep_10_to_20 | 11 | 1 |      4
+(4 rows)
+
+-- Also do a lookup with specific distribution key. If the rows were not
+-- correctly moved across segments, this would fail to find them, assuming
+-- that direct dispatch is effective.
+SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
+         tableoid          | a  | b | orig_a 
+---------------------------+----+---+--------
+ update_gp_rangep_1_to_10  |  9 | 1 |      1
+ update_gp_rangep_1_to_10  |  2 | 1 |      2
+ update_gp_rangep_10_to_20 | 11 | 1 |      4
+(3 rows)
+
 -- start_ignore
 drop table r;
 drop table s;
 drop table update_dist;
-drop table ao_table;
-drop table aoco_table;
+drop table update_ao_table;
+drop table update_aoco_table;
 drop table nosplitupdate;
 drop table tsplit_entry;
 -- end_ignore

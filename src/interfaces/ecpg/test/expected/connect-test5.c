@@ -154,9 +154,9 @@ main(void)
 
 
 	/* not connected */
-	{ ECPGdisconnect(__LINE__, "nonexistant");}
+	{ ECPGdisconnect(__LINE__, "nonexistent");}
 #line 73 "test5.pgc"
 
 
-	return (0);
+	return 0;
 }

@@ -23,7 +23,6 @@
 #include "access/xact.h"
 #include "utils/guc.h"
 #include "utils/session_state.h"
-#include "utils/tqual.h"
 
 /*
  * process local cache used to identify "dispatch units"

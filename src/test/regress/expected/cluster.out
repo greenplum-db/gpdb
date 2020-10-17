@@ -441,6 +441,14 @@ select * from clstr_temp;
 
 drop table clstr_temp;
 RESET SESSION AUTHORIZATION;
+-- Check that partitioned tables cannot be clustered
+CREATE TABLE clstrpart (a int) PARTITION BY RANGE (a);
+CREATE INDEX clstrpart_idx ON clstrpart (a);
+ALTER TABLE clstrpart CLUSTER ON clstrpart_idx;
+ERROR:  cannot mark index clustered in partitioned table
+CLUSTER clstrpart USING clstrpart_idx;
+ERROR:  cannot cluster a partitioned table
+DROP TABLE clstrpart;
 -- Test CLUSTER with external tuplesorting
 -- The tests assume that the rows come out in the physical order, as
 -- sorted by CLUSTER. In GPDB, add a dummy column to force all the rows to go
@@ -450,22 +458,8 @@ create table clstr_4 as select 1 as dummy, * from tenk1 distributed by (dummy);
 create index cluster_sort on clstr_4 (hundred, thousand, tenthous);
 -- ensure we don't use the index in CLUSTER nor the checking SELECTs
 set enable_indexscan = off;
--- Use external sort that only ever uses quicksort to sort runs:
+-- Use external sort:
 set maintenance_work_mem = '1MB';
-set replacement_sort_tuples = 0;
-cluster clstr_4 using cluster_sort;
-select * from
-(select hundred, lag(hundred) over () as lhundred,
-        thousand, lag(thousand) over () as lthousand,
-        tenthous, lag(tenthous) over () as ltenthous from clstr_4) ss
-where row(hundred, thousand, tenthous) <= row(lhundred, lthousand, ltenthous);
- hundred | lhundred | thousand | lthousand | tenthous | ltenthous 
----------+----------+----------+-----------+----------+-----------
-(0 rows)
-
--- Replacement selection will now be forced.  It should only produce a single
--- run, due to the fact that input is found to be presorted:
-set replacement_sort_tuples = 150000;
 cluster clstr_4 using cluster_sort;
 select * from
 (select hundred, lag(hundred) over () as lhundred,
@@ -478,61 +472,6 @@ where row(hundred, thousand, tenthous) <= row(lhundred, lthousand, ltenthous);
 
 reset enable_indexscan;
 reset maintenance_work_mem;
-reset replacement_sort_tuples;
--- Test CLUSTER with append optimized storage
-CREATE TABLE ao_table(
-	id int,
-	fname text,
-	lname text,
-	address1 text,
-	address2 text,
-	city text,
-	state text,
-	zip text)
-WITH (appendonly=true)
-DISTRIBUTED BY (id);
-INSERT INTO ao_table (id, fname, lname, address1, address2, city, state, zip)
-SELECT i, 'Jon_' || i, 'Roberts_' || i, i || ' Main Street', 'Apartment ' || i, 'New York', 'NY', i::text
-FROM generate_series(1, 10000) AS i;
-CREATE INDEX ON ao_table (id);
-BEGIN;
-CLUSTER ao_table USING ao_table_id_idx;
-ABORT;
-CLUSTER ao_table USING ao_table_id_idx;
-SELECT * FROM ao_table WHERE id = 10;
- id | fname  |   lname    |    address1    |   address2   |   city   | state | zip 
-----+--------+------------+----------------+--------------+----------+-------+-----
- 10 | Jon_10 | Roberts_10 | 10 Main Street | Apartment 10 | New York | NY    | 10
-(1 row)
-
-DROP TABLE ao_table;
--- Test CLUSTER with append optimized columnar storage
-CREATE TABLE ao_table(
-	id int,
-	fname text,
-	lname text,
-	address1 text,
-	address2 text,
-	city text,
-	state text,
-	zip text)
-WITH (appendonly=true, orientation=column)
-DISTRIBUTED BY (id);
-INSERT INTO ao_table (id, fname, lname, address1, address2, city, state, zip)
-SELECT i, 'Jon_' || i, 'Roberts_' || i, i || ' Main Street', 'Apartment ' || i, 'New York', 'NY', i::text
-FROM generate_series(1, 10000) AS i;
-CREATE INDEX ON ao_table (id);
-BEGIN;
-CLUSTER ao_table USING ao_table_id_idx;
-ABORT;
-CLUSTER ao_table USING ao_table_id_idx;
-SELECT * FROM ao_table WHERE id = 10;
- id | fname  |   lname    |    address1    |   address2   |   city   | state | zip 
-----+--------+------------+----------------+--------------+----------+-------+-----
- 10 | Jon_10 | Roberts_10 | 10 Main Street | Apartment 10 | New York | NY    | 10
-(1 row)
-
-DROP TABLE ao_table;
 -- clean up
 DROP TABLE clustertest;
 DROP TABLE clstr_1;

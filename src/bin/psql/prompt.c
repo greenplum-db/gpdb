@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  *
  * src/bin/psql/prompt.c
  */
@@ -66,7 +66,7 @@
  */
 
 char *
-get_prompt(promptStatus_t status)
+get_prompt(promptStatus_t status, ConditionalStack cstack)
 {
 #define MAX_PROMPT_SIZE 256
 	static char destination[MAX_PROMPT_SIZE + 1];
@@ -181,14 +181,16 @@ get_prompt(promptStatus_t status)
 				case '5':
 				case '6':
 				case '7':
-					*buf = (char) strtol(p, (char **) &p, 8);
+					*buf = (char) strtol(p, unconstify(char **, &p), 8);
 					--p;
 					break;
 				case 'R':
 					switch (status)
 					{
 						case PROMPT_READY:
-							if (!pset.db)
+							if (cstack != NULL && !conditional_active(cstack))
+								buf[0] = '@';
+							else if (!pset.db)
 								buf[0] = '!';
 							else if (!pset.singleline)
 								buf[0] = '=';
@@ -308,7 +310,7 @@ get_prompt(promptStatus_t status)
 					 */
 					buf[0] = (*p == '[') ? RL_PROMPT_START_IGNORE : RL_PROMPT_END_IGNORE;
 					buf[1] = '\0';
-#endif   /* USE_READLINE */
+#endif							/* USE_READLINE */
 					break;
 
 				default:

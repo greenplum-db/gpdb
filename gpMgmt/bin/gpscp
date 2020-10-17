@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 gpscp -- scp to multiple hosts at once
@@ -14,27 +14,15 @@ Usage: gpscp [--version] [-?v] [-r] [-p port] [-u user]
 	     -f file      : a file listing all hosts to connect to
              -J character : character to be substitute as hostname [default='=']
 '''
-
-# disable deprecationwarnings
-import warnings
-
-warnings.simplefilter('ignore', DeprecationWarning)
-
 import os
 import sys
 import getopt
-import popen2
+import subprocess
 from gppylib.util import ssh_utils
 from gppylib.gpparseopts import OptParser
 from gppylib.parseutils import canonicalize_address
 
 progname = os.path.split(sys.argv[0])[-1]
-
-if sys.version_info < (2, 5, 0):
-    sys.exit(
-        '''Error: %s is supported on Python versions 2.5 or greater
-        Please upgrade python installed on this machine.''' % progname)
-
 
 #
 # all the command line options
@@ -60,13 +48,13 @@ def usage(exitarg):
     try:
         parser.print_help()
     except:
-        print __doc__
+        print(__doc__)
     sys.exit(exitarg)
 
 
 #############
 def print_version():
-    print '%s version $Revision$' % GV.script_name
+    print('%s version $Revision$' % GV.script_name)
     sys.exit(0)
 
 
@@ -74,7 +62,7 @@ def print_version():
 def parseCommandLine():
     try:
         (options, args) = getopt.getopt(sys.argv[1:], '?vrJ:p:u:h:f:', ['version'])
-    except Exception, e:
+    except Exception as e:
         usage('Error: ' + str(e))
 
     for (switch, val) in options:
@@ -104,16 +92,6 @@ def parseCommandLine():
 
 
 #############
-def run(cmd, peer):
-    if GV.opt['-v']: print '[INFO]', cmd
-    p = popen2.Popen4(cmd)
-    p.x_cmd = cmd
-    p.x_peer = peer
-    p.tochild.close()
-    return p
-
-
-#############
 try:
     parseCommandLine()
     hostlist = ssh_utils.HostList()
@@ -124,7 +102,7 @@ try:
 
     try:
         hostlist.checkSSH()
-    except ssh_utils.SSHError, e:
+    except ssh_utils.SSHError as e:
         sys.exit('[ERROR] ' + str(e))
 
     GV.opt['-h'] = hostlist.filterMultiHomedHosts()
@@ -140,19 +118,20 @@ try:
         cmd = scp + ' '
         for f in GV.filePath:
             cmd += f.replace(GV.opt['-J'], '%s:' % peer) + ' '
-        proc.append(run(cmd, peer))
+        if GV.opt['-v']: print('[INFO]', cmd)
+        proc.append(subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
 
-    errmsg = None
+    withError = False
     for p in proc:
-        for out in p.fromchild:
-            print '[OUT %s] %s' % (p.x_peer, out)
+        for line in p.stdout.readlines():
+            print('[OUT %s] %s' % ("".join(p.args), line))
         status = p.wait()
         if status:
-            errmsg = '[ERROR %s] exit %d, cmd - %s' % (p.x_peer, status, p.x_cmd)
-            print errmsg
+            print('[ERROR %s] exit %d, cmd - %s' % (p.stderr.read(), status, "".join(p.args)))
+            withError=True
 
-    if errmsg: sys.exit(1)
-    if GV.opt['-v']: print '[INFO] completed successfully'
+    if withError: sys.exit(1)
+    if GV.opt['-v']: print('[INFO] completed successfully')
 
 except KeyboardInterrupt:
     sys.exit('\nInterrupted...')

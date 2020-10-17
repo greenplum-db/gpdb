@@ -31,7 +31,7 @@ SELECT '' AS five, * FROM DEFAULT_TBL;
       |   3 |        |       1
 (5 rows)
 
-CREATE SEQUENCE DEFAULT_SEQ;
+CREATE SEQUENCE DEFAULT_SEQ CACHE 1;
 CREATE TABLE DEFAULTEXPR_TBL (i1 int DEFAULT 100 + (200-199) * 2,
 	i2 int DEFAULT nextval('default_seq'));
 INSERT INTO DEFAULTEXPR_TBL VALUES (-1, -2);
@@ -88,7 +88,7 @@ SELECT '' AS three, * FROM CHECK_TBL;
        | 6
 (3 rows)
 
-CREATE SEQUENCE CHECK_SEQ;
+CREATE SEQUENCE CHECK_SEQ CACHE 1;
 CREATE TABLE CHECK2_TBL (x int, y text, z int,
 	CONSTRAINT SEQUENCE_CON
 	CHECK (x > 3 and y <> 'check failed' and z < 8));
@@ -116,7 +116,7 @@ SELECT '' AS two, * from CHECK2_TBL;
 --
 -- Check constraints on INSERT
 --
-CREATE SEQUENCE INSERT_SEQ;
+CREATE SEQUENCE INSERT_SEQ CACHE 1;
 CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'),
 	y TEXT DEFAULT '-NULL-',
 	z INT DEFAULT -1 * (nextval('insert_seq')-1),
@@ -228,11 +228,20 @@ SELECT '' AS nine, * FROM INSERT_TBL;
 --
 -- Check constraints on system columns
 --
--- GPDB: tableoid is allowed in upstream, but not in GPDB.
 CREATE TABLE SYS_COL_CHECK_TBL (city text, state text, is_capital bool,
                   altitude int,
                   CHECK (NOT (is_capital AND tableoid::regclass::text = 'sys_col_check_tbl')));
-ERROR:  system column "tableoid" reference in check constraint is invalid
+INSERT INTO SYS_COL_CHECK_TBL VALUES ('Seattle', 'Washington', false, 100);
+INSERT INTO SYS_COL_CHECK_TBL VALUES ('Olympia', 'Washington', true, 100);
+ERROR:  new row for relation "sys_col_check_tbl" violates check constraint "sys_col_check_tbl_check"
+DETAIL:  Failing row contains (Olympia, Washington, t, 100).
+SELECT *, tableoid::regclass::text FROM SYS_COL_CHECK_TBL;
+  city   |   state    | is_capital | altitude |     tableoid      
+---------+------------+------------+----------+-------------------
+ Seattle | Washington | f          |      100 | sys_col_check_tbl
+(1 row)
+
+DROP TABLE SYS_COL_CHECK_TBL;
 --
 -- Check constraints on system columns other then TableOid should return error
 --
@@ -240,6 +249,8 @@ CREATE TABLE SYS_COL_CHECK_TBL (city text, state text, is_capital bool,
                   altitude int,
 				  CHECK (NOT (is_capital AND ctid::text = 'sys_col_check_tbl')));
 ERROR:  system column "ctid" reference in check constraint is invalid
+LINE 3:       CHECK (NOT (is_capital AND ctid::text = 'sys_col_check...
+                                         ^
 --
 -- Check inheritance of defaults and constraints
 --
@@ -301,7 +312,7 @@ NOTICE:  drop cascades to table atacc2
 --
 DELETE FROM INSERT_TBL;
 ALTER SEQUENCE INSERT_SEQ RESTART WITH 4;
-CREATE TABLE tmp (xd INT, yd TEXT, zd INT);
+CREATE TEMP TABLE tmp (xd INT, yd TEXT, zd INT);
 INSERT INTO tmp VALUES (null, 'Y', null);
 INSERT INTO tmp VALUES (5, '!check failed', null);
 INSERT INTO tmp VALUES (null, 'try again', null);
@@ -581,6 +592,32 @@ SET CONSTRAINTS ALL IMMEDIATE; -- should fail
 ERROR:  duplicate key value violates unique constraint "unique_tbl_i_key"
 DETAIL:  Key (i)=(3) already exists.
 COMMIT;
+-- test deferrable UNIQUE with a partitioned table
+CREATE TABLE parted_uniq_tbl (i int UNIQUE DEFERRABLE) partition by range (i);
+CREATE TABLE parted_uniq_tbl_1 PARTITION OF parted_uniq_tbl FOR VALUES FROM (0) TO (10);
+CREATE TABLE parted_uniq_tbl_2 PARTITION OF parted_uniq_tbl FOR VALUES FROM (20) TO (30);
+SELECT conname, conrelid::regclass FROM pg_constraint
+  WHERE conname LIKE 'parted_uniq%' ORDER BY conname;
+         conname         |     conrelid      
+-------------------------+-------------------
+ parted_uniq_tbl_1_i_key | parted_uniq_tbl_1
+ parted_uniq_tbl_2_i_key | parted_uniq_tbl_2
+ parted_uniq_tbl_i_key   | parted_uniq_tbl
+(3 rows)
+
+BEGIN;
+INSERT INTO parted_uniq_tbl VALUES (1);
+SAVEPOINT f;
+INSERT INTO parted_uniq_tbl VALUES (1);	-- unique violation
+ERROR:  duplicate key value violates unique constraint "parted_uniq_tbl_1_i_key"
+DETAIL:  Key (i)=(1) already exists.
+ROLLBACK TO f;
+SET CONSTRAINTS parted_uniq_tbl_i_key DEFERRED;
+INSERT INTO parted_uniq_tbl VALUES (1);	-- OK now, fail at commit
+COMMIT;
+ERROR:  duplicate key value violates unique constraint "parted_uniq_tbl_1_i_key"
+DETAIL:  Key (i)=(1) already exists.
+DROP TABLE parted_uniq_tbl;
 -- test a HOT update that invalidates the conflicting tuple.
 -- the trigger should still fire and catch the violation
 BEGIN;
@@ -710,6 +747,9 @@ ERROR:  could not create exclusion constraint "deferred_excl_f1_excl"
 DETAIL:  Key (f1)=(3) conflicts with key (f1)=(3).
 DROP TABLE deferred_excl;
 -- Comments
+-- Setup a low-level role to enforce non-superuser checks.
+CREATE ROLE regress_constraint_comments;
+SET SESSION AUTHORIZATION regress_constraint_comments;
 CREATE TABLE constraint_comments_tbl (a int CONSTRAINT the_constraint CHECK (a > 0));
 CREATE DOMAIN constraint_comments_dom AS int CONSTRAINT the_constraint CHECK (value > 0);
 COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS 'yes, the comment';
@@ -718,7 +758,7 @@ COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS 'yes, 
 COMMENT ON CONSTRAINT no_constraint ON constraint_comments_tbl IS 'yes, the comment';
 ERROR:  constraint "no_constraint" for table "constraint_comments_tbl" does not exist
 COMMENT ON CONSTRAINT no_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment';
-ERROR:  constraint "no_constraint" for domain "constraint_comments_dom" does not exist
+ERROR:  constraint "no_constraint" for domain constraint_comments_dom does not exist
 -- no such table/domain
 COMMENT ON CONSTRAINT the_constraint ON no_comments_tbl IS 'bad comment';
 ERROR:  relation "no_comments_tbl" does not exist
@@ -726,5 +766,16 @@ COMMENT ON CONSTRAINT the_constraint ON DOMAIN no_comments_dom IS 'another bad c
 ERROR:  type "no_comments_dom" does not exist
 COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS NULL;
 COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS NULL;
+-- unauthorized user
+RESET SESSION AUTHORIZATION;
+CREATE ROLE regress_constraint_comments_noaccess;
+SET SESSION AUTHORIZATION regress_constraint_comments_noaccess;
+COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS 'no, the comment';
+ERROR:  must be owner of relation constraint_comments_tbl
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS 'no, another comment';
+ERROR:  must be owner of type constraint_comments_dom
+RESET SESSION AUTHORIZATION;
 DROP TABLE constraint_comments_tbl;
 DROP DOMAIN constraint_comments_dom;
+DROP ROLE regress_constraint_comments;
+DROP ROLE regress_constraint_comments_noaccess;

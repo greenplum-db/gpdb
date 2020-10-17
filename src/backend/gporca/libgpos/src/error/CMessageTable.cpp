@@ -27,25 +27,13 @@ const ELocale CMessageTable::m_invalid_locale = ELocInvalid;
 //	@doc:
 //
 //---------------------------------------------------------------------------
-CMessageTable::CMessageTable
-	(
-	CMemoryPool *mp,
-	ULONG size,
-	ELocale locale
-	)
-	:
-	m_locale(locale)
+CMessageTable::CMessageTable(CMemoryPool *mp, ULONG size, ELocale locale)
+	: m_locale(locale)
 {
-	m_hash_table.Init
-		(
-		mp,
-		size,
-		GPOS_OFFSET(CMessage, m_link),
-		GPOS_OFFSET(CMessage, m_exception),
-		&(CException::m_invalid_exception),
-		CException::HashValue,
-		CException::Equals
-		);
+	m_hash_table.Init(mp, size, GPOS_OFFSET(CMessage, m_link),
+					  GPOS_OFFSET(CMessage, m_exception),
+					  &(CException::m_invalid_exception), CException::HashValue,
+					  CException::Equals);
 }
 
 
@@ -54,14 +42,11 @@ CMessageTable::CMessageTable
 //		CMessageTable::LookupMessage
 //
 //	@doc:
-//		Lookup message 
+//		Lookup message
 //
 //---------------------------------------------------------------------------
-CMessage*
-CMessageTable::LookupMessage
-	(
-	CException exc
-	)
+CMessage *
+CMessageTable::LookupMessage(CException exc)
 {
 	MTAccessor acc(m_hash_table, exc);
 	return acc.Find();
@@ -77,10 +62,7 @@ CMessageTable::LookupMessage
 //
 //---------------------------------------------------------------------------
 void
-CMessageTable::AddMessage
-	(
-	CMessage *msg
-	)
+CMessageTable::AddMessage(CMessage *msg)
 {
 	MTAccessor acc(m_hash_table, msg->m_exception);
 
@@ -88,10 +70,9 @@ CMessageTable::AddMessage
 	{
 		acc.Insert(msg);
 	}
-	
+
 	// TODO: 6/24/2010; raise approp. error for duplicate message
 	// or simply ignore?
 }
 
 // EOF
-

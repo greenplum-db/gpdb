@@ -4,7 +4,7 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeUnique.h
@@ -17,8 +17,7 @@
 #include "nodes/execnodes.h"
 
 extern UniqueState *ExecInitUnique(Unique *node, EState *estate, int eflags);
-extern TupleTableSlot *ExecUnique(UniqueState *node);
 extern void ExecEndUnique(UniqueState *node);
 extern void ExecReScanUnique(UniqueState *node);
 
-#endif   /* NODEUNIQUE_H */
+#endif							/* NODEUNIQUE_H */

@@ -125,7 +125,7 @@
 #include "unittest/dxl/statistics/CMCVTest.h"
 #include "unittest/dxl/statistics/CJoinCardinalityTest.h"
 #include "unittest/gpopt/cost/CCostTest.h"
-#include "unittest/gpopt/minidump/MinidumpTestHeaders.h" // auto generated header file
+#include "unittest/gpopt/minidump/MinidumpTestHeaders.h"  // auto generated header file
 
 using namespace gpos;
 using namespace gpopt;
@@ -134,34 +134,24 @@ using namespace gpnaucrates;
 using namespace gpdbcost;
 
 // static array of all known unittest routines
-static gpos::CUnittest rgut[] =
-{
-#include "unittest/gpopt/minidump/MinidumpTestArray.inl" // auto generated inlining file
+static gpos::CUnittest rgut[] = {
+#include "unittest/gpopt/minidump/MinidumpTestArray.inl"  // auto generated inlining file
 
 	// naucrates
-	GPOS_UNITTEST_STD(CCostTest),
-	GPOS_UNITTEST_STD(CDatumTest),
-	GPOS_UNITTEST_STD(CDXLMemoryManagerTest),
-	GPOS_UNITTEST_STD(CDXLUtilsTest),
-	GPOS_UNITTEST_STD(CMDAccessorTest),
-	GPOS_UNITTEST_STD(CMDProviderTest),
+	GPOS_UNITTEST_STD(CCostTest), GPOS_UNITTEST_STD(CDatumTest),
+	GPOS_UNITTEST_STD(CDXLMemoryManagerTest), GPOS_UNITTEST_STD(CDXLUtilsTest),
+	GPOS_UNITTEST_STD(CMDAccessorTest), GPOS_UNITTEST_STD(CMDProviderTest),
 	GPOS_UNITTEST_STD(CMiniDumperDXLTest),
 	GPOS_UNITTEST_STD(CExpressionPreprocessorTest),
-	GPOS_UNITTEST_STD(CWindowTest),
-	GPOS_UNITTEST_STD(CICGTest),
-	GPOS_UNITTEST_STD(CMultilevelPartitionTest),
-	GPOS_UNITTEST_STD(CDMLTest),
-	GPOS_UNITTEST_STD(CDirectDispatchTest),
-	GPOS_UNITTEST_STD(CTVFTest),
-	GPOS_UNITTEST_STD(CAggTest),
-	GPOS_UNITTEST_STD(CSubqueryTest),
+	GPOS_UNITTEST_STD(CWindowTest), GPOS_UNITTEST_STD(CICGTest),
+	GPOS_UNITTEST_STD(CMultilevelPartitionTest), GPOS_UNITTEST_STD(CDMLTest),
+	GPOS_UNITTEST_STD(CDirectDispatchTest), GPOS_UNITTEST_STD(CTVFTest),
+	GPOS_UNITTEST_STD(CAggTest), GPOS_UNITTEST_STD(CSubqueryTest),
 	GPOS_UNITTEST_STD(CCollapseProjectTest),
 	GPOS_UNITTEST_STD(CPruneColumnsTest),
 	GPOS_UNITTEST_STD(CPhysicalParallelUnionAllTest),
-	GPOS_UNITTEST_STD(CMissingStatsTest),
-	GPOS_UNITTEST_STD(CBitmapTest),
-	GPOS_UNITTEST_STD(CCTETest),
-	GPOS_UNITTEST_STD(CExternalTableTest),
+	GPOS_UNITTEST_STD(CMissingStatsTest), GPOS_UNITTEST_STD(CBitmapTest),
+	GPOS_UNITTEST_STD(CCTETest), GPOS_UNITTEST_STD(CExternalTableTest),
 	GPOS_UNITTEST_STD(CEscapeMechanismTest),
 
 	GPOS_UNITTEST_STD(CMinidumpWithConstExprEvaluatorTest),
@@ -170,44 +160,31 @@ static gpos::CUnittest rgut[] =
 	GPOS_UNITTEST_STD(CParseHandlerCostModelTest),
 	GPOS_UNITTEST_STD(CParseHandlerOptimizerConfigSerializeTest),
 	GPOS_UNITTEST_STD(CStatisticsTest),
-	GPOS_UNITTEST_STD(CFilterCardinalityTest),
-	GPOS_UNITTEST_STD(CPointTest),
-	GPOS_UNITTEST_STD(CBucketTest),
-	GPOS_UNITTEST_STD(CHistogramTest),
-	GPOS_UNITTEST_STD(CMCVTest),
-	GPOS_UNITTEST_STD(CJoinCardinalityTest),
+	GPOS_UNITTEST_STD(CFilterCardinalityTest), GPOS_UNITTEST_STD(CPointTest),
+	GPOS_UNITTEST_STD(CBucketTest), GPOS_UNITTEST_STD(CHistogramTest),
+	GPOS_UNITTEST_STD(CMCVTest), GPOS_UNITTEST_STD(CJoinCardinalityTest),
 	GPOS_UNITTEST_STD(CTranslatorDXLToExprTest),
 	GPOS_UNITTEST_STD(CTranslatorExprToDXLTest),
 	GPOS_UNITTEST_STD(CXMLSerializerTest),
 
 	// opt
-	GPOS_UNITTEST_STD(CArrayExpansionTest),
-	GPOS_UNITTEST_STD(CJoinOrderDPTest),
+	GPOS_UNITTEST_STD(CArrayExpansionTest), GPOS_UNITTEST_STD(CJoinOrderDPTest),
 	GPOS_UNITTEST_STD(CPullUpProjectElementTest),
 	GPOS_UNITTEST_STD(CColumnDescriptorTest),
 	GPOS_UNITTEST_STD(CColumnFactoryTest),
-	GPOS_UNITTEST_STD(CColRefSetIterTest),
-	GPOS_UNITTEST_STD(CColRefSetTest),
-	GPOS_UNITTEST_STD(CConstraintTest),
-	GPOS_UNITTEST_STD(CContradictionTest),
+	GPOS_UNITTEST_STD(CColRefSetIterTest), GPOS_UNITTEST_STD(CColRefSetTest),
+	GPOS_UNITTEST_STD(CConstraintTest), GPOS_UNITTEST_STD(CContradictionTest),
 	GPOS_UNITTEST_STD(CCorrelatedExecutionTest),
 	GPOS_UNITTEST_STD(CDecorrelatorTest),
-	GPOS_UNITTEST_STD(CDistributionSpecTest),
-	GPOS_UNITTEST_STD(CCastTest),
+	GPOS_UNITTEST_STD(CDistributionSpecTest), GPOS_UNITTEST_STD(CCastTest),
 	GPOS_UNITTEST_STD(CConstTblGetTest),
 
-	GPOS_UNITTEST_STD(CSubqueryHandlerTest),
-	GPOS_UNITTEST_STD(CBindingTest),
-	GPOS_UNITTEST_STD(CEngineTest),
-	GPOS_UNITTEST_STD(CEquivalenceClassesTest),
-	GPOS_UNITTEST_STD(CExpressionTest),
-	GPOS_UNITTEST_STD(CJoinOrderTest),
-	GPOS_UNITTEST_STD(CKeyCollectionTest),
-	GPOS_UNITTEST_STD(CMaxCardTest),
-	GPOS_UNITTEST_STD(CFunctionalDependencyTest),
-	GPOS_UNITTEST_STD(CNameTest),
-	GPOS_UNITTEST_STD(COrderSpecTest),
-	GPOS_UNITTEST_STD(CRangeTest),
+	GPOS_UNITTEST_STD(CSubqueryHandlerTest), GPOS_UNITTEST_STD(CBindingTest),
+	GPOS_UNITTEST_STD(CEngineTest), GPOS_UNITTEST_STD(CEquivalenceClassesTest),
+	GPOS_UNITTEST_STD(CExpressionTest), GPOS_UNITTEST_STD(CJoinOrderTest),
+	GPOS_UNITTEST_STD(CKeyCollectionTest), GPOS_UNITTEST_STD(CMaxCardTest),
+	GPOS_UNITTEST_STD(CFunctionalDependencyTest), GPOS_UNITTEST_STD(CNameTest),
+	GPOS_UNITTEST_STD(COrderSpecTest), GPOS_UNITTEST_STD(CRangeTest),
 	GPOS_UNITTEST_STD(CPredicateUtilsTest),
 	GPOS_UNITTEST_STD(CScalarIsDistinctFromTest),
 	GPOS_UNITTEST_STD(CPartConstraintTest),
@@ -215,14 +192,12 @@ static gpos::CUnittest rgut[] =
 	GPOS_UNITTEST_STD(COptimizationJobsTest),
 	GPOS_UNITTEST_STD(CStateMachineTest),
 	GPOS_UNITTEST_STD(CTableDescriptorTest),
-	GPOS_UNITTEST_STD(CIndexDescriptorTest),
-	GPOS_UNITTEST_STD(CTreeMapTest),
-	GPOS_UNITTEST_STD(CXformFactoryTest),
-	GPOS_UNITTEST_STD(CXformTest),
+	GPOS_UNITTEST_STD(CIndexDescriptorTest), GPOS_UNITTEST_STD(CTreeMapTest),
+	GPOS_UNITTEST_STD(CXformFactoryTest), GPOS_UNITTEST_STD(CXformTest),
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDefaultTest),
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDXLTest),
 	// disable CEnumeratorTest until it is fixed
-//	GPOS_UNITTEST_STD(CEnumeratorTest),
+	//	GPOS_UNITTEST_STD(CEnumeratorTest),
 };
 
 //---------------------------------------------------------------------------
@@ -233,7 +208,8 @@ static gpos::CUnittest rgut[] =
 //		Configurations needed before running unittests
 //
 //---------------------------------------------------------------------------
-void ConfigureTests()
+void
+ConfigureTests()
 {
 	// initialize DXL support
 	InitDXL();
@@ -256,7 +232,7 @@ void ConfigureTests()
 	GPOS_RESULT eres = CXformFactory::Init();
 
 	GPOS_ASSERT(GPOS_OK == eres);
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 }
 
 
@@ -268,7 +244,8 @@ void ConfigureTests()
 //		Cleanup after unittests are done
 //
 //---------------------------------------------------------------------------
-void Cleanup()
+void
+Cleanup()
 {
 	CMDCache::Shutdown();
 	CTestUtils::DestroyMDProvider();
@@ -287,12 +264,9 @@ static ULONG tests_failed = 0;
 //
 //---------------------------------------------------------------------------
 static void *
-PvExec
-	(
-	void *pv
-	)
+PvExec(void *pv)
 {
-	CMainArgs *pma = (CMainArgs*) pv;
+	CMainArgs *pma = (CMainArgs *) pv;
 	CBitVector bv(ITask::Self()->Pmp(), CUnittest::UlTests());
 
 	CHAR ch = '\0';
@@ -305,7 +279,7 @@ PvExec
 	while (pma->Getopt(&ch))
 	{
 		CHAR *szTestName = NULL;
-		
+
 		switch (ch)
 		{
 			case 'U':
@@ -317,7 +291,8 @@ PvExec
 				break;
 
 			case 'x':
-				CUnittest::FindTest(bv, CUnittest::EttExtended, NULL /*szTestName*/);
+				CUnittest::FindTest(bv, CUnittest::EttExtended,
+									NULL /*szTestName*/);
 				fUnittest = true;
 				break;
 
@@ -343,17 +318,18 @@ PvExec
 
 	if (fMinidump && fUnittest)
 	{
-		GPOS_TRACE(GPOS_WSZ_LIT("Cannot specify -d and -U/-u options at the same time"));
+		GPOS_TRACE(GPOS_WSZ_LIT(
+			"Cannot specify -d and -U/-u options at the same time"));
 		return NULL;
 	}
-	
+
 	if (fMinidump)
-	{	
+	{
 		// initialize DXL support
 		InitDXL();
 
 		CMDCache::Init();
-		
+
 		CAutoMemoryPool amp;
 		CMemoryPool *mp = amp.Pmp();
 
@@ -369,7 +345,7 @@ PvExec
 		}
 		else
 		{
-			optimizer_config -> AddRef();
+			optimizer_config->AddRef();
 		}
 
 		if (ullPlanId != 0)
@@ -379,16 +355,10 @@ PvExec
 
 		ULONG ulSegments = CTestUtils::UlSegments(optimizer_config);
 
-		CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump
-								(
-								mp,
-								file_name,
-								ulSegments,
-								1 /*ulSessionId*/,
-								1 /*ulCmdId*/,
-								optimizer_config,
-								NULL /*pceeval*/
-								);
+		CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(
+			mp, file_name, ulSegments, 1 /*ulSessionId*/, 1 /*ulCmdId*/,
+			optimizer_config, NULL /*pceeval*/
+		);
 
 		GPOS_DELETE(pdxlmd);
 		optimizer_config->Release();
@@ -414,15 +384,11 @@ PvExec
 //		time being
 //
 //---------------------------------------------------------------------------
-INT main
-	(
-	INT iArgs,
-	const CHAR **rgszArgs
-	)
-{	
-
+INT
+main(INT iArgs, const CHAR **rgszArgs)
+{
 	// Use default allocator
-	struct gpos_init_params gpos_params = { NULL };
+	struct gpos_init_params gpos_params = {NULL};
 
 	gpos_init(&gpos_params);
 	gpdxl_init();
@@ -432,7 +398,7 @@ INT main
 
 	// setup args for unittest params
 	CMainArgs ma(iArgs, rgszArgs, "uU:d:xT:i:");
-	
+
 	// initialize unittest framework
 	CUnittest::Init(rgut, GPOS_ARRAY_SIZE(rgut), ConfigureTests, Cleanup);
 
