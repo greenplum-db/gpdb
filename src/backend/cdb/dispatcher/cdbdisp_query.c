@@ -893,7 +893,7 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		sizeof(resgroupInfo.len) +
 		resgroupInfo.len;
 
-	shared_query = palloc0(total_query_len);
+	shared_query = palloc(total_query_len);
 
 	pos = shared_query;
 
