@@ -1235,9 +1235,106 @@ select c1 from t1 where c1::absint not in
 ----
 (0 rows)
 
+-- Test the null not in an empty set
+-- null not in an unempty set, always returns false
+-- null not in an empty set, always returns true
+--
+-- q46
+--
+create table table_source (c1 varchar(100),c2 varchar(100),c3 varchar(100),c4 varchar(100));
+insert into table_source (c1 ,c2 ,c3 ,c4 ) values ('000181202006010000003158',null,'INC','0000000001') ;
+create table table_source2 as select * from table_source distributed by (c2);
+create table table_source3 as select * from table_source distributed replicated;
+create table table_source4 (c1 varchar(100),c2 varchar(100) not null,c3 varchar(100),c4 varchar(100));
+insert into table_source4 (c1 ,c2 ,c3 ,c4 ) values ('000181202006010000003158','a','INC','0000000001') ;
+create table table_config (c1 varchar(10) ,c2 varchar(10) ,PRIMARY KEY (c1));
+insert into table_config select i, 'test' from generate_series(1, 1000)i;
+delete from table_config where gp_segment_id = 0;
+explain select * from table_source where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.20 rows=1 width=40)
+   Hash Cond: ((table_source.c2)::text = (table_config.c1)::text)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=40)
+         ->  Seq Scan on table_source  (cost=0.00..431.00 rows=1 width=40)
+               Filter: (((c3)::text = 'INC'::text) AND ((c4)::text = '0000000001'::text))
+   ->  Hash  (cost=431.03..431.03 rows=1000 width=3)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.03 rows=1000 width=3)
+               ->  Seq Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: ((c2)::text = 'test'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select * from table_source where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+ c1 | c2 | c3 | c4 
+----+----+----+----
+(0 rows)
+
+explain select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.20 rows=1 width=40)
+   Hash Cond: ((table_source2.c2)::text = (table_config.c1)::text)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=40)
+         ->  Seq Scan on table_source2  (cost=0.00..431.00 rows=1 width=40)
+               Filter: (((c3)::text = 'INC'::text) AND ((c4)::text = '0000000001'::text))
+   ->  Hash  (cost=431.03..431.03 rows=1000 width=3)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.03 rows=1000 width=3)
+               ->  Seq Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: ((c2)::text = 'test'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+ c1 | c2 | c3 | c4 
+----+----+----+----
+(0 rows)
+
+explain select * from table_source3 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.20 rows=1 width=40)
+   Hash Cond: ((table_source3.c2)::text = (table_config.c1)::text)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=40)
+         ->  Seq Scan on table_source3  (cost=0.00..431.00 rows=3 width=40)
+               Filter: (((c3)::text = 'INC'::text) AND ((c4)::text = '0000000001'::text))
+   ->  Hash  (cost=431.03..431.03 rows=1000 width=3)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.03 rows=1000 width=3)
+               ->  Seq Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: ((c2)::text = 'test'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select * from table_source3 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+ c1 | c2 | c3 | c4 
+----+----+----+----
+(0 rows)
+
+explain select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.19 rows=1 width=42)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.19 rows=1 width=42)
+         Hash Cond: ((table_source4.c2)::text = (table_config.c1)::text)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=42)
+               Hash Key: table_source4.c2
+               ->  Seq Scan on table_source4  (cost=0.00..431.00 rows=1 width=42)
+                     Filter: (((c3)::text = 'INC'::text) AND ((c4)::text = '0000000001'::text))
+         ->  Hash  (cost=431.02..431.02 rows=334 width=3)
+               ->  Seq Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: ((c2)::text = 'test'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+            c1            | c2 | c3  |     c4     
+--------------------------+----+-----+------------
+ 000181202006010000003158 | a  | INC | 0000000001
+(1 row)
+
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to 11 other objects
+NOTICE:  drop cascades to 16 other objects
 DETAIL:  drop cascades to table notin.t1
 drop cascades to table notin.t2
 drop cascades to table notin.t3
@@ -1249,3 +1346,8 @@ drop cascades to type notin.absint
 drop cascades to function notin.iszero(notin.absint)
 drop cascades to function notin.abseq(notin.absint,notin.absint)
 drop cascades to operator notin.=(notin.absint,notin.absint)
+drop cascades to table notin.table_source
+drop cascades to table notin.table_source2
+drop cascades to table notin.table_source3
+drop cascades to table notin.table_source4
+drop cascades to table notin.table_config
