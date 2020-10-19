@@ -1694,6 +1694,89 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 }
 
 
+/*
+ * This function is used to determine whether the parameters of an expression in
+ * ALL Sublink can be NULL.
+ */
+static bool
+is_param_nullable(Node *node, Query *query, Value *oprname)
+{
+	bool result = false;
+	NonNullableVarsContext context;
+	Expr *expr;
+	ListCell *lc;
+	Expr *arg;
+
+	Assert(query);
+	context.query = query;
+	context.nonNullableVars = NIL;
+
+	/* Find nullable vars in the jointree */
+	expression_tree_walker((Node *) query->jointree, find_nonnullable_vars_walker, &context);
+
+	/*
+	 * A null value "not in / > all / < all" a non-empty set, the result is
+	 * always false, but a null value "not in / > all / < all" a empty set, the
+	 * result is always true. So if the param is nullable, we should not make
+	 * the locus as "Partitioned".
+	 * If the sql is "... a not in (select ...)", the node should be a BoolExpr.
+	 * if the sql is "... a < all (select ...), the node should be a OpExpr"
+	 */
+	if (nodeTag(node) == T_BoolExpr)
+	{
+		if(((BoolExpr *) node)->boolop != NOT_EXPR)
+			return false;
+		expr = lfirst(list_head(((BoolExpr*) node)->args));
+	}
+	else if (nodeTag(node) == T_OpExpr)
+	{
+		expr = (Expr *) node;
+	}
+	else
+		return true;
+
+	if (nodeTag(expr) != T_OpExpr)
+		return true;
+
+	foreach(lc, ((OpExpr*)expr)->args)
+	{
+		arg = lfirst(lc);
+
+		if (nodeTag(arg) == T_RelabelType)
+			arg = ((RelabelType*)arg)->arg;
+
+		if (nodeTag(arg) == T_Param)
+			continue;
+		else if (nodeTag(arg) == T_Const)
+		{
+			/*
+			 * Is the constant entry in the targetlist null?
+			 */
+			Const	   *constant = (Const *) arg;
+
+			/*
+			 * Note: the 'dummy' column is not NULL, so we don't need any special handling for it
+			 */
+			if (constant->constisnull == true)
+				result = true;
+		}
+		else if (nodeTag(arg) == T_Var)
+		{
+			Var		   *var = (Var *) arg;
+
+			/* Was this var determined to be non-nullable? */
+			if (!list_member(context.nonNullableVars, var))
+			{
+				result = true;
+			}
+		}
+		else
+			result = true;
+	}
+
+	return result;
+}
+
 /**
  * This method determines if the targetlist of a query is nullable.
  * Consider a query of the form: select t1.x, t2.y from t1, t2 where t1.x > 5
@@ -1818,9 +1901,14 @@ convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout __attribute__((un
 		bool		inner_nullable = is_targetlist_nullable(subselect);
 		JoinExpr   *join_expr = make_join_expr(larg, subq_indx, JOIN_LASJ_NOTIN);
 
+		ListCell   *lc = list_head(sublink->operName);
+		bool		outer_nullable = is_param_nullable(sublink->testexpr,
+										   root->parse,
+										   lc? list_head(sublink->operName)->data.ptr_value : NULL);
+
 		join_expr->quals = make_lasj_quals(root, sublink, subq_indx);
 
-		if (inner_nullable)
+		if (inner_nullable || outer_nullable)
 		{
 			join_expr->quals = add_null_match_clause(join_expr->quals);
 		}

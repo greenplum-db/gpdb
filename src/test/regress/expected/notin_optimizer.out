@@ -1215,8 +1215,89 @@ select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 > 2;
   7
 (7 rows)
 
+-- Test the null not in an empty set
+-- null not in an unempty set, always returns false
+-- null not in an empty set, always returns true
+--
+-- q46
+--
+create table table_source (c1 varchar(100),c2 varchar(100),c3 varchar(100),c4 varchar(100));
+insert into table_source (c1 ,c2 ,c3 ,c4 ) values ('000181202006010000003158',null,'INC','0000000001') ;
+create table table_source2 as select * from table_source distributed by (c2);
+create table table_source4 (c1 varchar(100),c2 varchar(100) not null,c3 varchar(100),c4 varchar(100));
+insert into table_source4 (c1 ,c2 ,c3 ,c4 ) values ('000181202006010000003158','a','INC','0000000001') ;
+create table table_config (c1 varchar(10) ,c2 varchar(10) ,PRIMARY KEY (c1));
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "table_config_pkey" for table "table_config"
+insert into table_config select i, 'test' from generate_series(1, 1000)i;
+delete from table_config where gp_segment_id = 0;
+explain select * from table_source where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.20 rows=1 width=40)
+   Hash Cond: table_source.c2::text = table_config.c1::text
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=40)
+         ->  Table Scan on table_source  (cost=0.00..431.00 rows=1 width=40)
+               Filter: c3::text = 'INC'::text AND c4::text = '0000000001'::text
+   ->  Hash  (cost=431.03..431.03 rows=334 width=3)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.03 rows=1000 width=3)
+               ->  Table Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: c2::text = 'test'::text
+ Optimizer status: PQO version 3.112.0
+(10 rows)
+
+select * from table_source where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+ c1 | c2 | c3 | c4 
+----+----+----+----
+(0 rows)
+
+explain select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.20 rows=1 width=40)
+   Hash Cond: table_source2.c2::text = table_config.c1::text
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=40)
+         ->  Table Scan on table_source2  (cost=0.00..431.00 rows=1 width=40)
+               Filter: c3::text = 'INC'::text AND c4::text = '0000000001'::text
+   ->  Hash  (cost=431.03..431.03 rows=334 width=3)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.03 rows=1000 width=3)
+               ->  Table Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: c2::text = 'test'::text
+ Optimizer status: PQO version 3.112.0
+(10 rows)
+
+select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+ c1 | c2 | c3 | c4 
+----+----+----+----
+(0 rows)
+
+explain select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.08 rows=1 width=42)
+   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.08 rows=1 width=42)
+         Hash Cond: table_source4.c2::text = table_config.c1::text
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=42)
+               Hash Key: table_source4.c2
+               ->  Table Scan on table_source4  (cost=0.00..431.00 rows=1 width=42)
+                     Filter: c3::text = 'INC'::text AND c4::text = '0000000001'::text
+         ->  Hash  (cost=431.02..431.02 rows=334 width=3)
+               ->  Table Scan on table_config  (cost=0.00..431.02 rows=334 width=3)
+                     Filter: c2::text = 'test'::text
+ Optimizer status: PQO version 3.112.0
+(11 rows)
+
+select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+            c1            | c2 | c3  |     c4     
+--------------------------+----+-----+------------
+ 000181202006010000003158 | a  | INC | 0000000001
+(1 row)
+
 reset search_path;
 drop schema notin cascade;
+NOTICE:  drop cascades to table notin.table_config
+NOTICE:  drop cascades to table notin.table_source4
+NOTICE:  drop cascades to table notin.table_source2
+NOTICE:  drop cascades to table notin.table_source
 NOTICE:  drop cascades to table notin.l1
 NOTICE:  drop cascades to table notin.g1
 NOTICE:  drop cascades to table notin.t1n
