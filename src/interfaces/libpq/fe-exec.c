@@ -180,6 +180,7 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
 
 	result->extras = NULL;
 	result->extraslen = 0;
+	result->extraType = PGExtraTypeNone;
 
 	result->numRejected = 0;
 	result->numCompleted = 0;
@@ -759,6 +760,7 @@ PQclear(PGresult *res)
 		free(res->extras);
 	res->extraslen = 0;
 	res->extras = NULL;
+	res->extraType = PGExtraTypeNone;
 
 	if (res->waitGxids)
 		free(res->waitGxids);

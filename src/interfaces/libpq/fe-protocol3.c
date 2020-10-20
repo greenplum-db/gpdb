@@ -498,12 +498,14 @@ pqParseInput3(PGconn *conn)
 						/* Whether mark the result ready */
 						if (pqGetc(&ready, conn))
 							return;
+						if (pqGetInt((int *)&conn->result->extraType, sizeof(PGExtraType), conn))
+							return;
 						if (pqGetInt(&conn->result->extraslen, 4, conn))
 							return;
 						conn->result->extras = malloc(conn->result->extraslen);
 						if (pqGetnchar((char *)conn->result->extras, conn->result->extraslen, conn))
 							return;
-						if ((uint8) ready)
+						if (ready)
 							conn->asyncStatus = PGASYNC_READY;
 					}
 					break;

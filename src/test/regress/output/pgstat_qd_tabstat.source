@@ -1,0 +1,479 @@
+-- Turn off auto_stat to avoid ANALYZE
+set gp_autostats_mode = none;
+-- Test pgstat table stat for copy on QD
+create table table_for_docopy(i int, j varchar) distributed by (i);
+copy table_for_docopy (i, j) from stdin;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_docopy'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+         3 |         0 |         0 |             0 |          3 |          0 |                   3
+(1 row)
+
+CREATE TABLE data_tbl (a int,b char) distributed by (a);
+INSERT INTO data_tbl values(1,'1');
+INSERT INTO data_tbl values(1,'2');
+INSERT INTO data_tbl values(1,'a');
+INSERT INTO data_tbl values(1,'b');
+COPY data_tbl TO '/tmp/data_tbl<SEGID>.csv' on segment;
+create table copy_on_segment (a int,b char);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+COPY copy_on_segment from '/tmp/data_tbl<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'copy_on_segment'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+         4 |         0 |         0 |             0 |          4 |          0 |                   4
+(1 row)
+
+-- Test pgstat table stat in initplan on QD
+create table table_for_initplan (i int, j varchar, k int) distributed by (i);
+copy table_for_initplan (i, j, k) from stdin;
+explain (costs off) with updated AS (update table_for_initplan set k = 33 where i = 3 returning k) select table_for_initplan.*, (select sum(k) from updated) from table_for_initplan;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   InitPlan 1 (returns $1)  (slice2)
+     ->  Finalize Aggregate
+           ->  Gather Motion 1:1  (slice3; segments: 1)
+                 ->  Partial Aggregate
+                       ->  Update on table_for_initplan table_for_initplan_1
+                             ->  Seq Scan on table_for_initplan table_for_initplan_1
+                                   Filter: (i = 3)
+   ->  Seq Scan on table_for_initplan
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+with updated AS (update table_for_initplan set k = 33 where i = 3 returning k) select table_for_initplan.*, (select sum(k) from updated) from table_for_initplan;
+ i |   j   | k  | sum 
+---+-------+----+-----
+ 2 | test2 |  2 |  33
+ 3 | test3 | 33 |  33
+ 1 | test1 |  1 |  33
+(3 rows)
+
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_initplan'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+         3 |         1 |         0 |             0 |          3 |          1 |                   4
+(1 row)
+
+-- Test pgstat table stat in CTAS on QD
+create table table_for_ctas with (autovacuum_enabled=false) as select i, 'hello' || i from generate_series(1, 100) f(i);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_ctas'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       100 |         0 |         0 |             0 |        100 |          0 |                 100
+(1 row)
+
+select i, 'hello' || i into table_for_insert_into from generate_series(1, 100) f(i);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_insert_into'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       100 |         0 |         0 |             0 |        100 |          0 |                 100
+(1 row)
+
+-- Test pgstat table stat in ALTER TABLE SET DISTRIBUTED BY on QD
+create table table_for_set_distributed_by(i int, j varchar) distributed by (i);
+insert into table_for_set_distributed_by select i, 'hello' || i from generate_series(1, 333) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_set_distributed_by'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       333 |         0 |         0 |             0 |        333 |          0 |                 333
+(1 row)
+
+alter table table_for_set_distributed_by set distributed by (j);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_set_distributed_by'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       333 |         0 |         0 |             0 |        333 |          0 |                 333
+(1 row)
+
+-- Test pgstat table stat in execution of funciton on QD
+create table table_for_function(i int, j varchar) distributed by (i);
+create function update_table_for_function() returns void as
+$$
+  begin
+    insert into table_for_function select i, 'hello' || i from generate_series(1, 333) f(i);
+    delete from table_for_function where i <= 200;
+  end
+$$
+language plpgsql volatile execute on master;
+select update_table_for_function();
+ update_table_for_function 
+---------------------------
+ 
+(1 row)
+
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_function'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       333 |         0 |       200 |             0 |        133 |        200 |                 533
+(1 row)
+
+-- Test pgstat table stat in ALTER TABLE EXPAND TABLE on QD;
+-- Thanks @uglthinx for telling me this way to execute ALTER TABLE EXPAND manually
+create table table_for_expand(i int, j varchar) distributed by (i);
+set allow_system_table_mods=true;
+update gp_distribution_policy set numsegments = 1 where localoid = 'table_for_expand'::regclass;
+set allow_system_table_mods to default;
+insert into table_for_expand select i, 'hello' || i from generate_series(1, 333) f(i);
+select count(distinct gp_segment_id) from table_for_expand;
+ count 
+-------
+     1
+(1 row)
+
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_expand'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       333 |         0 |         0 |             0 |        333 |          0 |                 333
+(1 row)
+
+alter table table_for_expand expand table;
+select count(distinct gp_segment_id) from table_for_expand;
+ count 
+-------
+     3
+(1 row)
+
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_expand'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       333 |         0 |         0 |             0 |        333 |          0 |                 333
+(1 row)
+
+-- Test pgstat table stat in INSERT/UPDATE/DELETE on QD
+create table table_for_iud(i int, j varchar) distributed by (i);
+begin;
+insert into table_for_iud select i, 'hello' || i from generate_series(1, 333) f(i);
+savepoint level1;
+savepoint level2;
+savepoint level3;
+savepoint level4;
+savepoint level5;
+savepoint level6;
+savepoint level7;
+delete from table_for_iud where i <= 200;
+rollback to savepoint level5;
+update table_for_iud set j = 'heroes never die' where i >= 300;
+release savepoint level3;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_live_tup, n_dead_tup from pg_stat_all_tables_internal where relid = 'table_for_iud'::regclass;
+ n_live_tup | n_dead_tup 
+------------+------------
+        333 |         34
+(1 row)
+
+begin;
+savepoint level1;
+savepoint level2;
+savepoint level3;
+savepoint level4;
+savepoint level5;
+savepoint level6;
+savepoint level7;
+insert into table_for_iud select i, 'hello' || i from generate_series(333, 777) f(i);
+rollback to savepoint level5;
+update table_for_iud set j = 'are you ok' where i >= 300;
+rollback to savepoint level3;
+delete from table_for_iud where i <= 200;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_live_tup, n_dead_tup from pg_stat_all_tables_internal where relid = 'table_for_iud'::regclass;
+ n_live_tup | n_dead_tup 
+------------+------------
+        133 |        713
+(1 row)
+
+-- Test pgstat table stat in TRUNCATE on QD
+create table table_for_truncate(i int, j varchar) distributed by (i);
+insert into table_for_truncate select i, 'hello' || i from generate_series(1, 777) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_truncate'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       777 |         0 |         0 |             0 |        777 |          0 |                 777
+(1 row)
+
+begin;
+savepoint level1;
+savepoint level2;
+savepoint level3;
+update table_for_truncate set j = 'D' where i <= 200;
+delete from table_for_truncate where i >= 700;
+insert into table_for_truncate select i, 'hello' || i from generate_series(778, 800) f(i);
+truncate table_for_truncate;
+insert into table_for_truncate select i, 'hello' || i from generate_series(1, 800) f(i);
+delete from table_for_truncate where i >= 700;
+update table_for_truncate set j = 'D' where i <= 200;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_live_tup, n_dead_tup from pg_stat_all_tables_internal where relid = 'table_for_truncate'::regclass;
+ n_live_tup | n_dead_tup 
+------------+------------
+        699 |        301
+(1 row)
+
+create table table_for_truncate_abort(i int, j varchar) distributed by (i);
+insert into table_for_truncate_abort select i, 'hello' || i from generate_series(1, 777) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_live_tup, n_dead_tup from pg_stat_all_tables_internal where relid = 'table_for_truncate_abort'::regclass;
+ n_live_tup | n_dead_tup 
+------------+------------
+        777 |          0
+(1 row)
+
+begin;
+savepoint level1;
+savepoint level2;
+savepoint level3;
+update table_for_truncate_abort set j = 'D' where i <= 200;
+delete from table_for_truncate_abort where i >= 700;
+insert into table_for_truncate_abort select i, 'hello' || i from generate_series(778, 800) f(i);
+truncate table_for_truncate_abort;
+insert into table_for_truncate_abort select i, 'hello' || i from generate_series(1, 800) f(i);
+delete from table_for_truncate_abort where i < 700;
+update table_for_truncate_abort set j = 'D' where i >= 200;
+rollback;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_live_tup, n_dead_tup from pg_stat_all_tables_internal where relid = 'table_for_truncate_abort'::regclass;
+ n_live_tup | n_dead_tup 
+------------+------------
+        777 |        223
+(1 row)
+
+-- Test pgstat table stat for partition table on QD
+CREATE TABLE rankpart (id int, rank int, product int)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (rank)
+( START (1) END (10) EVERY (5),
+  DEFAULT PARTITION extra );
+insert into rankpart select i, i % 10, i from generate_series(1, 1000)i;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_2'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       500 |         0 |         0 |             0 |        500 |          0 |                 500
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_3'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       400 |         0 |         0 |             0 |        400 |          0 |                 400
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_extra'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       100 |         0 |         0 |             0 |        100 |          0 |                 100
+(1 row)
+
+begin;
+delete from rankpart where id <= 100;
+rollback;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_2'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       500 |         0 |        50 |             0 |        500 |          0 |                 500
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_3'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       400 |         0 |        40 |             0 |        400 |          0 |                 400
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_extra'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       100 |         0 |        10 |             0 |        100 |          0 |                 100
+(1 row)
+
+copy rankpart (id, rank, product) from stdin;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_2'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       505 |         0 |        50 |             0 |        505 |          0 |                 505
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_3'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       405 |         0 |        40 |             0 |        405 |          0 |                 405
+(1 row)
+
+begin;
+update rankpart set rank = 1 where id > 1005;
+savepoint level1;
+update rankpart set rank = 6 where id > 1005;
+savepoint level2;
+delete from rankpart where id > 1005;
+release savepoint level2;
+rollback to savepoint level1;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_2'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       510 |         0 |        55 |             0 |        510 |          0 |                 510
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_3'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       410 |         0 |        50 |             0 |        400 |         10 |                 410
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_extra'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       100 |         0 |        10 |             0 |        100 |          0 |                 100
+(1 row)
+
+begin;
+savepoint level1_1;
+insert into rankpart select i, i % 10, i from generate_series(2001, 3000)i;
+insert into rankpart select i, i % 10, i from generate_series(3001, 4000)i;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_2'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+      1510 |         0 |        55 |             0 |       1510 |          0 |                1510
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_3'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+      1210 |         0 |        50 |             0 |       1200 |         10 |                1210
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'rankpart_1_prt_extra'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       300 |         0 |        10 |             0 |        300 |          0 |                 300
+(1 row)
+
+reset gp_autostats_mode;

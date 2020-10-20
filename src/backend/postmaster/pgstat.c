@@ -4606,7 +4606,7 @@ pgstat_send_qd_tabstats(void)
 			Assert(stat_data.len > 0);
 			/* Don't mark the result ready when receive this message */
 			pq_sendbyte(&buf, false);
-
+			pq_sendint(&buf, PGExtraTypeTableStats, sizeof(PGExtraType));
 			pq_sendint(&buf, stat_data.len, sizeof(int));
 			pq_sendbytes(&buf, stat_data.data, stat_data.len);
 			pq_endmessage(&buf);
@@ -4619,6 +4619,11 @@ pgstat_send_qd_tabstats(void)
  *
  * Combine one pg_result's pgstat tables' stats from a QE. Process pg_result
  * contains stats send from QE.
+ * The function should be called on QD after get dispatch results from QE
+ * for the operations that could have tuple inserted/updated/deleted on
+ * QEs.
+ * Normally using pgstat_combine_from_qe(). Current function are also called
+ * in cdbCopyEndInternal().
  * oidMap - an oid bitmapset, record the processed table oid. To distinguish
  * whether reset or sum on current PgStat_TableXactStatus entry for the table.
  * pgresult - pointer of pg_result
@@ -4635,7 +4640,7 @@ pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
 	PgStat_TableStatus	   *pgstat_info;
 	PgStat_TableXactStatus *trans;
 
-	if (!pgresult || pgresult->extraslen < 1)
+	if (!pgresult || pgresult->extraslen < 1 || pgresult->extraType != PGExtraTypeTableStats)
 		return;
 	/*
 	* If this is the first rel to be modified at the current nest level,
@@ -4715,6 +4720,11 @@ pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
  * pgstat_combine_from_qe() -
  *
  * Combine the pgstat tables stats on QD from dispatch result for each QE.
+ * The function should be called on QD after get dispatch results from QE
+ * for the operations that could have tuple inserted/updated/deleted on
+ * QEs.
+ * Currently this function are called in cdbdisp_dispatchCommandInternal(),
+ * mppExecutorFinishup() and ExecSetParamPlan().
  */
 void
 pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
@@ -4737,7 +4747,8 @@ pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
 		Assert(dispatchResult->okindex >= 0);
 
 		pgresult = cdbdisp_getPGresult(dispatchResult, dispatchResult->okindex);
-		if (pgresult && !dispatchResult->errcode && pgresult->extraslen > 0)
+		if (pgresult && !dispatchResult->errcode && pgresult->extraslen > 0 &&
+			pgresult->extraType == PGExtraTypeTableStats)
 		{
 			pgstat_combine_one_qe_result(&oidMap, pgresult, nest_level,
 										 dispatchResult->segdbDesc->segindex);
