@@ -311,6 +311,7 @@ isLegacyCdbHashFunction(Oid funcid)
 		case F_CDBLEGACYHASH_UUID:
 		case F_CDBLEGACYHASH_COMPLEX:
 		case F_CDBLEGACYHASH_ANYENUM:
+		case 6148: // cdblegacyhash_bpchar
 			return true;
 
 		default:
