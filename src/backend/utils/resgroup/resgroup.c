@@ -2548,24 +2548,13 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 
 /*
  * Check whether resource group should be assigned on master.
- *
- * Resource group will not be assigned if we are in SIGUSR1 handler.
- * This is to avoid the deadlock situation cased by the following scenario:
- *
- * Suppose backend A starts a transaction and acquires the LAST slot in resource
- * group G. Then backend A signals other backends who need a catchup interrupt.
- * Suppose backend B receives the signal and wants to respond to catchup event.
- * If backend B is assigned the same resource group G and tries to acquire a slot,
- * it will hang. Backend A will also hang because it is waiting for backend B to
- * catch up and free its space in the global SI message queue.
  */
 bool
 ShouldAssignResGroupOnMaster(void)
 {
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
-		Gp_role == GP_ROLE_DISPATCH &&
-		!AmIInSIGUSR1Handler();
+		Gp_role == GP_ROLE_DISPATCH;
 }
 
 /*
@@ -2577,8 +2566,7 @@ ShouldUnassignResGroup(void)
 {
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
-		(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
-		!AmIInSIGUSR1Handler();
+		(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE);
 }
 
 /*
