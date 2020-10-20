@@ -1413,7 +1413,6 @@ CTranslatorUtils::GetDXLColumnDescrArray(CMemoryPool *mp, List *target_list,
 										 ULongPtrArray *colids,
 										 BOOL keep_res_junked)
 {
-	GPOS_ASSERT(NULL != target_list);
 	GPOS_ASSERT(NULL != colids);
 
 	ListCell *target_entry_cell = NULL;
@@ -1563,7 +1562,6 @@ ULongPtrArray *
 CTranslatorUtils::GetOutputColIdsArray(CMemoryPool *mp, List *target_list,
 									   IntToUlongMap *attno_to_colid_map)
 {
-	GPOS_ASSERT(NULL != target_list);
 	GPOS_ASSERT(NULL != attno_to_colid_map);
 
 	ULongPtrArray *colids = GPOS_NEW(mp) ULongPtrArray(mp);

@@ -75,7 +75,6 @@ CDistributionSpecHashed::CDistributionSpecHashed(
 	  m_equiv_hash_exprs(NULL)
 {
 	GPOS_ASSERT(NULL != pdrgpexpr);
-	GPOS_ASSERT(0 < pdrgpexpr->Size());
 	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution) &&
 		NULL == opfamilies)
 	{
