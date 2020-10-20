@@ -4349,6 +4349,14 @@ select a,1 from orca.r group by rollup(a);
     |        1
 (22 rows)
 
+select distinct grouping(a) + grouping(b) from orca.m group by rollup(a,b);
+ ?column? 
+----------
+        0
+        2
+        1
+(3 rows)
+
 -- arrays
 select array[array[a,b]], array[b] from orca.r;
    array    | array 
@@ -8727,7 +8735,7 @@ select max(a) from foo group by (select g from jazz where foo.a = (select max(a)
    3
 (2 rows)
 
--- group by inside groupby inside group by ;S
+-- group by inside groupby inside group by
 select max(a) from foo group by (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h);
  max 
 -----

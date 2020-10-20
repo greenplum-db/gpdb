@@ -131,12 +131,6 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL(
 				   GPOS_WSZ_LIT("View with WITH CHECK OPTION"));
 	}
 
-	// Grouping sets are not supported yet.
-	// GPDB_95_MERGE_FIXME: Support grouping sets in ORCA?
-	if (query->groupingSets)
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("Grouping Sets"));
-
 	// Initialize the map that stores gpdb att to optimizer col mapping.
 	// If this is a subquery, make a copy of the parent's mapping, otherwise
 	// initialize a new, empty, mapping.
@@ -564,6 +558,7 @@ CTranslatorQueryToDXL::TranslateSelectQueryToDXL()
 	{
 		CDXLNode *dxlnode = TranslateFromExprToDXL(m_query->jointree);
 		GPOS_ASSERT(NULL == m_query->groupClause);
+		GPOS_ASSERT(NULL == m_query->groupingSets);
 		child_dxlnode = TranslateWindowToDXL(
 			dxlnode, m_query->targetList, m_query->windowClause,
 			m_query->sortClause, sort_group_attno_to_colid_mapping,
@@ -573,8 +568,8 @@ CTranslatorQueryToDXL::TranslateSelectQueryToDXL()
 	{
 		child_dxlnode = TranslateGroupingSets(
 			m_query->jointree, m_query->targetList, m_query->groupClause,
-			m_query->hasAggs, sort_group_attno_to_colid_mapping,
-			output_attno_to_colid_mapping);
+			m_query->groupingSets, m_query->hasAggs,
+			sort_group_attno_to_colid_mapping, output_attno_to_colid_mapping);
 	}
 
 	// translate limit clause
@@ -2173,13 +2168,14 @@ CTranslatorQueryToDXL::IsDuplicateDqaArg(List *dqa_list, Aggref *aggref)
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorQueryToDXL::TranslateGroupingSets(
-	FromExpr *from_expr, List *target_list, List *group_clause, BOOL has_aggs,
+	FromExpr *from_expr, List *target_list, List *group_clause,
+	List *grouping_set, BOOL has_aggs,
 	IntToUlongMap *sort_grpref_to_colid_mapping,
 	IntToUlongMap *output_attno_to_colid_mapping)
 {
 	const ULONG num_of_cols = gpdb::ListLength(target_list) + 1;
 
-	if (NULL == group_clause)
+	if (NULL == group_clause && NULL == grouping_set)
 	{
 		IntToUlongMap *child_attno_colid_mapping =
 			GPOS_NEW(m_mp) IntToUlongMap(m_mp);
@@ -2213,8 +2209,8 @@ CTranslatorQueryToDXL::TranslateGroupingSets(
 		GPOS_NEW(m_mp) UlongToUlongMap(m_mp);
 	CBitSet *unique_grp_cols_bitset = GPOS_NEW(m_mp) CBitSet(m_mp, num_of_cols);
 	CBitSetArray *bitset_array = CTranslatorUtils::GetColumnAttnosForGroupBy(
-		m_mp, group_clause, num_of_cols, grpcol_index_to_colid_mapping,
-		unique_grp_cols_bitset);
+		m_mp, group_clause, grouping_set, num_of_cols,
+		grpcol_index_to_colid_mapping, unique_grp_cols_bitset);
 
 	const ULONG num_of_grouping_sets = bitset_array->Size();
 
@@ -3852,7 +3848,8 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject(
 	BOOL is_expand_aggref_expr)
 {
 	BOOL is_groupby =
-		(0 != gpdb::ListLength(m_query->groupClause) || m_query->hasAggs);
+		(0 != gpdb::ListLength(m_query->groupClause) ||
+		 0 != gpdb::ListLength(m_query->groupingSets) || m_query->hasAggs);
 
 	CDXLNode *project_list_dxlnode =
 		GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarProjList(m_mp));

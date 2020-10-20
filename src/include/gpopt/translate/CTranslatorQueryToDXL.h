@@ -230,7 +230,8 @@ private:
 	// translate a query with grouping sets
 	CDXLNode *TranslateGroupingSets(
 		FromExpr *from_expr, List *target_list, List *group_clause,
-		BOOL has_aggs, IntToUlongMap *phmiulSortGrpColsColId,
+		List *grouping_set, BOOL has_aggs,
+		IntToUlongMap *phmiulSortGrpColsColId,
 		IntToUlongMap *output_attno_to_colid_mapping);
 
 	// expand the grouping sets into a union all operator

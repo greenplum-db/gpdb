@@ -507,7 +507,8 @@ transformGroupedWindows(Node *node, void *context)
 		/*
 		 * we are done if this query doesn't have both window functions and group by/aggregates
 		 */
-		if (!qry->hasWindowFuncs || !(qry->groupClause || qry->hasAggs))
+		if (!qry->hasWindowFuncs ||
+			!(qry->groupClause || qry->groupingSets || qry->hasAggs))
 			return (Node *) qry;
 
 		Query	   *subq;

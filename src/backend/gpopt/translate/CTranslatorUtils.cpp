@@ -1036,52 +1036,178 @@ CTranslatorUtils::GetGroupingColidArray(
 //---------------------------------------------------------------------------
 CBitSetArray *
 CTranslatorUtils::GetColumnAttnosForGroupBy(
-	CMemoryPool *mp, List *group_clause_list, ULONG num_cols,
+	CMemoryPool *mp, List *group_clause_list, List *grouping_set_list,
+	ULONG num_cols,
 	UlongToUlongMap *
 		group_col_pos,	// mapping of grouping col positions to SortGroupRef ids
 	CBitSet *group_cols	 // existing uniqueue grouping columns
 )
 {
-	GPOS_ASSERT(NULL != group_clause_list);
-	GPOS_ASSERT(0 < gpdb::ListLength(group_clause_list));
 	GPOS_ASSERT(NULL != group_col_pos);
 
-	Node *node = (Node *) LInitial(group_clause_list);
-
-	if (NULL == node || IsA(node, SortGroupClause))
+	if (NIL == grouping_set_list)
 	{
 		// simple group by
 		CBitSet *col_attnos = CreateAttnoSetForGroupingSet(
-			mp, group_clause_list, num_cols, group_col_pos, group_cols);
+			mp, group_clause_list, num_cols, group_col_pos, group_cols,
+			true /* use_group_clause */);
 		CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
 		col_attnos_arr->Append(col_attnos);
 		return col_attnos_arr;
 	}
 
-	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			   GPOS_WSZ_LIT("Group by clause"));
+	GPOS_ASSERT(0 < gpdb::ListLength(grouping_set_list));
 
-	return NULL;
+	if (1 < gpdb::ListLength(grouping_set_list))
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Multiple grouping sets specifications"));
+	}
+
+	Node *node = (Node *) LInitial(grouping_set_list);
+	GPOS_ASSERT(NULL != node && IsA(node, GroupingSet));
+	GroupingSet *grouping_set = (GroupingSet *) node;
+	CBitSetArray *col_attnos_arr = NULL;
+
+	switch (grouping_set->kind)
+	{
+		case GROUPING_SET_EMPTY:
+		{
+			col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
+			CBitSet *bset = GPOS_NEW(mp) CBitSet(mp);
+			col_attnos_arr->Append(bset);
+			break;
+		}
+		case GROUPING_SET_ROLLUP:
+		{
+			col_attnos_arr = CreateGroupingSetsForRollup(
+				mp, grouping_set, num_cols, group_cols, group_col_pos);
+			break;
+		}
+		case GROUPING_SET_CUBE:
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("Cube"));
+		}
+		case GROUPING_SET_SETS:
+		{
+			col_attnos_arr = CreateGroupingSetsForSets(
+				mp, grouping_set, num_cols, group_cols, group_col_pos);
+			break;
+		}
+		case GROUPING_SET_SIMPLE:
+		default:
+		{
+			/* can't happen */
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError,
+					   GPOS_WSZ_LIT("Unrecognized grouping set kind"));
+		}
+	}
+
+	return col_attnos_arr;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorUtils::CreateGroupingSetsForSets
+//
+//	@doc:
+//		Construct a dynamic array of sets of column attnos for a grouping sets
+//		subclause
+//
+//---------------------------------------------------------------------------
+CBitSetArray *
+CTranslatorUtils::CreateGroupingSetsForSets(CMemoryPool *mp,
+											const GroupingSet *grouping_set,
+											ULONG num_cols, CBitSet *group_cols,
+											UlongToUlongMap *group_col_pos)
+{
+	GPOS_ASSERT(NULL != grouping_set);
+	GPOS_ASSERT(grouping_set->kind == GROUPING_SET_SETS);
+	CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
+
+	ListCell *cell = NULL;
+	ForEach(cell, grouping_set->content)
+	{
+		Node *n = (Node *) lfirst(cell);
+		GPOS_ASSERT(IsA(n, GroupingSet));
+		GroupingSet *gs_current = (GroupingSet *) n;
+
+		CBitSet *bset = NULL;
+		switch (gs_current->kind)
+		{
+			case GROUPING_SET_EMPTY:
+				bset = GPOS_NEW(mp) CBitSet(mp, num_cols);
+				break;
+			case GROUPING_SET_SIMPLE:
+				bset = CreateAttnoSetForGroupingSet(
+					mp, gs_current->content, num_cols, group_col_pos,
+					group_cols, false /* use_group_clause */);
+				break;
+			default:
+				GPOS_RAISE(ExmaDXL, ExmiQuery2DXLUnsupportedFeature,
+						   GPOS_WSZ_LIT("nested grouping set"));
+		}
+		col_attnos_arr->Append(bset);
+	}
+	return col_attnos_arr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorUtils::CreateGroupingSetsForRollup
+//
+//	@doc:
+//		Construct a dynamic array of sets of column attnos for a rollup
+//
+//---------------------------------------------------------------------------
+CBitSetArray *
+CTranslatorUtils::CreateGroupingSetsForRollup(CMemoryPool *mp,
+											  const GroupingSet *grouping_set,
+											  ULONG num_cols,
+											  CBitSet *group_cols,
+											  UlongToUlongMap *group_col_pos)
+{
+	GPOS_ASSERT(NULL != grouping_set);
+	GPOS_ASSERT(grouping_set->kind == GROUPING_SET_ROLLUP);
+	CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
+	ListCell *lc = NULL;
+	CBitSet *current_result = GPOS_NEW(mp) CBitSet(mp);
+	ForEach(lc, grouping_set->content)
+	{
+		GroupingSet *gs_current = (GroupingSet *) lfirst(lc);
+		GPOS_ASSERT(gs_current->kind == GROUPING_SET_SIMPLE);
+
+		CBitSet *bset = CreateAttnoSetForGroupingSet(
+			mp, gs_current->content, num_cols, group_col_pos, group_cols,
+			false /* use_group_clause */);
+		current_result->Union(bset);
+		col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp, *current_result));
+	}
+	// add an empty set
+	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
+	current_result->Release();
+	return col_attnos_arr;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorUtils::CreateAttnoSetForGroupingSet
 //
 //	@doc:
-//		Construct a set of column attnos corresponding to a grouping set
+//		Construct a set of column attnos corresponding to a single grouping set
+//		from either a simple GROUP BY or a list of grouping sets
 //
 //---------------------------------------------------------------------------
 CBitSet *
 CTranslatorUtils::CreateAttnoSetForGroupingSet(
 	CMemoryPool *mp, List *group_elems, ULONG num_cols,
 	UlongToUlongMap *
-		group_col_pos,	// mapping of grouping col positions to SortGroupRef ids,
-	CBitSet *group_cols	 // existing grouping columns
-)
+		group_col_pos,	// mapping of grouping col positions to SortGroupRef ids
+	CBitSet *group_cols,  // existing grouping columns
+	bool use_group_clause)
 {
-	GPOS_ASSERT(NULL != group_elems);
+	GPOS_ASSERT(NIL != group_elems);
 	GPOS_ASSERT(0 < gpdb::ListLength(group_elems));
 
 	CBitSet *bs = GPOS_NEW(mp) CBitSet(mp, num_cols);
@@ -1089,23 +1215,19 @@ CTranslatorUtils::CreateAttnoSetForGroupingSet(
 	ListCell *lc = NULL;
 	ForEach(lc, group_elems)
 	{
-		Node *elem_node = (Node *) lfirst(lc);
-
-		if (NULL == elem_node)
+		ULONG sort_group_ref;
+		if (use_group_clause)
 		{
-			continue;
+			Node *elem_node = (Node *) lfirst(lc);
+			GPOS_ASSERT(NULL != elem_node);
+			GPOS_ASSERT(IsA(elem_node, SortGroupClause));
+			sort_group_ref = ((SortGroupClause *) elem_node)->tleSortGroupRef;
 		}
-
-		if (!IsA(elem_node, SortGroupClause))
+		else
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT(
-						   "Mixing grouping sets with simple group by lists"));
+			sort_group_ref = lfirst_int(lc);
 		}
-
-		ULONG sort_group_ref = ((SortGroupClause *) elem_node)->tleSortGroupRef;
 		bs->ExchangeSet(sort_group_ref);
-
 		UpdateGrpColMapping(mp, group_col_pos, group_cols, sort_group_ref);
 	}
 

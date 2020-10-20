@@ -3726,8 +3726,6 @@ select * from orca.m where a=abs(b);
 
 -- grouping sets
 select a,b,count(*) from orca.m group by grouping sets ((a), (a,b));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | b  | count 
 ----+----+-------
   0 |  1 |     1
@@ -3806,8 +3804,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (73 rows)
 
 select b,count(*) from orca.m group by grouping sets ((a), (a,b));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  b  | count 
 ----+-------
   1 |     1
@@ -3886,8 +3882,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (73 rows)
 
 select a,count(*) from orca.m group by grouping sets ((a), (a,b));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | count 
 ----+-------
   0 |     1
@@ -3966,8 +3960,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (73 rows)
 
 select a,count(*) from orca.m group by grouping sets ((a), (b));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | count 
 ----+-------
     |     1
@@ -4012,8 +4004,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (39 rows)
 
 select a,b,count(*) from orca.m group by rollup(a, b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | b  | count 
 ----+----+-------
   0 |  1 |     1
@@ -4093,8 +4083,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (74 rows)
 
 select a,b,count(*) from orca.m group by rollup((a),(a,b)) order by 1,2,3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | b  | count 
 ----+----+-------
   0 |  1 |     1
@@ -4174,8 +4162,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (74 rows)
 
 select count(*) from orca.m group by ();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  count 
 -------
     38
@@ -4208,8 +4194,6 @@ select a, count(*) from orca.r group by (), a;
 (21 rows)
 
 select a, count(*) from orca.r group by grouping sets ((),(a));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | count 
 ----+-------
   2 |     1
@@ -4237,8 +4221,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (22 rows)
 
 select a, b, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order by b,a,c;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | b | c  
 ----+---+----
   3 | 0 |  1
@@ -4287,8 +4269,6 @@ DETAIL:  Feature not supported: Grouping Sets
 (43 rows)
 
 select a, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order by b,a,c;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | c  
 ----+----
   3 |  1
@@ -4337,16 +4317,12 @@ DETAIL:  Feature not supported: Grouping Sets
 (43 rows)
 
 select 1 from orca.r group by ();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? 
 ----------
         1
 (1 row)
 
 select a,1 from orca.r group by rollup(a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  a  | ?column? 
 ----+----------
   1 |        1
@@ -4372,6 +4348,14 @@ DETAIL:  Feature not supported: Grouping Sets
  18 |        1
  20 |        1
 (22 rows)
+
+select distinct grouping(a) + grouping(b) from orca.m group by rollup(a,b);
+ ?column? 
+----------
+        0
+        1
+        2
+(3 rows)
 
 -- arrays
 select array[array[a,b]], array[b] from orca.r;
@@ -8951,7 +8935,7 @@ DETAIL:  DXL-to-PlStmt Translation: Assert not supported
    1
 (2 rows)
 
--- group by inside groupby inside group by ;S
+-- group by inside groupby inside group by
 select max(a) from foo group by (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h);
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  DXL-to-PlStmt Translation: Assert not supported
@@ -10987,9 +10971,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-LOG:  2019-05-31 15:13:50:374760 PDT,THD000,NOTICE,"Feature not supported: Grouping Sets",
+LOG:  2020-10-19 17:17:37:192241 PDT,THD000,NOTICE,"Feature not supported: Cube",
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
+DETAIL:  Feature not supported: Cube
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=1319.44..1496.29 rows=10611 width=16)

@@ -47,7 +47,8 @@ using namespace gpmd;
 BOOL
 CQueryMutators::NeedsProjListNormalization(const Query *query)
 {
-	if (!query->hasAggs && NULL == query->groupClause)
+	if (!query->hasAggs && NULL == query->groupClause &&
+		NULL == query->groupingSets)
 	{
 		return false;
 	}
@@ -975,7 +976,8 @@ CQueryMutators::NormalizeHaving(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	ReassignSortClause(new_query, rte->subquery);
 
-	if (!rte->subquery->hasAggs && NIL == rte->subquery->groupClause)
+	if (!rte->subquery->hasAggs && NIL == rte->subquery->groupClause &&
+		NIL == rte->subquery->groupingSets)
 	{
 		// if the derived table has no grouping columns or aggregates then the
 		// subquery is equivalent to select XXXX FROM CONST-TABLE
@@ -1009,6 +1011,7 @@ CQueryMutators::NormalizeHaving(CMemoryPool *mp, CMDAccessor *md_accessor,
 		rte->subquery = new_subquery;
 		rte->subquery->jointree = MakeNode(FromExpr);
 		rte->subquery->groupClause = NIL;
+		rte->subquery->groupingSets = NIL;
 		rte->subquery->sortClause = NIL;
 		rte->subquery->windowClause = NIL;
 	}
@@ -1390,6 +1393,7 @@ CQueryMutators::NormalizeWindowProjList(CMemoryPool *mp,
 	// transformation, which separates GROUP BY from window functions
 	GPOS_ASSERT(NULL == original_query->distinctClause);
 	GPOS_ASSERT(NULL == original_query->groupClause);
+	GPOS_ASSERT(NULL == original_query->groupingSets);
 
 	// we do not fix target list of the derived table since we will be mutating it below
 	// to ensure that it does not have window functions
