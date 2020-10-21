@@ -1535,23 +1535,27 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	{
 		Motion	   *pMotion = (Motion *) planstate->plan;
 		int			curSliceId = pMotion->motionID;
+		CdbExplain_SliceSummary *ss = &ctx->slices[curSliceId];
 
-		for (int iWorker = 0; iWorker < ctx->slices[curSliceId].nworker; iWorker++)
+		for (int iWorker = 0; iWorker < ss->nworker; iWorker++)
 		{
+			if (NULL == ss->memoryAccounts[iWorker])
+				continue;
+
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 			{
 				appendStringInfoSpaces(es->str, es->indent * 2);
-				appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
+				appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, ss->segindex0 + iWorker);
 			}
 			else
 			{
 				ExplainOpenGroup("MemoryAccounting", NULL, false, es);
 				ExplainPropertyInteger("Slice", curSliceId, es);
-				ExplainPropertyInteger("Segment", iWorker, es);
+				ExplainPropertyInteger("Segment", ss->segindex0 + iWorker, es);
 			}
 
-			MemoryAccounting_CombinedAccountArrayToExplain(ctx->slices[curSliceId].memoryAccounts[iWorker],
-														   ctx->slices[curSliceId].memoryAccountCount[iWorker],
+			MemoryAccounting_CombinedAccountArrayToExplain(ss->memoryAccounts[iWorker],
+														   ss->memoryAccountCount[iWorker],
 														   es);
 			if (es->format != EXPLAIN_FORMAT_TEXT)
 				ExplainCloseGroup("MemoryAccounting", NULL, false, es);

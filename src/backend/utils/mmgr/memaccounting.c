@@ -450,6 +450,7 @@ void
 MemoryAccounting_CombinedAccountArrayToExplain(void *accountArrayBytes,
 		MemoryAccountIdType accountCount, void *explainstate)
 {
+	Assert(NULL != accountArrayBytes);
 	MemoryAccount *combinedArray = (MemoryAccount *) accountArrayBytes;
 	ExplainState *es = (ExplainState *) explainstate;
 	/* 1 extra account pointer to reserve for undefined account */
