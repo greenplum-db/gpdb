@@ -41,6 +41,10 @@
        <li><codeph><xref href="pgcrypto.xml" format="dita"
              >pgcrypto</xref></codeph> - Provides cryptographic functions for Greenplum
          Database.</li>
+       <li><codeph><xref href="postgres_fdw.xml" format="dita"
+             >postgres_fdw</xref></codeph> - Provides a foreign data wrapper (FDW)
+         for accessing data stored in an external PostgreSQL or Greenplum
+         database.</li>
       <li><codeph><xref href="sslinfo.xml" format="dita">sslinfo</xref></codeph> - Provides
         information about the SSL certificate that the current client provided when connecting to
         Greenplum.</li>

@@ -12,7 +12,7 @@
       wrapper must handle that, too.</p>
     <p>The foreign-data wrappers included in the Greenplum Database open source
       github repository are good references when trying to write your own.
-      You may want to examine the
+      You may want to examine the source code for the
       <codeph><xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/file_fdw" scope="external">file_fdw</xref></codeph>
       and <codeph><xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/postgres_fdw" scope="external">postgres_fdw</xref></codeph>
       modules in the <codeph>contrib/</codeph> directory. The
