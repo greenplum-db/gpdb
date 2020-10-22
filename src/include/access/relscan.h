@@ -89,7 +89,6 @@ typedef struct ParallelBlockTableScanDescData *ParallelBlockTableScanDesc;
 typedef struct IndexFetchTableData
 {
 	Relation	rel;
-	bool		indexonly;
 } IndexFetchTableData;
 
 /*

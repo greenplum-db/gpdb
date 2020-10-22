@@ -226,8 +226,6 @@ indexonly_beginscan(Relation heapRelation,
 
 	scan = index_beginscan(heapRelation, indexRelation, snapshot, nkeys, norderbys);
 
-	scan->xs_heapfetch->indexonly = true;
-
 	return scan;
 }
 

@@ -158,9 +158,8 @@ IndexOnlyNext(IndexOnlyScanState *node)
 		 * It's worth going through this complexity to avoid needing to lock
 		 * the VM buffer, which could cause significant contention.
 		 */
-		if (!VM_ALL_VISIBLE(scandesc->heapRelation,
-							ItemPointerGetBlockNumber(tid),
-							&node->ioss_VMBuffer))
+		if (!scandesc->xs_heapfetch->rel->rd_tableam->tid_visible(
+				scandesc->xs_heapfetch, tid, scandesc->xs_snapshot))
 		{
 			/*
 			 * Rats, we have to visit the heap to check visibility.
