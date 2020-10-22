@@ -16,6 +16,16 @@ CREATE TABLE sto_alt_uao1(
           date_column date,
           col_set_default numeric) DISTRIBUTED RANDOMLY;
 
+-- Append optimized tables should not have a valid relfrozenxid in
+-- pg_class because per-tuple MVCC information (xmin/xmax) is not
+-- present.
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao1'
+       and n.nspname = 'alter_ao_table_col_ddl_@amname@';
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao1'
+       and n.nspname = 'alter_ao_table_col_ddl_@amname@';
+
 insert into sto_alt_uao1 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '1-1-2000', 0);
 insert into sto_alt_uao1 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '1-1-2001', 1);
 insert into sto_alt_uao1 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '1-1-2002', 2);
@@ -52,4 +62,13 @@ select count(int4_col) = 5 as passed from sto_alt_uao1;
 set gp_select_invisible = true;
 select count(int4_col) from sto_alt_uao1;
 set gp_select_invisible = false;
+
+-- relfrozenxid should remain invalid after table rewrite
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao1'
+       and n.nspname = 'alter_ao_table_col_ddl_@amname@';
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao1'
+       and n.nspname = 'alter_ao_table_col_ddl_@amname@';
+
 COMMIT;

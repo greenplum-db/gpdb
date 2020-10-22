@@ -1244,12 +1244,19 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	/* set rel1's frozen Xid and minimum MultiXid */
 	if (relform1->relkind != RELKIND_INDEX)
 	{
-		Assert(TransactionIdIsNormal(frozenXid));
-		relform1->relfrozenxid = frozenXid;
+		Assert(!TransactionIdIsValid(frozenXid) ||
+			   TransactionIdIsNormal(frozenXid));
+		/*
+		 * Greenplum: append-optimized tables do not have a valid relfrozenxid.
+		 * Leave the relfrozenxid as invalid after rewrite if it is currently
+		 * invalid.
+		 */
+		if (TransactionIdIsValid(relform1->relfrozenxid))
+			relform1->relfrozenxid = frozenXid;
+		else
+			relform1->relfrozenxid = InvalidTransactionId;
 		Assert(MultiXactIdIsValid(cutoffMulti));
 		relform1->relminmxid = cutoffMulti;
-		// GPDB_12_MERGE_FIXME
-		//Assert(should_have_valid_relfrozenxid(relform1->relkind));
 	}
 	/* swap size statistics too, since new rel has freshly-updated stats */
 	if (swap_stats)

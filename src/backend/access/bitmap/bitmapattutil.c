@@ -122,9 +122,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		lovIndex = index_open(idxid, AccessExclusiveLock);
 
 		RelationSetNewRelfilenode(lovHeap, lovHeap->rd_rel->relpersistence);
-		// GPDB_12_MERGE_FIXME: RecentXmin, GetOldestMultiXactId()); 
 		RelationSetNewRelfilenode(lovIndex, lovIndex->rd_rel->relpersistence);
-		// GPDB_12_MERGE_FIXME: InvalidTransactionId, InvalidMultiXactId);
 
 		/*
 		 * After creating the new relfilenode for a btee index, this is not

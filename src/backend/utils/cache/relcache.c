@@ -1812,6 +1812,12 @@ RelationInitTableAccessMethod(Relation relation)
 		aform = (Form_pg_am) GETSTRUCT(tuple);
 		relation->rd_amhandler = aform->amhandler;
 		ReleaseSysCache(tuple);
+		/*
+		 * Greenplum: append-optimized relations should not have a valid
+		 * relfrozenxid.
+		 */
+		Assert (!RelationIsAppendOptimized(relation) ||
+				!TransactionIdIsValid(relation->rd_rel->relfrozenxid));
 	}
 
 	/*

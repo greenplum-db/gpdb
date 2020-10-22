@@ -203,7 +203,4 @@ extern void MetaTrackDropObject(Oid		classid,
 		|| ((relkind) == RELKIND_SEQUENCE) \
 		|| ((relkind) == RELKIND_VIEW)) 
 
-extern bool
-should_have_valid_relfrozenxid(Relation relation,char relkind);
-
 #endif							/* HEAP_H */

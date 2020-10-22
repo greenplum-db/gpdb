@@ -29,6 +29,43 @@ select count(*) from sto_altap2;
     20
 (1 row)
 
+-- Append optimized tables should not have a valid relfrozenxid in
+-- pg_class because per-tuple MVCC information (xmin/xmax) is not
+-- present.
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+ relfrozenxid 
+--------------
+            0
+            0
+            0
+            0
+            0
+(5 rows)
+
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+ relfrozenxid 
+--------------
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+(15 rows)
+
 create table sto_altap3 (col1 bigint, col2 date, col3 text, col4 int)
  distributed randomly
  partition by range(col2) subpartition by list (col3)
@@ -286,6 +323,49 @@ select * from sto_altap2 order by a;
 
 -- Truncate a partitioned table
 Truncate table sto_altap2;
+-- relfrozenxid should remain invalid after rewrite
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+ relfrozenxid 
+--------------
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+(7 rows)
+
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+ relfrozenxid 
+--------------
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+(21 rows)
+
 select * from sto_altap2;
  a | b | c 
 ---+---+---

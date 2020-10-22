@@ -1305,22 +1305,8 @@ AddNewRelationTuple(Relation pg_class_desc,
 	}
 
 	/* Initialize relfrozenxid and relminmxid */
-	if (should_have_valid_relfrozenxid(new_rel_desc, relkind))
-	{
-		new_rel_reltup->relfrozenxid = relfrozenxid;
-		new_rel_reltup->relminmxid = relminmxid;
-	}
-	else
-	{
-		/*
-		 * Other relation types will not contain XIDs, so set relfrozenxid to
-		 * InvalidTransactionId.  (Note: a sequence does contain a tuple, but
-		 * we force its xmin to be FrozenTransactionId always; see
-		 * commands/sequence.c.)
-		 */
-		new_rel_reltup->relfrozenxid = InvalidTransactionId;
-		new_rel_reltup->relminmxid = InvalidMultiXactId;
-	}
+	new_rel_reltup->relfrozenxid = relfrozenxid;
+	new_rel_reltup->relminmxid = relminmxid;
 	new_rel_reltup->relowner = relowner;
 	new_rel_reltup->reltype = new_type_oid;
 	new_rel_reltup->reloftype = reloftype;
@@ -3977,33 +3963,6 @@ insert_ordered_unique_oid(List *list, Oid datum)
 	/* Insert datum into list after 'prev' */
 	lappend_cell_oid(list, prev, datum);
 	return list;
-}
-
-/*
- * Note: when modifying this function, make sure to modify the query
- * updating 'relfrozenxid' in function set_frozenxids() too.
- * This is to keep consistent behavior for relfrozenxid before
- * and after upgrade.
- */
-bool
-should_have_valid_relfrozenxid(Relation relation,char relkind)
-{
-	switch (relkind)
-	{
-		case RELKIND_RELATION:
-			if (RelationIsAppendOptimized(relation))
-				return false;
-
-			return true;
-		case RELKIND_TOASTVALUE:
-		case RELKIND_MATVIEW:
-		case RELKIND_AOSEGMENTS:
-		case RELKIND_AOBLOCKDIR:
-		case RELKIND_AOVISIMAP:
-			return true;
-	}
-
-	return false;
 }
 
 /*

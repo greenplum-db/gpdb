@@ -922,21 +922,10 @@ aoco_relation_set_new_filenode(Relation rel,
 	SMgrRelation srel;
 
 	/*
-	 * Initialize to the minimum XID that could put tuples in the table. We
-	 * know that no xacts older than RecentXmin are still running, so that
-	 * will do.
+	 * Append-optimized tables do not contain transaction information in
+	 * tuples.
 	 */
-	*freezeXid = RecentXmin;
-
-	/*
-	 * Similarly, initialize the minimum Multixact to the first value that
-	 * could possibly be stored in tuples in the table.  Running transactions
-	 * could reuse values from their local cache, so we are careful to
-	 * consider all currently running multis.
-	 *
-	 * XXX this could be refined further, but is it worth the hassle?
-	 */
-	*minmulti = GetOldestMultiXactId();
+	*freezeXid = *minmulti = InvalidTransactionId;
 
 	/*
 	 * No special treatment is needed for new AO_ROW/COLUMN relation. Create
