@@ -34,6 +34,7 @@ function gen_env(){
 		fi
 		cd "\${1}/gpdb_src"
 		source gpAux/gpdemo/gpdemo-env.sh
+		export TEST_PGFDW=1
 		make -s ${MAKE_TEST_COMMAND}
 	EOF
 

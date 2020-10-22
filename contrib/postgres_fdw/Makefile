@@ -14,8 +14,13 @@ SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdyn
 EXTENSION = postgres_fdw
 DATA = postgres_fdw--1.0.sql
 
+ifdef TEST_PGFDW
 REGRESS = gp2pg_postgres_fdw
 REGRESS_OPTS = --load-extension=$(EXTENSION)
+installcheck: prep_postgres
+clean: clean_postgres
+endif
+
 
 # the db name is hard-coded in the tests
 override USE_MODULE_DB =
@@ -37,9 +42,6 @@ endif
 # both the below PG_PORT and the port in test/sql/postgres_fdw.sql
 # which is the option of foreign server
 export PG_PORT=5432
-
-installcheck: prep_postgres
-clean: clean_postgres
 
 prep_postgres:
 	./postgres_setup.bash
