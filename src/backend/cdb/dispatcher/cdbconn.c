@@ -289,10 +289,10 @@ cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 			if (!sent)
 				elog(LOG, "Unable to cancel: %s", strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
 		}
-
-		PQfinish(segdbDesc->conn);
-		segdbDesc->conn = NULL;
 	}
+
+	PQfinish(segdbDesc->conn);
+	segdbDesc->conn = NULL;
 }
 
 /*
