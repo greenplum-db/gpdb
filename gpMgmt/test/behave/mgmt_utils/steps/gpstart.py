@@ -51,6 +51,7 @@ def impl(context):
 
         subprocess.check_call(['gpstart', '-am'])
         _run_sql("""
+            SET allow_system_table_mods='true';
             UPDATE gp_segment_configuration
                SET hostname = master.hostname,
                     address = master.address
@@ -60,10 +61,10 @@ def impl(context):
                       WHERE content = -1 and role = 'p'
                    ) master
              WHERE content = -1 AND role = 'm'
-        """, opts=opts)
+        """, {'gp_role': 'utility'})
         subprocess.check_call(['gpstop', '-am'])
 
-        context.add_cleanup(cleanup, context)
+    context.add_cleanup(cleanup, context)
 
 def _handle_sigpipe():
     """
