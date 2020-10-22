@@ -1264,16 +1264,16 @@ from
                                  ->  Sort  (cost=0.00..862.00 rows=1 width=12)
                                        Sort Key: t2_mpp_24563.seq
                                        ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=12)
-                                             Hash Cond: t2_mpp_24563.id = t1_mpp_24563.id
+                                             Hash Cond: (t2_mpp_24563.id = t1_mpp_24563.id)
                                              ->  Seq Scan on t2_mpp_24563  (cost=0.00..431.00 rows=1 width=8)
-                                                   Filter: value = 7
+                                                   Filter: (value = 7)
                                              ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                                                    ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
                                                          Group Key: t1_mpp_24563.id
                                                          ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                                                Sort Key: t1_mpp_24563.id
                                                                ->  Seq Scan on t1_mpp_24563  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA)
 (21 rows)
 
 drop table t1_mpp_24563;
@@ -1304,8 +1304,8 @@ CASE
 	ELSE 'Q2'::text END  AS  cc,  1 AS nn
 FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
-                                                                             QUERY PLAN                                                                              
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
  WindowAgg  (cost=0.00..862.00 rows=1 width=16)
    ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=2 width=12)
          ->  Result  (cost=0.00..862.00 rows=1 width=12)
@@ -1329,7 +1329,7 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                          ->  Partition Selector for t_mpp_20470 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
                                                                Partitions selected: 2 (out of 2)
                                                          ->  Dynamic Seq Scan on t_mpp_20470 t_mpp_20470_1 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=12)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (24 rows)
 
 drop view v1_mpp_20470;
@@ -1779,7 +1779,7 @@ EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) F
                                        ->  HashAggregate  (cost=0.00..431.96 rows=3334 width=12)
                                              Group Key: tenk1.unique1
                                              ->  Seq Scan on tenk1  (cost=0.00..431.51 rows=3334 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;

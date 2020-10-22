@@ -803,7 +803,7 @@ union all
         </dxl:LogicalJoin>
       </dxl:UnionAll>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1">
+    <dxl:Plan Id="0" SpaceSize="4">
       <dxl:Append IsTarget="false" IsZapped="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="874.433340" Rows="1.000000" Width="20"/>

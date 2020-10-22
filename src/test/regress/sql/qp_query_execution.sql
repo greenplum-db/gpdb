@@ -155,10 +155,10 @@ analyze foo_p;
 
 analyze bar;
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6 order by 1, 2 desc limit 10;
 
-select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6 order by 1, 2 desc limit 10;
 
 -- Use all distribution keys in the select list
@@ -208,10 +208,10 @@ insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER
 analyze abbp;
 analyze b;
 
-select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Right Join');
 select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6 order by 1, 2 desc limit 10;
 
-select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Right Join');
 select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = '6SOME NUMBER' order by 1, 2 desc limit 10;
 
 -- Varchar in the select list with a broadcast on top of an append with flow node
@@ -273,10 +273,10 @@ insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gener
 analyze foo_p;
 analyze bar;
 
-select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6 order by 1, 2 desc limit 10;
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00 order by 1, 2 desc limit 10;
 
 -- Partitioned tables with character type distribution keys used in predicates
@@ -297,10 +297,10 @@ insert into b select i % 7 || 'SOME NUMBER', i%6, i % 9 || 'SOME NUMBER', i % 9,
 analyze abbp;
 analyze b;
 
-select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Right Join');
 select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6 order by 1, 2 asc limit 10;
 
-select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Right Join');
 select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = '6SOME NUMBER' order by 1, 2 asc limit 10;
 
 -- Partitioned tables on both sides of a join
@@ -321,16 +321,16 @@ insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gen
 analyze foo_p;
 analyze bar_p;
 
-select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar_p on foo_p.k = bar_p.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar_p on foo_p.k = bar_p.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.k, foo_p.t from foo_p left outer join bar_p on foo_p.k = bar_p.k  where foo_p.t is not null and foo_p.p = 6 order by 1, 2 desc limit 10;
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k  where foo_p.t is not null and foo_p.a = 6 order by 1, 2 asc limit 10;
 
 select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6 and bar_p.a = 14;', 'Nested Loop', 'Hash Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6 and bar_p.a = 14 order by 1, 2 desc limit 10;
 
-select qx_count_operator('select bar_p.a, foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select bar_p.a, foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
 select bar_p.a, foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6 order by 1, 2, 3 asc limit 10;
 
 select qx_count_operator('select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6 and bar_p.a = 4;', 'Nested Loop', 'Hash Join');
@@ -339,10 +339,10 @@ select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k a
 select qx_count_operator('select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.b where foo_p.t is not null and foo_p.a = 6 and bar_p.a = 4;', 'Hash Join', 'Hash Join');
 select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.b where foo_p.t is not null and foo_p.a = 6 and bar_p.a = 4 order by 1, 2 asc limit 10;
 
-select qx_count_operator('select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.b = bar_p.b where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.b = bar_p.b where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
 select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.b = bar_p.b where foo_p.t is not null and foo_p.a = 6 order by 1, 2 desc limit 10;
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6 order by 1, 2 asc limit 10;
 
 -- Queries where equality predicate is not an immediate constant
@@ -362,11 +362,11 @@ insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gener
 analyze foo_p;
 analyze bar;
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1];', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1];', 'Hash Right Join', 'Hash Right Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1] order by 1, 2 desc limit 10;
 
 create function mytest(integer) returns integer as 'select $1/100' language sql;
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = mytest(100);', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = mytest(100);', 'Hash Right Join', 'Hash Right Join');
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = mytest(100) order by 1, 2 asc limit 10;
 
 drop function if exists mytest(integer);

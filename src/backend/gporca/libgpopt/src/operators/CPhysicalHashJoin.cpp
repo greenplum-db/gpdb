@@ -283,7 +283,7 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 
 	EChildExecOrder eceo = Eceo();
 
-	// check the type of distribution delivered by first child
+	// check the type of distribution delivered by first (inner) child
 	switch (pds->Edt())
 	{
 		case CDistributionSpec::EdtUniversal:
@@ -310,6 +310,12 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 			{
 				GPOS_ASSERT(1 == ulSourceChildIndex);
 
+				// inner child is replicated, for ROJ outer must be executed on a single (non-master) segment to avoid duplicates
+				if (this->Eopid() == EopPhysicalRightOuterHashJoin)
+				{
+					return GPOS_NEW(mp) CDistributionSpecSingleton(
+						CDistributionSpecSingleton::EstSegment);
+				}
 				// inner child is replicated, request outer child to have non-singleton distribution
 				return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 			}
@@ -692,10 +698,23 @@ CPhysicalHashJoin::PdsRequiredRedistribute(CMemoryPool *mp,
 	return pdsMatch;
 }
 
+CDistributionSpec *
+CPhysicalHashJoin::PdsRequired(
+	CMemoryPool * /*mp*/, CExpressionHandle & /*exprhdl*/,
+	CDistributionSpec * /*pdsInput*/, ULONG /*child_index*/,
+	CDrvdPropArray * /*pdrgpdpCtxt*/,
+	ULONG /*ulOptReq*/	// identifies which optimization request should be created
+) const
+{
+	GPOS_RAISE(
+		CException::ExmaInvalid, CException::ExmiInvalid,
+		GPOS_WSZ_LIT("PdsRequired should not be called for CPhysicalHashJoin"));
+	return NULL;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalHashJoin::PdsRequired
+//		CPhysicalHashJoin::Ped
 //
 //	@doc:
 //		Compute required distribution of the n-th child;
@@ -715,20 +734,6 @@ CPhysicalHashJoin::PdsRequiredRedistribute(CMemoryPool *mp,
 //
 //
 //---------------------------------------------------------------------------
-CDistributionSpec *
-CPhysicalHashJoin::PdsRequired(
-	CMemoryPool * /*mp*/, CExpressionHandle & /*exprhdl*/,
-	CDistributionSpec * /*pdsInput*/, ULONG /*child_index*/,
-	CDrvdPropArray * /*pdrgpdpCtxt*/,
-	ULONG /*ulOptReq*/	// identifies which optimization request should be created
-) const
-{
-	GPOS_RAISE(
-		CException::ExmaInvalid, CException::ExmiInvalid,
-		GPOS_WSZ_LIT("PdsRequired should not be called for CPhysicalHashJoin"));
-	return NULL;
-}
-
 CEnfdDistribution *
 CPhysicalHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 					   CReqdPropPlan *prppInput, ULONG child_index,

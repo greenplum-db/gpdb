@@ -2793,6 +2793,21 @@ select * from foo join (select min_a, count(*) as cnt from (select min(a) as min
 reset optimizer_join_order;
 reset optimizer_enable_hashjoin;
 reset optimizer_enable_groupagg;
+
+-- ROJ must use the hash side for deriving the distribution spec. Force a non-redistribute plan to ensure we get some motion (gather)
+create table roj1 (a int, b int) ;
+create table roj2 (c int, d int) ;
+insert into roj1 values (1, 1);
+insert into roj1 values (2, 2);
+insert into roj2 select null,null from generate_series(1,10) ;
+analyze roj1;
+analyze roj2;
+
+set optimizer_enable_motion_redistribute=off;
+select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
+explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
+reset optimizer_enable_motion_redistribute;
+
 reset optimizer_trace_fallback;
 reset enable_sort;
 

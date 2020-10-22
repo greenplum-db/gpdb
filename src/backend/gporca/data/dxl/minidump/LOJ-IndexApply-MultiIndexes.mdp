@@ -26,7 +26,7 @@ set optimizer_enable_hashjoin = off;
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102029,102046,102048,102053,102054,102074,102120,103001,103014,103015,103022,103027,104003,104004,104005,105000,106000"/>
+      <dxl:TraceFlags Value="102029,102046,102048,102053,102054,102074,102120,103001,103014,103015,103022,103027,104003,104004,104005,105000,106000,,102157,102158"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32774.1.0" Name="zoo" Rows="0.000000" EmptyRelation="true"/>

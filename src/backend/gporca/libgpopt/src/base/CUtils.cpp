@@ -1059,9 +1059,9 @@ CUtils::FPhysicalJoin(COperator *pop)
 	return FHashJoin(pop) || FNLJoin(pop);
 }
 
-// check if a given operator is a physical outer join
+// check if a given operator is a physical left outer join
 BOOL
-CUtils::FPhysicalOuterJoin(COperator *pop)
+CUtils::FPhysicalLeftOuterJoin(COperator *pop)
 {
 	GPOS_ASSERT(NULL != pop);
 

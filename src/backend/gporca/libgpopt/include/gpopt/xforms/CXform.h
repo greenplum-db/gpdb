@@ -222,6 +222,8 @@ public:
 		ExfJoin2IndexGetApply,
 		ExfMultiExternalGet2MultiExternalScan,
 		ExfExpandDynamicGetWithExternalPartitions,
+		ExfLeftJoin2RightJoin,
+		ExfRightOuterJoin2HashJoin,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

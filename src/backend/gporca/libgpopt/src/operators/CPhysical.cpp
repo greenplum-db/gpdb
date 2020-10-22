@@ -812,11 +812,17 @@ CPhysical::PppsRequiredPushThruNAry(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		if (ppfmReqd->FContainsScanId(part_idx_id))
 		{
 			CExpression *pexpr = ppfmReqd->Pexpr(part_idx_id);
-			// if the current child is inner child and the predicate is IsNull check and the parent is outer join,
+			// if the current child is inner child and the predicate is IsNull check and the parent is left outer join,
 			// don't push IsNull check predicate to the partition filter.
 			// for all the other cases, push the filter down.
-			if (!(1 == child_index && CUtils::FScalarNullTest(pexpr) &&
-				  CUtils::FPhysicalOuterJoin(exprhdl.Pop())))
+			BOOL isNullOuterJoin =
+				CUtils::FScalarNullTest(pexpr) &&
+				((1 == child_index &&
+				  CUtils::FPhysicalLeftOuterJoin(exprhdl.Pop())) ||
+				 (0 == child_index &&
+				  COperator::EopPhysicalRightOuterHashJoin ==
+					  exprhdl.Pop()->Eopid()));
+			if (!(isNullOuterJoin))
 			{
 				pexpr->AddRef();
 				ppfmResult->AddPartFilter(mp, part_idx_id, pexpr,

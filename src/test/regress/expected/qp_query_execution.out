@@ -175,7 +175,7 @@ insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gener
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 10000) i;
 analyze foo_p;
 analyze bar;
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -196,7 +196,7 @@ select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where
  6 | 6SOME NUMBER SOME NUMBER
 (10 rows)
 
-select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -343,7 +343,7 @@ insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 1000)i;  
 analyze abbp;
 analyze b;
-select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -364,7 +364,7 @@ select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t 
  186SN SN | 186
 (10 rows)
 
-select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -498,7 +498,7 @@ insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gener
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 10000) i;
 analyze foo_p;
 analyze bar;
-select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -519,7 +519,7 @@ select foo_p.k, foo_p.t from foo_p left outer join bar on foo_p.k = bar.k  where
  6.00 | 6SOME NUMBER SOME NUMBER
 (10 rows)
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -559,7 +559,7 @@ insert into b select i % 7 || 'SOME NUMBER', i%6, i % 9 || 'SOME NUMBER', i % 9,
 insert into b select i % 7 || 'SOME NUMBER', i%6, i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 1000)i;
 analyze abbp;
 analyze b;
-select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t is not null and abbp.p = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -580,7 +580,7 @@ select abbp.k, abbp.t from abbp left outer join b on abbp.k = b.k  where abbp.t 
  186SN SN | 186
 (10 rows)
 
-select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = E''6SOME NUMBER''', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -627,7 +627,7 @@ insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gen
 insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 10000) i;
 analyze foo_p;
 analyze bar_p;
-select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar_p on foo_p.k = bar_p.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.k, foo_p.t from foo_p left outer join bar_p on foo_p.k = bar_p.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -648,7 +648,7 @@ select foo_p.k, foo_p.t from foo_p left outer join bar_p on foo_p.k = bar_p.k  w
  6 | 6SOME NUMBER SOME NUMBER
 (10 rows)
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -680,7 +680,7 @@ select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k an
 ---+---
 (0 rows)
 
-select qx_count_operator('select bar_p.a, foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select bar_p.a, foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.k = bar_p.k where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -733,7 +733,7 @@ select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k a
 ---+---
 (0 rows)
 
-select qx_count_operator('select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.b = bar_p.b where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k and foo_p.b = bar_p.b where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -745,7 +745,7 @@ select  foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.k a
  6 | 6SOME NUMBER SOME NUMBER
 (1 row)
 
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6;', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -785,7 +785,7 @@ insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from gener
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 10000) i;
 analyze foo_p;
 analyze bar;
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1];', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1];', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1
@@ -807,7 +807,7 @@ select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where
 (10 rows)
 
 create function mytest(integer) returns integer as 'select $1/100' language sql;
-select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = mytest(100);', 'Hash Right Join', 'Hash Left Join');
+select qx_count_operator('select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = mytest(100);', 'Hash Right Join', 'Hash Right Join');
  qx_count_operator 
 -------------------
                  1

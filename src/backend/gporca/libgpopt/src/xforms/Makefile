@@ -90,6 +90,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftAntiSemiJoin2NLJoin.o \
               CXformLeftAntiSemiJoinNotIn2HashJoinNotIn.o \
               CXformLeftAntiSemiJoinNotIn2NLJoinNotIn.o \
+              CXformLeftJoin2RightJoin.o \
               CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin.o \
               CXformLeftOuterApply2LeftOuterJoin.o \
               CXformLeftOuterApply2LeftOuterJoinNoCorrelations.o \
@@ -112,6 +113,7 @@ OBJS        = CDecorrelator.o \
               CXformPushGbWithHavingBelowJoin.o \
               CXformRemoveSubqDistinct.o \
               CXformResult.o \
+              CXformRightOuterJoin2HashJoin.o \
               CXformSelect2Apply.o \
               CXformSelect2BitmapBoolOp.o \
               CXformSelect2DynamicIndexGet.o \

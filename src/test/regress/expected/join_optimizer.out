@@ -3362,28 +3362,28 @@ select * from tenk1 t1 left join
   (tenk1 t2 join tenk1 t3 on t2.thousand = t3.unique2)
   on t1.hundred = t2.hundred and t1.ten = t3.ten
 where t1.unique1 = 1;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice5; segments: 3)
-   ->  Hash Left Join
-         Hash Cond: ((tenk1.hundred = tenk1_1.hundred) AND (tenk1.ten = tenk1_2.ten))
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: tenk1.hundred, tenk1.ten
-               ->  Index Scan using tenk1_unique1 on tenk1
-                     Index Cond: (unique1 = 1)
+   ->  Hash Right Join
+         Hash Cond: ((tenk1.hundred = tenk1_2.hundred) AND (tenk1_1.ten = tenk1_2.ten))
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)
+               Hash Key: tenk1.hundred
+               ->  Hash Join
+                     Hash Cond: (tenk1.thousand = tenk1_1.unique2)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: tenk1.thousand
+                           ->  Seq Scan on tenk1
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: tenk1_1.unique2
+                                 ->  Seq Scan on tenk1 tenk1_1
          ->  Hash
                ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                     Hash Key: tenk1_1.hundred, tenk1_2.ten
-                     ->  Hash Join
-                           Hash Cond: (tenk1_1.thousand = tenk1_2.unique2)
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: tenk1_1.thousand
-                                 ->  Seq Scan on tenk1 tenk1_1
-                           ->  Hash
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: tenk1_2.unique2
-                                       ->  Seq Scan on tenk1 tenk1_2
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+                     Hash Key: tenk1_2.hundred
+                     ->  Index Scan using tenk1_unique1 on tenk1 tenk1_2
+                           Index Cond: (unique1 = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (20 rows)
 
 explain (costs off)
@@ -3391,29 +3391,29 @@ select * from tenk1 t1 left join
   (tenk1 t2 join tenk1 t3 on t2.thousand = t3.unique2)
   on t1.hundred = t2.hundred and t1.ten + t2.ten = t3.ten
 where t1.unique1 = 1;
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 3:1  (slice5; segments: 3)
-   ->  Hash Left Join
-         Hash Cond: (tenk1.hundred = tenk1_1.hundred)
-         Join Filter: ((tenk1.ten + tenk1_1.ten) = tenk1_2.ten)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: (tenk1.hundred = tenk1_2.hundred)
+         Join Filter: ((tenk1_2.ten + tenk1.ten) = tenk1_1.ten)
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)
                Hash Key: tenk1.hundred
-               ->  Index Scan using tenk1_unique1 on tenk1
-                     Index Cond: (unique1 = 1)
+               ->  Hash Join
+                     Hash Cond: (tenk1.thousand = tenk1_1.unique2)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: tenk1.thousand
+                           ->  Seq Scan on tenk1
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: tenk1_1.unique2
+                                 ->  Seq Scan on tenk1 tenk1_1
          ->  Hash
                ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                     Hash Key: tenk1_1.hundred
-                     ->  Hash Join
-                           Hash Cond: (tenk1_1.thousand = tenk1_2.unique2)
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: tenk1_1.thousand
-                                 ->  Seq Scan on tenk1 tenk1_1
-                           ->  Hash
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: tenk1_2.unique2
-                                       ->  Seq Scan on tenk1 tenk1_2
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+                     Hash Key: tenk1_2.hundred
+                     ->  Index Scan using tenk1_unique1 on tenk1 tenk1_2
+                           Index Cond: (unique1 = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (21 rows)
 
 explain (costs off)
@@ -3466,39 +3466,39 @@ select b.unique1 from
   join int4_tbl i1 on b.thousand = f1
   right join int4_tbl i2 on i2.f1 = b.tenthous
   order by 1;
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice6; segments: 3)
    Merge Key: tenk1.unique1
    ->  Sort
          Sort Key: tenk1.unique1
-         ->  Hash Left Join
-               Hash Cond: (int4_tbl.f1 = tenk1.tenthous)
-               ->  Seq Scan on int4_tbl
+         ->  Hash Right Join
+               Hash Cond: (tenk1.tenthous = int4_tbl_1.f1)
+               ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                     Hash Key: tenk1.tenthous
+                     ->  Hash Left Join
+                           Hash Cond: (tenk1_1.thousand = tenk1_2.thousand)
+                           Join Filter: (tenk1.unique1 = 42)
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: tenk1_1.thousand
+                                 ->  Nested Loop
+                                       Join Filter: true
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: tenk1.unique2
+                                             ->  Nested Loop
+                                                   Join Filter: true
+                                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                         ->  Seq Scan on int4_tbl
+                                                   ->  Index Scan using tenk1_thous_tenthous on tenk1
+                                                         Index Cond: (thousand = int4_tbl.f1)
+                                       ->  Index Scan using tenk1_unique1 on tenk1 tenk1_1
+                                             Index Cond: (unique1 = tenk1.unique2)
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                       Hash Key: tenk1_2.thousand
+                                       ->  Seq Scan on tenk1 tenk1_2
                ->  Hash
-                     ->  Redistribute Motion 3:3  (slice5; segments: 3)
-                           Hash Key: tenk1.tenthous
-                           ->  Hash Left Join
-                                 Hash Cond: (tenk1_1.thousand = tenk1_2.thousand)
-                                 Join Filter: (tenk1.unique1 = 42)
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: tenk1_1.thousand
-                                       ->  Nested Loop
-                                             Join Filter: true
-                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                   Hash Key: tenk1.unique2
-                                                   ->  Nested Loop
-                                                         Join Filter: true
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                                               ->  Seq Scan on int4_tbl int4_tbl_1
-                                                         ->  Index Scan using tenk1_thous_tenthous on tenk1
-                                                               Index Cond: (thousand = int4_tbl_1.f1)
-                                             ->  Index Scan using tenk1_unique1 on tenk1 tenk1_1
-                                                   Index Cond: (unique1 = tenk1.unique2)
-                                 ->  Hash
-                                       ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                                             Hash Key: tenk1_2.thousand
-                                             ->  Seq Scan on tenk1 tenk1_2
+                     ->  Seq Scan on int4_tbl int4_tbl_1
  Optimizer: Pivotal Optimizer (GPORCA)
 (32 rows)
 
@@ -3534,16 +3534,16 @@ order by fault;
          ->  Result
                Filter: (((COALESCE(tenk1.unique1, (-1)) + int8_tbl.q1)) = 122)
                ->  Result
-                     ->  Hash Left Join
-                           Hash Cond: (int8_tbl.q2 = (tenk1.unique2)::bigint)
+                     ->  Hash Right Join
+                           Hash Cond: ((tenk1.unique2)::bigint = int8_tbl.q2)
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                 Hash Key: int8_tbl.q2
-                                 ->  Seq Scan on int8_tbl
+                                 Hash Key: (tenk1.unique2)::bigint
+                                 ->  Seq Scan on tenk1
                            ->  Hash
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                       Hash Key: (tenk1.unique2)::bigint
-                                       ->  Seq Scan on tenk1
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+                                       Hash Key: int8_tbl.q2
+                                       ->  Seq Scan on int8_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
 
 select * from
@@ -3598,14 +3598,14 @@ select q1, unique2, thousand, hundred
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Result
          Filter: ((COALESCE(tenk1.thousand, 123) = int8_tbl.q1) AND (int8_tbl.q1 = COALESCE(tenk1.hundred, 123)))
-         ->  Hash Left Join
-               Hash Cond: (int8_tbl.q1 = (tenk1.unique2)::bigint)
-               ->  Seq Scan on int8_tbl
+         ->  Hash Right Join
+               Hash Cond: ((tenk1.unique2)::bigint = int8_tbl.q1)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: (tenk1.unique2)::bigint
+                     ->  Seq Scan on tenk1
                ->  Hash
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: (tenk1.unique2)::bigint
-                           ->  Seq Scan on tenk1
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+                     ->  Seq Scan on int8_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
 select q1, unique2, thousand, hundred
@@ -3625,14 +3625,14 @@ select f1, unique2, case when unique2 is null then f1 else 0 end
    ->  Result
          ->  Result
                Filter: (CASE WHEN (tenk1.unique2 IS NULL) THEN int4_tbl.f1 ELSE 0 END = 0)
-               ->  Hash Left Join
-                     Hash Cond: (int4_tbl.f1 = tenk1.unique2)
-                     ->  Seq Scan on int4_tbl
+               ->  Hash Right Join
+                     Hash Cond: (tenk1.unique2 = int4_tbl.f1)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: tenk1.unique2
+                           ->  Seq Scan on tenk1
                      ->  Hash
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                 Hash Key: tenk1.unique2
-                                 ->  Seq Scan on tenk1
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
+                           ->  Seq Scan on int4_tbl
+ Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
 select f1, unique2, case when unique2 is null then f1 else 0 end
@@ -3650,29 +3650,29 @@ explain (costs off)
 select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
   from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)
   where a.unique2 = 5530 and coalesce(b.twothousand, a.twothousand) = 44;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    ->  Result
-         ->  Hash Left Join
-               Hash Cond: (COALESCE(tenk1_1.twothousand, tenk1.twothousand) = tenk1_2.unique2)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: COALESCE(tenk1_1.twothousand, tenk1.twothousand)
-                     ->  Result
-                           Filter: (COALESCE(tenk1_1.twothousand, tenk1.twothousand) = 44)
-                           ->  Hash Left Join
-                                 Hash Cond: (tenk1.unique1 = tenk1_1.thousand)
-                                 ->  Index Scan using tenk1_unique2 on tenk1
-                                       Index Cond: (unique2 = 5530)
-                                 ->  Hash
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                             Hash Key: tenk1_1.thousand
-                                             ->  Seq Scan on tenk1 tenk1_1
+         ->  Hash Right Join
+               Hash Cond: (tenk1.unique2 = COALESCE(tenk1_1.twothousand, tenk1_2.twothousand))
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: tenk1.unique2
+                     ->  Seq Scan on tenk1
                ->  Hash
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                           Hash Key: tenk1_2.unique2
-                           ->  Seq Scan on tenk1 tenk1_2
- Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
+                           Hash Key: COALESCE(tenk1_1.twothousand, tenk1_2.twothousand)
+                           ->  Result
+                                 Filter: (COALESCE(tenk1_1.twothousand, tenk1_2.twothousand) = 44)
+                                 ->  Hash Right Join
+                                       Hash Cond: (tenk1_1.thousand = tenk1_2.unique1)
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: tenk1_1.thousand
+                                             ->  Seq Scan on tenk1 tenk1_1
+                                       ->  Hash
+                                             ->  Index Scan using tenk1_unique2 on tenk1 tenk1_2
+                                                   Index Cond: (unique2 = 5530)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (21 rows)
 
 select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
@@ -3698,8 +3698,8 @@ left join
    using (join_key)
   ) foo3
 using (join_key);
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    Output: "Values".column1, int4_tbl.f1, "outer".bug_field
    ->  Hash Left Join
@@ -3711,22 +3711,22 @@ using (join_key);
                      Output: "Values".column1
          ->  Hash
                Output: int4_tbl.f1, "outer".bug_field
-               ->  Hash Left Join
+               ->  Hash Right Join
                      Output: int4_tbl.f1, "outer".bug_field
-                     Hash Cond: (int4_tbl.f1 = tenk1.unique2)
-                     ->  Result
-                           Output: 666, int4_tbl.f1
-                           ->  Seq Scan on public.int4_tbl
-                                 Output: int4_tbl.f1
-                     ->  Hash
+                     Hash Cond: (tenk1.unique2 = int4_tbl.f1)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
                            Output: tenk1.unique2
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: tenk1.unique2
+                           ->  Seq Scan on public.tenk1
                                  Output: tenk1.unique2
-                                 Hash Key: tenk1.unique2
-                                 ->  Seq Scan on public.tenk1
-                                       Output: tenk1.unique2
- Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
- Settings: optimizer=on
+                     ->  Hash
+                           Output: "outer".bug_field, int4_tbl.f1
+                           ->  Result
+                                 Output: 666, int4_tbl.f1
+                                 ->  Seq Scan on public.int4_tbl
+                                       Output: int4_tbl.f1
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_seqscan=on, optimizer=on
 (27 rows)
 
 select foo1.join_key as foo1_id, foo3.join_key AS foo3_id, bug_field from
@@ -3761,57 +3761,57 @@ select t1.* from
   on (t1.f1 = b1.d1)
   left join int4_tbl i4
   on (i8.q2 = i4.f1);
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice6; segments: 3)
    Output: text_tbl.f1
    ->  Hash Left Join
          Output: text_tbl.f1
-         Hash Cond: (int8_tbl_1.q2 = (int4_tbl.f1)::bigint)
+         Hash Cond: (int8_tbl.q2 = (int4_tbl.f1)::bigint)
          ->  Redistribute Motion 1:3  (slice4)
-               Output: text_tbl.f1, int8_tbl_1.q2
-               ->  Hash Left Join
-                     Output: text_tbl.f1, int8_tbl_1.q2
-                     Hash Cond: (text_tbl.f1 = "outer".d1)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)
-                           Output: text_tbl.f1
-                           ->  Seq Scan on public.text_tbl
-                                 Output: text_tbl.f1
-                     ->  Hash
-                           Output: "outer".d1, int8_tbl_1.q2
-                           ->  Hash Left Join
-                                 Output: "outer".d1, int8_tbl_1.q2
-                                 Hash Cond: (int8_tbl.q2 = ("outer".d2)::bigint)
-                                 ->  Result
-                                       Output: '***'::text, int8_tbl.q2
-                                       ->  Gather Motion 3:1  (slice2; segments: 3)
-                                             Output: int8_tbl.q2
-                                             ->  Seq Scan on public.int8_tbl
-                                                   Output: int8_tbl.q2
-                                 ->  Hash
-                                       Output: int8_tbl_1.q2, "outer".d2
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)
-                                             Output: int8_tbl_1.q2, "outer".d2
-                                             ->  Hash Left Join
-                                                   Output: int8_tbl_1.q2, "outer".d2
-                                                   Hash Cond: (int8_tbl_1.q1 = int8_tbl_2.q1)
+               Output: text_tbl.f1, int8_tbl.q2
+               ->  Hash Right Join
+                     Output: text_tbl.f1, int8_tbl.q2
+                     Hash Cond: ("outer".d1 = text_tbl.f1)
+                     ->  Hash Right Join
+                           Output: "outer".d1, int8_tbl.q2
+                           Hash Cond: (("outer".d2)::bigint = int8_tbl_2.q2)
+                           ->  Gather Motion 3:1  (slice1; segments: 3)
+                                 Output: int8_tbl.q2, "outer".d2
+                                 ->  Hash Left Join
+                                       Output: int8_tbl.q2, "outer".d2
+                                       Hash Cond: (int8_tbl.q1 = int8_tbl_1.q1)
+                                       ->  Seq Scan on public.int8_tbl
+                                             Output: int8_tbl.q1, int8_tbl.q2
+                                       ->  Hash
+                                             Output: "outer".d2, int8_tbl_1.q1
+                                             ->  Result
+                                                   Output: NULL::integer, int8_tbl_1.q1
                                                    ->  Seq Scan on public.int8_tbl int8_tbl_1
-                                                         Output: int8_tbl_1.q1, int8_tbl_1.q2
-                                                   ->  Hash
-                                                         Output: "outer".d2, int8_tbl_2.q1
-                                                         ->  Result
-                                                               Output: NULL::integer, int8_tbl_2.q1
-                                                               ->  Seq Scan on public.int8_tbl int8_tbl_2
-                                                                     Output: int8_tbl_2.q1
+                                                         Output: int8_tbl_1.q1
+                           ->  Hash
+                                 Output: "outer".d1, int8_tbl_2.q2
+                                 ->  Result
+                                       Output: '***'::text, int8_tbl_2.q2
+                                       ->  Gather Motion 3:1  (slice2; segments: 3)
+                                             Output: int8_tbl_2.q2
+                                             ->  Seq Scan on public.int8_tbl int8_tbl_2
+                                                   Output: int8_tbl_2.q2
+                     ->  Hash
+                           Output: text_tbl.f1
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 Output: text_tbl.f1
+                                 ->  Seq Scan on public.text_tbl
+                                       Output: text_tbl.f1
          ->  Hash
                Output: int4_tbl.f1
                ->  Broadcast Motion 3:3  (slice5; segments: 3)
                      Output: int4_tbl.f1
                      ->  Seq Scan on public.int4_tbl
                            Output: int4_tbl.f1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
- Settings: optimizer=on
-(49 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_seqscan=on, optimizer=on
+(48 rows)
 
 select t1.* from
   text_tbl t1
@@ -3840,63 +3840,63 @@ select t1.* from
   on (t1.f1 = b1.d1)
   left join int4_tbl i4
   on (i8.q2 = i4.f1);
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice7; segments: 3)
    Output: text_tbl.f1
    ->  Hash Left Join
          Output: text_tbl.f1
-         Hash Cond: (int8_tbl_1.q2 = (int4_tbl_1.f1)::bigint)
+         Hash Cond: (int8_tbl.q2 = (int4_tbl_1.f1)::bigint)
          ->  Redistribute Motion 1:3  (slice5)
-               Output: text_tbl.f1, int8_tbl_1.q2
-               ->  Hash Left Join
-                     Output: text_tbl.f1, int8_tbl_1.q2
-                     Hash Cond: (text_tbl.f1 = "outer".d1)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)
-                           Output: text_tbl.f1
-                           ->  Seq Scan on public.text_tbl
-                                 Output: text_tbl.f1
-                     ->  Hash
-                           Output: "outer".d1, int8_tbl_1.q2
-                           ->  Hash Left Join
-                                 Output: "outer".d1, int8_tbl_1.q2
-                                 Hash Cond: (int8_tbl.q2 = ("outer".d2)::bigint)
+               Output: text_tbl.f1, int8_tbl.q2
+               ->  Hash Right Join
+                     Output: text_tbl.f1, int8_tbl.q2
+                     Hash Cond: ("outer".d1 = text_tbl.f1)
+                     ->  Hash Right Join
+                           Output: "outer".d1, int8_tbl.q2
+                           Hash Cond: (("outer".d2)::bigint = int8_tbl_2.q2)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)
+                                 Output: int8_tbl.q2, "outer".d2
+                                 ->  Hash Left Join
+                                       Output: int8_tbl.q2, "outer".d2
+                                       Hash Cond: (int8_tbl.q1 = int8_tbl_1.q1)
+                                       ->  Seq Scan on public.int8_tbl
+                                             Output: int8_tbl.q1, int8_tbl.q2
+                                       ->  Hash
+                                             Output: "outer".d2, int8_tbl_1.q1
+                                             ->  Result
+                                                   Output: NULL::integer, int8_tbl_1.q1
+                                                   ->  Nested Loop
+                                                         Output: int8_tbl_1.q1
+                                                         Join Filter: true
+                                                         ->  Seq Scan on public.int8_tbl int8_tbl_1
+                                                               Output: int8_tbl_1.q1
+                                                         ->  Materialize
+                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                                     ->  Seq Scan on public.int4_tbl
+                           ->  Hash
+                                 Output: "outer".d1, int8_tbl_2.q2
                                  ->  Result
-                                       Output: '***'::text, int8_tbl.q2
-                                       ->  Gather Motion 3:1  (slice2; segments: 3)
-                                             Output: int8_tbl.q2
-                                             ->  Seq Scan on public.int8_tbl
-                                                   Output: int8_tbl.q2
-                                 ->  Hash
-                                       Output: int8_tbl_1.q2, "outer".d2
-                                       ->  Gather Motion 3:1  (slice4; segments: 3)
-                                             Output: int8_tbl_1.q2, "outer".d2
-                                             ->  Hash Left Join
-                                                   Output: int8_tbl_1.q2, "outer".d2
-                                                   Hash Cond: (int8_tbl_1.q1 = int8_tbl_2.q1)
-                                                   ->  Seq Scan on public.int8_tbl int8_tbl_1
-                                                         Output: int8_tbl_1.q1, int8_tbl_1.q2
-                                                   ->  Hash
-                                                         Output: "outer".d2, int8_tbl_2.q1
-                                                         ->  Result
-                                                               Output: NULL::integer, int8_tbl_2.q1
-                                                               ->  Nested Loop
-                                                                     Output: int8_tbl_2.q1
-                                                                     Join Filter: true
-                                                                     ->  Seq Scan on public.int8_tbl int8_tbl_2
-                                                                           Output: int8_tbl_2.q1
-                                                                     ->  Materialize
-                                                                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                                                                 ->  Seq Scan on public.int4_tbl
+                                       Output: '***'::text, int8_tbl_2.q2
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)
+                                             Output: int8_tbl_2.q2
+                                             ->  Seq Scan on public.int8_tbl int8_tbl_2
+                                                   Output: int8_tbl_2.q2
+                     ->  Hash
+                           Output: text_tbl.f1
+                           ->  Gather Motion 3:1  (slice4; segments: 3)
+                                 Output: text_tbl.f1
+                                 ->  Seq Scan on public.text_tbl
+                                       Output: text_tbl.f1
          ->  Hash
                Output: int4_tbl_1.f1
                ->  Broadcast Motion 3:3  (slice6; segments: 3)
                      Output: int4_tbl_1.f1
                      ->  Seq Scan on public.int4_tbl int4_tbl_1
                            Output: int4_tbl_1.f1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
- Settings: optimizer=on
-(55 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_seqscan=on, optimizer=on
+(54 rows)
 
 select t1.* from
   text_tbl t1
@@ -3926,67 +3926,67 @@ select t1.* from
   on (t1.f1 = b1.d1)
   left join int4_tbl i4
   on (i8.q2 = i4.f1);
-                                                    QUERY PLAN                                                    
-------------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice8; segments: 3)
    Output: text_tbl.f1
    ->  Hash Left Join
          Output: text_tbl.f1
-         Hash Cond: (int8_tbl_1.q2 = (int4_tbl_1.f1)::bigint)
+         Hash Cond: (int8_tbl.q2 = (int4_tbl_1.f1)::bigint)
          ->  Redistribute Motion 1:3  (slice6)
-               Output: text_tbl.f1, int8_tbl_1.q2
-               ->  Hash Left Join
-                     Output: text_tbl.f1, int8_tbl_1.q2
-                     Hash Cond: (text_tbl.f1 = "outer".d1)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)
-                           Output: text_tbl.f1
-                           ->  Seq Scan on public.text_tbl
-                                 Output: text_tbl.f1
-                     ->  Hash
-                           Output: "outer".d1, int8_tbl_1.q2
+               Output: text_tbl.f1, int8_tbl.q2
+               ->  Hash Right Join
+                     Output: text_tbl.f1, int8_tbl.q2
+                     Hash Cond: ("outer".d1 = text_tbl.f1)
+                     ->  Hash Right Join
+                           Output: "outer".d1, int8_tbl.q2
+                           Hash Cond: (("outer".d2)::bigint = int8_tbl_2.q2)
                            ->  Hash Left Join
-                                 Output: "outer".d1, int8_tbl_1.q2
-                                 Hash Cond: (int8_tbl.q2 = ("outer".d2)::bigint)
-                                 ->  Result
-                                       Output: '***'::text, int8_tbl.q2
-                                       ->  Gather Motion 3:1  (slice2; segments: 3)
-                                             Output: int8_tbl.q2
-                                             ->  Seq Scan on public.int8_tbl
-                                                   Output: int8_tbl.q2
+                                 Output: int8_tbl.q2, "outer".d2
+                                 Hash Cond: (int8_tbl.q1 = int8_tbl_1.q1)
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                                       Output: int8_tbl.q1, int8_tbl.q2
+                                       ->  Seq Scan on public.int8_tbl
+                                             Output: int8_tbl.q1, int8_tbl.q2
                                  ->  Hash
-                                       Output: int8_tbl_1.q2, "outer".d2
-                                       ->  Hash Left Join
-                                             Output: int8_tbl_1.q2, "outer".d2
-                                             Hash Cond: (int8_tbl_1.q1 = int8_tbl_2.q1)
-                                             ->  Gather Motion 3:1  (slice3; segments: 3)
-                                                   Output: int8_tbl_1.q1, int8_tbl_1.q2
-                                                   ->  Seq Scan on public.int8_tbl int8_tbl_1
-                                                         Output: int8_tbl_1.q1, int8_tbl_1.q2
-                                             ->  Hash
-                                                   Output: "outer".d2, int8_tbl_2.q1
-                                                   ->  Result
-                                                         Output: NULL::integer, int8_tbl_2.q1
-                                                         ->  Hash Join
-                                                               Output: int8_tbl_2.q1
-                                                               Hash Cond: (int8_tbl_2.q1 = (int4_tbl.f1)::bigint)
-                                                               ->  Gather Motion 3:1  (slice4; segments: 3)
-                                                                     Output: int8_tbl_2.q1
-                                                                     ->  Seq Scan on public.int8_tbl int8_tbl_2
-                                                                           Output: int8_tbl_2.q1
-                                                               ->  Hash
+                                       Output: "outer".d2, int8_tbl_1.q1
+                                       ->  Result
+                                             Output: NULL::integer, int8_tbl_1.q1
+                                             ->  Hash Join
+                                                   Output: int8_tbl_1.q1
+                                                   Hash Cond: (int8_tbl_1.q1 = (int4_tbl.f1)::bigint)
+                                                   ->  Gather Motion 3:1  (slice2; segments: 3)
+                                                         Output: int8_tbl_1.q1
+                                                         ->  Seq Scan on public.int8_tbl int8_tbl_1
+                                                               Output: int8_tbl_1.q1
+                                                   ->  Hash
+                                                         Output: int4_tbl.f1
+                                                         ->  Gather Motion 3:1  (slice3; segments: 3)
+                                                               Output: int4_tbl.f1
+                                                               ->  Seq Scan on public.int4_tbl
                                                                      Output: int4_tbl.f1
-                                                                     ->  Gather Motion 3:1  (slice5; segments: 3)
-                                                                           Output: int4_tbl.f1
-                                                                           ->  Seq Scan on public.int4_tbl
-                                                                                 Output: int4_tbl.f1
+                           ->  Hash
+                                 Output: "outer".d1, int8_tbl_2.q2
+                                 ->  Result
+                                       Output: '***'::text, int8_tbl_2.q2
+                                       ->  Gather Motion 3:1  (slice4; segments: 3)
+                                             Output: int8_tbl_2.q2
+                                             ->  Seq Scan on public.int8_tbl int8_tbl_2
+                                                   Output: int8_tbl_2.q2
+                     ->  Hash
+                           Output: text_tbl.f1
+                           ->  Gather Motion 3:1  (slice5; segments: 3)
+                                 Output: text_tbl.f1
+                                 ->  Seq Scan on public.text_tbl
+                                       Output: text_tbl.f1
          ->  Hash
                Output: int4_tbl_1.f1
                ->  Broadcast Motion 3:3  (slice7; segments: 3)
                      Output: int4_tbl_1.f1
                      ->  Seq Scan on public.int4_tbl int4_tbl_1
                            Output: int4_tbl_1.f1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
- Settings: optimizer=on
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_seqscan=on, optimizer=on
 (59 rows)
 
 select t1.* from
@@ -4212,24 +4212,24 @@ select * from
   left join
     (tenk1 as a1 full join (select 1 as id) as yy on (a1.unique1 = yy.id))
   on (xx.id = coalesce(yy.id));
-                      QUERY PLAN                      
-------------------------------------------------------------------
- Hash Left Join
-   Hash Cond: (id = COALESCE(id))
-   ->  Result
-         ->  Result
-   ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Merge Full Join
-                     Merge Cond: (unique1 = id)
-                     ->  Sort
-                           Sort Key: unique1
-                           ->  Seq Scan on tenk1
-                     ->  Sort
-                           Sort Key: id
+                   QUERY PLAN                   
+------------------------------------------------
+ Hash Right Join
+   Hash Cond: (COALESCE(id) = id)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Merge Full Join
+               Merge Cond: (unique1 = id)
+               ->  Sort
+                     Sort Key: unique1
+                     ->  Seq Scan on tenk1
+               ->  Sort
+                     Sort Key: id
+                     ->  Result
                            ->  Result
                                  ->  Result
-                                       ->  Result
+   ->  Hash
+         ->  Result
+               ->  Result
  Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
 
@@ -4248,18 +4248,18 @@ select * from
 --
 explain (costs off)
   select * from int4_tbl a left join tenk1 b on f1 = unique2 where f1 = 0;
-                        QUERY PLAN                         
------------------------------------------------------------
- Hash Left Join
-   Hash Cond: (int4_tbl.f1 = tenk1.unique2)
+                      QUERY PLAN                      
+------------------------------------------------------
+ Hash Right Join
+   Hash Cond: (tenk1.unique2 = int4_tbl.f1)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on int4_tbl
-               Filter: (f1 = 0)
+         ->  Index Scan using tenk1_unique2 on tenk1
+               Index Cond: (unique2 = 0)
    ->  Hash
          ->  Gather Motion 3:1  (slice2; segments: 3)
-               ->  Index Scan using tenk1_unique2 on tenk1
-                     Index Cond: (unique2 = 0)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.44.0
+               ->  Seq Scan on int4_tbl
+                     Filter: (f1 = 0)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
 explain (costs off)

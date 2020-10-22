@@ -659,8 +659,8 @@ explain (costs off) select even.i from even left outer join odd on (even.i = odd
 
 -- But this does.
 explain (costs off) select even.i from even right outer join odd on (even.i = odd.i) group by (even.i);
-                             QUERY PLAN                            
--------------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  GroupAggregate
          Group Key: even.i
@@ -673,7 +673,7 @@ explain (costs off) select even.i from even right outer join odd on (even.i = od
                            ->  Seq Scan on odd
                            ->  Hash
                                  ->  Seq Scan on even
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 -- Check that we can track the distribution through multiple FULL OUTER JOINs.

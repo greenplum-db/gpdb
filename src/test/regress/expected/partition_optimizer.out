@@ -6915,25 +6915,24 @@ analyze bar;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 explain select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1];
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..866.75 rows=20500 width=30)
-   ->  Hash Left Join  (cost=0.00..864.46 rows=6834 width=30)
-         Hash Cond: foo_p.a = bar.k
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=134 width=34)
-               Hash Key: foo_p.a
-               ->  Sequence  (cost=0.00..431.07 rows=134 width=34)
-                     ->  Partition Selector for foo_p (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                           Partitions selected: 6 (out of 6)
-                     ->  Dynamic Seq Scan on foo_p (dynamic scan id: 1)  (cost=0.00..431.07 rows=134 width=34)
-                           Filter: NOT t IS NULL AND a = ('{1}'::integer[])[1]
-         ->  Hash  (cost=431.36..431.36 rows=6700 width=4)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.36 rows=6700 width=4)
-                     Hash Key: bar.k
-                     ->  Seq Scan on bar  (cost=0.00..431.22 rows=6700 width=4)
- Settings:  optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: Pivotal Optimizer (GPORCA) version 2.48.0
-(16 rows)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..866.72 rows=20497 width=30)
+   ->  Hash Right Join  (cost=0.00..864.43 rows=6833 width=30)
+         Hash Cond: (bar.k = foo_p.a)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.36 rows=6700 width=4)
+               Hash Key: bar.k
+               ->  Seq Scan on bar  (cost=0.00..431.22 rows=6700 width=4)
+         ->  Hash  (cost=431.06..431.06 rows=134 width=34)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.06 rows=134 width=34)
+                     Hash Key: foo_p.a
+                     ->  Sequence  (cost=0.00..431.04 rows=134 width=34)
+                           ->  Partition Selector for foo_p (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Seq Scan on foo_p (dynamic scan id: 1)  (cost=0.00..431.04 rows=134 width=34)
+                                 Filter: ((NOT (t IS NULL)) AND (a = ('{1}'::integer[])[1]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
 
 reset optimizer_segments;
 drop table if exists foo_p;

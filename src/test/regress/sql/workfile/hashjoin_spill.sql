@@ -10,6 +10,7 @@ set search_path to hashjoin_spill;
 
 -- start_ignore
 create language plpythonu;
+select disable_xform('CXformLeftJoin2RightJoin'); -- disable right join in orca to force left join spilling
 -- end_ignore
 
 -- set workfile is created to true if all segment did it.

@@ -531,10 +531,10 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
                   </dxl:Materialize>
                 </dxl:Result>
                 <dxl:LimitCount>
-                  <dxl:ConstValue TypeMdid="0.20.1.0" IsNull="false" Value="1"/>
+                  <dxl:ConstValue TypeMdid="0.20.1.0" Value="1"/>
                 </dxl:LimitCount>
                 <dxl:LimitOffset>
-                  <dxl:ConstValue TypeMdid="0.20.1.0" IsNull="false" Value="0"/>
+                  <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                 </dxl:LimitOffset>
               </dxl:Limit>
             </dxl:SubPlan>

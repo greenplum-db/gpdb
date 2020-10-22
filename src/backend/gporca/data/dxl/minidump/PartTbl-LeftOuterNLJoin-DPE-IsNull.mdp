@@ -311,7 +311,7 @@ select * from t2 left outer join t1 on t1.b = t2.d where t1.b is null;
             </dxl:IsNull>
           </dxl:Filter>
           <dxl:OneTimeFilter/>
-          <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false">
+          <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="1293.000308" Rows="2.000000" Width="16"/>
             </dxl:Properties>
