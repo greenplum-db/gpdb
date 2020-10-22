@@ -1,7 +1,7 @@
 # Understanding Orca Memos
 
-Orca memos is a structure that enumerates different, but logically identical
-plans and then optimizes to find the most efficient one. Let's explore how to
+An Orca memo is a structure that enumerates different, but logically identical
+plans, and then optimizes to find the most efficient one. Let's explore how to
 read the memo.
 
 ### Setup
@@ -15,7 +15,15 @@ SET optimizer_print_memo_after_optimization=on;
 SET optimizer_print_optimization_context=on;
 ```
 
+Additional GUCs may be used to see the memo at different stages of the
+optimization process.
+```sql
+SET optimizer_print_memo_after_exploration=on;
+SET optimizer_print_memo_after_implementation=on;
+```
+
 ### How to traverse a memo
+
 Let's start with simple case with multiple paths.
 ```sql
 CREATE TABLE t(a int);
