@@ -7,6 +7,7 @@ resource_types:
   type: registry-image
   source:
     repository: teliaoss/github-pr-resource
+    tag: v0.21.0
 - name: gcs
   type: registry-image
   source:
