@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 cat <<"EOF"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%x}}")" >/dev/null 2>&1 && pwd)"
 if [ ! -L "${SCRIPT_DIR}" ]; then
 	GPDB_DIR=$(basename "${SCRIPT_DIR}")
 else
