@@ -148,7 +148,7 @@ pylint:
 
 $(MOCK_BIN):
 	@echo "--- mock for platform $(UBUNTU_PLATFORM)"
-	@if [ $(UBUNTU_PLATFORM) = "Ubuntu" ]; then\
+	@if [ "$(UBUNTU_PLATFORM)" = "Ubuntu" ]; then\
        pip install mock;\
      else\
        mkdir -p $(PYTHONSRC_INSTALL_SITE) && \
