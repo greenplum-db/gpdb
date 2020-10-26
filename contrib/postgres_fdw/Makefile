@@ -16,7 +16,7 @@ DATA = postgres_fdw--1.0.sql
 
 REGRESS =
 ifeq ($(TEST_PGFDW),1)
-REGRESS += postgres_fdw
+REGRESS += gp2pg_postgres_fdw
 endif
 REGRESS_OPTS = --load-extension=$(EXTENSION)
 
