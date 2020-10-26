@@ -230,7 +230,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
 {
 	Gang *newGangDefinition = NULL;
 	ListCell *lc;
-	int	i = 0;
+	volatile int i = 0;
 	int	size;
 	int contentId;
 
@@ -260,6 +260,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
 	}
 	PG_CATCH();
 	{
+		newGangDefinition->size = i;
 		RecycleGang(newGangDefinition, true /* destroy */);
 		PG_RE_THROW();
 	}
