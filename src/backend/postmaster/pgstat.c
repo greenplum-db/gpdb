@@ -4604,8 +4604,14 @@ pgstat_send_qd_tabstats(void)
 		if (buf.len > 0)
 		{
 			Assert(stat_data.len > 0);
-			/* Don't mark the result ready when receive this message */
+			/*
+			 * Don't mark the pgresult PGASYNC_READY when receive this message on QD.
+			 * Otherwise, QD may think the result is complete and start to process it.
+			 * But actually there may still have messages not received yet on QD belong
+			 * to same pgresult.
+			 */
 			pq_sendbyte(&buf, false);
+
 			pq_sendint(&buf, PGExtraTypeTableStats, sizeof(PGExtraType));
 			pq_sendint(&buf, stat_data.len, sizeof(int));
 			pq_sendbytes(&buf, stat_data.data, stat_data.len);
@@ -4670,8 +4676,8 @@ pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
 		if (bms_is_member(records[i].table_stat.t_id, *oidMap))
 		{
 			/*
-			* Same table pgstat from different QE;
-			*/
+			 * Same table pgstat from different QE;
+			 */
 			trans->tuples_inserted += records[i].table_stat.tuples_inserted;
 			trans->tuples_updated += records[i].table_stat.tuples_updated;
 			trans->tuples_deleted += records[i].table_stat.tuples_deleted;
