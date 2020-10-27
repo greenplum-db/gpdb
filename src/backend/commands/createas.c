@@ -58,6 +58,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
+#include "utils/metrics_utils.h"
 
 typedef struct
 {
@@ -416,6 +417,10 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 	queryDesc = CreateQueryDesc(plan, queryString,
 								GetActiveSnapshot(), InvalidSnapshot,
 								dest, params, 0);
+
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);
 	
 	if (into->skipData && !is_matview)
 	{
