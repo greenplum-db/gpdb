@@ -47,6 +47,7 @@ select * from gpfdist2_start;
 -- start_ignore
 drop table if exists lineitem;
 drop external table if exists ext_lineitem;
+drop external table if exists ext_simple;
 -- end_ignore
 
 -- test 1 using a .gz file
@@ -983,6 +984,56 @@ DROP EXTERNAL TABLE ext_crlf_with_lf_column;
 CREATE EXTERNAL TABLE ext_crlf_with_lf_column(c1 int, c2 text) LOCATION ('gpfdist://@hostname@:7070/gpfdist2/crlf_with_lf_column.csv') FORMAT 'text' (DELIMITER ',' NEWLINE 'CRLF');
 SELECT count(*) FROM ext_crlf_with_lf_column;
 DROP EXTERNAL TABLE ext_crlf_with_lf_column;
+
+-- test 26 correct combination of command-id, transaction-id and session id defines a gpfdist-session
+
+CREATE EXTERNAL TABLE ext_simple(id INTEGER)
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/simple.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+        ESCAPE 'OFF'
+);
+
+-- command-id is incremented for select statements
+SELECT count(*) FROM ext_simple;
+set optimizer=off;
+BEGIN;
+SELECT count(*) FROM ext_simple;
+SELECT count(*) FROM ext_simple;
+ROLLBACK;
+set optimizer=on;
+BEGIN;
+SELECT count(*) FROM ext_simple;
+SELECT count(*) FROM ext_simple;
+ROLLBACK;
+
+-- command-id is incremented when executing same prepared statement multiple times.
+-- See plancache.c: if (plansource->num_custom_plans < 5)
+PREPARE ext_simple_foo(int) AS SELECT count(*) from ext_simple;
+BEGIN;
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+ROLLBACK;
+BEGIN;
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+EXECUTE ext_simple_foo(1);
+ROLLBACK;
+
+DEALLOCATE ext_simple_foo;
+DROP EXTERNAL TABLE ext_simple;
+
 
 -- start_ignore
 select * from gpfdist2_stop;

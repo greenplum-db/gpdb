@@ -315,7 +315,6 @@ MakeExternalScanInfo(ExtTableEntry *extEntry)
 	bool		islimitinrows = false;
 	int			rejectlimit = -1;
 	char		logerrors = LOG_ERRORS_DISABLE;
-	static uint32 scancounter = 0;
 
 	if (extEntry->rejectlimit != -1)
 	{
@@ -347,7 +346,6 @@ MakeExternalScanInfo(ExtTableEntry *extEntry)
 	node->rejLimitInRows = islimitinrows;
 	node->logErrors = logerrors;
 	node->encoding = extEntry->encoding;
-	node->scancounter = scancounter++;
 	node->extOptions = extEntry->options;
 
 	return node;

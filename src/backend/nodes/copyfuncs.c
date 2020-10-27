@@ -636,7 +636,6 @@ _copyExternalScanInfo(const ExternalScanInfo *from)
 	COPY_SCALAR_FIELD(rejLimitInRows);
 	COPY_SCALAR_FIELD(logErrors);
 	COPY_SCALAR_FIELD(encoding);
-	COPY_SCALAR_FIELD(scancounter);
 	COPY_NODE_FIELD(extOptions);
 
 	return newnode;

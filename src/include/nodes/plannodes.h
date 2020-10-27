@@ -908,7 +908,6 @@ typedef struct ExternalScanInfo
 	bool		rejLimitInRows; /* true if ROWS false if PERCENT      */
 	char		logErrors;      /* 't', 'p' to log errors into file. 'p' makes persistent error log */
 	int			encoding;		/* encoding of external table data    */
-	uint32      scancounter;	/* counter incr per scan node created */
 	List	   *extOptions;		/* external options */
 } ExternalScanInfo;
 

@@ -640,7 +640,6 @@ exttable_BeginForeignScan(ForeignScanState *node,
 		elog(ERROR, "external table scan without a current relation");
 
 	currentScanDesc = external_beginscan(currentRelation,
-										 externalscan_info->scancounter,
 										 externalscan_info->uriList,
 										 externalscan_info->fmtType,
 										 externalscan_info->isMasterOnly,

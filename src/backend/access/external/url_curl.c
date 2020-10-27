@@ -1138,7 +1138,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 	set_httpheader(file, "X-GP-XID", ev->GP_XID);
 	set_httpheader(file, "X-GP-CID", ev->GP_CID);
-	set_httpheader(file, "X-GP-SN", ev->GP_SN);
+	set_httpheader(file, "X-GP-SN", ev->GP_SESSION_ID);
 	set_httpheader(file, "X-GP-SEGMENT-ID", ev->GP_SEGMENT_ID);
 	set_httpheader(file, "X-GP-SEGMENT-COUNT", ev->GP_SEGMENT_COUNT);
 	set_httpheader(file, "X-GP-LINE-DELIM-STR", ev->GP_LINE_DELIM_STR);
@@ -1171,7 +1171,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-DATABASE", ev->GP_DATABASE);
 		set_httpheader(file, "X-GP-USER", ev->GP_USER);
 		set_httpheader(file, "X-GP-SEG-PORT", ev->GP_SEG_PORT);
-		set_httpheader(file, "X-GP-SESSION-ID", ev->GP_SESSION_ID);
 	}
 		
 	{

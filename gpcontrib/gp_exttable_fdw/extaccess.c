@@ -108,7 +108,7 @@ elog(DEBUG2, "external_getnext returning tuple")
  * ----------------
  */
 FileScanDesc
-external_beginscan(Relation relation, uint32 scancounter,
+external_beginscan(Relation relation,
 				   List *uriList, char fmtType, bool isMasterOnly,
 				   int rejLimit, bool rejLimitInRows, char logErrors, int encoding,
 				   List *extOptions)
@@ -137,7 +137,6 @@ external_beginscan(Relation relation, uint32 scancounter,
 	scan->fs_ctup.t_data = NULL;
 	ItemPointerSetInvalid(&scan->fs_ctup.t_self);
 	scan->fs_rd = relation;
-	scan->fs_scancounter = scancounter;
 	scan->fs_noop = false;
 	scan->fs_file = NULL;
 	scan->fs_formatter = NULL;
@@ -1291,7 +1290,6 @@ open_external_readable_source(FileScanDesc scan, ExternalSelectDesc desc)
 							  scan->fs_pstate->quote,
 							  scan->fs_pstate->eol_type,
 							  scan->fs_pstate->header_line,
-							  scan->fs_scancounter,
 							  scan->fs_custom_formatter_params);
 
 	/* actually open the external source */
@@ -1323,8 +1321,7 @@ open_external_writable_source(ExternalInsertDesc extInsertDesc)
 							  extInsertDesc->ext_pstate->quote,
 							  extInsertDesc->ext_pstate->eol_type,
 							  extInsertDesc->ext_pstate->header_line,
-							  0,
-						 extInsertDesc->ext_custom_formatter_params);
+							  extInsertDesc->ext_custom_formatter_params);
 
 	/* actually open the external source */
 	extInsertDesc->ext_file = url_fopen(extInsertDesc->ext_uri,

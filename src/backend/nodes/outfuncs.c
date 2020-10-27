@@ -738,7 +738,6 @@ _outExternalScanInfo(StringInfo str, const ExternalScanInfo *node)
 	WRITE_BOOL_FIELD(rejLimitInRows);
 	WRITE_CHAR_FIELD(logErrors);
 	WRITE_INT_FIELD(encoding);
-	WRITE_INT_FIELD(scancounter);
 	WRITE_NODE_FIELD(extOptions);
 }
 

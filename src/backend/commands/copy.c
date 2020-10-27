@@ -7857,7 +7857,7 @@ open_program_pipes(char *command, bool forwrite)
 	extvar_t extvar;
 	memset(&extvar, 0, sizeof(extvar));
 
-	external_set_env_vars(&extvar, command, false, NULL, NULL, false, 0);
+	external_set_env_vars(&extvar, command, false, NULL, NULL, false);
 
 	ProgramPipes *program_pipes = palloc(sizeof(ProgramPipes));
 	program_pipes->pid = -1;
