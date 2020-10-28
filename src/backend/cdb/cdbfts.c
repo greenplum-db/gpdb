@@ -103,6 +103,9 @@ FtsNotifyProber(void)
 	int32			started;
 	int32			done;
 
+	if (am_ftsprobe)
+		return;
+
 	SpinLockAcquire(&ftsProbeInfo->lock);
 	initial_started = ftsProbeInfo->start_count;
 	SpinLockRelease(&ftsProbeInfo->lock);
