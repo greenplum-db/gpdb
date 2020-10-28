@@ -361,6 +361,23 @@ external_endscan(FileScanDesc scan)
 {
 	char	   *relname = pstrdup(RelationGetRelationName(scan->fs_rd));
 
+	/*
+	 * report Sreh results if external web table execute on master with reject limit.
+	 * if external web table execute on segment, these messages are printed
+	 * in cdbdisp_sumRejectedRows()
+	*/
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CopyState cstate = scan->fs_pstate;
+		if (cstate && cstate->cdbsreh)
+		{
+			CdbSreh	 *cdbsreh = cstate->cdbsreh;
+			uint64	total_rejected_from_qd = cdbsreh->rejectcount;
+			if (total_rejected_from_qd > 0)
+				ReportSrehResults(cdbsreh, total_rejected_from_qd);
+		}
+	}
+
 	if (scan->fs_pstate != NULL)
 	{
 		/*

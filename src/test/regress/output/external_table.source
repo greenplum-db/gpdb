@@ -621,6 +621,7 @@ EXECUTE E'cat @abs_srcdir@/data/exttab.data' ON MASTER
 FORMAT 'TEXT' (DELIMITER '|')
 SEGMENT REJECT LIMIT 20;
 SELECT * FROM exttab_basic_error_1;
+NOTICE:  found 10 data formatting errors (10 or more input rows), rejected related input data
  i 
 ---
 (0 rows)
@@ -4825,3 +4826,48 @@ DROP EXTERNAL TABLE test_delimiter;
 -- Test multiple character delimiter
 CREATE EXTERNAL TABLE test_delimiter(data text) LOCATION('gpfdist://127.0.0.1/test_delimiter.txt') FORMAT 'csv' (DELIMITER 'ab');
 ERROR:  COPY delimiter must be a single one-byte character, or 'off'
+-- Test notice reject message when execute on master
+CREATE EXTERNAL WEB TABLE web_exec_on_master_with_err_limit (c1 int) EXECUTE 'for i in `seq 1 2`; do echo 1 3;done; echo 22' ON MASTER FORMAT 'TEXT' SEGMENT REJECT LIMIT 3;
+SELECT * FROM web_exec_on_master_with_err_limit;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ c1 
+----
+ 22
+(1 row)
+
+DROP EXTERNAL TABLE web_exec_on_master_with_err_limit;
+-- Test notice reject message when execute on master with multiple commands
+CREATE EXTERNAL WEB TABLE web_exec_on_master_with_multiple_commands (c1 int) EXECUTE 'for i in `seq 1 `; do echo 2 1;
+done; echo 2 ; echo 1 2; echo 2;  echo 3 4' ON MASTER FORMAT 'TEXT' SEGMENT REJECT LIMIT 6;
+SELECT * FROM  web_exec_on_master_with_multiple_commands;
+NOTICE:  found 3 data formatting errors (3 or more input rows), rejected related input data
+ c1 
+----
+  2
+  2
+(2 rows)
+
+DROP EXTERNAL TABLE web_exec_on_master_with_multiple_commands;
+-- Test notice reject message when execute on segments with multiple commands
+CREATE EXTERNAL WEB TABLE web_exec_on_segments_with_multiple_commands (c1 int) EXECUTE 'for i in `seq 1 `; do echo 2 1;
+done; echo 2 ; echo 1 2; echo 2;  echo 3 4' FORMAT 'TEXT' SEGMENT REJECT LIMIT 6;
+SELECT * FROM  web_exec_on_segments_with_multiple_commands;
+NOTICE:  found 9 data formatting errors (9 or more input rows), rejected related input data
+ c1 
+----
+  2
+  2
+  2
+  2
+  2
+  2
+(6 rows)
+
+DROP EXTERNAL TABLE web_exec_on_segments_with_multiple_commands;
+-- Test reject number reached when execute on master
+CREATE EXTERNAL WEB TABLE web_exec_on_master_with_err_limit_reached (c1 int) EXECUTE 'for i in `seq 1 3`; do echo 1 3;done; echo 22' ON MASTER FORMAT 'TEXT' SEGMENT REJECT LIMIT 3;
+SELECT * FROM web_exec_on_master_with_err_limit_reached;
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "1 3", column c1
+CONTEXT:  External table web_exec_on_master_with_err_limit_reached, line 3 of execute:for i in `seq 1 3`; do echo 1 3;done; echo 22, column c1
+DROP EXTERNAL TABLE web_exec_on_master_with_err_limit_reached;
