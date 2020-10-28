@@ -702,8 +702,9 @@ class AnalyzeDb(Operation):
                 prev_ao_state_dict[schema_table] = new_modcount
 
             # update last op for tables that are successfully analyzed
-            last_op_info = curr_last_op_dict[schema_table]  # {'CREATE':'<entry>', 'ALTER':'<entry>', ...}
-            prev_last_op_dict[schema_table] = last_op_info
+            if schema_table in curr_last_op_dict:
+                last_op_info = curr_last_op_dict[schema_table]  # {'CREATE':'<entry>', 'ALTER':'<entry>', ...}
+                prev_last_op_dict[schema_table] = last_op_info
 
             # update column dict
             if is_full or schema_table in dirty_partitions or schema_table not in prev_col_dict or '-1' in \
