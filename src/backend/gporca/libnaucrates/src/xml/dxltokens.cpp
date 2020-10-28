@@ -370,6 +370,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenTotalCost, GPOS_WSZ_LIT("TotalCost")},
 		{EdxltokenRows, GPOS_WSZ_LIT("Rows")},
 		{EdxltokenWidth, GPOS_WSZ_LIT("Width")},
+		{EdxltokenRelPages, GPOS_WSZ_LIT("RelPages")},
+		{EdxltokenRelAllVisible, GPOS_WSZ_LIT("RelAllVisible")},
 		{EdxltokenTableName, GPOS_WSZ_LIT("TableName")},
 		{EdxltokenDerivedTableName, GPOS_WSZ_LIT("DerivedTableName")},
 		{EdxltokenExecuteAsUser, GPOS_WSZ_LIT("ExecuteAsUser")},

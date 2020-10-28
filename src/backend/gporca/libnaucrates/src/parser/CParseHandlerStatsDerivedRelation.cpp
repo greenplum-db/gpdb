@@ -36,6 +36,8 @@ CParseHandlerStatsDerivedRelation::CParseHandlerStatsDerivedRelation(
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_rows(CStatistics::DefaultColumnWidth),
 	  m_empty(false),
+	  m_relpages(0),
+	  m_relallvisible(0),
 	  m_dxl_stats_derived_relation(NULL)
 {
 }
@@ -104,6 +106,26 @@ CParseHandlerStatsDerivedRelation::StartElement(
 				m_parse_handler_mgr->GetDXLMemoryManager(), xml_is_empty,
 				EdxltokenEmptyRelation, EdxltokenStatsDerivedRelation);
 		}
+
+		m_relpages = 0;
+		const XMLCh *xml_relpages =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelPages));
+		if (NULL != xml_relpages)
+		{
+			m_relpages = CDXLOperatorFactory::ConvertAttrValueToUlong(
+				m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows,
+				EdxltokenRelPages, EdxltokenStatsDerivedRelation);
+		}
+
+		m_relallvisible = 0;
+		const XMLCh *xml_relallvisible =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelAllVisible));
+		if (NULL != xml_relallvisible)
+		{
+			m_relallvisible = CDXLOperatorFactory::ConvertAttrValueToUlong(
+				m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows,
+				EdxltokenRelAllVisible, EdxltokenStatsDerivedRelation);
+		}
 	}
 }
 
@@ -151,7 +173,8 @@ CParseHandlerStatsDerivedRelation::EndElement(
 	}
 
 	m_dxl_stats_derived_relation = GPOS_NEW(m_mp)
-		CDXLStatsDerivedRelation(m_rows, m_empty, dxl_stats_derived_col_array);
+		CDXLStatsDerivedRelation(m_rows, m_empty, m_relpages, m_relallvisible,
+								 dxl_stats_derived_col_array);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

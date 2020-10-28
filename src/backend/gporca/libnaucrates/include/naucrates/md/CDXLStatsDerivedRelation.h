@@ -44,6 +44,12 @@ private:
 	// flag to indicate if input relation is empty
 	BOOL m_empty;
 
+	// number of blocks in the relation (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks in the relation (not always up-to-date)
+	ULONG m_relallvisible;
+
 	// array of derived column statistics
 	CDXLStatsDerivedColumnArray *m_dxl_stats_derived_col_array;
 
@@ -52,7 +58,7 @@ public:
 
 	// ctor
 	CDXLStatsDerivedRelation(
-		CDouble rows, BOOL is_empty,
+		CDouble rows, BOOL is_empty, ULONG relpages, ULONG relallvisible,
 		CDXLStatsDerivedColumnArray *dxl_stats_derived_col_array);
 
 	// dtor

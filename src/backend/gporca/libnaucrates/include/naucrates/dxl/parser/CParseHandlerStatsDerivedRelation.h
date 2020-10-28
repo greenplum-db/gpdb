@@ -41,6 +41,12 @@ private:
 	// flag to express that the statistics is on an empty input
 	BOOL m_empty;
 
+	// number of blocks in the relation (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks in the relation (not always up-to-date)
+	ULONG m_relallvisible;
+
 	// relation stats
 	CDXLStatsDerivedRelation *m_dxl_stats_derived_relation;
 

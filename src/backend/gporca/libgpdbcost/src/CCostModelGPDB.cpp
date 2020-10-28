@@ -1586,20 +1586,60 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 
 
 CCost
-CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *,		   // mp
-								  CExpressionHandle &,	   //exprhdl
-								  const CCostModelGPDB *,  // pcmgpdb
-								  const SCostingInfo *pci  //pci
+CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
+								  CExpressionHandle &exprhdl,	  //exprhdl
+								  const CCostModelGPDB *pcmgpdb,  // pcmgpdb
+								  const SCostingInfo *pci		  //pci
 )
 {
-	// FIXME: Gather relation's visibility map statistics and use that info to
-	// create a cost model. When a block is visible then the scan can rely
-	// solely on the values stored in the index and does not have to open the
-	// corresponding heap page of the relation. If the blocks are not visible
-	// then there is no benefit over an index scan and you pay overhead of
-	// looking at visibility map.
-	pci->NumRebinds();
-	return CCost(std::numeric_limits<double>::max());
+	GPOS_ASSERT(NULL != pcmgpdb);
+	GPOS_ASSERT(NULL != pci);
+
+	COperator *pop = exprhdl.Pop();
+	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid());
+
+	const CDouble dTableWidth =
+		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
+
+	const CDouble dIndexFilterCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexFilterCostUnit)
+			->Get();
+	const CDouble dIndexScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
+			->Get();
+	const CDouble dIndexScanTupRandomFactor =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupRandomFactor)
+			->Get();
+	GPOS_ASSERT(0 < dIndexFilterCostUnit);
+	GPOS_ASSERT(0 < dIndexScanTupCostUnit);
+	GPOS_ASSERT(0 < dIndexScanTupRandomFactor);
+
+	CDouble dRowsIndex = pci->Rows();
+
+	ULONG ulIndexKeys =
+		CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
+	IStatistics *stats =
+		CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+
+	// Calculating cost of index-only-scan is identical to index-scan with the
+	// addition of dPartialVisFrac which indicates the percentage of pages not
+	// currently marked as all-visible. Planner has similar logic inside
+	// `cost_index()` to calculate pages fetched from index-only-scan.
+
+	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
+							   dTableWidth * dIndexScanTupCostUnit;
+	CDouble dPartialVisFrac(1);
+	if (stats->RelPages() != 0)
+	{
+		dPartialVisFrac =
+			1 - (CDouble(stats->RelAllVisible()) / CDouble(stats->RelPages()));
+	}
+	return CCost(pci->NumRebinds() *
+				 (dRowsIndex * dCostPerIndexRow +
+				  dIndexScanTupRandomFactor * dPartialVisFrac));
 }
 
 CCost

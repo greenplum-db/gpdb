@@ -26,10 +26,12 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CDXLStatsDerivedRelation::CDXLStatsDerivedRelation(
-	CDouble rows, BOOL is_empty,
+	CDouble rows, BOOL is_empty, ULONG relpages, ULONG relallvisible,
 	CDXLStatsDerivedColumnArray *dxl_stats_derived_col_array)
 	: m_rows(rows),
 	  m_empty(is_empty),
+	  m_relpages(relpages),
+	  m_relallvisible(relallvisible),
 	  m_dxl_stats_derived_col_array(dxl_stats_derived_col_array)
 {
 	GPOS_ASSERT(NULL != dxl_stats_derived_col_array);

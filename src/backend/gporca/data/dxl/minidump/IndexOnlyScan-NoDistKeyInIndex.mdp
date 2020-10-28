@@ -224,7 +224,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="9999999999999999210968330832147026575540427693752222372866517696718412616639336002780474141705354144110364081118142324010404785714541315284281257752757291623642503417072967859774120474650369161140553335192009630674782085554695972153397552576515276800.0000" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000119" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="b">
@@ -235,7 +235,7 @@
         <dxl:SortingColumnList/>
         <dxl:IndexOnlyScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="9999999999999999210968330832147026575540427693752222372866517696718412616639336002780474141705354144110364081118142324010404785714541315284281257752757291623642503417072967859774120474650369161140553335192009630674782085554695972153397552576515276800.0000" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000101" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="b">

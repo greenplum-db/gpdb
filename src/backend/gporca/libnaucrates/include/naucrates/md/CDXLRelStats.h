@@ -61,11 +61,18 @@ private:
 	// DXL string for object
 	CWStringDynamic *m_dxl_str;
 
+	// number of blocks (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks (not always up-to-date)
+	ULONG m_relallvisible;
+
 public:
 	CDXLRelStats(const CDXLRelStats &) = delete;
 
 	CDXLRelStats(CMemoryPool *mp, CMDIdRelStats *rel_stats_mdid,
-				 CMDName *mdname, CDouble rows, BOOL is_empty);
+				 CMDName *mdname, CDouble rows, BOOL is_empty, ULONG relpages,
+				 ULONG relallvisible);
 
 	~CDXLRelStats() override;
 
@@ -80,6 +87,20 @@ public:
 
 	// number of rows
 	CDouble Rows() const override;
+
+	// number of blocks (not always up to-to-date)
+	ULONG
+	RelPages() const override
+	{
+		return m_relpages;
+	}
+
+	// number of all-visible blocks (not always up-to-date)
+	ULONG
+	RelAllVisible() const override
+	{
+		return m_relallvisible;
+	}
 
 	// is statistics on an empty input
 	BOOL

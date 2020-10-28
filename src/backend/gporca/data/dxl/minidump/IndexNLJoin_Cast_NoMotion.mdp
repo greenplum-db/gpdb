@@ -401,7 +401,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         </dxl:LogicalJoin>
       </dxl:UnionAll>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="42">
+    <dxl:Plan Id="0" SpaceSize="56">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1072.381940" Rows="1.000000" Width="16"/>
