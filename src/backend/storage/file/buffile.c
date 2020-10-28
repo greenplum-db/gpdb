@@ -355,7 +355,7 @@ MakeNewSharedSegment(BufFile *buffile, int segment)
  * unrelated SharedFileSet objects.
  */
 BufFile *
-BufFileCreateShared(SharedFileSet *fileset, const char *name)
+BufFileCreateShared(SharedFileSet *fileset, const char *name, workfile_set *work_set)
 {
 	BufFile    *file;
 
@@ -365,6 +365,14 @@ BufFileCreateShared(SharedFileSet *fileset, const char *name)
 	file->files = (File *) palloc(sizeof(File));
 	file->files[0] = MakeNewSharedSegment(file, 0);
 	file->readOnly = false;
+	/*
+	 * Register the file as a "work file", so that the Greenplum workfile
+	 * limits apply to it.
+	 */
+	file->work_set = work_set;
+
+	FileSetIsWorkfile(file->files[0]);
+	RegisterFileWithSet(file->files[0], work_set);
 
 	return file;
 }
