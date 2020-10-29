@@ -253,6 +253,7 @@ class Session(cmd.Cmd):
         '''Escape occurrences of \ and $ as needed and package the line as an "eval" shell command'''
         line = line.strip()
         if line == 'EOF' or line == 'exit' or line == 'quit':
+            self.close()
             raise self.SessionCmdExit()
         line = line.split('\\')
         line = '\\\\'.join(line)
