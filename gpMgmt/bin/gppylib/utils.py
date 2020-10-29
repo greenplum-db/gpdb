@@ -351,49 +351,6 @@ def parseKeyColonValueLines(str):
 def sortedDictByKey(di):
     return  [ (k,di[k]) for k in sorted(di.keys())]
 
-def appendNewEntriesToHbaFile(fileName, segments):
-    """
-    Will raise Exception if there is a problem updating the hba file
-    """
-
-    try:
-        #
-        # Get the list of lines that already exist...we won't write those again
-        #
-        # Replace runs of whitespace with single space to improve deduping
-        #
-        def lineToCanonical(s):
-            s = re.sub("\s", " ", s) # first reduce whitespace runs to single space
-            s = re.sub(" $", "", s) # remove trailing space
-            s = re.sub("^ ", "", s) # remove leading space
-            return s
-        existingLineMap = {}
-        for line in readAllLinesFromFile(fileName):
-            existingLineMap[lineToCanonical(line)] = True
-
-        fp = open(fileName, 'a')
-        try:
-            for newSeg in segments:
-                address = newSeg.getSegmentAddress()
-                addrinfo = socket.getaddrinfo(address, None)
-                ipaddrlist = list(set([ (ai[0], ai[4][0]) for ai in addrinfo]))
-                haveWrittenCommentHeader = False
-                for addr in ipaddrlist:
-                    newLine = 'host\tall\tall\t%s/%s\ttrust' % (addr[1], '32' if addr[0] == socket.AF_INET else '128')
-                    newLineCanonical = lineToCanonical(newLine)
-                    if newLineCanonical not in existingLineMap:
-                        if not haveWrittenCommentHeader:
-                            fp.write('# %s\n' % address)
-                            haveWrittenCommentHeader = True
-                        fp.write(newLine)
-                        fp.write('\n')
-                        existingLineMap[newLineCanonical] = True
-        finally:
-            fp.close()
-    except IOError, msg:
-        raise Exception('Failed to open %s' % fileName)
-    except Exception, msg:
-        raise Exception('Failed to add new segments to template %s' % fileName)
 
 class TableLogger:
 
