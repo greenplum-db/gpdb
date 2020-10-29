@@ -1072,8 +1072,8 @@ CHK_GPDB_ID () {
 		elif [ x$GPDB_GROUPID_CHK == x$MASTER_INITDB_GROUPID ] && [ x"x" == x"$GROUP_EXECUTE" ] ; then
 		    LOG_MSG "[INFO]:-Current group id of $GPDB_GROUPID, matches initdb group id of $MASTER_INITDB_GROUPID"
 		else
-			LOG_MSG "[WARN]:-File permission mismatch.  The $GPDB_ID_CHK owns the Greenplum Database installation directory."
-			LOG_MSG "[WARN]:-You are currently logged in as $MASTER_INITDB_ID and may not have sufficient"
+			LOG_MSG "[WARN]:-File permission mismatch.  The $MASTER_INITDB_ID owns the Greenplum Database installation directory."
+			LOG_MSG "[WARN]:-You are currently logged in as $GPDB_ID and may not have sufficient"
 			LOG_MSG "[WARN]:-permissions to run the Greenplum binaries and management utilities."
 		fi
 
