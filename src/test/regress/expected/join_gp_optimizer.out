@@ -1289,23 +1289,22 @@ inner join lateral
 (select myid, log_date as next_date
  from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
 on true;
-                                                           QUERY PLAN                                                            
----------------------------------------------------------------------------------------------------------------------------------
- Nested Loop  (cost=10000000001.10..10000000002.20 rows=4 width=20)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.06 rows=2 width=12)
-         ->  Seq Scan on t_mylog_issue_8860 ml1  (cost=0.00..1.02 rows=1 width=12)
-   ->  Materialize  (cost=1.10..1.12 rows=1 width=8)
-         ->  Subquery Scan on ml2  (cost=1.10..1.11 rows=1 width=8)
-               ->  Limit  (cost=1.10..1.10 rows=1 width=12)
-                     ->  Sort  (cost=1.10..1.10 rows=2 width=12)
-                           Sort Key: t_mylog_issue_8860.log_date
-                           ->  Result  (cost=0.00..1.09 rows=2 width=12)
-                                 Filter: ((t_mylog_issue_8860.log_date > ml1.log_date) AND (t_mylog_issue_8860.myid = ml1.myid))
-                                 ->  Materialize  (cost=0.00..1.07 rows=2 width=12)
-                                       ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.06 rows=2 width=12)
-                                             ->  Seq Scan on t_mylog_issue_8860  (cost=0.00..1.02 rows=1 width=12)
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=10000002890.33..10225160051.75 rows=77900 width=20)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on t_mylog_issue_8860 ml1  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Materialize  (cost=2890.33..2890.35 rows=1 width=8)
+         ->  Limit  (cost=2890.33..2890.34 rows=1 width=12)
+               ->  Sort  (cost=2890.33..3085.08 rows=77900 width=12)
+                     Sort Key: t_mylog_issue_8860.log_date
+                     ->  Result  (cost=0.00..2500.83 rows=77900 width=12)
+                           Filter: ((t_mylog_issue_8860.log_date > ml1.log_date) AND (t_mylog_issue_8860.myid = ml1.myid))
+                           ->  Materialize  (cost=0.00..1721.83 rows=77900 width=12)
+                                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+                                       ->  Seq Scan on t_mylog_issue_8860  (cost=0.00..293.67 rows=25967 width=12)
  Optimizer: Postgres query optimizer
-(15 rows)
+(13 rows)
 
 select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
 inner join lateral
@@ -1419,22 +1418,21 @@ select p from
           (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
 cross join lateral
   (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
  Nested Loop
    ->  Values Scan on "*VALUES*"
    ->  Materialize
-         ->  Subquery Scan on ss
-               ->  Limit
-                     ->  Sort
-                           Sort Key: ((gist_tbl_github9733.p <-> ("*VALUES*".column1)[0]))
-                           ->  Result
-                                 Filter: (gist_tbl_github9733.p <@ "*VALUES*".column1)
-                                 ->  Materialize
-                                       ->  Gather Motion 3:1  (slice1; segments: 3)
-                                             ->  Seq Scan on gist_tbl_github9733
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((gist_tbl_github9733.p <-> ("*VALUES*".column1)[0]))
+                     ->  Result
+                           Filter: (gist_tbl_github9733.p <@ "*VALUES*".column1)
+                           ->  Materialize
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                                       ->  Seq Scan on gist_tbl_github9733
  Optimizer: Postgres query optimizer
-(13 rows)
+(12 rows)
 
 select p from
   (values (box(point(0,0), point(0.5,0.5))),

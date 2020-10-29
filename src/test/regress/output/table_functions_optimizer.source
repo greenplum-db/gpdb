@@ -2038,16 +2038,16 @@ explain WITH cte AS (SELECT * FROM example) SELECT x.* FROM multiset_5( TABLE ( 
    Merge Key: a, b
    ->  Sort  (cost=10000000004.89..10000000004.92 rows=4 width=36)
          Sort Key: a, b
-         ->  Nested Loop  (cost=10000000002.13..10000000004.73 rows=4 width=36)
-               ->  Table Function Scan on multiset_5 x  (cost=0.00..2.20 rows=4 width=36)
-                     ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
-               ->  Materialize  (cost=2.13..2.20 rows=1 width=0)
-                     ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=2.13..2.19 rows=3 width=0)
-                           ->  Subquery Scan on y  (cost=2.13..2.15 rows=1 width=0)
-                                 ->  Finalize Aggregate  (cost=2.13..2.14 rows=1 width=8)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=2.10..2.13 rows=1 width=0)
-                                             ->  Partial Aggregate  (cost=2.10..2.11 rows=1 width=0)
-                                                   ->  Seq Scan on example example_1  (cost=0.00..2.10 rows=4 width=16)
+         ->  Nested Loop  (cost=10000000001.08..10000000002.36 rows=3 width=36)
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=1.08..1.12 rows=1 width=0)
+                     ->  Subquery Scan on y  (cost=1.08..1.10 rows=1 width=0)
+                           ->  Finalize Aggregate  (cost=1.08..1.09 rows=1 width=8)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.03..1.08 rows=3 width=0)
+                                       ->  Partial Aggregate  (cost=1.03..1.04 rows=1 width=0)
+                                             ->  Seq Scan on example  (cost=0.00..1.03 rows=3 width=16)
+               ->  Materialize  (cost=0.00..1.18 rows=10 width=36)
+                     ->  Table Function Scan on multiset_5 x  (cost=0.00..1.13 rows=10 width=36)
+                           ->  Seq Scan on example example_1  (cost=0.00..1.03 rows=3 width=16)
  Optimizer: Postgres query optimizer
 (15 rows)
 

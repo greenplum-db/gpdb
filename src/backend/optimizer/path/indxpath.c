@@ -797,12 +797,6 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	{
 		IndexPath  *ipath = (IndexPath *) lfirst(lc);
 
-		/* CDB: Flag RelOptInfo if at most one row can satisfy index quals. */
-		if (ipath->num_leading_eq > 0 &&
-			ipath->num_leading_eq == ipath->indexinfo->ncolumns &&
-			ipath->indexinfo->unique)
-			rel->onerow = true;
-
 		/*
 		 * Random access to Append-Only is slow because AO doesn't use the buffer
 		 * pool and we want to avoid decompressing blocks multiple times.  So,

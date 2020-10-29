@@ -12352,7 +12352,7 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.05..10000000003.21 rows=3 width=8)
+ Nested Loop Semi Join  (cost=10000000001.05..10000000003.20 rows=3 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
    ->  Materialize  (cost=1.05..2.17 rows=1 width=4)
@@ -12448,7 +12448,7 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.05..10000000003.21 rows=3 width=8)
+ Nested Loop Semi Join  (cost=10000000001.05..10000000003.20 rows=3 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
    ->  Materialize  (cost=1.05..2.17 rows=1 width=4)

@@ -3573,8 +3573,7 @@ create_nestloop_path(PlannerInfo *root,
 	 * If outer has at most one row, NJ will make at most one pass over inner.
 	 * Else materialize inner rel after motion so NJ can loop over results.
 	 */
-	if (!inner_path->rescannable &&
-		(!outer_path->parent->onerow || !bms_is_empty(required_outer)))
+	if (!inner_path->rescannable && !bms_is_empty(required_outer))
 	{
 		/*
 		 * NLs potentially rescan the inner; if our inner path

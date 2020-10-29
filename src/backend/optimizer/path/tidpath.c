@@ -382,8 +382,6 @@ ec_member_matches_ctid(PlannerInfo *root, RelOptInfo *rel,
  *	  Create paths corresponding to direct TID scans of the given rel.
  *
  *	  Candidate paths are added to the rel's pathlist (using add_path).
- *
- * CDB TODO: Set rel->onerow if at most one tid is to be fetched.
  */
 void
 create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)

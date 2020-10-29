@@ -209,7 +209,6 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptInfo *parent)
 	rel->pathlist = NIL;
 	rel->ppilist = NIL;
 	rel->partial_pathlist = NIL;
-    rel->onerow = false;
 	rel->cheapest_startup_path = NULL;
 	rel->cheapest_total_path = NULL;
 	rel->cheapest_unique_path = NULL;
@@ -626,9 +625,6 @@ build_join_rel(PlannerInfo *root,
 														   outer_rel,
 														   inner_rel);
 
-        /* CDB: Join between single-row inputs produces a single-row joinrel. */
-        Assert(joinrel->onerow == (outer_rel->onerow && inner_rel->onerow));
-
 		return joinrel;
 	}
 
@@ -647,7 +643,6 @@ build_join_rel(PlannerInfo *root,
 	joinrel->pathlist = NIL;
 	joinrel->ppilist = NIL;
 	joinrel->partial_pathlist = NIL;
-    joinrel->onerow = false;
 	joinrel->cheapest_startup_path = NULL;
 	joinrel->cheapest_total_path = NULL;
 	joinrel->cheapest_unique_path = NULL;
@@ -698,10 +693,6 @@ build_join_rel(PlannerInfo *root,
 	joinrel->partexprs = NULL;
 	joinrel->nullable_partexprs = NULL;
 	joinrel->partitioned_child_rels = NIL;
-
-	/* CDB: Join between single-row inputs produces a single-row joinrel. */
-	if (outer_rel->onerow && inner_rel->onerow)
-		joinrel->onerow = true;
 
 	/* Compute information relevant to the foreign relations. */
 	set_foreign_rel_properties(joinrel, outer_rel, inner_rel);

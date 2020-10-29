@@ -345,29 +345,29 @@ explain (costs off)
      union all
      select ff + 4 as x from ec1) as ss2
   where ss1.x = ec1.f1 and ss1.x = ss2.x and ec1.ff = 42::int8;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Merge Join
-         Merge Cond: ((((ec1_1.ff + 2) + 1)) = (((ec1_4.ff + 2) + 1)))
-         ->  Nested Loop
-               Join Filter: ((((ec1_1.ff + 2) + 1)) = ec1.f1)
-               ->  Merge Append
-                     Sort Key: (((ec1_1.ff + 2) + 1))
-                     ->  Index Scan using ec1_expr2 on ec1 ec1_1
-                     ->  Index Scan using ec1_expr3 on ec1 ec1_2
-                     ->  Index Scan using ec1_expr4 on ec1 ec1_3
-               ->  Materialize
-                     ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                           ->  Index Scan using ec1_pkey on ec1
-                                 Index Cond: (ff = '42'::bigint)
-         ->  Sort
-               Sort Key: (((ec1_4.ff + 2) + 1))
-               ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                     ->  Append
-                           ->  Seq Scan on ec1 ec1_4
-                           ->  Seq Scan on ec1 ec1_5
-                           ->  Seq Scan on ec1 ec1_6
+   ->  Nested Loop
+         Join Filter: ((((ec1_1.ff + 2) + 1)) = ec1.f1)
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Index Scan using ec1_pkey on ec1
+                     Index Cond: (ff = '42'::bigint)
+         ->  Materialize
+               ->  Merge Join
+                     Merge Cond: ((((ec1_1.ff + 2) + 1)) = (((ec1_4.ff + 2) + 1)))
+                     ->  Merge Append
+                           Sort Key: (((ec1_1.ff + 2) + 1))
+                           ->  Index Scan using ec1_expr2 on ec1 ec1_1
+                           ->  Index Scan using ec1_expr3 on ec1 ec1_2
+                           ->  Index Scan using ec1_expr4 on ec1 ec1_3
+                     ->  Sort
+                           Sort Key: (((ec1_4.ff + 2) + 1))
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Append
+                                       ->  Seq Scan on ec1 ec1_4
+                                       ->  Seq Scan on ec1 ec1_5
+                                       ->  Seq Scan on ec1 ec1_6
  Optimizer: Postgres query optimizer
 (22 rows)
 

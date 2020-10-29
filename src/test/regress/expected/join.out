@@ -5710,56 +5710,56 @@ select c.*,a.*,ss1.q1,ss2.q1,ss3.* from
     lateral (select q1, coalesce(ss1.x,q2) as y from int8_tbl d) ss2
   ) on c.q2 = ss2.q1,
   lateral (select * from int4_tbl i where ss2.y > f1) ss3;
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, i.f1
    ->  Nested Loop
          Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, i.f1
          Join Filter: ((COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)) > i.f1)
-         ->  Hash Right Join
-               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
-               Hash Cond: (d.q1 = c.q2)
-               ->  Nested Loop
-                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
-                           ->  Hash Right Join
-                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
-                                 Hash Cond: (b.q1 = a.q2)
-                                 ->  Nested Loop
-                                       Output: b.q1, COALESCE(b.q2, (b2.f1)::bigint)
-                                       Join Filter: (b.q1 < b2.f1)
-                                       ->  Seq Scan on public.int8_tbl b
-                                             Output: b.q1, b.q2
-                                       ->  Materialize
-                                             Output: b2.f1
-                                             ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                                   Output: b2.f1
-                                                   ->  Seq Scan on public.int4_tbl b2
-                                                         Output: b2.f1
-                                 ->  Hash
-                                       Output: a.q1, a.q2
-                                       ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                                             Output: a.q1, a.q2
-                                             Hash Key: a.q2
-                                             ->  Seq Scan on public.int8_tbl a
-                                                   Output: a.q1, a.q2
-                     ->  Seq Scan on public.int8_tbl d
-                           Output: d.q1, COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)
-               ->  Hash
-                     Output: c.q1, c.q2
-                     ->  Redistribute Motion 3:3  (slice5; segments: 3)
-                           Output: c.q1, c.q2
-                           Hash Key: c.q2
-                           ->  Seq Scan on public.int8_tbl c
-                                 Output: c.q1, c.q2
-         ->  Materialize
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
                Output: i.f1
-               ->  Broadcast Motion 3:3  (slice6; segments: 3)
+               ->  Seq Scan on public.int4_tbl i
                      Output: i.f1
-                     ->  Seq Scan on public.int4_tbl i
-                           Output: i.f1
+         ->  Materialize
+               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+               ->  Hash Right Join
+                     Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+                     Hash Cond: (d.q1 = c.q2)
+                     ->  Nested Loop
+                           Output: a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
+                                 ->  Hash Right Join
+                                       Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
+                                       Hash Cond: (b.q1 = a.q2)
+                                       ->  Nested Loop
+                                             Output: b.q1, COALESCE(b.q2, (b2.f1)::bigint)
+                                             Join Filter: (b.q1 < b2.f1)
+                                             ->  Seq Scan on public.int8_tbl b
+                                                   Output: b.q1, b.q2
+                                             ->  Materialize
+                                                   Output: b2.f1
+                                                   ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                         Output: b2.f1
+                                                         ->  Seq Scan on public.int4_tbl b2
+                                                               Output: b2.f1
+                                       ->  Hash
+                                             Output: a.q1, a.q2
+                                             ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                                   Output: a.q1, a.q2
+                                                   Hash Key: a.q2
+                                                   ->  Seq Scan on public.int8_tbl a
+                                                         Output: a.q1, a.q2
+                           ->  Seq Scan on public.int8_tbl d
+                                 Output: d.q1, COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)
+                     ->  Hash
+                           Output: c.q1, c.q2
+                           ->  Redistribute Motion 3:3  (slice6; segments: 3)
+                                 Output: c.q1, c.q2
+                                 Hash Key: c.q2
+                                 ->  Seq Scan on public.int8_tbl c
+                                       Output: c.q1, c.q2
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (50 rows)
@@ -6144,24 +6144,22 @@ select * from j1 inner join j2 on j1.id = j2.id;
 -- ensure join is not unique when not an equi-join
 explain (verbose, costs off)
 select * from j1 inner join j2 on j1.id > j2.id;
-                          QUERY PLAN                           
----------------------------------------------------------------
+                       QUERY PLAN                        
+---------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: j1.id, j2.id
    ->  Nested Loop
          Output: j1.id, j2.id
-         Join Filter: (j1.id > j2.id)
-         ->  Seq Scan on public.j1
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
                Output: j1.id
-         ->  Materialize
+               ->  Seq Scan on public.j1
+                     Output: j1.id
+         ->  Index Only Scan using j2_pkey on public.j2
                Output: j2.id
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     Output: j2.id
-                     ->  Seq Scan on public.j2
-                           Output: j2.id
+               Index Cond: (j2.id < j1.id)
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
-(15 rows)
+(13 rows)
 
 -- ensure non-unique rel is not chosen as inner
 explain (verbose, costs off)
@@ -6520,22 +6518,22 @@ where exists (select 1 from tenk1 t3
                ->  Nested Loop
                      Output: t1.unique1, t3.tenthous
                      Join Filter: (t1.unique1 = t3.thousand)
-                     ->  HashAggregate
-                           Output: t3.thousand, t3.tenthous
-                           Group Key: t3.thousand, t3.tenthous
-                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                 Output: t3.thousand, t3.tenthous
-                                 Hash Key: t3.thousand, t3.tenthous
-                                 ->  Index Only Scan using tenk1_thous_tenthous on public.tenk1 t3
-                                       Output: t3.thousand, t3.tenthous
-                                       Index Cond: (t3.thousand < 1)
-                     ->  Materialize
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
                            Output: t1.unique1
-                           ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                           ->  Index Only Scan using onek_unique1 on public.onek t1
                                  Output: t1.unique1
-                                 ->  Index Only Scan using onek_unique1 on public.onek t1
-                                       Output: t1.unique1
-                                       Index Cond: (t1.unique1 < 1)
+                                 Index Cond: (t1.unique1 < 1)
+                     ->  Materialize
+                           Output: t3.thousand, t3.tenthous
+                           ->  HashAggregate
+                                 Output: t3.thousand, t3.tenthous
+                                 Group Key: t3.thousand, t3.tenthous
+                                 ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                       Output: t3.thousand, t3.tenthous
+                                       Hash Key: t3.thousand, t3.tenthous
+                                       ->  Index Only Scan using tenk1_thous_tenthous on public.tenk1 t3
+                                             Output: t3.thousand, t3.tenthous
+                                             Index Cond: (t3.thousand < 1)
          ->  Index Only Scan using tenk1_hundred on public.tenk1 t2
                Output: t2.hundred
                Index Cond: (t2.hundred = t3.tenthous)
@@ -6553,32 +6551,32 @@ from onek t1, tenk1 t2
 where exists (select 1 from j3
               where j3.unique1 = t1.unique1 and j3.tenthous = t2.hundred)
       and t1.unique1 < 1;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: t1.unique1, t2.hundred
    ->  Nested Loop
          Output: t1.unique1, t2.hundred
          Join Filter: (j3.unique1 = t1.unique1)
-         ->  Nested Loop
-               Output: t2.hundred, j3.unique1
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     Output: j3.unique1, j3.tenthous
-                     ->  Index Only Scan using j3_unique1_tenthous_idx on public.j3
-                           Output: j3.unique1, j3.tenthous
-                           Index Cond: (j3.unique1 < 1)
-               ->  Index Only Scan using tenk1_hundred on public.tenk1 t2
-                     Output: t2.hundred
-                     Index Cond: (t2.hundred = j3.tenthous)
-         ->  Materialize
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
                Output: t1.unique1
-               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+               ->  Index Only Scan using onek_unique1 on public.onek t1
                      Output: t1.unique1
-                     ->  Index Only Scan using onek_unique1 on public.onek t1
-                           Output: t1.unique1
-                           Index Cond: (t1.unique1 < 1)
+                     Index Cond: (t1.unique1 < 1)
+         ->  Materialize
+               Output: t2.hundred, j3.unique1
+               ->  Nested Loop
+                     Output: t2.hundred, j3.unique1
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           Output: j3.unique1, j3.tenthous
+                           ->  Index Only Scan using j3_unique1_tenthous_idx on public.j3
+                                 Output: j3.unique1, j3.tenthous
+                                 Index Cond: (j3.unique1 < 1)
+                     ->  Index Only Scan using tenk1_hundred on public.tenk1 t2
+                           Output: t2.hundred
+                           Index Cond: (t2.hundred = j3.tenthous)
  Optimizer: Postgres query optimizer
- Settings: enable_bitmapscan=off, enable_mergejoin=on, enable_nestloop=on, enable_seqscan=off, optimizer=off
+ Settings: enable_bitmapscan=off, enable_mergejoin=on, enable_nestloop=on, enable_seqscan=off, jit=off, optimizer=off
 (24 rows)
 
 drop table j3;

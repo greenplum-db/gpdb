@@ -522,20 +522,20 @@ set work_mem='64kB';  --set small work mem to force lossy pages
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
 	select count(*) from tenk1, tenk2 where tenk1.hundred > 1 and tenk2.thousand=0;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Nested Loop
-                     ->  Bitmap Heap Scan on tenk1
-                           Recheck Cond: (hundred > 1)
-                           ->  Bitmap Index Scan on tenk1_hundred
-                                 Index Cond: (hundred > 1)
+                     ->  Seq Scan on tenk2
+                           Filter: (thousand = 0)
                      ->  Materialize
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                 ->  Seq Scan on tenk2
-                                       Filter: (thousand = 0)
+                                 ->  Bitmap Heap Scan on tenk1
+                                       Recheck Cond: (hundred > 1)
+                                       ->  Bitmap Index Scan on tenk1_hundred
+                                             Index Cond: (hundred > 1)
  Optimizer: Postgres query optimizer
 (13 rows)
 
@@ -560,20 +560,20 @@ alter table tenk2 set (parallel_workers = 0);
 explain (analyze, timing off, summary off, costs off)
    select count(*) from tenk1, tenk2 where tenk1.hundred > 1
         and tenk2.thousand=0;
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
-               ->  Nested Loop (actual rows=33200 loops=1)
-                     ->  Seq Scan on tenk1 (actual rows=3320 loops=1)
-                           Filter: (hundred > 1)
-                           Rows Removed by Filter: 66
-                     ->  Materialize (actual rows=10 loops=3320)
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=10 loops=1)
-                                 ->  Seq Scan on tenk2 (actual rows=5 loops=1)
-                                       Filter: (thousand = 0)
-                                       Rows Removed by Filter: 3363
+               ->  Nested Loop (actual rows=49000 loops=1)
+                     ->  Seq Scan on tenk2 (actual rows=5 loops=1)
+                           Filter: (thousand = 0)
+                           Rows Removed by Filter: 3363
+                     ->  Materialize (actual rows=9800 loops=5)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=9800 loops=1)
+                                 ->  Seq Scan on tenk1 (actual rows=3320 loops=1)
+                                       Filter: (hundred > 1)
+                                       Rows Removed by Filter: 66
  Optimizer: Postgres query optimizer
 (13 rows)
 
