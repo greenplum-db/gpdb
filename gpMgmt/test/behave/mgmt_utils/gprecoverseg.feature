@@ -279,3 +279,27 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+
+    @concourse_cluster
+    Scenario: moving mirror to a different host must work
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "mirror" segment on a remote host is saved
+          And the information of the corresponding primary segment on a remote host is saved
+         When user kills a "mirror" process with the saved information
+          And user can start transactions
+         Then the saved "mirror" segment is marked down in config
+         When the user runs "gprecoverseg -a -p mdw"
+         Then gprecoverseg should return a return code of 0
+         When user kills a "primary" process with the saved information
+          And user can start transactions
+         Then the saved "primary" segment is marked down in config
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized

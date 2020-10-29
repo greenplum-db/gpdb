@@ -29,6 +29,7 @@ from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
+from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
@@ -663,6 +664,7 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
+            config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 
@@ -771,6 +773,8 @@ class GpRecoverSegmentProgram:
                          help="Max # of workers to use for building recovery segments.  [default: %default]")
         addTo.add_option("-r", None, default=False, action='store_true',
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
+        addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
+                         help='use hostnames instead of CIDR in pg_hba.conf')
 
         parser.set_defaults()
         return parser

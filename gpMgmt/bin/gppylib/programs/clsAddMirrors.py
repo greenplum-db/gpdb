@@ -19,6 +19,7 @@ from gppylib.db import catalog, dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
+from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
@@ -499,54 +500,6 @@ class GpAddMirrorsProgram:
         else:
             logger.info("Heap checksum setting consistent across cluster")
 
-    def config_primaries_for_replication(self, gpArray):
-        logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-
-        try:
-            for segmentPair in gpArray.getSegmentList():
-                # Start with an empty string so that the later .join prepends a newline to the first entry
-                entries = ['']
-                # Add the samehost replication entry to support single-host development
-                entries.append('host  replication {username} samehost trust'.format(username=unix.getUserName()))
-                if self.__options.hba_hostnames:
-                    mirror_hostname, _, _ = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
-                    entries.append("host all {username} {hostname} trust".format(username=unix.getUserName(), hostname=mirror_hostname))
-                    entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=mirror_hostname))
-                    primary_hostname, _, _ = socket.gethostbyaddr(segmentPair.primaryDB.getSegmentHostName())
-                    if mirror_hostname != primary_hostname:
-                        entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=primary_hostname))
-                else:
-                    mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
-                    for ip in mirror_ips:
-                        cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = ip + cidr_suffix
-                        hba_line_entry = "host all {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr)
-                        entries.append(hba_line_entry)
-                    mirror_hostname = segmentPair.mirrorDB.getSegmentHostName()
-                    segment_pair_ips = gp.IfAddrs.list_addrs(mirror_hostname)
-                    primary_hostname = segmentPair.primaryDB.getSegmentHostName()
-                    if mirror_hostname != primary_hostname:
-                        segment_pair_ips.extend(gp.IfAddrs.list_addrs(primary_hostname))
-                    for ip in segment_pair_ips:
-                        cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = ip + cidr_suffix
-                        hba_line_entry = "host replication {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr)
-                        entries.append(hba_line_entry)
-                cmdStr = ". {gphome}/greenplum_path.sh; echo '{entries}' >> {datadir}/pg_hba.conf; pg_ctl -D {datadir} reload".format(
-                    gphome=os.environ["GPHOME"],
-                    entries="\n".join(entries),
-                    datadir=segmentPair.primaryDB.datadir)
-                logger.debug(cmdStr)
-                cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=segmentPair.primaryDB.hostname)
-                cmd.run(validateAfter=True)
-
-        except Exception, e:
-            logger.error("Failed while modifying pg_hba.conf on primary segments to allow replication connections: %s" % str(e))
-            raise
-
-        else:
-            logger.info("Successfully modified pg_hba.conf on primary segments to allow replication connections")
-
 
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
@@ -584,7 +537,7 @@ class GpAddMirrorsProgram:
                 if not userinput.ask_yesno(None, "\nContinue with add mirrors procedure", 'N'):
                     raise UserAbortedException()
 
-            self.config_primaries_for_replication(gpArray)
+            config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
             if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
                 return 1
 

@@ -232,6 +232,11 @@ Do not show pg_basebackup progress. Useful when writing to a
 file. Defaults to showing the progress.
 
 
+--hba-hostnames
+
+Optional. use hostnames instead of CIDR in pg_hba.conf
+
+
 -v
 
 Sets logging output to verbose.
