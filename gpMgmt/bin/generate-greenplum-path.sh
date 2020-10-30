@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 cat <<"EOF"
-if test -n "$ZSH_VERSION"; then
+if test -n "${ZSH_VERSION:-}"; then
     # zsh
     SCRIPT_PATH="${(%):-%x}"
-elif test -n "$BASH_VERSION"; then
+elif test -n "${BASH_VERSION:-}"; then
     # bash
     SCRIPT_PATH="${BASH_SOURCE[0]}"
 else
