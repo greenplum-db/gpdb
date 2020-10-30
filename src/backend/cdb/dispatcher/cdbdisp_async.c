@@ -910,7 +910,17 @@ processResults(CdbDispatchResult *dispatchResult)
 		}
 
 		if (segdbDesc->conn->wrote_xlog)
+		{
 			MarkTopTransactionWriteXLogOnExecutor();
+
+			/*
+			 * Reset the worte_xlog here. Since if the received pgresult not process
+			 * the xlog write message('x' message sends from QE in ReadyForQuery),
+			 * the value may still refer to previous dispatch statement. Which may
+			 * always mark current top transaction has wrote xlog on executor.
+			 */
+			segdbDesc->conn->wrote_xlog = false;
+		}
 
 		/*
 		 * Attach the PGresult object to the CdbDispatchResult object.
