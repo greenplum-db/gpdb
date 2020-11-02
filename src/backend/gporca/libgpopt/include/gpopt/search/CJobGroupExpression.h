@@ -100,7 +100,7 @@ protected:
 #ifdef GPOS_DEBUG
 
 	// print function
-	IOstream &OsPrint(IOstream &os) override = 0;
+	IOstream &OsPrint(IOstream &os) const override = 0;
 
 #endif	// GPOS_DEBUG
 public:
