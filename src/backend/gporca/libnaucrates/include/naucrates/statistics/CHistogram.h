@@ -341,7 +341,7 @@ public:
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 #ifdef GPOS_DEBUG
 	void DbgPrint() const;

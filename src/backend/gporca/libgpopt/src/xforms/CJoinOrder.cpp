@@ -604,6 +604,8 @@ CJoinOrder::DeriveStats(CExpression *pexpr)
 //		Helper function to print a join order class
 //
 //---------------------------------------------------------------------------
+// FIXME: the following function is completely unused even for the purpose of
+// debugging, because all subclasses implement their own OsPrint
 IOstream &
 CJoinOrder::OsPrint(IOstream &os) const
 {

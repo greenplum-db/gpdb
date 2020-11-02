@@ -555,7 +555,7 @@ public:
 						   CBitSet **requiredBitsOnLeft = NULL);
 
 	// print function
-	IOstream &OsPrint(IOstream &) const override;
+	IOstream &OsPrint(IOstream &) const;
 
 	IOstream &OsPrintProperty(IOstream &, SExpressionProperties &) const;
 

@@ -237,7 +237,7 @@ public:
 	virtual ~CJoinOrder();
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	// is this a valid join combination
 	BOOL IsValidJoinCombination(SComponent *comp1, SComponent *comp2) const;

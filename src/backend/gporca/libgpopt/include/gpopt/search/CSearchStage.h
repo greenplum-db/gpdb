@@ -139,7 +139,7 @@ public:
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	// generate default search strategy
 	static CSearchStageArray *PdrgpssDefault(CMemoryPool *mp);
