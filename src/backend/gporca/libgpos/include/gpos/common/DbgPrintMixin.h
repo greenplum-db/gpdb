@@ -6,7 +6,9 @@
 #define GPDB_DbgPrintMixin_H
 
 #include "gpos/error/CAutoTrace.h"
+#include "gpos/io/COstreamStdString.h"
 #include "gpos/task/CTask.h"
+
 namespace gpos
 {
 template <class T>
@@ -19,6 +21,14 @@ struct DbgPrintMixin
 	{
 		CAutoTrace at(CTask::Self()->Pmp());
 		static_cast<const T *>(this)->OsPrint(at.Os());
+	}
+
+	std::wstring
+	DbgStr() const __attribute__((used))
+	{
+		COstreamStdString oss;
+		static_cast<const T *>(this)->OsPrint(oss);
+		return oss.Str();
 	}
 #endif
 };
