@@ -148,24 +148,3 @@ COptCtxt::FAllEnforcersEnabled()
 
 	return !fEnforcerDisabled;
 }
-
-
-#ifdef GPOS_DEBUG
-//---------------------------------------------------------------------------
-//	@function:
-//		COptCtxt::OsPrint
-//
-//	@doc:
-//		debug print -- necessary to override abstract function in base class
-//
-//---------------------------------------------------------------------------
-IOstream &
-COptCtxt::OsPrint(IOstream &os) const
-{
-	// NOOP
-	return os;
-}
-
-#endif	// GPOS_DEBUG
-
-// EOF

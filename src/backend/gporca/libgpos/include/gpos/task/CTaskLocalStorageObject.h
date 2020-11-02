@@ -58,11 +58,6 @@ public:
 	// key
 	const CTaskLocalStorage::Etlsidx m_etlsidx;
 
-#ifdef GPOS_DEBUG
-	// debug print
-	virtual IOstream &OsPrint(IOstream &os) const = 0;
-#endif	// GPOS_DEBUG
-
 };	// class CTaskLocalStorageObject
 }  // namespace gpos
 

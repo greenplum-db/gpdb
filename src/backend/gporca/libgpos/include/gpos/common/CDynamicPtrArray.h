@@ -396,13 +396,6 @@ public:
 		return result;
 	}
 
-	virtual IOstream &
-	OsPrint(IOstream &os) const
-	{
-		// do nothing, for now
-		return os;
-	}
-
 };	// class CDynamicPtrArray
 }  // namespace gpos
 
