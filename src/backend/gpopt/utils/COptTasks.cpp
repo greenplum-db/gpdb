@@ -38,7 +38,6 @@
 
 #include "gpos/_api.h"
 #include "gpos/common/CAutoP.h"
-#include "gpos/io/COstreamFile.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"

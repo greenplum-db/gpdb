@@ -17,7 +17,6 @@
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/error/CErrorHandlerStandard.h"
-#include "gpos/io/COstreamFile.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CAutoTraceFlag.h"

@@ -9,18 +9,18 @@
 //		Implementation of plan enumerator config
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpos/io/COstreamFile.h"
-#include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/task/CTask.h"
-#include "gpos/task/CWorker.h"
+#include "gpopt/engine/CEnumeratorConfig.h"
 
 #include "gpopt/base/CIOUtils.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/engine/CEnumeratorConfig.h"
 
+#include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
+#include "gpos/io/CFileDescriptor.h"
+#include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/task/CAutoSuspendAbort.h"
+#include "gpos/task/CTask.h"
+#include "gpos/task/CWorker.h"
 
 using namespace gpos;
 using namespace gpopt;
