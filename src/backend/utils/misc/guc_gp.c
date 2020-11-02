@@ -3980,7 +3980,7 @@ struct config_real ConfigureNamesReal_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&disable_cost,
-		1.0e10, 1.0e10, 1.0e30,
+		1.0e30, 1.0e10, 1.0e30,
 		NULL, NULL, NULL
 	},
 
