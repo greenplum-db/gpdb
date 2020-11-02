@@ -15,6 +15,7 @@
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CList.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 #include "gpopt/metadata/CName.h"
 #include "naucrates/md/IMDType.h"
@@ -51,7 +52,7 @@ typedef CHashMapIter<ULONG, CColRef, gpos::HashValue<ULONG>,
 //		factory object
 //
 //---------------------------------------------------------------------------
-class CColRef
+class CColRef : public gpos::DbgPrintMixin<CColRef>
 {
 public:
 	enum EUsedStatus
@@ -227,10 +228,6 @@ public:
 	{
 		m_mdid_table = mdid_table;
 	}
-
-#ifdef GPOS_DEBUG
-	void DbgPrint() const;
-#endif	// GPOS_DEBUG
 
 };	// class CColRef
 

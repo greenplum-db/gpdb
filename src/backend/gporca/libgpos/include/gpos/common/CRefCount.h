@@ -128,11 +128,6 @@ public:
 		}
 	}
 
-#ifdef GPOS_DEBUG
-	// debug print for interactive debugging sessions only
-	void DbgPrint() const;
-#endif	// GPOS_DEBUG
-
 	// print function
 	virtual IOstream &
 	OsPrint(IOstream &os) const

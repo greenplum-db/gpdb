@@ -993,16 +993,3 @@ CJoinOrderDP::OsPrint(IOstream &os) const
 
 	return os;
 }
-
-
-#ifdef GPOS_DEBUG
-void
-CJoinOrderDP::DbgPrint()
-{
-	CAutoTrace at(m_mp);
-
-	OsPrint(at.Os());
-}
-#endif
-
-// EOF

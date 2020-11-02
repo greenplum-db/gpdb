@@ -95,15 +95,6 @@ COrderSpec::COrderExpression::OsPrint(IOstream &os) const
 	return os;
 }
 
-#ifdef GPOS_DEBUG
-void
-COrderSpec::COrderExpression::DbgPrint() const
-{
-	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-	CAutoTrace at(mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif	// GPOS_DEBUG
 
 //---------------------------------------------------------------------------
 //	@function:

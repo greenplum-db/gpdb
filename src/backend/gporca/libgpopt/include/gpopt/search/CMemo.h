@@ -15,6 +15,7 @@
 #include "gpos/common/CRefCount.h"
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncList.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 #include "gpopt/search/CGroupExpression.h"
 
@@ -41,7 +42,7 @@ using namespace gpos;
 //		Dynamic programming table
 //
 //---------------------------------------------------------------------------
-class CMemo
+class CMemo : public gpos::DbgPrintMixin<CMemo>
 {
 private:
 	// definition of hash table key accessor
@@ -176,8 +177,6 @@ public:
 	// get group by id
 	CGroup *Pgroup(ULONG id);
 
-	// debug print for interactive debugging sessions only
-	void DbgPrint();
 #endif	// GPOS_DEBUG
 
 };	// class CMemo

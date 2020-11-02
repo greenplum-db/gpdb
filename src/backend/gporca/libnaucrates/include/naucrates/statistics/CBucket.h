@@ -13,6 +13,7 @@
 #define GPNAUCRATES_CBucket_H
 
 #include "gpos/base.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CTask.h"
 
@@ -42,7 +43,7 @@ typedef CDynamicPtrArray<CBucket, CleanupDelete> CBucketArray;
 //
 //---------------------------------------------------------------------------
 
-class CBucket : public IBucket
+class CBucket : public IBucket, public gpos::DbgPrintMixin<CBucket>
 {
 private:
 	// lower bound of bucket
@@ -167,10 +168,6 @@ public:
 
 	// print function
 	virtual IOstream &OsPrint(IOstream &os) const;
-
-#ifdef GPOS_DEBUG
-	void DbgPrint() const;
-#endif
 
 	// construct new bucket with lower bound greater than given point
 	CBucket *MakeBucketGreaterThan(CMemoryPool *mp, CPoint *point) const;

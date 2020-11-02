@@ -247,15 +247,6 @@ CBucket::OsPrint(IOstream &os) const
 	return os;
 }
 
-#ifdef GPOS_DEBUG
-void
-CBucket::DbgPrint() const
-{
-	CAutoTrace at(CTask::Self()->Pmp());
-	OsPrint(at.Os());
-}
-#endif
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CBucket::MakeBucketGreaterThan

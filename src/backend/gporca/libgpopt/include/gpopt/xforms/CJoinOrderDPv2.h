@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/io/IOstream.h"
 
 #include "gpopt/base/CKHeap.h"
@@ -44,7 +45,8 @@ using namespace gpos;
 //				a result expression, each of these sets will be associated
 //				with a CGroup in MEMO.
 //---------------------------------------------------------------------------
-class CJoinOrderDPv2 : public CJoinOrder
+class CJoinOrderDPv2 : public CJoinOrder,
+					   public gpos::DbgPrintMixin<CJoinOrderDPv2>
 {
 private:
 	// Data structures for DPv2 join enumeration:
@@ -568,10 +570,6 @@ public:
 	{
 		return CXform::ExfExpandNAryJoinDPv2;
 	}
-
-#ifdef GPOS_DEBUG
-	void DbgPrint();
-#endif
 
 };	// class CJoinOrderDPv2
 

@@ -48,8 +48,7 @@ CGroupExpression::CGroupExpression(CMemoryPool *mp, COperator *pop,
 								   CXform::EXformId exfid,
 								   CGroupExpression *pgexprOrigin,
 								   BOOL fIntermediate)
-	: m_mp(mp),
-	  m_id(GPOPT_INVALID_GEXPR_ID),
+	: m_id(GPOPT_INVALID_GEXPR_ID),
 	  m_pgexprDuplicate(NULL),
 	  m_pop(pop),
 	  m_pdrgpgroup(pdrgpgroup),
@@ -1204,7 +1203,7 @@ void
 CGroupExpression::DbgPrintWithProperties()
 {
 	CAutoTraceFlag atf(EopttracePrintGroupProperties, true);
-	CAutoTrace at(m_mp);
+	CAutoTrace at(CTask::Self()->Pmp());
 	(void) this->OsPrint(at.Os());
 }
 #endif	// GPOS_DEBUG

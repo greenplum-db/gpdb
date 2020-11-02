@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/io/IOstream.h"
 
 #include "gpopt/base/CUtils.h"
@@ -33,7 +34,7 @@ using namespace gpos;
 //		Helper class for creating join orders using dynamic programming
 //
 //---------------------------------------------------------------------------
-class CJoinOrderDP : public CJoinOrder
+class CJoinOrderDP : public CJoinOrder, public gpos::DbgPrintMixin<CJoinOrderDP>
 {
 private:
 	//---------------------------------------------------------------------------
@@ -196,9 +197,6 @@ public:
 		return CXform::ExfExpandNAryJoinDP;
 	}
 
-#ifdef GPOS_DEBUG
-	void DbgPrint();
-#endif
 
 };	// class CJoinOrderDP
 
