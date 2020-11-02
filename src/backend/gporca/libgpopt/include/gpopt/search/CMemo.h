@@ -158,7 +158,7 @@ public:
 	void ResetStats();
 
 	// print driver
-	IOstream &OsPrint(IOstream &os);
+	IOstream &OsPrint(IOstream &os) const;
 
 	// derive stats when no stats not present for the group
 	void DeriveStatsIfAbsent(CMemoryPool *mp);
