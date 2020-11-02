@@ -19,12 +19,6 @@
 
 namespace gpopt
 {
-IOstream &
-operator<<(IOstream &os, CDrvdPropCtxt &drvdpropctxt)
-{
-	return drvdpropctxt.OsPrint(os);
-}
-
 }  // namespace gpopt
 
 // EOF
