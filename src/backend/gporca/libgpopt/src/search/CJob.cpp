@@ -75,7 +75,7 @@ CJob::FResumeParent() const
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJob::OsPrint(IOstream &os)
+CJob::OsPrint(IOstream &os) const
 {
 	os << "ID=" << Id();
 

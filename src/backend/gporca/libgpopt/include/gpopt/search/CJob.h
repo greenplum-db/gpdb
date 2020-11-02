@@ -303,7 +303,7 @@ public:
 
 #ifdef GPOS_DEBUG
 	// print job description
-	virtual IOstream &OsPrint(IOstream &os);
+	virtual IOstream &OsPrint(IOstream &os) const;
 
 	// link for running job list
 	SLink m_linkRunning;

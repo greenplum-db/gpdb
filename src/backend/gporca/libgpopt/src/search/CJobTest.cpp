@@ -274,7 +274,7 @@ CJobTest::Loop()
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobTest::OsPrint(IOstream &os)
+CJobTest::OsPrint(IOstream &os) const
 {
 	os << "Test job, ";
 	return CJob::OsPrint(os);

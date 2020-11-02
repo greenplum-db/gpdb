@@ -105,7 +105,7 @@ protected:
 #ifdef GPOS_DEBUG
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) = 0;
+	virtual IOstream &OsPrint(IOstream &os) const = 0;
 
 #endif	// GPOS_DEBUG
 
