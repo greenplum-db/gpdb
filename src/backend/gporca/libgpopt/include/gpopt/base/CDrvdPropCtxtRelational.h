@@ -61,12 +61,6 @@ public:
 	// dtor
 	~CDrvdPropCtxtRelational() override = default;
 
-	// print
-	IOstream &
-	OsPrint(IOstream &os) const override
-	{
-		return os;
-	}
 
 #ifdef GPOS_DEBUG
 
