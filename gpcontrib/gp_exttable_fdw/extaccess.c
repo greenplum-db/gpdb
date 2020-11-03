@@ -270,6 +270,12 @@ external_beginscan(Relation relation, uint32 scancounter,
 									NIL,
 									(fmttype_is_custom(fmtType) ? NIL : extOptions));
 
+	if (scan->fs_pstate->header_line && Gp_role == GP_ROLE_DISPATCH)
+	{
+		ereport(NOTICE,
+				(errmsg("HEADER means that each one of the data files has a header row")));
+	}
+
 	/* Initialize all the parsing and state variables */
 	InitParseState(scan->fs_pstate, relation, false, fmtType,
 				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors);

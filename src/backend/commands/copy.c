@@ -1395,14 +1395,10 @@ void
 ProcessCopyOptions(ParseState *pstate,
 				   CopyState cstate,
 				   bool is_from,
-				   List *options,
-				   int num_columns,
-				   bool is_copy) /* false means external table */
+				   List *options)
 {
 	bool		format_specified = false;
 	ListCell   *option;
-	Oid			extprotocol_oid = InvalidOid;
-	ExtTableEntry *exttbl = NULL;
 
 	/* Support external use for option sanity checking */
 	if (cstate == NULL)
@@ -1415,25 +1411,6 @@ ProcessCopyOptions(ParseState *pstate,
 
 	cstate->delim_off = false;
 	cstate->file_encoding = -1;
-
-	if (cstate->rel && rel_is_external_table(cstate->rel->rd_id))
-	{
-		is_copy = false;
-		num_columns = cstate->rel->rd_att->natts;
-		exttbl = GetExtTableEntry(cstate->rel->rd_id);
-	}
-
-	if (exttbl && exttbl->urilocations)
-	{
-		char	   *location;
-		char	   *protocol;
-		Size		position;
-
-		location = strVal(linitial(exttbl->urilocations));
-		position = strchr(location, ':') - location;
-		protocol = pnstrdup(location, position);
-		extprotocol_oid = get_extprotocol_oid(protocol, true);
-	}
 
 	/* Extract options from the statement node tree */
 	foreach(option, options)
@@ -1675,12 +1652,6 @@ ProcessCopyOptions(ParseState *pstate,
 						 errmsg("conflicting or redundant options")));
 			cstate->skip_ext_partition = true;
 		}
-		else if (!extprotocol_oid)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("option \"%s\" not recognized",
-							defel->defname),
-					 parser_errposition(pstate, defel->location)));
 	}
 
 	/*
@@ -1878,51 +1849,6 @@ ProcessCopyOptions(ParseState *pstate,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("COPY delimiter cannot be backslash")));
 
-	if (cstate->delim_off)
-	{
-
-		/*
-		 * We don't support delimiter 'off' for COPY because the QD COPY
-		 * sometimes internally adds columns to the data that it sends to
-		 * the QE COPY modules, and it uses the delimiter for it. There
-		 * are ways to work around this but for now it's not important and
-		 * we simply don't support it.
-		 */
-		if (is_copy)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("using no delimiter is only supported for external tables")));
-
-		if (num_columns != 1)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("using no delimiter is only possible for a single column table")));
-
-	}
-
-
-	/* Check header */
-	if (cstate->header_line)
-	{
-		if (!is_copy && Gp_role == GP_ROLE_DISPATCH)
-		{
-			/* (exttab) */
-			if (is_from)
-			{
-				/* RET */
-				ereport(NOTICE,
-						(errmsg("HEADER means that each one of the data files has a header row")));
-			}
-			else
-			{
-				/* WET */
-				ereport(ERROR,
-						(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-						errmsg("HEADER is not yet supported for writable external tables")));
-			}
-		}
-	}
-
 	if (cstate->fill_missing && !is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1990,7 +1916,6 @@ BeginCopy(ParseState *pstate,
 	CopyState	cstate;
 	int			num_phys_attrs;
 	MemoryContext oldcontext;
-	int num_columns = 0;
 
 	/* Allocate workspace and zero all fields */
 	cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
@@ -2012,9 +1937,21 @@ BeginCopy(ParseState *pstate,
 		cstate->rel = rel;
 
 	/* Extract options from the statement node tree */
-	ProcessCopyOptions(pstate, cstate, is_from, options,
-					   num_columns, /* pass correct value when COPY supports no delim */
-					   true);
+	ProcessCopyOptions(pstate, cstate, is_from, options);
+
+	if (cstate->delim_off && !rel_is_external_table(rel->rd_id))
+	{
+		/*
+		 * We don't support delimiter 'off' for COPY because the QD COPY
+		 * sometimes internally adds columns to the data that it sends to
+		 * the QE COPY modules, and it uses the delimiter for it. There
+		 * are ways to work around this but for now it's not important and
+		 * we simply don't support it.
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("using no delimiter is only supported for external tables")));
+	}
 
 	/* Process the source/target relation or query */
 	if (rel)
