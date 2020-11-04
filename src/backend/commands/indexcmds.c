@@ -62,6 +62,7 @@
 
 #include "catalog/pg_inherits_fn.h"
 #include "catalog/oid_dispatch.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
@@ -469,10 +470,30 @@ DefineIndex(Oid relationId,
 	 * relation.  To avoid lock upgrade hazards, that lock should be at least
 	 * as strong as the one we take here.
 	 */
+	lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
+
+	/*
+	 * Appendoptimized tables need block directory relation for index
+	 * access. Creating and maintaining block directory is expensive,
+	 * because it needs to be kept up to date whenever new data is inserted
+	 * in the table. We delay the block directory creation until it is
+	 * really needed - the first index creation. Once created, all indexes
+	 * share the same block directory. We need stronger lock
+	 * (ShareRowExclusiveLock) that blocks index creation from another
+	 * transaction (not to be confused with create index concurrently) as
+	 * well as concurrent insert for appendoptimized tables, if the block
+	 * directory needs to be created. If the block directory already exists,
+	 * we can use the same lock as heap tables.
+	 */
 	if (RangeVarIsAppendOptimizedTable(stmt->relation))
-		lockmode = ShareRowExclusiveLock;
-	else
-		lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
+	{
+		Oid blkdirrelid = InvalidOid;
+		GetAppendOnlyEntryAuxOids(relationId, NULL, NULL, &blkdirrelid, NULL, NULL, NULL);
+
+		if (!OidIsValid(blkdirrelid))
+			lockmode = ShareRowExclusiveLock; /* Relation is AO, and has no block directory */
+	}
+
 	rel = heap_open(relationId, lockmode);
 
 	relationId = RelationGetRelid(rel);
