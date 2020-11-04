@@ -11,11 +11,11 @@
     <ol>
       <li id="ji162035">Make sure your host systems meet the requirements described in <xref
           href="platform-requirements.xml"/>.</li>
-      <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable SELinux and firewall
+      <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable or configure SELinux.</xref></li>
+      <li><xref href="#topic_et2_y22_4nb" format="dita">Disable or configure firewall
           software.</xref></li>
-      <li id="ji162039">
-        <xref href="#topic3" type="topic" format="dita">Set the required operating system
-          parameters.</xref>
+      <li id="ji162039"><xref href="#topic3" type="topic" format="dita">Set the required operating
+          system parameters.</xref>
       </li>
       <li><xref href="#topic_qst_s5t_wy" type="topic" format="dita">Synchronize system
           clocks.</xref></li>
@@ -59,10 +59,12 @@
     </note>
   </body>
   <topic id="topic_sqj_lt1_nfb">
-    <title>Disabling SELinux and Firewall Software</title>
+    <title>Disable or Configure SELinux</title>
     <body>
-      <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must be disabled.
-        Follow these steps:<ol id="ol_ysm_5t1_nfb">
+      <p>For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be
+          <codeph>Disabled</codeph> or, if it is set to <codeph>Enforcing</codeph> mode, you must
+        ensure that Greenplum processes, directories, and the gpadmin user run unconfined. </p>
+      <p>To disable SELinux:<ol id="ol_ysm_5t1_nfb">
           <li>As the root user, check the status of
             SELinux:<codeblock># sestatus
 SELinuxstatus: disabled</codeblock></li>
@@ -78,13 +80,45 @@ SELinuxstatus: disabled</codeblock></li>
           <li>Reboot the system to apply any changes that you made and verify that SELinux is
             disabled.</li>
         </ol></p>
-      <p>For information about disabling SELinux, see the SELinux documentation.</p>
+      <p>If you run SELinux in <codeph>Enforcing</codeph> mode, ensure that Greenplum software runs
+          unconfined:<ol id="ol_g4q_tvy_nnb">
+          <li>The default SELinux configuration uses the <codeph>Targeted</codeph> policy, where
+            only specific, targeted processes run in a confined domain. For
+              example:<codeblock>$ cat /etc/selinux/config
+SELINUX=enforcing
+SELINUXTYPE=targeted
+</codeblock><p>In
+              this default configuration, ensure that you do not target any files or directories
+              under <codeph>/usr/local</codeph> that would confine Greenplum processes from running.
+              After installation, you can confirm that the <codeph>postgres</codeph> process is
+              unconfied:<codeblock>$ ps -eZ | grep postgres
+unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 9074 ? 00:00:00 postgres
+</codeblock>
+            </p></li>
+          <li>The <codeph>gpadmin</codeph> SElinux user must also be unconfined to ensure Greenplum
+            operation. You can verify this with the <codeph>semanage</codeph> utility. For
+            example:<codeblock>$ semanage login -l
+Login Name           SELinux User         MLS/MCS Range        Service
+
+__default__          unconfined_u         s0-s0:c0.c1023       *
+root                 unconfined_u         s0-s0:c0.c1023       *
+...
+gpadmin              gpadmin              s0-s0:c0.c1023       *
+</codeblock></li>
+        </ol></p>
+      <p>See the SELinux documentation for your distribution for more information about configuring
+        SELinux and SELinux users.</p>
+    </body>
+  </topic>
+  <topic id="topic_et2_y22_4nb">
+    <title>Disable or Configure Firewall Software</title>
+    <body>
       <p>You should also disable firewall software such as <codeph>iptables</codeph> (on systems
         such as RHEL 6.x and CentOS 6.x ), <codeph>firewalld</codeph> (on systems such as RHEL 7.x
-        and CentOS 7.x), or <codeph>ufw</codeph> (on Ubuntu systems, disabled by default). </p>
-      <p>If you decide to enable <codeph>iptables</codeph> with Greenplum Database for security
-        purposes, see <xref href="enable_iptables.xml#topic1" format="dita"/>.</p>
-      <p>Follow these steps to disable <codeph>iptables</codeph>: <ol id="ul_wrw_3v1_nfb">
+        and CentOS 7.x), or <codeph>ufw</codeph> (on Ubuntu systems, disabled by default). If
+        firewall software is not disabled, you must instead configure your software to allow
+        required communication between Greenplum hosts.</p>
+      <p>To disable <codeph>iptables</codeph>: <ol id="ul_wrw_3v1_nfb">
           <li>As the root user, check the status of
               <codeph>iptables</codeph>:<codeblock># /sbin/chkconfig --list iptables</codeblock><p>If
                 <codeph>iptables</codeph> is disabled, the command output
@@ -103,8 +137,11 @@ SELinuxstatus: disabled</codeblock></li>
             <codeph>firewalld</codeph>:<codeblock># systemctl stop firewalld.service
 # systemctl disable firewalld.service</codeblock></li>
         </ol></p>
-      <p>For more information about configuring your firewall software, see the documentation for
-        the firewall or your operating system.</p>
+      <p>If you decide to enable <codeph>iptables</codeph> with Greenplum Database for security
+        purposes, see <xref href="enable_iptables.xml#topic1" format="dita"/> for important
+        considerations and example configurations.</p>
+      <p>See the documentation for the firewall or your operating system for additional
+        information.</p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
