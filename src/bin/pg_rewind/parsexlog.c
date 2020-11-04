@@ -314,7 +314,7 @@ SimpleXLogPageRead(XLogReaderState *xlogreader, XLogRecPtr targetPagePtr,
 static void
 extractPageInfo(XLogRecord *record)
 {
-#define pageinfo_add(forkno, rnode, blkno) process_block_change(forkno, rnode, blkno)
+#define pageinfo_add(forkno, rnode, blkno) process_target_wal_block_change(forkno, rnode, blkno)
 #define pageinfo_set_truncation(forkno, rnode, blkno) datapagemap_set_truncation(pagemap, forkno, rnode, blkno)
 
 	uint8   info = record->xl_info & ~XLR_INFO_MASK;
@@ -971,9 +971,9 @@ extractPageInfo(XLogRecord *record)
 				case XLOG_APPENDONLY_INSERT:
 				{
 					xl_ao_insert *insert_record = (xl_ao_insert *) XLogRecGetData(record);
-					process_aofile_change(insert_record->target.node,
-										  insert_record->target.segment_filenum,
-										  insert_record->target.offset);
+					process_target_wal_aofile_change(insert_record->target.node,
+													 insert_record->target.segment_filenum,
+													 insert_record->target.offset);
 					break;
 				}
 				case XLOG_APPENDONLY_TRUNCATE:

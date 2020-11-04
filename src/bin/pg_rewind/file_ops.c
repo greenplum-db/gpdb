@@ -126,8 +126,9 @@ void
 remove_target(file_entry_t *entry)
 {
 	Assert(entry->action == FILE_ACTION_REMOVE);
+	Assert(entry->target_exists);
 
-	switch (entry->type)
+	switch (entry->target_type)
 	{
 		case FILE_TYPE_DIRECTORY:
 			remove_target_dir(entry->path);
@@ -141,6 +142,10 @@ remove_target(file_entry_t *entry)
 		case FILE_TYPE_SYMLINK:
 			remove_target_symlink(entry->path);
 			break;
+
+		case FILE_TYPE_UNDEFINED:
+			pg_fatal("undefined file type for \"%s\"", entry->path);
+			break;
 	}
 }
 
@@ -148,18 +153,19 @@ void
 create_target(file_entry_t *entry)
 {
 	Assert(entry->action == FILE_ACTION_CREATE);
+	Assert(!entry->target_exists);
 
-	switch (entry->type)
+	switch (entry->source_type)
 	{
 		case FILE_TYPE_DIRECTORY:
 			create_target_dir(entry->path);
 			break;
 
 		case FILE_TYPE_SYMLINK:
-			if(entry->is_gp_tablespace)
-				create_target_tablespace_layout(entry->path, entry->link_target);
+			if (entry->is_gp_tablespace)
+				create_target_tablespace_layout(entry->path, entry->source_link_target);
 			else
-				create_target_symlink(entry->path, entry->link_target);
+				create_target_symlink(entry->path, entry->source_link_target);
 			break;
 
 		case FILE_TYPE_REGULAR:
@@ -170,6 +176,10 @@ create_target(file_entry_t *entry)
 		case FILE_TYPE_FIFO:
 			/* Only pgsql_tmp files are FIFO and they are ignored from source target. */
 			pg_fatal("invalid action (CREATE) for fifo file\n");
+			break;
+
+		case FILE_TYPE_UNDEFINED:
+			pg_fatal("undefined file type for \"%s\"", entry->path);
 			break;
 	}
 }
@@ -301,8 +311,6 @@ create_target_tablespace_layout(const char *path, const char *link)
 
 	pfree(newlink);
 }
-
-
 
 /*
  * Read a file into memory. The file to be read is <datadir>/<path>.
