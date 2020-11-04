@@ -28,7 +28,7 @@ import math
 
 try:
     from gppylib.db import dbconn
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # constants
@@ -332,7 +332,7 @@ WHERE starelid = 'cal_dim'::regclass AND staattnum = 2;
 # -----------------------------------------------------------------------------
 
 def parseargs():
-    parser = argparse.ArgumentParser(description=_help, version='1.0')
+    parser = argparse.ArgumentParser(description=_help)
 
     parser.add_argument("tests", metavar="TEST", choices=[ [], "all", "none", "bitmap_scan_tests", "bitmap_join_tests" ], nargs="*",
                         help="Run these tests (all, bitmap_scan_tests, bitmap_join_tests), default is none")
@@ -378,7 +378,7 @@ def connect(host, port_num, db_name):
         dburl = dbconn.DbURL(hostname=host, port=port_num, dbname=db_name)
         conn = dbconn.connect(dburl, encoding="UTF8")
     except Exception as e:
-        print("Exception during connect: %s" % e)
+        print(("Exception during connect: %s" % e))
         quit()
     return conn
 
@@ -408,7 +408,7 @@ def execute_sql(conn, sqlStr):
         dbconn.execSQL(conn, sqlStr)
     except Exception as e:
         print("")
-        print("Error executing query: %s; Reason: %s" % (sqlStr, e))
+        print(("Error executing query: %s; Reason: %s" % (sqlStr, e)))
         dbconn.execSQL(conn, "abort")
 
 def execute_sql_arr(conn, sqlStrArr):
@@ -597,7 +597,7 @@ def find_crossover(conn, lowParamValue, highParamLimit, setup, parameterizeMetho
     reset_method(conn)
 
     # determine the increment
-    incParamValue = (highParamLimit - lowParamValue) / 10
+    incParamValue = (highParamLimit - lowParamValue) // 10
     if incParamValue == 0:
         incParamValue = 1
     elif highParamLimit <= lowParamValue:
@@ -726,7 +726,7 @@ def print_results(testTitle, explainDict, execDict, errMessages, plan_ids):
         headerList.append("std dev default")
         for p_id in plan_ids:
             headerList.append("std dev %s" % p_id)
-    print(", ".join(headerList))
+    print((", ".join(headerList)))
 
     # sort the keys of the dictionary by parameter value
     sorted_params = sorted(explainDict.keys())
@@ -766,12 +766,12 @@ def print_results(testTitle, explainDict, execDict, errMessages, plan_ids):
             resultList.extend(stddevList)
 
         # print a comma-separated list of result values (CSV)
-        print(", ".join(resultList))
+        print((", ".join(resultList)))
 
     # if there are any errors, print them at the end, leaving an empty line between the result and the errors
     if (len(errMessages) > 0):
         print("")
-        print("%d diagnostic message(s):" % len(errMessages))
+        print(("%d diagnostic message(s):" % len(errMessages)))
         for e in errMessages:
             print(e)
 
