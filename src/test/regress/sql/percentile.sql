@@ -37,6 +37,7 @@ DISTRIBUTED BY (d1,d2,d3);
 insert into mpp_22413
 select i, i, i, i, i,i
 from  (select * from generate_series(1, 99) i ) a ;
+SET extra_float_digits TO 0;
 
 select percentile_cont(0.5) within group (order by a),
 	median(a), percentile_disc(0.5) within group(order by a) from perct;
@@ -216,3 +217,4 @@ drop table mpp_22219;
 drop table mpp_21026;
 drop table mpp_20076;
 drop table mpp_22413;
+
