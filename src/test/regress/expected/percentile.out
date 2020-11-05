@@ -1,6 +1,4 @@
 create table perct as select a, a / 10 as b from generate_series(1, 100)a distributed by (a);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table perct2 as select a, a / 10 as b from generate_series(1, 100)a, generate_series(1, 2);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -98,9 +96,8 @@ select a / 10, percentile_cont(0.2) within group (order by a) from generate_seri
 
 select percentile_cont(0.2) within group (order by a),
 	percentile_cont(0.8) within group (order by a desc) from perct group by b order by b;
- percentile_cont | percentile_cont
+ percentile_cont | percentile_cont 
 -----------------+-----------------
-             100 |             100
              2.6 |             2.6
             11.8 |            11.8
             21.8 |            21.8
@@ -111,6 +108,7 @@ select percentile_cont(0.2) within group (order by a),
             71.8 |            71.8
             81.8 |            81.8
             91.8 |            91.8
+             100 |             100
 (11 rows)
 
 select percentile_cont(0.1) within group (order by a), count(*), sum(a) from perct
@@ -159,7 +157,7 @@ select median(a) from perct group by b having median(a) = 5;
 (1 row)
 
 select median(a), percentile_cont(0.6) within group (order by a desc) from perct group by b having count(*) > 1 order by 1;
- median | percentile_cont
+ median | percentile_cont 
 --------+-----------------
       5 |             4.2
    14.5 |            13.6
@@ -183,14 +181,14 @@ select count(*), median(b+1) from perct group by b+2
 	having median(b+1) in (select avg(b+1) from perct group by b+2);
  count | median 
 -------+--------
-     1 |     11
      9 |      1
     10 |      2
     10 |      3
-    10 |      4
-    10 |      5
     10 |      6
     10 |      7
+     1 |     11
+    10 |      4
+    10 |      5
     10 |      8
     10 |      9
     10 |     10
@@ -261,17 +259,17 @@ select median(a), median(c) from perct4;
 select median(a), median(c) from perct4 group by b;
  median | median 
 --------+--------
-      5 |       
-     14 |       
      24 |       
      34 |       
      44 |       
-     54 |       
-     64 |       
      74 |       
      84 |       
+     54 |       
+     64 |       
      94 |       
     100 |       
+      5 |       
+     14 |       
 (11 rows)
 
 select count(*) over (partition by b), median(a) from perct group by b order by b;
@@ -333,7 +331,6 @@ execute p(0.1);
 execute p(0.8);
  percentile_cont 
 -----------------
-             100
              7.4
             17.2
             27.2
@@ -344,6 +341,7 @@ execute p(0.8);
             77.2
             87.2
             97.2
+             100
 (11 rows)
 
 deallocate p;
@@ -641,17 +639,17 @@ select median(a) from perct group by grouping sets((), (b));
  median 
 --------
       5
-    100
    14.5
    24.5
    34.5
    44.5
-   50.5
    54.5
    64.5
    74.5
    84.5
    94.5
+    100
+   50.5
 (12 rows)
 
 -- wrong type in ORDER BY
@@ -705,26 +703,26 @@ GROUP BY b.dkey_a) s;
 select median(t2) from mpp_21026 group by t1;
  median 
 --------
-      1
-      2
-      3
-      4
+     15
+     18
       5
       6
-      7
       8
-      9
+     16
+     19
+      2
+     20
+      3
+      4
+      7
+      1
      10
      11
      12
      13
      14
-     15
-     16
      17
-     18
-     19
-     20
+      9
 (20 rows)
 
 -- MPP-20076
@@ -737,25 +735,25 @@ select 1, to_char(col1, 'YYYY'), median(col2) from mpp_20076 group by 1, 2;
 select 1, col1, median(col2) from mpp_20076 group by 1, 2;
  ?column? |           col1           | median 
 ----------+--------------------------+--------
-        1 | Wed Dec 31 16:00:01 1969 |      1
         1 | Wed Dec 31 16:00:02 1969 |      2
+        1 | Wed Dec 31 16:00:06 1969 |      6
+        1 | Wed Dec 31 16:00:08 1969 |      8
+        1 | Wed Dec 31 16:00:11 1969 |     11
+        1 | Wed Dec 31 16:00:15 1969 |     15
+        1 | Wed Dec 31 16:00:18 1969 |     18
+        1 | Wed Dec 31 16:00:01 1969 |      1
         1 | Wed Dec 31 16:00:03 1969 |      3
         1 | Wed Dec 31 16:00:04 1969 |      4
         1 | Wed Dec 31 16:00:05 1969 |      5
-        1 | Wed Dec 31 16:00:06 1969 |      6
-        1 | Wed Dec 31 16:00:07 1969 |      7
-        1 | Wed Dec 31 16:00:08 1969 |      8
         1 | Wed Dec 31 16:00:09 1969 |      9
         1 | Wed Dec 31 16:00:10 1969 |     10
-        1 | Wed Dec 31 16:00:11 1969 |     11
-        1 | Wed Dec 31 16:00:12 1969 |     12
-        1 | Wed Dec 31 16:00:13 1969 |     13
         1 | Wed Dec 31 16:00:14 1969 |     14
-        1 | Wed Dec 31 16:00:15 1969 |     15
         1 | Wed Dec 31 16:00:16 1969 |     16
         1 | Wed Dec 31 16:00:17 1969 |     17
-        1 | Wed Dec 31 16:00:18 1969 |     18
         1 | Wed Dec 31 16:00:19 1969 |     19
+        1 | Wed Dec 31 16:00:07 1969 |      7
+        1 | Wed Dec 31 16:00:12 1969 |     12
+        1 | Wed Dec 31 16:00:13 1969 |     13
         1 | Wed Dec 31 16:00:20 1969 |     20
 (20 rows)
 
