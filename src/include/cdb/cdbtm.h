@@ -327,8 +327,6 @@ extern void finishDistributedTransactionContext (char *debugCaller, bool aborted
 extern void performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 									  const char *gid,
 									  DtxContextInfo *contextInfo);
-extern void UtilityModeFindOrCreateDtmRedoFile(void);
-extern void UtilityModeCloseDtmRedoFile(void);
 
 extern bool currentDtxDispatchProtocolCommand(DtxProtocolCommand dtxProtocolCommand, bool raiseError);
 extern bool doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType);

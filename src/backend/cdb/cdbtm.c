@@ -1032,10 +1032,10 @@ tmShmemInit(void)
 	 * We can assign MaxBackends (MaxConnections should be fine also but let's
 	 * be conservative) to max_tm_gxacts on master/standby to tolerate various
 	 * configuration combinations of max_prepared_transactions and
-	 * max_connections. For segments or utility mode, max_tm_gxacts is useless
-	 * so let's set it as zero to save memory.
+	 * max_connections. max_tm_gxacts is used on the coordinator only, and the
+	 * coordinator might be accessed in dispatch mode or utility mode.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (IS_QUERY_DISPATCHER())
 		max_tm_gxacts = MaxBackends;
 	else
 		max_tm_gxacts = 0;

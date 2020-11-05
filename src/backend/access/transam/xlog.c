@@ -6155,7 +6155,6 @@ XLogProcessCheckpointRecord(XLogReaderState *rec)
 	if (ckptExtended.dtxCheckpoint)
 	{
 		/* Handle the DTX information. */
-		UtilityModeFindOrCreateDtmRedoFile();
 		redoDtxCheckPoint(ckptExtended.dtxCheckpoint);
 		/*
 		 * Avoid closing the file here as possibly the file was already open
@@ -7080,8 +7079,6 @@ StartupXLOG(void)
 		/* Check that the GUCs used to generate the WAL allow recovery */
 		CheckRequiredParameterValues();
 
-		UtilityModeFindOrCreateDtmRedoFile();
-		
 		/*
 		 * We're in recovery, so unlogged relations may be trashed and must be
 		 * reset.  This should be done BEFORE allowing Hot Standby
@@ -7866,8 +7863,6 @@ StartupXLOG(void)
 		}
 		else
 			CreateCheckPoint(CHECKPOINT_END_OF_RECOVERY | CHECKPOINT_IMMEDIATE);
-
-		UtilityModeCloseDtmRedoFile();
 
 		/*
 		 * And finally, execute the recovery_end_command, if any.

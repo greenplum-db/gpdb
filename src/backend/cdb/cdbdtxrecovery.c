@@ -47,25 +47,12 @@ volatile pid_t *shmDtxRecoveryPid = NULL;
 TMGXACT_LOG *shmCommittedGxactArray;
 volatile int *shmNumCommittedGxacts;
 
-static int	redoFileFD = -1;
-static int	redoFileOffset;
-
 static volatile sig_atomic_t got_SIGHUP = false;
 
 typedef struct InDoubtDtx
 {
 	char		gid[TMGIDSIZE];
 } InDoubtDtx;
-
-/*
- * Directory where Utility Mode DTM REDO file reside within PGDATA
- */
-#define UTILITYMODEDTMREDO_DIR "pg_utilitymodedtmredo"
-
-/*
- * File name for Utility Mode DTM REDO
- */
-#define UTILITYMODEDTMREDO_FILE "savedtmredo.file"
 
 static void recoverTM(void);
 static bool recoverInDoubtTransactions(void);
@@ -74,9 +61,6 @@ static HTAB *gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError);
 static void abortRMInDoubtTransactions(HTAB *htab);
 static void doAbortInDoubt(char *gid);
 static bool doNotifyCommittedInDoubt(char *gid);
-static void UtilityModeSaveRedo(bool committed, TMGXACT_LOG *gxact_log);
-static void ReplayRedoFromUtilityMode(void);
-static void RemoveRedoUtilityModeFile(void);
 static void AbortOrphanedPreparedTransactions(void);
 
 static bool
@@ -119,14 +103,6 @@ doAbortInDoubt(char *gid)
 	else
 		elog(LOG, "Crash recovery broadcast of the distributed transaction "
 			 	  "'Abort Prepared' broadcast succeeded for gid = %s", gid);
-}
-
-static void
-GetRedoFileName(char *path)
-{
-	snprintf(path, MAXPGPATH,
-			 "%s/" UTILITYMODEDTMREDO_DIR "/" UTILITYMODEDTMREDO_FILE, DataDir);
-	elog(DTM_DEBUG3, "Returning save DTM redo file path = %s", path);
 }
 
 /*
@@ -196,8 +172,6 @@ recoverInDoubtTransactions(void)
 
 	elog(DTM_DEBUG3, "recover in-doubt distributed transactions");
 
-	ReplayRedoFromUtilityMode();
-
 	/*
 	 * For each committed transaction found in the redo pass that was not
 	 * matched by a forget committed record, change its state indicating
@@ -241,8 +215,6 @@ recoverInDoubtTransactions(void)
 
 	/* get rid of the hashtable */
 	hash_destroy(htab);
-
-	RemoveRedoUtilityModeFile();
 
 	return true;
 }
@@ -441,139 +413,6 @@ abortOrphanedTransactions(HTAB *htab)
 	}
 }
 
-static void
-UtilityModeSaveRedo(bool committed, TMGXACT_LOG *gxact_log)
-{
-	TMGXACT_UTILITY_MODE_REDO utilityModeRedo;
-	int			write_len;
-
-	utilityModeRedo.committed = committed;
-	memcpy(&utilityModeRedo.gxact_log, gxact_log, sizeof(TMGXACT_LOG));
-
-	elog(DTM_DEBUG5, "Writing {committed = %s, gid = %s, gxid = %u} to DTM redo file",
-		 (utilityModeRedo.committed ? "true" : "false"),
-		 utilityModeRedo.gxact_log.gid,
-		 utilityModeRedo.gxact_log.gxid);
-
-	write_len = write(redoFileFD, &utilityModeRedo, sizeof(TMGXACT_UTILITY_MODE_REDO));
-	if (write_len != sizeof(TMGXACT_UTILITY_MODE_REDO))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not write save DTM redo file : %m")));
-}
-
-static void
-ReplayRedoFromUtilityMode(void)
-{
-	TMGXACT_UTILITY_MODE_REDO utilityModeRedo;
-
-	int			fd;
-	int			read_len;
-	int			errno;
-	char		path[MAXPGPATH];
-	int			entries;
-
-	entries = 0;
-
-	GetRedoFileName(path);
-
-	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
-	if (fd < 0)
-	{
-		/* UNDONE: Distinquish "not found" from other errors. */
-		elog(DTM_DEBUG3, "Could not open DTM redo file %s for reading",
-			 path);
-		return;
-	}
-
-	elog(DTM_DEBUG3, "Succesfully opened DTM redo file %s for reading",
-		 path);
-
-	while (true)
-	{
-		errno = 0;
-		read_len = read(fd, &utilityModeRedo, sizeof(TMGXACT_UTILITY_MODE_REDO));
-
-		if (read_len == 0)
-			break;
-		else if (read_len != sizeof(TMGXACT_UTILITY_MODE_REDO) && errno == 0)
-			elog(ERROR, "Bad redo length (expected %d and found %d)",
-				 (int) sizeof(TMGXACT_UTILITY_MODE_REDO), read_len);
-		else if (errno != 0)
-		{
-			CloseTransientFile(fd);
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("error reading DTM redo file: %m")));
-		}
-
-		elog(DTM_DEBUG5, "Read {committed = %s, gid = %s, gxid = %u} from DTM redo file",
-			 (utilityModeRedo.committed ? "true" : "false"),
-			 utilityModeRedo.gxact_log.gid,
-			 utilityModeRedo.gxact_log.gxid);
-		if (utilityModeRedo.committed)
-			redoDistributedCommitRecord(&utilityModeRedo.gxact_log);
-		else
-			redoDistributedForgetCommitRecord(&utilityModeRedo.gxact_log);
-
-		entries++;
-	}
-
-	elog(DTM_DEBUG5, "Processed %d entries from DTM redo file",
-		 entries);
-	CloseTransientFile(fd);
-}
-
-static void
-RemoveRedoUtilityModeFile(void)
-{
-	char		path[MAXPGPATH];
-	bool		removed;
-
-	GetRedoFileName(path);
-	removed = (unlink(path) == 0);
-	elog(DTM_DEBUG5, "Removed DTM redo file %s (%s)",
-		 path, (removed ? "true" : "false"));
-}
-
-void
-UtilityModeCloseDtmRedoFile(void)
-{
-	if (Gp_role != GP_ROLE_UTILITY)
-	{
-		elog(DTM_DEBUG3, "Not in Utility Mode (role = %s)-- skipping closing DTM redo file",
-			 role_to_string(Gp_role));
-		return;
-	}
-	elog(DTM_DEBUG3, "Closing DTM redo file");
-	CloseTransientFile(redoFileFD);
-	redoFileFD = -1;
-}
-
-void
-UtilityModeFindOrCreateDtmRedoFile(void)
-{
-	char		path[MAXPGPATH];
-
-	if (Gp_role != GP_ROLE_UTILITY)
-	{
-		elog(DTM_DEBUG3, "Not in Utility Mode (role = %s) -- skipping finding or creating DTM redo file",
-			 role_to_string(Gp_role));
-		return;
-	}
-	GetRedoFileName(path);
-
-	redoFileFD = OpenTransientFile(path, O_RDWR | O_CREAT | PG_BINARY);
-	if (redoFileFD < 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not create save DTM redo file \"%s\"", path)));
-
-	redoFileOffset = lseek(redoFileFD, 0, SEEK_END);
-	elog(DTM_DEBUG3, "Succesfully opened DTM redo file %s (end offset %d)",
-		 path, redoFileOffset);
-}
-
 /*
  * Redo transaction commit log record.
  */
@@ -611,13 +450,6 @@ redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
 		elog(PANIC, "Distribute transaction identifier too long (%d)",
 			 (int) strlen(gxact_log->gid));
 
-	if (Gp_role == GP_ROLE_UTILITY)
-	{
-		elog(DTM_DEBUG3, "DB in Utility mode.  Save DTM distributed commit until later.");
-		UtilityModeSaveRedo(true, gxact_log);
-		return;
-	}
-
 	for (i = 0; i < *shmNumCommittedGxacts; i++)
 	{
 		if (strcmp(gxact_log->gid, shmCommittedGxactArray[i].gid) == 0)
@@ -651,13 +483,6 @@ void
 redoDistributedForgetCommitRecord(TMGXACT_LOG *gxact_log)
 {
 	int			i;
-
-	if (Gp_role == GP_ROLE_UTILITY)
-	{
-		elog(DTM_DEBUG3, "DB in Utility mode.  Save DTM disributed forget until later.");
-		UtilityModeSaveRedo(false, gxact_log);
-		return;
-	}
 
 	for (i = 0; i < *shmNumCommittedGxacts; i++)
 	{
