@@ -110,7 +110,8 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	for (ULONG i = 0; i < pdrgpcrOutput->Size(); i++)
 	{
 		CColRef *col = (*pdrgpcrOutput)[i];
-		if (col->GetUsage(true /*check_system_cols*/) == CColRef::EUsed)
+		if (col->GetUsage(true /*check_system_cols*/,
+						  true /*check_distribution_col*/) == CColRef::EUsed)
 		{
 			output_cols->Include(col);
 		}

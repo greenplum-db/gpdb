@@ -30,6 +30,7 @@ const CCostModelGPDBLegacy::SCostMapping CCostModelGPDBLegacy::m_rgcm[] = {
 
 	{COperator::EopPhysicalIndexScan, CostIndexScan},
 	{COperator::EopPhysicalDynamicIndexScan, CostIndexScan},
+	{COperator::EopPhysicalIndexOnlyScan, CostIndexScan},
 	{COperator::EopPhysicalBitmapTableScan, CostBitmapTableScan},
 	{COperator::EopPhysicalDynamicBitmapTableScan, CostBitmapTableScan},
 
@@ -952,6 +953,7 @@ CCostModelGPDBLegacy::CostIndexScan(CMemoryPool *,	// mp
 
 	COperator::EOperatorId op_id = exprhdl.Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopPhysicalIndexScan == op_id ||
+				COperator::EopPhysicalIndexOnlyScan == op_id ||
 				COperator::EopPhysicalDynamicIndexScan == op_id);
 
 	CDouble dRandomIOBandwidth =
@@ -964,6 +966,7 @@ CCostModelGPDBLegacy::CostIndexScan(CMemoryPool *,	// mp
 	{
 		case COperator::EopPhysicalDynamicIndexScan:
 		case COperator::EopPhysicalIndexScan:
+		case COperator::EopPhysicalIndexOnlyScan:
 			return CCost(pci->NumRebinds() * (pci->Rows() * pci->Width()) /
 						 dRandomIOBandwidth);
 
