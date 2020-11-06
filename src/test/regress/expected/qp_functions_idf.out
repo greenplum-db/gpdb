@@ -480,17 +480,19 @@ select c, percentile_cont(0.9999) within group (order by ((days1 + days2) * 1.2)
 (10 rows)
 
 --numeric types
+SET extra_float_digits=0;
+
 select b, percentile_cont(0.9876) within group( order by c::numeric - 2.8765::numeric) from perctnum group by b order by b limit 10;
- b |  percentile_cont   
----+--------------------
- 0 | 20.849513639999998
- 1 |        46.82341488
- 2 |        72.82211488
- 3 |        98.82081488
- 4 |       124.81951488
- 5 |       150.81821488
- 6 | 176.81691487999998
- 7 | 196.89031115999998
+ b | percentile_cont 
+---+-----------------
+ 0 |     20.84951364
+ 1 |     46.82341488
+ 2 |     72.82211488
+ 3 |     98.82081488
+ 4 |    124.81951488
+ 5 |    150.81821488
+ 6 |    176.81691488
+ 7 |    196.89031116
 (8 rows)
 
 select median( c::numeric + (0.2*0.99):: numeric) from perctnum;
@@ -669,21 +671,21 @@ LINE 1: select a,percentile_cont(0.7) within group(order by b) from ...
 -- SQL with Cube and IDF
 -- SQL with GroupingSets and IDF
 select percentile_cont(0.7) within group (order by a) from perct4 group by grouping sets((b),(c), ());
-  percentile_cont   
---------------------
- 6.8999999999999995
-               16.6
-               26.6
-               36.6
-               46.6
-               56.6
-               66.6
-               76.6
-               86.6
-               96.6
-                100
-               70.3
-               70.3
+ percentile_cont
+-----------------
+             100
+             6.9
+            16.6
+            26.6
+            36.6
+            46.6
+            56.6
+            66.6
+            70.3
+            70.3
+            76.6
+            86.6
+            96.6
 (13 rows)
 
 select median(a) from perct group by grouping sets((), (b));

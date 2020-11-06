@@ -112,6 +112,7 @@ select c, percentile_cont(0.9999) within group (order by ((days1 -days2) / doubl
 select c, percentile_cont(0.9999) within group (order by ((days1 + days2) * 1.2) ) from perctint group by c order by c limit 10;
 
 --numeric types
+SET extra_float_digits=0;
 
 select b, percentile_cont(0.9876) within group( order by c::numeric - 2.8765::numeric) from perctnum group by b order by b limit 10;
 
