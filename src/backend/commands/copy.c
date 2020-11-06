@@ -1652,6 +1652,12 @@ ProcessCopyOptions(ParseState *pstate,
 						 errmsg("conflicting or redundant options")));
 			cstate->skip_ext_partition = true;
 		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("option \"%s\" not recognized",
+							defel->defname),
+					 parser_errposition(pstate, defel->location)));
 	}
 
 	/*
@@ -1950,7 +1956,7 @@ BeginCopy(ParseState *pstate,
 		 */
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("using no delimiter is only supported for external tables")));
+				 errmsg("using no delimiter is only supported for external tables")));
 	}
 
 	/* Process the source/target relation or query */
