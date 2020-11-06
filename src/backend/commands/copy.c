@@ -1652,7 +1652,7 @@ ProcessCopyOptions(ParseState *pstate,
 						 errmsg("conflicting or redundant options")));
 			cstate->skip_ext_partition = true;
 		}
-		else
+		else if (!rel_is_external_table(cstate->rel->rd_id))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("option \"%s\" not recognized",
