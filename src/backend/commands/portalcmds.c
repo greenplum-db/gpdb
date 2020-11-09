@@ -29,6 +29,7 @@
 #include "commands/portalcmds.h"
 #include "executor/executor.h"
 #include "executor/tstoreReceiver.h"
+#include "miscadmin.h"
 #include "tcop/pquery.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
@@ -74,6 +75,10 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	 */
 	if (!(cstmt->options & CURSOR_OPT_HOLD))
 		RequireTransactionChain(isTopLevel, "DECLARE CURSOR");
+	else if (InSecurityRestrictedOperation())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("cannot create a cursor WITH HOLD within security-restricted operation")));
 
 	/*
 	 * Allow using the SCROLL keyword even though we don't support its
