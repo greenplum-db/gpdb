@@ -56,6 +56,7 @@ typedef struct extvar_t
 	char GP_TIME[7];		/* HHMMSS */
 	char GP_XID[TMGIDSIZE];		/* global transaction id */
 	char GP_CID[10];		/* command id */
+	char GP_SN[10];		/* scan number */
 	char GP_SEGMENT_ID[11];  /*segments content id*/
 	char GP_SEG_PORT[11];
 	char GP_SESSION_ID[11];  /* session id */
@@ -73,10 +74,10 @@ typedef struct extvar_t
 #define EXEC_URL_PREFIX "execute:"
 
 extern void external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape,
-								  char *quote, bool header);
+								  char *quote, bool header, uint32 scancounter);
 extern void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
 									  char *quote, int eol_type, bool header,
-									  List *params);
+									  uint32 scancounter, List *params);
 
 /* exported functions */
 extern URL_FILE *url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, ExternalSelectDesc desc);

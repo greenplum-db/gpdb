@@ -66,6 +66,7 @@ typedef struct FileScanDescData
 	struct URL_FILE *fs_file;	/* the file pointer to our URI */
 	char	   *fs_uri;			/* the URI string */
 	bool		fs_noop;		/* no op. this segdb has no file to scan */
+	uint32      fs_scancounter;	/* copied from struct ExternalScan in plan */
 
 	/* current file parse state */
 	struct CopyStateData *fs_pstate;
@@ -103,7 +104,8 @@ typedef enum DataLineStatus
 	END_MARKER
 } DataLineStatus;
 
-extern FileScanDesc external_beginscan(Relation relation, List *uriList,
+extern FileScanDesc external_beginscan(Relation relation,
+				   uint32 scancounter, List *uriList,
 				   char fmtType, bool isMasterOnly,
 				   int rejLimit, bool rejLimitInRows,
 				   char logErrors, int encoding, List *extOptions);

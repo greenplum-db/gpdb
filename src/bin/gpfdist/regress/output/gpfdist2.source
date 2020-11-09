@@ -1025,7 +1025,7 @@ SELECT count(*) FROM ext_crlf_with_lf_column;
  10367
 
 DROP EXTERNAL TABLE ext_crlf_with_lf_column;
--- test 26 correct combination of command-id, transaction-id and session id defines a gpfdist-session
+-- test 26 correct combination of command-id, transaction-id and scan-number defines a gpfdist-session
 CREATE EXTERNAL TABLE ext_simple(id INTEGER)
 LOCATION
 (
@@ -1060,6 +1060,7 @@ SELECT count(*) FROM ext_simple;
 ROLLBACK;
 -- command-id is incremented when executing same prepared statement multiple times.
 -- See plancache.c: if (plansource->num_custom_plans < 5)
+set optimizer=off;
 PREPARE ext_simple_foo(int) AS SELECT count(*) from ext_simple;
 BEGIN;
 EXECUTE ext_simple_foo(1);
@@ -1080,8 +1081,23 @@ EXECUTE ext_simple_foo(1);
 EXECUTE ext_simple_foo(1);
      4
 
+EXECUTE ext_simple_foo(1);
+     4
+
+EXECUTE ext_simple_foo(1);
+     4
+
 ROLLBACK;
+DEALLOCATE ext_simple_foo;
+set optimizer=on;
+PREPARE ext_simple_foo(int) AS SELECT count(*) from ext_simple;
 BEGIN;
+EXECUTE ext_simple_foo(1);
+     4
+
+EXECUTE ext_simple_foo(1);
+     4
+
 EXECUTE ext_simple_foo(1);
      4
 
@@ -1102,6 +1118,74 @@ EXECUTE ext_simple_foo(1);
 
 ROLLBACK;
 DEALLOCATE ext_simple_foo;
+-- Two scans on the same external table within the same query.
+set optimizer=off;
+SELECT count(*) FROM ext_simple AS e1, ext_simple AS e2 WHERE e1.id = e2.id;
+     4
+
+set optimizer=on;
+SELECT count(*) FROM ext_simple AS e1, ext_simple AS e2 WHERE e1.id = e2.id;
+     4
+
+-- PREPARE & EXECUTE two scans on the same external table within the same query.
+set optimizer=off;
+PREPARE ext_simple_bar(int) AS SELECT count(*) FROM ext_simple AS e1, ext_simple AS e2 WHERE e1.id = e2.id;
+BEGIN;
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+ROLLBACK;
+DEALLOCATE ext_simple_bar;
+set optimizer=on;
+PREPARE ext_simple_bar(int) AS SELECT count(*) FROM ext_simple AS e1, ext_simple AS e2 WHERE e1.id = e2.id;
+BEGIN;
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+EXECUTE ext_simple_bar(1);
+     4
+
+ROLLBACK;
+DEALLOCATE ext_simple_bar;
 DROP EXTERNAL TABLE ext_simple;
 -- start_ignore
 select * from gpfdist2_stop;

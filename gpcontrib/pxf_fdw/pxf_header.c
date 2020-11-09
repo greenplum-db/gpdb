@@ -65,7 +65,7 @@ BuildHttpHeaders(CHURL_HEADERS headers,
 	}
 
 	/* GP cluster configuration */
-	external_set_env_vars(&ev, "pxf_fdw", false, NULL, NULL, false);
+	external_set_env_vars(&ev, "pxf_fdw", false, NULL, NULL, false, 0);
 
 	/*
 	 * make sure that user identity is known and set, otherwise impersonation

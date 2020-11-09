@@ -221,6 +221,7 @@ make_command(const char *cmd, extvar_t *ev)
 	make_export("GP_TIME", ev->GP_TIME, &buf);
 	make_export("GP_XID", ev->GP_XID, &buf);
 	make_export("GP_CID", ev->GP_CID, &buf);
+	make_export("GP_SN", ev->GP_SN, &buf);
 	make_export("GP_SEGMENT_ID", ev->GP_SEGMENT_ID, &buf);
 	make_export("GP_SEG_PORT", ev->GP_SEG_PORT, &buf);
 	make_export("GP_SESSION_ID", ev->GP_SESSION_ID, &buf);

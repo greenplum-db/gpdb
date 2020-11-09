@@ -107,8 +107,9 @@ static void flush_ssl_buffer(int fd, short event, void* arg);
  ================
  When a gpdb segment connects to gpfdist, it provides the following parameters:
  X-GP-XID   - transaction ID
- X-GP-CID   - command ID
- X-GP-SN    - session ID
+ X-GP-CID   - command ID to distinguish different queries.
+ X-GP-SN    - scan number to distinguish scans on the same external tables
+              within the same query.
  X-GP-PROTO - protocol number, report error if not provided:
 
  X-GP-PROTO = 0
