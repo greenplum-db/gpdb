@@ -15,7 +15,6 @@ OBJS        = CFileDescriptor.o \
               CFileWriter.o \
               COstream.o \
               COstreamBasic.o \
-              COstreamFile.o \
               COstreamString.o \
               ioutils.o
 

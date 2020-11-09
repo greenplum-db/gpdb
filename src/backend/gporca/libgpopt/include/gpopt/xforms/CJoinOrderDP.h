@@ -187,7 +187,7 @@ public:
 	}
 
 	// print function
-	IOstream &OsPrint(IOstream &) const override;
+	IOstream &OsPrint(IOstream &) const;
 
 #ifdef GPOS_DEBUG
 	void DbgPrint();

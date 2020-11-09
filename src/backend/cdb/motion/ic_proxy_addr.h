@@ -18,7 +18,7 @@ typedef struct ICProxyAddr ICProxyAddr;
 
 struct ICProxyAddr
 {
-	struct sockaddr_storage addr;
+	struct sockaddr_storage sockaddr;
 
 	int			dbid;
 	int			content;
@@ -43,14 +43,21 @@ struct ICProxyAddr
  * List<ICProxyAddr *>
  */
 extern List		   *ic_proxy_addrs;
+extern List		   *ic_proxy_prev_addrs;
+
+/*
+ * List<unowned ICProxyAddr *>
+ */
+extern List		   *ic_proxy_removed_addrs;
+extern List		   *ic_proxy_added_addrs;
 
 
 extern void ic_proxy_reload_addresses(uv_loop_t *loop);
 extern const ICProxyAddr *ic_proxy_get_my_addr(void);
 extern int ic_proxy_addr_get_port(const ICProxyAddr *addr);
-extern int ic_proxy_extract_addr(const struct sockaddr *addr,
-								 char *name, size_t namelen,
-								 int *port, int *family);
+extern int ic_proxy_extract_sockaddr(const struct sockaddr *addr,
+									 char *name, size_t namelen,
+									 int *port, int *family);
 
 
 #endif   /* IC_PROXY_ADDR_H */

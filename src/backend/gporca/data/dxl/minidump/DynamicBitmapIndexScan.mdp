@@ -481,7 +481,7 @@ see sql/DynamicBitmapIndexScan.sql
     <dxl:Plan Id="0" SpaceSize="95">
       <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="5184.781941" Rows="1.000000" Width="9"/>
+          <dxl:Cost StartupCost="0" TotalCost="5989.546228" Rows="1.000000" Width="9"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="24" Alias="fid">
@@ -492,7 +492,7 @@ see sql/DynamicBitmapIndexScan.sql
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="5184.781921" Rows="1.000000" Width="9"/>
+            <dxl:Cost StartupCost="0" TotalCost="5989.546208" Rows="1.000000" Width="9"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="24" Alias="fid">
@@ -607,7 +607,7 @@ see sql/DynamicBitmapIndexScan.sql
           </dxl:RedistributeMotion>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="3.193481" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="204.384553" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="flex_value_set_id">
@@ -640,7 +640,7 @@ see sql/DynamicBitmapIndexScan.sql
             </dxl:PartitionSelector>
             <dxl:DynamicBitmapTableScan PartIndexId="1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3.193481" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="204.384553" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="flex_value_set_id">
@@ -651,10 +651,16 @@ see sql/DynamicBitmapIndexScan.sql
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
-                  <dxl:Ident ColId="24" ColName="fid" TypeMdid="0.1700.1.0"/>
-                  <dxl:Ident ColId="0" ColName="flex_value_set_id" TypeMdid="0.1700.1.0"/>
-                </dxl:Comparison>
+                <dxl:And>
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
+                    <dxl:Ident ColId="1" ColName="flex_value_id" TypeMdid="0.1700.1.0"/>
+                    <dxl:Ident ColId="7" ColName="flex_value_id" TypeMdid="0.1700.1.0"/>
+                  </dxl:Comparison>
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
+                    <dxl:Ident ColId="24" ColName="fid" TypeMdid="0.1700.1.0"/>
+                    <dxl:Ident ColId="0" ColName="flex_value_set_id" TypeMdid="0.1700.1.0"/>
+                  </dxl:Comparison>
+                </dxl:And>
               </dxl:Filter>
               <dxl:RecheckCond>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">

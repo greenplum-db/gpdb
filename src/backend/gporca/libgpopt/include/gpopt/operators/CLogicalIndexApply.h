@@ -26,12 +26,15 @@ protected:
 	// is this an outer join?
 	BOOL m_fOuterJoin;
 
+	// a copy of the original join predicate that has been pushed down to the inner side
+	CExpression *m_origJoinPred;
+
 public:
 	CLogicalIndexApply(const CLogicalIndexApply &) = delete;
 
 	// ctor
 	CLogicalIndexApply(CMemoryPool *mp, CColRefArray *pdrgpcrOuterRefs,
-					   BOOL fOuterJoin);
+					   BOOL fOuterJoin, CExpression *origJoinPred);
 
 	// ctor for patterns
 	explicit CLogicalIndexApply(CMemoryPool *mp);
@@ -65,6 +68,12 @@ public:
 	FouterJoin() const
 	{
 		return m_fOuterJoin;
+	}
+
+	CExpression *
+	OrigJoinPred()
+	{
+		return m_origJoinPred;
 	}
 
 	//-------------------------------------------------------------------------------------

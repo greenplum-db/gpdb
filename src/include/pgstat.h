@@ -1336,7 +1336,6 @@ extern void pgstat_ping(void);
 extern void pgstat_report_stat(bool force);
 extern void pgstat_vacuum_stat(void);
 extern void pgstat_report_queuestat(void); /* GPDB */
-extern void collect_tabstat(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFunction); /* GPDB */
 
 extern void pgstat_drop_database(Oid databaseid);
 
@@ -1384,7 +1383,6 @@ extern PgStat_TableStatus *find_tabstat_entry(Oid rel_id);
 extern PgStat_BackendFunctionEntry *find_funcstat_entry(Oid func_id);
 
 extern void pgstat_report_resgroup(Oid groupid);
-extern void gp_pgstat_report_tabstat(AutoStatsCmdType cmdtype, Oid reloid, uint64 tuples);
 
 extern void pgstat_initstats(Relation rel);
 
@@ -1599,6 +1597,16 @@ extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
 
 extern void pgstat_send_archiver(const char *xlog, bool failed);
 extern void pgstat_send_bgwriter(void);
+
+struct CdbDispatchResults;
+struct pg_result;
+extern void pgstat_send_qd_tabstats(void);								/* GPDB */
+extern void pgstat_combine_one_qe_result(Bitmapset **oidMap,			/* GPDB */
+										 struct pg_result *pgresult,
+										 int nest_level,
+										 int32 segindex);
+extern void pgstat_combine_from_qe(struct CdbDispatchResults *results,	/* GPDB */
+								   int writerSliceIndex);
 
 /* ----------
  * Support functions for the SQL-callable functions to

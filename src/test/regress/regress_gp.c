@@ -872,8 +872,6 @@ PG_FUNCTION_INFO_V1(gp_fts_probe_stats);
 Datum
 gp_fts_probe_stats(PG_FUNCTION_ARGS)
 {
-	Assert(GpIdentity.dbid == MASTER_DBID);
-
 	TupleDesc	tupdesc;
 	int32		start_count = 0;
 	int32		done_count = 0;

@@ -60,7 +60,6 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
-#include "pgstat.h"
 #include "utils/metrics_utils.h"
 
 typedef struct
@@ -464,7 +463,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 
 		/* MPP-14001: Running auto_stats */
 		if (Gp_role == GP_ROLE_DISPATCH)
-			collect_tabstat(cmdType, relationOid, queryDesc->es_processed, false /* inFunction */);
+			auto_stats(cmdType, relationOid, queryDesc->es_processed, false /* inFunction */);
 	}
 
 	{

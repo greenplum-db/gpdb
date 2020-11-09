@@ -47,7 +47,7 @@ public:
 	virtual CExpression *PexprExpand();
 
 	// print function
-	IOstream &OsPrint(IOstream &) const override;
+	IOstream &OsPrint(IOstream &) const;
 
 };	// class CJoinOrderMinCard
 

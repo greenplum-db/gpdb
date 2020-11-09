@@ -30,6 +30,7 @@ class Options:
         self.persistent_check = None
         self.quiet = None
         self.interactive = False
+        self.hba_hostnames = False
 
 
 class GpRecoversegTestCase(GpTestCase):

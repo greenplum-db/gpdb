@@ -363,7 +363,7 @@
     <dxl:Plan Id="0" SpaceSize="18">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="499.127705" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="635.382908" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -383,7 +383,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="499.127645" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="635.382848" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -466,7 +466,7 @@
           </dxl:Sequence>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="68.127570" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="204.382710" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="c">
@@ -499,7 +499,7 @@
             </dxl:PartitionSelector>
             <dxl:DynamicBitmapTableScan PartIndexId="2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="68.127570" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="204.382710" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="c">

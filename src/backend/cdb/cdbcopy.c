@@ -55,6 +55,7 @@
 #include "miscadmin.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
+#include "access/xact.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbcopy.h"
 #include "cdb/cdbdisp_query.h"
@@ -67,6 +68,7 @@
 #include "commands/defrem.h"
 #include "mb/pg_wchar.h"
 #include "nodes/makefuncs.h"
+#include "pgstat.h"
 #include "storage/pmsignal.h"
 #include "tcop/tcopprot.h"
 #include "utils/faultinjector.h"
@@ -436,6 +438,8 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	struct pollfd	*pollRead;
 	bool		io_errors = false;
 	StringInfoData io_err_msg;
+	Bitmapset	   *oidMap = NULL;
+	int				nest_level;
 
 	initStringInfo(&io_err_msg);
 
@@ -498,6 +502,8 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 		}
 	}
 
+	nest_level = GetCurrentTransactionNestLevel();
+
 	pollRead = (struct pollfd *) palloc(sizeof(struct pollfd));
 	for (seg = 0; seg < gp->size; seg++)
 	{
@@ -557,6 +563,8 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				if (!first_error)
 					first_error = cdbdisp_get_PQerror(res);
 			}
+
+			pgstat_combine_one_qe_result(&oidMap, res, nest_level, q->segindex);
 
 			/*
 			 * If we are still in copy mode, tell QE to stop it.  COPY_IN

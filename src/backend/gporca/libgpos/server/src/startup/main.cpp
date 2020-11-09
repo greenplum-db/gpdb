@@ -46,7 +46,6 @@
 #include "unittest/gpos/error/CMiniDumperTest.h"
 
 #include "unittest/gpos/io/COstreamBasicTest.h"
-#include "unittest/gpos/io/COstreamFileTest.h"
 #include "unittest/gpos/io/COstreamStringTest.h"
 #include "unittest/gpos/io/CFileTest.h"
 
@@ -97,7 +96,6 @@ static gpos::CUnittest rgut[] = {
 	// io
 	GPOS_UNITTEST_STD(COstreamBasicTest),
 	GPOS_UNITTEST_STD(COstreamStringTest),
-	GPOS_UNITTEST_STD(COstreamFileTest),
 	GPOS_UNITTEST_STD(CFileTest),
 
 	// memory

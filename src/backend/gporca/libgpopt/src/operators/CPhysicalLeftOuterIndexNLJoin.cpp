@@ -18,16 +18,23 @@
 using namespace gpopt;
 
 CPhysicalLeftOuterIndexNLJoin::CPhysicalLeftOuterIndexNLJoin(
-	CMemoryPool *mp, CColRefArray *colref_array)
-	: CPhysicalLeftOuterNLJoin(mp), m_pdrgpcrOuterRefs(colref_array)
+	CMemoryPool *mp, CColRefArray *colref_array, CExpression *origJoinPred)
+	: CPhysicalLeftOuterNLJoin(mp),
+	  m_pdrgpcrOuterRefs(colref_array),
+	  m_origJoinPred(origJoinPred)
 {
 	GPOS_ASSERT(NULL != colref_array);
+	if (NULL != origJoinPred)
+	{
+		origJoinPred->AddRef();
+	}
 }
 
 
 CPhysicalLeftOuterIndexNLJoin::~CPhysicalLeftOuterIndexNLJoin()
 {
 	m_pdrgpcrOuterRefs->Release();
+	CRefCount::SafeRelease(m_origJoinPred);
 }
 
 

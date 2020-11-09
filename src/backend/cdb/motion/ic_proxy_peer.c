@@ -134,14 +134,14 @@ ic_proxy_peer_update_name(ICProxyPeer *peer)
 	 * happens.
 	 */
 	uv_tcp_getsockname(&peer->tcp, (struct sockaddr *) &peeraddr, &addrlen);
-	ic_proxy_extract_addr((struct sockaddr *) &peeraddr,
-						  sockname, sizeof(sockname),
-						  &sockport, NULL /* family */);
+	ic_proxy_extract_sockaddr((struct sockaddr *) &peeraddr,
+							  sockname, sizeof(sockname),
+							  &sockport, NULL /* family */);
 
 	uv_tcp_getpeername(&peer->tcp, (struct sockaddr *) &peeraddr, &addrlen);
-	ic_proxy_extract_addr((struct sockaddr *) &peeraddr,
-						  peername, sizeof(peername),
-						  &peerport, NULL /* family */);
+	ic_proxy_extract_sockaddr((struct sockaddr *) &peeraddr,
+							  peername, sizeof(peername),
+							  &peerport, NULL /* family */);
 
 	snprintf(peer->name, sizeof(peer->name), "peer%s[seg%hd,dbid%hu %s:%d->%s:%d]",
 			 (peer->state & IC_PROXY_PEER_STATE_LEGACY) ? ".legacy" : "",
@@ -811,6 +811,27 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 
 	uv_tcp_connect(conn, &peer->tcp, (struct sockaddr *) dest,
 				   ic_proxy_peer_on_connected);
+}
+
+/*
+ * Disconnect a peer.
+ *
+ * The peer can be in any state, the caller only needs to ensure not to call
+ * this function from a peer callback.
+ */
+void
+ic_proxy_peer_disconnect(ICProxyPeer *peer)
+{
+	/* No such a peer yet */
+	if (!peer)
+		return;
+
+	/* No connection is made or being made */
+	if (!(peer->state & IC_PROXY_PEER_STATE_CONNECTING))
+		return;
+
+	ic_proxy_log(LOG, "%s: disconnecting", peer->name);
+	ic_proxy_peer_shutdown(peer);
 }
 
 /*

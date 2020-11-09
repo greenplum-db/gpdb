@@ -122,27 +122,6 @@ class GpAddMirrorsTest(GpTestCase):
 
         self.assertIn("45000", result[0])
 
-    @patch('gppylib.programs.clsAddMirrors.Command')
-    @patch('gppylib.programs.clsAddMirrors.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
-    def test_pghbaconf_updated_successfully(self, mock1, mock2):
-        sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
-        options, _ = self.parser.parse_args()
-        self.subject = GpAddMirrorsProgram(options)
-        self.subject.config_primaries_for_replication(self.gparrayMock)
-        self.mock_logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-        self.mock_logger.info.assert_any_call("Successfully modified pg_hba.conf on primary segments to allow replication connections")
-
-    @patch('gppylib.programs.clsAddMirrors.Command', side_effect=Exception("boom"))
-    @patch('gppylib.programs.clsAddMirrors.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
-    def test_pghbaconf_updated_fails(self, mock1, mock2):
-        sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
-        options, _ = self.parser.parse_args()
-        self.subject = GpAddMirrorsProgram(options)
-        with self.assertRaisesRegex(Exception, "boom"):
-            self.subject.config_primaries_for_replication(self.gparrayMock)
-        self.mock_logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-        self.mock_logger.error.assert_any_call("Failed while modifying pg_hba.conf on primary segments to allow replication connections: boom")
-
     def test_datadir_interview(self):
         self.input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
         sys.argv = ['gpaddmirrors', '-p', '5000']

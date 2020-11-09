@@ -628,7 +628,7 @@ FROM
          sum(n_tup_hot_upd) as n_tup_hot_upd,
          sum(n_live_tup) as n_live_tup,
          sum(n_dead_tup) as n_dead_tup,
-         max(n_mod_since_analyze) as n_mod_since_analyze,
+         sum(n_mod_since_analyze) as n_mod_since_analyze,
          max(last_vacuum) as last_vacuum,
          max(last_autovacuum) as last_autovacuum,
          max(last_analyze) as last_analyze,

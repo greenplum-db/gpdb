@@ -38,7 +38,6 @@
 
 #include "gpos/_api.h"
 #include "gpos/common/CAutoP.h"
-#include "gpos/io/COstreamFile.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
@@ -478,7 +477,7 @@ ICostModel *
 COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 {
 	ICostModel *cost_model = NULL;
-	if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
+	if (optimizer_cost_model >= OPTIMIZER_GPDB_CALIBRATED)
 	{
 		cost_model = GPOS_NEW(mp) CCostModelGPDB(mp, num_segments);
 	}

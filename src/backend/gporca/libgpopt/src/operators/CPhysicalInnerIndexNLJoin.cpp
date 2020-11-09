@@ -34,10 +34,17 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalInnerIndexNLJoin::CPhysicalInnerIndexNLJoin(CMemoryPool *mp,
-													 CColRefArray *colref_array)
-	: CPhysicalInnerNLJoin(mp), m_pdrgpcrOuterRefs(colref_array)
+													 CColRefArray *colref_array,
+													 CExpression *origJoinPred)
+	: CPhysicalInnerNLJoin(mp),
+	  m_pdrgpcrOuterRefs(colref_array),
+	  m_origJoinPred(origJoinPred)
 {
 	GPOS_ASSERT(NULL != colref_array);
+	if (NULL != origJoinPred)
+	{
+		origJoinPred->AddRef();
+	}
 }
 
 
@@ -52,6 +59,7 @@ CPhysicalInnerIndexNLJoin::CPhysicalInnerIndexNLJoin(CMemoryPool *mp,
 CPhysicalInnerIndexNLJoin::~CPhysicalInnerIndexNLJoin()
 {
 	m_pdrgpcrOuterRefs->Release();
+	CRefCount::SafeRelease(m_origJoinPred);
 }
 
 

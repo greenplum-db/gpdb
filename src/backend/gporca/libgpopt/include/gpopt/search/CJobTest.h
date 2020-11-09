@@ -85,7 +85,7 @@ public:
 
 #ifdef GPOS_DEBUG
 	// printer
-	IOstream &OsPrint(IOstream &) override;
+	IOstream &OsPrint(IOstream &) const override;
 #endif	// GPOS_DEBUG
 
 	// set execution parameters

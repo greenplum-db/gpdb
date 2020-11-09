@@ -669,9 +669,35 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		ProcessCopyOptions(pstate,
 						   cstate,
 						   !iswritable, /* is_from */
-						   formatOpts,
-						   numcols,
-						   false /* is_copy */);
+						   formatOpts);
+
+		if (cstate->delim_off)
+		{
+			if (numcols != 1)
+				ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("using no delimiter is only possible for a single column table")));
+		}
+
+		if (cstate->header_line)
+		{
+			if (Gp_role == GP_ROLE_DISPATCH)
+			{
+				if (!iswritable)
+				{
+					/* RET */
+					ereport(NOTICE,
+							(errmsg("HEADER means that each one of the data files has a header row")));
+				}
+				else
+				{
+					/* WET */
+					ereport(ERROR,
+							(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+							errmsg("HEADER is not yet supported for writable external tables")));
+				}
+			}
+		}
 
 		/* keep the same order with the original pg_exttable catalog's fmtopt field */
 		cslist = lappend(cslist, makeDefElem("delimiter", (Node *) makeString(cstate->delim), -1));

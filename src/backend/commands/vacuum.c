@@ -481,15 +481,6 @@ vacuum(List *relations, VacuumParams *params,
 				analyze_rel(vrel->oid, vrel->relation, params,
 							vrel->va_cols, in_outer_xact, vac_strategy, NULL);
 
-#ifdef FAULT_INJECTOR
-				if (IsAutoVacuumWorkerProcess())
-				{
-					FaultInjector_InjectFaultIfSet(
-						"analyze_finished_one_relation", DDLNotSpecified,
-						"", vrel->relation->relname);
-				}
-#endif
-
 				if (use_own_xacts)
 				{
 					PopActiveSnapshot();
@@ -504,6 +495,15 @@ vacuum(List *relations, VacuumParams *params,
 					 */
 					CommandCounterIncrement();
 				}
+
+#ifdef FAULT_INJECTOR
+				if (IsAutoVacuumWorkerProcess())
+				{
+					FaultInjector_InjectFaultIfSet(
+						"analyze_finished_one_relation", DDLNotSpecified,
+						"", vrel->relation->relname);
+				}
+#endif
 			}
 		}
 	}
@@ -2747,7 +2747,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 		ListCell *lc = NULL;
 		struct pg_result *pgresult = cdb_pgresults->pg_results[result_no];
 
-		if (pgresult->extras == NULL)
+		if (pgresult->extras == NULL || pgresult->extraType != PGExtraTypeVacuumStats)
 			continue;
 
 		Assert(pgresult->extraslen > sizeof(int));
@@ -2852,6 +2852,8 @@ vac_send_relstats_to_qd(Relation relation,
 	stats.rel_pages = num_pages;
 	stats.rel_tuples = num_tuples;
 	stats.relallvisible = num_all_visible_pages;
+	pq_sendbyte(&buf, true); /* Mark the result ready when receive this message */
+	pq_sendint(&buf, PGExtraTypeVacuumStats, sizeof(PGExtraType));
 	pq_sendint(&buf, sizeof(VPgClassStats), sizeof(int));
 	pq_sendbytes(&buf, (char *) &stats, sizeof(VPgClassStats));
 	pq_endmessage(&buf);

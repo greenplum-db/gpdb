@@ -1298,10 +1298,10 @@
         </dxl:Or>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="20095485">
+    <dxl:Plan Id="0" SpaceSize="21244151">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1357145192.816764" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="1357145192.840398" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="26" Alias="cd_gender">
@@ -1312,7 +1312,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1357145192.816761" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="1357145192.840394" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="26" Alias="cd_gender">
@@ -1361,7 +1361,7 @@
           </dxl:BroadcastMotion>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324475.102324" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324475.102347" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -1382,7 +1382,7 @@
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324475.102318" Rows="1.000000" Width="6"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324475.102341" Rows="1.000000" Width="6"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1405,7 +1405,7 @@
               <dxl:LimitOffset/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324475.102318" Rows="1.000000" Width="6"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324475.102341" Rows="1.000000" Width="6"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1443,7 +1443,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:HashJoin JoinType="Left">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324475.102186" Rows="2.000000" Width="6"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1324475.102209" Rows="2.000000" Width="6"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1466,7 +1466,7 @@
                   </dxl:HashCondList>
                   <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="443.002179" Rows="1.000000" Width="5"/>
+                      <dxl:Cost StartupCost="0" TotalCost="443.002202" Rows="1.000000" Width="5"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1479,13 +1479,13 @@
                     <dxl:Filter/>
                     <dxl:SortingColumnList/>
                     <dxl:HashExprList>
-                      <dxl:HashExpr TypeMdid="0.23.1.0">
+                      <dxl:HashExpr>
                         <dxl:Ident ColId="0" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                       </dxl:HashExpr>
                     </dxl:HashExprList>
                     <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="443.002163" Rows="1.000000" Width="5"/>
+                        <dxl:Cost StartupCost="0" TotalCost="443.002186" Rows="1.000000" Width="5"/>
                       </dxl:Properties>
                       <dxl:GroupingColumns>
                         <dxl:GroupingColumn ColId="0"/>
@@ -1502,7 +1502,7 @@
                       <dxl:Filter/>
                       <dxl:Sort SortDiscardDuplicates="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="443.002155" Rows="1.000000" Width="5"/>
+                          <dxl:Cost StartupCost="0" TotalCost="443.002178" Rows="1.000000" Width="5"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1521,7 +1521,7 @@
                         <dxl:LimitOffset/>
                         <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="443.002155" Rows="1.000000" Width="5"/>
+                            <dxl:Cost StartupCost="0" TotalCost="443.002178" Rows="1.000000" Width="5"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1534,16 +1534,16 @@
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
                           <dxl:HashExprList>
-                            <dxl:HashExpr TypeMdid="0.23.1.0">
+                            <dxl:HashExpr>
                               <dxl:Ident ColId="0" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                             </dxl:HashExpr>
-                            <dxl:HashExpr TypeMdid="0.16.1.0">
+                            <dxl:HashExpr>
                               <dxl:Ident ColId="193" ColName="ColRef_0193" TypeMdid="0.16.1.0"/>
                             </dxl:HashExpr>
                           </dxl:HashExprList>
                           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="443.002147" Rows="1.000000" Width="5"/>
+                              <dxl:Cost StartupCost="0" TotalCost="443.002170" Rows="1.000000" Width="5"/>
                             </dxl:Properties>
                             <dxl:GroupingColumns>
                               <dxl:GroupingColumn ColId="0"/>
@@ -1560,7 +1560,7 @@
                             <dxl:Filter/>
                             <dxl:Sort SortDiscardDuplicates="false">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="443.002143" Rows="2.000000" Width="5"/>
+                                <dxl:Cost StartupCost="0" TotalCost="443.002166" Rows="2.000000" Width="5"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1579,7 +1579,7 @@
                               <dxl:LimitOffset/>
                               <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="443.002143" Rows="2.000000" Width="5"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="443.002166" Rows="2.000000" Width="5"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1593,7 +1593,7 @@
                                 <dxl:SortingColumnList/>
                                 <dxl:HashJoin JoinType="Left">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="443.002117" Rows="2.000000" Width="5"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="443.002140" Rows="2.000000" Width="5"/>
                                   </dxl:Properties>
                                   <dxl:ProjList>
                                     <dxl:ProjElem ColId="0" Alias="c_customer_sk">
@@ -1636,7 +1636,7 @@
                                   </dxl:TableScan>
                                   <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                                     <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="12.001555" Rows="1.000000" Width="5"/>
+                                      <dxl:Cost StartupCost="0" TotalCost="12.001578" Rows="1.000000" Width="5"/>
                                     </dxl:Properties>
                                     <dxl:ProjList>
                                       <dxl:ProjElem ColId="45" Alias="ws_bill_customer_sk">
@@ -1649,13 +1649,13 @@
                                     <dxl:Filter/>
                                     <dxl:SortingColumnList/>
                                     <dxl:HashExprList>
-                                      <dxl:HashExpr TypeMdid="0.23.1.0">
+                                      <dxl:HashExpr>
                                         <dxl:Ident ColId="45" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
                                       </dxl:HashExpr>
                                     </dxl:HashExprList>
                                     <dxl:Result>
                                       <dxl:Properties>
-                                        <dxl:Cost StartupCost="0" TotalCost="12.001547" Rows="1.000000" Width="5"/>
+                                        <dxl:Cost StartupCost="0" TotalCost="12.001570" Rows="1.000000" Width="5"/>
                                       </dxl:Properties>
                                       <dxl:ProjList>
                                         <dxl:ProjElem ColId="45" Alias="ws_bill_customer_sk">
@@ -1669,7 +1669,7 @@
                                       <dxl:OneTimeFilter/>
                                       <dxl:Result>
                                         <dxl:Properties>
-                                          <dxl:Cost StartupCost="0" TotalCost="12.001547" Rows="1.000000" Width="5"/>
+                                          <dxl:Cost StartupCost="0" TotalCost="12.001570" Rows="1.000000" Width="5"/>
                                         </dxl:Properties>
                                         <dxl:ProjList>
                                           <dxl:ProjElem ColId="193" Alias="ColRef_0193">
@@ -1683,7 +1683,7 @@
                                         <dxl:OneTimeFilter/>
                                         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                                           <dxl:Properties>
-                                            <dxl:Cost StartupCost="0" TotalCost="12.001546" Rows="1.000000" Width="4"/>
+                                            <dxl:Cost StartupCost="0" TotalCost="12.001569" Rows="1.000000" Width="4"/>
                                           </dxl:Properties>
                                           <dxl:ProjList>
                                             <dxl:ProjElem ColId="45" Alias="ws_bill_customer_sk">
@@ -1791,9 +1791,12 @@
                                           </dxl:BroadcastMotion>
                                           <dxl:Sequence>
                                             <dxl:Properties>
-                                              <dxl:Cost StartupCost="0" TotalCost="6.000441" Rows="1.000000" Width="4"/>
+                                              <dxl:Cost StartupCost="0" TotalCost="6.000441" Rows="1.000000" Width="8"/>
                                             </dxl:Properties>
                                             <dxl:ProjList>
+                                              <dxl:ProjElem ColId="41" Alias="ws_sold_date_sk">
+                                                <dxl:Ident ColId="41" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                              </dxl:ProjElem>
                                               <dxl:ProjElem ColId="45" Alias="ws_bill_customer_sk">
                                                 <dxl:Ident ColId="45" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
                                               </dxl:ProjElem>
@@ -1807,7 +1810,31 @@
                                                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                                               </dxl:PartEqFilters>
                                               <dxl:PartFilters>
-                                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                                                <dxl:Or>
+                                                  <dxl:And>
+                                                    <dxl:Not>
+                                                      <dxl:Or>
+                                                        <dxl:DefaultPart Level="0"/>
+                                                        <dxl:Or>
+                                                          <dxl:PartBoundOpen Level="0" LowerBound="true"/>
+                                                          <dxl:PartBoundOpen Level="0" LowerBound="false"/>
+                                                        </dxl:Or>
+                                                      </dxl:Or>
+                                                    </dxl:Not>
+                                                    <dxl:And>
+                                                      <dxl:IsNotNull>
+                                                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="true"/>
+                                                      </dxl:IsNotNull>
+                                                      <dxl:IsNotNull>
+                                                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
+                                                      </dxl:IsNotNull>
+                                                    </dxl:And>
+                                                  </dxl:And>
+                                                  <dxl:Or>
+                                                    <dxl:PartBoundOpen Level="0" LowerBound="true"/>
+                                                    <dxl:PartBoundOpen Level="0" LowerBound="false"/>
+                                                  </dxl:Or>
+                                                </dxl:Or>
                                               </dxl:PartFilters>
                                               <dxl:ResidualFilter>
                                                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
@@ -1816,14 +1843,21 @@
                                                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                                               </dxl:PropagationExpression>
                                               <dxl:PrintableFilter>
-                                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                                                <dxl:Not>
+                                                  <dxl:IsNull>
+                                                    <dxl:Ident ColId="41" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                                  </dxl:IsNull>
+                                                </dxl:Not>
                                               </dxl:PrintableFilter>
                                             </dxl:PartitionSelector>
                                             <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
                                               <dxl:Properties>
-                                                <dxl:Cost StartupCost="0" TotalCost="6.000441" Rows="1.000000" Width="4"/>
+                                                <dxl:Cost StartupCost="0" TotalCost="6.000441" Rows="1.000000" Width="8"/>
                                               </dxl:Properties>
                                               <dxl:ProjList>
+                                                <dxl:ProjElem ColId="41" Alias="ws_sold_date_sk">
+                                                  <dxl:Ident ColId="41" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                                </dxl:ProjElem>
                                                 <dxl:ProjElem ColId="45" Alias="ws_bill_customer_sk">
                                                   <dxl:Ident ColId="45" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
                                                 </dxl:ProjElem>
@@ -1880,7 +1914,7 @@
                     <dxl:Filter/>
                     <dxl:SortingColumnList/>
                     <dxl:HashExprList>
-                      <dxl:HashExpr TypeMdid="0.23.1.0">
+                      <dxl:HashExpr>
                         <dxl:Ident ColId="124" ColName="cs_ship_customer_sk" TypeMdid="0.23.1.0"/>
                       </dxl:HashExpr>
                     </dxl:HashExprList>

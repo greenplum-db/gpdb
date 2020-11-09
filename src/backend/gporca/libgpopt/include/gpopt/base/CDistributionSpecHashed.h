@@ -234,9 +234,9 @@ public:
 	BOOL HasCompleteEquivSpec(CMemoryPool *mp);
 
 	// use given predicates to complete an incomplete spec, if possible
-	static CDistributionSpecHashed *CompleteEquivSpec(
+	static CDistributionSpecHashed *TryToCompleteEquivSpec(
 		CMemoryPool *mp, CDistributionSpecHashed *pdshashed,
-		CExpression *pexprPred);
+		CExpression *pexprPred, CColRefSet *outerRefs);
 };	// class CDistributionSpecHashed
 
 }  // namespace gpopt

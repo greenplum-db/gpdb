@@ -74,13 +74,14 @@ public:
 		GPOS_ASSERT(FCheckPattern(pexpr));
 
 		CMemoryPool *mp = pxfctxt->Pmp();
+		CLogicalIndexApply *indexApply =
+			CLogicalIndexApply::PopConvert(pexpr->Pop());
 
 		// extract components
 		CExpression *pexprOuter = (*pexpr)[0];
 		CExpression *pexprInner = (*pexpr)[1];
 		CExpression *pexprScalar = (*pexpr)[2];
-		CColRefArray *colref_array =
-			CLogicalIndexApply::PopConvert(pexpr->Pop())->PdrgPcrOuterRefs();
+		CColRefArray *colref_array = indexApply->PdrgPcrOuterRefs();
 		colref_array->AddRef();
 
 		// addref all components
@@ -92,9 +93,11 @@ public:
 		CPhysicalNLJoin *pop = NULL;
 
 		if (CLogicalIndexApply::PopConvert(pexpr->Pop())->FouterJoin())
-			pop = GPOS_NEW(mp) CPhysicalLeftOuterIndexNLJoin(mp, colref_array);
+			pop = GPOS_NEW(mp) CPhysicalLeftOuterIndexNLJoin(
+				mp, colref_array, indexApply->OrigJoinPred());
 		else
-			pop = GPOS_NEW(mp) CPhysicalInnerIndexNLJoin(mp, colref_array);
+			pop = GPOS_NEW(mp) CPhysicalInnerIndexNLJoin(
+				mp, colref_array, indexApply->OrigJoinPred());
 
 		CExpression *pexprResult = GPOS_NEW(mp)
 			CExpression(mp, pop, pexprOuter, pexprInner, pexprScalar);

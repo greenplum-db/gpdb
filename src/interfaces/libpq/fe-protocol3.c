@@ -479,8 +479,7 @@ pqParseInput3(PGconn *conn)
 					break;
 				case 'y':
 					/*
-					 * CDB: for gang management and stats collection for Vacuum/Analyze
-					 * commands.
+					 * CDB: for gang management and stats collection.
 					 */
 					if (pqGets(&conn->workBuffer, conn))
 						return;
@@ -494,13 +493,21 @@ pqParseInput3(PGconn *conn)
 					strlcpy(conn->result->cmdStatus, conn->workBuffer.data,
 							CMDSTATUS_LEN);
 
-					if (pqGetInt(&conn->result->extraslen, 4, conn))
-						return;
-					conn->result->extras = malloc(conn->result->extraslen);
-					if (pqGetnchar((char *)conn->result->extras, conn->result->extraslen, conn))
-						return;
-					conn->asyncStatus = PGASYNC_READY;
-
+					{
+						char	ready = '0';
+						/* Whether mark the result ready */
+						if (pqGetc(&ready, conn))
+							return;
+						if (pqGetInt((int *)&conn->result->extraType, sizeof(PGExtraType), conn))
+							return;
+						if (pqGetInt(&conn->result->extraslen, 4, conn))
+							return;
+						conn->result->extras = malloc(conn->result->extraslen);
+						if (pqGetnchar((char *)conn->result->extras, conn->result->extraslen, conn))
+							return;
+						if (ready)
+							conn->asyncStatus = PGASYNC_READY;
+					}
 					break;
 
 				case 'w':

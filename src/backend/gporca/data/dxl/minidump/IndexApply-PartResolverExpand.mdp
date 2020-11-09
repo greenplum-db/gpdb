@@ -593,7 +593,7 @@ select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
     <dxl:Plan Id="0" SpaceSize="7">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="491.039538" Rows="1.000000" Width="214"/>
+          <dxl:Cost StartupCost="0" TotalCost="491.048021" Rows="1.000000" Width="214"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -625,7 +625,7 @@ select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="491.038577" Rows="1.000000" Width="214"/>
+            <dxl:Cost StartupCost="0" TotalCost="491.047060" Rows="1.000000" Width="214"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -715,7 +715,7 @@ select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
           </dxl:BroadcastMotion>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="60.001174" Rows="1.000000" Width="82"/>
+              <dxl:Cost StartupCost="0" TotalCost="60.009658" Rows="1.000000" Width="82"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="i">
@@ -754,7 +754,7 @@ select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
             </dxl:PartitionSelector>
             <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="60.001174" Rows="1.000000" Width="82"/>
+                <dxl:Cost StartupCost="0" TotalCost="60.009658" Rows="1.000000" Width="82"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="i">
@@ -771,10 +771,16 @@ select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.665.1.0">
-                  <dxl:Ident ColId="1" ColName="j" TypeMdid="0.25.1.0"/>
-                  <dxl:Ident ColId="11" ColName="i" TypeMdid="0.25.1.0"/>
-                </dxl:Comparison>
+                <dxl:And>
+                  <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.664.1.0">
+                    <dxl:Ident ColId="12" ColName="j" TypeMdid="0.25.1.0"/>
+                    <dxl:Ident ColId="0" ColName="i" TypeMdid="0.25.1.0"/>
+                  </dxl:Comparison>
+                  <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.665.1.0">
+                    <dxl:Ident ColId="1" ColName="j" TypeMdid="0.25.1.0"/>
+                    <dxl:Ident ColId="11" ColName="i" TypeMdid="0.25.1.0"/>
+                  </dxl:Comparison>
+                </dxl:And>
               </dxl:Filter>
               <dxl:IndexCondList>
                 <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.664.1.0">

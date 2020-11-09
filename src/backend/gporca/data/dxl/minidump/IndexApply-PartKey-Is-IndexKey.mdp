@@ -583,7 +583,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
     <dxl:Plan Id="0" SpaceSize="15">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="12.001188" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="12.001227" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="j">
@@ -594,7 +594,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="12.001170" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="12.001209" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="j">
@@ -693,9 +693,13 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
           </dxl:BroadcastMotion>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000152" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000152" Rows="1.000000" Width="8"/>
             </dxl:Properties>
-            <dxl:ProjList/>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="10" Alias="i">
+                <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
             <dxl:PartitionSelector RelationMdid="0.41880825.1.1" PartitionLevels="1" ScanId="2">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
@@ -705,7 +709,31 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               </dxl:PartEqFilters>
               <dxl:PartFilters>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                <dxl:Or>
+                  <dxl:And>
+                    <dxl:Not>
+                      <dxl:Or>
+                        <dxl:DefaultPart Level="0"/>
+                        <dxl:Or>
+                          <dxl:PartBoundOpen Level="0" LowerBound="true"/>
+                          <dxl:PartBoundOpen Level="0" LowerBound="false"/>
+                        </dxl:Or>
+                      </dxl:Or>
+                    </dxl:Not>
+                    <dxl:And>
+                      <dxl:IsNotNull>
+                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="true"/>
+                      </dxl:IsNotNull>
+                      <dxl:IsNotNull>
+                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
+                      </dxl:IsNotNull>
+                    </dxl:And>
+                  </dxl:And>
+                  <dxl:Or>
+                    <dxl:PartBoundOpen Level="0" LowerBound="true"/>
+                    <dxl:PartBoundOpen Level="0" LowerBound="false"/>
+                  </dxl:Or>
+                </dxl:Or>
               </dxl:PartFilters>
               <dxl:ResidualFilter>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
@@ -714,14 +742,22 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
               </dxl:PropagationExpression>
               <dxl:PrintableFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                <dxl:Not>
+                  <dxl:IsNull>
+                    <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+                  </dxl:IsNull>
+                </dxl:Not>
               </dxl:PrintableFilter>
             </dxl:PartitionSelector>
             <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000152" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000152" Rows="1.000000" Width="8"/>
               </dxl:Properties>
-              <dxl:ProjList/>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="10" Alias="i">
+                  <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
               <dxl:Filter/>
               <dxl:IndexCondList>
                 <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">

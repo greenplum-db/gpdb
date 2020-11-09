@@ -416,7 +416,7 @@ select * from x, y where x.i > y.j and y.k = 10;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="499.130120" Rows="1.000000" Width="48"/>
+          <dxl:Cost StartupCost="0" TotalCost="499.130142" Rows="1.000000" Width="48"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -448,7 +448,7 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="499.129941" Rows="1.000000" Width="48"/>
+            <dxl:Cost StartupCost="0" TotalCost="499.129963" Rows="1.000000" Width="48"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -538,7 +538,7 @@ select * from x, y where x.i > y.j and y.k = 10;
           </dxl:BroadcastMotion>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="68.128736" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="68.128758" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="i">
@@ -563,7 +563,31 @@ select * from x, y where x.i > y.j and y.k = 10;
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               </dxl:PartEqFilters>
               <dxl:PartFilters>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                <dxl:Or>
+                  <dxl:And>
+                    <dxl:Not>
+                      <dxl:Or>
+                        <dxl:DefaultPart Level="0"/>
+                        <dxl:Or>
+                          <dxl:PartBoundOpen Level="0" LowerBound="true"/>
+                          <dxl:PartBoundOpen Level="0" LowerBound="false"/>
+                        </dxl:Or>
+                      </dxl:Or>
+                    </dxl:Not>
+                    <dxl:And>
+                      <dxl:IsNotNull>
+                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="true"/>
+                      </dxl:IsNotNull>
+                      <dxl:IsNotNull>
+                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
+                      </dxl:IsNotNull>
+                    </dxl:And>
+                  </dxl:And>
+                  <dxl:Or>
+                    <dxl:PartBoundOpen Level="0" LowerBound="true"/>
+                    <dxl:PartBoundOpen Level="0" LowerBound="false"/>
+                  </dxl:Or>
+                </dxl:Or>
               </dxl:PartFilters>
               <dxl:ResidualFilter>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
@@ -572,12 +596,16 @@ select * from x, y where x.i > y.j and y.k = 10;
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               </dxl:PropagationExpression>
               <dxl:PrintableFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                <dxl:Not>
+                  <dxl:IsNull>
+                    <dxl:Ident ColId="12" ColName="j" TypeMdid="0.23.1.0"/>
+                  </dxl:IsNull>
+                </dxl:Not>
               </dxl:PrintableFilter>
             </dxl:PartitionSelector>
             <dxl:DynamicBitmapTableScan PartIndexId="1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="68.128736" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="68.128758" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="i">
@@ -594,10 +622,16 @@ select * from x, y where x.i > y.j and y.k = 10;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="13" ColName="k" TypeMdid="0.23.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                </dxl:Comparison>
+                <dxl:And>
+                  <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+                    <dxl:Ident ColId="12" ColName="j" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="13" ColName="k" TypeMdid="0.23.1.0"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                  </dxl:Comparison>
+                </dxl:And>
               </dxl:Filter>
               <dxl:RecheckCond>
                 <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">

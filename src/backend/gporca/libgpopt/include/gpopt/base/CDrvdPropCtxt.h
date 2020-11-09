@@ -110,9 +110,6 @@ public:
 
 };	// class CDrvdPropCtxt
 
-// shorthand for printing
-IOstream &operator<<(IOstream &os, CDrvdPropCtxt &drvdpropctxt);
-
 }  // namespace gpopt
 
 

@@ -76,7 +76,7 @@ using namespace gpopt;
 // predicates less selective than this threshold
 // (selectivity is greater than this number) lead to
 // disqualification of a btree index on an AO table
-#define AO_TABLE_BTREE_INDEX_SELECTIVITY_THRESHOLD 0.05
+#define AO_TABLE_BTREE_INDEX_SELECTIVITY_THRESHOLD 0.10
 
 //---------------------------------------------------------------------------
 //	@function:

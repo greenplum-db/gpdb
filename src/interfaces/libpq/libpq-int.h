@@ -184,6 +184,12 @@ typedef struct pgCdbStatCell
     char       *data;
 } pgCdbStatCell;
 
+typedef enum PGExtraType {
+	PGExtraTypeNone,
+	PGExtraTypeVacuumStats,		/* Stats collected for vacuum and analyze from QEs */
+	PGExtraTypeTableStats		/* Table stats collected for statement from QEs */
+} PGExtraType;
+
 struct pg_result
 {
 	int			ntups;
@@ -235,11 +241,11 @@ struct pg_result
     pgCdbStatCell  *cdbstats;   /* ordered from newest to oldest */
 
 	/*
-	 * Used for gang management commands and stats collected from QEs for
-	 * Vacuum and Analyze commands.
+	 * Used for gang management commands and stats collected from QEs.
 	 */
     void * extras;
     int	   extraslen;
+    PGExtraType		extraType;
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
 	int64		numRejected;

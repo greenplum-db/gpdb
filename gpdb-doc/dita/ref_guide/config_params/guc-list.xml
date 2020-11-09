@@ -3706,10 +3706,10 @@
       <p>When the <codeph>gp_interconnect_type</codeph> parameter is set to <codeph>proxy</codeph>,
         You must specify a proxy port for the master, standby master, and all primary and mirror
         segment instances in this format:</p>
-      <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_ip>:&lt;port>[,&lt;dbid>:&lt;segid>:&lt;ip>:&lt;port> ... ]</codeblock>
+      <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_address>:&lt;port>[, ... ]</codeblock>
       <p>For the master, standby master, and segment instance, the first three fields,
-          <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_ip</varname> can be
-        found in the <codeph><xref href="../system_catalogs/gp_segment_configuration.xml"
+          <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_address</varname>
+        can be found in the <codeph><xref href="../system_catalogs/gp_segment_configuration.xml"
             >gp_segment_configuration</xref></codeph> catalog table. The fourth field,
           <varname>port</varname>, is the proxy port for the Greenplum master or a segment
           instance.<ul id="ul_zly_vpm_4mb">
@@ -3717,15 +3717,14 @@
             table.</li>
           <li><varname>cont_id</varname> is the <codeph>content</codeph> column in the catalog
             table.</li>
-          <li><varname>seg_ip</varname> is the IP address corresponding to <codeph>address</codeph>
-            column in the catalog table. If the <codeph>address</codeph> is a hostname, use the IP
-            address of the hostname.</li>
+          <li><varname>seg_address</varname> is the IP address or hostname corresponding to tge
+              <codeph>address</codeph> column in the catalog table.</li>
           <li><varname>port</varname> is the TCP/IP port for the segment instance proxy that you
             specify.</li>
         </ul></p>
-      <note type="important">The <varname>seg_ip</varname> must be an IP address, not a hostname.
-        Also, If the mapping of a segment instance hostname to the IP address changes, you must
-        update the IP address in the parameter value.</note>
+      <note type="important">If a segment instance hostname is bound to a different IP address at
+        runtime, you must execute <codeph>gpstop -U</codeph> to re-load the
+          <codeph>gp_interconnect_proxy_addresses</codeph> value.</note>
       <p>You must specify the value as a single-quoted string. This <codeph>gpconfig</codeph>
         command sets the value for <codeph>gp_interconnect_proxy_addresses</codeph> as a
         single-quoted string. The Greenplum system consists of a master and a single segment

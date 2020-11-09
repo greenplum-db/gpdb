@@ -283,10 +283,6 @@ public:
 	// return true if all enforcers are enabled
 	static BOOL FAllEnforcersEnabled();
 
-#ifdef GPOS_DEBUG
-	IOstream &OsPrint(IOstream &) const override;
-#endif	// GPOS_DEBUG
-
 };	// class COptCtxt
 }  // namespace gpopt
 

@@ -619,7 +619,6 @@ AppendOnlyVisimapDelete_Stash(
 	bool		found;
 	off_t		offset;
 	int 		fileno;
-	int64		filesize;
 
 	Assert(visiMapDelete);
 	visiMap = visiMapDelete->visiMap;
@@ -643,37 +642,14 @@ AppendOnlyVisimapDelete_Stash(
 	oldContext = MemoryContextSwitchTo(visiMap->memoryContext);
 	AppendOnlyVisimapEntry_WriteData(&visiMap->visimapEntry);
 
-	BufFileTell(visiMapDelete->workfile, &fileno, &offset);
-	filesize = BufFileSize(visiMapDelete->workfile);
 	/*
 	 * If the BufFile was seeked to an internal position for reading a
 	 * previously stashed visimap entry before we were called, we must seek
 	 * till the end of it before writing new visimap entries.
-	 *
-	 * GPDB_12_MERGE_FIXME if the BufFile ends up with multiple files
-	 * (numFiles > 1), the following (filesize > offset) comaprison is
-	 * invalid.  The offset is within a single file whereas filesize is total
-	 * size of all files comprising this BufFile.  BufFile interface may need
-	 * some enhancements to address this problem.  E.g. API to seek to the end
-	 * so as to append to the BufFile, API to flush existing in-memory buffer
-	 * to disk.
 	 */
-	if (filesize > offset)
-	{
-		if (BufFileSeek(visiMapDelete->workfile, 0, filesize, SEEK_SET) != 0)
-			elog(ERROR, "failed to seek to end of visimap buf file: offset " INT64_FORMAT, filesize);
-		BufFileTell(visiMapDelete->workfile, &fileno, &offset);
-	}
-	else
-	{
-		/*
-		 * The previous write was shorter than the buffer size used by
-		 * BufFile.  That means it was not actually written to disk, leading
-		 * to disk file size smaller than the in-memory size.  The BufFile is
-		 * already positioned to the offest past the previous write in that
-		 * case, no need to seek.
-		 */
-	}
+	if (BufFileSeek(visiMapDelete->workfile, 0, 0, SEEK_END) != 0)
+		elog(ERROR, "failed to seek to end of visimap buf file");
+	BufFileTell(visiMapDelete->workfile, &fileno, &offset);
 
 	elogif(Debug_appendonly_print_visimap, LOG,
 		   "Append-only visi map delete: Stash dirty visimap entry %d/" INT64_FORMAT,

@@ -175,7 +175,7 @@ public:
 	}
 
 	// dump memory pool to given stream
-	virtual IOstream &OsPrint(IOstream &os);
+	IOstream &OsPrint(IOstream &os);
 
 	// check if a memory pool is empty
 	virtual void AssertEmpty(IOstream &os);

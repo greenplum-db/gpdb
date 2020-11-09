@@ -144,7 +144,7 @@ public:
 
 #ifdef GPOS_DEBUG
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	void DbgPrint() const;
 #endif	// GPOS_DEBUG

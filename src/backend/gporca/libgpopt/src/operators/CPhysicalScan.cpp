@@ -186,8 +186,8 @@ CPhysicalScan::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		CDistributionSpecHashed *pdshashed =
 			CDistributionSpecHashed::PdsConvert(m_pds);
 		CDistributionSpecHashed *pdshashedEquiv =
-			CDistributionSpecHashed::CompleteEquivSpec(mp, pdshashed,
-													   pexprIndexPred);
+			CDistributionSpecHashed::TryToCompleteEquivSpec(
+				mp, pdshashed, pexprIndexPred, exprhdl.DeriveOuterReferences());
 
 		if (NULL != pdshashedEquiv)
 		{

@@ -20,6 +20,8 @@
 #include "naucrates/md/IMDScalarOp.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
+#include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
@@ -1066,6 +1068,27 @@ CPhysicalJoin::PppsRequiredCompute(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CColRefSet *pcrsOutputOuter = exprhdl.DeriveOutputColumns(0);
 	CColRefSet *pcrsOutputInner = exprhdl.DeriveOutputColumns(1);
 
+	// the original join predicate for index NLJs, those just have a "true"
+	// join predicate which isn't very useful for DPE
+	CExpression *origJoinPredForIndexNLJ = NULL;
+
+	switch (Eopid())
+	{
+		case COperator::EopPhysicalInnerIndexNLJoin:
+			origJoinPredForIndexNLJ =
+				CPhysicalInnerIndexNLJoin::PopConvert(this)->OrigJoinPred();
+			break;
+
+		case COperator::EopPhysicalLeftOuterIndexNLJoin:
+			origJoinPredForIndexNLJ =
+				CPhysicalLeftOuterIndexNLJoin::PopConvert(this)->OrigJoinPred();
+			break;
+
+		default:
+			// no original join pred to worry about
+			break;
+	}
+
 	const ULONG ulPartIndexIds = pdrgpul->Size();
 
 	for (ULONG ul = 0; ul < ulPartIndexIds; ul++)
@@ -1112,6 +1135,15 @@ CPhysicalJoin::PppsRequiredCompute(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				// check if there is an interesting condition involving the partition key
 				CExpression *pexprScalar =
 					exprhdl.PexprScalarExactChild(2 /*child_index*/);
+
+				if (NULL != origJoinPredForIndexNLJ &&
+					CUtils::FScalarConstTrue(pexprScalar))
+				{
+					// use the original join predicate, not the "true" expression of the
+					// index nested loop join, for dynamic partition elimination
+					pexprScalar = origJoinPredForIndexNLJ;
+				}
+
 				AddFilterOnPartKey(mp, true /*fNLJoin*/, pexprScalar, ppim,
 								   ppfm, child_index, part_idx_id,
 								   fOuterPartConsumer, ppimResult, ppfmResult,

@@ -107,7 +107,155 @@ select relpages, reltuples from pg_class where oid = 'anatest'::regclass;
 
 
 --
--- Test2, if another transaction want to acquire lock which conflict with
+-- Test2, sanity test to make sure auto-analyze works on partition leaf tables
+--
+
+-- Prepare the table to be ANALYZEd
+1: CREATE TABLE rankpart (id int, rank int, product int) DISTRIBUTED BY (id) PARTITION BY RANGE (rank) ( START (1) END (10) EVERY (2), DEFAULT PARTITION extra );
+CREATE
+
+-- Track report gpstat on master
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'rankpart_1_prt_extra', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'rankpart_1_prt_5', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'rankpart_1_prt_extra', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- No data inserted into rankpart_1_prt_6
+1&: insert into rankpart select i, i % 8, i from generate_series(1, 1000)i;  <waiting ...>
+
+-- Wait until report pgstat on master
+SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+INSERT 1000
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.rankpart_1_prt_extra                                                          
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Should have statistic updated.
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_extra'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_2'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_3'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_4'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_5'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_6'::regclass;
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart'::regclass;
+ count 
+-------
+ 0     
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart_1_prt_extra'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 125       
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart_1_prt_2'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 250       
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart_1_prt_3'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 250       
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart_1_prt_4'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 250       
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart_1_prt_5'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 125       
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart_1_prt_6'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+select relpages, reltuples from pg_class where oid = 'rankpart'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+
+
+--
+-- Test3, if another transaction want to acquire lock which conflict with
 -- auto-analyze's ShareUpdateExclusiveLock, the auto-analyze should abort.
 --
 

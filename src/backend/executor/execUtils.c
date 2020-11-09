@@ -46,6 +46,7 @@
  */
 
 #include "postgres.h"
+#include "pgstat.h"
 
 #include "access/genam.h"
 #include "access/heapam.h"
@@ -1562,11 +1563,13 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 {
 	EState	   *estate;
 	ExecSlice  *currentSlice;
+	int			primaryWriterSliceIndex;
 
 	/* caller must have switched into per-query memory context already */
 	estate = queryDesc->estate;
 
 	currentSlice = getCurrentSlice(estate, LocallyExecutingSliceIndex(estate));
+	primaryWriterSliceIndex = PrimaryWriterSliceIndex(estate);
 
 	/* Teardown the Interconnect */
 	if (estate->es_interconnect_is_setup)
@@ -1607,7 +1610,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 
 		cdbdisp_checkDispatchResult(ds, waitMode);
 
-		pr = cdbdisp_getDispatchResults(ds, &qeError);		
+		pr = cdbdisp_getDispatchResults(ds, &qeError);
 
 		if (qeError)
 		{
@@ -1616,13 +1619,12 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 			ReThrowError(qeError);
 		}
 
-		/* If top slice was delegated to QEs, get num of rows processed. */
-		int primaryWriterSliceIndex = PrimaryWriterSliceIndex(estate);
-		//if (sliceRunsOnQE(currentSlice))
-		{
-			estate->es_processed +=
-				cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
-		}
+		/* collect pgstat from QEs for current transaction level */
+		pgstat_combine_from_qe(pr, primaryWriterSliceIndex);
+
+		/* get num of rows processed from writer QEs. */
+		estate->es_processed +=
+			cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
 
 		/* sum up rejected rows if any (single row error handling only) */
 		cdbdisp_sumRejectedRows(pr);

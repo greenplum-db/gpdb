@@ -169,7 +169,7 @@ const CDouble CCostModelParamsGPDB::DBitmapPageCostLargeNDV(83.1651);
 const CDouble CCostModelParamsGPDB::DBitmapPageCostSmallNDV(204.3810);
 
 // default bitmap page cost with no assumption about NDV
-const CDouble CCostModelParamsGPDB::DBitmapPageCost(50.4381);
+const CDouble CCostModelParamsGPDB::DBitmapPageCost(10);
 
 // default threshold of NDV for bitmap costing
 const CDouble CCostModelParamsGPDB::DBitmapNDVThreshold(200);

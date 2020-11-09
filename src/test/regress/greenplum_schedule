@@ -253,7 +253,7 @@ test: oid_wraparound
 test: fts_recovery_in_progress
 test: mirror_replay
 test: autovacuum-template0
-test: collect_tabstat
+test: pgstat_qd_tabstat
 
 # gpexpand introduce the partial tables, check them if they can run correctly
 test: gangsize gang_reuse

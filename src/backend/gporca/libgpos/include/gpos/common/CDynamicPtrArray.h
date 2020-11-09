@@ -396,13 +396,6 @@ public:
 		return result;
 	}
 
-	IOstream &
-	OsPrint(IOstream &os) const override
-	{
-		// do nothing, for now
-		return os;
-	}
-
 };	// class CDynamicPtrArray
 }  // namespace gpos
 

@@ -12,6 +12,7 @@
     <topicref href="orafce_ref.xml"/>
     <topicref href="pageinspect.xml"/>
     <topicref href="pgcrypto.xml"/>
+    <topicref href="postgres_fdw.xml"/>
     <topicref href="sslinfo.xml"/>
   </topicref>
 </map>

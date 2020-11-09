@@ -334,7 +334,7 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 
 	// insert the btree or bitmap alternatives
 	CreateHomogeneousIndexApplyAlternatives(
-		mp, pexpr->Pop(), pexprOuter, pexprGet, pexprAllPredicates,
+		mp, pexpr->Pop(), pexprOuter, pexprGet, pexprAllPredicates, pexprScalar,
 		nodesToInsertAboveIndexGet, endOfNodesToInsertAboveIndexGet,
 		ptabdescInner, popDynamicGet, pxfres,
 		(m_generateBitmapPlans ? IMDIndex::EmdindBitmap

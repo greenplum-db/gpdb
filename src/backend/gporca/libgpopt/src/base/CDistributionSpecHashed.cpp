@@ -988,9 +988,9 @@ CDistributionSpecHashed::HasCompleteEquivSpec(CMemoryPool *mp)
 
 // use given predicates to complete an incomplete spec, if possible
 CDistributionSpecHashed *
-CDistributionSpecHashed::CompleteEquivSpec(CMemoryPool *mp,
-										   CDistributionSpecHashed *pdshashed,
-										   CExpression *pexprPred)
+CDistributionSpecHashed::TryToCompleteEquivSpec(
+	CMemoryPool *mp, CDistributionSpecHashed *pdshashed, CExpression *pexprPred,
+	CColRefSet *outerRefs)
 {
 	CExpressionArray *pdrgpexprPred =
 		CPredicateUtils::PdrgpexprConjuncts(mp, pexprPred);
@@ -1004,8 +1004,11 @@ CDistributionSpecHashed::CompleteEquivSpec(CMemoryPool *mp,
 		CExpression *pexpr = (*pdrgpexprHashed)[ul];
 		CExpression *pexprMatching =
 			CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexprPred);
-		if (NULL != pexprMatching)
+		if (NULL != pexprMatching &&
+			outerRefs->FIntersects(pexprMatching->DeriveUsedColumns()))
 		{
+			// we are able to replace an original expression with one that refers to outer
+			// references (values from the equivalent table), making it more complete
 			pexprMatching->AddRef();
 			pdrgpexprResult->Append(pexprMatching);
 		}

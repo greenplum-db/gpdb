@@ -152,13 +152,12 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: '42'::bigint
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
                ->  Seq Scan on ec2
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: ((ff = ec2.x1) AND (ff = '42'::bigint))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
-(9 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 explain (costs off)
   select * from ec1, ec2 where ff = x1 and ff = '42'::int8alias1;

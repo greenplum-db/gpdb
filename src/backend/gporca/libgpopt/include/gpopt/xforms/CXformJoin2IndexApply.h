@@ -26,7 +26,7 @@ private:
 	void CreateHomogeneousBtreeIndexApplyAlternatives(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
 		CExpression *pexprInner, CExpression *pexprScalar,
-		CExpression *nodesToInsertAboveIndexGet,
+		CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet,
 		CTableDescriptor *ptabdescInner, CLogicalDynamicGet *popDynamicGet,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
@@ -36,7 +36,8 @@ private:
 	// for homogeneous b-tree indexes
 	void CreateAlternativesForBtreeIndex(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
-		CExpression *pexprInner, CExpression *nodesToInsertAboveIndexGet,
+		CExpression *pexprInner, CExpression *origJoinPred,
+		CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet, CMDAccessor *md_accessor,
 		CExpressionArray *pdrgpexprConjuncts, CColRefSet *pcrsScalarExpr,
 		CColRefSet *outer_refs, CColRefSet *pcrsReqd, const IMDRelation *pmdrel,
@@ -48,7 +49,7 @@ private:
 	void CreateHomogeneousBitmapIndexApplyAlternatives(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
 		CExpression *pexprInner, CExpression *pexprScalar,
-		CExpression *nodesToInsertAboveIndexGet,
+		CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet,
 		CTableDescriptor *ptabdescInner, CColRefSet *outer_refs,
 		CColRefSet *pcrsReqd, CXformResult *pxfres) const;
@@ -114,7 +115,7 @@ protected:
 	virtual void CreateHomogeneousIndexApplyAlternatives(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
 		CExpression *pexprInner, CExpression *pexprScalar,
-		CExpression *nodesToInsertAboveIndexGet,
+		CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet,
 		CTableDescriptor *PtabdescInner, CLogicalDynamicGet *popDynamicGet,
 		CXformResult *pxfres, gpmd::IMDIndex::EmdindexType emdtype) const;
@@ -137,8 +138,9 @@ protected:
 	// that it is trying to transform to in the current
 	// xform rule, caller takes the ownership and
 	// responsibility to release the instance.
-	virtual CLogicalApply *PopLogicalApply(
-		CMemoryPool *mp, CColRefArray *pdrgpcrOuterRefs) const = 0;
+	virtual CLogicalApply *PopLogicalApply(CMemoryPool *mp,
+										   CColRefArray *pdrgpcrOuterRefs,
+										   CExpression *origJoinPred) const = 0;
 
 public:
 	CXformJoin2IndexApply(const CXformJoin2IndexApply &) = delete;

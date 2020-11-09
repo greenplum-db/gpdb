@@ -27,6 +27,7 @@
 #include "cdb/cdbsrlz.h"
 #include "cdb/tupleremap.h"
 #include "nodes/execnodes.h"
+#include "pgstat.h"
 #include "tcop/tcopprot.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
@@ -507,6 +508,9 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 		FlushErrorState();
 		ReThrowError(qeError);
 	}
+
+	/* collect pgstat from QEs for current transaction level */
+	pgstat_combine_from_qe(pr, -1);
 
 	cdbdisp_returnResults(pr, cdb_pgresults);
 

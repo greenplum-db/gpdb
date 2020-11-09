@@ -793,7 +793,7 @@ CJobGroupExpressionOptimization::FScheduleCTEOptimization(
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupExpressionOptimization::OsPrint(IOstream &os)
+CJobGroupExpressionOptimization::OsPrint(IOstream &os) const
 {
 	os << "Group expr: ";
 	m_pgexpr->OsPrint(os);

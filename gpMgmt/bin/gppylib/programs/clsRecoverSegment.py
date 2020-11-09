@@ -31,6 +31,7 @@ from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
+from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
@@ -347,7 +348,7 @@ class GpRecoverSegmentProgram:
                 if isStandardArray:
                     # We have a standard array configuration, so we'll try to use the same
                     # interface naming convention.  If this doesn't work, we'll correct it
-                    # below on name lookup
+                    # below during ping failure
                     segInterface = segAddress[segAddress.rfind('-'):]
                     destAddress = recoverHostMap[segHostname] + segInterface
                     destHostname = recoverHostMap[segHostname]
@@ -361,36 +362,14 @@ class GpRecoverSegmentProgram:
                 # Save off the new host/address for this address.
                 recoverAddressMap[segAddress] = (destHostname, destAddress)
 
-            # Now that we've generated the mapping, look up all the addresses to make
-            # sure they are resolvable.
-            interfaces = [address for (_ignore, address) in list(recoverAddressMap.values())]
-            interfaceLookup = GpInterfaceToHostNameCache(self.__pool, interfaces, [None] * len(interfaces))
-
             for key in list(recoverAddressMap.keys()):
                 (newHostname, newAddress) = recoverAddressMap[key]
                 try:
-                    addressHostnameLookup = interfaceLookup.getHostName(newAddress)
-                    # Lookup failed so use hostname passed in for everything.
-                    if addressHostnameLookup is None:
-                        interfaceHostnameWarnings.append(
-                            "Lookup of %s failed.  Using %s for both hostname and address." % (newAddress, newHostname))
-                        newAddress = newHostname
+                    unix.Ping.local("ping new address", newAddress)
                 except:
-                    # Catch all exceptions.  We will use hostname instead of address
-                    # that we generated.
-                    interfaceHostnameWarnings.append(
-                        "Lookup of %s failed.  Using %s for both hostname and address." % (newAddress, newHostname))
+                    # new address created is invalid, so instead use same hostname for address
+                    self.logger.info("Ping of %s failed, Using %s for both hostname and address.", newAddress, newHostname)
                     newAddress = newHostname
-
-                # if we've updated the address to use the hostname because of lookup failure
-                # make sure the hostname is resolvable and up
-                if newHostname == newAddress:
-                    try:
-                        unix.Ping.local("ping new hostname", newHostname)
-                    except:
-                        raise Exception("Ping of host %s failed." % newHostname)
-
-                # Save changes in map
                 recoverAddressMap[key] = (newHostname, newAddress)
 
             if len(self.__options.newRecoverHosts) != recoverHostIdx:
@@ -662,6 +641,7 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
+            config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 
@@ -772,6 +752,8 @@ class GpRecoverSegmentProgram:
                          help="Max # of workers to use for building recovery segments.  [default: %default]")
         addTo.add_option("-r", None, default=False, action='store_true',
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
+        addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
+                         help='use hostnames instead of CIDR in pg_hba.conf')
 
         parser.set_defaults()
         return parser

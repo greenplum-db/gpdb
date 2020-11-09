@@ -70,8 +70,12 @@
 #include "utils/snapmgr.h"
 #include "utils/timestamp.h"
 
+#include "libpq-int.h"
+#include "cdb/cdbconn.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbvars.h"
 #include "commands/resgroupcmds.h"
+#include "libpq/pqformat.h"
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 
@@ -245,6 +249,12 @@ typedef struct TwoPhasePgStatRecord
 	bool		t_shared;		/* is it a shared catalog? */
 	bool		t_truncated;	/* was the relation truncated? */
 } TwoPhasePgStatRecord;
+
+typedef struct PgStatTabRecordFromQE
+{
+	TwoPhasePgStatRecord 	table_stat;
+	int						nest_level;
+} PgStatTabRecordFromQE;
 
 /*
  * Info about current "snapshot" of stats file
@@ -4529,6 +4539,228 @@ pgstat_send_bgwriter(void)
 	MemSet(&BgWriterStats, 0, sizeof(BgWriterStats));
 }
 
+/*
+ * pgstat_send_qd_tabstats() -
+ *
+ * Send the writer QE's tables' pgstat for current nest xact level
+ * to QD through libpq at each end of a statement.
+ *
+ * For a single statement executed on the writer QE, it wouldn't operate
+ * too many tables, so the effort should be small.
+ *
+ * We used don't have accurate table stat on QD, especially for partition
+ * tables since these table stats counters are counted through the access
+ * method on segments that contain data.
+ */
+void
+pgstat_send_qd_tabstats(void)
+{
+	int		nest_level;
+
+	if (!pgstat_track_counts || !pgStatXactStack)
+		return;
+
+	nest_level = GetCurrentTransactionNestLevel();
+
+	if (nest_level == pgStatXactStack->nest_level)
+	{
+		StringInfoData					buf;
+		StringInfoData					stat_data;
+		PgStat_TableXactStatus		   *trans = pgStatXactStack->first;
+
+		if (trans)
+		{
+			pq_beginmessage(&buf, 'y');
+			pq_sendstring(&buf, "PGSTAT");
+			initStringInfo(&stat_data);
+		}
+
+		for (; trans != NULL; trans = trans->next)
+		{
+			PgStatTabRecordFromQE		record;
+			PgStat_TableStatus		   *tabstat = trans->parent;
+
+			record.table_stat.tuples_inserted = trans->tuples_inserted;
+			record.table_stat.tuples_updated = trans->tuples_updated;
+			record.table_stat.tuples_deleted = trans->tuples_deleted;
+			record.table_stat.inserted_pre_trunc = trans->inserted_pre_trunc;
+			record.table_stat.updated_pre_trunc = trans->updated_pre_trunc;
+			record.table_stat.deleted_pre_trunc = trans->deleted_pre_trunc;
+			record.table_stat.t_id = tabstat->t_id;
+			record.table_stat.t_shared = tabstat->t_shared;
+			record.table_stat.t_truncated = trans->truncated;
+			record.nest_level = trans->nest_level;
+
+			appendBinaryStringInfo(
+				&stat_data, (char *)&record, sizeof(PgStatTabRecordFromQE));
+			ereport(DEBUG3,
+					(errmsg("Send pgstat for current xact nest_level: %d, table oid: %d. "
+							"Inserted: %ld, updated: %ld, deleted: %ld.",
+							nest_level, tabstat->t_id,
+							trans->tuples_inserted, trans->tuples_updated,
+							trans->tuples_deleted)));
+		}
+
+		if (buf.len > 0)
+		{
+			Assert(stat_data.len > 0);
+			/*
+			 * Don't mark the pgresult PGASYNC_READY when receive this message on QD.
+			 * Otherwise, QD may think the result is complete and start to process it.
+			 * But actually there may still have messages not received yet on QD belong
+			 * to same pgresult.
+			 */
+			pq_sendbyte(&buf, false);
+
+			pq_sendint(&buf, PGExtraTypeTableStats, sizeof(PGExtraType));
+			pq_sendint(&buf, stat_data.len, sizeof(int));
+			pq_sendbytes(&buf, stat_data.data, stat_data.len);
+			pq_endmessage(&buf);
+		}
+	}
+}
+
+/*
+ * pgstat_combine_one_qe_result() -
+ *
+ * Combine one pg_result's pgstat tables' stats from a QE. Process pg_result
+ * contains stats send from QE.
+ * The function should be called on QD after get dispatch results from QE
+ * for the operations that could have tuple inserted/updated/deleted on
+ * QEs.
+ * Normally using pgstat_combine_from_qe(). Current function are also called
+ * in cdbCopyEndInternal().
+ * oidMap - an oid bitmapset, record the processed table oid. To distinguish
+ * whether reset or sum on current PgStat_TableXactStatus entry for the table.
+ * pgresult - pointer of pg_result
+ * nest_level - current xact nest level
+ * segindex - the QE segment index for the current pgresult, for logging purpose
+ */
+void
+pgstat_combine_one_qe_result(Bitmapset **oidMap, struct pg_result *pgresult,
+							 int nest_level, int32 segindex)
+{
+	int						arrayLen;
+	PgStatTabRecordFromQE  *records;
+	PgStat_SubXactStatus   *xact_state;
+	PgStat_TableStatus	   *pgstat_info;
+	PgStat_TableXactStatus *trans;
+
+	if (!pgresult || pgresult->extraslen < 1 || pgresult->extraType != PGExtraTypeTableStats)
+		return;
+	/*
+	* If this is the first rel to be modified at the current nest level,
+	* we first have to push a transaction stack entry.
+	*/
+	xact_state = get_tabstat_stack_level(nest_level);
+
+	arrayLen = pgresult->extraslen / sizeof(PgStatTabRecordFromQE);
+	records = (PgStatTabRecordFromQE *) pgresult->extras;
+	for (int i = 0; i < arrayLen; i++)
+	{
+		char		   *relname;
+		Assert(records[i].nest_level = nest_level);
+
+		relname = get_rel_name(records[i].table_stat.t_id);
+		if (!relname)
+			continue;
+
+		/* Find or create a tabstat entry for the rel */
+		pgstat_info = get_tabstat_entry(
+			records[i].table_stat.t_id, records[i].table_stat.t_shared);
+
+		if (pgstat_info->trans == NULL ||
+			pgstat_info->trans->nest_level != nest_level)
+			add_tabstat_xact_level(pgstat_info, nest_level);
+		trans = pgstat_info->trans;
+		if (bms_is_member(records[i].table_stat.t_id, *oidMap))
+		{
+			/*
+			 * Same table pgstat from different QE;
+			 */
+			trans->tuples_inserted += records[i].table_stat.tuples_inserted;
+			trans->tuples_updated += records[i].table_stat.tuples_updated;
+			trans->tuples_deleted += records[i].table_stat.tuples_deleted;
+			trans->truncated = (trans->truncated ||
+								records[i].table_stat.t_truncated) ? true : false;
+			trans->inserted_pre_trunc += records[i].table_stat.inserted_pre_trunc;
+			trans->updated_pre_trunc += records[i].table_stat.updated_pre_trunc;
+			trans->deleted_pre_trunc += records[i].table_stat.deleted_pre_trunc;
+		}
+		else
+		{
+			/*
+			 * First time see the table from a QE, overwrite existing records,
+			 * since the results could belong to same transaction nest level,
+			 * it already contians the previous count collected from previous
+			 * statement.
+			 */
+			*oidMap = bms_add_member(*oidMap, records[i].table_stat.t_id);
+			trans->tuples_inserted = records[i].table_stat.tuples_inserted;
+			trans->tuples_updated = records[i].table_stat.tuples_updated;
+			trans->tuples_deleted = records[i].table_stat.tuples_deleted;
+			trans->truncated = records[i].table_stat.t_truncated;
+			trans->inserted_pre_trunc = records[i].table_stat.inserted_pre_trunc;
+			trans->updated_pre_trunc = records[i].table_stat.updated_pre_trunc;
+			trans->deleted_pre_trunc = records[i].table_stat.deleted_pre_trunc;
+
+#ifdef FAULT_INJECTOR
+			FaultInjector_InjectFaultIfSet(
+				"gp_pgstat_report_on_master", DDLNotSpecified,
+				"", relname);
+#endif
+		}
+
+		ereport(DEBUG3,
+				(errmsg("Update pgstat from segment %d for current xact nest_level: %d, "
+						"relation name: %s, relation oid: %d. "
+						"Sum of inserted: %ld, updated: %ld, deleted: %ld.",
+						segindex, nest_level, relname, pgstat_info->t_id,
+						trans->tuples_inserted, trans->tuples_updated,
+						trans->tuples_deleted)));
+		pfree(relname);
+	}
+}
+
+/*
+ * pgstat_combine_from_qe() -
+ *
+ * Combine the pgstat tables stats on QD from dispatch result for each QE.
+ * The function should be called on QD after get dispatch results from QE
+ * for the operations that could have tuple inserted/updated/deleted on
+ * QEs.
+ * Currently this function are called in cdbdisp_dispatchCommandInternal(),
+ * mppExecutorFinishup() and ExecSetParamPlan().
+ */
+void
+pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
+{
+	CdbDispatchResult	   *dispatchResult;
+	CdbDispatchResult	   *resultEnd;
+	struct pg_result	   *pgresult;
+	Bitmapset			   *oidMap = NULL;
+	int						nest_level;
+
+	if (!pgstat_track_counts)
+		return;
+
+	resultEnd = cdbdisp_resultEnd(results, writerSliceIndex);
+	nest_level = GetCurrentTransactionNestLevel();
+
+	for (dispatchResult = cdbdisp_resultBegin(results, writerSliceIndex);
+		 dispatchResult < resultEnd; ++dispatchResult)
+	{
+		Assert(dispatchResult->okindex >= 0);
+
+		pgresult = cdbdisp_getPGresult(dispatchResult, dispatchResult->okindex);
+		if (pgresult && !dispatchResult->errcode && pgresult->extraslen > 0 &&
+			pgresult->extraType == PGExtraTypeTableStats)
+		{
+			pgstat_combine_one_qe_result(&oidMap, pgresult, nest_level,
+										 dispatchResult->segdbDesc->segindex);
+		}
+	}
+}
 
 /* ----------
  * PgstatCollectorMain() -
@@ -6962,102 +7194,4 @@ pgstat_clip_activity(const char *raw_activity)
 	activity[cliplen] = '\0';
 
 	return activity;
-}
-
-/*
- * just as pgstat_count_heap_update(), with an extra parameter ntuples.
- * ntuples is used to specify how many rows the caller has updated.
- */
-static void
-gp_pgstat_count_heap_update(PgStat_TableStatus *pgstat_info, PgStat_Counter ntuples)
-{
-	int nest_level = GetCurrentTransactionNestLevel();
-	if (pgstat_info->trans == NULL || pgstat_info->trans->nest_level != nest_level)
-		add_tabstat_xact_level(pgstat_info, nest_level);
-	pgstat_info->trans->tuples_updated += ntuples;
-}
-
-/*
- * just as pgstat_count_heap_delete(), with an extra parameter ntuples.
- * ntuples is used to specify how many rows the caller has deleted.
- */
-static void
-gp_pgstat_count_heap_delete(PgStat_TableStatus *pgstat_info, PgStat_Counter ntuples)
-{
-	int nest_level = GetCurrentTransactionNestLevel();
-	if (pgstat_info->trans == NULL || pgstat_info->trans->nest_level != nest_level)
-		add_tabstat_xact_level(pgstat_info, nest_level);
-	pgstat_info->trans->tuples_deleted += ntuples;
-}
-
-/*
- * Report the statistics gathered by QD to statistics collector.
- * These parameters tell us that 'tuples' rows of table 'reloid' has changed,
- * and 'cmdtype' specifies the type of change.
- * reloid must have been locked.
- */
-void
-gp_pgstat_report_tabstat(AutoStatsCmdType cmdtype, Oid reloid, uint64 tuples)
-{
-	if (Gp_role != GP_ROLE_DISPATCH || reloid == InvalidOid || tuples <= 0
-		|| get_rel_relkind(reloid) != RELKIND_RELATION)
-		return;
-
-	Relation rel = relation_open(reloid, NoLock);
-	if (!rel->pgstat_info)
-	{
-		relation_close(rel, NoLock);
-		return;
-	}
-
-	switch (cmdtype)
-	{
-		case AUTOSTATS_CMDTYPE_CTAS:
-		case AUTOSTATS_CMDTYPE_INSERT:
-		case AUTOSTATS_CMDTYPE_COPY:
-			pgstat_count_heap_insert(rel, tuples);
-			break;
-		case AUTOSTATS_CMDTYPE_UPDATE:
-			gp_pgstat_count_heap_update(rel->pgstat_info, tuples);
-			break;
-		case AUTOSTATS_CMDTYPE_DELETE:
-			gp_pgstat_count_heap_delete(rel->pgstat_info, tuples);
-			break;
-		default:
-			break;
-	}
-
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		"gp_pgstat_report_on_master", DDLNotSpecified,
-		"", RelationGetRelationName(rel));
-#endif
-
-	relation_close(rel, NoLock);
-}
-
-/*
- * collect_tabstat - collect relation's pgstat or do auto_stats.
- * it should be called after QD have gathered the number of tuples changed in QEs.
- * cmdType specifies the type of change.
- *
- * ntuples means the processed tuples for a relation at end of a command execution
- * on QD.
- *
- * NOTE: If the autovacuum is enabled on master, collect gpstat for the target
- * relation for ANALYZE. Currently this is not support for partition table.
- * This is because we don't have accurate pgstat on QD for parent table and child
- * table. So run auto_stats for partition table.
- * For relation who's storage parameter autovacuum_enable=false with autovacuum
- * enabled, neither autovacuum ANALYZE nor auto_stats will execute for it. Users
- * need to manually run ANALYZE for it. This is same with Postgres.
- */
-void
-collect_tabstat(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFunction)
-{
-	if (Gp_role == GP_ROLE_DISPATCH && AutoVacuumingActive() &&
-		get_rel_relkind(relationOid) != RELKIND_PARTITIONED_TABLE)
-		return gp_pgstat_report_tabstat(cmdType, relationOid, ntuples);
-	else
-		return auto_stats(cmdType, relationOid, ntuples, inFunction);
 }

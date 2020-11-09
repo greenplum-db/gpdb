@@ -333,7 +333,7 @@ CJobGroupExpressionImplementation::ScheduleJob(CSchedulerContext *psc,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupExpressionImplementation::OsPrint(IOstream &os)
+CJobGroupExpressionImplementation::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

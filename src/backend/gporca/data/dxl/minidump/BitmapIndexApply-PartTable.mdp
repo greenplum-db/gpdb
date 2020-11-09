@@ -1400,7 +1400,7 @@ ORDER BY 1 asc ;
     <dxl:Plan Id="0" SpaceSize="35">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="24.847656" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="49.447266" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1413,7 +1413,7 @@ ORDER BY 1 asc ;
         </dxl:SortingColumnList>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="23.843750" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="48.443359" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="23"/>
@@ -1426,7 +1426,7 @@ ORDER BY 1 asc ;
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="22.820312" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="47.419922" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1441,7 +1441,7 @@ ORDER BY 1 asc ;
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="21.820312" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="46.419922" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1457,7 +1457,7 @@ ORDER BY 1 asc ;
               </dxl:HashExprList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="20.816406" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="45.416016" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1477,7 +1477,7 @@ ORDER BY 1 asc ;
                 <dxl:OneTimeFilter/>
                 <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="19.808594" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="44.408203" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -1532,7 +1532,7 @@ ORDER BY 1 asc ;
                   </dxl:BroadcastMotion>
                   <dxl:Sequence>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2.419922" Rows="1.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="27.019531" Rows="1.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="11" Alias="ets">
@@ -1568,7 +1568,7 @@ ORDER BY 1 asc ;
                     </dxl:PartitionSelector>
                     <dxl:DynamicBitmapTableScan PartIndexId="1">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="2.419922" Rows="1.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="27.019531" Rows="1.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="11" Alias="ets">
@@ -1582,12 +1582,22 @@ ORDER BY 1 asc ;
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter>
-                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                          <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
-                            <dxl:Ident ColId="12" ColName="sym" TypeMdid="0.1043.1.0"/>
-                          </dxl:Cast>
-                          <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
-                        </dxl:Comparison>
+                        <dxl:And>
+                          <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
+                            <dxl:Ident ColId="11" ColName="ets" TypeMdid="0.20.1.0"/>
+                            <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                          </dxl:Comparison>
+                          <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
+                            <dxl:Ident ColId="15" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                            <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                          </dxl:Comparison>
+                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                            <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
+                              <dxl:Ident ColId="12" ColName="sym" TypeMdid="0.1043.1.0"/>
+                            </dxl:Cast>
+                            <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
+                          </dxl:Comparison>
+                        </dxl:And>
                       </dxl:Filter>
                       <dxl:RecheckCond>
                         <dxl:And>

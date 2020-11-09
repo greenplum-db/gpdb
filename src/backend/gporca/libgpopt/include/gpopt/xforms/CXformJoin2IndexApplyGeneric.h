@@ -79,7 +79,7 @@ public:
 	}
 
 	CLogicalApply *
-	PopLogicalApply(CMemoryPool *, CColRefArray *) const override
+	PopLogicalApply(CMemoryPool *, CColRefArray *, CExpression *) const override
 	{
 		return NULL;
 	}

@@ -4855,7 +4855,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			pass = AT_PASS_MISC;
 			break;
 		case AT_ExpandTable:
-			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
+			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
 
 			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
 			if (!recursing)
@@ -16378,7 +16378,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 
-		collect_tabstat(cmdType, relationOid, queryDesc->es_processed, false);
+		auto_stats(cmdType, relationOid, queryDesc->es_processed, false);
 
 		FreeQueryDesc(queryDesc);
 
@@ -16908,7 +16908,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ExecutorEnd(queryDesc);
 
 			if (Gp_role == GP_ROLE_DISPATCH)
-				collect_tabstat(cmdType, relationOid, queryDesc->es_processed,
+				auto_stats(cmdType, relationOid, queryDesc->es_processed,
 								false);
 
 			FreeQueryDesc(queryDesc);

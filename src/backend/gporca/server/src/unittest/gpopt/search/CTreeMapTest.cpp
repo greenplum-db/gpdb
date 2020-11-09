@@ -310,7 +310,6 @@ CTreeMapTest::EresUnittest_Unrank()
 		oss << "=== tree rank: " << ulRank << " ===" << std::endl;
 		BOOL fFlag = true;
 		CNode *pnd = ptmap->PrUnrank(mp, &fFlag, ulRank);
-		(void) pnd->OsPrint(oss);
 
 		pnd->Release();
 	}

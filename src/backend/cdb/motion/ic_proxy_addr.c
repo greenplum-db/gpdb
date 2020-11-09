@@ -28,14 +28,122 @@
 
 
 /*
- * List<ICProxyAddr *>, the addresses list.
+ * List<ICProxyAddr *>, the current addresses list.
  */
 List	   *ic_proxy_addrs = NIL;
+
+/*
+ * List<ICProxyAddr *>, the previous addresses list.
+ *
+ * It holds the memory of all the addresses, so the classified lists can only
+ * hold a ref.
+ */
+List	   *ic_proxy_prev_addrs = NIL;
+
+/*
+ * List<unowned ICProxyAddr *>, the classified addresses lists.
+ *
+ * - if an address is removed from the GUC gp_interconnect_proxy_addresses,
+ *   it is put in the "removed" list;
+ * - if an address is newly added to the GUC, it is in the "added" list;
+ * - if an address is updated, it is in both the "removed" and "added" lists;
+ *
+ * The addresses of these lists must not be freed, they are actually held by
+ * ic_proxy_addrs or ic_proxy_prev_addrs.
+ */
+List	   *ic_proxy_removed_addrs = NIL;
+List	   *ic_proxy_added_addrs = NIL;
 
 /*
  * List<ICProxyAddr *>, the addresses list that are being resolved.
  */
 static List *ic_proxy_unknown_addrs = NIL;
+
+/*
+ * My address.
+ */
+static ICProxyAddr *ic_proxy_my_addr = NULL;
+
+static int
+ic_proxy_addr_compare_dbid(const void *a, const void *b, void *arg)
+{
+	const ICProxyAddr *addr1 = a;
+	const ICProxyAddr *addr2 = b;
+
+	return addr1->dbid - addr2->dbid;
+}
+
+/*
+ * Classify the addrs as added, deleted, updated and unchanged.
+ *
+ * Both the old and new lists must be sorted by dbid, the caller is responsible
+ * to ensure this.
+ */
+static void
+ic_proxy_classify_addresses(List *oldaddrs, List *newaddrs)
+{
+	ListCell   *lcold;
+	ListCell   *lcnew;
+
+	ic_proxy_added_addrs = ic_proxy_list_free(ic_proxy_added_addrs);
+	ic_proxy_removed_addrs = ic_proxy_list_free(ic_proxy_removed_addrs);
+
+	lcold = list_head(oldaddrs);
+	lcnew = list_head(newaddrs);
+	while (lcold && lcnew)
+	{
+		ICProxyAddr *old = lfirst(lcold);
+		ICProxyAddr *new = lfirst(lcnew);
+
+		if (old->dbid < new->dbid)
+		{
+			/* the address is removed */
+			ic_proxy_removed_addrs = lappend(ic_proxy_removed_addrs, old);
+			lcold = lnext(lcold);
+		}
+		else if (old->dbid > new->dbid)
+		{
+			/* the address is newly added */
+			ic_proxy_added_addrs = lappend(ic_proxy_added_addrs, new);
+			lcnew = lnext(lcnew);
+		}
+		/*
+		 * note that the new->sockaddr is not filled yet, so we must compare
+		 * with the hostname and service as strings.
+		 */
+		else if (strcmp(old->service, new->service) ||
+				 strcmp(old->hostname, new->hostname))
+		{
+			/* the address is updated */
+			ic_proxy_removed_addrs = lappend(ic_proxy_removed_addrs, old);
+			ic_proxy_added_addrs = lappend(ic_proxy_added_addrs, new);
+			lcold = lnext(lcold);
+			lcnew = lnext(lcnew);
+		}
+		else
+		{
+			/* the address is unchanged */
+			lcold = lnext(lcold);
+			lcnew = lnext(lcnew);
+		}
+	}
+
+	/* all the addresses remaining in the old list are removed */
+	for ( ; lcold; lcold = lnext(lcold))
+	{
+		ICProxyAddr *old = lfirst(lcold);
+
+		ic_proxy_removed_addrs = lappend(ic_proxy_removed_addrs, old);
+	}
+
+	/* all the addresses remaining in the new list are newly added */
+	for ( ; lcnew; lcnew = lnext(lcnew))
+	{
+		ICProxyAddr *new = lfirst(lcnew);
+
+		ic_proxy_added_addrs = lappend(ic_proxy_added_addrs, new);
+	}
+}
 
 /*
  * Resolved one address.
@@ -98,7 +206,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 			}
 #endif /* IC_PROXY_LOG_LEVEL <= LOG */
 
-			memcpy(&addr->addr, iter->ai_addr, iter->ai_addrlen);
+			memcpy(&addr->sockaddr, iter->ai_addr, iter->ai_addrlen);
 			ic_proxy_addrs = lappend(ic_proxy_addrs, addr);
 			break;
 		}
@@ -117,18 +225,13 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 void
 ic_proxy_reload_addresses(uv_loop_t *loop)
 {
-	/* reset the old addresses */
-	{
-		ListCell   *cell;
-
-		foreach(cell, ic_proxy_addrs)
-		{
-			ic_proxy_free(lfirst(cell));
-		}
-
-		list_free(ic_proxy_addrs);
-		ic_proxy_addrs = NIL;
-	}
+	/*
+	 * save the old addresses to the "prev" list, it is used to know the diffs
+	 * of the addresses.
+	 */
+	ic_proxy_prev_addrs = ic_proxy_list_free_deep(ic_proxy_prev_addrs);
+	ic_proxy_prev_addrs = ic_proxy_addrs;
+	ic_proxy_addrs = NULL;
 
 	/* cancel any unfinished getaddrinfo reqs */
 	{
@@ -144,6 +247,8 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 
 		list_free(ic_proxy_unknown_addrs);
 		ic_proxy_unknown_addrs = NIL;
+
+		ic_proxy_my_addr = NULL;
 	}
 
 	/* parse the new addresses */
@@ -182,6 +287,9 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 			snprintf(addr->service, sizeof(addr->service), "%d", port);
 			ic_proxy_unknown_addrs = lappend(ic_proxy_unknown_addrs, addr);
 
+			if (dbid == GpIdentity.dbid)
+				ic_proxy_my_addr = addr;
+
 			ic_proxy_log(LOG,
 						 "ic-proxy-addr: seg%d,dbid%d: parsed addr: %s:%d",
 						 content, dbid, hostname, port);
@@ -193,6 +301,14 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 		fclose(f);
 		ic_proxy_free(buf);
 	}
+
+	/* sort the new addrs so it's easy to diff */
+	ic_proxy_unknown_addrs = list_qsort(ic_proxy_unknown_addrs,
+										ic_proxy_addr_compare_dbid, NULL);
+
+	/* the last thing is to classify the addrs */
+	ic_proxy_classify_addresses(ic_proxy_prev_addrs /* oldaddrs */,
+								ic_proxy_unknown_addrs /* newaddrs */);
 }
 
 /*
@@ -203,16 +319,8 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 const ICProxyAddr *
 ic_proxy_get_my_addr(void)
 {
-	ListCell   *cell;
-	int			dbid = GpIdentity.dbid;
-
-	foreach(cell, ic_proxy_addrs)
-	{
-		ICProxyAddr *addr = lfirst(cell);
-
-		if (addr->dbid == dbid)
-			return addr;
-	}
+	if (ic_proxy_my_addr)
+		return ic_proxy_my_addr;
 
 	ic_proxy_log(LOG, "ic-proxy-addr: cannot get my addr");
 	return NULL;
@@ -226,14 +334,14 @@ ic_proxy_get_my_addr(void)
 int
 ic_proxy_addr_get_port(const ICProxyAddr *addr)
 {
-	if (addr->addr.ss_family == AF_INET)
+	if (addr->sockaddr.ss_family == AF_INET)
 		return ntohs(((struct sockaddr_in *) addr)->sin_port);
-	else if (addr->addr.ss_family == AF_INET6)
+	else if (addr->sockaddr.ss_family == AF_INET6)
 		return ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
 
 	ic_proxy_log(WARNING,
 				 "ic-proxy-addr: invalid address family %d for seg%d,dbid%d",
-				 addr->addr.ss_family, addr->content, addr->dbid);
+				 addr->sockaddr.ss_family, addr->content, addr->dbid);
 	return -1;
 }
 
@@ -255,8 +363,8 @@ ic_proxy_addr_get_port(const ICProxyAddr *addr)
  * error code.
  */
 int
-ic_proxy_extract_addr(const struct sockaddr *addr,
-					  char *name, size_t namelen, int *port, int *family)
+ic_proxy_extract_sockaddr(const struct sockaddr *addr,
+						  char *name, size_t namelen, int *port, int *family)
 {
 	int			ret;
 
