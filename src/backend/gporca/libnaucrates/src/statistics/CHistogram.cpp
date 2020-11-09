@@ -117,6 +117,8 @@ CHistogram::SetNullFrequency(CDouble null_freq)
 	m_null_freq = null_freq;
 }
 
+FORCE_GENERATE_DBGSTR(gpnaucrates::CHistogram);
+
 //	print function
 IOstream &
 CHistogram::OsPrint(IOstream &os) const

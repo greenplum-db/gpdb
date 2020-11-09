@@ -32,7 +32,6 @@
 #include "naucrates/md/IMDRelStats.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 
-
 using namespace gpopt;
 
 // how many expressions will we return at the end of the DP phase?
@@ -1805,6 +1804,8 @@ CJoinOrderDPv2::LevelIsFull(ULONG level)
 	return li->m_top_k_groups->IsLimitExceeded();
 }
 
+
+FORCE_GENERATE_DBGSTR(gpopt::CJoinOrderDPv2);
 
 //---------------------------------------------------------------------------
 //	@function:

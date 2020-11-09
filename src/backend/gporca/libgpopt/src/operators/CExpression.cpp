@@ -37,7 +37,6 @@
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/traceflags/traceflags.h"
 
-
 using namespace gpnaucrates;
 using namespace gpopt;
 
@@ -1122,6 +1121,8 @@ CExpression::DbgPrintWithProperties() const
 }
 
 #endif	// GPOS_DEBUG
+
+FORCE_GENERATE_DBGSTR(gpopt::CExpression);
 
 //---------------------------------------------------------------------------
 //	@function:

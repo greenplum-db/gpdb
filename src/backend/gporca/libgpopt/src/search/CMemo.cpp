@@ -610,6 +610,8 @@ CMemo::Trace()
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::CMemo);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMemo::OsPrint

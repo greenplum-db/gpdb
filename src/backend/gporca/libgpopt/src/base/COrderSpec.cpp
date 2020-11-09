@@ -75,6 +75,8 @@ COrderSpec::COrderExpression::Matches(const COrderExpression *poe) const
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::COrderSpec::COrderExpression);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		COrderSpec::COrderExpression::OsPrint

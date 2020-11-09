@@ -93,6 +93,8 @@ CColRef::HashValue(const CColRef *colref)
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::CColRef);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CColRef::OsPrint
