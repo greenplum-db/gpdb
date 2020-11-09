@@ -84,6 +84,7 @@ DefineOperator(List *names, List *parameters)
 	Oid			functionOid;	/* functions converted to OID */
 	Oid			restrictionOid;
 	Oid			joinOid;
+	Oid			joinOid2;
 	Oid			typeId[5];		/* only need up to 5 args here */
 	int			nargs;
 	ListCell   *pl;
