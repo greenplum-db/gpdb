@@ -270,7 +270,6 @@ extern bool Debug_print_parse;
 extern bool Debug_print_rewritten;
 extern bool Debug_pretty_print;
 
-extern bool dev_opt_unsafe_truncate_in_subtransaction;
 extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool Debug_disable_distributed_snapshot;

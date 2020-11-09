@@ -111,7 +111,6 @@ bool        gp_guc_need_restore = false;
 
 char	   *Debug_dtm_action_sql_command_tag;
 
-bool		dev_opt_unsafe_truncate_in_subtransaction = false;
 bool		Debug_print_full_dtm = false;
 bool		Debug_print_snapshot_dtm = false;
 bool		Debug_disable_distributed_snapshot = false;
@@ -1048,21 +1047,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL
 		},
 		&gp_debug_resqueue_priority,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"dev_opt_unsafe_truncate_in_subtransaction", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Pick unsafe truncate instead of safe truncate inside sub-transaction."),
-		 gettext_noop("Usage of this GUC is strongly discouraged and only "
-					  "should be used after understanding the impact of using "
-					  "the same. Setting the GUC comes with cost of losing "
-					  "table data on truncate command despite sub-transaction "
-					  "rollback for table created within transaction."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_DISALLOW_IN_AUTO_FILE
-		},
-		&dev_opt_unsafe_truncate_in_subtransaction,
 		false,
 		NULL, NULL, NULL
 	},
