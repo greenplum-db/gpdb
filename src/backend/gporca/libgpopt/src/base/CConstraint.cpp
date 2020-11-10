@@ -768,6 +768,12 @@ CConstraint::PdrgpcnstrDeduplicate(CMemoryPool *mp,
 			continue;
 		}
 
+		if (0 == pcrs->Size())
+		{
+			// skip current contraint if comparing with empty array
+			continue;
+		}
+
 		CColRef *colref = pcrs->PcrFirst();
 		if (pcrsDeduped->FMember(colref))
 		{
