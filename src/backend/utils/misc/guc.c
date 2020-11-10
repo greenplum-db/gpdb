@@ -3696,9 +3696,7 @@ static struct config_string ConfigureNamesString[] =
 			GUC_NO_SHOW_ALL
 		},
 		&Log_line_prefix,
-		/* GPDB_12_MERGE_FIXME: Could we adopt the upstream's default? Is there some
-		 * reason for this particular prefix in GPDB? */
-		"%m|%u|%d|%p|%I|%X|:-",
+		"%m [%p] ",
 		NULL, NULL, NULL
 	},
 

@@ -72,6 +72,7 @@
 #include "catalog/aoblkdir.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/oid_dispatch.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
@@ -680,28 +681,32 @@ DefineIndex(Oid relationId,
 	 * parallel workers under the control of certain particular ambuild
 	 * functions will need to be updated, too.
 	 */
+	lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
+
 	/*
-	 * GPDB_12_MERGE_FIXME: Appendoptimized tables need block directory
-	 * relation for index access.  Creating and maintaining block directory is
-	 * expensive, because it needs to be kept up to date whenever new data is
-	 * inserted in the table.  We delay the block directory creation until it
-	 * is really needed - the first index creation.  Once created, all indexes
-	 * share the same block directory.  We need stronger lock
+	 * Appendoptimized tables need block directory relation for index
+	 * access. Creating and maintaining block directory is expensive,
+	 * because it needs to be kept up to date whenever new data is inserted
+	 * in the table. We delay the block directory creation until it is
+	 * really needed - the first index creation. Once created, all indexes
+	 * share the same block directory. We need stronger lock
 	 * (ShareRowExclusiveLock) that blocks index creation from another
-	 * transaction (not to be confused with create index concurrently) as well
-	 * as concurrent insert for appendoptimized tables, if the block directory
-	 * needs to be created.  If the block directory already exists, we can use
-	 * the same lock as heap tables but this is not currently implemented
-	 * (hence the fixme).
+	 * transaction (not to be confused with create index concurrently) as
+	 * well as concurrent insert for appendoptimized tables, if the block
+	 * directory needs to be created. If the block directory already exists,
+	 * we can use the same lock as heap tables.
 	 */
+	rel = table_open(relationId, NoLock);
+	if (RelationIsAppendOptimized(rel))
 	{
-		rel = table_open(relationId, NoLock);
-		if (RelationIsAppendOptimized(rel))
-			lockmode = ShareRowExclusiveLock;
-		else
-			lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
-		table_close(rel, NoLock);
+		Oid blkdirrelid = InvalidOid;
+		GetAppendOnlyEntryAuxOids(relationId, NULL, NULL, &blkdirrelid, NULL, NULL, NULL);
+
+		if (!OidIsValid(blkdirrelid))
+			lockmode = ShareRowExclusiveLock; /* Relation is AO, and has no block directory */
 	}
+	table_close(rel, NoLock);
+
 	rel = table_open(relationId, lockmode);
 
 	namespaceId = RelationGetNamespace(rel);

@@ -740,8 +740,9 @@ pg_file_length(PG_FUNCTION_ARGS)
 
 
 /*
- * GPDB_12_MERGE_FIXME: Perhaps this function can call into generic function
- * pg_ls_dir_files() rather than re-implmenting much of the same pattern.
+ * This function returns the name and creation time of the log files, the creation
+ * time is parsed from the file name. It's different from 'pg_ls_dir_files' because
+ * it returns the modification time of the log files.
  */
 Datum
 pg_logdir_ls(PG_FUNCTION_ARGS)

@@ -89,8 +89,6 @@ extern size_t url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstat
 extern void url_fflush(URL_FILE *file, CopyState pstate);
 
 /* prototypes for functions in url_execute.c */
-extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
-extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
 extern char *make_command(const char *cmd, extvar_t *ev);
 
 /* implementation-specific functions. */
