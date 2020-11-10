@@ -57,6 +57,7 @@
             <topicref href="guc-list.xml#default_transaction_deferrable"/>
             <topicref href="guc-list.xml#default_transaction_isolation"/>
             <topicref href="guc-list.xml#default_transaction_read_only"/>
+            <topicref href="guc-list.xml#dtx_phase2_retry_count"/>
             <topicref href="guc-list.xml#dynamic_library_path"/>
             <topicref href="guc-list.xml#effective_cache_size"/>
             <topicref href="guc-list.xml#enable_bitmapscan"/>

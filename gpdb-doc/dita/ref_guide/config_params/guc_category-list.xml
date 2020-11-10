@@ -1488,6 +1488,12 @@
                   >gp_max_local_distributed_cache</xref>
               </p>
             </stentry>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#dtx_phase2_retry_count" type="section"
+                  >dtx_phase2_retry_count</xref>
+              </p>
+            </stentry>
           </strow>
         </simpletable>
       </body>

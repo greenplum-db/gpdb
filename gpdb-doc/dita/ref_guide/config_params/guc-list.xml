@@ -99,6 +99,9 @@
               <xref href="#default_transaction_read_only"/>
             </li>
             <li>
+              <xref href="#dtx_phase2_retry_count"/>
+            </li>
+            <li>
               <xref href="#dynamic_library_path"/>
             </li>
             <li>
@@ -1566,6 +1569,38 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="dtx_phase2_retry_count">
+    <title>dtx_phase2_retry_count</title>
+    <body>
+      <p>The maximum number of retries during two phase commit, after which the
+        Greenplum Database master generates a PANIC.</p>
+      <p>When the network is unstable, the master may be unable to connect to one
+        or more segments; increasing the number of two phase commit retries may
+        aid Greenplum recovery when the master encounters transient network
+        issues.</p>
+      <table id="dtx_phase2_retry_count_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - <codeph>INT_MAX</codeph></entry>
+              <entry colname="col2">10</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
