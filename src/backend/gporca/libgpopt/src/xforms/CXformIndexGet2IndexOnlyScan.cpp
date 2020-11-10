@@ -110,6 +110,14 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	for (ULONG i = 0; i < pdrgpcrOutput->Size(); i++)
 	{
 		CColRef *col = (*pdrgpcrOutput)[i];
+
+		// In most cases we want to treat system columns unconditionally as
+		// used. This is because certain transforms like those for DML or
+		// CXformPushGbBelowJoin use unique keys in the derived properties,
+		// even if they are not referenced in the query. Those keys are system
+		// columns gp_segment_id and ctid. We also treat distribution columns
+		// as used, since they appear in the CDistributionSpecHashed of
+		// physical properties and therefore might be used in the plan.
 		if (col->GetUsage(true /*check_system_cols*/,
 						  true /*check_distribution_col*/) == CColRef::EUsed)
 		{
