@@ -34,6 +34,7 @@ CConstraintDisjunction::CConstraintDisjunction(CMemoryPool *mp,
 	m_pdrgpcnstr = PdrgpcnstrFlatten(mp, pdrgpcnstr, EctDisjunction);
 
 	const ULONG length = m_pdrgpcnstr->Size();
+	GPOS_ASSERT(0 < length);
 
 	m_pcrsUsed = GPOS_NEW(mp) CColRefSet(mp);
 

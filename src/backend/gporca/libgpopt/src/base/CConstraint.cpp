@@ -135,6 +135,24 @@ CConstraint::PcnstrFromScalarArrayCmp(CMemoryPool *mp, CExpression *pexpr,
 			return NULL;
 		}
 
+		if (arity == 0)
+		{
+			if (earrccmpt == CScalarArrayCmp::EarrcmpAny)
+			{
+				CRangeArray *emptyRangeArray = GPOS_NEW(mp) CRangeArray(mp);
+				// comparing with an empty array for any ANY comparison produces a "false" constraint
+				// which is represented by an empty CConstraintInterval
+				return GPOS_NEW(mp) CConstraintInterval(
+					mp, colref, emptyRangeArray, false /*includes NULL*/);
+			}
+			else
+			{
+				// for an all comparison with an empty array, don't do further processing as we won't
+				// do simplification anyway
+				return NULL;
+			}
+		}
+
 		CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
 
 		for (ULONG ul = 0; ul < arity; ul++)
@@ -759,18 +777,13 @@ CConstraint::PdrgpcnstrDeduplicate(CMemoryPool *mp,
 		CConstraint *pcnstrChild = (*pdrgpcnstr)[ul];
 		CColRefSet *pcrs = pcnstrChild->PcrsUsed();
 
+		GPOS_ASSERT(0 != pcrs->Size());
 		// we only simplify constraints that reference a single column, otherwise
 		// we add constraint as is
-		if (1 < pcrs->Size())
+		if (1 != pcrs->Size())
 		{
 			pcnstrChild->AddRef();
 			pdrgpcnstrNew->Append(pcnstrChild);
-			continue;
-		}
-
-		if (0 == pcrs->Size())
-		{
-			// skip current contraint if comparing with empty array
 			continue;
 		}
 
