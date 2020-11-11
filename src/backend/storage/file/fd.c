@@ -1961,9 +1961,6 @@ FileClose(File file)
 		else
 			stat_errno = 0;
 
-		if (vfdP->fdstate & FD_WORKFILE)
-			WorkFileDeleted(file, true);
-
 		/* in any case do the unlink */
 		if (unlink(vfdP->fileName))
 			elog(DEBUG1, "could not unlink file \"%s\": %m", vfdP->fileName);
@@ -1981,6 +1978,10 @@ FileClose(File file)
 	/* Unregister it from the resource owner */
 	if (vfdP->resowner)
 		ResourceOwnerForgetFile(vfdP->resowner, file);
+
+	/* Unregister it from the workfile set */
+	if (vfdP->fdstate & FD_WORKFILE)
+		WorkFileDeleted(file, true);
 
 	/*
 	 * Return the Vfd slot to the free list
