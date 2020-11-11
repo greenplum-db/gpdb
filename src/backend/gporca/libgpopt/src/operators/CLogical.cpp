@@ -1392,10 +1392,6 @@ CLogical::PcrsDist(CMemoryPool *mp, const CTableDescriptor *ptabdesc,
 		CColumnDescriptor *pcoldesc = (*pdrgpcoldescDist)[ul2];
 		const INT attno = pcoldesc->AttrNum();
 		CColRef *pcrMapped = phmicr->Find(&attno);
-		// The distribution columns are not explicity referenced in the query but we
-		// still need to mark distribution columns as used since they are required
-		// to add motions
-		pcrMapped->MarkAsUsed();
 		GPOS_ASSERT(NULL != pcrMapped);
 		pcrsDist->Include(pcrMapped);
 	}
