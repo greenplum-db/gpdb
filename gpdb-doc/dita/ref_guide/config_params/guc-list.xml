@@ -1578,12 +1578,15 @@
   <topic id="dtx_phase2_retry_count">
     <title>dtx_phase2_retry_count</title>
     <body>
-      <p>The maximum number of retries during two phase commit, after which the
-        Greenplum Database master generates a PANIC.</p>
+      <p>The maximum number of retries attempted by Greenplum Database during the
+        second phase of a two phase commit. When one or more segments cannot
+        successfully complete the commit phase, the master retries the commit a
+        maximum of <codeph>dtx_phase2_retry_count</codeph> times. If the commit
+        continues to fail on the last retry attempt, the master generates a PANIC.</p>
       <p>When the network is unstable, the master may be unable to connect to one
         or more segments; increasing the number of two phase commit retries may
-        aid Greenplum recovery when the master encounters transient network
-        issues.</p>
+        improve high availability of Greenplum when the master encounters
+        transient network issues.</p>
       <table id="dtx_phase2_retry_count_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
