@@ -101,6 +101,12 @@ private:
 
 	// flag to indicate if input relation is empty
 	BOOL m_empty;
+	//
+	// number of blocks in the relation (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks in the relation (not always up-to-date)
+	ULONG m_relallvisible;
 
 	// statistics could be computed using predicates with external parameters (outer references),
 	// this is the total number of external parameters' values
@@ -139,6 +145,11 @@ public:
 				UlongToDoubleMap *colid_width_mapping, CDouble rows,
 				BOOL is_empty, ULONG num_predicates = 0);
 
+	CStatistics(CMemoryPool *mp, UlongToHistogramMap *col_histogram_mapping,
+				UlongToDoubleMap *colid_width_mapping, CDouble rows,
+				BOOL is_empty, ULONG relpages, ULONG relallvisible);
+
+
 	// dtor
 	virtual ~CStatistics();
 
@@ -151,6 +162,18 @@ public:
 
 	// actual number of rows
 	virtual CDouble Rows() const;
+
+	virtual ULONG
+	RelPages() const
+	{
+		return m_relpages;
+	}
+
+	virtual ULONG
+	RelAllVisible() const
+	{
+		return m_relallvisible;
+	}
 
 	// number of rebinds
 	virtual CDouble

@@ -2165,6 +2165,8 @@ CTranslatorRelcacheToDXL::RetrieveRelStats(CMemoryPool *mp, IMDId *mdid)
 
 	double num_rows = 0.0;
 	CMDName *mdname = NULL;
+	ULONG relpages = 0;
+	ULONG relallvisible = 0;
 
 	GPOS_TRY
 	{
@@ -2177,6 +2179,9 @@ CTranslatorRelcacheToDXL::RetrieveRelStats(CMemoryPool *mp, IMDId *mdid)
 		GPOS_DELETE(relname_str);
 
 		num_rows = gpdb::CdbEstimatePartitionedNumTuples(rel);
+
+		relpages = rel->rd_rel->relpages;
+		relallvisible = rel->rd_rel->relallvisible;
 
 		m_rel_stats_mdid->AddRef();
 		gpdb::CloseRelation(rel);
@@ -2198,9 +2203,9 @@ CTranslatorRelcacheToDXL::RetrieveRelStats(CMemoryPool *mp, IMDId *mdid)
 		relation_empty = true;
 	}
 
-	CDXLRelStats *dxl_rel_stats = GPOS_NEW(mp) CDXLRelStats(
-		mp, m_rel_stats_mdid, mdname, CDouble(num_rows), relation_empty);
-
+	CDXLRelStats *dxl_rel_stats = GPOS_NEW(mp)
+		CDXLRelStats(mp, m_rel_stats_mdid, mdname, CDouble(num_rows),
+					 relation_empty, relpages, relallvisible);
 
 	return dxl_rel_stats;
 }

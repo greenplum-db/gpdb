@@ -64,9 +64,16 @@ private:
 	// private copy ctor
 	CDXLRelStats(const CDXLRelStats &);
 
+	// number of blocks (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks (not always up-to-date)
+	ULONG m_relallvisible;
+
 public:
 	CDXLRelStats(CMemoryPool *mp, CMDIdRelStats *rel_stats_mdid,
-				 CMDName *mdname, CDouble rows, BOOL is_empty);
+				 CMDName *mdname, CDouble rows, BOOL is_empty, ULONG relpages,
+				 ULONG relallvisible);
 
 	virtual ~CDXLRelStats();
 
@@ -81,6 +88,20 @@ public:
 
 	// number of rows
 	virtual CDouble Rows() const;
+
+	// number of blocks (not always up to-to-date)
+	virtual ULONG
+	RelPages() const
+	{
+		return m_relpages;
+	}
+
+	// number of all-visible blocks (not always up-to-date)
+	virtual ULONG
+	RelAllVisible() const
+	{
+		return m_relallvisible;
+	}
 
 	// is statistics on an empty input
 	virtual BOOL

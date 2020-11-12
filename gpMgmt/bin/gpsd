@@ -59,7 +59,7 @@ def dumpGlobals(connectionInfo, envOpts):
 
 
 def dumpTupleCount(cur):
-    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples FROM pg_class pgc, pg_namespace pgn WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN " + \
+    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples, pgc.relallvisible FROM pg_class pgc, pg_namespace pgn WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN " + \
         sysnslist
     setStmt = '-- Table: {1}\n' \
         'UPDATE pg_class\nSET\n' \
@@ -69,7 +69,7 @@ def dumpTupleCount(cur):
 
     cur.execute(stmt)
     columns = map(lambda x: x[0], cur.description)
-    types = ['int', 'real']
+    types = ['int', 'real', 'int']
     for vals in ResultIter(cur):
         print setStmt.format(',\n'.join(map(lambda t: '\t%s = %s::%s' %
                                             t, zip(columns[2:], vals[2:], types))), vals[0], vals[1])

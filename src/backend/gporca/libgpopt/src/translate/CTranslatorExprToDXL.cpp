@@ -1529,6 +1529,7 @@ CTranslatorExprToDXL::PdxlnIndexScanWithInlinedCondition(
 
 	COperator::EOperatorId op_id = pexprIndexScan->Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopPhysicalIndexScan == op_id ||
+				COperator::EopPhysicalIndexOnlyScan == op_id ||
 				COperator::EopPhysicalDynamicIndexScan == op_id);
 
 	// TODO: Index only scans work on GiST and SP-GiST only for specific operators

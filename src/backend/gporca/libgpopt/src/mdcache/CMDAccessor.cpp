@@ -1119,8 +1119,9 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 
 	CDouble rows = std::max(DOUBLE(1.0), pmdRelStats->Rows().Get());
 
-	return GPOS_NEW(mp) CStatistics(mp, col_histogram_mapping,
-									colid_width_mapping, rows, fEmptyTable);
+	return GPOS_NEW(mp) CStatistics(
+		mp, col_histogram_mapping, colid_width_mapping, rows, fEmptyTable,
+		pmdRelStats->RelPages(), pmdRelStats->RelAllVisible());
 }
 
 

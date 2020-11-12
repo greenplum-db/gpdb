@@ -653,7 +653,7 @@ explain (costs off)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
-               ->  Index Scan using tenk1_unique1 on tenk1
+               ->  Index Only Scan using tenk1_unique1 on tenk1
                      Index Cond: (unique1 < 42)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
@@ -671,7 +671,7 @@ explain (costs off)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
-               ->  Index Scan using tenk1_unique1 on tenk1
+               ->  Index Only Scan using tenk1_unique1 on tenk1
                      Index Cond: (unique1 > 42)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
@@ -691,7 +691,7 @@ explain (costs off)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
-               ->  Index Scan using tenk1_unique1 on tenk1
+               ->  Index Only Scan using tenk1_unique1 on tenk1
                      Index Cond: (unique1 > 42000)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
@@ -711,7 +711,7 @@ explain (costs off)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
-               ->  Index Scan using tenk1_thous_tenthous on tenk1
+               ->  Index Only Scan using tenk1_thous_tenthous on tenk1
                      Index Cond: (thousand = 33)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
@@ -729,7 +729,7 @@ explain (costs off)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
-               ->  Index Scan using tenk1_thous_tenthous on tenk1
+               ->  Index Only Scan using tenk1_thous_tenthous on tenk1
                      Index Cond: (thousand = 33)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)

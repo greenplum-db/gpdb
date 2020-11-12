@@ -45,6 +45,7 @@ The results can be copied and pasted into a spreadsheet for further processing.
 TABLE_NAME_PATTERN = r"cal_txtest"
 NDV_TABLE_NAME_PATTERN = r"cal_ndvtest"
 BFV_TABLE_NAME_PATTERN = r"cal_bfvtest"
+WIDE_TABLE_NAME_PATTERN = r"cal_widetest"
 
 TABLE_SCAN = "table_scan"
 TABLE_SCAN_PATTERN = r"Seq Scan"
@@ -53,6 +54,10 @@ TABLE_SCAN_PATTERN_V5 = r"Table Scan"
 INDEX_SCAN = "index_scan"
 INDEX_SCAN_PATTERN = r">  Index Scan"
 INDEX_SCAN_PATTERN_V5 = r">  Index Scan"
+
+INDEX_ONLY_SCAN = "indexonly_scan"
+INDEX_ONLY_SCAN_PATTERN = r">  Index Only Scan"
+INDEX_ONLY_SCAN_PATTERN_V5 = r">  Index Only Scan"
 
 BITMAP_SCAN = "bitmap_scan"
 BITMAP_SCAN_PATTERN = r"Bitmap Heap Scan"
@@ -92,7 +97,7 @@ glob_appendonly = False
 # -----------------------------------------------------------------------------
 
 _drop_tables = """
-DROP TABLE IF EXISTS cal_txtest, cal_temp_ids, cal_dim, cal_bfvtest, cal_bfv_dim, cal_ndvtest;
+DROP TABLE IF EXISTS cal_txtest, cal_temp_ids, cal_dim, cal_bfvtest, cal_bfv_dim, cal_ndvtest, cal_widetest;
 """
 
 # create the table. Parameters:
@@ -281,9 +286,11 @@ def parseargs():
     parser = argparse.ArgumentParser(description=_help, version='1.0')
 
     parser.add_argument("tests", metavar="TEST", choices=[[], "all", "none", "bitmap_scan_tests", "btree_ao_scan_tests",
-                                                          "bitmap_ndv_scan_tests", "index_join_tests", "bfv_join_tests"],
+                                                          "bitmap_ndv_scan_tests", "index_join_tests", "bfv_join_tests",
+                                                          "index_only_scan_tests"],
                         nargs="*",
-                        help="Run these tests (all, none, bitmap_scan_tests, btree_ao_scan_tests, bitmap_ndv_scan_tests, index_join_tests, bfv_join_tests), default is none")
+                        help="Run these tests (all, none, bitmap_scan_tests, btree_ao_scan_tests, bitmap_ndv_scan_tests, "
+                              "index_join_tests, bfv_join_tests, index_only_scan_tests), default is none")
     parser.add_argument("--create", action="store_true",
                         help="Create the tables to use in the test")
     parser.add_argument("--execute", type=int, default="0",
@@ -452,22 +459,28 @@ def explain_index_scan(conn, sqlStr):
         rows = exp_curs.fetchall()
         table_scan_pattern = TABLE_SCAN_PATTERN
         index_scan_pattern = INDEX_SCAN_PATTERN
+        index_only_scan_pattern = INDEX_ONLY_SCAN_PATTERN
         bitmap_scan_pattern = BITMAP_SCAN_PATTERN
         fallback_pattern = FALLBACK_PATTERN
         if (glob_gpdb_major_version) <= 5:
             table_scan_pattern = TABLE_SCAN_PATTERN_V5
             index_scan_pattern = INDEX_SCAN_PATTERN_V5
+            index_only_scan_pattern = INDEX_ONLY_SCAN_PATTERN_V5
             bitmap_scan_pattern = BITMAP_SCAN_PATTERN_V5
             fallback_pattern = FALLBACK_PATTERN_V5
 
         for row in rows:
             log_output(row[0])
-            if re.search(TABLE_NAME_PATTERN, row[0]) or re.search(NDV_TABLE_NAME_PATTERN, row[0]):
+            if (re.search(TABLE_NAME_PATTERN, row[0]) or re.search(NDV_TABLE_NAME_PATTERN, row[0]) or
+                re.search(WIDE_TABLE_NAME_PATTERN, row[0])):
                 if re.search(bitmap_scan_pattern, row[0]):
                     scan_type = BITMAP_SCAN
                     cost = cost_from_explain_line(row[0])
                 elif re.search(index_scan_pattern, row[0]):
                     scan_type = INDEX_SCAN
+                    cost = cost_from_explain_line(row[0])
+                elif re.search(index_only_scan_pattern, row[0]):
+                    scan_type = INDEX_ONLY_SCAN
                     cost = cost_from_explain_line(row[0])
                 elif re.search(table_scan_pattern, row[0]):
                     scan_type = TABLE_SCAN
@@ -498,13 +511,14 @@ def explain_join_scan(conn, sqlStr):
         nl_join_pattern = NL_JOIN_PATTERN
         table_scan_pattern = TABLE_SCAN_PATTERN
         index_scan_pattern = INDEX_SCAN_PATTERN
+        index_only_scan_pattern = INDEX_ONLY_SCAN_PATTERN
         bitmap_scan_pattern = BITMAP_SCAN_PATTERN
         fallback_pattern = FALLBACK_PATTERN
         if (glob_gpdb_major_version) <= 5:
             hash_join_pattern = HASH_JOIN_PATTERN_V5
             nl_join_pattern = NL_JOIN_PATTERN_V5
             table_scan_pattern = TABLE_SCAN_PATTERN_V5
-            index_scan_pattern = INDEX_SCAN_PATTERN_V5
+            index_only_scan_pattern = INDEX_ONLY_SCAN_PATTERN_V5
             bitmap_scan_pattern = BITMAP_SCAN_PATTERN_V5
             fallback_pattern = FALLBACK_PATTERN_V5
 
@@ -515,12 +529,15 @@ def explain_join_scan(conn, sqlStr):
                 cost = cost_from_explain_line(row[0])
             elif re.search(hash_join_pattern, row[0]):
                 cost = cost_from_explain_line(row[0])
+
             # mark the scan type used underneath the join
             if re.search(TABLE_NAME_PATTERN, row[0]) or re.search(BFV_TABLE_NAME_PATTERN, row[0]):
                 if re.search(bitmap_scan_pattern, row[0]):
                     scan_type = BITMAP_SCAN
                 elif re.search(index_scan_pattern, row[0]):
                     scan_type = INDEX_SCAN
+                elif re.search(index_only_scan_pattern, row[0]):
+                    scan_type = INDEX_ONLY_SCAN
                 elif re.search(table_scan_pattern, row[0]):
                     scan_type = TABLE_SCAN
                 elif re.search(fallback_pattern, row[0]):
@@ -577,13 +594,7 @@ def find_crossover(conn, lowParamValue, highParamLimit, setup, parameterizeMetho
     execDict = {}
     errMessages = []
     timedOutDict = {}
-    expPrevPlan = ""
-    expPrevParamValue = lowParamValue
-    expCrossoverOccurred = False
     expCrossoverLow = lowParamValue - 1
-    expCrossoverHigh = highParamLimit
-    expCrossoverLowPlan = ""
-    expCrossoverHighPlan = ""
     reset_method(conn)
 
     # determine the increment
@@ -606,16 +617,6 @@ def find_crossover(conn, lowParamValue, highParamLimit, setup, parameterizeMetho
         (plan, cost) = explain_method(conn, sqlString)
         explainDict[paramValue] = (plan, cost)
         log_output("For param value %d the optimizer chose %s with a cost of %f" % (paramValue, plan, cost))
-
-        # look for the crossover from one plan to another
-        if not expCrossoverOccurred and paramValue > lowParamValue and plan != expPrevPlan:
-            expCrossoverOccurred = True
-            expCrossoverLow = expPrevParamValue
-            expCrossoverLowPlan = expPrevPlan
-            expCrossoverHigh = paramValue
-            expCrossoverHighPlan = plan
-        expPrevPlan = plan
-        expPrevParamValue = paramValue
 
         # execute the query, if requested
         if execute_n_times > 0:
@@ -825,7 +826,7 @@ def timed_execute_and_check_timeout(conn, sqlString, execute_n_times, paramValue
 #   created by this program or add more tables to be created.
 # - Define methods that parameterize these test queries, given an integer
 #   parameter value in a range that you can define later.
-# - Use the predefined types of plans (TABLE_SCAN, INDEX_SCAN) or add your
+# - Use the predefined types of plans (TABLE_SCAN, INDEX_SCAN, INDEX_ONLY_SCAN) or add your
 #   own plan types above. Note that you will also need to change or implement
 #   an explain method that takes a query, explains it, and returns the plan
 #   type and the estimated cost.
@@ -848,6 +849,9 @@ SELECT enable_xform('CXformImplementBitmapTableGet');
 """,
                             """
 SELECT enable_xform('CXformGet2TableScan');
+""",
+                            """
+SELECT enable_xform('CXformIndexGet2IndexScan');
 """ ]
 
 _force_sequential_scan = ["""
@@ -857,6 +861,10 @@ SELECT disable_xform('CXformImplementBitmapTableGet');
 _force_index_scan = ["""
 SELECT disable_xform('CXformGet2TableScan');
 """]
+
+_force_index_only_scan = ["SELECT disable_xform('CXformGet2TableScan');",
+                          "SELECT disable_xform('CXformIndexGet2IndexScan');"]
+
 
 _reset_index_join_forces = ["""
 SELECT enable_xform('CXformPushGbBelowJoin');
@@ -1001,6 +1009,7 @@ WHERE val <= 1000000;
 # Parameterize methods for the test queries above
 # -----------------------------------------------------------------------------
 
+
 # bitmap index scan with 0...100 % of values, for parameter values 0...10, in 10 % increments
 def parameterize_bitmap_index_10_narrow(paramValue):
     return _bitmap_select_10_pct % ("", paramValue)
@@ -1130,6 +1139,14 @@ def force_bitmap_scan(conn):
     execute_sql_arr(conn, _force_index_scan)
 
 
+def force_index_scan(conn):
+    execute_sql_arr(conn, _force_index_scan)
+
+
+def force_index_only_scan(conn):
+    execute_sql_arr(conn, _force_index_only_scan)
+
+
 def reset_index_join(conn):
     execute_sql_arr(conn, _reset_index_join_forces)
 
@@ -1166,11 +1183,50 @@ def run_one_bitmap_join_test(conn, testTitle, paramValueLow, paramValueHigh, set
                                                    execute_n_times)
     print_results(testTitle, explainDict, execDict, errors, plan_ids, execute_n_times)
 
+def run_one_index_scan_test(conn, testTitle, paramValueLow, paramValueHigh, setup, parameterizeMethod,
+                             execute_n_times):
+    log_output("Running index scan test " + testTitle)
+    plan_ids = [INDEX_SCAN, INDEX_ONLY_SCAN]
+    force_methods = [force_index_scan, force_index_only_scan]
+    explainDict, execDict, errors = find_crossover(conn, paramValueLow, paramValueHigh, setup, parameterizeMethod,
+                                                   explain_index_scan, reset_index_test, plan_ids, force_methods,
+                                                   execute_n_times)
+    print_results(testTitle, explainDict, execDict, errors, plan_ids, execute_n_times)
+
 
 # Main driver for the tests
 # -----------------------------------------------------------------------------
 
+def run_index_only_scan_tests(conn, execute_n_times):
+    def setup_wide_table(paramValue):
+        execute_sql_arr(conn, [
+            "DROP TABLE IF EXISTS cal_widetest;",
+            "CREATE TABLE cal_widetest(a int, {})".format(','.join('col' + str(i) + " text" for i in range(1, max(2, paramValue)))),
+            "CREATE INDEX cal_widetest_index ON cal_widetest(a);",
+            "TRUNCATE cal_widetest;",
+            "INSERT INTO cal_widetest SELECT i%50, {} FROM generate_series(1,100000)i;".format(','.join("repeat('a', 1024)" for i in range(1, max(2, paramValue)))),
+            "VACUUM ANALYZE cal_widetest;"
+        ])
+        return "select 1;"
+
+    def parameterized_method(paramValue):
+        return """
+            SELECT count(a)
+            FROM cal_widetest
+            WHERE a<25;
+            """
+
+    run_one_index_scan_test(conn,
+                            "Index Scan Test; Wide table; Narrow index",
+                            1,
+                            6,
+                            setup_wide_table,
+                            parameterized_method,
+                            execute_n_times)
+
+
 def run_bitmap_index_scan_tests(conn, execute_n_times):
+
     run_one_bitmap_scan_test(conn,
                              "Bitmap Scan Test; NDV=10; selectivity_pct=10*parameter_value; count(*)",
                              0,
@@ -1509,6 +1565,8 @@ def main():
                 run_btree_ao_index_scan_tests(conn, args.execute)
             run_index_join_tests(conn, args.execute)
             # skip the long-running bitmap_ndv_scan_tests and bfv_join_tests
+        elif test_unit == "index_only_scan_tests":
+            run_index_only_scan_tests(conn, args.execute)
         elif test_unit == "bitmap_scan_tests":
             run_bitmap_index_scan_tests(conn, args.execute)
         elif test_unit == "bitmap_ndv_scan_tests":

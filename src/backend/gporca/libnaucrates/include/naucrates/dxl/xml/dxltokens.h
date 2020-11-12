@@ -318,6 +318,8 @@ enum Edxltoken
 	EdxltokenTotalCost,
 	EdxltokenRows,
 	EdxltokenWidth,
+	EdxltokenRelPages,
+	EdxltokenRelAllVisible,
 	EdxltokenCTASOptions,
 	EdxltokenCTASOption,
 

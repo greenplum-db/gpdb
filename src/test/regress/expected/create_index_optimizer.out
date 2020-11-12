@@ -3099,7 +3099,7 @@ ORDER BY thousand;
    Merge Key: thousand
    ->  Sort
          Sort Key: thousand
-         ->  Index Scan using tenk1_thous_tenthous on tenk1
+         ->  Index Only Scan using tenk1_thous_tenthous on tenk1
                Index Cond: (thousand < 2)
                Filter: (tenthous = ANY ('{1001,3000}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.80.0
@@ -3130,7 +3130,7 @@ ORDER BY thousand;
    Merge Key: thousand
    ->  Sort
          Sort Key: thousand
-         ->  Index Scan using tenk1_thous_tenthous on tenk1
+         ->  Index Only Scan using tenk1_thous_tenthous on tenk1
                Index Cond: (thousand < 2)
                Filter: (tenthous = ANY ('{1001,3000}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.80.0

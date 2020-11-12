@@ -30,12 +30,15 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CDXLRelStats::CDXLRelStats(CMemoryPool *mp, CMDIdRelStats *rel_stats_mdid,
-						   CMDName *mdname, CDouble rows, BOOL is_empty)
+						   CMDName *mdname, CDouble rows, BOOL is_empty,
+						   ULONG relpages, ULONG relallvisible)
 	: m_mp(mp),
 	  m_rel_stats_mdid(rel_stats_mdid),
 	  m_mdname(mdname),
 	  m_rows(rows),
-	  m_empty(is_empty)
+	  m_empty(is_empty),
+	  m_relpages(relpages),
+	  m_relallvisible(relallvisible)
 {
 	GPOS_ASSERT(rel_stats_mdid->IsValid());
 	m_dxl_str = CDXLUtils::SerializeMDObj(
@@ -134,6 +137,10 @@ CDXLRelStats::Serialize(CXMLSerializer *xml_serializer) const
 								 m_mdname->GetMDName());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenRows),
 								 m_rows);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenRelPages),
+								 m_relpages);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelAllVisible), m_relallvisible);
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenEmptyRelation), m_empty);
 
@@ -166,6 +173,10 @@ CDXLRelStats::DebugPrint(IOstream &os) const
 
 	os << "Rows: " << Rows() << std::endl;
 
+	os << "RelPages: " << RelPages() << std::endl;
+
+	os << "RelAllVisible: " << RelAllVisible() << std::endl;
+
 	os << "Empty: " << IsEmpty() << std::endl;
 }
 
@@ -188,9 +199,9 @@ CDXLRelStats::CreateDXLDummyRelStats(CMemoryPool *mp, IMDId *mdid)
 	CAutoP<CMDName> mdname;
 	mdname = GPOS_NEW(mp) CMDName(mp, str.Value());
 	CAutoRef<CDXLRelStats> rel_stats_dxl;
-	rel_stats_dxl = GPOS_NEW(mp)
-		CDXLRelStats(mp, rel_stats_mdid, mdname.Value(),
-					 CStatistics::DefaultColumnWidth, false /* is_empty */);
+	rel_stats_dxl = GPOS_NEW(mp) CDXLRelStats(
+		mp, rel_stats_mdid, mdname.Value(), CStatistics::DefaultColumnWidth,
+		false /* is_empty */, 0 /* relpages */, 0 /* relallvisible */);
 	mdname.Reset();
 	return rel_stats_dxl.Reset();
 }

@@ -190,7 +190,7 @@ def pg_dump_object(mr_query, connectionInfo, envOpts):
         sys.exit(1)
 
 def dump_tuple_count(cur, oid_str, f_out):
-    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples FROM pg_class pgc, pg_namespace pgn " \
+    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples, pgc.relallvisible FROM pg_class pgc, pg_namespace pgn " \
             "WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) and pgn.nspname NOT LIKE 'pg_temp_%%'" % (oid_str)
 
     templateStmt = '-- Table: {1}\n' \
@@ -201,7 +201,7 @@ def dump_tuple_count(cur, oid_str, f_out):
 
     cur.execute(stmt)
     columns = [x[0] for x in cur.description]
-    types = ['int', 'real']
+    types = ['int', 'real', 'int']
     for vals in result_iter(cur):
         lines = []
         for col, val, typ in zip(columns[2:], vals[2:], types):
