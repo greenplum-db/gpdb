@@ -13,16 +13,18 @@ set statement_mem= '1800 kB';
 -- There are only 2000 distinct values of 'c' in the table, which fits
 -- comfortably in an in-memory hash table.
 explain select avg(b) from cost_agg_t1 group by c;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Finalize HashAggregate  (cost=5579.00..5604.00 rows=2000 width=36)
-   Group Key: c
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=5449.00..5549.00 rows=6000 width=36)
-         ->  Partial HashAggregate  (cost=5449.00..5469.00 rows=2000 width=36)
-               Group Key: c
-               ->  Seq Scan on cost_agg_t1  (cost=0.00..3782.33 rows=333333 width=8)
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=5519.00..5554.00 rows=2000 width=36)
+   ->  Finalize HashAggregate  (cost=5519.00..5527.33 rows=667 width=36)
+         Group Key: c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=5449.00..5509.00 rows=2000 width=36)
+               Hash Key: c
+               ->  Partial HashAggregate  (cost=5449.00..5469.00 rows=2000 width=36)
+                     Group Key: c
+                     ->  Seq Scan on cost_agg_t1  (cost=0.00..3782.33 rows=333333 width=8)
  Optimizer: Postgres query optimizer
-(7 rows)
+(9 rows)
 
 -- In the other table, there are 300000 distinct values of 'c', which doesn't
 -- fit in statement_mem. The planner chooses to do a single-phase agg for this.
@@ -34,32 +36,35 @@ explain select avg(b) from cost_agg_t1 group by c;
 explain select avg(b) from cost_agg_t2 group by c;
                                               QUERY PLAN                                               
 -------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=12115.67..17035.13 rows=281112 width=36)
-   ->  HashAggregate  (cost=12115.67..13286.97 rows=93704 width=36)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=12115.67..17309.12 rows=296769 width=36)
+   ->  HashAggregate  (cost=12115.67..13352.20 rows=98923 width=36)
          Group Key: c
+         Planned Partitions: 8
          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..10449.00 rows=333333 width=8)
                Hash Key: c
                ->  Seq Scan on cost_agg_t2  (cost=0.00..3782.33 rows=333333 width=8)
  Optimizer: Postgres query optimizer
-(7 rows)
+(8 rows)
 
 -- But if there are a lot more duplicate values, the two-stage plan becomes
 -- cheaper again, even though it doesn't git in memory and has to spill.
 insert into cost_agg_t2 select i, random() * 99999,1 from generate_series(1, 200000) i;
 analyze cost_agg_t2;
 explain select avg(b) from cost_agg_t2 group by c;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
- Finalize HashAggregate  (cost=13092.74..14363.89 rows=101692 width=36)
-   Group Key: c
-   Planned Partitions: 8
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=6538.00..11580.11 rows=302526 width=36)
-         ->  Partial HashAggregate  (cost=6538.00..7546.42 rows=100842 width=36)
-               Group Key: c
-               Planned Partitions: 8
-               ->  Seq Scan on cost_agg_t2  (cost=0.00..4538.00 rows=400000 width=8)
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10113.08..11916.68 rows=103063 width=36)
+   ->  Finalize HashAggregate  (cost=10113.08..10542.51 rows=34354 width=36)
+         Group Key: c
+         Planned Partitions: 8
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=6538.00..9602.35 rows=102145 width=36)
+               Hash Key: c
+               ->  Partial HashAggregate  (cost=6538.00..7559.45 rows=102145 width=36)
+                     Group Key: c
+                     Planned Partitions: 8
+                     ->  Seq Scan on cost_agg_t2  (cost=0.00..4538.00 rows=400000 width=8)
  Optimizer: Postgres query optimizer
-(9 rows)
+(11 rows)
 
 drop table cost_agg_t1;
 drop table cost_agg_t2;
