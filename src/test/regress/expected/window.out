@@ -624,17 +624,19 @@ explain (costs off)
 select first_value(max(x)) over (), y
   from (select unique1 as x, ten+four as y from tenk1) ss
   group by y;
-                       QUERY PLAN                        
----------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  WindowAgg
-   ->  Finalize HashAggregate
-         Group Key: ((tenk1.ten + tenk1.four))
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Partial HashAggregate
-                     Group Key: (tenk1.ten + tenk1.four)
-                     ->  Seq Scan on tenk1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Finalize HashAggregate
+               Group Key: ((tenk1.ten + tenk1.four))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ((tenk1.ten + tenk1.four))
+                     ->  Partial HashAggregate
+                           Group Key: (tenk1.ten + tenk1.four)
+                           ->  Seq Scan on tenk1
  Optimizer: Postgres query optimizer
-(8 rows)
+(10 rows)
 
 -- test non-default frame specifications
 SELECT four, ten,

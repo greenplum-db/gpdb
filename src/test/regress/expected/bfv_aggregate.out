@@ -1678,23 +1678,25 @@ ANALYZE pagg_tab2;
 -- should have Redistribute Motion above the FULL JOIN
 EXPLAIN (COSTS OFF)
 SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x ORDER BY 1 NULLS LAST;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Finalize GroupAggregate
-   Group Key: a.x
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: a.x
-         ->  Sort
-               Sort Key: a.x
-               ->  Partial HashAggregate
-                     Group Key: a.x
-                     ->  Hash Full Join
-                           Hash Cond: (a.x = b.y)
-                           ->  Seq Scan on pagg_tab1 a
-                           ->  Hash
-                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                       Hash Key: b.y
-                                       ->  Seq Scan on pagg_tab2 b
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a.x
+   ->  Sort
+         Sort Key: a.x
+         ->  Finalize HashAggregate
+               Group Key: a.x
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: a.x
+                     ->  Partial HashAggregate
+                           Group Key: a.x
+                           ->  Hash Full Join
+                                 Hash Cond: (a.x = b.y)
+                                 ->  Seq Scan on pagg_tab1 a
+                                 ->  Hash
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: b.y
+                                             ->  Seq Scan on pagg_tab2 b
  Optimizer: Postgres query optimizer
 (16 rows)
 

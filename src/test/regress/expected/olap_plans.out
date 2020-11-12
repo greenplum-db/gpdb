@@ -79,19 +79,18 @@ select a, b, c, sum(d) from olap_test group by a, b, c;
 
 -- If it's not a superset, redistribution is needed.
 explain select a, sum(d) from olap_test group by a;
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=56.05..56.26 rows=3 width=12)
-   Group Key: a
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=56.05..56.18 rows=9 width=12)
-         Merge Key: a
-         ->  Sort  (cost=56.05..56.06 rows=3 width=12)
-               Sort Key: a
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=56.11..56.16 rows=3 width=12)
+   ->  Finalize HashAggregate  (cost=56.11..56.12 rows=1 width=12)
+         Group Key: a
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=56.00..56.09 rows=3 width=12)
+               Hash Key: a
                ->  Partial HashAggregate  (cost=56.00..56.03 rows=3 width=12)
                      Group Key: a
                      ->  Seq Scan on olap_test  (cost=0.00..39.33 rows=3333 width=8)
  Optimizer: Postgres query optimizer
-(10 rows)
+(9 rows)
 
 select a, sum(d) from olap_test group by a;
  a |   sum    
@@ -312,40 +311,36 @@ reset enable_hashagg;
 create table foo_ctas(a int, b int) distributed randomly;
 insert into foo_ctas select g%5, g%2 from generate_series(1, 100) g;
 explain create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=11.59..11.76 rows=10 width=8)
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Finalize HashAggregate  (cost=11.47..11.51 rows=3 width=8)
    Group Key: a, b
-   ->  Sort  (cost=11.59..11.61 rows=10 width=8)
-         Sort Key: a, b
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1.50..11.42 rows=10 width=8)
-               Hash Key: b
-               ->  Partial HashAggregate  (cost=1.50..1.60 rows=10 width=8)
-                     Group Key: a, b
-                     ->  Seq Scan on foo_ctas  (cost=0.00..1.33 rows=33 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1.50..11.42 rows=10 width=8)
+         Hash Key: b
+         ->  Partial HashAggregate  (cost=1.50..1.60 rows=10 width=8)
+               Group Key: a, b
+               ->  Seq Scan on foo_ctas  (cost=0.00..1.33 rows=33 width=8)
  Optimizer: Postgres query optimizer
-(10 rows)
+(8 rows)
 
 create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
 -- Currently, the planner misses this optimization with INSERT, so this
 -- needs an extra Redistribute Motion.
 explain insert into bar_ctas select * from foo_ctas group by a, b;
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Insert on bar_ctas  (cost=11.59..21.86 rows=10 width=8)
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=11.59..21.86 rows=10 width=8)
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Insert on bar_ctas  (cost=11.47..14.87 rows=3 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=11.47..14.87 rows=3 width=8)
          Hash Key: foo_ctas.b
-         ->  Finalize GroupAggregate  (cost=11.59..11.76 rows=10 width=8)
+         ->  Finalize HashAggregate  (cost=11.47..11.51 rows=3 width=8)
                Group Key: foo_ctas.a, foo_ctas.b
-               ->  Sort  (cost=11.59..11.61 rows=10 width=8)
-                     Sort Key: foo_ctas.a, foo_ctas.b
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.50..11.42 rows=10 width=8)
-                           Hash Key: foo_ctas.a, foo_ctas.b
-                           ->  Partial HashAggregate  (cost=1.50..1.60 rows=10 width=8)
-                                 Group Key: foo_ctas.a, foo_ctas.b
-                                 ->  Seq Scan on foo_ctas  (cost=0.00..1.33 rows=33 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.50..11.42 rows=10 width=8)
+                     Hash Key: foo_ctas.a, foo_ctas.b
+                     ->  Partial HashAggregate  (cost=1.50..1.60 rows=10 width=8)
+                           Group Key: foo_ctas.a, foo_ctas.b
+                           ->  Seq Scan on foo_ctas  (cost=0.00..1.33 rows=33 width=8)
  Optimizer: Postgres query optimizer
-(13 rows)
+(11 rows)
 
 drop table foo_ctas;
 drop table bar_ctas;
