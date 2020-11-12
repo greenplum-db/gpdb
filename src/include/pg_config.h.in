@@ -61,6 +61,9 @@
    (--enable-thread-safety) */
 #undef ENABLE_THREAD_SAFETY
 
+/* Define to 1 to build with fault injector. (--enable-debug-extensions) */
+#undef FAULT_INJECTOR
+
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like `struct s { int n; double
    d[FLEXIBLE_ARRAY_MEMBER]; };', the struct hack can be used with pre-C99

@@ -3414,7 +3414,9 @@ if test "${enable_debug_extensions+set}" = set; then :
   enableval=$enable_debug_extensions;
   case $enableval in
     yes)
-      :
+
+$as_echo "#define FAULT_INJECTOR 1" >>confdefs.h
+
       ;;
     no)
       :
@@ -3426,7 +3428,7 @@ if test "${enable_debug_extensions+set}" = set; then :
 
 else
   enable_debug_extensions=yes
-
+$as_echo "#define FAULT_INJECTOR 1" >>confdefs.h
 fi
 
 
