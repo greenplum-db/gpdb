@@ -243,3 +243,6 @@ test: distributed_transactions
 
 # Test for tablespace
 test: concurrent_drop_truncate_tablespace
+
+# Test for distributed commit array overflow during replay on standby 
+test: standby_replay_dtx_info 
