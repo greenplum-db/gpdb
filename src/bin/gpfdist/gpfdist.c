@@ -1552,11 +1552,27 @@ static int session_attach(request_t* r)
 			int quote = 0;
 			int escape = 0;
 			int eol_type = 0;
-			sscanf(r->csvopt, "m%dx%dq%dn%dh%d", &fstream_options.is_csv, &escape,
-					&quote, &eol_type, &fstream_options.header);
-			fstream_options.quote = quote;
-			fstream_options.escape = escape;
-			fstream_options.eol_type = eol_type;
+			/* csvopt is different in gp4 and later version */
+			/* for gp4, csv opt is like "mxqnh"; for later version of gpdb, csv opt is like "mxqhn" */
+			/* we check the number of successful match here to make sure eol_type and header is right */
+			if ( strcmp(r->csvopt, "") != 0 ){  //writable external table doesn't have csvopt
+				int n = sscanf(r->csvopt, "m%dx%dq%dn%dh%d", &fstream_options.is_csv, &escape,
+						&quote, &eol_type, &fstream_options.header);
+				if (n!=5){
+					n = sscanf(r->csvopt, "m%dx%dq%dh%dn%d", &fstream_options.is_csv, &escape,
+						&quote, &fstream_options.header, &eol_type);
+				}
+				if (n==5){
+					fstream_options.quote = quote;
+					fstream_options.escape = escape;
+					fstream_options.eol_type = eol_type;
+				}
+				else{
+					http_error(r, FDIST_BAD_REQUEST, "bad request, csvopt doesn't match the format");
+					request_end(r, 1, 0);
+					return -1;
+				}
+			}
 		}
 
 		/* set fstream for read (GET) or write (PUT) */
