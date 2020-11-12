@@ -26,6 +26,7 @@
 #include "storage/proc.h"
 #include "storage/shmem.h"
 #include "storage/procarray.h"
+#include "utils/faultinjector.h"
 
 #include "access/xact.h"
 #include "cdb/cdbgang.h"
@@ -599,17 +600,36 @@ redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
 
 	if (i == *shmNumCommittedGxacts)
 	{
+#ifdef FAULT_INJECTOR
+		if (SIMPLE_FAULT_INJECTOR("standby_gxacts_overflow") == FaultInjectorTypeSkip)
+		{
+			max_tm_gxacts = 1;
+			elog(LOG, "Committed gid array length: %d", *shmNumCommittedGxacts);
+		}
+#endif
+
 		/*
 		 * Transaction not found, this is the first log of this transaction.
 		 */
 		if (*shmNumCommittedGxacts >= max_tm_gxacts)
+		{
+			StringInfoData gxact_array;
+
+			initStringInfo(&gxact_array);
+			for (int j = 0; j < *shmNumCommittedGxacts; j++)
+			{
+				appendStringInfo(&gxact_array, "shmCommittedGxactArray[%d]: %s\n",
+					j, shmCommittedGxactArray[j].gid);
+			}
 			ereport(FATAL,
-					(errmsg("the limit of %d distributed transactions has been reached",
-							max_tm_gxacts),
+					(errmsg("the limit of %d distributed transactions has been reached "\
+							"while adding gid = %s. Committed gid array length: %d, dump:\n%s",
+							max_tm_gxacts, gxact_log->gid, *shmNumCommittedGxacts, gxact_array.data),
 					 errdetail("It should not happen. Temporarily increase "
 							   "max_connections (need postmaster reboot) on "
 							   "the postgres (master or standby) to work "
 							   "around this issue and then report a bug")));
+		}
 
 		shmCommittedGxactArray[(*shmNumCommittedGxacts)++] = *gxact_log;
 		elogif(Debug_print_full_dtm, LOG,

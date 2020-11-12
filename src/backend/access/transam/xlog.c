@@ -7206,21 +7206,6 @@ StartupXLOG(void)
 					TransactionIdAdvance(ShmemVariableCache->nextXid);
 					LWLockRelease(XidGenLock);
 				}
-				/*
-				 * See if this record is a checkpoint, if yes then uncover it to
-				 * find distributed committed Xacts.
-				 * No need to unpack checkpoint in crash recovery mode
-				 */
-				uint8 xlogRecInfo = record->xl_info & ~XLR_INFO_MASK;
-
-				if (IsStandbyMode() &&
-					record->xl_rmid == RM_XLOG_ID &&
-					(xlogRecInfo == XLOG_CHECKPOINT_SHUTDOWN
-					 || xlogRecInfo == XLOG_CHECKPOINT_ONLINE))
-				{
-					XLogProcessCheckpointRecord(record);
-					memcpy(&checkPoint, XLogRecGetData(record), sizeof(CheckPoint));
-				}
 
 				/*
 				 * Before replaying this record, check if this record causes

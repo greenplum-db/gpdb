@@ -260,3 +260,6 @@ test: restore_memory_accounting_default
 #Too many exec account tests end
 
 test: distributed_transactions
+
+# Test for distributed commit array overflow during replay on standby
+test: standby_replay_dtx_info
