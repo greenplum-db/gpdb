@@ -1470,7 +1470,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&log_autostats,
-		true,
+		false,
 		NULL, NULL, NULL
 	},
 	{

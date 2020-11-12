@@ -7,6 +7,7 @@ class LeakedSchemaDropper:
     # The second part of the query gets the leaked temp schemas from just the master
     # The simpler form of this query that pushed the union into the
     # inner select does not run correctly on 3.2.x
+    # Also note autovacuum lancher and worker will not generate temp namespace
     leaked_schema_query = """
         SELECT distinct nspname as schema
         FROM (
@@ -18,7 +19,7 @@ class LeakedSchemaDropper:
           FROM   gp_dist_random('pg_namespace')
           WHERE  nspname ~ '^pg_toast_temp_[0-9]+'
         ) n LEFT OUTER JOIN pg_stat_activity x using (sess_id)
-        WHERE x.sess_id is null
+        WHERE x.sess_id is null OR x.backend_type like 'autovacuum%'
         UNION
         SELECT nspname as schema
         FROM (
@@ -30,7 +31,7 @@ class LeakedSchemaDropper:
           FROM   pg_namespace
           WHERE  nspname ~ '^pg_toast_temp_[0-9]+'
         ) n LEFT OUTER JOIN pg_stat_activity x using (sess_id)
-        WHERE x.sess_id is null
+        WHERE x.sess_id is null OR x.backend_type like 'autovacuum%'
     """
 
     def __get_leaked_schemas(self, db_connection):

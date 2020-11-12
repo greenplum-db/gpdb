@@ -1783,7 +1783,10 @@ vac_update_datfrozenxid(void)
 
 		heap_inplace_update(relation, tuple);
 		heap_freetuple(tuple);
-		SIMPLE_FAULT_INJECTOR("vacuum_update_dat_frozen_xid");
+
+		FaultInjector_InjectFaultIfSet(
+			"vacuum_update_dat_frozen_xid", DDLNotSpecified,
+			NameStr(cached_dbform->datname), "");
 	}
 
 	ReleaseSysCache(cached_tuple);

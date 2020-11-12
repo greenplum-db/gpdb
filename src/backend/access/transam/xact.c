@@ -88,6 +88,7 @@
 #include "utils/workfile_mgr.h"
 #include "utils/vmem_tracker.h"
 #include "cdb/cdbdisp.h"
+#include "postmaster/autovacuum.h"
 
 /*
  *	User-tweakable parameters
@@ -6621,7 +6622,7 @@ EndLocalDistribXact(bool isCommit)
 		case DTX_CONTEXT_QD_RETRY_PHASE_2:
 		case DTX_CONTEXT_LOCAL_ONLY:
 			AssertImply(DistributedTransactionContext == DTX_CONTEXT_LOCAL_ONLY,
-						Gp_role == GP_ROLE_UTILITY);
+						Gp_role == GP_ROLE_UTILITY || IsAutoVacuumWorkerProcess());
 			LocalDistribXact_ChangeState(MyProc->pgprocno,
 										 isCommit ?
 										 LOCALDISTRIBXACT_STATE_COMMITTED :

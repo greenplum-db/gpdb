@@ -4565,68 +4565,71 @@ pgstat_send_bgwriter(void)
 void
 pgstat_send_qd_tabstats(void)
 {
-	int		nest_level;
+	int								nest_level;
+	StringInfoData					buf;
+	StringInfoData					stat_data;
+	PgStat_TableXactStatus		   *trans;
 
 	if (!pgstat_track_counts || !pgStatXactStack)
 		return;
 
 	nest_level = GetCurrentTransactionNestLevel();
+	if (nest_level != pgStatXactStack->nest_level)
+		return;
 
-	if (nest_level == pgStatXactStack->nest_level)
+	trans = pgStatXactStack->first;
+	initStringInfo(&stat_data);
+
+	for (; trans != NULL; trans = trans->next)
 	{
-		StringInfoData					buf;
-		StringInfoData					stat_data;
-		PgStat_TableXactStatus		   *trans = pgStatXactStack->first;
+		PgStatTabRecordFromQE		record;
+		PgStat_TableStatus		   *tabstat = trans->parent;
 
-		if (trans)
-		{
-			pq_beginmessage(&buf, 'y');
-			pq_sendstring(&buf, "PGSTAT");
-			initStringInfo(&stat_data);
-		}
+		/*
+		 * No need to send catalog table's pgstat to QD since if the catalog
+		 * table get updated on QE, QD should have the same update.
+		 */
+		if (tabstat->t_id < FirstNormalObjectId)
+			continue;
 
-		for (; trans != NULL; trans = trans->next)
-		{
-			PgStatTabRecordFromQE		record;
-			PgStat_TableStatus		   *tabstat = trans->parent;
+		record.table_stat.tuples_inserted = trans->tuples_inserted;
+		record.table_stat.tuples_updated = trans->tuples_updated;
+		record.table_stat.tuples_deleted = trans->tuples_deleted;
+		record.table_stat.inserted_pre_trunc = trans->inserted_pre_trunc;
+		record.table_stat.updated_pre_trunc = trans->updated_pre_trunc;
+		record.table_stat.deleted_pre_trunc = trans->deleted_pre_trunc;
+		record.table_stat.t_id = tabstat->t_id;
+		record.table_stat.t_shared = tabstat->t_shared;
+		record.table_stat.t_truncated = trans->truncated;
+		record.nest_level = trans->nest_level;
 
-			record.table_stat.tuples_inserted = trans->tuples_inserted;
-			record.table_stat.tuples_updated = trans->tuples_updated;
-			record.table_stat.tuples_deleted = trans->tuples_deleted;
-			record.table_stat.inserted_pre_trunc = trans->inserted_pre_trunc;
-			record.table_stat.updated_pre_trunc = trans->updated_pre_trunc;
-			record.table_stat.deleted_pre_trunc = trans->deleted_pre_trunc;
-			record.table_stat.t_id = tabstat->t_id;
-			record.table_stat.t_shared = tabstat->t_shared;
-			record.table_stat.t_truncated = trans->truncated;
-			record.nest_level = trans->nest_level;
+		appendBinaryStringInfo(
+			&stat_data, (char *)&record, sizeof(PgStatTabRecordFromQE));
+		ereport(DEBUG3,
+				(errmsg("Send pgstat for current xact nest_level: %d, table oid: %d. "
+						"Inserted: %ld, updated: %ld, deleted: %ld.",
+						nest_level, tabstat->t_id,
+						trans->tuples_inserted, trans->tuples_updated,
+						trans->tuples_deleted)));
+	}
 
-			appendBinaryStringInfo(
-				&stat_data, (char *)&record, sizeof(PgStatTabRecordFromQE));
-			ereport(DEBUG3,
-					(errmsg("Send pgstat for current xact nest_level: %d, table oid: %d. "
-							"Inserted: %ld, updated: %ld, deleted: %ld.",
-							nest_level, tabstat->t_id,
-							trans->tuples_inserted, trans->tuples_updated,
-							trans->tuples_deleted)));
-		}
+	if (stat_data.len > 0)
+	{
+		pq_beginmessage(&buf, 'y');
+		pq_sendstring(&buf, "PGSTAT");
 
-		if (buf.len > 0)
-		{
-			Assert(stat_data.len > 0);
-			/*
-			 * Don't mark the pgresult PGASYNC_READY when receive this message on QD.
-			 * Otherwise, QD may think the result is complete and start to process it.
-			 * But actually there may still have messages not received yet on QD belong
-			 * to same pgresult.
-			 */
-			pq_sendbyte(&buf, false);
+		/*
+		 * Don't mark the pgresult PGASYNC_READY when receive this message on QD.
+		 * Otherwise, QD may think the result is complete and start to process it.
+		 * But actually there may still have messages not received yet on QD belong
+		 * to same pgresult.
+		 */
+		pq_sendbyte(&buf, false);
 
-			pq_sendint(&buf, PGExtraTypeTableStats, sizeof(PGExtraType));
-			pq_sendint(&buf, stat_data.len, sizeof(int));
-			pq_sendbytes(&buf, stat_data.data, stat_data.len);
-			pq_endmessage(&buf);
-		}
+		pq_sendint(&buf, PGExtraTypeTableStats, sizeof(PGExtraType));
+		pq_sendint(&buf, stat_data.len, sizeof(int));
+		pq_sendbytes(&buf, stat_data.data, stat_data.len);
+		pq_endmessage(&buf);
 	}
 }
 
