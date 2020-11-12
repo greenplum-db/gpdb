@@ -102,8 +102,6 @@ CParseHandlerArray::EndElement(const XMLCh *const,	// element_uri,
 
 	// construct node from the created child nodes
 
-	GPOS_ASSERT(0 < this->Length());
-
 	for (ULONG ul = 0; ul < this->Length(); ul++)
 	{
 		CParseHandlerScalarOp *child_parse_handler =

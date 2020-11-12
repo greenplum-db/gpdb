@@ -158,8 +158,10 @@ MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDi
 MultiDistKeyWithOtherPredsJoinCardinality NoDistKeyMultiPredJoinCardinality OneDistKeyMultiPredJoinCardinality;
 
 CArrayCmpTest:
-ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll UDA-AnyArray InClauseWithMCV
-CastedInClauseWithMCV FilterScalarCast IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements;
+ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll
+UDA-AnyArray InClauseWithMCV CastedInClauseWithMCV FilterScalarCast
+IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements ArrayCmpAnyEmpty ArrayCmpAllEmpty
+ArrayCmpAnyEmptyLessThan;
 
 CProjectTest:
 ProjectWithConstant ProjectWithTextConstant ProjectSetFunction Equivalence-class-project-over-LOJ;
