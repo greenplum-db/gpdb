@@ -538,14 +538,33 @@ ao_truncate_one_rel(Relation rel)
 	 * callback for it.
 	 */
 	truncate_ao_perFile(0, &truncateFiles);
+
+	pfree(segPath);
+	pfree(basepath);
+
 	/*
 	 * Other segfiles than segfile 0 could be unlinked here, they are not
 	 * necessary for a clean truncated AO table.
 	 */
-	ao_foreach_extent_file(mdunlink_ao_perFile, &truncateFiles);
+	RelFileNodeBackend rnode;
+	rnode.node = rel->rd_node;
+	rnode.backend = rel->rd_backend;
+	const char *path = relpath(rnode, MAIN_FORKNUM);
 
+	pathSize = strlen(path);
+	segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
+	segPathSuffixPosition = segPath + pathSize;
+	strncpy(segPath, path, pathSize);
+
+	struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
+	unlinkFiles.rnode = rel->rd_node;
+	unlinkFiles.segPath = segPath;
+	unlinkFiles.segpathSuffixPosition = segPathSuffixPosition;
+	/* unlinkFiles.isRedo is not used here */
+	ao_foreach_extent_file(mdunlink_ao_perFile, &unlinkFiles);
+
+	pfree(path);
 	pfree(segPath);
-	pfree(basepath);
 }
 
 /*
