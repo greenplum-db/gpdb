@@ -712,6 +712,11 @@ pg_isolation_regress_installcheck = \
     --bindir='$(bindir)' \
     $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
 
+pg_isolation2_regress_installcheck = \
+    $(top_builddir)/src/test/isolation2/pg_isolation2_regress \
+    --inputdir=$(srcdir) \
+    --bindir= \
+    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
 ##########################################################################
 #
 # Customization
