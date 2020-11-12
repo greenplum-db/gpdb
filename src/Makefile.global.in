@@ -494,6 +494,24 @@ prove_installcheck = @echo "TAP tests not enabled"
 prove_check = $(prove_installcheck)
 endif
 
+ifeq ($(enable_debug_extensions),yes)
+define faultinjector_prep
+$(top_builddir)/src/test/regress/scan_flaky_fault_injectors.sh &&
+endef
+FAULTINJECTOR_OPTS := --load-extension=gp_inject_fault
+else
+define faultinjector_prep
+# TODO: A similar grep command is used in
+# scan_flaky_fault_injectors.sh script.  Find a way to avoid the
+# duplication.
+grep -sERIli '(select|perform)\s.*gp_inject_fault' sql input specs \
+	| sed 's,^[^/]*/\(.*\)\.[^.]*$$,\1,' \
+	| sort -u \
+	> tests_using_faultinjector.txt &&
+endef
+FAULTINJECTOR_OPTS := --exclude-file=tests_using_faultinjector.txt
+endif
+
 # Installation.
 
 install_bin = @install_bin@
@@ -682,41 +700,47 @@ TEMP_CONF += --temp-config=$(TEMP_CONFIG)
 endif
 
 pg_regress_locale_flags = $(if $(ENCODING),--encoding=$(ENCODING)) $(NOLOCALE)
-pg_regress_clean_files = results/ regression.diffs regression.out tmp_check/ tmp_check_iso/ log/ output_iso/
+pg_regress_clean_files = results/ regression.diffs regression.out tmp_check/ tmp_check_iso/ log/ output_iso/ tests_using_faultinjector.txt
 
 pg_regress_check = \
+    $(faultinjector_prep) \
     $(with_temp_install) \
     $(top_builddir)/src/test/regress/pg_regress \
     --temp-instance=./tmp_check \
     --inputdir=$(srcdir) \
     --bindir= \
     $(TEMP_CONF) \
-    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS) $(FAULTINJECTOR_OPTS)
 pg_regress_installcheck = \
+    $(faultinjector_prep) \
     $(top_builddir)/src/test/regress/pg_regress \
     --inputdir=$(srcdir) \
     --bindir='$(bindir)' \
-    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS) $(FAULTINJECTOR_OPTS)
 
 pg_isolation_regress_check = \
+    $(faultinjector_prep) \
     $(with_temp_install) \
     $(top_builddir)/src/test/isolation/pg_isolation_regress \
     --temp-instance=./tmp_check_iso \
     --inputdir=$(srcdir) --outputdir=output_iso \
     --bindir= \
     $(TEMP_CONF) \
-    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS) $(FAULTINJECTOR_OPTS)
 pg_isolation_regress_installcheck = \
+    $(faultinjector_prep) \
     $(top_builddir)/src/test/isolation/pg_isolation_regress \
     --inputdir=$(srcdir) --outputdir=output_iso \
     --bindir='$(bindir)' \
-    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS) $(FAULTINJECTOR_OPTS)
 
 pg_isolation2_regress_installcheck = \
+    $(faultinjector_prep) \
     $(top_builddir)/src/test/isolation2/pg_isolation2_regress \
     --inputdir=$(srcdir) \
-    --bindir= \
-    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+    --bindir='$(bindir)' \
+    $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS) $(FAULTINJECTOR_OPTS)
+
 ##########################################################################
 #
 # Customization

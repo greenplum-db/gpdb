@@ -17,7 +17,7 @@ endif
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
-all: pg_isolation2_regress$(X) all-lib data extended_protocol_test scan_flaky_fault_injectors
+all: pg_isolation2_regress$(X) all-lib data extended_protocol_test
 
 extended_protocol_test: extended_protocol_test.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
@@ -43,10 +43,6 @@ explain.pm:
 
 data:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/data
-
-.PHONY: scan_flaky_fault_injectors
-scan_flaky_fault_injectors:
-	$(top_builddir)/src/test/regress/scan_flaky_fault_injectors.sh
 
 pg_isolation2_regress$(X): isolation2_main.o pg_regress.o submake-libpq submake-libpgport
 	$(CC) $(CFLAGS) $(filter %.o,$^) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
