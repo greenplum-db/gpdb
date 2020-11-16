@@ -9281,17 +9281,20 @@ CreateCheckPoint(int flags)
 	 * Update the average distance between checkpoints if the prior checkpoint
 	 * exists.
 	 */
-	if (gp_keep_all_xlog == false && PriorRedoPtr != InvalidXLogRecPtr)
+	if (PriorRedoPtr != InvalidXLogRecPtr)
 		UpdateCheckPointDistanceEstimate(RedoRecPtr - PriorRedoPtr);
 
-	/*
-	 * Delete old log files, those no longer needed for last checkpoint to
-	 * prevent the disk holding the xlog from growing full.
-	 */
-	XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
-	KeepLogSeg(recptr, &_logSegNo);
-	_logSegNo--;
-	RemoveOldXlogFiles(_logSegNo, RedoRecPtr, recptr);
+	if (!gp_keep_all_xlog)
+	{
+		/*
+		 * Delete old log files, those no longer needed for last checkpoint to
+		 * prevent the disk holding the xlog from growing full.
+		 */
+		XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
+		KeepLogSeg(recptr, &_logSegNo);
+		_logSegNo--;
+		RemoveOldXlogFiles(_logSegNo, RedoRecPtr, recptr);
+	}
 
 	/*
 	 * Make more log segments if needed.  (Do this after deleting offline log
@@ -9610,57 +9613,60 @@ CreateRestartPoint(int flags)
 	 * Update the average distance between checkpoints/restartpoints if the
 	 * prior checkpoint exists.
 	 */
-	if (!gp_keep_all_xlog && PriorRedoPtr != InvalidXLogRecPtr)
+	if (PriorRedoPtr != InvalidXLogRecPtr)
 		UpdateCheckPointDistanceEstimate(RedoRecPtr - PriorRedoPtr);
 
-	/*
-	 * Delete old log files, those no longer needed for last restartpoint to
-	 * prevent the disk holding the xlog from growing full.
-	 */
-	XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
+	if (!gp_keep_all_xlog)
+	{
+		/*
+		 * Delete old log files, those no longer needed for last restartpoint to
+		 * prevent the disk holding the xlog from growing full.
+		 */
+		XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
 
-	/*
-	 * Retreat _logSegNo using the current end of xlog replayed or received,
-	 * whichever is later.
-	 */
-	receivePtr = GetWalRcvWriteRecPtr(NULL, NULL);
-	replayPtr = GetXLogReplayRecPtr(&replayTLI);
-	endptr = (receivePtr < replayPtr) ? replayPtr : receivePtr;
-	KeepLogSeg(endptr, &_logSegNo);
-	_logSegNo--;
+		/*
+		 * Retreat _logSegNo using the current end of xlog replayed or received,
+		 * whichever is later.
+		 */
+		receivePtr = GetWalRcvWriteRecPtr(NULL, NULL);
+		replayPtr = GetXLogReplayRecPtr(&replayTLI);
+		endptr = (receivePtr < replayPtr) ? replayPtr : receivePtr;
+		KeepLogSeg(endptr, &_logSegNo);
+		_logSegNo--;
 
-	/*
-	 * Try to recycle segments on a useful timeline. If we've been promoted
-	 * since the beginning of this restartpoint, use the new timeline chosen
-	 * at end of recovery (RecoveryInProgress() sets ThisTimeLineID in that
-	 * case). If we're still in recovery, use the timeline we're currently
-	 * replaying.
-	 *
-	 * There is no guarantee that the WAL segments will be useful on the
-	 * current timeline; if recovery proceeds to a new timeline right after
-	 * this, the pre-allocated WAL segments on this timeline will not be used,
-	 * and will go wasted until recycled on the next restartpoint. We'll live
-	 * with that.
-	 */
-	if (RecoveryInProgress())
-		ThisTimeLineID = replayTLI;
+		/*
+		 * Try to recycle segments on a useful timeline. If we've been promoted
+		 * since the beginning of this restartpoint, use the new timeline chosen
+		 * at end of recovery (RecoveryInProgress() sets ThisTimeLineID in that
+		 * case). If we're still in recovery, use the timeline we're currently
+		 * replaying.
+		 *
+		 * There is no guarantee that the WAL segments will be useful on the
+		 * current timeline; if recovery proceeds to a new timeline right after
+		 * this, the pre-allocated WAL segments on this timeline will not be used,
+		 * and will go wasted until recycled on the next restartpoint. We'll live
+		 * with that.
+		 */
+		if (RecoveryInProgress())
+			ThisTimeLineID = replayTLI;
 
-	RemoveOldXlogFiles(_logSegNo, RedoRecPtr, endptr);
+		RemoveOldXlogFiles(_logSegNo, RedoRecPtr, endptr);
 
-	/*
-	 * Make more log segments if needed.  (Do this after recycling old log
-	 * segments, since that may supply some of the needed files.)
-	 */
-	PreallocXlogFiles(endptr);
+		/*
+		 * Make more log segments if needed.  (Do this after recycling old log
+		 * segments, since that may supply some of the needed files.)
+		 */
+		PreallocXlogFiles(endptr);
 
-	/*
-	 * ThisTimeLineID is normally not set when we're still in recovery.
-	 * However, recycling/preallocating segments above needed ThisTimeLineID
-	 * to determine which timeline to install the segments on. Reset it now,
-	 * to restore the normal state of affairs for debugging purposes.
-	 */
-	if (RecoveryInProgress())
-		ThisTimeLineID = 0;
+		/*
+		 * ThisTimeLineID is normally not set when we're still in recovery.
+		 * However, recycling/preallocating segments above needed ThisTimeLineID
+		 * to determine which timeline to install the segments on. Reset it now,
+		 * to restore the normal state of affairs for debugging purposes.
+		 */
+		if (RecoveryInProgress())
+			ThisTimeLineID = 0;
+	}
 
 	/*
 	 * Truncate pg_subtrans if possible.  We can throw away all data before
