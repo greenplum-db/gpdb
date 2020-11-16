@@ -56,3 +56,44 @@ gp_inject_fault_new
 -------------------
 t                  
 (1 row)
+
+-- check catalog tuple visibility while waiting for second phase of 2PC
+SELECT gp_inject_fault_new( 'dtm_broadcast_commit_prepared', 'suspend', 1);
+gp_inject_fault_new
+-------------------
+t                  
+(1 row)
+1&:CREATE TABLE test_qd_visibility(a int);  <waiting ...>
+SELECT gp_wait_until_triggered_fault( 'dtm_broadcast_commit_prepared', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+-- confirm the transaction is committed in clog
+SET gp_select_invisible to ON;
+SET
+SELECT status FROM gp_transaction_log WHERE transaction IN (SELECT xmin FROM pg_class WHERE relname = 'test_qd_visibility');
+status   
+---------
+Committed
+(1 row)
+SET gp_select_invisible to OFF;
+SET
+-- the tuple should not be visible
+SELECT relname FROM pg_class WHERE relname = 'test_qd_visibility';
+relname
+-------
+(0 rows)
+SELECT gp_inject_fault_new( 'dtm_broadcast_commit_prepared', 'reset', 1);
+gp_inject_fault_new
+-------------------
+t                  
+(1 row)
+1<:  <... completed>
+CREATE
+-- now the tuple should be visible
+SELECT relname FROM pg_class WHERE relname = 'test_qd_visibility';
+relname           
+------------------
+test_qd_visibility
+(1 row)

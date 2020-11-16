@@ -1576,8 +1576,12 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 	 * snapshot since it covers the correct past view of in-progress distributed
 	 * transactions and also the correct future view of in-progress distributed
 	 * transactions that may yet arrive.
+	 *
+	 * In the QD, the distributed transactions become visible at the same time
+	 * as the corresponding local ones, so we can rely on the local XIDs.
 	 */
-	if (snapshot->haveDistribSnapshot && !distributedSnapshotIgnore)
+	if (snapshot->haveDistribSnapshot && !distributedSnapshotIgnore &&
+		GpIdentity.segindex != MASTER_CONTENT_ID)
 	{
 		DistributedSnapshotCommitted	distributedSnapshotCommitted;
 
