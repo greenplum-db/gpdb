@@ -2664,7 +2664,7 @@ jobs:
       - get: greenplum-database-release
       - get: license_file
   - task: create_gpdb_rpm_package_centos6
-    file: greenplum-database-release/ci/concourse/tasks/build_gpdb_rpm.yml
+    file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
     image: gpdb6-centos6-build
     input_mapping:
       bin_gpdb: bin_gpdb_centos6
@@ -2678,7 +2678,7 @@ jobs:
       GPDB_URL: https://github.com/greenplum-db/gpdb
       GPDB_OSS: false
   - task: create_gpdb_rpm_package_centos7
-    file: greenplum-database-release/ci/concourse/tasks/build_gpdb_rpm.yml
+    file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
     image: gpdb6-centos7-build
     input_mapping:
       bin_gpdb: bin_gpdb_centos7
