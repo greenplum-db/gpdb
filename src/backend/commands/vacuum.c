@@ -1917,6 +1917,36 @@ vac_update_relstats(Oid relid, BlockNumber num_pages, double num_tuples,
 
 
 /*
+ * fetch_database_tuple - Fetch a copy of database tuple from pg_database.
+ *
+ * This using disk heap table instead of system cache.
+ * relation: opened pg_database relation in vac_update_datfrozenxid().
+ */
+static HeapTuple
+fetch_database_tuple(Relation relation, Oid dbOid)
+{
+	ScanKeyData skey[1];
+	SysScanDesc sscan;
+	HeapTuple	tuple = NULL;
+
+	ScanKeyInit(&skey[0],
+				ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(dbOid));
+
+	sscan = systable_beginscan(relation, DatabaseOidIndexId, true,
+							   SnapshotNow, 1, skey);
+
+	tuple = systable_getnext(sscan);
+	if (HeapTupleIsValid(tuple))
+		tuple = heap_copytuple(tuple);
+
+	systable_endscan(sscan);
+
+	return tuple;
+}
+
+/*
  *	vac_update_datfrozenxid() -- update pg_database.datfrozenxid for our DB
  *
  *		Update pg_database's datfrozenxid entry for our database to be the
@@ -1934,8 +1964,8 @@ vac_update_relstats(Oid relid, BlockNumber num_pages, double num_tuples,
 void
 vac_update_datfrozenxid(void)
 {
-	HeapTuple	tuple;
-	Form_pg_database dbform;
+	HeapTuple	cached_tuple;
+	Form_pg_database cached_dbform;
 	Relation	relation;
 	SysScanDesc scan;
 	HeapTuple	classTup;
@@ -1999,30 +2029,41 @@ vac_update_datfrozenxid(void)
 	relation = heap_open(DatabaseRelationId, RowExclusiveLock);
 
 	/* Fetch a copy of the tuple to scribble on */
-	tuple = SearchSysCacheCopy(DATABASEOID,
-							   ObjectIdGetDatum(MyDatabaseId),
-							   0, 0, 0);
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "could not find tuple for database %u", MyDatabaseId);
-	dbform = (Form_pg_database) GETSTRUCT(tuple);
+	cached_tuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(MyDatabaseId));
+	cached_dbform = (Form_pg_database) GETSTRUCT(cached_tuple);
 
 	/*
 	 * Don't allow datfrozenxid to go backward (probably can't happen anyway);
 	 * and detect the common case where it doesn't go forward either.
 	 */
-	if (TransactionIdPrecedes(dbform->datfrozenxid, newFrozenXid))
+	if (TransactionIdPrecedes(cached_dbform->datfrozenxid, newFrozenXid))
 	{
-		dbform->datfrozenxid = newFrozenXid;
 		dirty = true;
 	}
 
 	if (dirty)
 	{
+		HeapTuple			tuple;
+		Form_pg_database	tmp_dbform;
+		/*
+		 * Fetch a copy of the tuple to scribble on from pg_database disk
+		 * heap table instead of system cache
+		 * "SearchSysCacheCopy1(DATABASEOID, ObjectIdGetDatum(MyDatabaseId))".
+		 * Since the cache already flatten toast tuple, so the
+		 * heap_inplace_update will fail with "wrong tuple length".
+		 */
+		tuple = fetch_database_tuple(relation, MyDatabaseId);
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "could not find tuple for database %u", MyDatabaseId);
+		tmp_dbform = (Form_pg_database) GETSTRUCT(tuple);
+		tmp_dbform->datfrozenxid = newFrozenXid;
+
 		heap_inplace_update(relation, tuple);
+		heap_freetuple(tuple);
 		SIMPLE_FAULT_INJECTOR(VacuumUpdateDatFrozenXid);
 	}
 
-	heap_freetuple(tuple);
+	ReleaseSysCache(cached_tuple);
 	heap_close(relation, RowExclusiveLock);
 
 	/*
