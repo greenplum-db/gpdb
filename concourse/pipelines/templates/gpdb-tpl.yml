@@ -3976,7 +3976,7 @@ jobs:
     - in_parallel:
         steps:
           - task: build_rpm_gpdb_centos6
-            file: greenplum-database-release/ci/concourse/tasks/build_gpdb5_rpm.yml
+            file: greenplum-database-release/ci/concourse/tasks/build-gpdb5-rpm.yml
             vars:
               concourse-root: gpdb5/concourse
             image: centos-gpdb-dev-6
@@ -3991,7 +3991,7 @@ jobs:
               GPDB_URL: https://docs.greenplum.org
               GPDB_RELEASE: 1
           - task: build_rpm_gpdb_centos7
-            file: greenplum-database-release/ci/concourse/tasks/build_gpdb5_rpm.yml
+            file: greenplum-database-release/ci/concourse/tasks/build-gpdb5-rpm.yml
             vars:
               concourse-root: gpdb5/concourse
             image: centos-gpdb-dev-7
