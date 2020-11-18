@@ -5988,7 +5988,7 @@
   proargtypes => 'int4', prosrc => 'pg_terminate_backend' },
 { oid => '6999', descr => 'terminate all mpp backends on the segment',
   proname => 'gp_terminate_mpp_backends', provolatile => 'v', proparallel => 'r',
-  prorettype => 'void', proargtypes => 'int4', prosrc => 'gp_terminate_mpp_backends' },
+  prorettype => 'void', proargtypes => '', prosrc => 'gp_terminate_mpp_backends' },
 { oid => '2172', descr => 'prepare for taking an online backup',
   proname => 'pg_start_backup', provolatile => 'v', proparallel => 'r',
   prorettype => 'pg_lsn', proargtypes => 'text bool bool',
