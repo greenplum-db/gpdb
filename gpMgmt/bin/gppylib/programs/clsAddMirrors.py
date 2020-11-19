@@ -516,7 +516,8 @@ class GpAddMirrorsProgram:
         # check that heap_checksums is consistent across cluster, fail immediately if not
         self.validate_heap_checksums(gpArray)
 
-        self.checkMirrorOffset(gpArray)
+        if self.__options.mirrorConfigFile is None:
+            self.checkMirrorOffset(gpArray)
         
         # check that we actually have mirrors
         if gpArray.hasMirrors:
