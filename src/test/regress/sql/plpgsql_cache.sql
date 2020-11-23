@@ -688,3 +688,52 @@ select cache_test(t) from cache_tab;
 
 drop function get_dummy_string(text);
 drop function cache_test(text);
+
+-- ************************************************************
+-- * Test partition elimination inside plpgsql
+-- ************************************************************
+
+drop table if exists t_part;
+create table t_part (a date, b int) distributed by (b)
+partition by range (a)
+(start ('2019-01-01') end ('2020-01-01') every (interval '1 month'));
+
+-- f_pe() is a plpgsql function, so its internal expression is planned
+-- and executed via SPI. A plan for the expression would be generated
+-- twice.
+-- 1. General plan without any parameters in predicate. It produces a
+--    seqscan for all 12 partitions.
+-- 2. Revalidated plan with a parameter in predicate, eliminating
+--    partitions (plan contains exactly 1 partition seqscan).
+-- So, the total printed seqscans with `debug_print_plan` is 13.
+create or replace function f_pe(d date)
+returns void as $$
+begin
+	perform * from t_part where a = d;
+end;
+$$ language plpgsql
+	set optimizer = off
+	set client_min_messages = debug1
+	set debug_print_plan = on
+	set debug_pretty_print = on;
+
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+
+create or replace function f_plan(db text)
+returns text as $$
+import subprocess
+cmd = '''psql %s -c "select f_pe('2019-11-17')"''' % (db,)
+cmd_output = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
+return cmd_output.stdout.read()
+$$ language plpythonu;
+
+-- Expect to have 13 seqscans: 12 from the first general without partition elimination
+-- and 1 from the final revalidated plan.
+select count(*) from regexp_matches(f_plan(current_database()), 'SEQSCAN', 'g');
+
+reset optimizer;
+drop function if exists f_pe(date);
+drop function if exists f_plan(text);
+drop table if exists t_part;
