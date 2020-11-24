@@ -8696,7 +8696,7 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 				GpPolicyReplace(RelationGetRelid(rel), policy);
 				rel->rd_cdbpolicy = policy;
 				if (Gp_role != GP_ROLE_EXECUTE)
-				    ereport(NOTICE,
+				    ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("dropping a column that is part of the distribution policy forces a NULL distribution policy")));
 			}
