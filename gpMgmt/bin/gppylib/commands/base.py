@@ -341,8 +341,8 @@ class CommandResult():
         self.halt = halt
 
     def printResult(self):
-        res = "cmd had rc=%d completed=%s halted=%s\n  stdout='%s'\n  " \
-              "stderr='%s'" % (self.rc, str(self.completed), str(self.halt), self.stdout, self.stderr)
+        res = "cmd had rc=%s completed=%s halted=%s\n  stdout='%s'\n  " \
+              "stderr='%s'" % (str(self.rc), str(self.completed), str(self.halt), self.stdout, self.stderr)
         return res
 
     def wasSuccessful(self):
