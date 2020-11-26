@@ -207,18 +207,9 @@ operator<<(IOstream &os, IStatistics &stats)
 {
 	return stats.OsPrint(os);
 }
-// release istats
-inline void
-CleanupStats(IStatistics *stats)
-{
-	if (NULL != stats)
-	{
-		(dynamic_cast<CRefCount *>(stats))->Release();
-	}
-}
 
 // dynamic array for derived stats
-typedef CDynamicPtrArray<IStatistics, CleanupStats> IStatisticsArray;
+typedef CDynamicPtrArray<IStatistics, CleanupRelease> IStatisticsArray;
 }  // namespace gpnaucrates
 
 #endif	// !GPNAUCRATES_IStatistics_H
