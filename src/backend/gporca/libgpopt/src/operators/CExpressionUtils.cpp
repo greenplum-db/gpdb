@@ -98,8 +98,7 @@ CExpressionUtils::AppendChildren(CMemoryPool *mp, CExpression *pexpr,
 	GPOS_ASSERT(NULL != pdrgpexpr);
 
 	CExpressionArray *pdrgpexprChildren = PdrgpexprUnnestChildren(mp, pexpr);
-	CUtils::AddRefAppend<CExpression, CleanupRelease>(pdrgpexpr,
-													  pdrgpexprChildren);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprChildren);
 	pdrgpexprChildren->Release();
 }
 

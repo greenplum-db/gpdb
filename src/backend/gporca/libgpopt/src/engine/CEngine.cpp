@@ -919,8 +919,7 @@ CEngine::PocChild(
 
 	// use current stats for optimizing current child
 	IStatisticsArray *stats_ctxt = GPOS_NEW(m_mp) IStatisticsArray(m_mp);
-	CUtils::AddRefAppend<IStatistics, CleanupStats>(stats_ctxt,
-													pdrgpstatCurrentCtxt);
+	CUtils::AddRefAppend(stats_ctxt, pdrgpstatCurrentCtxt);
 
 	// compute required relational properties
 	CReqdPropRelational *prprel = NULL;
@@ -1041,8 +1040,7 @@ CEngine::PdrgpocOptimizeChildren(
 	// initialize current stats context with input stats context
 	IStatisticsArray *pdrgpstatCurrentCtxt =
 		GPOS_NEW(m_mp) IStatisticsArray(m_mp);
-	CUtils::AddRefAppend<IStatistics, CleanupStats>(pdrgpstatCurrentCtxt,
-													pocOrigin->Pdrgpstat());
+	CUtils::AddRefAppend(pdrgpstatCurrentCtxt, pocOrigin->Pdrgpstat());
 
 	// initialize required relational properties computation
 	CExpressionHandle exprhdlRel(m_mp);

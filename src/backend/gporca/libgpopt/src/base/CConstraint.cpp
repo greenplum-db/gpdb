@@ -719,15 +719,13 @@ CConstraint::PdrgpcnstrFlatten(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 		{
 			CConstraintConjunction *pcconj =
 				(CConstraintConjunction *) pcnstrChild;
-			CUtils::AddRefAppend<CConstraint, CleanupRelease>(
-				pdrgpcnstrNew, pcconj->Pdrgpcnstr());
+			CUtils::AddRefAppend(pdrgpcnstrNew, pcconj->Pdrgpcnstr());
 		}
 		else if (EctDisjunction == ectChild && EctDisjunction == ect)
 		{
 			CConstraintDisjunction *pcdisj =
 				(CConstraintDisjunction *) pcnstrChild;
-			CUtils::AddRefAppend<CConstraint, CleanupRelease>(
-				pdrgpcnstrNew, pcdisj->Pdrgpcnstr());
+			CUtils::AddRefAppend(pdrgpcnstrNew, pcdisj->Pdrgpcnstr());
 		}
 		else
 		{

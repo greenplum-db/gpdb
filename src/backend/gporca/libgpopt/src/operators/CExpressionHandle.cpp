@@ -349,8 +349,7 @@ CExpressionHandle::PdrgpstatOuterRefs(IStatisticsArray *statistics_array,
 	if (gpos::ulong_max != ulStartIndex)
 	{
 		// copy stats starting from index of outer-most stats object referenced by child
-		CUtils::AddRefAppend<IStatistics, CleanupStats>(
-			pdrgpstatResult, statistics_array, ulStartIndex);
+		CUtils::AddRefAppend(pdrgpstatResult, statistics_array, ulStartIndex);
 	}
 
 	return pdrgpstatResult;
@@ -428,8 +427,7 @@ CExpressionHandle::DeriveStats(IStatisticsArray *stats_ctxt,
 	// copy input context
 	IStatisticsArray *pdrgpstatCurrentCtxt =
 		GPOS_NEW(m_mp) IStatisticsArray(m_mp);
-	CUtils::AddRefAppend<IStatistics, CleanupStats>(pdrgpstatCurrentCtxt,
-													stats_ctxt);
+	CUtils::AddRefAppend(pdrgpstatCurrentCtxt, stats_ctxt);
 
 	// create array of children stats
 	m_pdrgpstat = GPOS_NEW(m_mp) IStatisticsArray(m_mp);

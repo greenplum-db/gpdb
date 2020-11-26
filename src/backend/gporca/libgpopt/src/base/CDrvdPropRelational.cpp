@@ -472,16 +472,14 @@ CDrvdPropRelational::DeriveFunctionalDependencies(CExpressionHandle &exprhdl)
 			{
 				CFunctionalDependencyArray *pdrgpfdChild =
 					DeriveChildFunctionalDependencies(m_mp, ul, exprhdl);
-				CUtils::AddRefAppend<CFunctionalDependency, CleanupRelease>(
-					pdrgpfd, pdrgpfdChild);
+				CUtils::AddRefAppend(pdrgpfd, pdrgpfdChild);
 				pdrgpfdChild->Release();
 			}
 		}
 		// add local FD's
 		CFunctionalDependencyArray *pdrgpfdLocal =
 			DeriveLocalFunctionalDependencies(m_mp, exprhdl);
-		CUtils::AddRefAppend<CFunctionalDependency, CleanupRelease>(
-			pdrgpfd, pdrgpfdLocal);
+		CUtils::AddRefAppend(pdrgpfd, pdrgpfdLocal);
 		pdrgpfdLocal->Release();
 
 		m_pdrgpfd = pdrgpfd;

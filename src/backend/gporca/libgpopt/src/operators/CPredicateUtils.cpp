@@ -382,8 +382,8 @@ CPredicateUtils::PdrgpexprExpandDisjuncts(CMemoryPool *mp,
 			{
 				CExpressionArray *pdrgpexprArrayCmpDisjuncts =
 					PdrgpexprDisjuncts(mp, pexprExpanded);
-				CUtils::AddRefAppend<CExpression, CleanupRelease>(
-					pdrgpexprExpanded, pdrgpexprArrayCmpDisjuncts);
+				CUtils::AddRefAppend(pdrgpexprExpanded,
+									 pdrgpexprArrayCmpDisjuncts);
 				pdrgpexprArrayCmpDisjuncts->Release();
 				pexprExpanded->Release();
 			}
@@ -441,8 +441,8 @@ CPredicateUtils::PdrgpexprExpandConjuncts(CMemoryPool *mp,
 			{
 				CExpressionArray *pdrgpexprArrayCmpConjuncts =
 					PdrgpexprConjuncts(mp, pexprExpanded);
-				CUtils::AddRefAppend<CExpression, CleanupRelease>(
-					pdrgpexprExpanded, pdrgpexprArrayCmpConjuncts);
+				CUtils::AddRefAppend(pdrgpexprExpanded,
+									 pdrgpexprArrayCmpConjuncts);
 				pdrgpexprArrayCmpConjuncts->Release();
 				pexprExpanded->Release();
 			}
@@ -791,8 +791,8 @@ CPredicateUtils::PexprConjDisj(CMemoryPool *mp, CExpression *pexprOne,
 	}
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	CUtils::AddRefAppend<CExpression, CleanupRelease>(pdrgpexpr, pdrgpexprOne);
-	CUtils::AddRefAppend<CExpression, CleanupRelease>(pdrgpexpr, pdrgpexprTwo);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprOne);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprTwo);
 
 	pdrgpexprOne->Release();
 	pdrgpexprTwo->Release();

@@ -144,7 +144,7 @@ CXformLeftSemiApplyWithExternalCorrs2InnerJoin::FDecorrelate(
 	// add all original scalar conjuncts to correlations
 	CExpressionArray *pdrgpexprOriginal =
 		CPredicateUtils::PdrgpexprConjuncts(mp, pexprScalar);
-	CUtils::AddRefAppend<CExpression>(pdrgpexpr, pdrgpexprOriginal);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprOriginal);
 	pdrgpexprOriginal->Release();
 
 	*ppdrgpexprCorr = pdrgpexpr;
