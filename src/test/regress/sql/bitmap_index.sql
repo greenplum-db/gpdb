@@ -17,7 +17,7 @@ select * from bm_test where i > 10;
 reindex index bm_test_idx;
 select count(*) from bm_test where i in(1, 3);
 drop index bm_test_idx;
-create index bm_test_multi_idx on bm_test using bitmap(i, t);
+create index bm_test_coll_idx on bm_test using bitmap(i, t COLLATE "C");
 select * from bm_test where i=5 and t='5';
 select * from bm_test where i=5 or t='6';
 
