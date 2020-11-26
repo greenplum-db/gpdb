@@ -42,6 +42,7 @@ typedef struct BMBuildHashData
 	FmgrInfo   *hash_funcs;
 	bool       *hash_func_is_strict;
 	FmgrInfo   *eq_funcs;
+	Oid        *ind_collations;
 	MemoryContext tmpcxt;
 	MemoryContext hash_cxt;
 } BMBuildHashData;
@@ -192,6 +193,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
                         palloc(sizeof(FmgrInfo) * bmstate->bm_tupDesc->natts);
     cur_bmbuild->hash_func_is_strict = (bool *)
                         palloc(sizeof(bool) * bmstate->bm_tupDesc->natts);
+	cur_bmbuild->ind_collations = NULL;
 
 	for (i = 0; i < bmstate->bm_tupDesc->natts; i++)
 	{
@@ -227,6 +229,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 	if (cur_bmbuild)
 	{
 		cur_bmbuild->natts = bmstate->bm_tupDesc->natts;
+		cur_bmbuild->ind_collations = index->rd_indcollation;
 		cur_bmbuild->tmpcxt = AllocSetContextCreate(CurrentMemoryContext,
         	                      "Bitmap build temp space",
             	                  ALLOCSET_DEFAULT_MINSIZE,
@@ -476,9 +479,12 @@ build_hash_key(const void *key, Size keysize pg_attribute_unused())
         }
         else
         {
+			Oid	collation = cur_bmbuild->ind_collations[i];
+
+			if (!OidIsValid(collation))
+				collation = DEFAULT_COLLATION_OID;
 			hashkey ^= DatumGetUInt32(FunctionCall1Coll(&cur_bmbuild->hash_funcs[i],
-														/* GPDB_12_MERGE_FIXME: always use default collation. Is that OK? */
-														DEFAULT_COLLATION_OID,
+														collation,
 														k[i]));
         }
 	}
@@ -530,9 +536,12 @@ build_match_key(const void *key1, const void *key2, Size keysize pg_attribute_un
             /* do the real comparison */
             Datum attr1 = k1[i];
             Datum attr2 = k2[i];
+			Oid	collation = cur_bmbuild->ind_collations[i];
+
+			if (!OidIsValid(collation))
+				collation = DEFAULT_COLLATION_OID;
 			if (!DatumGetBool(FunctionCall2Coll(&cur_bmbuild->eq_funcs[i],
-												/* GPDB_12_MERGE_FIXME: always use default collation. Is that OK? */
-												DEFAULT_COLLATION_OID,
+												collation,
 												attr1,
 												attr2)))
             {
