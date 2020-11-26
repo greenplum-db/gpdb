@@ -480,8 +480,6 @@ select c, percentile_cont(0.9999) within group (order by ((days1 + days2) * 1.2)
 (10 rows)
 
 --numeric types
-SET extra_float_digits=0;
-
 select b, percentile_cont(0.9876) within group( order by c::numeric - 2.8765::numeric) from perctnum group by b order by b limit 10;
  b | percentile_cont 
 ---+-----------------
@@ -671,9 +669,8 @@ LINE 1: select a,percentile_cont(0.7) within group(order by b) from ...
 -- SQL with Cube and IDF
 -- SQL with GroupingSets and IDF
 select percentile_cont(0.7) within group (order by a) from perct4 group by grouping sets((b),(c), ());
- percentile_cont
+ percentile_cont 
 -----------------
-             100
              6.9
             16.6
             26.6
@@ -681,11 +678,12 @@ select percentile_cont(0.7) within group (order by a) from perct4 group by group
             46.6
             56.6
             66.6
-            70.3
-            70.3
             76.6
             86.6
             96.6
+             100
+            70.3
+            70.3
 (13 rows)
 
 select median(a) from perct group by grouping sets((), (b));
