@@ -1,3 +1,5 @@
+SET extra_float_digits to 0;
+
 create table perct as select a, a / 10 as b from generate_series(1, 100)a distributed by (a);
 create table perct2 as select a, a / 10 as b from generate_series(1, 100)a, generate_series(1, 2);
 create table perct3 as select a, b from perct, generate_series(1, 10)i where a % 7 < i;
@@ -37,7 +39,6 @@ DISTRIBUTED BY (d1,d2,d3);
 insert into mpp_22413
 select i, i, i, i, i,i
 from  (select * from generate_series(1, 99) i ) a ;
-SET extra_float_digits TO 0;
 
 select percentile_cont(0.5) within group (order by a),
 	median(a), percentile_disc(0.5) within group(order by a) from perct;
@@ -217,4 +218,3 @@ drop table mpp_22219;
 drop table mpp_21026;
 drop table mpp_20076;
 drop table mpp_22413;
-
