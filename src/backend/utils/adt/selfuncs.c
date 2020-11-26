@@ -7013,11 +7013,6 @@ gincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	*indexPages = dataPagesFetched;
 }
 
-/*
- * GPDB_12_MERGE_FIXME: indexPages is a new output param. Need to set it.
- * This probably needs some updating in other ways too. Should be similar to
- * btcostestimate()?
- */
 void
 bmcostestimate(struct PlannerInfo *root,
 			   struct IndexPath *path,
@@ -7087,6 +7082,15 @@ bmcostestimate(struct PlannerInfo *root,
 	if (numDistinctValues == 0)
 		numDistinctValues = 1;
 
+	/*
+	 * Estimate the number of index tuples. This is basically the same
+	 * as the one in genericcostestimate(), except that
+	 * (1) We don't consider ScalarArrayOpExpr in the calculation, since
+	 *     each value has its own bit vector.
+	 * (2) since the bitmap index stores bit vectors, one for each distinct
+	 *     value, we adjust the number of index tuples by dividing the
+	 *     value with the number of distinct values.
+	 */
 	numIndexTuples = *indexSelectivity * baserel->tuples;
 	numIndexTuples = rint(numIndexTuples / numDistinctValues);
 
@@ -7102,6 +7106,19 @@ bmcostestimate(struct PlannerInfo *root,
 	*indexTotalCost = costs.indexTotalCost;
 	*indexSelectivity = costs.indexSelectivity;
 	*indexCorrelation = costs.indexCorrelation;
+
+	/*
+	 * We create a LOV for each distinct key in bitmap index. And the LOV point
+	 * to the bitmap vector pages. Since each bitmap vector has the same length,
+	 * although we do compress for the bits, but we can assume each distinct
+	 * key has approximately same number of bitmap vector pages(although there
+	 * must be some counterexamples). So the indexPages should be:
+	 * selectedDistinctValues / numDistinctValues * index->pages.
+	 *
+	 * But the issue is we can't estimate selected distinct values from stats.
+	 * So just use the normal estimate results from genericcostestimate like others.
+	 */
+	*indexPages = costs.numIndexPages;
 }
 
 /*
