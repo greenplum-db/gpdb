@@ -2584,7 +2584,8 @@ WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn a
 
 -- REGR_INTERCEPT() function with ONLY order by having rows based framing clause in combination with other functions --
 
-SELECT cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(cf_olap_windowerr_sale.pn),floor(cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
+-- Add 1 to REGR_INTERCEPT values to make sure they are not zero. Otherwise some platforms show them as -.00000
+SELECT cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(cf_olap_windowerr_sale.pn),floor(cf_olap_windowerr_sale.pn)) OVER(win1),0)+1,'99999999.9999999'),cf_olap_windowerr_sale.cn,
 TO_CHAR(COALESCE(LEAD(cast(floor(cf_olap_windowerr_sale.pn) as int),cast (floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),cf_olap_windowerr_sale.vn,
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),0),'99999999.9999999'),

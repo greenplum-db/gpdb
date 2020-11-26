@@ -3719,7 +3719,8 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc,cf_olap_windowerr_sale.vn desc,cf_olap_windowerr_sale.vn asc rows current row );
 ERROR:  division by zero
 -- REGR_INTERCEPT() function with ONLY order by having rows based framing clause in combination with other functions --
-SELECT cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(cf_olap_windowerr_sale.pn),floor(cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
+-- Add 1 to REGR_INTERCEPT values to make sure they are not zero. Otherwise some platforms show them as -.00000
+SELECT cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(cf_olap_windowerr_sale.pn),floor(cf_olap_windowerr_sale.pn)) OVER(win1),0)+1,'99999999.9999999'),cf_olap_windowerr_sale.cn,
 TO_CHAR(COALESCE(LEAD(cast(floor(cf_olap_windowerr_sale.pn) as int),cast (floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),cf_olap_windowerr_sale.vn,
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),0),'99999999.9999999'),
@@ -3732,18 +3733,18 @@ win3 as (order by cf_olap_windowerr_sale.cn desc),
 win4 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
  prc  |      to_char      | cn |      to_char      | vn |      to_char      |      to_char      |      to_char      |      to_char      |     dt     
 ------+-------------------+----+-------------------+----+-------------------+-------------------+-------------------+-------------------+------------
- 2400 |          .0000000 |  2 |          .0000000 | 40 |         1.0000000 |         1.0000000 |         6.0000000 |          .0000000 | 01-01-1401
-    0 |          .0000000 |  1 |          .0000000 | 10 |         2.0000000 |         2.0000000 |         8.0000000 |          .0000000 | 03-01-1401
-    0 |          .0000000 |  3 |          .0000000 | 40 |         3.0000000 |         3.0000000 |         3.0000000 |          .0000000 | 04-01-1401
-    0 |          .0000000 |  1 |          .0000000 | 20 |         4.0000000 |         4.0000000 |         8.0000000 |          .0000000 | 05-01-1401
-    0 |          .0000000 |  1 |          .0000000 | 30 |         5.0000000 |         5.0000000 |         8.0000000 |          .0000000 | 05-02-1401
-    0 |          .0000000 |  1 |          .0000000 | 50 |         6.0000000 |         6.0000000 |         8.0000000 |          .0000000 | 06-01-1401
-    0 |          .0000000 |  2 |          .0000000 | 50 |         7.0000000 |         7.0000000 |         6.0000000 |          .0000000 | 06-01-1401
-    5 |          .0000000 |  1 |          .0000000 | 30 |         8.0000000 |         8.0000000 |         8.0000000 |          .0000000 | 06-01-1401
-    5 |          .0000000 |  3 |          .0000000 | 30 |         9.0000000 |         9.0000000 |         3.0000000 |          .0000000 | 06-01-1401
-    5 |          .0000000 |  3 |          .0000000 | 30 |        10.0000000 |        10.0000000 |         3.0000000 |          .0000000 | 06-01-1401
-    1 |         -.0000000 |  4 |          .0000000 | 40 |        11.0000000 |        11.0000000 |         1.0000000 |       150.0000000 | 06-01-1401
-    1 |          .0000000 |  4 |          .0000000 | 40 |        12.0000000 |        12.0000000 |         1.0000000 |        40.0000000 | 06-01-1401
+ 2400 |         1.0000000 |  2 |          .0000000 | 40 |         1.0000000 |         1.0000000 |         6.0000000 |          .0000000 | 01-01-1401
+    0 |         1.0000000 |  1 |          .0000000 | 10 |         2.0000000 |         2.0000000 |         8.0000000 |          .0000000 | 03-01-1401
+    0 |         1.0000000 |  3 |          .0000000 | 40 |         3.0000000 |         3.0000000 |         3.0000000 |          .0000000 | 04-01-1401
+    0 |         1.0000000 |  1 |          .0000000 | 20 |         4.0000000 |         4.0000000 |         8.0000000 |          .0000000 | 05-01-1401
+    0 |         1.0000000 |  1 |          .0000000 | 30 |         5.0000000 |         5.0000000 |         8.0000000 |          .0000000 | 05-02-1401
+    0 |         1.0000000 |  1 |          .0000000 | 50 |         6.0000000 |         6.0000000 |         8.0000000 |          .0000000 | 06-01-1401
+    0 |         1.0000000 |  2 |          .0000000 | 50 |         7.0000000 |         7.0000000 |         6.0000000 |          .0000000 | 06-01-1401
+    5 |         1.0000000 |  1 |          .0000000 | 30 |         8.0000000 |         8.0000000 |         8.0000000 |          .0000000 | 06-01-1401
+    5 |         1.0000000 |  3 |          .0000000 | 30 |         9.0000000 |         9.0000000 |         3.0000000 |          .0000000 | 06-01-1401
+    5 |         1.0000000 |  3 |          .0000000 | 30 |        10.0000000 |        10.0000000 |         3.0000000 |          .0000000 | 06-01-1401
+    1 |         1.0000000 |  4 |          .0000000 | 40 |        11.0000000 |        11.0000000 |         1.0000000 |       150.0000000 | 06-01-1401
+    1 |         1.0000000 |  4 |          .0000000 | 40 |        12.0000000 |        12.0000000 |         1.0000000 |        40.0000000 | 06-01-1401
 (12 rows)
 
 -- REGR_INTERCEPT() function with ONLY order by having rows based framing clause in combination with other functions --
