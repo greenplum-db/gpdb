@@ -1975,6 +1975,7 @@ sliceCalculateNumSendingProcesses(Slice *slice)
 }
 
 /* Forward declarations */
+static bool AssignWriterGangFirst(CdbDispatcherState *ds, List *slices, int sliceIndex);
 static void InventorySliceTree(CdbDispatcherState *ds, List * slices, int sliceIndex);
 
 /*
@@ -2015,7 +2016,72 @@ AssignGangs(CdbDispatcherState *ds, QueryDesc *queryDesc)
 		slice->processesMap = NULL;
 	}
 
+	AssignWriterGangFirst(ds, sliceTable->slices, rootIdx);
 	InventorySliceTree(ds, sliceTable->slices, rootIdx);
+}
+
+/*
+ * AssignWriterGangFirst() - Try to assign writer gang first.
+ *
+ * For the gang allocation, our current implementation required the first
+ * allocated gang must be the writer gang.
+ * This has several reasons:
+ * - For lock holding, Because of our MPP structure, we assign a LockHolder
+ *   for each segment when executing a query. lockHolder is the gang member that
+ *   should hold and manage locks for this transaction. On the QEs, it should
+ *   normally be the Writer gang member. More details please refer to
+ *   lockHolderProcPtr in lock.c.
+ * - For SharedSnapshot among session's gang processes on a particular segment.
+ *   During initPostgres(), reader QE will try to lookup the shared slot written
+ *   by writer QE. More details please reger to sharedsnapshot.c.
+ *
+ * Normally, the writer slice will be assign writer gang first when iterate the
+ * slice table. But this is not true for writable CTE (with only one writer gang).
+ * For below statement:
+ *
+ * WITH updated AS (update tbl set rank = 6 where id = 5 returning rank)
+ * select * from tbl where rank in (select rank from updated);
+ *                                           QUERY PLAN
+ * ----------------------------------------------------------------------------------------------
+ *  Gather Motion 3:1  (slice1; segments: 3)
+ *    ->  Seq Scan on tbl
+ *          Filter: (hashed SubPlan 1)
+ *          SubPlan 1
+ *            ->  Broadcast Motion 1:3  (slice2; segments: 1)
+ *                  ->  Update on tbl
+ *                        ->  Seq Scan on tbl
+ *                              Filter: (id = 5)
+ *  Slice 0: Dispatcher; root 0; parent -1; gang size 0
+ *  Slice 1: Reader; root 0; parent 0; gang size 3
+ *  Slice 2: Primary Writer; root 0; parent 1; gang size 1
+ *
+ * If we sill assign writer gang to Slice 1 here, the writer process will execute
+ * on reader gang. So, find the writer slice and assign writer gang first.
+ */
+static bool
+AssignWriterGangFirst(CdbDispatcherState *ds, List *slices, int sliceIndex)
+{
+	Slice *slice = list_nth(slices, sliceIndex);
+
+	if (slice->gangType == GANGTYPE_PRIMARY_WRITER)
+	{
+		Assert(slice->primaryGang == NULL);
+		Assert(slice->segments != NIL);
+		slice->primaryGang = AllocateGang(ds, slice->gangType, slice->segments);
+		setupCdbProcessList(slice);
+		return true;
+	}
+	else
+	{
+		ListCell *cell;
+		foreach(cell, slice->children)
+		{
+			int			childIndex = lfirst_int(cell);
+			if (AssignWriterGangFirst(ds, slices, childIndex))
+				return true;
+		}
+	}
+	return false;
 }
 
 /*
@@ -2035,7 +2101,7 @@ InventorySliceTree(CdbDispatcherState *ds, List *slices, int sliceIndex)
 		slice->primaryGang = NULL;
 		slice->primaryProcesses = getCdbProcessesForQD(true);
 	}
-	else
+	else if (!slice->primaryGang)
 	{
 		Assert(slice->segments != NIL);
 		slice->primaryGang = AllocateGang(ds, slice->gangType, slice->segments);

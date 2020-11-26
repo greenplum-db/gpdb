@@ -2182,3 +2182,16 @@ WITH t AS (
 VALUES(FALSE);
 ERROR:  conditional DO INSTEAD rules are not supported for data-modifying statements in WITH
 DROP RULE y_rule ON y;
+CREATE TABLE rank_tbl (id int, rank int) DISTRIBUTED BY (id);
+insert into rank_tbl select i, i % 11 from generate_series(1, 100)i;
+-- this used to raise ERROR:  INSERT/UPDATE/DELETE must be executed by a writer segworker group
+-- case we assign write gang to read slice
+WITH updated AS (
+	update rank_tbl set rank = 6 where id = 5 returning rank
+)
+select count(*) from rank_tbl where rank in (select rank from updated);
+ count 
+-------
+     9
+(1 row)
+
