@@ -42,7 +42,7 @@ typedef struct PartDatum
 	Datum		datum;
 } PartDatum;
 
-static Datum *buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray, int *nEntries, float4 ndistinct, float4 samplerows);
+static Datum *buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray, int *nEntries, float4 ndistinct, float4 nrows);
 static float4 *buildFreqArrayForStatsEntry(MCVFreqPair **mcvpairArray, int nEntries, float4 reltuples);
 static int	datumHashTableMatch(const void *keyPtr1, const void *keyPtr2, Size keysize);
 static uint32 datumHashTableHash(const void *keyPtr, Size keysize);
@@ -242,12 +242,13 @@ aggregate_leaf_partition_MCVs(Oid relationOid,
  * 	- mcvpairArray: contains MCVs and corresponding counts in desc order
  * 	- nEntries: number of MCVs to be returned
  * 	- typoid: type oid of the MCV datum
+ * 	- nrows: number of tuples from all partitions
  */
 static Datum *
 buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray,
 						   int *nEntries,
 						   float4 ndistinct,
-						   float4 samplerows)
+						   float4 nrows)
 {
 	Assert(mcvpairArray);
 	Assert(*nEntries > 0);
@@ -255,9 +256,7 @@ buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray,
 	Datum	   *out = palloc(sizeof(Datum) * (*nEntries));
 	double		mincount = -1.0;
 
-	if (*nEntries == (int) ndistinct &&
-		ndistinct > 0 &&
-		*nEntries <= default_statistics_target)
+	if (*nEntries == (int) ndistinct && ndistinct > 0)
 	{
 		/* Track list includes all values seen, and all will fit */
 	}
@@ -267,13 +266,13 @@ buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray,
 					maxmincount;
 
 		/* estimate # of occurrences in sample of a typical value */
-		avgcount = (double) samplerows / ndistinct;
+		avgcount = (double) nrows / ndistinct;
 		/* set minimum threshold count to store a value */
 		mincount = avgcount * 1.25;
 		if (mincount < 2)
 			mincount = 2;
 		/* don't let threshold exceed 1/K, however */
-		maxmincount = (double) samplerows / (double) default_statistics_target;
+		maxmincount = (double) nrows / (double) *nEntries;
 		if (mincount > maxmincount)
 			mincount = maxmincount;
 
