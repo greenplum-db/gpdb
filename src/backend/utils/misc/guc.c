@@ -1007,7 +1007,7 @@ static struct config_bool ConfigureNamesBool[] =
 			GUC_EXPLAIN
 		},
 		&enable_groupingsets_hash_disk,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 	{

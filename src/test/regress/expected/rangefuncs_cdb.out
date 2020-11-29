@@ -4,7 +4,7 @@ SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
  enable_bitmapscan              | on
  enable_gathermerge             | on
  enable_groupagg                | on
- enable_groupingsets_hash_disk  | off
+ enable_groupingsets_hash_disk  | on
  enable_hashagg                 | on
  enable_hashagg_disk            | on
  enable_hashjoin                | on
