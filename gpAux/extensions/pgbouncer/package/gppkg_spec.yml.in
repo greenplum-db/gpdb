@@ -1,7 +1,0 @@
-Pkgname: pgbouncer
-Architecture: #arch
-Version: ossv1.1_pv1.2_gpdb4.3
-OS: #os
-GPDBVersion: 4.3
-Description: Connection pool for Greenplum Database. 
-
