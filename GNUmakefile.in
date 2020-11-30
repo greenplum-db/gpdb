@@ -26,7 +26,6 @@ all:
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
-	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpMgmt all
 	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
@@ -61,7 +60,6 @@ ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
 endif
 	$(MAKE) -C gpMgmt $@
-	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
@@ -89,14 +87,12 @@ clean:
 # leap over gpAux/Makefile into subdirectories to avoid circular dependency.
 # gpAux/Makefile is the entry point for the enterprise build, which ends up
 # calling top-level configure and this Makefile
-	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpMgmt $@
 
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
 distclean maintainer-clean:
 #	$(MAKE) -C doc $@
-	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C contrib $@
 	$(MAKE) -C gpcontrib $@
 	$(MAKE) -C config $@
