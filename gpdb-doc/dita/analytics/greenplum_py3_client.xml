@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="py212122">Greenplum Database Python 3 Client (Beta)</title>
+  <body>
+    <p>This chapter contains the following information:</p>
+    <ul>
+      <li><xref href="#about" type="topic" format="dita"/></li>
+      <li><xref href="#supplat" type="topic" format="dita"/></li>
+      <li><xref href="#limits" format="dita"/></li>
+      <li><xref href="#prereqs" type="topic" format="dita"/></li>
+      <li><xref href="#install" format="dita"/></li>
+      <li><xref href="#use" format="dita"/></li>
+      <li><xref href="#help_ref" format="dita"/></li>
+    </ul>
+  </body>
+  <topic xml:lang="en" id="about">
+    <title>About Greenplum Python</title>
+    <body>
+      <p>The Greenplum Python 3 Client (GreenplumPython) is an interactive 
+        in-database data analytics tool for Greenplum Database. The client
+        uses <xref href="https://docs.sqlalchemy.org/en/13/index.html"
+          scope="external" format="html">SQLAlchemy</xref> to provide a Python 3
+        interface to tables and views, and requires no SQL knowledge to operate
+        on these database objects.</p>
+      <p>You can use GreenplumPython with Greenplum PL/Container 2.x to run
+        a Python 3 function on data stored in Greenplum Database in a
+        high-performance Python 3 sandbox runtime environment. GreenplumPython
+        parses the Python function and creates a user-defined function (UDF) for
+        execution in Greenplum Database. Greenplum runs the UDF in parallel on
+        the segment hosts.</p>
+      <p>No analytic data is loaded into Python when you use GreenplumPython, a 
+        key requirement when dealing with large data sets. Only the Python
+        function and minimal data is transferred between Python and Greenplum.</p>
+    </body>
+  </topic>
+  <topic id="supplat">
+    <title>Supported Platforms</title>
+    <body>
+      <p>GreenplumPython supports the following component versions:</p>
+      <table>
+        <title>GreenplumPython Supported Component Versions</title>
+        <tgroup cols="5">
+          <colspec colnum="1" colname="col1" colwidth="100pt"/>
+          <colspec colnum="2" colname="col2" colwidth="100pt"/>
+          <colspec colnum="3" colname="col3" colwidth="100pt"/>
+          <colspec colnum="4" colname="col5" colwidth="100pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">GreenplumPython Version</entry>
+              <entry colname="col2">Python Version</entry>
+              <entry colname="col3">Greenplum Version</entry>
+              <entry colname="col4">PL/Container Version</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">1.0.0</entry>
+              <entry colname="col2">3.0+</entry>
+              <entry colname="col3">6.1+</entry>
+              <entry colname="col4">2.x</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="limits">
+    <title>Limitations</title>
+    <body>
+      <p>GreenplumPython has the following limitations:</p>
+        <ul>
+          <li>You can instantiate Greenplum Python 3 Client objects and invoke
+            their methods in a Python 3 script. Importing and using 
+            GreenplumPython from the <codeph>python3</codeph> interactive
+            interpreter is not supported.</li>
+          <li>Do not mix Python 2 and Python 3 code in your functions.</li>
+          <li>The Python function that you create to run in Greenplum cannot
+            reference or call outside functions. If you require more than one
+            function, you must define a single function block with nested
+            functions. For example:
+            <codeblock>def func():
+    def a():
+        return 1+1
+    def b():
+        return a()</codeblock></li>
+        </ul>
+    </body>
+  </topic>
+  <topic id="prereqs">
+    <title>Prerequisites</title>
+    <body>
+      <p>You can use GreenplumPython with Greenplum Database and the PL/Container
+        procedural language. Before you install and run GreenplumPython
+        on a client system:</p>
+      <ul>
+        <li>Ensure that your Greenplum Database installation is running version
+          6.1 or newer.</li>
+        <li>Ensure that your client development system has connectivity to the
+          Greenplum Database master host.</li>
+        <li>Ensure that <codeph>Python</codeph> version 3.0 or newer is installed
+          on your client system, and that you have set the
+          <codeph>$PYTHONPATH</codeph> environment variable appropriately.</li>
+        <li>Ensure that the PL/Container language is installed and configured in
+          your Greenplum Database cluster. Refer to
+          <xref href="pl_container.xml#topic1" type="topic" format="dita"></xref>
+          for language installation and configuration instructions.</li>
+        <li>Verify that you have registered the PL/Container procedural language
+          in each database in which you plan to use GreenplumPython to read
+          data from or write data to Greenplum. For example, the following
+          command lists the extensions and languages registered in the database
+          named <codeph>testdb</codeph>:<codeblock>$ psql -h gpmaster -d testdb -c '\dx'
+                             List of installed extensions
+    Name     | Version  |   Schema   |                          Description     
+-------------+----------+------------+---------------------------------------------
+ plcontainer | 1.0.0    | public     | GPDB execution sandboxing for Python and R
+ plpgsql     | 1.0      | pg_catalog | PL/pgSQL procedural language
+</codeblock>
+          <p>Check for the <codeph>plcontainer</codeph> extension <codeph>Name</codeph>.</p></li>
+        <li>If the Python 3 function that you want to run in Greenplum Database
+          uses external libraries, you must ensure that the external libraries
+          are installed in the PL/Container Python 3 image.</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="install">
+    <title>Installing the Greenplum Python 3 Client</title>
+    <body>
+      <p>GreenplumPython is a Python module. You obtain the module from
+        <ph otherprops="oss-only">the GreenplumPython <codeph>github</codeph>
+        repository</ph> <ph otherprops="pivotal">Pivotal Network</ph>, install
+        the module on your system, and import the package into your Python 3
+        script.</p>
+      <ol>
+        <li>Download the package from the <ph otherprops="oss-only"> <xref
+            href="https://github.com/greenplum-db/GreenplumPython/tarball/master" scope="external"
+            format="html">GreenplumPython <codeph>github</codeph> repository</xref></ph>
+          <ph otherprops="pivotal"> Greenplum Database <i>Greenplum Procedural
+          Languages</i> filegroup on
+          <xref href="https://network.pivotal.io/products/pivotal-gpdb"
+            scope="external" format="html" >Pivotal Network</xref></ph>. The
+          naming format of the downloaded file is
+          <codeph>XXXgreenplumpython&#8209;&lt;version>&#8209;gp6.tar.gz</codeph>.
+          <p>Note the file system location of the downloaded file.</p></li>
+        <li>Install the dependent operating system packages
+          <codeph>postgresql</codeph>, <codeph>postgresql-devel</codeph>, and
+          <codeph>python3-devel</codeph>. You must have operating system
+          root or sudo privileges to install OS packages:
+          <codeblock>$ sudo yum install postgresql postgresql-devel python3-devel</codeblock></li>
+        <li>Install the dependent Python packages: <codeph>numpy</codeph>,
+          <codeph>PyGreSQL</codeph>, <codeph>SQLAlchemy</codeph>, and
+          <codeph>pandas</codeph>. For example, to install these packages to a
+          user-specific location:
+          <codeblock>user@clientsys$ python3 -m pip install --user numpy PyGreSQL SQLAlchemy pandas</codeblock>
+          <p>After downloading, Python unpacks, builds and installs these and
+            dependent packages.</p></li>
+        <li>Install the GreenplumPython package. To install the package to a
+          user-specific location:
+          <codeblock>user@clientsys$ python3 -m pip install --user XXXgreenplum_python.whl</codeblock></li>
+      </ol>
+      <p otherprops="oss-only">Alternatively, you can install the GreenplumPython
+        package directly from the <codeph>github</codeph> repository:
+        <codeblock>$ python3 -m pip install --user pip install git+https://github.com/greenplum-db/GreenplumPython.git</codeblock></p>
+    </body>
+  </topic>
+  <topic id="use">
+    <title>Using the Greenplum Python 3 Client</title>
+    <body>
+      <p>You use GreenplumPython to perform in-database analytics. Typical
+        operations that you may perform include:</p>
+      <ul>
+        <li>Importing the GreenplumPython module.</li>
+        <li>Connecting to and disconnecting from Greenplum Database.</li>
+        <li>Accessing database objects and running queries.</li>
+        <li>Constructing output data frames.</li>
+        <li>Running Python 3 functions in Greenplum Database.</li>
+      </ul>
+      <p>You perform these operations in a Python 3 script.</p>
+      <section id="import">
+        <title>Importing GreenplumPython</title>
+        <p>Use the <codeph>import</codeph> statement to load GreenplumPython.
+          For example, to load GreenplumPython and assign the module the alias
+          <codeph>gppy</codeph>:</p>
+        <codeblock>import greenplumpython as gppy</codeblock>
+      </section>
+      <section id="connect">
+        <title>Connecting to Greenplum Database</title>
+        <p>To use GreenplumPython, you must first create a
+          <codeph>GPConnection</codeph> object that manages connections to
+          specific Greenplum databases:
+          <codeblock>connections = gppy.GPConnection()</codeblock></p>
+        <p>The <codeph>GPConnection</codeph> class includes the following
+          methods:</p>
+      <table>
+        <title>GPConnection Class</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="200pt"/>
+          <colspec colnum="2" colname="col2" colwidth="100pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Method Signature</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">connect( self, host:str, port:int, database:str, user:str, password:str )</entry>
+              <entry colname="col2">Establish a connection to the specified
+                Greenplum database as the specified user.</entry>
+            </row>
+            <row>
+              <entry colname="col1">close( self, conn_id:int )</entry>
+              <entry colname="col2">Close a database connection.</entry>
+            </row>
+            <row>
+              <entry colname="col1">get_connection( self, conn_id:int )</entry>
+              <entry colname="col2">Return the connection object associated with
+                the specified connection identifier.</entry>
+            </row>
+            <row>
+              <entry colname="col1">list_connections( self )</entry>
+              <entry colname="col2">List all connections to Greenplum databases.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+         <p>When you connect to Greenplum Database, you provide the master host,
+           port, database name, user name, and password via function arguments.
+           You must specify all arguments, even if the argument is empty.</p>
+         <p>The <codeph>connect()</codeph> function returns a proxy object for
+           the database connection. This object is comprised of an integer
+           connection identifier and an SqlAlchemy
+           <codeph>sqlalchemy.engine.base.Connection</codeph> object. You specify
+           the connection object when you operate on tables or views in the
+           database. You can specify the connection identifier when you close the
+           connection.</p>
+         <p>Use the <codeph>close()</codeph> function to close a connection.
+           The <codeph>close()</codeph> function returns no value.</p>
+         <p>GreenplumPython maintains connections in a dictionary. To list and
+           display information about active Greenplum connections, use the
+           <codeph>list_connections()</codeph> method.</p>
+        <p><b>Example</b>:</p>
+	 <codeblock># instantiate a GPConnection object
+connections = gppy.GPConnection()
+
+# connect to the Greenplum database named testdb on host gpmaster
+cid_to_testdb = connections.connect( 'gpmaster', 5432, 'testdb', 'gpadmin', 'changeme' )
+
+# list all database connections
+connlist = connections.list_connections()
+
+# close the connection by object
+cid_to_testdb.close()
+
+# close the connection by id
+# connections.close( 1 ) </codeblock>
+      </section>
+      <section id="objs">
+        <title>Accessing Database Objects and Running Queries</title>
+        <p>The <codeph>GPDatabase()</codeph> class converts between a Pandas
+          <codeph>DataFrame</codeph> and a Greenplum database. GreenplumPython
+          uses SQLAlchemy to handle this database abstraction.</p>
+        <codeblock>class GPDatabase( pandas.io.sql.SQLDatabase )</codeblock>
+        <p>The GreenplumPython implementation of this class provides methods to
+          identify if a table or view exists in the database identified by a
+          specific connection. The class also exposes methods to execute queries
+          in the database and obtain a data frame wrapper reference to a
+          Greenplum table.</p>
+      <table>
+        <title>GPDatabase Class</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="150pt"/>
+          <colspec colnum="2" colname="col2" colwidth="150pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Method Signature</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">check_table_if_exist( self, table_name, schema )</entry>
+              <entry colname="col2">Determine if table exists.</entry>
+            </row>
+            <row>
+              <entry colname="col1">execute_query( self, db_sql )</entry>
+              <entry colname="col2">Execute the specified query in the database.</entry>
+            </row>
+            <row>
+              <entry colname="col1">execute_transaction_query(self, trans, db_sql )</entry>
+              <entry colname="col2">Execute the specified query in a transaction 
+                in the database.</entry>
+            </row>
+            <row>
+              <entry colname="col1">get_table( self, table_name, schema=None )</entry>
+              <entry colname="col2">Obtain a data frame wrapper for the specified
+                table.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+        <p>The <codeph>GPDatabase</codeph> class also inherits methods from the
+          <codeph>pandas.io.sql.SQLDatabase</codeph> class and its superclasses.</p>
+        <p><b>Example</b>:</p>
+	 <codeblock># instantiate a GPDatabase object for the connection to testdb
+testdb_inst = gppy.GPDatabase( cid_to_testdb )
+
+# determine if table1 exists
+table1_exists = testdb_inst.check_table_if_exist( 'table1', 'public' )
+if not table1_exists:
+    print( 'table 1 does not exist, exiting' )
+    quit()
+
+# determine the number of rows in table1 and print the count
+count_qres = testdb_inst.execute_query( 'SELECT count(*) FROM table1' )
+print( 'query results:' )
+print( count_qres )
+
+# get a data frame wrapper for table1; we will use this later
+df_table1 = testdb_inst.get_table( 'table1', 'public' )</codeblock>
+        <p><codeph>get_table()</codeph> creates a temporary Python object
+          that references a view or table in a Greenplum database. No data is
+          loaded into Python when you use this function.</p>
+      </section>
+      <section id="data">
+        <title>Constructing Output Data Frames</title>
+        <p>The fundamental data structure of GreenplumPython is the Pandas
+          <codeph>DataFrame</codeph>, a 2-dimensional labeled data structure
+          comprised of columns of potentially different types.
+          GreenplumPython operates on <codeph>GPTableMetadata</codeph> objects,
+          which abstract the structure of an output data frame that represents
+          a local variable or an output Greenplum Database table.</p>
+        <p>When you instantiate a <codeph>GPTableMetadata</codeph> object, you
+          provide the name of the output table (optional), the column signatures,
+          and the distribution column or scheme:</p>
+        <codeblock>GPTableMetadata( self, name, signature=[], distribute_on='', case_sensitive=False )</codeblock>
+        <p>If you do not provide an output table name
+          (<codeph>name = None</codeph>), GreenplumPython stores the output in
+          a local data frame.</p>
+        <p>Provide a list of column-name, Greenplum data type pairs for the
+          column signature. For example:</p>
+        <codeblock>[{"c1": "int4"},{"c2": "text"}]</codeblock>
+        <p>When specifying the distribution, you can provide a list of one or
+          more distribution column names:</p>
+        <codeblock>['city', 'zipcode']</codeblock>
+        <p>Or the <codeph>'randomly'</codeph> or <codeph>'replicated'</codeph>
+          distribution scheme names.</p>
+        <p><b>Example</b>:</p>
+        <codeblock># construct an output data frame with a single int column
+output_cols = [{"c1":"int"}]
+
+# attach the signature to a table named table1_py_inc with random distribution
+tbl_output = gppy.GPTableMetadata( 'table1_py_inc', output_cols, 'randomly' )
+
+# attach the signature to a local data frame
+local_output = gppy.GPTableMetadata( None, output_cols, None )</codeblock>
+      </section>
+      <section id="run_greenplum">
+        <title>Running Python 3 Functions in Greenplum Database</title>
+          <p>GreenplumPython supports two functions that allow you to run a Python
+            3 function, in-database, on every row of a Greenplum Database table:
+            <codeph>gpApply()</codeph> and <codeph>gptApply()</codeph>.
+            You use the Greenplum PL/Container procedural language as the
+            vehicle in which to run the function.</p>
+          <p>The function signatures follow:</p>
+          <codeblock>gpApply( dataframe, py3_func, db, output, runtime_id, runtime_type='plcontainer',
+         clear_existing=True, **kwargs )
+
+gptApply( dataframe, index, py3_func, db, output, runtime_id, runtime_type='plcontainer',
+          clear_existing=True, **kwargs )</codeblock>
+          <p>Use the second variant of the function when the source table data is indexed.</p>
+          <note>You must specify a <codeph>runtime_id</codeph> that is linked to a
+            PL/Container Python 3 Docker image.</note>
+          <p><codeph>gpApply()</codeph> writes the <codeph>output</codeph> to the
+            local data frame or a Greenplum table reference that you provide.</p>
+          <p>By default, <codeph>gp[t]Apply()</codeph> passes input arguments 
+            that correspond to the input table column names to the Python 3
+            function <codeph>py3_func</codeph>. You pass additional arguments to
+            the Python function in <codeph>kwargs</codeph>.</p>
+          <p><codeph>py3_func</codeph> must return a <codeph>dict</codeph> or a
+           tuple that has the same number of columns as the <codeph>output</codeph>
+           table or data frame.</p>
+          <note>If <codeph>py3_func</codeph> uses external libraries, you must
+            include imports for these libraries in the function body.</note>
+          <p><b>Example</b>:</p>
+          <p>Create a Greenplum table named <codeph>table1</codeph> in the
+            database named <codeph>testdb</codeph>. This table has a single
+            integer-type field. Populate the table with some data:</p>
+            <codeblock>user@clientsys$ psql -h gpmaster -d testdb
+testdb=# CREATE TABLE table1( id int );
+testdb=# INSERT INTO table1 SELECT generate_series( 1,13 );
+testdb=# \q</codeblock>
+          <p>Create a Python function that increments an integer. Run the function
+            on <codeph>table1</codeph> in Greenplum using the PL/Container
+            procedural language, writing the output values to a local data frame.
+            Also write the output values to a table named
+            <codeph>table1_py_inc</codeph>:
+          <codeblock>
+# create a Python 3 function that increments the integer id argument by 1
+# this function returns a dict
+def input_py_func( id ):
+    x = dict()
+    x['c1'] = id + 1
+    return x
+
+# run the function in Greenplum Database:
+#  - df_table1 is our previously-obtained data frame wrapper reference to table1
+#  - testdb_inst is our previously-obtained GPDatabase reference
+#  - use a PL/Container runtime named plc_python3_shared
+
+# run 1: save the results in the previously-created local_output dataframe ref
+df1 = gppy.gpApply( df_table1, input_py_func, testdb_inst, local_output, 'plc_python3_shared' )
+
+# sort and print the results of run 1
+sorted_df1 = df1.sort_values( 'c1' )
+print( 'sorted local output result: ' )
+print( sorted_df1 )
+
+# run 2: write the results to the previously-created tbl_output reference
+df2 = gppy.gpApply( df_table1, input_py_func, testdb_inst, tbl_output, 'plc_python3_shared' )
+
+# query the output table and print the first tuple of run 2 results
+query2 = 'SELECT * FROM table1_py_inc ORDER BY c1'
+q2res = testdb_inst.execute_query( query2 )
+print( 'query output table, first tuple:' )
+print( q2res.iat[0,0] )</codeblock></p>
+      </section>
+    </body>
+  </topic>
+  <topic id="help_ref" xml:lang="en">
+    <title>Reference</title>
+    <body>
+      <p>GreenplumPython provides several classes. To obtain reference information
+        for a GreenplumPython class, invoke the <codeph>pydoc3</codeph> command
+        with the fully-qualified class name. For example, to display the reference
+        information for the GreenplumPython <codeph>GPDatabase</codeph> class:
+        <codeblock>$ pydoc3 greenplumpython.GPDatabase</codeblock>
+        To display reference information for a class method, invoke the
+        <codeph>pydoc3</codeph> command with the fully-qualified method name.
+        For example, to obtain reference information for the
+        <codeph>get_table()</codeph> method of the <codeph>GPDatabase</codeph>
+        class:
+        <codeblock>$ pydoc3 greenplumpython.GPDatabase.get_table</codeblock></p>
+    </body>
+  </topic>
+</topic>

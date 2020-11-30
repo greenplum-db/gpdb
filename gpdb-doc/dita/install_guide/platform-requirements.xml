@@ -375,6 +375,12 @@
                 <entry>1.1.0</entry>
                 <entry>Supports R 3.6+.</entry>
               </row>
+              <row>
+                <entry><xref href="../analytics/greenplum_py3_client.xml" format="dita" scope="peer"
+                    >GreenplumPython</xref></entry>
+                <entry>1.0.0 (beta)</entry>
+                <entry>Supports Python 3+.</entry>
+              </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry "><xref href="../analytics/madlib.xml"
                     format="dita" scope="peer">MADlib Machine Learning</xref></entry>

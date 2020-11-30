@@ -32,4 +32,5 @@
         <topicref href="pl_r.xml" linking="none"/>
     </topicref>
     <topicref href="greenplum_r_client.xml" linking="none"/>
+    <topicref href="greenplum_py3_client.xml" linking="none"/>
 </map>
