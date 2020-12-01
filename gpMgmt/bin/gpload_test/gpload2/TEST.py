@@ -64,6 +64,25 @@ def get_ip(hostname=None):
             ipv4 = myip
             return ipv4
 
+
+def run(cmd):
+    """
+    Run a shell command. Return (True, [result]) if OK, or (False, []) otherwise.
+    @params cmd: The command to run at the shell.
+            oFile: an optional output file.
+            mode: What to do if the output file already exists: 'a' = append;
+            'w' = write.  Defaults to append (so that the function is
+            backwards compatible).  Yes, this is passed to the open()
+            function, so you can theoretically pass any value that is
+            valid for the second parameter of open().
+    """
+    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    out = p.communicate()[0]
+    ret = []
+    ret.append(out)
+    rc = False if p.wait() else True
+    return (rc,ret)
+
 def getPortMasterOnly(host = 'localhost',master_value = None,
                       user = os.environ.get('USER'),gphome = os.environ['GPHOME'],
                       mdd=os.environ['MASTER_DATA_DIRECTORY'],port = os.environ['PGPORT']):
@@ -93,6 +112,26 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
 
     return str(master_value)
 
+
+def runfile(ifile, flag='', dbname=None, outputPath="", outputFile="",
+            username=None,
+            PGOPTIONS=None, host = None, port = None):
+    '''
+    run a file in psql
+    '''
+
+    if len(outputFile) == 0:
+        (ok, out) = psql_run(ifile = ifile,ofile = outFile(ifile, outputPath),flag = flag,
+                             dbname=dbname , username=username,
+                            PGOPTIONS=PGOPTIONS, host = host, port = port)
+    else:
+        (ok,out) = psql_run(ifile =ifile, ofile =outFile(outputFile, outputPath), flag =flag,
+                            dbname= dbname, username= username,
+                            PGOPTIONS= PGOPTIONS, host = host, port = port)
+
+    return (ok, out)
+
+
 """
 Global Values
 """
@@ -118,133 +157,103 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(config='config/config_file',file='data/external_file_01.txt',input_port='8081',columns=None, format='text', log_errors=None, error_limit=None, delimiter='|', 
-    encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, table='texttable', mode='insert', update_columns=['n2'],update_condition=None, match_columns=['n1','s1','s2'], staging_table=None,
-    mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,sql=False, before=None, after=None
-    , error_table=None):
-    '''
+hostNameAddrs = get_ip(HOST)
+masterPort = getPortMasterOnly()
 
-    write gpload config file according to pramarters, please see gpload document for detail information of parameters.
+def write_config_file(database='reuse_gptest', user=os.environ.get('USER'),host=hostNameAddrs, port=int(masterPort), config='config/config_file',file='data/external_file_01.txt',input_port='8081',columns=None, format='text', log_errors=None, error_limit=None, delimiter="'|'", 
+    encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None,transform_config=None, max_line_length=None,table='texttable', mode='insert', update_columns=['n2'],update_condition=None, match_columns=['n1','s1','s2'], staging_table=None,
+    mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,sql=False, before=None, after=None, 
+    error_table=None):
 
-    Args:
-        config (string): config file path
-        columns (list): columns in source file [{"col1":"type1"},{"col2":"type2"}...]
-        log_errors (bool): 
-        error_limit (int): 
-        update_columns (list): target column names to update ['col1','col2'...], add single quottion to columns spontaneously
-        match_columns (list): target column name to match when update or merge ['col1','col2'...], add single quottion to columns spontaneously
-        mapping (dict): target_column_name: source_column_name {"tar1":"sour1","tar2":"sou2"...}, add single quottion to columns spontaneously
-        sql (bool): wether to execute sql, False for default
-        external (bool): False for default
-        preload (bool): True for default
-        reuse_flag (bool): reuse table or not
-        fast_match (bool):
-        staging_table (sting): external_table_name
-        delimiter (string): add single quotation spontaneously
-        null_as (string): add single quotation spontaneously
+    f = open(config,'w')
+    f.write("VERSION: 1.0.0.1")
+    if database:
+        f.write("\nDATABASE: "+database)
+    f.write("\nUSER: "+os.environ.get('USER'))
+    f.write("\nHOST: "+hostNameAddrs)
+    f.write("\nPORT: "+masterPort)
 
-    Returns:
-        none
-    '''
-    S = ruamel.yaml.scalarstring.SingleQuotedScalarString # use S if you want str to be single quoted
-    conf = {}
-    conf['VERSION'] = '1.0.0.1'
-    conf['DATABASE'] = 'reuse_gptest'
-    conf['USER'] = os.environ.get('USER') #only for linux
-    conf['HOST'] = hostNameAddrs
-    conf['PORT'] = int(masterPort)
-    conf['GPLOAD'] = {}
-
-    gpload_input = []
-    input_source = {'LOCAL_HOSTNAME':[hostNameAddrs],
-        'port':int(input_port),
-        'FILE': [mkpath(file)]}
-    gpload_input.append({'SOURCE':input_source})
+    f.write("\nGPLOAD:")
+    f.write("\n   INPUT:")
+    f.write("\n    - SOURCE:")
+    f.write("\n         LOCAL_HOSTNAME:")
+    f.write("\n            - "+hostNameAddrs)
+    if input_port:
+        f.write("\n         PORT: "+str(input_port))
+    f.write("\n         FILE:")
+    f.write("\n            - "+mkpath(file))
     if columns:
-        gpload_input.append({"COLUMNS":columns})
+        f.write("\n    - COLUMNS:")
+        for c,ct in columns.items():
+            f.write("\n           - "+c+": "+ct)
     if format:
-        gpload_input.append({'FORMAT':format})
+        f.write("\n    - FORMAT: "+format)
     if log_errors:
-        gpload_input.append({'LOG_ERRORS':log_errors})
+        f.write("\n    - LOG_ERRORS: "+str(log_errors))
     if error_limit:
-        gpload_input.append({'ERROR_LIMIT':error_limit})
+        f.write("\n    - ERROR_LIMIT: "+str(error_limit))
     if error_table:
-        gpload_input.append({'ERROR_TABLE':error_table})
-    if delimiter:
-        gpload_input.append({'DELIMITER':S(delimiter)})
+        f.write("\n    - ERROR_TABLE: "+error_table)
+    f.write("\n    - DELIMITER: "+delimiter)
     if encoding:
-        gpload_input.append({'ENCODING': encoding})
+        f.write("\n    - ENCODING: "+encoding)
     if escape:
-        gpload_input.append({'ESCAPE':escape})
+        f.write("\n    - ESCAPE: "+escape)
     if null_as:
-        gpload_input.append({'NULL_AS':null_as})
+        f.write("\n    - NULL_AS: "+null_as)
     if fill_missing_fields:
-        gpload_input.append({'FILL_MISSING_FIELDS':fill_missing_fields})
+        f.write("\n    - FILL_MISSING_FIELDS: "+str(fill_missing_fields))
     if quote:
-        gpload_input.append({'QUOTE':quote})
+        f.write("\n    - QUOTE: "+quote)
+    if header:
+        f.write("\n    - HEADER: "+header)
+    if transform:
+        f.write("\n    - TRANSFORM: "+transform)
+    if transform_config:
+        f.write("\n    - TRANSFORM_CONFIG: "+transform_config)
+    if max_line_length:
+        f.write("\n    - MAX_LINE_LENGTH: "+str(max_line_length))
     
-    conf['GPLOAD']['INPUT'] = gpload_input
-
     if externalSchema:
-        conf['GPLOAD']['EXTERNAL'] = [{'SCHEMA':externalSchema}]
+        f.write("\n   EXTERNAL:")
+        f.write("\n    - SCHEMA: "+externalSchema)
 
-    gpload_output = []
-    gpload_output.append({'TABLE':table})
-    gpload_output.append({'MODE':mode})
+    f.write("\n   OUTPUT:")
+    f.write("\n    - TABLE: "+table)
+    f.write("\n    - MODE: "+mode)
     if match_columns:
-        gpload_output.append({'MATCH_COLUMNS':match_columns})
+        f.write("\n    - MATCH_COLUMNS:")
+        for m in match_columns:
+            f.write("\n           - "+m)
     if update_columns:
-        gpload_output.append({'UPDATE_COLUMNS':update_columns})
+        f.write("\n    - UPDATE_COLUMNS:")
+        for u in update_columns:
+            f.write("\n           - "+u)
     if update_condition:
-        gpload_output.append({'UPDATE_CONDITION':update_condition})
+        f.write("\n    - UPDATE_CONDITION: "+update_condition)
     if mapping:
-        mapping_quoted = {}
+        f.write("\n    - MAPPING:")
         for key, val in mapping.items():
-            mapping_quoted[S(key)]= S(val)
-        gpload_output.append({'MAPPING':mapping_quoted})
-    conf['GPLOAD']['OUTPUT'] = gpload_output
+            f.write("\n           "+key+": "+val)
 
     if preload:
-        gpload_preload = []
+        f.write("\n   PRELOAD:" )
         if truncate:
-            gpload_preload.append({'TRUNCATE':truncate})
+            f.write("\n    - TRUNCSTE: "+str(truncate))
         if reuse_tables:
-            gpload_preload.append({'REUSE_TABLES':reuse_tables})
+            f.write("\n    - REUSE_TABLES: "+str(reuse_tables))
         if fast_match:
-            gpload_preload.append({'FAST_MATCH':fast_match})
+            f.write("\n    - FAST_MATCH: "+str(fast_match))
         if staging_table:
-            gpload_preload.append({'STAGING_TABLE':staging_table})
-        conf['GPLOAD']['PRELOAD'] = gpload_preload
+            f.write("\n    - STAGING_TABLE: "+staging_table)
 
     if sql:
-        gpload_sql=[]
+        f.write("\n   SQL:" )
         if before:
-            gpload_sql.append({'BEFORE':before})
+            f.write("\n    - BEFORE: "+before)
         if after:
-            gpload_sql.append({'AFTER':after})
-        conf['GPLOAD']['SQL'] = gpload_sql
-
-    f = open(mkpath(config),'w')
-    yaml = ruamel.yaml.YAML()
-    yaml.dump(conf, f)
-
-def runfile(ifile, flag='', dbname=None, outputPath="", outputFile="",
-            username=None,
-            PGOPTIONS=None, host = None, port = None):
-    '''
-    run a file in psql
-    '''
-
-    if len(outputFile) == 0:
-        (ok, out) = psql_run(ifile = ifile,ofile = outFile(ifile, outputPath),flag = flag,
-                             dbname=dbname , username=username,
-                            PGOPTIONS=PGOPTIONS, host = host, port = port)
-    else:
-        (ok,out) = psql_run(ifile =ifile, ofile =outFile(outputFile, outputPath), flag =flag,
-                            dbname= dbname, username= username,
-                            PGOPTIONS= PGOPTIONS, host = host, port = port)
-
-    return (ok, out)
+            f.write("\n    - AFTER: "+after)
+    f.close()
 
 def psql_run(ifile = None, ofile = None, cmd = None,
             flag = '-e',dbname = None,
@@ -304,23 +313,6 @@ def psql_run(ifile = None, ofile = None, cmd = None,
     return run('%s psql -d %s %s %s -U %s %s %s %s' %
                              (PGOPTIONS, dbname, host, port, username, flag, arg, ofile))
 
-def run(cmd):
-    """
-    Run a shell command. Return (True, [result]) if OK, or (False, []) otherwise.
-    @params cmd: The command to run at the shell.
-            oFile: an optional output file.
-            mode: What to do if the output file already exists: 'a' = append;
-            'w' = write.  Defaults to append (so that the function is
-            backwards compatible).  Yes, this is passed to the open()
-            function, so you can theoretically pass any value that is
-            valid for the second parameter of open().
-    """
-    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    out = p.communicate()[0]
-    ret = []
-    ret.append(out)
-    rc = False if p.wait() else True
-    return (rc,ret)
 
 def outFile(fname,outputPath = ''):
     return changeExtFile(fname, ".out", outputPath)
@@ -395,8 +387,6 @@ def copy_data(source='',target=''):
     p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     return p.communicate()
 
-hostNameAddrs = get_ip(HOST)
-masterPort = getPortMasterOnly()
 
 def get_table_name():
     try:
@@ -486,61 +476,80 @@ def doTest(num):
     runfile(file)
     check_result(file)
 
-def prepare_test_file(num):
+def write_test_file(num,cmd='',times=2):
     """
-    initialize specific query#.sql for test case num
+    initialize specific query#.sql for test case n
+
+    num: number for case
+    cmd: add sth after default gpload command
+    times: how many times to write gpload command, dufault is 2
     """
     f = open(mkpath('query%d.sql' % num),'w')
-    f.write("\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
+    while times>0:
+        f.write("\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest " + cmd + "\n")
+        times-=1
     f.close()
+
+
+from functools import wraps
+
+def prepare_before_test(num,cmd='',times=2):
+    def prepare_decorator(func):
+        @wraps(func)
+        def wrapped_function(*args, **kwargs):
+            write_test_file(num,cmd,times)
+            retval= func(*args, **kwargs)
+            doTest(num)
+            return retval
+        return wrapped_function
+    return prepare_decorator
+
+
 
 def test_00_gpload_formatOpts_setup():
     "0  gpload setup"
-    """setup query.sql for all cases"""
-    for num in range(1,44):
-        f = open(mkpath('query%d.sql' % num),'w')
-        f.write("\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
-        f.close()
+    """setup database"""
     file = mkpath('setup.sql')
     runfile(file)
     check_result(file)
 
+@prepare_before_test(num=1)
 def test_01_gpload_formatOpts_delimiter():
     "1  gpload formatOpts delimiter '|' with reuse "
     copy_data('external_file_01.txt','data_file.txt')
-    write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter='|')
-    doTest(1)
+    write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter="'|'")
 
+@prepare_before_test(num=2)
 def test_02_gpload_formatOpts_delimiter():
     "2  gpload formatOpts delimiter '\t' with reuse"
     copy_data('external_file_02.txt','data_file.txt')
-    write_config_file(reuse_tables=True, format='text', file='data_file.txt',delimiter='\t')
-    doTest(2)
+    write_config_file(reuse_tables=True, format='text', file='data_file.txt',delimiter="'\\t'")
 
+@prepare_before_test(num=3)
 def test_03_gpload_formatOpts_delimiter():
     "3  gpload formatOpts delimiter E'\t' with reuse"
     copy_data('external_file_02.txt','data_file.txt')
     write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter="E'\\t'")
-    doTest(3)
 
+@prepare_before_test(num=4)
 def test_04_gpload_formatOpts_delimiter():
     "4  gpload formatOpts delimiter E'\u0009' with reuse"
     copy_data('external_file_02.txt','data_file.txt')
-    write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter="E'\u0009'")
-    doTest(4)
+    write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter=r"E'\u0009'")
 
+@prepare_before_test(num=5)
 def test_05_gpload_formatOpts_delimiter():
     "5  gpload formatOpts delimiter E'\\'' with reuse"
     copy_data('external_file_03.txt','data_file.txt')
     write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter="E'\''")
-    doTest(5)
 
+@prepare_before_test(num=6)
 def test_06_gpload_formatOpts_delimiter():
     "6  gpload formatOpts delimiter \"'\" with reuse"
     copy_data('external_file_03.txt','data_file.txt')
-    write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter="'")
-    doTest(6)
+    write_config_file(reuse_tables=True,format='text',file='data_file.txt',table='texttable',delimiter="\"'\"")
 
+@prepare_before_test(num=7)
 def test_07_gpload_reuse_table_insert_mode_without_reuse():
     "7  gpload insert mode without reuse"
     runfile(mkpath('setup.sql'))
@@ -548,15 +557,15 @@ def test_07_gpload_reuse_table_insert_mode_without_reuse():
     f.write("\\! psql -d reuse_gptest -c 'select count(*) from texttable;'")
     f.close()
     write_config_file(mode='insert',reuse_tables=False)
-    doTest(7)
 
+@prepare_before_test(num=8)
 def test_08_gpload_reuse_table_update_mode_with_reuse():
     "8  gpload update mode with reuse"
     drop_tables()
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='update',reuse_tables=True,file='data_file.txt')
-    doTest(8)
 
+@prepare_before_test(num=9)
 def test_09_gpload_reuse_table_update_mode_without_reuse():
     "9  gpload update mode without reuse"
     f = open(mkpath('query9.sql'),'a')
@@ -564,99 +573,98 @@ def test_09_gpload_reuse_table_update_mode_without_reuse():
     f.close()
     copy_data('external_file_05.txt','data_file.txt')
     write_config_file(mode='update',reuse_tables=False,file='data_file.txt')
-    doTest(9)
 
+@prepare_before_test(num=10)
 def test_10_gpload_reuse_table_merge_mode_with_reuse():
     "10  gpload merge mode with reuse "
     drop_tables()
     copy_data('external_file_06.txt','data_file.txt')
     write_config_file(mode='merge', reuse_tables=True, file='data_file.txt')
-    doTest(10)
 
+@prepare_before_test(num=11)
 def test_11_gpload_reuse_table_merge_mode_without_reuse():
     "11  gpload merge mode without reuse "
     copy_data('external_file_07.txt','data_file.txt')
     write_config_file(mode='merge', reuse_tables=False, file='data_file.txt')
-    doTest(11)
 
+@prepare_before_test(num=12)
 def test_12_gpload_reuse_table_merge_mode_with_different_columns_number_in_file():
     "12 gpload merge mode with reuse (RERUN with different columns number in file) "
     psql_run(cmd="ALTER TABLE texttable ADD column n8 text",dbname='reuse_gptest')
     copy_data('external_file_08.txt','data_file.txt')
     write_config_file(mode='merge', reuse_tables=True, file='data_file.txt')
-    doTest(12)
 
+@prepare_before_test(num=13)
 def test_13_gpload_reuse_table_merge_mode_with_different_columns_number_in_DB():
     "13  gpload merge mode with reuse (RERUN with different columns number in DB table) "
     preTest = mkpath('pre_test_13.sql')
     psql_run(preTest, dbname='reuse_gptest')
     copy_data('external_file_09.txt','data_file.txt')
     write_config_file(mode='merge', reuse_tables=True, file='data_file.txt')
-    doTest(13)
 
+@prepare_before_test(num=14)
 def test_14_gpload_reuse_table_update_mode_with_reuse_RERUN():
     "14 gpload update mode with reuse (RERUN) "
     write_config_file(mode='update', reuse_tables=True, file='data_file.txt')
-    doTest(14)
 
+@prepare_before_test(num=15)
 def test_15_gpload_reuse_table_merge_mode_with_different_columns_order():
     "15 gpload merge mode with different columns' order "
     copy_data('external_file_10.txt','data/data_file.tbl')
-    input_columns = [{'s_s1':'text'},
-        {'s_s2':'text'},
-        {'s_dt':'timestamp'},
-        {'s_s3':'text'},
-        {'s_n1':'smallint'},
-        {'s_n2':'integer'},
-        {'s_n3':'bigint'},
-        {'s_n4':'decimal'},
-        {'s_n5':'numeric'},
-        {'s_n6':'real'},
-        {'s_n7':'double precision'},
-        {'s_n8':'text'},
-        {'s_n9':'text'}]
+    input_columns = {'s_s1':'text',
+        's_s2':'text',
+        's_dt':'timestamp',
+        's_s3':'text',
+        's_n1':'smallint',
+        's_n2':'integer',
+        's_n3':'bigint',
+        's_n4':'decimal',
+        's_n5':'numeric',
+        's_n6':'real',
+        's_n7':'double precision',
+        's_n8':'text',
+        's_n9':'text'}
     output_mapping =  {"s1": "s_s1", "s2": "s_s2",  "dt": "s_dt", "s3": "s_s3", "n1": "s_n1",
     "n2": "s_n2", "n3": "s_n3", "n4": "s_n4", "n5": "s_n5", "n6": "s_n6", "n7": "s_n7", "n8": "s_n8", "n9": "s_n9"}
     write_config_file(mode='merge', reuse_tables=True, file='data/data_file.tbl',columns=input_columns,mapping=output_mapping)
-    doTest(15)
 
+@prepare_before_test(num=16)
 def test_16_gpload_formatOpts_quote():
     "16  gpload formatOpts quote unspecified in CSV with reuse "
     copy_data('external_file_11.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable',delimiter=',')
-    doTest(16)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable',delimiter="','")
 
+@prepare_before_test(num=17)
 def test_17_gpload_formatOpts_quote():
     "17  gpload formatOpts quote '\\x26'(&) with reuse"
     copy_data('external_file_12.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter=',', quote='\x26')
-    doTest(17)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter="','", quote=r"'\x26'")
 
+@prepare_before_test(num=18)
 def test_18_gpload_formatOpts_quote():
     "18  gpload formatOpts quote E'\\x26'(&) with reuse"
     copy_data('external_file_12.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter=',', quote="E'\x26'")
-    doTest(18)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter="','", quote="E'\x26'")
 
+@prepare_before_test(num=19)
 def test_19_gpload_formatOpts_escape():
     "19  gpload formatOpts escape '\\' with reuse"
     copy_data('external_file_01.txt','data_file.txt')
     file = mkpath('setup.sql')
     runfile(file)
-    write_config_file(reuse_tables=True, format='text', file='data_file.txt',table='texttable',escape='\\')
-    doTest(19)
+    write_config_file(reuse_tables=True, format='text', file='data_file.txt',table='texttable',escape="'\\'")
 
+@prepare_before_test(num=20)
 def test_20_gpload_formatOpts_escape():
     "20  gpload formatOpts escape '\\' with reuse"
     copy_data('external_file_01.txt','data_file.txt')
-    write_config_file(reuse_tables=True, format='text', file='data_file.txt',table='texttable',escape='\x5C')
-    doTest(20)
+    write_config_file(reuse_tables=True, format='text', file='data_file.txt',table='texttable',escape="'\x5C'")
 
+@prepare_before_test(num=21)
 def test_21_gpload_formatOpts_escape():
     "21  gpload formatOpts escape E'\\\\' with reuse"
     copy_data('external_file_01.txt','data_file.txt')
     write_config_file(reuse_tables=True, format='text', file='data_file.txt',table='texttable',escape="E'\\\\'")
-    doTest(21)
 
 # case 22 is flaky on concourse. It may report: Fatal Python error: GC object already tracked during testing.
 # This is seldom issue. we can't reproduce it locally, so we disable it, in order to not blocking others
@@ -676,6 +684,7 @@ def test_21_gpload_formatOpts_escape():
 #    write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='90000000')
 #   self.doTest(22)
 
+@prepare_before_test(num=23)
 def test_23_gpload_error_count():
     "23  gpload error_table"
     file = mkpath('setup.sql')
@@ -691,9 +700,9 @@ def test_23_gpload_error_count():
             f.write('1997,Ford,E350,"ac, abs, moon",3000.00\n')
     f.close()
     copy_data('large_file.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv',table='csvtable', delimiter=',', error_table="err_table", error_limit=90000000)
-    doTest(23)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv',table='csvtable', delimiter="','", error_table="err_table", error_limit=90000000)
 
+@prepare_before_test(num=24)
 def test_24_gpload_error_count():
     "24  gpload error count with ext schema"
     file = mkpath('setup.sql')
@@ -709,9 +718,9 @@ def test_24_gpload_error_count():
             f.write('1997,Ford,E350,"ac, abs, moon",3000.00\n')
     f.close()
     copy_data('large_file.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv',table='csvtable', delimiter=',', log_errors=True, error_limit=90000000, externalSchema='test')
-    doTest(24)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv',table='csvtable', delimiter="','", log_errors=True, error_limit=90000000, externalSchema='test')
 
+@prepare_before_test(num=25)
 def test_25_gpload_ext_staging_table():
     "25  gpload reuse ext_staging_table if it is configured"
     file = mkpath('setup.sql')
@@ -720,9 +729,9 @@ def test_25_gpload_ext_staging_table():
     f.write("\\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
     f.close()
     copy_data('external_file_13.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter=',', log_errors=True,error_limit=10,staging_table='staging_table')
-    doTest(25)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter="','", log_errors=True,error_limit=10,staging_table='staging_table')
 
+@prepare_before_test(num=26)
 def test_26_gpload_ext_staging_table_with_externalschema():
     "26  gpload reuse ext_staging_table if it is configured with externalschema"
     file = mkpath('setup.sql')
@@ -731,9 +740,9 @@ def test_26_gpload_ext_staging_table_with_externalschema():
     f.write("\\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
     f.close()
     copy_data('external_file_13.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter=',',log_errors=True,error_limit=10, staging_table='staging_table',externalSchema='test')
-    doTest(26)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter="','",log_errors=True,error_limit=10, staging_table='staging_table',externalSchema='test')
 
+@prepare_before_test(num=27)
 def test_27_gpload_ext_staging_table_with_externalschema():
     "27  gpload reuse ext_staging_table if it is configured with externalschema"
     file = mkpath('setup.sql')
@@ -742,9 +751,9 @@ def test_27_gpload_ext_staging_table_with_externalschema():
     f.write("\\! psql -d reuse_gptest -c 'select count(*) from test.csvtable;'")
     f.close()
     copy_data('external_file_13.csv','data_file.csv')
-    write_config_file(reuse_tables=True, format='csv', file='data_file.csv',table='test.csvtable',delimiter=',',log_errors=True,error_limit=10,staging_table='staging_table',externalSchema='%')
-    doTest(27)
+    write_config_file(reuse_tables=True, format='csv', file='data_file.csv',table='test.csvtable',delimiter="','",log_errors=True,error_limit=10,staging_table='staging_table',externalSchema="'%'")
 
+@prepare_before_test(num=28)
 def test_28_gpload_ext_staging_table_with_dot():
     "28  gpload reuse ext_staging_table if it is configured with dot"
     file = mkpath('setup.sql')
@@ -753,9 +762,9 @@ def test_28_gpload_ext_staging_table_with_dot():
     f.write("\\! psql -d reuse_gptest -c 'select count(*) from test.csvtable;'")
     f.close()
     copy_data('external_file_13.csv','data_file.csv')
-    write_config_file(reuse_tables=True, file='data_file.csv',table='test.csvtable',format='csv',delimiter=',',log_errors=True,error_limit=10,staging_table='t.staging_table')
-    doTest(28)
+    write_config_file(reuse_tables=True, file='data_file.csv',table='test.csvtable',format='csv',delimiter="','",log_errors=True,error_limit=10,staging_table='t.staging_table')
 
+@prepare_before_test(num=29)
 def test_29_gpload_reuse_table_insert_mode_with_reuse_and_null():
     "29  gpload insert mode with reuse and null"
     runfile(mkpath('setup.sql'))
@@ -764,82 +773,82 @@ def test_29_gpload_reuse_table_insert_mode_with_reuse_and_null():
     f.close()
     copy_data('external_file_14.txt','data_file.txt')
     write_config_file(mode='insert', reuse_tables=True, file='data_file.txt',log_errors=True, error_limit=100)
-    doTest(29)
 
+@prepare_before_test(num=30)
 def test_30_gpload_reuse_table_update_mode_with_fast_match():
     "30  gpload update mode with fast match"
     drop_tables()
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='update',reuse_tables=True,fast_match=True,file='data_file.txt')
-    doTest(30)
 
+@prepare_before_test(num=31)
 def test_31_gpload_reuse_table_update_mode_with_fast_match_and_different_columns_number():
     "31 gpload update mode with fast match and differenct columns number) "
     psql_run(cmd="ALTER TABLE texttable ADD column n8 text",dbname='reuse_gptest')
     copy_data('external_file_08.txt','data_file.txt')
     write_config_file(mode='update',reuse_tables=True,fast_match=True,file='data_file.txt')
-    doTest(31)
 
+@prepare_before_test(num=32)
 def test_32_gpload_update_mode_without_reuse_table_with_fast_match():
     "32  gpload update mode when reuse table is false and fast match is true"
     drop_tables()
     copy_data('external_file_08.txt','data_file.txt')
     write_config_file(mode='update',reuse_tables=False,fast_match=True,file='data_file.txt')
-    doTest(32)
 
+@prepare_before_test(num=33)
 def test_33_gpload_reuse_table_merge_mode_with_fast_match_and_external_schema():
     "33  gpload update mode with fast match and external schema"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='merge',reuse_tables=True,fast_match=True,file='data_file.txt',externalSchema='test')
-    doTest(33)
 
+@prepare_before_test(num=34)
 def test_34_gpload_reuse_table_merge_mode_with_fast_match_and_encoding():
     "34  gpload merge mode with fast match and encoding GBK"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='merge',reuse_tables=True,fast_match=True,file='data_file.txt',encoding='GBK')
-    doTest(34)
 
+@prepare_before_test(num=35)
 def test_35_gpload_reuse_table_merge_mode_with_fast_match_default_encoding():
     "35  gpload does not reuse table when encoding is setted from GBK to empty"
     write_config_file(mode='merge',reuse_tables=True,fast_match=True,file='data_file.txt')
-    doTest(35)
 
+@prepare_before_test(num=36)
 def test_36_gpload_reuse_table_merge_mode_default_encoding():
     "36  gpload merge mode with encoding GBK"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='merge',reuse_tables=True,fast_match=False,file='data_file.txt',encoding='GBK')
-    doTest(36)
 
+@prepare_before_test(num=37)
 def test_37_gpload_reuse_table_merge_mode_invalid_encoding():
     "37  gpload merge mode with invalid encoding"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='merge',reuse_tables=True,fast_match=False,file='data_file.txt',encoding='xxxx')
-    doTest(37)
 
+@prepare_before_test(num=38)
 def test_38_gpload_without_preload():
     "38  gpload insert mode without preload"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='insert',reuse_tables=True,fast_match=False,file='data_file.txt',error_table="err_table",error_limit=1000,preload=False)
-    doTest(38)
 
+@prepare_before_test(num=39)
 def test_39_gpload_fill_missing_fields():
     "39  gpload fill missing fields"
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_04.txt','data_file.txt')
     write_config_file(mode='insert',reuse_tables=False,fast_match=False,file='data_file.txt',table='texttable1', error_limit=1000, fill_missing_fields=True)
-    doTest(39)
 
+@prepare_before_test(num=40)
 def test_40_gpload_merge_mode_with_multi_pk():
     "40  gpload merge mode with multiple pk"
     file = mkpath('setup.sql')
@@ -866,46 +875,50 @@ def test_40_gpload_merge_mode_with_multi_pk():
     f.write("\\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
     f.write("\\! psql -d reuse_gptest -c 'drop table testpk;'\n")
     f.close()
-    doTest(40)
 
+@prepare_before_test(num=41)
 def test_41_gpload_special_char():
     "41 gpload special char"
-    file = mkpath('setup.sql')
-    runfile(file)
     copy_data('external_file_15.txt','data_file.txt')
-    columns = [{'"Field1"': 'bigint'},{'"Field#2"': 'text'}]
-    write_config_file(mode='insert',reuse_tables=True,fast_match=False, file='data_file.txt',table='testSpecialChar', columns=columns,delimiter=";")
+    columns = {"'\"Field1\"'": 'bigint',"'\"Field#2\"'": 'text'}
+    write_config_file(mode='insert',reuse_tables=True,fast_match=False, file='data_file.txt',table='testSpecialChar', columns=columns,delimiter="';'")
     copy_data('external_file_16.txt','data_file2.txt')
-    update_columns=['"Field#2"']
-    match_columns = ['"Field1"', '"Field#2"']
-    write_config_file(update_columns=update_columns ,config='config/config_file2', mode='merge',reuse_tables=True,fast_match=False, file='data_file2.txt',table='testSpecialChar',columns=columns, delimiter=';',match_columns=match_columns)
+    update_columns=["'\"Field#2\"'"]
+    match_columns = ["'\"Field1\"'", "'\"Field#2\"'"]
+    write_config_file(update_columns=update_columns ,config='config/config_file2', mode='merge',reuse_tables=True,fast_match=False, file='data_file2.txt',table='testSpecialChar',columns=columns, delimiter="';'",match_columns=match_columns)
     f = open(mkpath('query41.sql'),'a')
     f.write("\\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
     f.close()
-    doTest(41)
 
+@prepare_before_test(num=42)
 def test_42_gpload_update_condition():
     "42 gpload update condition"
-    file = mkpath('setup.sql')
-    runfile(file)
     copy_data('external_file_01.txt','data_file.txt')
     copy_data('external_file_03.txt','data_file2.txt')
     f = open(mkpath('query42.sql'),'w')
     f.write("\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
     f.write("\\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
     f.close()
-    write_config_file(mode='insert', format='text',file='data_file.txt',table='texttable',delimiter="|")
+    write_config_file(mode='insert', format='text',file='data_file.txt',table='texttable')
     update_columns = ['s2']
     match_columns = ['n1']
-    write_config_file(update_columns=update_columns,match_columns=match_columns,config='config/config_file2',mode='update', update_condition="s3='shpits'", format='text',file='data_file2.txt',table='texttable',delimiter="'")
-    doTest(42)
+    write_config_file(update_columns=update_columns,match_columns=match_columns,config='config/config_file2',mode='update', update_condition="s3='shpits'", format='text',file='data_file2.txt',table='texttable',delimiter="\"'\"")
 
+@prepare_before_test(num=43)
 def test_43_gpload_column_without_data_type():
     "43 gpload column name has capital letters and without data type"
-    file = mkpath('setup.sql')
-    prepare_test_file(43)
-    runfile(file)
     copy_data('external_file_15.txt','data_file.txt')
-    columns = [{'"Field1"': ''},{'"Field#2"': ''}]
-    write_config_file(mode='insert',reuse_tables=True,fast_match=False, file='data_file.txt',table='testSpecialChar',columns=columns, delimiter=";")
-    doTest(43)
+    columns = {"'\"Field1\"'": '',"'\"Field#2\"'": ''}
+    write_config_file(mode='insert',reuse_tables=True,fast_match=False, file='data_file.txt',table='testSpecialChar',columns=columns, delimiter="';'")
+
+@prepare_before_test(num=44, cmd="-h "+str(hostNameAddrs))
+def test_44_gpload_config_h():
+    "44 gpload command config test -h hostname"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file( host="",format='text',file='data_file.txt',table='texttable',delimiter="'|'")
+
+@prepare_before_test(num=45, cmd="-p "+str(masterPort))
+def test_45_gpload_config_p():
+    "45 gpload command config test -p port"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file(port="", format='text',file='data_file.txt',table='texttable')

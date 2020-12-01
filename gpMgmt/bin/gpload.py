@@ -1186,7 +1186,7 @@ class gpload:
                     if argv[0]=='-h':
                         self.options.h = argv[1]
                         argv = argv[2:]
-                    if argv[0]=='--gpfdist_timeout':
+                    elif argv[0]=='--gpfdist_timeout':
                         self.options.gpfdist_timeout = argv[1]
                         argv = argv[2:]
                     elif argv[0]=='-p':
