@@ -1354,6 +1354,9 @@ CREATE VIEW pg_stat_bgwriter AS
 
 CREATE VIEW pg_stat_wal AS
     SELECT
+        w.wal_records,
+        w.wal_fpw,
+        w.wal_bytes,
         w.wal_buffers_full,
         w.stats_reset
     FROM pg_stat_get_wal() w;
