@@ -18,29 +18,30 @@ Feature: gpstart behave tests
         Given the database is running
           And the catalog has a standby master entry
 
-         When the standby host goes down
+         When the standby host is made unreachable
           And the user runs command "pkill -9 postgres"
-          And gpstart is run with prompts accepted
+          And "gpstart" is run with prompts accepted
 
          Then gpstart should print "Continue only if you are certain that the standby is not acting as the master." to stdout
           And gpstart should print "No standby master configured" to stdout
           And gpstart should return a return code of 0
           And all the segments are running
 
+          And the cluster is returned to a good state
+
     @concourse_cluster
     @demo_cluster
     Scenario: gpstart starts even if a segment host is unreachable
         Given the database is running
-          And segment 2 goes down
-          And segment 3 goes down
-          And the user runs command "pkill -9 postgres"
+          And the host for the primary on content 0 is made unreachable
+          And the host for the mirror on content 1 is made unreachable
 
-         When gpstart is run with prompts accepted
+          And the user runs command "pkill -9 postgres" on all hosts without validation
+         When "gpstart" is run with prompts accepted
 
          Then gpstart should print "Host invalid_host is unreachable" to stdout
-          And gpstart should print "Marking segment 2 down because invalid_host is unreachable" to stdout
-          And gpstart should print "Marking segment 3 down because invalid_host is unreachable" to stdout
-          And the status of segment 2 should be "d"
-          And the status of segment 3 should be "d"
+          And gpstart should print unreachable host messages for the down segments
+          And the status of the primary on content 0 should be "d"
+          And the status of the mirror on content 1 should be "d"
 
           And the cluster is returned to a good state

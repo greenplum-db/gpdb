@@ -1828,6 +1828,19 @@ def impl(context, gppkg_name):
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
 
+@given('the user runs command "{command}" on all hosts without validation')
+@when('the user runs command "{command}" on all hosts without validation')
+@then('the user runs command "{command}" on all hosts without validation')
+def impl(context, command):
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    for hostname in set(hostlist):
+        cmd = Command(name='running command:%s' % command,
+                      cmdStr=command,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=False)
+
 @given('"{gppkg_name}" gppkg files do not exist on any hosts')
 @when('"{gppkg_name}" gppkg files do not exist on any hosts')
 @then('"{gppkg_name}" gppkg files do not exist on any hosts')
