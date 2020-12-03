@@ -515,7 +515,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
     <dxl:Plan Id="1" SpaceSize="12">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="270.551953" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="2598.003284" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -524,7 +524,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
         </dxl:ProjList>
         <dxl:CTEProducer CTEId="0" Columns="23,24,25,26,27,28,29,30,31">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2.042969" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000245" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="23" Alias="symbol">
@@ -557,7 +557,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           </dxl:ProjList>
           <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.041016" Rows="1.000000" Width="42"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000244" Rows="1.000000" Width="42"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="23" Alias="symbol">
@@ -592,7 +592,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.020508" Rows="1.000000" Width="42"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000016" Rows="1.000000" Width="42"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="23" Alias="symbol">
@@ -644,7 +644,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
         </dxl:CTEProducer>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="267.493359" Rows="3.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="2167.003031" Rows="3.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -655,7 +655,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
           <dxl:SortingColumnList/>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="265.458203" Rows="3.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="2167.002912" Rows="3.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -788,7 +788,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                         </dxl:And>
                       </dxl:And>
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                     </dxl:If>
                   </dxl:If>
                 </dxl:If>
@@ -799,7 +799,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
             </dxl:PartitionSelector>
             <dxl:Append IsTarget="false" IsZapped="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="265.458203" Rows="3.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="2167.002912" Rows="3.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -809,7 +809,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
               <dxl:Filter/>
               <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2.072396" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.001030" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -822,7 +822,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:JoinFilter>
                 <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1.023438" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000438" Rows="2.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -833,7 +833,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                   <dxl:SortingColumnList/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -844,7 +844,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                     <dxl:OneTimeFilter/>
                     <dxl:CTEConsumer CTEId="0" Columns="0,1,4,5,6,7,8,9,10">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="0" Alias="symbol">
@@ -880,7 +880,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:BroadcastMotion>
                 <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="2" PrintablePartIndexId="1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.033333" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6.000557" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList/>
                   <dxl:Filter/>
@@ -913,7 +913,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
               </dxl:NestedLoopJoin>
               <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="3.307682" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.000944" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="37" Alias="event_ts">
@@ -926,7 +926,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:JoinFilter>
                 <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1.023438" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000438" Rows="2.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="37" Alias="event_ts">
@@ -937,7 +937,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                   <dxl:SortingColumnList/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="37" Alias="event_ts">
@@ -948,7 +948,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                     <dxl:OneTimeFilter/>
                     <dxl:CTEConsumer CTEId="0" Columns="36,37,38,39,40,41,42,43,44">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="36" Alias="symbol">
@@ -984,7 +984,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:BroadcastMotion>
                 <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="3" PrintablePartIndexId="1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1.268620" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6.000473" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="49" Alias="end_ts">
@@ -1024,7 +1024,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
               </dxl:NestedLoopJoin>
               <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="259.054688" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.000926" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="60" Alias="event_ts">
@@ -1046,7 +1046,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:JoinFilter>
                 <dxl:DynamicTableScan PartIndexId="4" PrintablePartIndexId="1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.015625" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="68" Alias="ets">
@@ -1076,7 +1076,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                 </dxl:DynamicTableScan>
                 <dxl:Materialize Eager="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2.039062" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000446" Rows="2.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="60" Alias="event_ts">
@@ -1086,7 +1086,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                   <dxl:Filter/>
                   <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1.023438" Rows="2.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000438" Rows="2.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="60" Alias="event_ts">
@@ -1097,7 +1097,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                     <dxl:SortingColumnList/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="60" Alias="event_ts">
@@ -1108,7 +1108,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                       <dxl:OneTimeFilter/>
                       <dxl:CTEConsumer CTEId="0" Columns="59,60,61,62,63,64,65,66,67">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="59" Alias="symbol">

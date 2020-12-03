@@ -79,7 +79,6 @@
 #include "naucrates/exception.h"
 
 #include "gpdbcost/CCostModelGPDB.h"
-#include "gpdbcost/CCostModelGPDBLegacy.h"
 
 
 #include "gpopt/gpdbwrappers.h"
@@ -429,17 +428,9 @@ COptTasks::SetCostModelParams(ICostModel *cost_model)
 	if (optimizer_nestloop_factor > 1.0)
 	{
 		// change NLJ cost factor
-		ICostModelParams::SCostParam *cost_param = NULL;
-		if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
-		{
-			cost_param = cost_model->GetCostModelParams()->PcpLookup(
+		ICostModelParams::SCostParam *cost_param =
+			cost_model->GetCostModelParams()->PcpLookup(
 				CCostModelParamsGPDB::EcpNLJFactor);
-		}
-		else
-		{
-			cost_param = cost_model->GetCostModelParams()->PcpLookup(
-				CCostModelParamsGPDBLegacy::EcpNLJFactor);
-		}
 		CDouble nlj_factor(optimizer_nestloop_factor);
 		cost_model->GetCostModelParams()->SetParam(
 			cost_param->Id(), nlj_factor, nlj_factor - 0.5, nlj_factor + 0.5);
@@ -448,18 +439,15 @@ COptTasks::SetCostModelParams(ICostModel *cost_model)
 	if (optimizer_sort_factor > 1.0 || optimizer_sort_factor < 1.0)
 	{
 		// change sort cost factor
-		ICostModelParams::SCostParam *cost_param = NULL;
-		if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
-		{
-			cost_param = cost_model->GetCostModelParams()->PcpLookup(
+		ICostModelParams::SCostParam *cost_param =
+			cost_model->GetCostModelParams()->PcpLookup(
 				CCostModelParamsGPDB::EcpSortTupWidthCostUnit);
 
-			CDouble sort_factor(optimizer_sort_factor);
-			cost_model->GetCostModelParams()->SetParam(
-				cost_param->Id(), cost_param->Get() * optimizer_sort_factor,
-				cost_param->GetLowerBoundVal() * optimizer_sort_factor,
-				cost_param->GetUpperBoundVal() * optimizer_sort_factor);
-		}
+		CDouble sort_factor(optimizer_sort_factor);
+		cost_model->GetCostModelParams()->SetParam(
+			cost_param->Id(), cost_param->Get() * optimizer_sort_factor,
+			cost_param->GetLowerBoundVal() * optimizer_sort_factor,
+			cost_param->GetUpperBoundVal() * optimizer_sort_factor);
 	}
 }
 
@@ -475,15 +463,7 @@ COptTasks::SetCostModelParams(ICostModel *cost_model)
 ICostModel *
 COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 {
-	ICostModel *cost_model = NULL;
-	if (optimizer_cost_model >= OPTIMIZER_GPDB_CALIBRATED)
-	{
-		cost_model = GPOS_NEW(mp) CCostModelGPDB(mp, num_segments);
-	}
-	else
-	{
-		cost_model = GPOS_NEW(mp) CCostModelGPDBLegacy(mp, num_segments);
-	}
+	ICostModel *cost_model = GPOS_NEW(mp) CCostModelGPDB(mp, num_segments);
 
 	SetCostModelParams(cost_model);
 

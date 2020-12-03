@@ -736,7 +736,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
     <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="103.716309" Rows="10.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.104136" Rows="10.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="20" Alias="?column?">
@@ -747,7 +747,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="102.677246" Rows="10.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.103776" Rows="10.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="?column?">
@@ -758,7 +758,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="101.599121" Rows="20.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.103736" Rows="20.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="19" Alias="?column?">
@@ -775,7 +775,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="100.442871" Rows="20.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.103656" Rows="20.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="21" Alias="ColRef_0021">
@@ -786,7 +786,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
               <dxl:OneTimeFilter/>
               <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="99.286621" Rows="20.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.103576" Rows="20.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="18" Alias="count">
@@ -799,7 +799,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                 </dxl:JoinFilter>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.004883" Rows="10.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000105" Rows="10.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList/>
                   <dxl:Filter/>
@@ -818,7 +818,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                 </dxl:TableScan>
                 <dxl:Materialize Eager="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="18.281738" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.103009" Rows="2.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="18" Alias="count">
@@ -828,7 +828,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                   <dxl:Filter/>
                   <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="17.266113" Rows="2.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.103001" Rows="2.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="18" Alias="count">
@@ -839,7 +839,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                     <dxl:SortingColumnList/>
                     <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="16.250488" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.102582" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:GroupingColumns/>
                       <dxl:ProjList>
@@ -852,7 +852,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                       <dxl:Filter/>
                       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="15.219238" Rows="1.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.102581" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="22" Alias="ColRef_0022">
@@ -863,7 +863,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                         <dxl:SortingColumnList/>
                         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="14.215332" Rows="1.000000" Width="8"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.102545" Rows="1.000000" Width="8"/>
                           </dxl:Properties>
                           <dxl:GroupingColumns/>
                           <dxl:ProjList>
@@ -874,7 +874,7 @@ SELECT (SELECT 1 + count(*) FROM x) FROM y;
                           <dxl:Filter/>
                           <dxl:TableScan>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="4.399902" Rows="9011.000000" Width="1"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.094165" Rows="9011.000000" Width="1"/>
                             </dxl:Properties>
                             <dxl:ProjList/>
                             <dxl:Filter/>

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-    Test case: When `optimizer_cost_model` is set to experimental, we should choose a bitmap index scan that has a diff cost than master. The intent of this test is to ensure the traceflag properly works and changes the cost model.
+    Test case: When `optimizer_cost_model` is set to calibrated, we should choose a bitmap index scan that has a diff cost than master. The intent of this test is to ensure the traceflag properly works and changes the cost model.
     create table foo(a int);
     create index my_idx on foo using bitmap(a);
     insert into foo select i%100 from generate_series(1,100000)i;
     analyze foo;
-    set optimizer_cost_model=experimental;
+    set optimizer_cost_model=calibrated;
     explain select * from foo where a = 0;
                                        QUERY PLAN
     --------------------------------------------------------------------------------
@@ -31,7 +31,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
-      <dxl:TraceFlags Value="102074,102113,102120,102146,102147,103001,103014,103015,103022,103027,103029,104003,104004,104005,104006,104007,105000"/>
+      <dxl:TraceFlags Value="102074,102113,102120,102146,102147,103001,103014,103015,103022,103027,103029,104003,104004,104005,104006,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">

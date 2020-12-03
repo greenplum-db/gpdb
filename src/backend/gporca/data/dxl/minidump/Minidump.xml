@@ -12,7 +12,7 @@
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:CostModelConfig CostModelType="0" SegmentsForCosting="3"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3"/>
       <dxl:TraceFlags Value="103027,0,101000,101001"/>
     </dxl:OptimizerConfig>
     <dxl:Query>

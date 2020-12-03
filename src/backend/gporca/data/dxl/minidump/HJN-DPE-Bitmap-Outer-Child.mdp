@@ -828,7 +828,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
     <dxl:Plan Id="0" SpaceSize="36">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="635.393021" Rows="22.230000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="828.979625" Rows="22.230000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c1">
@@ -854,7 +854,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="635.390625" Rows="22.230000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="828.977230" Rows="22.230000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c1">
@@ -890,7 +890,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
           </dxl:HashCondList>
           <dxl:DynamicBitmapTableScan PartIndexId="1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="204.385855" Rows="3.705000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="397.972460" Rows="3.705000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="c1">

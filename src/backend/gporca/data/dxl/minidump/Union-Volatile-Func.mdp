@@ -9,6 +9,14 @@
       <dxl:TraceFlags Value="103027,101013,102024,102025,102115,102116,102117,102119,102121,103001,103003,103016"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
+      <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.66.1.0"/>
+        <dxl:Commutator Mdid="0.521.1.0"/>
+        <dxl:InverseOp Mdid="0.525.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
         <dxl:EqualityOp Mdid="0.91.1.0"/>
         <dxl:InequalityOp Mdid="0.85.1.0"/>
@@ -101,9 +109,9 @@
       </dxl:Union>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="840">
-      <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
+      <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.074219" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000074" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:GroupingColumns>
           <dxl:GroupingColumn ColId="1"/>
@@ -114,9 +122,9 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:Append IsTarget="false" IsZapped="false">
+        <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3.035156" Rows="2.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000063" Rows="2.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="?column?">
@@ -124,58 +132,74 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:Result>
+          <dxl:SortingColumnList>
+            <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+          </dxl:SortingColumnList>
+          <dxl:LimitCount/>
+          <dxl:LimitOffset/>
+          <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.009766" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000018" Rows="2.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="?column?">
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                <dxl:Ident ColId="1" ColName="?column?" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
-                <dxl:ProjElem ColId="0" Alias="">
-                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:OneTimeFilter/>
-            </dxl:Result>
-          </dxl:Result>
-          <dxl:Result>
-            <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.009766" Rows="1.000000" Width="4"/>
-            </dxl:Properties>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="3" Alias="generate_series">
-                <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+                <dxl:ProjElem ColId="1" Alias="?column?">
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                </dxl:FuncExpr>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:OneTimeFilter/>
-            <dxl:Result>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="2" Alias="">
-                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
               <dxl:OneTimeFilter/>
+              <dxl:Result>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="0" Alias="">
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:OneTimeFilter/>
+              </dxl:Result>
             </dxl:Result>
-          </dxl:Result>
-        </dxl:Append>
+            <dxl:Result>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="3" Alias="generate_series">
+                  <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                  </dxl:FuncExpr>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:OneTimeFilter/>
+              <dxl:Result>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="2" Alias="">
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:OneTimeFilter/>
+              </dxl:Result>
+            </dxl:Result>
+          </dxl:Append>
+        </dxl:Sort>
       </dxl:Aggregate>
     </dxl:Plan>
   </dxl:Thread>

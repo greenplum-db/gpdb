@@ -2113,7 +2113,7 @@
     <dxl:Plan Id="0" SpaceSize="680">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="40173678.932290" Rows="896.720000" Width="238"/>
+          <dxl:Cost StartupCost="0" TotalCost="69956.106522" Rows="896.720000" Width="238"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="36" Alias="tableoid">
@@ -2145,7 +2145,7 @@
               </dxl:ParamList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="114.285313" Rows="1.000000" Width="64"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.059266" Rows="1.000000" Width="64"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="74" Alias="rolname">
@@ -2156,7 +2156,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="114.285313" Rows="1.000000" Width="64"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.059266" Rows="1.000000" Width="64"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="99" Alias="rolpassword">
@@ -2170,7 +2170,7 @@
                   <dxl:OneTimeFilter/>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="113.160313" Rows="1.000000" Width="64"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.059202" Rows="1.000000" Width="64"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="74" Alias="rolname">
@@ -2236,7 +2236,7 @@
               </dxl:ParamList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="126.140625" Rows="1.000000" Width="64"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.131851" Rows="1.000000" Width="64"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="102" Alias="spcname">
@@ -2276,7 +2276,7 @@
         <dxl:OneTimeFilter/>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="361895.471665" Rows="896.720000" Width="145"/>
+            <dxl:Cost StartupCost="0" TotalCost="69955.893103" Rows="1000.000000" Width="241"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="relname">
@@ -2342,7 +2342,7 @@
           <dxl:LimitOffset/>
           <dxl:HashJoin JoinType="Left">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="712.465820" Rows="896.720000" Width="145"/>
+              <dxl:Cost StartupCost="0" TotalCost="1295.838652" Rows="896.720000" Width="145"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="relname">
@@ -2423,7 +2423,7 @@
             </dxl:HashCondList>
             <dxl:HashJoin JoinType="LeftAntiSemiJoinNotIn">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="48.243164" Rows="1.000000" Width="137"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.051129" Rows="1.000000" Width="137"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="relname">
@@ -2485,7 +2485,7 @@
               </dxl:HashCondList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="46.622070" Rows="2.000000" Width="137"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.049779" Rows="2.000000" Width="137"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="relname">
@@ -2577,7 +2577,7 @@
               </dxl:TableScan>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000060" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="53" Alias="parchildrelid">
@@ -2602,7 +2602,7 @@
             </dxl:HashJoin>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="225.298828" Rows="2240.800000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.642269" Rows="2240.800000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="38" Alias="classid">

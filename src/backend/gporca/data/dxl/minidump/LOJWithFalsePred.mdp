@@ -176,9 +176,9 @@
       </dxl:LogicalJoin>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="1">
-      <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false">
+      <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2.009766" Rows="2.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000121" Rows="2.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="?column?">
@@ -197,7 +197,7 @@
         </dxl:JoinFilter>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.009766" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="?column?">
@@ -208,7 +208,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="">
@@ -225,31 +225,31 @@
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="2" Alias="i">
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="3" Alias="j">
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="4" Alias="ctid">
-              <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true" IsByValue="false"/>
+              <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="5" Alias="xmin">
-              <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="6" Alias="cmin">
-              <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="7" Alias="xmax">
-              <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="8" Alias="cmax">
-              <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="9" Alias="tableoid">
-              <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="10" Alias="gp_segment_id">
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>

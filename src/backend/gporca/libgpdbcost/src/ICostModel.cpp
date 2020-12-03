@@ -11,7 +11,7 @@
 
 #include "gpos/base.h"
 #include "gpos/string/CWStringConst.h"
-#include "gpdbcost/CCostModelGPDBLegacy.h"
+#include "gpdbcost/CCostModelGPDB.h"
 
 using namespace gpopt;
 using namespace gpdbcost;
@@ -30,7 +30,7 @@ using namespace gpdbcost;
 ICostModel *
 ICostModel::PcmDefault(CMemoryPool *mp)
 {
-	return GPOS_NEW(mp) CCostModelGPDBLegacy(mp, GPOPT_DEFAULT_SEGMENT_COUNT);
+	return GPOS_NEW(mp) CCostModelGPDB(mp, GPOPT_DEFAULT_SEGMENT_COUNT);
 }
 
 

@@ -317,7 +317,7 @@
     <dxl:Plan Id="1" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="5.993359" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.000635" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -334,7 +334,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="4.983594" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.000545" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -356,7 +356,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2.917187" Rows="2.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000488" Rows="2.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -460,7 +460,7 @@
                       </dxl:And>
                     </dxl:And>
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:If>
                 </dxl:If>
               </dxl:PropagationExpression>
@@ -473,7 +473,7 @@
             </dxl:PartitionSelector>
             <dxl:Append IsTarget="false" IsZapped="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2.917187" Rows="2.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="437.000488" Rows="2.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -489,7 +489,7 @@
               <dxl:Filter/>
               <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="2" PrintablePartIndexId="1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.800000" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6.000319" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">
@@ -527,7 +527,7 @@
               </dxl:DynamicIndexScan>
               <dxl:DynamicTableScan PartIndexId="3" PrintablePartIndexId="1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1.070312" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000101" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="10" Alias="a">

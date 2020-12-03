@@ -1688,7 +1688,7 @@ CCostModelGPDB::CostBitmapTableScan(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			pexprIndexCond->Pop()->Eopid() ||
 		1 < pcrsLocalUsed->Size() ||
 		(isInPredOnBtreeIndex && rows > 2.0 &&
-		 !GPOS_FTRACE(EopttraceCalibratedBitmapIndexCostModel)))
+		 GPOS_FTRACE(EopttraceLegacyCostModel)))
 	{
 		// Child is Bitmap AND/OR, or we use Multi column index or this is an IN predicate
 		// that's used with the "calibrated" cost model.
@@ -1763,9 +1763,9 @@ CCostModelGPDB::CostBitmapTableScan(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			}
 		}
 
-		if (!GPOS_FTRACE(EopttraceCalibratedBitmapIndexCostModel))
+		if (GPOS_FTRACE(EopttraceLegacyCostModel))
 		{
-			// optimizer_cost_model = 'calibrated'
+			// optimizer_cost_model = 'legacy'
 			if (dNDVThreshold <= dNDV)
 			{
 				result = CostBitmapLargeNDV(pcmgpdb, pci, dNDV);
@@ -1777,7 +1777,7 @@ CCostModelGPDB::CostBitmapTableScan(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		}
 		else
 		{
-			// optimizer_cost_model = 'experimental'
+			// optimizer_cost_model = 'calibrated'|'experimental'
 			CDouble dBitmapIO =
 				pcmgpdb->GetCostModelParams()
 					->PcpLookup(CCostModelParamsGPDB::EcpBitmapIOCostSmallNDV)

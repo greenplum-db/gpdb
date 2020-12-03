@@ -54,7 +54,8 @@ public:
 	{
 		EcmtGPDBLegacy = 0,
 		EcmtGPDBCalibrated = 1,
-		EcmtSentinel = 2
+		EcmtGPDBExperimental = 2,
+		EcmtSentinel = 3
 	};
 
 	//---------------------------------------------------------------------------

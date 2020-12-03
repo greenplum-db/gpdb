@@ -14,7 +14,6 @@
 
 #include "gpdbcost/CCostModelGPDB.h"
 #include "gpdbcost/CCostModelParamsGPDB.h"
-#include "gpdbcost/CCostModelParamsGPDBLegacy.h"
 
 
 #include "gpos/base.h"
@@ -164,41 +163,11 @@ Eres_SerializeCalibratedCostModel()
 	return gpos::GPOS_OK;
 }
 
-static gpos::GPOS_RESULT
-Eres_ParseLegacyCostModel()
-{
-	const CHAR dxl_filename[] =
-		"../data/dxl/parse_tests/CostModelConfigLegacy.xml";
-	Fixture fixture;
-
-	CMemoryPool *mp = fixture.Pmp();
-
-	gpos::CAutoRg<CHAR> a_szDXL(CDXLUtils::Read(mp, dxl_filename));
-
-	CParseHandlerCostModel *pphcm = fixture.PphCostModel();
-
-	fixture.Parse((const XMLByte *) a_szDXL.Rgt(), strlen(a_szDXL.Rgt()));
-
-	ICostModel *pcm = pphcm->GetCostModel();
-
-	GPOS_RTL_ASSERT(ICostModel::EcmtGPDBLegacy == pcm->Ecmt());
-	GPOS_RTL_ASSERT(3 == pcm->UlHosts());
-
-	CAutoRef<CCostModelParamsGPDBLegacy> pcpExpected(
-		GPOS_NEW(mp) CCostModelParamsGPDBLegacy(mp));
-	GPOS_RTL_ASSERT(pcpExpected->Equals(pcm->GetCostModelParams()));
-
-	return gpos::GPOS_OK;
-}
-
 gpos::GPOS_RESULT
 CParseHandlerCostModelTest::EresUnittest()
 {
-	CUnittest rgut[] = {
-		GPOS_UNITTEST_FUNC(Eres_ParseCalibratedCostModel),
-		GPOS_UNITTEST_FUNC(Eres_SerializeCalibratedCostModel),
-		GPOS_UNITTEST_FUNC(Eres_ParseLegacyCostModel),
-	};
+	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(Eres_ParseCalibratedCostModel),
+						GPOS_UNITTEST_FUNC(Eres_SerializeCalibratedCostModel)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }

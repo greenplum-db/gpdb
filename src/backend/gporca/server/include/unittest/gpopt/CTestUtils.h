@@ -32,8 +32,6 @@
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 #include "naucrates/md/CSystemId.h"
 
-#include "gpdbcost/CCostModelGPDBLegacy.h"
-
 #include "unittest/base.h"
 
 #include "naucrates/statistics/CPoint.h"
@@ -605,7 +603,7 @@ public:
 	static ICostModel *
 	GetCostModel(CMemoryPool *mp)
 	{
-		return GPOS_NEW(mp) CCostModelGPDBLegacy(mp, GPOPT_TEST_SEGMENTS);
+		return GPOS_NEW(mp) CCostModelGPDB(mp, GPOPT_TEST_SEGMENTS);
 	}
 
 	// create a datum with a given type, encoded value and int value

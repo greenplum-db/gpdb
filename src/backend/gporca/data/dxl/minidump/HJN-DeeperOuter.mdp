@@ -359,7 +359,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
     <dxl:Plan Id="0" SpaceSize="2345">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.324219" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001510" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="18" Alias="i">
@@ -382,7 +382,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3.308594" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001367" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="18" Alias="i">
@@ -419,7 +419,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.015625" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="i">
@@ -450,7 +450,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
           </dxl:TableScan>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2.144531" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000640" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -474,7 +474,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
             </dxl:HashExprList>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1.132812" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000602" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">
@@ -497,7 +497,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
               </dxl:HashCondList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.015625" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="i">
@@ -524,7 +524,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
               </dxl:TableScan>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="i">

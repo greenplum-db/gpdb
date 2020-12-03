@@ -387,7 +387,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2976.640625" Rows="101432.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="438.672316" Rows="101432.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -401,7 +401,7 @@
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2579.421875" Rows="101432.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="435.028879" Rows="101432.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -414,7 +414,7 @@
           <dxl:Filter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1784.984375" Rows="101432.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="434.623151" Rows="101432.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -433,7 +433,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="991.546875" Rows="101432.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="432.954595" Rows="101432.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="g">
@@ -447,7 +447,7 @@
               <dxl:OneTimeFilter/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="198.109375" Rows="101432.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="432.171540" Rows="101432.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">
@@ -472,7 +472,7 @@
           </dxl:Result>
           <dxl:RandomMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.000000" Rows="0.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="a">
@@ -504,31 +504,31 @@
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="11" Alias="a">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="21" Alias="g">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="14" Alias="ctid">
-                    <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true" IsByValue="false"/>
+                    <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="15" Alias="xmin">
-                    <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="16" Alias="cmin">
-                    <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="17" Alias="xmax">
-                    <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="18" Alias="cmax">
-                    <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="19" Alias="tableoid">
-                    <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="20" Alias="gp_segment_id">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>

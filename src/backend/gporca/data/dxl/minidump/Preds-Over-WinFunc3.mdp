@@ -257,7 +257,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.091797" Rows="1.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000261" Rows="1.000000" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -283,7 +283,7 @@
         <dxl:SortingColumnList/>
         <dxl:Window PartitionColumns="0">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="5.074219" Rows="1.000000" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000100" Rows="1.000000" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -308,7 +308,7 @@
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="4.046875" Rows="1.000000" Width="28"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000086" Rows="1.000000" Width="28"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="sum">
@@ -336,7 +336,7 @@
             <dxl:LimitOffset/>
             <dxl:Window PartitionColumns="0">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3.046875" Rows="1.000000" Width="28"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000086" Rows="1.000000" Width="28"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="sum">
@@ -360,7 +360,7 @@
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2.046875" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000086" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="i">
@@ -381,7 +381,7 @@
                 <dxl:LimitOffset/>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1.046875" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000086" Rows="1.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="i">

@@ -23,7 +23,6 @@
 #include "naucrates/dxl/xml/dxltokens.h"
 
 #include "gpdbcost/CCostModelGPDB.h"
-#include "gpdbcost/CCostModelGPDBLegacy.h"
 
 using namespace gpdxl;
 using namespace gpdbcost;
@@ -139,17 +138,16 @@ CParseHandlerCostModel::EndElement(const XMLCh *const,	// element_uri,
 
 	switch (m_cost_model_type)
 	{
+		// FIXME: Remove ICostModel::ECostModelType
+		// Right now, we use the same class for all cost models
 		case ICostModel::EcmtGPDBLegacy:
-			m_cost_model =
-				GPOS_NEW(m_mp) CCostModelGPDBLegacy(m_mp, m_num_of_segments);
-			break;
+		case ICostModel::EcmtGPDBExperimental:
 		case ICostModel::EcmtGPDBCalibrated:
 			CCostModelParamsGPDB *pcp;
 
 			if (NULL == m_parse_handler_cost_params)
 			{
 				pcp = NULL;
-				GPOS_ASSERT(false && "CostModelParam handler not set");
 			}
 			else
 			{

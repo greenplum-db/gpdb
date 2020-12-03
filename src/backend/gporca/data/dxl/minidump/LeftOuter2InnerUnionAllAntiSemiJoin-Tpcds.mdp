@@ -11631,10 +11631,10 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="174532">
+    <dxl:Plan Id="0" SpaceSize="176644">
       <dxl:Limit>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="139746685.873548" Rows="5.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="7462.922002" Rows="5.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11646,7 +11646,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:ProjList>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="139746684.795423" Rows="5.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="7462.921962" Rows="5.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11660,7 +11660,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
           <dxl:SortingColumnList/>
           <dxl:Limit>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="139746683.775892" Rows="5.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="7462.921782" Rows="5.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11672,7 +11672,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
             </dxl:ProjList>
             <dxl:Sequence>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="139746682.736829" Rows="34588120.393257" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="7462.921762" Rows="34588120.393257" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11684,7 +11684,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
               </dxl:ProjList>
               <dxl:CTEProducer CTEId="2" Columns="190">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="53.374023" Rows="17877.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="434.143134" Rows="17877.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="190" Alias="i_item_sk">
@@ -11693,7 +11693,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                 </dxl:ProjList>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="34.916016" Rows="17877.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="434.067693" Rows="17877.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="190" Alias="i_item_sk">
@@ -11738,7 +11738,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
               </dxl:CTEProducer>
               <dxl:Sequence>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="139476408.672234" Rows="34579006.805802" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6890.426146" Rows="34579006.805802" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11750,7 +11750,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                 </dxl:ProjList>
                 <dxl:CTEProducer CTEId="3" Columns="247,248">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="138462666.906256" Rows="34571856.005802" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="2714.983600" Rows="34571856.005802" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="247" Alias="i_item_sk">
@@ -11760,9 +11760,9 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                       <dxl:Ident ColId="248" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:HashJoin JoinType="Inner">
+                  <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="138428904.328125" Rows="34571856.005802" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="2697.697672" Rows="34571856.005802" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="247" Alias="i_item_sk">
@@ -11773,36 +11773,113 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:JoinFilter/>
-                    <dxl:HashCondList>
-                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                        <dxl:Ident ColId="248" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
-                      </dxl:Comparison>
-                    </dxl:HashCondList>
-                    <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+                    <dxl:JoinFilter>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                    </dxl:JoinFilter>
+                    <dxl:HashJoin JoinType="Inner">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="138293052.947266" Rows="34571856.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1303.011659" Rows="2880988.000483" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
+                        <dxl:ProjElem ColId="247" Alias="i_item_sk">
+                          <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
                         <dxl:ProjElem ColId="248" Alias="ss_item_sk">
                           <dxl:Ident ColId="248" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:JoinFilter>
-                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                      </dxl:JoinFilter>
+                      <dxl:JoinFilter/>
+                      <dxl:HashCondList>
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                          <dxl:Ident ColId="248" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                          <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                        </dxl:Comparison>
+                      </dxl:HashCondList>
+                      <dxl:TableScan>
+                        <dxl:Properties>
+                          <dxl:Cost StartupCost="0" TotalCost="561.724831" Rows="2880988.000000" Width="4"/>
+                        </dxl:Properties>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="248" Alias="ss_item_sk">
+                            <dxl:Ident ColId="248" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
+                        <dxl:Filter/>
+                        <dxl:TableDescriptor Mdid="0.15668460.1.1" TableName="store_sales">
+                          <dxl:Columns>
+                            <dxl:Column ColId="249" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="250" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="248" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="251" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="252" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="253" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="254" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="255" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="256" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="257" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="258" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="259" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="260" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="261" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="262" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="263" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="264" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="265" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="266" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="267" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="268" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="269" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="270" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                            <dxl:Column ColId="271" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                            <dxl:Column ColId="272" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                            <dxl:Column ColId="273" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                            <dxl:Column ColId="274" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                            <dxl:Column ColId="275" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                            <dxl:Column ColId="276" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                            <dxl:Column ColId="277" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                          </dxl:Columns>
+                        </dxl:TableDescriptor>
+                      </dxl:TableScan>
                       <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="1.017578" Rows="24.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="432.957889" Rows="35754.000000" Width="4"/>
+                        </dxl:Properties>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="247" Alias="i_item_sk">
+                            <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
+                        <dxl:Filter/>
+                        <dxl:SortingColumnList/>
+                        <dxl:CTEConsumer CTEId="2" Columns="247">
+                          <dxl:Properties>
+                            <dxl:Cost StartupCost="0" TotalCost="431.086167" Rows="17877.000000" Width="4"/>
+                          </dxl:Properties>
+                          <dxl:ProjList>
+                            <dxl:ProjElem ColId="247" Alias="i_item_sk">
+                              <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                          </dxl:ProjList>
+                        </dxl:CTEConsumer>
+                      </dxl:BroadcastMotion>
+                    </dxl:HashJoin>
+                    <dxl:Materialize Eager="true">
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="431.002855" Rows="24.000000" Width="1"/>
+                      </dxl:Properties>
+                      <dxl:ProjList/>
+                      <dxl:Filter/>
+                      <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                        <dxl:Properties>
+                          <dxl:Cost StartupCost="0" TotalCost="431.002843" Rows="24.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
                         <dxl:TableScan>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="0.005859" Rows="12.000000" Width="1"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.002518" Rows="12.000000" Width="1"/>
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter/>
@@ -11848,79 +11925,12 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                           </dxl:TableDescriptor>
                         </dxl:TableScan>
                       </dxl:BroadcastMotion>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="5626.929688" Rows="2880988.000000" Width="4"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="248" Alias="ss_item_sk">
-                            <dxl:Ident ColId="248" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.15668460.1.1" TableName="store_sales">
-                          <dxl:Columns>
-                            <dxl:Column ColId="249" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="250" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="248" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="251" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="252" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="253" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="254" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="255" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="256" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="257" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="258" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="259" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="260" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="261" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="262" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="263" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="264" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="265" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="266" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="267" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="268" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="269" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="270" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="271" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                            <dxl:Column ColId="272" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                            <dxl:Column ColId="273" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                            <dxl:Column ColId="274" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                            <dxl:Column ColId="275" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                            <dxl:Column ColId="276" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                            <dxl:Column ColId="277" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                    </dxl:NestedLoopJoin>
-                    <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="105.748047" Rows="35754.000000" Width="4"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="247" Alias="i_item_sk">
-                          <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:SortingColumnList/>
-                      <dxl:CTEConsumer CTEId="2" Columns="247">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="34.916016" Rows="17877.000000" Width="4"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="247" Alias="i_item_sk">
-                            <dxl:Ident ColId="247" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                      </dxl:CTEConsumer>
-                    </dxl:BroadcastMotion>
-                  </dxl:HashJoin>
+                    </dxl:Materialize>
+                  </dxl:NestedLoopJoin>
                 </dxl:CTEProducer>
                 <dxl:Append IsTarget="false" IsZapped="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="743592.275308" Rows="34579006.805802" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="4037.126519" Rows="34579006.805802" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11933,7 +11943,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                   <dxl:Filter/>
                   <dxl:CTEConsumer CTEId="3" Columns="95,124">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="135046.312523" Rows="34571856.005802" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="764.272692" Rows="34571856.005802" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11946,7 +11956,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                   </dxl:CTEConsumer>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="338396.472115" Rows="7150.800000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="3134.537800" Rows="7150.800000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="342" Alias="i_item_sk">
@@ -11960,7 +11970,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                     <dxl:OneTimeFilter/>
                     <dxl:HashJoin JoinType="LeftAntiSemiJoin">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="338339.606490" Rows="7150.800000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="3134.509197" Rows="7150.800000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="342" Alias="i_item_sk">
@@ -11979,7 +11989,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                       </dxl:HashCondList>
                       <dxl:CTEConsumer CTEId="2" Columns="342">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="34.916016" Rows="17877.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.086167" Rows="17877.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="342" Alias="i_item_sk">
@@ -11989,7 +11999,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                       </dxl:CTEConsumer>
                       <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="337910.133634" Rows="16574.710197" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="2700.216462" Rows="16574.710197" Width="4"/>
                         </dxl:Properties>
                         <dxl:GroupingColumns>
                           <dxl:GroupingColumn ColId="343"/>
@@ -12002,7 +12012,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                         <dxl:Filter/>
                         <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="337714.898749" Rows="16574.710197" Width="4"/>
+                            <dxl:Cost StartupCost="0" TotalCost="2699.199669" Rows="16574.710197" Width="4"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="343" Alias="i_item_sk">
@@ -12018,7 +12028,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                           </dxl:HashExprList>
                           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="337681.526268" Rows="16574.710197" Width="4"/>
+                              <dxl:Cost StartupCost="0" TotalCost="2699.095912" Rows="16574.710197" Width="4"/>
                             </dxl:Properties>
                             <dxl:GroupingColumns>
                               <dxl:GroupingColumn ColId="343"/>
@@ -12031,7 +12041,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                             <dxl:Filter/>
                             <dxl:CTEConsumer CTEId="3" Columns="343,344">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="67523.156261" Rows="34571856.005802" Width="4"/>
+                                <dxl:Cost StartupCost="0" TotalCost="597.636346" Rows="34571856.005802" Width="4"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="343" Alias="i_item_sk">

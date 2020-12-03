@@ -296,7 +296,7 @@ explain select * from r where a = 1 or b = 2;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1.017578" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.062110" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -316,7 +316,7 @@ explain select * from r where a = 1 or b = 2;
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.005859" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.061980" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

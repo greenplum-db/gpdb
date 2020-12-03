@@ -731,7 +731,7 @@
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1906.107428" Rows="2585.000000" Width="83"/>
+          <dxl:Cost StartupCost="0" TotalCost="5177.936329" Rows="2585.000000" Width="83"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="attname">
@@ -753,7 +753,7 @@
               </dxl:ParamList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="3.101569" Rows="0.000387" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.425377" Rows="0.000387" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="37" Alias="substring">
@@ -771,7 +771,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2.101562" Rows="0.000387" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.425377" Rows="0.000387" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="25" Alias="adrelid">
@@ -798,7 +798,7 @@
                   </dxl:OneTimeFilter>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1.070312" Rows="1.000000" Width="24"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000145" Rows="1.000000" Width="24"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="25" Alias="adrelid">
@@ -850,7 +850,7 @@
         <dxl:OneTimeFilter/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1486.054694" Rows="1000.000000" Width="83"/>
+            <dxl:Cost StartupCost="0" TotalCost="5177.721774" Rows="1000.000000" Width="83"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="attrelid">

@@ -338,64 +338,34 @@
       </dxl:LogicalProject>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+      <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.030273" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000095" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="23" Alias="?column?">
-            <dxl:Ident ColId="23" ColName="?column?" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:SortingColumnList/>
-        <dxl:Result>
+        <dxl:OneTimeFilter/>
+        <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3.028320" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000091" Rows="1.000000" Width="1"/>
           </dxl:Properties>
-          <dxl:ProjList>
-            <dxl:ProjElem ColId="23" Alias="?column?">
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:ProjElem>
-          </dxl:ProjList>
+          <dxl:ProjList/>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
-          <dxl:Sequence>
+          <dxl:SortingColumnList/>
+          <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2.024414" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000087" Rows="1.000000" Width="1"/>
             </dxl:Properties>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="10" Alias="l_shipdate">
-                <dxl:Ident ColId="10" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="11" Alias="l_commitdate">
-                <dxl:Ident ColId="11" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.29434.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:ProjList/>
+            <dxl:Filter/>
+            <dxl:OneTimeFilter/>
+            <dxl:Sequence>
               <dxl:Properties>
-                <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-              </dxl:Properties>
-              <dxl:ProjList/>
-              <dxl:PartEqFilters>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:PartEqFilters>
-              <dxl:PartFilters>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:PartFilters>
-              <dxl:ResidualFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:ResidualFilter>
-              <dxl:PropagationExpression>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-              </dxl:PropagationExpression>
-              <dxl:PrintableFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:PrintableFilter>
-            </dxl:PartitionSelector>
-            <dxl:DynamicTableScan PartIndexId="1">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2.024414" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000087" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="l_shipdate">
@@ -405,30 +375,64 @@
                   <dxl:Ident ColId="11" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
-                  <dxl:Ident ColId="10" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
-                  <dxl:Ident ColId="11" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
-                </dxl:Comparison>
-              </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.29434.1.1" TableName="lineitem">
-                <dxl:Columns>
-                  <dxl:Column ColId="0" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
-                  <dxl:Column ColId="10" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
-                  <dxl:Column ColId="11" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
-                  <dxl:Column ColId="16" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                  <dxl:Column ColId="17" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                  <dxl:Column ColId="18" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                  <dxl:Column ColId="19" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                  <dxl:Column ColId="20" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                  <dxl:Column ColId="21" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                  <dxl:Column ColId="22" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:DynamicTableScan>
-          </dxl:Sequence>
-        </dxl:Result>
-      </dxl:GatherMotion>
+              <dxl:PartitionSelector RelationMdid="0.29434.1.1" PartitionLevels="1" ScanId="1">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList/>
+                <dxl:PartEqFilters>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                </dxl:PartEqFilters>
+                <dxl:PartFilters>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                </dxl:PartFilters>
+                <dxl:ResidualFilter>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                </dxl:ResidualFilter>
+                <dxl:PropagationExpression>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                </dxl:PropagationExpression>
+                <dxl:PrintableFilter>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                </dxl:PrintableFilter>
+              </dxl:PartitionSelector>
+              <dxl:DynamicTableScan PartIndexId="1">
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000087" Rows="1.000000" Width="16"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="10" Alias="l_shipdate">
+                    <dxl:Ident ColId="10" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="11" Alias="l_commitdate">
+                    <dxl:Ident ColId="11" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter>
+                  <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
+                    <dxl:Ident ColId="10" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                    <dxl:Ident ColId="11" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                  </dxl:Comparison>
+                </dxl:Filter>
+                <dxl:TableDescriptor Mdid="0.29434.1.1" TableName="lineitem">
+                  <dxl:Columns>
+                    <dxl:Column ColId="0" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="10" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                    <dxl:Column ColId="11" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                    <dxl:Column ColId="16" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                    <dxl:Column ColId="17" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="18" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="19" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="20" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="21" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                    <dxl:Column ColId="22" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:DynamicTableScan>
+            </dxl:Sequence>
+          </dxl:Result>
+        </dxl:GatherMotion>
+      </dxl:Result>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

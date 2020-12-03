@@ -794,7 +794,7 @@ explain select * from t_ao where c2 = 'HEAP';
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="204.717960" Rows="100.000000" Width="30"/>
+          <dxl:Cost StartupCost="0" TotalCost="398.329030" Rows="100.000000" Width="30"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c1">
@@ -823,7 +823,7 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="204.701700" Rows="100.000000" Width="30"/>
+            <dxl:Cost StartupCost="0" TotalCost="398.312770" Rows="100.000000" Width="30"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c1">

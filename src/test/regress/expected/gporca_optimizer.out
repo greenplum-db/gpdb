@@ -10885,14 +10885,15 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
-                                  QUERY PLAN
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
-   ->  Seq Scan on bitmap_test  (cost=0.00..431.00 rows=2 width=4)
-         Filter: a = ANY ('{1,2,47}'::integer[])
- Settings:  optimizer=on
- Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
-(5 rows)
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..417.97 rows=4 width=4)
+   ->  Bitmap Heap Scan on bitmap_test  (cost=0.00..417.97 rows=2 width=4)
+         Recheck Cond: (a = ANY ('{1,2,47}'::integer[]))
+         ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (a = ANY ('{1,2,47}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 -- Test Logging for unsupported features in ORCA
 -- start_ignore

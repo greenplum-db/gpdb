@@ -404,7 +404,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
     <dxl:Plan Id="0" SpaceSize="56">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1072.381940" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1265.966969" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -418,7 +418,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1072.381880" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1265.966909" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -431,7 +431,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
           <dxl:Filter/>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="635.381459" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="828.966488" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -466,7 +466,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
             </dxl:TableScan>
             <dxl:BitmapTableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="204.381428" Rows="1.000000" Width="2"/>
+                <dxl:Cost StartupCost="0" TotalCost="397.966457" Rows="1.000000" Width="2"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

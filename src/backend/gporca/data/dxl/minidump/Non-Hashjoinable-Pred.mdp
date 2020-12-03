@@ -337,7 +337,7 @@
     <dxl:Plan Id="0" SpaceSize="12">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="196.066406" Rows="1.000000" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000954" Rows="1.000000" Width="28"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="i">
@@ -362,7 +362,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="195.052734" Rows="1.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000828" Rows="1.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="i">
@@ -389,7 +389,7 @@
           <dxl:LimitOffset/>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="194.052734" Rows="1.000000" Width="28"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.000828" Rows="1.000000" Width="28"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="i">
@@ -422,49 +422,7 @@
             </dxl:JoinFilter>
             <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1.046875" Rows="2.000000" Width="16"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="10" Alias="i">
-                  <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="11" Alias="j">
-                  <dxl:Ident ColId="11" ColName="j" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:SortingColumnList/>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.015625" Rows="1.000000" Width="16"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="10" Alias="i">
-                    <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="11" Alias="j">
-                    <dxl:Ident ColId="11" ColName="j" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.49189.1.1" TableName="case2_tbl">
-                  <dxl:Columns>
-                    <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="12" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                    <dxl:Column ColId="13" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                    <dxl:Column ColId="14" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                    <dxl:Column ColId="15" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                    <dxl:Column ColId="16" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                    <dxl:Column ColId="17" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                    <dxl:Column ColId="18" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-            </dxl:BroadcastMotion>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.005859" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000338" Rows="2.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="i">
@@ -475,18 +433,60 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.49165.1.1" TableName="case_tbl">
+              <dxl:SortingColumnList/>
+              <dxl:TableScan>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000013" Rows="1.000000" Width="12"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="1" Alias="i">
+                    <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="2" Alias="f">
+                    <dxl:Ident ColId="2" ColName="f" TypeMdid="0.701.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:TableDescriptor Mdid="0.49165.1.1" TableName="case_tbl">
+                  <dxl:Columns>
+                    <dxl:Column ColId="0" Attno="1" ColName="dummy" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="1" Attno="2" ColName="i" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="2" Attno="3" ColName="f" TypeMdid="0.701.1.0"/>
+                    <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                    <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                    <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:TableScan>
+            </dxl:BroadcastMotion>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="16"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="10" Alias="i">
+                  <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="11" Alias="j">
+                  <dxl:Ident ColId="11" ColName="j" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.49189.1.1" TableName="case2_tbl">
                 <dxl:Columns>
-                  <dxl:Column ColId="0" Attno="1" ColName="dummy" TypeMdid="0.23.1.0"/>
-                  <dxl:Column ColId="1" Attno="2" ColName="i" TypeMdid="0.23.1.0"/>
-                  <dxl:Column ColId="2" Attno="3" ColName="f" TypeMdid="0.701.1.0"/>
-                  <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                  <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                  <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                  <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                  <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                  <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                  <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                  <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
+                  <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
+                  <dxl:Column ColId="12" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                  <dxl:Column ColId="13" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                  <dxl:Column ColId="14" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                  <dxl:Column ColId="15" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                  <dxl:Column ColId="16" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                  <dxl:Column ColId="17" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                  <dxl:Column ColId="18" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>

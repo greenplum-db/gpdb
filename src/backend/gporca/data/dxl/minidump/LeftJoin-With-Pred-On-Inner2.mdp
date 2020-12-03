@@ -397,7 +397,7 @@
     <dxl:Plan Id="0" SpaceSize="4">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.582031" Rows="15.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.008993" Rows="15.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -411,7 +411,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3.523438" Rows="15.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.008454" Rows="15.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -435,7 +435,7 @@
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="Left">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2.406250" Rows="44.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.007730" Rows="44.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -458,7 +458,7 @@
             </dxl:HashCondList>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.039062" Rows="20.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000209" Rows="20.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -481,7 +481,7 @@
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.117188" Rows="30.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000314" Rows="30.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="c">

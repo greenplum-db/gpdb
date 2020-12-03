@@ -266,7 +266,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2.600621" Rows="69.172600" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.004080" Rows="69.172600" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -277,7 +277,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.465518" Rows="69.172600" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.002837" Rows="69.172600" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -287,7 +287,7 @@
           <dxl:Filter>
             <dxl:IsDistinctFrom OperatorMdid="0.96.1.0">
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
             </dxl:IsDistinctFrom>
           </dxl:Filter>
           <dxl:TableDescriptor Mdid="0.2428752.1.1" TableName="idf">

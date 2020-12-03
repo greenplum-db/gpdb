@@ -464,9 +464,13 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
 	}
 
-	if (OPTIMIZER_GPDB_EXPERIMENTAL == optimizer_cost_model)
+	if (OPTIMIZER_GPDB_LEGACY == optimizer_cost_model)
 	{
-		traceflag_bitset->ExchangeSet(EopttraceCalibratedBitmapIndexCostModel);
+		traceflag_bitset->ExchangeSet(EopttraceLegacyCostModel);
+	}
+	else if (OPTIMIZER_GPDB_EXPERIMENTAL == optimizer_cost_model)
+	{
+		traceflag_bitset->ExchangeSet(EopttraceExperimentalCostModel);
 	}
 
 	// enable nested loop index plans using nest params

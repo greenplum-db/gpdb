@@ -874,7 +874,7 @@ inferred from the second operator (c4 = 'f')
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="102.193886" Rows="1.000000" Width="30"/>
+          <dxl:Cost StartupCost="0" TotalCost="392.963707" Rows="1.000000" Width="30"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c1">
@@ -903,7 +903,7 @@ inferred from the second operator (c4 = 'f')
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="102.193751" Rows="1.000000" Width="30"/>
+            <dxl:Cost StartupCost="0" TotalCost="392.963572" Rows="1.000000" Width="30"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c1">

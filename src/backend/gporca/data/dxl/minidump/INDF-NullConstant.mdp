@@ -268,7 +268,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2.371094" Rows="30.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.003230" Rows="30.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -279,7 +279,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.312500" Rows="30.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.002692" Rows="30.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -290,7 +290,7 @@
             <dxl:Not>
               <dxl:IsDistinctFrom OperatorMdid="0.96.1.0">
                 <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
               </dxl:IsDistinctFrom>
             </dxl:Not>
           </dxl:Filter>
@@ -310,7 +310,7 @@
       </dxl:GatherMotion>
       <dxl:DirectDispatchInfo>
         <dxl:KeyValue>
-          <dxl:Datum TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+          <dxl:Datum TypeMdid="0.23.1.0" IsNull="true"/>
         </dxl:KeyValue>
       </dxl:DirectDispatchInfo>
     </dxl:Plan>
