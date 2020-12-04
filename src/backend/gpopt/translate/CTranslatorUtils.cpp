@@ -1814,13 +1814,10 @@ CTranslatorUtils::IsGroupingColumn(const TargetEntry *target_entry,
 	{
 		Node *group_clause_node = (Node *) lfirst(group_clause_cell);
 
-		if (NULL == group_clause_node)
-		{
-			continue;
-		}
+		GPOS_ASSERT(NULL != group_clause_node);
+		GPOS_ASSERT(IsA(group_clause_node, SortGroupClause));
 
-		if (IsA(group_clause_node, SortGroupClause) &&
-			IsGroupingColumn(target_entry,
+		if (IsGroupingColumn(target_entry,
 							 (SortGroupClause *) group_clause_node))
 		{
 			return true;

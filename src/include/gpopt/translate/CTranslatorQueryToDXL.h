@@ -393,6 +393,11 @@ private:
 	// table of a DML query
 	void GetCtidAndSegmentId(ULONG *ctid, ULONG *segment_id);
 
+	// translate a grouping func expression
+	CDXLNode *TranslateGroupingFuncToDXL(
+		const Expr *expr, CBitSet *bitset,
+		UlongToUlongMap *grpcol_index_to_colid_mapping) const;
+
 	// construct a list of CTE producers from the query's CTE list
 	void ConstructCTEProducerList(List *cte_list, ULONG query_level);
 

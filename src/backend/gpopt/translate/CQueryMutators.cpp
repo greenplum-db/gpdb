@@ -41,8 +41,8 @@ using namespace gpmd;
 //		CQueryMutators::NeedsProjListNormalization
 //
 //	@doc:
-//		Is the group by project list flat (contains only aggregates
-//		and grouping columns)
+//		Is the group by project list flat (contains only aggregates, grouping
+//		funcs, and grouping columns)
 //---------------------------------------------------------------------------
 BOOL
 CQueryMutators::NeedsProjListNormalization(const Query *query)
@@ -70,6 +70,7 @@ CQueryMutators::NeedsProjListNormalization(const Query *query)
 		// Normalize when there is an expression that is neither used for grouping
 		// nor is an aggregate function
 		if (!IsA(target_entry->expr, Aggref) &&
+			!IsA(target_entry->expr, GroupingFunc) &&
 			!CTranslatorUtils::IsGroupingColumn((Node *) target_entry->expr,
 												query->groupClause,
 												query->targetList))
@@ -98,7 +99,8 @@ CQueryMutators::ShouldFallback(Node *node, SContextTLWalker *context)
 		return false;
 	}
 
-	if (IsA(node, Const) || IsA(node, Aggref) || IsA(node, SubLink))
+	if (IsA(node, Const) || IsA(node, Aggref) || IsA(node, GroupingFunc) ||
+		IsA(node, SubLink))
 	{
 		return false;
 	}
@@ -146,8 +148,8 @@ CQueryMutators::ShouldFallback(Node *node, SContextTLWalker *context)
 //		CQueryMutators::NormalizeGroupByProjList
 //
 //	@doc:
-// 		Flatten expressions in project list to contain only aggregates and
-//		grouping columns
+// 		Flatten expressions in project list to contain only aggregates, grouping
+// 		funcs and grouping columns
 //		ORGINAL QUERY:
 //			SELECT * from r where r.a > (SELECT max(c) + min(d) FROM t where r.b = t.e)
 // 		NEW QUERY:
@@ -210,6 +212,9 @@ CQueryMutators::NormalizeGroupByProjList(CMemoryPool *mp,
 				(Node *) target_entry->expr, &context);
 			GPOS_ASSERT(!IsA(target_entry->expr, Aggref) &&
 						"New target list entry should not contain any Aggrefs");
+			GPOS_ASSERT(
+				!IsA(target_entry->expr, GroupingFunc) &&
+				"New target list entry should not contain any GroupingFuncs");
 		}
 	}
 
@@ -410,6 +415,15 @@ CQueryMutators::RunGroupingColMutator(Node *node,
 		return (Node *) aggref;
 	}
 
+	if (IsA(node, GroupingFunc))
+	{
+		// FIXME: we do not fix levelsup for GroupingFunc here, the translator
+		// will fall back later when it detects levelsup > 0. We need to do
+		// similar things as AggRef here when ORCA adds support for GroupingFunc
+		// with outer refs
+		return (Node *) gpdb::CopyObject(node);
+	}
+
 	if (IsA(node, SubLink))
 	{
 		SubLink *old_sublink = (SubLink *) node;
@@ -547,10 +561,16 @@ CQueryMutators::GetTargetEntryForAggExpr(CMemoryPool *mp,
 										 CMDAccessor *md_accessor, Node *node,
 										 ULONG attno)
 {
-	GPOS_ASSERT(IsA(node, Aggref));
+	GPOS_ASSERT(IsA(node, Aggref) || IsA(node, GroupingFunc));
 
 	// get the function/aggregate name
 	CHAR *name = NULL;
+	if (IsA(node, GroupingFunc))
+	{
+		name = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
+			GPOS_WSZ_LIT("grouping"));
+	}
+	else
 	{
 		Aggref *aggref = (Aggref *) node;
 
@@ -573,7 +593,8 @@ CQueryMutators::GetTargetEntryForAggExpr(CMemoryPool *mp,
 //
 // This mutator should be called after creating a derived query (a subquery in
 // the FROM clause), on each element in the old query's target list or qual to
-// update any AggRef & Var to refer to the output from the derived query.
+// update any AggRef, GroupingFunc & Var to refer to the output from the derived
+// query.
 //
 // See comments below & in the callers for specific use cases.
 Node *
@@ -808,12 +829,12 @@ CQueryMutators::MakeVarInDerivedTable(Node *node,
 {
 	GPOS_ASSERT(NULL != node);
 	GPOS_ASSERT(NULL != context);
-	GPOS_ASSERT(IsA(node, Aggref) || IsA(node, Var));
+	GPOS_ASSERT(IsA(node, Aggref) || IsA(node, Var) || IsA(node, GroupingFunc));
 
 	// Append a new target entry for the node to the derived target list ...
 	const ULONG attno = gpdb::ListLength(context->m_lower_table_tlist) + 1;
 	TargetEntry *tle = NULL;
-	if (IsA(node, Aggref))
+	if (IsA(node, Aggref) || IsA(node, GroupingFunc))
 		tle = GetTargetEntryForAggExpr(context->m_mp, context->m_mda, node,
 									   attno);
 	else if (IsA(node, Var))
