@@ -125,6 +125,7 @@ static void writeStr(Oid group, BaseType base, ResGroupCompType comp, const char
 static bool permListCheck(const PermList *permlist, Oid group, bool report);
 static bool checkPermission(Oid group, bool report);
 static bool checkCpuSetPermission(Oid group, bool report);
+static void checkCompHierarchy();
 static void getMemoryInfo(unsigned long *ram, unsigned long *swap);
 static void getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw);
 static int getOvercommitRatio(void);
@@ -1086,6 +1087,81 @@ checkCpuSetPermission(Oid group, bool report)
 	return true;
 }
 
+/*
+ * Check the mount hierarchy of cpu and cpuset subsystem.
+ *
+ * Raise an error if cpu and cpuset are mounted on the same hierarchy.
+ */
+static void
+checkCompHierarchy()
+{
+	ResGroupCompType comp;
+	FILE       *f;
+	char        buf[MAXPATHLEN * 2];
+	
+	f = fopen("/proc/1/cgroup", "r");
+	if (!f)
+	{
+		CGROUP_CONFIG_ERROR("can't check component mount hierarchy \
+					file '/proc/1/cgroup' doesn't exist");
+		return;
+	}
+
+	/*
+	 * format: id:comps:path, e.g.:
+	 *
+	 * 10:cpuset:/
+	 * 4:cpu,cpuacct:/
+	 * 1:name=systemd:/init.scope
+	 * 0::/init.scope
+	 */
+	while (fscanf(f, "%*d:%s", buf) != EOF)
+	{
+		char       *ptr;
+		char       *tmp;
+		char        sep = '\0';
+		/* mark if the line has alread contained cpu or cpuset comp */
+		int        markComp = RESGROUP_COMP_TYPE_UNKNOWN;
+
+		/* buf is stored with "comps:path" */
+		if (buf[0] == ':')
+			continue; /* ignore empty comp */
+
+		/* split comps */
+		for (ptr = buf; sep != ':'; ptr = tmp)
+		{
+			tmp = strpbrk(ptr, ":,=");
+			
+			sep = *tmp;
+			*tmp++ = 0;
+
+			/* for name=comp case there is nothing to do with the name */
+			if (sep == '=')
+				continue;
+			
+			comp = compByName(ptr);
+
+			if (comp == RESGROUP_COMP_TYPE_UNKNOWN)
+				continue; /* not used by us */
+			
+			if (comp == RESGROUP_COMP_TYPE_CPU || comp == RESGROUP_COMP_TYPE_CPUSET)
+			{
+				if (markComp == RESGROUP_COMP_TYPE_UNKNOWN)
+					markComp = comp;
+				else
+				{
+					Assert(markComp != comp);
+					fclose(f);
+					CGROUP_CONFIG_ERROR("can't mount 'cpu' and 'cpuset' on the same hierarchy");
+					return;
+				}
+			}
+		}
+	}
+
+	fclose(f);
+}
+
 /* get total ram and total swap (in Byte) from sysinfo */
 static void
 getMemoryInfo(unsigned long *ram, unsigned long *swap)
@@ -1332,6 +1408,16 @@ ResGroupOps_Bless(void)
 	 * Check again, this time we will fail on unmet requirements.
 	 */
 	checkPermission(RESGROUP_ROOT_ID, true);
+
+	/*
+ 	 * Check if cpu and cpuset subsystems are mounted on the same hierarchy.
+ 	 * We do not allow they mount on the same hierarchy, because writting pid
+ 	 * to DEFAULT_CPUSET_GROUP_ID in ResGroupOps_AssignGroup will cause the
+ 	 * removal of the pid in group BASETYPE_GPDB, which will make cpu usage
+ 	 * out of control.
+	 */
+	if (!CGROUP_CPUSET_IS_OPTIONAL)
+		checkCompHierarchy();
 
 	/*
 	 * Dump the cgroup comp dirs to logs.

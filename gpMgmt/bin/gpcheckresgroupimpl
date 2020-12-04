@@ -76,6 +76,8 @@ class cgroup(object):
             self.validate_permission("cpuset", "gpdb/cpuset.cpus", "rw")
             self.validate_permission("cpuset", "gpdb/cpuset.mems", "rw")
 
+            self.validate_comp_hierarchy();
+
     def die(self, msg):
         exit(self.impl + self.error_prefix + msg)
 
@@ -123,6 +125,27 @@ class cgroup(object):
                 return False
 
         return True
+
+    def validate_comp_hierarchy(self):
+        """
+        Validate the mount hierarchy of cpu and cpuset subsystem.
+
+        Raise an error if cpu and cpuset are mounted on the same hierarchy.
+        """
+
+        path = "/proc/1/cgroup"
+        if not os.path.exists(path):
+            self.die("can't check component mount hierarchy: \
+                     file '/proc/1/cgroup' doesn't exist")
+
+        for line in open(path):
+            line = line.strip()
+            compid, compnames, comppath = line.split(":")
+            if not compnames or '=' in compnames:
+                continue
+            complist = compnames.split(',')
+            if "cpu" in complist and "cpuset" in complist:
+                self.die("can't mount 'cpu' and 'cpuset' on the same hierarchy")
 
     def detect_cgroup_mount_point(self):
         proc_mounts_path = "/proc/self/mounts"
