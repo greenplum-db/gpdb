@@ -1046,66 +1046,44 @@ CHK_GPDB_ID () {
 	if [ -f ${INITDB} ];then
 	        PERMISSION=`ls -al ${INITDB}|$AWK '{print $1}'`
 		MASTER_INITDB_ID=`ls -al ${INITDB}|$AWK '{print $3}'`
-		INIT_CHAR=`$ECHO $MASTER_INITDB_ID|$TR -d '\n'|$WC -c|$TR -d ' '`
 		MASTER_INITDB_GROUPID=`ls -al ${INITDB}|$AWK '{print $4}'`
-		GROUP_INIT_CHAR=`$ECHO $MASTER_INITDB_ID|$TR -d '\n'|$WC -c|$TR -d ' '`
-		GPDB_ID=`id|$TR '(' ' '|$TR ')' ' '|$AWK '{print $2}'`
-		GPDB_GROUPID=`id|$TR '(' ' '|$TR ')' ' '|$AWK '{print $4}'`
+		GROUP_NAME=`id|$TR '(' ' '|$TR ')' ' '|$AWK '{print $4}'`
 
 		USER_EXECUTE=`$ECHO $PERMISSION | $SED -e 's/...\(.\).*/\1/g'`
 		GROUP_EXECUTE=`$ECHO $PERMISSION | $SED -e 's/......\(.\).*/\1/g'`
+		WORLD_EXECUTE=`$ECHO $PERMISSION | $SED -e 's/.........\(.\).*/\1/g'`
 
-		if [ `$ECHO $GPDB_ID|$TR -d '\n'|$WC -c` -gt $INIT_CHAR ];then
-			GPDB_ID_CHK=`$ECHO $GPDB_ID|$CUT -c1-$INIT_CHAR`
+		if [ "$USER_NAME" == "$MASTER_INITDB_ID" ] && [ "x" == "$USER_EXECUTE" ];then
+		    LOG_MSG "[INFO]:-Current user id of $USER_NAME, matches initdb id of $MASTER_INITDB_ID"
+		elif [ "$GROUP_NAME" == "$MASTER_INITDB_GROUPID" ] && [ "x" == "$GROUP_EXECUTE" ] ; then
+		    LOG_MSG "[INFO]:-Current group id of $GROUP_NAME, matches initdb group id of $MASTER_INITDB_GROUPID"
+		elif [ "x" == "$WORLD_EXECUTE" ]; then
+		    LOG_MSG "[INFO]:-Current user id of $USER_NAME, group id of $GROUP_NAME, matches initdb of permissions for all other users"
 		else
-			GPDB_ID_CHK=$GPDB_ID
-		fi
-
-		if [ `$ECHO $GPDB_GROUPID|$TR -d '\n'|$WC -c` -gt $GROUP_INIT_CHAR ];then
-			GPDB_GROUPID_CHK=`$ECHO $GPDB_GROUPID|$CUT -c1-$GROUP_INIT_CHAR`
-		else
-			GPDB_GROUPID_CHK=$GPDB_GROUPID
-		fi
-
-		if [ x$GPDB_ID_CHK == x$MASTER_INITDB_ID ] && [ x"x" == x"$USER_EXECUTE" ];then
-		    LOG_MSG "[INFO]:-Current user id of $GPDB_ID, matches initdb id of $MASTER_INITDB_ID"
-		elif [ x$GPDB_GROUPID_CHK == x$MASTER_INITDB_GROUPID ] && [ x"x" == x"$GROUP_EXECUTE" ] ; then
-		    LOG_MSG "[INFO]:-Current group id of $GPDB_GROUPID, matches initdb group id of $MASTER_INITDB_GROUPID"
-		else
-			LOG_MSG "[WARN]:-File permission mismatch.  The $GPDB_ID_CHK owns the Greenplum Database installation directory."
-			LOG_MSG "[WARN]:-You are currently logged in as $MASTER_INITDB_ID and may not have sufficient"
+			LOG_MSG "[WARN]:-File permission mismatch.  The $MASTER_INITDB_ID owns the Greenplum Database installation directory."
+			LOG_MSG "[WARN]:-You are currently logged in as $USER_NAME and may not have sufficient"
 			LOG_MSG "[WARN]:-permissions to run the Greenplum binaries and management utilities."
 		fi
 
-		if [ x"" != x"$USER" ];then
-			if [ `$ECHO $USER|$TR -d '\n'|$WC -c` -gt $INIT_CHAR ];then
-				USER_CHK=`$ECHO $USER|$CUT -c1-$INIT_CHAR`
-			else
-				USER_CHK=$USER
-			fi
-			if [ x$GPDB_ID_CHK != x$USER_CHK ];then
-				LOG_MSG "[WARN]:-\$USER mismatch, id returns $GPDB_ID, \$USER returns $USER" 1
+		if [ "" != "$USER" ];then
+			if [ "$USER_NAME" != "$USER" ];then
+				LOG_MSG "[WARN]:-\$USER mismatch, id returns $USER_NAME, \$USER returns $USER" 1
 				LOG_MSG "[WARN]:-The GPDB superuser account that owns the initdb binary should run these utilities" 1
 				LOG_MSG "[WARN]:-This may cause problems when these utilities are run as $USER" 1
 			fi
 		else
-			LOG_MSG "[INFO]:-Environment variable \$USER unset, will set to $GPDB_ID" 1
-			export USER=$GPDB_ID
+			LOG_MSG "[INFO]:-Environment variable \$USER unset, will set to $USER_NAME" 1
+			export USER=$USER_NAME
 		fi
-		if [ x"" != x"$LOGNAME" ];then
-			if [ `$ECHO $LOGNAME|$TR -d '\n'|$WC -c` -gt $INIT_CHAR ];then
-				LOGNAME_CHK=`$ECHO $LOGNAME|$CUT -c1-$INIT_CHAR`
-			else
-				LOGNAME_CHK=$LOGNAME
-			fi
-			if [ x$GPDB_ID_CHK != x$LOGNAME_CHK ];then
-				LOG_MSG "[WARN]:-\$LOGNAME mismatch, id returns $GPDB_ID_CHK, \$LOGNAME returns $LOGNAME_CHK" 1
+		if [ "" != "$LOGNAME" ];then
+			if [ "$USER_NAME" != "$LOGNAME" ];then
+				LOG_MSG "[WARN]:-\$LOGNAME mismatch, id returns $USER_NAME, \$LOGNAME returns $LOGNAME" 1
 				LOG_MSG "[WARN]:-The GPDB superuser account that owns the initdb binary should run these utilities" 1
 				LOG_MSG "[WARN]:-This may cause problems when these utilities are run as $LOGNAME" 1
 			fi
 		else
-			LOG_MSG "[INFO]:-Environment variable \$LOGNAME unset, will set to $GPDB_ID" 1
-			export LOGNAME=$GPDB_ID
+			LOG_MSG "[INFO]:-Environment variable \$LOGNAME unset, will set to $USER_NAME" 1
+			export LOGNAME=$USER_NAME
 		fi
 	else
 		LOG_MSG "[WARN]:-No initdb file, unable to verify id" 1
