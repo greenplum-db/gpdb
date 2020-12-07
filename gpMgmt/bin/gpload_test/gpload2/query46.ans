@@ -1,0 +1,18 @@
+2020-12-01 15:47:53|INFO|gpload session started 2020-12-01 15:47:53
+2020-12-01 15:47:53|ERROR|could not connect to database: could not connect to server: Connection refused
+	Is the server running on host "*" and accepting
+	TCP/IP connections on port 9999?
+. Is the Greenplum Database running on port 9999?
+2020-12-01 15:47:53|INFO|rows Inserted          = 0
+2020-12-01 15:47:53|INFO|rows Updated           = 0
+2020-12-01 15:47:53|INFO|data formatting errors = 0
+2020-12-01 15:47:53|INFO|gpload failed
+2020-12-01 15:47:53|INFO|gpload session started 2020-12-01 15:47:53
+2020-12-01 15:47:53|ERROR|could not connect to database: could not connect to server: Connection refused
+	Is the server running on host "*" and accepting
+	TCP/IP connections on port 9999?
+. Is the Greenplum Database running on port 9999?
+2020-12-01 15:47:53|INFO|rows Inserted          = 0
+2020-12-01 15:47:53|INFO|rows Updated           = 0
+2020-12-01 15:47:53|INFO|data formatting errors = 0
+2020-12-01 15:47:53|INFO|gpload failed

@@ -1,0 +1,14 @@
+2020-12-03 15:53:24|INFO|gpload session started 2020-12-03 15:53:24
+2020-12-03 15:53:24|ERROR|could not connect to database: invalid port number: "111111"
+. Is the Greenplum Database running on port 111111?
+2020-12-03 15:53:24|INFO|rows Inserted          = 0
+2020-12-03 15:53:24|INFO|rows Updated           = 0
+2020-12-03 15:53:24|INFO|data formatting errors = 0
+2020-12-03 15:53:24|INFO|gpload failed
+2020-12-03 15:53:24|INFO|gpload session started 2020-12-03 15:53:24
+2020-12-03 15:53:24|ERROR|could not connect to database: invalid port number: "111111"
+. Is the Greenplum Database running on port 111111?
+2020-12-03 15:53:24|INFO|rows Inserted          = 0
+2020-12-03 15:53:24|INFO|rows Updated           = 0
+2020-12-03 15:53:24|INFO|data formatting errors = 0
+2020-12-03 15:53:24|INFO|gpload failed

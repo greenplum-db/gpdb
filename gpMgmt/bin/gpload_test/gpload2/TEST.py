@@ -10,7 +10,6 @@ import fileinput
 import platform
 import re
 #import yaml
-import ruamel.yaml
 import pytest
 
 try:
@@ -160,28 +159,39 @@ if not os.path.exists(d):
 hostNameAddrs = get_ip(HOST)
 masterPort = getPortMasterOnly()
 
-def write_config_file(database='reuse_gptest', user=os.environ.get('USER'),host=hostNameAddrs, port=int(masterPort), config='config/config_file',file='data/external_file_01.txt',input_port='8081',columns=None, format='text', log_errors=None, error_limit=None, delimiter="'|'", 
-    encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None,transform_config=None, max_line_length=None,table='texttable', mode='insert', update_columns=['n2'],update_condition=None, match_columns=['n1','s1','s2'], staging_table=None,
-    mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,sql=False, before=None, after=None, 
-    error_table=None):
+def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=masterPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
+    ssl=None,columns=None, format='text', log_errors=None, error_limit=None, delimiter="'|'", encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None, transform_config=None, max_line_length=None, 
+    table='texttable', mode='insert', update_columns=['n2'], update_condition=None, match_columns=['n1','s1','s2'], staging_table=None, mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,
+    sql=False, before=None, after=None, error_table=None):
 
     f = open(config,'w')
-    f.write("VERSION: 1.0.0.1")
+    f.write("VERSION: "+version)
     if database:
         f.write("\nDATABASE: "+database)
-    f.write("\nUSER: "+os.environ.get('USER'))
-    f.write("\nHOST: "+hostNameAddrs)
-    f.write("\nPORT: "+masterPort)
+    if user:
+        f.write("\nUSER: "+user)
+    f.write("\nHOST: "+host)
+    f.write("\nPORT: "+str(port))
 
     f.write("\nGPLOAD:")
     f.write("\n   INPUT:")
     f.write("\n    - SOURCE:")
-    f.write("\n         LOCAL_HOSTNAME:")
-    f.write("\n            - "+hostNameAddrs)
+    if local_host:
+        f.write("\n         LOCAL_HOSTNAME:")
+        for lh in local_host:
+            f.write("\n            - "+lh)
     if input_port:
         f.write("\n         PORT: "+str(input_port))
+    if port_range:
+        f.write("\n         PORT_RANGE: "+port_range)
     f.write("\n         FILE:")
-    f.write("\n            - "+mkpath(file))
+    if(isinstance(file,str)):
+        f.write("\n            - "+mkpath(file))
+    if (isinstance(file,list)):
+        for ff in file:
+            f.write("\n            - "+mkpath(ff))
+    if ssl is not None:
+        f.write("\n         SSL: "+str(ssl))
     if columns:
         f.write("\n    - COLUMNS:")
         for c,ct in columns.items():
@@ -333,6 +343,15 @@ def gpdbAnsFile(fname):
     ext = '.ans'
     return os.path.splitext(fname)[0] + ext
 
+def alterOutFile(file,old_str,new_str):
+    with open(file, "r", encoding="utf-8") as f1,open("%s.bak" % file, "w", encoding="utf-8") as f2:
+        for line in f1:
+            for i in range(len(old_str)):
+                line = re.sub(old_str[i],new_str[i],line)
+            f2.write(line)
+    os.remove(file)
+    os.rename("%s.bak" % file, file)
+
 def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
     LMYD = os.path.abspath(os.path.dirname(__file__))
     if not os.access( f1, os.R_OK ):
@@ -342,6 +361,16 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
     dfile = diffFile( f1, outputPath = outputPath )
     # Gets the suitePath name to add init_file
     suitePath = f1[0:f1.rindex( "/" )]
+
+    pat1 = r'["|//]\d+\.\d+\.\d+\.\d+'  # host ip 
+    newpat1 = lambda x : x[0][0]+'*'
+    pat2 = r'[a-zA-Z0-9/\_-]*/data_file'  # file location
+    newpat2 = 'pathto/data_file'
+    pat3 = r', SSL off$'
+    newpat3 = ''
+    alterOutFile(f2, [pat1,pat2,pat3], [newpat1,newpat2,newpat3])  # some strings in outfile are different each time, such as host and file location
+    # we alter the out file here to make it match the ans file
+
     gphome = os.environ['GPHOME']
     if os.path.exists(suitePath + "/init_file"):
         (ok, out) = run(gphome+'/lib/postgresql/pgxs/src/test/regress/gpdiff.pl -w ' + optionalFlags + \
@@ -422,7 +451,7 @@ def drop_tables():
         name = i[0]
         match = re.search('ext_gpload',name)
         if match:
-            queryString = "DROP EXTERNAL TABLE %s" % name
+            queryString = "DROP EXTERNAL TABLE %s;" % name
             db.query(queryString.encode('utf-8'))
 
         else:
@@ -446,7 +475,7 @@ class AnsFile():
     def __eq__(self, other):
         return isFileEqual(self.path, other.path, '-U3', outputPath="")
 
-def check_result(ifile, optionalFlags = "-U3", outputPath = ""):
+def check_result(ifile,  optionalFlags = "-U3", outputPath = "", num=None):
     """
     PURPOSE: compare the actual and expected output files and report an
         error if they don't match.
@@ -465,6 +494,8 @@ def check_result(ifile, optionalFlags = "-U3", outputPath = ""):
     f2 = outFile(ifile, outputPath=outputPath)
     f2 = AnsFile(f2)
     assert f1 == f2 #, read_diff(ifile, "")
+    if num==54:
+        assert f1==AnsFile(mkpath('54tmp.log'))
     return True
 
 def doTest(num):
@@ -474,7 +505,7 @@ def doTest(num):
     modify_sql_file(num)
     file = mkpath('query%d.sql' % num)
     runfile(file)
-    check_result(file)
+    check_result(file,num=num)
 
 def write_test_file(num,cmd='',times=2):
     """
@@ -486,7 +517,7 @@ def write_test_file(num,cmd='',times=2):
     """
     f = open(mkpath('query%d.sql' % num),'w')
     while times>0:
-        f.write("\\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest " + cmd + "\n")
+        f.write("\\! gpload -f "+mkpath('config/config_file')+ " " + cmd + "\n")
         times-=1
     f.close()
 
@@ -922,3 +953,107 @@ def test_45_gpload_config_p():
     "45 gpload command config test -p port"
     copy_data('external_file_01.txt', 'data_file.txt')
     write_config_file(port="", format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=46, cmd="-p 9999")
+def test_46_gpload_config_wrong_p():
+    "46 gpload command config test -p port"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file(port="", format='text',file='data_file.txt',table='texttable')
+
+''' this case runs extreamly slowly, comment it here
+@prepare_before_test(num=47, cmd="-h 1.2.3.4")
+def test_47_gpload_config_wrong_h():
+    "47 gpload command config test -h hostname"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file( host="",format='text',file='data_file.txt',table='texttable',delimiter="'|'")
+'''
+
+@prepare_before_test(num=48, cmd="-d reuse_gptest")
+def test_48_gpload_config_d():
+    "48 gpload command config test -d database"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file(database="", format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=49, cmd="-d notexistdb")
+def test_49_gpload_config_wrong_d():
+    "49 gpload command config test -d with wrong database"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file(database="", format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=50, cmd="-U gpadmin")
+def test_50_gpload_config_U():
+    "50 gpload command config test -U username"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file(user="", format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=51, cmd="-U notexistusr")
+def test_51_gpload_config_wrong_U():
+    "51 gpload command config test -U wrong username"
+    copy_data('external_file_01.txt', 'data_file.txt')
+    write_config_file(user="", format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=52, cmd='--gpfdist_timeout 2')
+def test_52_gpload_config_gpfdist_timeout():
+    "52 gpload command config test gpfdist_timeout"
+    drop_tables()
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(format='text',file='data_file.txt',table='texttable')
+
+'''  maybe some bug in gpfdist
+@prepare_before_test(num=53, cmd='--gpfdist_timeout aa')
+def test_53_gpload_config_gpfdist_timeout_wrong():
+    "53 gpload command config test gpfdist_timeout with a string"
+    runfile(mkpath('setup.sql'))
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(format='text',file='data_file.txt',table='texttable')
+'''
+
+@prepare_before_test(num=54, cmd='-l 54tmp.log')
+def test_54_gpload_config_l():
+    "54 gpload command config test -l logfile"
+    run('rm 54tmp.log')
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=55)
+def test_55_gpload_yaml_version():
+    "55 gpload yaml version"
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(version='1.0.0.2',format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=56)
+def test_56_gpload_yaml_wrong_database():
+    "56 gpload yaml writing a not exist database"
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(database='notexist',format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=57)
+def test_57_gpload_yaml_wrong_user():
+    "57 gpload yaml writing a not exist user"
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(user='notexist',format='text',file='data_file.txt',table='texttable')
+''' wrong host runs slowly
+@prepare_before_test(num=58)
+def test_58_gpload_yaml_wrong_host():
+    "58 gpload yaml writing a not exist host"
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(host='1.2.3.4',format='text',file='data_file.txt',table='texttable')
+'''
+@prepare_before_test(num=59)
+def test_59_gpload_yaml_wrong_port():
+    "59 gpload yaml writing a not exist port"
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(port='111111',format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=60)
+def test_60_gpload_local_hostname():
+    "60 gpload yaml local host with 127.0.0.1 and none and a not exist host"
+    copy_data('external_file_01.txt','data_file.txt')
+    write_config_file(local_host=['127.0.0.1'],format='text',file='data_file.txt',table='texttable')
+    write_config_file(config='config/config_file2',local_host=None,format='text',file='data_file.txt',table='texttable')
+    write_config_file(config='config/config_file3',local_host=['123.123.1.1'],format='text',file='data_file.txt',table='texttable')
+    f = open('query60.sql','w')
+    f.write("\\! gpload -f "+mkpath('config/config_file')+"\n")
+    f.write("\\! gpload -f "+mkpath('config/config_file2')+"\n")
+    f.write("\\! gpload -f "+mkpath('config/config_file3')+"\n")
+    f.close()
