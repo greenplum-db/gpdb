@@ -91,6 +91,9 @@ test: external_table
 # This test validates that for AO we delay fsync to checkpointer on mirror.
 test: fsync_ao
 
+# Test deadlock situation when waiting on a resource queue lock
+test: resource_queue_deadlock
+
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
