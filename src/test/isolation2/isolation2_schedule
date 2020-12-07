@@ -25,6 +25,9 @@ test: dynamic_index_scan
 test: select_for_update
 test: eval_record
 
+# Test deadlock situation when waiting on a resource queue lock
+test: resource_queue_deadlock
+
 # Tests on Append-Optimized tables (row-oriented).
 test: uao/alter_while_vacuum_row
 test: uao/alter_while_vacuum2_row

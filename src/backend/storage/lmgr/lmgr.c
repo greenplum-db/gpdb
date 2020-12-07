@@ -836,6 +836,11 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 tag->locktag_field2,
 							 tag->locktag_field1);
 			break;
+		case LOCKTAG_RESOURCE_QUEUE:
+			appendStringInfo(buf,
+							 _("resource queue %u"),
+							 tag->locktag_field1);
+			break;
 		case LOCKTAG_TRANSACTION:
 			appendStringInfo(buf,
 							 _("transaction %u"),

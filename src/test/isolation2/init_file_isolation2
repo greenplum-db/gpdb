@@ -12,4 +12,13 @@ s/\s+\(entry db(.*)+\spid=\d+\)//
 # ignore OID and file/line number diffs for invalid toast indexes
 m/^ERROR:  no valid index found for toast relation/
 s/with Oid \d+ \(.*\)/with Oid OID/
+
+# For resource queue deadlock
+m/^DETAIL:  Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./
+s/^DETAIL:  Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./DETAIL:  Process PID waits for ExclusiveLock on resource queue OID; blocked by process PID./
+
+# For resource queue deadlock
+m/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d+; blocked by process \d+./
+s/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d+; blocked by process \d+./Process PID waits for ShareUpdateExclusiveLock on relation OID of database OID; blocked by process PID./
+
 -- end_matchsubs

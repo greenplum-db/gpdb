@@ -257,6 +257,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	CdbDispFinishCommand,
 
+	BeforeAutoStats,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

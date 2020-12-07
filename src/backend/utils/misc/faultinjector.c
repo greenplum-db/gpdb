@@ -377,6 +377,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in AbortTransaction after ProcArrayEndTransaction */
 	_("cdbdisp_finish_command"),
 		/* inject fault in cdbdisp_finishCommand */
+	_("before_auto_stats"),
+		/* inject fault in auto_stats before running autostats logic */
 	_("not recognized"),
 };
 
