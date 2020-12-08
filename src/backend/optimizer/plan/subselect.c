@@ -1437,13 +1437,6 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 		return NULL;
 
 	/*
-	 * If there are CTEs, then the transformation does not work. Don't attempt
-	 * to pullup.
-	 */
-	if (parse->cteList)
-		return NULL;
-
-	/*
 	 * If uncorrelated, and no Var nodes on lhs, the subquery will be executed
 	 * only once.  It should become an InitPlan, but make_subplan() doesn't
 	 * handle that case, so just flatten it for now.
