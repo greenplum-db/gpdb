@@ -51,9 +51,8 @@ using namespace gpdxl;
 using namespace gpnaucrates;
 
 // hash map mapping CColRef -> CDXLNode
-typedef CHashMap<CColRef, CDXLNode, gpos::HashValue<CColRef>,
-				 gpos::Equals<CColRef>, CleanupNULL<CColRef>,
-				 CleanupRelease<CDXLNode> >
+typedef CHashMap<CColRef, CDXLNode, CColRef::HashValue, CColRef::Equals,
+				 CleanupNULL<CColRef>, CleanupRelease<CDXLNode> >
 	ColRefToDXLNodeMap;
 
 //---------------------------------------------------------------------------
