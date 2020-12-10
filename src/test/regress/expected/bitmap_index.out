@@ -730,3 +730,140 @@ SELECT * from bm_test_reindex where c2 = 65536;
   1 | 65536
 (1 row)
 
+SET enable_seqscan = ON;
+SET enable_indexscan = ON;
+--
+-- correct cost estimate to avoid bm index scan for wrong result
+--
+CREATE TABLE test_bmselec(id int, type int, msg text) distributed by (id);
+INSERT INTO test_bmselec (id, type, msg) SELECT g, g % 10000, md5(g::text) FROM generate_series(1,100000) as g;
+CREATE INDEX ON test_bmselec USING bitmap(type);
+ANALYZE test_bmselec;
+-- it used to choose bitmap index over seq scan, which not right.
+explain (analyze, verbose) select * from test_bmselec where type < 500;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..562.63 rows=5097 width=41) (actual time=0.325..5.944 rows=5000 loops=1)
+   Output: id, type, msg
+   ->  Seq Scan on public.test_bmselec  (cost=0.00..494.67 rows=1699 width=41) (actual time=0.029..5.094 rows=1693 loops=1)
+         Output: id, type, msg
+         Filter: (test_bmselec.type < 500)
+         Rows Removed by Filter: 31769
+ Planning Time: 0.620 ms
+   (slice0)    Executor memory: 36K bytes.
+   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=on, enable_indexscan=on, enable_seqscan=on
+ Execution Time: 6.606 ms
+(13 rows)
+
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+-- we can see the bitmap index scan is much more slower
+explain (analyze, verbose) select * from test_bmselec where type < 500;
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..5931.19 rows=5097 width=41) (actual time=25.173..84.703 rows=5000 loops=1)
+   Output: id, type, msg
+   ->  Index Scan using test_bmselec_type_idx on public.test_bmselec  (cost=0.00..5863.22 rows=1699 width=41) (actual time=24.676..49.892 rows=1693 loops=1)
+         Output: id, type, msg
+         Index Cond: (test_bmselec.type < 500)
+ Planning Time: 0.358 ms
+   (slice0)    Executor memory: 39K bytes.
+   (slice1)    Executor memory: 15732K bytes avg x 3 workers, 15785K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_indexscan=on, enable_seqscan=off
+ Execution Time: 87.205 ms
+(12 rows)
+
+DROP TABLE test_bmselec;
+SET enable_seqscan = ON;
+SET enable_bitmapscan = ON;
+-- for sparse bitmap index
+create table test_bmsparse(id int, type int, msg text) distributed by (id);
+INSERT INTO test_bmsparse (id, type, msg) SELECT g, g % 10000, md5(g::text) FROM generate_series(1,10000) as g;
+INSERT INTO test_bmsparse (id, type, msg) SELECT g, g % 200, md5(g::text) FROM generate_series(1,80000) as g;
+INSERT INTO test_bmsparse (id, type, msg) SELECT g, g % 10000, md5(g::text) FROM generate_series(1,10000) as g;
+CREATE INDEX ON test_bmsparse USING bitmap(type);
+ANALYZE test_bmsparse;
+-- select lots of rows but on small part of distinct values, should use seq scan
+explain (analyze, verbose) select * from test_bmsparse where type < 200;
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1559.93 rows=79895 width=41) (actual time=0.846..27.219 rows=80400 loops=1)
+   Output: id, type, msg
+   ->  Seq Scan on public.test_bmsparse  (cost=0.00..494.67 rows=26632 width=41) (actual time=0.029..7.373 rows=26975 loops=1)
+         Output: id, type, msg
+         Filter: (test_bmsparse.type < 200)
+         Rows Removed by Filter: 6596
+ Planning Time: 0.549 ms
+   (slice0)    Executor memory: 36K bytes.
+   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=on, enable_indexscan=on, enable_seqscan=on
+ Execution Time: 31.714 ms
+(13 rows)
+
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+explain (analyze, verbose) select * from test_bmsparse where type < 200;
+                                                                            QUERY PLAN                                                                             
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..35546.79 rows=79895 width=41) (actual time=21.727..232.170 rows=80400 loops=1)
+   Output: id, type, msg
+   ->  Index Scan using test_bmsparse_type_idx on public.test_bmsparse  (cost=0.00..34481.53 rows=26632 width=41) (actual time=11.498..206.903 rows=26975 loops=1)
+         Output: id, type, msg
+         Index Cond: (test_bmsparse.type < 200)
+ Planning Time: 0.271 ms
+   (slice0)    Executor memory: 39K bytes.
+   (slice1)    Executor memory: 6499K bytes avg x 3 workers, 6499K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_indexscan=on, enable_seqscan=off
+ Execution Time: 237.311 ms
+(12 rows)
+
+SET enable_seqscan = ON;
+SET enable_bitmapscan = ON;
+-- select small part of table but on lots of distinct values, should use seq scan
+explain (analyze, verbose) select * from test_bmsparse where type > 500;
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..748.40 rows=19030 width=41) (actual time=0.327..9.309 rows=18998 loops=1)
+   Output: id, type, msg
+   ->  Seq Scan on public.test_bmsparse  (cost=0.00..494.67 rows=6343 width=41) (actual time=0.042..5.347 rows=6448 loops=1)
+         Output: id, type, msg
+         Filter: (test_bmsparse.type > 500)
+         Rows Removed by Filter: 26979
+ Planning Time: 0.330 ms
+   (slice0)    Executor memory: 36K bytes.
+   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=on, enable_indexscan=on, enable_seqscan=on
+ Execution Time: 10.469 ms
+(13 rows)
+
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+explain (analyze, verbose) select * from test_bmsparse where type > 500;
+                                                                           QUERY PLAN                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8707.89 rows=19030 width=41) (actual time=446.186..930.016 rows=18998 loops=1)
+   Output: id, type, msg
+   ->  Index Scan using test_bmsparse_type_idx on public.test_bmsparse  (cost=0.00..8454.16 rows=6343 width=41) (actual time=445.685..927.002 rows=6448 loops=1)
+         Output: id, type, msg
+         Index Cond: (test_bmsparse.type > 500)
+ Planning Time: 0.240 ms
+   (slice0)    Executor memory: 39K bytes.
+   (slice1)    Executor memory: 100254K bytes avg x 3 workers, 102077K bytes max (seg1).
+ Memory used:  128000kB
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_indexscan=on, enable_seqscan=off
+ Execution Time: 950.231 ms
+(12 rows)
+
+DROP TABLE test_bmsparse;

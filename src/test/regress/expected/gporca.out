@@ -12786,20 +12786,18 @@ select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
 -- 4 bitmap with select pred
 explain (costs off)
 select * from foo join tbitmap on foo.a=tbitmap.a where tbitmap.a < 5000;
-                    QUERY PLAN                    
---------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tbitmap.a = foo.a)
-         ->  Bitmap Heap Scan on tbitmap
-               Recheck Cond: (a < 5000)
-               ->  Bitmap Index Scan on tbitmapxa
-                     Index Cond: (a < 5000)
+         ->  Seq Scan on tbitmap
+               Filter: (a < 5000)
          ->  Hash
                ->  Seq Scan on foo
                      Filter: (a < 5000)
  Optimizer: Postgres query optimizer
-(11 rows)
+(9 rows)
 
 select * from foo join tbitmap on foo.a=tbitmap.a where tbitmap.a < 5000;
   a   |  b   |  c   |  a   |  b   |  c   
@@ -12966,22 +12964,20 @@ select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a
 -- 10 bitmap with proj select grby select
 explain (costs off)
 select * from foo join (select a, count(*) + 5 as cnt from tbitmap where tbitmap.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
-                       QUERY PLAN                       
---------------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tbitmap.a = foo.a)
          ->  HashAggregate
                Group Key: tbitmap.a
                Filter: (count(*) < 2)
-               ->  Bitmap Heap Scan on tbitmap
-                     Recheck Cond: (a < 5000)
-                     ->  Bitmap Index Scan on tbitmapxa
-                           Index Cond: (a < 5000)
+               ->  Seq Scan on tbitmap
+                     Filter: (a < 5000)
          ->  Hash
                ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
-(13 rows)
+(11 rows)
 
 select * from foo join (select a, count(*) + 5 as cnt from tbitmap where tbitmap.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
   a   |  b   |  c   |  a   | cnt 

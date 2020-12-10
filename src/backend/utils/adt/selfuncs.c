@@ -7747,73 +7747,44 @@ bmcostestimate(PG_FUNCTION_ARGS)
 	Cost	   *indexTotalCost = (Cost *) PG_GETARG_POINTER(4);
 	Selectivity *indexSelectivity = (Selectivity *) PG_GETARG_POINTER(5);
 	double	   *indexCorrelation = (double *) PG_GETARG_POINTER(6);
+
+	IndexOptInfo *index = path->indexinfo;
+	RelOptInfo *baserel = index->rel;
+	RangeTblEntry *rte = planner_rt_fetch(baserel->relid, root);
 	GenericCosts costs;
 
-	List *selectivityQuals;
-	double numIndexTuples;
-	List *groupExprs = NIL;
-	int i;
-	double numDistinctValues;
-
-	/*
-	 * Estimate the number of index tuples. This is basically the same
-	 * as the one in genericcostestimate(), except that
-	 * (1) We don't consider ScalarArrayOpExpr in the calculation, since
-	 *     each value has its own bit vector.
-	 * (2) since the bitmap index stores bit vectors, one for each distinct
-	 *     value, we adjust the number of index tuples by dividing the
-	 *     value with the number of distinct values.
-	 */
-	if (path->indexinfo->indpred != NIL)
-	{
-		List	   *strippedQuals;
-		List	   *predExtraQuals;
-
-		strippedQuals = get_actual_clauses(path->indexquals);
-		predExtraQuals = list_difference(path->indexinfo->indpred, strippedQuals);
-		selectivityQuals = list_concat(predExtraQuals, path->indexquals);
-	}
-	else
-		selectivityQuals = path->indexquals;
-
-	/* Estimate the fraction of main-table tuples that will be visited */
-	*indexSelectivity = clauselist_selectivity(root, selectivityQuals,
-											   path->indexinfo->rel->relid,
-											   JOIN_INNER,
-											   NULL,
-											   false /* use_damping */);
-
-	/*
-	 * Construct a list of index keys, so that we can estimate the number
-	 * of distinct values for those keys.
-	 */
-	for (i = 0; i < path->indexinfo->ncolumns; i ++)
-	{
-		if (path->indexinfo->indexkeys[i] > 0)
-		{
-			Var *var = find_indexkey_var(root, path->indexinfo->rel,
-										 (AttrNumber) path->indexinfo->indexkeys[i]);
-
-			groupExprs = lappend(groupExprs, var);
-		}
-	}
-	if (path->indexinfo->indexprs != NULL)
-		groupExprs = list_concat_unique(groupExprs, path->indexinfo->indexprs);
-
-	Assert(groupExprs != NULL);
-	numDistinctValues = estimate_num_groups(root, groupExprs, path->indexinfo->rel->rows);
-	if (numDistinctValues == 0)
-		numDistinctValues = 1;
-
-	numIndexTuples = *indexSelectivity * path->indexinfo->rel->tuples;
-	numIndexTuples = rint(numIndexTuples / numDistinctValues);
+	Assert(rte->rtekind == RTE_RELATION);
+	Assert(rte->relid != InvalidOid);
 
 	/*
 	 * Now do generic index cost estimation.
 	 */
 	MemSet(&costs, 0, sizeof(costs));
-	costs.numIndexTuples = numIndexTuples;
 
+	/*
+	 * We create a LOV for each distinct key in bitmap index. And the LOV point
+	 * to the bitmap vector pages. Since each bitmap vector has the same length,
+	 * although we do compress for the bits, but we can assume each distinct
+	 * key has approximately same number of bitmap vector pages(although there
+	 * must be some counterexamples). So the indexPages should be:
+	 * selectedDistinctValues / numDistinctValues * index->pages.
+	 *
+	 * But the issue is we can't estimate both of the distinct values from stats
+	 * through estimate_num_groups since it produces larger estimates. Especially
+	 * for selectedDistinctValues.
+	 *
+	 * Image below cases:
+	 * 1. indexSelectivity also correspond to how may distinct values get selected.
+	 * Then the result of genericcostestimate's indexPages will be accurate.
+	 * 2. indexSelectivity is high but only match a small number of distinct values.
+	 * This means the bitmap vector is sparse. So the total index pages number should
+	 * be small.
+	 * 3. indexSelectivity is low but match lots of distinct values. This also means
+	 * the bitmap vector is sparse, and the total index pages number should be small.
+	 *
+	 * The estimate in genericcostestimate should works fine for above cases although
+	 * it's not accurate.
+	 */
 	genericcostestimate(root, path, loop_count, &costs);
 
 	*indexStartupCost = costs.indexStartupCost;

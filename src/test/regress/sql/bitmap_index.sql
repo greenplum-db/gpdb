@@ -311,3 +311,52 @@ SELECT * from bm_test_reindex where c2 = 32767;
 SELECT * from bm_test_reindex where c2 = 32768;
 SELECT * from bm_test_reindex where c2 = 32769;
 SELECT * from bm_test_reindex where c2 = 65536;
+
+SET enable_seqscan = ON;
+SET enable_indexscan = ON;
+
+--
+-- correct cost estimate to avoid bm index scan for wrong result
+--
+CREATE TABLE test_bmselec(id int, type int, msg text) distributed by (id);
+INSERT INTO test_bmselec (id, type, msg) SELECT g, g % 10000, md5(g::text) FROM generate_series(1,100000) as g;
+CREATE INDEX ON test_bmselec USING bitmap(type);
+ANALYZE test_bmselec;
+
+-- it used to choose bitmap index over seq scan, which not right.
+explain (analyze, verbose) select * from test_bmselec where type < 500;
+
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+-- we can see the bitmap index scan is much more slower
+explain (analyze, verbose) select * from test_bmselec where type < 500;
+DROP TABLE test_bmselec;
+
+SET enable_seqscan = ON;
+SET enable_bitmapscan = ON;
+
+-- for sparse bitmap index
+create table test_bmsparse(id int, type int, msg text) distributed by (id);
+INSERT INTO test_bmsparse (id, type, msg) SELECT g, g % 10000, md5(g::text) FROM generate_series(1,10000) as g;
+INSERT INTO test_bmsparse (id, type, msg) SELECT g, g % 200, md5(g::text) FROM generate_series(1,80000) as g;
+INSERT INTO test_bmsparse (id, type, msg) SELECT g, g % 10000, md5(g::text) FROM generate_series(1,10000) as g;
+CREATE INDEX ON test_bmsparse USING bitmap(type);
+ANALYZE test_bmsparse;
+
+-- select lots of rows but on small part of distinct values, should use seq scan
+explain (analyze, verbose) select * from test_bmsparse where type < 200;
+
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+explain (analyze, verbose) select * from test_bmsparse where type < 200;
+
+SET enable_seqscan = ON;
+SET enable_bitmapscan = ON;
+-- select small part of table but on lots of distinct values, should use seq scan
+explain (analyze, verbose) select * from test_bmsparse where type > 500;
+
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+explain (analyze, verbose) select * from test_bmsparse where type > 500;
+
+DROP TABLE test_bmsparse;
