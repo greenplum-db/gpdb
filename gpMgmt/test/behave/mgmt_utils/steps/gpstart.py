@@ -119,14 +119,14 @@ def impl(context):
     for dbid in sorted(context.down_segment_dbids):
         context.execute_steps(u'Then gpstart should print "Marking segment %s down because invalid_host is unreachable" to stdout' % dbid)
 
-def must_have_expected_status(content, preferred_role, expected_status):
+def must_have_expected_field(content, preferred_role, field, expected):
     with dbconn.connect(dbconn.DbURL(dbname="template1")) as conn:
-        status = dbconn.execSQLForSingleton(conn, "SELECT status FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
-    if status != expected_status:
-        raise Exception("Expected status for role %s to be %s, but it is %s" % (preferred_role, expected_status, status))
+        result = dbconn.execSQLForSingleton(conn, "SELECT %s FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (field, content, preferred_role))
+    if result != expected:
+        raise Exception("Expected %s for role %s to be %s, but it is %s" % (field, preferred_role, expected, result))
 
-@then('the status of the {seg_type} on content {content} should be "{expected_status}"')
-def impl(context, seg_type, content, expected_status):
+@then('the {field} of the {seg_type} on content {content} should be "{expected}"')
+def impl(context, field, seg_type, content, expected):
     if seg_type == "primary":
         preferred_role = 'p'
     elif seg_type == "mirror":
@@ -136,7 +136,7 @@ def impl(context, seg_type, content, expected_status):
 
     wait_for_unblocked_transactions(context)
 
-    must_have_expected_status(content, preferred_role, expected_status)
+    must_have_expected_field(content, preferred_role, field, expected)
 
 @then('the cluster is returned to a good state')
 def impl(context):

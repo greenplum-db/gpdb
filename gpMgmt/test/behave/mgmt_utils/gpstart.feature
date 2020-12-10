@@ -125,7 +125,13 @@ Feature: Validate command line arguments
      Then gpstart should print "Host invalid_host is unreachable" to stdout
       And gpstart should print unreachable host messages for the down segments
       And the status of the primary on content 0 should be "d"
+      And the role of the primary on content 0 should be "m"
+      And the mode of the mirror on content 0 should be "c"
+      And the role of the mirror on content 0 should be "p"
       And the status of the primary on content 1 should be "d"
+      And the role of the primary on content 1 should be "m"
+      And the mode of the mirror on content 1 should be "c"
+      And the role of the mirror on content 1 should be "p"
       And the cluster is returned to a good state
 
     # Once the mirror is marked down, gpstart will not start it.  In this case, connections
@@ -142,4 +148,12 @@ Feature: Validate command line arguments
 
          Then gpstart should print "Host invalid_host is unreachable" to stdout
           And gpstart should print unreachable host messages for the down segments
+          And the status of the primary on content 0 should be "d"
+          And the role of the primary on content 0 should be "m"
+          And the mode of the mirror on content 0 should be "c"
+          And the role of the mirror on content 0 should be "p"
+          And the mode of the primary on content 1 should be "c"
+          And the role of the primary on content 1 should be "p"
+          And the status of the mirror on content 1 should be "d"
+          And the role of the mirror on content 1 should be "m"
           And the cluster is returned to a good state
