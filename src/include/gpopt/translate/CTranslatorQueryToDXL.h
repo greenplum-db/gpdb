@@ -230,7 +230,8 @@ private:
 	// translate a query with grouping sets
 	CDXLNode *TranslateGroupingSets(
 		FromExpr *from_expr, List *target_list, List *group_clause,
-		BOOL has_aggs, IntToUlongMap *phmiulSortGrpColsColId,
+		List *grouping_set, BOOL has_aggs,
+		IntToUlongMap *phmiulSortGrpColsColId,
 		IntToUlongMap *output_attno_to_colid_mapping);
 
 	// expand the grouping sets into a union all operator
@@ -391,6 +392,11 @@ private:
 	// obtain the ids of the ctid and segmentid columns for the target
 	// table of a DML query
 	void GetCtidAndSegmentId(ULONG *ctid, ULONG *segment_id);
+
+	// translate a grouping func expression
+	CDXLNode *TranslateGroupingFuncToDXL(
+		const Expr *expr, CBitSet *bitset,
+		UlongToUlongMap *grpcol_index_to_colid_mapping) const;
 
 	// construct a list of CTE producers from the query's CTE list
 	void ConstructCTEProducerList(List *cte_list, ULONG query_level);

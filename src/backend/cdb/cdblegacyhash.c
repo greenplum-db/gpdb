@@ -111,6 +111,7 @@ Datum cdblegacyhash_float8(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_numeric(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_char(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_text(PG_FUNCTION_ARGS);
+Datum cdblegacyhash_bpchar(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_bytea(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_name(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_oid(PG_FUNCTION_ARGS);
@@ -278,6 +279,7 @@ isLegacyCdbHashFunction(Oid funcid)
 		case F_CDBLEGACYHASH_NUMERIC:
 		case F_CDBLEGACYHASH_CHAR:
 		case F_CDBLEGACYHASH_TEXT:
+		case F_CDBLEGACYHASH_BPCHAR:
 		case F_CDBLEGACYHASH_BYTEA:
 		case F_CDBLEGACYHASH_NAME:
 		case F_CDBLEGACYHASH_OID:
@@ -406,7 +408,7 @@ cdblegacyhash_char(PG_FUNCTION_ARGS)
 	PG_RETURN_UINT32(hashFn(&char_buf, 1));
 }
 
-/* also for BPCHAR and VARCHAR */
+/* also for VARCHAR */
 Datum
 cdblegacyhash_text(PG_FUNCTION_ARGS)
 {
@@ -425,6 +427,28 @@ cdblegacyhash_text(PG_FUNCTION_ARGS)
 
 	/* Avoid leaking memory for toasted inputs */
 	PG_FREE_IF_COPY(text_buf, 0);
+
+	PG_RETURN_UINT32(hash);
+}
+
+Datum
+cdblegacyhash_bpchar(PG_FUNCTION_ARGS)
+{
+	BpChar	   *bpchar_buf = PG_GETARG_BPCHAR_PP(0);
+	int			len;
+	void	   *buf;		/* pointer to the data */
+	uint32		hash;
+
+	buf = (void *) VARDATA_ANY(bpchar_buf);
+	len = VARSIZE_ANY_EXHDR(bpchar_buf);
+	/* adjust length to not include trailing blanks */
+	if (len > 1)
+		len = ignoreblanks((char *) buf, len);
+
+	hash = hashFn(buf, len);
+
+	/* Avoid leaking memory for toasted inputs */
+	PG_FREE_IF_COPY(bpchar_buf, 0);
 
 	PG_RETURN_UINT32(hash);
 }

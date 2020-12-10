@@ -10,27 +10,23 @@
                 Database DBMS.</p>
             <p>Several utilities are installed when you install the Greenplum Database server. These
                 utilities reside in <codeph>$GPHOME/bin</codeph>. <ph otherprops="pivotal"> Other
-                    utilities must be downloaded from Pivotal Network and installed separately.
+                    utilities must be downloaded from VMware Tanzu Network and installed separately.
                     These include:</ph></p>
             <ul otherprops="pivotal">
                 <li>The <xref href="http://gpdb.docs.pivotal.io/backup-restore/latest/index.html"
-                        scope="external" format="html">Pivotal Greenplum Backup and Restore</xref>
+                        scope="external" format="html">Tanzu Greenplum Backup and Restore</xref>
                     utilities.</li>
                 <li otherprops="pivotal">The <xref
                         href="https://gpdb.docs.pivotal.io/gpcopy/latest/index.html"
-                        scope="external" format="html">Pivotal Greenplum gpcopy</xref> utility.</li>
-                <li otherprops="pivotal">The <xref
-                        href="http://greenplum.docs.pivotal.io/streaming-server/1-4/kafka/gpkafka-ref.html"
-                        scope="external" format="html">Pivotal Greenplum-Kafka Integration</xref>
-                    utilities.</li>
+                        scope="external" format="html">Tanzu Greenplum Copy Utility</xref>.</li>
                 <li otherprops="pivotal">The <xref
                         href="http://greenplum.docs.pivotal.io/streaming-server/1-4/ref/gpss-ref.html"
-                        scope="external" format="html">Pivotal Greenplum Streaming Server</xref>
+                        scope="external" format="html">Tanzu Greenplum Streaming Server</xref>
                     utilities.</li>
             </ul>
-            <p otherprops="pivotal">Additionally, the Pivotal <xref
-                    href="../client_tool_guides/about.xml" otherprops="pivotal" scope="peer"
-                    >Greenplum Client and Loader Tools</xref> is a separate download from Pivotal
+            <p otherprops="pivotal">Additionally, the <xref
+                    href="../client_tool_guides/about.xml" scope="peer"
+                    >Tanzu Clients</xref> package is a separate download from VMware Tanzu
                 Network that includes selected utilities from the Greenplum Database server
                 installation that you can install on a client system.</p>
             <p>Greenplum Database provides the following utility programs. <ph otherprops="pivotal"
@@ -125,22 +121,22 @@
                 <p><sup>1</sup> The utility program can be obtained from the <i>Greenplum Backup and
                         Restore</i> tile on <xref
                         href="https://network.pivotal.io/products/pivotal-gpdb-backup-restore"
-                        scope="external" format="html"><ph>Pivotal Network</ph></xref>.</p>
+                        scope="external" format="html"><ph>VMware Tanzu Network</ph></xref>.</p>
                 <p><sup>2</sup> The utility program can be obtained from the <i>Greenplum Data Copy
                         Utility</i> tile on <xref
                         href="https://network.pivotal.io/products/gpdb-data-copy" scope="external"
-                        format="html"><ph>Pivotal Network</ph></xref>.</p>
+                        format="html"><ph>VMware Tanzu Network</ph></xref>.</p>
                 <p><sup>3</sup> The utility program is also installed with the <i>Greenplum Client
                         and Loader Tools Package</i>s for Linux and Windows. You can obtain these
                     packages from the Greenplum Database <i>Greenplum Clients</i> filegroup on <xref
                         href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-                        format="html"><ph>Pivotal Network</ph></xref>.</p>
+                        format="html"><ph>VMware Tanzu Network</ph></xref>.</p>
                 <p><sup>4</sup>The utility program is also installed with the <i>Greenplum Client
                         and Loader Tools Package</i> for Linux. You can obtain the most up-to-date
                     version of the <i>Greenplum Streaming Server</i> and <i>Greenplum-Kafka
                         Integration</i> from <xref
                         href="https://network.pivotal.io/products/greenplum-streaming-server"
-                        scope="external" format="html"><ph>Pivotal Network</ph></xref>.</p>
+                        scope="external" format="html"><ph>VMware Tanzu Network</ph></xref>.</p>
             </note>
         </body>
     </topic>

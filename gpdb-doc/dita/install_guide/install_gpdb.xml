@@ -21,11 +21,11 @@
       <p>You must install Greenplum Database on each host machine of the Greenplum Database
           system.<ph otherprops="oss-only"> You can configure a minimal Greenplum Database system to
           run on a single host system with the master instance and segment instances running on the
-          same host system.</ph><ph otherprops="pivotal"> Pivotal distributes the Greenplum Database
+          same host system.</ph><ph otherprops="pivotal"> VMware distributes the Greenplum Database
           software as a downloadable package that you install on each host system with the operating
           system's package management system. You can download the package from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-            >Pivotal Network</xref>.</ph></p>
+            >VMware Tanzu Network</xref>.</ph></p>
       <!--OSS only-->
       <p otherprops="oss-only">Greenplum Database releases are available as: source code tarballs,
         RPM installers for CentOS, and DEB packages for Debian and Ubuntu. See <xref

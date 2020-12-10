@@ -484,12 +484,12 @@
                                   <dxl:Ident ColId="25" ColName="ColRef_0025" TypeMdid="0.20.1.0"/>
                                   <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                                 </dxl:Comparison>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                 <dxl:If TypeMdid="0.16.1.0">
                                   <dxl:IsNull>
                                     <dxl:Ident ColId="2" ColName="f3" TypeMdid="0.701.1.0"/>
                                   </dxl:IsNull>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                   <dxl:If TypeMdid="0.16.1.0">
                                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                       <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.20.1.0"/>

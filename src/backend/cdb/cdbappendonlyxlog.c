@@ -140,6 +140,8 @@ ao_truncate_replay(XLogReaderState *record)
 		snprintf(path, MAXPGPATH, "%s/%u", dbPath, xlrec->target.node.relNode);
 	else
 		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, xlrec->target.node.relNode, xlrec->target.segment_filenum);
+	pfree(dbPath);
+	dbPath = NULL;
 
 	file = PathNameOpenFile(path, O_RDWR | PG_BINARY);
 	if (file < 0)

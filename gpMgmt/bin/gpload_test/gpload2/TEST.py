@@ -149,15 +149,17 @@ PGUSER = os.environ.get("PGUSER")
 if PGUSER is None:
     PGUSER = USER
 PGHOST = os.environ.get("PGHOST")
-if PGHOST is None:
+if PGHOST is None or PGHOST=="":
     PGHOST = HOST
 
 d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
+
 hostNameAddrs = get_ip(HOST)
 masterPort = getPortMasterOnly()
+
 
 def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=masterPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
     ssl=None,columns=None, format='text', log_errors=None, error_limit=None, delimiter="'|'", encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None, transform_config=None, max_line_length=None, 
@@ -223,7 +225,6 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
         f.write("\n    - TRANSFORM_CONFIG: "+transform_config)
     if max_line_length:
         f.write("\n    - MAX_LINE_LENGTH: "+str(max_line_length))
-    
     if externalSchema:
         f.write("\n   EXTERNAL:")
         f.write("\n    - SCHEMA: "+externalSchema)
@@ -1057,3 +1058,4 @@ def test_60_gpload_local_hostname():
     f.write("\\! gpload -f "+mkpath('config/config_file2')+"\n")
     f.write("\\! gpload -f "+mkpath('config/config_file3')+"\n")
     f.close()
+

@@ -1694,7 +1694,6 @@ tuplestore_make_shared(Tuplestorestate *state, SharedFileSet *fileset, const cha
 {
 	ResourceOwner oldowner;
 
-	// GPDB_12_MERGE_FIXME: how should SharedFileSets and workfile sets interact?
 	state->work_set = workfile_mgr_create_set("SharedTupleStore", filename, true /* hold pin */);
 
 	Assert(state->status == TSS_INMEM);
@@ -1716,7 +1715,7 @@ tuplestore_make_shared(Tuplestorestate *state, SharedFileSet *fileset, const cha
 	oldowner = CurrentResourceOwner;
 	CurrentResourceOwner = state->resowner;
 
-	state->myfile = BufFileCreateShared(fileset, filename);
+	state->myfile = BufFileCreateShared(fileset, filename, state->work_set);
 	CurrentResourceOwner = oldowner;
 
 	/*

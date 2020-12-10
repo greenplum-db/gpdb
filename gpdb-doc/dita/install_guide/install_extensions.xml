@@ -14,7 +14,7 @@
         usage.</p>
       <p>Extension packages can be downloaded from the Greenplum Database page on <xref
           href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-          class="- topic/xref ">Pivotal Network</xref>. The extension documentation in the <i><xref
+          class="- topic/xref ">VMware Tanzu Network</xref>. The extension documentation in the <i><xref
             format="dita" scope="peer" type="topic" href="../ref_guide/ref_guide.xml">Greenplum
             Database Reference Guide</xref></i> contains information about installing extension
         packages and using extensions.<ul id="ul_i5j_hrl_dbb">

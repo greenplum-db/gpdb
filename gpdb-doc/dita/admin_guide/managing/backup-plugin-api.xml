@@ -112,8 +112,8 @@ options:
       <p otherprops="pivotal">The Plugin API also defines the <codeph>delete_backup</codeph>
         command, which is called by the <codeph>gpbackup_manager</codeph> utility. (The
           <codeph>gpbackup_manager</codeph> source code is proprietary and the utility is available
-        only in the Pivotal Greenplum Backup and Restore download from <xref
-          href="https://network.pivotal.io" format="html" scope="external">Pivotal Network</xref>.)</p>
+        only in the Tanzu Greenplum Backup and Restore download from <xref
+          href="https://network.pivotal.io" format="html" scope="external">VMware Tanzu Network</xref>.)</p>
       <p>The Backup/Restore Storage Plugin API defines the following call syntax for a
         backup/restore storage plugin executable
         program:<codeblock><varname>plugin_executable</varname> <varname>command</varname> <varname>config_file</varname> <varname>args</varname></codeblock></p>

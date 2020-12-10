@@ -6155,7 +6155,6 @@ XLogProcessCheckpointRecord(XLogReaderState *rec)
 	if (ckptExtended.dtxCheckpoint)
 	{
 		/* Handle the DTX information. */
-		UtilityModeFindOrCreateDtmRedoFile();
 		redoDtxCheckPoint(ckptExtended.dtxCheckpoint);
 		/*
 		 * Avoid closing the file here as possibly the file was already open
@@ -7080,8 +7079,6 @@ StartupXLOG(void)
 		/* Check that the GUCs used to generate the WAL allow recovery */
 		CheckRequiredParameterValues();
 
-		UtilityModeFindOrCreateDtmRedoFile();
-		
 		/*
 		 * We're in recovery, so unlogged relations may be trashed and must be
 		 * reset.  This should be done BEFORE allowing Hot Standby
@@ -7339,22 +7336,6 @@ StartupXLOG(void)
 				 * xid.
 				 */
 				AdvanceNextFullTransactionIdPastXid(record->xl_xid);
-
-				/*
-				 * See if this record is a checkpoint, if yes then uncover it to
-				 * find distributed committed Xacts.
-				 * No need to unpack checkpoint in crash recovery mode
-				 */
-				uint8 xlogRecInfo = record->xl_info & ~XLR_INFO_MASK;
-
-				if (IsStandbyMode() &&
-					record->xl_rmid == RM_XLOG_ID &&
-					(xlogRecInfo == XLOG_CHECKPOINT_SHUTDOWN
-					 || xlogRecInfo == XLOG_CHECKPOINT_ONLINE))
-				{
-					XLogProcessCheckpointRecord(xlogreader);
-					memcpy(&checkPoint, XLogRecGetData(xlogreader), sizeof(CheckPoint));
-				}
 
 				/*
 				 * Before replaying this record, check if this record causes
@@ -7866,8 +7847,6 @@ StartupXLOG(void)
 		}
 		else
 			CreateCheckPoint(CHECKPOINT_END_OF_RECOVERY | CHECKPOINT_IMMEDIATE);
-
-		UtilityModeCloseDtmRedoFile();
 
 		/*
 		 * And finally, execute the recovery_end_command, if any.

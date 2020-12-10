@@ -39,7 +39,7 @@
         first correct the problem that made it fail in the first place, and then recover the segment
         instance in Greenplum Database using <codeph>gprecoverseg</codeph>.</p>
       <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
-        instance data is not corrupted, contact Pivotal Support. </note>
+        instance data is not corrupted, contact VMware Support. </note>
       <p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an active
         mirror to recover from. For systems that do not have mirroring enabled, or in the event of a
         double fault (a primary and mirror pair both down at the same time) — you must take manual

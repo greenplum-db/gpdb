@@ -4,37 +4,37 @@
 <topic id="topic_lvl_dsy_4bb">
   <title>DCA System Installation and Upgrade</title>
   <body>
-    <p>On supported Dell EMC DCA systems, you can install Pivotal Greenplum 6, or you can upgrade
-      from Pivotal Greenplum 6.x to 6.new.</p>
-    <p>Only Pivotal Greenplum Database is supported on DCA systems. Open source versions of
+    <p>On supported Dell EMC DCA systems, you can install Tanzu Greenplum 6, or you can upgrade
+      from Tanzu Greenplum 6.x to 6.new.</p>
+    <p>Only Tanzu Greenplum is supported on DCA systems. Open source versions of
       Greenplum Database are not supported. </p>
     <ul id="ul_ryv_wn2_pbb">
       <li><xref href="#topic_x2w_ltv_yq" format="dita"/></li>
       <li><xref href="#topic_usj_2xl_xq" format="dita"/></li>
     </ul>
-    <note type="important">Upgrading Pivotal Greenplum Database 4 or 5 to Pivotal Greenplum 6 is not
+    <note type="important">Upgrading Tanzu Greenplum 4 or 5 to Greenplum 6 is not
       supported.</note>
   </body>
   <topic id="topic_x2w_ltv_yq">
-    <title class="- topic/title ">Installing the Pivotal Greenplum 6 Software Binaries on DCA
+    <title class="- topic/title ">Installing the Tanzu Greenplum 6 Software Binaries on DCA
       Systems</title>
     <body class="- topic/body ">
-      <note type="important">This section is for installing Pivotal Greenplum 6 only on DCA systems.
+      <note type="important">This section is for installing Tanzu Greenplum 6 only on DCA systems.
         Also, see the information on the <xref href="https://support.emc.com/" format="html"
           scope="external">DELL EMC support site</xref> (requires login). </note>
       <section>
         <title>Prerequisites</title>
         <ul id="ul_fjm_nx2_pbb">
-          <li>Ensure your DCA system supports Pivotal Greenplum 6. See <xref
+          <li>Ensure your DCA system supports Tanzu Greenplum 6. See <xref
               href="supported-platforms.xml" format="dita"/>.</li>
           <li>Ensure that no previous versions of Greenplum Database are installed on your
-              system.<p>Installing Pivotal Greenplum 6 on a DCA system with an existing Greenplum
+              system.<p>Installing Tanzu Greenplum 6 on a DCA system with an existing Greenplum
               Database installation is not supported. For information about uninstalling Greenplum
               Database software, see your Dell EMC DCA documentation.</p></li>
         </ul>
       </section>
       <section>
-        <title>Installing Pivotal Greenplum 6</title>
+        <title>Installing Tanzu Greenplum 6</title>
         <ol class="- topic/ol " id="ol_ctw_ltv_yq">
           <li class="- topic/li ">Download or copy the Greenplum Database DCA installer file to the
             Greenplum Database master host.</li>
@@ -51,10 +51,10 @@
   <topic id="topic_usj_2xl_xq">
     <title class="- topic/title ">Upgrading Greenplum 6.x on DCA Systems</title>
     <body class="- topic/body ">
-      <p>Upgrading Pivotal Greenplum from 6.x to 6.new on a Dell EMC DCA system involves stopping
+      <p>Upgrading Tanzu Greenplum from 6.x to 6.new on a Dell EMC DCA system involves stopping
         Greenplum Database, updating the Greenplum Database software binaries, and restarting
         Greenplum Database. </p>
-      <note type="important">This section is only for upgrading Pivotal Greenplum 6 on DCA systems.
+      <note type="important">This section is only for upgrading Tanzu Greenplum 6 on DCA systems.
         For information about upgrading on non-DCA systems, see <xref
           href="upgrading.xml#topic_tbx_szy_kbb"/>.</note>
       <ol class="- topic/ol " id="ol_fql_2xl_xq">

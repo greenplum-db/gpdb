@@ -36,8 +36,8 @@
             quiescent system. The utility might report false alerts if there is activity on the
             system. </p><note type="important" otherprops="pivotal">If the
               <codeph>gpcheckcat</codeph> utility reports errors, but does not generate a SQL script
-            to fix the errors, contact Pivotal Support. Information for contacting Pivotal Support
-            is at <xref href="https://support.pivotal.io" scope="external" format="html"
+            to fix the errors, contact VMware Support. Information for contacting VMware Support
+            is at <xref href="https://tanzu.vmware.com/support" scope="external" format="html"
               class="- topic/xref ">https://support.pivotal.io</xref>.</note></li>
         <li>If you have configured the Greenplum Platform Extension Framework (PXF) in your previous
           Greenplum Database installation, you must stop the PXF service, and you might need to back up
@@ -129,7 +129,7 @@ $ ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codebl
           previously using any Greenplum Database extensions such as pgcrypto, PL/R, PL/Java, or
           PostGIS, download the corresponding packages from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-            class="- topic/xref ">Pivotal Network</xref>, and install using this utility. See the
+            class="- topic/xref ">VMware Tanzu Network</xref>, and install using this utility. See the
           extension documentation for details.<p>Also copy any files that are used by the extensions
             (such as JAR files, shared object files, and libraries) from the previous version
             installation directory to the new version installation directory on the master and
@@ -158,8 +158,8 @@ $ gpstart</codeblock></li>
     <title class="- topic/title ">Troubleshooting a Failed Upgrade</title>
     <body class="- topic/body ">
       <p>If you experience issues during the migration process and have active entitlements for
-        Greenplum Database that were purchased through Pivotal, contact Pivotal Support. Information
-        for contacting Pivotal Support is at <xref href="https://support.pivotal.io"
+        Greenplum Database that were purchased through VMware, contact VMware Support. Information
+        for contacting VMware Support is at <xref href="https://tanzu.vmware.com/support"
           scope="external" format="html" class="- topic/xref ">https://support.pivotal.io</xref>. </p>
       <p>
         <b class="+ topic/ph hi-d/b ">Be prepared to provide the following information:</b>

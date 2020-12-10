@@ -35,7 +35,6 @@ CConstraintConjunction::CConstraintConjunction(CMemoryPool *mp,
 
 	const ULONG length = m_pdrgpcnstr->Size();
 	GPOS_ASSERT(0 < length);
-
 	m_pcrsUsed = GPOS_NEW(mp) CColRefSet(mp);
 
 	for (ULONG ul = 0; ul < length; ul++)

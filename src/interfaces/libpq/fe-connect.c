@@ -2486,16 +2486,6 @@ keep_going:						/* We will come back to here until there is
 						goto keep_going;
 					}
 
-					if (addr_cur == NULL)
-					{
-						/*
-						 * Ooops, no more addresses.  An appropriate error
-						 * message is already set up, so just set the right
-						 * status.
-						 */
-						goto error_return;
-					}
-
 					/* Remember current address for possible error msg */
 					memcpy(&conn->raddr.addr, addr_cur->ai_addr,
 						   addr_cur->ai_addrlen);

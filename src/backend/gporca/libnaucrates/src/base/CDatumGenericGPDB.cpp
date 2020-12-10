@@ -52,6 +52,7 @@ CDatumGenericGPDB::CDatumGenericGPDB(CMemoryPool *mp, IMDId *mdid,
 	  m_is_null(is_null),
 	  m_mdid(mdid),
 	  m_type_modifier(type_modifier),
+	  m_cached_type(NULL),
 	  m_stats_comp_val_int(stats_comp_val_int),
 	  m_stats_comp_val_double(stats_comp_val_double)
 {
@@ -304,9 +305,11 @@ CDatumGenericGPDB::IsDatumMappableToDouble() const
 BOOL
 CDatumGenericGPDB::IsDatumMappableToLINT() const
 {
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDType *type = md_accessor->RetrieveType(MDId());
-	return CMDTypeGenericGPDB::HasByte2IntMapping(type);
+	if (NULL == m_cached_type)
+	{
+		m_cached_type = COptCtxt::PoctxtFromTLS()->Pmda()->RetrieveType(MDId());
+	}
+	return CMDTypeGenericGPDB::HasByte2IntMapping(m_cached_type);
 }
 
 //---------------------------------------------------------------------------

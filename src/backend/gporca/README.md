@@ -239,5 +239,15 @@ CLANG_FORMAT=clang-format src/tools/fmt chk
 
 For more information, head over to the [formatting README](README.format.md).
 
+[clang-tidy]: https://clang.llvm.org/extra/clang-tidy/index.html
+
+A set of [clang-tidy]-based checks are enforced in CI. Your editor or IDE may support displaying ClangTidy diagnostics. When in doubt, check formatting locally before submitting your patches:
+
+```
+CLANG_TIDY=clang-tidy-12 src/tools/tidy build.debug
+```
+
+See our [Clang-Tidy README](README.tidy.md) for details about how to invoke the tidy script.
+
 We follow GPDB's comprehensive contribution policy. Please refer to it [here](https://github.com/greenplum-db/gpdb#contributing) for details.
 

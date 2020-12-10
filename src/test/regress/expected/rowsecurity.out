@@ -3942,7 +3942,6 @@ ALTER TABLE r2 FORCE ROW LEVEL SECURITY;
 -- Updates records in both
 -- not supported in GPDB
 UPDATE r1 SET a = a+5;
-ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 -- Remove FORCE from r2
 ALTER TABLE r2 NO FORCE ROW LEVEL SECURITY;
 -- As owner, we now bypass RLS

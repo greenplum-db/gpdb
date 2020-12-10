@@ -202,7 +202,7 @@
       <p>A deliberate, thorough approach to deploying compatible hardware greatly minimizes risk to
         the expansion process.</p>
       <p>Hardware resources and configurations for new segment hosts should match those of the
-        existing hosts.<ph otherprops="pivotal"> Work with <i>Pivotal Support</i> before making a
+        existing hosts.<ph otherprops="pivotal"> Work with <i>VMware Support</i> before making a
           hardware purchase to expand Greenplum Database.</ph></p>
       <p>The steps to plan and set up new hardware platforms vary for each deployment. Some
         considerations include how to:</p>

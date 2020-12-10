@@ -44,7 +44,7 @@
           process:<codeblock>$ gpstate -m</codeblock></li>
       </ol>
       <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
-        instance data is not corrupted, contact Pivotal Support. </note>
+        instance data is not corrupted, contact VMware Support. </note>
     </section>
     <section id="ki155666">
       <title>To return all segments to their preferred role</title>
@@ -89,7 +89,7 @@
         <li id="ki165671">After the system restarts, run <codeph>gprecoverseg</codeph> to reactivate
           the failed segment instances.<codeblock>$ gprecoverseg</codeblock>
           <note otherprops="pivotal"> If incremental recovery was not successful and the down
-            segment instance data is not corrupted, contact Pivotal Support. </note></li>
+            segment instance data is not corrupted, contact VMware Support. </note></li>
         <li id="ki165709">After <codeph>gprecoverseg</codeph> completes, use
             <codeph>gpstate</codeph> to check the status of your mirrors and ensure the segment
           instances have gone from <i>Resynchronizing</i> mode to <i>Synchronized</i>

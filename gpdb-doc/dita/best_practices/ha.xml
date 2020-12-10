@@ -12,7 +12,7 @@
       <p>With the Greenplum Database "shared-nothing" MPP architecture, the master host and segment
         hosts each have their own dedicated memory and disk storage, and each master or segment
         instance has its own independent data directory. For both reliability and high performance,
-        Pivotal recommends a hardware RAID storage solution with from 8 to 24 disks. A larger number
+        VMware recommends a hardware RAID storage solution with from 8 to 24 disks. A larger number
         of disks improves I/O throughput when using RAID 5 (or 6) because striping increases
         parallel disk I/O. The RAID controller can continue to function with a failed disk because
         it saves parity data on each disk in a way that it can reconstruct the data on any failed
@@ -235,8 +235,7 @@
               <p dir="ltr">If backups are saved to NFS mounts, use a scale-out NFS solution such as
                 Dell EMC Isilon to prevent IO bottlenecks.</p>
             </li>
-            <li dir="ltr" otherprops="pivotal">Consider using Pivotal Greenplum Database integration
-              to stream backups to the Dell EMC Data Domain enterprise backup platform.</li>
+            <li dir="ltr" otherprops="pivotal">Consider streaming backups to the Dell EMC Data Domain enterprise backup platform.</li>
           </ul>
         </p>
       </section>

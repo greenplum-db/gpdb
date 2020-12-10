@@ -207,7 +207,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
           format="dita"/>.<note>Greenplum Database does not support the PostgreSQL <xref
             href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
             scope="external">large object facility</xref> for streaming user data that is stored in
-          large-object structures.</note><note otherprops="pivotal">Pivotal does not support using
+          large-object structures.</note><note otherprops="pivotal">VMware does not support using
             <codeph>WITH OIDS</codeph> or <codeph>oids=TRUE</codeph> to assign an OID system column
           when creating or altering a table.  This syntax is deprecated and will be removed in a
           future Greenplum release.</note></p>

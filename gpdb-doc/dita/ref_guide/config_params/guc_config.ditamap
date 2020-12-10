@@ -216,6 +216,7 @@
             <topicref href="guc-list.xml#optimizer_array_expansion_threshold"/>
             <topicref href="guc-list.xml#optimizer_analyze_root_partition"/>
             <topicref href="guc-list.xml#optimizer_control"/>
+            <topicref href="guc-list.xml#optimizer_cost_model"/>
             <topicref href="guc-list.xml#optimizer_cte_inlining_bound"/>
             <topicref href="guc-list.xml#optimizer_enable_associativity"/>
             <topicref href="guc-list.xml#optimizer_enable_dml"/>

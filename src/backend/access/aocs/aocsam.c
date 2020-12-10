@@ -307,7 +307,7 @@ aocs_initscan(AOCSScanDesc scan)
 	{
 		scan->columnScanInfo.num_proj_atts = natts;
 		scan->columnScanInfo.proj_atts = (AttrNumber *)
-										 palloc0(natts * sizeof(AttrNumber *));
+										 palloc0(natts * sizeof(AttrNumber));
 
 		for (AttrNumber attno = 0; attno < natts; attno++)
 			scan->columnScanInfo.proj_atts[attno] = attno;
@@ -556,7 +556,8 @@ aocs_beginscan_internal(Relation relation,
 	if (proj)
 	{
 		natts = RelationGetNumberOfAttributes(relation);
-		scan->columnScanInfo.proj_atts = palloc0(natts * sizeof(AttrNumber *));
+		scan->columnScanInfo.proj_atts = (AttrNumber *)
+										 palloc0(natts * sizeof(AttrNumber));
 		scan->columnScanInfo.num_proj_atts = 0;
 
 		for (AttrNumber i = 0; i < natts; i++)

@@ -307,6 +307,10 @@ public:
 		CMemoryPool *mp, IMDId *mdid, INT type_modifier, BOOL is_null,
 		BYTE *byte_array, ULONG length, LINT lint_Value, CDouble double_Value);
 
+	// create a NULL constant for this type
+	IDatum *CreateGenericNullDatum(CMemoryPool *mp,
+								   INT type_modifier) const override;
+
 	// does a datum of this type need bytea to Lint mapping for statistics computation
 	static BOOL HasByte2IntMapping(const IMDType *mdtype);
 

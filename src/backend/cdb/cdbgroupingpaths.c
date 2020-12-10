@@ -93,6 +93,8 @@ typedef struct
 	const AggClauseCosts *agg_partial_costs;
 	const AggClauseCosts *agg_final_costs;
 	List	   *rollups;
+	List       *new_rollups;
+	AggStrategy strat;
 
 	List	   *group_tles;
 
@@ -213,7 +215,9 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 								   const AggClauseCosts *agg_costs,
 								   const AggClauseCosts *agg_partial_costs,
 								   const AggClauseCosts *agg_final_costs,
-								   List *rollups)
+								   List *rollups,
+								   List *new_rollups,
+								   AggStrategy strat)
 {
 	Query	   *parse = root->parse;
 	Path	   *cheapest_path = input_rel->cheapest_total_path;
@@ -258,6 +262,8 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 	ctx.agg_partial_costs = agg_partial_costs;
 	ctx.agg_final_costs = agg_final_costs;
 	ctx.rollups = rollups;
+	ctx.new_rollups = new_rollups;
+	ctx.strat = strat;
 
 	/* create a partial rel similar to make_grouping_rel() */
 	if (IS_OTHER_REL(input_rel))
@@ -432,14 +438,9 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 	 * Consider Hash Aggregate over the cheapest input path.
 	 *
 	 * Hashing is not possible with DQAs.
-	 *
-	 * GPDB_12_MERGE_FIXME: hashing not supported on GROUPING SETS, until
-	 * PostgreSQL v12. We do support hashing in the second stage even with
-	 * GROUPING SETS, though.
 	 */
 	if (can_hash &&
-		list_length(agg_costs->distinctAggrefs) == 0 &&
-		parse->groupingSets == NIL)
+		list_length(agg_costs->distinctAggrefs) == 0)
 	{
 		/*
 		 * If the input is neatly distributed along the GROUP BY columns,
@@ -825,23 +826,48 @@ add_first_stage_hash_agg_path(PlannerInfo *root,
 							  cdb_agg_planning_context *ctx)
 {
 	Query	   *parse = root->parse;
+	Path       *first_stage_agg_path = NULL;
 	double		dNumGroups;
 
 	dNumGroups = estimate_num_groups_on_segment(ctx->dNumGroupsTotal,
 												path->rows, path->locus);
 
-	add_path(ctx->partial_rel,
-			 (Path *) create_agg_path(root,
-									  ctx->partial_rel,
-									  path,
-									  ctx->partial_grouping_target,
-									  AGG_HASHED,
-									  AGGSPLIT_INITIAL_SERIAL,
-									  false, /* streaming */
-									  parse->groupClause,
-									  NIL,
-									  ctx->agg_partial_costs,
-									  dNumGroups));
+	/*
+	 * FIXME:
+	 * Shall we compute hash table size and compare with work_mem here?
+	 */
+
+	if (parse->groupingSets)
+	{
+		first_stage_agg_path =
+			(Path *) create_groupingsets_path(root,
+											  ctx->partial_rel,
+											  path,
+											  AGGSPLIT_INITIAL_SERIAL,
+											  NIL,
+											  ctx->strat,
+											  ctx->new_rollups,
+											  ctx->agg_partial_costs,
+											  dNumGroups);
+		CdbPathLocus_MakeStrewn(&(first_stage_agg_path->locus),
+								CdbPathLocus_NumSegments(first_stage_agg_path->locus));
+		add_path(ctx->partial_rel, first_stage_agg_path);
+	}
+	else
+	{
+		add_path(ctx->partial_rel,
+				 (Path *) create_agg_path(root,
+										  ctx->partial_rel,
+										  path,
+										  ctx->partial_grouping_target,
+										  AGG_HASHED,
+										  AGGSPLIT_INITIAL_SERIAL,
+										  false, /* streaming */
+										  parse->groupClause,
+										  NIL,
+										  ctx->agg_partial_costs,
+										  dNumGroups));
+	}
 }
 
 /*
@@ -877,7 +903,9 @@ add_second_stage_hash_agg_path(PlannerInfo *root,
 
 	/* Would the hash table fit in memory? */
 	hashentrysize = MAXALIGN(initial_agg_path->pathtarget->width) + MAXALIGN(SizeofMinimalTupleHeader);
-	if (hashentrysize * dNumGroups > work_mem * 1024L)
+
+	if (enable_hashagg_disk ||
+		hashentrysize * dNumGroups < work_mem * 1024L)
 	{
 		Path	   *path;
 
@@ -892,7 +920,7 @@ add_second_stage_hash_agg_path(PlannerInfo *root,
 										AGGSPLIT_FINAL_DESERIAL,
 										false, /* streaming */
 										ctx->final_groupClause,
-										(List *) parse->havingQual,
+										ctx->havingQual,
 										ctx->agg_final_costs,
 										dNumGroups);
 		add_path(output_rel, path);

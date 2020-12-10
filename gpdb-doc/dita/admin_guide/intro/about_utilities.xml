@@ -21,7 +21,7 @@
       <li>Transferring data between Greenplum databases</li>
       <li>System state reporting</li>
     </ul>
-    <p otherprops="pivotal">Pivotal provides an optional system monitoring and management tool,
+    <p otherprops="pivotal">VMware provides an optional system monitoring and management tool,
       Greenplum Command Center, which administrators can install and enable with Greenplum Database.
       Greenplum Command Center provides a web-based user interface for viewing system metrics and
       allows administrators to perform additional system management tasks. For more information

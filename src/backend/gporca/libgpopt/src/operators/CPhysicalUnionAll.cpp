@@ -4,6 +4,7 @@
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CHashedDistributions.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/base/CColRefSetIter.h"
@@ -861,7 +862,8 @@ CPhysicalUnionAll::PdsDeriveFromChildren(CMemoryPool *
 			break;
 		}
 
-		if (CDistributionSpec::EdtReplicated == edtChild)
+		if (CDistributionSpec::EdtStrictReplicated == edtChild ||
+			CDistributionSpec::EdtTaintedReplicated == edtChild)
 		{
 			fReplicatedChild = true;
 			pds = pdsChild;
@@ -878,6 +880,23 @@ CPhysicalUnionAll::PdsDeriveFromChildren(CMemoryPool *
 	{
 		// failed to derive distribution from children
 		pds = NULL;
+	}
+
+	// even if a single child is tainted, the result should be tainted
+	if (fReplicatedChild)
+	{
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CDistributionSpec *pdsChild =
+				exprhdl.Pdpplan(ul /*child_index*/)->Pds();
+			CDistributionSpec::EDistributionType edtChild = pdsChild->Edt();
+
+			if (CDistributionSpec::EdtTaintedReplicated == edtChild)
+			{
+				pds = pdsChild;
+				break;
+			}
+		}
 	}
 
 	return pds;
@@ -994,18 +1013,19 @@ CheckChildDistributions(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						BOOL fSingletonChild, BOOL fReplicatedChild,
 						BOOL fUniversalOuterChild)
 {
-	CDistributionSpec::EDistributionType rgedt[4];
+	CDistributionSpec::EDistributionType rgedt[5];
 	rgedt[0] = CDistributionSpec::EdtSingleton;
 	rgedt[1] = CDistributionSpec::EdtStrictSingleton;
 	rgedt[2] = CDistributionSpec::EdtUniversal;
-	rgedt[3] = CDistributionSpec::EdtReplicated;
+	rgedt[3] = CDistributionSpec::EdtStrictReplicated;
+	rgedt[4] = CDistributionSpec::EdtTaintedReplicated;
 
 	if (fReplicatedChild)
 	{
 		// assert all children have distribution Universal or Replicated
 		AssertValidChildDistributions(
 			mp, exprhdl, rgedt + 2 /*start from Universal in rgedt*/,
-			2 /*ulDistrs*/,
+			3 /*ulDistrs*/,
 			"expecting Replicated or Universal distribution in UnionAll children" /*szAssertMsg*/);
 	}
 	else if (fSingletonChild || fUniversalOuterChild)

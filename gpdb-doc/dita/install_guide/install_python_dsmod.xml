@@ -8,7 +8,7 @@
       used with the Greenplum Database PL/Python language. You can download these modules in
         <codeph>.gppkg</codeph> format from <xref
         href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-        >Pivotal Network</xref>.</p>
+        >VMware Tanzu Network</xref>.</p>
     <p>This section contains the following information:</p>
     <ul>
       <li id="pw22228177">

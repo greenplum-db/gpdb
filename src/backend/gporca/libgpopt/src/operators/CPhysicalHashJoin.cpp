@@ -303,7 +303,9 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 									 ulSourceChildIndex);
 
 		default:
-			GPOS_ASSERT(CDistributionSpec::EdtReplicated == pds->Edt());
+			GPOS_ASSERT(CDistributionSpec::EdtStrictReplicated == pds->Edt() ||
+						CDistributionSpec::EdtTaintedReplicated == pds->Edt());
+
 			if (EceoRightToLeft == eceo)
 			{
 				GPOS_ASSERT(1 == ulSourceChildIndex);
@@ -315,7 +317,8 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 			GPOS_ASSERT(0 == ulSourceChildIndex);
 
 			// outer child is replicated, replicate inner child too in order to preserve correctness of semi-join
-			return GPOS_NEW(mp) CDistributionSpecReplicated();
+			return GPOS_NEW(mp) CDistributionSpecReplicated(
+				CDistributionSpec::EdtStrictReplicated);
 	}
 }
 
@@ -403,6 +406,7 @@ CPhysicalHashJoin::PdshashedMatching(
 		pdrgpexpr->Release();
 		if (NULL != pdshashed->PdshashedEquiv())
 		{
+			CRefCount::SafeRelease(opfamilies);
 			// try again using the equivalent hashed distribution
 			return PdshashedMatching(mp, pdshashed->PdshashedEquiv(),
 									 ulSourceChild);
@@ -449,18 +453,19 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
 	GPOS_ASSERT(NULL != pdsFirst);
 
-	if (CDistributionSpec::EdtUniversal == pdsFirst->Edt())
+	if (CDistributionSpec::EdtUniversal == pdsFirst->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated == pdsFirst->Edt())
 	{
 		// first child is universal, request second child to execute on a single host to avoid duplicates
 		return GPOS_NEW(mp) CDistributionSpecSingleton();
 	}
 
 	if (COptCtxt::PoctxtFromTLS()->OptimizeDMLQueryWithSingletonSegment() &&
-		CDistributionSpec::EdtReplicated == pdsFirst->Edt())
+		CDistributionSpec::EdtStrictReplicated == pdsFirst->Edt())
 	{
 		// For a DML query that can be optimized by enforcing a non-master gather motion,
 		// we request singleton-segment distribution on the outer child. If the outer child
-		// is replicated, no enforcer gets added; in which case pdsFirst is EdtReplicated.
+		// is replicated, no enforcer gets added; in which case pdsFirst is EdtStrictReplicated.
 		// Hence handle this scenario here and require a singleton-segment on the
 		// inner child to produce a singleton execution alternavtive for the HJ.
 		return GPOS_NEW(mp)
@@ -488,21 +493,27 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 CDistributionSpec *
 CPhysicalHashJoin::PdsRequiredReplicate(
 	CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *pdsInput,
-	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const
+	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq,
+	CReqdPropPlan *prppInput)
 {
 	EChildExecOrder eceo = Eceo();
 	if (EceoLeftToRight == eceo)
 	{
 		// if optimization order is left to right, fall-back to implementation of parent Join operator
-		return CPhysicalJoin::PdsRequired(mp, exprhdl, pdsInput, child_index,
-										  pdrgpdpCtxt, 0 /*ulOptReq*/);
+		CEnfdDistribution *ped = CPhysicalJoin::Ped(
+			mp, exprhdl, prppInput, child_index, pdrgpdpCtxt, ulOptReq);
+		CDistributionSpec *pds = ped->PdsRequired();
+		pds->AddRef();
+		SafeRelease(ped);
+		return pds;
 	}
 	GPOS_ASSERT(EceoRightToLeft == eceo);
 
 	if (1 == child_index)
 	{
 		// require inner child to be replicated
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 	GPOS_ASSERT(0 == child_index);
 
@@ -531,7 +542,8 @@ CPhysicalHashJoin::PdsRequiredReplicate(
 	}
 
 	// otherwise, require second child to deliver non-singleton distribution
-	GPOS_ASSERT(CDistributionSpec::EdtReplicated == pdsInner->Edt());
+	GPOS_ASSERT(CDistributionSpec::EdtStrictReplicated == pdsInner->Edt() ||
+				CDistributionSpec::EdtTaintedReplicated == pdsInner->Edt());
 	return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 }
 
@@ -705,28 +717,50 @@ CPhysicalHashJoin::PdsRequiredRedistribute(CMemoryPool *mp,
 //---------------------------------------------------------------------------
 CDistributionSpec *
 CPhysicalHashJoin::PdsRequired(
-	CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *pdsInput,
-	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt,
-	ULONG ulOptReq	// identifies which optimization request should be created
+	CMemoryPool *mp GPOS_UNUSED, CExpressionHandle &exprhdl GPOS_UNUSED,
+	CDistributionSpec *pdsInput GPOS_UNUSED, ULONG child_index GPOS_UNUSED,
+	CDrvdPropArray *pdrgpdpCtxt GPOS_UNUSED,
+	ULONG ulOptReq
+		GPOS_UNUSED	 // identifies which optimization request should be created
 ) const
+{
+	GPOS_RAISE(
+		CException::ExmaInvalid, CException::ExmiInvalid,
+		GPOS_WSZ_LIT("PdsRequired should not be called for CPhysicalHashJoin"));
+	return nullptr;
+}
+
+CEnfdDistribution *
+CPhysicalHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+					   CReqdPropPlan *prppInput, ULONG child_index,
+					   CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
 {
 	GPOS_ASSERT(2 > child_index);
 	GPOS_ASSERT(ulOptReq < UlDistrRequests());
 
+	CEnfdDistribution::EDistributionMatching dmatch =
+		Edm(prppInput, child_index, pdrgpdpCtxt, ulOptReq);
+	CDistributionSpec *const pdsInput = prppInput->Ped()->PdsRequired();
+
 	// if expression has to execute on a single host then we need a gather
 	if (exprhdl.NeedsSingletonExecution())
 	{
-		return PdsRequireSingleton(mp, exprhdl, pdsInput, child_index);
+		return GPOS_NEW(mp) CEnfdDistribution(
+			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index), dmatch);
 	}
 
 	if (exprhdl.HasOuterRefs())
 	{
 		if (CDistributionSpec::EdtSingleton == pdsInput->Edt() ||
-			CDistributionSpec::EdtReplicated == pdsInput->Edt())
+			CDistributionSpec::EdtStrictReplicated == pdsInput->Edt())
 		{
-			return PdsPassThru(mp, exprhdl, pdsInput, child_index);
+			return GPOS_NEW(mp) CEnfdDistribution(
+				PdsPassThru(mp, exprhdl, pdsInput, child_index), dmatch);
 		}
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecReplicated(
+								  CDistributionSpec::EdtStrictReplicated),
+							  dmatch);
 	}
 
 	const ULONG ulHashDistributeRequests =
@@ -742,7 +776,7 @@ CPhysicalHashJoin::PdsRequired(
 				CDistributionSpecHashed::PdsConvert(pds);
 			pdsHashed->ComputeEquivHashExprs(mp, exprhdl);
 		}
-		return pds;
+		return GPOS_NEW(mp) CEnfdDistribution(pds, dmatch);
 	}
 
 	if (ulOptReq == ulHashDistributeRequests ||
@@ -750,23 +784,25 @@ CPhysicalHashJoin::PdsRequired(
 	{
 		// requests N+1, N+2 are (hashed/non-singleton, replicate)
 
-		CDistributionSpec *pds = PdsRequiredReplicate(
-			mp, exprhdl, pdsInput, child_index, pdrgpdpCtxt, ulOptReq);
+		CDistributionSpec *pds =
+			PdsRequiredReplicate(mp, exprhdl, pdsInput, child_index,
+								 pdrgpdpCtxt, ulOptReq, prppInput);
 		if (CDistributionSpec::EdtHashed == pds->Edt())
 		{
 			CDistributionSpecHashed *pdsHashed =
 				CDistributionSpecHashed::PdsConvert(pds);
 			pdsHashed->ComputeEquivHashExprs(mp, exprhdl);
 		}
-		return pds;
+		return GPOS_NEW(mp) CEnfdDistribution(pds, dmatch);
 	}
 
 	GPOS_ASSERT(ulOptReq == ulHashDistributeRequests + 2);
 
 	// requests N+3 is (singleton, singleton)
 
-	return PdsRequiredSingleton(mp, exprhdl, pdsInput, child_index,
-								pdrgpdpCtxt);
+	return GPOS_NEW(mp) CEnfdDistribution(
+		PdsRequiredSingleton(mp, exprhdl, pdsInput, child_index, pdrgpdpCtxt),
+		dmatch);
 }
 
 

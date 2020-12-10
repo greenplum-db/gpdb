@@ -501,9 +501,7 @@ DistributedLog_CommittedCheck(
 	}
 
 	LWLockAcquire(DistributedLogTruncateLock, LW_SHARED);
-	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
-
-	slotno = SimpleLruReadPage(DistributedLogCtl, page, true, localXid);
+	slotno = SimpleLruReadPage_ReadOnly(DistributedLogCtl, page, localXid);
 	ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
 	ptr += entryno;
 	*distribTimeStamp = ptr->distribTimeStamp;

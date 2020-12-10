@@ -374,7 +374,7 @@ main(int argc, char **argv)
 				chkpttli);
 
 	/*
-	 * Build the filemap, by comparing the source and target data directories.
+	 * Collect information about all files in the target and source systems.
 	 */
 	filemap_create();
 	if (showprogress)
@@ -395,8 +395,12 @@ main(int argc, char **argv)
 		pg_log_info("reading WAL in target");
 	extractPageMap(datadir_target, chkptrec, lastcommontliIndex,
 				   ControlFile_target.checkPoint);
-	filemap_finalize();
 
+	/*
+	 * We have collected all information we need from both systems. Decide
+	 * what to do with each file.
+	 */
+	decide_file_actions();
 	if (showprogress)
 		calculate_totals();
 

@@ -104,7 +104,7 @@
               </entry>
               <entry colname="col2">DO NOT USE<p><b>Warning:</b> This program might cause data loss
                   or cause data to become unavailable. If this program is used, the <ph
-                    otherprops="pivotal">Pivotal Greenplum Database cluster is not supported. The
+                    otherprops="pivotal">Tanzu Greenplum cluster is not supported. The
                   </ph>cluster must be reinitialized and restored<ph otherprops="pivotal"> by the
                     customer</ph>.</p></entry>
               <entry colname="col3">N/A</entry>

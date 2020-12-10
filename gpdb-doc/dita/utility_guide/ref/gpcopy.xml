@@ -8,8 +8,8 @@
         <p>The <codeph>gpcopy</codeph> utility copies objects from databases in a source Greenplum
             Database system to databases in a destination Greenplum Database system. </p>
         <note> The <codeph>gpcopy</codeph> utility is available as a separate download for the
-            commercial release of Pivotal Greenplum Database. See the <xref
-                href="https://gpdb.docs.pivotal.io/gpcopy" format="html" scope="external">Pivotal
-                gpcopy Documentation</xref>.</note>
+            commercial release of Tanzu Greenplum. See the <xref
+                href="https://gpdb.docs.pivotal.io/gpcopy" format="html" scope="external">Tanzu
+                Greenplum Copy Utility Documentation</xref>.</note>
     </body>
 </topic>

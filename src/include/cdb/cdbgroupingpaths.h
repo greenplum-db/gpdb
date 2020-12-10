@@ -28,7 +28,9 @@ extern void cdb_create_twostage_grouping_paths(PlannerInfo *root,
 											   const AggClauseCosts *agg_costs,
 											   const AggClauseCosts *agg_partial_costs,
 											   const AggClauseCosts *agg_final_costs,
-											   List *rollups);
+											   List *rollups,
+											   List *new_rollups,
+											   AggStrategy strat);
 
 extern Path *cdb_prepare_path_for_sorted_agg(PlannerInfo *root,
 											 bool is_sorted,

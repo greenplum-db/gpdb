@@ -187,7 +187,7 @@
       <p>To use PGP asymmetric encryption in Greenplum Database, you must first create public and
         private keys and install them. </p>
       <p>This section assumes you are installing Greenplum Database on a Linux machine with the Gnu
-        Privacy Guard (<codeph>gpg</codeph>) command line tool. Pivotal recommends using the latest
+        Privacy Guard (<codeph>gpg</codeph>) command line tool. VMware recommends using the latest
         version of GPG to create keys. Download and install Gnu Privacy Guard (GPG) for your
         operating system from <xref href="https://www.gnupg.org/download/" format="html"
           scope="external"/>. On the GnuPG website you will find installers for popular Linux
