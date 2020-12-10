@@ -825,3 +825,11 @@ INSERT INTO foo SELECT i%10 FROM generate_series(0, 100) i WHERE i%2 = 0;
 ALTER TABLE foo ALTER COLUMN a SET STATISTICS 5;
 ANALYZE foo;
 SELECT array_length(most_common_vals, 1), array_length(most_common_freqs, 1), array_length(histogram_bounds, 1) FROM pg_stats WHERE tablename = 'foo' AND attname = 'a';
+
+-- Make sure a simple heap table does not store HLL values
+CREATE TABLE simple_table_no_hll (a int);
+INSERT INTO simple_table_no_hll SELECT generate_series(1,10);
+ANALYZE simple_table_no_hll;
+SELECT staattnum, stakind1, stakind2, stakind3, stakind4, stakind5,
+       stavalues1, stavalues2, stavalues3, stavalues4, stavalues5
+FROM pg_statistic WHERE starelid = 'simple_table_no_hll'::regclass;

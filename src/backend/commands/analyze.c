@@ -788,7 +788,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				 * Store HLL/HLL fullscan information for leaf partitions in
 				 * the stats object
 				 */
-				if (onerel->rd_rel->relkind == RELKIND_RELATION)
+				if (onerel->rd_rel->relkind == RELKIND_RELATION && onerel->rd_rel->relispartition)
 				{
 					MemoryContext old_context;
 					Datum *hll_values;

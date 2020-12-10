@@ -1935,3 +1935,15 @@ SELECT array_length(most_common_vals, 1), array_length(most_common_freqs, 1), ar
             5 |            5 |            5
 (1 row)
 
+-- Make sure a simple heap table does not store HLL values
+CREATE TABLE simple_table_no_hll (a int);
+INSERT INTO simple_table_no_hll SELECT generate_series(1,10);
+ANALYZE simple_table_no_hll;
+SELECT staattnum, stakind1, stakind2, stakind3, stakind4, stakind5,
+       stavalues1, stavalues2, stavalues3, stavalues4, stavalues5
+FROM pg_statistic WHERE starelid = 'simple_table_no_hll'::regclass;
+ staattnum | stakind1 | stakind2 | stakind3 | stakind4 | stakind5 |  stavalues1  | stavalues2 | stavalues3 | stavalues4 | stavalues5 
+-----------+----------+----------+----------+----------+----------+--------------+------------+------------+------------+------------
+         1 |        2 |        3 |        0 |        0 |        0 | {1,3,5,7,10} |            |            |            | 
+(1 row)
+
