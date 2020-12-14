@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -26,6 +26,7 @@ usage(void)
 	printf(" -l SECONDS     number of seconds to sample the network, default is 60\n");
 	printf(" -P {0|1}       0 (don't) or 1 (do) display headers in the output, default is 1\n");
 	printf(" -b SIZE        size of the send buffer in kilobytes, default is 32\n");
+	printf(" -6             use ipv6\n");
 	printf(" -h             show this help message\n");
 }
 
@@ -35,31 +36,30 @@ main(int argc, char** argv)
 	int socketFd;
 	int retVal;
 	int c;
-	int i;
 	int displayHeaders = 1;
-	int serverPort = 0;
+	char* serverPort = "0";
 	int duration = 60;
+	bool ipv6 = false;
 	double actual_duration;
 	char* hostname = NULL;
 	char* sendBuffer = NULL;
 	int kilobytesBufSize = 32;
 	int bytesBufSize;
-	struct sockaddr_in address;
-	struct hostent* host_entry;
+    struct addrinfo hints, *servinfo, *p;
 	time_t start_time;
 	time_t end_time;
 	unsigned int buffers_sent = 0;
 	double megaBytesSent;
 	double megaBytesPerSecond;
-    struct timeval beginTimeDetails;
-    struct timeval endTimeDetails;
+	struct timeval beginTimeDetails;
+	struct timeval endTimeDetails;
 
-	while ((c = getopt (argc, argv, "p:l:b:P:H:f:t:h")) != -1)
+	while ((c = getopt (argc, argv, "p:l:b:P:H:f:t:6h")) != -1)
 	{
 		switch (c)
 		{
 			case 'p':
-				serverPort = atoi(optarg);
+				serverPort = optarg;
 				break;
 			case 'l':
 				duration = atoi(optarg);
@@ -81,9 +81,12 @@ main(int argc, char** argv)
 			case 't':
 				fprintf(stderr, "NOTICE: -t is deprecated, and has no effect\n");
 				break;
+			case '6':
+				ipv6 = true;
+				break;
 			case 'h':
 			case '?':
-        	default:
+			default:
 				usage();
 				return 1;
 		}
@@ -124,53 +127,66 @@ main(int argc, char** argv)
 		return 1;
 	}
 
-	socketFd = socket(PF_INET, SOCK_STREAM, 0); 
-	if (socketFd < 0)
-	{ 
-		fprintf(stderr, "socket call failed\n");
-		return 1;
-	}   
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
 
-	host_entry = gethostbyname(hostname);
-	memset(&address, 0, sizeof(struct sockaddr_in));
-	address.sin_family = AF_INET;
-	memcpy((char *)&address.sin_addr,(char *)host_entry->h_addr, host_entry->h_length);
-	address.sin_port = htons(serverPort);
+    retVal = getaddrinfo(hostname, serverPort, &hints, &servinfo);
+    if (retVal != 0)
+    {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retVal));
+        exit(1);
+    }
 
-	for (i = 0; i < INIT_RETRIES; ++i)
-	{
-		retVal = connect(socketFd,(struct sockaddr *)&address, sizeof(address));
-		if (retVal == 0)
-			break;
-		sleep(1);
-	}
+    for (p = servinfo; p != NULL; p = p->ai_next)
+    {
+        socketFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if (socketFd < 0)
+        {
+            fprintf(stderr, "socket call failed\n");
+            continue;
+        }
 
-	if (retVal < 0)
-	{
-		fprintf(stderr, "Could not connect to server after %d retries\n", INIT_RETRIES);
-		return 1;
-	}
-	printf("Connected to server\n");
+        if (connect(socketFd, p->ai_addr, p->ai_addrlen) == -1)
+        {
+            perror("connect");
+            close(socketFd);
+            continue;
+        }
 
-	start_time = time(NULL);
-	end_time = start_time + duration;
+        break; // successfully connected
+    }
+
+    if (p == NULL)
+    {
+        fprintf(stderr, "failed to connect\n");
+        exit(2);
+    }
+
+    freeaddrinfo(servinfo);
+
+    printf("Connected to server\n");
+
+    start_time = time(NULL);
+    end_time = start_time + duration;
     gettimeofday(&beginTimeDetails, NULL);
-	while (time(NULL) < end_time)
-	{
-		send_buffer(socketFd, sendBuffer, bytesBufSize);
-		buffers_sent++;
-	}
+    while (time(NULL) < end_time)
+    {
+        send_buffer(socketFd, sendBuffer, bytesBufSize);
+        buffers_sent++;
+    }
     gettimeofday(&endTimeDetails, NULL);
 
-	actual_duration = subtractTimeOfDay(&beginTimeDetails, &endTimeDetails);
-	megaBytesSent = buffers_sent * (double)bytesBufSize / (1024.0*1024.0);
-	megaBytesPerSecond = megaBytesSent / actual_duration;
+    actual_duration = subtractTimeOfDay(&beginTimeDetails, &endTimeDetails);
+    megaBytesSent = buffers_sent * (double)bytesBufSize / (1024.0*1024.0);
+    megaBytesPerSecond = megaBytesSent / actual_duration;
 
-	if (displayHeaders)
-		print_headers();
+    if (displayHeaders)
+        print_headers();
 
-	printf("0     0        %d       %.2f     %.2f\n", bytesBufSize, (double)actual_duration, megaBytesPerSecond);
-	return 0;
+    printf("0     0        %d       %.2f     %.2f\n", bytesBufSize, (double)actual_duration, megaBytesPerSecond);
+
+    return 0;
 }
 
 static void

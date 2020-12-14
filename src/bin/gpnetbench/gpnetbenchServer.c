@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <netinet/in.h>
-#include <netdb.h>
 #include <unistd.h>
 
 #define SERVER_APPLICATION_RECEIVE_BUF_SIZE 65536
@@ -16,7 +15,7 @@ static void usage(void);
 static void
 usage(void)
 {
-	printf("usage: gpnetbenchServer -p PORT\n");
+	printf("usage: gpnetbenchServer [-6] -p PORT\n");
 }
 
 int
@@ -26,18 +25,23 @@ main(int argc, char** argv)
 	int clientFd;
 	int retVal;
 	int one = 1;
-	struct sockaddr_in serverSocketAddress;
+	bool ipv6 = false;
+	struct sockaddr_in v4Addresses;
+	struct sockaddr_in6 v6Addresses;
 	socklen_t socket_length;
 	int c;
 	int serverPort = 0;
 	int pid;
-     
-	while ((c = getopt (argc, argv, "hp:")) != -1)
+
+	while ((c = getopt (argc, argv, "6hp:")) != -1)
 	{
 		switch (c)
 		{
 			case 'p':
 				serverPort = atoi(optarg);
+				break;
+			case '6':
+				ipv6 = true;
 				break;
 			default:
 				usage();
@@ -59,13 +63,20 @@ main(int argc, char** argv)
 		return 1;
 	}
 
-	socketFd = socket(PF_INET, SOCK_STREAM, 0); 
+	if (ipv6)
+	{
+		socketFd = socket(PF_INET6, SOCK_STREAM, 0);
+    }
+	else
+	{
+		socketFd = socket(PF_INET, SOCK_STREAM, 0);
+	}
 
 	if (socketFd < 0)
 	{ 
 		perror("Socket creation failed");
 		return 1;
-	}   
+	}
 
 	retVal = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 	if (retVal)
@@ -74,12 +85,30 @@ main(int argc, char** argv)
 		return 1;
 	}
 
-	memset(&serverSocketAddress, 0, sizeof(struct sockaddr_in));
-	serverSocketAddress.sin_family = AF_INET;
-	serverSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-	serverSocketAddress.sin_port = htons(serverPort);
+	if (ipv6)
+	{
+		memset(&v6Addresses, 0, sizeof(struct sockaddr_in6));
+		v6Addresses.sin6_family = AF_INET6;
+		v6Addresses.sin6_addr = in6addr_any;
+		v6Addresses.sin6_port = htons(serverPort);
+	}
+	else
+	{
+		memset(&v4Addresses, 0, sizeof(struct sockaddr_in));
+		v4Addresses.sin_family = AF_INET;
+		v4Addresses.sin_addr.s_addr = htonl(INADDR_ANY);
+		v4Addresses.sin_port = htons(serverPort);
+	}
 
-	retVal = bind(socketFd,(struct sockaddr *)&serverSocketAddress, sizeof(serverSocketAddress));
+	if (ipv6)
+	{
+		retVal = bind(socketFd, (struct sockaddr *)&v6Addresses, sizeof(v6Addresses));
+	}
+	else
+	{
+		retVal = bind(socketFd, (struct sockaddr *)&v4Addresses, sizeof(v4Addresses));
+	}
+
 	if (retVal)
 	{
 		perror("Could not bind port");
@@ -87,11 +116,11 @@ main(int argc, char** argv)
 	}
 
 	retVal = listen(socketFd, SOMAXCONN);
-  	if (retVal < 0)
+	if (retVal < 0)
 	{
 		perror("listen system call failed");
-  		return 1;
-  	}
+		return 1;
+	}
 
 	pid = fork();
 	if (pid < 0) 
@@ -104,10 +133,10 @@ main(int argc, char** argv)
 		return 0; // we exit the parent cleanly and leave the child process open as a listening server
 	}
 
-	socket_length = sizeof(serverSocketAddress);
+	socket_length = sizeof(v4Addresses);
 	while(1)
 	{
-		clientFd = accept(socketFd, (struct sockaddr *)&serverSocketAddress, &socket_length);
+		clientFd = accept(socketFd, (struct sockaddr *)&v4Addresses, &socket_length);
 		if (clientFd < 0)
 		{
 			perror("error from accept call on server");

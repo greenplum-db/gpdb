@@ -262,9 +262,6 @@ def parseCommandLine():
     if (GV.opt['-B']) > 1024 * 1024:
         usage('Error: maximum size for -B parameter is 1MB')
 
-    if GV.opt['--ipprotocol'] == '-6' and GV.opt['--netclient'] != 'netperf':
-        usage('Error: --ipv6 option can be only used by --netperf')
-
     if GV.opt['-S'] == 0:
         GV.opt['-S'] = 2 * getMemory() / len(GV.opt['-d'])
     else:
@@ -513,7 +510,8 @@ def startNetServer():
             print('[Warning] retrying with port %d' % port)
         (ok, out) = gpssh(killall(GV.opt['--netserver']))
 
-        (ok, out) = gpssh('%s -p %d > /dev/null 2>&1' % (rmtPath, port))
+        protocol = '-6' if GV.opt['--ipprotocol'] == '-6' else ''
+        (ok, out) = gpssh('%s %s -p %d > /dev/null 2>&1' % (rmtPath, protocol, port))
         if ok:
             return port
 
