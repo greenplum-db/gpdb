@@ -353,36 +353,40 @@ class GpMirrorListToBuild:
         rewindFailedSegments = []
         # Run pg_rewind on all the targets
         for rewindSeg in list(rewindInfo.values()):
-            # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
-            # pg_rewind wants that to make incremental recovery successful finally.
-            self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (rewindSeg.sourceHostname, rewindSeg.sourcePort))
-            dburl = dbconn.DbURL(hostname=rewindSeg.sourceHostname,
-                                 port=rewindSeg.sourcePort,
-                                 dbname='template1')
-            conn = dbconn.connect(dburl, utility=True)
-            dbconn.execSQL(conn, "CHECKPOINT")
-            conn.close()
-
-            # If the postmaster.pid still exists and another process
-            # is actively using that pid, pg_rewind will fail when it
-            # tries to start the failed segment in single-user
-            # mode. It should be safe to remove the postmaster.pid
-            # file since we do not expect the failed segment to be up.
-            self.remove_postmaster_pid_from_remotehost(
-                rewindSeg.targetSegment.getSegmentHostName(),
-                rewindSeg.targetSegment.getSegmentDataDirectory())
-
-            # Note the command name, we use the dbid later to
-            # correlate the command results with GpMirrorToBuild
-            # object.
-            cmd = gp.SegmentRewind('rewind dbid: %s' %
-                                   rewindSeg.targetSegment.getSegmentDbId(),
-                                   rewindSeg.targetSegment.getSegmentHostName(),
-                                   rewindSeg.targetSegment.getSegmentDataDirectory(),
-                                   rewindSeg.sourceHostname,
-                                   rewindSeg.sourcePort,
-                                   verbose=gplog.logging_is_verbose())
-            self.__pool.addCommand(cmd)
+            try:
+                # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
+                # pg_rewind wants that to make incremental recovery successful finally.
+                self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (rewindSeg.sourceHostname, rewindSeg.sourcePort))
+                dburl = dbconn.DbURL(hostname=rewindSeg.sourceHostname,
+                                     port=rewindSeg.sourcePort,
+                                     dbname='template1')
+                conn = dbconn.connect(dburl, utility=True)
+                dbconn.execSQL(conn, "CHECKPOINT")
+                conn.close()
+    
+                # If the postmaster.pid still exists and another process
+                # is actively using that pid, pg_rewind will fail when it
+                # tries to start the failed segment in single-user
+                # mode. It should be safe to remove the postmaster.pid
+                # file since we do not expect the failed segment to be up.
+                self.remove_postmaster_pid_from_remotehost(
+                    rewindSeg.targetSegment.getSegmentHostName(),
+                    rewindSeg.targetSegment.getSegmentDataDirectory())
+    
+                # Note the command name, we use the dbid later to
+                # correlate the command results with GpMirrorToBuild
+                # object.
+                cmd = gp.SegmentRewind('rewind dbid: %s' %
+                                       rewindSeg.targetSegment.getSegmentDbId(),
+                                       rewindSeg.targetSegment.getSegmentHostName(),
+                                       rewindSeg.targetSegment.getSegmentDataDirectory(),
+                                       rewindSeg.sourceHostname,
+                                       rewindSeg.sourcePort,
+                                       verbose=gplog.logging_is_verbose())
+                self.__pool.addCommand(cmd)
+            except Exception as e:
+                self.__logger.warning("Incremental recovery skipped for dbid %d (Reason='%s')." % (rewindSeg.targetSegment.getSegmentDbId(), e))
+                rewindFailedSegments.append(rewindSeg.targetSegment)
 
         if self.__quiet:
             self.__pool.join()
