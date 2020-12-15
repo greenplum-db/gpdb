@@ -47,3 +47,5 @@ CREATE TABLE  chinese表 ( 列1 text, "列#2" int, lie3 timestamp, 列four decim
 CREATE TABLE
 CREATE TABLE texttable2(s1 text, s2 text) DISTRIBUTED BY (s1);
 CREATE TABLE
+CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber)
+CREATE TABLE

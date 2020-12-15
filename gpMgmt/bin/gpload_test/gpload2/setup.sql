@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS test.csvtable;
 DROP TABLE IF EXISTS texttable1;
 DROP TABLE IF EXISTS testSpecialChar;
 DROP TABLE IF EXISTS chinese表;
+DROP TABLE IF EXISTS prices;
 reset client_min_messages;
 CREATE TABLE texttable (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -32,3 +33,5 @@ CREATE TABLE test.csvtable (
 create table testSpecialChar("Field1" bigint, "Field#2" text) distributed by ("Field1");
 CREATE TABLE  chinese表 ( 列1 text, "列#2" int, lie3 timestamp, 列four decimal ) DISTRIBUTED BY ("列#2");
 CREATE TABLE texttable2(s1 text, s2 text) DISTRIBUTED BY (s1);
+CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber)
+

@@ -136,3 +136,13 @@ def test_63_gpload_test_port_range():
     "63 gpload yaml file use port_range"
     copy_data('external_file_01.txt','data_file.txt')
     write_config_file(input_port=None,port_range='[8082,8090]'  ,format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=100, times=1)
+def test_100_gpload_transform():
+    runfile(mkpath('setup.sql'))
+    write_config_file(file='data/transform/prices.xml',
+                      transform_config='data/transform/transform_config.yaml',
+                      transform='prices_input',
+                      format='text',
+                      table='prices',
+                      mode='insert')
