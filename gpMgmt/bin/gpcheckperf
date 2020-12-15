@@ -867,7 +867,7 @@ def printNetResult(result):
     n = list(map(lambda x: float(x[6]), result))
     sum = reduce(lambda x, y: x + y, n)
     min = reduce(lambda x, y: x > y and y or x, n, 9999999999)
-    max = reduce(lambda x, y: x > y and x or y, n)
+    max = reduce(lambda x, y: x > y and x or y, n, 0)
     avg = float(sum) / len(result)
 
     copy = n[:]
