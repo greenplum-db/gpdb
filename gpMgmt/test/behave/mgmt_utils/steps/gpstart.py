@@ -40,31 +40,7 @@ def change_hostname(content, preferred_role, hostname):
 
 @when('the standby host is made unreachable')
 def impl(context):
-    change_hostname(-1, 'm', 'invalid_host')
-
-    def cleanup(context):
-        """
-        Reverses the above SQL by starting up in master-only utility mode. Since
-        the standby host is incorrect, a regular gpstart call won't work.
-        """
-        utils.stop_database_if_started(context)
-
-        subprocess.check_call(['gpstart', '-am'])
-        _run_sql("""
-            SET allow_system_table_mods='dml';
-            UPDATE gp_segment_configuration
-               SET hostname = master.hostname,
-                    address = master.address
-              FROM (
-                     SELECT hostname, address
-                       FROM gp_segment_configuration
-                      WHERE content = -1 and role = 'p'
-                   ) master
-             WHERE content = -1 AND role = 'm'
-        """, {'gp_session_role': 'utility'})
-        subprocess.check_call(['gpstop', '-am'])
-
-    context.cleanup_standby_host_failure = cleanup
+    make_host_unreachable(context, "mirror", -1)
 
 def _handle_sigpipe():
     """
@@ -92,6 +68,9 @@ def impl(context, cmd):
 
 @given('the host for the {seg_type} on content {content} is made unreachable')
 def impl(context, seg_type, content):
+    make_host_unreachable(context, seg_type, content)
+
+def make_host_unreachable(context, seg_type, content):
     if seg_type == "primary":
         preferred_role = 'p'
     elif seg_type == "mirror":
@@ -138,20 +117,52 @@ def impl(context, field, seg_type, content, expected):
 
     must_have_expected_field(content, preferred_role, field, expected)
 
+@given('the primary on content {content} fails over to its mirror')
+def impl(context, content):
+    with dbconn.connect(dbconn.DbURL(dbname="template1"), allowSystemTableMods='dml') as conn:
+        dbconn.execSQL(conn, "UPDATE gp_segment_configuration SET role = 'm', status = 'd' WHERE content = %s AND preferred_role = 'p'" % content)
+        dbconn.execSQL(conn, "UPDATE gp_segment_configuration SET role = 'p', mode = 'c' WHERE content = %s AND preferred_role = 'm'" % content)
+        conn.commit()
+
 @then('the cluster is returned to a good state')
 def impl(context):
-    if not hasattr(context, 'old_hostnames'):
-        raise Exception("Cannot reset segment hostnames: no hostnames are saved")
-    for key, hostname in context.old_hostnames.items():
-        change_hostname(key[0], key[1], hostname)
+    needs_restart = False
+    try: # If a test ended with the cluster down, we need to bring it back up for recovery to work
+        conn = dbconn.connect(dbconn.DbURL(dbname="template1"))
+        conn.close()
+    except Exception, e:
+        needs_restart = True
+        try: # If any segments are left running we need to stop them, but if we can't connect because the cluster never started that's fine
+            context.execute_steps(u'Given the user runs command "pkill -9 postgres" on all hosts without validation')
+        except Exception, e:
+            pass
+        subprocess.check_call(['gpstart', '-am'])
+
+    with dbconn.connect(dbconn.DbURL(dbname="template1"), utility=True, allowSystemTableMods='dml') as conn:
+        if hasattr(context, 'old_hostnames'):
+            for key, hostname in context.old_hostnames.items():
+                dbconn.execSQL(conn, "UPDATE gp_segment_configuration SET hostname = '{0}', address = '{0}' WHERE content = {1} AND preferred_role = '{2}'".format(hostname, key[0], key[1]))
+        # In a double-fault scenario, manually mark the mirror in the segment pair as up so that gpstart and gprecoverseg will work
+        dbconn.execSQL(conn, """UPDATE gp_segment_configuration SET status = 'u' WHERE dbid = (
+                                SELECT m.dbid
+                                FROM gp_segment_configuration p
+                                JOIN gp_segment_configuration m
+                                ON (p.content = m.content AND p.role = 'p' AND m.role = 'm' AND p.status = 'd' AND m.status = 'd')
+                            );""")
+        conn.commit()
+
+    if needs_restart:
+        subprocess.check_call(['gpstop', '-am'])
+        subprocess.check_call(['gpstart', '-a'])
 
     context.execute_steps(u"""
-    When the user runs "gprecoverseg -a"
-    Then gprecoverseg should return a return code of 0
-    And all the segments are running
-    And the segments are synchronized
-    When the user runs "gprecoverseg -a -r"
-    Then gprecoverseg should return a return code of 0
-    And all the segments are running
-    And the segments are synchronized
-    """)
+         When the user runs "gprecoverseg -aF"
+         Then gprecoverseg should return a return code of 0
+         And all the segments are running
+         And the segments are synchronized
+         When the user runs "gprecoverseg -ar"
+         Then gprecoverseg should return a return code of 0
+         And all the segments are running
+         And the segments are synchronized
+         """)
+

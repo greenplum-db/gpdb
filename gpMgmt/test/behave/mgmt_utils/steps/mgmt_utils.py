@@ -5472,9 +5472,13 @@ def impl(context, gppkg_name):
 @when('the user runs command "{command}" on all hosts without validation')
 @then('the user runs command "{command}" on all hosts without validation')
 def impl(context, command):
-    hostlist = get_all_hostnames_as_list(context, 'template1')
+    #hostlist = get_all_hostnames_as_list(context, 'template1')
+    with dbconn.connect(dbconn.DbURL(dbname="template1"), utility=True, allowSystemTableMods='dml') as conn:
+        curs = dbconn.execSQL(conn, "SELECT DISTINCT(hostname) FROM gp_segment_configuration")
+        hostnames = [h[0].strip() for h in curs.fetchall()]
 
-    for hostname in set(hostlist):
+    #for hostname in set(hostlist):
+    for hostname in hostnames:
         cmd = Command(name='running command:%s' % command,
                       cmdStr=command,
                       ctxt=REMOTE,

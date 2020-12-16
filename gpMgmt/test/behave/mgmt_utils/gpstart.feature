@@ -89,20 +89,18 @@ Feature: Validate command line arguments
 
     Scenario: gpstart correctly identifies down segments
         Given the database is running
-          And a mirror has crashed
-          And the database is not running
+          And the host for the mirror on content 0 is made unreachable
+          And the user runs command "pkill -9 postgres" on all hosts without validation
          When the user runs "gpstart -a"
          Then gpstart should return a return code of 0
           And gpstart should print "Skipping startup of segment marked down in configuration" to stdout
           And gpstart should print "Skipped segment starts \(segments are marked down in configuration\) += 1" to stdout
           And gpstart should print "Successfully started [0-9]+ of [0-9]+ segment instances, skipped 1 other segments" to stdout
           And gpstart should print "Number of segments not attempted to start: 1" to stdout
-         # Cleanup
-         Then the user runs "gprecoverseg -a"
+          And the cluster is returned to a good state
 
     Scenario: gpstart starts even if the standby host is unreachable
         Given the database is running
-          And the temporary filespace is moved
           And the catalog has a standby master entry
 
          When the standby host is made unreachable
@@ -112,32 +110,28 @@ Feature: Validate command line arguments
          Then gpstart should print "Continue only if you are certain that the standby is not acting as the master." to stdout
           And gpstart should print "No standby master configured" to stdout
           And gpstart should return a return code of 0
-          And all the segments are running
+          And the cluster is returned to a good state
 
     Scenario: gpstart starts even if segment hosts for two primaries is unreachable
-      Given the database is running
-      And the host for the primary on content 0 is made unreachable
-      And the host for the primary on content 1 is made unreachable
-      And the user runs command "pkill -9 postgres" on all hosts without validation
+          Given the database is running
+          And the host for the primary on content 0 is made unreachable
+          And the host for the primary on content 1 is made unreachable
+          And the user runs command "pkill -9 postgres" on all hosts without validation
 
-      When "gpstart" is run with prompts accepted
+          When "gpstart" is run with prompts accepted
 
-     Then gpstart should print "Host invalid_host is unreachable" to stdout
-      And gpstart should print unreachable host messages for the down segments
-      And the status of the primary on content 0 should be "d"
-      And the role of the primary on content 0 should be "m"
-      And the mode of the mirror on content 0 should be "c"
-      And the role of the mirror on content 0 should be "p"
-      And the status of the primary on content 1 should be "d"
-      And the role of the primary on content 1 should be "m"
-      And the mode of the mirror on content 1 should be "c"
-      And the role of the mirror on content 1 should be "p"
-      And the cluster is returned to a good state
+         Then gpstart should print "Host invalid_host is unreachable" to stdout
+          And gpstart should print unreachable host messages for the down segments
+          And the status of the primary on content 0 should be "d"
+          And the role of the primary on content 0 should be "m"
+          And the mode of the mirror on content 0 should be "c"
+          And the role of the mirror on content 0 should be "p"
+          And the status of the primary on content 1 should be "d"
+          And the role of the primary on content 1 should be "m"
+          And the mode of the mirror on content 1 should be "c"
+          And the role of the mirror on content 1 should be "p"
+          And the cluster is returned to a good state
 
-    # Once the mirror is marked down, gpstart will not start it.  In this case, connections
-    # to the cluster are not allowed. Hence, we do not check here for the states of the primary
-    # or mirror here after we restart the cluster.  The step to restart the cluster taks about
-    # 12 minutes.
     Scenario: gpstart starts even if segment hosts for a primary and mirror are unreachable
         Given the database is running
           And the host for the primary on content 0 is made unreachable
@@ -156,4 +150,17 @@ Feature: Validate command line arguments
           And the role of the primary on content 1 should be "p"
           And the status of the mirror on content 1 should be "d"
           And the role of the mirror on content 1 should be "m"
+          And the cluster is returned to a good state
+
+    Scenario: gpstart will not start when there is a failed primary plus an unreachable segment host
+        Given the database is running
+          And the host for the mirror on content 0 is made unreachable
+          And the primary on content 0 fails over to its mirror
+          And the user runs command "pkill -9 postgres" on all hosts without validation
+
+         When "gpstart" is run with prompts accepted
+
+         Then gpstart should print "Host invalid_host is unreachable" to stdout
+          And gpstart should print unreachable host messages for the down segments
+          And gpstart should print "Do not have enough valid segments to start the array" to stdout
           And the cluster is returned to a good state

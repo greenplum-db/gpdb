@@ -369,21 +369,24 @@ class GpStart:
             if not (primary_host in unreachable_hosts or mirror_host in unreachable_hosts):
                 continue # both hosts are reachable, nothing to do
             if primary_host in unreachable_hosts and mirror_host in unreachable_hosts:
-                continue # double-fault scenario, don't update the catalog as the cluster won't start anyway
+                continue # In a double-fault scenario, don't update the catalog since the cluster won't start anyway
 
-            seg, peer = None, None
-            swap_roles = False
+            down_seg, peer = None, None
             if primary_host in unreachable_hosts:
-                seg = segment.primaryDB
+                down_seg = segment.primaryDB
                 peer = segment.mirrorDBs[0]
-                swap_roles = True
-            elif mirror_host in unreachable_hosts:
-                seg = segment.mirrorDBs[0]
+            else:
+                down_seg = segment.mirrorDBs[0]
                 peer = segment.primaryDB
 
-            logger.warning("Marking segment %d down because %s is unreachable" % (seg.getSegmentDbId(), seg.getSegmentHostName()))
-            dbconn.executeUpdateOrInsert(conn, "UPDATE gp_segment_configuration SET %sstatus = 'd' WHERE dbid = %d" % ("role = 'm', " if swap_roles else "", seg.getSegmentDbId()), 1)
-            dbconn.executeUpdateOrInsert(conn, "UPDATE gp_segment_configuration SET %smode = 'c' WHERE dbid = %d" % ("role = 'p', " if swap_roles else "", peer.getSegmentDbId()), 1)
+            logger.warning("Marking segment %d down because %s is unreachable" % (down_seg.getSegmentDbId(), down_seg.getSegmentHostName()))
+            dbconn.executeUpdateOrInsert(conn, "UPDATE gp_segment_configuration SET status = 'd' WHERE dbid = %d" % down_seg.getSegmentDbId(), 1)
+            # If the segments are not synchronized, this is a mirror acting as a primary and its peer segment has failed over, so it's not safe
+            # to artificially "fail it over" again.
+            if down_seg.isSegmentModeSynchronized() and peer.isSegmentModeSynchronized():
+                logger.debug("Setting segment %d to mirror and segment %d to primary" % (down_seg.getSegmentDbId(), peer.getSegmentDbId()))
+                dbconn.executeUpdateOrInsert(conn, "UPDATE gp_segment_configuration SET role = 'm' WHERE dbid = %d" % down_seg.getSegmentDbId(), 1)
+                dbconn.executeUpdateOrInsert(conn, "UPDATE gp_segment_configuration SET role = 'p', mode = 'c' WHERE dbid = %d" % peer.getSegmentDbId(), 1)
             conn.commit()
         conn.close()
 
