@@ -70,6 +70,7 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     [
         'prepare_binary_swap_gpdb_centos6',
         'compile_gpdb_clients_windows',
+        'compile_gpdb_photon3',
         'concourse_unit_tests',
         'test_gpdb_clients_windows',
         'walrep_2',
@@ -292,7 +293,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos6'],
-        choices=['centos6', 'centos7', 'centos8', 'oracle7', 'ubuntu18.04', 'win'],
+        choices=['centos6', 'centos7', 'centos8', 'oracle7', 'photon3', 'ubuntu18.04', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -369,7 +370,7 @@ def main():
         args.pipeline_configuration = 'prod'
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full':
-        args.os_types = ['centos6', 'centos7', 'centos8', 'oracle7', 'ubuntu18.04', 'win']
+        args.os_types = ['centos6', 'centos7', 'centos8', 'oracle7', 'ubuntu18.04', 'photon3', 'win']
         args.test_sections = [
             'ICW',
             'Replication',
