@@ -334,6 +334,12 @@ statext_ndistinct_deserialize(bytea *data)
 	return ndistinct;
 }
 
+#define REPORT_ERROR_INVALID_REPRESENTATION(ch) \
+	ereport(ERROR, \
+			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION)), \
+			 errmsg("invalid input syntax for mvndistinct"), \
+			 errdetail("Unexpected character '%c'", (ch)));
+
 /*
  * pg_ndistinct_in
  *		input routine for type pg_ndistinct
@@ -344,11 +350,105 @@ statext_ndistinct_deserialize(bytea *data)
 Datum
 pg_ndistinct_in(PG_FUNCTION_ARGS)
 {
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("cannot accept a value of type %s", "pg_ndistinct")));
+	char	   *str = PG_GETARG_CSTRING(0);
 
-	PG_RETURN_VOID();			/* keep compiler quiet */
+
+	MVNDistinctItem *item = NULL;
+
+	int colitem = 0;
+	bool attrsStart = false;
+	List *items = NIL;
+
+	if (str[0] != '{') // TODO: check in_funcion strictness.
+		REPORT_ERROR_INVALID_REPRESENTATION(str[0]);
+
+	for (int i = 1; i<strlen(str)-1; i++) {
+		switch (str[i])
+		{
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				if (item == NULL)
+					REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+				if (!attrsStart)
+				{
+					item->ndistinct *= 10;
+					item->ndistinct += str[i]-'0';
+				}
+				else
+				{
+					colitem *= 10;
+					colitem += str[i]-'0';
+				}
+				break;
+			case '"':
+				if (!attrsStart)
+					item = palloc0(sizeof(MVNDistinctItem));
+
+				attrsStart = !attrsStart;
+				break;
+			case ':':
+				if (item == NULL || colitem == 0 || attrsStart)
+					REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+				item->attrs = bms_add_member(item->attrs, colitem);
+				if (bms_num_members(item->attrs) <= 1)
+					REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+
+				colitem = 0;
+				break;
+			case ',':
+				if (item == NULL)
+					REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+
+				if (attrsStart) {
+					/* comma inside attrlist */
+					if (colitem == 0)
+						REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+					item->attrs = bms_add_member(item->attrs, colitem);
+					colitem = 0;
+				}
+				else
+				{
+					/* comma outside attrlist */
+					items = lappend(items, item);
+					item = NULL;
+				}
+				break;
+			case ' ':
+				if (i==0 || (str[i-1] != ',' && str[i-1] != ':'))
+					REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+				break;
+			default:
+				REPORT_ERROR_INVALID_REPRESENTATION(str[i]);
+		}
+	}
+
+	if (str[strlen(str)-1] != '}' || attrsStart || colitem != 0 || item == NULL)
+		REPORT_ERROR_INVALID_REPRESENTATION(str[strlen(str)-1]);
+	items = lappend(items, item);
+
+	MVNDistinct *ndistinct = palloc0(MAXALIGN(offsetof(MVNDistinct, items)) +
+						(list_length(items) * sizeof(MVNDistinctItem)));
+	ndistinct->magic = STATS_NDISTINCT_MAGIC;
+	ndistinct->type = STATS_NDISTINCT_TYPE_BASIC;
+	ndistinct->nitems = list_length(items);
+
+	MVNDistinctItem *pointer = ndistinct->items;
+
+	ListCell *cell;
+	foreach(cell, items) {
+		memcpy(pointer, lfirst(cell), sizeof(MVNDistinctItem));
+		pointer += 1;
+	}
+
+	PG_RETURN_BYTEA_P(statext_ndistinct_serialize(ndistinct));
 }
 
 /*

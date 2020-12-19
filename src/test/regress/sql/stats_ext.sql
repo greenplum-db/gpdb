@@ -517,3 +517,43 @@ RESET SESSION AUTHORIZATION;
 DROP VIEW priv_test_view;
 DROP TABLE priv_test_tbl;
 DROP USER regress_stats_user1;
+
+-- Test pg_ndistinct_in
+drop table if exists mytable;
+create table mytable(i int, ii pg_ndistinct);
+insert into mytable values (1, '{"1, 2": 1}');
+insert into mytable values (2, '{"1, 2": 2, "1, 3": 3, "2, 3": 2, "1, 2, 3": 3}');
+insert into mytable values (3, '{"123, 234": 11}');
+select * from mytable;
+
+-- leading space
+insert into mytable values (1, ' {"1, 2": 1}');
+-- trailing space
+insert into mytable values (1, '{"1, 2": 1} ');
+-- unmatched quote
+insert into mytable values (1, '{"1", 2": 1} ');
+-- space in attribute list
+insert into mytable values (1, '{"1 3, 2": 1} ');
+-- colon in attribute list
+insert into mytable values (1, '{"1: 2": 1}');
+insert into mytable values (1, '{"1, 2:" 1}');
+insert into mytable values (1, '{":1 2": 1}');
+-- zero/single item attribute list
+insert into mytable values (1, '{"1": 1}');
+insert into mytable values (1, '{: 1}');
+insert into mytable values (1, '{"": 1}');
+insert into mytable values (1, '{" ": 1}');
+insert into mytable values (1, '{}');
+insert into mytable values (1, '{:}');
+-- illegal character
+insert into mytable values (1, '{"1,| 2": 1}');
+
+-- multiple consecutive characters
+insert into mytable values (1, '{"1,, 2": 1}');
+insert into mytable values (1, '{"1": 1}');
+
+-- Need to add check on catalog table insert that atribute numbers are legal
+-- (e.g. there shouldn't be attribute number 100 for a table with only 2
+-- columns also it should match)
+
+select * from mytable;
