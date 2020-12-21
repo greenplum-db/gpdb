@@ -224,31 +224,16 @@ bumpGxid()
 	DistributedTransactionId nextLimit;
 	uint32 nextCount;
 
-	/* Note this function needs shmGxidGenLock to be locked in advance. */
-
-	nextCount = ShmemVariableCache->GxidCount + gp_gxid_prefetch_num;
-	nextLimit = ShmemVariableCache->nextGxid + nextCount;
-	if (nextLimit >= LastDistributedTransactionId)
-		ereport(PANIC,
-			(errmsg("reached the limit of "UINT64_FORMAT" global transactions",
-					LastDistributedTransactionId)));
 	/*
-	 * Should not hold shmGxidGenLock during bumping since there might be still
-	 * gxid count for use at this moment and bumping gxid might be
-	 * time-consuming in wal code.
+	 * Someone else might have done this, so if the lock was blocked and is now
+	 * free, just return.
 	 */
-	SpinLockRelease(shmGxidGenLock);
+	if (!LWLockAcquireOrWait(GxidBumpLock, LW_EXCLUSIVE))
+		return;
 
 	/*
-	 * Real work should be done by one caller one time.
-	 */
-	LWLockAcquire(GxidBumpLock, LW_EXCLUSIVE);
-
-	/*
-	 * If bumping already finishes skip bumping.
-	 *
-	 * Assume atomic access of ShmemVariableCache->GxidCount.  so there is no
-	 * need of GxidGenLock locking here.
+	 * No need to bump if there have been enough gxid. This is possible if
+	 * another bump finished before we tried to lock GxidBumpLock.
 	 */
 	if (ShmemVariableCache->GxidCount > GXID_PRETCH_THRESHOLD)
 	{
@@ -256,12 +241,24 @@ bumpGxid()
 		return;
 	}
 
+	/* nextLimit should be always multiple of gp_gxid_prefetch_num. */
+	SpinLockAcquire(shmGxidGenLock);
+	nextCount = ShmemVariableCache->GxidCount + gp_gxid_prefetch_num;
+	nextLimit = ShmemVariableCache->nextGxid + nextCount;
+	if (nextLimit >= (LastDistributedTransactionId - gp_gxid_prefetch_num))
+		ereport(PANIC,
+			(errmsg("Will soon reach the limit of global transactions: "UINT64_FORMAT,
+					ShmemVariableCache->nextGxid)));
+	SpinLockRelease(shmGxidGenLock);
+
+	/* It might be time-consuming. */
 	XLogPutNextGxid(nextLimit);
 
 	SpinLockAcquire(shmGxidGenLock);
 	ShmemVariableCache->GxidCount += gp_gxid_prefetch_num;
 	SpinLockRelease(shmGxidGenLock);
 
+	/* Only one bump operation one time, so lock till the end. */
 	LWLockRelease(GxidBumpLock);
 }
 
@@ -288,15 +285,23 @@ currentDtxActivate(void)
 			SendPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY);
 	}
 
-	SpinLockAcquire(shmGxidGenLock);
+	for(;;)
+	{
+		if (unlikely(ShmemVariableCache->GxidCount == 0))
+			bumpGxid();
 
-	if (unlikely(ShmemVariableCache->GxidCount == 0))
-		bumpGxid();
+		SpinLockAcquire(shmGxidGenLock);
 
-	MyTmGxact->gxid = ShmemVariableCache->nextGxid++;
-	ShmemVariableCache->GxidCount--;
+		if (ShmemVariableCache->GxidCount > 0)
+		{
+			MyTmGxact->gxid = ShmemVariableCache->nextGxid++;
+			ShmemVariableCache->GxidCount--;
+			SpinLockRelease(shmGxidGenLock);
+			break;
+		}
 
-	SpinLockRelease(shmGxidGenLock);
+		SpinLockRelease(shmGxidGenLock);
+	}
 
 	MyTmGxact->sessionId = gp_session_id;
 	setCurrentDtxState(DTX_STATE_ACTIVE_DISTRIBUTED);

@@ -5321,6 +5321,18 @@ PostgresMain(int argc, char *argv[],
 					if (TempDtxContextInfo.distributedXid != InvalidDistributedTransactionId &&
 						!IS_QUERY_DISPATCHER()) /* On segments only */
 					{
+						/*
+						 * In theory we do not need to track nextGxid on
+						 * segments since we generate gxid on the coordinator,
+						 * but we still do this due to:
+						 * 1. For possible debuggging purpose.
+						 * 2. pg_resetwal on the coordinator needs this value
+						 *    on all the segments for nextGxid guessing.
+						 *    Normally we do not need to use pg_resetwal since
+						 *    there is coordinator failover but pg_resetwal
+						 *    is still possibly useful in some scenarios.
+						 * 3. The related code change on segments are lightweight.
+						 */
 						SpinLockAcquire(shmGxidGenLock);
 						if (TempDtxContextInfo.distributedXid > ShmemVariableCache->nextGxid)
 							ShmemVariableCache->nextGxid = TempDtxContextInfo.distributedXid;

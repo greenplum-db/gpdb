@@ -645,9 +645,7 @@ DtxRecoveryMain(Datum main_arg)
 	}
 
 	/* Fetch the gxid batch in advance. */
-	SpinLockAcquire(shmGxidGenLock);
 	bumpGxid();
-	SpinLockRelease(shmGxidGenLock);
 
 	/*
 	 * Normally we check with interval gp_dtx_recovery_interval, but sometimes
@@ -675,9 +673,7 @@ DtxRecoveryMain(Datum main_arg)
 
 		if (event & DTX_RECOVERY_EVENT_BUMP_GXID)
 		{
-			SpinLockAcquire(shmGxidGenLock);
 			bumpGxid();
-			SpinLockRelease(shmGxidGenLock);
 			ResetDtxRecoveryEvent(DTX_RECOVERY_EVENT_BUMP_GXID);
 		}
 
