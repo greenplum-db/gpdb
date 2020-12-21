@@ -592,13 +592,16 @@ set enable_hashagg = true;
 set enable_sort = false;
 explain (costs off)
 select from generate_series(1,5) union select from generate_series(1,3);
-                           QUERY PLAN                           
-----------------------------------------------------------------
- HashAggregate
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Aggregate
    ->  Append
-         ->  Function Scan on generate_series
-         ->  Function Scan on generate_series generate_series_1
-(4 rows)
+         ->  Aggregate
+               ->  Function Scan on generate_series
+         ->  Aggregate
+               ->  Function Scan on generate_series generate_series_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 explain (costs off)
 select from generate_series(1,5) intersect select from generate_series(1,3);
@@ -641,13 +644,16 @@ set enable_hashagg = false;
 set enable_sort = true;
 explain (costs off)
 select from generate_series(1,5) union select from generate_series(1,3);
-                           QUERY PLAN                           
-----------------------------------------------------------------
- Unique
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Aggregate
    ->  Append
-         ->  Function Scan on generate_series
-         ->  Function Scan on generate_series generate_series_1
-(4 rows)
+         ->  Aggregate
+               ->  Function Scan on generate_series
+         ->  Aggregate
+               ->  Function Scan on generate_series generate_series_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 explain (costs off)
 select from generate_series(1,5) intersect select from generate_series(1,3);

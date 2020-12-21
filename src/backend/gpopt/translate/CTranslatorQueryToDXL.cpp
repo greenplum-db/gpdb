@@ -2613,7 +2613,6 @@ CTranslatorQueryToDXL::CreateDXLSetOpFromColumns(
 	CDXLNodeArray *children_dxlnodes, BOOL is_cast_across_input,
 	BOOL keep_res_junked) const
 {
-	GPOS_ASSERT(NULL != output_target_list);
 	GPOS_ASSERT(NULL != output_colids);
 	GPOS_ASSERT(NULL != input_colids);
 	GPOS_ASSERT(NULL != children_dxlnodes);
@@ -2731,7 +2730,6 @@ CTranslatorQueryToDXL::SetOpNeedsCast(List *target_list,
 									  IMdIdArray *input_col_mdids) const
 {
 	GPOS_ASSERT(NULL != input_col_mdids);
-	GPOS_ASSERT(NULL != target_list);
 	GPOS_ASSERT(
 		input_col_mdids->Size() <=
 		gpdb::ListLength(target_list));	 // there may be resjunked columns
@@ -2772,39 +2770,6 @@ CTranslatorQueryToDXL::TranslateSetOpChild(Node *child_node,
 {
 	GPOS_ASSERT(NULL != colids);
 	GPOS_ASSERT(NULL != input_col_mdids);
-
-	// GPDB_12_MERGE_FIXME: We have to fallback here because otherwise we trip
-	// the following assert in ORCA:
-	//
-	// INFO:  GPORCA failed to produce a plan, falling back to planner
-	// DETAIL:  CKeyCollection.cpp:84: Failed assertion: __null != colref_array && 0 < colref_array->Size()
-	// Stack trace:
-	// 1    0x000055c239243b8a gpos::CException::Raise + 278
-	// 2    0x000055c2393ab075 gpopt::CKeyCollection::CKeyCollection + 221
-	// 3    0x000055c239449ab6 gpopt::CLogicalSetOp::DeriveKeyCollection + 98
-	// 4    0x000055c2393a5a67 gpopt::CDrvdPropRelational::DeriveKeyCollection + 135
-	// 5    0x000055c2393a4937 gpopt::CDrvdPropRelational::Derive + 197
-	// 6    0x000055c239405d9f gpopt::CExpression::PdpDerive + 703
-	// 7    0x000055c2394d1e14 gpopt::CMemo::PgroupInsert + 512
-	// 8    0x000055c2393dd734 gpopt::CEngine::PgroupInsert + 632
-	// 9    0x000055c2393dcd73 gpopt::CEngine::InitLogicalExpression + 225
-	// 10   0x000055c2393dd106 gpopt::CEngine::Init + 884
-	// 11   0x000055c23949da9f gpopt::COptimizer::PexprOptimize + 103
-	// 12   0x000055c23949d3d8 gpopt::COptimizer::PdxlnOptimize + 1414
-	// 13   0x000055c23960e55e COptTasks::OptimizeTask + 1530
-	// 14   0x000055c2392572b6 gpos::CTask::Execute + 196
-	// 15   0x000055c239259dbf gpos::CWorker::Execute + 191
-	// 16   0x000055c2392556b5 gpos::CAutoTaskProxy::Execute + 221
-	// 17   0x000055c23925c0c0 gpos_exec + 876
-	//
-	// Currently there are a lot of asserts on NULL != target_list in the
-	// translator, but most of them are unnecessary. We should instead fix ORCA
-	// to handle empty target list.
-	if (NIL == target_list)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("Empty target list"));
-	}
 
 	if (IsA(child_node, RangeTblRef))
 	{

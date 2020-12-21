@@ -63,7 +63,7 @@ CKeyCollection::CKeyCollection(CMemoryPool *mp, CColRefArray *colref_array)
 	: m_pdrgpcrs(NULL)
 {
 	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != colref_array && 0 < colref_array->Size());
+	GPOS_ASSERT(NULL != colref_array);
 
 	m_pdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 
