@@ -1,3 +1,6 @@
+# test if gxid is valid or not on the cluster before running the tests
+test: check_gxid
+
 test: autovacuum-analyze
 test: lockmodes
 # Put test prepare_limit near to test lockmodes since both of them reboot the
@@ -247,3 +250,6 @@ test: concurrent_drop_truncate_tablespace
 
 # Test for distributed commit array overflow during replay on standby 
 test: standby_replay_dtx_info 
+
+# test if gxid is valid or not on the cluster after running the tests
+test: check_gxid

@@ -3124,7 +3124,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 					if (localXid != InvalidTransactionId)
 					{
 						if (distribXid >= FirstDistributedTransactionId)
-							appendStringInfo(buf, "dx%u, ", distribXid);
+							appendStringInfo(buf, "dx"UINT64_FORMAT", ", distribXid);
 
 						appendStringInfo(buf, "x%u", localXid);
 

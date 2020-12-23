@@ -43,9 +43,11 @@ static int frequent_check_times;
 volatile bool *shmDtmStarted = NULL;
 volatile bool *shmCleanupBackends = NULL;
 volatile pid_t *shmDtxRecoveryPid = NULL;
+volatile DtxRecoveryEvent *shmDtxRecoveryEvents = NULL;
+slock_t *shmDtxRecoveryEventLock;
 
 /* transactions need recover */
-TMGXACT_LOG *shmCommittedGxactArray;
+DistributedTransactionId *shmCommittedGxidArray;
 volatile int *shmNumCommittedGxacts;
 
 static volatile sig_atomic_t got_SIGHUP = false;
@@ -184,17 +186,18 @@ recoverInDoubtTransactions(void)
 
 	for (i = 0; i < *shmNumCommittedGxacts; i++)
 	{
-		TMGXACT_LOG *gxact_log = &shmCommittedGxactArray[i];
+		DistributedTransactionId gxid = shmCommittedGxidArray[i];
+		char gid[TMGIDSIZE];
 
-		Assert(gxact_log->gxid != InvalidDistributedTransactionId);
+		Assert(gxid != InvalidDistributedTransactionId);
+		dtxFormGid(gid, gxid);
 
 		elog(DTM_DEBUG5,
-			 "Recovering committed distributed transaction gid = %s",
-			 gxact_log->gid);
+			 "Recovering committed distributed transaction gid = %s", gid);
 
-		doNotifyCommittedInDoubt(gxact_log->gid);
+		doNotifyCommittedInDoubt(gid);
 
-		RecordDistributedForgetCommitted(gxact_log);
+		RecordDistributedForgetCommitted(gxid);
 	}
 
 	*shmNumCommittedGxacts = 0;
@@ -392,7 +395,6 @@ abortOrphanedTransactions(HTAB *htab)
 {
 	HASH_SEQ_STATUS status;
 	InDoubtDtx *entry = NULL;
-	DistributedTransactionTimeStamp	distribTimeStamp;
 	DistributedTransactionId	gxid;
 
 	if (htab == NULL)
@@ -404,9 +406,9 @@ abortOrphanedTransactions(HTAB *htab)
 	{
 		elog(DTM_DEBUG3, "Finding orphaned transactions with gid = %s", entry->gid);
 
-		dtxCrackOpenGid(entry->gid, &distribTimeStamp, &gxid);
+		dtxDeformGid(entry->gid, &gxid);
 
-		if (!IsDtxInProgress(distribTimeStamp, gxid))
+		if (!IsDtxInProgress(gxid))
 		{
 			elog(LOG, "Aborting orphaned transactions with gid = %s", entry->gid);
 			doAbortInDoubt(entry->gid);
@@ -432,28 +434,20 @@ redoDtxCheckPoint(TMGXACT_CHECKPOINT *gxact_checkpoint)
 	elog(DTM_DEBUG5, "redoDtxCheckPoint has committedCount = %d", committedCount);
 
 	for (i = 0; i < committedCount; i++)
-		redoDistributedCommitRecord(&gxact_checkpoint->committedGxactArray[i]);
+		redoDistributedCommitRecord(gxact_checkpoint->committedGxidArray[i]);
 }
 
 /*
  * Redo transaction commit log record.
  */
 void
-redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
+redoDistributedCommitRecord(DistributedTransactionId gxid)
 {
 	int			i;
 
-	/*
-	 * The length check here requires the identifer have a trailing NUL
-	 * character.
-	 */
-	if (strlen(gxact_log->gid) >= TMGIDSIZE)
-		elog(PANIC, "Distribute transaction identifier too long (%d)",
-			 (int) strlen(gxact_log->gid));
-
 	for (i = 0; i < *shmNumCommittedGxacts; i++)
 	{
-		if (strcmp(gxact_log->gid, shmCommittedGxactArray[i].gid) == 0)
+		if (gxid == shmCommittedGxidArray[i])
 			return;
 	}
 
@@ -477,22 +471,22 @@ redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
 			initStringInfo(&gxact_array);
 			for (int j = 0; j < *shmNumCommittedGxacts; j++)
 			{
-				appendStringInfo(&gxact_array, "shmCommittedGxactArray[%d]: %s\n",
-					j, shmCommittedGxactArray[j].gid);
+				appendStringInfo(&gxact_array, "shmCommittedGxactArray[%d]: "UINT64_FORMAT"\n",
+					j, shmCommittedGxidArray[j]);
 			}
 			ereport(FATAL,
 					(errmsg("the limit of %d distributed transactions has been reached "\
-							"while adding gid = %s. Committed gid array length: %d, dump:\n%s",
-							max_tm_gxacts, gxact_log->gid, *shmNumCommittedGxacts, gxact_array.data),
+							"while adding gid = "UINT64_FORMAT". Committed gid array length: %d, dump:\n%s",
+							max_tm_gxacts, gxid, *shmNumCommittedGxacts, gxact_array.data),
 					 errdetail("It should not happen. Temporarily increase "
 							   "max_connections (need postmaster reboot) on "
 							   "the postgres (master or standby) to work "
 							   "around this issue and then report a bug")));
 		}
 
-		shmCommittedGxactArray[(*shmNumCommittedGxacts)++] = *gxact_log;
+		shmCommittedGxidArray[(*shmNumCommittedGxacts)++] = gxid;
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "Crash recovery redo added committed distributed transaction gid = %s", gxact_log->gid);
+			 "Crash recovery redo added committed distributed transaction gid = "UINT64_FORMAT, gxid);
 	}
 }
 
@@ -500,34 +494,34 @@ redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
  * Redo transaction forget commit log record.
  */
 void
-redoDistributedForgetCommitRecord(TMGXACT_LOG *gxact_log)
+redoDistributedForgetCommitRecord(DistributedTransactionId gxid)
 {
 	int			i;
 
 	for (i = 0; i < *shmNumCommittedGxacts; i++)
 	{
-		if (strcmp(gxact_log->gid, shmCommittedGxactArray[i].gid) == 0)
+		if (gxid == shmCommittedGxidArray[i])
 		{
 			/* found an active global transaction */
 			elog((Debug_print_full_dtm ? INFO : DEBUG5),
-				 "Crash recovery redo removed committed distributed transaction gid = %s for forget",
-				 gxact_log->gid);
+				 "Crash recovery redo removed committed distributed transaction gid = "UINT64_FORMAT" for forget",
+				 gxid);
 
 			/*
-			 * there's no concurrent access to shmCommittedGxactArray during
+			 * there's no concurrent access to shmCommittedGxidArray during
 			 * recovery
 			 */
 			(*shmNumCommittedGxacts)--;
 			if (i != *shmNumCommittedGxacts)
-				shmCommittedGxactArray[i] = shmCommittedGxactArray[*shmNumCommittedGxacts];
+				shmCommittedGxidArray[i] = shmCommittedGxidArray[*shmNumCommittedGxacts];
 
 			return;
 		}
 	}
 
 	elog((Debug_print_full_dtm ? WARNING : DEBUG5),
-		 "Crash recovery redo did not find committed distributed transaction gid = %s for forget",
-		 gxact_log->gid);
+		 "Crash recovery redo did not find committed distributed transaction gid = "UINT64_FORMAT" for forget",
+		 gxid);
 }
 
 bool
@@ -589,6 +583,26 @@ DtxRecoveryPID(void)
 	return *shmDtxRecoveryPid;
 }
 
+/* Note: Event functions may need lock shmDtxRecoveryEventLock. */
+
+void
+SetDtxRecoveryEvent(DtxRecoveryEvent event)
+{
+	*shmDtxRecoveryEvents |= event;
+}
+
+DtxRecoveryEvent
+GetDtxRecoveryEvent(void)
+{
+	return *shmDtxRecoveryEvents;
+}
+
+static void
+ResetDtxRecoveryEvent(DtxRecoveryEvent event)
+{
+	*shmDtxRecoveryEvents &= ~event;
+}
+
 /*
  * DtxRecoveryMain
  */
@@ -626,6 +640,9 @@ DtxRecoveryMain(Datum main_arg)
 		set_ps_display("", false);
 	}
 
+	/* Fetch the gxid batch in advance. */
+	bumpGxid();
+
 	/*
 	 * Normally we check with interval gp_dtx_recovery_interval, but sometimes
 	 * we want to be more frequent in a period, e.g. just after master panic.
@@ -638,6 +655,7 @@ DtxRecoveryMain(Datum main_arg)
 	while (true)
 	{
 		int rc;
+		DtxRecoveryEvent event;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -647,8 +665,27 @@ DtxRecoveryMain(Datum main_arg)
 			ProcessConfigFile(PGC_SIGHUP);
 		}
 
-		/* Find orphaned prepared transactions and abort them. */
-		AbortOrphanedPreparedTransactions();
+		event = GetDtxRecoveryEvent();
+
+		if (event & DTX_RECOVERY_EVENT_BUMP_GXID)
+		{
+			bumpGxid();
+
+			SpinLockAcquire(shmDtxRecoveryEventLock);
+			ResetDtxRecoveryEvent(DTX_RECOVERY_EVENT_BUMP_GXID);
+			SpinLockRelease(shmDtxRecoveryEventLock);
+		}
+
+		if (event & DTX_RECOVERY_EVENT_ABORT_PREPARED)
+		{
+			/*
+			 * We do not reset the event so far, but maybe do this later when
+			 * we know there isn't distributed transaction to abort in normal
+			 * cases so that it could respond promptly for gxid bumping given
+			 * the abort operation might be time-consuming.
+			 */
+			AbortOrphanedPreparedTransactions();
+		}
 
 		/* GPDB_12_MERGE_FIXME: Create a new WaitEventIPC member for this? */
 		rc = WaitLatch(&MyProc->procLatch,

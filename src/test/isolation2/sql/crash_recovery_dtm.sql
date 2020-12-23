@@ -7,9 +7,6 @@
 -- s/\s+\(.*\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/
 -- m/(PANIC):.*unable to complete*/
 --
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
---
 -- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/
 -- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
 --
@@ -19,24 +16,6 @@
 -- 2pc retry PANIC (do not finish earlier before PANIC happens).
 alter system set dtx_phase2_retry_second to 5;
 select pg_reload_conf();
-
--- This function is used to loop until master shutsdown, to make sure
--- next command executed is only after restart and doesn't go through
--- while PANIC is still being processed by master, as master continues
--- to accept connections for a while despite undergoing PANIC.
-CREATE OR REPLACE FUNCTION wait_till_master_shutsdown()
-RETURNS void AS
-$$
-  DECLARE
-    i int; /* in func */
-  BEGIN
-    i := 0; /* in func */
-    while i < 120 loop
-      i := i + 1; /* in func */
-      PERFORM pg_sleep(.5); /* in func */
-    end loop; /* in func */
-  END; /* in func */
-$$ LANGUAGE plpgsql;
 
 1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 -- Scenario 1: Test to fail broadcasting of COMMIT PREPARED to one

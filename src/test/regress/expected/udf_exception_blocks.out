@@ -678,8 +678,6 @@ SELECT count(*) FROM test_truncate_tab;
 -- m/ /
 -- m/transaction \d+/
 -- s/transaction \d+/transaction /
--- m/transaction -\d+/
--- s/transaction -\d+/transaction/
 -- end_matchsubs
 CREATE OR REPLACE FUNCTION test_excep (arg INTEGER) RETURNS INTEGER
 AS $$
@@ -758,8 +756,8 @@ DROP TABLE IF EXISTS employees;
 NOTICE:  table "employees" does not exist, skipping
 select test_protocol_allseg(1, 2,'f');
 NOTICE:  catching the exception ...2
-ERROR:  transaction 1518031192-0000000602 at level 1 already processed (current level 1) (cdbtm.c:3456)  (seg1 127.0.1.1:25433 pid=24105)
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 8 during exception cleanup
+ERROR:  transaction 41615890 at level 1 already processed (current level 1) (cdbtm.c:2299)  (seg2 192.168.235.128:7004 pid=654) (cdbtm.c:2299)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 9 during exception cleanup
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
@@ -870,8 +868,8 @@ SET debug_dtm_action_nestinglevel=0;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
 NOTICE:  catching the exception ...2
-ERROR:  transaction 1518031192-0000000650 at level 1 already processed (current level 1) (cdbtm.c:3456)  (seg0 127.0.1.1:25432 pid=24104)
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 8 during exception cleanup
+ERROR:  transaction 41615928 at level 1 already processed (current level 1) (cdbtm.c:2299)  (seg1 192.168.235.128:7003 pid=648) (cdbtm.c:2299)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 9 during exception cleanup
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;

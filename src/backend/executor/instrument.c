@@ -21,6 +21,7 @@
 #include "storage/spin.h"
 #include "executor/instrument.h"
 #include "utils/memutils.h"
+#include "utils/timestamp.h"
 #include "miscadmin.h"
 #include "storage/shmem.h"
 #include "cdb/cdbdtxcontextinfo.h"
@@ -500,10 +501,5 @@ instrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit, bool isTopL
 
 static void gp_gettmid(int32* tmid)
 {
-	if (QEDtxContextInfo.distributedSnapshot.distribTransactionTimeStamp > 0)
-		/* On QE */
-		*tmid = (int32)QEDtxContextInfo.distributedSnapshot.distribTransactionTimeStamp;
-	else
-		/* On QD */
-		*tmid = (int32)getDtmStartTime();
+	*tmid = (int32) PgStartTime;
 }

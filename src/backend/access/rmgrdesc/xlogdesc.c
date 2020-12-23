@@ -83,7 +83,7 @@ xlog_desc(StringInfo buf, XLogReaderState *record)
 		CheckpointExtendedRecord ckptExtended;
 
 		appendStringInfo(buf, "redo %X/%X; "
-						 "tli %u; prev tli %u; fpw %s; xid %u:%u; oid %u; relfilenode %u; multi %u; offset %u; "
+						 "tli %u; prev tli %u; fpw %s; xid %u:%u; gxid "UINT64_FORMAT"; oid %u; relfilenode %u; multi %u; offset %u; "
 						 "oldest xid %u in DB %u; oldest multi %u in DB %u; "
 						 "oldest/newest commit timestamp xid: %u/%u; "
 						 "oldest running xid %u; %s",
@@ -93,6 +93,7 @@ xlog_desc(StringInfo buf, XLogReaderState *record)
 						 checkpoint->fullPageWrites ? "true" : "false",
 						 EpochFromFullTransactionId(checkpoint->nextFullXid),
 						 XidFromFullTransactionId(checkpoint->nextFullXid),
+						 checkpoint->nextGxid,
 						 checkpoint->nextOid,
 						 checkpoint->nextRelfilenode,
 						 checkpoint->nextMulti,
@@ -123,6 +124,13 @@ xlog_desc(StringInfo buf, XLogReaderState *record)
 
 		memcpy(&nextOid, rec, sizeof(Oid));
 		appendStringInfo(buf, "%u", nextOid);
+	}
+	else if (info == XLOG_NEXTGXID)
+	{
+		DistributedTransactionId nextGxid;
+
+		nextGxid = *((DistributedTransactionId *) rec);
+		appendStringInfo(buf, UINT64_FORMAT, nextGxid);
 	}
 	else if (info == XLOG_NEXTRELFILENODE)
 	{
@@ -217,6 +225,9 @@ xlog_identify(uint8 info)
 			break;
 		case XLOG_NEXTOID:
 			id = "NEXTOID";
+			break;
+		case XLOG_NEXTGXID:
+			id = "NEXTGXID";
 			break;
 		case XLOG_NEXTRELFILENODE:
 			id = "NEXTRELFILENODE";

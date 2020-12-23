@@ -16,12 +16,10 @@
 
 #include "utils/snapshot.h"
 
-#define DtxContextInfo_StaticInit {0,InvalidDistributedTransactionId,false,false,DistributedSnapshot_StaticInit,0,0,0}
+#define DtxContextInfo_StaticInit {InvalidDistributedTransactionId,false,false,DistributedSnapshot_StaticInit,0,0,0,0}
 
 typedef struct DtxContextInfo
 {
-	DistributedTransactionTimeStamp	distributedTimeStamp;
-	
 	DistributedTransactionId 		distributedXid;
 	
 	bool							haveDistributedSnapshot;

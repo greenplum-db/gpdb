@@ -734,7 +734,7 @@ ExecDelete(ModifyTableState *mtstate,
 		   bool *tupleDeleted,
 		   TupleTableSlot **epqreturnslot)
 {
-	PlanGenerator planGen = estate->es_plannedstmt->planGen;
+	/* PlanGenerator planGen = estate->es_plannedstmt->planGen; */
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
 	TM_Result	result;

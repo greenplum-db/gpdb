@@ -3042,6 +3042,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+		{"gp_gxid_prefetch_num", PGC_POSTMASTER, WAL,
+			gettext_noop("how many gxid is prefetched in each bumping batch."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_gxid_prefetch_num,
+		8192, 512, INT_MAX,
+		NULL, NULL, NULL
+	},
+	{
 		{"gp_dbid", PGC_POSTMASTER, PRESET_OPTIONS,
 			gettext_noop("The dbid used by this server."),
 			NULL,
