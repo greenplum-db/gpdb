@@ -348,7 +348,7 @@ extern bool CurrentDtxIsRollingback(void);
 
 extern pid_t DtxRecoveryPID(void);
 extern DtxRecoveryEvent GetDtxRecoveryEvent(void);
-extern void SetDtxRecoveryEvent(DtxRecoveryEvent event, bool locked);
+extern void SetDtxRecoveryEvent(DtxRecoveryEvent event);
 extern void DtxRecoveryMain(Datum main_arg);
 extern bool DtxRecoveryStartRule(Datum main_arg);
 

@@ -583,14 +583,12 @@ DtxRecoveryPID(void)
 	return *shmDtxRecoveryPid;
 }
 
+/* Note: Event functions may need lock shmDtxRecoveryEventLock. */
+
 void
-SetDtxRecoveryEvent(DtxRecoveryEvent event, bool locked)
+SetDtxRecoveryEvent(DtxRecoveryEvent event)
 {
-	if (!locked)
-		SpinLockAcquire(shmDtxRecoveryEventLock);
 	*shmDtxRecoveryEvents |= event;
-	if (!locked)
-		SpinLockRelease(shmDtxRecoveryEventLock);
 }
 
 DtxRecoveryEvent
@@ -602,9 +600,7 @@ GetDtxRecoveryEvent(void)
 static void
 ResetDtxRecoveryEvent(DtxRecoveryEvent event)
 {
-	SpinLockAcquire(shmDtxRecoveryEventLock);
 	*shmDtxRecoveryEvents &= ~event;
-	SpinLockRelease(shmDtxRecoveryEventLock);
 }
 
 /*
@@ -674,7 +670,10 @@ DtxRecoveryMain(Datum main_arg)
 		if (event & DTX_RECOVERY_EVENT_BUMP_GXID)
 		{
 			bumpGxid();
+
+			SpinLockAcquire(shmDtxRecoveryEventLock);
 			ResetDtxRecoveryEvent(DTX_RECOVERY_EVENT_BUMP_GXID);
+			SpinLockRelease(shmDtxRecoveryEventLock);
 		}
 
 		if (event & DTX_RECOVERY_EVENT_ABORT_PREPARED)

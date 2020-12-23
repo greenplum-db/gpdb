@@ -247,11 +247,11 @@ bumpGxid()
 	nextLimit = ShmemVariableCache->nextGxid + nextCount;
 	if (nextLimit >= (LastDistributedTransactionId - gp_gxid_prefetch_num))
 		ereport(PANIC,
-			(errmsg("Will soon reach the limit of global transactions: "UINT64_FORMAT,
-					ShmemVariableCache->nextGxid)));
+				(errmsg("Will soon reach the limit of global transactions: "UINT64_FORMAT,
+						ShmemVariableCache->nextGxid)));
 	SpinLockRelease(shmGxidGenLock);
 
-	/* It might be time-consuming. */
+	/* It might be time-consuming, so put it out of the spin locking section. */
 	XLogPutNextGxid(nextLimit);
 
 	SpinLockAcquire(shmGxidGenLock);
@@ -267,16 +267,17 @@ currentDtxActivate(void)
 {
 	bool signal_dtx_recovery;
 
-	if (ShmemVariableCache->GxidCount <= GXID_PRETCH_THRESHOLD)
+	if (ShmemVariableCache->GxidCount <= GXID_PRETCH_THRESHOLD &&
+		(GetDtxRecoveryEvent() & DTX_RECOVERY_EVENT_BUMP_GXID) == 0)
 	{
+
 		signal_dtx_recovery = false;
 
 		SpinLockAcquire(shmDtxRecoveryEventLock);
-		/* avoid re-enter. */
 		if ((GetDtxRecoveryEvent() & DTX_RECOVERY_EVENT_BUMP_GXID) == 0)
 		{
-			/* wake up dtx recovery to prefetch */
-			SetDtxRecoveryEvent(DTX_RECOVERY_EVENT_BUMP_GXID, true);
+			/* dtx recovery is not notified, wake up dtx recovery to prefetch. */
+			SetDtxRecoveryEvent(DTX_RECOVERY_EVENT_BUMP_GXID);
 			signal_dtx_recovery = true;
 		}
 		SpinLockRelease(shmDtxRecoveryEventLock);
@@ -285,13 +286,19 @@ currentDtxActivate(void)
 			SendPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY);
 	}
 
+	/*
+	 * We need to retry since in theory even after gxid bumping, we still can
+	 * not get an available gxid if other backends quickly consume all of the
+	 * generated gxid. This mostly happens when the system is with high
+	 * performance and load but with low gxid prefetch batch size. It should be
+	 * rare so far, but in case in the future...
+	 */
 	for(;;)
 	{
 		if (unlikely(ShmemVariableCache->GxidCount == 0))
 			bumpGxid();
 
 		SpinLockAcquire(shmGxidGenLock);
-
 		if (ShmemVariableCache->GxidCount > 0)
 		{
 			MyTmGxact->gxid = ShmemVariableCache->nextGxid++;
@@ -299,7 +306,6 @@ currentDtxActivate(void)
 			SpinLockRelease(shmGxidGenLock);
 			break;
 		}
-
 		SpinLockRelease(shmGxidGenLock);
 	}
 
@@ -720,7 +726,9 @@ retryAbortPrepared(void)
 	if (!succeeded)
 	{
 		ResetAllGangs();
-		SetDtxRecoveryEvent(DTX_RECOVERY_EVENT_ABORT_PREPARED, false);
+		SpinLockAcquire(shmDtxRecoveryEventLock);
+		SetDtxRecoveryEvent(DTX_RECOVERY_EVENT_ABORT_PREPARED);
+		SpinLockRelease(shmDtxRecoveryEventLock);
 		SendPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY);
 		ereport(WARNING,
 				(errmsg("unable to complete 'Abort' broadcast. The dtx recovery"
