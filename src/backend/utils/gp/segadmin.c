@@ -4,7 +4,7 @@
  *	  Functions to support administrative tasks with GPDB segments.
  *
  * Portions Copyright (c) 2010 Greenplum
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

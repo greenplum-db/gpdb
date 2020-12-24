@@ -71,12 +71,14 @@ enum DistributionHashOpsKind
 class CTranslatorUtils
 {
 private:
-	// construct a set of column attnos corresponding to a single grouping set
+	// Construct a set of column attnos corresponding to a single grouping set
+	// from either a plain GROUP BY or one set in a list of grouping sets
 	static CBitSet *CreateAttnoSetForGroupingSet(CMemoryPool *mp,
 												 List *group_elems,
 												 ULONG num_cols,
 												 UlongToUlongMap *group_col_pos,
-												 CBitSet *group_cols);
+												 CBitSet *group_cols,
+												 bool use_group_clause);
 
 	// check if the given mdid array contains any of the polymorphic
 	// types (ANYELEMENT, ANYARRAY)
@@ -93,6 +95,16 @@ private:
 	static void UpdateGrpColMapping(CMemoryPool *mp,
 									UlongToUlongMap *grouping_col_to_pos_map,
 									CBitSet *group_cols, ULONG sort_group_ref);
+
+	// create a set of grouping sets for a rollup
+	static CBitSetArray *CreateGroupingSetsForRollup(
+		CMemoryPool *mp, const GroupingSet *grouping_set, ULONG num_cols,
+		CBitSet *group_cols, UlongToUlongMap *group_col_pos);
+
+	// create a set of grouping sets for a grouping sets subclause
+	static CBitSetArray *CreateGroupingSetsForSets(
+		CMemoryPool *mp, const GroupingSet *grouping_set_node, ULONG num_cols,
+		CBitSet *group_cols, UlongToUlongMap *group_col_pos);
 
 public:
 	struct SCmptypeStrategy
@@ -179,8 +191,8 @@ public:
 	// construct a dynamic array of sets of column attnos corresponding
 	// to the group by clause
 	static CBitSetArray *GetColumnAttnosForGroupBy(
-		CMemoryPool *mp, List *group_clause, ULONG num_cols,
-		UlongToUlongMap *group_col_pos, CBitSet *group_cold);
+		CMemoryPool *mp, List *group_clause, List *grouping_set_list,
+		ULONG num_cols, UlongToUlongMap *group_col_pos, CBitSet *group_cold);
 
 	// return a copy of the query with constant of unknown type being coerced
 	// to the common data type of the output target list

@@ -3,7 +3,7 @@
 /*
  *	greenplum/pg_upgrade_greenplum.h
  *
- *	Portions Copyright (c) 2019-Present, Pivotal Software Inc
+ *	Portions Copyright (c) 2019-Present, VMware, Inc. or its affiliates
  *	src/bin/pg_upgrade/greenplum/pg_upgrade_greenplum.h
  */
 

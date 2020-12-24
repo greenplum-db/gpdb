@@ -1,0 +1,167 @@
+Query To DXL Translator
+=======================
+
+The Query To DXL Translator, as known as the algebrizer, takes as
+input a parsed query object and returns its DXL representation, which
+is an algebrized tree comprised of logical and scalar operations. The
+serialized DXL is then shipped to GPORCA for optimization.
+
+
+Nomenclature
+------------
+
+Logical Operator:
+Set based operator that maps one or more sets of tuples to a set of
+tuples.
+
+Physical Operator:
+Implementation of the logical operator, e.g. a logical join operation
+can be implemented as a nested-loop, hash- or merge-join.
+
+Scalar Operator:
+Maps a single or set of tuples to a single value.
+
+Algebrized Representation (Tree):
+The DXL representation of the GPDB query object
+
+
+Algebrizer Components
+---------------------
+
+CQueryMutator: normalize the incoming GPDB Query object.
+
+CTranslatorQueryToDXL: translate the normalized Query into a DXL tree
+structure. This DXL structure will then be serialized into DXL
+document and be shipped to the optimizer.
+
+CTranslatorDXLToQuery: translates the DXL back into a GPDB Query, this
+is only used to verify the correctness of the translation from Query
+to DXL.
+
+
+Normalized Query Form
+---------------------
+
+1) GROUP BY
+
+We assert that the group by operator has aggregate functions, grouping
+functions and grouping columns and nothing else. Expression on
+aggregate operators or grouping functions are translated as a project
+on top of the group by operation. To facilitate this we mutate the
+original query to a form that conforms to this assumption. To
+illustrate consider the following queries:
+
+Example 1:
+    INPUT:
+        SELECT a, count(*) + 1, grouping(a) + 1 FROM foo GROUP BY a
+    OUTPUT:
+        SELECT q_new.a, q_new.ct + 1, q_new.grouping + 1 FROM (SELECT
+        a, count(*) ct, grouping(a) grouping FROM foo GROUP BY a)
+        q_new
+
+Example 2:
+	INPUT:
+        SELECT * FROM bar where bar.c = (SELECT count(*) + sum(a) FROM
+        foo GROUP BY a)
+	OUTPUT:
+        SELECT * FROM bar where bar.c = (SELECT q_new.ct + q_new.sm
+        FROM (SELECT a, count(*) ct, sum(b) sm FROM foo GROUP BY a)
+        q_new)
+
+
+2) HAVING
+
+The having clause is translated into a select on top the
+original query. To accomplish this, we traverse the having clause to
+collect all aggregates pertaining to the current grouping operation
+and replacing it with the corresponding variable. To illustrate
+consider the following queries:
+
+Example:
+    INPUT:
+        SELECT a FROM foo GROUP BY a HAVING (count(*) > (SELECT
+        sum(foo.b) FROM bar))
+    OUTPUT:
+        SELECT q_new.a FROM (SELECT a, count(*) ct, sum(foo.b) sm FROM
+        foo GROUP BY a) q_new) WHERE q_new.ct > (SELECT q_new.sm FROM
+        bar))
+
+
+3) WINDOW
+
+Similar to GROUP BY, a window operator only has simple window
+functions rather than expression on window functions. The expression
+involving window functions are then translated into a project on top
+of the window operator. The mutation methodology is identical to the
+process described in GROUP BY.
+
+
+4) DISTINCT
+
+We transform the distinct clause into a GROUP BY on top the original
+query.
+
+Example:
+    INPUT:
+        SELECT distinct a, count(*) FROM foo GROUP BY a, b
+    OUTPUT:
+        SELECT q_new.a, q_new.ct FROM (SELECT a, count(*) ct, FROM foo
+        GROUP BY a) q_new) GROUP BY q_new.a, q_new.ct
+
+
+Query To DXL Translation
+------------------------
+
+Input: Query Object
+
+CTranslatorQueryToDXL assumes that the query has already been
+normalized. Therefore the following members in the query objects are
+NULL:
+1. Distinct Columns
+2. Having Clause
+
+
+Output: DXL
+
+DXL containing:
+1. List of output columns along with their alias name
+2. List of CTE Producers where each CTE producer has:
+        a. An unique identifier
+        b. List of output columns
+3. The DXL representation of the query
+
+
+Translation Algorithm
+
+1. If the query has set operations then
+    a. Process the inputs to the set op.
+    b. Check if the inputs need to casted
+        - If so the optimizer will generate new output column for the
+          casting functions
+    c. Create a logical set operator that contains:
+        - List of input columns from each input
+        - List of output columns of the set op
+2. If not, process the from clause (FROM EXPR)
+    a. Translate each range table entry used in the from clause based
+       on the type of the range table entry
+        - Table Entries: translate into logical get or logical
+          external get
+        - TVF: translate into logical tvf
+        - Value Scan: translate into a constant table get
+        - CTE: represented as a logical CTE consumer with it CTE
+          Producer ID and list of output columns.
+        - Translate a derived table to a logical tree
+3. Check if the query has window operation
+    a. If the window specification is a computed column then create a
+       project child
+    b. Add window function in the target list to the project list of
+       the window operator
+4. Check if the query has GROUP BY (including grouping sets/rollup)
+    a. Expand rollup/grouping sets into a union all over group bys
+    b. Add the aggregates in the target list to the project list of
+       the group by operator
+5. Check if the query has ordering clause
+    a. Create a logical limit operator with
+        - Order Spec (sorting columns and sorting functions used)
+        - limit count, and limit offset
+6. Generate the list of output columns and the alias name (for display)

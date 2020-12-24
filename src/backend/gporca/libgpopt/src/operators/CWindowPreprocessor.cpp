@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2015 Pivotal Inc.
+//	Copyright 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CWindowPreprocessor.cpp

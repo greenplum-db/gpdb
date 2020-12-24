@@ -482,6 +482,18 @@ CMDTypeGenericGPDB::HasByte2IntMapping(const IMDType *mdtype)
 		   mdid->Equals(&CMDIdGPDB::m_mdid_cash);
 }
 
+IDatum *
+CMDTypeGenericGPDB::CreateGenericNullDatum(CMemoryPool *mp,
+										   INT type_modifier) const
+{
+	return GPOS_NEW(mp) CDatumGenericGPDB(mp, MDId(), type_modifier,
+										  NULL,	 // source value buffer
+										  0,	 // source value buffer length
+										  true,	 // is NULL
+										  0,	 // LINT mapping for stats
+										  0.0);	 // CDouble mapping for stats
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDTypeGenericGPDB::HasByte2DoubleMapping

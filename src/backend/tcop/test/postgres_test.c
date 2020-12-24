@@ -32,7 +32,6 @@ _errfinish_impl()
 		will_return_with_sideeffect(errstart, false, &_errfinish_impl, NULL); \
     } \
 
-const char *progname = "postgres";
 
 /* List with multiple elements, return FALSE. */
 static void

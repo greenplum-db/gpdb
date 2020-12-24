@@ -9,7 +9,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:CostModelConfig CostModelType="0" SegmentsForCosting="2"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="2"/>
       <dxl:TraceFlags Value="103027,101013,102024,102025,102115,102116,102117,102119,102121,103001,103003,103016"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -99,7 +99,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.070312" Rows="3.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000059" Rows="3.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="one">
@@ -108,7 +108,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
         </dxl:ProjList>
         <dxl:CTEProducer CTEId="0" Columns="1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2.011719" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="one">
@@ -117,7 +117,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
           </dxl:ProjList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.009766" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="one">
@@ -128,7 +128,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="">
@@ -142,7 +142,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
         </dxl:CTEProducer>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.035156" Rows="3.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000041" Rows="3.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="2" Alias="one">
@@ -152,7 +152,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
           <dxl:Filter/>
           <dxl:CTEConsumer CTEId="0" Columns="2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.003906" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="one">
@@ -162,7 +162,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
           </dxl:CTEConsumer>
           <dxl:CTEConsumer CTEId="0" Columns="4">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.003906" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="4" Alias="one">
@@ -172,7 +172,7 @@ SQL: with v as (select 1 as one) select one from v union all select one from v u
           </dxl:CTEConsumer>
           <dxl:CTEConsumer CTEId="0" Columns="6">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.003906" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="6" Alias="one">

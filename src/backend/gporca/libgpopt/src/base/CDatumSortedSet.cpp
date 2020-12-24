@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #include "gpopt/operators/COperator.h"
 #include "gpopt/base/CDatumSortedSet.h"

@@ -258,7 +258,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3.070312" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000161" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="month_id">
@@ -275,7 +275,7 @@
         <dxl:SortingColumnList/>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2.058594" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="month_id">
@@ -316,7 +316,7 @@
           </dxl:PartitionSelector>
           <dxl:DynamicTableScan PartIndexId="1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2.058594" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="month_id">

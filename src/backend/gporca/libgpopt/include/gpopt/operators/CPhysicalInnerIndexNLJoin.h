@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalInnerIndexNLJoin.h
@@ -73,6 +73,11 @@ public:
 								   ULONG child_index,
 								   CDrvdPropArray *pdrgpdpCtxt,
 								   ULONG ulOptReq) const override;
+
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
 
 	// execution order of children
 	EChildExecOrder

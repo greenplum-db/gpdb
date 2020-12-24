@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	Class for representing DXL Part List Values expressions
 //	These expressions indicate the constant values for the list partition

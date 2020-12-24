@@ -208,6 +208,7 @@ groups:
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
   - icw_gporca_ictcp_centos7
+  - unit_tests_gporca_centos7
 {% endif %}
 {% if "centos7" in os_types and "CLI" in test_sections %}
   - gpexpand
@@ -996,6 +997,18 @@ jobs:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
       TEST_OS: centos
 
+- name: unit_tests_gporca_centos7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+        trigger: [[ test_trigger ]]
+      - get: gpdb7-centos7-build
+  - task: unit_tests_gporca
+    file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
+    image: gpdb7-centos7-build
+
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: icw_gporca_ubuntu18.04
@@ -1114,6 +1127,7 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - icw_gporca_ictcp_centos7
+        - unit_tests_gporca_centos7
 {% if "Extensions" in test_sections %}
         - icw_extensions_gpcloud_centos7
 {% endif %}
@@ -1822,6 +1836,7 @@ jobs:
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
         - cli_cross_subnet
+        - unit_tests_gporca_centos7
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]
 {% if "ubuntu18.04" in os_types %}
@@ -1955,7 +1970,7 @@ jobs:
       - get: greenplum-database-release
       - get: license_file
   - task: create_gpdb_rpm_package_centos7
-    file: greenplum-database-release/ci/concourse/tasks/build_gpdb_rpm.yml
+    file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
     image: gpdb7-centos7-build
     input_mapping:
       bin_gpdb: bin_gpdb_centos7
@@ -1965,7 +1980,7 @@ jobs:
       PLATFORM: "rhel7"
       GPDB_NAME: greenplum-db-7
       GPDB_RELEASE: 1
-      GPDB_LICENSE: Pivotal Software EULA
+      GPDB_LICENSE: VMware, Inc. or its affiliates EULA
       GPDB_URL: https://github.com/greenplum-db/gpdb
       GPDB_OSS: false
   - task: rename_rc_artifacts

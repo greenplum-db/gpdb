@@ -309,7 +309,8 @@ CPhysical::PdsCompute(CMemoryPool *mp, const CTableDescriptor *ptabdesc,
 		}
 
 		case IMDRelation::EreldistrReplicated:
-			return GPOS_NEW(mp) CDistributionSpecReplicated();
+			return GPOS_NEW(mp) CDistributionSpecReplicated(
+				CDistributionSpec::EdtStrictReplicated);
 			break;
 
 		default:
@@ -391,7 +392,8 @@ CPhysical::PdsRequireSingletonOrReplicated(CMemoryPool *mp,
 	{
 		if (0 == ulOptReq)
 		{
-			return GPOS_NEW(mp) CDistributionSpecReplicated();
+			return GPOS_NEW(mp)
+				CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 		}
 
 		return GPOS_NEW(mp) CDistributionSpecSingleton();
@@ -1266,5 +1268,16 @@ CPhysical::Erm(CReqdPropPlan *, ULONG, CDrvdPropArray *, ULONG)
 	return CEnfdRewindability::ErmSatisfy;
 }
 
+CEnfdDistribution *
+CPhysical::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+			   CReqdPropPlan *prppInput, ULONG child_index,
+			   CDrvdPropArray *pdrgpdpCtxt, ULONG ulDistrReq)
+{
+	return GPOS_NEW(mp) CEnfdDistribution(
+		PdsRequired(mp, exprhdl, prppInput->Ped()->PdsRequired(), child_index,
+					pdrgpdpCtxt, ulDistrReq),
+		Edm(prppInput, child_index, pdrgpdpCtxt, ulDistrReq));
+	;
+}
 
 // EOF

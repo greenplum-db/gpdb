@@ -4,7 +4,7 @@
  *	  definitions for the gp_distribution_policy catalog table
  *
  * Portions Copyright (c) 2005-2011, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

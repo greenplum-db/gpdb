@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software, Inc
+//	Copyright (C) 2017 VMware, Inc. or its affiliates
 
 #ifndef GPOS_CHashSetIterTest_H
 #define GPOS_CHashSetIterTest_H

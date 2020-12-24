@@ -3,7 +3,7 @@
  * execDynamicScan.h
  *	 Definitions and API functions for execDynamicScan.c
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

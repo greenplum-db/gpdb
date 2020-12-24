@@ -167,6 +167,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         with self.assertRaisesRegex(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
+
 class SegmentProgressTestCase(GpTestCase):
     """
     Test case for GpMirrorListToBuild._join_and_show_segment_progress().

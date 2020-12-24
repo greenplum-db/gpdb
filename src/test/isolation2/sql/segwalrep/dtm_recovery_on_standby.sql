@@ -84,21 +84,23 @@ returns text as $$
     master = rv[1] # role = 'p'
     try:
         cmd = 'rm -rf %s.dtm_recovery && cp -R %s %s.dtm_recovery' % (standby['datadir'], standby['datadir'], standby['datadir'])
-        remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii')
         cmd = 'gpinitstandby -ar -P %d' % master['port']
-        remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii')
         cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (master['port'], standby['hostname'], standby['datadir'], standby['port'])
-        init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii')
     except subprocess.CalledProcessError as e:
         plpy.info(e.output)
         raise
 
+    if "ERROR" not in remove_output and "FATAL" not in remove_output and \
+       "ERROR" not in init_output and "FATAL" not in init_output:
+        return "standby initialized"
+
     return remove_output + "\n" + init_output
 $$ language plpython3u;
 
--- start_ignore
 select reinitialize_standby();
--- end_ignore
 
 -- Sync state between master and standby must be restored at the end.
 select wait_until_standby_in_state('streaming');

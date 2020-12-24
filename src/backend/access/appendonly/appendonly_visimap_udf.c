@@ -3,7 +3,7 @@
  * AppendOnlyVisimap UDFs
  *   User-defined functions (UDF) for support of append-only visimap
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

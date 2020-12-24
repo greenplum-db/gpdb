@@ -1,0 +1,15 @@
+-- test gp_terminate_mpp_backends
+1:create table gp_terminate_mpp_backends_t (a int);
+CREATE
+
+select gp_terminate_mpp_backends() from gp_dist_random('gp_id');
+ gp_terminate_mpp_backends 
+---------------------------
+                           
+                           
+                           
+(3 rows)
+
+-- expect following to fail as writer gang was killed
+1:select count(*) from gp_terminate_mpp_backends_t;
+ERROR:  terminating connection due to administrator command  (seg0 slice1 10.138.0.26:7002 pid=26162)

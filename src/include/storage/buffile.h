@@ -16,7 +16,7 @@
  * access.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -29,6 +29,7 @@
 #define BUFFILE_H
 
 #include "storage/sharedfileset.h"
+#include "utils/workfile_mgr.h"
 
 /* BufFile is an opaque type whose details are not known outside buffile.c. */
 
@@ -52,7 +53,7 @@ extern int	BufFileSeekBlock(BufFile *file, int64 blknum);
 extern int64 BufFileSize(BufFile *file);
 extern long BufFileAppend(BufFile *target, BufFile *source);
 
-extern BufFile *BufFileCreateShared(SharedFileSet *fileset, const char *name);
+extern BufFile *BufFileCreateShared(SharedFileSet *fileset, const char *name, struct workfile_set *work_set);
 extern void BufFileExportShared(BufFile *file);
 extern BufFile *BufFileOpenShared(SharedFileSet *fileset, const char *name);
 extern void BufFileDeleteShared(SharedFileSet *fileset, const char *name);

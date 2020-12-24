@@ -3,7 +3,7 @@
  *
  *	Greenplum version-specific routines for upgrades
  *
- *	Copyright (c) 2016-Present Pivotal Software, Inc
+ *	Copyright (c) 2016-Present VMware, Inc. or its affiliates
  *	contrib/pg_upgrade/version_gp.c
  */
 #include "postgres_fe.h"

@@ -238,6 +238,11 @@ public:
 		return dynamic_cast<CPhysicalLimit *>(pop);
 	}
 
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
+
 };	// class CPhysicalLimit
 
 }  // namespace gpopt

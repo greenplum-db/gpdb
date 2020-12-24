@@ -294,7 +294,7 @@ select * from s,t where s.b=t.a and t.b=35;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.335938" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001717" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -314,7 +314,7 @@ select * from s,t where s.b=t.a and t.b=35;
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="5.320312" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001573" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -340,7 +340,7 @@ select * from s,t where s.b=t.a and t.b=35;
           </dxl:HashCondList>
           <dxl:DynamicTableScan PartIndexId="1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -397,7 +397,7 @@ select * from s,t where s.b=t.a and t.b=35;
             </dxl:PrintableFilter>
             <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3.109375" Rows="2.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000921" Rows="2.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="a">
@@ -411,7 +411,7 @@ select * from s,t where s.b=t.a and t.b=35;
               <dxl:SortingColumnList/>
               <dxl:Sequence>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2.078125" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000084" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="a">
@@ -447,7 +447,7 @@ select * from s,t where s.b=t.a and t.b=35;
                 </dxl:PartitionSelector>
                 <dxl:DynamicTableScan PartIndexId="2">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2.078125" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000084" Rows="1.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="a">

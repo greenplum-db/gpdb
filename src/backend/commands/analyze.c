@@ -788,7 +788,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				 * Store HLL/HLL fullscan information for leaf partitions in
 				 * the stats object
 				 */
-				if (onerel->rd_rel->relkind == RELKIND_RELATION)
+				if (onerel->rd_rel->relkind == RELKIND_RELATION && onerel->rd_rel->relispartition)
 				{
 					MemoryContext old_context;
 					Datum *hll_values;
@@ -4221,7 +4221,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 		mcvpairArray = aggregate_leaf_partition_MCVs(
 			stats->attr->attrelid, stats->attr->attnum,
 			numPartitions, heaptupleStats, relTuples,
-			default_statistics_target, ndistinct, &num_mcv, &rem_mcv,
+			stats->attr->attstattarget, ndistinct, &num_mcv, &rem_mcv,
 			resultMCV);
 		MemoryContextSwitchTo(old_context);
 
@@ -4246,7 +4246,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 		int num_hist = aggregate_leaf_partition_histograms(
 			stats->attr->attrelid, stats->attr->attnum,
 			numPartitions, heaptupleStats, relTuples,
-			default_statistics_target, mcvpairArray + num_mcv,
+			stats->attr->attstattarget, mcvpairArray + num_mcv,
 			rem_mcv, resultHistogram);
 		MemoryContextSwitchTo(old_context);
 		if (num_hist > 0)

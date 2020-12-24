@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CDistributionSpecStrictRandom_H
 #define GPOPT_CDistributionSpecStrictRandom_H

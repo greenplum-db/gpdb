@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Software, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CPhysicalFullMergeJoin_H
 #define GPOPT_CPhysicalFullMergeJoin_H
@@ -56,6 +56,11 @@ public:
 								   ULONG child_index,
 								   CDrvdPropArray *pdrgpdpCtxt,
 								   ULONG ulOptReq) const override;
+
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
 
 	COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							COrderSpec *posInput, ULONG child_index,

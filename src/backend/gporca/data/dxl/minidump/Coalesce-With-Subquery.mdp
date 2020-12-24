@@ -855,7 +855,7 @@
     <dxl:Plan Id="0" SpaceSize="5302">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="282440.388516" Rows="4.000000" Width="269"/>
+          <dxl:Cost StartupCost="0" TotalCost="38915.797885" Rows="4.000000" Width="269"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="datname">
@@ -889,7 +889,7 @@
               </dxl:ParamList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2.140625" Rows="1.000000" Width="64"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.001303" Rows="1.000000" Width="64"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="90" Alias="spcname">
@@ -923,7 +923,7 @@
         <dxl:OneTimeFilter/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="72514.146328" Rows="8.000000" Width="205"/>
+            <dxl:Cost StartupCost="0" TotalCost="6920.082238" Rows="8.000000" Width="205"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="datname">
@@ -957,7 +957,7 @@
           </dxl:JoinFilter>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="315.603516" Rows="4.000000" Width="141"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.011733" Rows="4.000000" Width="141"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="datname">
@@ -990,7 +990,7 @@
             <dxl:LimitOffset/>
             <dxl:HashJoin JoinType="Left">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3.962891" Rows="4.000000" Width="141"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.005337" Rows="4.000000" Width="141"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="datname">
@@ -1025,7 +1025,7 @@
               </dxl:HashCondList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1.714844" Rows="3.000000" Width="81"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000761" Rows="3.000000" Width="81"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="datname">
@@ -1076,7 +1076,7 @@
               </dxl:TableScan>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.070312" Rows="1.000000" Width="72"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000064" Rows="1.000000" Width="72"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="19" Alias="rolname">
@@ -1105,7 +1105,7 @@
           </dxl:Sort>
           <dxl:Assert ErrorCode="P0003">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="5.542813" Rows="1.000000" Width="64"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.001650" Rows="1.000000" Width="64"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="44" Alias="rolname">
@@ -1124,7 +1124,7 @@
             </dxl:AssertConstraintList>
             <dxl:Window PartitionColumns="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="4.417813" Rows="1.000000" Width="72"/>
+                <dxl:Cost StartupCost="0" TotalCost="437.001586" Rows="1.000000" Width="72"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="107" Alias="row_number">
@@ -1137,7 +1137,7 @@
               <dxl:Filter/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="3.417813" Rows="1.000000" Width="64"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.001586" Rows="1.000000" Width="64"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="44" Alias="rolname">
@@ -1154,7 +1154,7 @@
                 </dxl:HashCondList>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.070312" Rows="1.000000" Width="72"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000064" Rows="1.000000" Width="72"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="44" Alias="rolname">
@@ -1181,7 +1181,7 @@
                 </dxl:TableScan>
                 <dxl:Assert ErrorCode="P0003">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2.167813" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6.000756" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="70" Alias="datdba">
@@ -1200,7 +1200,7 @@
                   </dxl:AssertConstraintList>
                   <dxl:Window PartitionColumns="">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1.160000" Rows="1.200000" Width="12"/>
+                      <dxl:Cost StartupCost="0" TotalCost="6.000752" Rows="1.200000" Width="12"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="106" Alias="row_number">
@@ -1213,7 +1213,7 @@
                     <dxl:Filter/>
                     <dxl:IndexScan IndexScanDirection="Forward">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.160000" Rows="1.200000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="6.000743" Rows="1.200000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="70" Alias="datdba">
@@ -1224,7 +1224,7 @@
                       <dxl:IndexCondList>
                         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                           <dxl:Ident ColId="69" ColName="datname" TypeMdid="0.19.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGVtcGxhdGUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGVtcGxhdGUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
                       <dxl:IndexDescriptor Mdid="0.2671.1.0" IndexName="pg_database_datname_index"/>

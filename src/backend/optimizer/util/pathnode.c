@@ -4,7 +4,7 @@
  *	  Routines to manipulate pathlists and create path nodes
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -4646,7 +4646,9 @@ create_groupingsets_path(PlannerInfo *root,
 					 aggstrategy,
 					 agg_costs,
 					 numGroupCols,
-					 rollup->numGroups,
+					 estimate_num_groups_on_segment(rollup->numGroups,
+													subpath->rows,
+													subpath->locus),
 					 having_qual,
 					 subpath->startup_cost,
 					 subpath->total_cost,
@@ -4671,7 +4673,9 @@ create_groupingsets_path(PlannerInfo *root,
 						 rollup->is_hashed ? AGG_HASHED : AGG_SORTED,
 						 agg_costs,
 						 numGroupCols,
-						 rollup->numGroups,
+						 estimate_num_groups_on_segment(rollup->numGroups,
+														subpath->rows,
+														subpath->locus),
 						 having_qual,
 						 0.0, 0.0,
 						 subpath->rows,
@@ -4696,7 +4700,9 @@ create_groupingsets_path(PlannerInfo *root,
 						 AGG_SORTED,
 						 agg_costs,
 						 numGroupCols,
-						 rollup->numGroups,
+						 estimate_num_groups_on_segment(rollup->numGroups,
+														subpath->rows,
+														subpath->locus),
 						 having_qual,
 						 sort_path.startup_cost,
 						 sort_path.total_cost,

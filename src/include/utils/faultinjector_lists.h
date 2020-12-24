@@ -19,7 +19,7 @@
  *
  *
  * Copyright 2009-2010, Greenplum Inc. All rights reserved.
- * Copyright (c) 2017-Present Pivotal Software, Inc.
+ * Copyright (c) 2017-Present VMware, Inc. or its affiliates.
  */
 
 /* there is deliberately not an #ifndef FAULTINJECTOR_LISTS_H here */

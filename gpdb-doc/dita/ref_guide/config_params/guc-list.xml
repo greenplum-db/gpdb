@@ -397,6 +397,9 @@
               <xref href="#optimizer_control" type="section">optimizer_control</xref>
             </li>
             <li>
+              <xref href="#optimizer_cost_model" type="section">optimizer_cost_model</xref>
+            </li>
+            <li>
               <xref href="#optimizer_cte_inlining_bound" type="section"
                 >optimizer_cte_inlining_bound</xref>
             </li>
@@ -404,6 +407,8 @@
                 >optimizer_enable_associativity</xref>
             </li>
             <li><xref href="#optimizer_enable_dml" type="section">optimizer_enable_dml</xref>
+            </li>
+            <li><xref href="#optimizer_enable_indexonlyscan" type="section">optimizer_enable_indexonlyscan</xref>
             </li>
             <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
@@ -2593,8 +2598,8 @@
         <sup>1</sup>The set classification when the parameter is set at the system level with the
           <codeph>gpconfig</codeph> utility.</note>
       <note>
-        <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal
-        Greenplum Database.</note>
+        <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu
+        Greenplum.</note>
     </body>
   </topic>
   <topic id="gp_dynamic_partition_pruning">
@@ -2978,10 +2983,10 @@
       <p>After changing this configuration parameter, Greenplum Database must be restarted for the
         change to take effect.</p>
       <p>The Greenplum Database metrics collection extension, when enabled, sends the collected
-        metrics over UDP to a Pivotal Greenplum Command Center agent<sup>1</sup>. </p>
-      <note><sup>1</sup> The metrics collection extension is included in Pivotal's commercial
-        version of Greenplum Database. Pivotal Greenplum Command Center is supported only with
-        Pivotal Greenplum Database.</note>
+        metrics over UDP to a Tanzu Greenplum Command Center agent<sup>1</sup>. </p>
+      <note><sup>1</sup> The metrics collection extension is included in VMware's commercial
+        version of Greenplum Database. Tanzu Greenplum Command Center is supported only with
+        Tanzu Greenplum.</note>
       <table id="gp_enable_query_metrics">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6802,6 +6807,37 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_cost_model">
+    <title>optimizer_cost_model</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls the cost
+        model that GPORCA chooses for bitmap scans used with bitmap indexes or
+        with btree indexes on AO tables.</p>
+      <p>The <codeph>experimental</codeph> cost model is more likely to choose
+        a faster bitmap index with nested loop joins instead of hash joins.</p>
+      <table id="optimizer_cost_model_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">legacy<p>calibrated</p><p>experimental</p></entry>
+              <entry colname="col2">calibrated</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_cte_inlining_bound">
     <title>optimizer_cte_inlining_bound</title>
     <body>
@@ -6882,6 +6918,46 @@
         Planner when performing DML commands.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_igw_npf_fjb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_enable_indexonlyscan">
+    <title>optimizer_enable_indexonlyscan</title>
+    <body>
+      <p>When GPORCA is enabled (the default) and this parameter is
+        <codeph>true</codeph> (the default), GPORCA can generate index-only scan
+        plan types for B-tree indexes. GPORCA accesses the index values only,
+        not the data blocks of the relation. This provides a query execution
+        performance improvement, particularly when the table has been vacuumed,
+        has wide columns, and GPORCA does not need to fetch any data blocks
+        (for example, they are visible).</p>
+      <p>When disabled (<codeph>false</codeph>), GPORCA does not generate
+        index-only scan plan types.</p>
+      <p>The parameter can be set for a database system, an individual database,
+        or a session or query.</p>
       <p>For information about GPORCA, see <xref
           href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
@@ -9285,7 +9361,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       <p>If Greenplum Database detects a corruption in the free TID list, the free TID list is
         rebuilt, a warning is logged, and a warning is returned by queries for which the check
         failed. Greenplum Database attempts to execute the queries. </p>
-      <note otherprops="pivotal">If a warning is returned, please contact Pivotal Support.</note>
+      <note otherprops="pivotal">If a warning is returned, please contact VMware Support.</note>
       <table id="table_fkc_4pb_1w">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

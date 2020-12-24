@@ -88,8 +88,9 @@ public:
 
 	// scalar expression on given column mapped from all constraints
 	// on its equivalent columns
-	CExpression *PexprScalarMappedFromEquivCols(CMemoryPool *mp,
-												CColRef *colref) const;
+	CExpression *PexprScalarMappedFromEquivCols(
+		CMemoryPool *mp, CColRef *colref,
+		CPropConstraint *constraintsForOuterRefs) const;
 
 	// print
 	IOstream &OsPrint(IOstream &os) const override;

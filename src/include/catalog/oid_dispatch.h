@@ -4,7 +4,7 @@
  *	  prototypes for functions in backend/catalog/oid_dispatch.c
  *
  *
- * Portions Copyright 2016 Pivotal Software, Inc.
+ * Portions Copyright 2016 VMware, Inc. or its affiliates.
  *
  * src/include/catalog/oid_dispatch.h
  *

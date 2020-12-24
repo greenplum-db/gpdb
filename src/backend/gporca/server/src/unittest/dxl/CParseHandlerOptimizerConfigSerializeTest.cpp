@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 
 #include "gpos/io/COstreamString.h"
 #include "unittest/dxl/CParseHandlerOptimizerConfigSerializeTest.h"

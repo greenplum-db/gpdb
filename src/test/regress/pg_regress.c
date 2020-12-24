@@ -87,6 +87,7 @@ bool		debug = false;
 char	   *inputdir = ".";
 char	   *outputdir = ".";
 char	   *tablespacedir = ".";
+char	   *exclude_tests_file = "";
 char	   *prehook = "";
 char	   *bindir = PGBINDIR;
 char	   *launcher = NULL;
@@ -230,6 +231,40 @@ split_to_stringlist(const char *s, const char *delim, _stringlist **listhead)
 		token = strtok(NULL, delim);
 	}
 	free(sc);
+}
+
+static void
+load_exclude_tests_file(_stringlist **listhead, const char *exclude_tests_file)
+{
+	char buf[1024];
+	FILE *excludefile;
+	int i;
+	excludefile = fopen(exclude_tests_file, "r");
+	if (!excludefile)
+	{
+		fprintf(stderr, _("\ncould not open file %s: %s\n"),
+				exclude_tests_file, strerror(errno));
+		_exit(2);
+	}
+	while (fgets(buf, sizeof(buf), excludefile))
+	{
+		i = strlen(buf);
+		if (buf[i-1] == '\n')
+			buf[i-1] = '\0';
+		add_stringlist_item(&exclude_tests, buf);
+	}
+	if (ferror(excludefile))
+	{
+		fprintf(stderr, _("\ncould not read file %s: %s\n"),
+				exclude_tests_file, strerror(errno));
+		_exit(2);
+	}
+	if (fclose(excludefile))
+	{
+		fprintf(stderr, _("\ncould not close file %s: %s\n"),
+				exclude_tests_file, strerror(errno));
+		_exit(2);
+	}
 }
 
 /*
@@ -2081,6 +2116,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		char	   *test = NULL;
 		char	   *c;
 		int			num_tests;
+		int			excluded_tests;
 		bool		inword;
 		int			i;
 		struct timeval start_time;
@@ -2118,6 +2154,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		}
 
 		num_tests = 0;
+		excluded_tests = 0;
 		inword = false;
 		for (c = test;; c++)
 		{
@@ -2146,7 +2183,10 @@ run_schedule(const char *schedule, test_function tfunc)
 					 * array, after all.
 					 */
 					if (should_exclude_test(tests[num_tests - 1]))
+					{
+						excluded_tests++;
 						num_tests--;
+					}
 				}
 				if (*c == '\0')
 					break;		/* loop exit is here */
@@ -2163,18 +2203,19 @@ run_schedule(const char *schedule, test_function tfunc)
 		if (num_tests - 1 >= 0 && should_exclude_test(tests[num_tests - 1]))
 		{
 			num_tests--;
-
-			/* All tests in this line are to be excluded, so go to the next line */
-			if (num_tests == 0)
-				continue;
+			excluded_tests++;
 		}
 
-		if (num_tests == 0)
+		if (num_tests == 0 && excluded_tests == 0)
 		{
 			fprintf(stderr, _("syntax error in schedule file \"%s\" line %d: %s\n"),
 					schedule, line_num, scbuf);
 			exit(2);
 		}
+
+		/* All tests in this line are to be excluded, so go to the next line */
+		if (num_tests == 0)
+			continue;
 
 		if (!cluster_healthy())
 			break;
@@ -2343,6 +2384,9 @@ run_single_test(const char *test, test_function tfunc)
 	bool		differ = false;
 
 	if (!cluster_healthy())
+		return;
+
+	if (should_exclude_test((char *) test))
 		return;
 
 	status(_("test %-28s ... "), test);
@@ -2520,6 +2564,7 @@ create_database(const char *dbname)
 		header(_("installing %s"), sl->str);
 		psql_command(dbname, "CREATE EXTENSION IF NOT EXISTS \"%s\"", sl->str);
 	}
+
 }
 
 static void
@@ -2574,7 +2619,7 @@ should_exclude_test(char *test)
 	_stringlist *sl;
 	for (sl = exclude_tests; sl != NULL; sl = sl->next)
 	{
-		if (strcmp(test, sl->str) == 0)
+		if (strncmp(test, sl->str, strlen(sl->str)) == 0)
 			return true;
 	}
 
@@ -2681,6 +2726,7 @@ help(void)
 	/* Please put GPDB specific options here, at the end */
 	printf(_("      --prehook=NAME            pre-hook name (default \"\")\n"));
 	printf(_("      --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
+	printf(_("      --exclude-file=FILE       file with tests to exclude from running, one test name per line\n"));
     printf(_("      --init-file=GPD_INIT_FILE  init file to be used for gpdiff (could be used multiple times)\n"));
 	printf(_("      --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("      --print-failure-diffs     Print the diff file to standard out after a failure\n"));
@@ -2738,6 +2784,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"prehook", required_argument, NULL, 83},
 		{"print-failure-diffs", no_argument, NULL, 84},
 		{"tablespace-dir", required_argument, NULL, 85},
+		{"exclude-file", required_argument, NULL, 87}, /* 86 conflicts with 'V' */
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2876,6 +2923,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
 			case 85:
 				tablespacedir = strdup(optarg);
+				break;
+			case 87:
+				exclude_tests_file = strdup(optarg);
+				load_exclude_tests_file(&exclude_tests, exclude_tests_file);
 				break;
 			default:
 				/* getopt_long already emitted a complaint */
@@ -3190,6 +3241,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				drop_role_if_exists(sl->str);
 		}
 	}
+
+#ifdef FAULT_INJECTOR
+	header(_("faultinjector enabled"));
+#else
+	header(_("faultinjector not enabled"));
+#endif
 
 	/*
 	 * Create the test database(s) and role(s)

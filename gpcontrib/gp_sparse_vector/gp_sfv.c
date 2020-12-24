@@ -3,7 +3,7 @@
  * gp_sfv.c
  *
  * Copyright (c) 2010, Greenplum Software
- * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

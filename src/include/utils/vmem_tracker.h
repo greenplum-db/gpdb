@@ -3,7 +3,7 @@
  * vmem_tracker.h
  *	  This file contains declarations for vmem tracking functions.
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

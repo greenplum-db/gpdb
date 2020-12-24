@@ -316,7 +316,7 @@ file_fdw_validator(PG_FUNCTION_ARGS)
 	/*
 	 * Now apply the core COPY code's validation logic for more checks.
 	 */
-	ProcessCopyOptions(NULL, NULL, true, other_options, 0, true);
+	ProcessCopyOptions(NULL, NULL, true, other_options);
 
 	/*
 	 * Either filename or program option is required for file_fdw foreign

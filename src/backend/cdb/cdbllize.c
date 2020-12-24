@@ -4,7 +4,7 @@
  *	  Parallelize a PostgreSQL sequential plan tree.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  * This file contains functions to process plan tree, at various stages in
  * planning, to produce a parallelize MPP plan. Outline of the stages,

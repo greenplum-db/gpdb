@@ -6,7 +6,7 @@
  * and merge with upstream.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
@@ -111,7 +111,6 @@ bool        gp_guc_need_restore = false;
 
 char	   *Debug_dtm_action_sql_command_tag;
 
-bool		dev_opt_unsafe_truncate_in_subtransaction = false;
 bool		Debug_print_full_dtm = false;
 bool		Debug_print_snapshot_dtm = false;
 bool		Debug_disable_distributed_snapshot = false;
@@ -172,8 +171,6 @@ bool		debug_walrepl_rcv = false;
 bool		debug_basebackup = false;
 
 int rep_lag_avoidance_threshold = 0;
-
-bool		gp_keep_all_xlog = false;
 
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
 bool		Debug_dtm_action_primary = DEBUG_DTM_ACTION_PRIMARY_DEFAULT;
@@ -1053,21 +1050,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"dev_opt_unsafe_truncate_in_subtransaction", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Pick unsafe truncate instead of safe truncate inside sub-transaction."),
-		 gettext_noop("Usage of this GUC is strongly discouraged and only "
-					  "should be used after understanding the impact of using "
-					  "the same. Setting the GUC comes with cost of losing "
-					  "table data on truncate command despite sub-transaction "
-					  "rollback for table created within transaction."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_DISALLOW_IN_AUTO_FILE
-		},
-		&dev_opt_unsafe_truncate_in_subtransaction,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"debug_print_full_dtm", PGC_SUSET, LOGGING_WHAT,
 			gettext_noop("Prints full DTM information to server log."),
 			NULL,
@@ -1603,17 +1585,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_SUPERUSER_ONLY
 		},
 		&pljava_debug,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_keep_all_xlog", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Do not remove old xlog files."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_keep_all_xlog,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2194,7 +2165,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_indexonlyscan,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 

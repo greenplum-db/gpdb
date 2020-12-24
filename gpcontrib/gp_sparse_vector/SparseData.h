@@ -15,7 +15,7 @@
  * function.  This implies a COPY from the SparseData to the VARLENA.
  *
  * Copyright (c) 2010, Greenplum Software
- * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

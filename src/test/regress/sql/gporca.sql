@@ -236,6 +236,8 @@ select a, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order by
 select 1 from orca.r group by ();
 select a,1 from orca.r group by rollup(a);
 
+select distinct grouping(a) + grouping(b) from orca.m group by rollup(a,b);
+
 -- arrays
 select array[array[a,b]], array[b] from orca.r;
 
@@ -706,7 +708,7 @@ select max(a) from foo group by (select e from bar where bar.e = foo.a);
 -- nested subquery in group by
 select max(a) from foo group by (select g from jazz where foo.a = (select max(a) from foo where c = 1 group by b));
 
--- group by inside groupby inside group by ;S
+-- group by inside groupby inside group by
 select max(a) from foo group by (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h);
 
 -- cte subquery in group by

@@ -288,9 +288,8 @@ extern void DoCopy(ParseState *state, const CopyStmt *stmt,
 				   int stmt_location, int stmt_len,
 				   uint64 *processed);
 
-extern void ProcessCopyOptions(ParseState *pstate, CopyState cstate, bool is_from, List *options,
-                               int num_columns,
-                               bool is_copy);
+extern void ProcessCopyOptions(ParseState *pstate, CopyState cstate, bool is_from, List *options);
+
 extern CopyState BeginCopyFrom(ParseState *pstate, Relation rel, const char *filename,
 							   bool is_program, copy_data_source_cb data_source_cb,
 							   void *data_source_cb_extra,

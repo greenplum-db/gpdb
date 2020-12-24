@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	Base Index Apply operator for Inner and Outer Join;
 //	a variant of inner/outer apply that captures the need to implement a

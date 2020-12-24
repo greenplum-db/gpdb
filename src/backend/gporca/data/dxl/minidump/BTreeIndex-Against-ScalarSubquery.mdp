@@ -313,7 +313,7 @@ SELECT * FROM btree_test WHERE a in (select 1);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="20">
+    <dxl:Plan Id="0" SpaceSize="22">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6.000126" Rows="1.000000" Width="4"/>
@@ -325,7 +325,7 @@ SELECT * FROM btree_test WHERE a in (select 1);
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true">
+        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="4"/>
           </dxl:Properties>

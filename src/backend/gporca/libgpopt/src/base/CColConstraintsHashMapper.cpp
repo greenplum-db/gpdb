@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #include "gpos/common/CAutoRef.h"
 #include "gpopt/base/CColConstraintsHashMapper.h"

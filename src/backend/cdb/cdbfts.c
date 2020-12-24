@@ -4,7 +4,7 @@
  *	  Provides fault tolerance service routines for mpp.
  *
  * Portions Copyright (c) 2003-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

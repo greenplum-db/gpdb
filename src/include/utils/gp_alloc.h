@@ -4,7 +4,7 @@
  *	  This file contains declarations for an allocator that works with
  *	  vmem quota.
  *
- * Copyright (c) 2016-Present Pivotal Software, Inc.
+ * Copyright (c) 2016-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

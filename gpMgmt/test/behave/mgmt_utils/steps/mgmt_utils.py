@@ -1828,6 +1828,19 @@ def impl(context, gppkg_name):
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
 
+@given('the user runs command "{command}" on all hosts without validation')
+@when('the user runs command "{command}" on all hosts without validation')
+@then('the user runs command "{command}" on all hosts without validation')
+def impl(context, command):
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    for hostname in set(hostlist):
+        cmd = Command(name='running command:%s' % command,
+                      cmdStr=command,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=False)
+
 @given('"{gppkg_name}" gppkg files do not exist on any hosts')
 @when('"{gppkg_name}" gppkg files do not exist on any hosts')
 @then('"{gppkg_name}" gppkg files do not exist on any hosts')
@@ -2633,9 +2646,16 @@ def impl(context, table, dbname):
         raise Exception("Unexpected variance for redistributed data in table %s. Relative standard error %f exceeded tolerance factor of %f." %
                 (table, relative_std_error, tolerance))
 
+@then('distribution information from table "{table1}" and "{table2}" in "{dbname}" are the same')
+def impl(context, table1, table2, dbname):
+    distribution_row_count_tbl1 = _get_row_count_per_segment(table1, dbname)
+    distribution_row_count_tbl2 = _get_row_count_per_segment(table2, dbname)
+    if distribution_row_count_tbl1 != distribution_row_count_tbl2:
+        raise Exception("%s and %s have different distribution. Row count of %s is %s and row count of %s is %s" % (table1, table2, table1, distribution_row_count_tbl1, table2, distribution_row_count_tbl2)) 
+
 def _get_row_count_per_segment(table, dbname):
     with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
-        query = "SELECT gp_segment_id,COUNT(i) FROM %s GROUP BY gp_segment_id;" % table
+        query = "SELECT gp_segment_id,COUNT(i) FROM %s GROUP BY gp_segment_id ORDER BY gp_segment_id;" % table
         cursor = dbconn.query(conn, query)
         rows = cursor.fetchall()
     conn.close()

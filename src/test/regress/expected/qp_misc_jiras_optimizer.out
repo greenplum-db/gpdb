@@ -3603,54 +3603,19 @@ SELECT * FROM qp_misc_jiras.one_of_every_data_type ORDER BY id,serial_col;
 
 -- Clean up.
 DROP TABLE IF EXISTS qp_misc_jiras.one_of_every_data_type; 
-create table qp_misc_jiras.tbl7553_test (i int, j int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into qp_misc_jiras.tbl7553_test values(1,2);
-explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000464.50..10000000636.25 rows=6000 width=8)
-   ->  HashAggregate  (cost=10000000464.50..10000000556.25 rows=2000 width=8)
-         Hash Key: i, i
-         Hash Key: i
-         ->  Seq Scan on tbl7553_test  (cost=10000000000.00..10000000321.00 rows=28700 width=8)
- Optimizer: Postgres query optimizer
-(9 rows)
-
-select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
- a | b 
----+---
- 1 | 1
- 1 |  
-(2 rows)
-
-explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
-                                                    QUERY PLAN                                                    
-------------------------------------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=10000002790.97..10000002940.97 rows=2000 width=8)
-   Group Key: j, j, (GROUPINGSET_ID())
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000002790.97..10000002875.97 rows=6000 width=8)
-         Merge Key: j, (GROUPINGSET_ID())
-         ->  Sort  (cost=10000002790.97..10000002795.97 rows=2000 width=8)
-               Sort Key: j, (GROUPINGSET_ID())
-               ->  Partial GroupAggregate  (cost=10000002446.06..10000002681.31 rows=2000 width=8)
-                     Group Key: j, j
-                     Group Key: j
-                     ->  Sort  (cost=10000002446.06..10000002517.81 rows=28700 width=8)
-                           Sort Key: j
-                           ->  Seq Scan on tbl7553_test  (cost=10000000000.00..10000000321.00 rows=28700 width=8)
- Optimizer: Postgres query optimizer
-(16 rows)
-
-select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
- a | b 
----+---
- 2 | 2
- 2 |  
-(2 rows)
-
-drop table qp_misc_jiras.tbl7553_test;
+-- FIXME: This test file is ported from cdbfast to ICG via commit
+-- 993bc9c911. The following case is just test grouping sets
+-- Now we have some test (regress/groupingsets) cases cover this.
+-- So I decide to remove them here. Leave a FIXME here since I think this
+-- test file needs to review to see if anything might be also
+-- removed.
+-- create table qp_misc_jiras.tbl7553_test (i int, j int);
+-- insert into qp_misc_jiras.tbl7553_test values(1,2);
+-- explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
+-- select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
+-- explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
+-- select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
+-- drop table qp_misc_jiras.tbl7553_test;
 -- Check that a table created with CTAS "inherits" the distribution key from
 -- the source table.
 create table qp_misc_jiras.tbl7268_foo (a varchar(15), b varchar(15)) distributed by (b);

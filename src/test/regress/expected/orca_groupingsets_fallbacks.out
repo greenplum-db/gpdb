@@ -1,0 +1,144 @@
+--
+-- One purpose of these tests is to make sure that ORCA can gracefully fall
+-- back for these queries. To detect that, turn optimizer_trace_fallback on,
+-- and watch for "falling back to planner" messages.
+--
+set optimizer_trace_fallback='on';
+create temp table gstest1 (a int, b int, c int, d int, v int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into gstest1 values (1, 5, 10, 0, 100);
+insert into gstest1 values (1, 42, 20, 7, 200);
+insert into gstest1 values (2, 5, 30, 21, 300);
+insert into gstest1 values (2, 42, 40, 53, 400);
+-- Orca falls back due to Cube
+select a, b, c, sum(v) from gstest1 group by cube(a, b, c);
+ a | b  | c  | sum  
+---+----+----+------
+ 1 |  5 | 10 |  100
+ 1 |  5 |    |  100
+ 1 | 42 | 20 |  200
+ 1 | 42 |    |  200
+ 1 |    |    |  300
+ 2 |  5 | 30 |  300
+ 2 |  5 |    |  300
+ 2 | 42 | 40 |  400
+ 2 | 42 |    |  400
+ 2 |    |    |  700
+   |    |    | 1000
+   |    | 30 |  300
+   |    | 10 |  100
+   |    | 40 |  400
+   |    | 20 |  200
+ 2 |    | 30 |  300
+ 1 |    | 20 |  200
+ 2 |    | 40 |  400
+ 1 |    | 10 |  100
+   |  5 |    |  400
+   | 42 |    |  600
+   |  5 | 30 |  300
+   | 42 | 20 |  200
+   | 42 | 40 |  400
+   |  5 | 10 |  100
+(25 rows)
+
+-- Orca falls back due to multiple grouping sets specifications
+select sum(v), b, a, c from gstest1 group by c, grouping sets ((a, b), ());
+ sum | b  | a | c  
+-----+----+---+----
+ 400 | 42 | 2 | 40
+ 300 |  5 | 2 | 30
+ 200 | 42 | 1 | 20
+ 300 |    |   | 30
+ 400 |    |   | 40
+ 200 |    |   | 20
+ 100 |  5 | 1 | 10
+ 100 |    |   | 10
+(8 rows)
+
+select sum(v), b, a, c, d from gstest1 group by grouping sets(a, b), rollup(c, d);
+ sum | b  | a | c  | d  
+-----+----+---+----+----
+ 100 |    | 1 | 10 |  0
+ 100 |    | 1 | 10 |   
+ 200 |    | 1 | 20 |  7
+ 200 |    | 1 | 20 |   
+ 300 |    | 1 |    |   
+ 300 |    | 2 | 30 | 21
+ 300 |    | 2 | 30 |   
+ 400 |    | 2 | 40 | 53
+ 400 |    | 2 | 40 |   
+ 700 |    | 2 |    |   
+ 100 |  5 |   | 10 |  0
+ 100 |  5 |   | 10 |   
+ 300 |  5 |   | 30 | 21
+ 300 |  5 |   | 30 |   
+ 400 |  5 |   |    |   
+ 200 | 42 |   | 20 |  7
+ 200 | 42 |   | 20 |   
+ 400 | 42 |   | 40 | 53
+ 400 | 42 |   | 40 |   
+ 600 | 42 |   |    |   
+(20 rows)
+
+-- Orca falls back due to nested grouping sets
+select sum(v), b, a, c, d from gstest1 group by grouping sets(a, b, rollup(c, d));
+ sum  | b  | a | c  | d  
+------+----+---+----+----
+ 1000 |    |   |    |   
+  300 |    | 1 |    |   
+  700 |    | 2 |    |   
+  400 |  5 |   |    |   
+  600 | 42 |   |    |   
+  100 |    |   | 10 |  0
+  400 |    |   | 40 | 53
+  300 |    |   | 30 | 21
+  200 |    |   | 20 |  7
+  300 |    |   | 30 |   
+  100 |    |   | 10 |   
+  400 |    |   | 40 |   
+  200 |    |   | 20 |   
+(13 rows)
+
+-- Orca falls back when all grouping sets contain the primary key and the target
+-- list contains a column that does not appear in any grouping set
+create temp table gstest2 (a int primary key, b int, c int, d int, v int);
+insert into gstest2 values (1, 1, 1, 1, 1);
+insert into gstest2 values (2, 2, 2, 2, 1);
+select d from gstest2 group by grouping sets ((a,b), (a));
+ d 
+---
+ 2
+ 2
+ 1
+ 1
+(4 rows)
+
+-- Orca falls back due to HAVING clause with outer references
+select v.c, (select count(*) from gstest1 group by () having v.c) from (values (false),(true)) v(c);
+ c | count 
+---+-------
+ f |      
+ t |     4
+(2 rows)
+
+-- Orca falls back due to grouping function with multiple arguments
+select a, b, grouping(a,b), sum(v), count(*), max(v) from gstest1 group by rollup (a,b);
+ a | b  | grouping | sum  | count | max 
+---+----+----------+------+-------+-----
+ 1 |  5 |        0 |  100 |     1 | 100
+ 1 | 42 |        0 |  200 |     1 | 200
+ 1 |    |        1 |  300 |     2 | 200
+ 2 |  5 |        0 |  300 |     1 | 300
+ 2 | 42 |        0 |  400 |     1 | 400
+ 2 |    |        1 |  700 |     2 | 400
+   |    |        3 | 1000 |     4 | 400
+(7 rows)
+
+-- Orca falls back due to grouping function with outer references
+select (select grouping(a) from (values(1)) v2(c)) from (values(1, 2)) v1(a, b) group by (a, b);
+ grouping 
+----------
+        0
+(1 row)
+

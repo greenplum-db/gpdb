@@ -95,7 +95,7 @@
     <dxl:Plan Id="0" SpaceSize="32">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3.128906" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000534" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="a">
@@ -115,7 +115,7 @@
         </dxl:HashCondList>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.017578" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000009" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="a">
@@ -126,7 +126,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="">
@@ -139,7 +139,7 @@
         </dxl:Result>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.017578" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000009" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="3" Alias="b">
@@ -150,7 +150,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="">

@@ -249,7 +249,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:DMLUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="7.324219" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.101765" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -275,7 +275,7 @@
         </dxl:TableDescriptor>
         <dxl:PartitionSelector RelationMdid="0.224805.1.1" PartitionLevels="1" ScanId="0">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.222656" Rows="2.000000" Width="26"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000202" Rows="2.000000" Width="26"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="b">
@@ -304,14 +304,14 @@
             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
           </dxl:ResidualFilter>
           <dxl:PropagationExpression>
-            <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
           </dxl:PropagationExpression>
           <dxl:PrintableFilter>
             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
           </dxl:PrintableFilter>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="5.171875" Rows="2.000000" Width="22"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000176" Rows="2.000000" Width="22"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="b">
@@ -339,7 +339,7 @@
             </dxl:HashExprList>
             <dxl:Split DeleteColumns="0,1" InsertColumns="9,1" ActionCol="10" CtidCol="2" SegmentIdCol="8" PreserveOids="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="4.150391" Rows="2.000000" Width="22"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000107" Rows="2.000000" Width="22"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="b">
@@ -360,7 +360,7 @@
               </dxl:ProjList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="3.107422" Rows="1.000000" Width="22"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000085" Rows="1.000000" Width="22"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="b">
@@ -383,7 +383,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Sequence>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2.085938" Rows="1.000000" Width="22"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000074" Rows="1.000000" Width="22"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="b">
@@ -422,7 +422,7 @@
                   </dxl:PartitionSelector>
                   <dxl:DynamicTableScan PartIndexId="1">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2.085938" Rows="1.000000" Width="22"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000074" Rows="1.000000" Width="22"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="b">

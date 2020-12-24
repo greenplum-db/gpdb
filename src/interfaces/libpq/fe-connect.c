@@ -3,7 +3,7 @@
  * fe-connect.c
  *	  functions related to setting up a connection to the backend
  *
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -2484,16 +2484,6 @@ keep_going:						/* We will come back to here until there is
 					{
 						conn->try_next_host = true;
 						goto keep_going;
-					}
-
-					if (addr_cur == NULL)
-					{
-						/*
-						 * Ooops, no more addresses.  An appropriate error
-						 * message is already set up, so just set the right
-						 * status.
-						 */
-						goto error_return;
 					}
 
 					/* Remember current address for possible error msg */

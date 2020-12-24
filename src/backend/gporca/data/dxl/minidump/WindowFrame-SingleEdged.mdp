@@ -6,7 +6,7 @@
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:CostModelConfig CostModelType="0" SegmentsForCosting="2"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="2"/>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647"/>
       <dxl:TraceFlags Value="103027,101013,103001,103016,103022,104002"/>
     </dxl:OptimizerConfig>
@@ -260,7 +260,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Window PartitionColumns="">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.685580" Rows="10.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.001178" Rows="10.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="cn">
@@ -275,7 +275,7 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3.529330" Rows="10.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.001098" Rows="10.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="cn">
@@ -288,7 +288,7 @@
           </dxl:SortingColumnList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2.490268" Rows="10.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000739" Rows="10.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="cn">
@@ -303,7 +303,7 @@
             <dxl:LimitOffset/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.039062" Rows="10.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000137" Rows="10.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="cn">

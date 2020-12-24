@@ -2,7 +2,7 @@
  * nodeTupleSplit.c
  *	  Implementation of nodeTupleSplit.
  *
- * Portions Copyright (c) 2019-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2019-Present VMware, Inc. or its affiliates.
  *
  * IDENTIFICATION
  *	    src/backend/executor/nodeTupleSplit.c

@@ -4,7 +4,7 @@
  *	  In Memory Tuple format
  *
  * Portions Copyright (c) 2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

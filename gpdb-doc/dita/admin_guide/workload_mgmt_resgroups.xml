@@ -554,7 +554,7 @@ SET statement_mem='10 MB';</codeblock></p>
   <topic id="topic999" otherprops="pivotal" xml:lang="en">
     <title>Using Greenplum Command Center to Manage Resource Groups</title>
     <body>
-      <p>Using Pivotal Greenplum Command Center, an administrator can create and manage resource
+      <p>Using Tanzu Greenplum Command Center, an administrator can create and manage resource
         groups, change roles' resource groups, and create workload management rules. </p>
       <p>Workload management assignment rules assign transactions to different resource groups based
         on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the

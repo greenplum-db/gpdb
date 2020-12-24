@@ -47,7 +47,7 @@
       <parml id="s3-exe-path">
         <plentry>
           <pt>executablepath</pt>
-          <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
+          <pd>Required. Absolute path to the plugin executable. For example, the Greenplum
             Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The
             plugin must be in the same location on every Greenplum Database host.</pd>
         </plentry>

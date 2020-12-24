@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CParseHandlerCostModelTest_H
 #define GPOPT_CParseHandlerCostModelTest_H

@@ -2646,7 +2646,6 @@ insert into trig_table values
   (3, 'three a'),
   (3, 'three b');
 update refd_table set a = 11 where b = 'one';
-ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 select * from trig_table;
  a |    b    
 ---+---------

@@ -143,19 +143,22 @@ GROUP BY b
 HAVING max(c) = '31'
 $$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE) :qry;
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Finalize HashAggregate
-   Output: sum(a) FILTER (WHERE false), b
-   Group Key: test_combinefn_null.b
-   Filter: (max(test_combinefn_null.c) = '31'::bpchar)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL sum(a) FILTER (WHERE false)), (PARTIAL max(c))
-         ->  Partial HashAggregate
-               Output: b, PARTIAL sum(a) FILTER (WHERE false), PARTIAL max(c)
-               Group Key: test_combinefn_null.b
-               ->  Seq Scan on public.test_combinefn_null
-                     Output: a, b, c
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (sum(a) FILTER (WHERE false)), b
+   ->  Finalize HashAggregate
+         Output: sum(a) FILTER (WHERE false), b
+         Group Key: test_combinefn_null.b
+         Filter: (max(test_combinefn_null.c) = '31'::bpchar)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: b, (PARTIAL sum(a) FILTER (WHERE false)), (PARTIAL max(c))
+               Hash Key: b
+               ->  Partial HashAggregate
+                     Output: b, PARTIAL sum(a) FILTER (WHERE false), PARTIAL max(c)
+                     Group Key: test_combinefn_null.b
+                     ->  Seq Scan on public.test_combinefn_null
+                           Output: a, b, c
  Optimizer: Postgres query optimizer
  Settings: enable_indexscan=off, enable_seqscan=on, enable_sort=off, optimizer=off
 (13 rows)
@@ -175,19 +178,22 @@ GROUP BY b
 HAVING max(c) = '31'
 $$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE) :qry;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
- Finalize HashAggregate
-   Output: var_pop((a)::integer) FILTER (WHERE false), b
-   Group Key: test_combinefn_null.b
-   Filter: (max(test_combinefn_null.c) = '31'::bpchar)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL var_pop((a)::integer) FILTER (WHERE false)), (PARTIAL max(c))
-         ->  Partial HashAggregate
-               Output: b, PARTIAL var_pop((a)::integer) FILTER (WHERE false), PARTIAL max(c)
-               Group Key: test_combinefn_null.b
-               ->  Seq Scan on public.test_combinefn_null
-                     Output: a, b, c
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (var_pop((a)::integer) FILTER (WHERE false)), b
+   ->  Finalize HashAggregate
+         Output: var_pop((a)::integer) FILTER (WHERE false), b
+         Group Key: test_combinefn_null.b
+         Filter: (max(test_combinefn_null.c) = '31'::bpchar)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: b, (PARTIAL var_pop((a)::integer) FILTER (WHERE false)), (PARTIAL max(c))
+               Hash Key: b
+               ->  Partial HashAggregate
+                     Output: b, PARTIAL var_pop((a)::integer) FILTER (WHERE false), PARTIAL max(c)
+                     Group Key: test_combinefn_null.b
+                     ->  Seq Scan on public.test_combinefn_null
+                           Output: a, b, c
  Optimizer: Postgres query optimizer
  Settings: enable_indexscan=off, enable_seqscan=on, enable_sort=off, optimizer=off
 (13 rows)
@@ -207,19 +213,22 @@ GROUP BY b
 HAVING max(c) = '31'
 $$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE) :qry;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Finalize HashAggregate
-   Output: sum((a)::numeric) FILTER (WHERE false), b
-   Group Key: test_combinefn_null.b
-   Filter: (max(test_combinefn_null.c) = '31'::bpchar)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL sum((a)::numeric) FILTER (WHERE false)), (PARTIAL max(c))
-         ->  Partial HashAggregate
-               Output: b, PARTIAL sum((a)::numeric) FILTER (WHERE false), PARTIAL max(c)
-               Group Key: test_combinefn_null.b
-               ->  Seq Scan on public.test_combinefn_null
-                     Output: a, b, c
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (sum((a)::numeric) FILTER (WHERE false)), b
+   ->  Finalize HashAggregate
+         Output: sum((a)::numeric) FILTER (WHERE false), b
+         Group Key: test_combinefn_null.b
+         Filter: (max(test_combinefn_null.c) = '31'::bpchar)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: b, (PARTIAL sum((a)::numeric) FILTER (WHERE false)), (PARTIAL max(c))
+               Hash Key: b
+               ->  Partial HashAggregate
+                     Output: b, PARTIAL sum((a)::numeric) FILTER (WHERE false), PARTIAL max(c)
+                     Group Key: test_combinefn_null.b
+                     ->  Seq Scan on public.test_combinefn_null
+                           Output: a, b, c
  Optimizer: Postgres query optimizer
  Settings: enable_indexscan=off, enable_seqscan=on, enable_sort=off, optimizer=off
 (13 rows)
@@ -239,19 +248,22 @@ GROUP BY b
 HAVING max(c) = '31'
 $$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE) :qry;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
- Finalize HashAggregate
-   Output: var_pop((a)::numeric) FILTER (WHERE false), b
-   Group Key: test_combinefn_null.b
-   Filter: (max(test_combinefn_null.c) = '31'::bpchar)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL var_pop((a)::numeric) FILTER (WHERE false)), (PARTIAL max(c))
-         ->  Partial HashAggregate
-               Output: b, PARTIAL var_pop((a)::numeric) FILTER (WHERE false), PARTIAL max(c)
-               Group Key: test_combinefn_null.b
-               ->  Seq Scan on public.test_combinefn_null
-                     Output: a, b, c
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (var_pop((a)::numeric) FILTER (WHERE false)), b
+   ->  Finalize HashAggregate
+         Output: var_pop((a)::numeric) FILTER (WHERE false), b
+         Group Key: test_combinefn_null.b
+         Filter: (max(test_combinefn_null.c) = '31'::bpchar)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: b, (PARTIAL var_pop((a)::numeric) FILTER (WHERE false)), (PARTIAL max(c))
+               Hash Key: b
+               ->  Partial HashAggregate
+                     Output: b, PARTIAL var_pop((a)::numeric) FILTER (WHERE false), PARTIAL max(c)
+                     Group Key: test_combinefn_null.b
+                     ->  Seq Scan on public.test_combinefn_null
+                           Output: a, b, c
  Optimizer: Postgres query optimizer
  Settings: enable_indexscan=off, enable_seqscan=on, enable_sort=off, optimizer=off
 (13 rows)

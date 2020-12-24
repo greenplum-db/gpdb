@@ -4,7 +4,7 @@
 	<topicref href="../../7-0/homenav.html" scope="external"
 		navtitle="Greenplum Database® 7.0 Beta Documentation" format="html" otherprops="oss-only"/>
 	<topicref href="../../7-0/homenav.html" scope="external"
-		navtitle="Pivotal Greenplum® 7.0 Beta Documentation" format="html" otherprops="pivotal"/>
+		navtitle="Tanzu Greenplum® 7.0 Beta Documentation" format="html" otherprops="pivotal"/>
 	<topicref href="ref_guide.xml">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>

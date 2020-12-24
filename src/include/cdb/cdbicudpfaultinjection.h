@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2011, Greenplum Inc.
  * Portions Copyright (c) 2011-2012, EMC Corporation
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

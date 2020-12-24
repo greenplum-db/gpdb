@@ -29,7 +29,7 @@
  * GPPC 1.2 is compatible with Greenplum Database 4.2.2.0 and above.
  *
  * Portions Copyright (c) 2012, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

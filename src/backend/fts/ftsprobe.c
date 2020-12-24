@@ -4,7 +4,7 @@
  *	  Implementation of segment probing interface
  *
  * Portions Copyright (c) 2006-2011, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

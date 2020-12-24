@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Pivotal Software, Inc.
+# Copyright (c) 2015, VMware, Inc. or its affiliates.
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project(gpopt_master LANGUAGES CXX C)

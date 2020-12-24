@@ -3,7 +3,7 @@
  * external.c
  *	  routines for getting external info from external table fdw.
  *
- * Portions Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  * IDENTIFICATION
  *	    src/backend/access/external/external.c

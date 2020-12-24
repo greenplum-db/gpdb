@@ -5,7 +5,7 @@
  *
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 2001-2019, PostgreSQL Global Development Group
  *
  * src/include/executor/instrument.h

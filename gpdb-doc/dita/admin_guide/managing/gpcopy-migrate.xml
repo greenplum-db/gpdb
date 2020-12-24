@@ -13,8 +13,8 @@
       (or later) system to a 5.9 (or later) or a 6.x Greenplum system, or from a Greenplum Database
       version 5.9+ system to a Greenplum 6.x system.</p>
     <note> The <codeph>gpcopy</codeph> utility is available as a separate download for the
-      commercial release of Pivotal Greenplum Database. See the <xref
-        href="https://gpdb.docs.pivotal.io/gpcopy" format="html" scope="external">Pivotal gpcopy
+      commercial release of Tanzu Greenplum. See the <xref
+        href="https://gpdb.docs.pivotal.io/gpcopy" format="html" scope="external">Tanzu Greenplum Data Copy Utility
         Documentation</xref>.</note>
   </body>
 </topic>

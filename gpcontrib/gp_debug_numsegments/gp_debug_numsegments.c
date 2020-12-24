@@ -4,7 +4,7 @@
  *	  Debugging helpers to get / set default numsegment when creating tables.
  *
  *
- * Copyright (c) 2018-Present Pivotal Software, Inc.
+ * Copyright (c) 2018-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------

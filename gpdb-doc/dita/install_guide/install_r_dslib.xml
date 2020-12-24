@@ -8,7 +8,7 @@
       collection of data science-related R libraries that can be used with the Greenplum Database
       PL/R language. You can download these libraries in <codeph>.gppkg</codeph> format from <xref
         href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-        >Pivotal Network</xref>.</p>
+        >VMware Tanzu Network</xref>.</p>
     <p>This chapter contains the following information:</p>
     <ul>
       <li id="py2177">

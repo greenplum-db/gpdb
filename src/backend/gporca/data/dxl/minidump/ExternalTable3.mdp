@@ -178,7 +178,7 @@
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:ExternalScan>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="7812.500000" Rows="1000000.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="451.900000" Rows="1000000.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="x">

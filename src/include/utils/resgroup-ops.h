@@ -3,7 +3,7 @@
  * resgroup-ops.h
  *	  GPDB resource group definitions.
  *
- * Copyright (c) 2017 Pivotal Software, Inc.
+ * Copyright (c) 2017 VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

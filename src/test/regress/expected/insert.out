@@ -576,11 +576,18 @@ alter table mlparted4 drop a;
 alter table mlparted4 add a int not null;
 alter table mlparted4 set distributed by (a);
 alter table mlparted attach partition mlparted4 for values from (1, 30) to (1, 40);
--- this upstream query doesn't work on GPDB at the moment.
 with ins (a, b, c) as
   (insert into mlparted (b, a) select s.a, 1 from generate_series(2, 39) s(a) returning tableoid::regclass, *)
   select a, b, min(c), max(c) from ins group by a, b order by 1;
-ERROR:  INSERT/UPDATE/DELETE must be executed by a writer segworker group
+     a      | b | min | max 
+------------+---+-----+-----
+ mlparted11 | 1 |   2 |   4
+ mlparted12 | 1 |   5 |   9
+ mlparted2  | 1 |  10 |  19
+ mlparted3  | 1 |  20 |  29
+ mlparted4  | 1 |  30 |  39
+(5 rows)
+
 alter table mlparted add c text;
 create table mlparted5 (c text, a int not null, b int not null) partition by list (c);
 alter table mlparted5 set distributed by (a);

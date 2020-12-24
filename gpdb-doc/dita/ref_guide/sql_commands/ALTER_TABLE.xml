@@ -339,7 +339,7 @@ where <varname>action</varname> is one of:
                                         tables.</note></li>
                                 <li id="ay137152"><b>SET WITHOUT OIDS</b> — Removes the OID system
                                         column from the table.<note type="warning"><ph
-                                                  otherprops="pivotal">Pivotal does not support
+                                                  otherprops="pivotal">VMware does not support
                                                   using <codeph>SET WITH OIDS</codeph> or
                                                   <codeph>oids=TRUE</codeph> to assign an OID system
                                                   column. </ph>On large tables, such as those in a

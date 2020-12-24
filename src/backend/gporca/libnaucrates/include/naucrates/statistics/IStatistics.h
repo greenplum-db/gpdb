@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		IStatistics.h
@@ -103,6 +103,12 @@ public:
 
 	// how many rows
 	virtual CDouble Rows() const = 0;
+
+	// number of blocks in the relation (not always up to-to-date)
+	virtual ULONG RelPages() const = 0;
+
+	// number of all-visible blocks in the relation (not always up-to-date)
+	virtual ULONG RelAllVisible() const = 0;
 
 	// is statistics on an empty input
 	virtual BOOL IsEmpty() const = 0;

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Pivotal Software, Inc. All Rights Reserved
+# Copyright (c) 2015 VMware, Inc. or its affiliates. All Rights Reserved
 #
-# This software contains the intellectual property of Pivotal Software, Inc.
-# or is licensed to Pivotal Software, Inc. from third parties. Use of this
+# This software contains the intellectual property of VMware, Inc. or its affiliates.
+# or is licensed to VMware, Inc. or its affiliates. from third parties. Use of this
 # software and the intellectual property contained therein is expressly
 # limited to the terms and conditions of the License Agreement under which
-# it is provided by or on behalf of Pivotal Software, Inc.
+# it is provided by or on behalf of VMware, Inc. or its affiliates.
 
 
 # import mainUtils FIRST to get python version check

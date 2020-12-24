@@ -2,7 +2,7 @@
  *
  * gp_dump_oids.c
  *
- * Copyright (c) 2015-Present Pivotal Software, Inc.
+ * Copyright (c) 2015-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

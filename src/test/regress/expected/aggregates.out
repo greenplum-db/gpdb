@@ -1146,14 +1146,16 @@ explain (costs off) select * from t1 group by a,b,c,d;
 
 -- No removal can happen if the complete PK is not present in GROUP BY
 explain (costs off) select a,c from t1 group by a,c,d;
-                   QUERY PLAN                   
-------------------------------------------------
- Finalize HashAggregate
-   Group Key: a, c, d
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial HashAggregate
-               Group Key: a, c, d
-               ->  Seq Scan on t1
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Finalize HashAggregate
+         Group Key: a, c, d
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: a, c, d
+               ->  Partial HashAggregate
+                     Group Key: a, c, d
+                     ->  Seq Scan on t1
  Optimizer: Postgres query optimizer
 (7 rows)
 

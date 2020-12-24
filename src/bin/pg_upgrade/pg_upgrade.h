@@ -3,7 +3,7 @@
 /*
  *	pg_upgrade.h
  *
- *	Portions Copyright (c) 2016-Present, Pivotal Software Inc
+ *	Portions Copyright (c) 2016-Present, VMware, Inc. or its affiliates
  *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *	src/bin/pg_upgrade/pg_upgrade.h
  */

@@ -3,7 +3,7 @@
 #      PostgreSQL error codes
 #
 # Portions Copyright (c) 2005-2008, Greenplum inc.
-# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+# Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
 # Copyright (c) 2003-2019, PostgreSQL Global Development Group
 #
 # This list serves as the basis for generating source files containing error

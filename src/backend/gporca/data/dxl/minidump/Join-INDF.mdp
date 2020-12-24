@@ -347,7 +347,7 @@ select * from foo, foo2 where foo.a is not distinct from foo2.a;
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2.402344" Rows="9.999994" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.003542" Rows="9.999994" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -364,7 +364,7 @@ select * from foo, foo2 where foo.a is not distinct from foo2.a;
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1.343750" Rows="9.999994" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.003003" Rows="9.999994" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -389,7 +389,7 @@ select * from foo, foo2 where foo.a is not distinct from foo2.a;
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.085938" Rows="22.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000230" Rows="22.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -416,7 +416,7 @@ select * from foo, foo2 where foo.a is not distinct from foo2.a;
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.007812" Rows="4.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="4.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">

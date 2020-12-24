@@ -3,7 +3,7 @@
  * external.h
  *	  routines for getting external info from external table foreign table.
  *
- * Portions Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

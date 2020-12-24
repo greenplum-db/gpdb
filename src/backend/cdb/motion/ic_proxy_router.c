@@ -6,7 +6,7 @@
  *
  * A router routes a packet to the correct target, a client or a peer.
  *
- * Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------

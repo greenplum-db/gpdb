@@ -4,7 +4,7 @@
  *	  definitions for Greenplum-specific global variables
  *
  * Portions Copyright (c) 2003-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

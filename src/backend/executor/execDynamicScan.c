@@ -3,7 +3,7 @@
  * execDynamicScan.c
  *	  Support routines for iterating through dynamically chosen partitions of a relation
  *
- * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

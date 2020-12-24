@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 
 #include "naucrates/dxl/CCostModelConfigSerializer.h"
 #include "naucrates/dxl/xml/dxltokens.h"
@@ -14,11 +14,6 @@ using gpos::CAutoRef;
 void
 CCostModelConfigSerializer::Serialize(CXMLSerializer &xml_serializer) const
 {
-	if (ICostModel::EcmtGPDBLegacy == m_cost_model->Ecmt())
-	{
-		return;
-	}
-
 	xml_serializer.OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenCostModelConfig));

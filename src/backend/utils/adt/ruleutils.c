@@ -333,7 +333,6 @@ static char *pg_get_partkeydef_worker(Oid relid, int prettyFlags,
 									  bool attrsOnly, bool missing_ok);
 static char *pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 										 int prettyFlags, bool missing_ok);
-static text *pg_get_expr_internal(text *expr, Oid relid, bool pretty, bool trylock);
 static text *pg_get_expr_worker(text *expr, Oid relid, const char *relname,
 								int prettyFlags);
 static int	print_function_arguments(StringInfo buf, HeapTuple proctup,
@@ -2368,48 +2367,12 @@ decompile_column_index_array(Datum column_index_array, Oid relId,
 Datum
 pg_get_expr(PG_FUNCTION_ARGS)
 {
-	text	*expr = pg_get_expr_internal(PG_GETARG_TEXT_PP(0),
-										 PG_GETARG_INT32(1),
-										 false, false);
-	if (expr)
-		PG_RETURN_TEXT_P(expr);
-	else
-		PG_RETURN_NULL();
-}
+	text	   *expr = PG_GETARG_TEXT_PP(0);
+	Oid			relid = PG_GETARG_OID(1);
+	int			prettyFlags;
+	char	   *relname;
 
-Datum
-pg_get_expr_ext(PG_FUNCTION_ARGS)
-{
-	text	*expr = pg_get_expr_internal(PG_GETARG_TEXT_PP(0),
-										 PG_GETARG_INT32(1),
-										 PG_GETARG_BOOL(2),
-										 false);
-	if (expr)
-		PG_RETURN_TEXT_P(expr);
-	else
-		PG_RETURN_NULL();
-}
-
-Datum
-pg_get_expr_ext_lock(PG_FUNCTION_ARGS)
-{
-	text	*expr = pg_get_expr_internal(PG_GETARG_TEXT_PP(0),
-										 PG_GETARG_INT32(1),
-										 PG_GETARG_BOOL(2),
-										 PG_GETARG_BOOL(3));
-	if (expr)
-		PG_RETURN_TEXT_P(expr);
-	else
-		PG_RETURN_NULL();
-}
-
-static text *
-pg_get_expr_internal(text *expr, Oid relid, bool pretty, bool trylock)
-{
-	char		*relname;
-	Relation	rel = NULL;
-	text		*result;
-	int			prettyFlags = pretty ? (PRETTYFLAG_PAREN | PRETTYFLAG_INDENT | PRETTYFLAG_SCHEMA) : PRETTYFLAG_INDENT;
+	prettyFlags = PRETTYFLAG_INDENT;
 
 	if (OidIsValid(relid))
 	{
@@ -2423,37 +2386,37 @@ pg_get_expr_internal(text *expr, Oid relid, bool pretty, bool trylock)
 		 * examining catalog entries for just-deleted relations.
 		 */
 		if (relname == NULL)
-			return NULL;
+			PG_RETURN_NULL();
 	}
 	else
 		relname = NULL;
 
-	/*
-	 * CDB: hold the AccessShareLock in case some transactions drop it concurrently.
-	 *
-	 * Since here, if the table that the relid tells is dropped, an error will raise
-	 * later when opening the relation to get column names.
-	 *
-	 * pg_get_expr() is used by GPDB add-on view 'pg_partitions' which is widely
-	 * used by regression tests for partition tables. Lots of parallel test cases
-	 * issue view pg_partitions and drop partitions concurrently, so those cases
-	 * are very flaky. Serialize test cases will cost more testing time and be
-	 * fragile, so GPDB holds a AccessShareLock here to make tests stable.
-	 */
-	if (trylock)
+	PG_RETURN_TEXT_P(pg_get_expr_worker(expr, relid, relname, prettyFlags));
+}
+
+Datum
+pg_get_expr_ext(PG_FUNCTION_ARGS)
+{
+	text	   *expr = PG_GETARG_TEXT_PP(0);
+	Oid			relid = PG_GETARG_OID(1);
+	bool		pretty = PG_GETARG_BOOL(2);
+	int			prettyFlags;
+	char	   *relname;
+
+	prettyFlags = pretty ? (PRETTYFLAG_PAREN | PRETTYFLAG_INDENT | PRETTYFLAG_SCHEMA) : PRETTYFLAG_INDENT;
+
+	if (OidIsValid(relid))
 	{
-		rel = try_relation_open(relid, AccessShareLock, false);
-
-		if (!rel)
-			return NULL;
+		/* Get the name for the relation */
+		relname = get_rel_name(relid);
+		/* See notes above */
+		if (relname == NULL)
+			PG_RETURN_NULL();
 	}
+	else
+		relname = NULL;
 
-	result = pg_get_expr_worker(expr, relid, relname, prettyFlags);
-
-	if (trylock)
-		relation_close(rel, AccessShareLock);
-
-	return result;
+	PG_RETURN_TEXT_P(pg_get_expr_worker(expr, relid, relname, prettyFlags));
 }
 
 static text *

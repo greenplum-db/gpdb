@@ -3,7 +3,7 @@
  * gp_instrument_shmem.c
  *    Functions for diagnos Instrumentation Shmem slots
  *
- * Copyright (c) 2017-Present Pivotal Software, Inc.
+ * Copyright (c) 2017-Present VMware, Inc. or its affiliates.
  *
  *-------------------------------------------------------------------------
 */

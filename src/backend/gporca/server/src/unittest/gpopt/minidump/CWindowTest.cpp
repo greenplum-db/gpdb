@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software
+//	Copyright (C) 2016 VMware, Inc. or its affiliates
 //---------------------------------------------------------------------------
 #include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/minidump/CWindowTest.h"

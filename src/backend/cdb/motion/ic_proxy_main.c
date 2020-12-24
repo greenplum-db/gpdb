@@ -6,7 +6,7 @@
  *	  clients, it also establish the peer connections.
  *
  *
- * Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------
@@ -177,7 +177,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	uv_tcp_init(loop, listener);
 	uv_tcp_nodelay(listener, true);
 
-	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->addr, 0);
+	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->sockaddr, 0);
 	if (ret < 0)
 	{
 		ic_proxy_log(WARNING, "ic-proxy-server: tcp: fail to bind: %s",

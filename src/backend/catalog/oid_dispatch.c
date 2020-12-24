@@ -65,7 +65,7 @@
  * in the restore process be preassigned, a separate list of all such OIDs is
  * maintained and queried before assigning a new non-preassigned OID.
  *
- * Portions Copyright 2016-Present Pivotal Software, Inc.
+ * Portions Copyright 2016-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *

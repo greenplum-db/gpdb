@@ -8,7 +8,7 @@
  *	 cleanup is finished, the runaway cleaner also informs the red zone handler
  *	 so that a new runaway session can be chosen if necessary.
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

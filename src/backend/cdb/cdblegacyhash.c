@@ -8,7 +8,7 @@
  * compatible with the "cdbhash" functions in GPDB 5 and below.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -111,6 +111,7 @@ Datum cdblegacyhash_float8(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_numeric(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_char(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_text(PG_FUNCTION_ARGS);
+Datum cdblegacyhash_bpchar(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_bytea(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_name(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_oid(PG_FUNCTION_ARGS);
@@ -278,6 +279,7 @@ isLegacyCdbHashFunction(Oid funcid)
 		case F_CDBLEGACYHASH_NUMERIC:
 		case F_CDBLEGACYHASH_CHAR:
 		case F_CDBLEGACYHASH_TEXT:
+		case F_CDBLEGACYHASH_BPCHAR:
 		case F_CDBLEGACYHASH_BYTEA:
 		case F_CDBLEGACYHASH_NAME:
 		case F_CDBLEGACYHASH_OID:
@@ -427,6 +429,12 @@ cdblegacyhash_text(PG_FUNCTION_ARGS)
 	PG_FREE_IF_COPY(text_buf, 0);
 
 	PG_RETURN_UINT32(hash);
+}
+
+Datum
+cdblegacyhash_bpchar(PG_FUNCTION_ARGS)
+{
+	return cdblegacyhash_text(fcinfo);
 }
 
 Datum

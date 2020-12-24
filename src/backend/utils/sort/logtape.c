@@ -706,17 +706,15 @@ LogicalTapeSetCreate(int ntapes, TapeShare *shared, SharedFileSet *fileset,
 	else if (fileset)
 	{
 		char		filename[MAXPGPATH];
+		workfile_set *work_set;
 
 		pg_itoa(worker, filename);
-		lts->pfile = BufFileCreateShared(fileset, filename);
+		work_set = workfile_mgr_create_set("LogicalTape", filename, false /* hold pin */);
+		lts->pfile = BufFileCreateShared(fileset, filename, work_set);
 	}
 	else
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: This is also used for Hash Aggs, not just
-		 * Sorts.
-		 */
-		lts->pfile = BufFileCreateTemp("Sort", false);
+		lts->pfile = BufFileCreateTemp("LogicalTape", false);
 	}
 
 	return lts;

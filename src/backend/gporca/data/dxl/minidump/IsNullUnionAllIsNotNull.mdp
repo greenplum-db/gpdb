@@ -233,7 +233,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4.722656" Rows="50.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.003801" Rows="50.000000" Width="4"/>
           <dxl:DerivedRelationStats Rows="50.000000" EmptyRelation="false">
             <dxl:DerivedColumnStats ColId="0" Width="4.000000" NullFreq="0.200000" NdvRemain="0.000000" FreqRemain="0.000000">
               <dxl:StatsBucket Frequency="0.080000" DistinctValues="1.000000">
@@ -288,7 +288,7 @@
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3.625000" Rows="50.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.002903" Rows="50.000000" Width="4"/>
             <dxl:DerivedRelationStats Rows="50.000000" EmptyRelation="false">
               <dxl:DerivedColumnStats ColId="0" Width="4.000000" NullFreq="0.200000" NdvRemain="0.000000" FreqRemain="0.000000">
                 <dxl:StatsBucket Frequency="0.080000" DistinctValues="1.000000">
@@ -342,7 +342,7 @@
           <dxl:Filter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.175781" Rows="10.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001364" Rows="10.000000" Width="4"/>
               <dxl:DerivedRelationStats Rows="10.000000" EmptyRelation="false">
                 <dxl:DerivedColumnStats ColId="0" Width="4.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
               </dxl:DerivedRelationStats>
@@ -372,7 +372,7 @@
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.253906" Rows="40.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001439" Rows="40.000000" Width="4"/>
               <dxl:DerivedRelationStats Rows="40.000000" EmptyRelation="false">
                 <dxl:DerivedColumnStats ColId="8" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
                   <dxl:StatsBucket Frequency="0.100000" DistinctValues="1.000000">

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Software, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementFullOuterMergeJoin.h"

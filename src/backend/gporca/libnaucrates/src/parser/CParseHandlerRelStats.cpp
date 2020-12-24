@@ -98,8 +98,29 @@ CParseHandlerRelStats::StartElement(const XMLCh *const,	 // element_uri,
 			EdxltokenEmptyRelation, EdxltokenStatsDerivedRelation);
 	}
 
-	m_imd_obj = GPOS_NEW(m_mp) CDXLRelStats(m_mp, CMDIdRelStats::CastMdid(mdid),
-											mdname, rows, is_empty);
+	ULONG relpages = 0;
+	const XMLCh *xml_relpages =
+		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelPages));
+	if (NULL != xml_relpages)
+	{
+		relpages = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenRelPages, EdxltokenRelationStats);
+	}
+
+	ULONG relallvisible = 0;
+	const XMLCh *xml_relallvisible =
+		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelAllVisible));
+	if (NULL != xml_relallvisible)
+	{
+		relallvisible = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenRelAllVisible, EdxltokenRelationStats);
+	}
+
+	m_imd_obj =
+		GPOS_NEW(m_mp) CDXLRelStats(m_mp, CMDIdRelStats::CastMdid(mdid), mdname,
+									rows, is_empty, relpages, relallvisible);
 }
 
 //---------------------------------------------------------------------------

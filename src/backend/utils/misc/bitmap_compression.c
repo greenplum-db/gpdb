@@ -3,7 +3,7 @@
  * bitmap_compression.c
  *	  Compression code tailored to compression of bitmap
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

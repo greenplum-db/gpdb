@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2018 Pivotal, Inc.
+//	Copyright 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CJoinStatsProcessor.cpp

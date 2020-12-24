@@ -4,7 +4,7 @@
  *
  *	  implement hooks for twophase and tablespace storage
  *
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

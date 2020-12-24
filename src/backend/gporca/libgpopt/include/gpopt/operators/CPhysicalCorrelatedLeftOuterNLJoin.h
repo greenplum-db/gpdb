@@ -85,14 +85,29 @@ public:
 		return false;
 	}
 
+	CEnfdDistribution *
+	Ped(CMemoryPool *mp, CExpressionHandle &exprhdl, CReqdPropPlan *prppInput,
+		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) override
+	{
+		return PedCorrelatedJoin(mp, exprhdl, prppInput, child_index,
+								 pdrgpdpCtxt, ulOptReq);
+	}
+
 	// compute required distribution of the n-th child
 	CDistributionSpec *
-	PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-				CDistributionSpec *pdsRequired, ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const override
+	PdsRequired(CMemoryPool *,		  // mp
+				CExpressionHandle &,  // exprhdl,
+				CDistributionSpec *,  // pdsRequired,
+				ULONG,				  // child_index,
+				CDrvdPropArray *,	  // pdrgpdpCtxt,
+				ULONG				  //ulOptReq
+	) const override
 	{
-		return PdsRequiredCorrelatedJoin(mp, exprhdl, pdsRequired, child_index,
-										 pdrgpdpCtxt, ulOptReq);
+		GPOS_RAISE(
+			CException::ExmaInvalid, CException::ExmiInvalid,
+			GPOS_WSZ_LIT(
+				"PdsRequired should not be called for CPhysicalCorrelatedLeftOuterNLJoin"));
+		return nullptr;
 	}
 
 	// compute required rewindability of the n-th child

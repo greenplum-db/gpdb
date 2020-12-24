@@ -3,7 +3,7 @@
  *
  *	runtime reporting functions
  *
- *	Copyright (c) 2017-Present, Pivotal Software Inc.
+ *	Copyright (c) 2017-Present, VMware, Inc. or its affiliates.
  */
 
 #include "pg_upgrade_greenplum.h"

@@ -1395,17 +1395,23 @@ SELECT * FROM qp_misc_jiras.one_of_every_data_type ORDER BY id,serial_col;
 -- Clean up.
 DROP TABLE IF EXISTS qp_misc_jiras.one_of_every_data_type; 
 
-create table qp_misc_jiras.tbl7553_test (i int, j int);
-insert into qp_misc_jiras.tbl7553_test values(1,2);
-explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
+-- FIXME: This test file is ported from cdbfast to ICG via commit
+-- 993bc9c911. The following case is just test grouping sets
+-- Now we have some test (regress/groupingsets) cases cover this.
+-- So I decide to remove them here. Leave a FIXME here since I think this
+-- test file needs to review to see if anything might be also
+-- removed.
+-- create table qp_misc_jiras.tbl7553_test (i int, j int);
+-- insert into qp_misc_jiras.tbl7553_test values(1,2);
+-- explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
 
-select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
+-- select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
 
-explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
+-- explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
 
-select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
+-- select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
 
-drop table qp_misc_jiras.tbl7553_test;
+-- drop table qp_misc_jiras.tbl7553_test;
 
 -- Check that a table created with CTAS "inherits" the distribution key from
 -- the source table.

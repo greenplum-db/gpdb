@@ -1,26 +1,23 @@
 --
 -- Test \dx and \dx+, to display extensions.
 --
--- We just use gp_inject_fault as an example of an extension here. We don't
--- inject any faults.
-\dx gp_inject*
-                           List of installed extensions
-      Name       | Version | Schema |                 Description                  
------------------+---------+--------+----------------------------------------------
- gp_inject_fault | 1.0     | public | simulate various faults for testing purposes
+-- We just use plpgsql as an example of an extension here.
+\dx plpgsql
+                 List of installed extensions
+  Name   | Version |   Schema   |         Description          
+---------+---------+------------+------------------------------
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
 (1 row)
 
-\dx+ gp_inject*
-                       Objects in extension "gp_inject_fault"
-                                 Object description                                 
-------------------------------------------------------------------------------------
- function force_mirrors_to_catch_up()
- function gp_inject_fault(text,text,integer)
- function gp_inject_fault(text,text,text,text,text,integer,integer,integer,integer)
- function gp_inject_fault_infinite(text,text,integer)
- function gp_wait_until_triggered_fault(text,integer,integer)
- function insert_noop_xlog_record()
-(6 rows)
+\dx+ plpgsql
+      Objects in extension "plpgsql"
+            Object description             
+-------------------------------------------
+ function plpgsql_call_handler()
+ function plpgsql_inline_handler(internal)
+ function plpgsql_validator(oid)
+ language plpgsql
+(4 rows)
 
 --
 -- Test extended \du flags

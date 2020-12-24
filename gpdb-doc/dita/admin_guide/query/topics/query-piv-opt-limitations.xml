@@ -18,7 +18,7 @@
     <body>
       <p>Certain query features are not supported with the default GPORCA optimizer. When an
         unsupported query is executed, Greenplum logs this notice along with the query
-        text:<codeblock>Feature not supported by the Pivotal Query Optimizer: UTILITY command</codeblock></p>
+        text:<codeblock>Feature not supported by the Greenplum Query Optimizer: UTILITY command</codeblock></p>
       <p>These features are unsupported when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Prepared statements that have parameterized values.</li>
           <li>Indexed expressions (an index defined as expression based on one or more columns of

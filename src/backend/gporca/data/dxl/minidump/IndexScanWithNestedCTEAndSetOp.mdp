@@ -350,7 +350,7 @@ SELECT a FROM y WHERE (a IN (SELECT b FROM bar WHERE b = 2));
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="132">
+    <dxl:Plan Id="0" SpaceSize="209">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="868.000741" Rows="1.000000" Width="4"/>

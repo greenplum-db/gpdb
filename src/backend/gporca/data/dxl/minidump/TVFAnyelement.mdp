@@ -62,7 +62,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:TableValuedFunction FuncId="0.973889.1.0" Name="unnest1" TypeMdid="0.23.1.0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="7.812500" Rows="1000.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.004000" Rows="1000.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="unnest1">

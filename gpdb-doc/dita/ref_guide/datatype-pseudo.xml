@@ -99,7 +99,7 @@
           languages. The body of the function can access the table using the Greenplum Database
           Server Programming Interface (SPI) or the Greenplum Partner Connector (GPPC) API. </p>
         <p otherprops="pivotal">The <i>anytable</i> type is used in some user-defined functions in
-          the Pivotal GPText API. The following GPText example uses the <codeph>TABLE</codeph>
+          the Tanzu Greenplum Text API. The following GPText example uses the <codeph>TABLE</codeph>
           function with the <codeph>SCATTER BY</codeph> clause in the GPText function
             <codeph>gptext.index()</codeph> to populate the index
             <codeph>mydb.mytest.articles</codeph> with data from the messages
@@ -107,7 +107,7 @@
           SCATTER BY distrib_id), 'mydb.mytest.messages');
         </codeblock></p>
         <p otherprops="pivotal">For information about the function <codeph>gptext.index()</codeph>,
-          see the Pivotal GPText documentation.</p>
+          see the Tanzu Greenplum Text documentation.</p>
       </body>
     </topic>
   </topic>

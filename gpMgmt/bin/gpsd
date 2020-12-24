@@ -33,16 +33,16 @@ def ResultIter(cursor, arraysize=1000):
 def getVersion(envOpts):
     cmd = subprocess.Popen('psql --pset footer -Atqc "select version()" template1', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=envOpts)
     if cmd.wait() is not 0:
-        sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + cmd.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + cmd.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
-    return cmd.communicate()[0]
+    return cmd.communicate()[0].decode('ascii')
 
 
 def dumpSchema(connectionInfo, envOpts):
     dump_cmd = 'pg_dump -h {host} -p {port} -U {user} -s -x -O {database}'.format(**connectionInfo)
     p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
-        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
 
 
@@ -50,12 +50,12 @@ def dumpGlobals(connectionInfo, envOpts):
     dump_cmd = 'pg_dumpall -h {host} -p {port} -U {user} -l {database} -g'.format(**connectionInfo)
     p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
-        sys.stderr.write('\nError while dumping globals.\n\n' + p.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while dumping globals.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
 
 
 def dumpTupleCount(cur):
-    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples FROM pg_class pgc, pg_namespace pgn WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN " + \
+    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples, pgc.relallvisible FROM pg_class pgc, pg_namespace pgn WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN " + \
         sysnslist
     setStmt = '-- Table: {1}\n' \
         'UPDATE pg_class\nSET\n' \
@@ -64,11 +64,11 @@ def dumpTupleCount(cur):
         '(SELECT oid FROM pg_namespace WHERE nspname = \'{2}\');\n\n'
 
     cur.execute(stmt)
-    columns = map(lambda x: x[0], cur.description)
-    types = ['int', 'real']
+    columns = [x[0] for x in cur.description]
+    types = ['int', 'real', 'int']
     for vals in ResultIter(cur):
-        print setStmt.format(',\n'.join(map(lambda t: '\t%s = %s::%s' %
-                                            t, zip(columns[2:], vals[2:], types))), vals[0], vals[1])
+        print(setStmt.format(',\n'.join(['\t%s = %s::%s' %
+                                            t for t in zip(columns[2:], vals[2:], types)]), vals[0], vals[1]))
 
 
 def dumpStats(cur, inclHLL):
@@ -134,7 +134,7 @@ def dumpStats(cur, inclHLL):
 
             if val is None:
                 val = 'NULL'
-            elif isinstance(val, (str, unicode)) and val[0] == '{':
+            elif isinstance(val, str) and val[0] == '{':
                 val = val.replace("'", "''")
                 val = "E'" + val + "'"
 
@@ -147,7 +147,7 @@ def dumpStats(cur, inclHLL):
                 rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
             else:
                 rowVals.append('\t{0}::{1}'.format(val, typ))
-        print pstring.format(vals[0], vals[2], ',\n'.join(rowVals))
+        print(pstring.format(vals[0], vals[2], ',\n'.join(rowVals)))
 
 
 def parseCmdLine():
@@ -207,11 +207,11 @@ def main():
         dumpGlobals(connectionInfo, envOpts)
         # Now be sure that when we load the rest we are doing it in the right
         # database
-        print '\\connect ' + db + '\n'
+        print('\\connect ' + db + '\n')
         sys.stdout.flush()
         dumpSchema(connectionInfo, envOpts)
     else:
-        print '\\connect ' + db + '\n'
+        print('\\connect ' + db + '\n')
         sys.stdout.flush()
 
     # Now we have to explicitly allow editing of these pg_class &
@@ -233,7 +233,7 @@ def main():
                                'which requires some data elements to be included in the output file.\n',
                                'Please review output file to ensure it is within corporate policy to transport the output file.\n'])
 
-    except pgdb.DatabaseError, err:  # catch *all* exceptions
+    except pgdb.DatabaseError as err:  # catch *all* exceptions
         sys.stderr.write('Error while dumping statistics:\n')
         sys.stderr.write(err.message)
         sys.exit(1)

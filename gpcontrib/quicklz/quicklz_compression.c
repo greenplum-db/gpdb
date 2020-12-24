@@ -3,7 +3,7 @@
  *	Interfaces to quicklz compression functionality.
  *
  * Portions Copyright (c) 2011, EMC Corporation
- * Portions Copyright (c) 2013-Present, Pivotal Software, Inc.
+ * Portions Copyright (c) 2013-Present, VMware, Inc. or its affiliates.
  *
  * IDENTIFICATION
  *	gpcontrib/quicklz/quicklz_compression.c

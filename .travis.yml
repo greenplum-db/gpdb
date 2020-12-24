@@ -120,15 +120,12 @@ matrix:
                   sources: *common_sources
                   packages: *common_packages
 
-        - stage: check-format
+        - name: check-format
+          stage: lint
           os: linux
-          dist: bionic
+          dist: focal
           addons:
             apt:
-              sources:
-                - *common_sources
-                - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
-                  key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
               packages:
                 - clang-format-10
                 - parallel
@@ -141,8 +138,33 @@ matrix:
             - git diff --exit-code
             - env CLANG_FORMAT=clang-format-10 src/tools/fmt chk
 
+        - name: clang-tidy
+          stage: lint
+          os: linux
+          dist: focal
+          addons:
+            apt:
+              sources:
+                - sourceline: 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main'
+                  key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+              packages:
+                - ninja-build
+                - clang-10
+                - clang-tidy-11
+                - parallel
+                - libxerces-c-dev
+          before_install: ~
+          install: ~
+          before_script: ~
+          after_script: ~
+          script:
+            - CXX=clang++-10 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=Debug -Hsrc/backend/gporca -Bbuild.debug
+            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk build.debug
+            - CXX=clang++-10 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -Hsrc/backend/gporca -Bbuild.relwithdebinfo
+            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk build.relwithdebinfo
+
 stages:
-  - check-format
+  - lint
   - test
 
 ## ----------------------------------------------------------------------

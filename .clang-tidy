@@ -1,0 +1,24 @@
+---
+Checks:          'clang-diagnostic-*,clang-analyzer-*,-*,modernize-use-override,modernize-use-equals-default,modernize-use-equals-delete'
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'gpdbcost|gpopt|gpos|naucrates'
+AnalyzeTemporaryDtors: false
+FormatStyle:     file
+User:            pivotal
+CheckOptions:
+  - key:             modernize-use-override.OverrideSpelling
+    value:           override
+  - key:             modernize-use-override.AllowOverrideAndFinal
+    value:           'false'
+  - key:             modernize-use-equals-default.IgnoreMacros
+    value:           'true'
+  - key:             modernize-use-override.FinalSpelling
+    value:           final
+  - key:             modernize-use-nullptr.NullMacros
+    value:           'NULL'
+  - key:             modernize-use-equals-delete.IgnoreMacros
+    value:           'true'
+  - key:             modernize-use-override.IgnoreDestructors
+    value:           'false'
+...
+

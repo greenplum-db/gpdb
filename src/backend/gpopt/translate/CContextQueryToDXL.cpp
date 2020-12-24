@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //  Greenplum Database
-//	Copyright (C) 2018-Present Pivotal Software, Inc.
+//	Copyright (C) 2018-Present VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CContextQueryToDXL.cpp

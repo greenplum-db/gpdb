@@ -1529,6 +1529,7 @@ CTranslatorExprToDXL::PdxlnIndexScanWithInlinedCondition(
 
 	COperator::EOperatorId op_id = pexprIndexScan->Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopPhysicalIndexScan == op_id ||
+				COperator::EopPhysicalIndexOnlyScan == op_id ||
 				COperator::EopPhysicalDynamicIndexScan == op_id);
 
 	// TODO: Index only scans work on GiST and SP-GiST only for specific operators
@@ -7401,8 +7402,10 @@ CTranslatorExprToDXL::GetProperties(const CExpression *pexpr)
 		rows = stats->Rows();
 	}
 
-	if (CDistributionSpec::EdtReplicated ==
-		pexpr->GetDrvdPropPlan()->Pds()->Edt())
+	if (CDistributionSpec::EdtStrictReplicated ==
+			pexpr->GetDrvdPropPlan()->Pds()->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated ==
+			pexpr->GetDrvdPropPlan()->Pds()->Edt())
 	{
 		// if distribution is replicated, multiply number of rows by number of segments
 		ULONG ulSegments = COptCtxt::PoctxtFromTLS()->GetCostModel()->UlHosts();

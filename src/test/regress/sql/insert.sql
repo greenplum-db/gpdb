@@ -373,7 +373,6 @@ alter table mlparted4 drop a;
 alter table mlparted4 add a int not null;
 alter table mlparted4 set distributed by (a);
 alter table mlparted attach partition mlparted4 for values from (1, 30) to (1, 40);
--- this upstream query doesn't work on GPDB at the moment.
 with ins (a, b, c) as
   (insert into mlparted (b, a) select s.a, 1 from generate_series(2, 39) s(a) returning tableoid::regclass, *)
   select a, b, min(c), max(c) from ins group by a, b order by 1;

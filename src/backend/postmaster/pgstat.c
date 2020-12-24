@@ -40,6 +40,7 @@
 #include "access/transam.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "access/xlog.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_proc.h"
 #include "executor/instrument.h"
@@ -4518,6 +4519,15 @@ pgstat_send_bgwriter(void)
 {
 	/* We assume this initializes to zeroes */
 	static const PgStat_MsgBgWriter all_zeroes;
+
+	/*
+	 * Non hot standby mirror should not send bgwriter statistics to the
+	 * stat collector, since stat collector is not started when mirror
+	 * is not in hot standby mode. Sending statistics would cause the
+	 * Recv-Q buffer to be filled up.
+	 */
+	if (!EnableHotStandby && IsRoleMirror())
+		return;
 
 	/*
 	 * This function can be called even if nothing at all has happened. In

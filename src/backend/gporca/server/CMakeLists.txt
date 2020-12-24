@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Pivotal Software, Inc. All Rights Reserved.
+# Copyright (c) 2015, VMware, Inc. or its affiliates. All Rights Reserved.
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                     "${PROJECT_SOURCE_DIR}/libgpdbcost/include"
@@ -66,7 +66,8 @@ AddEqualityPredicates AddPredsInSubqueries ExtractPredicateFromDisjWithComputedC
 Join-With-Subq-Preds-1 Non-Hashjoinable-Pred Non-Hashjoinable-Pred-2 Factorized-Preds IN OR AvoidConstraintDerivationForLike
 NLJ-DistCol-No-Broadcast NLJ-EqAllCol-No-Broadcast NLJ-EqDistCol-InEqNonDistCol-No-Broadcast
 NLJ-InEqDistCol-EqNonDistCol-Redistribute CorrelatedNLJWithTrueCondition InferPredicatesInnerOfLOJ
-InferredPredicatesConstraintSimplification NoPushdownPredicateWithCTEAnchor;
+InferredPredicatesConstraintSimplification NoPushdownPredicateWithCTEAnchor
+InferPredicatesForPartSQ InferPredicatesForQuantifiedSQ;
 
 CLikeIDFTest:
 LIKE-Pattern-green LIKE-Pattern-green-2 LIKE-Pattern-Empty Nested-Or-Predicates Join-IDF
@@ -154,8 +155,10 @@ MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDi
 MultiDistKeyWithOtherPredsJoinCardinality NoDistKeyMultiPredJoinCardinality OneDistKeyMultiPredJoinCardinality;
 
 CArrayCmpTest:
-ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll UDA-AnyArray InClauseWithMCV
-CastedInClauseWithMCV FilterScalarCast IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements;
+ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll
+UDA-AnyArray InClauseWithMCV CastedInClauseWithMCV FilterScalarCast
+IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements ArrayCmpAnyEmpty ArrayCmpAllEmpty
+ArrayCmpAnyEmptyLessThan;
 
 CProjectTest:
 ProjectWithConstant ProjectWithTextConstant ProjectSetFunction Equivalence-class-project-over-LOJ;
@@ -306,7 +309,10 @@ ReplicatedJoinRandomDistributedTable ReplicatedLOJHashDistributedTable
 ReplicatedLOJRandomDistributedTable ReplicatedLOJReplicated
 ReplicatedNLJReplicated ReplicatedTableAggregate ReplicatedTableCTE
 ReplicatedTableGroupBy ReplicatedJoinPartitionedTable
-ReplicatedTableInClause;
+ReplicatedTableInClause ReplicatedTableSequenceInsert;
+
+CTaintedReplicatedTest:
+InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg TaintedReplicatedLimit TaintedReplicatedFilter;
 
 CDqaTest:
 NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute;
@@ -325,7 +331,10 @@ Distinct-LegacyOpfamily;
 
 CSubquery2Test:
 Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJoin Subq2OuterRefMultiLevelInOn
-Index-Join-With-Subquery-In-Pred
+Index-Join-With-Subquery-In-Pred;
+
+CIndexOnlyScanTest:
+IndexOnlyScan-NoDistKeyInIndex
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

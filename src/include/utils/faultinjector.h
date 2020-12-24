@@ -9,7 +9,7 @@
 #ifndef FAULTINJECTOR_H
 #define FAULTINJECTOR_H
 
-#include "pg_config_manual.h"
+#include "pg_config.h"
 
 #define FAULTINJECTOR_MAX_SLOTS	16
 

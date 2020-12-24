@@ -121,10 +121,12 @@ CPhysicalSerialUnionAll::PdsRequired(
 		return GPOS_NEW(mp) CDistributionSpecSingleton();
 	}
 
-	if (CDistributionSpec::EdtReplicated == pdsOuter->Edt())
+	if (CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated == pdsOuter->Edt())
 	{
 		// outer child is replicated, require inner child to be replicated
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 
 	if (CDistributionSpec::EdtExternal == pdsOuter->Edt())

@@ -10,7 +10,7 @@
         >Ansible</xref>.</p>
     <note type="important">This playbook is provided as an <i>example only</i> to illustrate how
       Greenplum Database cluster configuration and software installation tasks can be automated
-      using provisioning tools such as Ansible, Chef, or Puppet. Pivotal does not provide support
+      using provisioning tools such as Ansible, Chef, or Puppet. VMware does not provide support
       for Ansible or for the playbook presented in this example.</note>
     <p>The example playbook is designed for use with CentOS 7. It creates the
         <codeph>gpadmin</codeph> user, installs the Greenplum Database software release, sets the

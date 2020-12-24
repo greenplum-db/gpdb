@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Software, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalFullMergeJoin.cpp
@@ -10,7 +10,6 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CCastUtils.h"
@@ -56,18 +55,36 @@ CPhysicalFullMergeJoin::~CPhysicalFullMergeJoin()
 }
 
 CDistributionSpec *
-CPhysicalFullMergeJoin::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-									CDistributionSpec *pdsRequired,
-									ULONG child_index,
+CPhysicalFullMergeJoin::PdsRequired(CMemoryPool *mp GPOS_UNUSED,
+									CExpressionHandle &exprhdl GPOS_UNUSED,
+									CDistributionSpec *pdsRequired GPOS_UNUSED,
+									ULONG child_index GPOS_UNUSED,
 									CDrvdPropArray *,  //pdrgpdpCtxt,
-									ULONG ulOptReq) const
+									ULONG ulOptReq GPOS_UNUSED) const
+{
+	GPOS_RAISE(
+		CException::ExmaInvalid, CException::ExmiInvalid,
+		GPOS_WSZ_LIT(
+			"PdsRequired should not be called for CPhysicalFullMergeJoin"));
+	return nullptr;
+}
+
+CEnfdDistribution *
+CPhysicalFullMergeJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							CReqdPropPlan *prppInput, ULONG child_index,
+							CDrvdPropArray *pdrgpdpCtxt GPOS_UNUSED,
+							ULONG ulOptReq)
 {
 	GPOS_ASSERT(2 > child_index);
+
+	CDistributionSpec *const pdsRequired = prppInput->Ped()->PdsRequired();
 
 	// if expression has to execute on a single host then we need a gather
 	if (exprhdl.NeedsSingletonExecution() || exprhdl.HasOuterRefs())
 	{
-		return PdsRequireSingleton(mp, exprhdl, pdsRequired, child_index);
+		return GPOS_NEW(mp) CEnfdDistribution(
+			PdsRequireSingleton(mp, exprhdl, pdsRequired, child_index),
+			CEnfdDistribution::EdmExact);
 	}
 
 	BOOL nulls_collocated = true;
@@ -95,19 +112,21 @@ CPhysicalFullMergeJoin::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 		CDistributionSpecHashed *pds = GPOS_NEW(mp)
 			CDistributionSpecHashed(pdrgpexprCurrent, nulls_collocated);
-		return pds;
+		return GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 	}
 	else if (ulOptReq == num_hash_reqs)
 	{
 		clauses->AddRef();
 		CDistributionSpecHashed *pds =
 			GPOS_NEW(mp) CDistributionSpecHashed(clauses, nulls_collocated);
-		return pds;
+		return GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 	}
 	else
 	{
 		GPOS_ASSERT(ulOptReq == (num_hash_reqs + 1));
-		return PdsRequireSingleton(mp, exprhdl, pdsRequired, child_index);
+		return GPOS_NEW(mp) CEnfdDistribution(
+			PdsRequireSingleton(mp, exprhdl, pdsRequired, child_index),
+			CEnfdDistribution::EdmExact);
 	}
 }
 

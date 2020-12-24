@@ -25,7 +25,7 @@
  *   transaction to run in it.
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -1463,7 +1463,6 @@ groupDecMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 		/* Sub chunks from memSharedUsage in group */
 		int32 oldSharedUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *) &group->memSharedUsage,
 										deltaSharedMemUsage);
-		Assert(oldSharedUsage >= deltaSharedMemUsage);
 
 		/* record the total global share usage of current group */
 		int32 grpTotalGlobalUsage = Max(0, oldSharedUsage - group->memSharedGranted);

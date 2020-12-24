@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
-//	Pivotal Software, Inc
-//	Copyright (C) 2017 Pivotal Software, Inc
+//	VMware, Inc. or its affiliates
+//	Copyright (C) 2017 VMware, Inc. or its affiliates
 //---------------------------------------------------------------------------
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"

@@ -4,7 +4,7 @@
  *	  Interfaces to low level compression functionality.
  *
  * Portions Copyright (c) 2011 EMC Corporation All Rights Reserved
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

@@ -1019,7 +1019,7 @@
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:HashJoin JoinType="Left">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="69.021875" Rows="136.148000" Width="132"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.173205" Rows="136.148000" Width="132"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="31" Alias="oid">
@@ -1042,7 +1042,7 @@
         </dxl:HashCondList>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="43.651562" Rows="134.800000" Width="72"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.067322" Rows="134.800000" Width="72"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="relname">
@@ -1078,7 +1078,7 @@
         </dxl:TableScan>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.492188" Rows="7.000000" Width="72"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000566" Rows="7.000000" Width="72"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="38" Alias="nspname">

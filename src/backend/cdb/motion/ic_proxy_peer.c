@@ -35,7 +35,7 @@
  * immediately.
  *
  *
- * Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------
@@ -134,14 +134,14 @@ ic_proxy_peer_update_name(ICProxyPeer *peer)
 	 * happens.
 	 */
 	uv_tcp_getsockname(&peer->tcp, (struct sockaddr *) &peeraddr, &addrlen);
-	ic_proxy_extract_addr((struct sockaddr *) &peeraddr,
-						  sockname, sizeof(sockname),
-						  &sockport, NULL /* family */);
+	ic_proxy_extract_sockaddr((struct sockaddr *) &peeraddr,
+							  sockname, sizeof(sockname),
+							  &sockport, NULL /* family */);
 
 	uv_tcp_getpeername(&peer->tcp, (struct sockaddr *) &peeraddr, &addrlen);
-	ic_proxy_extract_addr((struct sockaddr *) &peeraddr,
-						  peername, sizeof(peername),
-						  &peerport, NULL /* family */);
+	ic_proxy_extract_sockaddr((struct sockaddr *) &peeraddr,
+							  peername, sizeof(peername),
+							  &peerport, NULL /* family */);
 
 	snprintf(peer->name, sizeof(peer->name), "peer%s[seg%hd,dbid%hu %s:%d->%s:%d]",
 			 (peer->state & IC_PROXY_PEER_STATE_LEGACY) ? ".legacy" : "",

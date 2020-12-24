@@ -259,7 +259,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="302067.597758" Rows="2.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="663.259999" Rows="2.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="sum">
@@ -270,7 +270,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="302066.589946" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="663.259928" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="10" Alias="sum">
@@ -281,7 +281,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="302066.589946" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="663.259928" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -299,7 +299,7 @@
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="298154.511821" Rows="1001232.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="661.257459" Rows="1001232.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -314,7 +314,7 @@
               <dxl:LimitOffset/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1955.531250" Rows="1001232.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="442.564230" Rows="1001232.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">

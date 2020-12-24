@@ -4,7 +4,7 @@
  * Plugin system for collecting warning functions and processing warnings
  * at a later time.
  *
- * Portions Copyright (c) 2019-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2019-Present VMware, Inc. or its affiliates.
  *
  * IDENTIFICATION
  *	    src/backend/utils/misc/faultinjector_warnings.c

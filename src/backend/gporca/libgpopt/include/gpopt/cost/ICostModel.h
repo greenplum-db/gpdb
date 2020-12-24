@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		ICostModel.h
@@ -54,7 +54,8 @@ public:
 	{
 		EcmtGPDBLegacy = 0,
 		EcmtGPDBCalibrated = 1,
-		EcmtSentinel = 2
+		EcmtGPDBExperimental = 2,
+		EcmtSentinel = 3
 	};
 
 	//---------------------------------------------------------------------------

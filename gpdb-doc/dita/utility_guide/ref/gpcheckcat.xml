@@ -136,7 +136,7 @@
                   <codeph>reltoastrelid</codeph> in <i>pg_class</i> is missing and the
                   <codeph>pg_depend</codeph> entry is missing (a double orphan TOAST table). If a
                 manual catalog change is needed, <codeph>gpcheckcat</codeph> will display detailed
-                steps you can follow to update the catalog. <ph otherprops="pivotal">Contact Pivotal
+                steps you can follow to update the catalog. <ph otherprops="pivotal">Contact VMware
                   Support if you need help with the catalog change.</ph></note></p>
             <p><codeph>part_integrity</codeph> - Check <i>pg_partition</i> branch integrity,
               partition with OIDs, partition distribution policy</p>

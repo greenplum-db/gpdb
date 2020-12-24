@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
 # Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
-# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+# Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
 #
 # Author: Jeffrey I Cohen
 #
@@ -79,7 +79,7 @@ The tokens are:
 Jeffrey I Cohen
 
 Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
-Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
 
 Address bug reports and comments to: bugs@greenplum.org
 

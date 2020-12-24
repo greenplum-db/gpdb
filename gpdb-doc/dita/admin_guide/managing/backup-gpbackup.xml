@@ -38,7 +38,7 @@
       <ul id="ul_jlm_wnd_hjb">
         <li>Pivotal Greenplum Database 4.3.22 and later</li>
         <li>Pivotal Greenplum Database 5.5.0 and later</li>
-        <li>Pivotal Greenplum Database 6.0.0 and later</li>
+        <li>Tanzu Greenplum 6.0.0 and later</li>
       </ul>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> have the following limitations:<ul
           id="ul_uqh_hhd_tbb">

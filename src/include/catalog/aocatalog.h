@@ -5,7 +5,7 @@
  * Helper function to support the creation of
  * append-only auxiliary relation as block directories and visimaps.
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

@@ -200,7 +200,7 @@ class StartSegmentsOperation:
             if cmd.get_results().rc == 0 or cmd.get_results().rc == 1:
             # error code 0 mean all good, 1 means it ran but at least one thing failed
                 cmdout = cmd.get_results().stdout
-                lines=cmdout.split('\n')
+                lines = cmdout.split('\n')
                 for line in lines:
                     if line.startswith("STATUS"):
                         fields=line.split('--')
@@ -234,6 +234,8 @@ class StartSegmentsOperation:
                                     resultOut.addSuccess(segment)
                                 else:
                                     resultOut.addFailure(segment, reasonStr, reasonCode)
+                if cmd.get_results().stderr is not None:
+                    logger.info(cmd.get_results().stderr)
             else:
                 for segment in cmd.dblist:
                     resultOut.addFailure(segment, cmd.get_results(), gp.SEGSTART_ERROR_UNKNOWN_ERROR)

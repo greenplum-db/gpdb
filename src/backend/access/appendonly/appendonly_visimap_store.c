@@ -4,7 +4,7 @@
  *   maintain a visibility bitmap for all rows in a
  *   minipage.
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

@@ -2,7 +2,7 @@ MODULES=heap_checksum_helper
 PG_CONFIG=pg_config
 
 REGRESS = setup heap_checksum_corruption
-REGRESS_OPTS = --init-file=../regress/init_file --load-extension=gp_inject_fault
+REGRESS_OPTS = --init-file=../regress/init_file
 
 subdir = src/test/heap_checksum
 top_builddir = ../../..

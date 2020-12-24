@@ -4,7 +4,7 @@
  *	  Internal utility support functions for Greenplum Database/PostgreSQL.
  *
  * Portions Copyright (c) 2005-2011, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

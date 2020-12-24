@@ -3,7 +3,7 @@
  * metrics_utils.h
  *	  Definitions for query info collector enum and functions
  *
- * Portions Copyright (c) 2017-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2017-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
