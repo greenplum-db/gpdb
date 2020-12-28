@@ -300,6 +300,10 @@ ListBucketResult S3InterfaceService::listBucket(S3Url &s3Url) {
             querySs << (marker.empty() ? "prefix=" : "&prefix=") << encodedPrefix;
         }
         s3Url.setPrefix("");
+        
+        // rfc1738 - encoded '/' symbol
+        s3Url.setDelimeter("%2F");
+        
         string queryStr = querySs.str();
 
         Response resp = getBucketResponse(s3Url, queryStr);

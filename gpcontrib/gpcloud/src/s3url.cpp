@@ -41,6 +41,11 @@ string S3Url::getFullUrlForCurl() const {
 
     fullUrl << this->getSchema() << "://" << this->getHostForCurl() << "/" << this->getBucket()
             << "/" << this->getPrefix();
+    
+    if (this->getDelimiter().length()) {
+        /* set delimiter, if any specifed */
+        fullUrl << this->getDelimiter();
+    }
 
     return fullUrl.str();
 }

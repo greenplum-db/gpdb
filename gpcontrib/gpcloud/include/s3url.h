@@ -9,7 +9,7 @@
 class S3Url {
    public:
     S3Url(const string &sourceUrl, bool useHttps = true, const string &version = "",
-          const string &region = "");
+          const string &region = "", const string &delimiter = "");
 
     string getFullUrlForCurl() const;
     string getHostForCurl() const;
@@ -43,9 +43,17 @@ class S3Url {
         return version;
     }
 
+    const string &getDelimeter() const {
+        return delimeter;
+    }
+
     void setPrefix(const string &prefix) {
         this->prefix = prefix;
     };
+
+    void setDelimiter(const string &delimuter) {
+        this->delimiter = delimuter;
+    }
 
     bool isValidUrl() const;
 
