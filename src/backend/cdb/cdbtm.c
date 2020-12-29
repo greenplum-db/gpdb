@@ -1384,7 +1384,7 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		int lastRepeat = -1;
 		if (MyTmGxactLocal->waitGxids)
 		{
-			pfree(MyTmGxactLocal->waitGxids);
+			list_free(MyTmGxactLocal->waitGxids);
 			MyTmGxactLocal->waitGxids = NULL;
 		}
 
@@ -1496,7 +1496,7 @@ resetGxact()
 	MyTmGxactLocal->isOnePhaseCommit = false;
 	if (MyTmGxactLocal->waitGxids != NULL)
 	{
-		pfree(MyTmGxactLocal->waitGxids);
+		list_free(MyTmGxactLocal->waitGxids);
 		MyTmGxactLocal->waitGxids = NULL;
 	}
 	setCurrentDtxState(DTX_STATE_NONE);
