@@ -38,14 +38,13 @@ using namespace gpopt;
 CConstraintInterval::CConstraintInterval(CMemoryPool *mp, const CColRef *colref,
 										 CRangeArray *pdrgprng,
 										 BOOL fIncludesNull)
-	: CConstraint(mp),
+	: CConstraint(mp, GPOS_NEW(mp) CColRefSet(mp)),
 	  m_pcr(colref),
 	  m_pdrgprng(pdrgprng),
 	  m_fIncludesNull(fIncludesNull)
 {
 	GPOS_ASSERT(NULL != colref);
 	GPOS_ASSERT(NULL != pdrgprng);
-	m_pcrsUsed = GPOS_NEW(mp) CColRefSet(mp);
 	m_pcrsUsed->Include(colref);
 }
 
@@ -60,7 +59,6 @@ CConstraintInterval::CConstraintInterval(CMemoryPool *mp, const CColRef *colref,
 CConstraintInterval::~CConstraintInterval()
 {
 	m_pdrgprng->Release();
-	m_pcrsUsed->Release();
 }
 
 //---------------------------------------------------------------------------

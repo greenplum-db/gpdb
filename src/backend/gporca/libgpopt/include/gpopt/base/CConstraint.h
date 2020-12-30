@@ -157,11 +157,14 @@ protected:
 												 CColRef *colref,
 												 BOOL infer_nulls_as = false);
 
+	static CColRefSet *PcrsFromConstraints(CMemoryPool *mp,
+										   CConstraintArray *pdrgpcnstr);
+
 public:
 	CConstraint(const CConstraint &) = delete;
 
 	// ctor
-	explicit CConstraint(CMemoryPool *mp);
+	explicit CConstraint(CMemoryPool *mp, CColRefSet *pcrsUsed);
 
 	// dtor
 	~CConstraint() override;

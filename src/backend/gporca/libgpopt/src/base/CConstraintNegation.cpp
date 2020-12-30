@@ -26,11 +26,10 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CConstraintNegation::CConstraintNegation(CMemoryPool *mp, CConstraint *pcnstr)
-	: CConstraint(mp), m_pcnstr(pcnstr)
+	: CConstraint(mp, pcnstr->PcrsUsed()), m_pcnstr(pcnstr)
 {
 	GPOS_ASSERT(NULL != pcnstr);
 
-	m_pcrsUsed = pcnstr->PcrsUsed();
 	m_pcrsUsed->AddRef();
 }
 
@@ -45,7 +44,6 @@ CConstraintNegation::CConstraintNegation(CMemoryPool *mp, CConstraint *pcnstr)
 CConstraintNegation::~CConstraintNegation()
 {
 	m_pcnstr->Release();
-	m_pcrsUsed->Release();
 }
 
 //---------------------------------------------------------------------------

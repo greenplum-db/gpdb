@@ -28,21 +28,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CConstraintDisjunction::CConstraintDisjunction(CMemoryPool *mp,
 											   CConstraintArray *pdrgpcnstr)
-	: CConstraint(mp), m_pdrgpcnstr(NULL)
+	: CConstraint(mp, PcrsFromConstraints(mp, pdrgpcnstr)), m_pdrgpcnstr(NULL)
 {
 	GPOS_ASSERT(NULL != pdrgpcnstr);
 	m_pdrgpcnstr = PdrgpcnstrFlatten(mp, pdrgpcnstr, EctDisjunction);
-
-	const ULONG length = m_pdrgpcnstr->Size();
-	GPOS_ASSERT(0 < length);
-
-	m_pcrsUsed = GPOS_NEW(mp) CColRefSet(mp);
-
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		CConstraint *pcnstr = (*m_pdrgpcnstr)[ul];
-		m_pcrsUsed->Include(pcnstr->PcrsUsed());
-	}
 
 	m_phmcolconstr = Phmcolconstr(mp, m_pcrsUsed, m_pdrgpcnstr);
 }
@@ -58,7 +47,6 @@ CConstraintDisjunction::CConstraintDisjunction(CMemoryPool *mp,
 CConstraintDisjunction::~CConstraintDisjunction()
 {
 	m_pdrgpcnstr->Release();
-	m_pcrsUsed->Release();
 	m_phmcolconstr->Release();
 }
 

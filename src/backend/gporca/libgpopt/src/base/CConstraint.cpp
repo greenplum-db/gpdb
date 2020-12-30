@@ -49,8 +49,8 @@ BOOL CConstraint::m_fFalse(false);
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CConstraint::CConstraint(CMemoryPool *mp)
-	: m_phmcontain(NULL), m_mp(mp), m_pcrsUsed(NULL), m_pexprScalar(NULL)
+CConstraint::CConstraint(CMemoryPool *mp, CColRefSet *pcrsUsed)
+	: m_phmcontain(NULL), m_mp(mp), m_pcrsUsed(pcrsUsed), m_pexprScalar(NULL)
 {
 	m_phmcontain = GPOS_NEW(m_mp) ConstraintContainmentMap(m_mp);
 }
@@ -66,6 +66,7 @@ CConstraint::CConstraint(CMemoryPool *mp)
 CConstraint::~CConstraint()
 {
 	CRefCount::SafeRelease(m_pexprScalar);
+	m_pcrsUsed->Release();
 	m_phmcontain->Release();
 }
 
@@ -1038,6 +1039,23 @@ CConstraint::PrintConjunctionDisjunction(IOstream &os,
 	os << ")";
 
 	return os;
+}
+
+CColRefSet *
+CConstraint::PcrsFromConstraints(CMemoryPool *mp, CConstraintArray *pdrgpcnstr)
+{
+	CColRefSet *crs = GPOS_NEW(mp) CColRefSet(mp);
+
+	ULONG const length = pdrgpcnstr->Size();
+	GPOS_ASSERT(0 < length);
+
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		CConstraint *pcnstr = (*pdrgpcnstr)[ul];
+		crs->Include(pcnstr->PcrsUsed());
+	}
+
+	return crs;
 }
 
 // EOF
