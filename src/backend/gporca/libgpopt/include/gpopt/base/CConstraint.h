@@ -127,28 +127,28 @@ protected:
 
 	// construct a conjunction or disjunction scalar expression from an
 	// array of constraints
-	CExpression *PexprScalarConjDisj(CMemoryPool *mp,
-									 CConstraintArray *pdrgpcnstr,
-									 BOOL fConj) const;
+	static CExpression *PexprScalarConjDisj(CMemoryPool *mp,
+											CConstraintArray *pdrgpcnstr,
+											BOOL fConj);
 
 	// flatten an array of constraints to be used as constraint children
-	CConstraintArray *PdrgpcnstrFlatten(CMemoryPool *mp,
-										CConstraintArray *pdrgpcnstr,
-										EConstraintType ect) const;
+	static CConstraintArray *PdrgpcnstrFlatten(CMemoryPool *mp,
+											   CConstraintArray *pdrgpcnstr,
+											   EConstraintType ect);
 
 	// combine any two or more constraints that reference only one particular column
-	CConstraintArray *PdrgpcnstrDeduplicate(CMemoryPool *mp,
-											CConstraintArray *pdrgpcnstr,
-											EConstraintType ect) const;
+	static CConstraintArray *PdrgpcnstrDeduplicate(CMemoryPool *mp,
+												   CConstraintArray *pdrgpcnstr,
+												   EConstraintType ect);
 
 	// mapping between columns and arrays of constraints
 	ColRefToConstraintArrayMap *Phmcolconstr(
 		CMemoryPool *mp, CColRefSet *pcrs, CConstraintArray *pdrgpcnstr) const;
 
 	// return a copy of the conjunction/disjunction constraint for a different column
-	CConstraint *PcnstrConjDisjRemapForColumn(CMemoryPool *mp, CColRef *colref,
-											  CConstraintArray *pdrgpcnstr,
-											  BOOL fConj) const;
+	static CConstraint *PcnstrConjDisjRemapForColumn(
+		CMemoryPool *mp, CColRef *colref, CConstraintArray *pdrgpcnstr,
+		BOOL fConj);
 
 	// create constraint from scalar array comparison expression originally generated for
 	// "scalar op ANY/ALL (array)" construct

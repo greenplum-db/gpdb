@@ -673,7 +673,7 @@ CConstraint::PdrgpcnstrOnColumn(
 //---------------------------------------------------------------------------
 CExpression *
 CConstraint::PexprScalarConjDisj(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
-								 BOOL fConj) const
+								 BOOL fConj)
 {
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -705,7 +705,7 @@ CConstraint::PexprScalarConjDisj(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 //---------------------------------------------------------------------------
 CConstraintArray *
 CConstraint::PdrgpcnstrFlatten(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
-							   EConstraintType ect) const
+							   EConstraintType ect)
 {
 	CConstraintArray *pdrgpcnstrNew = GPOS_NEW(mp) CConstraintArray(mp);
 
@@ -751,7 +751,7 @@ CConstraint::PdrgpcnstrFlatten(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 CConstraintArray *
 CConstraint::PdrgpcnstrDeduplicate(CMemoryPool *mp,
 								   CConstraintArray *pdrgpcnstr,
-								   EConstraintType ect) const
+								   EConstraintType ect)
 {
 	CConstraintArray *pdrgpcnstrNew = GPOS_NEW(mp) CConstraintArray(mp);
 
@@ -886,7 +886,7 @@ CConstraint::Phmcolconstr(CMemoryPool *mp, CColRefSet *pcrs,
 CConstraint *
 CConstraint::PcnstrConjDisjRemapForColumn(CMemoryPool *mp, CColRef *colref,
 										  CConstraintArray *pdrgpcnstr,
-										  BOOL fConj) const
+										  BOOL fConj)
 {
 	GPOS_ASSERT(NULL != colref);
 
