@@ -1,0 +1,24 @@
+2021-01-11 19:18:24|INFO|gpload session started 2021-01-11 19:18:24
+2021-01-11 19:18:24|INFO|setting schema 'public' for table 'texttable_666'
+2021-01-11 19:18:24|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-11 19:18:24|ERROR|could not execute SQL in sql:before "INSERT INTO test_666_before VALUES('a')": ERROR:  invalid input syntax for type integer: "a"
+LINE 1: INSERT INTO test_666_before VALUES('a')
+                                           ^
+
+2021-01-11 19:18:24|INFO|rows Inserted          = 0
+2021-01-11 19:18:24|INFO|rows Updated           = 0
+2021-01-11 19:18:24|INFO|data formatting errors = 0
+2021-01-11 19:18:24|INFO|gpload failed
+ c1 
+----
+(0 rows)
+
+ c1 
+----
+(0 rows)
+
+ count 
+-------
+     0
+(1 row)
+

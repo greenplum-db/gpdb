@@ -1,0 +1,19 @@
+2021-01-11 19:42:13|INFO|gpload session started 2021-01-11 19:42:13
+2021-01-11 19:42:13|INFO|setting schema 'public' for table 'texttable_661'
+2021-01-11 19:42:13|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-11 19:42:13|INFO|did not find an external table to reuse. creating ext_gpload_reusable_0bd32590_5402_11eb_958e_005056983e1a
+2021-01-11 19:42:13|INFO|running time: 0.09 seconds
+2021-01-11 19:42:13|INFO|rows Inserted          = 16
+2021-01-11 19:42:13|INFO|rows Updated           = 0
+2021-01-11 19:42:13|INFO|data formatting errors = 0
+2021-01-11 19:42:13|INFO|gpload succeeded
+ c1 
+----
+  1
+(1 row)
+
+ count 
+-------
+    16
+(1 row)
+
