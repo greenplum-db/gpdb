@@ -2027,6 +2027,19 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan)
 		List	   *stmt_list;
 		CachedPlanSource *plansource;
 
+		if (IsA(parsetree->stmt, SelectStmt))
+		{
+			/*
+			 * Greenplum specific behavior
+			 * Cursor's query is executed by a reader gang and in Greenplum
+			 * reader gang cannot lock tuples. If a cursor's query is SELECT
+			 * statement with locking clause, Greenplum will ignore the locking
+			 * clause, always locks the relation using Exclusive Lock and
+			 * does not generate LockRows plannode.
+			 */
+			((SelectStmt *)parsetree->stmt)->disableLockingOptimization = GlobalDisableLockingOptimization;
+		}
+
 		/*
 		 * Create the CachedPlanSource before we do parse analysis, since it
 		 * needs to see the unmodified raw parse tree.

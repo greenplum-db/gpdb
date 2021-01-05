@@ -21,6 +21,7 @@ typedef void (*post_parse_analyze_hook_type) (ParseState *pstate,
 											  Query *query);
 extern PGDLLIMPORT post_parse_analyze_hook_type post_parse_analyze_hook;
 
+extern bool GlobalDisableLockingOptimization;
 
 extern Query *parse_analyze(RawStmt *parseTree, const char *sourceText,
 							Oid *paramTypes, int numParams, QueryEnvironment *queryEnv);

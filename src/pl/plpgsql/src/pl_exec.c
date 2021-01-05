@@ -31,6 +31,7 @@
 #include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/optimizer.h"
+#include "parser/analyze.h"
 #include "parser/parse_coerce.h"
 #include "parser/scansup.h"
 #include "storage/proc.h"
@@ -1607,8 +1608,16 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 					}
 					else
 					{
+						/*
+						 * Greenplum specific behavior
+						 * If it contains curosr, we have to tell the later code
+						 * does not optimize the locking behavior for SELECT
+						 * statement with locking clause.
+						 */
+						GlobalDisableLockingOptimization = true;
 						exec_assign_expr(estate, (PLpgSQL_datum *) var,
 										 var->default_val);
+						GlobalDisableLockingOptimization = false;
 					}
 				}
 				break;
@@ -2017,7 +2026,15 @@ exec_stmt(PLpgSQL_execstate *estate, PLpgSQL_stmt *stmt)
 			break;
 
 		case PLPGSQL_STMT_OPEN:
+			/*
+			 * Greenplum specific behavior
+			 * If it contains curosr, we have to tell the later code
+			 * does not optimize the locking behavior for SELECT
+			 * statement with locking clause.
+			 */
+			GlobalDisableLockingOptimization = true;
 			rc = exec_stmt_open(estate, (PLpgSQL_stmt_open *) stmt);
+			GlobalDisableLockingOptimization = false;
 			break;
 
 		case PLPGSQL_STMT_FETCH:
