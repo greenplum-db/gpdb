@@ -134,6 +134,7 @@ CDXLBucket::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatsDistinct), m_distinct);
 
+	xml_serializer->SetFullPrecision(true);
 	SerializeBoundaryValue(
 		xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketLowerBound),
@@ -142,6 +143,7 @@ CDXLBucket::Serialize(CXMLSerializer *xml_serializer) const
 		xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketUpperBound),
 		m_upper_bound_dxl_datum, m_is_upper_closed);
+	xml_serializer->SetFullPrecision(false);
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

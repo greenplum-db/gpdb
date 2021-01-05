@@ -9988,6 +9988,7 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 delete from pg_statistic where starelid='bar_missing_stats'::regclass;
 NOTICE:  One or more columns in the following table(s) do not have statistics: pg_statistic
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
+set allow_system_table_mods=false;
 select count(*) from foo_missing_stats where a = 10;
 NOTICE:  One or more columns in the following table(s) do not have statistics: foo_missing_stats
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
@@ -10013,6 +10014,62 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 (1 row)
 
 set optimizer_print_missing_stats = off;
+DROP TABLE IF EXISTS orca.table_with_small_statistic_precision_diff;
+NOTICE:  table "table_with_small_statistic_precision_diff" does not exist, skipping
+CREATE TABLE orca.table_with_small_statistic_precision_diff (
+    col1 double precision
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SET allow_system_table_mods=true;
+DELETE FROM pg_statistic WHERE starelid='table_with_small_statistic_precision_diff'::regclass;
+INSERT INTO pg_statistic VALUES (
+'table_with_small_statistic_precision_diff'::regclass,
+1::smallint,
+True::boolean,
+0::real,
+8::integer,
+0::real,
+1::smallint,
+2::smallint,
+0::smallint,
+0::smallint,
+0::smallint,
+670::oid,
+672::oid,
+0::oid,
+0::oid,
+0::oid,
+0::oid,
+0::oid,
+0::oid,
+0::oid,
+0::oid,
+E'{0.002}'::real[],
+NULL::real[],
+NULL::real[],
+NULL::real[],
+NULL::real[],
+E'{-0.25475}'::float8[],
+E'{-0.3,-0.2547399}'::float8[],
+NULL::float8[],
+NULL::float8[],
+NULL::float8[]);
+SET allow_system_table_mods=false;
+SELECT *
+FROM (
+    SELECT
+        *
+    FROM orca.table_with_small_statistic_precision_diff
+    UNION ALL
+    SELECT
+        *
+    FROM orca.table_with_small_statistic_precision_diff
+) x;
+ col1 
+------
+(0 rows)
+
 -- Push components of disjunctive predicates
 create table cust(cid integer, firstname text, lastname text) distributed by (cid);
 create table datedim(date_sk integer, year integer, moy integer) distributed by (date_sk);

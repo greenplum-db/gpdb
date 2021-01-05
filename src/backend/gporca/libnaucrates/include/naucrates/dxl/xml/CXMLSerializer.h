@@ -129,6 +129,12 @@ public:
 	// add a byte array attribute
 	void AddAttribute(const CWStringBase *pstrAttr, BOOL is_null,
 					  const BYTE *data, ULONG length);
+
+	void
+	SetFullPrecision(BOOL fullPrecision)
+	{
+		m_os.SetFullPrecision(fullPrecision);
+	}
 };
 
 }  // namespace gpdxl
