@@ -11,6 +11,9 @@
 (1 row)
 !\retcode gpconfig -c max_prepared_transactions -v 3 --skipvalidation;
 (exited with code 0)
+-- Enable gp_autostats_mode to make sure the single value insert triger 2pc
+!\retcode gpconfig -c gp_autostats_mode -v 'on_no_stats' --skipvalidation;
+(exited with code 0)
 !\retcode gpstop -ari;
 (exited with code 0)
 
@@ -113,6 +116,8 @@ DROP
 -- (50) and some isolation2 tests will fail due to "too many clients". Hardcode
 -- to 250 which is the default value when demo cluster is created.
 !\retcode gpconfig -c max_prepared_transactions -v 250 --skipvalidation;
+(exited with code 0)
+!\retcode gpconfig -c gp_autostats_mode -v 'none' --skipvalidation;
 (exited with code 0)
 !\retcode gpstop -ari;
 (exited with code 0)

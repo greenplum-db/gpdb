@@ -18,16 +18,17 @@ SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg('ao');
 (3 rows)
 VACUUM ao;
 VACUUM
-SELECT state, modcount FROM gp_ao_or_aocs_seg('ao');
- state | modcount 
+-- in case there's autovacuum worker running in the backend, the aoseg will not be dropped which has state = 2
+SELECT segno, modcount FROM gp_ao_or_aocs_seg('ao');
+ segno | modcount 
 -------+----------
- 1     | 1        
- 1     | 1        
+ 1     | 2        
+ 2     | 1        
  1     | 1        
  1     | 2        
- 1     | 2        
+ 2     | 1        
 (5 rows)
-SELECT sum(tupcount) FROM gp_ao_or_aocs_seg('ao');
+SELECT sum(tupcount) FROM gp_ao_or_aocs_seg('ao') where state = 1;
  sum 
 -----
  6   

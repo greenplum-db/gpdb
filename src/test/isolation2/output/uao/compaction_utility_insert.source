@@ -22,10 +22,8 @@ UPDATE foo SET b = -1 WHERE a = 3;
 UPDATE 1
 VACUUM foo;
 VACUUM
-SELECT segment_id, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
+SELECT segment_id, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo') where state = 1 and tupcount > 0;
  segment_id | segno | tupcount | state 
 ------------+-------+----------+-------
- 0          | 0     | 0        | 1     
  0          | 1     | 1        | 1     
- 0          | 2     | 0        | 1     
-(3 rows)
+(1 row)
