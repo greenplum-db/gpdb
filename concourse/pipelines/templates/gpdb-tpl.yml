@@ -724,6 +724,7 @@ resources:
     repository: pivotaldata/gpdb6-centos8-build
     tag: latest
 {% endif %}
+
 {% if "photon3" in os_types %}
 - name: gpdb6-photon3-build
   type: registry-image
