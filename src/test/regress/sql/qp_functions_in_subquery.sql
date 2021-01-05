@@ -7,6 +7,8 @@ CREATE TABLE foo (a int, b int);
 INSERT INTO foo select i, i+1 from generate_series(1,10) i;
 CREATE TABLE bar (c int, d int);
 INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+ANALYZE foo;
+ANALYZE bar;
 
 -- @description function_in_subqry_0.sql
 SELECT * FROM foo, (SELECT func1_nosql_vol(5)) r order by 1,2,3;

@@ -669,6 +669,7 @@ drop table if exists co;
 create table co (i int, j int, k varchar) with(appendonly=true, orientation=column);
 insert into co values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),
 	(5,5,'aaaaa'), (6,6,'aaaaaa'), (7,7,'aaaaaaa'), (8,8,'aaaaaaaa');
+analyze co;
 create index co_j on co using btree(j);
 create index co_k on co using btree(k);
 create index co_jk on co using btree((j + length(k)));

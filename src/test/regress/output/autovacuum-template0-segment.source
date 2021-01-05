@@ -25,17 +25,17 @@ select age(datfrozenxid) < 200 * 1000000 from gp_dist_random('pg_database') wher
 (3 rows)
 
 -- track that we've updated the row in pg_database for template0
-SELECT gp_inject_fault_infinite('vacuum_update_dat_frozen_xid', 'skip', dbid) from gp_segment_configuration where content = 0 and role = 'p';
- gp_inject_fault_infinite 
---------------------------
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'skip', '', 'template0', '', 1, -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_inject_fault 
+-----------------
  Success:
 (1 row)
 
 -- Suspend the autovacuum worker from vacuuming before
 -- ShmemVariableCache->latestCompletedXid is expected to be updated
-SELECT gp_inject_fault_infinite('auto_vac_worker_before_do_autovacuum', 'suspend', dbid) from gp_segment_configuration where content = 0 and role = 'p';
- gp_inject_fault_infinite 
---------------------------
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'suspend', '', 'template0', '', 1, -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_inject_fault 
+-----------------
  Success:
 (1 row)
 

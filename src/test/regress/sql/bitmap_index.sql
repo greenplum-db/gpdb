@@ -153,6 +153,7 @@ drop table bm_test3;
 
 create table bm_test (i int, j int);
 insert into bm_test values (0, 0), (0, 0), (0, 1), (1,0), (1,0), (1,1);
+analyze bm_test;
 create index bm_test_j on bm_test using bitmap(j);
 delete from bm_test where j =1;
 vacuum bm_test;

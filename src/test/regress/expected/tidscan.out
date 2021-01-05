@@ -18,6 +18,7 @@ set enable_nestloop=on;
 set client_min_messages='warning';
 -- only insert a few rows, we don't want to spill onto a second table page
 INSERT INTO tidscan (id) VALUES (1), (2), (3);
+ANALYZE tidscan;
 -- The 'distkey' column has served its purpose, by ensuring that all the rows
 -- end up on the same segment. Now drop it, so that it doesn't affect the
 -- output of the "select *" queries that follow.

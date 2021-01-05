@@ -611,6 +611,7 @@ drop table ab, lprt_a;
 -- Join
 create table tbl1(col1 int);
 insert into tbl1 values (501), (505);
+analyze tbl1;
 
 -- Basic table
 create table tprt (col1 int) partition by range (col1);

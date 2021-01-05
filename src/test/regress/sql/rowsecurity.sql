@@ -56,6 +56,7 @@ INSERT INTO uaccount VALUES
     ('regress_rls_bob', 1),
     ('regress_rls_carol', 2),
     ('regress_rls_dave', 3);
+ANALYZE uaccount;
 
 CREATE TABLE category (
     cid        int primary key,
@@ -67,6 +68,7 @@ INSERT INTO category VALUES
     (22, 'science fiction'),
     (33, 'technology'),
     (44, 'manga');
+ANALYZE category;
 
 CREATE TABLE document (
     did         int primary key,
@@ -87,6 +89,7 @@ INSERT INTO document VALUES
     ( 8, 44, 1, 'regress_rls_carol', 'great manga'),
     ( 9, 22, 1, 'regress_rls_dave', 'awesome science fiction'),
     (10, 33, 2, 'regress_rls_dave', 'awesome technology book');
+ANALYZE document;
 
 ALTER TABLE document ENABLE ROW LEVEL SECURITY;
 
@@ -250,6 +253,7 @@ COPY t1 FROM stdin WITH ;
 103	3	ccc
 104	4	dad
 \.
+ANALYZE t1;
 
 CREATE TABLE t2 (c float) INHERITS (t1);
 GRANT ALL ON t2 TO public;
@@ -260,6 +264,7 @@ COPY t2 FROM stdin;
 203	3	cde	3.3
 204	4	def	4.4
 \.
+ANALYZE t2;
 
 CREATE TABLE t3 (id int not null primary key, c text, b text, a int);
 ALTER TABLE t3 INHERIT t1;
@@ -270,6 +275,7 @@ COPY t3(id, a,b,c) FROM stdin;
 302	2	yyy	Y
 303	3	zzz	Z
 \.
+ANALYZE t3;
 
 CREATE POLICY p1 ON t1 FOR ALL TO PUBLIC USING (a % 2 = 0); -- be even number
 CREATE POLICY p2 ON t2 FOR ALL TO PUBLIC USING (a % 2 = 1); -- be odd number
@@ -1000,6 +1006,7 @@ DROP VIEW rls_sbv;
 --
 SET SESSION AUTHORIZATION regress_rls_alice;
 INSERT INTO y2 (SELECT x, md5(x::text) FROM generate_series(0,20) x);
+ANALYZE y2;
 CREATE POLICY p2 ON y2 USING (a % 3 = 0);
 CREATE POLICY p3 ON y2 USING (a % 4 = 0);
 
@@ -1018,6 +1025,7 @@ CREATE TABLE test_qual_pushdown (
 );
 
 INSERT INTO test_qual_pushdown VALUES ('abc'),('def');
+ANALYZE test_qual_pushdown;
 
 SELECT * FROM y2 JOIN test_qual_pushdown ON (b = abc) WHERE f_leak(abc);
 EXPLAIN (COSTS OFF) SELECT * FROM y2 JOIN test_qual_pushdown ON (b = abc) WHERE f_leak(abc);

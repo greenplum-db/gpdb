@@ -95,6 +95,14 @@ WITH (appendonly=false) DISTRIBUTED REPLICATED;
 \copy heap_partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from '@abs_srcdir@/data/partsupp.csv' with delimiter '|';
 \copy heap_region ( R_REGIONKEY,R_NAME,R_COMMENT) from '@abs_srcdir@/data/region.csv' with delimiter '|';
 \copy heap_supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from '@abs_srcdir@/data/supplier.csv' with delimiter '|';
+ANALYZE heap_customer;
+ANALYZE heap_lineitem;
+ANALYZE heap_nation;
+ANALYZE heap_orders;
+ANALYZE heap_part;
+ANALYZE heap_partsupp;
+ANALYZE heap_region;
+ANALYZE heap_supplier;
 CREATE TABLE ao_customer (
     c_custkey integer NOT NULL,
     c_name character varying(25) NOT NULL,
@@ -190,6 +198,14 @@ WITH (appendonly=true) DISTRIBUTED REPLICATED;
 \copy ao_partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from '@abs_srcdir@/data/partsupp.csv' with delimiter '|';
 \copy ao_region ( R_REGIONKEY,R_NAME,R_COMMENT) from '@abs_srcdir@/data/region.csv' with delimiter '|';
 \copy ao_supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from '@abs_srcdir@/data/supplier.csv' with delimiter '|';
+ANALYZE ao_customer;
+ANALYZE ao_lineitem;
+ANALYZE ao_nation;
+ANALYZE ao_orders;
+ANALYZE ao_part;
+ANALYZE ao_partsupp;
+ANALYZE ao_region;
+ANALYZE ao_supplier;
 CREATE TABLE co_customer (
     c_custkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
     c_name character varying(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
@@ -285,6 +301,14 @@ WITH (appendonly=true, orientation=column) DISTRIBUTED BY (s_suppkey);
 \copy co_partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from '@abs_srcdir@/data/partsupp.csv' with delimiter '|';
 \copy co_region ( R_REGIONKEY,R_NAME,R_COMMENT) from '@abs_srcdir@/data/region.csv' with delimiter '|';
 \copy co_supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from '@abs_srcdir@/data/supplier.csv' with delimiter '|';
+ANALYZE co_customer;
+ANALYZE co_lineitem;
+ANALYZE co_nation;
+ANALYZE co_orders;
+ANALYZE co_part;
+ANALYZE co_partsupp;
+ANALYZE co_region;
+ANALYZE co_supplier;
 select  'mpph1',
 	l_returnflag,
 	l_linestatus,

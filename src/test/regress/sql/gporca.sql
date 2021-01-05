@@ -90,6 +90,9 @@ insert into orca.foo select i,i+1,i+2 from generate_series(1,10) i;
 
 insert into orca.bar1 select i,i+1,i+2 from generate_series(1,20) i;
 insert into orca.bar2 select i,i+1,i+2 from generate_series(1,30) i;
+analyze orca.foo;
+analyze orca.bar1;
+analyze orca.bar2;
 
 -- produces result node
 
@@ -1525,6 +1528,7 @@ reset optimizer_segments;
 drop table if exists orca.bm_test;
 create table orca.bm_test (i int, t text);
 insert into orca.bm_test select i % 10, (i % 10)::text  from generate_series(1, 100) i;
+analyze orca.bm_test;
 create index bm_test_idx on orca.bm_test using bitmap (i);
 
 set optimizer_enable_bitmapscan=on;
@@ -1873,6 +1877,7 @@ select to_char(c1, 'YYYY-MM-DD HH24:MI:SS') from orca.t3 where c1 = '2015-07-03'
 -- MPP-25806: multi-column index
 create table orca.index_test (a int, b int, c int, d int, e int, constraint index_test_pkey PRIMARY KEY (a, b, c, d));
 insert into orca.index_test select i,i%2,i%3,i%4,i%5 from generate_series(1,100) i;
+analyze orca.index_test;
 -- force_explain
 explain select * from orca.index_test where a = 5;
 
@@ -1952,6 +1957,7 @@ drop table canSetTag_input_data;
 
 -- Test B-Tree index scan with in list
 CREATE TABLE btree_test as SELECT i a, i b FROM generate_series(1,100) i distributed randomly;
+ANALYZE btree_test;
 CREATE INDEX btree_test_index ON btree_test(a);
 set optimizer_enable_tablescan = off;
 -- start_ignore
@@ -1972,6 +1978,7 @@ reset optimizer_enable_tablescan;
 
 -- Test Bitmap index scan with in list
 CREATE TABLE bitmap_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
+ANALYZE bitmap_test;
 CREATE INDEX bitmap_index ON bitmap_test USING BITMAP(a);
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
@@ -2072,6 +2079,7 @@ reset optimizer_enable_ctas;
 create table input_tab1 (a int, b int);
 create table input_tab2 (c int, d int);
 insert into input_tab1 values (1, 1);
+analyze input_tab1;
 insert into input_tab1 values (NULL, NULL);
 set optimizer_force_multistage_agg = off;
 set optimizer_force_three_stage_scalar_dqa = off;
@@ -2092,13 +2100,16 @@ reset optimizer_force_three_stage_scalar_dqa;
 -- start_ignore
 CREATE TABLE tab_1 (id VARCHAR(32)) DISTRIBUTED RANDOMLY;
 INSERT INTO tab_1 VALUES('qwert'), ('vbn');
+ANALYZE tab_1;
 
 CREATE TABLE tab_2(key VARCHAR(200) NOT NULL, id VARCHAR(32) NOT NULL, cd VARCHAR(2) NOT NULL) DISTRIBUTED BY(key);
 INSERT INTO tab_2 VALUES('abc', 'rew', 'dr');
+ANALYZE tab_2;
 INSERT INTO tab_2 VALUES('tyu', 'rer', 'fd');
 
 CREATE TABLE tab_3 (region TEXT, code TEXT) DISTRIBUTED RANDOMLY;
 INSERT INTO tab_3 VALUES('cvb' ,'tyu');
+ANALYZE tab_3;
 INSERT INTO tab_3 VALUES('hjj' ,'xyz');
 -- end_ignore
 
@@ -2395,6 +2406,7 @@ select * from tc, tt where c = v;
 drop table if exists noexp_hash, gpexp_hash, gpexp_rand, gpexp_repl;
 create table noexp_hash(a int, b int) distributed by (a);
 insert into  noexp_hash select i, i from generate_series(1,50) i;
+analyze noexp_hash;
 
 -- three tables that will be expanded (simulated)
 create table gpexp_hash(a int, b int) distributed by (a);
@@ -2414,6 +2426,9 @@ explain insert into gpexp_hash select i, i from generate_series(1,50) i;
 insert into gpexp_hash select i, i from generate_series(1,50) i;
 insert into gpexp_rand select i, i from generate_series(1,50) i;
 insert into gpexp_repl select i, i from generate_series(1,50) i;
+analyze gpexp_hash;
+analyze gpexp_rand;
+analyze gpexp_repl;
 
 -- the segment ids in the unmodified table should have one extra number
 select max(noexp_hash.gp_segment_id) - max(gpexp_hash.gp_segment_id) as expect_one
@@ -2511,6 +2526,8 @@ CREATE TABLE btab_old_hash (b int) DISTRIBUTED BY (b);
 
 INSERT INTO atab_old_hash VALUES (-1), (0), (1);
 INSERT INTO btab_old_hash VALUES (-1), (0), (1), (2);
+ANALYZE atab_old_hash;
+ANALYZE btab_old_hash;
 
 -- Test simple join using the new operator(s) before creating the opclass/opfamily
 EXPLAIN SELECT a, b FROM atab_old_hash INNER JOIN btab_old_hash ON a |=| b;
@@ -2552,6 +2569,9 @@ CREATE index f2c on foo2 using bitmap(c);
 INSERT INTO foo1 values (1), (2);
 INSERT INTO foo2 values (1,1,1), (2,2,2);
 INSERT INTO foo3 values (1,1), (2,2);
+ANALYZE foo1;
+ANALYZE foo2;
+ANALYZE foo3;
 
 set optimizer_join_order=query;
 -- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
@@ -2572,6 +2592,7 @@ drop table if exists tp;
 
 create table t55 (c int, lid int);
 insert into t55 select i, i from generate_series(1, 1000) i;
+analyze t55;
 
 set optimizer_join_order = query;
 
@@ -2627,6 +2648,8 @@ create table tcorr2(a int, b int);
 
 insert into tcorr1 values (1,99);
 insert into tcorr2 values (1,1);
+analyze tcorr1;
+analyze tcorr2;
 
 set optimizer_trace_fallback to on;
 

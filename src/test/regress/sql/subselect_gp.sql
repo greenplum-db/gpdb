@@ -89,6 +89,7 @@ drop table if exists mrs_t1;
 create table mrs_t1(x int) distributed by (x);
 
 insert into mrs_t1 select generate_series(1,20);
+analyze mrs_t1;
 
 explain select * from mrs_t1 where exists (select x from mrs_t1 where x < -1);
 select * from mrs_t1 where exists (select x from mrs_t1 where x < -1) order by 1;
@@ -129,10 +130,12 @@ delete from gp_distribution_policy where localoid='csq_m1'::regclass;
 reset allow_system_table_mods;
 alter table csq_m1 add column x int;
 insert into csq_m1 values(1);
+analyze csq_m1;
 
 drop table if exists csq_d1;
 create table csq_d1(x int) distributed by (x);
 insert into csq_d1 select * from csq_m1;
+analyze csq_d1;
 
 explain select array(select x from csq_m1); -- no initplan
 select array(select x from csq_m1); -- {1}
@@ -187,11 +190,13 @@ delete from gp_distribution_policy where localoid='csq_m1'::regclass;
 reset allow_system_table_mods;
 alter table csq_m1 add column x int;
 insert into csq_m1 values(1),(2),(3);
+analyze csq_m1;
 
 drop table if exists csq_d1;
 create table csq_d1(x int) distributed by (x);
 insert into csq_d1 select * from csq_m1 where x < 3;
 insert into csq_d1 values(4);
+analyze csq_d1;
 
 select * from csq_m1;
 select * from csq_d1;
@@ -286,9 +291,9 @@ SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
 drop table if exists csq_pullup;
 create table csq_pullup(t text, n numeric, i int, v varchar(10)) distributed by (t);
 insert into csq_pullup values ('abc',1, 2, 'xyz');
+analyze csq_pullup;
 insert into csq_pullup values ('xyz',2, 3, 'def');  
 insert into csq_pullup values ('def',3, 1, 'abc'); 
-
 --
 -- Expr CSQs to joins
 --
@@ -649,6 +654,7 @@ drop table bar;
 --
 CREATE TABLE bar_s (c integer, d character varying(10));
 INSERT INTO bar_s VALUES (9,9);
+ANALYZE bar_s;
 SELECT * FROM bar_s T1 WHERE c = (SELECT max(c) FROM bar_s T2 WHERE T2.d = T1.d GROUP BY c) AND c < 10;
 CREATE TABLE foo_s (a integer, b integer)  PARTITION BY RANGE(b)
     (PARTITION sub_one START (1) END (10),
@@ -658,6 +664,7 @@ INSERT INTO foo_s VALUES (2,9);
 SELECT bar_s.c from bar_s, foo_s WHERE foo_s.a=2 AND foo_s.b = (SELECT max(b) FROM foo_s WHERE bar_s.c = 9);
 CREATE TABLE baz_s (i int4);
 INSERT INTO baz_s VALUES (9);
+ANALYZE baz_s;
 
 -- In this query, the planner avoids using SubPlan 1 in the qual in the join,
 -- because it avoids picking SubPlans from an equivalence class, when it has
@@ -802,9 +809,11 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b 
 -- More dedup semi-join tests.
 create table dedup_tab (a int4) distributed by(a) ;
 insert into dedup_tab select g from  generate_series(1,100) g;
+analyze dedup_tab;
 
 create table dedup_reptab (a int4) distributed replicated;
 insert into dedup_reptab select generate_series(1,1);
+analyze dedup_reptab;
 
 -- Replicated table on the inner side of the join. The replicated table needs
 -- be broadcast from a single node to the others, with a unique RowIdExpr
@@ -934,6 +943,7 @@ drop table if exists simplify_sub;
 create table simplify_sub (i int) distributed by (i);
 insert into simplify_sub values (1);
 insert into simplify_sub values (2);
+analyze simplify_sub;
 
 -- limit n
 explain (costs off)
@@ -1012,6 +1022,9 @@ create table baz (i int4, j int4) distributed by (i);
 insert into foo select g, g from generate_series(1, 10) g;
 insert into bar values (1, 1);
 insert into baz select g, g from generate_series(5, 100) g;
+analyze foo;
+analyze bar;
+analyze baz;
 
 explain (verbose, costs off)
 select * from foo left outer join baz on (select bar.i from bar where bar.i = foo.i) + 1  = baz.j;

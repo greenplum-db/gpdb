@@ -549,8 +549,10 @@ select * from inhdisttest_b;
 --
 create temporary table even (i int4, j int4) distributed by (i);
 insert into even select g*2, g*2 from generate_series(1, 10) g;
+analyze even;
 create temporary table odd (i int4, j int4) distributed by (i);
 insert into odd select g*2+1, g*2+1 from generate_series(1, 10) g;
+analyze odd;
 create temporary table ctas_x as
   select even.j, even.i as a, odd.i as b from even full outer join odd on (even.i = odd.i)
 distributed by (a);

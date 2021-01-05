@@ -8,6 +8,8 @@ INSERT INTO table_index2 SELECT *,* FROM generate_series(1, 347305);
 INSERT 0 347305
 INSERT INTO table_index2 SELECT *,* FROM generate_series(1, 347305);
 INSERT 0 347305
+ANALYZE table_index2;
+ANALYZE
 UPDATE table_index2 SET b=100 WHERE a < 347305;
 UPDATE 694608
 INSERT INTO table_index2 SELECT *,* FROM generate_series(1, 347305);

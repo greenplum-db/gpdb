@@ -25,6 +25,8 @@ create table t_lockmods (c int) distributed randomly;
 CREATE
 insert into t_lockmods select * from generate_series(1, 5);
 INSERT 5
+analyze t_lockmods;
+ANALYZE
 
 create table t_lockmods1 (c int) distributed randomly;
 CREATE
@@ -463,6 +465,8 @@ create table t_lockmods_ao (c int) with (appendonly=true) distributed randomly;
 CREATE
 insert into t_lockmods_ao select * from generate_series(1, 8);
 INSERT 8
+analyze t_lockmods_ao;
+ANALYZE
 create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 CREATE
 

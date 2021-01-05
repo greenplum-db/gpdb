@@ -10,6 +10,7 @@ set enable_nestloop=on;
 -- messages
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 CREATE VIEW ro_view1 AS SELECT DISTINCT a, b FROM base_tbl; -- DISTINCT not supported
 CREATE VIEW ro_view2 AS SELECT a, b FROM base_tbl GROUP BY a, b; -- GROUP BY not supported
 CREATE VIEW ro_view3 AS SELECT 1 FROM base_tbl HAVING max(a) > 0; -- HAVING not supported
@@ -357,6 +358,7 @@ NOTICE:  drop cascades to view ro_view19
 -- simple updatable view
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a>0;
 SELECT table_name, is_insertable_into
   FROM information_schema.tables
@@ -428,6 +430,7 @@ NOTICE:  drop cascades to view rw_view1
 -- view on top of view
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 CREATE VIEW rw_view1 AS SELECT b AS bb, a AS aa FROM base_tbl WHERE a>0;
 CREATE VIEW rw_view2 AS SELECT aa AS aaa, bb AS bbb FROM rw_view1 WHERE aa<10;
 SELECT table_name, is_insertable_into
@@ -508,6 +511,7 @@ drop cascades to view rw_view2
 -- view on top of view with rules
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a>0 OFFSET 0; -- not updatable without rules/triggers
 CREATE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a<10;
 SELECT table_name, is_insertable_into
@@ -718,6 +722,7 @@ drop cascades to view rw_view2
 -- view on top of view with triggers
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a>0 OFFSET 0; -- not updatable without rules/triggers
 CREATE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a<10;
 SELECT table_name, is_insertable_into
@@ -924,6 +929,7 @@ DROP FUNCTION rw_view1_trig_fn();
 -- update using whole row from view
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 CREATE VIEW rw_view1 AS SELECT b AS bb, a AS aa FROM base_tbl;
 CREATE FUNCTION rw_view1_aa(x rw_view1)
   RETURNS int AS $$ SELECT x.aa $$ LANGUAGE sql;
@@ -1249,6 +1255,7 @@ DROP TABLE base_tbl;
 -- view with ORDER BY
 CREATE TABLE base_tbl (a int, b int);
 INSERT INTO base_tbl VALUES (1,2), (4,5), (3,-3);
+ANALYZE base_tbl;
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl ORDER BY a+b;
 SELECT * FROM rw_view1;
  a | b  
@@ -1462,6 +1469,8 @@ CREATE TABLE base_tbl_parent (a int);
 CREATE TABLE base_tbl_child (CHECK (a > 0)) INHERITS (base_tbl_parent);
 INSERT INTO base_tbl_parent SELECT * FROM generate_series(-8, -1);
 INSERT INTO base_tbl_child SELECT * FROM generate_series(1, 8);
+ANALYZE base_tbl_parent;
+ANALYZE base_tbl_child;
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl_parent;
 CREATE VIEW rw_view2 AS SELECT * FROM ONLY base_tbl_parent;
 SELECT * FROM rw_view1 ORDER BY a;
@@ -1557,6 +1566,8 @@ CREATE TABLE other_tbl_parent (id int);
 CREATE TABLE other_tbl_child () INHERITS (other_tbl_parent);
 INSERT INTO other_tbl_parent VALUES (7),(200);
 INSERT INTO other_tbl_child VALUES (8),(100);
+ANALYZE other_tbl_parent;
+ANALYZE other_tbl_child;
 EXPLAIN (costs off)
 UPDATE rw_view1 SET a = a + 1000 FROM other_tbl_parent WHERE a = id;
                                 QUERY PLAN                                
@@ -1841,6 +1852,7 @@ NOTICE:  drop cascades to view rw_view1
 CREATE TABLE base_tbl (a int);
 CREATE TABLE ref_tbl (a int PRIMARY KEY);
 INSERT INTO ref_tbl SELECT * FROM generate_series(1,10);
+ANALYZE ref_tbl;
 CREATE VIEW rw_view1 AS
   SELECT * FROM base_tbl b
   WHERE EXISTS(SELECT 1 FROM ref_tbl r WHERE r.a = b.a)
@@ -1870,6 +1882,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
  Optimizer: Postgres query optimizer
 (12 rows)
 
+ANALYZE base_tbl;
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
                            QUERY PLAN                            
 -----------------------------------------------------------------
@@ -2221,6 +2234,7 @@ drop cascades to view rw_view2
 -- security barrier view on top of table with rules
 CREATE TABLE base_tbl(id int PRIMARY KEY, data text, deleted boolean);
 INSERT INTO base_tbl VALUES (1, 'Row 1', false), (2, 'Row 2', true);
+ANALYZE base_tbl;
 CREATE RULE base_tbl_ins_rule AS ON INSERT TO base_tbl
   WHERE EXISTS (SELECT 1 FROM base_tbl t WHERE t.id = new.id)
   DO INSTEAD

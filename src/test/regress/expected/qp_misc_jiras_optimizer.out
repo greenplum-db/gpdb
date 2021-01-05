@@ -4631,7 +4631,7 @@ drop table qp_misc_jiras.tbl7285_axg;
 show autovacuum;
  autovacuum 
 ------------
- off
+ on
 (1 row)
 
 set autovacuum=on;

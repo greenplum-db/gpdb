@@ -8,6 +8,7 @@ CREATE INDEX table_index2_index_b ON table_index2(b);
 \set QUIET off
 INSERT INTO table_index2 SELECT *,* FROM generate_series(1, 347305);
 INSERT INTO table_index2 SELECT *,* FROM generate_series(1, 347305);
+ANALYZE table_index2;
 UPDATE table_index2 SET b=100 WHERE a < 347305;
 INSERT INTO table_index2 SELECT *,* FROM generate_series(1, 347305);
 UPDATE table_index2 SET b=100 WHERE a < 347305;

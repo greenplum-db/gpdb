@@ -16,6 +16,7 @@ SET search_path TO 'exttableext';
     \echo 'loading data...'
 loading data...
     INSERT INTO exttabtest SELECT i, 'name'||i, i*2, i*3 FROM generate_series(1,100) i;
+    ANALYZE exttabtest;
 -- Test 1: create read and write functions based on example gpextprotocol.so
 -- Note: Only STABLE is supported for protocol, though this has not been enforced at the time of testing
     CREATE OR REPLACE FUNCTION write_to_file_stable() RETURNS integer AS

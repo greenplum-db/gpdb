@@ -91,6 +91,7 @@ update pg_class
 -- Make a relation with a couple of enormous tuples.
 create table wide as select generate_series(1, 2) as id, rpad('', 320000, 'x') as t;
 alter table wide set (parallel_workers = 2);
+ANALYZE wide;
 
 -- The "optimal" case: the hash table fits in memory; we plan for 1
 -- batch, we stick to that number, and peak memory usage stays within
@@ -310,8 +311,10 @@ rollback to settings;
 -- that we can check that instrumentation comes back correctly.
 
 create table join_foo as select generate_series(1, 3) as id, 'xxxxx'::text as t;
+analyze join_foo;
 alter table join_foo set (parallel_workers = 0);
 create table join_bar as select generate_series(1, 20000) as id, 'xxxxx'::text as t;
+analyze join_bar;
 alter table join_bar set (parallel_workers = 2);
 
 -- multi-batch with rescan, parallel-oblivious

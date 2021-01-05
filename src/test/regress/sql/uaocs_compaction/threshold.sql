@@ -2,6 +2,7 @@
 CREATE TABLE uaocs_threshold (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=column) distributed by (b);
 CREATE INDEX uaocs_threshold_index ON uaocs_threshold(a);
 INSERT INTO uaocs_threshold SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 100) AS i;
+ANALYZE uaocs_threshold;
 
 \set QUIET off
 VACUUM uaocs_threshold;

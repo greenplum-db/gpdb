@@ -88,6 +88,7 @@ copy gstest2 from stdin;
 1	2	2	2	2	2	2	2
 2	2	2	2	2	2	2	2
 \.
+ANALYZE gstest2;
 
 create temp table gstest3 (a integer, b integer, c integer, d integer);
 copy gstest3 from stdin;

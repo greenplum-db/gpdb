@@ -2,6 +2,14 @@ create or replace function test_consume_xids(int4) returns void
 as '@abs_srcdir@/regress.so', 'test_consume_xids'
 language C;
 set debug_burn_xids=on;
+-- Speed up test.
+ALTER SYSTEM SET autovacuum_naptime = 5;
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
 -- Autovacuum should take care of anti-XID wraparounds of 'template0'. Because
 -- of that, the age of template0 should not go much above
 -- autovacuum_freeze_max_age (we assume the default of 200 million here).
@@ -12,17 +20,17 @@ select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='templat
 (1 row)
 
 -- track that we've updated the row in pg_database for template0
-SELECT gp_inject_fault_infinite('vacuum_update_dat_frozen_xid', 'skip', 1);
- gp_inject_fault_infinite 
---------------------------
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'skip', '', 'template0', '', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
  Success:
 (1 row)
 
 -- Suspend the autovacuum worker from vacuuming before
 -- ShmemVariableCache->latestCompletedXid is expected to be updated
-SELECT gp_inject_fault_infinite('auto_vac_worker_before_do_autovacuum', 'suspend', 1);
- gp_inject_fault_infinite 
---------------------------
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'suspend', '', 'template0', '', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
  Success:
 (1 row)
 
@@ -82,6 +90,14 @@ select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='templat
 select age(datfrozenxid) > 200 * 1000000 from pg_database where datname=current_database();
  ?column? 
 ----------
+ t
+(1 row)
+
+-- Reset GUCs.
+ALTER SYSTEM RESET autovacuum_naptime;
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
  t
 (1 row)
 

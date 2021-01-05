@@ -112,11 +112,7 @@ SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
 
 insert into sto_alt_uao1 values ('5_zero', 5, '0_zero', 5, 5, 5, '{3}', 0, 0, 0);
 update sto_alt_uao1 set int4_col = int4_col+100;
-NOTICE:  One or more columns in the following table(s) do not have statistics: sto_alt_uao1
-HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
 select count(int4_col) = 5 as passed from sto_alt_uao1;
-NOTICE:  One or more columns in the following table(s) do not have statistics: sto_alt_uao1
-HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
  passed 
 --------
  t
@@ -124,8 +120,6 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 
 set gp_select_invisible = true;
 select count(int4_col) from sto_alt_uao1;
-NOTICE:  One or more columns in the following table(s) do not have statistics: sto_alt_uao1
-HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
  count 
 -------
     10

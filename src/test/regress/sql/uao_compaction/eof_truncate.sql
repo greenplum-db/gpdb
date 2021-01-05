@@ -4,6 +4,7 @@ CREATE TABLE uao_eof_truncate (a INT, b INT, c CHAR(128)) WITH (appendonly=true)
 CREATE INDEX uao_eof_truncate_index ON uao_eof_truncate(b);
 BEGIN;
 INSERT INTO uao_eof_truncate SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1,1000) AS i;
+ANALYZE uao_eof_truncate;
 COMMIT;
 BEGIN;
 INSERT INTO uao_eof_truncate SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1000,2000) AS i;

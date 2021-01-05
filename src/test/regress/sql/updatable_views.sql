@@ -14,6 +14,7 @@ set enable_nestloop=on;
 
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 
 CREATE VIEW ro_view1 AS SELECT DISTINCT a, b FROM base_tbl; -- DISTINCT not supported
 CREATE VIEW ro_view2 AS SELECT a, b FROM base_tbl GROUP BY a, b; -- GROUP BY not supported
@@ -113,6 +114,7 @@ DROP SEQUENCE uv_seq CASCADE;
 
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a>0;
 
@@ -144,6 +146,7 @@ DROP TABLE base_tbl CASCADE;
 
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 
 CREATE VIEW rw_view1 AS SELECT b AS bb, a AS aa FROM base_tbl WHERE a>0;
 CREATE VIEW rw_view2 AS SELECT aa AS aaa, bb AS bbb FROM rw_view1 WHERE aa<10;
@@ -177,6 +180,7 @@ DROP TABLE base_tbl CASCADE;
 
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a>0 OFFSET 0; -- not updatable without rules/triggers
 CREATE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a<10;
@@ -265,6 +269,7 @@ DROP TABLE base_tbl CASCADE;
 
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a>0 OFFSET 0; -- not updatable without rules/triggers
 CREATE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a<10;
@@ -380,6 +385,7 @@ DROP FUNCTION rw_view1_trig_fn();
 
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
+ANALYZE base_tbl;
 
 CREATE VIEW rw_view1 AS SELECT b AS bb, a AS aa FROM base_tbl;
 
@@ -598,6 +604,7 @@ DROP TABLE base_tbl;
 
 CREATE TABLE base_tbl (a int, b int);
 INSERT INTO base_tbl VALUES (1,2), (4,5), (3,-3);
+ANALYZE base_tbl;
 
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl ORDER BY a+b;
 
@@ -693,6 +700,8 @@ CREATE TABLE base_tbl_parent (a int);
 CREATE TABLE base_tbl_child (CHECK (a > 0)) INHERITS (base_tbl_parent);
 INSERT INTO base_tbl_parent SELECT * FROM generate_series(-8, -1);
 INSERT INTO base_tbl_child SELECT * FROM generate_series(1, 8);
+ANALYZE base_tbl_parent;
+ANALYZE base_tbl_child;
 
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl_parent;
 CREATE VIEW rw_view2 AS SELECT * FROM ONLY base_tbl_parent;
@@ -721,6 +730,8 @@ CREATE TABLE other_tbl_parent (id int);
 CREATE TABLE other_tbl_child () INHERITS (other_tbl_parent);
 INSERT INTO other_tbl_parent VALUES (7),(200);
 INSERT INTO other_tbl_child VALUES (8),(100);
+ANALYZE other_tbl_parent;
+ANALYZE other_tbl_child;
 
 EXPLAIN (costs off)
 UPDATE rw_view1 SET a = a + 1000 FROM other_tbl_parent WHERE a = id;
@@ -836,6 +847,7 @@ DROP TABLE base_tbl CASCADE;
 CREATE TABLE base_tbl (a int);
 CREATE TABLE ref_tbl (a int PRIMARY KEY);
 INSERT INTO ref_tbl SELECT * FROM generate_series(1,10);
+ANALYZE ref_tbl;
 
 CREATE VIEW rw_view1 AS
   SELECT * FROM base_tbl b
@@ -849,6 +861,7 @@ UPDATE rw_view1 SET a = a + 5; -- ok
 UPDATE rw_view1 SET a = a + 5; -- should fail
 
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
+ANALYZE base_tbl;
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
 
 DROP TABLE base_tbl, ref_tbl CASCADE;
@@ -1055,6 +1068,7 @@ DROP TABLE base_tbl CASCADE;
 
 CREATE TABLE base_tbl(id int PRIMARY KEY, data text, deleted boolean);
 INSERT INTO base_tbl VALUES (1, 'Row 1', false), (2, 'Row 2', true);
+ANALYZE base_tbl;
 
 CREATE RULE base_tbl_ins_rule AS ON INSERT TO base_tbl
   WHERE EXISTS (SELECT 1 FROM base_tbl t WHERE t.id = new.id)

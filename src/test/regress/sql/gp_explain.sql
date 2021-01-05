@@ -34,6 +34,7 @@ $$ language plpgsql;
 -- 
 CREATE TABLE explaintest (id int4);
 INSERT INTO explaintest SELECT generate_series(1, 10);
+ANALYZE explaintest;
 
 EXPLAIN ANALYZE SELECT * FROM explaintest;
 

@@ -2,6 +2,8 @@ create table cost_agg_t1(a int, b int, c int);
 insert into cost_agg_t1 select i, random() * 99999, i % 2000 from generate_series(1, 1000000) i;
 create table cost_agg_t2 as select * from cost_agg_t1 with no data;
 insert into cost_agg_t2 select i, random() * 99999, i % 300000 from generate_series(1, 1000000) i;
+analyze cost_agg_t1;
+analyze cost_agg_t2;
 
 --
 -- Test planner's decisions on aggregates when only little memory is available.

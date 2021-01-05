@@ -368,6 +368,7 @@ DROP FUNCTION distinct_test();
 -- end_ignore
 create table multiagg_with_subquery (i int, j int, k int, m int) distributed by (i);
 insert into multiagg_with_subquery select i, i+1, i+2, i+3 from generate_series(1, 10)i;
+analyze multiagg_with_subquery;
 explain (costs off)
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
                                                        QUERY PLAN                                                       

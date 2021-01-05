@@ -180,6 +180,7 @@ CREATE TABLE srf_testtab (t text) DISTRIBUTED BY (t);
 INSERT INTO srf_testtab VALUES ('foo 0');
 INSERT INTO srf_testtab VALUES ('foo 1');
 INSERT INTO srf_testtab VALUES ('foo -1');
+ANALYZE srf_testtab;
 create function srf_on_coordinator () returns setof text as $$
 begin
   return next 'foo ' || current_setting('gp_contentid');

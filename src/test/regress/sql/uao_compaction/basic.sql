@@ -4,6 +4,7 @@ CREATE TABLE uao_basic (a INT, b INT, c CHAR(128)) WITH (appendonly=true);
 
 INSERT INTO uao_basic SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 10) AS i;
 INSERT INTO uao_basic SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 10) AS i;
+ANALYZE uao_basic;
 
 DELETE FROM uao_basic WHERE a < 4;
 SELECT COUNT(*) FROM uao_basic;

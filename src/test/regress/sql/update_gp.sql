@@ -283,6 +283,7 @@ explain update nosplitupdate set a=0 where a=1 and a<1;
 -- test split-update when split-node's flow is entry
 create table tsplit_entry (c int);
 insert into tsplit_entry values (1), (2);
+analyze tsplit_entry;
 
 explain update tsplit_entry set c = s.a from (select count(*) as a from gp_segment_configuration) s;
 update tsplit_entry set c = s.a from (select count(*) as a from gp_segment_configuration) s;

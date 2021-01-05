@@ -92,6 +92,7 @@ set optimizer_enable_dml=on;
 
 create table foo(a int, b int);
 insert into foo select i%100, i%100 from generate_series(1,10000)i;
+analyze foo;
 set optimizer_enable_hashagg = on;
 set optimizer_enable_groupagg = on;
 explain select count(*) from foo group by a;
