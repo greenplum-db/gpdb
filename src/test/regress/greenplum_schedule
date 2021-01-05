@@ -19,7 +19,10 @@
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples. And run gp_toolkit early to make some log
 # file related tests (like gp_log_system, etc) faster.
+test: disable_autovacuum
 test: gp_toolkit
+test: python_processed64bit
+test: enable_autovacuum
 
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
@@ -29,7 +32,6 @@ test: instr_in_shmem
 test: createdb
 test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp
 test: spi_processed64bit
-test: python_processed64bit
 test: gp_tablespace_with_faults
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
@@ -58,8 +60,6 @@ test: gp_connections
 test: bitmap_index
 test: gp_dump_query_oids analyze gp_owner_permission incremental_analyze truncate_gp
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules dispatch_encoding motion_gp
-# dispatch should always run seperately from other cases.
-test: dispatch
 
 # interconnect tests
 test: icudp/gp_interconnect_queue_depth icudp/gp_interconnect_queue_depth_longtime icudp/gp_interconnect_snd_queue_depth icudp/gp_interconnect_snd_queue_depth_longtime icudp/gp_interconnect_min_retries_before_timeout icudp/gp_interconnect_transmit_timeout icudp/gp_interconnect_cache_future_packets icudp/gp_interconnect_default_rtt icudp/gp_interconnect_fc_method icudp/gp_interconnect_min_rto icudp/gp_interconnect_timer_checking_period icudp/gp_interconnect_timer_period icudp/queue_depth_combination_loss icudp/queue_depth_combination_capacity
@@ -76,9 +76,6 @@ test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill 
 # test workfiles compressed using zlib
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
-
-# Check for shmem leak for instrumentation slots before gpdb restart
-test: instr_in_shmem_verify
 
 test: workfile_limits
 # It will also use faultinjector - so it needs to be in a group by itself.
@@ -105,13 +102,12 @@ test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_grou
 test: partition partition1 partition_indexing partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery partition_with_user_defined_function_that_truncates
 
 test: index_constraint_naming index_constraint_naming_partition index_constraint_naming_upgrade
-# 'partition_locking' gets confused if other backends run concurrently and
-# hold locks.
-test: partition_locking
-test: vacuum_gp
+
 test: brin_ao brin_aocs
 
 test: sreh
+
+test: rle rle_delta dsp not_out_of_shmem_exit_slots create_am_gp
 
 # Disabled tests. XXX: Why are these disabled?
 #test: olap_window
@@ -132,20 +128,33 @@ test: ic
 
 test: resource_queue
 test: resource_queue_function
+test: disable_autovacuum
+# Check for shmem leak for instrumentation slots before gpdb restart
+test: instr_in_shmem_verify
+# 'partition_locking' gets confused if other backends run concurrently and
+# hold locks.
+test: partition_locking
+test: vacuum_gp
 test: resource_queue_stat
+# background analyze may affect pgstat
+test: pg_stat
+test: bfv_partition qp_misc_rio
+test: pgstat_qd_tabstat
+# dispatch should always run seperately from other cases.
+test: dispatch
+test: enable_autovacuum
 test: resource_group
 test: resource_group_cpuset
 test: resource_group_gucs
 test: wrkloadadmin
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
-test: rle rle_delta dsp not_out_of_shmem_exit_slots create_am_gp
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
 test: minirepro
 
@@ -168,7 +177,7 @@ test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window 
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions_in_contexts_setup
 # test: qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with
-test: qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_with
+test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_with
 
 test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_resource_queue qp_orca_fallback
 
@@ -176,7 +185,6 @@ test: olap_setup
 test: qp_olap_group qp_olap_group2
 
 test: hooktest tuple_serialization
-
 
 # Test query_info_collect_hook are called in expected sequence on normal query, query error/abort
 test: query_info_hook_test
@@ -188,29 +196,23 @@ test: uao_compaction/full uao_compaction/outdated_partialindex uao_compaction/dr
 # TODO find why these tests fail in parallel, for now keeping them sequential
 test: uao_compaction/full_stats
 test: uao_compaction/stats
-test: uao_compaction/threshold
 test: uao_compaction/index_stats
 test: uao_compaction/index
 test: uao_compaction/drop_column
 test: uao_compaction/index2
+
 
 # Tests for "compaction", i.e. VACUUM, of updatable append-only column oriented tables
 test: uaocs_compaction/alter_table_analyze uaocs_compaction/basic uaocs_compaction/drop_column_update uaocs_compaction/eof_truncate uaocs_compaction/full uaocs_compaction/full_eof_truncate uaocs_compaction/full_threshold uaocs_compaction/outdated_partialindex uaocs_compaction/outdatedindex uaocs_compaction/outdatedindex_abort
 # TODO find why these tests fail in parallel, for now keeping them sequential
 test: uaocs_compaction/full_stats
 test: uaocs_compaction/stats
-test: uaocs_compaction/threshold
 test: uaocs_compaction/index_stats
 test: uaocs_compaction/index
 test: uaocs_compaction/drop_column
 
-test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column
+test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column
 test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column uao_ddl/temp_on_commit_delete_rows_row uao_ddl/temp_on_commit_delete_rows_column
-# Run uao[cs]_catalog_tables separately. They run VACUUM FULL on
-# append-optimized tables and assume that no AWAITING_DROP segfiles exist at
-# the end of VACUUM FULL.
-test: uao_catalog_tables
-test: uaocs_catalog_tables
 test: uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
 
@@ -218,10 +220,22 @@ test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alt
 
 # These tests use gp_select_invisible and VACUUM, and will get confused if there are
 # concurrent transactions holding back the global xmin.
-test: uao_dml/uao_dml_row
-test: uao_dml/uao_dml_column
+
 test: uao_dml/uao_dml_cursor_row uao_dml/uao_dml_select_row uao_dml/uao_dml_cursor_column uao_dml/uao_dml_select_column
 
+
+# diable autovacuum for the test
+test: disable_autovacuum
+# Run uao[cs]_catalog_tables separately. They run VACUUM FULL on
+# append-optimized tables and assume that no AWAITING_DROP segfiles exist at
+# the end of VACUUM FULL.
+test: uao_catalog_tables
+test: uaocs_catalog_tables
+test: uao_compaction/threshold
+test: uaocs_compaction/threshold
+test: uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column
+test: uao_dml/uao_dml_row
+test: uao_dml/uao_dml_column
 test: ao_locks
 test: freeze_aux_tables
 
@@ -232,6 +246,9 @@ test: vacuum_full_ao
 test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
+# Check for shmem leak for instrumentation slots
+test: instr_in_shmem_verify
+test: enable_autovacuum
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics
 test: session_reset
@@ -239,9 +256,6 @@ test: session_reset
 test: fts_error
 
 test: psql_gp_commands pg_resetwal dropdb_check_shared_buffer_cache gp_upgrade_cornercases
-
-# Check for shmem leak for instrumentation slots
-test: instr_in_shmem_verify
 
 test: temp_relation
 test: alter_db_set_tablespace
@@ -257,7 +271,6 @@ test: fts_recovery_in_progress
 test: mirror_replay
 test: autovacuum-template0
 test: autovacuum-template0-segment
-test: pgstat_qd_tabstat
 
 # gpexpand introduce the partial tables, check them if they can run correctly
 test: gangsize gang_reuse
