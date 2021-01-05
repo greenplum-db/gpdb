@@ -250,7 +250,7 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
     if preload:
         f.write("\n   PRELOAD:" )
         if truncate:
-            f.write("\n    - TRUNCSTE: "+str(truncate))
+            f.write("\n    - TRUNCATE: "+str(truncate))
         if reuse_tables:
             f.write("\n    - REUSE_TABLES: "+str(reuse_tables))
         if fast_match:
@@ -1045,4 +1045,27 @@ def test_59_gpload_yaml_wrong_port():
     "59 gpload yaml writing a not exist port"
     copy_data('external_file_01.txt','data_file.txt')
     write_config_file(port='111111',format='text',file='data_file.txt',table='texttable')
+
+@prepare_before_test(num=601, times=1)
+def test_601_with_trucate_true():
+    "601 gpload with truncate is true"
+    file = mkpath('setup.sql')
+    runfile(file)
+    f = open(mkpath('query601.sql'),'a')
+    f.write("\\! psql -d reuse_gptest -c 'select count(*) from testtruncate;'")
+    f.close()
+    copy_data('external_file_04.txt','data_file.txt')
+    write_config_file(mode='insert',reuse_tables=False,fast_match=False,file='data_file.txt',table='testtruncate', error_limit=1002, truncate=True)
+
+@prepare_before_test(num=602, times=1)
+def test_602_with_reuse_tables_true():
+    "602 gpload with reuse_tables is true"
+    drop_tables()
+    file = mkpath('setup.sql')
+    runfile(file)
+    f = open(mkpath('query602.sql'),'a')
+    f.write("\\! psql -d reuse_gptest -c \"SELECT count(*) from pg_class WHERE relname like 'ext_gpload_reusable%' OR relname like 'staging_gpload_reusable%';\"")
+    f.close()
+    copy_data('external_file_04.txt','data_file.txt')
+    write_config_file(mode='insert',reuse_tables=True,fast_match=False,file='data_file.txt',table='texttable', error_limit=1002, truncate=True)
 

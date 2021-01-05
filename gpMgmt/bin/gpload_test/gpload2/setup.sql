@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS texttable;
 DROP TABLE IF EXISTS csvtable;
 DROP TABLE IF EXISTS texttable1;
 DROP TABLE IF EXISTS testSpecialChar;
+DROP TABLE IF EXISTS testtruncate;
 reset client_min_messages;
 CREATE TABLE texttable (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -28,3 +29,8 @@ CREATE TABLE test.csvtable (
 	    year int, make text, model text, decription text, price decimal)
             DISTRIBUTED BY (year);
 create table testSpecialChar("Field1" bigint, "Field#2" text) distributed by ("Field1");
+CREATE TABLE testtruncate (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision) DISTRIBUTED BY (n1);
+INSERT INTO testtruncate VALUES('ttt','ttgt','shpits', '2011-06-01 12:30:30',16,732,834567,45.67,789.123,7.12345,156.456178);
