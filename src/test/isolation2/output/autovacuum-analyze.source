@@ -2,9 +2,7 @@
 -- true on Master, the launcher will take care of databases' analyze job on Master.
 -- VACUUM anti-XID wraparounds of 'template0' is not changed.
 
--- Start AUTOVACUUM launcher.
-ALTER SYSTEM SET autovacuum = on;
-ALTER
+-- Speed up test.
 ALTER SYSTEM SET autovacuum_naptime = 5;
 ALTER
 select * from pg_reload_conf();
@@ -370,15 +368,269 @@ select relpages, reltuples from pg_class where oid = 'anaabort'::regclass;
 1: END;
 END
 
--- Disable AUTOVACUUM launcher.
-ALTER SYSTEM SET autovacuum_naptime = 60;
-ALTER
-ALTER SYSTEM SET autovacuum = off;
+--
+-- Test 4, auto-ANALYZE and auto_stats could work at the same time.
+-- With `on_no_stats` mode, if insert into a empty table, ANALYZE gets triggered.
+-- But this doesn't prevent auto-ANALYZE for the table. (Case 1)
+-- And for `on_change` mode, if the modified tuples reach the auto_stats threshold,
+-- auto_stats will get triggered, this also doesn't prevent auto-ANALYZE. (Case 2)
+-- But, if not reach the auto_stats threshold, then only auto-ANALYZE will be considered. (Case 3)
+-- More details, please refer to the Implementation part of
+-- src/backend/postmaster/README.auto-ANALYZE.
+--
+
+-- Case 1 --
+2: SET gp_autostats_mode = 'on_no_stats';
+SET
+
+-- Prepare the table to be ANALYZEd
+2: CREATE TABLE autostatstbl (id bigint);
+CREATE
+
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'autostatstbl', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'autostatstbl', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- with auto_stats, the auto-ANALYZE still trigger
+2: INSERT INTO autostatstbl select i from generate_series(1, 1000) as i;
+INSERT 1000
+2: select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat. 
+-- auto_stats executed but auto-ANALYZE not execute yet since we suspend before finish ANALYZE.
+SELECT count(*) FROM pg_statistic where starelid = 'autostatstbl'::regclass;
+ count 
+-------
+ 1     
+(1 row)
+select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 1000      
+(1 row)
+-- expect analyze_count = 1, autoanalyze_count = 0, and n_mod_since_analyze = 1000 since ANALYZE executed
+-- in same transaction for the insert statement.
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze 
+---------------+-------------------+---------------------
+ 1             | 0                 | 1000                
+(1 row)
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.autostatstbl                                                                  
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- we can see the auto-ANALYZE finished
+select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 1000      
+(1 row)
+-- expect analyze_count = 1, autoanalyze_count = 1, and n_mod_since_analyze = 0
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze 
+---------------+-------------------+---------------------
+ 1             | 1                 | 0                   
+(1 row)
+
+-- Case 2 --
+-- with auto_stats 'on_change' mode, the auto-ANALYZE still trigger
+2: SET gp_autostats_mode = 'on_change';
+SET
+2: SET gp_autostats_on_change_threshold = 500;
+SET
+
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'autostatstbl', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'autostatstbl', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+2: INSERT INTO autostatstbl select i from generate_series(1001, 2000) as i;
+INSERT 1000
+2: select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat. 
+-- auto_stats executed but auto-ANALYZE not execute yet since we suspend before finish ANALYZE.
+select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 2000      
+(1 row)
+-- expect analyze_count = 2, autoanalyze_count = 1, and n_mod_since_analyze = 1000 since ANALYZE executed
+-- in same transaction for the insert statement.
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze 
+---------------+-------------------+---------------------
+ 2             | 1                 | 1000                
+(1 row)
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.autostatstbl                                                                  
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- we can see the auto-ANALYZE finished, check statistic and analyze count
+select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 2000      
+(1 row)
+-- expect analyze_count = 2, autoanalyze_count = 2, and n_mod_since_analyze = 0
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze 
+---------------+-------------------+---------------------
+ 2             | 2                 | 0                   
+(1 row)
+
+
+-- Case 3 --
+-- reset the threshold, so auto_stats will not be triggered and then auto-ANALYZE will be triggered.
+2: RESET gp_autostats_on_change_threshold;
+RESET
+
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'autostatstbl', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'autostatstbl', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+2: INSERT INTO autostatstbl select i from generate_series(2001, 3000) as i;
+INSERT 1000
+2: select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat. 
+-- auto_stats should not executed and auto-ANALYZE not execute yet since we suspend before finish ANALYZE.
+select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 2000      
+(1 row)
+-- expect analyze_count = 2, autoanalyze_count = 2, and n_mod_since_analyze = 1000 since ANALYZE executed
+-- in same transaction for the insert statement.
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze 
+---------------+-------------------+---------------------
+ 2             | 2                 | 1000                
+(1 row)
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.autostatstbl                                                                  
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- we can see the auto-ANALYZE finished, check statistic and analyze count
+select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 6        | 3000      
+(1 row)
+-- expect analyze_count = 2, autoanalyze_count = 3, and n_mod_since_analyze = 0 since ANALYZE executed
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze 
+---------------+-------------------+---------------------
+ 2             | 3                 | 0                   
+(1 row)
+
+-- Reset GUCs.
+ALTER SYSTEM RESET autovacuum_naptime;
 ALTER
 select * from pg_reload_conf();
  pg_reload_conf 
 ----------------
  t              
 (1 row)
-
 
