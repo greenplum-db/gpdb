@@ -668,10 +668,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 set allow_system_table_mods=dml ;
 update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
 select * from gp_toolkit.gp_bloat_diag;
- bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages |              bdidiag               
-----------+------------+------------+-------------+-------------+------------------------------------
-     2618 | pg_catalog | pg_rewrite |          19 |           5 | moderate amount of bloat suspected
-(1 row)
+ bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag 
+----------+------------+------------+-------------+-------------+---------
+(0 rows)
 
 \c regression
 drop database gptoolkit
