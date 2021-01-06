@@ -33,6 +33,7 @@
 #include "catalog/pg_type.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
+#include "commands/progress.h"
 #include "commands/trigger.h"
 #include "executor/execPartition.h"
 #include "executor/executor.h"
@@ -49,6 +50,7 @@
 #include "parser/parse_collate.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
+#include "pgstat.h"
 #include "port/pg_bswap.h"
 #include "rewrite/rewriteHandler.h"
 #include "storage/fd.h"
@@ -643,6 +645,10 @@ CopySendEndOfRow(CopyState cstate)
 			return; /* don't want to reset msgbuf quite yet */
 	}
 
+	/* Update the progress */
+	cstate->bytes_processed += cstate->fe_msgbuf->len;
+	pgstat_progress_update_param(PROGRESS_COPY_BYTES_PROCESSED, cstate->bytes_processed);
+
 	resetStringInfo(fe_msgbuf);
 }
 
@@ -948,6 +954,8 @@ CopyLoadRawBuf(CopyState cstate)
 	cstate->raw_buf[nbytes] = '\0';
 	cstate->raw_buf_index = 0;
 	cstate->raw_buf_len = nbytes;
+	cstate->bytes_processed += nbytes;
+	pgstat_progress_update_param(PROGRESS_COPY_BYTES_PROCESSED, cstate->bytes_processed);
 	return (inbytes > 0);
 }
 
@@ -2366,6 +2374,8 @@ EndCopy(CopyState cstate)
 	if (cstate->cdbsreh)
 		destroyCdbSreh(cstate->cdbsreh);
 
+	pgstat_progress_end_command();
+
 	MemoryContextDelete(cstate->copycontext);
 	pfree(cstate);
 }
@@ -2699,6 +2709,11 @@ BeginCopyTo(ParseState *pstate,
 								errmsg("\"%s\" is a directory", filename)));
 		}
 	}
+
+	/* initialize progress */
+	pgstat_progress_start_command(PROGRESS_COMMAND_COPY,
+								  cstate->rel ? RelationGetRelid(cstate->rel) : InvalidOid);
+	cstate->bytes_processed = 0;
 
 	MemoryContextSwitchTo(oldcontext);
 
@@ -3141,7 +3156,9 @@ CopyTo(CopyState cstate)
 
 			/* Format and send the data */
 			CopyOneRowTo(cstate, slot);
-			processed++;
+
+			/* Increment amount of processed tuples and update the progress */
+			pgstat_progress_update_param(PROGRESS_COPY_LINES_PROCESSED, ++processed);
 		}
 
 		ExecDropSingleTupleTableSlot(slot);
@@ -4637,13 +4654,14 @@ CopyFrom(CopyState cstate)
 			/*
 			 * We count only tuples not suppressed by a BEFORE INSERT trigger
 			 * or FDW; this is the same definition used by nodeModifyTable.c
-			 * for counting tuples inserted by an INSERT command.
+			 * for counting tuples inserted by an INSERT command. Update
+			 * progress of the COPY command as well.
 			 *
 			 * MPP: incrementing this counter here only matters for utility
 			 * mode. in dispatch mode only the dispatcher COPY collects row
 			 * count, so this counter is meaningless.
 			 */
-			processed++;
+			pgstat_progress_update_param(PROGRESS_COPY_LINES_PROCESSED, ++processed);
 			if (cstate->cdbsreh)
 				cstate->cdbsreh->processed++;
 		}
@@ -4927,6 +4945,11 @@ BeginCopyFrom(ParseState *pstate,
 		}
 	}
 
+	/* initialize progress */
+	pgstat_progress_start_command(PROGRESS_COMMAND_COPY,
+								  cstate->rel ? RelationGetRelid(cstate->rel) : InvalidOid);
+	cstate->bytes_processed = 0;
+
 	/* We keep those variables in cstate. */
 	cstate->in_functions = in_functions;
 	cstate->typioparams = typioparams;
@@ -5011,6 +5034,8 @@ BeginCopyFrom(ParseState *pstate,
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("\"%s\" is a directory", filename)));
+
+			pgstat_progress_update_param(PROGRESS_COPY_BYTES_TOTAL, st.st_size);
 		}
 	}
 
@@ -6095,6 +6120,18 @@ void
 EndCopyFrom(CopyState cstate)
 {
 	/* No COPY FROM related resources except memory. */
+
+	/*
+	 * We call pgstat_progress_end_command here even EndCopy does 
+	 * the same because we want to be consistent with upstream.
+	 * The upstream does that because it doesn't call EndCopy in 
+	 * EndCopyFrom, and that's what GPDB would do when we merge with
+	 * PG14. So calling it here in case we miss it when that happens.
+	 * The second call of it should just be a no-op.
+	 *
+	 * GPDB_14_MERGE_FIXME: remove this comment. 
+	 */
+	pgstat_progress_end_command();
 
 	EndCopy(cstate);
 }
@@ -7610,7 +7647,9 @@ copy_dest_receive(TupleTableSlot *slot, DestReceiver *self)
 
 	/* Send the data */
 	CopyOneRowTo(cstate, slot);
-	myState->processed++;
+
+	/* Increment amount of processed tuples and update the progress */
+	pgstat_progress_update_param(PROGRESS_COPY_LINES_PROCESSED, ++myState->processed);
 
 	return true;
 }
