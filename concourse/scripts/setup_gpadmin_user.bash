@@ -88,20 +88,19 @@ setup_sshd() {
   sed -ri 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
 
 
-  if [ ! "$TEST_OS" = "centos*" || "$TEST_OS" = "sles*" ]; then
-    test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
-  fi
-
-  if [  "$TEST_OS" = "photon*" ]; then
-    test -e /etc/ssh/ssh_host_ecdsa_key || ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa
-    test -e /etc/ssh/ssh_host_ed25519_key || ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N '' -t ed25519
-  fi
-
-  if [ "$TEST_OS" = "centos7" ]; then
-    # For Centos 7, disable looking for host key types that older Centos versions don't support.
-    sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
-    sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
-  fi
+  case "$TEST_OS" in
+    centos* | sles*)
+      test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
+    photon*)
+      test -e /etc/ssh/ssh_host_ecdsa_key || ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa
+      test -e /etc/ssh/ssh_host_ed25519_key || ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N '' -t ed25519
+      ;;
+    centos7)
+      # For Centos 7, disable looking for host key types that older Centos versions don't support.
+      sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
+      sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
+      ;;
+  esac
 
   setup_ssh_for_user root
 
