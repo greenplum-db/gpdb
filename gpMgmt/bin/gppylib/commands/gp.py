@@ -414,7 +414,7 @@ class SegmentRewind(Command):
     """
 
     def __init__(self, name, target_host, target_datadir,
-                 source_host, source_port,
+                 source_host, source_port, progress_file,
                  verbose=False, ctxt=REMOTE):
 
         # Construct the source server libpq connection string
@@ -432,7 +432,12 @@ class SegmentRewind(Command):
         if verbose:
             rewind_cmd = rewind_cmd + ' --progress'
 
-        self.cmdStr = rewind_cmd + ' 2>&1'
+        # pg_rewind prints progress updates to stdout, but it also prints
+        # errors relating to relevant failures(like it will not rewind due to
+        # a corrupted pg_control file) to stderr.
+        rewind_cmd = rewind_cmd + " > {} 2>&1".format(pipes.quote(progress_file))
+
+        self.cmdStr = rewind_cmd
 
         Command.__init__(self, name, self.cmdStr, ctxt, target_host)
 

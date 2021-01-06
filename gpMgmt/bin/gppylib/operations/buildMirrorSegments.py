@@ -194,12 +194,16 @@ class GpMirrorListToBuild:
     class RewindSegmentInfo:
         """
         Which segments to run pg_rewind during incremental recovery.  The
-        targetSegment is of type gparray.Segment.
+        targetSegment is of type gparray.Segment.  All progressFiles should have
+        the same timeStamp.
         """
-        def __init__(self, targetSegment, sourceHostname, sourcePort):
+        def __init__(self, targetSegment, sourceHostname, sourcePort, timeStamp):
             self.targetSegment = targetSegment
             self.sourceHostname = sourceHostname
             self.sourcePort = sourcePort
+            self.progressFile = '%s/pg_rewind.%s.dbid%s.out' % (gplog.get_logger_dir(),
+                                                                timeStamp,
+                                                                targetSegment.getSegmentDbId())
 
     def buildMirrors(self, actionName, gpEnv, gpArray):
         """
@@ -285,6 +289,7 @@ class GpMirrorListToBuild:
         primariesToConvert = []
         convertPrimaryUsingFullResync = []
         fullResyncMirrorDbIds = {}
+        timeStamp = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
         for toRecover in self.__mirrorsToBuild:
             seg = toRecover.getFailoverSegment()
             if seg is None:
@@ -300,7 +305,8 @@ class GpMirrorListToBuild:
             if not toRecover.isFullSynchronization() \
                and seg.getSegmentRole() == gparray.ROLE_MIRROR:
                 rewindInfo[seg.getSegmentDbId()] = GpMirrorListToBuild.RewindSegmentInfo(
-                    seg, primarySeg.getSegmentHostName(), primarySeg.getSegmentPort())
+                    seg, primarySeg.getSegmentHostName(), primarySeg.getSegmentPort(),
+                    timeStamp)
 
             # The change in configuration to of the mirror to down requires that
             # the primary also be marked as unsynchronized.
@@ -352,8 +358,10 @@ class GpMirrorListToBuild:
         Run pg_rewind for incremental recovery.
         """
 
-        rewindFailedSegments = []
         # Run pg_rewind on all the targets
+        cmds = []
+        progressCmds = []
+        removeCmds= []
         for rewindSeg in rewindInfo.values():
             # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
             # pg_rewind wants that to make incremental recovery successful finally.
@@ -384,15 +392,26 @@ class GpMirrorListToBuild:
                                    rewindSeg.targetSegment.getSegmentDataDirectory(),
                                    rewindSeg.sourceHostname,
                                    rewindSeg.sourcePort,
-                                   verbose=gplog.logging_is_verbose())
-            self.__pool.addCommand(cmd)
+                                   rewindSeg.progressFile,
+                                   verbose=True)
+            progressCmd, removeCmd = self.__getProgressAndRemoveCmds(rewindSeg.progressFile,
+                                                                     rewindSeg.targetSegment.getSegmentDbId(),
+                                                                     rewindSeg.targetSegment.getSegmentHostName())
+            cmds.append(cmd)
+            removeCmds.append(removeCmd)
+            if progressCmd:
+                progressCmds.append(progressCmd)
 
-        if self.__quiet:
-            self.__pool.join()
-        else:
-            base.join_and_indicate_progress(self.__pool)
 
-        for cmd in self.__pool.getCompletedItems():
+        completedCmds = self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "rewinding segments",
+                                                          suppressErrorCheck=True,
+                                                          progressCmds=progressCmds)
+
+        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing rewind progress logfiles",
+                                                          suppressErrorCheck=False)
+
+        rewindFailedSegments = []
+        for cmd in completedCmds:
             self.__logger.debug('pg_rewind results: %s' % cmd.results)
             if not cmd.was_successful():
                 dbid = int(cmd.name.split(':')[1].strip())
@@ -400,8 +419,6 @@ class GpMirrorListToBuild:
                 self.__logger.warning(cmd.get_stdout())
                 self.__logger.warning("Incremental recovery failed for dbid %d. You must use gprecoverseg -F to recover the segment." % dbid)
                 rewindFailedSegments.append(rewindInfo[dbid].targetSegment)
-
-        self.__pool.empty_completed_items()
 
         return rewindFailedSegments
 
@@ -484,6 +501,27 @@ class GpMirrorListToBuild:
         # Make sure every line is updated with the final status.
         print_progress()
 
+    # There is race between when the recovery process creates the progressFile
+    # when this progressCmd is run. Thus, the progress command touches
+    # the file to ensure its presence before tailing.
+    def __getProgressAndRemoveCmds(self, progressFile, targetSegmentDbId, targetHostname):
+        progressCmd = None
+        if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
+            progressCmd = GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
+                                                              "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' | tail -1".format(
+                                                                  pipes.quote(progressFile)),
+                                                              targetSegmentDbId,
+                                                              progressFile,
+                                                              ctxt=base.REMOTE,
+                                                              remoteHost=targetHostname)
+
+        removeCmd = base.Command("remove file",
+                                 "rm -f %s" % pipes.quote(progressFile),
+                                 ctxt=base.REMOTE,
+                                 remoteHost=targetHostname)
+
+        return progressCmd, removeCmd
+
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False,
                                                      progressCmds=[]):
         for cmd in cmds:
@@ -499,7 +537,12 @@ class GpMirrorListToBuild:
 
         if not suppressErrorCheck:
             self.__pool.check_results()
+
+        completedRecoveryCmds = list(set(self.__pool.getCompletedItems()) & set(cmds))
+
         self.__pool.empty_completed_items()
+
+        return completedRecoveryCmds
 
     def __copyFiles(self, srcDir, destDir, fileNames):
         for name in fileNames:
@@ -591,30 +634,18 @@ class GpMirrorListToBuild:
         # tails this file to show recovery progress to the user, and removes the
         # file when one done. A new file is generated for each run of
         # gprecoverseg based on a timestamp.
-        #
-        # There is race between when the pg_basebackup log file is created and
-        # when the progress command is run. Thus, the progress command touches
-        # the file to ensure its present before tailing.
         self.__logger.info('Configuring new segments')
         cmds = []
         progressCmds = []
         removeCmds= []
         for hostName in destSegmentByHost.keys():
             for segment in destSegmentByHost[hostName]:
-                if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
-                    progressCmds.append(
-                        GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
-                                       "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' | tail -1".format(
-                                           pipes.quote(segment.progressFile)),
-                                       segment.getSegmentDbId(),
-                                       segment.progressFile,
-                                       ctxt=base.REMOTE,
-                                       remoteHost=hostName))
-                removeCmds.append(
-                    base.Command("remove file",
-                                 "rm -f %s" % pipes.quote(segment.progressFile),
-                                 ctxt=base.REMOTE,
-                                 remoteHost=hostName))
+                progressCmd, removeCmd = self.__getProgressAndRemoveCmds(segment.progressFile,
+                                                                         segment.getSegmentDbId(),
+                                                                         hostName)
+                removeCmds.append(removeCmd)
+                if progressCmd:
+                    progressCmds.append(progressCmd)
 
             cmds.append(
                 createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))

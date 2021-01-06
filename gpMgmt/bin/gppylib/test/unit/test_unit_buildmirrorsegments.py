@@ -1,7 +1,7 @@
 from mock import *
 from gp_unittest import *
 from gppylib.gparray import GpArray, Segment
-from gppylib.commands.base import WorkerPool
+from gppylib.commands.base import WorkerPool, CommandResult
 
 class GpMirrorListToBuildTestCase(GpTestCase):
 
@@ -24,9 +24,12 @@ class GpMirrorListToBuildTestCase(GpTestCase):
             # Mock the command to remove postmaster.pid as successful
             patch('gppylib.commands.base.Command.run', return_value=Mock()),
             patch('gppylib.commands.base.Command.get_return_code', return_value=0),
+            # Mock gplog which is used in RewindSegmentInfo below
+            patch('gppylib.gplog.get_logger_dir', return_value=Mock()),
             # Mock all pg_rewind commands to be not successful
             patch('gppylib.commands.base.Command.was_successful', return_value=False),
-            patch('gppylib.commands.base.Command.get_stdout', return_value='Mocking results')
+            patch('gppylib.commands.base.Command.get_stdout', return_value='Mocking results'),
+            patch('gppylib.commands.base.Command.results', return_value=CommandResult(1, 'stdout:Failed', 'stderr:Failed', True, False))
         ])
         from gppylib.operations.buildMirrorSegments import GpMirrorListToBuild
         # WorkerPool is the only valid parameter required in this test
@@ -39,13 +42,13 @@ class GpMirrorListToBuildTestCase(GpTestCase):
         m0 = Segment.initFromString("4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         m1 = Segment.initFromString("5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
         rewindInfo[p0.dbid] = GpMirrorListToBuild.RewindSegmentInfo(
-            p0, p0.address, p0.port)
+            p0, p0.address, p0.port, "unused_timestamp")
         rewindInfo[p1.dbid] = GpMirrorListToBuild.RewindSegmentInfo(
-            p1, p1.address, p1.port)
+            p1, p1.address, p1.port, "unused_timestamp")
         rewindInfo[m0.dbid] = GpMirrorListToBuild.RewindSegmentInfo(
-            m0, m0.address, m0.port)
+            m0, m0.address, m0.port, "unused_timestamp")
         rewindInfo[m1.dbid] = GpMirrorListToBuild.RewindSegmentInfo(
-            m1, m1.address, m1.port)
+            m1, m1.address, m1.port, "unused_timestamp")
 
         # Test1: all 4 pg_rewind commands should fail due the "was_successful" patch
         failedSegments = g.run_pg_rewind(rewindInfo)
