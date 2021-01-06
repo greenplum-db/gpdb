@@ -66,9 +66,12 @@ setup_gpadmin_user() {
     ubuntu*)
       /usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash
       ;;
-    sles* | photon*)
+    sles*)
       # create a default group gpadmin, and add user gpadmin to group gapdmin, supergroup, tty
       /usr/sbin/useradd -U -G supergroup,tty gpadmin
+      ;;
+    photon*)
+      /usr/sbin/useradd -U -G supergroup,tty,root gpadmin
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
