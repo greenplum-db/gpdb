@@ -384,12 +384,18 @@ drop role toolkit_admin;
 
 create database gptoolkit;
 \c gptoolkit
-drop table if exists test;
-create table test as select * from pg_attribute;
-set allow_system_table_mods=dml ;
-update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
-
-select * from gp_toolkit.gp_bloat_diag;
+-- cover "moderate bloat" case
+create table test (a int, b int) distributed by (a);
+insert into test select i, i from generate_series(1,5000)i;
+-- update all rows five times, so that relpages is 5 times greater
+-- than expected pages.
+update test set b = -a;
+update test set b = -a;
+update test set b = -a;
+update test set b = -a;
+update test set b = -a;
+analyze test;
+select bdinspname, bdirelname, bdirelpages, bdiexppages, bdidiag from gp_toolkit.gp_bloat_diag;
 
 \c regression
 drop database gptoolkit

@@ -1019,6 +1019,15 @@ AS
         SELECT
             oid as btdrelid,
             pgc.relpages as btdrelpages,
+            -- The width value is approximate, particularly when
+            -- variable length attributes are involved (see
+            -- WIDTH_THRESHOLD in analyze.c).  Often times, it was
+            -- found to be wrong, leading to "moderate" or
+            -- "significant" bloat being reported when there is
+            -- actually no bloat (e.g. right after vacuum full).
+            -- Therefore, a compensating factor is added that is
+            -- proportional to the number of variable length
+            -- attributes in a table.
             CEIL((pgc.reltuples * (25 + width + width * (pga.varlen_cnt::numeric / pgc.relnatts::numeric)))::numeric / current_setting('block_size')::numeric) AS btdexppages,
             (select numsegments from gp_toolkit.__gp_number_of_segments) as numsegments
         FROM
@@ -1047,14 +1056,14 @@ AS
             )
             AS btwcols
         ON pgc.oid = btwcols.starelid
-	LEFT OUTER JOIN
+        LEFT OUTER JOIN
             (
                 SELECT  attrelid, sum(CASE WHEN attlen = -1 THEN 1 ELSE 0 END) AS varlen_cnt
-		FROM pg_attribute
-		GROUP BY 1
+                FROM pg_attribute
+                GROUP BY 1
             )
-	    AS pga
-	ON pgc.oid = pga.attrelid
+            AS pga
+        ON pgc.oid = pga.attrelid
         WHERE starelid IS NOT NULL
     ) AS subq;
 
