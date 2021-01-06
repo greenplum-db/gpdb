@@ -91,6 +91,7 @@ setup_sshd() {
   case "$TEST_OS" in
     centos* | sles*)
       test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
+      ;;
     photon*)
       test -e /etc/ssh/ssh_host_ecdsa_key || ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa
       test -e /etc/ssh/ssh_host_ed25519_key || ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N '' -t ed25519
