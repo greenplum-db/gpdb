@@ -105,7 +105,7 @@ setup_sshd() {
 
   setup_ssh_for_user root
 
-  if [ "$TEST_OS" = "ubuntu*" ]; then
+  if [[ "$TEST_OS" == *"ubuntu"* ]]; then
     mkdir -p /var/run/sshd
     chmod 0755 /var/run/sshd
   fi
