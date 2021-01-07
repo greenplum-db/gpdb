@@ -51,7 +51,7 @@ LOCATION
 )
 FORMAT 'text';
 SELECT * FROM gpfdist_path_test;
-ERROR:  http response code 400 from gpfdist (gpfdist://cc-desktop:7070/\.\./NON_EXISTS): HTTP/1.0 400 invalid request due to relative path  (seg0 slice1 @hostname@:7002 pid=1720305)
+ERROR:  http response code 400 from gpfdist (gpfdist://@hostname@:7070/\.\./NON_EXISTS): HTTP/1.0 400 invalid request due to relative path  (seg0 slice1 @hostname@:7002 pid=1720305)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- test3 relative path with URL-encoding '%2e%2e' returns error
 CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
@@ -61,7 +61,7 @@ LOCATION
 )
 FORMAT 'text';
 SELECT * FROM gpfdist_path_test;
-ERROR:  http response code 400 from gpfdist (gpfdist://cc-desktop:7070/%2e%2e/NON_EXISTS): HTTP/1.0 400 invalid request due to relative path  (seg0 slice1 @hostname@:7002 pid=1720305)
+ERROR:  http response code 400 from gpfdist (gpfdist://@hostname@:7070/%2e%2e/NON_EXISTS): HTTP/1.0 400 invalid request due to relative path  (seg0 slice1 @hostname@:7002 pid=1720305)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- test4 path contains one escape char '\' is stripped by
 -- apr_tokenize_to_argv and 404 error returned
@@ -72,7 +72,7 @@ LOCATION
 )
 FORMAT 'text';
 SELECT * FROM gpfdist_path_test;
-ERROR:  http response code 404 from gpfdist (gpfdist://cc-desktop:7070/\/NON_EXISTS): HTTP/1.0 404 file not found  (seg0 slice1 @hostname@:7002 pid=1720305)
+ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/\/NON_EXISTS): HTTP/1.0 404 file not found  (seg0 slice1 @hostname@:7002 pid=1720305)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- test5 path contains one escape char '\\' returns error
 CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
@@ -82,7 +82,7 @@ LOCATION
 )
 FORMAT 'text';
 SELECT * FROM gpfdist_path_test;
-ERROR:  http response code 400 from gpfdist (gpfdist://cc-desktop:7070/\\/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg0 slice1 @hostname@:7002 pid=1720305)
+ERROR:  http response code 400 from gpfdist (gpfdist://@hostname@:7070/\\/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg0 slice1 @hostname@:7002 pid=1720305)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- test6 path contains one escape char '%5c' returns error
 CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
@@ -92,7 +92,7 @@ LOCATION
 )
 FORMAT 'text';
 SELECT * FROM gpfdist_path_test;
-ERROR:  http response code 400 from gpfdist (gpfdist://cc-desktop:7070/%5c/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg0 slice1 @hostname@:7002 pid=1720305)
+ERROR:  http response code 400 from gpfdist (gpfdist://@hostname@:7070/%5c/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg0 slice1 @hostname@:7002 pid=1720305)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- test7 path contains multiple escape chars returns error
 CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
@@ -102,7 +102,7 @@ LOCATION
 )
 FORMAT 'text';
 SELECT * FROM gpfdist_path_test;
-ERROR:  http response code 400 from gpfdist (gpfdist://cc-desktop:7070/%5c.\\\.\\%2e/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg0 slice1 @hostname@:7002 pid=1720305)
+ERROR:  http response code 400 from gpfdist (gpfdist://@hostname@:7070/%5c.\\\.\\%2e/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg0 slice1 @hostname@:7002 pid=1720305)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- test8 POST to gpfdist should follow the same restrictions
 -- Note: The POST/GET share the same check functions now. If
@@ -114,7 +114,7 @@ LOCATION
 )
 FORMAT 'text';
 INSERT INTO gpfdist_path_test VALUES(1, 'a');
-ERROR:  http response code 400 from gpfdist (gpfdist://cc-desktop:7070/%5c.\\\.\\%2e/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg1 @hostname@:7003 pid=1720304)
+ERROR:  http response code 400 from gpfdist (gpfdist://@hostname@:7070/%5c.\\\.\\%2e/NON_EXISTS): HTTP/1.0 400 invalid request, escape character backslash '\' is not allowed.  (seg1 @hostname@:7003 pid=1720304)
 DROP EXTERNAL TABLE gpfdist_path_test;
 -- start_ignore
 select * from gpfdist_path_stop;
