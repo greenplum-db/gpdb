@@ -448,6 +448,11 @@ str2uint(const char *str)
 	return strtoul(str, NULL, 10);
 }
 
+uint64
+str2uint64(const char *str)
+{
+	return (uint64) strtoull(str, NULL, 10);
+}
 
 /*
  *	pg_putenv()

@@ -42,6 +42,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	bool		got_log_id = false;
 	bool		got_log_seg = false;
 	bool		got_xid = false;
+	bool		got_gxid = false;
 	bool		got_oid = false;
 	bool		got_multi = false;
 	bool		got_oldestmulti = false;
@@ -355,6 +356,17 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 			cluster->controldata.chkpnt_nxtxid = str2uint(p);
 			got_xid = true;
 		}
+		else if ((p = strstr(bufin, "Latest checkpoint's NextGxid:")) != NULL)
+		{
+			p = strchr(p, ':');
+
+			if (p == NULL || strlen(p) <= 1)
+				pg_fatal("%d: controldata retrieval problem\n", __LINE__);
+
+			p++;				/* remove ':' char */
+			cluster->controldata.chkpnt_nxtgxid = str2uint64(p);
+			got_gxid = true;
+		}
 		else if ((p = strstr(bufin, "Latest checkpoint's NextOID:")) != NULL)
 		{
 			p = strchr(p, ':');
@@ -594,7 +606,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	}
 
 	/* verify that we got all the mandatory pg_control data */
-	if (!got_xid || !got_oid ||
+	if (!got_xid || !got_gxid || !got_oid ||
 		!got_multi ||
 		(!got_oldestmulti &&
 		 cluster->controldata.cat_ver >= MULTIXACT_FORMATCHANGE_CAT_VER) ||
@@ -615,6 +627,9 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 
 		if (!got_xid)
 			pg_log(PG_REPORT, "  checkpoint next XID\n");
+
+		if (!got_gxid)
+			pg_log(PG_REPORT, "  checkpoint next Gxid\n");
 
 		if (!got_oid)
 			pg_log(PG_REPORT, "  latest checkpoint next OID\n");
