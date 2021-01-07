@@ -48,7 +48,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
-    Scenario: gprecoverseg displays pg_basebackup progress to the user
+    Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -60,6 +60,20 @@ Feature: gprecoverseg tests
         And gpAdminLogs directory has no "pg_basebackup*" files
         And all the segments are running
         And the segments are synchronized
+
+    Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all primary processes
+        And user can start transactions
+        When the user runs "gprecoverseg -a -s"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "no rewind required" to stdout for each primary
+        And gpAdminLogs directory has no "pg_rewind*" files
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
         Given the database is running
