@@ -16,7 +16,7 @@
 #ifndef GP_COMPRESS_H
 #define GP_COMPRESS_H
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 #include "zstd.h"
 #endif
 
@@ -66,7 +66,7 @@ extern void gp_decompress(
  * If the transaction is aborted, the handle will be automatically closed,
  * when the resource owner is destroyed.
  */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 
 typedef struct
 {
@@ -80,7 +80,7 @@ typedef struct
 extern void zstd_free_context(zstd_context *context);
 extern zstd_context *zstd_alloc_context(void);
 
-#endif	/* HAVE_LIBZSTD */
+#endif	/* USE_ZSTD */
 
 
 #endif

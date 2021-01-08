@@ -41,7 +41,7 @@
 
 #include "postgres.h"
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 #include <zstd.h>
 #endif
 
@@ -139,7 +139,7 @@ struct BufFile
 	} state;
 
 	/* ZStandard compression support */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	zstd_context *zstd_context;	/* ZStandard library handles. */
 
 	/*
@@ -513,7 +513,7 @@ BufFileClose(BufFile *file)
 		pfree(file->buffer.data);
 
 	/* release zstd handles */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	if (file->zstd_context)
 		zstd_free_context(file->zstd_context);
 #endif
@@ -1208,7 +1208,7 @@ BufFilePledgeSequential(BufFile *buffile)
 /*
  * The rest of the code is only needed when compression support is compiled in.
  */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 
 #define BUFFILE_ZSTD_COMPRESSION_LEVEL 1
 

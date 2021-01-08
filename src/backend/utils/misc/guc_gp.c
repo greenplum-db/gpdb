@@ -4840,7 +4840,7 @@ lookup_autostats_mode_by_value(GpAutoStatsModeValue val)
 static bool
 check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 {
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 	if (*newval)
 	{
 		GUC_check_errmsg("workfile compresssion is not supported by this build");
