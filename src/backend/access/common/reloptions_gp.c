@@ -815,7 +815,7 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "zstd") == 0))
 		{
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("Zstandard library is not supported by this build"),
@@ -979,7 +979,7 @@ validateAppendOnlyRelOptions(int blocksize,
 
 		if (comptype && (pg_strcasecmp(comptype, "zstd") == 0))
 		{
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("Zstandard library is not supported by this build"),

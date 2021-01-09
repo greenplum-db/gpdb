@@ -1,0 +1,47 @@
+-- start_ignore
+create extension if not exists gp_inject_fault;
+
+create or replace function test_consume_xids(int4) returns void
+as '@abs_srcdir@/regress.so', 'test_consume_xids'
+language C;
+
+\! gpconfig -c debug_burn_xids -v on --skipvalidation
+\! gpstop -au
+-- end_ignore
+
+-- Autovacuum should take care of anti-XID wraparounds of 'template0'. Because
+-- of that, the age of template0 should not go much above
+-- autovacuum_freeze_max_age (we assume the default of 200 million here).
+select age(datfrozenxid) < 200 * 1000000 from gp_dist_random('pg_database') where datname='template0';
+
+-- track that we've updated the row in pg_database for template0
+SELECT gp_inject_fault_infinite('vacuum_update_dat_frozen_xid', 'skip', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+-- Suspend the autovacuum worker from vacuuming before
+-- ShmemVariableCache->latestCompletedXid is expected to be updated
+SELECT gp_inject_fault_infinite('auto_vac_worker_before_do_autovacuum', 'suspend', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select test_consume_xids(10 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_before_do_autovacuum', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+-- wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('vacuum_update_dat_frozen_xid', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+-- template0 should be young
+select age(datfrozenxid) < 200 * 1000000 from gp_dist_random('pg_database') where datname='template0';
+
+-- But autovacuum should not touch other databases. Hence, our database
+-- should be well above the 200 million mark.
+select age(datfrozenxid) > 200 * 1000000 from gp_dist_random('pg_database') where datname=current_database() and gp_segment_id = 0;
+
+-- start_ignore
+\! gpconfig -c debug_burn_xids -v off --skipvalidation
+\! gpstop -au
+-- end_ignore
+

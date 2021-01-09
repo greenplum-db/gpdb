@@ -3042,6 +3042,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+		{"gp_gxid_prefetch_num", PGC_POSTMASTER, WAL,
+			gettext_noop("how many gxid is prefetched in each bumping batch."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_gxid_prefetch_num,
+		8192, 512, INT_MAX,
+		NULL, NULL, NULL
+	},
+	{
 		{"gp_dbid", PGC_POSTMASTER, PRESET_OPTIONS,
 			gettext_noop("The dbid used by this server."),
 			NULL,
@@ -4830,7 +4840,7 @@ lookup_autostats_mode_by_value(GpAutoStatsModeValue val)
 static bool
 check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 {
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 	if (*newval)
 	{
 		GUC_check_errmsg("workfile compresssion is not supported by this build");

@@ -6,18 +6,21 @@ import datetime
 import subprocess
 import os
 import platform
+import pwd
 import sys
 import re
 from contextlib import closing
 from distutils.version import LooseVersion
 from optparse import OptionParser
 import pgdb
+from gppylib.utils import formatInsertValuesList, Escape
 
 gpsd_version = '%prog 1.0'
 
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema')"
+# turn off optimizer to fall back to planner and speed up statistic queries
 # unset search path due to CVE-2018-1058
-pgoptions = '-c gp_role=utility -c search_path='
+pgoptions = '-c optimizer=off -c gp_role=utility -c search_path='
 
 
 def ResultIter(cursor, arraysize=1000):
@@ -86,67 +89,12 @@ def dumpStats(cur, inclHLL):
         '--\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
         '{2});\n\n'
-    types = ['smallint',  # staattnum
-             'boolean',
-             'real',
-             'integer',
-             'real',
-             'smallint',
-             'smallint',
-             'smallint',
-             'smallint',
-             'smallint',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'real[]',
-             'real[]',
-             'real[]',
-             'real[]',
-             'real[]'
-             ]
 
     cur.execute(query)
 
     for vals in ResultIter(cur):
-        rowVals = ["\t'%s.%s'::regclass" % tuple(vals[1::-1])]
-
-        i = 0
-        hll = False
-        if vals[3][0] == '_':
-            rowTypes = types + [vals[3]] * 5
-        else:
-            rowTypes = types + [vals[3] + '[]'] * 5
-        for val, typ in zip(vals[5:], rowTypes):
-            i = i + 1
-            str_val = "'%s'" % val
-            if i == 10 and (val == 98 or val == 99):
-                if inclHLL == False:
-                    val = 0
-                hll = True
-
-            if val is None:
-                val = 'NULL'
-            elif isinstance(val, str) and val[0] == '{':
-                val = val.replace("'", "''")
-                val = "E'" + val + "'"
-
-            if i == 25 and hll == True:
-                if inclHLL == True:
-                    rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
-                else:
-                    rowVals.append('\t{0}'.format('NULL::int4[]'))
-            elif i == 30 and str_val != "'None'":
-                rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
-            else:
-                rowVals.append('\t{0}::{1}'.format(val, typ))
+        starelid = "'%s.%s'::regclass" % (Escape(vals[1]), Escape(vals[0]))
+        rowVals = formatInsertValuesList(vals, starelid, inclHLL)
         print(pstring.format(vals[0], vals[2], ',\n'.join(rowVals)))
 
 
@@ -173,14 +121,14 @@ def main():
         exit(1)
 
     # OK - now let's setup all the arguments & options
+    envOpts = os.environ
     db = args[0]
     host = options.host or platform.node()
-    user = options.user or os.getlogin()
-    port = options.port or '5432'
+    user = options.user or ('PGUSER' in envOpts and envOpts['PGUSER']) or pwd.getpwuid(os.geteuid())[0]
+    port = options.port or ('PGPORT' in envOpts and envOpts['PGPORT']) or '5432'
     inclSchema = options.dumpSchema
     inclHLL = options.dumpHLL
 
-    envOpts = os.environ
     envOpts['PGOPTIONS'] = pgoptions
 
     version = getVersion(envOpts)
@@ -223,7 +171,6 @@ def main():
     sys.stdout.flush()
 
     try:
-        pgdb.set_typecast('anyarray', lambda v, c=str: v)
         with closing(pgdb.connect(**connectionInfo)) as connection:
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)

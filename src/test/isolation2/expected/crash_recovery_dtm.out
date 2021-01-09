@@ -7,9 +7,6 @@
 -- s/\s+\(.*\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/
 -- m/(PANIC):.*unable to complete*/
 --
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
---
 -- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/
 -- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
 --
@@ -24,13 +21,6 @@ select pg_reload_conf();
 ----------------
  t              
 (1 row)
-
--- This function is used to loop until master shutsdown, to make sure
--- next command executed is only after restart and doesn't go through
--- while PANIC is still being processed by master, as master continues
--- to accept connections for a while despite undergoing PANIC.
-CREATE OR REPLACE FUNCTION wait_till_master_shutsdown() RETURNS void AS $$ DECLARE i int; /* in func */ BEGIN i := 0; /* in func */ while i < 120 loop i := i + 1; /* in func */ PERFORM pg_sleep(.5); /* in func */ end loop; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
-CREATE
 
 1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
  role | preferred_role | content | mode | status 
@@ -65,8 +55,8 @@ CREATE
 3&: SELECT wait_till_master_shutsdown();  <waiting ...>
 -- Start transaction which should hit PANIC as COMMIT PREPARED will fail to one segment
 1: CREATE TABLE commit_phase1_panic(a int, b int);
-PANIC:  unable to complete 'Commit Prepared' broadcast (cdbtm.c:661)
-DETAIL:  gid=1561100299-0000000009, state=Retry Commit Prepared
+PANIC:  unable to complete 'Commit Prepared' broadcast (cdbtm.c:604)
+DETAIL:  gid=1630210, state=Retry Commit Prepared
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.

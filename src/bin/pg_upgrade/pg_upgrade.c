@@ -644,6 +644,18 @@ static void
 copy_xact_xlog_xid(void)
 {
 	/*
+	 * FIXME: Definitely need more work to make pre-gp7 to gp7 upgrade
+	 * work for the 64bit gxid work.
+	 */
+	/* set the next distributed transaction id of the new cluster */
+	prep_status("Setting next distributed transaction ID for new cluster");
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+			  "\"%s/pg_resetwal\" --binary-upgrade -f --next-gxid "UINT64_FORMAT" \"%s\"",
+			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtgxid,
+			  new_cluster.pgdata);
+	check_ok();
+
+	/*
 	 * Copy old commit logs to new data dir. pg_clog has been renamed to
 	 * pg_xact in post-10 clusters.
 	 */

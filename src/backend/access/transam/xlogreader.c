@@ -25,10 +25,10 @@
 #include "common/pg_lzcompress.h"
 #include "replication/origin.h"
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 /* Zstandard library is provided */
 #include <zstd.h>
-#endif			/* HAVE_LIBZSTD */
+#endif
 
 #ifndef FRONTEND
 #include "utils/memutils.h"
@@ -1475,7 +1475,7 @@ bool
 zstd_decompress_backupblock(const char *source, int32 slen, char *dest,
 							int32 rawsize, char *errormessage)
 {
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 		unsigned long long uncompressed_size;
 		int dst_length_used;
 		static ZSTD_DCtx  *cxt = NULL;      /* ZSTD decompression context */

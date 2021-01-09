@@ -11,6 +11,7 @@ DATA = pgstattuple--1.4.sql pgstattuple--1.4--1.5.sql \
 PGFILEDESC = "pgstattuple - tuple-level statistics"
 
 REGRESS = pgstattuple
+REGRESS_OPTS = --init-file=$(top_srcdir)/src/test/regress/init_file
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

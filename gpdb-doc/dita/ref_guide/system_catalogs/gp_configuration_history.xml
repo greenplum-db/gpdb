@@ -44,7 +44,7 @@
               <codeph id="ev138567">dbid</codeph>
             </entry>
             <entry colname="col2">smallint</entry>
-            <entry colname="col3">gp_segment _configuration.dbid</entry>
+            <entry colname="col3">gp_segment_configuration.dbid</entry>
             <entry colname="col4">System-assigned ID. The unique identifier of a segment (or master)
               instance.</entry>
           </row>

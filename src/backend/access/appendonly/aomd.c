@@ -243,7 +243,7 @@ mdunlink_ao(RelFileNodeBackend rnode, ForkNumber forkNumber, bool isRedo)
 		int pathSize = strlen(path);
 		char *segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
 		char *segPathSuffixPosition = segPath + pathSize;
-		struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
+		struct mdunlink_ao_callback_ctx unlinkFiles;
 		unlinkFiles.isRedo = isRedo;
 		unlinkFiles.rnode = rnode.node;
 

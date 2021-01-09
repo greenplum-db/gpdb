@@ -3925,7 +3925,7 @@ GetLockStatusData(void)
 	for (i = 0; i < ProcGlobal->allProcCount; ++i)
 	{
 		PGPROC	   *proc = &ProcGlobal->allProcs[i];
-		TMGXACT	   *gxact = &ProcGlobal->allTmGxact[i];
+		TMGXACT	   *tmGxact = &ProcGlobal->allTmGxact[i];
 		uint32		f;
 
 		LWLockAcquire(&proc->backendLock, LW_SHARED);
@@ -3961,7 +3961,7 @@ GetLockStatusData(void)
 			instance->mppSessionId = proc->mppSessionId;
 			instance->mppIsWriter = proc->mppIsWriter;
 			instance->distribXid = (Gp_role == GP_ROLE_DISPATCH)?
-								   gxact->gxid :
+								   tmGxact->gxid :
 								   proc->localDistribXactData.distribXid;
 			instance->holdTillEndXact = (holdTillEndXactBits > 0);
 			el++;
@@ -3995,7 +3995,7 @@ GetLockStatusData(void)
 			instance->mppSessionId = proc->mppSessionId;
 			instance->mppIsWriter = proc->mppIsWriter;
 			instance->distribXid = (Gp_role == GP_ROLE_DISPATCH)?
-								   gxact->gxid :
+								   tmGxact->gxid :
 								   proc->localDistribXactData.distribXid;
 			instance->holdTillEndXact = false;
 			el++;
@@ -4037,7 +4037,7 @@ GetLockStatusData(void)
 		PGPROC	   *proc = proclock->tag.myProc;
 		LOCK	   *lock = proclock->tag.myLock;
 		LockInstanceData *instance = &data->locks[el];
-		TMGXACT	   *gxact = &ProcGlobal->allTmGxact[proc->pgprocno];
+		TMGXACT	   *tmGxact = &ProcGlobal->allTmGxact[proc->pgprocno];
 
 		memcpy(&instance->locktag, &lock->tag, sizeof(LOCKTAG));
 		instance->holdMask = proclock->holdMask;
@@ -4054,7 +4054,7 @@ GetLockStatusData(void)
 		instance->mppSessionId = proc->mppSessionId;
 		instance->mppIsWriter = proc->mppIsWriter;
 		instance->distribXid = (Gp_role == GP_ROLE_DISPATCH)?
-							   gxact->gxid :
+							   tmGxact->gxid :
 							   proc->localDistribXactData.distribXid;
 		instance->holdTillEndXact = proclock->tag.myLock->holdTillEndXact;
 		el++;

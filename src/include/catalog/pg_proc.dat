@@ -10976,6 +10976,9 @@
 { oid => 6068, descr => 'dbid executing function',
    proname => 'gp_execution_dbid', proisstrict => 'f', provolatile => 'v', proparallel => 'u', prorettype => 'int4', proargtypes => '', prosrc => 'gp_execution_dbid' },
 
+{ oid => 7000, descr => 'Get the next available distributed transaction id',
+   proname => 'gp_get_next_gxid', provolatile => 'v', proparallel => 'u', prorettype => 'int8', proargtypes => '', prosrc => 'gp_get_next_gxid' },
+
 { oid => 7169, descr => 'show append only table tuple distribution across segment databases',
    proname => 'get_ao_distribution', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => 'regclass', proallargtypes => '{regclass,int4,int8}', proargmodes => '{i,o,o}', proargnames => '{rel,segmentid,tupcount}', prosrc => 'get_ao_distribution', prodataaccess => 'r' },
 

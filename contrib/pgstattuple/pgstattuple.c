@@ -258,6 +258,9 @@ pgstat_relation(Relation rel, FunctionCallInfo fcinfo)
 		case RELKIND_MATVIEW:
 		case RELKIND_TOASTVALUE:
 		case RELKIND_SEQUENCE:
+		case RELKIND_AOSEGMENTS:
+		case RELKIND_AOBLOCKDIR:
+		case RELKIND_AOVISIMAP:
 			return pgstat_heap(rel, fcinfo);
 		case RELKIND_INDEX:
 			switch (rel->rd_rel->relam)

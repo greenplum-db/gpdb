@@ -2445,7 +2445,7 @@
   <topic id="gp_dbid">
     <title>gp_dbid</title>
     <body>
-      <p>The local content dbid if a segment.</p>
+      <p>The local content dbid of a segment.</p>
       <table id="gp_dbid_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

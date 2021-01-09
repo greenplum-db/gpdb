@@ -51,6 +51,7 @@
 #include "cdb/cdbllize.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
+#include "utils/fmgrprotos.h"
 #include "utils/fmgroids.h"
 #include "utils/session_state.h"
 #include "utils/sharedsnapshot.h"
@@ -59,38 +60,37 @@
 
 typedef struct TmControlBlock
 {
-	DistributedTransactionTimeStamp	distribTimeStamp;
-	DistributedTransactionId	seqno;
 	bool						DtmStarted;
 	bool						CleanupBackends;
 	pid_t						DtxRecoveryPid;
+	DtxRecoveryEvent			DtxRecoveryEvents;
+	slock_t						DtxRecoveryEventLock;
 	uint32						NextSnapshotId;
 	int							num_committed_xacts;
 	slock_t						gxidGenLock;
 
-	/* Array [0..max_tm_gxacts-1] of TMGXACT_LOG ptrs is appended starting here */
-	TMGXACT_LOG  			    committed_gxact_array[1];
+	/* Array [0..max_tm_gxacts-1] of DistributedTransactionId ptrs is appended starting here */
+	DistributedTransactionId committed_gxid_array[FLEXIBLE_ARRAY_MEMBER];
 }	TmControlBlock;
 
 
 #define TMCONTROLBLOCK_BYTES(num_gxacts) \
-	(offsetof(TmControlBlock, committed_gxact_array) + sizeof(TMGXACT_LOG) * (num_gxacts))
+	(offsetof(TmControlBlock, committed_gxid_array) + sizeof(DistributedTransactionId) * (num_gxacts))
 
 extern bool Test_print_direct_dispatch_info;
 
 #define DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS 100
-
-volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
-volatile DistributedTransactionId *shmGIDSeq;
 
 uint32 *shmNextSnapshotId;
 slock_t *shmGxidGenLock;
 
 int	max_tm_gxacts = 100;
 
+int gp_gxid_prefetch_num;
+#define GXID_PRETCH_THRESHOLD (gp_gxid_prefetch_num>>1)
 
-#define TM_ERRDETAIL (errdetail("gid=%u-%.10u, state=%s", \
-		getDistributedTransactionTimestamp(), getDistributedTransactionId(),\
+#define TM_ERRDETAIL (errdetail("gid=" UINT64_FORMAT ", state=%s", \
+		getDistributedTransactionId(),\
 		DtxStateToString(MyTmGxactLocal ? MyTmGxactLocal->state : 0)))
 /* here are some flag options relationed to the txnOptions field of
  * PQsendGpQuery
@@ -170,12 +170,6 @@ isDtxContext(void)
  * VISIBLE FUNCTIONS
  */
 
-DistributedTransactionTimeStamp
-getDtmStartTime(void)
-{
-	return *shmDistribTimeStamp;
-}
-
 DistributedTransactionId
 getDistributedTransactionId(void)
 {
@@ -183,15 +177,6 @@ getDistributedTransactionId(void)
 		return MyTmGxact->gxid;
 	else
 		return InvalidDistributedTransactionId;
-}
-
-DistributedTransactionTimeStamp
-getDistributedTransactionTimestamp(void)
-{
-	if (isDtxContext())
-		return MyTmGxact->distribTimeStamp;
-	else
-		return 0;
 }
 
 bool
@@ -205,7 +190,7 @@ getDistributedTransactionIdentifier(char *id)
 		 * The length check here requires the identifer have a trailing
 		 * NUL character.
 		 */
-		dtxFormGID(id, MyTmGxact->distribTimeStamp, MyTmGxact->gxid);
+		dtxFormGid(id, MyTmGxact->gxid);
 		return true;
 	}
 
@@ -233,41 +218,97 @@ isCurrentDtxActivated(void)
 	return MyTmGxactLocal->state != DTX_STATE_NONE;
 }
 
+void
+bumpGxid()
+{
+	DistributedTransactionId nextLimit;
+	uint32 nextCount;
+
+	/*
+	 * Someone else might have done this, so if the lock was blocked and is now
+	 * free, just return.
+	 */
+	if (!LWLockAcquireOrWait(GxidBumpLock, LW_EXCLUSIVE))
+		return;
+
+	/*
+	 * No need to bump if there have been enough gxid. This is possible if
+	 * another bump finished before we tried to lock GxidBumpLock.
+	 */
+	if (ShmemVariableCache->GxidCount > GXID_PRETCH_THRESHOLD)
+	{
+		LWLockRelease(GxidBumpLock);
+		return;
+	}
+
+	/* nextLimit should be always multiple of gp_gxid_prefetch_num. */
+	SpinLockAcquire(shmGxidGenLock);
+	nextCount = ShmemVariableCache->GxidCount + gp_gxid_prefetch_num;
+	nextLimit = ShmemVariableCache->nextGxid + nextCount;
+	if (nextLimit >= (LastDistributedTransactionId - gp_gxid_prefetch_num))
+		ereport(PANIC,
+				(errmsg("Will soon reach the limit of global transactions: "UINT64_FORMAT,
+						ShmemVariableCache->nextGxid)));
+	SpinLockRelease(shmGxidGenLock);
+
+	/* It might be time-consuming, so put it out of the spin locking section. */
+	XLogPutNextGxid(nextLimit);
+
+	SpinLockAcquire(shmGxidGenLock);
+	ShmemVariableCache->GxidCount += gp_gxid_prefetch_num;
+	SpinLockRelease(shmGxidGenLock);
+
+	/* Only one bump operation one time, so lock till the end. */
+	LWLockRelease(GxidBumpLock);
+}
+
 static void
 currentDtxActivate(void)
 {
+	bool signal_dtx_recovery;
+
+	if (ShmemVariableCache->GxidCount <= GXID_PRETCH_THRESHOLD &&
+		(GetDtxRecoveryEvent() & DTX_RECOVERY_EVENT_BUMP_GXID) == 0)
+	{
+
+		signal_dtx_recovery = false;
+
+		SpinLockAcquire(shmDtxRecoveryEventLock);
+		if ((GetDtxRecoveryEvent() & DTX_RECOVERY_EVENT_BUMP_GXID) == 0)
+		{
+			/* dtx recovery is not notified, wake up dtx recovery to prefetch. */
+			SetDtxRecoveryEvent(DTX_RECOVERY_EVENT_BUMP_GXID);
+			signal_dtx_recovery = true;
+		}
+		SpinLockRelease(shmDtxRecoveryEventLock);
+
+		if (signal_dtx_recovery)
+			SendPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY);
+	}
+
 	/*
-	 * Bump 'shmGIDSeq' and assign it to 'MyTmGxact->gxid', this needs to be atomic.
-	 * Otherwise, another transaction might start and commit in between, which will
-	 * bump 'ShmemVariableCache->latestCompletedDxid'.  If someone else take a
-	 * snapshot now, it will consider this transaction has finished: it's not
-	 * in-progress (MyTmGxact->gxid is not set) and its transaction precedes the xmax.
-	 *
-	 * For example:
-	 * tx1: insert into t values(1), (2);
-	 * tx2: insert into t values(3), (4);
-	 * tx3: select * from t;
-	 *
-	 * It happens in the following order:
-	 * 1. tx1 generates a distributed transaction-id X1
-	 * 2. tx2 generates a distributed transaction-id X2 (X1 < X2)
-	 * 3. tx2 finished
-	 * 4. tx3 takes a distributed snapshot
-	 * 5. tx1 set 'TMGXACT->gxid'
-	 * 6. tx1 finish 'commit prepared' on segment 0 but not on segment 1 yet.
-	 * 7. tx3 will see the change of tx1 on segment 0 but not on segment 1, that's
-	 * because tx1 is considered finished according to the snapshot.
+	 * We need to retry since in theory even after gxid bumping, we still can
+	 * not get an available gxid if other backends quickly consume all of the
+	 * generated gxid. This mostly happens when the system is with high
+	 * performance and load but with low gxid prefetch batch size. It should be
+	 * rare so far, but in case in the future...
 	 */
-	SpinLockAcquire(shmGxidGenLock);
-	MyTmGxact->gxid = ++(*shmGIDSeq);
-	SpinLockRelease(shmGxidGenLock);
+	for(;;)
+	{
+		if (unlikely(ShmemVariableCache->GxidCount == 0))
+			bumpGxid();
 
-	if (MyTmGxact->gxid == LastDistributedTransactionId)
-		ereport(PANIC,
-				(errmsg("reached the limit of %u global transactions per start",
-						LastDistributedTransactionId)));
+		SpinLockAcquire(shmGxidGenLock);
+		if (ShmemVariableCache->GxidCount > 0)
+		{
+			MyTmGxact->gxid = ShmemVariableCache->nextGxid++;
+			ShmemVariableCache->GxidCount--;
+			SpinLockRelease(shmGxidGenLock);
+			break;
+		}
+		SpinLockRelease(shmGxidGenLock);
+	}
 
-	MyTmGxact->distribTimeStamp = getDtmStartTime();
 	MyTmGxact->sessionId = gp_session_id;
 	setCurrentDtxState(DTX_STATE_ACTIVE_DISTRIBUTED);
 	GxactLockTableInsert(MyTmGxact->gxid);
@@ -392,7 +433,7 @@ doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType)
 														 mppTxnOptions(true),
 														 "doDispatchSubtransactionInternalCmd");
 
-	dtxFormGID(gid, getDistributedTransactionTimestamp(), getDistributedTransactionId());
+	dtxFormGid(gid, getDistributedTransactionId());
 	succeeded = doDispatchDtxProtocolCommand(cmdType,
 											 gid,
 											 /* raiseError */ true,
@@ -463,16 +504,11 @@ doPrepareTransaction(void)
 static void
 doInsertForgetCommitted(void)
 {
-	TMGXACT_LOG gxact_log;
-
 	elog(DTM_DEBUG5, "doInsertForgetCommitted entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
 
 	setCurrentDtxState(DTX_STATE_INSERTING_FORGET_COMMITTED);
 
-	dtxFormGID(gxact_log.gid, getDistributedTransactionTimestamp(), getDistributedTransactionId());
-	gxact_log.gxid = getDistributedTransactionId();
-
-	RecordDistributedForgetCommitted(&gxact_log);
+	RecordDistributedForgetCommitted(getDistributedTransactionId());
 
 	setCurrentDtxState(DTX_STATE_INSERTED_FORGET_COMMITTED);
 	MyTmGxact->includeInCkpt = false;
@@ -690,6 +726,9 @@ retryAbortPrepared(void)
 	if (!succeeded)
 	{
 		ResetAllGangs();
+		SpinLockAcquire(shmDtxRecoveryEventLock);
+		SetDtxRecoveryEvent(DTX_RECOVERY_EVENT_ABORT_PREPARED);
+		SpinLockRelease(shmDtxRecoveryEventLock);
 		SendPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY);
 		ereport(WARNING,
 				(errmsg("unable to complete 'Abort' broadcast. The dtx recovery"
@@ -827,7 +866,7 @@ prepareDtxTransaction(void)
 	{
 		Assert(MyTmGxactLocal->state == DTX_STATE_NONE);
 		Assert(Gp_role != GP_ROLE_DISPATCH || MyTmGxact->gxid == InvalidDistributedTransactionId);
-		resetGxact();
+		resetTmGxact();
 		return;
 	}
 
@@ -854,7 +893,6 @@ prepareDtxTransaction(void)
 		 DtxStateToString(MyTmGxactLocal->state));
 
 	Assert(MyTmGxactLocal->state == DTX_STATE_ACTIVE_DISTRIBUTED);
-	Assert(MyTmGxact->gxid > FirstDistributedTransactionId);
 
 	doPrepareTransaction();
 }
@@ -1044,32 +1082,22 @@ tmShmemInit(void)
 	if (!shared)
 		elog(FATAL, "could not initialize transaction manager share memory");
 
-	shmDistribTimeStamp = &shared->distribTimeStamp;
-	shmGIDSeq = &shared->seqno;
 	/* Only initialize this if we are the creator of the shared memory */
 	if (!found)
 	{
-		time_t		t = time(NULL);
-
-		if (t == (time_t) -1)
-		{
-			elog(PANIC, "cannot generate global transaction id");
-		}
-
-		*shmDistribTimeStamp = (DistributedTransactionTimeStamp) t;
-		elog(DEBUG1, "DTM start timestamp %u", *shmDistribTimeStamp);
-
-		*shmGIDSeq = FirstDistributedTransactionId;
-		ShmemVariableCache->latestCompletedDxid = InvalidDistributedTransactionId;
+		ShmemVariableCache->latestCompletedGxid = InvalidDistributedTransactionId;
+		SpinLockInit(&shared->DtxRecoveryEventLock);
 		SpinLockInit(&shared->gxidGenLock);
 	}
 	shmDtmStarted = &shared->DtmStarted;
 	shmCleanupBackends = &shared->CleanupBackends;
 	shmDtxRecoveryPid = &shared->DtxRecoveryPid;
+	shmDtxRecoveryEvents = &shared->DtxRecoveryEvents;
+	shmDtxRecoveryEventLock = &shared->DtxRecoveryEventLock;
 	shmNextSnapshotId = &shared->NextSnapshotId;
-	shmNumCommittedGxacts = &shared->num_committed_xacts;
 	shmGxidGenLock = &shared->gxidGenLock;
-	shmCommittedGxactArray = &shared->committed_gxact_array[0];
+	shmNumCommittedGxacts = &shared->num_committed_xacts;
+	shmCommittedGxidArray = &shared->committed_gxid_array[0];
 
 	if (!IsUnderPostmaster)
 		/* Initialize locks and shared memory area */
@@ -1078,6 +1106,7 @@ tmShmemInit(void)
 		*shmDtmStarted = false;
 		*shmCleanupBackends = false;
 		*shmDtxRecoveryPid = 0;
+		*shmDtxRecoveryEvents = DTX_RECOVERY_EVENT_ABORT_PREPARED;
 		*shmNumCommittedGxacts = 0;
 	}
 }
@@ -1180,7 +1209,7 @@ currentDtxDispatchProtocolCommand(DtxProtocolCommand dtxProtocolCommand, bool ra
 {
 	char gid[TMGIDSIZE];
 
-	dtxFormGID(gid, getDistributedTransactionTimestamp(), getDistributedTransactionId());
+	dtxFormGid(gid, getDistributedTransactionId());
 	return doDispatchDtxProtocolCommand(dtxProtocolCommand, gid, raiseError,
 										MyTmGxactLocal->dtxSegments, NULL, 0);
 }
@@ -1402,10 +1431,9 @@ dispatchDtxCommand(const char *cmd)
 
 /* reset global transaction context */
 void
-resetGxact(void)
+resetTmGxact(void)
 {
 	Assert(MyTmGxact->gxid == InvalidDistributedTransactionId);
-	MyTmGxact->distribTimeStamp = 0;
 	MyTmGxact->xminDistributedSnapshot = InvalidDistributedTransactionId;
 	MyTmGxact->includeInCkpt = false;
 	MyTmGxact->sessionId = 0;
@@ -1681,15 +1709,15 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 			 IsoLevelAsUpperString(mppTxOptions_IsoLevel(txnOptions)), (isMppTxOptions_ReadOnly(txnOptions) ? "true" : "false"),
 			 (haveDistributedSnapshot ? "true" : "false"));
 		elog(DTM_DEBUG5,
-			 "setupQEDtxContext inputs (part 2): distributedXid = %u, isSharedLocalSnapshotSlotPresent = %s.",
+			 "setupQEDtxContext inputs (part 2): distributedXid = "UINT64_FORMAT", isSharedLocalSnapshotSlotPresent = %s.",
 			 dtxContextInfo->distributedXid,
 			 (isSharedLocalSnapshotSlotPresent ? "true" : "false"));
 
 		if (haveDistributedSnapshot)
 		{
 			elog(DTM_DEBUG5,
-				 "setupQEDtxContext inputs (part 2a): distributedXid = %u, "
-				 "distributedSnapshotData (xmin = %u, xmax = %u, xcnt = %u), distributedCommandId = %d",
+				 "setupQEDtxContext inputs (part 2a): distributedXid = "UINT64_FORMAT", "
+				 "distributedSnapshotData (xmin = "UINT64_FORMAT", xmax = "UINT64_FORMAT", xcnt = %u), distributedCommandId = %d",
 				 dtxContextInfo->distributedXid,
 				 distributedSnapshot->xmin, distributedSnapshot->xmax,
 				 distributedSnapshot->count,
@@ -1702,7 +1730,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 				elog(DTM_DEBUG5,
 					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = " UINT64_FORMAT " "
-					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = %u/%u",
+					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = "UINT64_FORMAT"/%u",
 					 U64FromFullTransactionId(SharedLocalSnapshotSlot->fullXid),
 					 SharedLocalSnapshotSlot->snapshot.xmin,
 					 SharedLocalSnapshotSlot->snapshot.xmax,
@@ -1895,7 +1923,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 
 	if (haveDistributedSnapshot)
 	{
-		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5), "[Distributed Snapshot #%u] *Set QE* currcid = %d (gxid = %u, '%s')",
+		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5), "[Distributed Snapshot #%u] *Set QE* currcid = %d (gxid = "UINT64_FORMAT", '%s')",
 			 dtxContextInfo->distributedSnapshot.distribSnapshotId,
 			 dtxContextInfo->curcid,
 			 getDistributedTransactionId(),
@@ -1924,7 +1952,7 @@ finishDistributedTransactionContext(char *debugCaller, bool aborted)
 
 	gxid = getDistributedTransactionId();
 	elog(DTM_DEBUG5,
-		 "finishDistributedTransactionContext called to change DistributedTransactionContext from %s to %s (caller = %s, gxid = %u)",
+		 "finishDistributedTransactionContext called to change DistributedTransactionContext from %s to %s (caller = %s, gxid = "UINT64_FORMAT")",
 		 DtxContextToString(DistributedTransactionContext),
 		 DtxContextToString(DTX_CONTEXT_LOCAL_ONLY),
 		 debugCaller,
@@ -2026,7 +2054,6 @@ sendWaitGxidsToQD(List *waitGxids)
 static void
 performDtxProtocolCommitOnePhase(const char *gid)
 {
-	DistributedTransactionTimeStamp distribTimeStamp;
 	DistributedTransactionId gxid;
 	List *waitGxids = list_copy(MyTmGxactLocal->waitGxids);
 
@@ -2035,9 +2062,8 @@ performDtxProtocolCommitOnePhase(const char *gid)
 	elog(DTM_DEBUG5,
 		 "performDtxProtocolCommitOnePhase going to call CommitTransaction for distributed transaction %s", gid);
 
-	dtxCrackOpenGid(gid, &distribTimeStamp, &gxid);
+	dtxDeformGid(gid, &gxid);
 	Assert(gxid == getDistributedTransactionId());
-	Assert(distribTimeStamp == getDistributedTransactionTimestamp());
 	MyTmGxactLocal->isOnePhaseCommit = true;
 
 	StartTransactionCommand();
@@ -2399,4 +2425,20 @@ CurrentDtxIsRollingback(void)
 			MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED ||
 			MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_PREPARED ||
 			MyTmGxactLocal->state == DTX_STATE_RETRY_ABORT_PREPARED);
+}
+
+Datum
+gp_get_next_gxid(PG_FUNCTION_ARGS)
+{
+	DistributedTransactionId next_gxid;
+
+	if (!superuser())
+		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						(errmsg("Superuser only to execute it"))));
+
+	SpinLockAcquire(shmGxidGenLock);
+	next_gxid = ShmemVariableCache->nextGxid;
+	SpinLockRelease(shmGxidGenLock);
+
+	PG_RETURN_UINT64(next_gxid);
 }

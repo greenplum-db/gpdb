@@ -368,7 +368,7 @@ GetTransactionSnapshot(void)
 	if (IsolationUsesXactSnapshot())
 	{
 		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-			 "[Distributed Snapshot #%u] *Serializable* (gxid = %u, '%s')",
+			 "[Distributed Snapshot #%u] *Serializable* (gxid = "UINT64_FORMAT", '%s')",
 			 CurrentSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
 			 getDistributedTransactionId(),
 			 DtxContextToString(DistributedTransactionContext));
@@ -388,7 +388,7 @@ GetTransactionSnapshot(void)
 	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 
 	elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-		 "[Distributed Snapshot #%u] (gxid = %u, '%s')",
+		 "[Distributed Snapshot #%u] (gxid = "UINT64_FORMAT", '%s')",
 		 CurrentSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
 		 getDistributedTransactionId(),
 		 DtxContextToString(DistributedTransactionContext));

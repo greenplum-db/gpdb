@@ -520,19 +520,18 @@ typedef TransactionId MultiXactId;
 
 typedef uint32 MultiXactOffset;
 
-typedef uint32 DistributedTransactionTimeStamp;
-
 typedef int32 DistributedSnapshotId;
 
-typedef uint32 DistributedTransactionId;
+typedef uint64 DistributedTransactionId;
 #define InvalidDistributedTransactionId	((DistributedTransactionId) 0)
 #define FirstDistributedTransactionId	((DistributedTransactionId) 1)
-#define LastDistributedTransactionId	((DistributedTransactionId) 0xffffffff)
+#define LastDistributedTransactionId	((DistributedTransactionId) 0xffffFFFFffffFFFF)
 
 /*
- * A 10 digit timestamp, a dash, a 10 digit distributed transaction id, and NUL.
+ * max(LastDistributedTransactionId) is 20-bytes, and then plus NULL.
+ * FIXME: Use hex later to save a bit memory.
  */
-#define TMGIDSIZE 22
+#define TMGIDSIZE 21
 
 typedef uint32 CommandId;
 

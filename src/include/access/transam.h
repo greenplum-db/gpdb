@@ -152,8 +152,17 @@ typedef struct VariableCacheData
 	 */
 	TransactionId latestCompletedXid;	/* newest XID that has committed or
 										 * aborted */
-	TransactionId latestCompletedDxid;	/* newest distributed XID that has
+	TransactionId latestCompletedGxid;	/* newest distributed XID that has
 										   committed or aborted */
+
+	/*
+	 * The two variables are protected by shmGxidGenLock.  Note nextGxid won't
+	 * be accurate after crash recovery.  When crash recovery happens, we bump
+	 * them to the next batch on the coordinator, while on the primary, it is
+	 * not accurate until the next query with an assigned gxid is dispatched.
+	 */
+	DistributedTransactionId nextGxid;	/* next full XID to assign */
+	uint32		GxidCount;		/* Gxids available before must do XLOG work */
 
 	/*
 	 * These fields are protected by CLogTruncationLock

@@ -117,3 +117,27 @@ drop view test_view;
 drop foreign table test_foreign_table;
 drop server dummy_server;
 drop foreign data wrapper dummy;
+
+--
+-- Test cases for auxiliary system relations of appendonly table
+--
+create table ao_table
+(id int,
+ fname text,
+ lname text,
+ address1 text,
+ address2 text,
+ city text,
+ state text,
+ zip text)
+with (appendonly=true)
+distributed by (id);
+create index ao_table_fname_idx on ao_table (fname);
+
+select pgstattuple(blkdirrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple(segrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple(visimaprelid) from pg_appendonly where relid = 'ao_table'::regclass;
+
+select pgstattuple_approx(blkdirrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple_approx(segrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple_approx(visimaprelid) from pg_appendonly where relid = 'ao_table'::regclass;

@@ -521,7 +521,7 @@ compresstype_is_valid(char *comptype)
 #ifdef HAVE_LIBZ
 			"zlib",
 #endif
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 			"zstd",
 #endif
 			"rle_type", "none"};

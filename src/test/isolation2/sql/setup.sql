@@ -369,3 +369,21 @@ create or replace function validate_tablespace_symlink(datadir text, tablespaced
     import os
     return os.readlink('%s/pg_tblspc/%d' % (datadir, tablespace_oid)) == ('%s/%d' % (tablespacedir, dbid))
 $$ language plpython3u;
+
+-- This function is used to loop until master shutsdown, to make sure
+-- next command executed is only after restart and doesn't go through
+-- while PANIC is still being processed by master, as master continues
+-- to accept connections for a while despite undergoing PANIC.
+CREATE OR REPLACE FUNCTION wait_till_master_shutsdown()
+RETURNS void AS
+$$
+  DECLARE
+    i int; /* in func */
+  BEGIN
+    i := 0; /* in func */
+    while i < 120 loop
+      i := i + 1; /* in func */
+      PERFORM pg_sleep(.5); /* in func */
+    end loop; /* in func */
+  END; /* in func */
+$$ LANGUAGE plpgsql;

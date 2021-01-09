@@ -32,12 +32,12 @@
 #include "utils/memutils.h"
 #include "pg_trace.h"
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 /* Zstandard library is provided */
 #include <zstd.h>
 /* zstandard compression level to use. */
 #define COMPRESS_LEVEL 3
-#endif			/* HAVE_LIBZSTD */
+#endif
 
 /*
  * For each block reference registered with XLogRegisterBuffer, we fill in
@@ -823,7 +823,7 @@ static bool
 XLogCompressBackupBlock(char *page, uint16 hole_offset, uint16 hole_length,
 						char *dest, uint16 *dlen)
 {
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	static ZSTD_CCtx  *cxt = NULL;      /* ZSTD compression context */
 	int32		orig_len = BLCKSZ - hole_length;
 	int32		len;

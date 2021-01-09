@@ -1,8 +1,4 @@
 -- CREATE TABLESPACE
--- start_matchsubs
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
--- end_matchsubs
 --
 -- We need to update the restart point on the mirrors
 -- so downstream tests do not attempt to replay records
@@ -867,7 +863,7 @@ select gp_inject_fault(:'fault_name', :'fault_type', dbid) from gp_segment_confi
 
 DROP TABLESPACE my_tablespace_for_testing;
 WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments. Retrying ... try 1
-DETAIL:  gid=1564560606-0000000899, state=Retry Commit Prepared
+DETAIL:  gid=41608220, state=Retry Commit Prepared
 NOTICE:  Releasing segworker group to retry broadcast.
 select wait_for_primaries_to_restart();
  wait_for_primaries_to_restart 

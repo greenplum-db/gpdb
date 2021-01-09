@@ -142,7 +142,6 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 	{
 		xl_xact_distrib *xl_distrib = (xl_xact_distrib *) data;
 
-		parsed->distribTimeStamp = xl_distrib->distrib_timestamp;
 		parsed->distribXid = xl_distrib->distrib_xid;
 		data += sizeof(xl_xact_distrib);
 	}
@@ -313,10 +312,9 @@ xact_desc_commit(StringInfo buf, uint8 info, xl_xact_commit *xlrec, RepOriginId 
 						 timestamptz_to_str(parsed.origin_timestamp));
 	}
 
-	if (parsed.distribTimeStamp != 0 || parsed.distribXid != InvalidDistributedTransactionId)
+	if (parsed.distribXid != InvalidDistributedTransactionId)
 	{
-		appendStringInfo(buf, " gid = %u-%.10u", parsed.distribTimeStamp, parsed.distribXid);
-		appendStringInfo(buf, " gxid = %u", parsed.distribXid);
+		appendStringInfo(buf, " gxid = "UINT64_FORMAT, parsed.distribXid);
 	}
 }
 
@@ -328,15 +326,13 @@ xact_desc_distributed_commit(StringInfo buf, uint8 info, xl_xact_commit *xlrec, 
 	ParseCommitRecord(info, xlrec, &parsed);
 
 	appendStringInfoString(buf, timestamptz_to_str(xlrec->xact_time));
-	appendStringInfo(buf, " gid = %u-%.10u, gxid = %u",
-					 parsed.distribTimeStamp, parsed.distribXid, parsed.distribXid);
+	appendStringInfo(buf, " gxid = "UINT64_FORMAT, parsed.distribXid);
 }
 
 static void
 xact_desc_distributed_forget(StringInfo buf, xl_xact_distributed_forget *xlrec)
 {
-	appendStringInfo(buf, " gid = %s, gxid = %u",
-					 xlrec->gxact_log.gid, xlrec->gxact_log.gxid);
+	appendStringInfo(buf, "gxid = "UINT64_FORMAT, xlrec->gxid);
 }
 
 static void

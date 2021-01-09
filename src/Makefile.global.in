@@ -263,6 +263,8 @@ BITCODE_CXXFLAGS = @BITCODE_CXXFLAGS@
 have_yaml 		= @have_yaml@
 YAML_LIBS		= @YAML_LIBS@
 with_zstd 		= @with_zstd@
+ZSTD_CFLAGS		= @ZSTD_CFLAGS@
+ZSTD_LIBS		= @ZSTD_LIBS@
 with_quicklz		= @with_quicklz@
 EVENT_LIBS		= @EVENT_LIBS@
 
@@ -276,7 +278,7 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 PG_SYSROOT = @PG_SYSROOT@
 
-override CPPFLAGS := $(ICU_CFLAGS) $(CPPFLAGS)
+override CPPFLAGS := $(ICU_CFLAGS) $(ZSTD_CFLAGS) $(CPPFLAGS)
 
 ifdef PGXS
 override CPPFLAGS := -I$(includedir_server) -I$(includedir_internal) $(CPPFLAGS)
@@ -328,6 +330,9 @@ UUID_EXTRA_OBJS = @UUID_EXTRA_OBJS@
 LLVM_LIBS=@LLVM_LIBS@
 LD = @LD@
 with_gnu_ld = @with_gnu_ld@
+
+# Greenplum uses zstd in frontend and backend
+LIBS := $(LIBS) $(ZSTD_LIBS)
 
 # It's critical that within LDFLAGS, all -L switches pointing to build-tree
 # directories come before any -L switches pointing to external directories.

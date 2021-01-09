@@ -12,8 +12,8 @@ create table truncate_test ("колонка 1" int, "колонка 2" int, "к�
 "колонка 24" int, "колонка 25" int, "колонка 26" int, "колонка 27" int, "колонка 28" int, "колонка 29" int,
 "колонка 30" int, "колонка 31" int, "колонка 32" int, "колонка 33" int, "колонка 34" int, "колонка 35" int,
 "колонка 36" int, "колонка 37" int, "колонка 38" int, "колонка 39" int, "колонка 40" int, "особая колонка" int);
-select logdebug from gp_toolkit.__gp_log_segment_ext where logdebug ilike
-'%create table truncate_test%' and logdebug not ilike '%gp_toolkit.__gp_log_segment_ext%' order by logtime desc limit 1;
+select split_part(logmessage, 'statement: ', 2) from gp_toolkit.__gp_log_segment_ext where logmessage ilike
+'%create table truncate_test%' and logmessage not ilike '%gp_toolkit.__gp_log_segment_ext%' order by logtime desc limit 1;
 drop table truncate_test;
 reset log_min_duration_statement;
 

@@ -25,9 +25,8 @@ namespace gpopt
 class CLogicalCTEConsumer;
 
 // hash map: CColRef -> ULONG
-typedef CHashMap<CColRef, ULONG, gpos::HashValue<CColRef>,
-				 gpos::Equals<CColRef>, CleanupNULL<CColRef>,
-				 CleanupDelete<ULONG> >
+typedef CHashMap<CColRef, ULONG, CColRef::HashValue, CColRef::Equals,
+				 CleanupNULL<CColRef>, CleanupDelete<ULONG> >
 	ColRefToUlongMap;
 
 //---------------------------------------------------------------------------
