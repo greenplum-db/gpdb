@@ -314,7 +314,7 @@ $$ language plpgsql;
 create or replace function pg_basebackup(host text, dbid int, port int, create_slot boolean, slotname text, datadir text, force_overwrite boolean, xlog_method text) returns text as $$
     import subprocess
     import os
-    cmd = 'pg_basebackup --checkpoint=fast -h %s -p %d -R -D %s --target-gp-dbid %d' % (host, port, datadir, dbid)
+    cmd = 'pg_basebackup --no-sync --checkpoint=fast -h %s -p %d -R -D %s --target-gp-dbid %d' % (host, port, datadir, dbid)
 
     if create_slot:
         cmd += ' --create-slot'
