@@ -196,6 +196,7 @@ groups:
 {% endif %}
 {% if "centos8" in os_types %}
   - compile_gpdb_centos8
+  - test_gpdb_clients_centos8
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
@@ -312,6 +313,7 @@ groups:
 {% endif %}
 {% if "centos8" in os_types %}
   - compile_gpdb_centos8
+  - test_gpdb_clients_centos8
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04

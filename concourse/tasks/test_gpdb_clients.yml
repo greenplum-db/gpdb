@@ -1,0 +1,14 @@
+platform: linux
+image_resource:
+  type: registry-image
+
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb
+  - name: bin_gpdb_clients
+
+outputs:
+  - name: bin_gpdb_clients_rc
+
+run:
+  path: gpdb_src/concourse/scripts/test_gpdb_clients.bash
