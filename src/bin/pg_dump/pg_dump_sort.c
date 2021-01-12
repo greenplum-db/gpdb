@@ -48,6 +48,7 @@ static const int dbObjectTypePriority[] =
 	3,							/* DO_COLLATION */
 	11,							/* DO_CONVERSION */
 	18,							/* DO_TABLE */
+	19,							/* DO_TABLE_ATTACH */
 	20,							/* DO_ATTRDEF */
 	28,							/* DO_INDEX */
 	29,							/* DO_INDEX_ATTACH */
@@ -1245,6 +1246,11 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 			snprintf(buf, bufsize,
 					 "TABLE %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
+			return;
+		case DO_TABLE_ATTACH:
+			snprintf(buf, bufsize,
+					 "TABLE ATTACH %s  (ID %d)",
+					 obj->name, obj->dumpId);
 			return;
 		case DO_ATTRDEF:
 			snprintf(buf, bufsize,
