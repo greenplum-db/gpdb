@@ -31,46 +31,88 @@ static const char *modulename = gettext_noop("sorter");
  * POST_DATA objects must sort after DO_POST_DATA_BOUNDARY, and DATA objects
  * must sort between them.
  */
-static const int newObjectTypePriority[] =
+
+/* This enum lists the priority levels in order */
+enum dbObjectTypePriorities
 {
-	1,							/* DO_NAMESPACE */
-	4,							/* DO_EXTENSION */
-	5,							/* DO_TYPE */
-	5,							/* DO_SHELL_TYPE */
-	6,							/* DO_FUNC */
-	7,							/* DO_AGG */
-	8,							/* DO_OPERATOR */
-	9,							/* DO_OPCLASS */
-	9,							/* DO_OPFAMILY */
-	3,							/* DO_COLLATION */
-	11,							/* DO_CONVERSION */
-	18,							/* DO_TABLE */
-	20,							/* DO_ATTRDEF */
-	27,							/* DO_INDEX */
-	28,							/* DO_RULE */
-	29,							/* DO_TRIGGER */
-	26,							/* DO_CONSTRAINT */
-	30,							/* DO_FK_CONSTRAINT */
-	2,							/* DO_PROCLANG */
-	10,							/* DO_CAST */
-	23,							/* DO_TABLE_DATA */
-	19,							/* DO_DUMMY_TYPE */
-	12,							/* DO_TSPARSER */
-	14,							/* DO_TSDICT */
-	13,							/* DO_TSTEMPLATE */
-	15,							/* DO_TSCONFIG */
-	16,							/* DO_FDW */
-	17,							/* DO_FOREIGN_SERVER */
-	31,							/* DO_DEFAULT_ACL */
-	21,							/* DO_BLOB */
-	24,							/* DO_BLOB_DATA */
-	8,							/* DO_EXTPROTOCOL */
-	21,							/* DO_TYPE_STORAGE_OPTIONS */
-	22,							/* DO_PRE_DATA_BOUNDARY */
-	25,							/* DO_POST_DATA_BOUNDARY */
-	32,							/* DO_EVENT_TRIGGER */
-	33,							/* DO_REFRESH_MATVIEW */
-	1							/* DO_BINARY_UPGRADE */
+	PRIO_BINARYUPGRADE = 1,
+	PRIO_NAMESPACE,
+	PRIO_PROCLANG,
+	PRIO_COLLATION,
+	PRIO_EXTENSION,
+	PRIO_TYPE,					/* used for DO_TYPE and DO_SHELL_TYPE */
+	PRIO_FUNC,
+	PRIO_AGG,
+	PRIO_EXTPROCOL,
+	PRIO_OPERATOR,
+	PRIO_OPFAMILY,				/* used for DO_OPFAMILY and DO_OPCLASS */
+	PRIO_CAST,
+	PRIO_CONVERSION,
+	PRIO_TSPARSER,
+	PRIO_TSTEMPLATE,
+	PRIO_TSDICT,
+	PRIO_TSCONFIG,
+	PRIO_FDW,
+	PRIO_FOREIGN_SERVER,
+	PRIO_TABLE,
+	PRIO_DUMMY_TYPE,
+	PRIO_ATTRDEF,
+	PRIO_BLOB,
+	PRIO_PRE_DATA_BOUNDARY,		/* boundary! */
+	PRIO_TABLE_DATA,
+	PRIO_SEQUENCE_SET,
+	PRIO_BLOB_DATA,
+	PRIO_POST_DATA_BOUNDARY,	/* boundary! */
+	PRIO_CONSTRAINT,
+	PRIO_INDEX,
+	PRIO_RULE,
+	PRIO_TRIGGER,
+	PRIO_FK_CONSTRAINT,
+	PRIO_DEFAULT_ACL,			/* done in ACL pass */
+	PRIO_EVENT_TRIGGER,			/* must be next to last! */
+	PRIO_REFRESH_MATVIEW		/* must be last! */
+};
+
+/* This table is indexed by enum DumpableObjectType */
+static const int dbObjectTypePriority[] =
+{
+	PRIO_NAMESPACE,				/* DO_NAMESPACE */
+	PRIO_EXTENSION,				/* DO_EXTENSION */
+	PRIO_TYPE,					/* DO_TYPE */
+	PRIO_TYPE,					/* DO_SHELL_TYPE */
+	PRIO_FUNC,					/* DO_FUNC */
+	PRIO_AGG,					/* DO_AGG */
+	PRIO_EXTPROCOL,			/* DO_EXTPROTOCOL */
+	PRIO_OPERATOR,				/* DO_OPERATOR */
+	PRIO_OPFAMILY,				/* DO_OPCLASS */
+	PRIO_OPFAMILY,				/* DO_OPFAMILY */
+	PRIO_COLLATION,				/* DO_COLLATION */
+	PRIO_CONVERSION,			/* DO_CONVERSION */
+	PRIO_TABLE,					/* DO_TABLE */
+	PRIO_ATTRDEF,				/* DO_ATTRDEF */
+	PRIO_INDEX,					/* DO_INDEX */
+	PRIO_RULE,					/* DO_RULE */
+	PRIO_TRIGGER,				/* DO_TRIGGER */
+	PRIO_CONSTRAINT,			/* DO_CONSTRAINT */
+	PRIO_FK_CONSTRAINT,			/* DO_FK_CONSTRAINT */
+	PRIO_PROCLANG,				/* DO_PROCLANG */
+	PRIO_CAST,					/* DO_CAST */
+	PRIO_TABLE_DATA,			/* DO_TABLE_DATA */
+	PRIO_SEQUENCE_SET,			/* DO_SEQUENCE_SET */
+	PRIO_DUMMY_TYPE,			/* DO_DUMMY_TYPE */
+	PRIO_TSPARSER,				/* DO_TSPARSER */
+	PRIO_TSDICT,				/* DO_TSDICT */
+	PRIO_TSTEMPLATE,			/* DO_TSTEMPLATE */
+	PRIO_TSCONFIG,				/* DO_TSCONFIG */
+	PRIO_FDW,					/* DO_FDW */
+	PRIO_FOREIGN_SERVER,		/* DO_FOREIGN_SERVER */
+	PRIO_BLOB,					/* DO_BLOB */
+	PRIO_BLOB_DATA,				/* DO_BLOB_DATA */
+	PRIO_PRE_DATA_BOUNDARY,		/* DO_PRE_DATA_BOUNDARY */
+	PRIO_POST_DATA_BOUNDARY,	/* DO_POST_DATA_BOUNDARY */
+	PRIO_EVENT_TRIGGER,			/* DO_EVENT_TRIGGER */
+	PRIO_REFRESH_MATVIEW,		/* DO_REFRESH_MATVIEW */
+	PRIO_BINARYUPGRADE,			/* DO_BINARY_UPGRADE */
 };
 
 static DumpId preDataBoundId;
@@ -209,8 +251,8 @@ DOTypeNameCompare(const void *p1, const void *p2)
 	int			cmpval;
 
 	/* Sort by type's priority */
-	cmpval = newObjectTypePriority[obj1->objType] -
-		newObjectTypePriority[obj2->objType];
+	cmpval = dbObjectTypePriority[obj1->objType] -
+		dbObjectTypePriority[obj2->objType];
 
 	if (cmpval != 0)
 		return cmpval;
