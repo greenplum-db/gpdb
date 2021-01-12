@@ -17641,19 +17641,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			 tbinfo->relkind == RELKIND_MATVIEW))
 		{
 			appendPQExpBuffer(q, "SET allow_system_table_mods = true;\n");
-		}
-
-		/*
-		 * In binary_upgrade mode, arrange to restore the old relfrozenxid and
-		 * relminmxid of all vacuumable relations.  (While vacuum.c processes
-		 * TOAST tables semi-independently, here we see them only as children
-		 * of other relations; so this "if" lacks RELKIND_TOASTVALUE, and the
-		 * child toast table is handled below.)
-		 */
-		if (dopt->binary_upgrade &&
-			(tbinfo->relkind == RELKIND_RELATION ||
-			 tbinfo->relkind == RELKIND_MATVIEW))
-		{
 			appendPQExpBufferStr(q, "\n-- For binary upgrade, set heap's relfrozenxid and relminmxid\n");
 			appendPQExpBuffer(q, "UPDATE pg_catalog.pg_class\n"
 							  "SET relfrozenxid = '%u', relminmxid = '%u'\n"
