@@ -65,7 +65,7 @@ WalRcvShmemInit(void)
 		MemSet(WalRcv, 0, WalRcvShmemSize());
 		WalRcv->walRcvState = WALRCV_STOPPED;
 		SpinLockInit(&WalRcv->mutex);
-		InitSharedLatch(&WalRcv->latch);
+		WalRcv->latch = NULL;
 	}
 }
 
@@ -300,7 +300,7 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 	if (launch)
 		SendPostmasterSignal(PMSIGNAL_START_WALRECEIVER);
 	else
-		SetLatch(&walrcv->latch);
+		SetLatch(walrcv->latch);
 }
 
 /*

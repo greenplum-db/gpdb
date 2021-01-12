@@ -113,10 +113,10 @@ typedef struct
 
 	/*
 	 * Latch used by startup process to wake up walreceiver after telling it
-	 * where to start streaming (after setting receiveStart and
-	 * receiveStartTLI).
+	 * where to start streaming (after setting receiveStart and receiveStartTLI).
+	 * This is normally mapped to procLatch when walreceiver is running.
 	 */
-	Latch		latch;
+	Latch		*latch;
 } WalRcvData;
 
 extern WalRcvData *WalRcv;
