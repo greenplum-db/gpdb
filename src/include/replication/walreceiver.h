@@ -109,14 +109,14 @@ typedef struct
 	 */
 	char		slotname[NAMEDATALEN];
 
-	slock_t		mutex;			/* locks shared variables shown above */
-
 	/*
 	 * Latch used by startup process to wake up walreceiver after telling it
 	 * where to start streaming (after setting receiveStart and receiveStartTLI).
 	 * This is normally mapped to procLatch when walreceiver is running.
 	 */
 	Latch		*latch;
+
+	slock_t		mutex;			/* locks shared variables shown above */
 } WalRcvData;
 
 extern WalRcvData *WalRcv;

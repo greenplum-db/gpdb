@@ -247,6 +247,7 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 	volatile WalRcvData *walrcv = WalRcv;
 	bool		launch = false;
 	pg_time_t	now = (pg_time_t) time(NULL);
+	Latch		*latch;
 
 	/*
 	 * We always start at the beginning of the segment. That prevents a broken
@@ -295,12 +296,14 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 	walrcv->receiveStart = recptr;
 	walrcv->receiveStartTLI = tli;
 
+	latch = walrcv->latch;
+
 	SpinLockRelease(&walrcv->mutex);
 
 	if (launch)
 		SendPostmasterSignal(PMSIGNAL_START_WALRECEIVER);
-	else
-		SetLatch(walrcv->latch);
+	else if (latch)
+		SetLatch(latch);
 }
 
 /*
