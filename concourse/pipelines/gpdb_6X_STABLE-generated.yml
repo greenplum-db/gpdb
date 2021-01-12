@@ -230,6 +230,8 @@ groups:
   - gpinitstandby_ubuntu18
   - gpcheckcat
   - gpcheckcat_ubuntu18
+  - gpcheckperf
+  - gpcheckperf_ubuntu18
   - gprecoverseg
   - gprecoverseg_ubuntu18
   - gpaddmirrors
@@ -363,6 +365,8 @@ groups:
   - gpinitstandby_ubuntu18
   - gpcheckcat
   - gpcheckcat_ubuntu18
+  - gpcheckperf
+  - gpcheckperf_ubuntu18
   - gprecoverseg
   - gprecoverseg_ubuntu18
   - gpaddmirrors
@@ -2694,6 +2698,117 @@ jobs:
               BEHAVE_FLAGS: --tags=gpcheckcat --tags=~concourse_cluster,demo_cluster
               
 
+- name: gpcheckperf
+  plan:
+    - in_parallel:
+        steps:
+        - get: gpdb_src
+          params:
+            submodules:
+              - gpMgmt/bin/pythonSrc/ext
+          passed: [gate_cli_start]
+        - get: gpdb6-centos6-test
+    - in_parallel:
+        steps:
+        - do:
+          - get: gpdb_binary
+            resource: bin_gpdb_centos6
+            passed: [gate_cli_start]
+            trigger: true
+          - get: ccp_src
+          - get: ccp-image
+          - put: terraform
+            params:
+              <<: *ccp_default_params
+              vars:
+                <<: *ccp_default_vars
+                instance_type: n1-standard-2
+                
+          - task: gen_cluster
+            file: ccp_src/ci/tasks/gen_cluster.yml
+            params:
+              <<: *ccp_gen_cluster_default_params
+          - task: gpinitsystem
+            file: ccp_src/ci/tasks/gpinitsystem.yml
+          - task: gpcheckperf_concourse_cluster_tests
+            file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
+            image: ccp-image
+            params:
+              BEHAVE_FLAGS: --tags=gpcheckperf --tags=concourse_cluster
+              
+            on_success:
+              <<: *ccp_destroy
+            ensure:
+              <<: *set_failed
+        - do:
+          - get: bin_gpdb
+            resource: bin_gpdb_centos6
+            passed: [gate_cli_start]
+            trigger: true
+          - task: gpcheckperf_demo_cluster_tests
+            file: gpdb_src/concourse/tasks/behave_gpdb.yml
+            image: gpdb6-centos6-test
+            params:
+              BEHAVE_FLAGS: --tags=gpcheckperf --tags=~concourse_cluster,demo_cluster
+              
+
+- name: gpcheckperf_ubuntu18
+  plan:
+    - in_parallel:
+        steps:
+        - get: gpdb_src
+          params:
+            submodules:
+              - gpMgmt/bin/pythonSrc/ext
+          passed: [compile_gpdb_ubuntu18.04]
+        - get: gpdb6-ubuntu18.04-test
+    - in_parallel:
+        steps:
+        - do:
+          - get: gpdb_binary
+            resource: bin_gpdb_ubuntu18.04
+            passed: [compile_gpdb_ubuntu18.04]
+            trigger: true
+          - get: ccp_src
+          - put: terraform
+            params:
+              <<: *ccp_default_params
+              vars:
+                <<: *ccp_default_vars
+                instance_type: n1-standard-2
+                PLATFORM: ubuntu18.04
+                
+          - task: gen_cluster
+            file: ccp_src/ci/tasks/gen_cluster.yml
+            params:
+              <<: *ccp_gen_cluster_default_params
+              PLATFORM: ubuntu18.04
+          - task: gpinitsystem
+            file: ccp_src/ci/tasks/gpinitsystem.yml
+          - task: gpcheckperf_concourse_cluster_tests
+            file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
+            image: gpdb6-ubuntu18.04-test
+            params:
+              BEHAVE_FLAGS: --tags=gpcheckperf --tags=concourse_cluster
+              
+            on_success:
+              <<: *ccp_destroy
+            ensure:
+              <<: *set_failed
+        - do:
+          - get: bin_gpdb_ubuntu18.04
+            resource: bin_gpdb_ubuntu18.04
+            passed: [compile_gpdb_ubuntu18.04]
+            trigger: true
+          - task: gpcheckperf_demo_cluster_tests
+            file: gpdb_src/concourse/tasks/behave_gpdb.yml
+            image: gpdb6-ubuntu18.04-test
+            input_mapping:
+              bin_gpdb: bin_gpdb_ubuntu18.04
+            params:
+              BEHAVE_FLAGS: --tags=gpcheckperf --tags=~concourse_cluster,demo_cluster
+              
+
 - name: gprecoverseg
   plan:
     - in_parallel:
@@ -3789,6 +3904,8 @@ jobs:
         - gpinitstandby_ubuntu18
         - gpcheckcat
         - gpcheckcat_ubuntu18
+        - gpcheckperf
+        - gpcheckperf_ubuntu18
         - gprecoverseg
         - gprecoverseg_ubuntu18
         - gpaddmirrors
@@ -3833,6 +3950,7 @@ jobs:
         - gpactivatestandby
         - gpinitstandby
         - gpcheckcat
+        - gpcheckperf
         - gprecoverseg
         - gpaddmirrors
         - gpconfig
@@ -3889,6 +4007,7 @@ jobs:
         - gpactivatestandby_ubuntu18
         - gpinitstandby_ubuntu18
         - gpcheckcat_ubuntu18
+        - gpcheckperf_ubuntu18
         - gprecoverseg_ubuntu18
         - gpaddmirrors_ubuntu18
         - gpconfig_ubuntu18

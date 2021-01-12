@@ -20,6 +20,8 @@
                        'use_concourse_cluster': false},
                       {'name': 'gpcheckcat',
                        'use_concourse_cluster': true},
+                      { 'name': 'gpcheckperf',
+                       'use_concourse_cluster': true },
                       {'name': 'gprecoverseg',
                        'use_concourse_cluster': true},
                       {'name': 'gpaddmirrors',
