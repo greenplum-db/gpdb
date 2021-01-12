@@ -1,0 +1,90 @@
+-- start_ignore
+create extension if not exists gp_inject_fault;
+
+create or replace function test_consume_xids(int4) returns void
+as '@abs_builddir@/../regress/regress.so', 'test_consume_xids'
+language C;
+
+create or replace language plpython3u;
+
+create or replace function num_distributed_log_files(content int, is_primary bool)
+returns int as
+$$
+    import os, os.path
+    result = plpy.execute("select datadir from gp_segment_configuration where content=%d and role = '%c'" % (content, 'p' if is_primary else 'm'))
+    datadir = result[0]['datadir']
+    path = os.path.join(datadir, 'pg_distributedlog')
+    return len([name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))])
+$$
+language plpython3u;
+
+!\retcode gpconfig -c debug_burn_xids -v on --skipvalidation;
+!\retcode gpstop -au;
+-- end_ignore
+
+-- test 1: vacuum database will truncate distributed log files to the frozen xid
+ 
+-- Autovacuum should take care of anti-XID wraparounds of 'template0'. Because
+-- of that, the age of template0 should not go much above
+-- autovacuum_freeze_max_age (we assume the default of 200 million here).
+show autovacuum_freeze_max_age;
+0U: select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0';
+
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'suspend', '', 'template0', '', 1, -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'skip', '', 'template0', '', 1, -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select test_consume_xids(10 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+
+checkpoint;
+
+-- more than (200 * 1000000 / 1024 / 1024 * 8) files, each xid takes 8 byes, max size of the file is 1MB.
+select num_distributed_log_files(0, true) > 200 * 1000000 / 1024 / 1024 * 8;
+select num_distributed_log_files(0, false) > 200 * 1000000 / 1024 / 1024 * 8;
+
+select gp_segment_id, age(datfrozenxid) < 200 * 1000000 from gp_dist_random('pg_database') where datname='template0';
+
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_before_do_autovacuum', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+-- track that we've updated the row in pg_database for template0
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+-- wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('vacuum_update_dat_frozen_xid', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+
+-- vacuum database will froze the xid and cut off the distributed log to the frozen xid.
+!\retcode vacuumdb -a;
+select num_distributed_log_files(0, true) < 200 * 1000000 / 1024 / 1024 * 8;
+select * from wait_for_replication_replay(0, 5000);
+select num_distributed_log_files(0, false) < 200 * 1000000 / 1024 / 1024 * 8;
+
+-- test 2: database startup will truncate distributed log files to the oldest active xid.
+create table t_distributedlog_truncate(a int);
+insert into t_distributedlog_truncate select generate_series(1,10);
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select test_consume_xids(10 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+
+select num_distributed_log_files(0, true) > 200 * 1000000 / 1024 / 1024 * 8;
+select num_distributed_log_files(0, false) > 200 * 1000000 / 1024 / 1024 * 8;
+
+-- start_ignore
+!\retcode gpstop -ari;
+-- end_ignore
+
+1: select num_distributed_log_files(0, true) < 200 * 1000000 / 1024 / 1024 * 8;
+1: select * from wait_for_replication_replay(0, 5000);
+1: select num_distributed_log_files(0, false) < 200 * 1000000 / 1024 / 1024 * 8;
+1: select count(*) from t_distributedlog_truncate;
+1: drop table t_distributedlog_truncate;
+
+-- start_ignore
+!\retcode vacuumdb -a;
+!\retcode gpconfig -c debug_burn_xids -v off --skipvalidation;
+!\retcode gpstop -au;
+-- end_ignore
+

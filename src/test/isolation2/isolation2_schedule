@@ -262,3 +262,6 @@ test: orphan_temp_table
 
 # test if gxid is valid or not on the cluster after running the tests
 test: check_gxid
+
+# test distributed log is truncate during vaccum or startup
+test: distributedlog_truncate

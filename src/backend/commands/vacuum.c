@@ -28,6 +28,7 @@
 
 #include "access/clog.h"
 #include "access/commit_ts.h"
+#include "access/distributedlog.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/htup_details.h"
@@ -1925,6 +1926,7 @@ vac_truncate_clog(TransactionId frozenXID,
 	TruncateCLOG(frozenXID, oldestxid_datoid);
 	TruncateCommitTs(frozenXID);
 	TruncateMultiXact(minMulti, minmulti_datoid);
+	DistributedLog_Truncate(frozenXID);
 
 	/*
 	 * Update the wrap limit for GetNewTransactionId and creation of new

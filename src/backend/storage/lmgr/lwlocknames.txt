@@ -60,8 +60,7 @@ ErrorLogLock						50
 SessionStateLock					51
 RelfilenodeGenLock					52
 WorkFileManagerLock					53
-DistributedLogTruncateLock			54
-TwophaseCommitLock				55
-ShareInputScanLock				56
-FTSReplicationStatusLock			57
-GxidBumpLock						58
+TwophaseCommitLock				54
+ShareInputScanLock				55
+FTSReplicationStatusLock			56
+GxidBumpLock						57

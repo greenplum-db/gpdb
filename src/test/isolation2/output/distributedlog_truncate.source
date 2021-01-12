@@ -1,0 +1,268 @@
+-- start_ignore
+create extension if not exists gp_inject_fault;
+CREATE
+
+create or replace function test_consume_xids(int4) returns void as '/home/gpadmin/workspace/gpdb/src/test/isolation2/../regress/regress.so', 'test_consume_xids' language C;
+CREATE
+
+create or replace language plpython3u;
+CREATE
+
+create or replace function num_distributed_log_files(content int, is_primary bool) returns int as $$ import os, os.path result = plpy.execute("select datadir from gp_segment_configuration where content=%d and role = '%c'" % (content, 'p' if is_primary else 'm')) datadir = result[0]['datadir'] path = os.path.join(datadir, 'pg_distributedlog') return len([name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]) $$ language plpython3u;
+CREATE
+
+!\retcode gpconfig -c debug_burn_xids -v on --skipvalidation;
+-- start_ignore
+20210112:12:39:31:453180 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c debug_burn_xids -v on --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -au;
+-- start_ignore
+20210112:12:39:32:453305 gpstop:09c5497cf854:gpadmin-[INFO]:-Starting gpstop with args: -au
+20210112:12:39:32:453305 gpstop:09c5497cf854:gpadmin-[INFO]:-Gathering information and validating the environment...
+20210112:12:39:32:453305 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20210112:12:39:32:453305 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
+20210112:12:39:32:453305 gpstop:09c5497cf854:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14173.ge595fc33a25 build dev'
+20210112:12:39:32:453305 gpstop:09c5497cf854:gpadmin-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
+-- test 1: vacuum database will truncate distributed log files to the frozen xid
+ -- Autovacuum should take care of anti-XID wraparounds of 'template0'. Because
+-- of that, the age of template0 should not go much above
+-- autovacuum_freeze_max_age (we assume the default of 200 million here).
+show autovacuum_freeze_max_age;
+ autovacuum_freeze_max_age 
+---------------------------
+ 200000000                 
+(1 row)
+0U: select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0';
+ ?column? 
+----------
+ t        
+(1 row)
+
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'suspend', '', 'template0', '', 1, -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'skip', '', 'template0', '', 1, -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+ test_consume_xids 
+-------------------
+                   
+(1 row)
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+ test_consume_xids 
+-------------------
+                   
+(1 row)
+select test_consume_xids(10 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+ test_consume_xids 
+-------------------
+                   
+(1 row)
+
+checkpoint;
+CHECKPOINT
+
+-- more than (200 * 1000000 / 1024 / 1024 * 8) files, each xid takes 8 byes, max size of the file is 1MB.
+select num_distributed_log_files(0, true) > 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+select num_distributed_log_files(0, false) > 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+
+select gp_segment_id, age(datfrozenxid) < 200 * 1000000 from gp_dist_random('pg_database') where datname='template0';
+ gp_segment_id | ?column? 
+---------------+----------
+ 2             | t        
+ 1             | t        
+ 0             | f        
+(3 rows)
+
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_before_do_autovacuum', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- track that we've updated the row in pg_database for template0
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('vacuum_update_dat_frozen_xid', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- vacuum database will froze the xid and cut off the distributed log to the frozen xid.
+!\retcode vacuumdb -a;
+-- start_ignore
+vacuumdb: vacuuming database "gpadmin"
+vacuumdb: vacuuming database "isolation2test"
+vacuumdb: vacuuming database "postgres"
+vacuumdb: vacuuming database "template1"
+
+-- end_ignore
+(exited with code 0)
+select num_distributed_log_files(0, true) < 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+select * from wait_for_replication_replay(0, 5000);
+ wait_for_replication_replay 
+-----------------------------
+ t                           
+(1 row)
+select num_distributed_log_files(0, false) < 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+
+-- test 2: database startup will truncate distributed log files to the oldest active xid.
+create table t_distributedlog_truncate(a int);
+CREATE
+insert into t_distributedlog_truncate select generate_series(1,10);
+INSERT 10
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+ test_consume_xids 
+-------------------
+                   
+(1 row)
+select test_consume_xids(100 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+ test_consume_xids 
+-------------------
+                   
+(1 row)
+select test_consume_xids(10 * 1000000) from gp_dist_random('gp_id') where gp_segment_id = 0;
+ test_consume_xids 
+-------------------
+                   
+(1 row)
+
+select num_distributed_log_files(0, true) > 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+select num_distributed_log_files(0, false) > 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+
+-- start_ignore
+!\retcode gpstop -ari;
+-- start_ignore
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Starting gpstop with args: -ari
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Gathering information and validating the environment...
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14173.ge595fc33a25 build dev'
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Stopping master standby host 09c5497cf854 mode=immediate
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Successfully shutdown standby process on 09c5497cf854
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20210112:12:40:40:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-0.00% of jobs completed
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-100.00% of jobs completed
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-0.00% of jobs completed
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-100.00% of jobs completed
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-----------------------------------------------------
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-----------------------------------------------------
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20210112:12:40:41:453444 gpstop:09c5497cf854:gpadmin-[INFO]:-Restarting System...
+
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
+1: select num_distributed_log_files(0, true) < 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+1: select * from wait_for_replication_replay(0, 5000);
+ wait_for_replication_replay 
+-----------------------------
+ t                           
+(1 row)
+1: select num_distributed_log_files(0, false) < 200 * 1000000 / 1024 / 1024 * 8;
+ ?column? 
+----------
+ t        
+(1 row)
+1: select count(*) from t_distributedlog_truncate;
+ count 
+-------
+ 10    
+(1 row)
+1: drop table t_distributedlog_truncate;
+DROP
+
+-- start_ignore
+!\retcode vacuumdb -a;
+-- start_ignore
+vacuumdb: vacuuming database "gpadmin"
+vacuumdb: vacuuming database "isolation2test"
+vacuumdb: vacuuming database "postgres"
+vacuumdb: vacuuming database "regression"
+vacuumdb: vacuuming database "template1"
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c debug_burn_xids -v off --skipvalidation;
+-- start_ignore
+20210112:12:40:45:453865 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c debug_burn_xids -v off --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -au;
+-- start_ignore
+20210112:12:40:45:453990 gpstop:09c5497cf854:gpadmin-[INFO]:-Starting gpstop with args: -au
+20210112:12:40:45:453990 gpstop:09c5497cf854:gpadmin-[INFO]:-Gathering information and validating the environment...
+20210112:12:40:45:453990 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20210112:12:40:45:453990 gpstop:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
+20210112:12:40:45:453990 gpstop:09c5497cf854:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.14173.ge595fc33a25 build dev'
+20210112:12:40:45:453990 gpstop:09c5497cf854:gpadmin-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
