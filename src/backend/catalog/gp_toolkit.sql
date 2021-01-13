@@ -966,11 +966,20 @@ AS
         SELECT
             oid as btdrelid,
             pgc.relpages as btdrelpages,
-            CEIL((pgc.reltuples * (25 + width))::numeric / current_setting('block_size')::numeric) AS btdexppages,
+            -- The width value is approximate, particularly when
+            -- variable length attributes are involved (see
+            -- WIDTH_THRESHOLD in analyze.c).  Often times, it was
+            -- found to be wrong, leading to "moderate" or
+            -- "significant" bloat being reported when there is
+            -- actually no bloat (e.g. right after vacuum full).
+            -- Therefore, a compensating factor is added that is
+            -- proportional to the number of variable length
+            -- attributes in a table.
+            CEIL((pgc.reltuples * (25 + width + width * (pga.varlen_cnt::numeric / pgc.relnatts::numeric)))::numeric / current_setting('block_size')::numeric) AS btdexppages,
             (select numsegments from gp_toolkit.__gp_number_of_segments) as numsegments
         FROM
             (
-                SELECT pgc.oid, pgc.reltuples, pgc.relpages
+                SELECT pgc.oid, pgc.reltuples, pgc.relpages, pgc.relnatts
                 FROM pg_class pgc
                 WHERE NOT EXISTS
                 (
@@ -994,6 +1003,14 @@ AS
             )
             AS btwcols
         ON pgc.oid = btwcols.starelid
+        LEFT OUTER JOIN
+            (
+                SELECT  attrelid, sum(CASE WHEN attlen = -1 THEN 1 ELSE 0 END) AS varlen_cnt
+                FROM pg_attribute
+                GROUP BY 1
+            )
+            AS pga
+        ON pgc.oid = pga.attrelid
         WHERE starelid IS NOT NULL
     ) AS subq;
 
@@ -1039,8 +1056,8 @@ $$
                 WHEN $1 < 10 AND $2 = 0 THEN -1
                 WHEN $2 = 0 THEN 2
                 WHEN $1 < $2 THEN 0
-                WHEN ($1/$2)::numeric > 10 THEN 2
-                WHEN ($1/$2)::numeric > 3 THEN 1
+                WHEN ($1/$2)::numeric > 12 THEN 2
+                WHEN ($1/$2)::numeric > 5 THEN 1
                 ELSE -1
             END AS bloatidx
     ) AS bloatmapping

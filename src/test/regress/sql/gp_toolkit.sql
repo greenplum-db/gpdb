@@ -389,3 +389,20 @@ reset session authorization;
 drop database toolkit_testdb;
 drop role toolkit_user1;
 drop role toolkit_admin;
+
+create database gptoolkit;
+\c gptoolkit
+-- cover "moderate bloat" case
+create table test (a int, b int) distributed by (a);
+insert into test select i, i from generate_series(1,5000)i;
+-- update all rows 4 times, so that relpages is 4 times greater
+-- than expected pages.
+update test set b = -a;
+update test set b = -a;
+update test set b = -a;
+update test set b = -a;
+analyze test;
+select bdinspname, bdirelname, bdirelpages, bdiexppages, bdidiag from gp_toolkit.gp_bloat_diag;
+
+\c regression
+drop database gptoolkit
