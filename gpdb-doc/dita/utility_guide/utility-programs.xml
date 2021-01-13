@@ -102,8 +102,6 @@
                         <p><xref href="ref/pg_dumpall.xml#topic1"/><sup otherprops="pivotal"
                             >3</sup></p>
                         <p><xref href="ref/pg_restore.xml#topic1"/></p>
-                        <p><xref href="ref/pgbouncer.xml#topic1"/></p>
-                        <p><xref href="ref/pgbouncer-ini.xml#topic1"/></p>
                         <p><xref href="ref/plcontainer.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/plcontainer-configuration.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/psql.xml#topic1"/><sup otherprops="pivotal">3</sup></p>

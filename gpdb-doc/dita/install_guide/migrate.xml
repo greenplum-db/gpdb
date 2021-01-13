@@ -311,11 +311,6 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
         such as external tables, indexes, user-defined functions, or user-defined aggregates.</p>
       <p>Here are some additional items to consider to complete your migration to Greenplum 6.</p>
       <ul id="ul_spw_q2b_z3b">
-        <li>If you are migrating from Greenplum Database 4.3.27 or an earlier 4.3.x release and have
-          configured PgBouncer in your Greenplum Database installation, you must migrate to the new
-          PgBouncer when you upgrade Greenplum Database. Refer to <xref
-            href="../admin_guide/access_db/topics/pgbouncer.xml#pgb_migrate" format="dita"
-            scope="peer">Migrating PgBouncer</xref> for specific migration instructions.</li>
         <li>Greenplum Database 5 and 6 remove automatic casts between the text type and other data
           types. After you migrate from Greenplum Database version 4.3 to version 6, this changed
           behavior may impact existing applications and queries. Refer to <xref href="43x_to_5x.xml"
