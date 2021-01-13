@@ -68,3 +68,11 @@ DROP SCHEMA "schema_view\'.gp_dist_random" CASCADE;
 -- correct internal representation
 CREATE TEMP VIEW view_with_array_op_expr AS SELECT '{1}'::int[] = '{2}'::int[];
 SELECT pg_get_viewdef('view_with_array_op_expr');
+
+-- Coerce unknown-type literals to type text
+CREATE VIEW unknown_v1 AS SELECT '2020-12-13'::unknown AS field_unknown;
+CREATE VIEW unknown_v2 AS SELECT field_unknown::date FROM unknown_v1;
+\d+ unknown_v2
+SELECT * FROM unknown_v2;
+DROP VIEW unknown_v2;
+DROP VIEW unknown_v1;

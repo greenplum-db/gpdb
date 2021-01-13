@@ -123,4 +123,26 @@ SELECT pg_get_viewdef('view_with_array_op_expr');
 -----------------------------------------------
  SELECT ('{1}'::integer[] = '{2}'::integer[]);
 (1 row)
- 
+
+-- Coerce unknown-type literals to type text
+CREATE VIEW unknown_v1 AS SELECT '2020-12-13'::unknown AS field_unknown;
+WARNING:  column "field_unknown" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+CREATE VIEW unknown_v2 AS SELECT field_unknown::date FROM unknown_v1;
+\d+ unknown_v2
+                 View "public.unknown_v2"
+    Column     | Type | Modifiers | Storage | Description 
+---------------+------+-----------+---------+-------------
+ field_unknown | date |           | plain   | 
+View definition:
+ SELECT unknown_v1.field_unknown::text::date AS field_unknown
+   FROM unknown_v1;
+
+SELECT * FROM unknown_v2;
+ field_unknown 
+---------------
+ 12-13-2020
+(1 row)
+
+DROP VIEW unknown_v2;
+DROP VIEW unknown_v1;

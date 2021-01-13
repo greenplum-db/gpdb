@@ -59,13 +59,19 @@ Datum		create_empty_extension(PG_FUNCTION_ARGS);
 
 Datum		view_has_anyarray_casts(PG_FUNCTION_ARGS);
 
+Datum		view_has_unknown_casts(PG_FUNCTION_ARGS);
+
 PG_FUNCTION_INFO_V1(add_pg_enum_label);
 
 PG_FUNCTION_INFO_V1(create_empty_extension);
 
 PG_FUNCTION_INFO_V1(view_has_anyarray_casts);
 
+PG_FUNCTION_INFO_V1(view_has_unknown_casts);
+
 static bool check_node_anyarray_walker(Node *node, void *context);
+
+static bool check_node_unknown_walker(Node *node, void *context);
 
 Datum
 add_pg_enum_label(PG_FUNCTION_ARGS)
@@ -720,4 +726,68 @@ check_node_anyarray_walker(Node *node, void *context)
 
 	return expression_tree_walker(node, check_node_anyarray_walker,
 								  context);
+}
+
+Datum
+view_has_unknown_casts(PG_FUNCTION_ARGS)
+{
+	Oid			view_oid = PG_GETARG_OID(0);
+	Relation 	rel = try_relation_open(view_oid, AccessShareLock, false);
+	Query		*viewquery;
+	bool		found;
+
+	if (rel == NULL)
+		elog(ERROR, "Could not open relation file for relation oid %u", view_oid);
+
+	if(rel->rd_rel->relkind == RELKIND_VIEW)
+	{
+		viewquery = get_view_query(rel);
+		found = query_tree_walker(viewquery, check_node_unknown_walker, NULL, 0);
+	}
+	else
+		found = false;
+
+	relation_close(rel, AccessShareLock);
+
+	PG_RETURN_BOOL(found);
+}
+
+static bool
+check_node_unknown_walker(Node *node, void *context)
+{
+	Assert(context == NULL);
+
+	if (node == NULL)
+		return false;
+
+	/*
+	 * Look only at FuncExpr since the GPDB special handling hack for unknown
+	 * types is only applied to FuncExpr. See parse_coerce.c: coerce_type()
+	 */
+	if (IsA(node, FuncExpr))
+	{
+		FuncExpr *fe = (FuncExpr *) node;
+		/*
+		 * Check to see if the FuncExpr has an unknown::cstring cast.
+		 *
+		 * If it has no such cast yet, check its arguments.
+		 */
+		if ((fe->funcresulttype != CSTRINGOID) || !fe->args || (list_length(fe->args) != 1))
+			return expression_tree_walker(node, check_node_unknown_walker, context);
+
+		Node *head = lfirst(((List *)fe->args)->head);
+
+		if (IsA(head, Var) && ((Var *)head)->vartype == UNKNOWNOID)
+			return true;
+		else
+			return expression_tree_walker(node, check_node_unknown_walker, context);
+	}
+	else if (IsA(node, Query))
+	{
+		/* recurse into subselects and ctes */
+		Query *query = (Query *) node;
+		return query_tree_walker(query, check_node_unknown_walker, context, 0);
+	}
+
+	return expression_tree_walker(node, check_node_unknown_walker, context);
 }

@@ -387,7 +387,7 @@ coerce_type(ParseState *pstate, Node *node,
 			Insist(OidIsValid(infunc));
 
 			/* do unknownout(Var) */
-			fe = makeFuncExpr(outfunc, CSTRINGOID, list_make1(node), cformat);
+			fe = makeFuncExpr(outfunc, TEXTOID, list_make1(node), cformat);
 			fe->location = location;
 
 			if (location >= 0 &&
