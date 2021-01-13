@@ -645,17 +645,23 @@ drop table t_issue_10315;
 set enable_seqscan = 0;
 
 create table rep_tbl (tablename text, explanation text) distributed replicated;
+create table dis_tbl (relname text, tablename text, explanation text);
 insert into rep_tbl values ('pg_class', 'contains all relations');
 create index on rep_tbl (tablename);
 analyze rep_tbl;
 
 --- The Var case
+
 explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
 select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
 explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
 select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+-- Simply test that the change does not affect non-system table and non-rep table.
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from dis_tbl c where relname = 'pg_class';
+explain verbose select c.relname, (select explanation from dis_tbl where dis_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
 
 --- The PlaceholderVar case
+
 explain verbose select t1.relname, ss.x from
   pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss
   on t1.relname = ss.y
@@ -666,4 +672,5 @@ select t1.relname, ss.x from
   where 1 = (select 1 from rep_tbl t3 where ss.y = t3.tablename limit 1);
 
 drop table rep_tbl;
+drop table dis_tbl;
 reset enable_seqscan;

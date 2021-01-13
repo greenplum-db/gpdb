@@ -1317,6 +1317,9 @@ drop table t_issue_10315;
 --
 set enable_seqscan = 0;
 create table rep_tbl (tablename text, explanation text) distributed replicated;
+create table dis_tbl (relname text, relisshared bool, oid oid);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'relname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into rep_tbl values ('pg_class', 'contains all relations');
 create index on rep_tbl (tablename);
 analyze rep_tbl;
@@ -1375,6 +1378,48 @@ select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.rel
  pg_class | contains all relations
 (1 row)
 
+-- Simply test that the change does not affect non-system table and non-rep table.
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from dis_tbl c where relname = 'pg_class';
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..888866.34 rows=1 width=16)
+   Output: dis_tbl.relname, ((SubPlan 1))
+   ->  Result  (cost=0.00..888866.34 rows=1 width=16)
+         Output: dis_tbl.relname, (SubPlan 1)
+         ->  Seq Scan on public.dis_tbl  (cost=0.00..888866.34 rows=334 width=16)
+               Output: dis_tbl.relname
+               Filter: (dis_tbl.relname = 'pg_class'::text)
+         SubPlan 1  (slice1; segments: 3)
+           ->  Result  (cost=0.00..6.00 rows=1 width=23)
+                 Output: rep_tbl.explanation
+                 ->  Index Scan using rep_tbl_tablename_idx on public.rep_tbl  (cost=0.00..6.00 rows=1 width=23)
+                       Output: rep_tbl.tablename, rep_tbl.explanation
+                       Index Cond: (rep_tbl.tablename = 'pg_class'::text)
+                       Filter: (rep_tbl.tablename = dis_tbl.relname)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_seqscan=off
+(16 rows)
+
+explain verbose select c.relname, (select explanation from dis_tbl where dis_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Index Only Scan using pg_class_relname_nsp_index on pg_catalog.pg_class c  (cost=0.27..10000000588.79 rows=1 width=64)
+   Output: c.relname, (SubPlan 1)
+   Index Cond: (c.relname = 'pg_class'::name)
+   SubPlan 1  (slice0)
+     ->  Result  (cost=10000000000.00..10000000488.63 rows=9 width=32)
+           Output: dis_tbl.explanation
+           Filter: (dis_tbl.tablename = (c.relname)::text)
+           ->  Materialize  (cost=10000000000.00..10000000488.63 rows=9 width=32)
+                 Output: dis_tbl.explanation, dis_tbl.tablename
+                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000488.50 rows=26 width=32)
+                       Output: dis_tbl.explanation, dis_tbl.tablename
+                       ->  Seq Scan on public.dis_tbl  (cost=10000000000.00..10000000488.50 rows=9 width=32)
+                             Output: dis_tbl.explanation, dis_tbl.tablename
+ Optimizer: Postgres query optimizer
+ Settings: enable_seqscan=off
+(16 rows)
+
 --- The PlaceholderVar case
 explain verbose select t1.relname, ss.x from
   pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss
@@ -1419,4 +1464,5 @@ select t1.relname, ss.x from
 (1 row)
 
 drop table rep_tbl;
+drop table dis_tbl;
 reset enable_seqscan;
