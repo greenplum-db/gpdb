@@ -127,6 +127,9 @@ OPTIONS
 
  The host name of the standby master host. 
 
+--hba-hostnames
+
+ Optional. use hostnames instead of CIDR in pg_hba.conf
 
 -v
 
