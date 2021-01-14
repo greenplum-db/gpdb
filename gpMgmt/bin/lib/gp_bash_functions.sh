@@ -1426,7 +1426,14 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -i"
 		NOLINE_ECHO="$ECHO -e"
-		DEFAULT_LOCALE_SETTING=en_US.utf8
+		# Using `$HEAD -1` protects from the unlikely scenario of there being two
+		# utf8 variants on the system and grabbing only one, rather than passing
+		# both values to initdb causing a failure.
+		DEFAULT_LOCALE_SETTING=$($LOCALE -a | $GREP -i "^en_US\.utf.*8$" | $HEAD -1)
+    # If no utf8 variant is found on the system default to "en_US.utf8" to
+    # prevent future checks and code within gpinitsystem from failing, and a
+    # friendly error message returned.
+		DEFAULT_LOCALE_SETTING=${DEFAULT_LOCALE_SETTING:-"en_US.utf8"}
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		DF="`findCmdInPath df` -P"
