@@ -140,6 +140,7 @@ def set_guc_value(context, guc, value):
 # this can be done to have the test run faster...
 # gpconfig -c gp_fts_mark_mirror_down_grace_period -v 5
 # postgres=# show gp_fts_mark_mirror_down_grace_period;
+@given('the status of the {seg_type} on content {content} should be "{expected_status}"')
 @then('the status of the {seg_type} on content {content} should be "{expected_status}"')
 def impl(context, seg_type, content, expected_status):
     if seg_type == "primary":

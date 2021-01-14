@@ -13,6 +13,10 @@ def config_primaries_for_replication(gpArray, hba_hostnames):
 
     try:
         for segmentPair in gpArray.getSegmentList():
+            # We cannot update the pg_hba.conf which uses ssh for hosts that are unreachable.
+            if segmentPair.primaryDB.unreachable or segmentPair.mirrorDB.unreachable:
+                continue
+
             # Start with an empty string so that the later .join prepends a newline to the first entry
             entries = ['']
             # Add the samehost replication entry to support single-host development
@@ -55,4 +59,3 @@ def config_primaries_for_replication(gpArray, hba_hostnames):
 
     else:
         logger.info("Successfully modified pg_hba.conf on primary segments to allow replication connections")
-        
