@@ -172,6 +172,7 @@
 		"gp_dtx_recovery_interval",
 		"gp_dtx_recovery_prepared_period",
 		"gp_dynamic_partition_pruning",
+		"gp_eager_two_phase_agg",
 		"gp_enable_agg_distinct",
 		"gp_enable_agg_distinct_pruning",
 		"gp_enable_direct_dispatch",

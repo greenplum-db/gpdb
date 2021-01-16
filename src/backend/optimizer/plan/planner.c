@@ -7727,6 +7727,16 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 	{
 		PathTarget *partially_grouped_target;
 
+		if (gp_eager_two_phase_agg)
+		{
+			ListCell *lc;
+			foreach(lc, grouped_rel->pathlist)
+			{
+				Path *path = (Path *) lfirst(lc);
+				path->total_cost += disable_cost;
+			}
+		}
+
 		if (partially_grouped_rel == NULL)
 			partially_grouped_target =
 				make_partial_grouping_target(root, grouped_rel->reltarget,

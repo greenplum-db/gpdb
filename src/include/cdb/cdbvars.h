@@ -622,6 +622,9 @@ extern bool 	gp_statistics_pullup_from_child_partition;
 /* Extract numdistinct from foreign key relationship */
 extern bool		gp_statistics_use_fkeys;
 
+/* Allow user to force tow stage agg */
+extern bool     gp_eager_two_phase_agg;
+
 /* Analyze tools */
 extern int gp_motion_slice_noop;
 
