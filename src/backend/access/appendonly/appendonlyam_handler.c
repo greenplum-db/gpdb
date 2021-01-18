@@ -1796,18 +1796,23 @@ appendonly_scan_bitmap_next_block(TableScanDesc scan,
 {
 	AppendOnlyScanDesc aoscan = (AppendOnlyScanDesc) scan;
 
+	/*
+	 * Start scanning from the beginning of the offsets array (or
+	 * at first "offset number" if it's a lossy page).
+	 * Have to set the init value before return fase. Since in
+	 * nodeBitmapHeapscan.c's BitmapHeapNext. After call
+	 * `table_scan_bitmap_next_block` and return false, it doesn't
+	 * clean the tbmres. And then it'll read tuples from the page
+	 * which should be skipped.
+	 */
+	aoscan->rs_cindex = 0;
+
 	/* If tbmres contains no tuples, continue. */
 	if (tbmres->ntuples == 0)
 		return false;
 
 	/* Make sure we never cross 15-bit offset number [MPP-24326] */
 	Assert(tbmres->ntuples <= INT16_MAX + 1);
-
-	/*
-	 * Start scanning from the beginning of the offsets array (or
-	 * at first "offset number" if it's a lossy page).
-	 */
-	aoscan->rs_cindex = 0;
 
 	return true;
 }
@@ -1817,10 +1822,11 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 								  TBMIterateResult *tbmres,
 								  TupleTableSlot *slot)
 {
-	AppendOnlyScanDesc aoscan = (AppendOnlyScanDesc) scan;
-	OffsetNumber pseudoHeapOffset;
-	ItemPointerData pseudoHeapTid;
-	AOTupleId	aoTid;
+	AppendOnlyScanDesc	aoscan = (AppendOnlyScanDesc) scan;
+	OffsetNumber		pseudoHeapOffset;
+	ItemPointerData 	pseudoHeapTid;
+	AOTupleId			aoTid;
+	int					numTuples;
 
 	if (aoscan->aofetch == NULL)
 	{
@@ -1831,7 +1837,11 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 
 	}
 
-	for (;;)
+	ExecClearTuple(slot);
+
+	/* ntuples == -1 indicates a lossy page */
+	numTuples = (tbmres->ntuples == -1) ? INT16_MAX + 1 : tbmres->ntuples;
+	while (aoscan->rs_cindex < numTuples)
 	{
 		/*
 		 * If it's a lossy pase, iterate through all possible "offset numbers".
@@ -1839,9 +1849,6 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 		 */
 		if (tbmres->ntuples == -1)
 		{
-			if (aoscan->rs_cindex == INT16_MAX + 1)
-				return false;
-
 			/*
 			 * +1 to convert index to offset, since TID offsets are not zero
 			 * based.
@@ -1849,31 +1856,27 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 			pseudoHeapOffset = aoscan->rs_cindex + 1;
 		}
 		else
-		{
-			if (aoscan->rs_cindex == tbmres->ntuples)
-				return false;
-
 			pseudoHeapOffset = tbmres->offsets[aoscan->rs_cindex];
-		}
+
 		aoscan->rs_cindex++;
 
 		/*
 		 * Okay to fetch the tuple
 		 */
 		ItemPointerSet(&pseudoHeapTid, tbmres->blockno, pseudoHeapOffset);
-
 		tbm_convert_appendonly_tid_out(&pseudoHeapTid, &aoTid);
 
-		appendonly_fetch(aoscan->aofetch, &aoTid, slot);
+		if(appendonly_fetch(aoscan->aofetch, &aoTid, slot))
+		{
+			/* OK to return this tuple */
+			pgstat_count_heap_fetch(aoscan->aos_rd);
 
-		if (TupIsNull(slot))
-			continue;
-
-		pgstat_count_heap_fetch(aoscan->aos_rd);
-
-		/* OK to return this tuple */
-		return true;
+			return true;
+		}
 	}
+
+	/* Done with this block */
+	return false;
 }
 
 static bool

@@ -77,7 +77,6 @@ typedef struct AOCSBitmapScanData
 	} bitmapScanDesc[2];
 
 	int	rs_cindex;	/* current tuple's index tbmres->offset or -1 */
-	int	rs_ntuples; /* how many tuples should fetch on the current block */
 } *AOCSBitmapScan;
 
 typedef struct AOCODMLState
@@ -1703,31 +1702,25 @@ aoco_scan_bitmap_next_block(TableScanDesc scan,
 {
 	AOCSBitmapScan	aocsBitmapScan = (AOCSBitmapScan)scan;
 
-	/* If tbmres contains no tuples, continue. */
-	if (tbmres->ntuples == 0)
-		return false;
-
 	/* Make sure we never cross 15-bit offset number [MPP-24326] */
 	Assert(tbmres->ntuples <= INT16_MAX + 1);
 
 	/*
 	 * Start scanning from the beginning of the offsets array (or
 	 * at first "offset number" if it's a lossy page).
+	 * In nodeBitmapHeapscan.c's BitmapHeapNext. After call
+	 * `table_scan_bitmap_next_block` and return false, it doesn't
+	 * clean the tbmres. Then it'll call aoco_scan_bitmap_next_tuple
+	 * to try to get tuples from the skipped page, and it'll return false.
+	 * Althouth aoco_scan_bitmap_next_tuple works fine.
+	 * But it still be better to set these init value before return in case
+	 * of wrong init value.
 	 */
 	aocsBitmapScan->rs_cindex = 0;
 
-	/*
-	 * ntuples == -1 indicates a lossy page
-	 */
-	if (tbmres->ntuples == -1)
-	{
-		Assert(tbmres->recheck);
-		aocsBitmapScan->rs_ntuples = INT16_MAX + 1;
-	}
-	else
-	{
-		aocsBitmapScan->rs_ntuples = tbmres->ntuples;
-	}
+	/* If tbmres contains no tuples, continue. */
+	if (tbmres->ntuples == 0)
+		return false;
 
 	/*
 	 * which descriptor to be used for fetching the data
@@ -1747,6 +1740,7 @@ aoco_scan_bitmap_next_tuple(TableScanDesc scan,
 	OffsetNumber	pseudoOffset;
 	ItemPointerData	pseudoTid;
 	AOTupleId		aoTid;
+	int				numTuples;
 
 	aocoFetchDesc = aocsBitmapScan->bitmapScanDesc[aocsBitmapScan->whichDesc].bitmapFetch;
 	if (aocoFetchDesc == NULL)
@@ -1758,10 +1752,11 @@ aoco_scan_bitmap_next_tuple(TableScanDesc scan,
 		aocsBitmapScan->bitmapScanDesc[aocsBitmapScan->whichDesc].bitmapFetch = aocoFetchDesc;
 	}
 
-
 	ExecClearTuple(slot);
 
-	while (aocsBitmapScan->rs_cindex < aocsBitmapScan->rs_ntuples)
+	/* ntuples == -1 indicates a lossy page */
+	numTuples = (tbmres->ntuples == -1) ? INT16_MAX + 1 : tbmres->ntuples;
+	while (aocsBitmapScan->rs_cindex < numTuples)
 	{
 		/*
 		 * If it's a lossy page, iterate through all possible "offset numbers".
