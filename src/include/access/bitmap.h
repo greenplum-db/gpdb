@@ -332,6 +332,29 @@ IS_FILL_WORD(const BM_HRL_WORD *words, int16 wordno)
 	return (words[wordno / BM_HRL_WORD_SIZE] & WORDNO_GET_HEADER_BIT(wordno)) > 0;
 }
 
+/*
+ * GET_NUM_BITS() -- return the number of bits included in the given
+ * bitmap words.
+ */
+static inline uint64
+GET_NUM_BITS(const BM_HRL_WORD *contentWords,
+			 const BM_HRL_WORD *headerWords,
+			 uint32 nwords)
+{
+	uint64	nbits = 0;
+	uint32	i;
+
+	for (i = 0; i < nwords; i++)
+	{
+		if (IS_FILL_WORD(headerWords, i))
+			nbits += FILL_LENGTH(contentWords[i]) * BM_HRL_WORD_SIZE;
+		else
+			nbits += BM_HRL_WORD_SIZE;
+	}
+
+	return nbits;
+}
+
 /* reloptions.c */
 #define BITMAP_MIN_FILLFACTOR		10
 #define BITMAP_DEFAULT_FILLFACTOR	100

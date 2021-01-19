@@ -140,3 +140,124 @@ SELECT gp_inject_fault('after_read_one_bitmap_idx_page', 'reset', dbid) FROM gp_
 -- Let's check the total tuple count after the test.
 SELECT count(*) FROM bmupdate WHERE id = 97;
 
+--
+-- Test 2, run Index Scan on the bitmap index when there's backend
+-- insert running.
+--
+-- Inject fault after read the first bitmap page when query the table.
+SELECT gp_inject_fault_infinite('after_read_one_bitmap_idx_page', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Inject fault when insert new tid cause rearrange words from current
+-- bitmap page to next bitmap page.
+SELECT gp_inject_fault_infinite('rearrange_word_to_next_bitmap_page', 'skip', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+1: set enable_bitmapscan=off;
+-- Should generate Index Scan on the bitmap index.
+1: EXPLAIN (COSTS OFF) SELECT * FROM bmupdate WHERE id = 97;
+-- Query should suspend on the first fault injection which finish read the first bitmap page.
+1&: SELECT count(*) FROM bmupdate WHERE id = 97;
+
+-- Insert will insert new tid in the first bitmap page and cause the word expand
+-- and rearrange exceed words to next bitmap page.
+-- The reason it not insert at the end of bitmap LOV is because right now only one
+-- transaction doing the insert, and it'll insert to small seg file number.
+2: INSERT INTO bmupdate VALUES (97);
+
+-- Query should read the first page(buffer lock released), and then INSERT insert to
+-- the first page which will trigger rearrange words.
+SELECT gp_wait_until_triggered_fault('rearrange_word_to_next_bitmap_page', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+SELECT gp_inject_fault('rearrange_word_to_next_bitmap_page', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Insert triggered rearrange
+SELECT gp_wait_until_triggered_fault('after_read_one_bitmap_idx_page', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+SELECT gp_inject_fault('after_read_one_bitmap_idx_page', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Should return the correct tuple count with id=97. It used to raise assertion failure for
+-- AO tables. This is because the wrong tid transform to an invalud AOTupleId.
+1<:
+
+--
+-- Test 3, run Index Scan on the bitmap index that match multiple keys when there's backend
+-- insert running.
+--
+-- Let's check the total tuple count before the test.
+SELECT count(*) FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+
+-- Inject fault after read the first bitmap page when query the table.
+SELECT gp_inject_fault_infinite('after_read_one_bitmap_idx_page', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Inject fault when insert new tid cause rearrange words from current
+-- bitmap page to next bitmap page.
+SELECT gp_inject_fault_infinite('rearrange_word_to_next_bitmap_page', 'skip', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Should generate Index Scan on the bitmap index that match multiple keys.
+1: EXPLAIN (COSTS OFF) SELECT * FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+-- Query should suspend on the first fault injection which finish read the first bitmap page.
+1&: SELECT count(*) FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+
+-- Insert will insert new tid in the first bitmap page and cause the word expand
+-- and rearrange exceed words to next bitmap page.
+-- The reason it not insert at the end of bitmap LOV is because right now only one
+-- transaction doing the insert, and it'll insert to small seg file number.
+-- Here insert both values to make sure update on full bitmap happens for one LOV.
+2: INSERT INTO bmupdate VALUES (97);
+2: INSERT INTO bmupdate VALUES (99);
+
+-- Query should read the first page(buffer lock released), and then INSERT insert to
+-- the first page which will trigger rearrange words.
+SELECT gp_wait_until_triggered_fault('rearrange_word_to_next_bitmap_page', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+SELECT gp_inject_fault('rearrange_word_to_next_bitmap_page', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Insert triggered rearrange
+SELECT gp_wait_until_triggered_fault('after_read_one_bitmap_idx_page', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+SELECT gp_inject_fault('after_read_one_bitmap_idx_page', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Should return the correct tuple count with id=97. It used to raise assertion failure for
+-- AO tables. This is because the wrong tid transform to an invalud AOTupleId.
+1<:
+
+-- Let's check the total tuple count after the test.
+SELECT count(*) FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+
+--
+-- Test 4, run Bitmap Heap Scan on the bitmap index that match multiple keys when there's backend
+-- insert running.
+--
+
+-- Inject fault after read the first bitmap page when query the table.
+SELECT gp_inject_fault_infinite('after_read_one_bitmap_idx_page', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Inject fault when insert new tid cause rearrange words from current
+-- bitmap page to next bitmap page.
+SELECT gp_inject_fault_infinite('rearrange_word_to_next_bitmap_page', 'skip', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+1: set enable_bitmapscan=on;
+-- Should generate Bitmap HEAP Scan on the bitmap index that match multiple keys.
+1: EXPLAIN (COSTS OFF) SELECT * FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+-- Query should suspend on the first fault injection which finish read the first bitmap page.
+1&: SELECT count(*) FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+
+-- Insert will insert new tid in the first bitmap page and cause the word expand
+-- and rearrange exceed words to next bitmap page.
+-- The reason it not insert at the end of bitmap LOV is because right now only one
+-- transaction doing the insert, and it'll insert to small seg file number.
+-- Here insert both values to make sure update on full bitmap happens for one LOV.
+2: INSERT INTO bmupdate SELECT 97 FROM generate_series(1, 1000);
+2: INSERT INTO bmupdate SELECT 99 FROM generate_series(1, 1000);
+
+-- Query should read the first page(buffer lock released), and then INSERT insert to
+-- the first page which will trigger rearrange words.
+SELECT gp_wait_until_triggered_fault('rearrange_word_to_next_bitmap_page', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+SELECT gp_inject_fault('rearrange_word_to_next_bitmap_page', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Insert triggered rearrange
+SELECT gp_wait_until_triggered_fault('after_read_one_bitmap_idx_page', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+SELECT gp_inject_fault('after_read_one_bitmap_idx_page', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = 0;
+
+-- Should return the correct tuple count with id=97. It used to raise assertion failure for
+-- AO tables. This is because the wrong tid transform to an invalud AOTupleId.
+1<:
+
+-- Let's check the total tuple count after the test.
+SELECT count(*) FROM bmupdate WHERE id >= 97 and id <= 99 and gp_segment_id = 0;
+

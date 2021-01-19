@@ -253,7 +253,6 @@ bmgetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	res = _bitmap_firstbatchwords(scan, ForwardScanDirection);
 
 	scanPos = ((BMScanOpaque)scan->opaque)->bm_currPos;
-	scanPos->bm_result.nextTid = 1;
 
 	/* perhaps this should be in a special context? */
 	is = (IndexStream *)palloc0(sizeof(IndexStream));
@@ -878,6 +877,24 @@ words_get_match(BMBatchWords *words, BMIterateResult *result,
 	int hrlwordno;
 	int newwordno;
 	uint64 start, end;
+
+	/*
+	 * Normally the batch words' first tid is equal to the next tid
+	 * for a new iteration.
+	 * But this is not the case when there inseration(which update existing
+	 * full bitmap page) and rearrange bitmap page next to the full page which
+	 * get updated. More details see read_words in bitmapsearch.c.
+	 * Related to issue: https://github.com/greenplum-db/gpdb/issues/11308
+	 *
+	 * Here, it's ok to move back the nextTid since the previous block of tids
+	 * are returned. So when result->nextTid > words->firstTid happens, we are
+	 * scanning tid for new block. The start tid to return is large than
+	 * the current words->firstTid. Then the below code will try to catch up
+	 * to the start tid word just like _bitmap_catchup_to_next_tid.
+	 * So no duplicate tids will be returned.
+	 */
+	if (result->nextTid > words->firstTid)
+		result->nextTid = words->firstTid;
 
 restart:
 	/* compute the first and last tid location for 'blockno' */

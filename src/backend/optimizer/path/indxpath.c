@@ -40,6 +40,7 @@
 
 #include "optimizer/subselect.h"
 #include "parser/parsetree.h"
+#include "utils/index_selfuncs.h"
 
 
 /* XXX see PartCollMatchesExprColl */
@@ -808,6 +809,7 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 * only consider bitmap paths because they are processed in TID order.
 		 * The appendonlyam.c module will optimize fetches in TID order by keeping
 		 * the last decompressed block between fetch calls.
+		 * Index scan path on GPDB's bitmap index should works the same as bitmap paths.
 		 *
 		 * GPDB_12_MERGE_FIXME: Also there is no code in place in order to be
 		 * able to use index only scans on AO/AOCO relations. However it is
@@ -815,8 +817,9 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 * are no straight forward solutions though.
 		 */
 		if (index->amhasgettuple &&
-				(rel->amhandler != AO_ROW_TABLE_AM_HANDLER_OID &&
-				 rel->amhandler != AO_COLUMN_TABLE_AM_HANDLER_OID))
+				((rel->amhandler != AO_ROW_TABLE_AM_HANDLER_OID &&
+				 rel->amhandler != AO_COLUMN_TABLE_AM_HANDLER_OID) ||
+				 index->amcostestimate == bmcostestimate))
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
