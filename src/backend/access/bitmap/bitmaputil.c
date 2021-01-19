@@ -27,7 +27,6 @@
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
 
-static void _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result);
 static void _bitmap_findnextword(BMBatchWords* words, uint64 nextReadNo);
 static void _bitmap_resetWord(BMBatchWords *words, uint32 prevStartNo);
 static uint8 _bitmap_find_bitset(BM_HRL_WORD word, uint8 lastPos);
@@ -358,22 +357,19 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
  * _bitmap_catchup_to_next_tid - Catch up to the nextTid we need to check
  * from last iteration.
  *
- * Normally words->firstTid should equal to result->nextTid. But this is
- * not the case when there inseration(which update existing full bitmap page)
- * and rearrange bitmap page next to the full page which get updated.
+ * Normally words->firstTid should equal to result->nextTid. But there
+ * are exceptions:
+ * 1: When the concurrent insert causes bitmap items from previous full page
+ * to spill over to current page in the window when we (the read transaction)
+ * had released the lock on the previous page and not locked the current page.
  * More details see read_words in bitmapsearch.c.
  * Related to issue: https://github.com/greenplum-db/gpdb/issues/11308
- *
- * When we iterate each bitmap pages, we increase result->nextTid once
- * we find a match and then read each bitmap page one by one.
- * So there is no way that words->firstTid > result->nextTid.
+ * 2. Or when running bitmap heap scan path on bitmap index, since we always
+ * try to read from a table block's start tid. See pull_stream.
  */
-static void
+void
 _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 {
-	/* words->firstTid > result->nextTid shouldn't happen */
-	Assert(words->firstTid <= result->nextTid);
-
 	if (words->firstTid >= result->nextTid)
 		return;
 
@@ -388,10 +384,12 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 			BM_HRL_WORD word = words->cwords[result->lastScanWordNo];
 			uint64	fillLength = FILL_LENGTH(word);
 
-			if (GET_FILL_BIT(word) == 0 && word == 0)
+			/*
+			 * XXX: weird, why the word marks as compresed but the word is 0?
+			 */
+			if (word == 0)
 			{
-				if (word == 0)
-					fillLength = 1;
+				fillLength = 1;
 				/* Skip all empty bits, this may cause words->firstTid > result->nextTid */
 				words->firstTid = fillLength * BM_HRL_WORD_SIZE;
 				words->nwords--;
@@ -411,7 +409,7 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 					fillLength--;
 				}
 
-				/* concume all the fill words, try to fetch next words */
+				/* comsume all the fill words, try to fetch next words */
 				if (fillLength == 0)
 				{
 					words->nwords--;
@@ -419,7 +417,7 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 				}
 
 				/*
-				* Catch up the next tid to search, but ther still fill words.
+				* Catch up the next tid to search, but there still fill words.
 				* Return current state.
 				*/
 				if (words->firstTid >= result->nextTid)

@@ -879,22 +879,11 @@ words_get_match(BMBatchWords *words, BMIterateResult *result,
 	uint64 start, end;
 
 	/*
-	 * Normally the batch words' first tid is equal to the next tid
-	 * for a new iteration.
-	 * But this is not the case when there inseration(which update existing
-	 * full bitmap page) and rearrange bitmap page next to the full page which
-	 * get updated. More details see read_words in bitmapsearch.c.
-	 * Related to issue: https://github.com/greenplum-db/gpdb/issues/11308
-	 *
-	 * Here, it's ok to move back the nextTid since the previous block of tids
-	 * are returned. So when result->nextTid > words->firstTid happens, we are
-	 * scanning tid for new block. The start tid to return is large than
-	 * the current words->firstTid. Then the below code will try to catch up
-	 * to the start tid word just like _bitmap_catchup_to_next_tid.
-	 * So no duplicate tids will be returned.
+	 * XXX: We assume that BM_HRL_WORD_SIZE is not greater than
+	 * TBM_BITS_PER_BITMAPWORD for tidbitmap.
 	 */
-	if (result->nextTid > words->firstTid)
-		result->nextTid = words->firstTid;
+	Assert(BM_HRL_WORD_SIZE <= TBM_BITS_PER_BITMAPWORD);
+	Assert(nhrlwords >= 1);
 
 restart:
 	/* compute the first and last tid location for 'blockno' */
@@ -916,72 +905,38 @@ restart:
 		else
 			return true;
 	}
-		
-	/*
-	 * XXX: We assume that BM_HRL_WORD_SIZE is not greater than
-	 * TBM_BITS_PER_BITMAPWORD for tidbitmap.
-	 */
-	Assert(BM_HRL_WORD_SIZE <= TBM_BITS_PER_BITMAPWORD);
-	Assert(nhrlwords >= 1); 
+
 	Assert((result->nextTid - start) % BM_HRL_WORD_SIZE == 0);
 
+	/* Set the next tid we expected to check */
+	result->nextTid = start;
+
 	/*
-	 * find the first tid location in 'words' that is equal to
-	 * 'start'.
+	 * If words->firstTid < result->nextTid, we need to catch up the words
+	 * firstTid for checking to the next tid(start of current block).
+	 * words->firstTid will keep set as result->nextTid before each
+	 * iteration to mark the scanned tids in _bitmap_nextbatchwords.
+	 * Note here that when we read new batchwords from bitmap page, the
+	 * words->firstTid may get set to a tid we already scanned.
+	 * See read_words in bitmapsearch.c.
+	 *
+	 * If the words->firstTid already pass the result->nextTid, then
+	 * we should scan from the words->firstTid. Since the new batchwords's
+	 * start tid exceeds block's start tid.
 	 */
-	while (words->nwords > 0 && result->nextTid < start)
+	if (words->firstTid < result->nextTid)
+		_bitmap_catchup_to_next_tid(words, result);
+	else if (words->firstTid > result->nextTid)
+		result->nextTid = words->firstTid;
+
+	/*
+	 * If the catch up processd all unmatch words that exceed current block's
+	 * end. Then restart for a new block.
+	 */
+	if (result->nextTid > end)
 	{
-		BM_HRL_WORD word = words->cwords[result->lastScanWordNo];
-
-		if (IS_FILL_WORD(words->hwords, result->lastScanWordNo))
-		{
-			uint64	fillLength;
-			
-			if (word == 0)
-				fillLength = 1;
-			else
-				fillLength = FILL_LENGTH(word);
-
-			if (GET_FILL_BIT(word) == 1)
-			{
-				if (start - result->nextTid >= fillLength * BM_HRL_WORD_SIZE)
-				{
-					result->nextTid += fillLength * BM_HRL_WORD_SIZE;
-					result->lastScanWordNo++;
-					words->nwords--;
-				}
-				else
-				{
-					words->cwords[result->lastScanWordNo] -=
-						(start - result->nextTid)/BM_HRL_WORD_SIZE;
-					result->nextTid = start;
-				}
-			}
-			else
-			{
-				/*
-				 * This word represents compressed non-matches. If it
-				 * is sufficiently large, we might be able to skip over a 
-				 * large range of blocks which would have no matches
-				 */
-				result->lastScanWordNo++;
-				words->nwords--;
-				
-				if(fillLength * BM_HRL_WORD_SIZE > end - result->nextTid)
-				{
-					result->nextTid += fillLength * BM_HRL_WORD_SIZE;
-					blockno = result->nextTid / BM_MAX_TUPLES_PER_PAGE;
-					goto restart;
-				}
-				result->nextTid += fillLength * BM_HRL_WORD_SIZE;
-			}
-		}
-		else
-		{
-			result->nextTid += BM_HRL_WORD_SIZE;
-			result->lastScanWordNo++;
-			words->nwords--;
-		}
+		blockno = result->nextTid / BM_MAX_TUPLES_PER_PAGE;
+		goto restart;
 	}
 
 	/*
@@ -994,6 +949,10 @@ restart:
 		return false;
 	}
 
+	/*
+	 * If the the nextTid is the firstTid, then we exam the leading
+	 * 0 fill words. And skip them.
+	 */
 	if (IS_FILL_WORD(words->hwords, result->lastScanWordNo) &&
 		GET_FILL_BIT(words->cwords[result->lastScanWordNo]) == 0)
 	{
@@ -1017,7 +976,11 @@ restart:
 			words->nwords--;
 			
 			if(newentry)
+			{
+				/* Mark the scanned tids */
+				words->firstTid = result->nextTid;
 				goto restart;
+			}
 			else
 				return true;
 		}
