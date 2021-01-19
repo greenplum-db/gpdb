@@ -26,6 +26,7 @@
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
+#include "utils/faultinjector.h"
 
 typedef struct ItemPos
 {
@@ -324,6 +325,7 @@ read_words(Relation rel, Buffer lovBuffer, OffsetNumber lovOffset,
 		*nextBlockNoP = bo->bm_bitmap_next;
 
 		_bitmap_relbuf(bitmapBuffer);
+		SIMPLE_FAULT_INJECTOR("after_read_one_bitmap_idx_page");
 		
 		*readLastWords = false;
 

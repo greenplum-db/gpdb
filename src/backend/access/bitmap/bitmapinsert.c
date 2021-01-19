@@ -32,6 +32,7 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
+#include "utils/faultinjector.h"
 
 /*
  * The following structure along with BMTIDBuffer are used to buffer
@@ -979,6 +980,7 @@ updatesetbit_inpage(Relation rel, uint64 tidnum,
 		memcpy(nextBitmap->hwords, words.hwords,
 			   BM_CALC_H_WORDS(nextOpaque->bm_hrl_words_used) * sizeof(BM_HRL_WORD));
 
+		SIMPLE_FAULT_INJECTOR("rearrange_word_to_next_bitmap_page");
 		Assert(new_words.curword == 0);
 	}
 
