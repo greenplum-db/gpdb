@@ -10,7 +10,7 @@ of the currently installed version of Greenplum Database. It is intended,
 for example, to be used by software packages that want to interface to
 Greenplum Database to facilitate finding the required header files and
 libraries. Note that information printed out by <codeph>pg_config</codeph>
-is for the Greenplum Database master only.</p><p>If more than one option is given, the information is printed in that
+is for the Greenplum Database coordinator only.</p><p>If more than one option is given, the information is printed in that
 order, one item per line. If no options are given, all available information
 is printed, with labels.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>--bindir</pt><pd>Print the location of user executables. Use this, for example, to find the <codeph>psql</codeph>
             program. This is normally also the location where the <codeph>pg_config</codeph> program

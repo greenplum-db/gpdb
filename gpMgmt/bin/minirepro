@@ -4,7 +4,7 @@ minirepro utility
 
 USAGE
 
-minirepro <db-name> [-h <master-host>] [-U <username>] [-p <port>]
+minirepro <db-name> [-h <coordinator-host>] [-U <username>] [-p <port>]
   -q <SQL-file> -f <repo-data-file>
 
 minirepro -?
@@ -30,8 +30,8 @@ PARAMETERS
 <db-name>
   Name of the Greenplum Database.
 
--h <master-host>
-  Greenplum Database master host. Default is localhost.
+-h <coordinator-host>
+  Greenplum Database coordinator host. Default is localhost.
 
 -U <username>
   Greenplum Database user name to log into the database and run the

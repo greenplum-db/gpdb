@@ -66,7 +66,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.gpArrayMock.getDbList.side_effect = [[self.primary0], [self.primary0], [self.primary0]]
         self.gpArrayMock.hasMirrors = True
         self.gpArrayMock.isStandardArray.return_value = (True, None)
-        self.gpArrayMock.master = self.gparray.master
+        self.gpArrayMock.coordinator = self.gparray.coordinator
 
         self.config_provider_mock.loadSystemConfig.return_value = self.gpArrayMock
 
@@ -103,7 +103,7 @@ class GpRecoversegTestCase(GpTestCase):
         sys.argv = ["gprecoverseg"]  # reset to relatively empty args list
 
         options = Options()
-        options.masterDataDirectory = self.temp_dir
+        options.coordinatorDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = self.config_file_path
         options.showProgress = True
         options.showProgressInplace = True
@@ -136,7 +136,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.mock_get_segments_checksum_settings.return_value = ([self.mirror0], [])
         self.return_one = True
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
-        self.assertTrue(self.gparray.master.isSegmentMaster(True))
+        self.assertTrue(self.gparray.coordinator.isSegmentMaster(True))
 
         with self.assertRaisesRegex(Exception, "Heap checksum setting differences reported on segments"):
             self.subject.run()
@@ -144,7 +144,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])
         self.subject.logger.fatal.assert_any_call('Heap checksum setting differences reported on segments')
         self.subject.logger.fatal.assert_any_call('Failed checksum consistency validation:')
-        self.subject.logger.fatal.assert_any_call('sdw1 checksum set to 0 differs from master checksum set to 1')
+        self.subject.logger.fatal.assert_any_call('sdw1 checksum set to 0 differs from coordinator checksum set to 1')
 
     @patch.object(HeapChecksum, "__init__", return_value=None)
     def test_when_cannot_determine_checksums_it_raises(self, mock_heap_checksum_init):
@@ -152,7 +152,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.mock_get_segments_checksum_settings.return_value = ([], [])
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
         self.return_one = True
-        self.assertTrue(self.gparray.master.isSegmentMaster(True))
+        self.assertTrue(self.gparray.coordinator.isSegmentMaster(True))
         with self.assertRaisesRegex(Exception, "No segments responded to ssh query for heap checksum validation."):
             self.subject.run()
 
@@ -179,7 +179,7 @@ class GpRecoversegTestCase(GpTestCase):
     def test_successful_rebalance(self, _, __, ___):
         self.gpArrayMock.get_unbalanced_segdbs.return_value = [self.primary0]
         options = Options()
-        options.masterDataDirectory = self.temp_dir
+        options.coordinatorDataDirectory = self.temp_dir
         options.rebalanceSegments = True
         options.spareDataDirectoryFile = None
         options.showProgress = True
@@ -200,7 +200,7 @@ class GpRecoversegTestCase(GpTestCase):
     def test_failed_rebalance(self, _, __, ___):
         self.gpArrayMock.get_unbalanced_segdbs.return_value = [self.primary0]
         options = Options()
-        options.masterDataDirectory = self.temp_dir
+        options.coordinatorDataDirectory = self.temp_dir
         options.rebalanceSegments = True
         options.spareDataDirectoryFile = None
         options.showProgress = True
@@ -221,7 +221,7 @@ class GpRecoversegTestCase(GpTestCase):
     def test_failed_recover(self, _):
         self.gpArrayMock.get_unbalanced_segdbs.return_value = [self.primary0]
         options = Options()
-        options.masterDataDirectory = self.temp_dir
+        options.coordinatorDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = None
         options.showProgress = True
         options.showProgressInplace = True
@@ -245,7 +245,7 @@ class GpRecoversegTestCase(GpTestCase):
     def test_successful_recover(self, _):
         self.gpArrayMock.get_unbalanced_segdbs.return_value = [self.primary0]
         options = Options()
-        options.masterDataDirectory = self.temp_dir
+        options.coordinatorDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = None
         options.showProgress = True
         options.showProgressInplace = True
@@ -269,8 +269,8 @@ class GpRecoversegTestCase(GpTestCase):
         self.assertEqual(cm.exception.code, 0)
 
     def _create_gparray_with_2_primary_2_mirrors(self):
-        master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         primary1 = Segment.initFromString(
@@ -279,7 +279,7 @@ class GpRecoversegTestCase(GpTestCase):
             "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         mirror1 = Segment.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
-        return GpArray([master, self.primary0, primary1, self.mirror0, mirror1])
+        return GpArray([coordinator, self.primary0, primary1, self.mirror0, mirror1])
 
 
 if __name__ == '__main__':

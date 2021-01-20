@@ -233,7 +233,7 @@ def openInputFile(ifn, options):
         fileIn = sys.stdin
     else:
         ifn = os.path.abspath(ifn)
-        # In case a master or segment instance's data directory name
+        # In case a coordinator or segment instance's data directory name
         # was given, append '.log' to get the instance's log file name
         # (gpdb convention).
         if (os.path.isdir(ifn)):

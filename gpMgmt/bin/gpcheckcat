@@ -124,7 +124,7 @@ class Global():
 
         self.opt['-E'] = False
 
-        self.master_dbid = None
+        self.coordinator_dbid = None
         self.cfg = None
         self.dbname = None
         self.firstdb = None
@@ -295,7 +295,7 @@ def parseCommandLine():
             usage('Error: invalid value \'%s\' for shared table option. Legal values are (none, only)' % GV.opt['-S'])
         GV.opt['-S'] = GV.opt['-S'].lower()
 
-    logger.debug('master at host %s, port %s, user %s, database %s' %
+    logger.debug('coordinator at host %s, port %s, user %s, database %s' %
                  (GV.opt['-h'], GV.opt['-p'], GV.opt['-U'], GV.dbname))
 
     try:
@@ -460,7 +460,7 @@ def getGPConfiguration():
     curs = db.query(qry)
     for row in curs.dictresult():
         if row['content'] == -1 and not row['isprimary']:
-            continue  # skip standby master
+            continue  # skip standby coordinator
         cfg[row['dbid']] = row
     db.close()
     return cfg
@@ -477,12 +477,12 @@ def checkDistribPolicy():
     where pk.contype in('p', 'u') and d.policytype = 'p' and d.distkey = ''
     '''
 
-    db = connect2(GV.cfg[GV.master_dbid])
+    db = connect2(GV.cfg[GV.coordinator_dbid])
     try:
         curs = db.query(qry)
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[GV.master_dbid], ('nspname', 'relname', 'constraint'), row])
+            err.append([GV.cfg[GV.coordinator_dbid], ('nspname', 'relname', 'constraint'), row])
 
         if not err:
             logger.info('[OK] randomly distributed tables')
@@ -523,7 +523,7 @@ def checkDistribPolicy():
 
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[GV.master_dbid], ('nspname', 'relname', 'constraint'), row])
+            err.append([GV.cfg[GV.coordinator_dbid], ('nspname', 'relname', 'constraint'), row])
 
         if not err:
             logger.info('[OK] unique constraints')
@@ -574,7 +574,7 @@ def checkPartitionIntegrity():
 
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[GV.master_dbid], cols, row])
+            err.append([GV.cfg[GV.coordinator_dbid], cols, row])
 
         if not err:
             logger.info('[OK] partition distribution policy check')
@@ -812,7 +812,7 @@ def checkDepend():
     logger.info('-----------------------------------')
     logger.info('Checking Object Dependencies')
 
-    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
 
     # Catalogs that link up to pg_depend/pg_shdepend
     qry = """
@@ -966,7 +966,7 @@ def checkOwners():
 
     # Check owners in pg_class
     #
-    #  - Report each table that has an inconsistency with the master database,
+    #  - Report each table that has an inconsistency with the coordinator database,
     #    this can be on the table directly, or on one of the table subobjects
     #    (pg_toast, pg_aoseg, etc)
     #
@@ -979,10 +979,10 @@ def checkOwners():
     #
     #  - Between 3.3 and 4.0 the ao segment columns migrated from pg_class
     #    to pg_appendonly.
-    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     qry = '''
     select distinct n.nspname, coalesce(o.relname, c.relname) as relname,
-                    a.rolname, m.rolname as master_rolname
+                    a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
@@ -1013,12 +1013,12 @@ def checkOwners():
             for row in rows[0:100]:
                 logger.error('  %s.%s relowner %s != %s'
                              % (row['nspname'], row['relname'], row['rolname'],
-                                row['master_rolname']))
+                                row['coordinator_rolname']))
             if len(rows) > 100:
                 logger.error("...")
             for row in rows:
                 fixupowners(row['nspname'], row['relname'], row['rolname'],
-                            row['master_rolname'])
+                            row['coordinator_rolname'])
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint("[ERROR] executing: check table ownership")
@@ -1026,16 +1026,16 @@ def checkOwners():
         myprint(qry)
 
     # TODO: add a check that subobject owners agree with the main object owner.
-    # (The above checks only compare master vs segment)
+    # (The above checks only compare coordinator vs segment)
 
 
     # Check owners in pg_type
     #  - Ignore implementation types of pg_class entries - they should be
     #    in the check above since ALTER TABLE is required to fix them, not
     #    ALTER TYPE.
-    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     qry = '''
-    select distinct n.nspname, t.typname, a.rolname, m.rolname as master_rolname
+    select distinct n.nspname, t.typname, a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_type') r
       join pg_type t on (t.oid = r.oid)
       join pg_namespace n on (n.oid = t.typnamespace)
@@ -1061,7 +1061,7 @@ def checkOwners():
             for row in rows[0:100]:
                 logger.error('  %s.%s typeowner %s != %s'
                              % (row['nspname'], row['typname'], row['rolname'],
-                                row['master_rolname']))
+                                row['coordinator_rolname']))
             if len(rows) > 100:
                 logger.error("...")
 
@@ -1096,7 +1096,7 @@ def closeDbs():
 
 # -------------------------------------------------------------------------------
 def getCatObj(namestr):
-    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     try:
         cat = GV.catalog.getCatalogTable(namestr)
     except Exception as e:
@@ -1121,7 +1121,7 @@ def checkACL():
 def checkTableACL(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
-    master = cat.isMasterOnly()
+    coordinator = cat.isMasterOnly()
     isShared = cat.isShared()
     acl = cat.getTableAcl()
 
@@ -1129,10 +1129,10 @@ def checkTableACL(cat):
         GV.aclStatus = True
 
     # Skip:
-    #   - master only tables
+    #   - coordinator only tables
     #   - tables without a primary key
     #   - tables without acls
-    if master or pkey == [] or acl is None:
+    if coordinator or pkey == [] or acl is None:
         return
 
     # skip shared/non-shared tables
@@ -1152,7 +1152,7 @@ def checkTableACL(cat):
 
     qry = """
     SELECT s.gp_segment_id as segid, {mPkey},
-           m.{acl} as master_acl, s.{acl} as segment_acl
+           m.{acl} as coordinator_acl, s.{acl} as segment_acl
     FROM {catalog} m
     JOIN gp_dist_random('{catalog}') s using ({primary_key})
     WHERE  not (m.{acl} @> s.{acl} and s.{acl} @> m.{acl}) or
@@ -1166,7 +1166,7 @@ def checkTableACL(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -1205,7 +1205,7 @@ def checkForeignKey(cat_tables=None):
     if not cat_tables:
         cat_tables = GV.catalog.getCatalogTables()
 
-    db_connection = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db_connection = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     try:
         foreign_key_check = ForeignKeyCheck(db_connection, logger, GV.opt['-S'], autoCast)
         foreign_key_issues = foreign_key_check.runCheck(cat_tables)
@@ -1263,12 +1263,12 @@ def _checkAllTablesForMissingEntries():
 def checkTableMissingEntry(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
-    master = cat.isMasterOnly()
+    coordinator = cat.isMasterOnly()
     isShared = cat.isShared()
     coltypes = cat.getTableColtypes()
 
-    # Skip master only tables
-    if master:
+    # Skip coordinator only tables
+    if coordinator:
         return
 
     # skip shared/non-shared tables
@@ -1293,7 +1293,7 @@ def checkTableMissingEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
         results = curs.getresult()
@@ -1436,19 +1436,19 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
     #
     # Full outer join
     #
-    # (Fetch all entries in master)
+    # (Fetch all entries in coordinator)
     #
     #
     # The WHERE clause at the bottom filters out all the boring rows, leaving
-    # only rows that are missing from one of the segments, or from the master.
+    # only rows that are missing from one of the segments, or from the coordinator.
 
     catalog_exclude = MISSING_ENTRY_EXCLUDE.get(catname, "")
 
     qry = """
           SELECT {primary_key},
-                 case when master is null then segids
-                      when segids is null then array[master.segid]
-                      else master.segid || segids end as segids
+                 case when coordinator is null then segids
+                      when segids is null then array[coordinator.segid]
+                      else coordinator.segid || segids end as segids
           FROM
           (
             SELECT {primary_key}, array_agg(gp_segment_id order by gp_segment_id) as segids
@@ -1457,9 +1457,9 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
           FULL OUTER JOIN
           (
             SELECT gp_segment_id as segid, {primary_key} FROM {catalog} {catalog_exclude}
-          ) as master
+          ) as coordinator
           USING ({primary_key})
-          WHERE master.segid is null
+          WHERE coordinator.segid is null
              OR segids is null
              OR NOT segids @> (select array_agg(content::int4) from gp_segment_configuration WHERE content >= 0)
           """.format(primary_key=','.join(pkey),
@@ -1508,13 +1508,13 @@ def checkInconsistentEntry():
 def checkTableInconsistentEntry(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
-    master = cat.isMasterOnly()
+    coordinator = cat.isMasterOnly()
     isShared = cat.isShared()
     columns = cat.getTableColumns(with_acl=False)
     coltypes = cat.getTableColtypes()
 
-    # Skip master only tables
-    if master:
+    # Skip coordinator only tables
+    if coordinator:
         return
 
     # skip shared/non-shared tables
@@ -1556,7 +1556,7 @@ def checkTableInconsistentEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -1609,8 +1609,8 @@ def inconsistentEntryQuery(max_content, catname, pkey, columns, castcols):
     qry = """
               SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
-              -- distribute catalog table from master, so that we can avoid to gather
-              CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
+              -- distribute catalog table from coordinator, so that we can avoid to gather
+              CREATE TEMPORARY TABLE _tmp_coordinator ON COMMIT DROP AS
                   SELECT gp_segment_id AS segid, {columns} FROM {catalog} DISTRIBUTED BY (segid);
               SELECT {columns}, array_agg(gp_segment_id order by gp_segment_id) as segids
               FROM
@@ -1623,7 +1623,7 @@ def inconsistentEntryQuery(max_content, catname, pkey, columns, castcols):
                           count(*) over (partition by {pkey}) as pcount,
                           gp_segment_id, {columns}
                    from (
-                     select segid gp_segment_id, {castcols} from _tmp_master
+                     select segid gp_segment_id, {castcols} from _tmp_coordinator
                      union all
                      select gp_segment_id, {castcols}
                      from   gp_dist_random('{catalog}')
@@ -1662,13 +1662,13 @@ def checkDuplicateEntry():
 def checkTableDuplicateEntry(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
-    master = cat.isMasterOnly()
+    coordinator = cat.isMasterOnly()
     isShared = cat.isShared()
     columns = cat.getTableColumns(with_acl=False)
     coltypes = cat.getTableColtypes()
 
-    # Skip master only tables
-    if master:
+    # Skip coordinator only tables
+    if coordinator:
         return
 
     # skip shared/non-shared tables
@@ -1692,7 +1692,7 @@ def checkTableDuplicateEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -1730,14 +1730,14 @@ def duplicateEntryQuery(catname, pkey):
     qry = """
           SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
-          -- distribute catalog table from master, so that we can avoid to gather
-          CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
+          -- distribute catalog table from coordinator, so that we can avoid to gather
+          CREATE TEMPORARY TABLE _tmp_coordinator ON COMMIT DROP AS
               SELECT gp_segment_id AS segid, {pkey} FROM {catalog} DISTRIBUTED BY (segid);
           SELECT {pkey}, total, array_agg(segid order by segid) as segids
           FROM (
               SELECT segid, {pkey}, count(*) as total
               FROM (
-                   select segid, {pkey} FROM _tmp_master
+                   select segid, {pkey} FROM _tmp_coordinator
                    union all
                    select gp_segment_id as segid, {pkey} FROM gp_dist_random('{catalog}')
               ) all_segments
@@ -1755,7 +1755,7 @@ def duplicateEntryQuery(catname, pkey):
 def checkUniqueIndexViolation():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for violated unique indexes')
-    db_connection = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db_connection = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
 
     violations = UniqueIndexViolationCheck().runCheck(db_connection)
 
@@ -1794,7 +1794,7 @@ def checkOrphanedToastTables():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for orphaned TOAST tables')
 
-    db_connection = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    db_connection = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     checker = OrphanedToastTablesCheck()
     check_passed = checker.runCheck(db_connection)
 
@@ -1888,7 +1888,7 @@ all_checks = {
         },
     "inconsistent":
         {
-            "description": "Cross consistency check for master segment inconsistency",
+            "description": "Cross consistency check for coordinator segment inconsistency",
             "fn": lambda: checkInconsistentEntry(),
             "version": 'main',
             "order": 4,
@@ -1944,7 +1944,7 @@ all_checks = {
         },
     "owner":
         {
-            "description": "Check table ownership that is inconsistent with the master database",
+            "description": "Check table ownership that is inconsistent with the coordinator database",
             "fn": lambda: checkOwners(),
             "version": 'main',
             "order": 11,
@@ -2206,8 +2206,8 @@ def checkSegmentRepair(maybeRemove, catmod_guc, seg):
 
 # -------------------------------------------------------------------------------
 def getCatalog():
-    # Establish a connection to the master & looks up info in the catalog
-    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+    # Establish a connection to the coordinator & looks up info in the catalog
+    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     return GPCatalog(db)
 
 
@@ -2313,7 +2313,7 @@ def getOidFromPK(catname, pkeys):
                      pkeystr=pkeystr)
 
     try:
-        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         curs = db.query(qry)
         if (len(curs.dictresult()) == 0):
             raise QueryException("No such entry '%s' in %s" % (pkeystr, catname))
@@ -2364,17 +2364,17 @@ def getResourceTypeOid(oid):
 
 def filterSpuriousFailures(catname, colnames, results):
     if catname == 'pg_depend':
-        # Catalog tables having content only on master
+        # Catalog tables having content only on coordinator
         # (e.g. pg_statistic*) should be excluded from pg_depend
-        # comparisons between master and segments.
+        # comparisons between coordinator and segments.
         legitFailures = []
-        masterOnlyOids = list(map(lambda cat: cat._oid,
+        coordinatorOnlyOids = list(map(lambda cat: cat._oid,
                              filter(lambda cat: cat.isMasterOnly(),
                                     GV.catalog.getCatalogTables())))
         for row in results:
             legit = True
-            if row[colnames.index('classid')] in masterOnlyOids:
-                logger.info('excluding master-only entry from missing_pg_depend: %s' % str(row))
+            if row[colnames.index('classid')] in coordinatorOnlyOids:
+                logger.info('excluding coordinator-only entry from missing_pg_depend: %s' % str(row))
                 legit = False
             if legit:
                 legitFailures.append(row)
@@ -2435,7 +2435,7 @@ def processMissingDuplicateEntryResult(catname, colname, allValues, type):
 
         if type == "missing":
 
-            # In how many segments (counting master as segment -1) was the
+            # In how many segments (counting coordinator as segment -1) was the
             # entry present?
             #
             # If it was present in half or more, then report the ones that
@@ -2599,7 +2599,7 @@ def getPrimaryKeyColumn(catname, pknames):
 # -------------------------------------------------------------------------------
 def processACLResult(catname, colname, allValues):
     '''
-    colname:	segid | datname | master_acl | segment_acl
+    colname:	segid | datname | coordinator_acl | segment_acl
     allValues:		2 | acldb | {=Tc/nmiller,nmiller=CTc/nmiller,person1=C/nmiller} | {=Tc/nmiller,nmiller=CTc/nmiller}
     				1 | gptest | None | {=Tc/nmiller,nmiller=CTc/nmiller,person2=CTc/nmiller}
     '''
@@ -2738,23 +2738,23 @@ class CatACLIssue:
         self.catname = catname
         self.pkeys = pkeys  # string of pkey=xxxx or oid=xxxx
         self.segid = segid  # the affected segid
-        self.macl_only = macl_only  # acl appears only on master
+        self.macl_only = macl_only  # acl appears only on coordinator
         self.sacl_only = sacl_only  # acl appears only on segment
 
     def report(self):
-        """ Master (host:port) and seg# (host:port) have different ACL:
-                Exist(s) on master only: [...........]
-                Exist(s) on   seg# only: [...........]
+        """ Coordinator (host:port) and seg# (host:port) have different ACL:
+                Exist(s) on coordinator only: [...........]
+                Exist(s) on        seg# only: [...........]
         """
-        mstr = 'Master (%s:%s)' % (GV.report_cfg[-1]['hostname'], GV.report_cfg[-1]['port'])
+        mstr = 'Coordinator (%s:%s)' % (GV.report_cfg[-1]['hostname'], GV.report_cfg[-1]['port'])
         sstr = '%s (%s:%s)' % (GV.report_cfg[self.segid]['segname'],
                                GV.report_cfg[self.segid]['hostname'],
                                GV.report_cfg[self.segid]['port'])
         myprint('        %s and %s have different ACLs:' % (mstr, sstr))
         if len(self.macl_only) > 0:
-            myprint('            Exist(s) on master only: %s' % (self.macl_only))
+            myprint('            Exist(s) on coordinator only: %s' % (self.macl_only))
         if len(self.sacl_only) > 0:
-            myprint('            Exist(s) on %s only: %s ' % \
+            myprint('            Exist(s) on      %s only: %s ' % \
                     (GV.report_cfg[self.segid]['segname'], self.sacl_only))
 
 # -------------------------------------------------------------------------------
@@ -2951,7 +2951,7 @@ class GPObject:
 
         # Collect all tables with missing issues for later reporting
         if len(self.missingIssues):
-            db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+            db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
             oid_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where oid=%d"
             type_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where reltype=%d"
             for issues in self.missingIssues.values() :
@@ -3120,7 +3120,7 @@ def getRelInfo(objects):
           """.format(oids=','.join(map(str, oids)))
 
     try:
-        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         curs = db.query(qry)
         for row in curs.getresult():
             (oid, relname, nspname, relkind, paroid) = row
@@ -3205,7 +3205,7 @@ def checkcatReport():
         # Report tables with missing attributes in a more usable format
         if len(GV.missing_attr_tables) or len(GV.extra_attr_tables):
             # Expand partition tables
-            db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
+            db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
 
             # GPDB_12_MERGE_FIXME: We used to have a query here, to fetch
             # some extra informationa about partitioned tables. I (Heikki)
@@ -3299,11 +3299,11 @@ def main():
 
     for dbid in GV.cfg:
         if (GV.cfg[dbid]['content'] == -1):
-            GV.master_dbid = dbid
+            GV.coordinator_dbid = dbid
             break
 
-    if GV.master_dbid is None:
-        myprint("Error: master configuration info not found in gp_segment_configuration\n")
+    if GV.coordinator_dbid is None:
+        myprint("Error: coordinator configuration info not found in gp_segment_configuration\n")
         setError(ERROR_NOREPAIR)
         sys.exit(GV.retcode)
 

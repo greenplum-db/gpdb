@@ -82,11 +82,11 @@ def run(cmd):
     rc = False if p.wait() else True
     return (rc,ret)
 
-def getPortMasterOnly(host = 'localhost',master_value = None,
+def getPortCoordinatorOnly(host = 'localhost',coordinator_value = None,
                       user = os.environ.get('USER'),gphome = os.environ['GPHOME'],
                       mdd=os.environ['MASTER_DATA_DIRECTORY'],port = os.environ['PGPORT']):
 
-    master_pattern = r"Context:\s*-1\s*Value:\s*\d+"
+    coordinator_pattern = r"Context:\s*-1\s*Value:\s*\d+"
     command = "gpconfig -s %s" % ( "port" )
 
     cmd = "source %s/greenplum_path.sh; export MASTER_DATA_DIRECTORY=%s; export PGPORT=%s; %s" \
@@ -102,14 +102,14 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
     for line in out:
         out = line.decode().split('\n')
     for line in out:
-        if re.search(master_pattern, line):
-            master_value = int(line.split()[3].strip())
+        if re.search(coordinator_pattern, line):
+            coordinator_value = int(line.split()[3].strip())
 
-    if master_value is None:
+    if coordinator_value is None:
         error_msg = "".join(out)
         raise Exception(error_msg)
 
-    return str(master_value)
+    return str(coordinator_value)
 
 
 def runfile(ifile, flag='', dbname=None, outputPath="", outputFile="",
@@ -157,9 +157,9 @@ if not os.path.exists(d):
     os.mkdir(d)
 
 hostNameAddrs = get_ip(HOST)
-masterPort = getPortMasterOnly()
+coordinatorPort = getPortCoordinatorOnly()
 
-def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=masterPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
+def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=coordinatorPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
     ssl=None,columns=None, format='text', log_errors=None, error_limit=None, delimiter="'|'", encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None, transform_config=None, max_line_length=None, 
     table='texttable', mode='insert', update_columns=['n2'], update_condition=None, match_columns=['n1','s1','s2'], staging_table=None, mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,
     sql=False, before=None, after=None, error_table=None):

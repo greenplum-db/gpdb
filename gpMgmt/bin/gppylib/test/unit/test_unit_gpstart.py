@@ -69,7 +69,7 @@ class GpStart(GpTestCase):
         self.mock_pgconf.readfile.return_value = Mock()
         self.mock_gplog_log_to_file_only = self.get_mock_from_apply_patch("log_to_file_only")
 
-        self.mock_gp.get_masterdatadir.return_value = 'masterdatadir'
+        self.mock_gp.get_coordinatordatadir.return_value = 'masterdatadir'
         self.mock_gp.GpCatVersion.local.return_value = 1
         self.mock_gp.GpCatVersionDirectory.local.return_value = 1
         self.mock_gp.DEFAULT_GPSTART_NUM_WORKERS = gp.DEFAULT_GPSTART_NUM_WORKERS
@@ -84,7 +84,7 @@ class GpStart(GpTestCase):
         gpstart = self.subject.GpStart.createProgram(options, args)
         return gpstart
 
-    def test_option_master_success_without_auto_accept(self):
+    def test_option_coordinator_success_without_auto_accept(self):
         sys.argv = ["gpstart", "-m"]
         self.mock_userinput.ask_yesno.return_value = True
         self.subject.unix.PgPortIsActive.local.return_value = False
@@ -95,12 +95,12 @@ class GpStart(GpTestCase):
         return_code = gpstart.run()
 
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 1)
-        self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with master-only startup', 'N')
-        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
-        self.subject.logger.info.assert_any_call('Master Started...')
+        self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with coordinator-only startup', 'N')
+        self.subject.logger.info.assert_any_call('Starting Coordinator instance in admin mode')
+        self.subject.logger.info.assert_any_call('Coordinator Started...')
         self.assertEqual(return_code, 0)
 
-    def test_option_master_success_with_auto_accept(self):
+    def test_option_coordinator_success_with_auto_accept(self):
         sys.argv = ["gpstart", "-m", "-a"]
         self.mock_userinput.ask_yesno.return_value = True
         self.subject.unix.PgPortIsActive.local.return_value = False
@@ -111,11 +111,11 @@ class GpStart(GpTestCase):
         return_code = gpstart.run()
 
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 0)
-        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
-        self.subject.logger.info.assert_any_call('Master Started...')
+        self.subject.logger.info.assert_any_call('Starting Coordinator instance in admin mode')
+        self.subject.logger.info.assert_any_call('Coordinator Started...')
         self.assertEqual(return_code, 0)
 
-    def test_output_to_stdout_and_log_for_master_only_happens_before_heap_checksum(self):
+    def test_output_to_stdout_and_log_for_coordinator_only_happens_before_heap_checksum(self):
         sys.argv = ["gpstart", "-m"]
         self.mock_userinput.ask_yesno.return_value = True
         self.subject.unix.PgPortIsActive.local.return_value = False
@@ -126,9 +126,9 @@ class GpStart(GpTestCase):
 
         self.assertEqual(return_code, 0)
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 1)
-        self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with master-only startup', 'N')
-        self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
-        self.subject.logger.info.assert_any_call('Master Started...')
+        self.mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with coordinator-only startup', 'N')
+        self.subject.logger.info.assert_any_call('Starting Coordinator instance in admin mode')
+        self.subject.logger.info.assert_any_call('Coordinator Started...')
 
         self.assertEqual(self.mock_gplog_log_to_file_only.call_count, 0)
 
@@ -146,12 +146,12 @@ class GpStart(GpTestCase):
         self.assertNotIn('Heap checksum setting is consistent across the cluster', messages)
         self.subject.logger.warning.assert_any_call('Because of --skip-heap-checksum-validation, '
                                                     'the GUC for data_checksums '
-                                                    'will not be checked between master and segments')
+                                                    'will not be checked between coordinator and segments')
 
     def test_log_when_heap_checksum_validation_fails(self):
         sys.argv = ["gpstart", "-a", "-S"]
         self.mock_os_path_exists.side_effect = os_exists_check
-        self.mock_heap_checksum.return_value.get_master_value.return_value = 1
+        self.mock_heap_checksum.return_value.get_coordinator_value.return_value = 1
         start_failure = StartSegmentsResult()
         start_failure.addFailure(self.mirror1, "fictitious reason", gp.SEGSTART_ERROR_CHECKSUM_MISMATCH)
         self.mock_start_result.return_value.startSegments.return_value.getFailedSegmentObjs.return_value = start_failure.getFailedSegmentObjs()
@@ -171,7 +171,7 @@ class GpStart(GpTestCase):
         return_value = gpstart._start_standby()
         self.assertFalse(return_value)
         messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
-        self.assertIn("No standby master configured.  skipping...", messages)
+        self.assertIn("No standby coordinator configured.  skipping...", messages)
 
     def test_prepare_segment_start_returns_up_and_down_segments(self):
         # Boilerplate: create a gpstart object
@@ -180,7 +180,7 @@ class GpStart(GpTestCase):
         gpstart = self.subject.GpStart.createProgram(options, args)
 
         # Up segments
-        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        coordinator = Segment.initFromString("1|-1|p|p|n|u|cdw|cdw|5432|/data/coordinator")
         primary1 = Segment.initFromString("3|1|p|p|n|u|sdw2|sdw2|40001|/data/primary1")
         mirror0 = Segment.initFromString("4|0|m|m|n|u|sdw2|sdw2|50000|/data/mirror0")
 
@@ -189,11 +189,11 @@ class GpStart(GpTestCase):
         mirror1 = Segment.initFromString("5|1|m|m|n|d|sdw1|sdw1|50001|/data/mirror1")
         standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
 
-        gpstart.gparray = GpArray([master, primary0, primary1, mirror0, mirror1, standby])
+        gpstart.gparray = GpArray([coordinator, primary0, primary1, mirror0, mirror1, standby])
 
         up, down = gpstart._prepare_segment_start()
 
-        # The master and standby should not be accounted for in these lists.
+        # The coordinator and standby should not be accounted for in these lists.
         self.assertCountEqual(up, [primary1, mirror0])
         self.assertCountEqual(down, [primary0, mirror1])
 
@@ -207,7 +207,7 @@ class GpStart(GpTestCase):
     @patch("gpstart.GpStart.fetch_tli", autospec=True)
     def test_standby_activated_returns_false_when_primary_tli_is_before_standby_tli(self, mock_fetch_tli):
         def mock_fetch_tli_func(self, data_dir, remote_host=None):
-            if "master" in data_dir:
+            if "coordinator" in data_dir:
                 return 3
             if "standby" in data_dir:
                 return 2
@@ -216,18 +216,18 @@ class GpStart(GpTestCase):
         mock_fetch_tli.side_effect = mock_fetch_tli_func
 
         gpstart = self.setup_gpstart()
-        gpstart.master_datadir = "/data/master"
+        gpstart.coordinator_datadir = "/data/coordinator"
 
-        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        coordinator = Segment.initFromString("1|-1|p|p|n|u|cdw|cdw|5432|/data/coordinator")
         standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
-        gpstart.gparray = GpArray([master, standby])
+        gpstart.gparray = GpArray([coordinator, standby])
 
         self.assertFalse(gpstart._standby_activated())
 
     @patch("gpstart.GpStart.fetch_tli", autospec=True)
     def test_standby_activated_returns_true_when_standby_tli_is_before_primary_tli(self, mock_fetch_tli):
         def mock_fetch_tli_func(self, data_dir, remote_host=None):
-            if "master" in data_dir:
+            if "coordinator" in data_dir:
                 return 1
             if "standby" in data_dir:
                 return 2
@@ -236,11 +236,11 @@ class GpStart(GpTestCase):
         mock_fetch_tli.side_effect = mock_fetch_tli_func
 
         gpstart = self.setup_gpstart()
-        gpstart.master_datadir = "/data/master"
+        gpstart.coordinator_datadir = "/data/coordinator"
 
-        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        coordinator = Segment.initFromString("1|-1|p|p|n|u|cdw|cdw|5432|/data/coordinator")
         standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
-        gpstart.gparray = GpArray([master, standby])
+        gpstart.gparray = GpArray([coordinator, standby])
 
         self.assertTrue(gpstart._standby_activated())
 
@@ -254,11 +254,11 @@ class GpStart(GpTestCase):
         mock_fetch_tli.side_effect = mock_fetch_tli_func
 
         gpstart = self.setup_gpstart()
-        gpstart.master_datadir = "/data/master"
+        gpstart.coordinator_datadir = "/data/coordinator"
 
-        master = Segment.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|/data/master")
+        coordinator = Segment.initFromString("1|-1|p|p|n|u|cdw|cdw|5432|/data/coordinator")
         standby = Segment.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|/data/standby")
-        gpstart.gparray = GpArray([master, standby])
+        gpstart.gparray = GpArray([coordinator, standby])
 
         with self.assertRaises(gpstart.StandbyUnreachable):
             gpstart._standby_activated()
@@ -272,16 +272,16 @@ class GpStart(GpTestCase):
 
     @patch("gpstart.gp.GpStop")
     @patch("gpstart.GpStart._standby_activated", return_value=True)
-    def test_check_standby_stops_master_and_raises_an_exception_when_standby_is_activated(self, mock_standby_activated, mock_gp_stop):
+    def test_check_standby_stops_coordinator_and_raises_an_exception_when_standby_is_activated(self, mock_standby_activated, mock_gp_stop):
         gpstart = self.setup_gpstart()
         with self.assertRaises(ExceptionNoStackTraceNeeded):
             gpstart.check_standby()
         self.assertTrue(mock_gp_stop.return_value.run.called)
 
-    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gpstart.GpStart.shutdown_coordinator_only")
     @patch("gpstart.gp.GpStop")
     @patch("gpstart.GpStart._standby_activated")
-    def test_check_standby_logs_warning_and_returns_when_standby_is_unreachable_and_user_proceeds(self, mock_standby_activated, mock_gp_stop, mock_shutdown_master):
+    def test_check_standby_logs_warning_and_returns_when_standby_is_unreachable_and_user_proceeds(self, mock_standby_activated, mock_gp_stop, mock_shutdown_coordinator):
         gpstart = self.setup_gpstart()
 
         mock_standby_activated.side_effect = gpstart.StandbyUnreachable()
@@ -289,14 +289,14 @@ class GpStart(GpTestCase):
         self.mock_userinput.ask_yesno.return_value = True
 
         gpstart.check_standby()
-        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the master"))
-        self.assertFalse(mock_shutdown_master.called)
+        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the coordinator"))
+        self.assertFalse(mock_shutdown_coordinator.called)
         self.assertFalse(mock_gp_stop.called)
 
-    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gpstart.GpStart.shutdown_coordinator_only")
     @patch("gpstart.gp.GpStop")
     @patch("gpstart.GpStart._standby_activated")
-    def test_check_standby_logs_warning_and_stops_master_and_raises_exception_when_standby_is_unreachable_and_user_does_not_proceeed(self, mock_standby_activated, mock_gp_stop, mock_shutdown_master):
+    def test_check_standby_logs_warning_and_stops_coordinator_and_raises_exception_when_standby_is_unreachable_and_user_does_not_proceeed(self, mock_standby_activated, mock_gp_stop, mock_shutdown_coordinator):
         gpstart = self.setup_gpstart()
 
         mock_standby_activated.side_effect = gpstart.StandbyUnreachable()
@@ -305,14 +305,14 @@ class GpStart(GpTestCase):
 
         with self.assertRaises(UserAbortedException):
             gpstart.check_standby()
-        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the master"))
-        self.assertTrue(mock_shutdown_master.called)
+        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the coordinator"))
+        self.assertTrue(mock_shutdown_coordinator.called)
         self.assertFalse(mock_gp_stop.called)
 
-    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gpstart.GpStart.shutdown_coordinator_only")
     @patch("gpstart.gp.GpStop")
     @patch("gpstart.GpStart._standby_activated")
-    def test_check_standby_logs_warning_and_stops_master_and_raises_exception_in_non_interactive_mode_and_standby_is_unreachable(self, mock_standby_activated, mock_gp_stop, mock_shutdown_master):
+    def test_check_standby_logs_warning_and_stops_coordinator_and_raises_exception_in_non_interactive_mode_and_standby_is_unreachable(self, mock_standby_activated, mock_gp_stop, mock_shutdown_coordinator):
         gpstart = self.setup_gpstart()
 
         mock_standby_activated.side_effect = gpstart.StandbyUnreachable()
@@ -320,14 +320,14 @@ class GpStart(GpTestCase):
 
         with self.assertRaises(UserAbortedException):
             gpstart.check_standby()
-        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the master"))
+        self.subject.logger.warning.assert_any_call(StringContains("Standby host is unreachable, cannot determine whether the standby is currently acting as the coordinator"))
         self.subject.logger.warning.assert_any_call("Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.")
-        self.assertTrue(mock_shutdown_master.called)
+        self.assertTrue(mock_shutdown_coordinator.called)
         self.assertFalse(mock_gp_stop.called)
 
     def _createGpArrayWith2Primary2Mirrors(self):
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.primary1 = Segment.initFromString(
@@ -338,7 +338,7 @@ class GpStart(GpTestCase):
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
         self.standby = Segment.initFromString(
             "6|-1|m|m|s|u|sdw3|sdw3|5433|/data/standby")
-        return GpArray([self.master, self.primary0, self.primary1, self.mirror0, self.mirror1])
+        return GpArray([self.coordinator, self.primary0, self.primary1, self.mirror0, self.mirror1])
 
     def _get_env(self, arg):
         if arg not in self.os_environ:

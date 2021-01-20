@@ -12,8 +12,8 @@ from test.unit.gp_unittest import GpTestCase, run_tests
 class UpdatePgHBAConfTests(GpTestCase):
     def setUp(self):
         def _setup_gparray():
-            master = Segment.initFromString(
-                "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+            coordinator = Segment.initFromString(
+                "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
             standby = Segment.initFromString(
                 "6|-1|m|m|s|u|sdw3|sdw3|5433|/data/standby")
             primary0 = Segment.initFromString(
@@ -24,7 +24,7 @@ class UpdatePgHBAConfTests(GpTestCase):
                 "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
             mirror1 = Segment.initFromString(
                 "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
-            return GpArray([master, standby, primary0, primary1, mirror0, mirror1])
+            return GpArray([coordinator, standby, primary0, primary1, mirror0, mirror1])
 
         self.gparray = _setup_gparray()
         self.apply_patches([

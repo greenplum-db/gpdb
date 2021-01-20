@@ -132,12 +132,12 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N -d /tmp &gt; subnet2.out</codebloc
       <section id="jj161569">
         <title>To run the disk and stream tests</title>
         <ol>
-          <li id="jj167791">Log in on the master host as the <codeph>gpadmin</codeph> user.</li>
+          <li id="jj167791">Log in on the coordinator host as the <codeph>gpadmin</codeph> user.</li>
           <li id="jj167824">Source the <codeph>greenplum_path.sh</codeph> path file from your
             Greenplum installation. For
             example:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
           <li id="jj167777">Create a host file named <codeph>hostfile_gpcheckperf</codeph> that has
-            one host name per segment host. Do not include the master host. For
+            one host name per segment host. Do not include the coordinator host. For
             example:<codeblock>sdw1
 sdw2
 sdw3

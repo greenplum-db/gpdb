@@ -16,14 +16,14 @@ Feature: gpstart behave tests
 
     Scenario: gpstart starts even if the standby host is unreachable
         Given the database is running
-          And the catalog has a standby master entry
+          And the catalog has a standby coordinator entry
 
          When the standby host is made unreachable
           And the user runs command "pkill -9 postgres"
           And "gpstart" is run with prompts accepted
 
-         Then gpstart should print "Continue only if you are certain that the standby is not acting as the master." to stdout
-          And gpstart should print "No standby master configured" to stdout
+         Then gpstart should print "Continue only if you are certain that the standby is not acting as the coordinator." to stdout
+          And gpstart should print "No standby coordinator configured" to stdout
           And gpstart should return a return code of 0
           And all the segments are running
 

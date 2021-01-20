@@ -145,7 +145,7 @@ class PgCtlBackendOptions(CmdArgs):
 
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --silent-mode=true'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master())
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_coordinator())
     '-p 5432 --silent-mode=true -i -c gp_role=dispatch'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_execute())
     '-p 5432 --silent-mode=true -i -c gp_role=execute'
@@ -170,10 +170,10 @@ class PgCtlBackendOptions(CmdArgs):
         ])
 
     #
-    # master/segment-specific options
+    # coordinator/segment-specific options
     #
 
-    def set_master(self):
+    def set_coordinator(self):
         """
         @param is_utility_mode: start with is_utility_mode?
         """
@@ -217,10 +217,10 @@ class PgCtlStartArgs(CmdArgs):
     Examples
     --------
 
-    >>> a = PgCtlStartArgs("/data1/master/gpseg-1", str(PgCtlBackendOptions(5432, 1, 2)), 123, None, None, True, 600)
+    >>> a = PgCtlStartArgs("/data1/coordinator/gpseg-1", str(PgCtlBackendOptions(5432, 1, 2)), 123, None, None, True, 600)
     >>> str(a).split(' ') #doctest: +NORMALIZE_WHITESPACE
-    ['env', GPERA=123', '$GPHOME/bin/pg_ctl', '-D', '/data1/master/gpseg-1', '-l',
-     '/data1/master/gpseg-1/log/startup.log', '-w', '-t', '600',
+    ['env', GPERA=123', '$GPHOME/bin/pg_ctl', '-D', '/data1/coordinator/gpseg-1', '-l',
+     '/data1/coordinator/gpseg-1/log/startup.log', '-w', '-t', '600',
      '-o', '"', '-p', '5432', '--silent-mode=true', '"', 'start']
     """
 
@@ -228,7 +228,7 @@ class PgCtlStartArgs(CmdArgs):
         """
         @param datadir: database data directory
         @param backend: backend options string from PgCtlBackendOptions
-        @param era: gpdb master execution era
+        @param era: gpdb coordinator execution era
         @param wrapper: wrapper executable for pg_ctl
         @param args: wrapper arguments for pg_ctl
         @param wait: true if pg_ctl should wait until backend starts completely
@@ -238,7 +238,7 @@ class PgCtlStartArgs(CmdArgs):
         CmdArgs.__init__(self, [
             "env",
             "GPSESSID=0000000000", 	# <- overwritten with gp_session_id to help identify orphans
-            "GPERA=%s" % str(era),	# <- master era used to help identify orphans
+            "GPERA=%s" % str(era),	# <- coordinator era used to help identify orphans
             "$GPHOME/bin/pg_ctl",
             "-D", str(datadir),
             "-l", "%s/log/startup.log" % datadir,
@@ -256,8 +256,8 @@ class PgCtlStopArgs(CmdArgs):
     Used by MasterStop, SegmentStop to format the pg_ctl command
     to stop a backend postmaster
 
-    >>> str(PgCtlStopArgs("/data1/master/gpseg-1", "smart", True, 600))
-    '$GPHOME/bin/pg_ctl -D /data1/master/gpseg-1 -m smart -w -t 600 stop'
+    >>> str(PgCtlStopArgs("/data1/coordinator/gpseg-1", "smart", True, 600))
+    '$GPHOME/bin/pg_ctl -D /data1/coordinator/gpseg-1 -m smart -w -t 600 stop'
 
     """
 
@@ -294,7 +294,7 @@ class MasterStart(Command):
         if utilityMode:
             b.set_utility()
         else:
-            b.set_master()
+            b.set_coordinator()
         b.set_special(specialMode)
         b.set_restricted(restrictedMode, max_connections)
 
@@ -577,12 +577,12 @@ class GpSegStartArgs(CmdArgs):
     "$GPHOME/sbin/gpsegstart.py -M mirrorless -V 'gpversion' -n 1 --era 123 -t 600"
     """
 
-    def __init__(self, mirrormode, gpversion, num_cids, era, master_checksum_value, timeout):
+    def __init__(self, mirrormode, gpversion, num_cids, era, coordinator_checksum_value, timeout):
         """
         @param mirrormode - mirror start mode (START_AS_PRIMARY_OR_MIRROR or START_AS_MIRRORLESS)
         @param gpversion - version (from postgres --gp-version)
         @param num_cids - number content ids
-        @param era - master era
+        @param era - coordinator era
         @param timeout - seconds to wait before giving up
         """
         default_args = [
@@ -593,9 +593,9 @@ class GpSegStartArgs(CmdArgs):
             "--era", str(era),
             "-t", str(timeout)
         ]
-        if master_checksum_value != None:
-            default_args.append("--master-checksum-version")
-            default_args.append(str(master_checksum_value))
+        if coordinator_checksum_value != None:
+            default_args.append("--coordinator-checksum-version")
+            default_args.append(str(coordinator_checksum_value))
 
         CmdArgs.__init__(self, default_args)
 
@@ -631,7 +631,7 @@ class GpSegStartArgs(CmdArgs):
 
 class GpSegStartCmd(Command):
     def __init__(self, name, gphome, segments, gpversion,
-                 mirrormode, numContentsInCluster, era, master_checksum_value=None,
+                 mirrormode, numContentsInCluster, era, coordinator_checksum_value=None,
                  timeout=SEGMENT_TIMEOUT_DEFAULT, verbose=False,
                  ctxt=LOCAL, remoteHost=None, pickledTransitionData=None,
                  specialMode=None, wrapper=None, wrapper_args=None,
@@ -641,7 +641,7 @@ class GpSegStartCmd(Command):
         self.dblist = [x for x in segments]
 
         # build gpsegstart command string
-        c = GpSegStartArgs(mirrormode, gpversion, numContentsInCluster, era, master_checksum_value,timeout)
+        c = GpSegStartArgs(mirrormode, gpversion, numContentsInCluster, era, coordinator_checksum_value,timeout)
         c.set_verbose(verbose)
         c.set_special(specialMode)
         c.set_transition(pickledTransitionData)
@@ -688,8 +688,8 @@ class GpSegStopCmd(Command):
 #-----------------------------------------------
 class GpStandbyStart(MasterStart, object):
     """
-    Start up the master standby.  The options to postgres in standby
-    are almost same as primary master, with a few exceptions.
+    Start up the coordinator standby.  The options to postgres in standby
+    are almost same as primary coordinator, with a few exceptions.
     The standby will be up as dispatch mode, and could be in remote.
     """
 
@@ -728,11 +728,11 @@ class GpStandbyStart(MasterStart, object):
 
 #-----------------------------------------------
 class GpStart(Command):
-    def __init__(self, name, masterOnly=False, restricted=False, verbose=False,ctxt=LOCAL, remoteHost=None):
+    def __init__(self, name, coordinatorOnly=False, restricted=False, verbose=False,ctxt=LOCAL, remoteHost=None):
         self.cmdStr="$GPHOME/bin/gpstart -a"
-        if masterOnly:
+        if coordinatorOnly:
             self.cmdStr += " -m"
-            self.propagate_env_map['GPSTART_INTERNAL_MASTER_ONLY'] = 1
+            self.propagate_env_map['GPSTART_INTERNAL_COORDINATOR_ONLY'] = 1
         if restricted:
             self.cmdStr += " -R"
         if verbose or logging_is_verbose():
@@ -740,40 +740,40 @@ class GpStart(Command):
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     @staticmethod
-    def local(name,masterOnly=False,restricted=False):
-        cmd=GpStart(name,masterOnly,restricted)
+    def local(name,coordinatorOnly=False,restricted=False):
+        cmd=GpStart(name,coordinatorOnly,restricted)
         cmd.run(validateAfter=True)
 
 #-----------------------------------------------
 class NewGpStart(Command):
-    def __init__(self, name, masterOnly=False, restricted=False, verbose=False,nostandby=False,ctxt=LOCAL, remoteHost=None, masterDirectory=None):
+    def __init__(self, name, coordinatorOnly=False, restricted=False, verbose=False,nostandby=False,ctxt=LOCAL, remoteHost=None, coordinatorDirectory=None):
         self.cmdStr="$GPHOME/bin/gpstart -a"
-        if masterOnly:
+        if coordinatorOnly:
             self.cmdStr += " -m"
-            self.propagate_env_map['GPSTART_INTERNAL_MASTER_ONLY'] = 1
+            self.propagate_env_map['GPSTART_INTERNAL_COORDINATOR_ONLY'] = 1
         if restricted:
             self.cmdStr += " -R"
         if verbose or logging_is_verbose():
             self.cmdStr += " -v"
         if nostandby:
             self.cmdStr += " -y"
-        if masterDirectory:
-            self.cmdStr += " -d " + masterDirectory
+        if coordinatorDirectory:
+            self.cmdStr += " -d " + coordinatorDirectory
 
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     @staticmethod
-    def local(name,masterOnly=False,restricted=False,verbose=False,nostandby=False,
-              masterDirectory=None):
-        cmd=NewGpStart(name,masterOnly,restricted,verbose,nostandby,
-                       masterDirectory=masterDirectory)
+    def local(name,coordinatorOnly=False,restricted=False,verbose=False,nostandby=False,
+              coordinatorDirectory=None):
+        cmd=NewGpStart(name,coordinatorOnly,restricted,verbose,nostandby,
+                       coordinatorDirectory=coordinatorDirectory)
         cmd.run(validateAfter=True)
 
 #-----------------------------------------------
 class NewGpStop(Command):
-    def __init__(self, name, masterOnly=False, restart=False, fast=False, force=False, verbose=False, ctxt=LOCAL, remoteHost=None):
+    def __init__(self, name, coordinatorOnly=False, restart=False, fast=False, force=False, verbose=False, ctxt=LOCAL, remoteHost=None):
         self.cmdStr="$GPHOME/bin/gpstop -a"
-        if masterOnly:
+        if coordinatorOnly:
             self.cmdStr += " -m"
         if verbose or logging_is_verbose():
             self.cmdStr += " -v"
@@ -786,15 +786,15 @@ class NewGpStop(Command):
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     @staticmethod
-    def local(name,masterOnly=False, restart=False, fast=False, force=False, verbose=False):
-        cmd=NewGpStop(name,masterOnly,restart, fast, force, verbose)
+    def local(name,coordinatorOnly=False, restart=False, fast=False, force=False, verbose=False):
+        cmd=NewGpStop(name,coordinatorOnly,restart, fast, force, verbose)
         cmd.run(validateAfter=True)
 
 #-----------------------------------------------
 class GpStop(Command):
-    def __init__(self, name, masterOnly=False, verbose=False, quiet=False, restart=False, fast=False, force=False, datadir=None, parallel=None, reload=False, ctxt=LOCAL, remoteHost=None, logfileDirectory=False):
+    def __init__(self, name, coordinatorOnly=False, verbose=False, quiet=False, restart=False, fast=False, force=False, datadir=None, parallel=None, reload=False, ctxt=LOCAL, remoteHost=None, logfileDirectory=False):
         self.cmdStr="$GPHOME/bin/gpstop -a"
-        if masterOnly:
+        if coordinatorOnly:
             self.cmdStr += " -m"
         if restart:
             self.cmdStr += " -r"
@@ -817,8 +817,8 @@ class GpStop(Command):
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     @staticmethod
-    def local(name,masterOnly=False, verbose=False, quiet=False,restart=False, fast=False, force=False, datadir=None, parallel=None, reload=False):
-        cmd=GpStop(name,masterOnly,verbose,quiet,restart,fast,force,datadir,parallel,reload)
+    def local(name,coordinatorOnly=False, verbose=False, quiet=False,restart=False, fast=False, force=False, datadir=None, parallel=None, reload=False):
+        cmd=GpStop(name,coordinatorOnly,verbose,quiet,restart,fast,force,datadir,parallel,reload)
         cmd.run(validateAfter=True)
         return cmd
 
@@ -1128,7 +1128,7 @@ def distribute_tarball(queue,list,tarball):
             hostname = db.getSegmentHostName()
             datadir = db.getSegmentDataDirectory()
             (head,tail)=os.path.split(datadir)
-            scp_cmd=Scp(name="copy master",srcFile=tarball,dstHost=hostname,dstFile=head)
+            scp_cmd=Scp(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head)
             queue.addCommand(scp_cmd)
         queue.join()
         queue.check_results()
@@ -1148,14 +1148,14 @@ def get_gphome():
 
 
 ######
-def get_masterdatadir():
-    master_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
-    if not master_datadir:
+def get_coordinatordatadir():
+    coordinator_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
+    if not coordinator_datadir:
         raise GpError("Environment Variable MASTER_DATA_DIRECTORY not set!")
-    return master_datadir
+    return coordinator_datadir
 
 ######
-def get_masterport(datadir):
+def get_coordinatorport(datadir):
     return pgconf.readfile(os.path.join(datadir, 'postgresql.conf')).int('port')
 
 
@@ -1190,7 +1190,7 @@ class _GpExpandStatus(object):
         self.phase = 0
         self.status = 'NO EXPANSION DETECTED'
 
-        datadir = get_masterdatadir()
+        datadir = get_coordinatordatadir()
         filename = os.path.join(datadir, 'gpexpand.status')
         try:
             with open(filename, 'r') as f:
@@ -1317,11 +1317,11 @@ def conflict_with_gpexpand(utility, refuse_phase1=True, refuse_phase2=False):
 
 #=-=-=-=-=-=-=-=-=-= Bash Migration Helper Functions =-=-=-=-=-=-=-=-
 
-def start_standbymaster(host, datadir, port, era=None,
+def start_standbycoordinator(host, datadir, port, era=None,
                         wrapper=None, wrapper_args=None):
-    logger.info("Starting standby master")
+    logger.info("Starting standby coordinator")
 
-    logger.info("Checking if standby master is running on host: %s  in directory: %s" % (host,datadir))
+    logger.info("Checking if standby coordinator is running on host: %s  in directory: %s" % (host,datadir))
     cmd = Command("recovery_startup",
                   ("python3 -c "
                    "'from gppylib.commands.gp import recovery_startup; "
@@ -1334,15 +1334,15 @@ def start_standbymaster(host, datadir, port, era=None,
     if res:
         logger.warning("Unable to cleanup previously started standby: '%s'" % res)
 
-    cmd = GpStandbyStart.remote('start standby master',
+    cmd = GpStandbyStart.remote('start standby coordinator',
                                 host, datadir, port, era=era,
                                 wrapper=wrapper, wrapper_args=wrapper_args)
     logger.debug("Starting standby: %s" % cmd )
 
-    logger.debug("Starting standby master results: %s" % cmd.get_results() )
+    logger.debug("Starting standby coordinator results: %s" % cmd.get_results() )
 
     if cmd.get_results().rc != 0:
-        logger.warning("Could not start standby master: %s" % cmd)
+        logger.warning("Could not start standby coordinator: %s" % cmd)
         return False
 
     # Wait for the standby to start recovery.  Ideally this means the
@@ -1370,7 +1370,7 @@ def start_standbymaster(host, datadir, port, era=None,
             return True
         time.sleep(1)
 
-    logger.warning("Could not start standby master")
+    logger.warning("Could not start standby coordinator")
     return False
 
 def get_pid_from_remotehost(host, datadir):
@@ -1524,7 +1524,7 @@ def get_lockfile_name(port):
     return "/tmp/.s.PGSQL.%d.lock" % port
 
 
-def get_local_db_mode(master_data_dir):
+def get_local_db_mode(coordinator_data_dir):
     """ Gets the mode Greenplum is running in.
         Possible return values are:
             'NORMAL'
@@ -1533,20 +1533,20 @@ def get_local_db_mode(master_data_dir):
     """
     mode = 'NORMAL'
 
-    if not os.path.exists(master_data_dir + '/postmaster.pid'):
+    if not os.path.exists(coordinator_data_dir + '/postmaster.pid'):
         raise Exception('Greenplum database appears to be stopped')
 
     try:
-        fp = open(master_data_dir + '/postmaster.opts', 'r')
+        fp = open(coordinator_data_dir + '/postmaster.opts', 'r')
         optline = fp.readline()
         if optline.find('superuser_reserved_connections') > 0:
             mode = 'RESTRICTED'
         elif optline.find('gp_role=utility') > 0:
             mode = 'UTILITY'
     except OSError:
-        raise Exception('Failed to open %s.  Is Greenplum Database running?' % master_data_dir + '/postmaster.opts')
+        raise Exception('Failed to open %s.  Is Greenplum Database running?' % coordinator_data_dir + '/postmaster.opts')
     except IOError:
-        raise Exception('Failed to read options from %s' % master_data_dir + '/postmaster.opts')
+        raise Exception('Failed to read options from %s' % coordinator_data_dir + '/postmaster.opts')
     finally:
         if fp: fp.close()
 
@@ -1573,8 +1573,8 @@ def read_postmaster_pidfile(datadir, host=None):
     return pid
 
 
-def createTempDirectoryName(masterDataDirectory, tempDirPrefix):
-    return '%s/%s_%s_%d' % (os.sep.join(os.path.normpath(masterDataDirectory).split(os.sep)[:-1]),
+def createTempDirectoryName(coordinatorDataDirectory, tempDirPrefix):
+    return '%s/%s_%s_%d' % (os.sep.join(os.path.normpath(coordinatorDataDirectory).split(os.sep)[:-1]),
                                 tempDirPrefix,
                                 datetime.datetime.now().strftime('%m%d%Y'),
                                 os.getpid())

@@ -38,7 +38,7 @@ def impl(context):
 
     def cleanup(context):
         """
-        Reverses the above SQL by starting up in master-only utility mode. Since
+        Reverses the above SQL by starting up in coordinator-only utility mode. Since
         the standby host is incorrect, a regular gpstart call won't work.
         """
         utils.stop_database_if_started(context)
@@ -47,13 +47,13 @@ def impl(context):
         _run_sql("""
             SET allow_system_table_mods='true';
             UPDATE gp_segment_configuration
-               SET hostname = master.hostname,
-                    address = master.address
+               SET hostname = coordinator.hostname,
+                    address = coordinator.address
               FROM (
                      SELECT hostname, address
                        FROM gp_segment_configuration
                       WHERE content = -1 and role = 'p'
-                   ) master
+                   ) coordinator
              WHERE content = -1 AND role = 'm'
         """, {'gp_role': 'utility'})
         subprocess.check_call(['gpstop', '-am'])

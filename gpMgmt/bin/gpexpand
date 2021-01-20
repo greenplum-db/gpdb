@@ -33,7 +33,7 @@ try:
     from gppylib.system import configurationInterface, configurationImplGpdb
     from gppylib.system.environment import GpMasterEnvironment
     from pgdb import DatabaseError
-    from gppylib.gpcatalog import MASTER_ONLY_TABLES
+    from gppylib.gpcatalog import COORDINATOR_ONLY_TABLES
     from gppylib.operations.package import SyncPackages
     from gppylib.operations.utils import ParallelOperation
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
@@ -203,14 +203,14 @@ def validate_options(options, args, parser):
         parser.exit()
 
     try:
-        options.master_data_directory = get_masterdatadir()
+        options.coordinator_data_directory = get_coordinatordatadir()
         options.gphome = get_gphome()
     except GpError as msg:
         logger.error(msg)
         parser.exit()
 
-    if not os.path.exists(options.master_data_directory):
-        logger.error('Master data directory %s does not exist.' % options.master_data_directory)
+    if not os.path.exists(options.coordinator_data_directory):
+        logger.error('Coordinator data directory %s does not exist.' % options.coordinator_data_directory)
         parser.exit()
 
     return options, args
@@ -218,10 +218,10 @@ def validate_options(options, args, parser):
 
 # -------------------------------------------------------------------------
 # process information functions
-def create_pid_file(master_data_directory):
+def create_pid_file(coordinator_data_directory):
     """Creates gpexpand pid file"""
     try:
-        fp = open(master_data_directory + '/gpexpand.pid', 'w')
+        fp = open(coordinator_data_directory + '/gpexpand.pid', 'w')
         fp.write(str(os.getpid()))
     except IOError:
         raise
@@ -229,19 +229,19 @@ def create_pid_file(master_data_directory):
         if fp: fp.close()
 
 
-def remove_pid_file(master_data_directory):
+def remove_pid_file(coordinator_data_directory):
     """Removes gpexpand pid file"""
     try:
-        os.unlink(master_data_directory + '/gpexpand.pid')
+        os.unlink(coordinator_data_directory + '/gpexpand.pid')
     except:
         pass
 
 
-def is_gpexpand_running(master_data_directory):
+def is_gpexpand_running(coordinator_data_directory):
     """Checks if there is another instance of gpexpand running"""
     is_running = False
     try:
-        fp = open(master_data_directory + '/gpexpand.pid', 'r')
+        fp = open(coordinator_data_directory + '/gpexpand.pid', 'r')
         pid = int(fp.readline().strip())
         fp.close()
         is_running = check_pid(pid)
@@ -253,9 +253,9 @@ def is_gpexpand_running(master_data_directory):
     return is_running
 
 
-def gpexpand_status_file_exists(master_data_directory):
+def gpexpand_status_file_exists(coordinator_data_directory):
     """Checks if gpexpand.pid exists"""
-    return os.path.exists(master_data_directory + '/gpexpand.status')
+    return os.path.exists(coordinator_data_directory + '/gpexpand.status')
 
 
 # -------------------------------------------------------------------------
@@ -357,11 +357,11 @@ class ValidationError(Exception): pass
 class GpExpandStatus():
     """Class that manages gpexpand status file.
 
-    The status file is placed in the master data directory on both the master and
-    the standby master.  it's used to keep track of where we are in the progression.
+    The status file is placed in the coordinator data directory on both the coordinator and
+    the standby coordinator.  it's used to keep track of where we are in the progression.
     """
 
-    def __init__(self, logger, master_data_directory, master_mirror=None):
+    def __init__(self, logger, coordinator_data_directory, coordinator_mirror=None):
         self.logger = logger
 
         self._status_values = {'UNINITIALIZED': 1,
@@ -380,13 +380,13 @@ class GpExpandStatus():
                                }
         self._status = []
         self._status_info = []
-        self._master_data_directory = master_data_directory
-        self._master_mirror = master_mirror
-        self._status_filename = master_data_directory + '/gpexpand.status'
-        if master_mirror:
-            self._status_standby_filename = master_mirror.getSegmentDataDirectory() \
+        self._coordinator_data_directory = coordinator_data_directory
+        self._coordinator_mirror = coordinator_mirror
+        self._status_filename = coordinator_data_directory + '/gpexpand.status'
+        if coordinator_mirror:
+            self._status_standby_filename = coordinator_mirror.getSegmentDataDirectory() \
                                             + '/gpexpand.status'
-            self._segment_configuration_standby_filename = master_mirror.getSegmentDataDirectory() \
+            self._segment_configuration_standby_filename = coordinator_mirror.getSegmentDataDirectory() \
                                             + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE
         self._fp = None
         self._temp_dir = None
@@ -436,15 +436,15 @@ class GpExpandStatus():
         except IOError:
             raise
 
-        if self._master_mirror:
+        if self._coordinator_mirror:
             self._sync_status_file()
 
     def _sync_status_file(self):
-        """Syncs the gpexpand status file with the master mirror"""
-        cpCmd = Scp('gpexpand copying status file to master mirror',
+        """Syncs the gpexpand status file with the coordinator mirror"""
+        cpCmd = Scp('gpexpand copying status file to coordinator mirror',
                     srcFile=self._status_filename,
                     dstFile=self._status_standby_filename,
-                    dstHost=self._master_mirror.getSegmentHostName())
+                    dstHost=self._coordinator_mirror.getSegmentHostName())
         cpCmd.run(validateAfter=True)
 
     def set_status(self, status, status_info=None, force=False):
@@ -469,7 +469,7 @@ class GpExpandStatus():
         os.fsync(self._fp)
         self._status.append(status)
         self._status_info.append(status_info)
-        if self._master_mirror:
+        if self._coordinator_mirror:
             self._sync_status_file()
 
     def get_current_status(self):
@@ -491,9 +491,9 @@ class GpExpandStatus():
             self._fp = None
         if os.path.exists(self._status_filename):
             os.unlink(self._status_filename)
-        if self._master_mirror:
-            RemoveFile.remote('gpexpand master mirror status file cleanup',
-                              self._master_mirror.getSegmentHostName(),
+        if self._coordinator_mirror:
+            RemoveFile.remote('gpexpand coordinator mirror status file cleanup',
+                              self._coordinator_mirror.getSegmentHostName(),
                               self._status_standby_filename)
 
     def remove_segment_configuration_backup_file(self):
@@ -502,19 +502,19 @@ class GpExpandStatus():
         if self._gp_segment_configuration_backup != None and os.path.exists(
                 self._gp_segment_configuration_backup) == True:
             os.unlink(self._gp_segment_configuration_backup)
-        if self._master_mirror:
-            RemoveFile.remote('gpexpand master mirror segment configuration backup file cleanup',
-                              self._master_mirror.getSegmentHostName(),
+        if self._coordinator_mirror:
+            RemoveFile.remote('gpexpand coordinator mirror segment configuration backup file cleanup',
+                              self._coordinator_mirror.getSegmentHostName(),
                               self._segment_configuration_standby_filename)
 
     def sync_segment_configuration_backup_file(self):
         """ Sync the segment configuration backup file to standby """
-        if self._master_mirror:
+        if self._coordinator_mirror:
             self.logger.debug("Sync segment configuration backup file")
-            cpCmd = Scp('gpexpand copying segment configuration backup file to master mirror',
+            cpCmd = Scp('gpexpand copying segment configuration backup file to coordinator mirror',
                         srcFile=self._gp_segment_configuration_backup,
                         dstFile=self._segment_configuration_standby_filename,
-                        dstHost=self._master_mirror.getSegmentHostName())
+                        dstHost=self._coordinator_mirror.getSegmentHostName())
             cpCmd.run(validateAfter=True)
 
     def get_temp_dir(self):
@@ -573,7 +573,7 @@ class SegmentTemplate:
     existing GPDB array"""
 
     def __init__(self, logger, statusLogger, pool,
-                 gparray, masterDataDirectory,
+                 gparray, coordinatorDataDirectory,
                  dburl, conn, tempDir, batch_size, is_hba_hostnames,
                  segTarDir='.', schemaTarFile='gpexpand_schema.tar'):
         self.logger = logger
@@ -584,7 +584,7 @@ class SegmentTemplate:
         self.batch_size = batch_size
         self.dburl = dburl
         self.conn = conn
-        self.masterDataDirectory = masterDataDirectory
+        self.coordinatorDataDirectory = coordinatorDataDirectory
         self.schema_tar_file = schemaTarFile
         self.maxDbId = self.gparray.get_max_dbid()
         self.segTarDir = segTarDir
@@ -658,10 +658,10 @@ class SegmentTemplate:
         dummyDBID = self._gen_DummyDBID()
 
         try:
-            masterSeg = self.gparray.master
+            coordinatorSeg = self.gparray.coordinator
             cmd = PgBaseBackup(pgdata=self.tempDir,
-                               host=masterSeg.getSegmentHostName(),
-                               port=str(masterSeg.getSegmentPort()),
+                               host=coordinatorSeg.getSegmentHostName(),
+                               port=str(coordinatorSeg.getSegmentPort()),
                                recovery_mode=False,
                                target_gp_dbid=dummyDBID)
             cmd.run(validateAfter=True)
@@ -697,8 +697,8 @@ class SegmentTemplate:
           that are in the same order.
           newTableSpaceInfo[dbid] is a list of locations in the same order of oids.
         """
-        master_tblspc_dir = self.gparray.master.getSegmentTableSpaceDirectory()
-        tbcspc_oids = os.listdir(master_tblspc_dir)
+        coordinator_tblspc_dir = self.gparray.coordinator.getSegmentTableSpaceDirectory()
+        tbcspc_oids = os.listdir(coordinator_tblspc_dir)
 
         # tablespace_template_dir is the path we store tablespace files generated
         # by pg_basebackup. Its directory structure is:
@@ -715,7 +715,7 @@ class SegmentTemplate:
         os.mkdir(tablespace_template_dir)
 
         for tbcspc_oid in tbcspc_oids:
-            symlink_path = os.path.join(master_tblspc_dir, tbcspc_oid)
+            symlink_path = os.path.join(coordinator_tblspc_dir, tbcspc_oid)
             target_path = os.readlink(symlink_path)
             os.mkdir(os.path.join(tablespace_template_dir, tbcspc_oid))
             # the target name for copytree does not impact anything
@@ -853,7 +853,7 @@ class SegmentTemplate:
 
         self.logger.info('Copying postgresql.conf from existing segment into template')
 
-        localHostname = self.gparray.master.getSegmentHostName()
+        localHostname = self.gparray.coordinator.getSegmentHostName()
         cmdName = 'gpexpand copying postgresql.conf to %s:%s/postgresql.conf' \
                   % (self.srcSegHostname, self.srcSegDataDir)
         cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
@@ -944,10 +944,10 @@ class gpexpand:
         self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods=True)
         self.old_segments = self.gparray.getSegDbList()
 
-        datadir = self.gparray.master.getSegmentDataDirectory()
+        datadir = self.gparray.coordinator.getSegmentDataDirectory()
         self.statusLogger = GpExpandStatus(logger=logger,
-                                           master_data_directory=datadir,
-                                           master_mirror=self.gparray.standbyMaster)
+                                           coordinator_data_directory=datadir,
+                                           coordinator_mirror=self.gparray.standbyCoordinator)
 
         # Adjust batch size if it's too high given the number of segments
         seg_count = len(self.old_segments)
@@ -957,7 +957,7 @@ class gpexpand:
 
         self.tempDir = self.statusLogger.get_temp_dir()
         if not self.tempDir:
-            self.tempDir = createTempDirectoryName(self.options.master_data_directory, "gpexpand")
+            self.tempDir = createTempDirectoryName(self.options.coordinator_data_directory, "gpexpand")
         self.queue = None
         self.segTemplate = None
 
@@ -968,7 +968,7 @@ class gpexpand:
         a continuation of a previous expansion or a rollback """
         # Get the database in the expected state for the expansion/rollback
         # If gpexpand status file exists ,the last run of gpexpand didn't finish properly
-        status_file_exists = os.path.exists(options.master_data_directory + '/gpexpand.status')
+        status_file_exists = os.path.exists(options.coordinator_data_directory + '/gpexpand.status')
         gpexpand_db_status = None
 
         if not status_file_exists:
@@ -986,7 +986,7 @@ class gpexpand:
         """Gets gpexpand status from the gpexpand schema"""
         status_conn = None
         gpexpand_db_status = None
-        if get_local_db_mode(options.master_data_directory) == 'NORMAL':
+        if get_local_db_mode(options.coordinator_data_directory) == 'NORMAL':
             try:
                 status_conn = dbconn.connect(dburl, encoding='UTF8')
                 # Get the last status entry
@@ -1070,8 +1070,8 @@ class gpexpand:
                                                            self.gparray, removeDataDirs=True)
 
             elif status[0] == 'UPDATE_CATALOG_STARTED':
-                self.logger.info('Rolling back master update')
-                self.restore_master()
+                self.logger.info('Rolling back coordinator update')
+                self.restore_coordinator()
                 self.gparray = GpArray.initFromCatalog(dburl, utility=True)
 
             else:
@@ -1110,8 +1110,8 @@ class gpexpand:
         return outputfile
 
     def generate_tablespace_inputfile(self, filename):
-        master_tblspc_dir = self.gparray.master.getSegmentTableSpaceDirectory()
-        tblspc_oids = os.listdir(master_tblspc_dir)
+        coordinator_tblspc_dir = self.gparray.coordinator.getSegmentTableSpaceDirectory()
+        tblspc_oids = os.listdir(coordinator_tblspc_dir)
         if not tblspc_oids:
             return None
 
@@ -1119,7 +1119,7 @@ class gpexpand:
         tblspc_info = {}
 
         for oid in tblspc_oids:
-            location = os.path.dirname(os.readlink(os.path.join(master_tblspc_dir,
+            location = os.path.dirname(os.readlink(os.path.join(coordinator_tblspc_dir,
                                                                 oid)))
             tblspc_info[oid] = {"location": location,
                                 "name": tblspc_oid_names[int(oid)]}
@@ -1229,8 +1229,8 @@ class gpexpand:
           that are in the same order.
           newTableSpaceInfo[dbid] is a list of locations in the same order of oids.
         """
-        master_tblspc_dir = self.gparray.master.getSegmentTableSpaceDirectory()
-        if not os.listdir(master_tblspc_dir):
+        coordinator_tblspc_dir = self.gparray.coordinator.getSegmentTableSpaceDirectory()
+        if not os.listdir(coordinator_tblspc_dir):
             return None
 
         if not self.options.filename:
@@ -1279,7 +1279,7 @@ class gpexpand:
                                            statusLogger=self.statusLogger,
                                            pool=self.pool,
                                            gparray=self.gparray,
-                                           masterDataDirectory=self.options.master_data_directory,
+                                           coordinatorDataDirectory=self.options.coordinator_data_directory,
                                            dburl=self.dburl,
                                            conn=self.conn,
                                            tempDir=self.tempDir,
@@ -1315,7 +1315,7 @@ class gpexpand:
         for the new segments.
         """
         self.statusLogger.set_gp_segment_configuration_backup(
-            self.options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
+            self.options.coordinator_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
         self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.sync_segment_configuration_backup_file()
@@ -1373,8 +1373,8 @@ class gpexpand:
         conn.close()
 
         """
-        Connect to each database in each segment and do some cleanup of tables that have stuff in them as a result of copying the segment from the master.
-        Note, this functionality used to be in segcopy and was therefore done just once to the original copy of the master.
+        Connect to each database in each segment and do some cleanup of tables that have stuff in them as a result of copying the segment from the coordinator.
+        Note, this functionality used to be in segcopy and was therefore done just once to the original copy of the coordinator.
         """
         for seg in newSegments:
             if seg.isSegmentMirror() == True:
@@ -1396,10 +1396,10 @@ class gpexpand:
         self.pool.check_results()
 
         """
-        Build the list of delete statements based on the MASTER_ONLY_TABLES
+        Build the list of delete statements based on the COORDINATOR_ONLY_TABLES
         defined in gpcatalog.py
         """
-        statements = ["delete from pg_catalog.%s" % tab for tab in MASTER_ONLY_TABLES]
+        statements = ["delete from pg_catalog.%s" % tab for tab in COORDINATOR_ONLY_TABLES]
 
         """
           Connect to each database in the new segments, and clean up the catalog tables.
@@ -1428,7 +1428,7 @@ class gpexpand:
         self.pool.getCompletedItems()
 
     # --------------------------------------------------------------------------
-    def restore_master(self):
+    def restore_coordinator(self):
         """Restores the gp_segment_configuration catalog table for rollback"""
         backupFile = self.statusLogger.get_gp_segment_configuration_backup()
 
@@ -1499,7 +1499,7 @@ class gpexpand:
 
                 restore_conn.commit()
             except Exception as e:
-                raise Exception("Unable to restore master. Exception: " + str(e))
+                raise Exception("Unable to restore coordinator. Exception: " + str(e))
             finally:
                 if restore_conn != None:
                     restore_conn.close()
@@ -1837,8 +1837,8 @@ ORDER BY fq_name, tableoid desc
         c = dbconn.connect(self.dburl, encoding='UTF8')
         if ask_yesno('', "Do you want to dump the gpexpand.status_detail table to file?", 'Y'):
             self.logger.info(
-                "Dumping gpexpand.status_detail to %s/gpexpand.status_detail" % self.options.master_data_directory)
-            copy_gpexpand_status_detail_sql = "COPY gpexpand.status_detail TO '%s/gpexpand.status_detail'" % self.options.master_data_directory
+                "Dumping gpexpand.status_detail to %s/gpexpand.status_detail" % self.options.coordinator_data_directory)
+            copy_gpexpand_status_detail_sql = "COPY gpexpand.status_detail TO '%s/gpexpand.status_detail'" % self.options.coordinator_data_directory
             dbconn.execSQL(c, copy_gpexpand_status_detail_sql)
 
         self.logger.info("Removing gpexpand schema")
@@ -1878,18 +1878,18 @@ ORDER BY fq_name, tableoid desc
             logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
             return 1
 
-        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+        consistent, inconsistent, coordinator_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
 
         inconsistent_segment_msgs = []
         for segment in inconsistent:
             inconsistent_segment_msgs.append("dbid: %s "
-                                             "checksum set to %s differs from master checksum set to %s" %
+                                             "checksum set to %s differs from coordinator checksum set to %s" %
                                              (segment.getSegmentDbId(), segment.heap_checksum,
-                                              master_heap_checksum))
+                                              coordinator_heap_checksum))
 
         if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
             self.logger.fatal("Cluster heap checksum setting differences reported")
-            self.logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+            self.logger.fatal("Heap checksum settings on %d of %d segment instances do not match coordinator <<<<<<<<"
                               % (len(inconsistent_segment_msgs), len(self.gparray.segmentPairs)))
             self.logger.fatal("Review %s for details" % get_logfile())
             log_to_file_only("Failed checksum consistency validation:", logging.WARN)
@@ -1898,7 +1898,7 @@ ORDER BY fq_name, tableoid desc
 
             for msg in inconsistent_segment_msgs:
                 log_to_file_only(msg, logging.WARN)
-                raise Exception("Segments have heap_checksum set inconsistently to master")
+                raise Exception("Segments have heap_checksum set inconsistently to coordinator")
         else:
             self.logger.info("Heap checksum setting consistent across cluster")
 
@@ -2360,16 +2360,16 @@ def main(options, args, parser):
         if options.verbose:
             enable_verbose_logging()
 
-        if is_gpexpand_running(options.master_data_directory):
+        if is_gpexpand_running(options.coordinator_data_directory):
             logger.error('gpexpand is already running.  Only one instance')
             logger.error('of gpexpand is allowed at a time.')
             remove_pid = False
             sys.exit(1)
         else:
-            create_pid_file(options.master_data_directory)
+            create_pid_file(options.coordinator_data_directory)
 
         # prepare provider for updateSystemConfig
-        gpEnv = GpMasterEnvironment(options.master_data_directory, True)
+        gpEnv = GpMasterEnvironment(options.coordinator_data_directory, True)
         configurationInterface.registerConfigurationProvider(
             configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
         configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
@@ -2524,7 +2524,7 @@ def main(options, args, parser):
     finally:
         try:
             if remove_pid and options:
-                remove_pid_file(options.master_data_directory)
+                remove_pid_file(options.coordinator_data_directory)
         except NameError:
             pass
 

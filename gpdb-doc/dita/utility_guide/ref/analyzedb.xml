@@ -33,7 +33,7 @@
         tables in a Greenplum database incrementally and concurrently. </p>
       <p>While performing <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
             >ANALYZE</xref></codeph> operations, <cmdname>analyzedb</cmdname> creates a snapshot of
-        the table metadata and stores it on disk on the master host. An <codeph>ANALYZE</codeph>
+        the table metadata and stores it on disk on the coordinator host. An <codeph>ANALYZE</codeph>
         operation is performed only if the table has been modified. If a table or partition has not
         been modified since the last time it was analyzed, <cmdname>analyzedb</cmdname>
         automatically skips the table or partition because it already contains up-to-date
@@ -68,7 +68,7 @@
         previous <cmdname>analyzedb</cmdname> operation. The snapshots of table metadata are stored
         as state files in the directory
             <codeph>db_analyze/&lt;<varname>db_name</varname>>/&lt;<varname>timestamp</varname>></codeph>
-        in the Greenplum Database master data directory. </p>The utility does not automatically
+        in the Greenplum Database coordinator data directory. </p>The utility does not automatically
       remove old snapshot information. Over time, the snapshots can consume a large amount of disk
       space. To recover disk space, you can keep the most recent snapshot information and remove the
       older snapshots. You can also specify the <codeph>--clean_last</codeph> or

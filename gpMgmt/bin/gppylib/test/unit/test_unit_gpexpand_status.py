@@ -11,7 +11,7 @@ from gppylib.commands import gp
 from gppylib.db import dbconn
 
 class Context(object):
-    filename = os.path.join(gp.get_masterdatadir(), 'gpexpand.status')
+    filename = os.path.join(gp.get_coordinatordatadir(), 'gpexpand.status')
     dbname = os.getenv('PGDATABASE', 'postgres')
     dburl = dbconn.DbURL(dbname=dbname)
     conn = dbconn.connect(dburl)

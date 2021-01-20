@@ -189,7 +189,7 @@ def impl(context):
     context.tablespaces["outerspace"].verify()
 
 
-@then('the tablespace is valid on the standby master')
+@then('the tablespace is valid on the standby coordinator')
 def impl(context):
     context.tablespaces["outerspace"].verify(context.standby_hostname, context.standby_port)
 

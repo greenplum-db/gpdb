@@ -1219,13 +1219,13 @@ RESET gp_default_storage_options;
 -- s/.*\[ERROR\]/[ERROR]/gm
 -- end_matchsubs
 \!gpconfig -c gp_default_storage_options -v 'checksum=false' --masteronly
-[ERROR]:-gp_default_storage_options value cannot be different on master and segments
-gp_default_storage_options value cannot be different on master and segments
+[ERROR]:-gp_default_storage_options value cannot be different on coordinator and segments
+gp_default_storage_options value cannot be different on coordinator and segments
 \!gpconfig -c gp_default_storage_options -v 'checksum=false' -m 'checksum=true'
-[ERROR]:-gp_default_storage_options value cannot be different on master and segments
-gp_default_storage_options value cannot be different on master and segments
+[ERROR]:-gp_default_storage_options value cannot be different on coordinator and segments
+gp_default_storage_options value cannot be different on coordinator and segments
 \!gpconfig -s gp_default_storage_options
 Values on all segments are consistent
-GUC          : gp_default_storage_options
-Master  value: blocksize=32768,compresstype=none,checksum=true
-Segment value: blocksize=32768,compresstype=none,checksum=true
+GUC              : gp_default_storage_options
+Coordinator value: blocksize=32768,compresstype=none,checksum=true
+Segment     value: blocksize=32768,compresstype=none,checksum=true

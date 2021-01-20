@@ -17,7 +17,7 @@ class MyDbUrl:
 
 class SegmentReconfiguerTestCase(GpTestCase):
     db = 'database'
-    host = 'mdw'
+    host = 'cdw'
     port = 15432
     user = 'postgres'
     passwd = 'passwd'

@@ -6,16 +6,16 @@ Feature: gpinitsystem tests
         When the user runs "gpconfig -s data_checksums"
         Then gpconfig should return a return code of 0
         And gpconfig should print "Values on all segments are consistent" to stdout
-        And gpconfig should print "Master  value: on" to stdout
-        And gpconfig should print "Segment value: on" to stdout
+        And gpconfig should print "Coordinator value: on" to stdout
+        And gpconfig should print "Segment     value: on" to stdout
 
     Scenario: gpinitsystem creates a cluster with data_checksums off
         Given the database is initialized with checksum "off"
         When the user runs "gpconfig -s data_checksums"
         Then gpconfig should return a return code of 0
         And gpconfig should print "Values on all segments are consistent" to stdout
-        And gpconfig should print "Master  value: off" to stdout
-        And gpconfig should print "Segment value: off" to stdout
+        And gpconfig should print "Coordinator value: off" to stdout
+        And gpconfig should print "Segment     value: off" to stdout
 
     Scenario: gpinitsystem exits with status 1 when the user enters nothing for the confirmation
         Given create demo cluster config
@@ -80,8 +80,8 @@ Feature: gpinitsystem tests
         And the cluster config is generated with data_checksums "1"
         When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -s localhost -P 21100 -S /wrong/path -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 0
-        And gpinitsystem should not print "To activate the Standby Master Segment in the event of Master" to stdout
-        And gpinitsystem should print "Cluster setup finished, but Standby Master failed to initialize. Review contents of log files for errors." to stdout
+        And gpinitsystem should not print "To activate the Standby Coordinator Segment in the event of Coordinator" to stdout
+        And gpinitsystem should print "Cluster setup finished, but Standby Coordinator failed to initialize. Review contents of log files for errors." to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
     Scenario: gpinitsystem generates an output configuration file and then starts cluster with data_checksums on
@@ -95,8 +95,8 @@ Feature: gpinitsystem tests
         When the user runs "gpconfig -s data_checksums"
         Then gpconfig should return a return code of 0
         And gpconfig should print "Values on all segments are consistent" to stdout
-        And gpconfig should print "Master  value: on" to stdout
-        And gpconfig should print "Segment value: on" to stdout
+        And gpconfig should print "Coordinator value: on" to stdout
+        And gpconfig should print "Segment     value: on" to stdout
 
     Scenario: gpinitsystem generates an output configuration file and then starts cluster with data_checksums off
         Given the cluster config is generated with data_checksums "off"
@@ -109,8 +109,8 @@ Feature: gpinitsystem tests
         When the user runs "gpconfig -s data_checksums"
         Then gpconfig should return a return code of 0
         And gpconfig should print "Values on all segments are consistent" to stdout
-        And gpconfig should print "Master  value: off" to stdout
-        And gpconfig should print "Segment value: off" to stdout
+        And gpconfig should print "Coordinator value: off" to stdout
+        And gpconfig should print "Segment     value: off" to stdout
 
     Scenario: gpinitsystem should warn but not fail when standby cannot be instantiated
         Given the database is running

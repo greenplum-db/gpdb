@@ -49,11 +49,11 @@ bin/gpssh-exkeys        -  Exchange ssh keys between many hosts
 
 List of Management Scripts Written in Python (gppylib - current libraries)
 --------------------------------------------------------------------------
-bin/gpactivatestandby   -  Activates the Standby Master
+bin/gpactivatestandby   -  Activates the Standby Coordinator
 bin/gpconfig_helper     -  Edits postgresql.conf file for all segments
 bin/gpdeletesystem      -  Deletes a Greenplum Database
 bin/gpexpand            -  Adds additional segments to a Greenplum Database
-bin/gpinitstandby       -  Initializes standby master
+bin/gpinitstandby       -  Initializes standby coordinator
 bin/gplogfilter         -  Filters log files
 bin/gpstart             -  Start a Greenplum Database
 bin/gpstop              -  Stop a Greenplum Database

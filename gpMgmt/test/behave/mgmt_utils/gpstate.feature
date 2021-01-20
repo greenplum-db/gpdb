@@ -8,14 +8,14 @@ Feature: gpstate tests
         And user can start transactions
         And the user runs "gpstate -b"
         Then gpstate output has rows with keys values
-            | Master instance                                         = Active                       |
-            | Master standby                                          =                              |
-            | Standby master state                                    = Standby host passive         |
+            | Coordinator instance                                    = Active                       |
+            | Coordinator standby                                     =                              |
+            | Standby coordinator state                               = Standby host passive         |
             | Total segment instance count from metadata              = 6                            |
             | Primary Segment Status                                                                 |
             | Total primary segments                                  = 3                            |
-            | Total primary segment valid \(at master\)               = 0                            |
-            | Total primary segment failures \(at master\)            = 3 .* <<<<<<<<                |
+            | Total primary segment valid \(at coordinator\)          = 0                            |
+            | Total primary segment failures \(at coordinator\)       = 3 .* <<<<<<<<                |
             | Total number of postmaster.pid files missing            = 3 .* <<<<<<<<                |
             | Total number of postmaster.pid files found              = 0                            |
             | Total number of postmaster.pid PIDs missing             = 3 .* <<<<<<<<                |
@@ -26,8 +26,8 @@ Feature: gpstate tests
             | Total number postmaster processes found                 = 0                            |
             | Mirror Segment Status                                                                  |
             | Total mirror segments                                   = 3                            |
-            | Total mirror segment valid \(at master\)                = 3                            |
-            | Total mirror segment failures \(at master\)             = 0                            |
+            | Total mirror segment valid \(at coordinator\)           = 3                            |
+            | Total mirror segment failures \(at coordinator\)        = 0                            |
             | Total number of postmaster.pid files missing            = 0                            |
             | Total number of postmaster.pid files found              = 3                            |
             | Total number of postmaster.pid PIDs missing             = 0                            |
@@ -78,23 +78,23 @@ Feature: gpstate tests
         Given the cluster is generated with "3" primaries only
         And the user runs "gpstate -b"
         Then gpstate output has rows with keys values
-            | Master instance                              = Active                       |
-            | Master standby                               = No master standby configured |
-            | Total segment instance count from metadata   = 3                            |
-            | Primary Segment Status                                                      |
-            | Total primary segments                       = 3                            |
-            | Total primary segment valid \(at master\)    = 3                            |
-            | Total primary segment failures \(at master\) = 0                            |
-            | Total number of postmaster.pid files missing = 0                            |
-            | Total number of postmaster.pid files found   = 3                            |
-            | Total number of postmaster.pid PIDs missing  = 0                            |
-            | Total number of postmaster.pid PIDs found    = 3                            |
-            | Total number of /tmp lock files missing      = 0                            |
-            | Total number of /tmp lock files found        = 3                            |
-            | Total number postmaster processes missing    = 0                            |
-            | Total number postmaster processes found      = 3                            |
-            | Mirror Segment Status                                                       |
-            | Mirrors not configured on this array                                        |
+            | Coordinator instance                              = Active                            |
+            | Coordinator standby                               = No coordinator standby configured |
+            | Total segment instance count from metadata        = 3                                 |
+            | Primary Segment Status                                                                |
+            | Total primary segments                            = 3                                 |
+            | Total primary segment valid \(at coordinator\)    = 3                                 |
+            | Total primary segment failures \(at coordinator\) = 0                                 |
+            | Total number of postmaster.pid files missing      = 0                                 |
+            | Total number of postmaster.pid files found        = 3                                 |
+            | Total number of postmaster.pid PIDs missing       = 0                                 |
+            | Total number of postmaster.pid PIDs found         = 3                                 |
+            | Total number of /tmp lock files missing           = 0                                 |
+            | Total number of /tmp lock files found             = 3                                 |
+            | Total number postmaster processes missing         = 0                                 |
+            | Total number postmaster processes found           = 3                                 |
+            | Mirror Segment Status                                                                 |
+            | Mirrors not configured on this array                                                  |
 
     Scenario: gpstate -e logs no errors when there are none
         Given a standard local demo cluster is running
@@ -139,14 +139,14 @@ Feature: gpstate tests
         Given a standard local demo cluster is running
         And the user runs "gpstate -b"
         Then gpstate output has rows with keys values
-            | Master instance                                         = Active                       |
-            | Master standby                                          =                              |
-            | Standby master state                                    = Standby host passive         |
+            | Coordinator instance                                    = Active                       |
+            | Coordinator standby                                     =                              |
+            | Standby coordinator state                               = Standby host passive         |
             | Total segment instance count from metadata              = 6                            |
             | Primary Segment Status                                                                 |
             | Total primary segments                                  = 3                            |
-            | Total primary segment valid \(at master\)               = 3                            |
-            | Total primary segment failures \(at master\)            = 0                            |
+            | Total primary segment valid \(at coordinator\)          = 3                            |
+            | Total primary segment failures \(at coordinator\)       = 0                            |
             | Total number of postmaster.pid files missing            = 0                            |
             | Total number of postmaster.pid files found              = 3                            |
             | Total number of postmaster.pid PIDs missing             = 0                            |
@@ -157,8 +157,8 @@ Feature: gpstate tests
             | Total number postmaster processes found                 = 3                            |
             | Mirror Segment Status                                                                  |
             | Total mirror segments                                   = 3                            |
-            | Total mirror segment valid \(at master\)                = 3                            |
-            | Total mirror segment failures \(at master\)             = 0                            |
+            | Total mirror segment valid \(at coordinator\)           = 3                            |
+            | Total mirror segment failures \(at coordinator\)        = 0                            |
             | Total number of postmaster.pid files missing            = 0                            |
             | Total number of postmaster.pid files found              = 3                            |
             | Total number of postmaster.pid PIDs missing             = 0                            |
@@ -170,11 +170,11 @@ Feature: gpstate tests
             | Total number mirror segments acting as primary segments = 0                            |
             | Total number mirror segments acting as mirror segments  = 3                            |
 
-    Scenario: gpstate -f logs master standyby details
+    Scenario: gpstate -f logs coordinator standyby details
         Given a standard local demo cluster is running
         When the user runs "gpstate -f"
         Then gpstate output has rows with keys values
-            | Standby master details                         |
+            | Standby coordinator details                    |
             | Standby address        =                       |
             | Standby data directory = .*/standby            |
             | Standby port           = [0-9]+                |
@@ -214,7 +214,7 @@ Feature: gpstate tests
     Scenario: gpstate -p logs port details
         Given a standard local demo cluster is running
         When the user runs "gpstate -p"
-        Then gpstate should print "Master segment instance .*/demoDataDir-1  port = .*" to stdout
+        Then gpstate should print "Coordinator segment instance .*/demoDataDir-1  port = .*" to stdout
         And gpstate should print "Segment instance port assignments" to stdout
         And gpstate output looks like
             | Host | Datadir                         | Port   |
@@ -229,17 +229,17 @@ Feature: gpstate tests
         Given a standard local demo cluster is running
         When the user runs "gpstate -s"
         Then gpstate output has rows with keys values
-            | Master Configuration & Status                          |
-            | Master host                   =                        |
-            | Master postgres process ID    = [0-9]+                 |
-            | Master data directory         = .*/demoDataDir-1       |
-            | Master port                   = [0-9]+                 |
-            | Master current role           = dispatch               |
+            | Coordinator Configuration & Status                          |
+            | Coordinator host                   =                        |
+            | Coordinator postgres process ID    = [0-9]+                 |
+            | Coordinator data directory         = .*/demoDataDir-1       |
+            | Coordinator port                   = [0-9]+                 |
+            | Coordinator current role           = dispatch               |
             | Greenplum initsystem version  = [0-9]+\.[0-9]+\.[0-9]+ |
             | Greenplum current version     = PostgreSQL \d+.* \(Greenplum Database [0-9]+\.[0-9]+\.[0-9]+.*\) |
             | Postgres version              = \d+.*                  |
-            | Master standby                =                        |
-            | Standby master state          = Standby host passive   |
+            | Coordinator standby           =                        |
+            | Standby coordinator state     = Standby host passive   |
             | Segment Instance Status Report                         |
             | Segment Info                                           |
             | Hostname                        =                      |
@@ -387,7 +387,7 @@ Feature: gpstate tests
          When the user runs "gpstate -x"
          Then gpstate output looks like
              | Cluster Expansion State = No Expansion Detected |
-        Given the file "gpexpand.status" exists under master data directory
+        Given the file "gpexpand.status" exists under coordinator data directory
          When the user runs "gpstate -x"
          Then gpstate output looks like
              | Cluster Expansion State = Replicating Meta Data |

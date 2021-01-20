@@ -8,7 +8,7 @@
         <p>Starts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstart</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>]
+            <codeblock><b>gpstart</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>]
         [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
         [<b>--skip-heap-checksum-validation</b>]
         [<b>-v</b> | <b>-q</b>]
@@ -22,11 +22,11 @@
             <p>The <codeph>gpstart</codeph> utility is used to start the Greenplum Database server
                 processes. When you start a Greenplum Database system, you are actually starting
                 several <codeph>postgres</codeph> database server listener processes at once (the
-                master and all of the segment instances). The <codeph>gpstart</codeph> utility
+                coordinator and all of the segment instances). The <codeph>gpstart</codeph> utility
                 handles the startup of the individual instances. Each instance is started in
                 parallel.</p>
             <p>As part of the startup process, the utility checks the consistency of heap checksum
-                setting among the Greenplum Database master and segment instances, either enabled or
+                setting among the Greenplum Database coordinator and segment instances, either enabled or
                 disabled on all instances. If the heap checksum setting is different among the
                 instances, an error is returned and Greenplum Database does not start. The
                 validation can be disabled by specifying the option
@@ -39,14 +39,14 @@
                 system using <codeph>gpinitsystem</codeph>. Enabling or disabing heap checksums is
                 set when you initialize the system and cannot be changed after
                 initialization.</note>
-            <p>If the Greenplum Database system is configured with a standby master, and
+            <p>If the Greenplum Database system is configured with a standby coordinator, and
                     <codeph>gpstart</codeph> does not detect it during startup,
                     <codeph>gpstart</codeph> displays a warning and lets you cancel the startup
                     operation.<ul id="ul_v3p_mrc_nlb">
                     <li>If the <codeph>-a</codeph> option (disable interactive mode prompts) is not
                         specified, <codeph>gpstart</codeph> displays and logs these
-                            messages:<codeblock>Standby host is unreachable, cannot determine whether the standby is currently acting as the master. Received error: &lt;error>
-Continue only if you are certain that the standby is not acting as the master.</codeblock><p>It also
+                            messages:<codeblock>Standby host is unreachable, cannot determine whether the standby is currently acting as the coordinator. Received error: &lt;error>
+Continue only if you are certain that the standby is not acting as the coordinator.</codeblock><p>It also
                             displays this prompt to continue
                             startup:<codeblock>Continue with startup Yy|Nn (default=N):</codeblock></p></li>
                     <li>If the <codeph>-a</codeph> option is specified, the utility does not start
@@ -54,8 +54,8 @@ Continue only if you are certain that the standby is not acting as the master.</
                         this log
                         message:<codeblock>Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.</codeblock></li>
                 </ul></p>
-            <p>If the standby master is not accessible, you can start the system and troubleshoot
-                standby master issues while the system is available.</p>
+            <p>If the standby coordinator is not accessible, you can start the system and troubleshoot
+                standby coordinator issues while the system is available.</p>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -71,8 +71,8 @@ Continue only if you are certain that the standby is not acting as the master.</
                         instances it needs to start.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-d <varname>master_data_directory</varname></pt>
-                    <pd>Optional. The master host data directory. If not specified, the value set
+                    <pt>-d <varname>coordinator_data_directory</varname></pt>
+                    <pd>Optional. The coordinator host data directory. If not specified, the value set
                         for <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
                 </plentry>
                 <plentry>
@@ -82,13 +82,13 @@ Continue only if you are certain that the standby is not acting as the master.</
                 </plentry>
                 <plentry>
                     <pt>-m</pt>
-                    <pd>Optional. Starts the master instance only, which may be useful for
-                        maintenance tasks. This mode only allows connections to the master in
+                    <pd>Optional. Starts the coordinator instance only, which may be useful for
+                        maintenance tasks. This mode only allows connections to the coordinator in
                         utility mode. For example:</pd>
                     <pd>
                         <codeblock>PGOPTIONS='-c gp_role=utility' psql</codeblock>
                     </pd>
-                    <pd>The consistency of the heap checksum setting on master and segment instances
+                    <pd>The consistency of the heap checksum setting on coordinator and segment instances
                         is not checked.</pd>
                 </plentry>
                 <plentry>
@@ -104,7 +104,7 @@ Continue only if you are certain that the standby is not acting as the master.</
                 <plentry>
                     <pt>--skip-heap-checksum-validation</pt>
                     <pd>During startup, the utility does not validate the consistency of the heap
-                        checksum setting among the Greenplum Database master and segment instances.
+                        checksum setting among the Greenplum Database coordinator and segment instances.
                         The default is to ensure that the heap checksum setting is the same on all
                         instances, either enabled or disabled.
                         <note type="warning">Starting Greenplum Database without this validation
@@ -128,8 +128,8 @@ Continue only if you are certain that the standby is not acting as the master.</
                 </plentry>
                 <plentry>
                     <pt>-y</pt>
-                    <pd>Optional. Do not start the standby master host. The default is to start the
-                        standby master host and synchronization process.</pd>
+                    <pd>Optional. Do not start the standby coordinator host. The default is to start the
+                        standby coordinator host and synchronization process.</pd>
                 </plentry>
                 <plentry>
                     <pt>-? | -h | --help</pt>
@@ -148,7 +148,7 @@ Continue only if you are certain that the standby is not acting as the master.</
             <p>Start a Greenplum Database system in restricted mode (only allow superuser
                 connections):</p>
             <codeblock>gpstart -R</codeblock>
-            <p>Start the Greenplum master instance only and connect in utility mode:</p>
+            <p>Start the Greenplum coordinator instance only and connect in utility mode:</p>
             <codeblock>gpstart -m PGOPTIONS='-c gp_role=utility' psql</codeblock>
         </section>
         <section id="section6">

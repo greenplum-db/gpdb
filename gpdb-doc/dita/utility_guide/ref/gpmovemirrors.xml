@@ -7,7 +7,7 @@
     <p>Moves mirror segment instances to new locations.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpmovemirrors</b> <b>-i</b> <varname>move_config_file</varname> [<b>-d</b> <varname>master_data_directory</varname>] 
+      <codeblock><b>gpmovemirrors</b> <b>-i</b> <varname>move_config_file</varname> [<b>-d</b> <varname>coordinator_data_directory</varname>] 
           [<b>-l</b> <varname>logfile_directory</varname>] 
           [<b>-B</b> <varname>parallel_processes</varname>] [<b>-v</b>]
 
@@ -39,8 +39,8 @@
             to move.</pd>
         </plentry>
         <plentry>
-          <pt>-d <varname>master_data_directory</varname></pt>
-          <pd>The master data directory. If not specified, the value set for
+          <pt>-d <varname>coordinator_data_directory</varname></pt>
+          <pd>The coordinator data directory. If not specified, the value set for
               <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
         </plentry>
         <plentry>

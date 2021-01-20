@@ -21,9 +21,9 @@
           Database. Be sure to retain the previous setting of the configuration parameter.
           For example:<codeblock>$ gpconfig -s shared_preload_libraries
 Values on all segments are consistent
-GUC          : shared_preload_libraries
-Master  value: auto_explain
-Segment value: auto_explain
+GUC              : shared_preload_libraries
+Coordinator value: auto_explain
+Segment     value: auto_explain
 $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota'
 $ gpstop -ar</codeblock></li>
         <li> Register the <codeph>diskquota</codeph> extension in databases where you want to

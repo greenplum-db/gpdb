@@ -10,10 +10,10 @@
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gpaddmirrors</b> [<b>-p</b> <varname>port_offset</varname>] [<b>-m</b> <varname>datadir_config_file </varname>[<b>-a</b>]] [<b>-s</b>] 
-   [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
+   [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
    [<b>-v</b>]
 
-<b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-a</b>] [<b>-d</b> <varname>master_data_directory</varname>]
+<b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-a</b>] [<b>-d</b> <varname>coordinator_data_directory</varname>]
    [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
 
 <b>gpaddmirrors</b> <b>-o</b> <varname>output_sample_mirror_config</varname> [<b>-s</b>] [<b>-m</b> <varname>datadir_config_file</varname>]
@@ -99,8 +99,8 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                         mirror segment instances it needs to set up.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-d <varname>master_data_directory</varname></pt>
-                    <pd>The master data directory. If not specified, the value set for
+                    <pt>-d <varname>coordinator_data_directory</varname></pt>
+                    <pd>The coordinator data directory. If not specified, the value set for
                             <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
                 </plentry>
                 <plentry>
@@ -209,7 +209,7 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                         >gp_segment_configuration</xref></codeph> catalog table with the mirror
                 segment instance information. Greenplum Database uses the <varname>address</varname>
                 value of the <codeph>gp_segment_configuration</codeph> catalog table when looking up
-                host systems for Greenplum interconnect (internal) communication between the master
+                host systems for Greenplum interconnect (internal) communication between the coordinator
                 and segment instances and between segment instances, and for other internal
                 communication.</p>
         </section>
@@ -225,7 +225,7 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
             <p>For example, this is a segment instance configuration for a simple Greenplum system.
                 The segment host <codeph>gp6m</codeph> is configured with two NICs,
                     <codeph>gp6m-1</codeph> and <codeph>gp6m-2</codeph>, where the Greenplum
-                Database system uses <codeph>gp6m-1</codeph> for the master segment and
+                Database system uses <codeph>gp6m-1</codeph> for the coordinator segment and
                     <codeph>gp6m-2</codeph> for segment instances. </p>
             <codeblock>select content, role, port, hostname, address from gp_segment_configuration ;
 

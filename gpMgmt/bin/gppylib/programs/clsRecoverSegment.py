@@ -536,7 +536,7 @@ class GpRecoverSegmentProgram:
                 "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
 
         self.__pool = WorkerPool(self.__options.parallelDegree)
-        gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True)
+        gpEnv = GpMasterEnvironment(self.__options.coordinatorDataDirectory, True)
 
         # verify "where to recover" options
         optionCnt = 0
@@ -677,17 +677,17 @@ class GpRecoverSegmentProgram:
         # go forward if we have at least one segment that has replied
         if len(successes) == 0:
             raise Exception("No segments responded to ssh query for heap checksum validation.")
-        consistent, inconsistent, master_checksum_value = heap_checksum.check_segment_consistency(successes)
+        consistent, inconsistent, coordinator_checksum_value = heap_checksum.check_segment_consistency(successes)
         if len(inconsistent) > 0:
             self.logger.fatal("Heap checksum setting differences reported on segments")
             self.logger.fatal("Failed checksum consistency validation:")
             for gpdb in inconsistent:
                 segment_name = gpdb.getSegmentHostName()
                 checksum = gpdb.heap_checksum
-                self.logger.fatal("%s checksum set to %s differs from master checksum set to %s" %
-                                  (segment_name, checksum, master_checksum_value))
+                self.logger.fatal("%s checksum set to %s differs from coordinator checksum set to %s" %
+                                  (segment_name, checksum, coordinator_checksum_value))
             raise Exception("Heap checksum setting differences reported on segments")
-        self.logger.info("Heap checksum setting is consistent between master and the segments that are candidates "
+        self.logger.info("Heap checksum setting is consistent between coordinator and the segments that are candidates "
                          "for recoverseg")
 
     def cleanup(self):

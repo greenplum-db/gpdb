@@ -12,7 +12,7 @@
 """
 import copy
 from gppylib.gplog import *
-from gppylib.gparray import ROLE_PRIMARY, ROLE_MIRROR, MASTER_CONTENT_ID
+from gppylib.gparray import ROLE_PRIMARY, ROLE_MIRROR, COORDINATOR_CONTENT_ID
 
 logger = get_default_logger()
 
@@ -177,13 +177,13 @@ class ComputeCatalogUpdate:
         only_contains_standby_mirror = (len(final[ ROLE_MIRROR ]) == 1 and final[ ROLE_MIRROR ].get(-1) != None)
         if len(final[ ROLE_MIRROR ]) > 0 and not only_contains_standby_mirror:
             for contentId in final[ ROLE_PRIMARY ]:
-                if contentId != MASTER_CONTENT_ID and final[ ROLE_MIRROR ].get( contentId ) is None:
+                if contentId != COORDINATOR_CONTENT_ID and final[ ROLE_MIRROR ].get( contentId ) is None:
                     seg = final[ ROLE_PRIMARY ][ contentId ]
                     raise Exception("Primary must have mirror when mirroring enabled: %s" % repr(seg))
 
 
         # Validate that the remove/add list contains only qualified mirrors.
-        # In particular, we disallow remove/add of the master, standby or a primary.
+        # In particular, we disallow remove/add of the coordinator, standby or a primary.
         #
         for seg in self.mirror_to_remove_and_add:
             originalSeg = self.dbsegmap.get(seg.getSegmentDbId())
@@ -195,9 +195,9 @@ class ComputeCatalogUpdate:
             if seg.isSegmentMaster(current_role=True) or seg.isSegmentStandby(current_role=True):
 
                 #
-                # Assertion here -- user should not be allowed to change master/standby info.
+                # Assertion here -- user should not be allowed to change coordinator/standby info.
                 #
-                raise Exception("Internal error: Can only change core details of segments, not masters" \
+                raise Exception("Internal error: Can only change core details of segments, not coordinators" \
                                 " (on segment %s) (seg %s vs original %s)" %
                                 (seg.getSegmentDbId(), repr(seg), repr(originalSeg)))
 

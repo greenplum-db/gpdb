@@ -72,8 +72,8 @@ def parseargs():
 
     # Standby activation options section
     optgrp = OptionGroup(parser, 'Delete system options')
-    optgrp.add_option('-d', '--master-data-directory', dest='master_data_dir',
-                      type='string', help='Master data directory.')
+    optgrp.add_option('-d', '--master-data-directory', dest='coordinator_data_dir',
+                      type='string', help='Coordinator data directory.')
     optgrp.add_option('-f', '--force', action='store_true',
                       help='Force deletion.  Ignore any database backup files.')
     optgrp.add_option('-B', '--batch-size', type='int', dest='batch_size',
@@ -93,29 +93,29 @@ def parseargs():
         parser.exit(0, None)
 
     # check we got the -d option
-    if not options.master_data_dir:
+    if not options.coordinator_data_dir:
         logger.info('Option -d or --master-data-directory not set. Checking environment variable MASTER_DATA_DIRECTORY')
-        env_master_data_dir = os.getenv('MASTER_DATA_DIRECTORY', None)
+        env_coordinator_data_dir = os.getenv('MASTER_DATA_DIRECTORY', None)
         # check for environment variable MASTER_DATA_DIRECTORY
-        if not env_master_data_dir:
+        if not env_coordinator_data_dir:
             logger.fatal('Both -d parameter and MASTER_DATA_DIRECTORY environment variable are not set.')
-            logger.fatal('Required option master data directory is missing.')
+            logger.fatal('Required option coordinator data directory is missing.')
             parser.exit(2, None)
-        options.master_data_dir = env_master_data_dir
+        options.coordinator_data_dir = env_coordinator_data_dir
 
     # We have to normalize this path for a later comparison
-    options.master_data_dir = os.path.normpath(options.master_data_dir)
+    options.coordinator_data_dir = os.path.normpath(options.coordinator_data_dir)
 
-    # Check that master data directory exists
-    if not os.path.exists(options.master_data_dir) or not os.path.isdir(options.master_data_dir):
-        logger.fatal('Master data directory supplied %s does not exist' % options.master_data_dir)
+    # Check that coordinator data directory exists
+    if not os.path.exists(options.coordinator_data_dir) or not os.path.isdir(options.coordinator_data_dir):
+        logger.fatal('Coordinator data directory supplied %s does not exist' % options.coordinator_data_dir)
         parser.exit(2, None)
 
     if options.logfile and not os.path.exists(options.logfile):
         logger.fatal('Log directory %s does not exist.' % options.logfile)
         parser.exit(2, None)
 
-    options.pgport = validate_pgport(options.master_data_dir)
+    options.pgport = validate_pgport(options.coordinator_data_dir)
 
     # Set log level
     if options.verbose:
@@ -143,13 +143,13 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
     global g_warnings_generated
     logger.info('Greenplum Instance Deletion Parameters')
     logger.info('--------------------------------------')
-    logger.info('Greenplum Master hostname                  = %s' % dburl.pghost)
-    logger.info('Greenplum Master data directory            = %s' % options.master_data_dir)
-    logger.info('Greenplum Master port                      = %s' % dburl.pgport)
+    logger.info('Greenplum Coordinator hostname                  = %s' % dburl.pghost)
+    logger.info('Greenplum Coordinator data directory            = %s' % options.coordinator_data_dir)
+    logger.info('Greenplum Coordinator port                      = %s' % dburl.pgport)
     if standby:
-        logger.info('Greenplum Master standby host              = %s' % standby.getSegmentHostName())
-        logger.info('Greenplum Master standby data directory    = %s' % standby.getSegmentDataDirectory())
-        logger.info('Greenplum Master standby port              = %s' % standby.getSegmentPort())
+        logger.info('Greenplum Coordinator standby host              = %s' % standby.getSegmentHostName())
+        logger.info('Greenplum Coordinator standby data directory    = %s' % standby.getSegmentDataDirectory())
+        logger.info('Greenplum Coordinator standby port              = %s' % standby.getSegmentPort())
     if options.force:
         logger.info('Greenplum Force delete of dump files       = ON')
     else:
@@ -168,7 +168,7 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
     yn = ask_yesno('', 'Continue with Greenplum instance deletion?', 'N')
     if yn:
         logger.info('FINAL WARNING, you are about to delete the Greenplum instance')
-        logger.info('on master host %s.' % dburl.pghost)
+        logger.info('on coordinator host %s.' % dburl.pghost)
         if dumpDirsExist and options.force:
             logger.warn('There are database dump files, these will be DELETED if you continue!')
             g_warnings_generated = True
@@ -184,8 +184,8 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
 # -------------------------------------------------------------------------
 def check_for_dump_files(options):
     logger.info('Checking for database dump files...')
-    return gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*dump*'") \
-           or gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*backups*'")
+    return gp.GpDirsExist.local('check for dump dirs', baseDir=options.coordinator_data_dir, dirName="'*dump*'") \
+           or gp.GpDirsExist.local('check for dump dirs', baseDir=options.coordinator_data_dir, dirName="'*backups*'")
 
 def getTablespaceDirs():
     ''' Create list of user-created tablespace locations for each host '''
@@ -219,8 +219,8 @@ def delete_cluster(options):
     # check for dumps if needed
     dump_files_exist = check_for_dump_files(options)
     if not options.force and dump_files_exist:
-        logger.fatal('Located possible database backup file on Master instance host')
-        logger.fatal('in directory %s' % options.master_data_dir)
+        logger.fatal('Located possible database backup file on Coordinator instance host')
+        logger.fatal('in directory %s' % options.coordinator_data_dir)
         logger.fatal('To override database backup file checking use -f option')
         raise GpDeleteSystemException('Backup files exist')
 
@@ -235,7 +235,7 @@ def delete_cluster(options):
     # get all segdbs
     segments = array.getDbList()
 
-    standby = array.standbyMaster
+    standby = array.standbyCoordinator
 
     # Display the options
     display_params(options, dburl, standby, segments, dump_files_exist)
@@ -243,7 +243,7 @@ def delete_cluster(options):
     # stop database
     logger.info('Stopping database...')
     try:
-        cmd = gp.GpStop('stop database', fast=True, datadir=options.master_data_dir)
+        cmd = gp.GpStop('stop database', fast=True, datadir=options.coordinator_data_dir)
         cmd.run(validateAfter=True)
     except:
         results = cmd.get_results()

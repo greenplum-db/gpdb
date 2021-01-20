@@ -48,7 +48,7 @@ VALID_MODE = [MODE_SYNCHRONIZED, MODE_NOT_SYNC]
 
 # These are all the valid states primary/mirror pairs can
 # be in.  Any configuration other than this will cause the
-# FTS Prober to bring down the master postmaster until the
+# FTS Prober to bring down the coordinator postmaster until the
 # configuration is corrected.  Here, primary and mirror refer
 # to the segments current role, not the preferred_role.
 #
@@ -68,7 +68,7 @@ _MODE_LABELS = {
 def getDataModeLabel(mode):
     return _MODE_LABELS[mode]
 
-MASTER_CONTENT_ID = -1
+COORDINATOR_CONTENT_ID = -1
 
 class InvalidSegmentConfiguration(Exception):
     """Exception raised when an invalid gparray configuration is
@@ -238,8 +238,8 @@ class Segment:
     # --------------------------------------------------------------------
     # Six simple helper functions to identify what role a segment plays:
     #  + QD (Query Dispatcher)
-    #     + master
-    #     + standby master
+    #     + coordinator
+    #     + standby coordinator
     #  + QE (Query Executor)
     #     + primary
     #     + mirror
@@ -758,8 +758,8 @@ class GpArray:
     GpArray is a python class that describes a Greenplum array.
 
     A Greenplum array consists of:
-      master         - The primary QD for the array
-      standby master - The mirror QD for the array [optional]
+      coordinator         - The primary QD for the array
+      standby coordinator - The mirror QD for the array [optional]
       segmentPairs array  - an array of segmentPairs within the cluster
 
     Each segmentPair has a primary and a mirror segment; if the system has no
@@ -772,8 +772,8 @@ class GpArray:
 
     # --------------------------------------------------------------------
     def __init__(self, segments, segmentsAsLoadedFromDb=None):
-        self.master = None
-        self.standbyMaster = None
+        self.coordinator = None
+        self.standbyCoordinator = None
         self.segmentPairs = []
         self.expansionSegmentPairs=[]
         self.numPrimarySegments = 0
@@ -788,16 +788,16 @@ class GpArray:
 
             # Handle QD nodes
             if segdb.isSegmentMaster(True):
-                if self.master != None:
-                    logger.error("multiple master dbs defined")
-                    raise Exception("GpArray - multiple master dbs defined")
-                self.master = segdb
+                if self.coordinator != None:
+                    logger.error("multiple coordinator dbs defined")
+                    raise Exception("GpArray - multiple coordinator dbs defined")
+                self.coordinator = segdb
 
             elif segdb.isSegmentStandby(True):
-                if self.standbyMaster != None:
-                    logger.error("multiple standby master dbs defined")
-                    raise Exception("GpArray - multiple standby master dbs defined")
-                self.standbyMaster = segdb
+                if self.standbyCoordinator != None:
+                    logger.error("multiple standby coordinator dbs defined")
+                    raise Exception("GpArray - multiple standby coordinator dbs defined")
+                self.standbyCoordinator = segdb
 
             # Handle regular segments
             elif segdb.isSegmentQE():
@@ -806,23 +806,23 @@ class GpArray:
                 self.addSegmentDb(segdb)
 
             else:
-                # Not a master, standbymaster, primary, or mirror?
+                # Not a coordinator, standbycoordinator, primary, or mirror?
                 # shouldn't even be possible.
                 logger.error("FATAL - invalid dbs defined")
                 raise Exception("Error: GpArray() - invalid dbs defined")
 
-        # Make sure we have a master db
-        if self.master is None:
-            logger.error("FATAL - no master dbs defined!")
-            raise Exception("Error: GpArray() - no master dbs defined")
+        # Make sure we have a coordinator db
+        if self.coordinator is None:
+            logger.error("FATAL - no coordinator dbs defined!")
+            raise Exception("Error: GpArray() - no coordinator dbs defined")
 
     def __str__(self):
-        return "Master: %s\nStandby: %s\nSegment Pairs: %s" % (str(self.master),
-                                                          str(self.standbyMaster) if self.standbyMaster else 'Not Configured',
+        return "Coordinator: %s\nStandby: %s\nSegment Pairs: %s" % (str(self.coordinator),
+                                                          str(self.standbyCoordinator) if self.standbyCoordinator else 'Not Configured',
                                                           "\n".join([str(segPair) for segPair in self.segmentPairs]))
 
-    def hasStandbyMaster(self):
-        return self.standbyMaster is not None
+    def hasStandbyCoordinator(self):
+        return self.standbyCoordinator is not None
 
     def addSegmentDb(self, segdb):
         """
@@ -864,10 +864,10 @@ class GpArray:
             for host in gpdbByHost:
                 gpdbList = gpdbByHost[host]
                 if len(gpdbList) == 1 and gpdbList[0].isSegmentQD() == True:
-                    # This host has one master segment and nothing else
+                    # This host has one coordinator segment and nothing else
                     continue
                 if len(gpdbList) == 2 and gpdbList[0].isSegmentQD() and gpdbList[1].isSegmentQD():
-                    # This host has the master segment and its mirror and nothing else
+                    # This host has the coordinator segment and its mirror and nothing else
                     continue
                 numPrimaries = 0
                 numMirrors   = 0
@@ -1024,9 +1024,9 @@ class GpArray:
         """
 
         dbs=[]
-        dbs.append(self.master)
-        if self.standbyMaster:
-            dbs.append(self.standbyMaster)
+        dbs.append(self.coordinator)
+        if self.standbyCoordinator:
+            dbs.append(self.standbyCoordinator)
         if includeExpansionSegs:
             dbs.extend(self.getSegDbList(True))
         else:
@@ -1039,10 +1039,10 @@ class GpArray:
         Return a list of all Hosts that make up the array
         """
         hostList = []
-        hostList.append(self.master.getSegmentHostName())
-        if (self.standbyMaster and
-            self.master.getSegmentHostName() != self.standbyMaster.getSegmentHostName()):
-            hostList.append(self.standbyMaster.getSegmentHostName())
+        hostList.append(self.coordinator.getSegmentHostName())
+        if (self.standbyCoordinator and
+            self.coordinator.getSegmentHostName() != self.standbyCoordinator.getSegmentHostName()):
+            hostList.append(self.standbyCoordinator.getSegmentHostName())
 
         dbList = self.getDbList(includeExpansionSegs = includeExpansionSegs)
         for db in dbList:
@@ -1185,20 +1185,20 @@ class GpArray:
     def get_hostlist(self, includeMaster=True):
         hosts=[]
         if includeMaster:
-            hosts.append(self.master.hostname)
-            if self.standbyMaster is not None:
-                hosts.append(self.standbyMaster.hostname)
+            hosts.append(self.coordinator.hostname)
+            if self.standbyCoordinator is not None:
+                hosts.append(self.standbyCoordinator.hostname)
         for segPair in self.segmentPairs:
             hosts.extend(segPair.get_hosts())
         # dedupe
         return list(set(hosts))
 
     # --------------------------------------------------------------------
-    def get_master_host_names(self):
-        if self.hasStandbyMaster():
-            return [self.master.hostname, self.standbyMaster.hostname]
+    def get_coordinator_host_names(self):
+        if self.hasStandbyCoordinator():
+            return [self.coordinator.hostname, self.standbyCoordinator.hostname]
         else:
-            return [self.master.hostname]
+            return [self.coordinator.hostname]
 
     # --------------------------------------------------------------------
     def get_max_dbid(self,includeExpansionSegs=False):
@@ -1378,9 +1378,9 @@ class GpArray:
         Returns the prefix portion of <prefix><contentid>
         """
 
-        start_last_dir = self.master.datadir.rfind('/') + 1
-        start_dir_content = self.master.datadir.rfind('-')
-        prefix = self.master.datadir[start_last_dir:start_dir_content]
+        start_last_dir = self.coordinator.datadir.rfind('/') + 1
+        start_dir_content = self.coordinator.datadir.rfind('-')
+        prefix = self.coordinator.datadir[start_last_dir:start_dir_content]
         return prefix
 
     # --------------------------------------------------------------------
@@ -1781,18 +1781,18 @@ class GpArray:
             """
         self.__segmentsAsLoadedFromDb = segments
 
-def get_segment_hosts(master_port):
+def get_segment_hosts(coordinator_port):
     """
     """
-    gparray = GpArray.initFromCatalog( dbconn.DbURL(port=master_port), utility=True )
+    gparray = GpArray.initFromCatalog( dbconn.DbURL(port=coordinator_port), utility=True )
     segments = GpArray.getSegmentsByHostName( gparray.getDbList() )
     return list(segments.keys())
 
 
-def get_session_ids(master_port):
+def get_session_ids(coordinator_port):
     """
     """
-    conn = dbconn.connect( dbconn.DbURL(port=master_port), utility=True )
+    conn = dbconn.connect( dbconn.DbURL(port=coordinator_port), utility=True )
     try:
         rows = dbconn.query(conn, "SELECT sess_id from pg_stat_activity where sess_id > 0;")
         ids  = set(row[0] for row in rows)
@@ -1806,8 +1806,8 @@ def get_gparray_from_config():
     from gppylib.system import configurationInterface
     from gppylib.system import configurationImplGpdb
     from gppylib.system.environment import GpMasterEnvironment
-    master_data_dir = os.environ['MASTER_DATA_DIRECTORY']
-    gpEnv = GpMasterEnvironment(master_data_dir, False)
+    coordinator_data_dir = os.environ['MASTER_DATA_DIRECTORY']
+    gpEnv = GpMasterEnvironment(coordinator_data_dir, False)
     configurationInterface.registerConfigurationProvider(
         configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
     confProvider = configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())

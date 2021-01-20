@@ -24,8 +24,8 @@ from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
 
-master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-if master_data_dir is None:
+coordinator_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+if coordinator_data_dir is None:
     raise Exception('MASTER_DATA_DIRECTORY is not set')
 
 
@@ -403,12 +403,12 @@ def create_external_partition(context, tablename, dbname, port, filename):
                         partition s_5  start(date '2014-01-01') end(date '2015-01-01') ) \
                         ;" % (tablename, table_definition)
 
-    master_hostname = get_master_hostname();
+    coordinator_hostname = get_coordinator_hostname();
     create_ext_table_str = "Create readable external table %s_ret (%s) \
                             location ('gpfdist://%s:%s/%s') \
                             format 'csv' encoding 'utf-8' \
                             log errors segment reject limit 1000 \
-                            ;" % (tablename, table_definition, master_hostname[0][0].strip(), port, filename)
+                            ;" % (tablename, table_definition, coordinator_hostname[0][0].strip(), port, filename)
 
     alter_table_str = "Alter table %s exchange partition p_2 \
                        with table %s_ret without validation \
@@ -576,9 +576,9 @@ def check_row_count(context, tablename, dbname, nrows):
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
 
 
-def get_master_hostname(dbname='template1'):
-    master_hostname_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE content=-1 AND role='p'"
-    return getRows(dbname, master_hostname_sql)
+def get_coordinator_hostname(dbname='template1'):
+    coordinator_hostname_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE content=-1 AND role='p'"
+    return getRows(dbname, coordinator_hostname_sql)
 
 
 def get_hosts(dbname='template1'):
@@ -602,9 +602,9 @@ def get_all_hostnames_as_list(context, dbname):
     for seg in segs:
         hosts.append(seg[0].strip())
 
-    masters = get_master_hostname(dbname)
-    for master in masters:
-        hosts.append(master[0].strip())
+    coordinators = get_coordinator_hostname(dbname)
+    for coordinator in coordinators:
+        hosts.append(coordinator[0].strip())
 
     return hosts
 

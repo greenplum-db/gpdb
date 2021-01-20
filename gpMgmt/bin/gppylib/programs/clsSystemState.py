@@ -66,7 +66,7 @@ VALUE__REPL_FLUSH_LSN = FieldDefinition("WAL Flush Location", "flush_lsn", "text
 VALUE__REPL_REPLAY_LSN = FieldDefinition("WAL Replay Location", "replay_lsn", "text")
 
 CATEGORY__STATUS = "Status"
-VALUE__MASTER_REPORTS_STATUS = FieldDefinition("Configuration reports status as", "status_in_config", "text", "Config status")
+VALUE__COORDINATOR_REPORTS_STATUS = FieldDefinition("Configuration reports status as", "status_in_config", "text", "Config status")
 VALUE__MIRROR_SEGMENT_STATUS = FieldDefinition("Segment status", "segment_status", "text") # must not be same name as VALUE__SEGMENT_STATUS
 VALUE__NONMIRROR_DATABASE_STATUS = FieldDefinition("Database status", "database_status", "text")
 VALUE__ACTIVE_PID = FieldDefinition("PID", "active_pid", "text") # int would be better, but we print error messages here sometimes
@@ -136,7 +136,7 @@ class GpStateData:
 
         self.__entriesByCategory[CATEGORY__STATUS] = \
                 [VALUE__ACTIVE_PID,
-                VALUE__MASTER_REPORTS_STATUS,
+                VALUE__COORDINATOR_REPORTS_STATUS,
                 VALUE__MIRROR_SEGMENT_STATUS,
                 VALUE__NONMIRROR_DATABASE_STATUS]
 
@@ -428,23 +428,23 @@ class GpSystemStateProgram:
         Log information about the configured standby and its current status
         """
         if standby is None:
-            tabLog.info(["Master standby", "= No master standby configured"])
+            tabLog.info(["Coordinator standby", "= No coordinator standby configured"])
         else:
-            tabLog.info(["Master standby", "= %s" % standby.getSegmentHostName()])
+            tabLog.info(["Coordinator standby", "= %s" % standby.getSegmentHostName()])
 
             (standbyStatusFetchWarning, outputFromStandbyCmd) = hostNameToResults[standby.getSegmentHostName()]
             standbyData = outputFromStandbyCmd[standby.getSegmentDbId()] if standbyStatusFetchWarning is None else None
 
             if standbyStatusFetchWarning is not None:
-                tabLog.warn(["Standby master state", "= Status could not be determined: %s" % standbyStatusFetchWarning])
+                tabLog.warn(["Standby coordinator state", "= Status could not be determined: %s" % standbyStatusFetchWarning])
 
             elif standbyData[gp.SEGMENT_STATUS__HAS_POSTMASTER_PID_FILE] and \
                     standbyData[gp.SEGMENT_STATUS__GET_PID]['pid'] > 0 and \
                     standbyData[gp.SEGMENT_STATUS__GET_PID]['error'] is None:
-                tabLog.info(["Standby master state", "= Standby host passive"])
+                tabLog.info(["Standby coordinator state", "= Standby host passive"])
 
             else:
-                tabLog.warn(["Standby master state", "= Standby host DOWN"])
+                tabLog.warn(["Standby coordinator state", "= Standby host DOWN"])
 
     def __showStatusStatistics(self, gpEnv, gpArray):
         """
@@ -456,13 +456,13 @@ class GpSystemStateProgram:
 
         logger.info("Greenplum instance status summary")
 
-        # master summary info
+        # coordinator summary info
         tabLog = TableLogger().setWarnWithArrows(True)
 
         tabLog.addSeparator()
-        tabLog.info(["Master instance", "= Active"])
+        tabLog.info(["Coordinator instance", "= Active"])
 
-        self.__appendStandbySummary(hostNameToResults, gpArray.standbyMaster, tabLog)
+        self.__appendStandbySummary(hostNameToResults, gpArray.standbyCoordinator, tabLog)
 
         tabLog.info(["Total segment instance count from metadata", "= %s" % len(gpArray.getSegDbList())])
         tabLog.addSeparator()
@@ -521,9 +521,9 @@ class GpSystemStateProgram:
 
             # print stuff
             tabLog.info(["Total %s segments" % whichType.lower(), "= %d" % numSegments])
-            tabLog.info(["Total %s segment valid (at master)" % whichType.lower(), "= %d" % numValidAtMaster])
+            tabLog.info(["Total %s segment valid (at coordinator)" % whichType.lower(), "= %d" % numValidAtMaster])
             tabLog.infoOrWarn(numFailuresAtMaster > 0,
-                      ["Total %s segment failures (at master)" % whichType.lower(), "= %d" % numFailuresAtMaster])
+                      ["Total %s segment failures (at coordinator)" % whichType.lower(), "= %d" % numFailuresAtMaster])
 
             tabLog.infoOrWarn(numPostmasterPidFilesMissing > 0,
                       ["Total number of postmaster.pid files missing", "= %d" % numPostmasterPidFilesMissing])
@@ -657,7 +657,7 @@ class GpSystemStateProgram:
         if segmentsThatAreDown:
             logger.info("----------------------------------------------------")
             logger.info("Downed Segments (may include segments where status could not be retrieved)")
-            logSegments(segmentsThatAreDown, False, [VALUE__MASTER_REPORTS_STATUS, VALUE__SEGMENT_STATUS])
+            logSegments(segmentsThatAreDown, False, [VALUE__COORDINATOR_REPORTS_STATUS, VALUE__SEGMENT_STATUS])
             exitCode = 1
         else:
             pass # logger.info( "No segments are down")
@@ -693,7 +693,7 @@ class GpSystemStateProgram:
                 VALUE__MIRROR_STATUS,
                 VALUE__MIRROR_RECOVERY_START,
 
-                VALUE__MASTER_REPORTS_STATUS,
+                VALUE__COORDINATOR_REPORTS_STATUS,
                 VALUE__SEGMENT_STATUS,
                 VALUE__HAS_DATABASE_STATUS_WARNING,
 
@@ -709,7 +709,7 @@ class GpSystemStateProgram:
 
     def __segmentStatusPipeSeparatedForTableUse(self, gpEnv, gpArray):
         """
-        Print out the current status of the cluster (not including master+standby) as a pipe separate list
+        Print out the current status of the cluster (not including coordinator+standby) as a pipe separate list
 
         @param gpEnv the GpMasterEnvironment object
         @param gpArray the array to display
@@ -812,7 +812,7 @@ class GpSystemStateProgram:
         columns = ["%s %s" % (f.getColumnName(), f.getColumnType()) for f in self.__getSegmentStatusColumns()]
 
         sql = "\nDROP EXTERNAL TABLE IF EXISTS gpstate_segment_status;\n\n\nCREATE EXTERNAL WEB TABLE gpstate_segment_status\n" \
-              "(%s)\nEXECUTE '%s' ON MASTER\nFORMAT 'TEXT' (DELIMITER '|' NULL AS '');\n" % \
+              "(%s)\nEXECUTE '%s' ON COORDINATOR\nFORMAT 'TEXT' (DELIMITER '|' NULL AS '');\n" % \
                (", ".join(columns), scriptName )
 
         print(sql)
@@ -841,9 +841,9 @@ class GpSystemStateProgram:
         hostNameToResults = self.__fetchAllSegmentData(gpArray)
 
         #
-        # fetch data about master
+        # fetch data about coordinator
         #
-        master = gpArray.master
+        coordinator = gpArray.coordinator
 
         dbUrl = dbconn.DbURL(port=gpEnv.getMasterPort(), dbname='template1' )
         conn = dbconn.connect(dbUrl, utility=True)
@@ -864,41 +864,41 @@ class GpSystemStateProgram:
         except Exception:
             qdRole = "utility" # unable to connect in non-utility, but we've been able to connect in utility so...
         #
-        # print output about master
+        # print output about coordinator
         #
-        (statusFetchWarning, outputFromMasterCmd) = hostNameToResults[master.getSegmentHostName()]
-        masterData = outputFromMasterCmd[master.getSegmentDbId()] if statusFetchWarning is None else None
+        (statusFetchWarning, outputFromMasterCmd) = hostNameToResults[coordinator.getSegmentHostName()]
+        coordinatorData = outputFromMasterCmd[coordinator.getSegmentDbId()] if statusFetchWarning is None else None
         data = self.__buildGpStateData(gpArray, hostNameToResults)
 
         logger.info( "----------------------------------------------------" )
-        logger.info("-Master Configuration & Status")
+        logger.info("-Coordinator Configuration & Status")
         logger.info( "----------------------------------------------------" )
 
         self.__addClusterDownWarning(gpArray, data)
 
         tabLog = TableLogger().setWarnWithArrows(True)
-        tabLog.info(["Master host", "= %s" % master.getSegmentHostName()])
+        tabLog.info(["Coordinator host", "= %s" % coordinator.getSegmentHostName()])
         if statusFetchWarning is None:
-            pidData = masterData[gp.SEGMENT_STATUS__GET_PID]
-            tabLog.info(["Master postgres process ID", "= %s" % pidData['pid']])
+            pidData = coordinatorData[gp.SEGMENT_STATUS__GET_PID]
+            tabLog.info(["Coordinator postgres process ID", "= %s" % pidData['pid']])
         else:
-            tabLog.warn(["Master port", "= Error fetching data: %s" % statusFetchWarning])
-        tabLog.info(["Master data directory", "= %s" % master.getSegmentDataDirectory()])
-        tabLog.info(["Master port", "= %d" % master.getSegmentPort()])
+            tabLog.warn(["Coordinator port", "= Error fetching data: %s" % statusFetchWarning])
+        tabLog.info(["Coordinator data directory", "= %s" % coordinator.getSegmentDataDirectory()])
+        tabLog.info(["Coordinator port", "= %d" % coordinator.getSegmentPort()])
 
-        tabLog.info(["Master current role", "= %s" % qdRole])
+        tabLog.info(["Coordinator current role", "= %s" % qdRole])
         tabLog.info(["Greenplum initsystem version", "= %s" % initDbVersion])
 
         if statusFetchWarning is None:
-            if masterData[gp.SEGMENT_STATUS__GET_VERSION] is None:
+            if coordinatorData[gp.SEGMENT_STATUS__GET_VERSION] is None:
                 tabLog.warn(["Greenplum current version", "= Unknown"])
             else:
-                tabLog.info(["Greenplum current version", "= %s" % masterData[gp.SEGMENT_STATUS__GET_VERSION]])
+                tabLog.info(["Greenplum current version", "= %s" % coordinatorData[gp.SEGMENT_STATUS__GET_VERSION]])
         else:
             tabLog.warn(["Greenplum current version", "= Error fetching data: %s" % statusFetchWarning])
         tabLog.info(["Postgres version", "= %s" % pgVersion])
 
-        self.__appendStandbySummary(hostNameToResults, gpArray.standbyMaster, tabLog)
+        self.__appendStandbySummary(hostNameToResults, gpArray.standbyCoordinator, tabLog)
         tabLog.outputTable()
         hasWarnings = hasWarnings or tabLog.hasWarnings()
 
@@ -1150,7 +1150,7 @@ class GpSystemStateProgram:
                     data.addValue(VALUE__ACTIVE_PID_INT, "", True)
 
                 data.addValue(VALUE__VERSION_STRING, segmentData[gp.SEGMENT_STATUS__GET_VERSION])
-            data.addValue(VALUE__MASTER_REPORTS_STATUS, "Up" if seg.isSegmentUp() else "Down", seg.isSegmentDown())
+            data.addValue(VALUE__COORDINATOR_REPORTS_STATUS, "Up" if seg.isSegmentUp() else "Down", seg.isSegmentDown())
 
             databaseStatus = None
             databaseStatusIsWarning = False
@@ -1185,7 +1185,7 @@ class GpSystemStateProgram:
 
         exitCode = 0
 
-        logger.info("-Quick Greenplum database status from Master instance only")
+        logger.info("-Quick Greenplum database status from Coordinator instance only")
         logger.info( "----------------------------------------------------------")
 
         segments = [seg for seg in gpArray.getDbList() if seg.isSegmentQE()]
@@ -1210,7 +1210,7 @@ class GpSystemStateProgram:
 
     def __showPortInfo(self, gpEnv, gpArray):
 
-        logger.info("-Master segment instance  %s  port = %d" % (gpEnv.getMasterDataDir(), gpEnv.getMasterPort()))
+        logger.info("-Coordinator segment instance  %s  port = %d" % (gpEnv.getMasterDataDir(), gpEnv.getMasterPort()))
         logger.info("-Segment instance port assignments")
         logger.info("----------------------------------")
 
@@ -1220,15 +1220,15 @@ class GpSystemStateProgram:
             tabLog.info(self.__appendSegmentTripletToArray(seg, []))
         tabLog.outputTable()
 
-    def __showStandbyMasterInformation(self, gpEnv, gpArray):
+    def __showStandbyCoordinatorInformation(self, gpEnv, gpArray):
 
-        standby = gpArray.standbyMaster
+        standby = gpArray.standbyCoordinator
 
         #
         # print standby configuration/status
         #
         if standby is None:
-            logger.info("Standby master instance not configured")
+            logger.info("Standby coordinator instance not configured")
         else:
             cmd = gp.GpGetSegmentStatusValues("get standby segment version status", [standby],
                                [gp.SEGMENT_STATUS__GET_PID], verbose=logging_is_verbose(), ctxt=base.REMOTE,
@@ -1245,7 +1245,7 @@ class GpSystemStateProgram:
                 pidData['error'] = None
 
             # Print output!
-            logger.info("Standby master details" )
+            logger.info("Standby coordinator details" )
             logger.info("----------------------" )
             tabLog = TableLogger().setWarnWithArrows(True)
             tabLog.info(["Standby address", "= %s" % standby.getSegmentAddress()])
@@ -1377,7 +1377,7 @@ class GpSystemStateProgram:
                  (1 if self.__options.segmentStatusPipeSeparatedForTableUse else 0) + \
                  (1 if self.__options.printSampleExternalTableSqlForSegmentStatus else 0) + \
                  (1 if self.__options.showPortInformation else 0) + \
-                 (1 if self.__options.showStandbyMasterInformation else 0) + \
+                 (1 if self.__options.showStandbyCoordinatorInformation else 0) + \
                  (1 if self.__options.showSummaryOfSegmentsWhichRequireAttention else 0) + \
                  (1 if self.__options.showVersionInfo else 0)
         if numSet > 1:
@@ -1389,7 +1389,7 @@ class GpSystemStateProgram:
         self.__pool = base.WorkerPool(self.__options.parallelDegree)
 
         # load config
-        gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True, self.__options.timeout, self.__options.retries)
+        gpEnv = GpMasterEnvironment(self.__options.coordinatorDataDirectory, True, self.__options.timeout, self.__options.retries)
         confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
         gpArray = confProvider.loadSystemConfig(useUtilityMode=True)
 
@@ -1408,8 +1408,8 @@ class GpSystemStateProgram:
             exitCode = self.__showSummaryOfSegmentsWhichRequireAttention(gpEnv, gpArray)
         elif self.__options.printSampleExternalTableSqlForSegmentStatus:
             exitCode = self.__printSampleExternalTableSqlForSegmentStatus(gpEnv)
-        elif self.__options.showStandbyMasterInformation:
-            exitCode = self.__showStandbyMasterInformation(gpEnv, gpArray)
+        elif self.__options.showStandbyCoordinatorInformation:
+            exitCode = self.__showStandbyCoordinatorInformation(gpEnv, gpArray)
         elif self.__options.showPortInformation:
             exitCode = self.__showPortInfo(gpEnv, gpArray)
         elif self.__options.segmentStatusPipeSeparatedForTableUse:
@@ -1471,9 +1471,9 @@ class GpSystemStateProgram:
                             metavar="<showPortInformation>",
                             help="Show port information")
         addTo.add_option("-f", None, default=False, action="store_true",
-                         dest="showStandbyMasterInformation",
-                         metavar="<showStandbyMasterInformation>",
-                         help="Show standby master information")
+                         dest="showStandbyCoordinatorInformation",
+                         metavar="<showStandbyCoordinatorInformation>",
+                         help="Show standby coordinator information")
         addTo.add_option("-b", None, default=False, action="store_true",
                          dest="showStatusStatistics",
                          metavar="<showStatusStatistics>",

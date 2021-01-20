@@ -22,10 +22,10 @@ are disabled to avoid catalog inconsistency between existing segments and new se
 	- Prepare new nodes. After this, new segments are startable, while not
 	  visible yet in the cluster.
 
-		- lock catalog to prevent catalog modifications on master (details explained in the
+		- lock catalog to prevent catalog modifications on coordinator (details explained in the
 		  later section)
 		- copy base files (e.g. catalog tables, xlogs, configuration files)
-		  from master to new segments
+		  from coordinator to new segments
 		- update configurations on new segments, such as dbid, port number in
 		  `postgresql.conf`
 		- update `pg_hba.conf` for the new segments to be accessible
@@ -35,7 +35,7 @@ are disabled to avoid catalog inconsistency between existing segments and new se
 
 		- add the new segments into table `gp_segment_configuration` with status 'u'
 		- bump the expand version so other backends can get newest `gp_segment_configuration`
-		- unlock catalog updates on master
+		- unlock catalog updates on coordinator
 
 ### 1.2 Preventing catalog inconsistency
 
@@ -43,9 +43,9 @@ To avoid catalog inconsistency across existing segments and new segments,
 catalog change is blocked during initialization phase, thus DDL operations (on most
 tables) are disallowed.
 
-Once gpexpand starts to copy base files from master to new segments, gpexpand have to
-prevent concurrent catalog changes on master. To do so, a new catalog lock is added.
-On master all changes to catalog tables acquire shared access on
+Once gpexpand starts to copy base files from coordinator to new segments, gpexpand have to
+prevent concurrent catalog changes on coordinator. To do so, a new catalog lock is added.
+On coordinator all changes to catalog tables acquire shared access on
 this lock, while gpexpand acquires access exclusive mode on the same lock. If
 there are existing uncommitted catalog changes, gpexpand must wait for all of
 them to commit or rollback. Once gpexpand has held the lock, all other concurrent
@@ -53,7 +53,7 @@ catalog changes will fail immediately, otherwise, those transactions cannot appl
 catalog changes to new segments, and result in catalog inconsistency.
 
 Updates on some of the catalog tables are always allowed as they are
-considered __local__ or __master only__ catalog tables, their contents will be
+considered __local__ or __coordinator only__ catalog tables, their contents will be
 truncated anyway after copying to new segments. These catalog tables are:
 
     gp_configuration_history

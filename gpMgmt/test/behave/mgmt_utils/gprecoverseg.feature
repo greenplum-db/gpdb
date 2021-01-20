@@ -251,10 +251,10 @@ Feature: gprecoverseg tests
         Then the saved "primary" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
         And the segments are synchronized
         # validate the new segment has the correct setting by getting admin connection to that segment

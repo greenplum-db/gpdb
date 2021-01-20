@@ -28,11 +28,11 @@ logger = gplog.get_default_logger()
 class GpPkgProgram:
     """ This is the CLI entry point to package management code.  """
     def __init__(self, options, args):
-        self.master_datadir = options.masterDataDirectory
+        self.coordinator_datadir = options.coordinatorDataDirectory
 
-        # TODO: AK: Program logic should not be dictating master, standby, and segment information
+        # TODO: AK: Program logic should not be dictating coordinator, standby, and segment information
         # In other words, the fundamental Operations should have APIs that preclude the need for this.
-        self.master_host = None
+        self.coordinator_host = None
         self.standby_host = None
         self.segment_host_list = None
 
@@ -133,15 +133,15 @@ class GpPkgProgram:
             This method gets the host names
             of all hosts in the gpdb array.
             It sets the following variables
-                GpPkgProgram.master_host to master
+                GpPkgProgram.coordinator_host to coordinator
                 GpPkgProgram.standby_host to standby
                 GpPkgProgram.segment_host_list to segment hosts
         """
 
         logger.debug('_get_gpdb_host_list')
 
-        gparr = GpArray.initFromCatalog(dbconn.DbURL(port = self.master_port), utility = True)
-        master_host = None
+        gparr = GpArray.initFromCatalog(dbconn.DbURL(port = self.coordinator_port), utility = True)
+        coordinator_host = None
         standby_host = None
         segment_host_list = []
 
@@ -149,7 +149,7 @@ class GpPkgProgram:
 
         for seg in segs:
             if seg.isSegmentMaster(current_role = True):
-                master_host = seg.getSegmentHostName()
+                coordinator_host = seg.getSegmentHostName()
             elif seg.isSegmentStandby(current_role = True):
                 standby_host = seg.getSegmentHostName()
             else:
@@ -159,24 +159,24 @@ class GpPkgProgram:
         # dont install multiple times on the same host
         segment_host_list = list(set(segment_host_list))
 
-        # Segments might exist on the master host. Since we store the
-        # master host separately in self.master_host, storing the master_host
+        # Segments might exist on the coordinator host. Since we store the
+        # coordinator host separately in self.coordinator_host, storing the coordinator_host
         # in the segment_host_list is redundant.
         for host in segment_host_list:
-            if host == master_host or host == standby_host:
+            if host == coordinator_host or host == standby_host:
                 segment_host_list.remove(host)
 
-        self.master_host = master_host
+        self.coordinator_host = coordinator_host
         self.standby_host = standby_host
         self.segment_host_list = segment_host_list
 
-    def _get_master_port(self, datadir):
+    def _get_coordinator_port(self, datadir):
 
         '''
-            Obtain the master port from the pgconf file
+            Obtain the coordinator port from the pgconf file
         '''
 
-        logger.debug('_get_master_port')
+        logger.debug('_get_coordinator_port')
         pgconf_dict = pgconf.readfile(os.path.join(datadir, 'postgresql.conf'))
         return pgconf_dict.int('port') or os.getenv('PGPORT')
 
@@ -211,9 +211,9 @@ class GpPkgProgram:
                 if len(results) != 0 and 'not found' in results:
                     raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH')
 
-        if self.master_datadir is None:
-            self.master_datadir = gp.get_masterdatadir()
-        self.master_port = self._get_master_port(self.master_datadir)
+        if self.coordinator_datadir is None:
+            self.coordinator_datadir = gp.get_coordinatordatadir()
+        self.coordinator_port = self._get_coordinator_port(self.coordinator_datadir)
 
         self._get_gpdb_host_list()
 
@@ -227,7 +227,7 @@ class GpPkgProgram:
 
         if self.install:
             pkg = Gppkg.from_package_path(self.install)
-            InstallPackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run()
+            InstallPackage(pkg, self.coordinator_host, self.standby_host, self.segment_host_list).run()
         elif self.query:
             query_type, package_path = self.query
             QueryPackage(query_type, package_path).run()
@@ -248,7 +248,7 @@ class GpPkgProgram:
 
             pkg_file = pkg_file_list[0]
             pkg = Gppkg.from_package_path(os.path.join(GPPKG_ARCHIVE_PATH, pkg_file))
-            UninstallPackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run()
+            UninstallPackage(pkg, self.coordinator_host, self.standby_host, self.segment_host_list).run()
         elif self.update:
             logger.warning('WARNING: The process of updating a package includes removing all')
             logger.warning('previous versions of the system objects related to the package. For')
@@ -260,7 +260,7 @@ class GpPkgProgram:
                     logger.info('Skipping update of gppkg based on user input')
                     return
             pkg = Gppkg.from_package_path(self.update)
-            UpdatePackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run()
+            UpdatePackage(pkg, self.coordinator_host, self.standby_host, self.segment_host_list).run()
         elif self.clean:
             CleanGppkg(self.standby_host, self.segment_host_list).run()
 

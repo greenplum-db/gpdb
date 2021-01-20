@@ -12,8 +12,8 @@ gpinitsystem -c <gpinitsystem_config>
             [-h <hostfile_gpinitsystem>]
             [-B <parallel_processes>] 
             [-p <postgresql_conf_param_file>]
-            [-s <standby_master_host>
-                [-P <standby_master_port>] [ {-S | --standby-datadir} <standby_master_datadir>]
+            [-s <standby_coordinator_host>
+                [-P <standby_coordinator_port>] [ {-S | --standby-datadir} <standby_coordinator_datadir>]
             [-m number | --max_connections=<number>] [--shared_buffers=<size>]
             [-n locale | --locale=<locale>] [--lc-collate=<locale>]
             [--lc-ctype=<locale>] [--lc-messages=<locale>] 
@@ -38,16 +38,16 @@ $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config.
  
 Before running this utility, make sure that you have installed 
 the Greenplum Database software on all the hosts in the array.
-In a Greenplum Database DBMS, each database instance (the master 
+In a Greenplum Database DBMS, each database instance (the coordinator 
 and all segments) must be initialized across all of the hosts in 
 the system in such a way that they can all work together as a 
 unified DBMS. The gpinitsystem utility takes care of initializing 
-the Greenplum master and each segment instance, and configuring 
+the Greenplum coordinator and each segment instance, and configuring 
 the system as a whole.
 
 Before running gpinitsystem, you must set the $GPHOME environment 
 variable to point to the location of your Greenplum Database 
-installation on the master host and exchange SSH keys between 
+installation on the coordinator host and exchange SSH keys between 
 all host addresses in the array using gpssh-exkeys.
 
 This utility performs the following tasks:
@@ -58,8 +58,8 @@ This utility performs the following tasks:
 * Verifies the locale settings.
 * Displays the configuration that will be used and prompts the 
   user for confirmation.
-* Initializes the master instance.
-* Initializes the standby master instance (if specified).
+* Initializes the coordinator instance.
+* Initializes the standby coordinator instance (if specified).
 * Initializes the primary segment instances.
 * Initializes the mirror segment instances (if mirroring is configured).
 * Configures the Greenplum Database system and checks for errors.
@@ -112,7 +112,7 @@ OPTIONS
 --locale=<locale> | -n <locale>  
 
  Sets the default locale used by Greenplum Database. If not specified, 
- the LC_ALL, LC_COLLATE, or LANG environment variable of the master 
+ the LC_ALL, LC_COLLATE, or LANG environment variable of the coordinator 
  host determines the locale. If these are not set, the default locale 
  is C (POSIX). A locale identifier consists of a language identifier 
  and a region identifier, and optionally a character set encoding. 
@@ -174,7 +174,7 @@ OPTIONS
 
 --max_connections=<number> | -m <number>
 
- Sets the maximum number of client connections allowed to the master. 
+ Sets the maximum number of client connections allowed to the coordinator. 
  The default is 25.
 
 
@@ -191,7 +191,7 @@ OPTIONS
 
  Optional. The name of a file that contains postgresql.conf parameter 
  settings that you want to set for Greenplum Database. These settings 
- will be used when the individual master and segment instances are 
+ will be used when the individual coordinator and segment instances are 
  initialized. You can also set parameters after initialization using 
  the gpconfig utility.
 
@@ -209,21 +209,21 @@ OPTIONS
  or gigabytes (GB). The default is 125MB.
 
 
--s <standby_master_host>
+-s <standby_coordinator_host>
 
- Optional. If you wish to configure a backup master host, specify the 
+ Optional. If you wish to configure a backup coordinator host, specify the 
  host name using this option. The Greenplum Database software must 
  already be installed and configured on this host.
 
 
--P <standby_master_port>
+-P <standby_coordinator_port>
 
  Optional and effective only when specified with -s.  This option can
- specify the port to be used by the standby master.  The default value
- is the same as the primary master.
+ specify the port to be used by the standby coordinator.  The default value
+ is the same as the primary coordinator.
 
 
---segment-datadir=<standby_master_datadir> | -S <standby_master_datadir>
+--segment-datadir=<standby_coordinator_datadir> | -S <standby_coordinator_datadir>
 
  Optional and effective only when specified with -s.  Specifies the
  data directory of the standby.
@@ -276,7 +276,7 @@ MACHINE_LIST_FILE
 
  Optional. Can be used in place of the -h option. This specifies 
  the file that contains the list of segment host address names that 
- comprise the Greenplum system. The master host is assumed to be 
+ comprise the Greenplum system. The coordinator host is assumed to be 
  the host from which you are running the utility and should not be 
  included in this file. If your segment hosts have multiple network 
  interfaces, then this file would include all addresses for the host. 
@@ -286,11 +286,11 @@ MACHINE_LIST_FILE
 SEG_PREFIX
 
  Required. This specifies a prefix that will be used to name the 
- data directories on the master and segment instances. The naming 
+ data directories on the coordinator and segment instances. The naming 
  convention for data directories in a Greenplum Database system 
  is SEG_PREFIX<number> where <number> starts with 0 for segment 
- instances (the master is always -1). So for example, if you choose 
- the prefix gpseg, your master instance data directory would be 
+ instances (the coordinator is always -1). So for example, if you choose 
+ the prefix gpseg, your coordinator instance data directory would be 
  named gpseg-1, and the segment instances would be named 
  gpseg0, gpseg1, gpseg2, gpseg3, and so on.
 
@@ -323,7 +323,7 @@ DATA_DIRECTORY
 
 MASTER_HOSTNAME
 
- Required. The host name of the master instance. This host name must 
+ Required. The host name of the coordinator instance. This host name must 
  exactly match the configured host name of the machine (run the hostname 
  command to determine the correct hostname).
 
@@ -331,14 +331,14 @@ MASTER_HOSTNAME
 MASTER_DIRECTORY
 
  Required. This specifies the location where the data directory will 
- be created on the master host. You must make sure that the user who runs 
+ be created on the coordinator host. You must make sure that the user who runs 
  gpinitsystem (for example, the gpadmin user) has permissions to write 
  to this directory.
 
 
 MASTER_PORT
 
- Required. The port number for the master instance. This is the port 
+ Required. The port number for the coordinator instance. This is the port 
  number that users and client connections will use when accessing the 
  Greenplum Database system.
 
@@ -403,7 +403,7 @@ Initialize a Greenplum Database array and set the superuser remote password:
  $ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem --su-password=mypassword
 
 
-Initialize a Greenplum Database array with an optional standby master host:
+Initialize a Greenplum Database array with an optional standby coordinator host:
 
  $ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem -s host09
 

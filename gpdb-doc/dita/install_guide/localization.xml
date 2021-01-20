@@ -21,7 +21,7 @@
         timezone based on information from the host system.</p>
       <!--GPDB 6.0 TimeZone is set in config. file-->
       <p>As a best practice, configure Greenplum Database and the host systems to use a known,
-        supported timezone. This sets the timezone for the Greenplum Database master and segment
+        supported timezone. This sets the timezone for the Greenplum Database coordinator and segment
         instances, and prevents Greenplum Database from selecting a best match timezone each time
         the cluster is restarted, using the current system timezone and Greenplum Database timezone
         files (which may have been updated from the IANA database since the last restart). Use the
@@ -96,13 +96,13 @@
         setting the server configuration parameters that have the same name as the locale categories
         (see the <i>Greenplum Database Reference Guide</i> for more information on setting server
         configuration parameters). The defaults that are chosen by gpinitsystem are written into the
-        master and segment <codeph>postgresql.conf</codeph> configuration files to serve as defaults
+        coordinator and segment <codeph>postgresql.conf</codeph> configuration files to serve as defaults
         when the Greenplum Database system is started. If you delete these assignments from the
-        master and each segment <codeph>postgresql.conf</codeph> files then the server will inherit
+        coordinator and each segment <codeph>postgresql.conf</codeph> files then the server will inherit
         the settings from its execution environment.</p>
       <p>Note that the locale behavior of the server is determined by the environment variables seen
         by the server, not by the environment of any client. Therefore, be careful to configure the
-        correct locale settings on each Greenplum Database host (master and segments) before
+        correct locale settings on each Greenplum Database host (coordinator and segments) before
         starting the system. A consequence of this is that if client and server are set up in
         different locales, messages may appear in different languages depending on where they
         originated. </p>
@@ -151,10 +151,10 @@
               href="../utility_guide/ref/gpinitsystem.xml" type="topic" format="dita"
               scope="peer">gpinitsystem</xref></codeph>. Other locale settings including
             <codeph>LC_MESSAGES</codeph> and <codeph>LC_MONETARY</codeph> are initially determined
-          by the operating system environment of the master and/or segment host, but can be changed
+          by the operating system environment of the coordinator and/or segment host, but can be changed
           after initialization by editing the <codeph>postgresql.conf</codeph> file of each
-          Greenplum master and segment instance. You can check the active locale settings of the
-          master host using the <codeph>SHOW</codeph> command. Note that every host in your
+          Greenplum coordinator and segment instance. You can check the active locale settings of the
+          coordinator host using the <codeph>SHOW</codeph> command. Note that every host in your
           Greenplum Database array should be using identical locale settings.</p>
       </body>
     </topic>
@@ -542,7 +542,7 @@
     <title>Character Set Conversion Between Server and Client</title>
     <body>
       <p>Greenplum Database supports automatic character set conversion between server and client
-        for certain character set combinations. The conversion information is stored in the master
+        for certain character set combinations. The conversion information is stored in the coordinator
           <codeph>pg_conversion</codeph> system catalog table. Greenplum Database comes with some
         predefined conversions or you can create a new conversion using the SQL command
           <codeph>CREATE CONVERSION</codeph>. </p>
@@ -739,7 +739,7 @@
           encoding is automatically selected when a connection to the server is made. (This can
           subsequently be overridden using any of the other methods mentioned above.) </li>
         <li id="jk168668">Setting the configuration parameter <codeph>client_encoding</codeph>. If
-            <codeph>client_encoding</codeph> is set in the master <codeph>postgresql.conf</codeph>
+            <codeph>client_encoding</codeph> is set in the coordinator <codeph>postgresql.conf</codeph>
           file, that client encoding is automatically selected when a connection to Greenplum
           Database is made. (This can subsequently be overridden using any of the other methods
           mentioned above.) </li>

@@ -8,17 +8,17 @@ from gppylib.gparray import GpArray
 
 # To test that an added mirror/standby works properly, we ensure that we
 #   can actually recover data on that segment when it fails over.  We also
-#   then bring up the original segment pair to ensure that the new primary/master
+#   then bring up the original segment pair to ensure that the new primary/coordinator
 #   is fully functional.
 #
 # We follow these steps:
-# 1). add table/data to current master/primary
-# 2). stop master/primary
-# 3). wait for automatic failover(for downed primary) or explicitly promote standby(for downed master)
-# 4). make sure data is on new master/primary
+# 1). add table/data to current coordinator/primary
+# 2). stop coordinator/primary
+# 3). wait for automatic failover(for downed primary) or explicitly promote standby(for downed coordinator)
+# 4). make sure data is on new coordinator/primary
 # 5). prepare for 6:
 #     - for segments: recoverseg to bring up old primary as mirror
-#     - for the master: bring up a new standby
+#     - for the coordinator: bring up a new standby
 # 6). repeat 1-4 for new-old back to old-new
 #
 # XXX In addition to the above steps, we manually check to ensure that a
@@ -45,13 +45,13 @@ def impl(context, segment):
 
     # Fail over to standby/mirrors.
     if segment == 'standby':
-        master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+        coordinator_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
         context.standby_port = os.environ.get('PGPORT')
-        context.standby_data_dir = master_data_dir
-        context.new_standby_data_dir = '%s_1' % master_data_dir
+        context.standby_data_dir = coordinator_data_dir
+        context.new_standby_data_dir = '%s_1' % coordinator_data_dir
         context.execute_steps("""
-         When the master goes down
-          And the user runs command "gpactivatestandby -a" from standby master
+         When the coordinator goes down
+          And the user runs command "gpactivatestandby -a" from standby coordinator
          Then gpactivatestandby should return a return code of 0
          """)
         os.environ['PGHOST'] = 'mdw-2'
@@ -72,13 +72,13 @@ def impl(context, segment):
     Given another tablespace is created with data
     """.format(segment=segment))
 
-    # Fail over (rebalance) to original master/primaries.
+    # Fail over (rebalance) to original coordinator/primaries.
     if segment == 'standby':
         # Re-initialize the standby with a new directory, since
-        # the previous master cannot assume the role of standby
+        # the previous coordinator cannot assume the role of standby
         # because it does not have the required recover.conf file.
         context.execute_steps("""
-         When the user runs command "gpinitstandby -a -s mdw-1 -S {datadir}" from standby master
+         When the user runs command "gpinitstandby -a -s mdw-1 -S {datadir}" from standby coordinator
          Then gpinitstandby should return a return code of 0
          """.format(datadir=context.new_standby_data_dir))
         os.environ['MASTER_DATA_DIRECTORY'] = context.new_standby_data_dir
@@ -89,7 +89,7 @@ def impl(context, segment):
             os.environ['PGHOST'] = orig_PGHOST
         context.standby_hostname = 'mdw-1'
         context.execute_steps("""
-         When the master goes down on "mdw-2"
+         When the coordinator goes down on "mdw-2"
           And the user runs "gpactivatestandby -a"
          Then gpactivatestandby should return a return code of 0
         """)
@@ -135,7 +135,7 @@ def impl(context, segment):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
 
     if segment == 'standby':
-        check_replication(gparray.master, context.standby_hostname)
+        check_replication(gparray.coordinator, context.standby_hostname)
     else: # mirrors
         for pair in gparray.segmentPairs:
             check_replication(pair.primaryDB, pair.mirrorDB.hostname)

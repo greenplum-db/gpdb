@@ -13,30 +13,30 @@ class GpMasterEnvironment:
     """
 
     Encapsulates information about the environment in which the script is running AND about the
-       master database.
+       coordinator database.
 
-    In the future we should make it possible to build this object on segments, or when the master data directory
+    In the future we should make it possible to build this object on segments, or when the coordinator data directory
        has not been built.
 
     """
 
-    def __init__(self, masterDataDir, readFromMasterCatalog, timeout=None, retries=None, verbose=True):
+    def __init__(self, coordinatorDataDir, readFromMasterCatalog, timeout=None, retries=None, verbose=True):
         """
-        masterDataDir: if None then we try to find it from the system environment
-        readFromMasterCatalog: if True then we will connect to the master in utility mode and fetch some more
+        coordinatorDataDir: if None then we try to find it from the system environment
+        readFromMasterCatalog: if True then we will connect to the coordinator in utility mode and fetch some more
                                data from there (like collation settings)
 
         """
-        if masterDataDir is None:
-            self.__masterDataDir = gp.get_masterdatadir()
-        else: self.__masterDataDir = masterDataDir
+        if coordinatorDataDir is None:
+            self.__coordinatorDataDir = gp.get_coordinatordatadir()
+        else: self.__coordinatorDataDir = coordinatorDataDir
 
-        logger.debug("Obtaining master's port from master data directory")
-        pgconf_dict = pgconf.readfile(self.__masterDataDir + "/postgresql.conf")
-        self.__masterPort = pgconf_dict.int('port')
-        logger.debug("Read from postgresql.conf port=%s" % self.__masterPort)
-        self.__masterMaxConnections = pgconf_dict.int('max_connections')
-        logger.debug("Read from postgresql.conf max_connections=%s" % self.__masterMaxConnections)
+        logger.debug("Obtaining coordinator's port from coordinator data directory")
+        pgconf_dict = pgconf.readfile(self.__coordinatorDataDir + "/postgresql.conf")
+        self.__coordinatorPort = pgconf_dict.int('port')
+        logger.debug("Read from postgresql.conf port=%s" % self.__coordinatorPort)
+        self.__coordinatorMaxConnections = pgconf_dict.int('max_connections')
+        logger.debug("Read from postgresql.conf max_connections=%s" % self.__coordinatorMaxConnections)
 
         self.__gpHome = gp.get_gphome()
         self.__gpVersion = gp.GpVersion.local('local GP software version check',self.__gpHome)
@@ -44,14 +44,14 @@ class GpMasterEnvironment:
         if verbose:
             logger.info("local Greenplum Version: '%s'" % self.__gpVersion)
 
-        # read collation settings from master
+        # read collation settings from coordinator
         if readFromMasterCatalog:
-            dbUrl = dbconn.DbURL(port=self.__masterPort, dbname='template1', timeout=timeout, retries=retries)
+            dbUrl = dbconn.DbURL(port=self.__coordinatorPort, dbname='template1', timeout=timeout, retries=retries)
             conn = dbconn.connect(dbUrl, utility=True)
 
-            # MPP-13807, read/show the master's database version too
+            # MPP-13807, read/show the coordinator's database version too
             self.__pgVersion = dbconn.queryRow(conn, "select version();")[0]
-            logger.info("master Greenplum Version: '%s'" % self.__pgVersion)
+            logger.info("coordinator Greenplum Version: '%s'" % self.__pgVersion)
             conn.close()
         else:
             self.__pgVersion = None
@@ -61,6 +61,6 @@ class GpMasterEnvironment:
     def getGpVersion(self): return self.__gpVersion
     def getPgVersion(self): return self.__pgVersion
 
-    def getMasterDataDir(self): return self.__masterDataDir
-    def getMasterMaxConnections(self) : return self.__masterMaxConnections
-    def getMasterPort(self) : return self.__masterPort
+    def getMasterDataDir(self): return self.__coordinatorDataDir
+    def getMasterMaxConnections(self) : return self.__coordinatorMaxConnections
+    def getMasterPort(self) : return self.__coordinatorPort

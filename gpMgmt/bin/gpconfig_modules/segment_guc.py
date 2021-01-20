@@ -2,14 +2,14 @@ import abc
 
 
 class SegmentGuc(metaclass=abc.ABCMeta):
-    MASTER_CONTEXT = '-1'
+    COORDINATOR_CONTEXT = '-1'
 
     def __init__(self, row):
         self.context = str(row[0])
         self.name = row[1]
 
     def get_label(self):
-        label = "Segment" if self.context != self.MASTER_CONTEXT else "Master "
+        label = "Coordinator" if self.context == self.COORDINATOR_CONTEXT else "Segment    "
         return label
 
     @abc.abstractmethod

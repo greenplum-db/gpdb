@@ -54,16 +54,16 @@ class GpConfig(GpTestCase):
 
         self.host = 'localhost'
         seg = SegmentPair()
-        db = self.gparray.master
+        db = self.gparray.coordinator
         seg.addPrimary(db)
-        seg.datadir = self.gparray.master.datadir
+        seg.datadir = self.gparray.coordinator.datadir
         seg.hostname = 'localhost'
 
 
-        self.master_file = Mock(name='master')
-        self.master_file.get_value.return_value = 'foo'
-        self.master_file.segInfo.getSegmentContentId.return_value = -1
-        self.master_file.segInfo.getSegmentDbId.return_value = 0
+        self.coordinator_file = Mock(name='coordinator')
+        self.coordinator_file.get_value.return_value = 'foo'
+        self.coordinator_file.segInfo.getSegmentContentId.return_value = -1
+        self.coordinator_file.segInfo.getSegmentDbId.return_value = 0
 
         self.seg0_file = Mock(name='seg0')
         self.seg0_file.get_value.return_value = 'foo'
@@ -71,7 +71,7 @@ class GpConfig(GpTestCase):
         self.seg0_file.segInfo.getSegmentDbId.return_value = 1
 
         self.pool = Mock()
-        self.pool.getCompletedItems.return_value = [self.master_file, self.seg0_file]
+        self.pool.getCompletedItems.return_value = [self.coordinator_file, self.seg0_file]
 
         self.apply_patches([
             patch('os.environ', new=self.os_env),
@@ -115,7 +115,7 @@ class GpConfig(GpTestCase):
             self.subject.parseargs()
         self.subject.LOGGER.error.assert_called_once_with("change requested but value not specified")
 
-    def test_option_show_without_master_data_dir_will_succeed(self):
+    def test_option_show_without_coordinator_data_dir_will_succeed(self):
         sys.argv = ["gpconfig", "--show", "statement_mem"]
         del self.os_env["MASTER_DATA_DIRECTORY"]
         self.subject.parseargs()
@@ -160,7 +160,7 @@ class GpConfig(GpTestCase):
             self.subject.parseargs()
         self.subject.LOGGER.error.assert_called_once_with("'--file' option must accompany '--show' option")
 
-    def test_option_file_without_master_data_dir_will_raise(self):
+    def test_option_file_without_coordinator_data_dir_will_raise(self):
         sys.argv = ["gpconfig", "--file", "--show", "statement_mem"]
         del self.os_env["MASTER_DATA_DIRECTORY"]
         with self.assertRaisesRegex(Exception, "--file option requires that MASTER_DATA_DIRECTORY be set"):
@@ -179,46 +179,46 @@ class GpConfig(GpTestCase):
         self.pool.haltWork.assert_called_once_with()
         self.pool.joinWorkers.assert_called_once_with()
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
-        self.assertIn("Master  value: foo\nSegment value: foo", mock_stdout.getvalue())
+        self.assertIn("Coordinator value: foo\nSegment     value: foo", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
-    def test_option_f_will_report_absence_of_setting_on_master(self, mock_stdout):
+    def test_option_f_will_report_absence_of_setting_on_coordinator(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
-        self.master_file.get_value.return_value = None
+        self.coordinator_file.get_value.return_value = None
         self.seg0_file.get_value.return_value = "seg_value"
 
         self.subject.do_main()
 
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
-        self.assertIn("No value is set on master\nSegment value: seg_value", mock_stdout.getvalue())
+        self.assertIn("No value is set on coordinator\nSegment     value: seg_value", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_f_will_report_absence_of_setting_on_segment(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
-        self.master_file.get_value.return_value = "master_value"
+        self.coordinator_file.get_value.return_value = "coordinator_value"
         self.seg0_file.get_value.return_value = None
 
         self.subject.do_main()
 
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
-        self.assertIn("Master  value: master_value\nNo value is set on segments", mock_stdout.getvalue())
+        self.assertIn("Coordinator value: coordinator_value\nNo value is set on segments", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_f_will_report_absence_of_setting_on_both(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
-        self.master_file.get_value.return_value = None
+        self.coordinator_file.get_value.return_value = None
         self.seg0_file.get_value.return_value = None
 
         self.subject.do_main()
 
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
-        self.assertIn("No value is set on master\nNo value is set on segments", mock_stdout.getvalue())
+        self.assertIn("No value is set on coordinator\nNo value is set on segments", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_f_will_report_difference_segments_out_of_sync(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
 
-        self.master_file.get_value.return_value = 'foo'
+        self.coordinator_file.get_value.return_value = 'foo'
         self.seg0_file.get_value.return_value = 'bar'
 
         seg_1 = Mock(name='seg1')
@@ -241,7 +241,7 @@ class GpConfig(GpTestCase):
     def test_option_f_will_report_difference_segments_out_of_sync_when_unset(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
 
-        self.master_file.get_value.return_value = 'foo'
+        self.coordinator_file.get_value.return_value = 'foo'
         self.seg0_file.get_value.return_value = 'bar'
 
         seg_1 = Mock(name='seg1')
@@ -260,7 +260,7 @@ class GpConfig(GpTestCase):
         self.assertIn("bar", mock_stdout.getvalue())
         self.assertIn("[name: my_property_name] [not set in file]", mock_stdout.getvalue())
 
-    def test_option_change_value_master_separate_succeed(self):
+    def test_option_change_value_coordinator_separate_succeed(self):
         db_singleton_side_effect_list.append("some happy result")
         entry = 'my_property_name'
         sys.argv = ["gpconfig", "-c", entry, "-v", "100", "-m", "20"]
@@ -278,12 +278,12 @@ class GpConfig(GpTestCase):
         self.assertTrue("my_property_name" in segment_command.cmdStr)
         value = shlex.quote("100")
         self.assertTrue(value in segment_command.cmdStr)
-        master_command = self.pool.addCommand.call_args_list[4][0][0]
-        self.assertTrue("my_property_name" in master_command.cmdStr)
+        coordinator_command = self.pool.addCommand.call_args_list[4][0][0]
+        self.assertTrue("my_property_name" in coordinator_command.cmdStr)
         value = shlex.quote("20")
-        self.assertTrue(value in master_command.cmdStr)
+        self.assertTrue(value in coordinator_command.cmdStr)
 
-    def test_option_change_value_masteronly_succeed(self):
+    def test_option_change_value_coordinatoronly_succeed(self):
         db_singleton_side_effect_list.append("some happy result")
         entry = 'my_property_name'
         sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--masteronly"]
@@ -297,12 +297,12 @@ class GpConfig(GpTestCase):
 
         self.subject.LOGGER.info.assert_called_with("completed successfully with parameters '-c my_property_name -v 100 --masteronly'")
         self.assertEqual(self.pool.addCommand.call_count, 1)
-        master_command = self.pool.addCommand.call_args_list[0][0][0]
-        self.assertTrue(("my_property_name") in master_command.cmdStr)
+        coordinator_command = self.pool.addCommand.call_args_list[0][0][0]
+        self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
         value = shlex.quote("100")
-        self.assertTrue(value in master_command.cmdStr)
+        self.assertTrue(value in coordinator_command.cmdStr)
 
-    def test_option_change_value_master_separate_fail_not_valid_guc(self):
+    def test_option_change_value_coordinator_separate_fail_not_valid_guc(self):
         db_singleton_side_effect_list.append("DatabaseError")
 
         with self.assertRaisesRegex(Exception, "not a valid GUC: my_property_name"):
@@ -319,10 +319,10 @@ class GpConfig(GpTestCase):
         self.assertEqual(self.pool.addCommand.call_count, 5)
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_hidden_guc_name" in segment_command.cmdStr)
-        master_command = self.pool.addCommand.call_args_list[1][0][0]
-        self.assertTrue("my_hidden_guc_name" in master_command.cmdStr)
+        coordinator_command = self.pool.addCommand.call_args_list[1][0][0]
+        self.assertTrue("my_hidden_guc_name" in coordinator_command.cmdStr)
         value = shlex.quote("100")
-        self.assertTrue(value in master_command.cmdStr)
+        self.assertTrue(value in coordinator_command.cmdStr)
 
     def test_option_change_value_hidden_guc_without_skipvalidation(self):
         db_singleton_side_effect_list.append("my happy result")
@@ -355,15 +355,15 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.assertIn("Master  value: foo | file: foo", mock_stdout.getvalue())
-        self.assertIn("Segment value: foo | file: foo", mock_stdout.getvalue())
+        self.assertIn("Coordinator value: foo | file: foo", mock_stdout.getvalue())
+        self.assertIn("Segment     value: foo | file: foo", mock_stdout.getvalue())
         self.assertIn("Values on all segments are consistent", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_file_compare_works_with_unset_values(self, mock_stdout):
         sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
 
-        self.master_file.get_value.return_value = None
+        self.coordinator_file.get_value.return_value = None
         self.seg0_file.get_value.return_value = None
 
         seg_1 = Mock(name='seg1')
@@ -381,8 +381,8 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.assertIn("Master  value: foo | not set in file", mock_stdout.getvalue())
-        self.assertIn("Segment value: foo | not set in file", mock_stdout.getvalue())
+        self.assertIn("Coordinator value: foo | not set in file", mock_stdout.getvalue())
+        self.assertIn("Segment     value: foo | not set in file", mock_stdout.getvalue())
         self.assertIn("Values on all segments are consistent", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
@@ -440,16 +440,16 @@ class GpConfig(GpTestCase):
                       mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
-    def test_option_file_compare_with_standby_master_with_different_file_value_will_report_failure(self, mock_stdout):
+    def test_option_file_compare_with_standby_coordinator_with_different_file_value_will_report_failure(self, mock_stdout):
         sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
 
-        standby_master = Mock(name='standby_master')
-        standby_master.segInfo.getSegmentContentId.return_value = -1
-        standby_master.segInfo.getSegmentDbId.return_value = 2
-        standby_master.get_value.return_value = 'bar'
+        standby_coordinator = Mock(name='standby_coordinator')
+        standby_coordinator.segInfo.getSegmentContentId.return_value = -1
+        standby_coordinator.segInfo.getSegmentDbId.return_value = 2
+        standby_coordinator.get_value.return_value = 'bar'
 
         # mocked values in the files
-        self.pool.getCompletedItems.return_value.append(standby_master)
+        self.pool.getCompletedItems.return_value.append(standby_coordinator)
 
         # mocked database values
         self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo']])
@@ -540,17 +540,17 @@ class GpConfig(GpTestCase):
         self.subject.do_main()
         self.validation_for_testing_quoting_string_values(expected_value="'baz'")
 
-    def test_change_of_master_value_with_quotes_succeeds(self):
-        already_quoted_master_value = "'ba'z'"
+    def test_change_of_coordinator_value_with_quotes_succeeds(self):
+        already_quoted_coordinator_value = "'ba'z'"
         vartype = 'string'
-        self.setup_for_testing_quoting_string_values(vartype=vartype, value=already_quoted_master_value, additional_args=['--mastervalue', already_quoted_master_value])
+        self.setup_for_testing_quoting_string_values(vartype=vartype, value=already_quoted_coordinator_value, additional_args=['--mastervalue', already_quoted_coordinator_value])
         self.subject.do_main()
         self.validation_for_testing_quoting_string_values(expected_value="'''ba''z'''")
 
-    def test_change_of_master_only_quotes_succeeds(self):
-        unquoted_master_value = "baz"
+    def test_change_of_coordinator_only_quotes_succeeds(self):
+        unquoted_coordinator_value = "baz"
         vartype = 'string'
-        self.setup_for_testing_quoting_string_values(vartype=vartype, value=unquoted_master_value, additional_args=['--masteronly'])
+        self.setup_for_testing_quoting_string_values(vartype=vartype, value=unquoted_coordinator_value, additional_args=['--masteronly'])
         self.subject.do_main()
         self.validation_for_testing_quoting_string_values(expected_value="'baz'")
 
@@ -609,8 +609,8 @@ class GpConfig(GpTestCase):
 
     @staticmethod
     def _create_gparray_with_2_primary_2_mirrors():
-        master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         primary1 = Segment.initFromString(
@@ -619,7 +619,7 @@ class GpConfig(GpTestCase):
             "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         mirror1 = Segment.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
-        return GpArray([master, primary0, primary1, mirror0, mirror1])
+        return GpArray([coordinator, primary0, primary1, mirror0, mirror1])
 
 
 def _mkdir_p(path, mode):

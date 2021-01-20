@@ -22,7 +22,7 @@ DESCRIPTION
 The gpscp utility allows you to copy one or more files from the 
 specified hosts to other specified hosts in one command using 
 SCP (secure copy). For example, you can copy a file from the 
-Greenplum Database master host to all of the segment hosts at 
+Greenplum Database coordinator host to all of the segment hosts at 
 the same time.
 
 To specify the hosts involved in the SCP session, use the -f 

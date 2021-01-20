@@ -24,7 +24,7 @@
                 prepare a Greenplum Database system for passwordless SSH access, and also to prepare
                 additional hosts for passwordless SSH access when expanding a Greenplum Database 
                 system.</p>
-            <p>Keys are exchanged as the currently logged in user. You run the utility on the master
+            <p>Keys are exchanged as the currently logged in user. You run the utility on the coordinator
                 host as the <codeph>gpadmin</codeph> user (the user designated to own your Greenplum
                 Database installation). Greenplum Database management utilities require that the
                     <codeph>gpadmin</codeph> user be created on all hosts in the Greenplum Database
@@ -34,11 +34,11 @@
                 additional users, <codeph>root</codeph>, for example.</p>
             <p>The <codeph>gpssh-exkeys</codeph> utility has the following prerequisites:<ul
                     id="ul_fgv_hjd_vhb">
-                    <li>The user must have an account on the master, standby, and every segment host
+                    <li>The user must have an account on the coordinator, standby, and every segment host
                         in the Greenplum Database cluster.</li>
                     <li>The user must have an <codeph>id_rsa</codeph> SSH key pair installed on the
-                        master host.</li>
-                    <li>The user must be able to connect with SSH from the master host to every
+                        coordinator host.</li>
+                    <li>The user must be able to connect with SSH from the coordinator host to every
                         other host machine without entering a password. (This is called "1-<i>n</i>
                         passwordless SSH.") </li>
                 </ul></p>
@@ -82,8 +82,8 @@
                     <pt>-e <varname>hostfile_exkeys</varname></pt>
                     <pd>When doing a system expansion, this is the name and location of a file
                         containing all configured host names and host addresses (interface names)
-                        for each host in your <varname>current</varname> Greenplum system (master,
-                        standby master, and segments), one name per line without blank lines or
+                        for each host in your <varname>current</varname> Greenplum system (coordinator,
+                        standby coordinator, and segments), one name per line without blank lines or
                         extra spaces. Hosts specified in this file cannot be specified in the host
                         file used with <codeph>-x</codeph>. </pd>
                 </plentry>
@@ -91,7 +91,7 @@
                     <pt>-f <varname>hostfile_exkeys</varname></pt>
                     <pd>Specifies the name and location of a file containing all configured host
                         names and host addresses (interface names) for each host in your Greenplum
-                        system (master, standby master and segments), one name per line without
+                        system (coordinator, standby coordinator and segments), one name per line without
                         blank lines or extra spaces.</pd>
                 </plentry>
                 <plentry>
@@ -132,12 +132,12 @@
                     <codeph>sdw4</codeph> and <codeph>sdw5</codeph> as part of a system expansion
                 operation:</p>
             <codeblock>$ cat hostfile_exkeys
-mdw
-mdw-1
-mdw-2
-smdw
-smdw-1
-smdw-2
+cdw
+cdw-1
+cdw-2
+scdw
+scdw-1
+scdw-2
 sdw1
 sdw1-1
 sdw1-2

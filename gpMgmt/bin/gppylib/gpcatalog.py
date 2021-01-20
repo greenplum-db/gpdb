@@ -21,8 +21,8 @@ logger = gplog.get_default_logger()
 class GPCatalogException(Exception):
     pass
 
-# Hard coded since "master only" is not defined in the catalog
-MASTER_ONLY_TABLES = [
+# Hard coded since "coordinator only" is not defined in the catalog
+COORDINATOR_ONLY_TABLES = [
     'gp_configuration_history',
     'gp_segment_configuration',
     'pg_auth_time_constraint',
@@ -118,7 +118,7 @@ class GPCatalog():
 
         1) Uses the supplied database connection to get a list of catalog tables
         2) iterate through the list building up CatalogTable objects
-        3) Mark "master only" tables manually
+        3) Mark "coordinator only" tables manually
         4) Mark a couple primary keys manually
         5) Mark foreign keys manually
         6) Mark known catalog differences manually
@@ -161,11 +161,11 @@ class GPCatalog():
         # The tidycat.pl utility has been used to generate a json file 
         # describing aspects of the catalog that we can not currently
         # interrogate from the catalog itself.  This includes things
-        # like which tables are master only vs segment local and what 
+        # like which tables are coordinator only vs segment local and what 
         # the foreign key relationships are.
         self._getJson()
 
-        # Which tables are "master only" is not derivable from the catalog
+        # Which tables are "coordinator only" is not derivable from the catalog
         # so we have to set this manually.
         self._markMasterOnlyTables()
 
@@ -195,18 +195,18 @@ class GPCatalog():
 
     def _markMasterOnlyTables(self):
         """
-        We mark two types of catalog tables as "master only"
-          - True "master only" tables
-          - Tables we know to have different contents on master/segment
+        We mark two types of catalog tables as "coordinator only"
+          - True "coordinator only" tables
+          - Tables we know to have different contents on coordinator/segment
 
-        While the later two are not technically "master only" they have
+        While the later two are not technically "coordinator only" they have
         the property that we cannot validate cross segment consistency,
         which makes them the same for our current purposes.
 
         We may want to eventually move these other types of tables into
         a different classification.
         """
-        for name in MASTER_ONLY_TABLES:
+        for name in COORDINATOR_ONLY_TABLES:
             if name in self._tables:
                 self._tables[name]._setMasterOnly()
 
@@ -284,7 +284,7 @@ class GPCatalog():
     def _setKnownDifferences(self):
         """
         Some catalogs have columns that, for one reason or another, we
-        need to mark as being different between the segments and the master.
+        need to mark as being different between the segments and the coordinator.
         
         These fall into two categories:
            - Bugs (marked with the appropriate jiras)
@@ -343,14 +343,14 @@ class GPCatalog():
 
         # MPP-11575 : Inconsistent handling of indpred for partial indexes
         # indcheckxmin column related to HOT feature in pg_index is calculated
-        # independently for master and segment based on individual nodes
+        # independently for coordinator and segment based on individual nodes
         # transaction state, hence it can be different so skip it from checks.
         self._tables['pg_index']._setKnownDifferences("indpred indcheckxmin")
 
     def _validate(self):
         """
         Check that all tables defined in the catalog have either been marked
-        as "master only" or have a primary key
+        as "coordinator only" or have a primary key
         """
         for relname in sorted(self._tables):
             if self._tables[relname].isMasterOnly():
@@ -369,7 +369,7 @@ class GPCatalogTable():
     # Accessor functions
     #   - getTableName()     - Returns the table name (string)
     #   - tableHasOids()     - Returns if the table has oids (boolean)
-    #   - isMasterOnly()     - Returns if the table is "master only" (boolean)
+    #   - isMasterOnly()     - Returns if the table is "coordinator only" (boolean)
     #   - isShared()         - Returns if the table is shared (boolean)
     #   - getTableAcl()      - Returns name of the acl column (string|None)
     #   - getPrimaryKey()    - Returns the primary key (list)
@@ -387,7 +387,7 @@ class GPCatalogTable():
         return (self._has_oid and 'oid' not in self._excluding)
 
     def isMasterOnly(self):
-        return self._master
+        return self._coordinator
 
     def isShared(self):
         return self._isshared
@@ -450,7 +450,7 @@ class GPCatalogTable():
 
         self._parent    = parent
         self._name      = name
-        self._master    = False
+        self._coordinator    = False
         self._isshared  = False
         self._pkey      = list(pkey or [])
         self._fkey      = []      # foreign key
@@ -537,7 +537,7 @@ class GPCatalogTable():
         return cmp(other, self._name)
 
     def _setMasterOnly(self, value=True):
-        self._master = value
+        self._coordinator = value
 
     def _setOid(self, oid):
         self._oid = oid

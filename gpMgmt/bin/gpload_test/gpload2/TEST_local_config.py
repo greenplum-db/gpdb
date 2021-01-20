@@ -6,7 +6,7 @@ def test_44_gpload_config_h():
     copy_data('external_file_01.txt', 'data_file.txt')
     write_config_file( host="",format='text',file='data_file.txt',table='texttable',delimiter="'|'")
 
-@prepare_before_test(num=45, cmd="-p "+str(masterPort))
+@prepare_before_test(num=45, cmd="-p "+str(coordinatorPort))
 def test_45_gpload_config_p():
     "45 gpload command config test -p port"
     copy_data('external_file_01.txt', 'data_file.txt')

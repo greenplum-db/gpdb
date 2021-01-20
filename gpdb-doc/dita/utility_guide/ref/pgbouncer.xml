@@ -28,7 +28,7 @@ pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
         <p>PgBouncer supports the standard connection interface shared by PostgreSQL
           and Greenplum Database. The Greenplum Database client application (for example,
           <codeph>psql</codeph>) should connect to the host and port on which PgBouncer
-          is running rather than directly to the Greenplum Database master host and port.</p>
+          is running rather than directly to the Greenplum Database coordinator host and port.</p>
          <p>You configure PgBouncer and its access to Greenplum Database via a
            configuration file. You provide the configuration file name, usually <codeph>pgbouncer.ini</codeph>,
            when you run the <codeph>pgbouncer</codeph> command. This file provides location information

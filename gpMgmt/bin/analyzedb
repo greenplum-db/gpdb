@@ -245,9 +245,9 @@ class AnalyzeDb(Operation):
 
         if args:
             logger.warn("Please note that some of the arguments (%s) aren't valid and will be ignored.", args)
-        if options.masterDataDirectory is None:
-            options.masterDataDirectory = gp.get_masterdatadir()
-        self.master_datadir = options.masterDataDirectory
+        if options.coordinatorDataDirectory is None:
+            options.coordinatorDataDirectory = gp.get_coordinatordatadir()
+        self.coordinator_datadir = options.coordinatorDataDirectory
         self.analyze_dir = STATEFILE_DIR
         self.pg_port = self._get_pgport()
         self.dbname = options.dbname
@@ -300,7 +300,7 @@ class AnalyzeDb(Operation):
     def _preprocess_options(self):
 
         if self.clean_all:
-            analyze_folder = os.path.join(self.master_datadir, self.analyze_dir, self.dbname)
+            analyze_folder = os.path.join(self.coordinator_datadir, self.analyze_dir, self.dbname)
             if os.path.exists(analyze_folder):
                 if not self.silent \
                         and not userinput.ask_yesno(None,
@@ -317,9 +317,9 @@ class AnalyzeDb(Operation):
                 logger.warning("Folder %s does not exist. Exiting...")
 
         if self.clean_last:
-            last_analyze_timestamp = get_lastest_analyze_timestamp(self.master_datadir, self.analyze_dir, self.dbname)
+            last_analyze_timestamp = get_lastest_analyze_timestamp(self.coordinator_datadir, self.analyze_dir, self.dbname)
             if last_analyze_timestamp is not None:
-                analyze_folder = os.path.join(self.master_datadir, self.analyze_dir, self.dbname,
+                analyze_folder = os.path.join(self.coordinator_datadir, self.analyze_dir, self.dbname,
                                               last_analyze_timestamp)
                 if os.path.exists(analyze_folder):
                     if not self.silent \
@@ -519,20 +519,20 @@ class AnalyzeDb(Operation):
                         (len(self.success_list), total_to_analyze))
 
     def read_last_analyzedb_output(self):
-        last_analyze_timestamp = get_lastest_analyze_timestamp(self.master_datadir, self.analyze_dir, self.dbname)
-        prev_ao_state = get_prev_ao_state(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
-        prev_col_dict = get_prev_col_state(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
-        prev_last_op = get_prev_last_op(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
+        last_analyze_timestamp = get_lastest_analyze_timestamp(self.coordinator_datadir, self.analyze_dir, self.dbname)
+        prev_ao_state = get_prev_ao_state(last_analyze_timestamp, self.coordinator_datadir, self.analyze_dir, self.dbname)
+        prev_col_dict = get_prev_col_state(last_analyze_timestamp, self.coordinator_datadir, self.analyze_dir, self.dbname)
+        prev_last_op = get_prev_last_op(last_analyze_timestamp, self.coordinator_datadir, self.analyze_dir, self.dbname)
         return last_analyze_timestamp, prev_ao_state, prev_col_dict, prev_last_op
 
     def _get_pgport(self):
         env_pgport = os.getenv('PGPORT')
         if not env_pgport:
-            return self._get_master_port(self.master_datadir)
+            return self._get_coordinator_port(self.coordinator_datadir)
         return env_pgport
 
-    def _get_master_port(self, datadir):
-        logger.debug("Obtaining master's port from master data directory")
+    def _get_coordinator_port(self, datadir):
+        logger.debug("Obtaining coordinator's port from coordinator data directory")
         pgconf_dict = pgconf.readfile(datadir + "/postgresql.conf")
         return pgconf_dict.int('port')
 
@@ -680,7 +680,7 @@ class AnalyzeDb(Operation):
                     input_col_dict, prev_col_dict, root_partition_col_dict, is_full, dirty_partitions, target_list):
 
         current_time = generate_timestamp() # timestamp used for output directory
-        validate_dir("%s/%s/%s/%s" % (self.master_datadir, self.analyze_dir, self.dbname, current_time))
+        validate_dir("%s/%s/%s/%s" % (self.coordinator_datadir, self.analyze_dir, self.dbname, current_time))
 
         curr_ao_state_dict = create_ao_state_dict(curr_ao_state)
         curr_last_op_dict = create_last_op_dict(curr_last_op)
@@ -711,7 +711,7 @@ class AnalyzeDb(Operation):
         col_state_output = construct_entries_from_dict_colstate(prev_col_dict)
 
         if len(ao_state_output) > 0:
-            ao_state_filename = generate_statefile_name('ao', self.master_datadir, self.analyze_dir, self.dbname,
+            ao_state_filename = generate_statefile_name('ao', self.coordinator_datadir, self.analyze_dir, self.dbname,
                                                         current_time)
             logger.info("Writing ao state file %s" % ao_state_filename)
             write_lines_to_file(ao_state_filename, ao_state_output)
@@ -719,7 +719,7 @@ class AnalyzeDb(Operation):
             verify_lines_in_file(ao_state_filename, ao_state_output)
 
         if len(last_op_output) > 0:
-            last_operation_filename = generate_statefile_name('lastop', self.master_datadir, self.analyze_dir,
+            last_operation_filename = generate_statefile_name('lastop', self.coordinator_datadir, self.analyze_dir,
                                                               self.dbname, current_time)
             logger.info("Writing last operation file %s" % last_operation_filename)
 
@@ -729,14 +729,14 @@ class AnalyzeDb(Operation):
             verify_lines_in_file(last_operation_filename, lines_to_write)
 
         if len(prev_col_dict) > 0:
-            col_state_filename = generate_statefile_name('col', self.master_datadir, self.analyze_dir, self.dbname,
+            col_state_filename = generate_statefile_name('col', self.coordinator_datadir, self.analyze_dir, self.dbname,
                                                          current_time)
             logger.info("Writing column state file %s" % col_state_filename)
             write_lines_to_file(col_state_filename, col_state_output)
             logger.debug("Verifying column state ...")
             verify_lines_in_file(col_state_filename, col_state_output)
 
-        report_filename = generate_statefile_name('report', self.master_datadir, self.analyze_dir, self.dbname,
+        report_filename = generate_statefile_name('report', self.coordinator_datadir, self.analyze_dir, self.dbname,
                                                   current_time)
         logger.info("Writing report file %s" % report_filename)
         with open(report_filename, 'w') as fp:
@@ -874,7 +874,7 @@ class AnalyzeDb(Operation):
             return col_dict[schema_table]
 
     def ensure_semaphore_file_exists(self):
-        db_directory = "%s/%s/%s" % (self.master_datadir, self.analyze_dir, self.dbname)
+        db_directory = "%s/%s/%s" % (self.coordinator_datadir, self.analyze_dir, self.dbname)
         validate_dir(db_directory)
         lock_file_path = os.path.join(db_directory, WRITE_LOCK_FILE_NAME)
 
@@ -971,8 +971,8 @@ def get_heap_tables_set(conn, input_tables_set):
     return dirty_tables
 
 
-def get_lastest_analyze_timestamp(master_datadir, statefile_dir, dbname):
-    analyze_dirs = get_analyze_dirs(master_datadir, statefile_dir, dbname)
+def get_lastest_analyze_timestamp(coordinator_datadir, statefile_dir, dbname):
+    analyze_dirs = get_analyze_dirs(coordinator_datadir, statefile_dir, dbname)
 
     for analyze_dir in analyze_dirs:
         files = sorted(os.listdir(analyze_dir))
@@ -994,9 +994,9 @@ def get_lastest_analyze_timestamp(master_datadir, statefile_dir, dbname):
     return None
 
 
-def get_prev_ao_state(timestamp, master_datadir, analyze_dir, dbname):
+def get_prev_ao_state(timestamp, coordinator_datadir, analyze_dir, dbname):
     logger.debug("getting previous ao state...")
-    prev_state_filename = generate_statefile_name('ao', master_datadir, analyze_dir, dbname, timestamp)
+    prev_state_filename = generate_statefile_name('ao', coordinator_datadir, analyze_dir, dbname, timestamp)
     if not os.path.isfile(prev_state_filename):
         return []
     lines = get_lines_from_file(prev_state_filename)
@@ -1006,9 +1006,9 @@ def get_prev_ao_state(timestamp, master_datadir, analyze_dir, dbname):
     return list(map((lambda x: x.split(',')), lines))
 
 
-def get_prev_last_op(timestamp, master_datadir, analyze_dir, dbname):
+def get_prev_last_op(timestamp, coordinator_datadir, analyze_dir, dbname):
     logger.debug("getting previous last operation...")
-    old_pgstatlastoperation_file = generate_statefile_name('lastop', master_datadir, analyze_dir, dbname, timestamp)
+    old_pgstatlastoperation_file = generate_statefile_name('lastop', coordinator_datadir, analyze_dir, dbname, timestamp)
     if not os.path.isfile(old_pgstatlastoperation_file):
         old_pgstatlastoperation = []
     else:
@@ -1025,9 +1025,9 @@ def get_prev_last_op(timestamp, master_datadir, analyze_dir, dbname):
     return ret
 
 
-def get_prev_col_state(timestamp, master_datadir, analyze_dir, dbname):
+def get_prev_col_state(timestamp, coordinator_datadir, analyze_dir, dbname):
     logger.debug("getting previous column states...")
-    prev_col_state_file = generate_statefile_name('col', master_datadir, analyze_dir, dbname, timestamp)
+    prev_col_state_file = generate_statefile_name('col', coordinator_datadir, analyze_dir, dbname, timestamp)
     if not os.path.isfile(prev_col_state_file):
         return {}
     lines = get_lines_from_file(prev_col_state_file)
@@ -1108,8 +1108,8 @@ def get_pgstatlastoperation_dict(last_operations):
     return last_operations_dict
 
 
-def generate_statefile_name(type_str, master_data_dir, analyze_dir, dbname, timestamp):
-    use_dir = "%s/%s/%s/%s" % (master_data_dir, analyze_dir, dbname, timestamp)
+def generate_statefile_name(type_str, coordinator_data_dir, analyze_dir, dbname, timestamp):
+    use_dir = "%s/%s/%s/%s" % (coordinator_data_dir, analyze_dir, dbname, timestamp)
     if type_str == 'lastop':
         ret_str = "%s/analyze_%s_last_operation"
     elif type_str == 'ao':
@@ -1123,8 +1123,8 @@ def generate_statefile_name(type_str, master_data_dir, analyze_dir, dbname, time
     return ret_str % (use_dir, timestamp)
 
 
-def get_analyze_dirs(master_datadir, statefile_dir, dbname):
-    analyze_path = os.path.join(master_datadir, statefile_dir, dbname)
+def get_analyze_dirs(coordinator_datadir, statefile_dir, dbname):
+    analyze_path = os.path.join(coordinator_datadir, statefile_dir, dbname)
 
     if not os.path.isdir(analyze_path):
         return []

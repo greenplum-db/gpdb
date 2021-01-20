@@ -22,7 +22,7 @@ The gplogfilter utility can be used to search through a Greenplum
 Database log file for entries matching the specified criteria. If an 
 input file is not supplied, then gplogfilter will use the 
 $MASTER_DATA_DIRECTORY environment variable to locate the Greenplum 
-master log file in the standard logging location. To read from standard 
+coordinator log file in the standard logging location. To read from standard 
 input, use a dash (-) as the input file name. Input files may be 
 compressed using gzip. In an input file, a log entry is identified by 
 its timestamp in YYYY-MM-DD [hh:mm[:ss]] format. 
@@ -171,7 +171,7 @@ INPUT OPTIONS
 
  The name of the input log file(s) to search through. If an input file is 
  not supplied, gplogfilter will use the $MASTER_DATA_DIRECTORY 
- environment variable to locate the Greenplum master log file. To read 
+ environment variable to locate the Greenplum coordinator log file. To read 
  from standard input, use a dash (-) as the input file name. 
 
  
@@ -195,18 +195,18 @@ INPUT OPTIONS
 EXAMPLES 
 ***************************************************** 
 
-Display the last three error messages in the master log file: 
+Display the last three error messages in the coordinator log file: 
 
  gplogfilter -t -n 3 
 
 
-Display all log messages in the master log file timestamped in the last 
+Display all log messages in the coordinator log file timestamped in the last 
 10 minutes: 
 
  gplogfilter -d :10 
 
 
-Display log messages in the master log file containing the string 
+Display log messages in the coordinator log file containing the string 
 '|con6 cmd11|': 
 
  gplogfilter -f '|con6 cmd11|' 

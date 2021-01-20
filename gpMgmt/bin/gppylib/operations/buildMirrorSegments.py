@@ -69,7 +69,7 @@ class GpMirrorToBuild:
 
         if not liveSegment.isSegmentQE():
             raise ExceptionNoStackTraceNeeded("Segment to recover from for content %s is not a correct segment "
-                                              "(it is a master or standby master)" % liveSegment.getSegmentContentId())
+                                              "(it is a coordinator or standby coordinator)" % liveSegment.getSegmentContentId())
         if not liveSegment.isSegmentPrimary(True):
             raise ExceptionNoStackTraceNeeded(
                 "Segment to recover from for content %s is not a primary" % liveSegment.getSegmentContentId())

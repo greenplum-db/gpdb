@@ -51,13 +51,13 @@ def parseargs():
     parser.add_option('-h', '-?', '--help', action='help')
     parser.add_option('--verbose', action='store_true')
     parser.add_option('--skipvalidation', action='store_true')
-    parser.add_option('--masteronly', action='store_true')
+    parser.add_option('--masteronly', dest="coordinatoronly", action='store_true')
     parser.add_option('--debug', action='store_true')
     parser.add_option('-c', '--change', type='string')
     parser.add_option('-r', '--remove', type='string')
     parser.add_option('-s', '--show', type='string')
     parser.add_option('-v', '--value', type='string')
-    parser.add_option('-m', '--mastervalue', type='string')
+    parser.add_option('-m', '--mastervalue', dest="coordinatorvalue", type='string')
     parser.add_option('-l', '--list', action='store_true')
     parser.add_option('-P', '--primaryvalue', type='string')
     parser.add_option('-M', '--mirrorvalue', type='string')
@@ -98,20 +98,20 @@ def validate_mutual_options(options):
         log_and_raise("'--file' option and '--file-compare' option cannot be used together")
     if options.file and "MASTER_DATA_DIRECTORY" not in os.environ:
         log_and_raise("--file option requires that MASTER_DATA_DIRECTORY be set")
-    if options.remove and (options.value is not None or options.primaryvalue is not None or options.mirrorvalue is not None or options.mastervalue is not None):
-        log_and_raise("remove action does not take a value, primary value, mirror value or master value parameter")
+    if options.remove and (options.value is not None or options.primaryvalue is not None or options.mirrorvalue is not None or options.coordinatorvalue is not None):
+        log_and_raise("remove action does not take a value, primary value, mirror value or coordinator value parameter")
     if options.change and options.remove:
         log_and_raise("Multiple actions specified.  See the --help info.")
     if options.change and (options.value is None and options.mirrorvalue is None and options.primaryvalue is None):
         log_and_raise("change requested but value not specified")
-    if options.change and options.mastervalue is not None and options.masteronly:
-        log_and_raise("when changing a parameter on the master only specify the --value not --mastervalue")
+    if options.change and options.coordinatorvalue is not None and options.coordinatoronly:
+        log_and_raise("when changing a parameter on the coordinator only specify the --value not --mastervalue")
     if options.change and (options.value is not None and (options.primaryvalue is not None or options.mirrorvalue is not None)):
         log_and_raise("cannot use both value option and primaryvalue/mirrorvalue option")
-    if (options.masteronly or options.mastervalue is not None) and options.entry in SAMEVALUE_GUCS:
-        log_and_raise("%s value cannot be different on master and segments" % options.entry)
-    if options.value is not None and options.mastervalue is None:
-        options.mastervalue = options.value
+    if (options.coordinatoronly or options.coordinatorvalue is not None) and options.entry in SAMEVALUE_GUCS:
+        log_and_raise("%s value cannot be different on coordinator and segments" % options.entry)
+    if options.value is not None and options.coordinatorvalue is None:
+        options.coordinatorvalue = options.value
 
 
 class ToolkitQuery:
@@ -137,16 +137,16 @@ class Guc:
         self.min_val = row[6]
         self.max_val = row[7]
 
-    def validate(self, newval, newmasterval, options):
+    def validate(self, newval, newcoordinatorval, options):
         # todo add code here...
         # be careful 128KB in postgresql.conf is translated into 32KB units
 
-        if self.name == "max_connections" and (not options.masteronly):
+        if self.name == "max_connections" and (not options.coordinatoronly):
             try:
                 seg = int(newval)
-                master = int(newmasterval)
-                if seg <= master:
-                    return "the value of max_connections must be greater on the segments than on the master"
+                coordinator = int(newcoordinatorval)
+                if seg <= coordinator:
+                    return "the value of max_connections must be greater on the segments than on the coordinator"
             except:
                 return "invalid value for max_connections"
 
@@ -254,7 +254,7 @@ def _print_gucs(gucname, gucs, options):
     else:
         if collection.are_segments_consistent():
             print("Values on all segments are consistent")
-            print(("GUC          : %s" % gucname))
+            print(("GUC              : %s" % gucname))
             print((collection.report()))
         else:
             print("WARNING: GUCS ARE OUT OF SYNC: ")
@@ -287,7 +287,7 @@ def do_change(options):
 
             # Force the postgresql.conf parser to detect vartype string as GUC_STRING in the guc-file.c/guc-file.l
             options.value = quote_string(guc, options.value)
-            options.mastervalue = quote_string(guc, options.mastervalue)
+            options.coordinatorvalue = quote_string(guc, options.coordinatorvalue)
 
             validate_change_options(options, conn, guc)
             conn.close()
@@ -303,7 +303,7 @@ def do_change(options):
     failure = False
     try:
         # do the segments
-        if not options.masteronly:
+        if not options.coordinatoronly:
             if options.primaryvalue:
                 do_add_config_script(pool, [seg for seg in gp_array.getSegDbList() if seg.isSegmentPrimary()],
                                      options.primaryvalue, options)
@@ -315,9 +315,9 @@ def do_change(options):
             if not options.primaryvalue and not options.mirrorvalue:
                 do_add_config_script(pool, [seg for seg in gp_array.getSegDbList()], options.value, options)
 
-        # do the master and standby
-        if options.mastervalue or options.remove:
-            do_add_config_script(pool, [seg for seg in [gp_array.master, gp_array.standbyMaster] if seg is not None], options.mastervalue, options)
+        # do the coordinator and standby
+        if options.coordinatorvalue or options.remove:
+            do_add_config_script(pool, [seg for seg in [gp_array.coordinator, gp_array.standbyCoordinator] if seg is not None], options.coordinatorvalue, options)
 
         pool.join()
         items = pool.getCompletedItems()
@@ -409,7 +409,7 @@ def validate_change_options(options, conn, guc):
         raise Exception(msg)
 
     if options.value:
-        msg = guc.validate(options.value, options.mastervalue, options)
+        msg = guc.validate(options.value, options.coordinatorvalue, options)
         if msg != "ok":
             msg = "new GUC value failed validation: " + msg
             LOGGER.fatal(msg)

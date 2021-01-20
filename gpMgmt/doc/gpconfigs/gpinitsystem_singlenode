@@ -2,7 +2,7 @@
 
 # A configuration file is needed by the gpinitsystem utility.
 # This sample file initializes a Greenplum Database Single Node
-# Edition (SNE) system with one master and  two segment instances 
+# Edition (SNE) system with one coordinator and  two segment instances 
 # on the local host. This file is referenced when you run gpinitsystem. 
 
 ################################################
@@ -26,11 +26,11 @@ MACHINE_LIST_FILE=./hostlist_singlenode
 
 
 # This specifies a prefix that will be used to name the data directories 
-# of the master and segment instances. The naming convention for data 
+# of the coordinator and segment instances. The naming convention for data 
 # directories in a Greenplum Database system is SEG_PREFIX<number> 
-# where <number> starts with 0 for segment instances and the master 
+# where <number> starts with 0 for segment instances and the coordinator 
 # is always -1. So for example, if you choose the prefix gpsne, your 
-# master instance data directory would be named gpsne-1, and the segment 
+# coordinator instance data directory would be named gpsne-1, and the segment 
 # instances would be named gpsne0, gpsne1, gpsne2, gpsne3, and so on.
 
 SEG_PREFIX=gpsne
@@ -60,22 +60,22 @@ PORT_BASE=6000
 declare -a DATA_DIRECTORY=(/gpdata1 /gpdata2)
 
 
-# The OS-configured hostname of the Greenplum Database master instance.
+# The OS-configured hostname of the Greenplum Database coordinator instance.
 
 MASTER_HOSTNAME=hostname_of_machine
 
 
 # The location where the data directory will be created on the  
-# Greenplum master host. 
+# Greenplum coordinator host. 
 # You must make sure that the user who runs gpinitsystem
 # has permissions to write to this directory. You may want to 
-# create this directory on the master host before running 
+# create this directory on the coordinator host before running 
 # gpinitsystem and chown it to the appropriate user.
 
 MASTER_DIRECTORY=/gpmaster
 
 
-# The port number for the master instance. This is the port number 
+# The port number for the coordinator instance. This is the port number 
 # that users and client connections will use when accessing the 
 # Greenplum Database system.
 

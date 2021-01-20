@@ -9,7 +9,7 @@
     <note type="important">Set the Greenplum Database timezone to a value that is compatible with
       your host systems. Setting the Greenplum Database timezone prevents Greenplum Database from
       selecting a timezone each time the cluster is restarted and sets the timezone for the
-      Greenplum Database master and segment instances. After you upgrade to this release and if you
+      Greenplum Database coordinator and segment instances. After you upgrade to this release and if you
       have not set a Greenplum Database timezone value, verify that the selected Greenplum Database
       timezone is acceptable for your deployment. See <xref href="localization.xml" format="dita"
         scope="peer">Configuring Timezone and Localization Settings</xref> for more
@@ -65,14 +65,14 @@
         are additional requirements. See <xref href="#topic_tbx_szy_kbb/gpdb_prereq" format="dita"/>
         in the previous section.</p>
       <ol class="- topic/ol " id="ol_wbx_szy_kbb">
-        <li class="- topic/li ">Log in to your Greenplum Database master host as the Greenplum
+        <li class="- topic/li ">Log in to your Greenplum Database coordinator host as the Greenplum
           administrative user:<codeblock>$ su - gpadmin</codeblock></li>
         <li class="- topic/li ">Perform a smart shutdown of your Greenplum Database 6.x system
           (there can be no active connections to the database). This example uses the
             <codeph>-a</codeph> option to disable confirmation
           prompts:<codeblock>$ gpstop -a</codeblock></li>
         <li>Copy the new Greenplum Database software installation package to the
-            <codeph>gpadmin</codeph> user's home directory on each master, standby, and segment
+            <codeph>gpadmin</codeph> user's home directory on each coordinator, standby, and segment
           host.</li>
         <li class="- topic/li "><i>If you used <codeph>yum</codeph> or <codeph>apt</codeph> to
             install Greenplum Database to the default location</i>, execute these commands on each
@@ -97,8 +97,8 @@
         <li>Update the permissions for the new installation. For example, run this command as
             <codeph>root</codeph> to change the user and group of the installed files to
             <codeph>gpadmin</codeph>.<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*</codeblock></li>
-        <li>If needed, update the <codeph>greenplum_path.sh</codeph> file on the master and standby
-          master hosts for use with your specific installation. These are some examples.<ul
+        <li>If needed, update the <codeph>greenplum_path.sh</codeph> file on the coordinator and standby
+          coordinator hosts for use with your specific installation. These are some examples.<ul
             id="ul_mk3_xjq_cgb">
             <li>If Greenplum Database uses LDAP authentication, edit the
                 <codeph>greenplum_path.sh</codeph> file to add the
@@ -132,7 +132,7 @@ $ ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codebl
             class="- topic/xref ">VMware Tanzu Network</xref>, and install using this utility. See the
           extension documentation for details.<p>Also copy any files that are used by the extensions
             (such as JAR files, shared object files, and libraries) from the previous version
-            installation directory to the new version installation directory on the master and
+            installation directory to the new version installation directory on the coordinator and
             segment host systems. </p></li>
         <li class="- topic/li ">After all segment hosts have been upgraded, log in as the
             <codeph>gpadmin</codeph> user and restart your Greenplum Database

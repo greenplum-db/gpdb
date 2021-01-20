@@ -8,9 +8,9 @@
 # All Rights Reserved. 
 #
 """
-Activates a standby master instance when the primary master instance has 
+Activates a standby coordinator instance when the primary coordinator instance has 
 failed.  Will promote the standby, update the system catalog
-tables to make the standby master instance as the new master.
+tables to make the standby coordinator instance as the new coordinator.
 """
 
 import os
@@ -76,14 +76,14 @@ def parseargs():
                       help='quiet mode, do not log progress to screen')
     optgrp.add_option('-l', '--logfile', type='string', default=None,
                       help='alternative logfile directory')
-    optgrp.add_option('-a', help='don\'t ask to confirm standby master activation',
+    optgrp.add_option('-a', help='don\'t ask to confirm standby coordinator activation',
                       dest='confirm', default=True, action='store_false')
     parser.add_option_group(optgrp)
 
     # Standby activation options section
     optgrp = OptionGroup(parser, 'Standby activation options')
-    optgrp.add_option('-d', '--master-data-directory', dest='master_data_dir',
-                      type='string', help='standby master data directory')
+    optgrp.add_option('-d', '--master-data-directory', dest='coordinator_data_dir',
+                      type='string', help='standby coordinator data directory')
     optgrp.add_option('-f', '--force', action='store_true',
                       help='force activation if standby process not running')
     optgrp.add_option('--ignore', dest='ignore', type='string', help=SUPPRESS_HELP)
@@ -103,18 +103,18 @@ def parseargs():
         parser.exit(0, None)
 
 
-    if not options.master_data_dir:
+    if not options.coordinator_data_dir:
         logger.info('Option -d or --master-data-directory not set. Checking environment variable MASTER_DATA_DIRECTORY')
-        env_master_data_dir = os.getenv('MASTER_DATA_DIRECTORY', None)
+        env_coordinator_data_dir = os.getenv('MASTER_DATA_DIRECTORY', None)
         # check for environment variable MASTER_DATA_DIRECTORY
-        if not env_master_data_dir:
+        if not env_coordinator_data_dir:
             logger.fatal('Both -d parameter and MASTER_DATA_DIRECTORY environment variable are not set.')
-            logger.fatal('Required option master data directory is missing.')
+            logger.fatal('Required option coordinator data directory is missing.')
             parser.exit(2, None)
-        options.master_data_dir = env_master_data_dir
+        options.coordinator_data_dir = env_coordinator_data_dir
         
     # We have to normalize this path for a later comparison
-    options.master_data_dir = os.path.abspath(options.master_data_dir)
+    options.coordinator_data_dir = os.path.abspath(options.coordinator_data_dir)
 
     # check if PGPORT environment variable is set.
     env_pgport = os.getenv('PGPORT', None)
@@ -145,23 +145,23 @@ def print_results(array, hostname, options):
     """Prints out the summary of the operation."""
     
     logger.info('-----------------------------------------------------')
-    logger.info('The activation of the standby master has completed successfully.')
-    logger.info('%s is now the new primary master.' % hostname)
+    logger.info('The activation of the standby coordinator has completed successfully.')
+    logger.info('%s is now the new primary coordinator.' % hostname)
     logger.info('You will need to update your user access mechanism to reflect')
-    logger.info('the change of master hostname.')
-    logger.info('Do not re-start the failed master while the fail-over master is')
+    logger.info('the change of coordinator hostname.')
+    logger.info('Do not re-start the failed coordinator while the fail-over coordinator is')
     logger.info('operational, this could result in database corruption!')
-    logger.info('MASTER_DATA_DIRECTORY is now %s if' % options.master_data_dir)
-    logger.info('this has changed as a result of the standby master activation, remember')
+    logger.info('MASTER_DATA_DIRECTORY is now %s if' % options.coordinator_data_dir)
+    logger.info('this has changed as a result of the standby coordinator activation, remember')
     logger.info('to change this in any startup scripts etc, that may be configured')
     logger.info('to set this value.')
-    logger.info('MASTER_PORT is now %d, if this has changed, you' % array.master.getSegmentPort())
+    logger.info('MASTER_PORT is now %d, if this has changed, you' % array.coordinator.getSegmentPort())
     logger.info('may need to make additional configuration changes to allow access')
     logger.info('to the Greenplum instance.')
     logger.info('Refer to the Administrator Guide for instructions on how to re-activate')
-    logger.info('the master to its previous state once it becomes available.')
+    logger.info('the coordinator to its previous state once it becomes available.')
     logger.info('Query planner statistics must be updated on all databases')
-    logger.info('following standby master activation.')
+    logger.info('following standby coordinator activation.')
     logger.info('When convenient, run ANALYZE against all user databases.')
     logger.info('-----------------------------------------------------')
 
@@ -176,13 +176,13 @@ def print_summary(options):
     warnings_generated = False
     require_force = False
     
-    # check the standby master
+    # check the standby coordinator
     standby_running = check_standby_running(options)
     if not standby_running:
         require_force = True
         
     logger.info('-----------------------------------------------------')
-    logger.info('Standby data directory    = %s' % options.master_data_dir)
+    logger.info('Standby data directory    = %s' % options.coordinator_data_dir)
     logger.info('Standby port              = %s' % str(os.getenv('PGPORT')))
     if options.logfile:
         logger.info('Log directory             = %s' % options.logfile)
@@ -190,7 +190,7 @@ def print_summary(options):
     logger.info('Force standby activation  = %s' % ('yes' if options.force else 'no'))
     logger.info('-----------------------------------------------------')
 
-    check_original_master_status(options)
+    check_original_coordinator_status(options)
 
     # Check if we require a force
     if require_force and not options.force:
@@ -199,23 +199,23 @@ def print_summary(options):
         warnings_generated = True
         raise GpActivateStandbyException('Force activation required')
     if options.confirm:
-        yn = ask_yesno(None, 'Do you want to continue with standby master activation?', 'N')
+        yn = ask_yesno(None, 'Do you want to continue with standby coordinator activation?', 'N')
         if not yn:
             raise GpActivateStandbyException('User canceled') 
 
     return warnings_generated
 
 #-------------------------------------------------------------------------
-def check_original_master_status(options):
-    original_master_hostname = ""
-    original_master_port = 0
+def check_original_coordinator_status(options):
+    original_coordinator_hostname = ""
+    original_coordinator_port = 0
 
-    standby_signal_file_location = os.path.join(options.master_data_dir, STANDBY_SIGNAL_FILE) 
+    standby_signal_file_location = os.path.join(options.coordinator_data_dir, STANDBY_SIGNAL_FILE) 
     if not os.path.exists(standby_signal_file_location):
         logger.warn('Please make sure the command gpactivatestandby is executed on current Standby host')
         raise GpActivateStandbyException('Critical required file on standby \"%s\" is not present.' % standby_signal_file_location)
 
-    postgres_auto_conf_file_location = os.path.join(options.master_data_dir, POSTGRESQL_AUTO_CONF_FILE)
+    postgres_auto_conf_file_location = os.path.join(options.coordinator_data_dir, POSTGRESQL_AUTO_CONF_FILE)
     with open(postgres_auto_conf_file_location) as read_file:
         for line in read_file:
             tokens = line.split()
@@ -223,19 +223,19 @@ def check_original_master_status(options):
                 for smaller_tokens in tokens:
                     smallest_token = smaller_tokens.split('=')
                     if smallest_token[0] == "host":
-                        original_master_hostname = smallest_token[1]
+                        original_coordinator_hostname = smallest_token[1]
                     elif smallest_token[0] == "port":
-                        original_master_port = int(smallest_token[1])
+                        original_coordinator_port = int(smallest_token[1])
 
-    cmd = pg.ReadPostmasterTempFile.remote('Read postmaster file', original_master_port, original_master_hostname)
+    cmd = pg.ReadPostmasterTempFile.remote('Read postmaster file', original_coordinator_port, original_coordinator_hostname)
     (file_exists, _, _) = cmd.getResults()
     if file_exists:
-        logger.warn('Appears that there is an active postgres process on %s port=%d' % (original_master_hostname, original_master_port))
-        logger.warn('Need to stop current master before activating the standby.')
-        logger.warn('Rare possibility is just /tmp/.s.PGSQL.%d and /tmp/.s.PGSQL.%d.* files exist on %s.' % (original_master_port, original_master_port, original_master_hostname))
+        logger.warn('Appears that there is an active postgres process on %s port=%d' % (original_coordinator_hostname, original_coordinator_port))
+        logger.warn('Need to stop current coordinator before activating the standby.')
+        logger.warn('Rare possibility is just /tmp/.s.PGSQL.%d and /tmp/.s.PGSQL.%d.* files exist on %s.' % (original_coordinator_port, original_coordinator_port, original_coordinator_hostname))
         logger.warn('Need to delete these files')
         logger.warn('Then call this utility again.')
-        raise GpActivateStandbyException('Active postgres process on master')
+        raise GpActivateStandbyException('Active postgres process on coordinator')
  
 #-------------------------------------------------------------------------
 def get_config():
@@ -251,7 +251,7 @@ def get_config():
 def check_standby_running(options):
     """Checks if the standby postmaster process is running."""
     
-    return gp.getPostmasterPID('localhost', options.master_data_dir) > 0
+    return gp.getPostmasterPID('localhost', options.coordinator_data_dir) > 0
 
 
 #-------------------------------------------------------------------------
@@ -260,10 +260,10 @@ def check_or_start_standby(options):
     Check if standby postmaster is running.  We need the process
     to activate it, but there could be some cases where user wants
     to activate it anyway, with potentional data loss.  In such case,
-    we'll end up restarting the master after promoting it.
+    we'll end up restarting the coordinator after promoting it.
     """
 
-    pid = gp.get_postmaster_pid_locally(options.master_data_dir) 
+    pid = gp.get_postmaster_pid_locally(options.coordinator_data_dir) 
 
 
     if pid > 0:
@@ -281,10 +281,10 @@ def check_or_start_standby(options):
         # it anyway.  We'll restart with the full options after
         # promoting the standby.  This is nothing but a bailout and
         # this could lose some of the latest changes from the primary.
-        fd, trigger_file = tempfile.mkstemp(dir=options.master_data_dir)
+        fd, trigger_file = tempfile.mkstemp(dir=options.coordinator_data_dir)
 
         cmd = gp.GpConfigHelper("add promote trigger file",
-                                options.master_data_dir,
+                                options.coordinator_data_dir,
                                 'promote_trigger_file',
                                 value="'" + trigger_file + "'")
         cmd.run(validateAfter=True)
@@ -293,31 +293,31 @@ def check_or_start_standby(options):
             f.write('');
         f.close();
 
-        start_master(options)
+        start_coordinator(options)
 
         return False
 
 #-------------------------------------------------------------------------
-def start_master(options):
-    """Starts the master."""
+def start_coordinator(options):
+    """Starts the coordinator."""
 
-    logger.info('Starting standby master database in utility mode...')
-    gp.NewGpStart.local('Start GPDB', masterOnly=True, masterDirectory=options.master_data_dir)
+    logger.info('Starting standby coordinator database in utility mode...')
+    gp.NewGpStart.local('Start GPDB', coordinatorOnly=True, coordinatorDirectory=options.coordinator_data_dir)
 
 #-------------------------------------------------------------------------
-def stop_master():
-    """Stops the master."""
+def stop_coordinator():
+    """Stops the coordinator."""
     
-    logger.info('Stopping standby master...')
-    gp.GpStop.local('Stop GPDB', masterOnly=True, fast=True)
+    logger.info('Stopping standby coordinator...')
+    gp.GpStop.local('Stop GPDB', coordinatorOnly=True, fast=True)
  
 #-------------------------------------------------------------------------
-def promote_standby(master_data_dir):
+def promote_standby(coordinator_data_dir):
     """Promote standby"""
 
     logger.info('Promoting standby...')
     cmd = gp.Command('pg_ctl promote',
-                     'pg_ctl promote -D %s' % master_data_dir)
+                     'pg_ctl promote -D %s' % coordinator_data_dir)
     cmd.run(validateAfter=True)
 
     logger.debug('Waiting for connection...')
@@ -325,11 +325,11 @@ def promote_standby(master_data_dir):
         try:
             dburl = dbconn.DbURL()
             conn = dbconn.connect(dburl, utility=True, logConn=False)
-            # When the new master is available for connections, we should
+            # When the new coordinator is available for connections, we should
             # run a CHECKPOINT to force the new TimeLineID to be written to
             # the pg_control file.
             dbconn.execSQL(conn, 'CHECKPOINT')
-            logger.info('Standby master is promoted')
+            logger.info('Standby coordinator is promoted')
             conn.close()
             return True
         except pygresql.InternalError as e:
@@ -369,19 +369,19 @@ try:
 
     # promote standby, only if the standby is running in recovery
     if not requires_restart:
-        res = promote_standby(options_.master_data_dir)
+        res = promote_standby(options_.coordinator_data_dir)
         if not res:
             raise GpActivateStandbyException('Either the set port is incorrect or '
                                              'the postmaster could not come up.')
 
     # now we can access the catalog.  promote action has already updated
-    # catalog, so array.master is the old (promoted) standby at this point.
+    # catalog, so array.coordinator is the old (promoted) standby at this point.
     array_ = get_config()
 
-    # If we forced to start utility master, this is the time to restart
-    # cluster so that the new master becomes dispatch mode.
+    # If we forced to start utility coordinator, this is the time to restart
+    # cluster so that the new coordinator becomes dispatch mode.
     if requires_restart:
-        cmd = gp.GpStop.local('GPDB restart', restart=True, datadir=options_.master_data_dir)
+        cmd = gp.GpStop.local('GPDB restart', restart=True, datadir=options_.coordinator_data_dir)
 
     # At this point, cancel isn't all that bad so re-enable 
     # keyboard interrupt.
@@ -395,7 +395,7 @@ try:
         sys.exit(0)
     
 except Exception as e:
-    logger.fatal('Error activating standby master: %s' % str(e))
+    logger.fatal('Error activating standby coordinator: %s' % str(e))
     sys.exit(2)
 
 sys.exit(0)

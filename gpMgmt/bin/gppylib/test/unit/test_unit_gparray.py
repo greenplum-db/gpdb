@@ -179,18 +179,18 @@ class GpArrayTestCase(GpTestCase):
 #------------------------------- non-test helpers --------------------------------
     def _setup_gparray(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type,
                        mirror_list, mirror_portbase, dir_prefix):
-        master = Segment(content = -1,
+        coordinator = Segment(content = -1,
                     preferred_role = 'p',
                     dbid = 0,
                     role = 'p',
                     mode = 's',
                     status = 'u',
-                    hostname = 'masterhost',
-                    address = 'masterhost-1',
+                    hostname = 'coordinatorhost',
+                    address = 'coordinatorhost-1',
                     port = 5432,
-                    datadir = '/masterdir')
+                    datadir = '/coordinatordir')
         allrows = []
-        allrows.append(master)                 
+        allrows.append(coordinator)                 
         rows =  createSegmentRows(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
                                   mirror_list, mirror_portbase, dir_prefix)
         

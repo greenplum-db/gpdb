@@ -8,7 +8,7 @@
 
 <b>gplogfilter</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>gplogfilter</codeph> utility can be used to search through a Greenplum Database log file for entries matching the specified criteria. If an input
         file is not supplied, then <codeph>gplogfilter</codeph> will use the
-          <codeph>$MASTER_DATA_DIRECTORY</codeph> environment variable to locate the Greenplum master log file in the standard logging location. To read
+          <codeph>$MASTER_DATA_DIRECTORY</codeph> environment variable to locate the Greenplum coordinator log file in the standard logging location. To read
         from standard input, use a dash (<codeph>-</codeph>) as the input file name. Input files may
         be compressed using <codeph>gzip</codeph>. In an input file, a log entry is identified by
         its timestamp in <codeph>YYYY-MM-DD [hh:mm[:ss]]</codeph> format.</p><p>You can also use <codeph>gplogfilter</codeph> to search through all segment log files at once by
@@ -52,11 +52,11 @@ name ending in <codeph>.gz</codeph>, the output file will be compressed
 by default using maximum compression.</pd></plentry><plentry><pt>-a | --append</pt><pd>If the output file already exists, appends to the file instead of
 overwriting it.</pd></plentry></parml></sectiondiv><sectiondiv id="section8"><b>Input Options</b><parml><plentry><pt>input_file</pt><pd>The name of the input log file(s) to search through. If an input file is not supplied,
                 <codeph>gplogfilter</codeph> will use the <codeph>$MASTER_DATA_DIRECTORY</codeph>
-              environment variable to locate the Greenplum Database master log file.
+              environment variable to locate the Greenplum Database coordinator log file.
               To read from standard input, use a dash (<codeph>-</codeph>) as the input file
               name.</pd></plentry><plentry><pt>-u | --unzip</pt><pd>Uncompress the input file using <codeph>gunzip</codeph>. If the input
-file name ends in <codeph>.gz</codeph>, it will be uncompressed by default.</pd></plentry><plentry><pt>--help</pt><pd>Displays the online help.</pd></plentry><plentry><pt>--version</pt><pd>Displays the version of this utility.</pd></plentry></parml></sectiondiv></section><section id="section9"><title>Examples</title><p>Display the last three error messages in the master log file:</p><codeblock>gplogfilter -t -n 3</codeblock><p>Display all log messages in the master log file timestamped in the last
-10 minutes:</p><codeblock>gplogfilter -d :10</codeblock><p>Display log messages in the master log file containing the string <codeph>|con6
+file name ends in <codeph>.gz</codeph>, it will be uncompressed by default.</pd></plentry><plentry><pt>--help</pt><pd>Displays the online help.</pd></plentry><plentry><pt>--version</pt><pd>Displays the version of this utility.</pd></plentry></parml></sectiondiv></section><section id="section9"><title>Examples</title><p>Display the last three error messages in the coordinator log file:</p><codeblock>gplogfilter -t -n 3</codeblock><p>Display all log messages in the coordinator log file timestamped in the last
+10 minutes:</p><codeblock>gplogfilter -d :10</codeblock><p>Display log messages in the coordinator log file containing the string <codeph>|con6
 cmd11|</codeph>:</p><codeblock>gplogfilter -f '|con6 cmd11|'</codeblock><p>Using <codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, run
           <codeph>gplogfilter</codeph> on the segment hosts and search for log messages in the
         segment log files containing the string <codeph>con6</codeph> and save output to a file.</p><codeblock>gpssh -f seg_hosts_file -e 'source 

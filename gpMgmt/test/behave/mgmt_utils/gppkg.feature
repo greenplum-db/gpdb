@@ -113,10 +113,10 @@ Feature: gppkg tests
 
     @skip_fixme_ubuntu18.04
     @concourse_cluster
-    Scenario: gppkg --clean (which should be named "sync") should remove on all segment hosts when gppkg does not exist in master
+    Scenario: gppkg --clean (which should be named "sync") should remove on all segment hosts when gppkg does not exist in coordinator
         Given the database is running
         When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
-        And gppkg "sample" is removed from master host
+        And gppkg "sample" is removed from coordinator host
         And the user runs "gppkg --clean"
         Then gppkg should return a return code of 0
         And gppkg should print "The following packages will be uninstalled on .*: sample.gppkg" to stdout
@@ -124,7 +124,7 @@ Feature: gppkg tests
 
     @skip_fixme_ubuntu18.04
     @concourse_cluster
-    Scenario: gppkg --migrate copies all packages from master to all segment hosts
+    Scenario: gppkg --migrate copies all packages from coordinator to all segment hosts
         Given the database is running
         And the user runs "gppkg -r sample"
         And a gphome copy is created at /tmp/gppkg_migrate on all hosts

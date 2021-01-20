@@ -331,8 +331,8 @@ def get_latest_analyze_dir(dbname):
 
 
 def get_analyze_dir(dbname):
-    master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-    analyze_dir = os.path.join(master_data_dir, 'db_analyze', dbname)
+    coordinator_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+    analyze_dir = os.path.join(coordinator_data_dir, 'db_analyze', dbname)
     return analyze_dir
 
 

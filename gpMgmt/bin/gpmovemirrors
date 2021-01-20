@@ -67,8 +67,8 @@ def parseargs():
 
     parser.add_option('-i', '--input', dest="input_filename",
                       help="input expansion configuration file.", metavar="FILE")
-    parser.add_option('-d', '--master-data-directory', dest='master_data_directory',
-                      help='The master data directory for the system. If this option is not specified, \
+    parser.add_option('-d', '--master-data-directory', dest='coordinator_data_directory',
+                      help='The coordinator data directory for the system. If this option is not specified, \
                             the value is obtained from the $MASTER_DATA_DIRECTORY environment variable.')
     parser.add_option('-B', '--batch-size', dest='batch_size', type='int', default=16, metavar="<batch_size>",
                       help='Expansion configuration batch size. Valid values are 1-%d' % MAX_BATCH_SIZE)
@@ -105,15 +105,15 @@ def parseargs():
         parser.exit()
 
     try:
-        if options.master_data_directory is None:
-            options.master_data_directory = get_masterdatadir()
+        if options.coordinator_data_directory is None:
+            options.coordinator_data_directory = get_coordinatordatadir()
         options.gphome = get_gphome()
     except GpError as msg:
         logger.error(msg)
         parser.exit()
 
-    if not os.path.exists(options.master_data_directory):
-        logger.error('Master data directory does not exist.')
+    if not os.path.exists(options.coordinator_data_directory):
+        logger.error('Coordinator data directory does not exist.')
         parser.exit()
 
     options.pgport = int(os.getenv('PGPORT', 5432))
@@ -127,7 +127,7 @@ def logOptionValues(options):
     logger.info("Option values for this invocation of gpmovemirrors are:")
     logger.info("")
     logger.info("  --input                 = " + str(options.input_filename))
-    logger.info("  --master-data-directory = " + str(options.master_data_directory))
+    logger.info("  --master-data-directory = " + str(options.coordinator_data_directory))
     logger.info("  --batch-size            = " + str(options.batch_size))
     if options.verbose != None:
         logger.info("  --verbose               = " + str(options.verbose))
@@ -149,9 +149,9 @@ def shutdown():
 
 
 # -------------------------------------------------------------------------
-def gpmovemirrors_status_file_exists(master_data_directory):
+def gpmovemirrors_status_file_exists(coordinator_data_directory):
     """Checks if status exists"""
-    return os.path.exists(master_data_directory + '/gpmovemirrors.status')
+    return os.path.exists(coordinator_data_directory + '/gpmovemirrors.status')
 
 
 # -------------------------------------------------------------------------
@@ -346,9 +346,9 @@ try:
             raise Exception(
                 "Old mirror segment does not exist with given information: address = %s, port = %s, segment data directory = %s"
                 % (oldMirror.address, str(oldMirror.port), oldMirror.dataDirectory))
-        if seg.getSegmentContentId() == MASTER_CONTENT_ID:
+        if seg.getSegmentContentId() == COORDINATOR_CONTENT_ID:
             raise Exception(
-                "Cannot move master or master mirror segments: address = %s, port = %s, segment data directory = %s"
+                "Cannot move coordinator or coordinator mirror segments: address = %s, port = %s, segment data directory = %s"
                 % (oldMirror.address, str(oldMirror.port), oldMirror.dataDirectory))
         if seg.getSegmentRole() != ROLE_MIRROR:
             raise Exception(
@@ -426,7 +426,7 @@ try:
     newConfig.write_output_file(backout_filename, False)
 
     """ Start gprecoverseg. """
-    recoversegOptions = "-i " + newConfig.inputFile + " -v -a -d " + options.master_data_directory
+    recoversegOptions = "-i " + newConfig.inputFile + " -v -a -d " + options.coordinator_data_directory
     if options.logfile_directory != None:
         recoversegOptions = recoversegOptions + " -l " + str(options.logfile_directory)
     logger.info('About to run gprecoverseg with options: ' + recoversegOptions)

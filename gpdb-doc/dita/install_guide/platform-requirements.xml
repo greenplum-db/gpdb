@@ -125,7 +125,7 @@
         <p>Greenplum Database 6 uses Python 2.7.12, which is included with the product installation
           (and not installed as a package dependency).</p>
         <note type="important">SSL <ph otherprops="pivotal">is supported </ph><ph
-            otherprops="oss-only">can be used </ph>only on the Greenplum Database master host
+            otherprops="oss-only">can be used </ph>only on the Greenplum Database coordinator host
           system. It cannot be used on the segment host systems.</note>
         <note type="important">For all Greenplum Database host systems, SELinux must be disabled.
           You should also disable firewall software, although firewall software can be enabled if it

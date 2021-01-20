@@ -7,7 +7,7 @@
     <p>Shows the status of a running Greenplum Database system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpstate</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
+      <codeblock><b>gpstate</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
           [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>] | <b>-x</b> 
           [<b>-l</b> <varname>log_directory</varname>]
 
@@ -21,7 +21,7 @@
           <codeph>gpstate</codeph> utility provides additional status information for a Greenplum Database system, such as:</p>
       <ul>
         <li id="md136156">Which segments are down.</li>
-        <li id="md136689">Master and segment configuration information (hosts, data directories,
+        <li id="md136689">Coordinator and segment configuration information (hosts, data directories,
           etc.).</li>
         <li id="md136182">The ports used by the system.</li>
         <li id="md136189">A mapping of primary segments to their corresponding mirror segments.</li>
@@ -47,8 +47,8 @@
             segments.</pd>
         </plentry>
         <plentry>
-          <pt>-d <varname>master_data_directory</varname></pt>
-          <pd>Optional. The master data directory. If not specified, the value set for
+          <pt>-d <varname>coordinator_data_directory</varname></pt>
+          <pd>Optional. The coordinator data directory. If not specified, the value set for
               <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
         </plentry>
         <plentry>
@@ -61,8 +61,8 @@
             one or more segment hosts with unbalanced processing load.</pd>
         </plentry>
         <plentry>
-          <pt>-f (show standby master details)</pt>
-          <pd>Display details of the standby master host if configured.</pd>
+          <pt>-f (show standby coordinator details)</pt>
+          <pd>Display details of the standby coordinator host if configured.</pd>
         </plentry>
         <plentry>
           <pt>-i (show Greenplum Database version)</pt>
@@ -91,7 +91,7 @@
         </plentry>
         <plentry>
           <pt>-Q (quick status)</pt>
-          <pd>Optional. Checks segment status in the system catalog on the master host. Does not
+          <pd>Optional. Checks segment status in the system catalog on the coordinator host. Does not
             poll the segments for status.</pd>
         </plentry>
         <plentry>
@@ -116,9 +116,9 @@
     </section>
     <section id="section5">
       <title>Output Field Definitions</title>
-      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for the master:</p>
+      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for the coordinator:</p>
       <table id="md138854">
-        <title>gpstate output data for the master</title>
+        <title>gpstate output data for the coordinator</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="166pt"/>
           <colspec colnum="2" colname="col2" colwidth="208pt"/>
@@ -130,24 +130,24 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">Master host</entry>
-              <entry colname="col2">host name of the master</entry>
+              <entry colname="col1">Coordinator host</entry>
+              <entry colname="col2">host name of the coordinator</entry>
             </row>
             <row>
-              <entry colname="col1">Master postgres process ID</entry>
-              <entry colname="col2">PID of the master database listener process</entry>
+              <entry colname="col1">Coordinator postgres process ID</entry>
+              <entry colname="col2">PID of the coordinator database listener process</entry>
             </row>
             <row>
-              <entry colname="col1">Master data directory</entry>
-              <entry colname="col2">file system location of the master data directory</entry>
+              <entry colname="col1">Coordinator data directory</entry>
+              <entry colname="col2">file system location of the coordinator data directory</entry>
             </row>
             <row>
-              <entry colname="col1">Master port</entry>
-              <entry colname="col2">port of the master <codeph>postgres</codeph> database listener
+              <entry colname="col1">Coordinator port</entry>
+              <entry colname="col2">port of the coordinator <codeph>postgres</codeph> database listener
                 process</entry>
             </row>
             <row>
-              <entry colname="col1">Master current role</entry>
+              <entry colname="col1">Coordinator current role</entry>
               <entry colname="col2">dispatch = regular operating mode<p>utility = maintenance mode
                 </p></entry>
             </row>
@@ -177,12 +177,12 @@
               <entry colname="col2">physical mirroring or none</entry>
             </row>
             <row>
-              <entry colname="col1">Master standby</entry>
-              <entry colname="col2">host name of the standby master</entry>
+              <entry colname="col1">Coordinator standby</entry>
+              <entry colname="col2">host name of the standby coordinator</entry>
             </row>
             <row>
-              <entry colname="col1">Standby master state</entry>
-              <entry colname="col2">status of the standby master: active or passive</entry>
+              <entry colname="col1">Standby coordinator state</entry>
+              <entry colname="col2">status of the standby coordinator: active or passive</entry>
             </row>
           </tbody>
         </tgroup>
@@ -281,7 +281,7 @@
               <entry colname="col2">active process ID of a segment</entry>
             </row>
             <row>
-              <entry colname="col1">Master reports status as</entry>
+              <entry colname="col1">Coordinator reports status as</entry>
               <entry colname="col2">segment status as reported in the system catalog:
                   <varname>Up</varname> or <varname>Down</varname></entry>
             </row>
@@ -295,10 +295,10 @@
           </tbody>
         </tgroup>
       </table>
-      <p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby master
+      <p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby coordinator
         replication status:</p>
       <table id="table_vt5_rvm_ht">
-        <title>gpstate output data for master replication</title>
+        <title>gpstate output data for coordinator replication</title>
         <tgroup cols="2">
           <colspec colnum="1" colname="col1" colwidth="165pt"/>
           <colspec colnum="2" colname="col2" colwidth="209.25pt"/>
@@ -311,25 +311,25 @@
           <tbody>
             <row>
               <entry colname="col1">Standby address</entry>
-              <entry colname="col2">hostname of the standby master</entry>
+              <entry colname="col2">hostname of the standby coordinator</entry>
             </row>
             <row>
               <entry colname="col1">Standby data dir</entry>
-              <entry colname="col2">file system location of the standby master data
+              <entry colname="col2">file system location of the standby coordinator data
                 directory</entry>
             </row>
             <row>
               <entry colname="col1">Standby port</entry>
-              <entry colname="col2">port of the standby master <codeph>postgres</codeph> database
+              <entry colname="col2">port of the standby coordinator <codeph>postgres</codeph> database
                 listener process</entry>
             </row>
             <row>
               <entry colname="col1">Standby PID</entry>
-              <entry colname="col2">process ID of the standby master </entry>
+              <entry colname="col2">process ID of the standby coordinator </entry>
             </row>
             <row>
               <entry colname="col1">Standby status</entry>
-              <entry colname="col2">status of the standby master: <varname>Standby host
+              <entry colname="col2">status of the standby coordinator: <varname>Standby host
                   passive</varname>
               </entry>
             </row>
@@ -365,11 +365,11 @@
       <title>Examples</title>
       <p>Show detailed status information of a Greenplum Database system:</p>
       <codeblock>gpstate -s</codeblock>
-      <p>Do a quick check for down segments in the master host system catalog:</p>
+      <p>Do a quick check for down segments in the coordinator host system catalog:</p>
       <codeblock>gpstate -Q</codeblock>
       <p>Show information about mirror segment
         instances:<codeblock>gpstate -m</codeblock></p>
-      <p>Show information about the standby master configuration:</p>
+      <p>Show information about the standby coordinator configuration:</p>
       <codeblock>gpstate -f</codeblock>
       <p>Display the Greenplum software version information:</p>
       <codeblock>gpstate -i</codeblock>

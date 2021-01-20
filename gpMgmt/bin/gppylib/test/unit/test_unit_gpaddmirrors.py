@@ -36,19 +36,19 @@ class GpAddMirrorsTest(GpTestCase):
         self.mock_logger = self.get_mock_from_apply_patch('logger')
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
-        self.gpMasterEnvironmentMock.return_value.getMasterDataDir.return_value = "/data/master/gpseg-1"
+        self.gpMasterEnvironmentMock.return_value.getMasterDataDir.return_value = "/data/coordinator/gpseg-1"
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch('getConfigurationProvider')
         self.config_provider_mock = Mock(spec=GpConfigurationProvider)
         self.getConfigProviderFunctionMock.return_value = self.config_provider_mock
         self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
         self.config_provider_mock.loadSystemConfig.return_value = self.gparrayMock
         self.mock_heap_checksum = self.get_mock_from_apply_patch('HeapChecksum')
-        self.mock_heap_checksum.return_value.get_master_value.return_value = 1
+        self.mock_heap_checksum.return_value.get_coordinator_value.return_value = 1
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [0])
         self.mock_heap_checksum.return_value.are_segments_consistent.return_value = False
-        self.master.heap_checksum = 1
+        self.coordinator.heap_checksum = 1
         self.mock_heap_checksum.return_value.check_segment_consistency.return_value = (
-            [self.primary0], [], self.master.heap_checksum)
+            [self.primary0], [], self.coordinator.heap_checksum)
         self.mdd = os.getenv("MASTER_DATA_DIRECTORY")
         if not self.mdd:
             self.mdd = "/Users/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1"
@@ -69,13 +69,13 @@ class GpAddMirrorsTest(GpTestCase):
     def test_run_calls_validate_heap_checksum(self):
         self.primary0.heap_checksum = 1
         self.primary1.heap_checksum = 0
-        self.master.heap_checksum = 1
+        self.coordinator.heap_checksum = 1
         self.mock_heap_checksum.return_value.check_segment_consistency.return_value = (
-            [self.primary0], [self.primary1], self.master.heap_checksum)
+            [self.primary0], [self.primary1], self.coordinator.heap_checksum)
         sys.argv = ['gpaddmirrors', '-a']
         options, args = self.parser.parse_args()
         command_obj = self.subject.createProgram(options, args)
-        with self.assertRaisesRegex(Exception, 'Segments have heap_checksum set inconsistently to master'):
+        with self.assertRaisesRegex(Exception, 'Segments have heap_checksum set inconsistently to coordinator'):
             command_obj.run()
 
     def test_option_batch_of_size_0_will_raise(self):
@@ -98,7 +98,7 @@ class GpAddMirrorsTest(GpTestCase):
         datadir_config = _write_datadir_config(self.mdd)
         mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
         sys.argv = ['gpaddmirrors', '-o', mirror_config_output_file, '-m', datadir_config]
-        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
+        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.coordinator, self.primary0, self.primary1])
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
         self.subject.run()
@@ -113,7 +113,7 @@ class GpAddMirrorsTest(GpTestCase):
         mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
         sys.argv = ['gpaddmirrors', '-p', '5000', '-o', mirror_config_output_file, '-m', datadir_config]
         options, _ = self.parser.parse_args()
-        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
+        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.coordinator, self.primary0, self.primary1])
         self.subject = GpAddMirrorsProgram(options)
         self.subject.run()
 
@@ -126,14 +126,14 @@ class GpAddMirrorsTest(GpTestCase):
         self.input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
         sys.argv = ['gpaddmirrors', '-p', '5000']
         options, _ = self.parser.parse_args()
-        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
+        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.coordinator, self.primary0, self.primary1])
         self.subject = GpAddMirrorsProgram(options)
         directories = self.subject._GpAddMirrorsProgram__getDataDirectoriesForMirrors(3, None)
         self.assertEqual(len(directories), 3)
 
     def _createGpArrayWith2Primary2Mirrors(self):
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/Users/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1")
         self.primary1 = Segment.initFromString(
@@ -143,7 +143,7 @@ class GpAddMirrorsTest(GpTestCase):
         mirror1 = Segment.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
 
-        return GpArray([self.master, self.primary0, self.primary1, mirror0, mirror1])
+        return GpArray([self.coordinator, self.primary0, self.primary1, mirror0, mirror1])
 
 
 def _write_datadir_config(mdd):

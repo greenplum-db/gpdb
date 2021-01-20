@@ -62,7 +62,7 @@ class StartSegmentsResult:
 
 class StartSegmentsOperation:
     """
-       This operation, to be run from the master, will start the segments up
+       This operation, to be run from the coordinator, will start the segments up
             and, if necessary, convert them to the proper mode
 
        Note that this can be used to start only a subset of the segments
@@ -70,7 +70,7 @@ class StartSegmentsOperation:
     """
 
     def __init__(self, workerPool, quiet, gpVersion,
-                 gpHome, masterDataDirectory, master_checksum_value=None, timeout=SEGMENT_TIMEOUT_DEFAULT,
+                 gpHome, coordinatorDataDirectory, coordinator_checksum_value=None, timeout=SEGMENT_TIMEOUT_DEFAULT,
                  specialMode=None, wrapper=None, wrapper_args=None, parallel=gp.DEFAULT_GPSTART_NUM_WORKERS,
                  logfileDirectory=False):
         checkNotNone("workerPool", workerPool)
@@ -78,14 +78,14 @@ class StartSegmentsOperation:
         self.__quiet = quiet
         self.__gpVersion = gpVersion
         self.__gpHome = gpHome
-        self.__masterDataDirectory = masterDataDirectory
+        self.__coordinatorDataDirectory = coordinatorDataDirectory
         self.__timeout = timeout
         assert(specialMode in [None, 'upgrade', 'maintenance'])
         self.__specialMode = specialMode
         self.__wrapper = wrapper
         self.__wrapper_args = wrapper_args
         self.__parallel = parallel
-        self.master_checksum_value = master_checksum_value
+        self.coordinator_checksum_value = coordinator_checksum_value
         self.logfileDirectory = logfileDirectory
 
     def startSegments(self, gpArray, segments, startMethod, era):
@@ -172,7 +172,7 @@ class StartSegmentsOperation:
                                    mirroringModePreTransition,
                                    numContentsInCluster,
                                    era,
-                                   self.master_checksum_value,
+                                   self.coordinator_checksum_value,
                                    self.__timeout,
                                    verbose=logging_is_verbose(),
                                    ctxt=base.REMOTE,

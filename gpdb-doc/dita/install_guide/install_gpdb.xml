@@ -20,7 +20,7 @@
     <body>
       <p>You must install Greenplum Database on each host machine of the Greenplum Database
           system.<ph otherprops="oss-only"> You can configure a minimal Greenplum Database system to
-          run on a single host system with the master instance and segment instances running on the
+          run on a single host system with the coordinator instance and segment instances running on the
           same host system.</ph><ph otherprops="pivotal"> VMware distributes the Greenplum Database
           software as a downloadable package that you install on each host system with the operating
           system's package management system. You can download the package from <xref
@@ -36,7 +36,7 @@
         installed via the <codeph>apt-get</codeph> command with the Ubuntu Personal Package Archive
         system.</p>
       <p>Before you begin installing Greenplum Database, be sure you have completed the steps in
-          <xref href="prep_os.xml#topic1"/> to configure each of the master, standby master, and
+          <xref href="prep_os.xml#topic1"/> to configure each of the coordinator, standby coordinator, and
         segment host machines for Greenplum Database.</p>
       <note type="important">After installing Greenplum Database, you must set Greenplum Database
         environment variables. See <xref href="init_gpdb.xml#topic8"/>.</note>
@@ -49,7 +49,7 @@
         DEB file. </note>
       <ol id="ol_mm5_v1n_1jb">
         <li>Download and copy the Greenplum Database package to the <codeph>gpadmin</codeph> user's
-          home directory on the master, standby master, and every segment host machine. The
+          home directory on the coordinator, standby coordinator, and every segment host machine. The
           distribution file name has the format
             <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> for RHEL, CentOS, and
           Oracle Linux systems, or <codeph>greenplum-db-&lt;version>-&lt;platform>.deb</codeph> for
@@ -86,7 +86,7 @@ $ sudo chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
         file. </note>
       <ol id="ol_ic2_htr_cmb">
         <li>Download and copy the Greenplum Database package to the <codeph>gpadmin</codeph> user's
-          home directory on the master, standby master, and every segment host machine. The
+          home directory on the coordinator, standby coordinator, and every segment host machine. The
           distribution file name has the format
             <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> for RHEL and CentOS
           systems, or <codeph>greenplum-db-&lt;version>-&lt;platform>.deb</codeph> for Ubuntu
@@ -119,12 +119,12 @@ libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R
     <body>
       <p>The <codeph>gpadmin</codeph> user on each Greenplum host must be able to SSH from any host
         in the cluster to any other host in the cluster without entering a password or passphrase
-        (called "passwordless SSH"). If you enable passwordless SSH from the master host to every
+        (called "passwordless SSH"). If you enable passwordless SSH from the coordinator host to every
         other host in the cluster ("1-<i>n</i> passwordless SSH"), you can use the Greenplum
         Database <codeph>gpssh-exkeys</codeph> command-line utility to enable passwordless SSH from
         every host to every other host ("<i>n</i>-<i>n</i> passwordless SSH"). </p>
       <ol id="ol_iyx_3b5_vhb">
-        <li>Log in to the master host as the <codeph>gpadmin</codeph> user.</li>
+        <li>Log in to the coordinator host as the <codeph>gpadmin</codeph> user.</li>
         <li>Source the <codeph>path</codeph> file in the Greenplum Database installation directory.<codeblock>$ source /usr/local/greenplum-db-&lt;version>/greenplum_path.sh</codeblock>
           <note>Add the above <codeph>source</codeph> command to the <codeph>gpadmin</codeph> user's
               <codeph>.bashrc</codeph> or other shell startup file so that the Greenplum Database
@@ -145,10 +145,10 @@ $ ssh-copy-id sdw3
           prompt.<codeblock>$ SSHPASS=&lt;password> sshpass -e ssh-copy-id smdw</codeblock></li>
         <li>In the <codeph>gpadmin</codeph> home directory, create a file named
             <codeph>hostfile_exkeys</codeph> that has the machine configured host names and host
-          addresses (interface names) for each host in your Greenplum system (master, standby
-          master, and segment hosts). Make sure there are no blank lines or extra spaces. Check the
+          addresses (interface names) for each host in your Greenplum system (coordinator, standby
+          coordinator, and segment hosts). Make sure there are no blank lines or extra spaces. Check the
             <codeph>/etc/hosts</codeph> file on your systems for the correct host names to use for
-          your environment. For example, if you have a master, standby master, and three segment
+          your environment. For example, if you have a coordinator, standby coordinator, and three segment
           hosts with two unbonded network interfaces per host, your file would look something like
           this:<codeblock>mdw
 mdw-1
@@ -175,10 +175,10 @@ sdw3-2</codeblock></li>
     <title>Confirming Your Installation</title>
     <body>
       <p>To make sure the Greenplum software was installed and configured correctly, run the
-        following confirmation steps from your Greenplum master host. If necessary, correct any
+        following confirmation steps from your Greenplum coordinator host. If necessary, correct any
         problems before continuing on to the next task.</p>
       <ol id="ol_yjk_knz_thb">
-        <li id="ji162490">Log in to the master host as
+        <li id="ji162490">Log in to the coordinator host as
           <codeph>gpadmin</codeph>:<codeblock>$ su - <varname>gpadmin</varname></codeblock></li>
         <li id="ji162506">Use the <codeph>gpssh</codeph> utility to see if you can log in to all
           hosts without a password prompt, and to confirm that the Greenplum software was installed

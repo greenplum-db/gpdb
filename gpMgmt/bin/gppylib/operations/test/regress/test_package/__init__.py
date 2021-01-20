@@ -76,7 +76,7 @@ def get_host_list():
     gparr = GpArray.initFromCatalog(dbconn.DbURL(port = MASTER_PORT), utility = True)
     segs = gparr.getDbList()
 
-    master = None
+    coordinator = None
     standby_host = None
     segment_host_list = []
 
@@ -86,13 +86,13 @@ def get_host_list():
         elif not seg.isSegmentMaster(current_role=True):
             segment_host_list.append(seg.getSegmentHostName())
         elif seg.isSegmentMaster(current_role=True):
-            master = seg.getSegmentHostName()
+            coordinator = seg.getSegmentHostName()
 
     #Deduplicate the hosts so that we
     #dont install multiple times on the same host
     segment_host_list = list(set(segment_host_list))
-    if master in segment_host_list:
-        segment_host_list.remove(master)
+    if coordinator in segment_host_list:
+        segment_host_list.remove(coordinator)
 
     return (standby_host, segment_host_list)
 

@@ -147,7 +147,7 @@ class SimpleMainLock:
             self.parentpid = int(os.environ[self.parentpidvar])
 
         if self.pidlockpath is not None:
-            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidlockpath)
+            self.ppath = os.path.join(gp.get_coordinatordatadir(), self.pidlockpath)
             self.pidlockfile = PIDLockFile(self.ppath)
 
     def acquire(self):
@@ -332,8 +332,8 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
             if options.ensure_value("quiet", False):
                 gplog.quiet_stdout_logging()
 
-        if options.ensure_value("masterDataDirectory", None) is not None:
-            options.master_data_directory = os.path.abspath(options.masterDataDirectory)
+        if options.ensure_value("coordinatorDataDirectory", None) is not None:
+            options.coordinator_data_directory = os.path.abspath(options.coordinatorDataDirectory)
 
         if not suppressStartupLogMessage:
             logger.info("Starting %s with args: %s" % (gProgramName, ' '.join(sys.argv[1:])))
@@ -408,15 +408,15 @@ def addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption, includ
 
 def addMasterDirectoryOptionForSingleClusterProgram(addTo):
     """
-    Add the -d master directory option to the specified parser object
-    which is intended to provide the value of the master data directory.
+    Add the -d coordinator directory option to the specified parser object
+    which is intended to provide the value of the coordinator data directory.
 
     For programs that operate on multiple clusters at once, this function/option
     is not appropriate.
     """
     addTo.add_option('-d', '--master_data_directory', type='string',
-                     dest="masterDataDirectory",
-                     metavar="<master data directory>",
-                     help="Optional. The master host data directory. If not specified, the value set" \
+                     dest="coordinatorDataDirectory",
+                     metavar="<coordinator data directory>",
+                     help="Optional. The coordinator host data directory. If not specified, the value set" \
                           "for $MASTER_DATA_DIRECTORY will be used.")
 

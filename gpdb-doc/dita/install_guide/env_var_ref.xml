@@ -69,9 +69,9 @@ export LD_LIBRARY_PATH</codeblock>
                         <title id="id138677" class="- topic/title ">MASTER_DATA_DIRECTORY</title>
                         <body class="- topic/body ">
                                 <p>This should point to the directory created by the gpinitsystem
-                                        utility in the master data directory location. For
+                                        utility in the coordinator data directory location. For
                                         example:</p>
-                                <codeblock>MASTER_DATA_DIRECTORY=/data/master/gpseg-1
+                                <codeblock>MASTER_DATA_DIRECTORY=/data/coordinator/gpseg-1
 export MASTER_DATA_DIRECTORY</codeblock>
                         </body>
                 </topic>
@@ -86,7 +86,7 @@ export MASTER_DATA_DIRECTORY</codeblock>
                                 connection-related environment variables to your profile for
                                 convenience, so you do not have to type so many options on the
                                 command line for client connections. Note that these environment
-                                variables should be set on the Greenplum Database master host
+                                variables should be set on the Greenplum Database coordinator host
                                 only.</p>
                 </body>
                 <topic id="topic8" xml:lang="en" ditaarch:DITAArchVersion="1.1"
@@ -119,7 +119,7 @@ export MASTER_DATA_DIRECTORY</codeblock>
                         class="- topic/topic ">
                         <title id="id138709" class="- topic/title ">PGHOST</title>
                         <body class="- topic/body ">
-                                <p>The Greenplum Database master host name.</p>
+                                <p>The Greenplum Database coordinator host name.</p>
                         </body>
                 </topic>
                 <topic id="topic11" xml:lang="en" ditaarch:DITAArchVersion="1.1"
@@ -127,7 +127,7 @@ export MASTER_DATA_DIRECTORY</codeblock>
                         class="- topic/topic ">
                         <title id="id138715" class="- topic/title ">PGHOSTADDR</title>
                         <body class="- topic/body ">
-                                <p>The numeric IP address of the master host. This can be set
+                                <p>The numeric IP address of the coordinator host. This can be set
                                         instead of or in addition to <codeph
                                                 class="+ topic/ph pr-d/codeph ">PGHOST</codeph> to
                                         avoid DNS lookup overhead.</p>
@@ -168,7 +168,7 @@ export MASTER_DATA_DIRECTORY</codeblock>
                         <title id="id138725" class="- topic/title ">PGOPTIONS</title>
                         <body class="- topic/body ">
                                 <p>Sets additional configuration parameters for the Greenplum
-                                        Database master server.</p>
+                                        Database coordinator server.</p>
                         </body>
                 </topic>
                 <topic id="topic15" xml:lang="en" ditaarch:DITAArchVersion="1.1"
@@ -176,7 +176,7 @@ export MASTER_DATA_DIRECTORY</codeblock>
                         class="- topic/topic ">
                         <title id="id138731" class="- topic/title ">PGPORT</title>
                         <body class="- topic/body ">
-                                <p>The port number of the Greenplum Database server on the master
+                                <p>The port number of the Greenplum Database server on the coordinator
                                         host. The default port is 5432.</p>
                         </body>
                 </topic>

@@ -11,7 +11,7 @@
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gppkg</b> [<b>-i</b> <varname>package</varname> | <b>-u</b> <varname>package</varname> | <b>-r </b> <varname>name</varname>-<varname>version</varname> | <b>-c</b>] 
-        [<b>-d</b> <varname>master_data_directory</varname>] [<b>-a</b>] [<b>-v</b>]
+        [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-a</b>] [<b>-v</b>]
 
 <b>gppkg --migrate</b> <varname>GPHOME_old</varname> <varname>GPHOME_new</varname> [<b>-a</b>] [<b>-v</b>]
 
@@ -46,14 +46,14 @@
                 </plentry>
                 <plentry>
                     <pt>-c | --clean</pt>
-                    <pd>Reconciles the package state of the cluster to match the state of the master
+                    <pd>Reconciles the package state of the cluster to match the state of the coordinator
                         host. Running this option after a failed or partial install/uninstall
                         ensures that the package installation state is consistent across the
                         cluster.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-d <varname>master_data_directory</varname></pt>
-                    <pd>The master data directory. If not specified, the value set for
+                    <pt>-d <varname>coordinator_data_directory</varname></pt>
+                    <pd>The coordinator data directory. If not specified, the value set for
                             <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
                 </plentry>
                 <plentry>
@@ -71,11 +71,11 @@
                             /usr/local/greenplum-db-&lt;new-version></codeph></pd>
                     <pd>When migrating packages, these requirements must be met.<ul
                             id="ul_sx3_hwx_41b">
-                            <li>At least the master instance of the destination Greenplum Database
+                            <li>At least the coordinator instance of the destination Greenplum Database
                                 must be started (the instance installed in
                                     <varname>GPHOME_new</varname>). Before running the
                                     <codeph>gppkg</codeph> command start the Greenplum Database
-                                master with the command <codeph>gpstart -m</codeph>.</li>
+                                coordinator with the command <codeph>gpstart -m</codeph>.</li>
                             <li>Run the <codeph>gppkg</codeph> utility from the
                                     <varname>GPHOME_new</varname> installation. The migration
                                 destination installation directory. </li>

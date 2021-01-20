@@ -25,10 +25,10 @@ class Repair:
     def create_repair(self, sql_repair_contents):
         repair_dir = self.create_repair_dir()
 
-        master_segment = next(segment for segment in list(self._context.cfg.values()) if segment['content'] == -1)
+        coordinator_segment = next(segment for segment in list(self._context.cfg.values()) if segment['content'] == -1)
 
-        sql_filename = self._create_sql_file_in_repair_dir(repair_dir, sql_repair_contents, master_segment)
-        self._create_bash_script_in_repair_dir(repair_dir, sql_filename, master_segment)
+        sql_filename = self._create_sql_file_in_repair_dir(repair_dir, sql_repair_contents, coordinator_segment)
+        self._create_bash_script_in_repair_dir(repair_dir, sql_filename, coordinator_segment)
 
         return repair_dir
 
@@ -121,7 +121,7 @@ class Repair:
         """
         cases to consider
         self._issue_type : extra/missing vs everything else(policies, owner, constraint)
-        master vs segment
+        coordinator vs segment
         """
         psql_cmd = ""
 

@@ -69,7 +69,7 @@ OPTIONS
 
 -p <port> 
 
- The Greenplum Database master port. If not specified, the value of the 
+ The Greenplum Database coordinator port. If not specified, the value of the 
  PGPORT environment variable is used. If the value is not available, an 
  error is returned. 
 

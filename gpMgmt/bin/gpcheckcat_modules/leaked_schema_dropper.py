@@ -2,9 +2,9 @@ from gppylib.utils import escapeDoubleQuoteInSQLString
 
 class LeakedSchemaDropper:
 
-    # This query does a union of all the leaked temp schemas on the master as well as all the segments.
+    # This query does a union of all the leaked temp schemas on the coordinator as well as all the segments.
     # The first part of the query uses gp_dist_random which gets the leaked schemas from only the segments
-    # The second part of the query gets the leaked temp schemas from just the master
+    # The second part of the query gets the leaked temp schemas from just the coordinator
     # The simpler form of this query that pushed the union into the
     # inner select does not run correctly on 3.2.x
     # Also note autovacuum lancher and worker will not generate temp namespace

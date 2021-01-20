@@ -21,7 +21,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
     """
     def test00_delete_package_from_archive_and_install(self):
         """
-        Delete a package from the archive on the master
+        Delete a package from the archive on the coordinator
         and try to install the gppkg again.
         """
         gppkg_file = self.build(self.alpha_spec, self.A_spec)
@@ -35,7 +35,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
     @unittest.expectedFailure
     def test01_delete_package_from_archive_and_uninstall(self):
         """
-        Delete a package from the archive on the master 
+        Delete a package from the archive on the coordinator 
         and try to uninstall the gppkg.  
         Known issue: MPP-15737
         """
@@ -55,7 +55,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
 
     def test02_delete_rpm_and_install(self):
         """
-        Delete the main comprising rpm from the master
+        Delete the main comprising rpm from the coordinator
         and try to install the gppkg again.
         """
         #Use gppkg from previous test
@@ -68,7 +68,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
 
     def test03_delete_rpm_and_uninstall(self):
         """
-        Delete the main comprising rpm from the master
+        Delete the main comprising rpm from the coordinator
         and try to install the gppkg again.
         """
         #Use gppkg from previous test
@@ -81,7 +81,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
 
     def test04_install_rpm_and_install(self):
         """
-        Install the main comprising rpm on the master
+        Install the main comprising rpm on the coordinator
         and try to install a gppkg.
         """
         with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
@@ -96,7 +96,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
     @unittest.expectedFailure
     def test05_install_rpm_and_uninstall(self):
         """
-        Install the main comprising rpm on the master and 
+        Install the main comprising rpm on the coordinator and 
         try to uninstall a gppkg.
         """
         with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:

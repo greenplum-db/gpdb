@@ -65,7 +65,7 @@ DBID_TXT="gp_dbid"
 INIT_STANDBY_PROG=$GPINITSTANDBY
 QE_MIRROR_ARRAY=""
 GP_PASSWD=gparray
-TMP_PG_HBA=/tmp/pg_hba_conf_master.$$
+TMP_PG_HBA=/tmp/pg_hba_conf_coordinator.$$
 TMP_FILE=/tmp/cluster_tmp_file.$$
 TMP_HOSTNAME_FILE=/tmp/hostname_test_file.$$
 PARALLEL_STATUS_FILE=/tmp/gpinitsystem_parallel_status_file.$$
@@ -87,9 +87,9 @@ DCA_RESQUEUE_PRIORITY_NAME="gp_resqueue_priority"
 DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME="gp_resqueue_priority_cpucores_per_segment"
 DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME="gp_resqueue_priority_sweeper_interval"
 
-DCA_MASTER_RESQUEUE_PRIORITY_VAL="on"
-DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL=24
-DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL=1000
+DCA_COORDINATOR_RESQUEUE_PRIORITY_VAL="on"
+DCA_COORDINATOR_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL=24
+DCA_COORDINATOR_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL=1000
 
 DCA_SEGMENT_RESQUEUE_PRIORITY_VAL="on"
 DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL=4
@@ -106,7 +106,7 @@ USAGE () {
 		$ECHO
 		$ECHO "      `basename $0` -c gp_config_file [OPTIONS]"
 		$ECHO
-		$ECHO "      Creates a new Greenplum Database instance on a Master host and a number of"
+		$ECHO "      Creates a new Greenplum Database instance on a Coordinator host and a number of"
 		$ECHO "      segment instance hosts."
 		$ECHO
 		$ECHO "      General options:"
@@ -123,7 +123,7 @@ USAGE () {
 		$ECHO "      -b, shared_buffers per instance [default $DEFAULT_BUFFERS]"
 		$ECHO "          Specify either the number of database I/O buffers (without suffix) or the"
 		$ECHO "          amount of memory to use for buffers (with suffix 'kB', 'MB' or 'GB')."
-		$ECHO "          Applies to master and all segments."
+		$ECHO "          Applies to coordinator and all segments."
 		$ECHO "      -B, <number> run this batch of create segment processes in parallel [default $BATCH_DEFAULT]"
 		$ECHO "      -c, gp_config_file [mandatory]"
 		$ECHO "          Supplies all Greenplum configuration information required by this utility."
@@ -143,7 +143,7 @@ USAGE () {
 		$ECHO "          using gpinitsystem with the -O <output_configuration_file> option. You must"
 		$ECHO "          provide either the -c <cluster_configuration_file> option or the -I"
 		$ECHO "          <input_configuration_file> option to gpinitsystem."
-		$ECHO "      -m, maximum number of connections for master instance [default ${DEFAULT_QD_MAX_CONNECT}]"
+		$ECHO "      -m, maximum number of connections for coordinator instance [default ${DEFAULT_QD_MAX_CONNECT}]"
 		$ECHO "      -n, <locale>, setting for locale to be set when database initialized [default $DEFAULT_LOCALE_SETTING]"
 		$ECHO "      -O, <output_configuration_file>"
 		$ECHO "          When used with the -O option, gpinitsystem does not create a new Greenplum"
@@ -153,7 +153,7 @@ USAGE () {
 		$ECHO "          PRIMARY_ARRAY parameters, and can be later used with -I"
 		$ECHO "          <input_configuration_file> to initialize a new cluster."
 		$ECHO "      -p, postgresql_conf_gp_additions [optional]"
-		$ECHO "          List of additional PostgreSQL parameters to be applied to each Master/Segment"
+		$ECHO "          List of additional PostgreSQL parameters to be applied to each Coordinator/Segment"
 		$ECHO "          postgresql.conf file during Greenplum database initialization."
 		$ECHO "      -P, standby_port [optional]"
 		$ECHO "      -s, standby_hostname [optional]"
@@ -335,7 +335,7 @@ CHK_PARAMS () {
 
 		# Make sure that this script is running on the QD host
 		if [ $MASTER_HOSTNAME != `$HOSTNAME` ]; then
-			LOG_MSG "[WARN]:-Master hostname $MASTER_HOSTNAME does not match hostname output" 1
+			LOG_MSG "[WARN]:-Coordinator hostname $MASTER_HOSTNAME does not match hostname output" 1
 			LOG_MSG "[INFO]:-Checking to see if $MASTER_HOSTNAME can be resolved on this host" 1
 			$TRUSTED_SHELL $MASTER_HOSTNAME "$TOUCH $TMP_HOSTNAME_FILE"
 			if [ -f $TMP_HOSTNAME_FILE ];then
@@ -343,10 +343,10 @@ CHK_PARAMS () {
 				$RM -f $TMP_HOSTNAME_FILE
 			else
 				$TRUSTED_SHELL $MASTER_HOSTNAME "$RM -f $TMP_HOSTNAME_FILE"
-				LOG_MSG "[FATAL]:-Master hostname in configuration file is ${MASTER_HOSTNAME}" 1
+				LOG_MSG "[FATAL]:-Coordinator hostname in configuration file is ${MASTER_HOSTNAME}" 1
 				LOG_MSG "[FATAL]:-Operating system command returns `$HOSTNAME`" 1
 				LOG_MSG "[FATAL]:-Unable to resolve $MASTER_HOSTNAME on this host" 1
-				ERROR_EXIT "[FATAL]:-Master hostname in gpinitsystem configuration file must be $MASTER_HOSTNAME"
+				ERROR_EXIT "[FATAL]:-Coordinator hostname in gpinitsystem configuration file must be $MASTER_HOSTNAME"
 			fi
 		fi
 
@@ -365,20 +365,20 @@ CHK_PARAMS () {
 		if [ x"" = x"$MASTER_DIRECTORY" ]; then
 			ERROR_EXIT "[FATAL]:-MASTER_DIRECTORY variable not set"
 		fi
-		# Check that we have write access to the proposed master data directory
+		# Check that we have write access to the proposed coordinator data directory
 		W_DIR=$MASTER_DIRECTORY
-		LOG_MSG "[INFO]:-Checking write access to $W_DIR on master host"
+		LOG_MSG "[INFO]:-Checking write access to $W_DIR on coordinator host"
 		$TOUCH ${W_DIR}/tmp_file_test
 		RETVAL=$?
 		if [ $RETVAL -ne 0 ];then
-			ERROR_EXIT "[FATAL]:-Cannot write to $W_DIR on master host "
+			ERROR_EXIT "[FATAL]:-Cannot write to $W_DIR on coordinator host "
 		else
 			$RM -f ${W_DIR}/tmp_file_test
-			LOG_MSG "[INFO]:-Write test passed $W_DIR directory on master host"
+			LOG_MSG "[INFO]:-Write test passed $W_DIR directory on coordinator host"
 		fi	
-		# Check that the master segment directory does not exist
+		# Check that the coordinator segment directory does not exist
 		if [ -d ${MASTER_DIRECTORY}/${SEG_PREFIX}-1 ];then
-			ERROR_EXIT "[FATAL]:-Master host data directory ${MASTER_DIRECTORY}/${SEG_PREFIX}-1 already exists"
+			ERROR_EXIT "[FATAL]:-Coordinator host data directory ${MASTER_DIRECTORY}/${SEG_PREFIX}-1 already exists"
 		fi
 		# DATABASE_PREFIX
 		if [ x"" = x"$DATABASE_NAME" ]; then
@@ -397,23 +397,23 @@ CHK_PARAMS () {
 		if [ x"SQL_ASCII" = x"$ENCODING" ]; then
 			ERROR_EXIT "[FATAL]:-SQL_ASCII is no longer supported as a server encoding"
 		fi
-		# MASTER_MAX_CONNECT
-		if [ ! $MASTER_MAX_CONNECT ];then
-			LOG_MSG "[INFO]:-MASTER_MAX_CONNECT not set, will set to default value $DEFAULT_QD_MAX_CONNECT" 1
-			MASTER_MAX_CONNECT=$DEFAULT_QD_MAX_CONNECT
+		# COORDINATOR_MAX_CONNECT
+		if [ ! $COORDINATOR_MAX_CONNECT ];then
+			LOG_MSG "[INFO]:-COORDINATOR_MAX_CONNECT not set, will set to default value $DEFAULT_QD_MAX_CONNECT" 1
+			COORDINATOR_MAX_CONNECT=$DEFAULT_QD_MAX_CONNECT
 		else
-			if [ $MASTER_MAX_CONNECT -lt 1 ];then
-				ERROR_EXIT "[FATAL]:-MASTER_MAX_CONNECT less than 1"
+			if [ $COORDINATOR_MAX_CONNECT -lt 1 ];then
+				ERROR_EXIT "[FATAL]:-COORDINATOR_MAX_CONNECT less than 1"
 			fi
 		fi
-		((QE_MAX_CONNECT=$MASTER_MAX_CONNECT*$QE_CONNECT_FACTOR))
+		((QE_MAX_CONNECT=$COORDINATOR_MAX_CONNECT*$QE_CONNECT_FACTOR))
 		LOG_MSG "[INFO]:-Setting segment instance MAX_CONNECTIONS to $QD_MAX_CONNECT"
 		if [ x"" == x"$NEW_BUFFERS" ];then
-			MASTER_SHARED_BUFFERS=$DEFAULT_BUFFERS
+			COORDINATOR_SHARED_BUFFERS=$DEFAULT_BUFFERS
 			QE_SHARED_BUFFERS=$DEFAULT_BUFFERS
 		else
 			# removed code that forced at least 1000 buffers -kh 3/14/07
-			MASTER_SHARED_BUFFERS=$NEW_BUFFERS
+			COORDINATOR_SHARED_BUFFERS=$NEW_BUFFERS
 			QE_SHARED_BUFFERS=$NEW_BUFFERS
 			LOG_MSG "[INFO]:-Set shared buffers to $NEW_BUFFERS"
 		fi
@@ -453,35 +453,35 @@ CHK_PARAMS () {
 		fi
 
 		# Check open files value
-		MASTER_OPEN=`ulimit -n`
-		if [ $MASTER_OPEN -lt $OS_OPENFILES ];then
-			LOG_MSG "[WARN]:-Master open file limit is $MASTER_OPEN should be >= $OS_OPENFILES" 1
+		COORDINATOR_OPEN=`ulimit -n`
+		if [ $COORDINATOR_OPEN -lt $OS_OPENFILES ];then
+			LOG_MSG "[WARN]:-Coordinator open file limit is $COORDINATOR_OPEN should be >= $OS_OPENFILES" 1
 			ULIMIT_WARN=1
 		fi
-		# Get IP address of the master host
+		# Get IP address of the coordinator host
 
-		MASTER_IP_ADDRESS_ALL=(`$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v 127.0.0 | $AWK '{print $2}' | $CUT -d'/' -f1`)
-		ERROR_CHK $? "obtain IP address of Master host" 2
-		MASTER_IPV6_LOCAL_ADDRESS_ALL=(`$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print $2}' | $CUT -d'/' -f1`)
-		MASTER_IP_ADDRESS=(`$ECHO ${MASTER_IP_ADDRESS_ALL[@]} ${MASTER_IPV6_LOCAL_ADDRESS_ALL[@]}|$TR ' ' '\n'|$SORT -u|$TR '\n' ' '`)
-		LOG_MSG "[INFO]:-Master IP address array = ${MASTER_IP_ADDRESS[@]}"
+		COORDINATOR_IP_ADDRESS_ALL=(`$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v 127.0.0 | $AWK '{print $2}' | $CUT -d'/' -f1`)
+		ERROR_CHK $? "obtain IP address of Coordinator host" 2
+		COORDINATOR_IPV6_LOCAL_ADDRESS_ALL=(`$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print $2}' | $CUT -d'/' -f1`)
+		COORDINATOR_IP_ADDRESS=(`$ECHO ${COORDINATOR_IP_ADDRESS_ALL[@]} ${MASTER_IPV6_LOCAL_ADDRESS_ALL[@]}|$TR ' ' '\n'|$SORT -u|$TR '\n' ' '`)
+		LOG_MSG "[INFO]:-Coordinator IP address array = ${COORDINATOR_IP_ADDRESS[@]}"
 		if [ x"" != x"$STANDBY_HOSTNAME" ];then
 			STANDBY_IP_ADDRESS_ALL=(`$TRUSTED_SHELL $STANDBY_HOSTNAME "$IPV4_ADDR_LIST_CMD |$GREP inet|$GREP -v \"127.0.0\"|$AWK '{print \\$2}'|$CUT -d'/' -f1" 2>>$LOG_FILE`) 
             STANDBY_IPV6_ADDRESS_ALL=(`$TRUSTED_SHELL $STANDBY_HOSTNAME "$IPV6_ADDR_LIST_CMD |$GREP inet6|$AWK '{print \\$2}' |$CUT -d'/' -f1" 2>>$LOG_FILE`)
 			STANDBY_IP_ADDRESS=(`$ECHO ${STANDBY_IP_ADDRESS_ALL[@]} ${STANDBY_IPV6_ADDRESS_ALL[@]}|$TR ' ' '\n'|$SORT -u|$TR '\n' ' '`)
-			ERROR_CHK $? "obtain IP address of standby Master host" 2
+			ERROR_CHK $? "obtain IP address of standby Coordinator host" 2
 			LOG_MSG "[INFO]:-Standby IP address array = ${STANDBY_IP_ADDRESS[@]}"
 			#Check open files value
-			STANDBY_MASTER_OPEN=`$TRUSTED_SHELL $STANDBY_HOSTNAME "ulimit -n"`
-			if [ $STANDBY_MASTER_OPEN -lt $OS_OPENFILES ];then
-				LOG_MSG "[WARN]:-Standby Master open file limit is $STANDBY_MASTER_OPEN should be >= $OS_OPENFILES" 1
+			STANDBY_COORDINATOR_OPEN=`$TRUSTED_SHELL $STANDBY_HOSTNAME "ulimit -n"`
+			if [ $STANDBY_COORDINATOR_OPEN -lt $OS_OPENFILES ];then
+				LOG_MSG "[WARN]:-Standby Coordinator open file limit is $STANDBY_COORDINATOR_OPEN should be >= $OS_OPENFILES" 1
 				ULIMIT_WARN=1
 			fi
 		fi
 		
 		# Validate that the different locale settings are available of the system
-		# Note: This check is performed on the master only.  There is an assumption
-		# being made that the locales available on the master are available on the
+		# Note: This check is performed on the coordinator only.  There is an assumption
+		# being made that the locales available on the coordinator are available on the
 		# segment hosts.
 		if [ x"" != x"$REQ_LOCALE_SETTING" ]; then
 			IN_ARRAY $REQ_LOCALE_SETTING "`locale -a`"
@@ -635,7 +635,7 @@ CHK_LOCALE_KNOWN () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -eq 0 ];then
 		if [ `$LOCALE -a |$GREP -ic $LOCALE_SETTING` -eq 0 ];then
-			LOG_MSG "[INFO]:-Master host available locale values"
+			LOG_MSG "[INFO]:-Coordinator host available locale values"
 			$LOCALE -a >> $LOG_FILE
 			LOG_MSG "[FATAL]:-Unable to locate locale value $LOCALE_SETTING on this host" 1
 			LOG_MSG "[INFO]:-Select another locale value via -n option to this utility" 1
@@ -683,15 +683,15 @@ CHK_OPEN_FILES () {
 
 CHK_QES () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	LOG_MSG "[INFO]:-Checking Master host" 1
+	LOG_MSG "[INFO]:-Checking Coordinator host" 1
 	SET_VAR $QD_PRIMARY_ARRAY
 	CHK_DIR $GP_DIR
 	if [ $EXISTS -eq 0 ]; then
-		ERROR_EXIT "[FATAL]:-Master directory $GP_DIR already exists"
+		ERROR_EXIT "[FATAL]:-Coordinator directory $GP_DIR already exists"
 	fi
 	GET_PG_PID_ACTIVE $GP_PORT
 	if [ $PID -ne 0 ];then
-		ERROR_EXIT "[FATAL]:-Found indication of postmaster process on port $GP_PORT on Master host"
+		ERROR_EXIT "[FATAL]:-Found indication of postmaster process on port $GP_PORT on Coordinator host"
 	fi
 	LOG_MSG "[INFO]:-Checking new segment hosts, please wait..." 1
 
@@ -743,7 +743,7 @@ CHK_QES () {
         if [ $LOCAL_COUNT -ne 0 ];then
             LOG_MSG "[WARN]:-----------------------------------------------------------" 1
             LOG_MSG "[WARN]:-Host $GP_HOSTADDRESS is assigned as localhost in $HOSTFILE"  1
-            LOG_MSG "[WARN]:-This will cause segment->master communication failures" 1
+            LOG_MSG "[WARN]:-This will cause segment->coordinator communication failures" 1
             LOG_MSG "[WARN]:-Remove $GP_HOSTADDRESS from local host line in /etc/hosts" 1
             LOG_MSG "[WARN]:-----------------------------------------------------------" 1
         fi
@@ -844,15 +844,15 @@ CHK_SEG () {
 
 CHK_QES_FROM_INPUTFILE () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	LOG_MSG "[INFO]:-Checking Master host" 1
+	LOG_MSG "[INFO]:-Checking Coordinator host" 1
 	SET_VAR $QD_PRIMARY_ARRAY
 	CHK_DIR $GP_DIR
 	if [ $EXISTS -eq 0 ]; then
-		ERROR_EXIT "[FATAL]:-Master directory $GP_DIR already exists"
+		ERROR_EXIT "[FATAL]:-Coordinator directory $GP_DIR already exists"
 	fi
 	GET_PG_PID_ACTIVE $GP_PORT
 	if [ $PID -ne 0 ];then
-		ERROR_EXIT "[FATAL]:-Found indication of postmaster process on port $GP_PORT on Master host"
+		ERROR_EXIT "[FATAL]:-Found indication of postmaster process on port $GP_PORT on Coordinator host"
 	fi
 	LOG_MSG "[INFO]:-Checking new segment hosts, please wait..." 1
 	
@@ -899,8 +899,8 @@ CREATE_QE_ARRAY () {
 	. $CLUSTER_CONFIG
 	if [ x"" != x"$REQ_LOCALE_SETTING" ];then LOCALE_SETTING=$REQ_LOCALE_SETTING;fi
 	if [ `$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP -c "~${MASTER_HOSTNAME}\$"` -gt 0 ]; then
-		MASTER_LIST=(`$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP "~${MASTER_HOSTNAME}\$"`)
-		M_HOST_ARRAY=(${MASTER_LIST[@]} `$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP -v "~${MASTER_HOSTNAME}\$"`)
+		COORDINATOR_LIST=(`$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP "~${MASTER_HOSTNAME}\$"`)
+		M_HOST_ARRAY=(${COORDINATOR_LIST[@]} `$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP -v "~${MASTER_HOSTNAME}\$"`)
 	fi
 	if [ $MIRRORING -eq 1 ] && [ $MIRROR_TYPE -eq 0 ];then
 		# Move first host to other end of the array
@@ -914,8 +914,8 @@ CREATE_QE_ARRAY () {
 	LAST_HOST=X
 	SEG_DIR_VECTOR=0
 	MIR_COUNT=-1
-	MASTER_HOST=$MASTER_HOSTNAME
-	QD_PRIMARY_ARRAY=${MASTER_HOST}~${MASTER_HOSTNAME}~${MASTER_PORT}~${MASTER_DIRECTORY}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~${CONTENT_COUNT}~0
+	COORDINATOR_HOST=$MASTER_HOSTNAME
+	QD_PRIMARY_ARRAY=${COORDINATOR_HOST}~${MASTER_HOSTNAME}~${MASTER_PORT}~${MASTER_DIRECTORY}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~${CONTENT_COUNT}~0
 	((DBID_COUNT=$DBID_COUNT+1));((CONTENT_COUNT=$CONTENT_COUNT+1))
 	for QE_PAIR in ${M_HOST_ARRAY[@]}
 	do
@@ -1022,17 +1022,17 @@ DISPLAY_CONFIG () {
 		SET_VAR $QD_PRIMARY_ARRAY
 		LOG_MSG "[INFO]:-Greenplum Database Creation Parameters" 1
 		LOG_MSG "[INFO]:---------------------------------------" 1
-		LOG_MSG "[INFO]:-Master Configuration" 1
+		LOG_MSG "[INFO]:-Coordinator Configuration" 1
 		LOG_MSG "[INFO]:---------------------------------------" 1
-		LOG_MSG "[INFO]:-Master instance name       = $ARRAY_NAME" 1
-		LOG_MSG "[INFO]:-Master hostname            = $GP_HOSTADDRESS" 1
-		LOG_MSG "[INFO]:-Master port                = $MASTER_PORT" 1
-		LOG_MSG "[INFO]:-Master instance dir        = $GP_DIR" 1
-		LOG_MSG "[INFO]:-Master LOCALE              = $LOCALE_SETTING" 1
+		LOG_MSG "[INFO]:-Coordinator instance name  = $ARRAY_NAME" 1
+		LOG_MSG "[INFO]:-Coordinator hostname       = $GP_HOSTADDRESS" 1
+		LOG_MSG "[INFO]:-Coordinator port           = $MASTER_PORT" 1
+		LOG_MSG "[INFO]:-Coordinator instance dir   = $GP_DIR" 1
+		LOG_MSG "[INFO]:-Coordinator LOCALE         = $LOCALE_SETTING" 1
 		LOG_MSG "[INFO]:-Greenplum segment prefix   = $SEG_PREFIX" 1
-		LOG_MSG "[INFO]:-Master Database            = $DATABASE_NAME" 1
-		LOG_MSG "[INFO]:-Master connections         = $MASTER_MAX_CONNECT" 1
-		LOG_MSG "[INFO]:-Master buffers             = $MASTER_SHARED_BUFFERS" 1
+		LOG_MSG "[INFO]:-Coordinator Database       = $DATABASE_NAME" 1
+		LOG_MSG "[INFO]:-Coordinator connections    = $COORDINATOR_MAX_CONNECT" 1
+		LOG_MSG "[INFO]:-Coordinator buffers        = $COORDINATOR_SHARED_BUFFERS" 1
 		LOG_MSG "[INFO]:-Segment connections        = $QE_MAX_CONNECT" 1
 		LOG_MSG "[INFO]:-Segment buffers            = $QE_SHARED_BUFFERS" 1
 		LOG_MSG "[INFO]:-Encoding                   = $ENCODING" 1
@@ -1052,16 +1052,16 @@ DISPLAY_CONFIG () {
 			LOG_MSG "[INFO]:-Array host connect type    = Multi hostname per node" 1
 		fi
 		IP_COUNT=1
-		for MASTER_IP in "${MASTER_IP_ADDRESS[@]}"
+		for COORDINATOR_IP in "${COORDINATOR_IP_ADDRESS[@]}"
 		do
-			LOG_MSG "[INFO]:-Master IP address [$IP_COUNT]      = $MASTER_IP" 1
+			LOG_MSG "[INFO]:-Coordinator IP address [$IP_COUNT]      = $COORDINATOR_IP" 1
 			((IP_COUNT=$IP_COUNT+1))
 		done
 
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
-            LOG_MSG "[INFO]:-Standby Master             = $STANDBY_HOSTNAME" 1
+            LOG_MSG "[INFO]:-Standby Coordinator             = $STANDBY_HOSTNAME" 1
         else
-            LOG_MSG "[INFO]:-Standby Master             = Not Configured" 1
+            LOG_MSG "[INFO]:-Standby Coordinator             = Not Configured" 1
         fi
         LOG_MSG "[INFO]:-Number of primary segments = $QE_PRIMARY_COUNT" 1
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
@@ -1140,9 +1140,9 @@ SET_VAR () {
 
 CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		LOG_MSG "[INFO]:-Building the Master instance database, please wait..." 1
+		LOG_MSG "[INFO]:-Building the Coordinator instance database, please wait..." 1
 		SET_VAR $QD_PRIMARY_ARRAY
-		LOG_MSG "[INFO]:-Initializing Master Postgres instance $GP_DIR"
+		LOG_MSG "[INFO]:-Initializing Coordinator Postgres instance $GP_DIR"
 		$EXPORT_LIB_PATH
 
         if [ x"" != x"$LCCOLLATE" ]; then
@@ -1178,8 +1178,8 @@ CREATE_QD_DB () {
 		cmd="$cmd -D $GP_DIR"
 		cmd="$cmd --locale=$LOCALE_SETTING"
 		cmd="$cmd $LC_ALL_SETTINGS"
-		cmd="$cmd --max_connections=$MASTER_MAX_CONNECT"
-		cmd="$cmd --shared_buffers=$MASTER_SHARED_BUFFERS"
+		cmd="$cmd --max_connections=$COORDINATOR_MAX_CONNECT"
+		cmd="$cmd --shared_buffers=$COORDINATOR_SHARED_BUFFERS"
 		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
 			cmd="$cmd --data-checksums"
 		fi
@@ -1192,28 +1192,28 @@ CREATE_QD_DB () {
 		fi
 
 		BACKOUT_COMMAND "if [ -d $GP_DIR ]; then $RM -Rf $GP_DIR; fi"
-		BACKOUT_COMMAND "$ECHO Removing Master data directory files"
-		LOG_MSG "[INFO]:-Completed Master instance initialization"
-		$ECHO "#Greenplum specific configuration parameters for Master instance database" >> ${GP_DIR}/$PG_CONF
+		BACKOUT_COMMAND "$ECHO Removing Coordinator data directory files"
+		LOG_MSG "[INFO]:-Completed Coordinator instance initialization"
+		$ECHO "#Greenplum specific configuration parameters for Coordinator instance database" >> ${GP_DIR}/$PG_CONF
 		$ECHO "#------------------------------------------------------------------------" >> ${GP_DIR}/$PG_CONF
-		LOG_MSG "[INFO]:-Setting the Master port to $GP_PORT"
+		LOG_MSG "[INFO]:-Setting the Coordinator port to $GP_PORT"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0
-		ERROR_CHK $? "set Master port=$GP_PORT in $PG_CONF" 2
-		LOG_MSG "[INFO]:-Completed setting the Master port to $MASTER_PORT"
-		LOG_MSG "[INFO]:-Setting the Master listen addresses to '*'"
+		ERROR_CHK $? "set Coordinator port=$GP_PORT in $PG_CONF" 2
+		LOG_MSG "[INFO]:-Completed setting the Coordinator port to $MASTER_PORT"
+		LOG_MSG "[INFO]:-Setting the Coordinator listen addresses to '*'"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' 0
-		ERROR_CHK $? "set Master listen addresses to '*' in $PG_CONF" 2
+		ERROR_CHK $? "set Coordinator listen addresses to '*' in $PG_CONF" 2
 		LOG_MSG "[INFO]:-Completed setting the listen addresses to '*'"
-		LOG_MSG "[INFO]:-Setting Master logging option"
+		LOG_MSG "[INFO]:-Setting Coordinator logging option"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$LOG_STATEMENT_TXT" log_statement=all 0
 		ERROR_CHK $? "set log_statement=all in ${GP_DIR}/$PG_CONF" 1
-		LOG_MSG "[INFO]:-Setting Master instance check point segments"
+		LOG_MSG "[INFO]:-Setting Coordinator instance check point segments"
 
-		LOG_MSG "[INFO]:-Setting Master instance content id"
+		LOG_MSG "[INFO]:-Setting Coordinator instance content id"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=$GP_CONTENT" 0
 		ERROR_CHK $? "set gp_contentid=$GP_CONTENT in ${GP_DIR}/$PG_CONF" 1
 
-		LOG_MSG "[INFO]:-Setting Master instance db id"
+		LOG_MSG "[INFO]:-Setting Coordinator instance db id"
 		SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=$GP_DBID" 0
 		ERROR_CHK $? "set gp_dbid=$GP_DBID in ${GP_DIR}/$PG_INTERNAL_CONF" 1
 
@@ -1221,32 +1221,32 @@ CREATE_QD_DB () {
 				LOG_MSG "[INFO]:-Processing additional configuration parameters"
 				for NEW_PARAM in `$CAT $PG_CONF_ADD_FILE|$TR -s ' '|$TR -d ' '|$GREP -v "^#"`
 						do
-						LOG_MSG "[INFO]:-Adding config $NEW_PARAM to Master"
+						LOG_MSG "[INFO]:-Adding config $NEW_PARAM to Coordinator"
 						SEARCH_TXT=`$ECHO $NEW_PARAM |$CUT -d"=" -f1`
 						SED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM 0
 						ERROR_CHK $? "set $NEW_PARAM ${GP_DIR}/$PG_CONF" 1
 				done
 		fi
-		LOG_MSG "[INFO]:-Adding gp_dumpall access to $PG_HBA for master host"
-		BUILD_MASTER_PG_HBA_FILE $GP_DIR $HBA_HOSTNAMES
+		LOG_MSG "[INFO]:-Adding gp_dumpall access to $PG_HBA for coordinator host"
+		BUILD_COORDINATOR_PG_HBA_FILE $GP_DIR $HBA_HOSTNAMES
 		LOG_MSG "[INFO]:-Creating gpssh configuration file"
 		BUILD_GPSSH_CONF $GP_DIR
-		LOG_MSG "[INFO]:-Starting the Master in admin mode" 1
+		LOG_MSG "[INFO]:-Starting the Coordinator in admin mode" 1
 		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
 		-m" start >> ${LOG_FILE} 2>&1
 		RET_TEXT="`$PG_CTL status -D $GP_DIR`"
 		RUNNING=`$ECHO $RET_TEXT|$EGREP -c "not running|neither"`
 		if [ $RUNNING -ne 0 ]; then
 				$CAT ${GP_DIR}.log|$TEE -a $LOG_FILE
-				ERROR_EXIT "[FATAL]:-Failed to start the Master database in admin mode"
+				ERROR_EXIT "[FATAL]:-Failed to start the Coordinator database in admin mode"
 		fi
 		BACKOUT_COMMAND "$RM -f /tmp/.s.PGSQL.${GP_PORT}*"
-		BACKOUT_COMMAND "$ECHO \"Removing Master lock files\""
+		BACKOUT_COMMAND "$ECHO \"Removing Coordinator lock files\""
 		BACKOUT_COMMAND "$RM -f ${GP_DIR}.log"
-		BACKOUT_COMMAND "$ECHO Removing Master log file"
+		BACKOUT_COMMAND "$ECHO Removing Coordinator log file"
 		BACKOUT_COMMAND "if [ -d $GP_DIR ]; then $EXPORT_LIB_PATH;export PGPORT=$GP_PORT; $PG_CTL -D $GP_DIR stop; fi"
-		BACKOUT_COMMAND "$ECHO \"Stopping Master instance\""
-		LOG_MSG "[INFO]:-Completed starting the Master in admin mode"
+		BACKOUT_COMMAND "$ECHO \"Stopping Coordinator instance\""
+		LOG_MSG "[INFO]:-Completed starting the Coordinator in admin mode"
 		GP_HOSTNAME=$GP_HOSTADDRESS
 		PING_HOST $GP_HOSTNAME
 		RETVAL=$?
@@ -1272,11 +1272,11 @@ UPDATE_GPCONFIG () {
 
 		U_DB=$DEFAULTDB
 		CHK_COUNT=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -X -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>>${LOG_FILE}` >> $LOG_FILE 2>&1
-		ERROR_CHK $? "obtain psql count Master $GP_CONFIG_TBL" 2
+		ERROR_CHK $? "obtain psql count Coordinator $GP_CONFIG_TBL" 2
 		if [ $CHK_COUNT -eq 0 ]; then
-				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME, path $U_DIR to Master gp_segment_configuration"
+				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME, path $U_DIR to Coordinator gp_segment_configuration"
 				env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "SELECT pg_catalog.gp_add_segment(${U_DBID}::int2, ${U_CONTENT}::int2, '${U_ROLE}', '${U_ROLE}', 's', 'u', ${U_PORT}, '${U_HOSTNAME}', '${U_ADDRESS}', '${U_DIR}');" >> $LOG_FILE 2>&1
-				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME in dir $U_DIR to Master gp_segment_configuration" 2
+				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME in dir $U_DIR to Coordinator gp_segment_configuration" 2
 		else
 				LOG_MSG "[INFO]:-Content $U_CONTENT already exists in gp_segment_configuration system table"
 		fi
@@ -1292,7 +1292,7 @@ LOAD_QE_SYSTEM_DATA () {
 		for I in "${QE_PRIMARY_ARRAY[@]}"
 		do
 				SET_VAR $I
-				LOG_MSG "[INFO]:-Adding segment $GP_HOSTADDRESS to Master system tables"
+				LOG_MSG "[INFO]:-Adding segment $GP_HOSTADDRESS to Coordinator system tables"
 				GP_HOSTNAME=$GP_HOSTADDRESS
 				PING_HOST $GP_HOSTNAME
 				RETVAL=$?
@@ -1300,7 +1300,7 @@ LOAD_QE_SYSTEM_DATA () {
 					ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration."
 				fi
 				UPDATE_GPCONFIG $MASTER_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p
-				LOG_MSG "[INFO]:-Successfully added segment $GP_HOSTADDRESS to Master system tables"
+				LOG_MSG "[INFO]:-Successfully added segment $GP_HOSTADDRESS to Coordinator system tables"
 		done
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
@@ -1368,7 +1368,7 @@ CREATE_SEGMENT () {
 			# PAIR_SEGMENT_INFO: corresponding pair, ex: host2~port2~data_dir~dbid2~contentid
 			# INST_COUNT: Number of parallel script count
 			MASTER_HOSTNAME=${MASTER_HOSTNAME} HBA_HOSTNAMES=${HBA_HOSTNAMES} $GPCREATESEG $FLAG $$ $PREFERRED_ROLE $SEGMENT_INFO "${PAIR_SEGMENT_INFO}" $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
-`$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
+`$ECHO ${COORDINATOR_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 			PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
 		done
@@ -1417,10 +1417,10 @@ STOP_QD_PRODUCTION () {
 CREATE_STANDBY_QD () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ ! -f $INIT_STANDBY_PROG ]; then
-		LOG_MSG "[WARN]:-Unable to locate $INIT_STANDBY_PROG, hence unable to initialize standby master $STANDBY_HOSTNAME"
+		LOG_MSG "[WARN]:-Unable to locate $INIT_STANDBY_PROG, hence unable to initialize standby coordinator $STANDBY_HOSTNAME"
 		STANDBY_RET_CODE=1
 	else
-		LOG_MSG "[INFO]:-Starting initialization of standby master $STANDBY_HOSTNAME" 1
+		LOG_MSG "[INFO]:-Starting initialization of standby coordinator $STANDBY_HOSTNAME" 1
 		INIT_STANDBY_ARGS=""
 		if [ x"" != x"$STANDBY_PORT" ]; then
 			INIT_STANDBY_ARGS+=" -P $STANDBY_PORT"
@@ -1434,9 +1434,9 @@ CREATE_STANDBY_QD () {
 		export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1;$INIT_STANDBY_PROG -s $STANDBY_HOSTNAME $INIT_STANDBY_ARGS -a
 		STANDBY_RET_CODE=$?
 		if [ $STANDBY_RET_CODE -eq 0 ]; then
-			LOG_MSG "[INFO]:-Successfully completed standby master initialization" 1
+			LOG_MSG "[INFO]:-Successfully completed standby coordinator initialization" 1
 		else
-			LOG_MSG "[WARN]:-Failed to complete standby master initialization" 1
+			LOG_MSG "[WARN]:-Failed to complete standby coordinator initialization" 1
 		fi
 		BACKOUT_COMMAND "$TRUSTED_SHELL ${STANDBY_HOSTNAME} \"$RM -Rf ${QD_DIR}\""
 		BACKOUT_COMMAND "$ECHO \"Removing standby directory ${QD_DIR} on $STANDBY_HOSTNAME\""
@@ -1744,24 +1744,24 @@ CHK_QE_ARRAY_PORT_RANGES () {
 
 SET_DCA_CONFIG_SETTINGS () {
 	LOG_MSG "[INFO]:-Setting DCA specific configuration values..." 1
-	local master_data_directory="${MASTER_DIRECTORY}/${SEG_PREFIX}-1"
+	local coordinator_data_directory="${MASTER_DIRECTORY}/${SEG_PREFIX}-1"
 
-	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_VAL" 1
-	MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_VAL
+	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$coordinator_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_COORDINATOR_RESQUEUE_PRIORITY_VAL" 1
+	MASTER_DATA_DIRECTORY=$coordinator_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_VAL -m $DCA_COORDINATOR_RESQUEUE_PRIORITY_VAL
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		LOG_MSG "[WARN]:-Failed to set value for $DCA_RESQUEUE_PRIORITY_NAME" 1
 	fi
 	
-	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL" 1
-	MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL
+	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$coordinator_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_COORDINATOR_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL" 1
+	MASTER_DATA_DIRECTORY=$coordinator_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL -m $DCA_COORDINATOR_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_VAL
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		LOG_MSG "[WARN]:-Failed to set value for $DCA_RESQUEUE_PRIORITY_CPUCORES_PER_SEGMENT_NAME" 1
 	fi
 
-	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL" 1
-	MASTER_DATA_DIRECTORY=$master_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_MASTER_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL
+	LOG_MSG "[INFO]:-MASTER_DATA_DIRECTORY=$coordinator_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_COORDINATOR_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL" 1
+	MASTER_DATA_DIRECTORY=$coordinator_data_directory $GPCONFIG -c $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME -v $DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL -m $DCA_COORDINATOR_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		LOG_MSG "[WARN]:-Failed to set value for $DCA_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_NAME" 1
@@ -1794,7 +1794,7 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 				e ) GP_PASSWD=$OPTARG ;;
 				p ) PG_CONF_ADD_FILE=$OPTARG ;;
 				h ) MACHINE_LIST_FILE_ALT=$OPTARG ;;
-				m ) MASTER_MAX_CONNECT=$OPTARG ;;
+				m ) COORDINATOR_MAX_CONNECT=$OPTARG ;;
 				b ) NEW_BUFFERS=$OPTARG ;;
 				s ) STANDBY_HOSTNAME=$OPTARG ;;
 				P ) STANDBY_PORT=$OPTARG ;;
@@ -1808,7 +1808,7 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 					NAME=${OPTARG%%=*}
 					VAL=${OPTARG#*=}
 					case $NAME in
-						"max_connections" ) MASTER_MAX_CONNECT=$VAL ;;
+						"max_connections" ) COORDINATOR_MAX_CONNECT=$VAL ;;
 						"shared_buffers"  ) NEW_BUFFERS=$VAL ;;
 						"su_password"     ) GP_PASSWD=$VAL ;;
 						"locale"          ) REQ_LOCALE_SETTING=$VAL ;;
@@ -1955,18 +1955,18 @@ LOG_MSG "[INFO]:-To remove instance, run gpdeletesystem utility" 1
 if [ x"" != x"$STANDBY_HOSTNAME" ];then
 	case $STANDBY_RET_CODE in
 		0|1)
-			LOG_MSG "[INFO]:-Standby Master $STANDBY_HOSTNAME has been configured" 1
-			LOG_MSG "[INFO]:-To activate the Standby Master Segment in the event of Master" 1
+			LOG_MSG "[INFO]:-Standby Coordinator $STANDBY_HOSTNAME has been configured" 1
+			LOG_MSG "[INFO]:-To activate the Standby Coordinator Segment in the event of Coordinator" 1
 			LOG_MSG "[INFO]:-failure review options for gpactivatestandby" 1 ;;
-		*) LOG_MSG "[WARN]:-Standby Master failed to initialize" 1
+		*) LOG_MSG "[WARN]:-Standby Coordinator failed to initialize" 1
 	esac
 else
-    LOG_MSG "[INFO]:-To initialize a Standby Master Segment for this Greenplum instance" 1
+    LOG_MSG "[INFO]:-To initialize a Standby Coordinator Segment for this Greenplum instance" 1
     LOG_MSG "[INFO]:-Review options for gpinitstandby" 1
 fi
 
 LOG_MSG "[INFO]:-------------------------------------------------------" 1
-LOG_MSG "[INFO]:-The Master ${MASTER_DATA_DIRECTORY}/$PG_HBA post gpinitsystem" 1
+LOG_MSG "[INFO]:-The Coordinator ${MASTER_DATA_DIRECTORY}/$PG_HBA post gpinitsystem" 1
 LOG_MSG "[INFO]:-has been configured to allow all hosts within this new" 1
 LOG_MSG "[INFO]:-array to intercommunicate. Any hosts external to this" 1
 LOG_MSG "[INFO]:-new array must be explicitly added to this file" 1
@@ -1977,8 +1977,8 @@ LOG_MSG "[INFO]:-------------------------------------------------------" 1
 # Make sure that the user sees that there's an error with the standby
 if [ $STANDBY_RET_CODE -ne 0 ] && [ $STANDBY_RET_CODE -ne 1 ]; then
 	LOG_MSG "[WARN]:-*******************************************************" 1
-	LOG_MSG "[WARN]:-Cluster setup finished, but Standby Master failed to initialize. Review contents of log files for errors." 1
-	LOG_MSG "[INFO]:-Use gpinitstandby to create a Standby Master" 1
+	LOG_MSG "[WARN]:-Cluster setup finished, but Standby Coordinator failed to initialize. Review contents of log files for errors." 1
+	LOG_MSG "[INFO]:-Use gpinitstandby to create a Standby Coordinator" 1
 	LOG_MSG "[WARN]:-*******************************************************" 1
 fi
 

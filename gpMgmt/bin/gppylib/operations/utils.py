@@ -101,7 +101,7 @@ class MasterOperation(Operation):
         self.operation = operation
     
     def execute(self):
-        # TODO: check that we're running on master
+        # TODO: check that we're running on coordinator
         pass
 
 if __name__ == "__main__":

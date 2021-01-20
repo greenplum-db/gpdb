@@ -9,7 +9,7 @@ Synopsis
 
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
-             [-d <master_data_directory>] [-B <parallel_processes>] 
+             [-d <coordinator_data_directory>] [-B <parallel_processes>] 
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
 
@@ -119,9 +119,9 @@ the utility will start up to 16 parallel processes depending
 on how many segment instances it needs to recover.
 
 
--d master_data_directory
+-d coordinator_data_directory
 
-Optional. The master host data directory. If not specified, 
+Optional. The coordinator host data directory. If not specified, 
 the value set for $MASTER_DATA_DIRECTORY will be used.
 
 

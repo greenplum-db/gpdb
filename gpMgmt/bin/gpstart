@@ -41,13 +41,13 @@ logger = get_default_logger()
 # ---------------------------------------------------------------
 class GpStart:
     ######
-    def __init__(self, specialMode, restricted, start_standby, master_datadir,
+    def __init__(self, specialMode, restricted, start_standby, coordinator_datadir,
                  wrapper,
                  wrapper_args,
                  skip_standby_check,
                  parallel=gp.DEFAULT_GPSTART_NUM_WORKERS,
                  quiet=False,
-                 masteronly=False,
+                 coordinatoronly=False,
                  interactive=False,
                  timeout=SEGMENT_TIMEOUT_DEFAULT,
                  logfileDirectory=False,
@@ -61,8 +61,8 @@ class GpStart:
         self.parallel = parallel
         self.attempt_standby_start = False
         self.quiet = quiet
-        self.masteronly = masteronly
-        self.master_datadir = master_datadir
+        self.coordinatoronly = coordinatoronly
+        self.coordinator_datadir = coordinator_datadir
         self.interactive = interactive
         self.timeout = timeout
         self.wrapper = wrapper
@@ -87,18 +87,18 @@ class GpStart:
     def run(self):
         self._prepare()
 
-        if self.masteronly:
-            if os.getenv('GPSTART_INTERNAL_MASTER_ONLY'):
-                logger.info('Master-only start requested for management utilities.')
+        if self.coordinatoronly:
+            if os.getenv('GPSTART_INTERNAL_COORDINATOR_ONLY'):
+                logger.info('Coordinator-only start requested for management utilities.')
             else:
                 logger.warning("****************************************************************************")
-                logger.warning("Master-only start requested. Disruptive action if standby master configured.")
+                logger.warning("Coordinator-only start requested. Disruptive action if standby coordinator configured.")
                 logger.warning("This is advisable only under the direct supervision of Greenplum support. ")
                 logger.warning("This mode of operation is not supported in a production environment and ")
                 logger.warning("may lead to a split-brain condition and possible unrecoverable data loss.")
                 logger.warning("****************************************************************************")
                 if self.interactive:
-                    if not userinput.ask_yesno(None, "\nContinue with master-only startup", 'N'):
+                    if not userinput.ask_yesno(None, "\nContinue with coordinator-only startup", 'N'):
                         raise UserAbortedException()
 
         try:
@@ -106,9 +106,9 @@ class GpStart:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
 
             self._startMaster()
-            logger.info("Master Started...")
+            logger.info("Coordinator Started...")
 
-            if self.masteronly:
+            if self.coordinatoronly:
                 return 0
 
             num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
@@ -120,20 +120,20 @@ class GpStart:
                 self.mark_segments_down_for_unreachable_hosts(unreachable_hosts)
 
             if self.skip_heap_checksum_validation:
-                self.master_checksum_value = None
+                self.coordinator_checksum_value = None
                 logger.warning("Because of --skip-heap-checksum-validation, the GUC for data_checksums "
-                                   "will not be checked between master and segments")
+                                   "will not be checked between coordinator and segments")
             else:
-                self.master_checksum_value = HeapChecksum(gparray=self.gparray, num_workers=num_workers,
-                                                          logger=logger).get_master_value()
+                self.coordinator_checksum_value = HeapChecksum(gparray=self.gparray, num_workers=num_workers,
+                                                          logger=logger).get_coordinator_value()
 
             if not self.skip_standby_check:
                 self.check_standby()
             else:
                 logger.info("Skipping Standby activation status checking.")
 
-            logger.info("Shutting down master")
-            self.shutdown_master_only()
+            logger.info("Shutting down coordinator")
+            self.shutdown_coordinator_only()
             # TODO: check results of command.
 
         finally:
@@ -176,21 +176,21 @@ class GpStart:
         self._basic_setup()
 
         self._check_version()
-        self._check_master_running()
+        self._check_coordinator_running()
 
     ######
     def _basic_setup(self):
         self.gphome = gp.get_gphome()
-        if self.master_datadir is None:
-            self.master_datadir = gp.get_masterdatadir()
+        if self.coordinator_datadir is None:
+            self.coordinator_datadir = gp.get_coordinatordatadir()
         self.user = unix.getUserName()
         gp.check_permissions(self.user)
         self._read_postgresqlconf()
 
     ######
     def _read_postgresqlconf(self):
-        logger.debug("Obtaining master's port from master data directory")
-        pgconf_dict = pgconf.readfile(self.master_datadir + "/postgresql.conf")
+        logger.debug("Obtaining coordinator's port from coordinator data directory")
+        pgconf_dict = pgconf.readfile(self.coordinator_datadir + "/postgresql.conf")
         self.port = pgconf_dict.int('port')
         logger.debug("Read from postgresql.conf port=%s" % self.port)
         self.max_connections = pgconf_dict.int('max_connections')
@@ -207,31 +207,31 @@ class GpStart:
         bin_catversion = gp.GpCatVersion.local('local GP software catalag version check', self.gphome)
         logger.info("Greenplum Catalog Version: '%s'" % bin_catversion)
 
-        dir_catversion = gp.GpCatVersionDirectory.local('local GP directory catalog version check', self.master_datadir)
+        dir_catversion = gp.GpCatVersionDirectory.local('local GP directory catalog version check', self.coordinator_datadir)
 
         if bin_catversion != dir_catversion:
             logger.info("MASTER_DIRECTORY Catalog Version: '%s'" % dir_catversion)
-            logger.info("Catalog Version of master directory incompatible with binaries")
+            logger.info("Catalog Version of coordinator directory incompatible with binaries")
             raise ExceptionNoStackTraceNeeded("Catalog Versions are incompatible")
 
     ######
-    def _check_master_running(self):
-        logger.debug("Check if Master is already running...")
-        if os.path.exists(self.master_datadir + '/postmaster.pid'):
-            logger.warning("postmaster.pid file exists on Master, checking if recovery startup required")
+    def _check_coordinator_running(self):
+        logger.debug("Check if Coordinator is already running...")
+        if os.path.exists(self.coordinator_datadir + '/postmaster.pid'):
+            logger.warning("postmaster.pid file exists on Coordinator, checking if recovery startup required")
             self._recovery_startup()
 
         self._remove_postmaster_tmpfile(self.port)
 
-    def shutdown_master_only(self):
-        cmd = gp.GpStop("Shutting down master", masterOnly=True,
+    def shutdown_coordinator_only(self):
+        cmd = gp.GpStop("Shutting down coordinator", coordinatorOnly=True,
                         fast=True, quiet=logging_is_quiet(),
                         verbose=logging_is_verbose(),
-                        datadir=self.master_datadir,
+                        datadir=self.coordinator_datadir,
                         parallel=self.parallel,
                         logfileDirectory=self.logfileDirectory)
         cmd.run()
-        logger.debug("results of forcing master shutdown: %s" % cmd)
+        logger.debug("results of forcing coordinator shutdown: %s" % cmd)
 
     def fetch_tli(self, data_dir_path, remoteHost=None):
         if not remoteHost:
@@ -248,14 +248,14 @@ class GpStart:
     def _standby_activated(self):
         logger.debug("Checking if standby has been activated...")
 
-        if not self.gparray.standbyMaster:
+        if not self.gparray.standbyCoordinator:
             return False
 
         # fetch timelineids for both primary and standby (post-promote)
-        primary_tli = self.fetch_tli(self.master_datadir)
+        primary_tli = self.fetch_tli(self.coordinator_datadir)
         try:
-            standby_tli = self.fetch_tli(self.gparray.standbyMaster.getSegmentDataDirectory(),
-                                         self.gparray.standbyMaster.getSegmentHostName())
+            standby_tli = self.fetch_tli(self.gparray.standbyCoordinator.getSegmentDataDirectory(),
+                                         self.gparray.standbyCoordinator.getSegmentHostName())
         except base.ExecutionError as err:
             raise GpStart.StandbyUnreachable(err)
 
@@ -267,12 +267,12 @@ class GpStart:
         try:
             standby_activated = self._standby_activated()
         except GpStart.StandbyUnreachable as err:
-            logger.warning("Standby host is unreachable, cannot determine whether the standby is currently acting as the master. Received error: %s" % err)
-            logger.warning("Continue only if you are certain that the standby is not acting as the master.")
+            logger.warning("Standby host is unreachable, cannot determine whether the standby is currently acting as the coordinator. Received error: %s" % err)
+            logger.warning("Continue only if you are certain that the standby is not acting as the coordinator.")
             if not self.interactive or not userinput.ask_yesno(None, "\nContinue with startup", 'N'):
                 if not self.interactive:
                     logger.warning("Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.")
-                self.shutdown_master_only()
+                self.shutdown_coordinator_only()
                 raise UserAbortedException()
 
             # If the user wants to continue when the standby is unreachable,
@@ -284,15 +284,15 @@ class GpStart:
         if not standby_activated:
             return
 
-        # stop the master we've started up.
-        cmd = gp.GpStop("Shutting down master", masterOnly=True,
+        # stop the coordinator we've started up.
+        cmd = gp.GpStop("Shutting down coordinator", coordinatorOnly=True,
                         fast=True, quiet=logging_is_quiet(),
                         verbose=logging_is_verbose(),
-                        datadir=self.master_datadir,
+                        datadir=self.coordinator_datadir,
                         parallel=self.parallel)
         cmd.run(validateAfter=True)
-        logger.info("Master Stopped...")
-        raise ExceptionNoStackTraceNeeded("Standby activated, this node no more can act as master.")
+        logger.info("Coordinator Stopped...")
+        raise ExceptionNoStackTraceNeeded("Standby activated, this node no more can act as coordinator.")
 
     def get_unreachable_segment_hosts(self, num_workers):
         hostlist = set(self.gparray.get_hostlist(includeMaster=False))
@@ -341,11 +341,11 @@ class GpStart:
         lockfile = "/tmp/.s.PGSQL.%s" % self.port
         tmpfile_exists = os.path.exists(lockfile)
 
-        netstat_port_active = unix.PgPortIsActive.local('check netstat for master port',
+        netstat_port_active = unix.PgPortIsActive.local('check netstat for coordinator port',
                                                         lockfile, self.port)
         if tmpfile_exists and netstat_port_active:
             logger.info("Have lock file %s and a process running on port %s" % (lockfile, self.port))
-            raise ExceptionNoStackTraceNeeded("Master instance process running")
+            raise ExceptionNoStackTraceNeeded("Coordinator instance process running")
         elif tmpfile_exists and not netstat_port_active:
             logger.info("Have lock file %s but no process running on port %s" % (lockfile, self.port))
         elif not tmpfile_exists and netstat_port_active:
@@ -354,25 +354,25 @@ class GpStart:
         elif not tmpfile_exists and not netstat_port_active:
             logger.info("No socket connection or lock file in /tmp found for port=%s" % self.port)
 
-        logger.info("No Master instance process, entering recovery startup mode")
+        logger.info("No Coordinator instance process, entering recovery startup mode")
 
         if tmpfile_exists:
-            logger.info("Clearing Master instance lock files")
+            logger.info("Clearing Coordinator instance lock files")
             os.remove(lockfile)
 
-        postmaster_pid_file = "%s/postmaster.pid" % self.master_datadir
+        postmaster_pid_file = "%s/postmaster.pid" % self.coordinator_datadir
         if os.path.exists(postmaster_pid_file):
-            logger.info("Clearing Master instance pid file")
-            os.remove("%s/postmaster.pid" % self.master_datadir)
+            logger.info("Clearing Coordinator instance pid file")
+            os.remove("%s/postmaster.pid" % self.coordinator_datadir)
 
         self._startMaster()
 
         logger.info("Commencing forced instance shutdown")
 
-        gp.GpStop.local("forcing master shutdown", masterOnly=True,
+        gp.GpStop.local("forcing coordinator shutdown", coordinatorOnly=True,
                         verbose=logging_is_verbose,
                         quiet=self.quiet, fast=False,
-                        force=True, datadir=self.master_datadir, parallel=self.parallel)
+                        force=True, datadir=self.coordinator_datadir, parallel=self.parallel)
 
     ######
     def _remove_postmaster_tmpfile(self, port):
@@ -380,26 +380,26 @@ class GpStart:
         tmpfile_exists = os.path.exists(lockfile)
 
         if tmpfile_exists:
-            logger.info("Clearing Master instance lock files")
+            logger.info("Clearing Coordinator instance lock files")
             os.remove(lockfile)
         pass
 
     ######
     def _summarize_actions(self, segmentsToStart):
         logger.info("--------------------------")
-        logger.info("Master instance parameters")
+        logger.info("Coordinator instance parameters")
         logger.info("--------------------------")
         logger.info("Database                 = %s" % self.dburl.pgdb)
-        logger.info("Master Port              = %s" % self.port)
-        logger.info("Master directory         = %s" % self.master_datadir)
+        logger.info("Coordinator Port              = %s" % self.port)
+        logger.info("Coordinator directory         = %s" % self.coordinator_datadir)
         logger.info("Timeout                  = %d seconds" % self.timeout)
-        if self.gparray.standbyMaster:
+        if self.gparray.standbyCoordinator:
             if self.start_standby:
-                logger.info("Master standby start     = On")
+                logger.info("Coordinator standby start     = On")
             else:
-                logger.info("Master standby start     = Off")
+                logger.info("Coordinator standby start     = Off")
         else:
-            logger.info("Master standby           = Off ")
+            logger.info("Coordinator standby           = Off ")
 
         logger.info("--------------------------------------")
         logger.info("Segment instances that will be started")
@@ -436,9 +436,9 @@ class GpStart:
 
     ######
     def _startMaster(self):
-        logger.info("Starting Master instance in admin mode")
+        logger.info("Starting Coordinator instance in admin mode")
 
-        cmd = gp.MasterStart('master in utility mode', self.master_datadir,
+        cmd = gp.MasterStart('coordinator in utility mode', self.coordinator_datadir,
                              self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
@@ -446,32 +446,32 @@ class GpStart:
         cmd.run()
 
         if cmd.get_results().rc != 0:
-            logger.fatal("Failed to start Master instance in admin mode")
+            logger.fatal("Failed to start Coordinator instance in admin mode")
             cmd.validate()
 
-        logger.info("Obtaining Greenplum Master catalog information")
+        logger.info("Obtaining Greenplum Coordinator catalog information")
 
-        logger.info("Obtaining Segment details from master...")
+        logger.info("Obtaining Segment details from coordinator...")
         self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
         self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
 
-        logger.info("Setting new master era")
-        e = GpEraFile(self.master_datadir, logger=get_logger_if_verbose())
-        e.new_era(self.gparray.master.hostname, self.port, time.strftime('%y%m%d%H%M%S'))
+        logger.info("Setting new coordinator era")
+        e = GpEraFile(self.coordinator_datadir, logger=get_logger_if_verbose())
+        e.new_era(self.gparray.coordinator.hostname, self.port, time.strftime('%y%m%d%H%M%S'))
         self.era = e.era
 
     ######
     def _start(self, segmentsToStart, invalidSegments):
-        """ starts all of the segments, the master and the standby master
+        """ starts all of the segments, the coordinator and the standby coordinator
 
             returns whether all segments that should be started were started successfully
 
-            note that the parameters do not list master/standby, they only list data segments
+            note that the parameters do not list coordinator/standby, they only list data segments
         """
         workers = min(len(self.gparray.get_hostlist()), self.parallel)
         self.pool = base.WorkerPool(numWorkers=workers)
 
-        if os.path.exists(self.master_datadir + "/gpexpand.status") and not self.restricted:
+        if os.path.exists(self.coordinator_datadir + "/gpexpand.status") and not self.restricted:
             raise ExceptionNoStackTraceNeeded(
                 "Found a System Expansion Setup in progress. Please run 'gpexpand --rollback'")
 
@@ -484,7 +484,7 @@ class GpStart:
 
         # this will eventually start gpsegstart.py
         segmentStartOp = StartSegmentsOperation(self.pool, self.quiet, self.gpversion,
-                                                self.gphome, self.master_datadir, self.master_checksum_value,
+                                                self.gphome, self.coordinator_datadir, self.coordinator_checksum_value,
                                                 self.timeout, self.specialMode, self.wrapper, self.wrapper_args, self.parallel,
                                                 logfileDirectory=self.logfileDirectory)
         segmentStartResult = segmentStartOp.startSegments(self.gparray, segmentsToStart, startMode, self.era)
@@ -502,11 +502,11 @@ class GpStart:
             raise ExceptionNoStackTraceNeeded("Do not have enough valid segments to start the array.")
 
         failedToStart = segmentStartResult.getFailedSegmentObjs()
-        master_result, message = self._start_final_master()
-        if not master_result:
+        coordinator_result, message = self._start_final_coordinator()
+        if not coordinator_result:
             return False
 
-        # start standby after master in dispatch mode comes up
+        # start standby after coordinator in dispatch mode comes up
         standby_was_started = self._start_standby()
 
         # report if we complete operations
@@ -680,7 +680,7 @@ class GpStart:
     def _check_final_result(self, standbyFailure,
                             failedToStart, invalidSegments, msg):
         if standbyFailure:
-            logger.warning("Standby Master could not be started")
+            logger.warning("Standby Coordinator could not be started")
         if len(failedToStart) > 0:
             logger.warning("Number of segments which failed to start:  %d", len(failedToStart))
 
@@ -699,10 +699,10 @@ class GpStart:
         return True
 
     ######
-    def _start_final_master(self):
-        """ Last item in the startup sequence is to start the master.
+    def _start_final_coordinator(self):
+        """ Last item in the startup sequence is to start the coordinator.
 
-            After starting the master we connect to it.  This is done both as a check that the system is
+            After starting the coordinator we connect to it.  This is done both as a check that the system is
             actually started but its also done because certain backend processes don't get kickstarted
             until the first connection.  The DTM is an example of this and it allows those initialization
             messages to end up in the gpstart log as opposed to the user's psql session.
@@ -712,32 +712,32 @@ class GpStart:
         if self.restricted:
             restrict_txt = "in RESTRICTED mode"
 
-        logger.info("Starting Master instance %s directory %s %s" % (
-        self.gparray.master.hostname, self.master_datadir, restrict_txt))
+        logger.info("Starting Coordinator instance %s directory %s %s" % (
+        self.gparray.coordinator.hostname, self.coordinator_datadir, restrict_txt))
 
-        # attempt to start master
-        gp.MasterStart.local("Starting Master instance",
-                             self.master_datadir, self.port, self.era,
+        # attempt to start coordinator
+        gp.MasterStart.local("Starting Coordinator instance",
+                             self.coordinator_datadir, self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout,
                              max_connections=self.max_connections
                              )
 
-        # check that master is running now
-        if not pg.DbStatus.local('master instance', self.gparray.master):
-            logger.warning("Command pg_ctl reports Master %s on port %d not running" % (
-            self.gparray.master.datadir, self.gparray.master.port))
-            logger.warning("Master could not be started")
+        # check that coordinator is running now
+        if not pg.DbStatus.local('coordinator instance', self.gparray.coordinator):
+            logger.warning("Command pg_ctl reports Coordinator %s on port %d not running" % (
+            self.gparray.coordinator.datadir, self.gparray.coordinator.port))
+            logger.warning("Coordinator could not be started")
             return False, None
 
-        logger.info("Command pg_ctl reports Master %s instance active" % self.gparray.master.hostname)
+        logger.info("Command pg_ctl reports Coordinator %s instance active" % self.gparray.coordinator.hostname)
 
         msg = None
         try:
             self.dburl.retries = 4
             self.dburl.timeout = 15
-            masterconn = dbconn.connect(self.dburl)
-            masterconn.close()
+            coordinatorconn = dbconn.connect(self.dburl)
+            coordinatorconn.close()
 
         except Exception as e:
             # MPP-14016.  While certain fts scenarios will trigger initial connection failures
@@ -749,31 +749,31 @@ class GpStart:
             logger.warning(msg)
 
         # set the era we used when starting the segments
-        e = GpEraFile(self.master_datadir, logger=get_logger_if_verbose())
+        e = GpEraFile(self.coordinator_datadir, logger=get_logger_if_verbose())
         e.set_era(self.era)
 
         return True, msg
 
     ######
     def _start_standby(self):
-        """ used to start the standbymaster if necessary.
+        """ used to start the standbycoordinator if necessary.
 
-            returns if the standby master was started or not
+            returns if the standby coordinator was started or not
         """
-        if self.start_standby and self.gparray.standbyMaster is not None:
+        if self.start_standby and self.gparray.standbyCoordinator is not None:
             try:
                 self.attempt_standby_start = True
-                host = self.gparray.standbyMaster.hostname
-                datadir = self.gparray.standbyMaster.datadir
-                port = self.gparray.standbyMaster.port
-                return gp.start_standbymaster(host, datadir, port, era=self.era,
+                host = self.gparray.standbyCoordinator.hostname
+                datadir = self.gparray.standbyCoordinator.datadir
+                port = self.gparray.standbyCoordinator.port
+                return gp.start_standbycoordinator(host, datadir, port, era=self.era,
                                               wrapper=self.wrapper,
                                               wrapper_args=self.wrapper_args)
             except base.ExecutionError as e:
-                logger.warning("Error occured while starting the standby master: %s" % e)
+                logger.warning("Error occured while starting the standby coordinator: %s" % e)
                 return False
         else:
-            logger.info("No standby master configured.  skipping...")
+            logger.info("No standby coordinator configured.  skipping...")
             return False
 
     # ----------------------- Command line option parser ----------------------
@@ -795,10 +795,10 @@ class GpStart:
         addTo.add_option('-U', '--specialMode', type='choice', choices=['maintenance'],
                          metavar='maintenance', action='store', default=None,
                          help=SUPPRESS_HELP)
-        addTo.add_option('-m', '--master_only', action='store_true',
-                         help='start master instance only in maintenance mode')
+        addTo.add_option('-m', '--master_only', dest="coordinator_only", action='store_true',
+                         help='start coordinator instance only in maintenance mode')
         addTo.add_option('-y', '--no_standby', dest="start_standby", action='store_false', default=True,
-                         help='do not start master standby server')
+                         help='do not start coordinator standby server')
         addTo.add_option('-B', '--parallel', type="int", default=gp.DEFAULT_GPSTART_NUM_WORKERS, metavar="<parallel_processes>",
                          help='number of segment hosts to run in parallel. Default is %d' % gp.DEFAULT_GPSTART_NUM_WORKERS)
         addTo.add_option('-R', '--restricted', action='store_true',
@@ -834,10 +834,10 @@ class GpStart:
 
         return GpStart(options.specialMode, options.restricted,
                        options.start_standby,
-                       master_datadir=options.masterDataDirectory,
+                       coordinator_datadir=options.coordinatorDataDirectory,
                        parallel=options.parallel,
                        quiet=options.quiet,
-                       masteronly=options.master_only,
+                       coordinatoronly=options.coordinator_only,
                        interactive=options.interactive,
                        timeout=options.timeout,
                        wrapper=options.wrapper,

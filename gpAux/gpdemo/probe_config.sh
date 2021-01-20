@@ -53,7 +53,7 @@ declare -a PORTS=(`expr $DEMO_PORT_BASE` \
    `expr $DEMO_PORT_BASE + 2` `expr $DEMO_PORT_BASE + 3 ` `expr $DEMO_PORT_BASE + 4`)
 
 #
-# Check tables on Master
+# Check tables on Coordinator
 #
 
 #***********************************************************

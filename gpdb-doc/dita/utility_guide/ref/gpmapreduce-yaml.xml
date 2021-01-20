@@ -12,8 +12,8 @@
 <xref href="#topic1/VERSION" format="dita">VERSION</xref>: 1.0.0.2
 <xref href="#topic1/DATABASE" format="dita">DATABASE</xref>: <i>dbname</i>
 <xref href="#topic1/USER" format="dita">USER</xref>: <i>db_username</i>
-<xref href="#topic1/HOST" format="dita">HOST</xref>: <i>master_hostname</i>
-<xref href="#topic1/PORT" format="dita">PORT</xref>: <i>master_port</i></codeblock>
+<xref href="#topic1/HOST" format="dita">HOST</xref>: <i>coordinator_hostname</i>
+<xref href="#topic1/PORT" format="dita">PORT</xref>: <i>coordinator_port</i></codeblock>
       <codeblock><xref href="#topic1/DEFINE" format="dita">DEFINE</xref>: 
   - <xref href="#topic1/INPUT" format="dita">INPUT</xref>:
      <xref href="#topic1/NAME" format="dita">NAME</xref>: <i>input_name</i>
@@ -121,12 +121,12 @@
         </plentry>
         <plentry>
           <pt id="HOST">HOST</pt>
-          <pd>Optional. Specifies Greenplum master host name. If not specified, defaults to
+          <pd>Optional. Specifies Greenplum coordinator host name. If not specified, defaults to
             localhost or <codeph>$PGHOST</codeph> if set.</pd>
         </plentry>
         <plentry>
           <pt id="PORT">PORT</pt>
-          <pd>Optional. Specifies Greenplum master port. If not specified, defaults to 5432 or
+          <pd>Optional. Specifies Greenplum coordinator port. If not specified, defaults to 5432 or
               <codeph>$PGPORT</codeph> if set.</pd>
         </plentry>
         <plentry>
@@ -406,7 +406,7 @@
                           <xref href="#topic1/VERSION" format="dita">VERSION</xref> must be 1.0.0.2.
                         The specified library file must be installed prior to running the MapReduce
                         job, and it must exist in the same file system location on all Greenplum
-                        hosts (master and segments).</pd>
+                        hosts (coordinator and segments).</pd>
                     </plentry>
                     <plentry>
                       <pt id="PARAMETERS">PARAMETERS</pt>

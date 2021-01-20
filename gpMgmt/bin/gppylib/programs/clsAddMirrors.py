@@ -423,8 +423,8 @@ class GpAddMirrorsProgram:
     def __displayAddMirrors(self, gpEnv, mirrorBuilder, gpArray):
         logger.info('Greenplum Add Mirrors Parameters')
         logger.info('---------------------------------------------------------')
-        logger.info('Greenplum master data directory          = %s' % gpEnv.getMasterDataDir())
-        logger.info('Greenplum master port                    = %d' % gpEnv.getMasterPort())
+        logger.info('Greenplum coordinator data directory          = %s' % gpEnv.getMasterDataDir())
+        logger.info('Greenplum coordinator port                    = %d' % gpEnv.getMasterPort())
         logger.info('Parallel batch limit                     = %d' % self.__options.parallelDegree)
 
         total = len(mirrorBuilder.getMirrorsToBuild())
@@ -472,18 +472,18 @@ class GpAddMirrorsProgram:
             logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
             return 1
 
-        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+        consistent, inconsistent, coordinator_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
 
         inconsistent_segment_msgs = []
         for segment in inconsistent:
             inconsistent_segment_msgs.append("dbid: %s "
-                                             "checksum set to %s differs from master checksum set to %s" %
+                                             "checksum set to %s differs from coordinator checksum set to %s" %
                                              (segment.getSegmentDbId(), segment.heap_checksum,
-                                              master_heap_checksum))
+                                              coordinator_heap_checksum))
 
         if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
             logger.fatal("Cluster heap checksum setting differences reported")
-            logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+            logger.fatal("Heap checksum settings on %d of %d segment instances do not match coordinator <<<<<<<<"
                               % (len(inconsistent_segment_msgs), len(gpArray.segmentPairs)))
             logger.fatal("Review %s for details" % get_logfile())
             log_to_file_only("Failed checksum consistency validation:", logging.WARN)
@@ -492,7 +492,7 @@ class GpAddMirrorsProgram:
 
             for msg in inconsistent_segment_msgs:
                 log_to_file_only(msg, logging.WARN)
-                raise Exception("Segments have heap_checksum set inconsistently to master")
+                raise Exception("Segments have heap_checksum set inconsistently to coordinator")
         else:
             logger.info("Heap checksum setting consistent across cluster")
 
@@ -502,7 +502,7 @@ class GpAddMirrorsProgram:
                 "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
 
         self.__pool = base.WorkerPool(self.__options.parallelDegree)
-        gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True)
+        gpEnv = GpMasterEnvironment(self.__options.coordinatorDataDirectory, True)
 
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getMasterPort())
         confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())

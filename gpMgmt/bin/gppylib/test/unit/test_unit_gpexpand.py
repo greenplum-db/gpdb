@@ -54,20 +54,20 @@ class GpExpand(GpTestCase):
         self.input_mock = self.get_mock_from_apply_patch("input")
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch("getConfigurationProvider")
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
-        self.previous_master_data_directory = os.getenv('MASTER_DATA_DIRECTORY', '')
+        self.previous_coordinator_data_directory = os.getenv('MASTER_DATA_DIRECTORY', '')
         os.environ["MASTER_DATA_DIRECTORY"] = '/tmp/dirdoesnotexist'
         configProviderMock = Mock(spec=GpConfigurationProvider)
         self.getConfigProviderFunctionMock.return_value = configProviderMock
         configProviderMock.initializeProvider.return_value = configProviderMock
         self.gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
         self.mock_heap_checksum = self.get_mock_from_apply_patch('HeapChecksum')
-        self.mock_heap_checksum.return_value.get_master_value.return_value = 1
+        self.mock_heap_checksum.return_value.get_coordinator_value.return_value = 1
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [1])
         self.mock_heap_checksum.return_value.are_segments_consistent.return_value = True
         self.mock_heap_checksum.return_value.check_segment_consistency.return_value = ([2], [], 1)
 
     def tearDown(self):
-        os.environ['MASTER_DATA_DIRECTORY'] = self.previous_master_data_directory
+        os.environ['MASTER_DATA_DIRECTORY'] = self.previous_coordinator_data_directory
         sys.argv = self.old_sys_argv
         super(GpExpand, self).tearDown()
 
@@ -79,25 +79,25 @@ class GpExpand(GpTestCase):
         self.mock_heap_checksum.return_value.are_segments_consistent.return_value = False
         self.primary0.heap_checksum = 1
         self.primary1.heap_checksum = 0
-        self.master.heap_checksum = '1'
+        self.coordinator.heap_checksum = '1'
         self.mock_heap_checksum.return_value.check_segment_consistency.return_value = (
-            [self.primary0], [self.primary1], self.master.heap_checksum)
+            [self.primary0], [self.primary1], self.coordinator.heap_checksum)
 
         with self.assertRaises(SystemExit):
             self.subject.main(self.options, self.args, self.parser)
 
         self.subject.logger.fatal.assert_any_call("Cluster heap checksum setting differences reported")
         self.subject.logger.fatal.assert_any_call("Heap checksum settings on 1 of 2 segment instances "
-                                                          "do not match master <<<<<<<<")
+                                                          "do not match coordinator <<<<<<<<")
         self.subject.logger.error.assert_called_with("gpexpand failed: Segments have heap_checksum set "
-                                                             "inconsistently to master \n\nExiting...")
+                                                             "inconsistently to coordinator \n\nExiting...")
 
     @patch('gpexpand.FileDirExists.return_value.filedir_exists', return_value=True)
     @patch('gpexpand.FileDirExists', return_value=Mock())
     # @patch('gpexpand.HeapChecksum.PgControlData.return_value.get_value', side_effect=[1, 1, 1])
     def test_validate_heap_checksums_completes_when_cluster_consistent(self, mock1, mock2):
         """
-        If all the segment checksums match the checksum at the master, then the cluster is consistent.
+        If all the segment checksums match the checksum at the coordinator, then the cluster is consistent.
         This is essentially making sure that the validate_heap_checksums() internal method has not detected any
         inconisistency.  However, since we are mocking all the dependencies, the actual message from gpexpand would be a
         failure from the method after validate_heap_checksums().
@@ -132,8 +132,8 @@ class GpExpand(GpTestCase):
     #
 
     def createGpArrayWith2Primary2Mirrors(self):
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|aspen|sdw1|40000|/Users/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1")
         self.primary1 = Segment.initFromString(
@@ -142,7 +142,7 @@ class GpExpand(GpTestCase):
             "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         self.mirror1 = Segment.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
-        return GpArray([self.master, self.primary0, self.primary1, self.mirror0, self.mirror1])
+        return GpArray([self.coordinator, self.primary0, self.primary1, self.mirror0, self.mirror1])
 
 if __name__ == '__main__':
     run_tests()

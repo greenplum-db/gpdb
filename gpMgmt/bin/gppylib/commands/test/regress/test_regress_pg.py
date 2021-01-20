@@ -31,18 +31,18 @@ class PgCommandsTestCase(unittest.TestCase):
         url = dbconn.DbURL()
         gpdb = GpArray.initFromCatalog(url)
         
-        logger.info("Search for valid master port: %s" % gpdb.master.port)
-        cmd = pg.ReadPostmasterTempFile.local('test pg tempfile read',gpdb.master.port)        
+        logger.info("Search for valid coordinator port: %s" % gpdb.coordinator.port)
+        cmd = pg.ReadPostmasterTempFile.local('test pg tempfile read',gpdb.coordinator.port)        
         (exists,PID,datadir)=cmd.getResults()
         logger.info("exists:=%s PID=%d datadir='%s'" % (exists,PID,datadir))                
         self.assertTrue(exists)
         self.assertTrue(PID > 0)
-        self.assertEqual(datadir,gpdb.master.datadir)
+        self.assertEqual(datadir,gpdb.coordinator.datadir)
         
         
-        gpdb.master.port=4000
-        logger.info("Search for bogus master port: %s" % gpdb.master.port)        
-        cmd = pg.ReadPostmasterTempFile.local('test pg tempfile read',gpdb.master.port)        
+        gpdb.coordinator.port=4000
+        logger.info("Search for bogus coordinator port: %s" % gpdb.coordinator.port)        
+        cmd = pg.ReadPostmasterTempFile.local('test pg tempfile read',gpdb.coordinator.port)        
         (exists,PID,datadir)=cmd.getResults()
         logger.info("exists:=%s PID=%d datadir='%s'" % (exists,PID,datadir))        
         self.assertFalse(exists)
