@@ -712,10 +712,10 @@ class GpRecoverSegmentProgram:
         loggingGroup = addStandardLoggingAndHelpOptions(parser, True)
         loggingGroup.add_option("-s", None, default=None, action='store_false',
                                 dest='showProgressInplace',
-                                help='Show pg_basebackup progress sequentially instead of inplace')
+                                help='Show pg_basebackup/pg_rewind progress sequentially instead of inplace')
         loggingGroup.add_option("--no-progress",
                                 dest="showProgress", default=True, action="store_false",
-                                help="Suppress pg_basebackup progress output")
+                                help="Suppress pg_basebackup/pg_rewind progress output")
 
         addTo = OptionGroup(parser, "Connection Options")
         parser.add_option_group(addTo)
