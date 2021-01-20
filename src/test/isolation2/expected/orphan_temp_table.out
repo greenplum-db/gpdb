@@ -1,0 +1,46 @@
+-- Test orphan temp table on coordinator.
+-- Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
+
+-- create a temp table
+1: CREATE TEMP TABLE test_temp_table_cleanup(a int);
+CREATE
+
+-- panic on segment 0
+2: SELECT gp_inject_fault('before_read_command', 'panic', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- wait 1 seconds, the fault inject handler process will call ReadCommand in
+-- PostgresMain loop, but the 'gp_inject_fault' query will return before that it
+-- gets there.
+1: select pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
+
+-- the backend process has exit due to segment reset.
+1: SELECT * FROM test_temp_table_cleanup;
+ERROR:  Error on receive from seg0 slice1 172.17.0.4:7002 pid=381114: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+-- we should not see the temp table on the coordinator
+1: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
+ oid | relname | relnamespace 
+-----+---------+--------------
+(0 rows)
+
+-- the temp table is left on segment 0, it should be dropped by autovacuum later
+0U: SELECT relname FROM pg_class where relname = 'test_temp_table_cleanup';
+ relname                 
+-------------------------
+ test_temp_table_cleanup 
+(1 row)
+
+-- no temp table left on other segments
+1U: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
+ oid | relname | relnamespace 
+-----+---------+--------------
+(0 rows)

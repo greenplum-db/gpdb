@@ -259,3 +259,6 @@ test: standby_replay_dtx_info
 
 # test if gxid is valid or not on the cluster after running the tests
 test: check_gxid
+
+# test if there is orphan temp table on the coordinator
+test: orphan_temp_table 
