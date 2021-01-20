@@ -6496,7 +6496,12 @@ StartupXLOG(void)
 		ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
 	{
 		RemoveTempXlogFiles();
+		ereport(LOG,
+				(errmsg("force synchronization of the data directory since the"
+						" database system was uncleanly shut down.")));
 		SyncDataDirectory();
+		ereport(LOG,
+				(errmsg("synchronization of the data directory is finished.")));
 		if (Gp_role == GP_ROLE_DISPATCH)
 			*shmCleanupBackends = true;
 	}
