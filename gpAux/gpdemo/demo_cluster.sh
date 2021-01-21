@@ -388,26 +388,24 @@ if [ "${BLDWRAP_POSTGRES_CONF_ADDONS}" != "__none__" ]  && \
 fi
 
 # photon requires explicitly setting locale during gpinitsystem
-if grep -q photon /etc/os-release; then
+if [ -f /etc/os-release ] && [ grep -q photon /etc/os-release ]; then
     LOCALE_OPTS="-n en_US.UTF-8"
-else
-    LOCALE_OPTS="-n en_US.utf8"
 fi
 
 if [ -f "${CLUSTER_CONFIG_POSTGRES_ADDONS}" ]; then
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} ${LOCALE_OPTS} \"$@\""
+    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} ${LOCALE_OPTS:-} \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} ${LOCALE_OPTS} "$@"
+    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} ${LOCALE_OPTS:-} "$@"
 else
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} ${LOCALE_OPTS} \"$@\""
+    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} ${LOCALE_OPTS:-} \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} ${LOCALE_OPTS} "$@"
+    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} ${LOCALE_OPTS:-} "$@"
 fi
 RETURN=$?
 
