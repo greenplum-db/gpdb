@@ -3981,6 +3981,9 @@ pgstat_get_wait_ipc(WaitEventIPC w)
 		case WAIT_EVENT_INTERCONNECT:
 			event_name = "Interconnect";
 			break;
+		case WAIT_EVENT_DTX_RECOVERY:
+			event_name = "DtxRecovery";
+			break;
 			/* no default case, so that compiler will warn */
 	}
 

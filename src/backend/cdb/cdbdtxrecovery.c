@@ -18,6 +18,7 @@
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "postmaster/bgworker.h"
+#include "pgstat.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/lwlock.h"
@@ -687,12 +688,11 @@ DtxRecoveryMain(Datum main_arg)
 			AbortOrphanedPreparedTransactions();
 		}
 
-		/* GPDB_12_MERGE_FIXME: Create a new WaitEventIPC member for this? */
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 					   frequent_check_times > 0 ?
 					   5 * 1000L : gp_dtx_recovery_interval * 1000L,
-					   0);
+					   WAIT_EVENT_DTX_RECOVERY);
 		ResetLatch(&MyProc->procLatch);
 
 		/* emergency bailout if postmaster has died */
