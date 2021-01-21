@@ -108,6 +108,10 @@ class Segment:
         self.port=port
         self.datadir=datadir
 
+        # Segments are "unreachable" if their host is not reachable.
+        # See detect_unreachable_hosts.py
+        self.unreachable = False
+
         # Todo: Remove old dead code
         self.valid = (status == 'u')
 
