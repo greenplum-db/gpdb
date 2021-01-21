@@ -605,6 +605,16 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		}
 	}
 
+	/*
+	 * GPDB specific: No such entry in pg_control data on gpdb 6 and below.
+	 * We set it as FirstDistributedTransactionId instead.
+	 *
+	 */
+	if  (GET_MAJOR_VERSION(cluster->major_version) < 1200) {
+		cluster->controldata.chkpnt_nxtgxid = FirstDistributedTransactionId;
+		got_gxid = true;
+	}
+
 	/* verify that we got all the mandatory pg_control data */
 	if (!got_xid || !got_gxid || !got_oid ||
 		!got_multi ||
