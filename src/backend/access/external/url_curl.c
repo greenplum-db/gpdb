@@ -97,7 +97,6 @@ typedef struct
 
 } URL_CURL_FILE;
 
-
 #if BYTE_ORDER == BIG_ENDIAN
 #define local_htonll(n)  (n)
 #define local_ntohll(n)  (n)
@@ -153,6 +152,9 @@ static char * make_url(const char *url, bool is_ipv6);
 
 /* we use a global one for convenience */
 static CURLM *multi_handle = 0;
+
+static int
+fill_buffer(URL_CURL_FILE *curl, int want);
 
 /*
  * A helper macro, to call curl_easy_setopt(), and ereport() if it fails.
@@ -443,6 +445,10 @@ check_response(URL_CURL_FILE *file, int *rc, char **response_string)
 			/* get the os level errno, and string representation of it */
 			if (curl_easy_getinfo(curl, CURLINFO_OS_ERRNO, &oserrno) == CURLE_OK)
 			{
+				if (oserrno == EHOSTUNREACH)
+				{
+					return oserrno;
+				}
 				if (oserrno != 0)
 					snprintf(connmsg, sizeof connmsg, "error code = %d (%s)",
 							 (int) oserrno, strerror((int)oserrno));
@@ -541,17 +547,12 @@ get_gpfdist_status(URL_CURL_FILE *file)
 	curl_easy_cleanup(status_handle);
 }
 
-/**
- * Send curl request and check response.
- * If failed, will retry multiple times.
- * Return true if succeed, false otherwise.
- */
-static void
-gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
-{
-	int 		response_code;
-	char	   *response_string = NULL;
+/* Return true to retry */
+typedef bool (*perform_func)(URL_CURL_FILE *file);
 
+static void
+gp_perform_backoff_and_check_response(URL_CURL_FILE *file, perform_func func)
+{
 	/* retry in case server return timeout error */
 	unsigned int wait_time = 1;
 	unsigned int retry_count = 0;
@@ -562,43 +563,10 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 
 	while (true)
 	{
-		/*
-		 * Use backoff policy to call curl_easy_perform to fix following error
-		 * when work load is high:
-		 *	- 'could not connect to server'
-		 *	- gpfdist return timeout (HTTP 408)
-		 * By default it will wait at least write_to_gpfdist_timeout seconds before abort.
-		 */
-		CURLcode e = curl_easy_perform(file->curl->handle);
-		if (CURLE_OK != e)
+		if (!func(file))
 		{
-			elog(LOG, "%s response (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
+			return;
 		}
-		else
-		{
-			/* check the response from server */                                              	
-			response_code = check_response(file, &response_code, &response_string);
-			switch (response_code)
-			{
-				case 0:
-					/* Success! */
-					return;
-
-				case FDIST_TIMEOUT:
-					elog(LOG, "%s timeout from gpfdist", file->curl_url);
-					break;
-
-				default:
-					ereport(ERROR,
-							(errcode(ERRCODE_CONNECTION_FAILURE),
-							 errmsg("error while getting response from gpfdist on %s (code %d, msg %s)",
-									file->curl_url, response_code, response_string)));
-			}
-			if (response_string)
-				pfree(response_string);
-			response_string = NULL;
-		}
-
 		/*
 		 * Retry until end_time is reached
 		 */
@@ -609,8 +577,8 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 				wait_time, now - start_time, write_to_gpfdist_timeout);
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					 errmsg("error when writing data to gpfdist %s, quit after %d tries",
-							file->curl_url, retry_count + 1)));
+					 errmsg("error when connecting to gpfdist %s, quit after %d tries",
+							file->curl_url, retry_count+1)));
 		}
 		else
 		{
@@ -630,6 +598,92 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 	}
 }
 
+static bool multi_perform_work(URL_CURL_FILE *file)
+{
+	int 		response_code;
+	char	   *response_string = NULL;
+	int e;
+	char *effective_url;
+
+	if (CURLE_OK != (e = curl_multi_add_handle(multi_handle, file->curl->handle)))
+	{
+		if (CURLM_CALL_MULTI_PERFORM != e)
+			elog(ERROR, "internal error: curl_multi_add_handle failed (%d - %s)",
+				 e, curl_easy_strerror(e));
+	}
+	file->curl->in_multi_handle = true;
+
+	while (CURLM_CALL_MULTI_PERFORM ==
+		   (e = curl_multi_perform(multi_handle, &file->still_running)));
+	if (e != CURLE_OK)
+		elog(ERROR, "internal error: curl_multi_perform failed (%d - %s)",
+			 e, curl_easy_strerror(e));
+	/* read some bytes to make sure the connection is established */
+	fill_buffer(file, 1);
+
+	/* check the connection for GET request */
+	int code = check_response(file, &response_code, &response_string);
+	switch (code)
+	{
+		case 0:
+			return false;
+		case EHOSTUNREACH:
+			curl_easy_getinfo(file->curl->handle, CURLINFO_EFFECTIVE_URL, &effective_url);
+			elog(LOG, "gpfdist request failed on seg%d, error: %s, effective url %s",
+				GpIdentity.segindex, strerror(EHOSTUNREACH), effective_url);
+			curl_multi_remove_handle(multi_handle, file->curl->handle);
+			curl_multi_cleanup(multi_handle);
+			multi_handle = curl_multi_init();
+			return true;
+		default:
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("could not open \"%s\" for reading", file->common.url),
+					 errdetail("Unexpected response from gpfdist server: %d - %s",
+							   response_code, response_string)));
+	}
+}
+
+static bool easy_perform_work(URL_CURL_FILE *file)
+{
+	int 		response_code;
+	char	   *response_string = NULL;
+	/*
+	 * Use backoff policy to call curl_easy_perform to fix following error
+	 * when work load is high:
+	 *	- 'could not connect to server'
+	 *	- gpfdist return timeout (HTTP 408)
+	 * By default it will wait at least write_to_gpfdist_timeout seconds before abort.
+	 */
+	CURLcode e = curl_easy_perform(file->curl->handle);
+	if (CURLE_OK != e)
+	{
+		elog(LOG, "%s response (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
+	}
+	else
+	{
+		/* check the response from server */
+		response_code = check_response(file, &response_code, &response_string);
+		switch (response_code)
+		{
+			case 0:
+				/* Success! */
+				return false;
+			case FDIST_TIMEOUT:
+				elog(LOG, "%s timeout from gpfdist", file->curl_url);
+				break;
+			default:
+				ereport(ERROR,
+						(errcode(ERRCODE_CONNECTION_FAILURE),
+						 errmsg("error while getting response from gpfdist on %s (code %d, msg %s)",
+								file->curl_url, response_code, response_string)));
+		}
+		if (response_string)
+			pfree(response_string);
+		response_string = NULL;
+	}
+	return true;
+}
 
 /*
  * fill_buffer
@@ -1303,34 +1357,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	 */
 	if (!forwrite)
 	{
-		int			response_code;
-		char	   *response_string;
-
-		if (CURLE_OK != (e = curl_multi_add_handle(multi_handle, file->curl->handle)))
-		{
-			if (CURLM_CALL_MULTI_PERFORM != e)
-				elog(ERROR, "internal error: curl_multi_add_handle failed (%d - %s)",
-					 e, curl_easy_strerror(e));
-		}
-		file->curl->in_multi_handle = true;
-
-		while (CURLM_CALL_MULTI_PERFORM ==
-			   (e = curl_multi_perform(multi_handle, &file->still_running)));
-
-		if (e != CURLE_OK)
-			elog(ERROR, "internal error: curl_multi_perform failed (%d - %s)",
-				 e, curl_easy_strerror(e));
-
-		/* read some bytes to make sure the connection is established */
-		fill_buffer(file, 1);
-
-		/* check the connection for GET request */
-		if (check_response(file, &response_code, &response_string))
-			ereport(ERROR,
-					(errcode(ERRCODE_CONNECTION_FAILURE),
-					 errmsg("could not open \"%s\" for reading", file->common.url),
-					 errdetail("Unexpected response from gpfdist server: %d - %s",
-							   response_code, response_string)));
+		gp_perform_backoff_and_check_response(file, multi_perform_work);
 	}
 	else
 	{
@@ -1339,7 +1366,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_POSTFIELDSIZE, 0);
 
 		/* post away and check response, retry if failed (timeout or * connect error) */
-		gp_curl_easy_perform_backoff_and_check_response(file);
+		gp_perform_backoff_and_check_response(file, easy_perform_work);
 		file->seq_number++;
 	}
 
@@ -1669,7 +1696,7 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 
 	replace_httpheader(file, "X-GP-SEQ", seq);
 
-	gp_curl_easy_perform_backoff_and_check_response(file);
+	gp_perform_backoff_and_check_response(file, easy_perform_work);
 	file->seq_number++;
 }
 
@@ -1687,7 +1714,7 @@ gp_proto0_write_done(URL_CURL_FILE *file)
 	CURL_EASY_SETOPT(file->curl->handle, CURLOPT_POSTFIELDSIZE, 0);
 
 	/* post away! */
-	gp_curl_easy_perform_backoff_and_check_response(file);
+	gp_perform_backoff_and_check_response(file, easy_perform_work);
 }
 
 static size_t
