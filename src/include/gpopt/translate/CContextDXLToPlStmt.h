@@ -29,14 +29,9 @@
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
 
-// fwd decl
-struct RangeTblEntry;
-struct Plan;
-
-struct List;
-struct Var;
-struct ShareInputScan;
-struct GpPolicy;
+extern "C" {
+#include "nodes/plannodes.h"
+}
 
 namespace gpdxl
 {
