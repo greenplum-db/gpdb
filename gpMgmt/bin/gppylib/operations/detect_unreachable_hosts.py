@@ -6,10 +6,10 @@ from gppylib.gparray import STATUS_DOWN
 logger = gplog.get_default_logger()
 
 
-def get_unreachable_segment_hosts(hosts_excluding_master, num_workers):
+def get_unreachable_segment_hosts(hosts, num_workers):
     pool = base.WorkerPool(numWorkers=num_workers)
     try:
-        for host in hosts_excluding_master:
+        for host in hosts:
             cmd = Command(name='check %s is up' % host, cmdStr="ssh %s 'echo %s'" % (host, host))
             pool.addCommand(cmd)
         pool.join()
@@ -17,22 +17,23 @@ def get_unreachable_segment_hosts(hosts_excluding_master, num_workers):
         pool.haltWork()
         pool.joinWorkers()
 
-    # There's no good way to map a CommandResult back to its originating Command so instead
-    # of looping through and finding the hosts that errored out, we remove any hosts that
-    # succeeded from the hosts_excluding_master and any remaining hosts will be ones that were unreachable.
+    # There's no good way to map a CommandResult back to its originating Command.
+    # To determine reachable hosts parse the stdout of the successful commands.
+    reachable_hosts = set()
     for item in pool.getCompletedItems():
         result = item.get_results()
         if result.rc == 0:
             host = result.stdout.strip()
-            hosts_excluding_master.remove(host)
+            reachable_hosts.add(host)
 
-    if len(hosts_excluding_master) > 0:
+    unreachable_hosts = list(set(hosts).difference(reachable_hosts))
+    unreachable_hosts.sort()
+    if len(unreachable_hosts) > 0:
         logger.warning("One or more hosts are not reachable via SSH.  Any segments on those hosts will be marked down")
-        for host in sorted(hosts_excluding_master):
+        for host in sorted(unreachable_hosts):
             logger.warning("Host %s is unreachable" % host)
-        return hosts_excluding_master
-    return None
 
+    return unreachable_hosts
 
 def mark_segments_down_for_unreachable_hosts(segmentPairs, unreachable_hosts):
     # We only mark the segment down in gparray for use by later checks, as
