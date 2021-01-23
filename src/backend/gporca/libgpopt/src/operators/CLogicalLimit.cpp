@@ -9,20 +9,17 @@
 //		Implementation of logical limit operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
-#include "naucrates/base/IDatumInt8.h"
-#include "naucrates/md/IMDTypeInt8.h"
-
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CColRefSet.h"
-
-#include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/metadata/CName.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalLimit.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/metadata/CName.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "naucrates/base/IDatumInt8.h"
+#include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/statistics/CLimitStatsProcessor.h"
 
 using namespace gpopt;

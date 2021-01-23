@@ -8,19 +8,19 @@
 //	@doc:
 //		Tests for order specification
 //---------------------------------------------------------------------------
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDProviderMemory.h"
+#include "unittest/gpopt/base/COrderSpecTest.h"
 
+#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CQueryContext.h"
-#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDTypeInt4.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/base/COrderSpecTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 #include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -10,10 +10,11 @@
 //		with dynamic buffer allocation.
 //---------------------------------------------------------------------------
 
+#include "gpos/string/CWStringDynamic.h"
+
+#include "gpos/common/CAutoRg.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/string/CStringStatic.h"
-#include "gpos/string/CWStringDynamic.h"
-#include "gpos/common/CAutoRg.h"
 using namespace gpos;
 
 

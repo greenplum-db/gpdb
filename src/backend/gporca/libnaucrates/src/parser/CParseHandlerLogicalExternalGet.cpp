@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalExternalGet.h"
+
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;

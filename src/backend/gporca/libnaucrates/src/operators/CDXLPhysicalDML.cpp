@@ -9,12 +9,13 @@
 //		Implementation of DXL physical DML operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDML.h"
+
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/CDXLUtils.h"
 
 using namespace gpos;
 using namespace gpdxl;

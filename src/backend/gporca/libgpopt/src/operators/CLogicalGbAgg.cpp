@@ -9,18 +9,17 @@
 //		Implementation of aggregate operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalGbAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/COptCtxt.h"
-
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalGbAgg.h"
-
 #include "naucrates/statistics/CGroupByStatsProcessor.h"
 
 using namespace gpopt;

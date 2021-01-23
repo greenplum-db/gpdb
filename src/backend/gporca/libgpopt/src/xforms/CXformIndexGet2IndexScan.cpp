@@ -9,15 +9,16 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformIndexGet2IndexScan.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalIndexScan.h"
-#include "gpopt/metadata/CIndexDescriptor.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;
 

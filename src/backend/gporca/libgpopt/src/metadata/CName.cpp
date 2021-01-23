@@ -12,9 +12,10 @@
 //		Only assumption, name string is NULL terminated;
 //---------------------------------------------------------------------------
 
+#include "gpopt/metadata/CName.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "gpopt/metadata/CName.h"
 
 using namespace gpopt;
 

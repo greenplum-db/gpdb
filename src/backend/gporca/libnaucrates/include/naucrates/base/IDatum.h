@@ -12,9 +12,9 @@
 #define GPNAUCRATES_IDatum_H
 
 #include "gpos/base.h"
-#include "gpos/string/CWStringConst.h"
 #include "gpos/common/CDouble.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/string/CWStringConst.h"
 
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"

@@ -9,9 +9,10 @@
 //		Implementation of wall clock timer
 //---------------------------------------------------------------------------
 
+#include "gpos/common/CWallClock.h"
+
 #include "gpos/base.h"
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/common/CWallClock.h"
 
 using namespace gpos;
 

@@ -9,11 +9,12 @@
 //		Implementation of disjunction constraints
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CConstraintDisjunction.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CConstraintInterval.h"
-#include "gpopt/base/CConstraintDisjunction.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;

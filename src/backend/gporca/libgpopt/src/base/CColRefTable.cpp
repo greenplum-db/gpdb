@@ -9,8 +9,9 @@
 //		Implementation of column reference class
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CColRefTable.h"
+
+#include "gpos/base.h"
 
 #include "naucrates/md/CMDIdGPDB.h"
 

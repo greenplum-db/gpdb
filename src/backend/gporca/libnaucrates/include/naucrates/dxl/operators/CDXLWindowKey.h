@@ -13,6 +13,7 @@
 #define GPDXL_CDXLWindowKey_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLWindowFrame.h"
 
 namespace gpdxl

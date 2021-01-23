@@ -9,15 +9,15 @@
 //		Implementation of const table access
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalConstTableGet.h"
-#include "gpopt/metadata/CName.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefTable.h"
-
+#include "gpopt/base/CUtils.h"
+#include "gpopt/metadata/CName.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;

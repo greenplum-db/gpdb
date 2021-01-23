@@ -11,12 +11,11 @@
 
 #include "naucrates/dxl/operators/CDXLScalarBitmapBoolOp.h"
 
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-
-#include "naucrates/md/IMDType.h"
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/md/IMDType.h"
 
 using namespace gpos;
 using namespace gpdxl;

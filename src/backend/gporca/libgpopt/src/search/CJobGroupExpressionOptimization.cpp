@@ -9,17 +9,18 @@
 //		Implementation of group expression optimization job
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/search/CJobGroupExpressionOptimization.h"
+
 #include "gpopt/base/CCostContext.h"
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/operators/CLogical.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/engine/CEngine.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogical.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupImplementation.h"
-#include "gpopt/search/CJobGroupExpressionOptimization.h"
 #include "gpopt/search/CJobTransformation.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"

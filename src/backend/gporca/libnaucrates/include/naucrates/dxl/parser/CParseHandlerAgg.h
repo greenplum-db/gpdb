@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerGroupBy_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl
 {

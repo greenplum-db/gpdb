@@ -11,8 +11,8 @@
 
 
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
 
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

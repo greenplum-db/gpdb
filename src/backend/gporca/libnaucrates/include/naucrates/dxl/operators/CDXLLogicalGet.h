@@ -14,6 +14,7 @@
 #define GPDXL_CDXLLogicalGet_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 

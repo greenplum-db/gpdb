@@ -12,8 +12,9 @@
 #define GPOPT_CPhysicalConstTableGet_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysical.h"
+
 #include "gpopt/operators/CLogicalConstTableGet.h"
+#include "gpopt/operators/CPhysical.h"
 
 namespace gpopt
 {

@@ -18,6 +18,7 @@
 #define GPOPT_CXformDifference2DifferenceAll_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt

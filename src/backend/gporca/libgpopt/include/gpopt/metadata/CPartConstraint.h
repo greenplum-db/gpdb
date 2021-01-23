@@ -12,7 +12,6 @@
 #define GPOPT_CPartConstraint_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
 

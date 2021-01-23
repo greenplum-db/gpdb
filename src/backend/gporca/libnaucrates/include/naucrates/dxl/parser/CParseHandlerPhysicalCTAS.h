@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerPhysicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDRelation.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/md/IMDRelation.h"
 
 
 namespace gpdxl

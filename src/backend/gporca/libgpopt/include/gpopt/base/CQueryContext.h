@@ -13,10 +13,10 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/search/CGroupExpression.h"
+#include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/operators/CExpressionPreprocessor.h"
+#include "gpopt/search/CGroupExpression.h"
 
 
 namespace gpopt

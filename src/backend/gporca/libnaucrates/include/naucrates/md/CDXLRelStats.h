@@ -16,11 +16,10 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
-
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelStats.h"
 #include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/IMDRelStats.h"
 
 namespace gpdxl
 {

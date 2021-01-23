@@ -12,6 +12,7 @@
 #define GPOPT_CPatternMultiLeaf_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPattern.h"
 
 namespace gpopt

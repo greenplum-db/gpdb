@@ -10,23 +10,23 @@
 //		objects in memory and provides a function for looking them up by id.
 //---------------------------------------------------------------------------
 
-#include "gpos/io/COstreamString.h"
-#include "gpos/memory/CMemoryPool.h"
-#include "gpos/task/CWorker.h"
+#include "naucrates/md/CMDProviderMemory.h"
+
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/error/CAutoTrace.h"
-
-#include "naucrates/md/CMDProviderMemory.h"
-#include "naucrates/md/CMDTypeInt4GPDB.h"
-#include "naucrates/md/CMDTypeInt8GPDB.h"
-#include "naucrates/md/CMDTypeBoolGPDB.h"
-#include "naucrates/md/CDXLRelStats.h"
-#include "naucrates/md/CDXLColStats.h"
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/exception.h"
+#include "gpos/io/COstreamString.h"
+#include "gpos/memory/CMemoryPool.h"
+#include "gpos/task/CWorker.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CDXLRelStats.h"
+#include "naucrates/md/CMDTypeBoolGPDB.h"
+#include "naucrates/md/CMDTypeInt4GPDB.h"
+#include "naucrates/md/CMDTypeInt8GPDB.h"
 
 using namespace gpdxl;
 using namespace gpmd;

@@ -11,35 +11,33 @@
 //		the caller is responsible for freeing it.
 //---------------------------------------------------------------------------
 
+#include "gpopt/translate/CTranslatorDXLToExpr.h"
+
 #include "gpos/common/CAutoTimer.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDFunction.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/IMDCast.h"
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-#include "naucrates/md/CMDRelationCtasGPDB.h"
-#include "naucrates/md/CMDProviderMemory.h"
-
-#include "naucrates/dxl/operators/dxlops.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColumnFactory.h"
-#include "gpopt/base/CEnfdOrder.h"
-#include "gpopt/base/CEnfdDistribution.h"
 #include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CEnfdDistribution.h"
+#include "gpopt/base/CEnfdOrder.h"
 #include "gpopt/base/CUtils.h"
+#include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
-#include "gpopt/exception.h"
-
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/CMDRelationCtasGPDB.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDRelation.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/traceflags/traceflags.h"
 
 #define GPDB_DENSE_RANK_OID 7002

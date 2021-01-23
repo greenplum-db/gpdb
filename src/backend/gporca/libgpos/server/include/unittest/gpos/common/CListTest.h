@@ -11,8 +11,8 @@
 #ifndef GPOS_CListTest_H
 #define GPOS_CListTest_H
 
-#include "gpos/types.h"
 #include "gpos/common/CList.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

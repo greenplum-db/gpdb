@@ -13,28 +13,26 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CBucketTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CPoint.h"
-#include "naucrates/statistics/CBucket.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-
+#include "naucrates/base/CDatumBoolGPDB.h"
 #include "naucrates/base/CDatumGenericGPDB.h"
 #include "naucrates/base/CDatumInt4GPDB.h"
-#include "naucrates/base/CDatumBoolGPDB.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/statistics/CBucket.h"
+#include "naucrates/statistics/CPoint.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CBucketTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/CMDTypeGenericGPDB.h"
 
 using namespace gpopt;
 

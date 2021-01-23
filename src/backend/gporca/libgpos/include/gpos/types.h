@@ -18,9 +18,9 @@
 #define GPOS_types_H
 
 #include <limits.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdarg.h>
 #include <sys/types.h>
 
 #include <iostream>

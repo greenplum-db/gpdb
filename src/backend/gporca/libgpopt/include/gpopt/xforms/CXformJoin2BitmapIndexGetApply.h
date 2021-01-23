@@ -10,6 +10,7 @@
 #define GPOPT_CXformJoin2BitmapIndexGetApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternNode.h"

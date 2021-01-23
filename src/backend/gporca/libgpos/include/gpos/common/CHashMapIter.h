@@ -12,9 +12,9 @@
 #define GPOS_CHashMapIter_H
 
 #include "gpos/base.h"
-#include "gpos/common/CStackObject.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashMap.h"
+#include "gpos/common/CStackObject.h"
 
 namespace gpos
 {

@@ -12,12 +12,13 @@
 #define GPOPT_CJoinOrderDP_H
 
 #include "gpos/base.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CBitSet.h"
+#include "gpos/common/CHashMap.h"
 #include "gpos/io/IOstream.h"
+
 #include "gpopt/base/CUtils.h"
-#include "gpopt/xforms/CJoinOrder.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/xforms/CJoinOrder.h"
 
 
 namespace gpopt

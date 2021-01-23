@@ -9,9 +9,10 @@
 //		Interface for serializable objects
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CSerializable.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
-#include "gpos/error/CSerializable.h"
 #include "gpos/task/CTask.h"
 
 using namespace gpos;

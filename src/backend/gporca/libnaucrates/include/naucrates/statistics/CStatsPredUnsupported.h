@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/statistics/CStatsPred.h"
 
 namespace gpnaucrates

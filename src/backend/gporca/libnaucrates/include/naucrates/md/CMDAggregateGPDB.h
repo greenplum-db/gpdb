@@ -16,8 +16,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDAggregate.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/IMDAggregate.h"
 
 
 namespace gpmd

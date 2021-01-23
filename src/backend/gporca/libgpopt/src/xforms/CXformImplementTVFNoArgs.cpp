@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementTVFNoArgs.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalTVF.h"
 

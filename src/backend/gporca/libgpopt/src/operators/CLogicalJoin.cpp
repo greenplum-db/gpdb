@@ -9,14 +9,14 @@
 //		Implementation of logical join class
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/COptCtxt.h"
-
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 

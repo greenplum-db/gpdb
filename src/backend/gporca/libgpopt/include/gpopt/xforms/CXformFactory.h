@@ -12,6 +12,7 @@
 #define GPOPT_CXformFactory_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXform.h"
 
 namespace gpopt

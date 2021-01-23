@@ -13,29 +13,27 @@
 //		expression or a stand-alone tree;
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CExpressionHandle.h"
+
 #include "gpos/base.h"
 
-
+#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CCostContext.h"
-#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPattern.h"
-#include "gpopt/operators/CPhysicalScan.h"
-#include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CPhysicalCTEConsumer.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CKeyCollection.h"
-
-#include "gpopt/exception.h"
-
+#include "gpopt/operators/CPhysicalScan.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpnaucrates;

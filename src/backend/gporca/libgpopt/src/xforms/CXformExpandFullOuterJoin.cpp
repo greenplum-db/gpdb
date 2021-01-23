@@ -9,15 +9,16 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformExpandFullOuterJoin.h"
-#include "gpopt/xforms/CXformUtils.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalFullOuterJoin.h"
 #include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CPatternTree.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 

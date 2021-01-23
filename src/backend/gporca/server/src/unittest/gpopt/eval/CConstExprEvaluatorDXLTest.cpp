@@ -15,9 +15,7 @@
 //
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/operators/CDXLDatumInt4.h"
-#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
+#include "unittest/gpopt/eval/CConstExprEvaluatorDXLTest.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CUtils.h"
@@ -25,8 +23,10 @@
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
+#include "naucrates/dxl/operators/CDXLDatumInt4.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
 
-#include "unittest/gpopt/eval/CConstExprEvaluatorDXLTest.h"
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
 

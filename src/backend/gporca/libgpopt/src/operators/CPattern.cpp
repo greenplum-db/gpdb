@@ -9,8 +9,9 @@
 //		Implementation of base class of pattern operators
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CPattern.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

@@ -9,9 +9,10 @@
 //		Implementation of getopt abstraction
 //---------------------------------------------------------------------------
 
+#include "gpos/common/CMainArgs.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
-#include "gpos/common/CMainArgs.h"
 
 using namespace gpos;
 

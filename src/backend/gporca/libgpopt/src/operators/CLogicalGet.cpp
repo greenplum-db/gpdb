@@ -9,25 +9,22 @@
 //		Implementation of basic table access
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalGet.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CDynamicPtrArray.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
+#include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalGet.h"
-
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
-
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
-
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;

@@ -13,9 +13,8 @@
 #define GPDXL_CParseHandlerMDCast_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-
-
 #include "naucrates/md/CMDFunctionGPDB.h"
 
 

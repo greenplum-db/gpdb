@@ -5,8 +5,10 @@
 //	Implementation of inner / left outer index apply operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CLogicalIndexApply.h"
+
+#include "gpos/base.h"
+
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 
 using namespace gpopt;

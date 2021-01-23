@@ -10,47 +10,42 @@
 //		metadata objects in an optimization session
 //---------------------------------------------------------------------------
 
+#include "gpopt/mdcache/CMDAccessor.h"
+
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CTimerUser.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/exception.h"
-#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-
-
-#include "naucrates/exception.h"
-#include "naucrates/traceflags/traceflags.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
-
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdCast.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDIdScCmp.h"
+#include "naucrates/md/CMDProviderGeneric.h"
+#include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDCacheObject.h"
+#include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDCheckConstraint.h"
+#include "naucrates/md/IMDColStats.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDProvider.h"
+#include "naucrates/md/IMDRelStats.h"
 #include "naucrates/md/IMDRelation.h"
 #include "naucrates/md/IMDRelationExternal.h"
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDFunction.h"
-#include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDTrigger.h"
-#include "naucrates/md/IMDCheckConstraint.h"
-#include "naucrates/md/IMDRelStats.h"
-#include "naucrates/md/IMDColStats.h"
-#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDScCmp.h"
-
-#include "naucrates/md/CMDIdRelStats.h"
-#include "naucrates/md/CMDIdColStats.h"
-#include "naucrates/md/CMDIdCast.h"
-#include "naucrates/md/CMDIdScCmp.h"
-
-#include "naucrates/md/IMDProvider.h"
-#include "naucrates/md/CMDProviderGeneric.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTrigger.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpos;
 using namespace gpmd;

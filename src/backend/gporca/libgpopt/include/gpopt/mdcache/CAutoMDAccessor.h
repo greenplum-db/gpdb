@@ -15,9 +15,10 @@
 #define GPOPT_CAutoMDAccessor_H
 
 #include "gpos/base.h"
-#include "naucrates/md/CMDProviderMemory.h"
+
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "naucrates/md/CMDProviderMemory.h"
 
 namespace gpmd
 {

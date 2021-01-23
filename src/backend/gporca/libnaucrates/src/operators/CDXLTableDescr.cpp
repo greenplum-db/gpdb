@@ -10,9 +10,10 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/dxl/operators/CDXLTableDescr.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

@@ -15,10 +15,9 @@
 #ifndef GPOS_utils_H
 #define GPOS_utils_H
 
-#include "gpos/types.h"
-
 #include "gpos/error/CException.h"
 #include "gpos/io/COstreamBasic.h"
+#include "gpos/types.h"
 
 #define ALIGNED_16(x) \
 	(((ULONG_PTR) x >> 1) << 1 == (ULONG_PTR) x)  // checks 16-bit alignment

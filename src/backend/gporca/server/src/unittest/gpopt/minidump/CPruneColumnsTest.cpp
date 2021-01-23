@@ -9,6 +9,8 @@
 //		Test for optimizing queries where intermediate columns are pruned
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/minidump/CPruneColumnsTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
@@ -18,7 +20,6 @@
 #include "gpopt/minidump/CMinidumperUtils.h"
 
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/minidump/CPruneColumnsTest.h"
 
 
 using namespace gpopt;

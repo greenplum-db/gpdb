@@ -9,19 +9,20 @@
 //		Relational derived properties;
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdPropRelational.h"
+
 #include "gpos/base.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CWorker.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CLogical.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/base/CDrvdPropRelational.h"
-#include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/CPartInfo.h"
+#include "gpopt/base/CReqdPropPlan.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
 
 using namespace gpopt;
 

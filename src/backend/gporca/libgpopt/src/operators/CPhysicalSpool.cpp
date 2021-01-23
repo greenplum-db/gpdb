@@ -9,10 +9,11 @@
 //		Implementation of spool operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSpool.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalSpool.h"
 
 
 using namespace gpopt;

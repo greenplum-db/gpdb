@@ -9,9 +9,10 @@
 //		Implementation of DXL physical table-valued function
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLPhysicalTVF.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLPhysicalTVF.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

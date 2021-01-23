@@ -13,9 +13,10 @@
 #define GPDXL_CDXLPhysicalIndexOnlyScan_H
 
 #include "gpos/base.h"
+
+#include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
-#include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 
 namespace gpdxl

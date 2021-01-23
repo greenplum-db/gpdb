@@ -16,11 +16,10 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDName.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryQuantified.h"
+#include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpdxl
 {

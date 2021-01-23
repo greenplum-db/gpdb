@@ -13,11 +13,11 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/CRange.h"
-#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintConjunction.h"
 #include "gpopt/base/CConstraintDisjunction.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintNegation.h"
+#include "gpopt/base/CRange.h"
 #include "gpopt/eval/IConstExprEvaluator.h"
 
 #include "unittest/gpopt/CTestUtils.h"

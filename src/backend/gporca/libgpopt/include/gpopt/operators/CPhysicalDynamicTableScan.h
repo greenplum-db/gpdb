@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalDynamicTableScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalDynamicScan.h"
 
 namespace gpopt

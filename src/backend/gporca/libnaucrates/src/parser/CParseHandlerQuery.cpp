@@ -18,11 +18,12 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerQuery.h"
+
+#include "naucrates/dxl/parser/CParseHandlerCTEList.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/parser/CParseHandlerQueryOutput.h"
-#include "naucrates/dxl/parser/CParseHandlerCTEList.h"
 
 using namespace gpdxl;
 

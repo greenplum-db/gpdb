@@ -18,14 +18,13 @@
 #define GPDXL_CTranslatorDXLToScalar_H
 
 
-#include "gpopt/translate/CMappingColIdVar.h"
-#include "gpopt/translate/CContextDXLToPlStmt.h"
-#include "gpopt/translate/CMappingElementColIdParamId.h"
-
 #include "gpos/base.h"
 
-#include "naucrates/dxl/operators/CDXLNode.h"
+#include "gpopt/translate/CContextDXLToPlStmt.h"
+#include "gpopt/translate/CMappingColIdVar.h"
+#include "gpopt/translate/CMappingElementColIdParamId.h"
 #include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
 #include "naucrates/dxl/operators/CDXLScalarCast.h"
 

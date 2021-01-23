@@ -9,12 +9,12 @@
 //		Implementation of column reference set based on bit sets
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CColRefSet.h"
 
-#include "gpopt/base/CColRefSetIter.h"
+#include "gpos/base.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColumnFactory.h"
 
 using namespace gpopt;

@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerCostModel_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
+
 #include "gpopt/cost/ICostModel.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {

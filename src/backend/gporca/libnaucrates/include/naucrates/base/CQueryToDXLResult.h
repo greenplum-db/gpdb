@@ -14,6 +14,7 @@
 #define GPDXL_CTranslatorQueryToDXLOutput_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 
 namespace gpdxl

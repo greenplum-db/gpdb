@@ -15,17 +15,17 @@
 //
 //---------------------------------------------------------------------------
 
-#include "unittest/base.h"
-#include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/eval/CConstExprEvaluatorDefaultTest.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CAutoOptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/ops.h"
-
 #include "naucrates/md/CMDProviderMemory.h"
+
+#include "unittest/base.h"
+#include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpos;
 using namespace gpopt;

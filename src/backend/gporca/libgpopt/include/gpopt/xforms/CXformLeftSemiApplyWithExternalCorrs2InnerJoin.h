@@ -14,10 +14,11 @@
 #define GPOPT_CXformLeftSemiApplyWithExternalCorrs2InnerJoin_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformApply2Join.h"
-#include "gpopt/xforms/CXformUtils.h"
+
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLeftSemiApply.h"
+#include "gpopt/xforms/CXformApply2Join.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 
 namespace gpopt

@@ -9,30 +9,28 @@
 //		Implementation of cost context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CCostContext.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "gpopt/base/CCostContext.h"
+
 #include "gpopt/base/CDistributionSpecHashed.h"
-
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
-#include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CDrvdPropCtxtRelational.h"
+#include "gpopt/base/CDrvdPropPlan.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/cost/ICostModel.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalDynamicTableScan.h"
-#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
-#include "gpopt/operators/CPhysicalSpool.h"
 #include "gpopt/operators/CPhysicalAgg.h"
-
+#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
+#include "gpopt/operators/CPhysicalDynamicTableScan.h"
+#include "gpopt/operators/CPhysicalSpool.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CGroupExpression.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
-
-#include "gpopt/exception.h"
 
 using namespace gpopt;
 using namespace gpnaucrates;

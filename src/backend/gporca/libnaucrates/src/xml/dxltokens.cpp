@@ -14,6 +14,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/xml/dxltokens.h"
+
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
 
 using namespace gpdxl;

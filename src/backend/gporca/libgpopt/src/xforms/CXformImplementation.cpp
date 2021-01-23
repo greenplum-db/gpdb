@@ -9,9 +9,9 @@
 //		Implementation of basic implementation transformation
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/xforms/CXformImplementation.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

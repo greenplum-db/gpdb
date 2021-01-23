@@ -9,10 +9,11 @@
 //		Auto suspend abort object
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CAutoSuspendAbort.h"
+
 #include <stddef.h>
 
 #include "gpos/base.h"
-#include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CTask.h"
 
 using namespace gpos;

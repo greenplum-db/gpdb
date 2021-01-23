@@ -17,8 +17,9 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobQueue.h"
+
+#include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
 

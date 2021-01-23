@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerMergeJoin_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalMergeJoin.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl
 {

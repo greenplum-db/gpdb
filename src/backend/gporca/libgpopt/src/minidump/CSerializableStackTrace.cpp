@@ -9,14 +9,14 @@
 //		Serializable stack trace object
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CSerializableStackTrace.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/CDXLSections.h"
-
-#include "gpopt/minidump/CSerializableStackTrace.h"
 
 #define GPOPT_MINIDUMP_BUF_SIZE (1024 * 4)
 

@@ -13,14 +13,15 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpos/memory/CMemoryPoolTracker.h"
+
 #include "gpos/assert.h"
-#include "gpos/types.h"
-#include "gpos/utils.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
-#include "gpos/memory/CMemoryPoolTracker.h"
 #include "gpos/memory/IMemoryVisitor.h"
+#include "gpos/types.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 

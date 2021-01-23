@@ -9,17 +9,18 @@
 //		Implementation of physical sequence project operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSequenceProject.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/cost/ICostModel.h"
-#include "gpopt/operators/CPhysicalSequenceProject.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarIdent.h"
 

@@ -12,9 +12,9 @@
 #ifndef GPOS_CStackDescriptor_H
 #define GPOS_CStackDescriptor_H
 
-#include "gpos/types.h"
 #include "gpos/common/clibtypes.h"
 #include "gpos/io/IOstream.h"
+#include "gpos/types.h"
 
 #define GPOS_STACK_TRACE_BUFFER_SIZE 4096
 #define GPOS_STACK_TRACE_DEPTH 32

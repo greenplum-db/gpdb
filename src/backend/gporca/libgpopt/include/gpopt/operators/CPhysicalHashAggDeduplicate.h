@@ -12,6 +12,7 @@
 #define GPOS_CPhysicalHashAggDeduplicate_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalHashAgg.h"
 
 namespace gpopt

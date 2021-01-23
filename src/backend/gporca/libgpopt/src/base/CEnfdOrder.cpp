@@ -9,9 +9,10 @@
 //		Implementation of enforceable order property
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CEnfdOrder.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CEnfdOrder.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CPhysicalSort.h"
 

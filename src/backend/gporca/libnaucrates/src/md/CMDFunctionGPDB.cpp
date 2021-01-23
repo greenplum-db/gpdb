@@ -11,11 +11,12 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/CMDFunctionGPDB.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/CMDFunctionGPDB.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpmd;
 using namespace gpdxl;

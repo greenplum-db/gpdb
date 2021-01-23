@@ -9,15 +9,16 @@
 //		Information about CTEs in a query
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CCTEInfo.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CCTEInfo.h"
 #include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CQueryContext.h"
-#include "gpopt/operators/CLogicalCTEProducer.h"
-#include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CExpressionPreprocessor.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/operators/CLogicalCTEProducer.h"
 
 
 using namespace gpopt;

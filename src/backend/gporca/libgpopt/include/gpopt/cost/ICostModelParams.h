@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 
-
 #include "naucrates/md/IMDRelation.h"
+
 #include "CCost.h"
 
 namespace gpopt

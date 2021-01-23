@@ -1,13 +1,14 @@
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/operators/CPhysicalUnionAll.h"
+
 #include "gpos/error/CAutoTrace.h"
 
-#include "gpopt/operators/CPhysicalUnionAll.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CHashedDistributions.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CHashedDistributions.h"
 #include "gpopt/operators/CScalarIdent.h"
-#include "gpopt/base/CColRefSetIter.h"
 
 using namespace gpopt;
 

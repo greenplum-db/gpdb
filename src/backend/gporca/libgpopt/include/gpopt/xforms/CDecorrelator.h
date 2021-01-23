@@ -12,6 +12,7 @@
 #define GPOPT_CDecorrelator_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt

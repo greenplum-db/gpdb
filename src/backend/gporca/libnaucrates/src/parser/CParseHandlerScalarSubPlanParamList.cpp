@@ -11,12 +11,12 @@
 //		of a scalar SubPlan
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParam.h"
 
 using namespace gpdxl;

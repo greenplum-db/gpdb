@@ -16,6 +16,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

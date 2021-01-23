@@ -9,8 +9,9 @@
 //		Implementation of unsupported statistics predicate
 //---------------------------------------------------------------------------
 
-#include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
+
+#include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpnaucrates;

@@ -9,9 +9,11 @@
 //		Base class for all transformations
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXform.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/operators/CExpressionHandle.h"
 
 
 using namespace gpopt;

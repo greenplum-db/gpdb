@@ -9,11 +9,12 @@
 //		Implementation of n-ary inner join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalNAryJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 

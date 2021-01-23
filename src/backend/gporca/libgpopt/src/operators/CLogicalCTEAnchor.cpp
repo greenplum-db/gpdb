@@ -9,12 +9,13 @@
 //		Implementation of CTE anchor operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalCTEAnchor.h"
 
 using namespace gpopt;
 

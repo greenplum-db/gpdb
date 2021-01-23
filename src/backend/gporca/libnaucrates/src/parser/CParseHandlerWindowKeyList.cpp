@@ -10,11 +10,12 @@
 //		window keys in the window operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerWindowKey.h"
 #include "naucrates/dxl/parser/CParseHandlerWindowKeyList.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerWindowKey.h"
 
 using namespace gpdxl;
 

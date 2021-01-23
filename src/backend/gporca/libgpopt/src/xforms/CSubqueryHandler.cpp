@@ -23,11 +23,12 @@
 //		fEnforceCorrelatedApply to true
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CSubqueryHandler.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/exception.h"
-
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalInnerApply.h"
@@ -40,8 +41,8 @@
 #include "gpopt/operators/CLogicalLeftSemiCorrelatedApplyIn.h"
 #include "gpopt/operators/CLogicalMaxOneRow.h"
 #include "gpopt/operators/CScalarBooleanTest.h"
-#include "gpopt/operators/CScalarCoalesce.h"
 #include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarCoalesce.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIf.h"
 #include "gpopt/operators/CScalarProjectElement.h"
@@ -50,9 +51,7 @@
 #include "gpopt/operators/CScalarSubqueryAll.h"
 #include "gpopt/operators/CScalarSubqueryAny.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
-#include "gpopt/xforms/CSubqueryHandler.h"
 #include "gpopt/xforms/CXformUtils.h"
-
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt8.h"

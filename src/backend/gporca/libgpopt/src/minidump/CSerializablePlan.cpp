@@ -9,13 +9,13 @@
 //		Serializable plan object
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CSerializablePlan.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
-
-#include "gpopt/minidump/CSerializablePlan.h"
 
 using namespace gpos;
 using namespace gpopt;

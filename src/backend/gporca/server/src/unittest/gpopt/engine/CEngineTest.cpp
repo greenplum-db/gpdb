@@ -8,20 +8,21 @@
 //	@doc:
 //		Test for CEngine
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/engine/CEngineTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/search/CGroup.h"
-#include "gpopt/search/CGroupProxy.h"
 #include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/operators/ops.h"
+#include "gpopt/search/CGroup.h"
+#include "gpopt/search/CGroupProxy.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/engine/CEngineTest.h"
 #include "unittest/gpopt/CSubqueryTestUtils.h"
 
 ULONG CEngineTest::m_ulTestCounter = 0;		 // start from first test

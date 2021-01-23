@@ -9,12 +9,13 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformExternalGet2ExternalScan.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalExternalGet.h"
 #include "gpopt/operators/CPhysicalExternalScan.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;
 

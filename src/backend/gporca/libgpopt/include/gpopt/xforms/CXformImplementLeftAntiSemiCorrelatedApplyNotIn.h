@@ -13,6 +13,7 @@
 #define GPOPT_CXformImplementLeftAntiSemiCorrelatedApplyNotIn_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalLeftAntiSemiCorrelatedApplyNotIn.h"
 #include "gpopt/operators/CPhysicalCorrelatedNotInLeftAntiSemiNLJoin.h"
 #include "gpopt/xforms/CXformImplementCorrelatedApply.h"

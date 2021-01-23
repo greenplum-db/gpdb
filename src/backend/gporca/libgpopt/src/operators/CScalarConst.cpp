@@ -9,13 +9,14 @@
 //		Implementation of scalar constant operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarConst.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-#include "naucrates/base/IDatumBool.h"
-#include "gpopt/operators/CScalarConst.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "naucrates/base/IDatumBool.h"
 
 using namespace gpopt;
 using namespace gpnaucrates;

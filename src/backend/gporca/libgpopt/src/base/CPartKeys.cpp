@@ -9,9 +9,11 @@
 //		Implementation of partitioning keys
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CPartKeys.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
-#include "gpopt/base/CPartKeys.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CUtils.h"
 

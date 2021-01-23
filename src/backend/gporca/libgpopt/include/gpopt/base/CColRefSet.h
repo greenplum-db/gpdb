@@ -12,8 +12,8 @@
 #define GPOS_CColRefSet_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CBitSet.h"
+
 #include "gpopt/base/CColRef.h"
 
 

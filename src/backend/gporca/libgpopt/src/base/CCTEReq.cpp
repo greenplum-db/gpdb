@@ -9,8 +9,10 @@
 //		Implementation of CTE requirements
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CCTEReq.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/base/COptCtxt.h"
 
 using namespace gpopt;

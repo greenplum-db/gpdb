@@ -12,13 +12,12 @@
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalCTAS.h"
 
+#include "naucrates/dxl/operators/CDXLLogicalCTAS.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerColDescr.h"
 #include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
-
-#include "naucrates/dxl/operators/CDXLLogicalCTAS.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 

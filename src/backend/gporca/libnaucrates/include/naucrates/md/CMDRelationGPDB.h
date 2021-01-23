@@ -17,11 +17,10 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDColumn.h"
-
 #include "naucrates/md/CMDColumn.h"
 #include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDRelation.h"
 
 namespace gpdxl
 {

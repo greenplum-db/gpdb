@@ -9,8 +9,9 @@
 //		Implementation of wrapper around wall clock timer
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
+
+#include "gpos/base.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 
 using namespace gpos;

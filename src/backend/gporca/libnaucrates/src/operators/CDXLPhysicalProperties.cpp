@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLPhysicalProperties.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;

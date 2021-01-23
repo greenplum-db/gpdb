@@ -9,12 +9,12 @@
 //		Test for CDynamicPtrArray
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CDynamicPtrArrayTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CDynamicPtrArrayTest.h"
 
 using namespace gpos;
 

@@ -15,7 +15,6 @@
 #define GPDXL_CMemoryPoolPalloc_H
 
 #include "gpos/base.h"
-
 #include "gpos/memory/CMemoryPool.h"
 
 namespace gpos

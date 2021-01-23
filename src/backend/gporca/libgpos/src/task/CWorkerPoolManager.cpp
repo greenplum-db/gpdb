@@ -13,10 +13,10 @@
 //---------------------------------------------------------------------------
 
 
-#include "gpos/memory/CMemoryPoolManager.h"
-#include "gpos/memory/CMemoryPool.h"
-
 #include "gpos/task/CWorkerPoolManager.h"
+
+#include "gpos/memory/CMemoryPool.h"
+#include "gpos/memory/CMemoryPoolManager.h"
 
 using namespace gpos;
 

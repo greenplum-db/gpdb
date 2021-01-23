@@ -17,15 +17,14 @@
 extern "C" {
 #include "postgres.h"
 
-#include "utils/guc.h"
-
-#include "nodes/plannodes.h"
-#include "nodes/parsenodes.h"
 #include "access/sysattr.h"
-#include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_statistic.h"
+#include "catalog/pg_type.h"
+#include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
 #include "optimizer/walkers.h"
+#include "utils/guc.h"
 #include "utils/rel.h"
 }
 
@@ -33,48 +32,42 @@ extern "C" {
 #define GPDB_CURRVAL 1575
 #define GPDB_SETVAL 1576
 
-#include "gpos/base.h"
 #include "gpos/attributes.h"
+#include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CBitSetIter.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "gpopt/translate/CTranslatorUtils.h"
+
+#include "gpopt/base/CUtils.h"
+#include "gpopt/gpdbwrappers.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
-
+#include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/dxl/operators/CDXLDatumOid.h"
+#include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLDatumInt2.h"
 #include "naucrates/dxl/operators/CDXLDatumInt4.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLDatumOid.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLSpoolInfo.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
-#include "naucrates/dxl/gpdb_types.h"
-
+#include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/md/CMDIdColStats.h"
 #include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
 #include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/IMDRelation.h"
 #include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDRelation.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt2.h"
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/md/IMDTypeOid.h"
-#include "naucrates/md/CMDTypeGenericGPDB.h"
-
-#include "naucrates/dxl/operators/CDXLDatumInt2.h"
-#include "naucrates/dxl/operators/CDXLDatumInt4.h"
-#include "naucrates/dxl/operators/CDXLDatumInt8.h"
-#include "naucrates/dxl/operators/CDXLDatumBool.h"
-#include "naucrates/dxl/operators/CDXLDatumOid.h"
-
 #include "naucrates/traceflags/traceflags.h"
-
-#include "gpopt/gpdbwrappers.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/mdcache/CMDAccessor.h"
 
 using namespace gpdxl;
 using namespace gpmd;

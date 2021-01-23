@@ -10,12 +10,12 @@
 //
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerCostParam.h"
 #include "naucrates/dxl/parser/CParseHandlerCostParams.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #include "gpdbcost/CCostModelParamsGPDB.h"
+#include "naucrates/dxl/parser/CParseHandlerCostParam.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 using namespace gpdxl;
 using namespace gpopt;

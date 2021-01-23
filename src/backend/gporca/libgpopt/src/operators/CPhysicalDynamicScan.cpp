@@ -17,8 +17,8 @@
 
 #include "gpopt/operators/CPhysicalDynamicScan.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"

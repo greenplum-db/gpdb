@@ -14,8 +14,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDType.h"
 #include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDType.h"
 
 namespace gpmd
 {

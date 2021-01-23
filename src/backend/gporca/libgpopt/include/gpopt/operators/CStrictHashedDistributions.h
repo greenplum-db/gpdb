@@ -4,10 +4,11 @@
 #ifndef GPOPT_CHashedDistributions_H
 #define GPOPT_CHashedDistributions_H
 
+#include "gpos/memory/CMemoryPool.h"
+
+#include "gpopt/base/CColRef.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecStrictHashed.h"
-#include "gpos/memory/CMemoryPool.h"
-#include "gpopt/base/CColRef.h"
 
 namespace gpopt
 {

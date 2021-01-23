@@ -15,6 +15,7 @@
 #define GPDXL_CDXLScalarProjElem_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/CMDName.h"
 

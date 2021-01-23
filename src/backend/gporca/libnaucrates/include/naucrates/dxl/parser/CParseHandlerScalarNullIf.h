@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerScalarNullIf_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarNullIf.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 namespace gpdxl
 {

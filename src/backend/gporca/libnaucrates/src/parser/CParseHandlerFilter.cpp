@@ -10,14 +10,14 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarJoinFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarOneTimeFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 using namespace gpdxl;
 

@@ -10,10 +10,11 @@
 //		operators
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/operators/CDXLLogicalCTEAnchor.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalCTEAnchor.h"
+
+#include "naucrates/dxl/operators/CDXLLogicalCTEAnchor.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
 

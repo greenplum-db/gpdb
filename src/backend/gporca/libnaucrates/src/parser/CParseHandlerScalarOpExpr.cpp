@@ -10,12 +10,11 @@
 //		Implementation of the SAX parse handler class for parsing scalar OpExpr.
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOpExpr.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarOpExpr.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;

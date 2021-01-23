@@ -13,8 +13,9 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/memory/CMemoryPool.h"
-#include "gpos/memory/CMemoryPoolTracker.h"
+
 #include "gpos/memory/CMemoryPoolManager.h"
+#include "gpos/memory/CMemoryPoolTracker.h"
 #include "gpos/memory/CMemoryVisitorPrint.h"
 #include "gpos/task/ITask.h"
 

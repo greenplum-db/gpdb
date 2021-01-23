@@ -12,9 +12,9 @@
 #define GPOS_CAutoTraceFlag_H
 
 #include "gpos/base.h"
+#include "gpos/common/CStackObject.h"
 #include "gpos/task/ITask.h"
 #include "gpos/task/traceflags.h"
-#include "gpos/common/CStackObject.h"
 
 
 namespace gpos

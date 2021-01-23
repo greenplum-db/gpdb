@@ -14,10 +14,10 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/CReqdProp.h"
 #include "gpopt/base/CMaxCard.h"
-#include "gpopt/base/CPropConstraint.h"
 #include "gpopt/base/CPartInfo.h"
+#include "gpopt/base/CPropConstraint.h"
+#include "gpopt/base/CReqdProp.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/xforms/CXform.h"
 

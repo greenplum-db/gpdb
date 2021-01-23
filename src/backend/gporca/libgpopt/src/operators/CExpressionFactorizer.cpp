@@ -15,19 +15,17 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionFactorizer.h"
+
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CFunctionProp.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
-
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CExpressionFactorizer.h"
-#include "gpopt/operators/CExpressionUtils.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
-
+#include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"

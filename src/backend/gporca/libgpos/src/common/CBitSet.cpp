@@ -12,9 +12,10 @@
 //		hence, keeping them in a linked list is efficient;
 //---------------------------------------------------------------------------
 
+#include "gpos/common/CBitSet.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
-#include "gpos/common/CBitSet.h"
 #include "gpos/common/CBitSetIter.h"
 
 #ifdef GPOS_DEBUG

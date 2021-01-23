@@ -9,11 +9,11 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformInnerApplyWithOuterKey2InnerJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/xforms/CXformInnerApplyWithOuterKey2InnerJoin.h"
-
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalInnerApply.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"

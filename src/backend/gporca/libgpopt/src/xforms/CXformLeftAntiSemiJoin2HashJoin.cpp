@@ -9,6 +9,8 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftAntiSemiJoin2HashJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
@@ -16,7 +18,6 @@
 #include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformLeftAntiSemiJoin2HashJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;

@@ -20,15 +20,15 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/utils/gpdbdefs.h"
+#include "gpopt/gpdbwrappers.h"
 
 #include "gpos/base.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CAutoExceptionStack.h"
+#include "gpos/error/CException.h"
 
+#include "gpopt/utils/gpdbdefs.h"
 #include "naucrates/exception.h"
 
-#include "gpopt/gpdbwrappers.h"
 #include "catalog/pg_collation.h"
 extern "C" {
 #include "access/external.h"
@@ -37,10 +37,10 @@ extern "C" {
 #include "optimizer/optimizer.h"
 #include "optimizer/plancat.h"
 #include "parser/parse_agg.h"
-#include "utils/fmgroids.h"
-#include "utils/memutils.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
+#include "utils/fmgroids.h"
+#include "utils/memutils.h"
 #include "utils/partcache.h"
 }
 #define GP_WRAP_START                                            \

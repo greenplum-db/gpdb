@@ -9,9 +9,10 @@
 //		Derived plan properties context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropPlan.h"
 

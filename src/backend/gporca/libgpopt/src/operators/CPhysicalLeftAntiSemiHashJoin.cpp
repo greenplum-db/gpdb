@@ -9,9 +9,11 @@
 //		Implementation of left anti semi hash join operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoin.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CDistributionSpecHashed.h"
 
 
 using namespace gpopt;

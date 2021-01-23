@@ -9,19 +9,19 @@
 //		Implementation of dynamic index scan operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/cost/ICostModel.h"
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/cost/ICostModel.h"
-
-#include "naucrates/statistics/CStatisticsUtils.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
 

@@ -16,9 +16,9 @@
 //---------------------------------------------------------------------------
 
 #include "gpopt/eval/CConstExprEvaluatorDXL.h"
-#include "gpopt/eval/IConstDXLNodeEvaluator.h"
 
 #include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/eval/IConstDXLNodeEvaluator.h"
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"

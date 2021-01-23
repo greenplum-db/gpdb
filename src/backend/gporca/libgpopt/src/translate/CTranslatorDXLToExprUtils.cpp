@@ -11,17 +11,15 @@
 //---------------------------------------------------------------------------
 
 #include "gpopt/translate/CTranslatorDXLToExprUtils.h"
-#include "gpopt/mdcache/CMDAccessorUtils.h"
 
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "naucrates/base/IDatumInt4.h"
 #include "naucrates/base/IDatumInt8.h"
-
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
-
+#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDRelation.h"
 #include "naucrates/md/IMDTypeInt8.h"
-#include "naucrates/md/IMDCast.h"
 
 using namespace gpos;
 using namespace gpmd;

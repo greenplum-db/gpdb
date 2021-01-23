@@ -7,9 +7,9 @@
 #define GPOS_CHashSetIter_H
 
 #include "gpos/base.h"
-#include "gpos/common/CStackObject.h"
-#include "gpos/common/CHashSet.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashSet.h"
+#include "gpos/common/CStackObject.h"
 
 namespace gpos
 {

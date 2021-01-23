@@ -19,12 +19,12 @@
 #define GPOS_CMemoryPoolTracker_H
 
 #include "gpos/assert.h"
-#include "gpos/types.h"
-#include "gpos/utils.h"
 #include "gpos/common/CList.h"
 #include "gpos/common/CStackDescriptor.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolStatistics.h"
+#include "gpos/types.h"
+#include "gpos/utils.h"
 
 namespace gpos
 {

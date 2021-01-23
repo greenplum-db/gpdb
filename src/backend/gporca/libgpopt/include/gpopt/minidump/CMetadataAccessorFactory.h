@@ -4,8 +4,9 @@
 #ifndef GPOPT_CMetadataAccessorFactory_H
 #define GPOPT_CMetadataAccessorFactory_H
 
-#include "gpos/memory/CMemoryPool.h"
 #include "gpos/common/CAutoP.h"
+#include "gpos/memory/CMemoryPool.h"
+
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/minidump/CDXLMinidump.h"
 

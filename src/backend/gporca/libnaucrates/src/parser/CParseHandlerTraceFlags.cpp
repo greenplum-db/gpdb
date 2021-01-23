@@ -9,15 +9,14 @@
 //		Implementation of the SAX parse handler class for parsing trace flags
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/parser/CParseHandlerTraceFlags.h"
+
 #include "gpos/common/CBitSet.h"
 
-#include "naucrates/dxl/parser/CParseHandlerTraceFlags.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/traceflags/traceflags.h"
-
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpdxl;
 

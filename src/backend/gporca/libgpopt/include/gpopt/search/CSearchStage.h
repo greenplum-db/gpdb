@@ -12,8 +12,8 @@
 #define GPOPT_CSearchStage_H
 
 #include "gpos/base.h"
-#include "gpos/common/CTimerUser.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CTimerUser.h"
 
 #include "gpopt/xforms/CXform.h"
 

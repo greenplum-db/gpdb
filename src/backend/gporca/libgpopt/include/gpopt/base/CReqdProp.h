@@ -12,8 +12,8 @@
 #define GPOPT_CReqdProp_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CDrvdProp.h"
 

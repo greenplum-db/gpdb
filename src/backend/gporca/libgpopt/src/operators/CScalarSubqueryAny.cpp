@@ -9,8 +9,10 @@
 //		Implementation of scalar subquery ANY operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarSubqueryAny.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/base/CUtils.h"
 
 using namespace gpopt;

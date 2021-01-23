@@ -12,6 +12,7 @@
 #define GPOPT_CXformGbAgg2ScalarAgg_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt

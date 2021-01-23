@@ -10,8 +10,8 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 
+#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLOperator.h"
 
 using namespace gpos;

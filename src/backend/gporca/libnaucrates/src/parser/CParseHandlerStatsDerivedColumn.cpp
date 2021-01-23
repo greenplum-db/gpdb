@@ -11,10 +11,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerStatsDerivedColumn.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerColStatsBucket.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 using namespace gpnaucrates;

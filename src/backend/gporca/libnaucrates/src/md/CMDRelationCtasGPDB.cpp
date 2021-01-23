@@ -10,10 +10,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/md/CMDRelationCtasGPDB.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
 using namespace gpmd;

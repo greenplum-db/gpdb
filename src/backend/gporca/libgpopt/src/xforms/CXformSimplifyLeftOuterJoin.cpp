@@ -9,6 +9,8 @@
 //		Simplify Left Outer Join with constant false predicate
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSimplifyLeftOuterJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
@@ -16,7 +18,6 @@
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
-#include "gpopt/xforms/CXformSimplifyLeftOuterJoin.h"
 
 using namespace gpmd;
 using namespace gpopt;

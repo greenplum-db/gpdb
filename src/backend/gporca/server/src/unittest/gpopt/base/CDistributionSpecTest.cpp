@@ -9,29 +9,27 @@
 //		Tests for distribution specification
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/base/CDistributionSpecTest.h"
+
 #include "gpos/error/CAutoTrace.h"
-
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDProviderMemory.h"
-
-#include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CDistributionSpecUniversal.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColumnFactory.h"
+#include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/CDistributionSpecUniversal.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/metadata/CName.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "gpopt/metadata/CName.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDTypeInt4.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/base/CDistributionSpecTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 

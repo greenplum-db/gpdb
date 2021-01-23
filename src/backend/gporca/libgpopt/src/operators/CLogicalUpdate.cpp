@@ -9,13 +9,14 @@
 //		Implementation of logical Update operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalUpdate.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalUpdate.h"
 
 using namespace gpopt;
 

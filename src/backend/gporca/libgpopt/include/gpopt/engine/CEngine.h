@@ -13,9 +13,9 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/xforms/CXform.h"
 #include "gpopt/search/CMemo.h"
 #include "gpopt/search/CSearchStage.h"
+#include "gpopt/xforms/CXform.h"
 
 namespace gpopt
 {

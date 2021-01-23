@@ -9,17 +9,17 @@
 //		Implementation of ComputeScalar operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalComputeScalar.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/base/CDistributionSpecStrictSingleton.h"
-#include "gpopt/base/CDistributionSpecRouted.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
-
-#include "gpopt/operators/CPhysicalComputeScalar.h"
+#include "gpopt/base/CDistributionSpecRouted.h"
+#include "gpopt/base/CDistributionSpecStrictSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
 using namespace gpopt;

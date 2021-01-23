@@ -9,13 +9,14 @@
 //		Implementation of group expression implementation job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroupExpressionImplementation.h"
+
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupImplementation.h"
-#include "gpopt/search/CJobGroupExpressionImplementation.h"
 #include "gpopt/search/CJobTransformation.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"

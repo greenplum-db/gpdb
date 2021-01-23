@@ -10,9 +10,9 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerCost.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpdxl;

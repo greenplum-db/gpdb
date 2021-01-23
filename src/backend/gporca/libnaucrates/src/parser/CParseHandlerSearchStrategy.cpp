@@ -11,6 +11,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerSearchStrategy.h"
+
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/parser/CParseHandlerSearchStage.h"

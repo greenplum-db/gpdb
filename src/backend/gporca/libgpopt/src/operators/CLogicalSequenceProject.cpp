@@ -9,17 +9,17 @@
 //		Implementation of sequence project operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalSequenceProject.h"
+
 #include "gpos/base.h"
 
+#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CKeyCollection.h"
-
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalSequenceProject.h"
 
 using namespace gpopt;
 

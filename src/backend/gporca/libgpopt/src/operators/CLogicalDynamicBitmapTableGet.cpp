@@ -17,11 +17,10 @@
 
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
 
+#include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXform.h"
-#include "gpopt/metadata/CPartConstraint.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;

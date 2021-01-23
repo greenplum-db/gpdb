@@ -18,11 +18,10 @@
 
 #include "naucrates/dxl/parser/CParseHandlerScalarOpList.h"
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarOpList.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;

@@ -11,8 +11,8 @@
 #ifndef GPOS_CStringStatic_H
 #define GPOS_CStringStatic_H
 
-#include "gpos/base.h"
 #include "gpos/attributes.h"
+#include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 
 #define GPOS_SZ_LENGTH(x) gpos::clib::Strlen(x)

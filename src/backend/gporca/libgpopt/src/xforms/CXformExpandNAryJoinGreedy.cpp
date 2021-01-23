@@ -11,6 +11,8 @@
 //		the end
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformExpandNAryJoinGreedy.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
@@ -18,7 +20,6 @@
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPatternMultiTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformExpandNAryJoinGreedy.h"
 #include "gpopt/xforms/CJoinOrderGreedy.h"
 #include "gpopt/xforms/CXformUtils.h"
 

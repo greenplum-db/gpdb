@@ -9,10 +9,11 @@
 //		Task implementation
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CTask.h"
+
 #include "gpos/error/CErrorContext.h"
 #include "gpos/error/CErrorHandlerStandard.h"
 #include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/task/CTask.h"
 #include "gpos/task/CWorker.h"
 
 using namespace gpos;

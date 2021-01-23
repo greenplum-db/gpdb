@@ -9,11 +9,12 @@
 //		Implementation of Sequence Project to Apply transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSequenceProject2Apply.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/xforms/CXformSequenceProject2Apply.h"
 
 using namespace gpopt;
 

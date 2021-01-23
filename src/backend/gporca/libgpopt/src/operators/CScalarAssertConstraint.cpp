@@ -9,10 +9,11 @@
 //		Implementation of scalar assert constraint
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarAssertConstraint.h"
+
 #include "gpos/base.h"
 
 #include "naucrates/md/IMDTypeBool.h"
-#include "gpopt/operators/CScalarAssertConstraint.h"
 
 using namespace gpopt;
 using namespace gpmd;

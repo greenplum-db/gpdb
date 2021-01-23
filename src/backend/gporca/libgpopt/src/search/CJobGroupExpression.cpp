@@ -9,10 +9,11 @@
 //		Implementation of group expression job superclass
 //---------------------------------------------------------------------------
 
-#include "gpopt/search/CGroupExpression.h"
-#include "gpopt/operators/CLogical.h"
-#include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupExpression.h"
+
+#include "gpopt/operators/CLogical.h"
+#include "gpopt/search/CGroupExpression.h"
+#include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
 #include "gpopt/search/CScheduler.h"

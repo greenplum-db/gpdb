@@ -9,15 +9,15 @@
 //		Implementation of filter operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalFilter.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/base/CPartInfo.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalFilter.h"
-#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CPartInfo.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 
 using namespace gpopt;

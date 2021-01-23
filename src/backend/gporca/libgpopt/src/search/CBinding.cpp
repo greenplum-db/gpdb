@@ -9,13 +9,13 @@
 //		Implementation of Binding structure
 //---------------------------------------------------------------------------
 
-#include "gpopt/operators/CPattern.h"
 #include "gpopt/search/CBinding.h"
-#include "gpopt/search/CGroupProxy.h"
-#include "gpopt/search/CMemo.h"
-
 
 #include "gpos/base.h"
+
+#include "gpopt/operators/CPattern.h"
+#include "gpopt/search/CGroupProxy.h"
+#include "gpopt/search/CMemo.h"
 
 using namespace gpopt;
 

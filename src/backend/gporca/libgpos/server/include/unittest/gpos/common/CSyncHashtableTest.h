@@ -12,9 +12,7 @@
 #define GPOS_CSyncHashtableTest_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CList.h"
-
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/CSyncHashtableIter.h"

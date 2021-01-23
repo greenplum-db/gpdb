@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLeftOuterHashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalHashJoin.h"
 
 namespace gpopt

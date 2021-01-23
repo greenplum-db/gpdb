@@ -13,18 +13,16 @@
 #define GPOPT_CXform_H
 
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
 #include "gpos/common/CEnumSet.h"
 #include "gpos/common/CEnumSetIter.h"
 #include "gpos/common/CRefCount.h"
 
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CPhysicalHashJoin.h"
-
 #include "gpopt/xforms/CXform.h"
 #include "gpopt/xforms/CXformContext.h"
 #include "gpopt/xforms/CXformResult.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 // Macro for enabling and disabling xforms

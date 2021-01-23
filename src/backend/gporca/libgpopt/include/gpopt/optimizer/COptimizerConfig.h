@@ -16,11 +16,11 @@
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CRefCount.h"
 
-#include "gpopt/engine/CStatisticsConfig.h"
-#include "gpopt/engine/CEnumeratorConfig.h"
-#include "gpopt/engine/CCTEConfig.h"
-#include "gpopt/engine/CHint.h"
 #include "gpopt/base/CWindowOids.h"
+#include "gpopt/engine/CCTEConfig.h"
+#include "gpopt/engine/CEnumeratorConfig.h"
+#include "gpopt/engine/CHint.h"
+#include "gpopt/engine/CStatisticsConfig.h"
 
 namespace gpopt
 {

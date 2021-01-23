@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalNLJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysicalJoin.h"
 

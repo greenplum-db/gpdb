@@ -9,19 +9,19 @@
 //		Implementation of enforceable distribution property
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CEnfdDistribution.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CEnfdDistribution.h"
 #include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
 #include "gpopt/operators/CPhysicalMotionHashDistribute.h"
-#include "gpopt/operators/CPhysicalMotionBroadcast.h"
 
 
 using namespace gpopt;

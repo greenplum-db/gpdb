@@ -16,41 +16,36 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/translate/CTranslatorExprToDXL.h"
+
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CHashMap.h"
 
-#include "naucrates/md/IMDCast.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDFunction.h"
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDRelationCtasGPDB.h"
-
-#include "naucrates/dxl/operators/CDXLDatumBool.h"
-#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
-#include "naucrates/dxl/operators/CDXLWindowFrame.h"
-#include "naucrates/dxl/operators/dxlops.h"
-
-#include "naucrates/statistics/CStatistics.h"
-
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CConstraintInterval.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CPhysicalAgg.h"
-#include "gpopt/operators/CPhysicalMotionRandom.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
+#include "gpopt/operators/CPhysicalMotionRandom.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/translate/CTranslatorExprToDXL.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
-
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CCastUtils.h"
-
-#include "naucrates/base/IDatumInt8.h"
 #include "naucrates/base/CDatumBoolGPDB.h"
-
+#include "naucrates/base/IDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
+#include "naucrates/dxl/operators/CDXLWindowFrame.h"
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/md/CMDRelationCtasGPDB.h"
+#include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeInt4.h"
+#include "naucrates/statistics/CStatistics.h"
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpos;

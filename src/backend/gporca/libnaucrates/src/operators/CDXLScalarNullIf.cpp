@@ -10,10 +10,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarNullIf.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
+
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
 using namespace gpdxl;

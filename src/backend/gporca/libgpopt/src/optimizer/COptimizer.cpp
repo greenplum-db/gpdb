@@ -9,39 +9,38 @@
 //		Optimizer class implementation
 //---------------------------------------------------------------------------
 
+#include "gpopt/optimizer/COptimizer.h"
+
+#include <fstream>
+
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CDebugCounter.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/error/CErrorHandlerStandard.h"
 #include "gpos/io/CFileDescriptor.h"
 
-#include "naucrates/base/CDatumGenericGPDB.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/md/IMDProvider.h"
-
-#include "naucrates/traceflags/traceflags.h"
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/cost/ICostModel.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/exception.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/minidump/CMiniDumperDXL.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
-#include "gpopt/minidump/CSerializableStackTrace.h"
-#include "gpopt/minidump/CSerializableQuery.h"
-#include "gpopt/minidump/CSerializablePlan.h"
-#include "gpopt/minidump/CSerializableOptimizerConfig.h"
 #include "gpopt/minidump/CSerializableMDAccessor.h"
-#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/minidump/CSerializableOptimizerConfig.h"
+#include "gpopt/minidump/CSerializablePlan.h"
+#include "gpopt/minidump/CSerializableQuery.h"
+#include "gpopt/minidump/CSerializableStackTrace.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
-
-#include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/optimizer/COptimizer.h"
-#include "gpopt/cost/ICostModel.h"
-
-#include <fstream>
+#include "naucrates/base/CDatumGenericGPDB.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/md/IMDProvider.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpos;
 using namespace gpdxl;

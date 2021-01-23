@@ -15,10 +15,9 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/IMDTypeGeneric.h"
-#include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/CGPDBTypeHelper.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDTypeGeneric.h"
 
 // some metadata ids for types that don't have their specific header files (yet)
 // keep this in sync with Postgres file pg_operator.h

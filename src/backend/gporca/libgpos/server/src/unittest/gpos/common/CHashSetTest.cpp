@@ -16,12 +16,12 @@
 //
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CHashSetTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CHashSet.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CHashSetTest.h"
 
 using namespace gpos;
 

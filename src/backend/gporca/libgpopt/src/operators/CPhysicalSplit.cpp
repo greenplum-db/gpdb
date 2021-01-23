@@ -9,16 +9,17 @@
 //		Implementation of physical split operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSplit.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalSplit.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 using namespace gpopt;
 

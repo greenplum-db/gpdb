@@ -16,8 +16,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/CMDCastGPDB.h"
 #include "naucrates/dxl/operators/CDXLScalar.h"
+#include "naucrates/md/CMDCastGPDB.h"
 
 namespace gpmd
 {

@@ -13,6 +13,7 @@
 #define GPMD_CMDTriggerGPDB_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/IMDTrigger.h"
 
 #define GPMD_TRIGGER_ROW 1

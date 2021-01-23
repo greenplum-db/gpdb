@@ -9,14 +9,14 @@
 //		Implementation of GPDB's legacy cost model
 //---------------------------------------------------------------------------
 
+#include "gpdbcost/CCostModelGPDBLegacy.h"
+
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CWindowFrame.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
-
-#include "gpdbcost/CCostModelGPDBLegacy.h"
 
 using namespace gpos;
 using namespace gpdbcost;

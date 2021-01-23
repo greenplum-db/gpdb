@@ -12,8 +12,8 @@
 #define GPOPT_CDrvdProp_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 
 namespace gpopt

@@ -9,15 +9,15 @@
 //		Implementation of scalar projection list operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarProjectList.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
-#include "gpopt/operators/CScalarProjectList.h"
-#include "gpopt/operators/CScalarWindowFunc.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CScalarWindowFunc.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 

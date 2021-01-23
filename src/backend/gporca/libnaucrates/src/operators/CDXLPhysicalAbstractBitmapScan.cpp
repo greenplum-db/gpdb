@@ -12,8 +12,8 @@
 
 #include "naucrates/dxl/operators/CDXLPhysicalAbstractBitmapScan.h"
 
-#include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 

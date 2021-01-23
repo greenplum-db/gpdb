@@ -9,31 +9,28 @@
 //		Histograms based statistics
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CScaleFactorUtils.h"
 
-#include "naucrates/statistics/CJoinStatsProcessor.h"
-#include "naucrates/statistics/CLeftOuterJoinStatsProcessor.h"
-#include "naucrates/statistics/CLeftSemiJoinStatsProcessor.h"
-#include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"
-#include "naucrates/statistics/CInnerJoinStatsProcessor.h"
 #include "gpos/common/CBitSet.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CReqdPropRelational.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-
-
 #include "gpopt/engine/CStatisticsConfig.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/statistics/CInnerJoinStatsProcessor.h"
+#include "naucrates/statistics/CJoinStatsProcessor.h"
+#include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"
+#include "naucrates/statistics/CLeftOuterJoinStatsProcessor.h"
+#include "naucrates/statistics/CLeftSemiJoinStatsProcessor.h"
+#include "naucrates/statistics/CScaleFactorUtils.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpmd;
 using namespace gpdxl;

@@ -9,17 +9,17 @@
 //		Implementation of base scan operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalScan.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-
-#include "gpopt/operators/CPhysicalScan.h"
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
 

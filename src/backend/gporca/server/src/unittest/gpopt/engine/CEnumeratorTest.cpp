@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for CEngine
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/engine/CEnumeratorTest.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
@@ -17,7 +19,6 @@
 #include "gpopt/exception.h"
 
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/engine/CEnumeratorTest.h"
 
 using namespace gpopt;
 

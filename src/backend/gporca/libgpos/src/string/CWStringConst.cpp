@@ -9,9 +9,10 @@
 //		Implementation of the wide character constant string class
 //---------------------------------------------------------------------------
 
+#include "gpos/string/CWStringConst.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
-#include "gpos/string/CWStringConst.h"
 
 using namespace gpos;
 

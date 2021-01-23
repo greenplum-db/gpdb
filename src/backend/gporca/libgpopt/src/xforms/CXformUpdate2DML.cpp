@@ -9,10 +9,11 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformUpdate2DML.h"
-#include "gpopt/xforms/CXformUtils.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalPartitionSelector.h"
 #include "gpopt/operators/CLogicalSplit.h"
 #include "gpopt/operators/CLogicalUpdate.h"
@@ -20,9 +21,8 @@
 #include "gpopt/operators/CScalarDMLAction.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
+#include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDTypeInt4.h"
 
 using namespace gpopt;

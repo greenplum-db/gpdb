@@ -9,13 +9,14 @@
 //		Implementation of logical Insert operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalInsert.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalInsert.h"
 
 using namespace gpopt;
 

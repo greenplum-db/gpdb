@@ -11,16 +11,16 @@
 //		operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerValuesScan.h"
-#include "naucrates/dxl/parser/CParseHandlerProjList.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarValuesList.h"
-#include "naucrates/dxl/parser/CParseHandlerProperties.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
-#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerProjList.h"
+#include "naucrates/dxl/parser/CParseHandlerProperties.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarValuesList.h"
+#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 using namespace gpdxl;
 

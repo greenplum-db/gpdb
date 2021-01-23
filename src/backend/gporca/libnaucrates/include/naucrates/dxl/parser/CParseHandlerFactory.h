@@ -15,10 +15,10 @@
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
 
-#include "naucrates/exception.h"
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/exception.h"
 
 namespace gpdxl
 {

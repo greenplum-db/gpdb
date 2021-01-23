@@ -9,21 +9,22 @@
 //		Implementation of expression tree normalizer
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CNormalizer.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CNormalizer.h"
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CScalarNAryJoinPredList.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalProject.h"
-#include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CLogicalSetOp.h"
+#include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CScalarNAryJoinPredList.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
 

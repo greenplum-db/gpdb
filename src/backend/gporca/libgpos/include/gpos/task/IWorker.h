@@ -15,8 +15,8 @@
 #ifndef GPOS_IWorker_H
 #define GPOS_IWorker_H
 
-#include "gpos/types.h"
 #include "gpos/common/CStackObject.h"
+#include "gpos/types.h"
 
 #define GPOS_CHECK_ABORT (IWorker::CheckAbort(__FILE__, __LINE__))
 

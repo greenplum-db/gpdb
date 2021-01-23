@@ -12,6 +12,7 @@
 #define GPOPT_CPartKeys_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 
 namespace gpopt

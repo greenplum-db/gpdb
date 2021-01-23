@@ -9,18 +9,19 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformIndexGet2IndexOnlyScan.h"
+
 #include <cwchar>
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformIndexGet2IndexOnlyScan.h"
-#include "gpopt/xforms/CXformUtils.h"
 
+#include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
-#include "gpopt/metadata/CIndexDescriptor.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDIndexGPDB.h"
 
 using namespace gpopt;

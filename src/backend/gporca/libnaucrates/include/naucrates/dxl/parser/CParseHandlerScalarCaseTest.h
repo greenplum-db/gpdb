@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerScalarCaseTest_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+
 #include "naucrates/dxl/operators/CDXLScalarCaseTest.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl

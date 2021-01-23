@@ -15,7 +15,6 @@
 #include "gpos/common/CRefCount.h"
 
 #include "gpopt/metadata/CName.h"
-
 #include "naucrates/md/IMDType.h"
 
 namespace gpopt

@@ -13,12 +13,12 @@
 #define GPOS_base_H
 
 #include "gpos/assert.h"
-#include "gpos/types.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CErrorHandler.h"
+#include "gpos/error/CException.h"
 #include "gpos/error/IErrorContext.h"
 #include "gpos/error/ILogger.h"
 #include "gpos/memory/CMemoryPool.h"
+#include "gpos/types.h"
 
 #endif	// GPOS_base_H
 

@@ -9,18 +9,19 @@
 //		Implementation of physical DML operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalDML.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRouted.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CPhysicalDML.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
 using namespace gpopt;

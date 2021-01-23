@@ -16,6 +16,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

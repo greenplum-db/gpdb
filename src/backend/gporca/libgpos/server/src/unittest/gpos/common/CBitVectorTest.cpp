@@ -10,16 +10,15 @@
 //---------------------------------------------------------------------------
 
 
-#include "gpos/base.h"
+#include "unittest/gpos/common/CBitVectorTest.h"
 
-#include "gpos/common/clibwrapper.h"
-#include "gpos/common/CBitVector.h"
+#include "gpos/base.h"
 #include "gpos/common/CAutoRg.h"
+#include "gpos/common/CBitVector.h"
 #include "gpos/common/CRandom.h"
+#include "gpos/common/clibwrapper.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CBitVectorTest.h"
 
 using namespace gpos;
 

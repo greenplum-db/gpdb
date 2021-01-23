@@ -20,15 +20,14 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "nodes/primnodes.h"
 }
 
+#include "gpopt/translate/CCTEListEntry.h"
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CMappingVarColId.h"
-#include "gpopt/translate/CCTEListEntry.h"
-
 #include "naucrates/base/IDatum.h"
-
 #include "naucrates/md/IMDType.h"
 
 // fwd declarations

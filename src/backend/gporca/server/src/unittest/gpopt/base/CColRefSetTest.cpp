@@ -8,20 +8,20 @@
 //	@doc:
 //		Tests for CColRefSet
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/base/CColRefSetTest.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColumnFactory.h"
-#include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/mdcache/CMDCache.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDTypeInt4.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/base/CColRefSetTest.h"
 #include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
-
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDProviderMemory.h"
 
 
 //---------------------------------------------------------------------------

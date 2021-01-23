@@ -9,13 +9,12 @@
 //		Tests for CAutoP
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
+#include "unittest/gpos/common/CAutoPTest.h"
 
+#include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CAutoPTest.h"
 
 using namespace gpos;
 
