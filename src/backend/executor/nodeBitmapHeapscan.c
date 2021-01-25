@@ -81,17 +81,19 @@ static void ExecEagerFreeBitmapHeapScan(BitmapHeapScanState *node);
 static void
 freeBitmapState(BitmapHeapScanState *scanstate)
 {
-	/* BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
-	scanstate->tbm = NULL;
-	/* Likewise, the tbmres member is owned by the iterator. It'll be freed
-	 * during end_iterate. */
-	scanstate->tbmres = NULL;
 	if (scanstate->tbmiterator)
 		tbm_generic_end_iterate(scanstate->tbmiterator);
 	scanstate->tbmiterator = NULL;
 	if (scanstate->prefetch_iterator)
 		tbm_generic_end_iterate(scanstate->prefetch_iterator);
 	scanstate->prefetch_iterator = NULL;
+
+	if (scanstate->tbm)
+		tbm_generic_free(scanstate->tbm);
+	scanstate->tbm = NULL;
+	/* The tbmres member is owned by the iterator. It'll be freed
+	 * during end_iterate. */
+	scanstate->tbmres = NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -657,13 +659,8 @@ ExecReScanBitmapHeapScan(BitmapHeapScanState *node)
 		tbm_end_shared_iterate(node->shared_tbmiterator);
 	if (node->shared_prefetch_iterator)
 		tbm_end_shared_iterate(node->shared_prefetch_iterator);
-#if 0
-	/* In gpdb, tbm life cycle is controled by BitmapIndexscan. This is only
-	 * a share pointer, do not free here, just set it to NULL later.
-	 */
 	if (node->tbm)
 		tbm_generic_free(node->tbm);
-#endif
 	if (node->vmbuffer != InvalidBuffer)
 		ReleaseBuffer(node->vmbuffer);
 	if (node->pvmbuffer != InvalidBuffer)
@@ -715,6 +712,11 @@ ExecEndBitmapHeapScan(BitmapHeapScanState *node)
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
 	/*
+	 * close down subplans
+	 */
+	ExecEndNode(outerPlanState(node));
+
+	/*
 	 * release bitmaps and buffers if any
 	 */
 	/* GPDB: release the iterators before closing down subplans, because
@@ -724,8 +726,8 @@ ExecEndBitmapHeapScan(BitmapHeapScanState *node)
 		tbm_generic_end_iterate(node->tbmiterator);
 	if (node->prefetch_iterator)
 		tbm_generic_end_iterate(node->prefetch_iterator);
-	/* GPDB: BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
-	node->tbm = NULL;
+	if (node->tbm)
+		tbm_generic_free(node->tbm);
 	if (node->shared_tbmiterator)
 		tbm_end_shared_iterate(node->shared_tbmiterator);
 	if (node->shared_prefetch_iterator)
@@ -734,11 +736,6 @@ ExecEndBitmapHeapScan(BitmapHeapScanState *node)
 		ReleaseBuffer(node->vmbuffer);
 	if (node->pvmbuffer != InvalidBuffer)
 		ReleaseBuffer(node->pvmbuffer);
-
-	/*
-	 * close down subplans
-	 */
-	ExecEndNode(outerPlanState(node));
 
 	/*
 	 * close heap scan
