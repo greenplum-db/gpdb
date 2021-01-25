@@ -903,7 +903,6 @@ index_create(Relation heapRelation,
 	 */
 	if (!OidIsValid(indexRelationId))
 	{
-		/* GPDB_12_MERGE_FIXME: Do we still need special treatment for IsBinaryUpgrade? */
 		indexRelationId = GetNewOidForRelation(pg_class, ClassOidIndexId,
 											   Anum_pg_class_oid,
 											   (char *) indexRelationName,
