@@ -7393,8 +7393,6 @@
         performance by limiting the number of alternate query plans that GPORCA evaluates. However,
         setting the value too low might cause GPORCA to generate a query plan that performs
         sub-optimally.</p>
-      <p>This parameter has no effect when the <codeph>optimizer_join_order</codeph> parameter is
-        set to <codeph>query</codeph> or <codeph>greedy</codeph>.</p>
       <p>This parameter can be set for a database system or a session.</p>
       <table id="table_lfq_3zg_nbb">
         <tgroup cols="3">
@@ -7422,23 +7420,39 @@
   <topic id="optimizer_join_order">
     <title>optimizer_join_order</title>
     <body>
-      <p>When GPORCA is enabled, this parameter sets the optimization level for join ordering during
-        query optimization by specifying which types of join ordering alternatives to evaluate.</p>
+      <p>When GPORCA is enabled (the default), this parameter sets the join
+        enumeration algorithm. The algorithms operate with an emphasis on
+        generating join orders that are suitable for dynamic partition
+        elimination.</p>
       <ul id="ul_dpf_cyr_1cb">
         <li><codeph>query</codeph> - Uses the join order specified in the query.</li>
         <li><codeph>greedy</codeph> - Evaluates the join order specified in the query and
           alternatives based on minimum cardinalities of the relations in the joins.</li>
-        <li><codeph>exhaustive</codeph> - Applies transformation rules to find and evaluate all join
-          ordering alternatives.</li>
+        <li><codeph>exhaustive</codeph> - Applies transformation rules to find and
+          evaluate up to a configurable threshold number 
+          (<codeph>optimizer_join_order_threshold</codeph>, default 10) of n-way
+          inner joins, and then abruptly changes to and uses the
+          <codeph>greedy</codeph> method beyond that. While planning time drops
+          significantly at that point, plan quality and execution time may get
+          worse.</li>
+        <li><codeph>exhaustive2</codeph> - Applies transformation rules to find and
+         evaluate up to a configurable threshold number
+         (<codeph>optimizer_join_order_threshold</codeph>, default 10) of n-way
+         inner and outer joins. When evaluating very large joins, this algorithm
+         employs a gradual transition to the <codeph>greedy</codeph> method;
+         planning time goes up smoothly as the query gets more complicated, and
+         plan quality and execution time only gradually degrade.</li>
       </ul>
-      <p>The default value is <codeph>exhaustive</codeph>. Setting this parameter to
+      <p>The default value, <codeph>exhaustive2</codeph>, provides a better
+        trade-off between planning time and execution time for most queries.</p>
+      <p>Setting this parameter to
           <codeph>query</codeph> or <codeph>greedy</codeph> can generate a suboptimal query plan.
         However, if the administrator is confident that a satisfactory plan is generated with the
-          <codeph>query</codeph> or <codeph>greedy</codeph> setting, query optimization time can be
+          <codeph>query</codeph> or <codeph>greedy</codeph> setting, query optimization time may be
         improved by setting the parameter to the lower optimization level.</p>
-      <p>Setting this parameter to <codeph>query</codeph> or <codeph>greedy</codeph> overrides the
-          <codeph>optimizer_join_order_threshold </codeph> and
-          <codeph>optimizer_join_arity_for_associativity_commutativity</codeph> parameters. </p>
+      <p>When you set this parameter to <codeph>query</codeph> or <codeph>greedy</codeph>,
+        GPORCA ignores the
+          <codeph>optimizer_join_order_threshold </codeph> parameter. </p>
       <p>This parameter can be set for an individual database, a session, or a query. </p>
       <table id="table_ucb_str_1cb">
         <tgroup cols="3">
@@ -7454,8 +7468,8 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">query<p>greedy</p><p>exhaustive</p></entry>
-              <entry colname="col2">exhaustive</entry>
+              <entry colname="col1">query<p>greedy</p><p>exhaustive</p><p>exhaustive2</p></entry>
+              <entry colname="col2">exhaustive2</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -7466,11 +7480,16 @@
   <topic id="optimizer_join_order_threshold">
     <title>optimizer_join_order_threshold</title>
     <body>
-      <p>When GPORCA is enabled (the default), this parameter sets the maximum number of join
-        children for which GPORCA will use the dynamic programming-based join ordering algorithm.
-        You can set this value for a single query or for an entire session.</p>
-      <p>This parameter has no effect when the <codeph>optimizer_join_query</codeph> parameter is
+      <p>When GPORCA is enabled (the default), this parameter sets the maximum
+        number of join children generated by the join enumeration algorithm
+        specified in <codeph>opimizer_join_order</codeph>. This threshold
+        restricts the search effort for a join plan to reasonable limits.</p>
+      <p>GPORCA examines the <codeph>optimizer_join_order_threshold</codeph> 
+        parameter when <codeph>optimizer_join_order</codeph> is set to
+        <codeph>exhaustive</codeph> or <codeph>exhaustive2</codeph>. GPORCA
+        ignores this parameter when <codeph>optimizer_join_order</codeph> is
         set to <codeph>query</codeph> or <codeph>greedy</codeph>.</p>
+        <p>You can set this value for a single query or for an entire session.</p>
       <table id="table_z1c_bqp_jx">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
