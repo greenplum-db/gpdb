@@ -4624,7 +4624,7 @@ pgstat_send_qd_tabstats(void)
 		appendBinaryStringInfo(
 			&stat_data, (char *)&record, sizeof(PgStatTabRecordFromQE));
 		ereport(DEBUG3,
-				(errmsg("Send pgstat for current xact nest_level: %d, table oid: %d. "
+				(errmsg("Send pgstat for current xact nest_level: %d, rel oid: %d. "
 						"Inserted: %ld, updated: %ld, deleted: %ld.",
 						nest_level, tabstat->t_id,
 						trans->tuples_inserted, trans->tuples_updated,

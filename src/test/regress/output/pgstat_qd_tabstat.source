@@ -486,4 +486,86 @@ select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n
        300 |         0 |        10 |             0 |        300 |          0 |                 300
 (1 row)
 
+-- Test pgstat matview stat with distributed policy.
+create table base_table(i int, j int, z int ) distributed by (i);
+insert into base_table select i,i,i from generate_series(1, 100) i;
+create materialized view mt as select * from base_table where z>=50;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'mt'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+        51 |         0 |         0 |             0 |         51 |          0 |                  51
+(1 row)
+
+insert into base_table select i,i,i from generate_series(1, 100) i;
+refresh materialized view mt;
+select pg_sleep(0.77) from gp_dist_random('gp_id'); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+ 
+ 
+(3 rows)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'mt'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       153 |         0 |         0 |             0 |        102 |          0 |                 153
+(1 row)
+
+-- pg_stat_all_tables collects gpstats across segments
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables where relid = 'mt'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       153 |         0 |         0 |             0 |        102 |          0 |                 153
+(1 row)
+
+drop materialized view mt;
+drop table base_table;
+-- Test pgstat matview stat with replicated policy.
+create table base_table(i int, j int, z int ) distributed replicated;
+insert into base_table select i,i,i from generate_series(1, 100) i;
+create materialized view mt as select * from base_table where z>=50 distributed replicated;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'mt'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+        51 |         0 |         0 |             0 |         51 |          0 |                  51
+(1 row)
+
+insert into base_table select i,i,i from generate_series(1, 100) i;
+refresh materialized view mt;
+select pg_sleep(0.77) from gp_dist_random('gp_id'); -- Force pgstat_report_stat() to send tabstat.
+ pg_sleep 
+----------
+ 
+ 
+ 
+(3 rows)
+
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'mt'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       153 |         0 |         0 |             0 |        102 |          0 |                 153
+(1 row)
+
+-- pg_stat_all_tables collects gpstats across segments
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables where relid = 'mt'::regclass;
+ n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
+-----------+-----------+-----------+---------------+------------+------------+---------------------
+       153 |         0 |         0 |             0 |        102 |          0 |                 153
+(1 row)
+
 reset gp_autostats_mode;

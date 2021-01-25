@@ -63,6 +63,7 @@ typedef struct
 	CommandId	output_cid;		/* cmin to insert in output tuples */
 	int			ti_options;		/* table_tuple_insert performance options */
 	BulkInsertState bistate;	/* bulk insert state */
+	uint64		processed;		/* GPDB: number of tuples inserted */
 } DR_transientrel;
 
 static int	matview_maintenance_depth = 0;
@@ -381,10 +382,18 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 		 * the matview and inserted some new data.  (The concurrent code path
 		 * above doesn't need to worry about this because the inserts and
 		 * deletes it issues get counted by lower-level code.)
+		 *
+		 * In GPDB, we should count the pgstat on segments and union them on
+		 * QD, so both the segments and coordinator will have pgstat for this
+		 * relation. See pgstat_combine_from_qe(pgstat.c) for more details.
+		 * Then comment out the below codes on the dispatcher side and leave
+		 * the current comment to avoid futher upstream merge issues.
+		 * The pgstat is updated in function transientrel_shutdown on QE side.
+		 * This related to issue: https://github.com/greenplum-db/gpdb/issues/11375
 		 */
-		pgstat_count_truncate(matviewRel);
-		if (!stmt->skipData)
-			pgstat_count_heap_insert(matviewRel, processed);
+		// pgstat_count_truncate(matviewRel);
+		// if (!stmt->skipData)
+		// 	pgstat_count_heap_insert(matviewRel, processed);
 	}
 
 	table_close(matviewRel, NoLock);
@@ -456,6 +465,14 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	/* run the plan */
 	ExecutorRun(queryDesc, ForwardScanDirection, 0L, true);
 
+	/*
+	 * GPDB: The total processed tuples here is always 0 on QD since we get it
+	 * before we fetch the total processed tuples from segments(which is done by
+	 * ExecutorEnd).
+	 * In upstream, the number is used to update pgstat, but in GPDB we do the
+	 * pgstat update on segments.
+	 * Since the processed is not used, no need to get correct value here.
+	 */
 	processed = queryDesc->estate->es_processed;
 
 	/* and clean up */
@@ -485,6 +502,7 @@ CreateTransientRelDestReceiver(Oid transientoid, Oid oldreloid, bool concurrent,
 	self->concurrent = concurrent;
 	self->skipData = skipdata;
 	self->relpersistence = relpersistence;
+	self->processed = 0;
 
 	return (DestReceiver *) self;
 }
@@ -571,6 +589,7 @@ transientrel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 	if (!XLogIsNeeded())
 		myState->ti_options |= TABLE_INSERT_SKIP_WAL;
 	myState->bistate = GetBulkInsertState();
+	myState->processed = 0;
 
 	if (RelationIsAoRows(myState->transientrel))
 		appendonly_dml_init(myState->transientrel, CMD_INSERT);
@@ -606,6 +625,7 @@ transientrel_receive(TupleTableSlot *slot, DestReceiver *self)
 					   myState->output_cid,
 					   myState->ti_options,
 					   myState->bistate);
+	myState->processed++;
 
 	/* We know this is a newly created relation, so there are no indexes */
 
@@ -628,7 +648,25 @@ transientrel_shutdown(DestReceiver *self)
 	table_close(myState->transientrel, NoLock);
 	myState->transientrel = NULL;
 	if (Gp_role == GP_ROLE_EXECUTE && !myState->concurrent)
+	{
+		Relation	matviewRel;
+
+		matviewRel = table_open(myState->oldreloid, NoLock);
 		refresh_by_heap_swap(myState->oldreloid, myState->transientoid, myState->relpersistence);
+
+		/*
+		 * In GPDB, we should count the pgstat on segments and union them on
+		 * QD, so both the segments and coordinator will have pgstat for this
+		 * relation. See pgstat_combine_from_qe(pgstat.c) for more details.
+		 * Here each QE will count it's pgstat and report to QD if needed.
+		 * This related to issue: https://github.com/greenplum-db/gpdb/issues/11375
+		 */
+		pgstat_count_truncate(matviewRel);
+		if (!myState->skipData)
+			pgstat_count_heap_insert(matviewRel, myState->processed);
+
+		table_close(matviewRel, NoLock);
+	}
 }
 
 /*
