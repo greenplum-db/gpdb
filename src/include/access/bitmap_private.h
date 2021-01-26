@@ -247,7 +247,7 @@ extern bool bminsert(Relation rel, Datum *values, bool *isnull,
 					 struct IndexInfo *indexInfo);
 extern IndexScanDesc bmbeginscan(Relation rel, int nkeys, int norderbys);
 extern bool bmgettuple(IndexScanDesc scan, ScanDirection dir);
-extern Node *bmgetbitmap(IndexScanDesc scan, Node *tbm);
+extern int64 bmgetbitmap(IndexScanDesc scan, Node **bmNodeP);
 extern void bmrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys,
 		 ScanKey orderbys, int norderbys);
 extern void bmendscan(IndexScanDesc scan);

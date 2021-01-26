@@ -210,7 +210,7 @@ extern IndexScanDesc spgbeginscan(Relation rel, int keysz, int orderbysz);
 extern void spgendscan(IndexScanDesc scan);
 extern void spgrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys,
 					  ScanKey orderbys, int norderbys);
-extern Node *spggetbitmap(IndexScanDesc scan, Node *tbm);
+extern int64 spggetbitmap(IndexScanDesc scan, Node **bmNodeP);
 extern bool spggettuple(IndexScanDesc scan, ScanDirection dir);
 extern bool spgcanreturn(Relation index, int attno);
 

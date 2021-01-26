@@ -372,8 +372,8 @@ brinbeginscan(Relation r, int nkeys, int norderbys)
  * unsummarized.  Pages in those ranges need to be returned regardless of scan
  * keys.
  */
-Node *
-bringetbitmap(IndexScanDesc scan, Node *n)
+int64
+bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 {
 	TIDBitmap  *tbm;
 	Relation	idxRel = scan->indexRelation;
@@ -400,19 +400,22 @@ bringetbitmap(IndexScanDesc scan, Node *n)
 	bdesc = opaque->bo_bdesc;
 	pgstat_count_index_scan(idxRel);
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
 	{
 		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L, NULL);
+		*bmNodeP = (Node *) tbm;
 	}
-	else if (!IsA(n, TIDBitmap))
-	{
-		elog(ERROR, "non hash bitmap");
-	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
+		elog(ERROR, "non brin bitmap");
 	else
-	{
-		tbm = (TIDBitmap *)n;
-	}
+		tbm = (TIDBitmap *)*bmNodeP;
 
 	/*
 	 * We need to know the size of the table so that we know how long to
@@ -626,7 +629,7 @@ bringetbitmap(IndexScanDesc scan, Node *n)
 	 * returns, but we don't have a precise idea of the number of heap tuples
 	 * involved.
 	 */
-	return (Node *) tbm;
+	return totalpages * 10;
 }
 
 /*

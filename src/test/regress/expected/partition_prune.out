@@ -2365,8 +2365,8 @@ create index ab_a3_b3_a_idx on ab_a3_b3 (a);
 set enable_hashjoin = 0;
 set enable_mergejoin = 0;
 select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on ab.a = a.a where a.a in(0, 0, 1)');
-                                        explain_parallel_append                                        
--------------------------------------------------------------------------------------------------------
+                                    explain_parallel_append                                     
+------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 1:1  (slice1; segments: 1) (actual rows=1 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
@@ -2379,15 +2379,15 @@ select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on 
                                  Partition Selectors: $0
                                  ->  Bitmap Heap Scan on ab_a1_b1 (never executed)
                                        Recheck Cond: (a = ANY ('{0,0,1}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                                              Index Cond: (a = ANY ('{0,0,1}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a1_b2 (never executed)
                                        Recheck Cond: (a = ANY ('{0,0,1}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b2_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b2_a_idx (never executed)
                                              Index Cond: (a = ANY ('{0,0,1}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a1_b3 (never executed)
                                        Recheck Cond: (a = ANY ('{0,0,1}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b3_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b3_a_idx (never executed)
                                              Index Cond: (a = ANY ('{0,0,1}'::integer[]))
                      ->  Sort (actual rows=1 loops=1)
                            Sort Key: a.a
@@ -2435,8 +2435,8 @@ select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on 
 
 insert into lprt_a values(3),(3);
 select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on ab.a = a.a where a.a in(1, 0, 3)');
-                                        explain_parallel_append                                        
--------------------------------------------------------------------------------------------------------
+                                    explain_parallel_append                                     
+------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 2:1  (slice1; segments: 2) (actual rows=2 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
@@ -2449,27 +2449,27 @@ select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on 
                                  Partition Selectors: $0
                                  ->  Bitmap Heap Scan on ab_a1_b1 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,3}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,3}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a1_b2 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,3}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b2_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b2_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,3}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a1_b3 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,3}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b3_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b3_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,3}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a3_b1 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,3}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a3_b1_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a3_b1_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,3}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a3_b2 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,3}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a3_b2_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a3_b2_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,3}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a3_b3 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,3}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a3_b3_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a3_b3_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,3}'::integer[]))
                      ->  Sort (actual rows=1 loops=1)
                            Sort Key: a.a
@@ -2481,8 +2481,8 @@ select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on 
 (41 rows)
 
 select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on ab.a = a.a where a.a in(1, 0, 0)');
-                                        explain_parallel_append                                        
--------------------------------------------------------------------------------------------------------
+                                    explain_parallel_append                                     
+------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 1:1  (slice1; segments: 1) (actual rows=1 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
@@ -2495,15 +2495,15 @@ select explain_parallel_append('select avg(ab.a) from ab inner join lprt_a a on 
                                  Partition Selectors: $0
                                  ->  Bitmap Heap Scan on ab_a1_b1 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,0}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,0}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a1_b2 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,0}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b2_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b2_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,0}'::integer[]))
                                  ->  Bitmap Heap Scan on ab_a1_b3 (never executed)
                                        Recheck Cond: (a = ANY ('{1,0,0}'::integer[]))
-                                       ->  Bitmap Index Scan on ab_a1_b3_a_idx (actual rows=1 loops=1)
+                                       ->  Bitmap Index Scan on ab_a1_b3_a_idx (never executed)
                                              Index Cond: (a = ANY ('{1,0,0}'::integer[]))
                      ->  Sort (actual rows=1 loops=1)
                            Sort Key: a.a
@@ -2610,7 +2610,7 @@ select * from ab where a = (select max(a) from lprt_a) and b = (select max(a)-1 
          ->  Bitmap Heap Scan on ab_a3_b2 (never executed)
                Recheck Cond: (a = $0)
                Filter: (b = $1)
-               ->  Bitmap Index Scan on ab_a3_b2_a_idx (actual rows=1 loops=1)
+               ->  Bitmap Index Scan on ab_a3_b2_a_idx (never executed)
                      Index Cond: (a = $0)
          ->  Bitmap Heap Scan on ab_a3_b3 (never executed)
                Recheck Cond: (a = $0)
@@ -2633,7 +2633,7 @@ select * from (select * from ab where a = 1 union all select * from ab) ab where
                ->  Bitmap Heap Scan on ab_a1_b1 ab_a1_b1_1 (never executed)
                      Recheck Cond: (a = 1)
                      Filter: (b = $0)
-                     ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+                     ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                            Index Cond: (a = 1)
                ->  Bitmap Heap Scan on ab_a1_b2 ab_a1_b2_1 (never executed)
                      Recheck Cond: (a = 1)
@@ -2679,7 +2679,7 @@ select * from (select * from ab where a = 1 union all (values(10,5)) union all s
                ->  Bitmap Heap Scan on ab_a1_b1 ab_a1_b1_1 (never executed)
                      Recheck Cond: (a = 1)
                      Filter: (b = $0)
-                     ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+                     ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                            Index Cond: (a = 1)
                ->  Bitmap Heap Scan on ab_a1_b2 ab_a1_b2_1 (never executed)
                      Recheck Cond: (a = 1)
@@ -2785,7 +2785,7 @@ update ab_a1 set b = 3 from ab where ab.a = 1 and ab.a = ab_a1.a;
    ->  Nested Loop (never executed)
          ->  Bitmap Heap Scan on ab_a1_b1 (never executed)
                Recheck Cond: (a = 1)
-               ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+               ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                      Index Cond: (a = 1)
          ->  Materialize (never executed)
                ->  Append (never executed)
@@ -2810,7 +2810,7 @@ update ab_a1 set b = 3 from ab where ab.a = 1 and ab.a = ab_a1.a;
                ->  Append (actual rows=1 loops=1)
                      ->  Bitmap Heap Scan on ab_a1_b1 ab_a1_b1_1 (never executed)
                            Recheck Cond: (a = 1)
-                           ->  Bitmap Index Scan on ab_a1_b1_a_idx (actual rows=1 loops=1)
+                           ->  Bitmap Index Scan on ab_a1_b1_a_idx (never executed)
                                  Index Cond: (a = 1)
                      ->  Bitmap Heap Scan on ab_a1_b2 ab_a1_b2_1 (actual rows=1 loops=1)
                            Recheck Cond: (a = 1)
@@ -2944,7 +2944,7 @@ select * from tbl1 join tprt on tbl1.col1 > tprt.col1;
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_2 (actual rows=2 loops=1)
                      Recheck Cond: (tbl1.col1 > col1)
-                     ->  Bitmap Index Scan on tprt2_idx (actual rows=1 loops=1)
+                     ->  Bitmap Index Scan on tprt2_idx (actual rows=2 loops=1)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (never executed)
                      Recheck Cond: (tbl1.col1 > col1)
@@ -3039,7 +3039,7 @@ select * from tbl1 inner join tprt on tbl1.col1 > tprt.col1;
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_2 (actual rows=2 loops=4)
                      Recheck Cond: (tbl1.col1 > col1)
-                     ->  Bitmap Index Scan on tprt2_idx (actual rows=1 loops=4)
+                     ->  Bitmap Index Scan on tprt2_idx (actual rows=2 loops=4)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (actual rows=1 loops=2)
                      Recheck Cond: (tbl1.col1 > col1)
@@ -3078,7 +3078,7 @@ select * from tbl1 inner join tprt on tbl1.col1 = tprt.col1;
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (actual rows=0 loops=2)
                      Recheck Cond: (col1 = tbl1.col1)
-                     ->  Bitmap Index Scan on tprt3_idx (actual rows=1 loops=2)
+                     ->  Bitmap Index Scan on tprt3_idx (actual rows=0 loops=2)
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_4 (never executed)
                      Recheck Cond: (col1 = tbl1.col1)

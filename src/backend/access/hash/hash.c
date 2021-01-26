@@ -324,27 +324,31 @@ hashgettuple(IndexScanDesc scan, ScanDirection dir)
 /*
  *	hashgetbitmap() -- get all tuples at once
  */
-Node *
-hashgetbitmap(IndexScanDesc scan, Node *n)
+int64
+hashgetbitmap(IndexScanDesc scan, Node **bmNodeP)
 {
 	TIDBitmap  *tbm;
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	bool		res;
+	int64		ntids = 0;
 	HashScanPosItem *currItem;
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
 	{
 		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L, NULL);
+		*bmNodeP = (Node *) tbm;
 	}
-	else if (!IsA(n, TIDBitmap))
-	{
+	else if (!IsA(*bmNodeP, TIDBitmap))
 		elog(ERROR, "non hash bitmap");
-	}
 	else
-	{
-		tbm = (TIDBitmap *)n;
-	}
+		tbm = (TIDBitmap *)*bmNodeP;
 
 	res = _hash_first(scan, ForwardScanDirection);
 
@@ -358,11 +362,12 @@ hashgetbitmap(IndexScanDesc scan, Node *n)
 		 * nothing to do here except add the results to the TIDBitmap.
 		 */
 		tbm_add_tuples(tbm, &(currItem->heapTid), 1, true);
+		ntids++;
 
 		res = _hash_next(scan, ForwardScanDirection);
 	}
 
-	return (Node *)tbm;
+	return ntids;
 }
 
 

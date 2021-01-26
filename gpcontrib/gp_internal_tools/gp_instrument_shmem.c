@@ -170,8 +170,8 @@ gp_instrument_shmem_detail(PG_FUNCTION_ARGS)
 		values[4] = Int32GetDatum(slot->pid);
 		values[5] = Int16GetDatum(slot->nid);
 		values[6] = Int64GetDatum((int64) ((slot->data).tuplecount));
-		values[7] = Int64GetDatum((int64) ((slot->data).ntuples));
-		values[8] = Int64GetDatum((int64) ((slot->data).nloops));
+		values[7] = Int64GetDatum((int64) ((slot->data).nloops));
+		values[8] = Int64GetDatum((int64) ((slot->data).ntuples));
 
 		HeapTuple	tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		Datum		result = HeapTupleGetDatum(tuple);
