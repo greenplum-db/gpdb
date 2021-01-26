@@ -142,6 +142,18 @@ class GpConfig(GpTestCase):
         self.assertEqual(options.show, "statement_mem")
         self.assertEqual(options.file, True)
 
+    def test_coordinatorvalue_precedence_over_mastervalue_succeed(self):
+        sys.argv = ["gpconfig", "-c", "some_guc", "-v", "100", "--mastervalue", "master", "--coordinatorvalue", "coordinator"]
+        options = self.subject.parseargs()
+
+        self.assertEqual(options.coordinatorvalue, "coordinator")
+
+    def test_coordinatorvalue_precedence_over_mastervalue_in_either_order_succeed(self):
+        sys.argv = ["gpconfig", "-c", "some_guc", "-v", "100", "--coordinatorvalue", "coordinator", "--mastervalue", "master"]
+        options = self.subject.parseargs()
+
+        self.assertEqual(options.coordinatorvalue, "coordinator")
+
     def test_option_file_with_option_change_will_raise(self):
         sys.argv = ["gpconfig", "--file", "--change", "statement_mem"]
         with self.assertRaisesRegex(Exception, "'--file' option must accompany '--show' option"):
@@ -301,6 +313,45 @@ class GpConfig(GpTestCase):
         self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
         value = shlex.quote("100")
         self.assertTrue(value in coordinator_command.cmdStr)
+
+    def test_new_option_change_value_coordinatoronly_succeed(self):
+        db_singleton_side_effect_list.append("some happy result")
+        entry = 'my_property_name'
+        sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--coordinatoronly"]
+
+        # mocked database values
+        # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', 'vartype', 'min_val', 'max_val']])
+
+        self.subject.do_main()
+
+        self.subject.LOGGER.info.assert_called_with("completed successfully with parameters '-c my_property_name -v 100 --coordinatoronly'")
+        self.assertEqual(self.pool.addCommand.call_count, 1)
+        coordinator_command = self.pool.addCommand.call_args_list[0][0][0]
+        self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
+        value = shlex.quote("100")
+        self.assertTrue(value in coordinator_command.cmdStr)
+
+    def test_old_and_new_option_change_value_coordinatoronly_succeed(self):
+        db_singleton_side_effect_list.append("some happy result")
+        entry = 'my_property_name'
+        sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--masteronly", "--coordinatoronly"]
+
+        # mocked database values
+        # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', 'vartype', 'min_val', 'max_val']])
+
+        self.subject.do_main()
+
+        self.subject.LOGGER.info.assert_called_with("completed successfully with parameters '-c my_property_name -v 100 --masteronly --coordinatoronly'")
+        self.assertEqual(self.pool.addCommand.call_count, 1)
+        coordinator_command = self.pool.addCommand.call_args_list[0][0][0]
+        self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
+        value = shlex.quote("100")
+        self.assertTrue(value in coordinator_command.cmdStr)
+
 
     def test_option_change_value_coordinator_separate_fail_not_valid_guc(self):
         db_singleton_side_effect_list.append("DatabaseError")

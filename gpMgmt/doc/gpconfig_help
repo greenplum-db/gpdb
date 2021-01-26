@@ -7,8 +7,9 @@ a Greenplum Database system.
 SYNOPSIS
 *****************************************************
 
-gpconfig -c <param_name> -v <value> [-m <coordinator_value> | --masteronly]
-       | -r <param_name> [--masteronly]
+gpconfig -c <param_name> -v <value>
+       [-m <coordinator_value> | --masteronly | --coordinatoronly]
+       | -r <param_name> [--masteronly | --coordinatoronly]
        | -l 
    [--skipvalidation] [--verbose] [--debug]
 
@@ -28,7 +29,7 @@ a parameter, you can also specify a different value for the coordinator if
 necessary. For example, parameters such as max_connections require 
 a different setting on the coordinator than what is used for the segments. 
 If you want to set or unset a global or coordinator only parameter, use 
-the --masteronly option.
+the --masteronly or --coordinatoronly option.
 
 gpconfig can only be used to manage certain parameters. For example, 
 you cannot use it to set parameters such as port, which is required 
@@ -81,7 +82,7 @@ with the -c option. By default, this value is applied to all
 segments, their mirrors, the coordinator, and the standby coordinator.
 
 
--m | --mastervalue coordinator_value
+-m | --mastervalue | --coordinatorvalue coordinator_value
 
 The coordinator value to use for the configuration parameter you 
 specified with the -c option. If specified, this value only 
@@ -89,7 +90,7 @@ applies to the coordinator and standby coordinator. The option can only
 be used with -v. 
 
 
---masteronly
+--masteronly | --coordinatoronly
 
 When specified, gpconfig only edits the coordinator postgresql.conf file.
 
@@ -178,7 +179,7 @@ EXAMPLES
 
 Set the statement_mem setting to 120MB on the coordinator only:
 
-gpconfig -c statement_mem -v 120MB --masteronly
+gpconfig -c statement_mem -v 120MB --coordinatoronly
 
 
 Set the max_connections setting to 100 on all segments 

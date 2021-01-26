@@ -51,13 +51,14 @@ def parseargs():
     parser.add_option('-h', '-?', '--help', action='help')
     parser.add_option('--verbose', action='store_true')
     parser.add_option('--skipvalidation', action='store_true')
-    parser.add_option('--masteronly', dest="coordinatoronly", action='store_true')
+    parser.add_option('--masteronly', '--coordinatoronly', dest="coordinatoronly", action='store_true')
     parser.add_option('--debug', action='store_true')
     parser.add_option('-c', '--change', type='string')
     parser.add_option('-r', '--remove', type='string')
     parser.add_option('-s', '--show', type='string')
     parser.add_option('-v', '--value', type='string')
     parser.add_option('-m', '--mastervalue', dest="coordinatorvalue", type='string')
+    parser.add_option('--coordinatorvalue', dest="newcoordinatorvalue", type='string')
     parser.add_option('-l', '--list', action='store_true')
     parser.add_option('-P', '--primaryvalue', type='string')
     parser.add_option('-M', '--mirrorvalue', type='string')
@@ -66,6 +67,10 @@ def parseargs():
     parser.setHelp([])
 
     (options, _) = parser.parse_args()
+
+    # --coordinatorvalue argument takes precedence over -m/--mastervalue
+    if options.newcoordinatorvalue is not None:
+        options.coordinatorvalue = options.newcoordinatorvalue
 
     options.entry = None
     validate_four_verbs(options)
