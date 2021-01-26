@@ -818,7 +818,7 @@ class GpStop:
 
         addTo.add_option('-r', '--restart', action='store_true',
                          help='Restart Greenplum Database instance after successful gpstop.')
-        addTo.add_option('-m', '--master_only', dest='coordinator_only', action='store_true',
+        addTo.add_option('-m', '--master_only', '-c', '--coordinator_only', dest='coordinator_only', action='store_true',
                          help='stop coordinator instance started in maintenance mode')
         addTo.add_option('-y', dest="stop_standby", action='store_false', default=True,
                          help='Do not stop the standby coordinator process.')
@@ -847,7 +847,7 @@ class GpStop:
                 raise ProgramArgumentValidationException("Can not mix --mode options with older deprecated '-f,-i,-s'")
 
         if options.coordinator_only and options.only_this_host:
-            raise ProgramArgumentValidationException("Incompatible flags. Cannot mix '--host' option with '-m' for "
+            raise ProgramArgumentValidationException("Incompatible flags. Cannot mix '--host' option with stopping "
                                                      "coordinator-only.")
 
         if options.restart and options.only_this_host:

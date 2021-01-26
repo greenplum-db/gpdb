@@ -109,8 +109,65 @@ class GpStop(GpTestCase):
         mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with coordinator-only shutdown', 'N')
 
     @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
+    def test_new_option_coordinator_success_without_auto_accept(self, mock_userinput):
+        sys.argv = ["gpstop", "-c"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        mock_userinput.ask_yesno.return_value = True
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+        self.assertEqual(mock_userinput.ask_yesno.call_count, 1)
+        mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with coordinator-only shutdown', 'N')
+
+    @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
+    def test_all_option_coordinator_success_without_auto_accept(self, mock_userinput):
+        sys.argv = ["gpstop", "-c", "-m"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        mock_userinput.ask_yesno.return_value = True
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+        self.assertEqual(mock_userinput.ask_yesno.call_count, 1)
+        mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with coordinator-only shutdown', 'N')
+
+    @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
     def test_option_coordinator_success_with_auto_accept(self, mock_userinput):
         sys.argv = ["gpstop", "-m", "-a"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        mock_userinput.ask_yesno.return_value = True
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+        self.assertEqual(mock_userinput.ask_yesno.call_count, 0)
+
+    @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
+    def test_new_option_coordinator_success_with_auto_accept(self, mock_userinput):
+        sys.argv = ["gpstop", "-c", "-a"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        mock_userinput.ask_yesno.return_value = True
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+        self.assertEqual(mock_userinput.ask_yesno.call_count, 0)
+
+    @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
+    def test_all_short_option_coordinator_success_with_auto_accept(self, mock_userinput):
+        sys.argv = ["gpstop", "-c", "-m", "-a"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        mock_userinput.ask_yesno.return_value = True
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+        self.assertEqual(mock_userinput.ask_yesno.call_count, 0)
+
+    @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
+    def test_all_options_coordinator_success_with_auto_accept(self, mock_userinput):
+        sys.argv = ["gpstop", "-c", "-m", "--coordinator_only", "--master_only", "-a"]
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
 
@@ -340,7 +397,16 @@ class GpStop(GpTestCase):
         options, args = parser.parse_args()
 
         with self.assertRaisesRegex(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
-                                                                         "option with '-m' for coordinator-only."):
+                                                                        "option with stopping coordinator-only."):
+            self.subject.GpStop.createProgram(options, args)
+
+    def test_host_new_option_with_coordinator_option_fails(self):
+        sys.argv = ["gpstop", "--host", "sdw1", "-c"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        with self.assertRaisesRegex(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
+                                                                        "option with stopping coordinator-only."):
             self.subject.GpStop.createProgram(options, args)
 
     def test_host_option_with_restart_option_fails(self):
