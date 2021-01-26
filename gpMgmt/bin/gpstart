@@ -757,7 +757,7 @@ class GpStart:
         addTo.add_option('-U', '--specialMode', type='choice', choices=['maintenance'],
                          metavar='maintenance', action='store', default=None,
                          help=SUPPRESS_HELP)
-        addTo.add_option('-m', '--master_only', dest="coordinator_only", action='store_true',
+        addTo.add_option('-m', '--master_only', '-c', '--coordinator_only', dest="coordinator_only", action='store_true',
                          help='start coordinator instance only in maintenance mode')
         addTo.add_option('-y', '--no_standby', dest="start_standby", action='store_false', default=True,
                          help='do not start coordinator standby server')

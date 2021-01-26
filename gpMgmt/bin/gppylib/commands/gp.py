@@ -731,7 +731,7 @@ class GpStart(Command):
     def __init__(self, name, coordinatorOnly=False, restricted=False, verbose=False,ctxt=LOCAL, remoteHost=None):
         self.cmdStr="$GPHOME/bin/gpstart -a"
         if coordinatorOnly:
-            self.cmdStr += " -m"
+            self.cmdStr += " -c"
             self.propagate_env_map['GPSTART_INTERNAL_COORDINATOR_ONLY'] = 1
         if restricted:
             self.cmdStr += " -R"
@@ -749,7 +749,7 @@ class NewGpStart(Command):
     def __init__(self, name, coordinatorOnly=False, restricted=False, verbose=False,nostandby=False,ctxt=LOCAL, remoteHost=None, coordinatorDirectory=None):
         self.cmdStr="$GPHOME/bin/gpstart -a"
         if coordinatorOnly:
-            self.cmdStr += " -m"
+            self.cmdStr += " -c"
             self.propagate_env_map['GPSTART_INTERNAL_COORDINATOR_ONLY'] = 1
         if restricted:
             self.cmdStr += " -R"

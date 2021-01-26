@@ -7,8 +7,8 @@ Starts a Greenplum Database system.
 SYNOPSIS
 *****************************************************
 
-gpstart [-d <coordinator_data_directory>] [-B <parallel_processes>] 
-        [-R] [-m] [-y] [-a] [-t <timeout_seconds>] 
+gpstart [-d <coordinator_data_directory>] [-B <parallel_processes>]
+        [-R] [-m | -c] [-y] [-a] [-t <timeout_seconds>]
         [-l logfile_directory] [-v | -q]
 
 gpstart -? | -h | --help
@@ -58,7 +58,7 @@ OPTIONS
   The directory to write the log file. Defaults to ~/gpAdminLogs.
 
 
--m
+-m | -c | --master_only | --coordinator_only
 
   Optional. Starts the coordinator instance only, which may be necessary 
   for maintenance tasks. This mode only allows connections to the coordinator 
