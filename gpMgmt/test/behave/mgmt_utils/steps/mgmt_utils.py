@@ -188,6 +188,8 @@ def impl(conetxt, tabname):
         sql = ("alter table t exchange partition for (2018) with table {tabname} without validation").format(tabname=tabname)
         dbconn.execSQL(conn, sql)
         conn.commit()
+    conn.close()
+
 
 @given('the user executes "{sql}" with named connection "{cname}"')
 def impl(context, cname, sql):

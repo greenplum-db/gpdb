@@ -29,6 +29,8 @@ if coordinator_data_dir is None:
     raise Exception('MASTER_DATA_DIRECTORY is not set')
 
 
+# query_sql returns a cursor object, so the caller is responsible for closing
+# the dbconn connection.
 def query_sql(dbname, sql):
     result = None
 

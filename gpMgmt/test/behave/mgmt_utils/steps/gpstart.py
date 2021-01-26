@@ -30,7 +30,7 @@ def _run_sql(sql, opts=None):
 def change_hostname(content, preferred_role, hostname):
     with dbconn.connect(dbconn.DbURL(dbname="template1"), allowSystemTableMods=True, unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, "UPDATE gp_segment_configuration SET hostname = '{0}', address = '{0}' WHERE content = {1} AND preferred_role = '{2}'".format(hostname, content, preferred_role))
-        conn.commit()
+    conn.close()
 
 @when('the standby host is made unreachable')
 def impl(context):
@@ -95,6 +95,7 @@ def impl(context, seg_type, content):
 
     with dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False) as conn:
         dbid, hostname = dbconn.queryRow(conn, "SELECT dbid, hostname FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
+    conn.close()
     if not hasattr(context, 'old_hostnames'):
         context.old_hostnames = {}
     context.old_hostnames[(content, preferred_role)] = hostname
@@ -116,18 +117,21 @@ def impl(context):
 def has_expected_status(content, preferred_role, expected_status):
     with dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False) as conn:
         status = dbconn.querySingleton(conn, "SELECT status FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
+    conn.close()
     return status == expected_status
 
 
 def must_have_expected_status(content, preferred_role, expected_status):
     with dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False) as conn:
         status = dbconn.querySingleton(conn, "SELECT status FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
+    conn.close()
     if status != expected_status:
         raise Exception("Expected status for role %s to be %s, but it is %s" % (preferred_role, expected_status, status))
 
 def get_guc_value(guc):
     with dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False) as conn:
         value = dbconn.querySingleton(conn, "show %s" % guc)
+    conn.close()
     return value
 
 def set_guc_value(context, guc, value):
