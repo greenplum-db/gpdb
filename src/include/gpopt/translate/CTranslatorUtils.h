@@ -27,9 +27,11 @@
 #include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/IStatistics.h"
 
+extern "C" {
 #include "access/sdir.h"
 #include "access/skey.h"
 #include "nodes/parsenodes.h"
+}
 
 // fwd declarations
 namespace gpopt

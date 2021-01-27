@@ -40,9 +40,10 @@
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
+extern "C" {
 #include "access/tupdesc.h"
-#include "c.h"
 #include "catalog/gp_policy.h"
+}
 
 // fwd decl
 struct RelationData;

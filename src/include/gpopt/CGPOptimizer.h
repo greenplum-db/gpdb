@@ -17,9 +17,11 @@
 
 #include "postgres.h"
 
+extern "C" {
 #include "nodes/params.h"
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
+}
 
 class CGPOptimizer
 {
