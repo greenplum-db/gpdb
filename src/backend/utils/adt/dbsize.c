@@ -39,7 +39,7 @@
 #include "utils/syscache.h"
 
 #include "access/tableam.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "libpq-fe.h"
 #include "foreign/fdwapi.h"
 #include "cdb/cdbdisp_query.h"

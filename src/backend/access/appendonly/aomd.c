@@ -31,7 +31,7 @@
 #include "access/appendonlytid.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "common/relpath.h"

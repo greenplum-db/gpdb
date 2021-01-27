@@ -36,7 +36,7 @@
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
 #include "commands/vacuum.h"

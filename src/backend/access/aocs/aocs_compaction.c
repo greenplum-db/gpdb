@@ -25,7 +25,7 @@
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
 #include "commands/vacuum.h"

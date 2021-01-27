@@ -98,7 +98,7 @@
 #include "utils/syscache.h"
 
 #include "catalog/oid_dispatch.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_stat_last_operation.h"
 #include "catalog/pg_stat_last_shoperation.h"
 #include "catalog/gp_partition_template.h"

@@ -16,7 +16,7 @@
 
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "catalog/aoblkdir.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "access/heapam.h"
 #include "access/genam.h"
 #include "parser/parse_oper.h"

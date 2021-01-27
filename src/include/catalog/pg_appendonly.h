@@ -17,6 +17,8 @@
 
 #include "catalog/genbki.h"
 #include "catalog/pg_appendonly_d.h"
+#include "utils/relcache.h"
+#include "utils/snapshot.h"
 
 /*
  * pg_appendonly definition.
@@ -105,5 +107,61 @@ static inline void AORelationVersion_CheckValid(int version)
 	AORelationVersion_CheckValid(version), \
 	(version < AORelationVersion_PG83) \
 )
+
+extern void
+InsertAppendOnlyEntry(Oid relid,
+					  int blocksize,
+					  int safefswritesize,
+					  int compresslevel,
+					  bool checksum,
+					  bool columnstore,
+					  char* compresstype,
+					  Oid segrelid,
+					  Oid blkdirrelid,
+					  Oid blkdiridxid,
+					  Oid visimaprelid,
+					  Oid visimapidxid);
+
+void
+GetAppendOnlyEntryAttributes(Oid relid,
+							 int32 *blocksize,
+							 int32 *safefswritesize,
+							 int16 *compresslevel,
+							 bool *checksum,
+							 NameData *compresstype);
+
+/*
+ * Get the OIDs of the auxiliary relations and their indexes for an appendonly
+ * relation.
+ *
+ * The OIDs will be retrieved only when the corresponding output variable is
+ * not NULL.
+ */
+void
+GetAppendOnlyEntryAuxOids(Oid relid,
+						  Snapshot appendOnlyMetaDataSnapshot,
+						  Oid *segrelid,
+						  Oid *blkdirrelid,
+						  Oid *blkdiridxid,
+						  Oid *visimaprelid,
+						  Oid *visimapidxid);
+
+/*
+ * Update the segrelid and/or blkdirrelid if the input new values
+ * are valid OIDs.
+ */
+extern void
+UpdateAppendOnlyEntryAuxOids(Oid relid,
+							 Oid newSegrelid,
+							 Oid newBlkdirrelid,
+							 Oid newBlkdiridxid,
+							 Oid newVisimaprelid,
+							 Oid newVisimapidxid);
+
+extern void
+RemoveAppendonlyEntry(Oid relid);
+
+extern void
+SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);
 
 #endif   /* PG_APPENDONLY_H */

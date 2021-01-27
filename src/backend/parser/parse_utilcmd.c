@@ -80,7 +80,7 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 
 /* State shared by transformCreateStmt and its subroutines */
 typedef struct
