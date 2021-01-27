@@ -865,7 +865,7 @@ LockAcquireExtended(const LOCKTAG *locktag,
 
 	/*
 	 * lockHolder is the gang member that should hold and manage locks for this
-	 * transaction.  In Utility mode, or on the QD, it's allways myself.
+	 * transaction.  In Utility mode, or on the QD, it's always myself.
 	 *
 	 * On the QEs, it should normally be the Writer gang member.
 	 */
@@ -1483,7 +1483,7 @@ RemoveLocalLock(LOCALLOCK *locallock)
  *
  * In Greenplum Database, the conflict is more complicated;  not only the
  * process itself but also other processes within the same MPP session may
- * have held conflicting locks.  We must take account  into consideration
+ * have held conflicting locks.  We must take into consideration
  * those MPP session member processes to subtract off the lock mask.
  */
 int
@@ -1522,10 +1522,10 @@ LockCheckConflicts(LockMethod lockMethodTable,
 
 	/*
 	 * GPDB_96_MERGE_FIXME:
-	 * We do not support parallel execution yet, so it is fine just
-	 * handle mpp session and single process separetelly.
+	 * We do not support parallel execution yet, so it is fine to just
+	 * handle mpp session and single process separately.
 	 * 
-	 * After parallel execution feature in, mpp session part should
+	 * After parallel execution feature is in, mpp session part should
 	 * change.
 	 */
 	 mppSessionId = proclock->tag.myProc->mppSessionId;
@@ -3927,8 +3927,11 @@ GetLockStatusData(void)
 		PGPROC	   *proc = &ProcGlobal->allProcs[i];
 		TMGXACT	   *tmGxact = &ProcGlobal->allTmGxact[i];
 		uint32		f;
+		DistributedTransactionId	distribXid;
 
 		LWLockAcquire(&proc->backendLock, LW_SHARED);
+
+		distribXid = (Gp_role == GP_ROLE_DISPATCH)? tmGxact->gxid : proc->localDistribXactData.distribXid;
 
 		for (f = 0; f < FP_LOCK_SLOTS_PER_BACKEND; ++f)
 		{
@@ -3960,9 +3963,7 @@ GetLockStatusData(void)
 			instance->databaseId = proc->databaseId;
 			instance->mppSessionId = proc->mppSessionId;
 			instance->mppIsWriter = proc->mppIsWriter;
-			instance->distribXid = (Gp_role == GP_ROLE_DISPATCH)?
-								   tmGxact->gxid :
-								   proc->localDistribXactData.distribXid;
+			instance->distribXid = distribXid;
 			instance->holdTillEndXact = (holdTillEndXactBits > 0);
 			el++;
 		}
@@ -3994,9 +3995,7 @@ GetLockStatusData(void)
 			instance->databaseId = proc->databaseId;
 			instance->mppSessionId = proc->mppSessionId;
 			instance->mppIsWriter = proc->mppIsWriter;
-			instance->distribXid = (Gp_role == GP_ROLE_DISPATCH)?
-								   tmGxact->gxid :
-								   proc->localDistribXactData.distribXid;
+			instance->distribXid = distribXid;
 			instance->holdTillEndXact = false;
 			el++;
 		}
