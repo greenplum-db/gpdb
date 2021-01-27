@@ -9,12 +9,15 @@
 //		Implementation of interval constraints
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CConstraintInterval.h"
+
 #include "gpos/base.h"
+#include "gpos/common/CAutoRef.h"
 
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CConstraintDisjunction.h"
-#include "gpopt/base/CConstraintInterval.h"
+#include "gpopt/base/CDatumSortedSet.h"
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
@@ -22,8 +25,6 @@
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
 #include "naucrates/md/IMDScalarOp.h"
-#include "gpopt/base/CDatumSortedSet.h"
-#include "gpos/common/CAutoRef.h"
 
 using namespace gpopt;
 

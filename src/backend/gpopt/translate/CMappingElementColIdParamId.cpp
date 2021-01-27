@@ -14,10 +14,6 @@
 //
 //---------------------------------------------------------------------------
 
-#include "postgres.h"
-#include "nodes/makefuncs.h"
-#include "nodes/primnodes.h"
-
 #include "gpopt/translate/CMappingElementColIdParamId.h"
 
 using namespace gpdxl;

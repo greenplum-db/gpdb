@@ -12,6 +12,7 @@
 
 
 #include "naucrates/md/CMDColumn.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

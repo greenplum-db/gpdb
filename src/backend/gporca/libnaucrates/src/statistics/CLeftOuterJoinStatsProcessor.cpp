@@ -9,8 +9,9 @@
 //		Statistics helper routines for processing Left Outer Joins
 //---------------------------------------------------------------------------
 
-#include "naucrates/statistics/CStatisticsUtils.h"
 #include "naucrates/statistics/CLeftOuterJoinStatsProcessor.h"
+
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpmd;
 

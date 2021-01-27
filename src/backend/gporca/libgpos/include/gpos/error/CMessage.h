@@ -15,11 +15,10 @@
 
 
 
-#include "gpos/types.h"
 #include "gpos/assert.h"
-
-#include "gpos/common/clibwrapper.h"
 #include "gpos/common/CSyncHashtable.h"
+#include "gpos/common/clibwrapper.h"
+#include "gpos/types.h"
 
 #define GPOS_WSZ_WSZLEN(x) (L##x), (gpos::clib::Wcslen(L##x))
 

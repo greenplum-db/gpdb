@@ -15,10 +15,9 @@
 #ifndef GPOS_utils_H
 #define GPOS_utils_H
 
-#include "gpos/types.h"
-
 #include "gpos/error/CException.h"
 #include "gpos/io/COstreamBasic.h"
+#include "gpos/types.h"
 
 #define GPOS_ASMFP asm volatile("movq %%rbp, %0" : "=g"(ulp));
 #define GPOS_ASMSP asm volatile("movq %%rsp, %0" : "=g"(ulp));

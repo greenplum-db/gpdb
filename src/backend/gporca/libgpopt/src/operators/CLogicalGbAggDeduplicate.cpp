@@ -9,12 +9,13 @@
 //		Implementation of aggregate operator for deduplicating semijoin outputs
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalGbAggDeduplicate.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 
 using namespace gpopt;
 

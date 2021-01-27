@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerSearchStrategy_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 #include "gpopt/search/CSearchStage.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {

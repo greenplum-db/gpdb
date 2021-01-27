@@ -14,13 +14,13 @@
 //
 //---------------------------------------------------------------------------
 
+extern "C" {
 #include "postgres.h"
+}
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/relcache/CMDProviderRelcache.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
-
 #include "naucrates/exception.h"
 
 using namespace gpos;

@@ -9,6 +9,10 @@
 //		Implementation of test utility functions
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/CTestUtils.h"
+
+#include <fstream>
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/error/CMessage.h"
@@ -18,63 +22,52 @@
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
 
-#include "gpopt/base/CConstraintInterval.h"
+#include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/eval/IConstExprEvaluator.h"
-#include "gpopt/operators/ops.h"
-#include "gpopt/operators/CScalarSubqueryAll.h"
-#include "gpopt/operators/CScalarSubqueryAny.h"
-#include "gpopt/xforms/CSubqueryHandler.h"
-
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/CMDProviderMemory.h"
-#include "naucrates/md/IMDTypeBool.h"
-#include "naucrates/md/CMDTypeGenericGPDB.h"
-#include "naucrates/md/IMDTypeInt2.h"
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/IMDTypeInt8.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/base/CDatumInt2GPDB.h"
-#include "naucrates/base/CDatumInt4GPDB.h"
-#include "naucrates/base/CDatumInt8GPDB.h"
-#include "naucrates/base/CDatumBoolGPDB.h"
-
-#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
-#include "naucrates/dxl/operators/CDXLDatumStatsDoubleMappable.h"
-#include "naucrates/dxl/operators/CDXLDatumStatsLintMappable.h"
-
-#include "naucrates/statistics/CStatsPredUtils.h"
-
-
-#include "gpopt/exception.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CAutoOptCtxt.h"
-#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CPrintPrefix.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/eval/IConstExprEvaluator.h"
+#include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
+#include "gpopt/operators/CScalarSubqueryAll.h"
+#include "gpopt/operators/CScalarSubqueryAny.h"
 #include "gpopt/operators/ops.h"
-#include "gpopt/xforms/CXformUtils.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
-
+#include "gpopt/xforms/CSubqueryHandler.h"
+#include "gpopt/xforms/CXformUtils.h"
+#include "naucrates/base/CDatumBoolGPDB.h"
+#include "naucrates/base/CDatumInt2GPDB.h"
+#include "naucrates/base/CDatumInt4GPDB.h"
+#include "naucrates/base/CDatumInt8GPDB.h"
 #include "naucrates/base/CQueryToDXLResult.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
+#include "naucrates/dxl/operators/CDXLDatumStatsDoubleMappable.h"
+#include "naucrates/dxl/operators/CDXLDatumStatsLintMappable.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt2.h"
+#include "naucrates/md/IMDTypeInt4.h"
+#include "naucrates/md/IMDTypeInt8.h"
+#include "naucrates/statistics/CStatsPredUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CSubqueryTestUtils.h"
-#include "unittest/gpopt/CTestUtils.h"
-
-#include <fstream>
 
 #define GPOPT_SEGMENT_COUNT 2  // number segments for testing
 

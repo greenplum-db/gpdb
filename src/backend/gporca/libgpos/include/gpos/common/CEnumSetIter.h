@@ -12,8 +12,8 @@
 #define GPOS_CEnumSetIter_H
 
 #include "gpos/base.h"
-#include "gpos/common/CEnumSet.h"
 #include "gpos/common/CBitSetIter.h"
+#include "gpos/common/CEnumSet.h"
 
 namespace gpos
 {

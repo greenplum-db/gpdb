@@ -10,10 +10,10 @@
 //---------------------------------------------------------------------------
 
 
+#include "gpos/task/IWorker.h"
+
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/task/CWorkerPoolManager.h"
-
-#include "gpos/task/IWorker.h"
 
 using namespace gpos;
 

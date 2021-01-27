@@ -17,18 +17,17 @@
 #include "gpos/base.h"
 #include "gpos/memory/CMemoryPool.h"
 
-#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
-#include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
-#include "naucrates/dxl/operators/CDXLColRef.h"
-#include "naucrates/dxl/operators/CDXLPhysicalDML.h"
-#include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
-#include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
-#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
-#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
-
-#include "gpopt/operators/ops.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/ops.h"
+#include "naucrates/dxl/operators/CDXLColRef.h"
+#include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDML.h"
+#include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
+#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
+#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
+#include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
 
 // fwd declaration
 namespace gpnaucrates

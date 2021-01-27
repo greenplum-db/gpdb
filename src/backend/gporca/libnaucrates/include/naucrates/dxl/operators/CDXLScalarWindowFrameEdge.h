@@ -19,6 +19,7 @@
 #define GPDXL_CDXLScalarWindowFrameEdge_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl

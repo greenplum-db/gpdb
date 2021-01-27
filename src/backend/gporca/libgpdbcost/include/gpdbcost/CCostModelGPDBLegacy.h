@@ -14,12 +14,11 @@
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
 
+#include "gpdbcost/CCostModelParamsGPDBLegacy.h"
 #include "gpopt/cost/CCost.h"
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/cost/ICostModelParams.h"
 #include "gpopt/operators/COperator.h"
-
-#include "gpdbcost/CCostModelParamsGPDBLegacy.h"
 
 
 namespace gpdbcost

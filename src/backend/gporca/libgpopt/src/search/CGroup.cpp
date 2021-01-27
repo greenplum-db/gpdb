@@ -9,6 +9,8 @@
 //		Implementation of Memo groups; database agnostic
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CGroup.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CAutoSuspendAbort.h"
@@ -19,19 +21,16 @@
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CDrvdPropCtxtRelational.h"
 #include "gpopt/base/COptimizationContext.h"
-#include "gpopt/search/CGroup.h"
-#include "gpopt/search/CGroupProxy.h"
-#include "gpopt/search/CJobGroup.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalCTEProducer.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
-#include "gpopt/operators/COperator.h"
+#include "gpopt/operators/CLogicalCTEProducer.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
 #include "gpopt/operators/CScalarSubquery.h"
-
-#include "gpopt/exception.h"
-
+#include "gpopt/search/CGroupProxy.h"
+#include "gpopt/search/CJobGroup.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/traceflags/traceflags.h"
 

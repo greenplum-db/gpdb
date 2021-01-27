@@ -9,13 +9,14 @@
 //		Implementation of inner join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalInnerJoin.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CLogicalInnerJoin.h"
-#include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;

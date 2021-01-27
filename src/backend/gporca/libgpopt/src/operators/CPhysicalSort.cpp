@@ -9,12 +9,13 @@
 //		Implementation of physical sort operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSort.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CPhysicalSort.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/base/CCTEMap.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/operators/CExpressionHandle.h"
 
 using namespace gpopt;
 

@@ -19,8 +19,8 @@
 #define GPOPT_CStateMachine_H
 
 #include "gpos/base.h"
-#include "gpos/types.h"
 #include "gpos/common/CEnumSet.h"
+#include "gpos/types.h"
 
 #ifdef GPOS_DEBUG
 #include "gpos/common/CEnumSetIter.h"

@@ -9,12 +9,12 @@
 //		Implementation of optimizer I/O utilities
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CIOUtils.h"
+
 #include "gpos/base.h"
+#include "gpos/io/COstreamFile.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CWorker.h"
-#include "gpos/io/COstreamFile.h"
-
-#include "gpopt/base/CIOUtils.h"
 
 using namespace gpopt;
 

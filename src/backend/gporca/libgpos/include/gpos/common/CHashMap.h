@@ -16,8 +16,8 @@
 #define GPOS_CHashMap_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 namespace gpos
 {

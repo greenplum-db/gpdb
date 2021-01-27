@@ -9,10 +9,10 @@
 //		Initialization of DXL-specific exception messages
 //---------------------------------------------------------------------------
 
+#include "naucrates/exception.h"
+
 #include "gpos/error/CMessage.h"
 #include "gpos/error/CMessageRepository.h"
-
-#include "naucrates/exception.h"
 
 using namespace gpos;
 using namespace gpdxl;

@@ -9,12 +9,12 @@
 //		Implementation of DXL Scalar SubPlan operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/base/COptCtxt.h"
-
-#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

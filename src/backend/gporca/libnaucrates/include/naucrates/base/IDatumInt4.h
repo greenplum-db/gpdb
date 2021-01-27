@@ -12,6 +12,7 @@
 #define GPNAUCRATES_IDatumInt4_H
 
 #include "gpos/base.h"
+
 #include "naucrates/base/IDatum.h"
 
 namespace gpnaucrates

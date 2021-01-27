@@ -9,16 +9,18 @@
 //		Derived plan properties
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/operators/CPhysical.h"
-#include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CPartIndexMap.h"
-#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropPlan.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysical.h"
 #include "gpopt/operators/CPhysicalCTEConsumer.h"
+#include "gpopt/operators/CScalar.h"
 
 
 using namespace gpopt;

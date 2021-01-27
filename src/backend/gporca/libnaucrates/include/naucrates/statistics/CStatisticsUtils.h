@@ -12,20 +12,19 @@
 #define GPOPT_CStatisticsUtils_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CPartFilterMap.h"
+#include "gpopt/engine/CStatisticsConfig.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CScalarBoolOp.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/engine/CStatisticsConfig.h"
-
+#include "naucrates/base/IDatum.h"
 #include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CStatsPredUtils.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
-
-#include "naucrates/base/IDatum.h"
+#include "naucrates/statistics/CStatsPredUtils.h"
 
 namespace gpopt
 {

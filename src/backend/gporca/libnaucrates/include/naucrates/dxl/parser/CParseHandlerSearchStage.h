@@ -13,10 +13,10 @@
 #define GPDXL_CParseHandlerSearchStage_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 #include "gpopt/cost/CCost.h"
 #include "gpopt/xforms/CXform.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {

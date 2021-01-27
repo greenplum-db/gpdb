@@ -13,9 +13,9 @@
 #define GPOS_CFileTest_H
 
 #include "gpos/base.h"
-#include "gpos/io/ioutils.h"
-#include "gpos/io/CFileWriter.h"
 #include "gpos/io/CFileReader.h"
+#include "gpos/io/CFileWriter.h"
+#include "gpos/io/ioutils.h"
 
 namespace gpos
 {

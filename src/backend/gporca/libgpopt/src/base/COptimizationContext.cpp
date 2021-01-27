@@ -9,19 +9,19 @@
 //		Implementation of optimization context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/COptimizationContext.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CEnfdOrder.h"
-#include "gpopt/base/COptimizationContext.h"
 #include "gpopt/base/COrderSpec.h"
-#include "gpopt/search/CGroupExpression.h"
-
 #include "gpopt/operators/CPhysicalAgg.h"
 #include "gpopt/operators/CPhysicalCTEProducer.h"
 #include "gpopt/operators/CPhysicalMotion.h"
-#include "gpopt/operators/CPhysicalSort.h"
 #include "gpopt/operators/CPhysicalNLJoin.h"
+#include "gpopt/operators/CPhysicalSort.h"
+#include "gpopt/search/CGroupExpression.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 

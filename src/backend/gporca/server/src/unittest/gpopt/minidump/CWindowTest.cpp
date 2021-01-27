@@ -2,8 +2,9 @@
 //	Greenplum Database
 //	Copyright (C) 2016 Pivotal Software
 //---------------------------------------------------------------------------
-#include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/minidump/CWindowTest.h"
+
+#include "unittest/gpopt/CTestUtils.h"
 
 
 

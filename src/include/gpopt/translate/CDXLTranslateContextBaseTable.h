@@ -18,11 +18,12 @@
 #ifndef GPDXL_CDXLTranslateContextBaseTable_H
 #define GPDXL_CDXLTranslateContextBaseTable_H
 
+extern "C" {
+#include "postgres.h"  // Index
+}
 
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
-
-#include "postgres.h"  // Index
 
 #include "naucrates/dxl/gpdb_types.h"
 

@@ -9,18 +9,17 @@
 //		Implementation of inner nested-loops join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalInnerNLJoin.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecNonSingleton.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
+
 #include "gpopt/base/CCastUtils.h"
-
+#include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CUtils.h"
-
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
-#include "gpopt/operators/CPhysicalInnerNLJoin.h"
 
 
 using namespace gpopt;

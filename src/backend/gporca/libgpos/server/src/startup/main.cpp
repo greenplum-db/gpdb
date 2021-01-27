@@ -10,11 +10,10 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/_api.h"
-#include "gpos/types.h"
-
 #include "gpos/common/CMainArgs.h"
 #include "gpos/test/CFSimulatorTestExt.h"
 #include "gpos/test/CUnittest.h"
+#include "gpos/types.h"
 
 
 // test headers
@@ -25,41 +24,35 @@
 #include "unittest/gpos/common/CBitSetIterTest.h"
 #include "unittest/gpos/common/CBitSetTest.h"
 #include "unittest/gpos/common/CBitVectorTest.h"
+#include "unittest/gpos/common/CDoubleTest.h"
 #include "unittest/gpos/common/CDynamicPtrArrayTest.h"
 #include "unittest/gpos/common/CEnumSetTest.h"
-#include "unittest/gpos/common/CDoubleTest.h"
-#include "unittest/gpos/common/CHashMapTest.h"
 #include "unittest/gpos/common/CHashMapIterTest.h"
-#include "unittest/gpos/common/CHashSetTest.h"
+#include "unittest/gpos/common/CHashMapTest.h"
 #include "unittest/gpos/common/CHashSetIterTest.h"
+#include "unittest/gpos/common/CHashSetTest.h"
 #include "unittest/gpos/common/CListTest.h"
 #include "unittest/gpos/common/CRefCountTest.h"
 #include "unittest/gpos/common/CStackTest.h"
 #include "unittest/gpos/common/CSyncHashtableTest.h"
 #include "unittest/gpos/common/CSyncListTest.h"
-
 #include "unittest/gpos/error/CErrorHandlerTest.h"
 #include "unittest/gpos/error/CExceptionTest.h"
 #include "unittest/gpos/error/CFSimulatorTest.h"
 #include "unittest/gpos/error/CLoggerTest.h"
-#include "unittest/gpos/error/CMessageTest.h"
-#include "unittest/gpos/error/CMessageTableTest.h"
 #include "unittest/gpos/error/CMessageRepositoryTest.h"
+#include "unittest/gpos/error/CMessageTableTest.h"
+#include "unittest/gpos/error/CMessageTest.h"
 #include "unittest/gpos/error/CMiniDumperTest.h"
-
+#include "unittest/gpos/io/CFileTest.h"
 #include "unittest/gpos/io/COstreamBasicTest.h"
 #include "unittest/gpos/io/COstreamFileTest.h"
 #include "unittest/gpos/io/COstreamStringTest.h"
-#include "unittest/gpos/io/CFileTest.h"
-
-#include "unittest/gpos/memory/CMemoryPoolBasicTest.h"
 #include "unittest/gpos/memory/CCacheTest.h"
-
+#include "unittest/gpos/memory/CMemoryPoolBasicTest.h"
 #include "unittest/gpos/string/CStringTest.h"
 #include "unittest/gpos/string/CWStringTest.h"
-
 #include "unittest/gpos/task/CTaskLocalStorageTest.h"
-
 #include "unittest/gpos/test/CUnittestTest.h"
 
 

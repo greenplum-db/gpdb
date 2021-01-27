@@ -8,11 +8,12 @@
 //	@doc:
 //		Test for checking bindings extracted for an expression
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/engine/CBindingTest.h"
+
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 
-#include "unittest/gpopt/engine/CBindingTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 #define EXPECTED_BINDING 1

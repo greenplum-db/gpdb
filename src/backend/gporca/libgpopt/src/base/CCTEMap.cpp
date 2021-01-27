@@ -9,9 +9,10 @@
 //		Implementation of CTE map
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CCTEMap.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CCTEReq.h"
 
 using namespace gpopt;

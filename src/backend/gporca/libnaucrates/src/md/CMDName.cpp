@@ -9,9 +9,10 @@
 //		Metadata name of objects
 //---------------------------------------------------------------------------
 
+#include "naucrates/md/CMDName.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "naucrates/md/CMDName.h"
 
 using namespace gpmd;
 

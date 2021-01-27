@@ -12,8 +12,9 @@
 #define GPDXL_CDXLNode_H
 
 #include "gpos/base.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashMap.h"
+
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLProperties.h"
 

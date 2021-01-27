@@ -12,9 +12,10 @@
 #define GPOPT_CXformDynamicGet2DynamicTableScan_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformImplementation.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
 {

@@ -9,22 +9,22 @@
 //		Implementation of hash join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalHashJoin.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CPartIndexMap.h"
-
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalHashJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 using namespace gpopt;
 

@@ -10,8 +10,9 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/task/CTaskLocalStorage.h"
-#include "gpos/task/CTaskLocalStorageObject.h"
+
 #include "gpos/common/CSyncHashtableAccessByKey.h"
+#include "gpos/task/CTaskLocalStorageObject.h"
 
 using namespace gpos;
 

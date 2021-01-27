@@ -9,12 +9,12 @@
 //		Implementation of enforced partition propagation property
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CEnfdPartitionPropagation.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CEnfdPartitionPropagation.h"
 #include "gpopt/base/CReqdPropPlan.h"
-
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysical.h"
 
 using namespace gpopt;

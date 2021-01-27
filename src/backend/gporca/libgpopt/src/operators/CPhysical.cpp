@@ -9,22 +9,22 @@
 //		Implementation of basic physical operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysical.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropPlan.h"
-#include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CCTEReq.h"
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecAny.h"
-
+#include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/CDrvdPropPlan.h"
+#include "gpopt/base/CPartIndexMap.h"
+#include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysical.h"
 #include "gpopt/operators/CScalarIdent.h"
 
 using namespace gpopt;

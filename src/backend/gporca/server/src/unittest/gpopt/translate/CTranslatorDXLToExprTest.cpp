@@ -9,37 +9,37 @@
 //		Tests translating DXL trees into Expr tree.
 //
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/translate/CTranslatorDXLToExprTest.h"
+
 #include "gpos/error/CException.h"
 #include "gpos/error/CMessage.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/translate/CTranslatorDXLToExprTest.h"
 
 // XSD location
-#include "unittest/dxl/CParseHandlerTest.h"
-#include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/base/IDatum.h"
-#include "naucrates/base/CQueryToDXLResult.h"
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/md/IMDTypeBool.h"
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDTypeInt4GPDB.h"
-
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/operators/CLogicalGet.h"
-#include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/operators/CScalarConst.h"
-#include "gpopt/operators/CScalarOp.h"
-#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/minidump/CMetadataAccessorFactory.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
+#include "gpopt/operators/CLogicalGet.h"
+#include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/operators/CScalarOp.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
+#include "naucrates/base/CQueryToDXLResult.h"
+#include "naucrates/base/IDatum.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/CMDTypeInt4GPDB.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt4.h"
+
+#include "unittest/dxl/CParseHandlerTest.h"
+#include "unittest/gpopt/CTestUtils.h"
 
 #define GPDB_INT4_GT_OP OID(521)
 #define GPDB_INT4_ADD_OP OID(551)

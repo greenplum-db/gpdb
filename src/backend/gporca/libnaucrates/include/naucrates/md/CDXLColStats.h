@@ -17,9 +17,9 @@
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDColStats.h"
-#include "naucrates/md/CMDIdColStats.h"
 #include "naucrates/md/CDXLBucket.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/IMDColStats.h"
 
 namespace gpdxl
 {

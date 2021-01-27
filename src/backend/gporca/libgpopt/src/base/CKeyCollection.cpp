@@ -9,8 +9,10 @@
 //		Implementation of key collections
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CKeyCollection.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/base/CUtils.h"
 
 using namespace gpopt;

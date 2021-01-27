@@ -20,6 +20,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 
 namespace gpdxl

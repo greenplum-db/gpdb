@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
+
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
 
 using namespace gpdxl;

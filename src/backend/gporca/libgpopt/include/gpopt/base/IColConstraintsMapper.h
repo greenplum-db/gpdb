@@ -5,6 +5,7 @@
 #define GPOPT_IColConstraintsMapper_H
 
 #include "gpos/common/CRefCount.h"
+
 #include "gpopt/base/CConstraint.h"
 
 namespace gpopt

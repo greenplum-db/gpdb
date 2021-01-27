@@ -12,14 +12,14 @@
 #define GPOPT_COperator_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/base/CFunctionProp.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CReqdPropRelational.h"
-#include "gpopt/base/CFunctionProp.h"
 
 namespace gpopt
 {

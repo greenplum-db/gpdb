@@ -10,17 +10,13 @@
 //		class CSyncHashtableTest to avoid template parameter confusion for the compiler
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
-#include "gpos/common/CBitVector.h"
-
-#include "gpos/memory/CAutoMemoryPool.h"
-
-#include "gpos/task/CAutoTaskProxy.h"
-
-#include "gpos/test/CUnittest.h"
-
 #include "unittest/gpos/common/CSyncHashtableTest.h"
+
+#include "gpos/base.h"
+#include "gpos/common/CBitVector.h"
+#include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/task/CAutoTaskProxy.h"
+#include "gpos/test/CUnittest.h"
 
 using namespace gpos;
 

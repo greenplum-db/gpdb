@@ -15,21 +15,20 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSerialUnionAll.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
-
-#include "gpopt/operators/CPhysicalSerialUnionAll.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarIdent.h"
-
-#include "gpopt/exception.h"
 
 using namespace gpopt;
 

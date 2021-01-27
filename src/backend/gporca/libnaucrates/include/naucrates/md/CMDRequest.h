@@ -15,12 +15,12 @@
 #define GPMD_CMDRequest_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 #include "naucrates/md/CSystemId.h"
-#include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDType.h"
 
 namespace gpmd
 {

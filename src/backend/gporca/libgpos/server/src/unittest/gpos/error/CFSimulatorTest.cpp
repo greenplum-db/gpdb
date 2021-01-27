@@ -9,14 +9,14 @@
 //		Tests for
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/error/CFSimulatorTest.h"
+
 #include "gpos/base.h"
-#include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/error/CFSimulator.h"
 #include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/task/CAutoSuspendAbort.h"
+#include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/error/CFSimulatorTest.h"
 
 using namespace gpos;
 

@@ -9,14 +9,16 @@
 //		Implementation of derived properties
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdProp.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/operators/COperator.h"
 
 #ifdef GPOS_DEBUG
-#include "gpopt/base/COptCtxt.h"
 #include "gpos/error/CAutoTrace.h"
+
+#include "gpopt/base/COptCtxt.h"
 #endif	// GPOS_DEBUG
 
 namespace gpopt

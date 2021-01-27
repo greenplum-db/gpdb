@@ -17,8 +17,6 @@
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
-
-
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
 

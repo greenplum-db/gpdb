@@ -9,14 +9,14 @@
 //		Implementation of Difference operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDifference.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalDifference.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
-
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;

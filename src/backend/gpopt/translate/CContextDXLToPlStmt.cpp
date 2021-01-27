@@ -16,15 +16,18 @@
 //
 //---------------------------------------------------------------------------
 
+extern "C" {
 #include "postgres.h"
+
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 #include "utils/rel.h"
+}
 
-#include "gpopt/translate/CContextDXLToPlStmt.h"
-#include "gpopt/gpdbwrappers.h"
 #include "gpos/base.h"
 
+#include "gpopt/gpdbwrappers.h"
+#include "gpopt/translate/CContextDXLToPlStmt.h"
 #include "naucrates/exception.h"
 
 using namespace gpdxl;

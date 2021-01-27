@@ -15,6 +15,7 @@
 #define GPDXL_CDXLScalarPartBoundOpen_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl

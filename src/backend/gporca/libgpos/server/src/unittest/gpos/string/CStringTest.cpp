@@ -9,11 +9,11 @@
 //		Tests for CStringStatic
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/string/CStringTest.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CStringStatic.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/string/CStringTest.h"
 
 
 using namespace gpos;

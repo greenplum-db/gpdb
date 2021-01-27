@@ -9,18 +9,15 @@
 //		Tests for CCache
 //---------------------------------------------------------------------------
 
-#include "gpos/error/CAutoTrace.h"
+#include "unittest/gpos/memory/CCacheTest.h"
+
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CRandom.h"
-
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/memory/CCacheFactory.h"
-
 #include "gpos/task/CAutoTaskProxy.h"
-
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/memory/CCacheTest.h"
 
 
 using namespace gpos;

@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpopt/base/CWindowFrame.h"
+
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CScalarIdent.h"
 

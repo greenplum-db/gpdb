@@ -13,6 +13,7 @@
 #define GPMD_CMDIndexInfo_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDInterface.h"
 

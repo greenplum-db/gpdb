@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerLogicalGet_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
+
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
+#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
 namespace gpdxl

@@ -12,13 +12,13 @@
 #ifndef GPDXL_CParseHandlerBase_H
 #define GPDXL_CParseHandlerBase_H
 
-#include "gpos/base.h"
-#include "naucrates/exception.h"
-
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/CDXLUtils.h"
-
 #include <xercesc/sax2/DefaultHandler.hpp>
+
+#include "gpos/base.h"
+
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/exception.h"
 
 namespace gpdxl
 {

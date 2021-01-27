@@ -8,26 +8,25 @@
 //	@doc:
 //		Tests parsing DXL documents into DXL trees.
 //---------------------------------------------------------------------------
-#include "gpos/error/CException.h"
+#include "unittest/dxl/CParseHandlerTest.h"
+
 #include "gpos/error/CAutoTrace.h"
+#include "gpos/error/CException.h"
 #include "gpos/error/CMessage.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/exception.h"
-#include "naucrates/base/CQueryToDXLResult.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/CDXLUtils.h"
-
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "naucrates/base/CQueryToDXLResult.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDRequest.h"
 
 #include "unittest/base.h"
-#include "unittest/dxl/CParseHandlerTest.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/CMDRequest.h"
 
 
 // MD request file

@@ -9,20 +9,21 @@
 //		Specification of hashed distribution
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/traceflags/traceflags.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CUtils.h"
+#include "gpopt/base/CDistributionSpecHashed.h"
+
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CExpressionPreprocessor.h"
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalMotionHashDistribute.h"
-#include "gpopt/operators/CScalarIdent.h"
-#include "gpopt/operators/CExpressionPreprocessor.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CScalarIdent.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/traceflags/traceflags.h"
 
 
 #define GPOPT_DISTR_SPEC_HASHED_EXPRESSIONS (ULONG(5))

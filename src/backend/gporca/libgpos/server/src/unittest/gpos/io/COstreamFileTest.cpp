@@ -9,16 +9,16 @@
 //		Tests for COstreamFile
 //---------------------------------------------------------------------------
 
-#include "gpos/io/ioutils.h"
+#include "unittest/gpos/io/COstreamFileTest.h"
+
 #include "gpos/io/CFileReader.h"
 #include "gpos/io/COstreamFile.h"
+#include "gpos/io/ioutils.h"
 #include "gpos/string/CStringStatic.h"
-#include "gpos/string/CWStringStatic.h"
 #include "gpos/string/CWStringConst.h"
+#include "gpos/string/CWStringStatic.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/io/COstreamFileTest.h"
 
 using namespace gpos;
 

@@ -21,7 +21,6 @@
 #define GPOS_CSyncHashtable_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CAutoRg.h"
 #include "gpos/common/CList.h"
 #include "gpos/task/CAutoSuspendAbort.h"

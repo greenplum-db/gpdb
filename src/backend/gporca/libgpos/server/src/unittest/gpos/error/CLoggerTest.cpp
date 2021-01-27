@@ -9,16 +9,16 @@
 //		Unit test for logger classes.
 //---------------------------------------------------------------------------
 
-#include "gpos/error/ILogger.h"
+#include "unittest/gpos/error/CLoggerTest.h"
+
 #include "gpos/error/CLoggerStream.h"
 #include "gpos/error/CLoggerSyslog.h"
+#include "gpos/error/ILogger.h"
 #include "gpos/io/ioutils.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/error/CLoggerTest.h"
 
 using namespace gpos;
 

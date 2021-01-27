@@ -15,13 +15,12 @@
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CHashMapIter.h"
 
-#include "naucrates/statistics/CStatsPred.h"
-#include "naucrates/statistics/CStatsPredPoint.h"
-#include "naucrates/statistics/CStatsPredJoin.h"
-#include "naucrates/statistics/CHistogram.h"
-#include "naucrates/md/CDXLStatsDerivedRelation.h"
-
 #include "gpopt/base/CColRef.h"
+#include "naucrates/md/CDXLStatsDerivedRelation.h"
+#include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CStatsPred.h"
+#include "naucrates/statistics/CStatsPredJoin.h"
+#include "naucrates/statistics/CStatsPredPoint.h"
 
 namespace gpopt
 {

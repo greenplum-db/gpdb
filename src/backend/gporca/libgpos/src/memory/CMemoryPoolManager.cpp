@@ -11,17 +11,18 @@
 //		* keeps track of all worker pools
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpos/common/clibwrapper.h"
-#include "gpos/common/CAutoP.h"
-#include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/error/CFSimulator.h"	 // for GPOS_FPSIMULATOR
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
+
+#include "gpos/base.h"
+#include "gpos/common/CAutoP.h"
+#include "gpos/common/clibwrapper.h"
+#include "gpos/error/CAutoTrace.h"
+#include "gpos/error/CFSimulator.h"	 // for GPOS_FPSIMULATOR
+#include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolTracker.h"
 #include "gpos/memory/CMemoryVisitorPrint.h"
 #include "gpos/task/CAutoSuspendAbort.h"
+#include "gpos/task/CAutoTraceFlag.h"
 
 
 using namespace gpos;

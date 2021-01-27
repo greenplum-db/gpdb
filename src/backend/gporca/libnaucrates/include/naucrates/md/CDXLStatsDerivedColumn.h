@@ -14,6 +14,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/md/CDXLBucket.h"
 
 namespace gpdxl

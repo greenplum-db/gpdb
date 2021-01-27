@@ -3,31 +3,29 @@
 
 
 
-#include <xercesc/util/XercesDefs.hpp>
-#include <xercesc/sax2/SAX2XMLReader.hpp>
-#include <xercesc/sax2/XMLReaderFactory.hpp>
-#include <xercesc/framework/MemBufInputSource.hpp>
-
 #include "unittest/dxl/CParseHandlerCostModelTest.h"
 
 #include <memory>
-
-#include "gpdbcost/CCostModelGPDB.h"
-#include "gpdbcost/CCostModelParamsGPDB.h"
-
+#include <xercesc/framework/MemBufInputSource.hpp>
+#include <xercesc/sax2/SAX2XMLReader.hpp>
+#include <xercesc/sax2/XMLReaderFactory.hpp>
+#include <xercesc/util/XercesDefs.hpp>
 
 #include "gpos/base.h"
-#include "gpos/test/CUnittest.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CAutoRg.h"
 #include "gpos/io/COstreamString.h"
+#include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/test/CUnittest.h"
+
+#include "gpdbcost/CCostModelGPDB.h"
+#include "gpdbcost/CCostModelParamsGPDB.h"
+#include "naucrates/dxl/CCostModelConfigSerializer.h"
 #include "naucrates/dxl/parser/CParseHandlerCostModel.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
-#include "naucrates/dxl/CCostModelConfigSerializer.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;

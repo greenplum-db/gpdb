@@ -9,9 +9,10 @@
 //		Implementation of group job superclass
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroup.h"
+
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobGroup.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
 

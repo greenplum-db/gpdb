@@ -12,39 +12,38 @@
 //	@test:
 //---------------------------------------------------------------------------
 
+extern "C" {
 #include "postgres.h"
-#include "nodes/plannodes.h"
-#include "nodes/parsenodes.h"
-#include "nodes/primnodes.h"
-#include "nodes/makefuncs.h"
-#include "catalog/pg_collation.h"
-#include "utils/datum.h"
 
+#include "catalog/pg_collation.h"
+#include "nodes/makefuncs.h"
+#include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
+#include "nodes/primnodes.h"
+#include "utils/datum.h"
+}
 #include "gpos/base.h"
 
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/gpdbwrappers.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/translate/CTranslatorDXLToScalar.h"
-#include "gpopt/translate/CTranslatorDXLToPlStmt.h"
-#include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
-
+#include "gpopt/translate/CTranslatorDXLToPlStmt.h"
+#include "gpopt/translate/CTranslatorDXLToScalar.h"
+#include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 #include "naucrates/dxl/operators/CDXLDatumInt2.h"
 #include "naucrates/dxl/operators/CDXLDatumInt4.h"
 #include "naucrates/dxl/operators/CDXLDatumInt8.h"
-#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 #include "naucrates/dxl/operators/CDXLDatumOid.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDTypeBool.h"
-
-#include "gpopt/gpdbwrappers.h"
 
 using namespace gpdxl;
 using namespace gpos;

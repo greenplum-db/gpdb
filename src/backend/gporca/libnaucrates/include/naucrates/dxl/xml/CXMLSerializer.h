@@ -14,10 +14,10 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
-#include "gpos/string/CWStringConst.h"
-#include "gpos/io/COstream.h"
-
 #include "gpos/common/CStack.h"
+#include "gpos/io/COstream.h"
+#include "gpos/string/CWStringConst.h"
+
 #include "naucrates/dxl/xml/dxltokens.h"
 
 namespace gpdxl

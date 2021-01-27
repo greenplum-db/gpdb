@@ -46,7 +46,6 @@
 #include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/xforms/CXformUtils.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;

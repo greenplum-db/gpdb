@@ -9,9 +9,10 @@
 //		Implementation of optimizer job base class
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJob.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/search/CJob.h"
 #include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CScheduler.h"
 

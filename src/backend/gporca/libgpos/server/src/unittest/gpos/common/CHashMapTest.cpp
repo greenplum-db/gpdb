@@ -9,12 +9,12 @@
 //		Test for CHashMap
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CHashMapTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CHashMapTest.h"
 
 using namespace gpos;
 

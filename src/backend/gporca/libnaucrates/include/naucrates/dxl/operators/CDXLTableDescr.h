@@ -15,9 +15,10 @@
 #define GPDXL_CDXLTableDescriptor_H
 
 #include "gpos/base.h"
+
+#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/md/CMDName.h"
 #include "naucrates/md/IMDId.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
 
 namespace gpdxl
 {

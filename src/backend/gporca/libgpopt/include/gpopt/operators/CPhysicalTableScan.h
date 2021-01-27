@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalTableScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalScan.h"
 
 namespace gpopt

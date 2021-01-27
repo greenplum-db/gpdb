@@ -9,9 +9,10 @@
 //		Partial implementation of interface class for logging
 //---------------------------------------------------------------------------
 
-#include "gpos/common/syslibwrapper.h"
-#include "gpos/common/clibwrapper.h"
 #include "gpos/error/CLogger.h"
+
+#include "gpos/common/clibwrapper.h"
+#include "gpos/common/syslibwrapper.h"
 #include "gpos/error/CLoggerStream.h"
 #include "gpos/error/CLoggerSyslog.h"
 #include "gpos/error/CMessageRepository.h"

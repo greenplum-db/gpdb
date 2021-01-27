@@ -16,7 +16,6 @@
 
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLScalar.h"
-
 #include "naucrates/md/IMDId.h"
 
 namespace gpdxl

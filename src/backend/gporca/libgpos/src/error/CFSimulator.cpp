@@ -12,14 +12,15 @@
 //		otherwise raise exception.
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpos/error/CFSimulator.h"
+
+#include "gpos/base.h"
 
 #ifdef GPOS_FPSIMULATOR
 
+#include "gpos/common/CAutoP.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
-#include "gpos/common/CAutoP.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
 using namespace gpos;

@@ -9,8 +9,9 @@
 //		Implementation of scalar CoerceToDomain operators
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarCoerceToDomain.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

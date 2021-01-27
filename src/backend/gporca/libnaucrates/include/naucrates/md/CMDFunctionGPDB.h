@@ -15,8 +15,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDFunction.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/IMDFunction.h"
 
 namespace gpmd
 {

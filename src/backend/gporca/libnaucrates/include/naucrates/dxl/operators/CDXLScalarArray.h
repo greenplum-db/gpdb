@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarArray_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/IMDId.h"
 

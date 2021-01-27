@@ -13,8 +13,8 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CList.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CErrorContext.h"
+#include "gpos/error/CException.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/task/CTaskContext.h"
 #include "gpos/task/CTaskId.h"

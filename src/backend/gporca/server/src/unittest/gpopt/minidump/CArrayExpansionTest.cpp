@@ -9,6 +9,7 @@
 //		Test for array expansion in WHERE clause
 //---------------------------------------------------------------------------
 #include "unittest/gpopt/minidump/CArrayExpansionTest.h"
+
 #include "unittest/gpopt/CTestUtils.h"
 
 

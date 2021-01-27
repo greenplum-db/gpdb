@@ -10,10 +10,11 @@
 //		of assert operators
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarAssertConstraintList.h"
+
 #include "gpos/base.h"
 
 #include "naucrates/md/IMDTypeBool.h"
-#include "gpopt/operators/CScalarAssertConstraintList.h"
 
 using namespace gpopt;
 using namespace gpmd;

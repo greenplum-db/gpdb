@@ -9,8 +9,9 @@
 //		Implementation of result container
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformResult.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

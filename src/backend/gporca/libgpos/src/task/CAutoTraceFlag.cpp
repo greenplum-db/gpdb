@@ -9,9 +9,10 @@
 //		Auto object to toggle TF in scope
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CAutoTraceFlag.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
-#include "gpos/task/CAutoTraceFlag.h"
 
 using namespace gpos;
 

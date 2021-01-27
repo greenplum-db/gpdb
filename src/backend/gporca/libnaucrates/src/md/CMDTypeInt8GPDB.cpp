@@ -16,16 +16,15 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
-
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 
-#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
-#include "naucrates/dxl/operators/CDXLDatum.h"
-#include "naucrates/dxl/operators/CDXLDatumInt8.h"
-#include "naucrates/dxl/CDXLUtils.h"
+#include "gpos/string/CWStringDynamic.h"
 
 #include "naucrates/base/CDatumInt8GPDB.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
 
 using namespace gpdxl;
 using namespace gpmd;

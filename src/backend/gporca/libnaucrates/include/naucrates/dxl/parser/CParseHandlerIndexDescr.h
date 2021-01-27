@@ -14,9 +14,9 @@
 #define GPDXL_CParseHandlerIndexDescriptor_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 #include "naucrates/dxl/operators/CDXLIndexDescr.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 
 namespace gpdxl

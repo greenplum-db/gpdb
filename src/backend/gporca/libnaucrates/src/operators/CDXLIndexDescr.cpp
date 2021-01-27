@@ -9,9 +9,10 @@
 //		Implementation of DXL index descriptors
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLIndexDescr.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

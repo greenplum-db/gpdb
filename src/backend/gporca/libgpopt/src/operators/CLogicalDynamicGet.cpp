@@ -9,20 +9,20 @@
 //		Implementation of dynamic table access
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDynamicGet.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CConstraintInterval.h"
+
 #include "gpopt/base/CColRefSet.h"
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/base/CPartIndexMap.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
-
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;

@@ -15,8 +15,8 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDPartConstraint.h"
 #include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDPartConstraint.h"
 
 // fwd decl
 namespace gpdxl

@@ -17,14 +17,14 @@
 #include "gpos/common/CSyncPool.h"
 
 #include "gpopt/search/CJob.h"
-#include "gpopt/search/CJobGroupOptimization.h"
-#include "gpopt/search/CJobGroupExpressionOptimization.h"
 #include "gpopt/search/CJobGroupExploration.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
-#include "gpopt/search/CJobGroupImplementation.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
-#include "gpopt/search/CJobTransformation.h"
+#include "gpopt/search/CJobGroupExpressionOptimization.h"
+#include "gpopt/search/CJobGroupImplementation.h"
+#include "gpopt/search/CJobGroupOptimization.h"
 #include "gpopt/search/CJobTest.h"
+#include "gpopt/search/CJobTransformation.h"
 
 namespace gpopt
 {

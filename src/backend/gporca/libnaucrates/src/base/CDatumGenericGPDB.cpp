@@ -9,19 +9,17 @@
 //		Implementation of GPDB generic datum
 //---------------------------------------------------------------------------
 
+#include "naucrates/base/CDatumGenericGPDB.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/base/CDatumGenericGPDB.h"
-
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/CMDIdGPDB.h"
-
-#include "naucrates/statistics/CScaleFactorUtils.h"
-
-#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/statistics/CScaleFactorUtils.h"
 
 using namespace gpnaucrates;
 using namespace gpmd;

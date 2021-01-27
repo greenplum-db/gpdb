@@ -9,9 +9,10 @@
 //		Parameters of GPDB cost model
 //---------------------------------------------------------------------------
 
+#include "gpdbcost/CCostModelParamsGPDB.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringConst.h"
-#include "gpdbcost/CCostModelParamsGPDB.h"
 
 using namespace gpopt;
 

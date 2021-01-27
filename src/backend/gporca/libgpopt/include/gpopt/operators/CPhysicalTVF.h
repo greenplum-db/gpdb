@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalTVF_H
 
 #include "gpos/base.h"
+
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CPhysical.h"
 

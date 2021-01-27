@@ -9,17 +9,16 @@
 //		Implementation of scalar aggregate function call operators
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarAggFunc.h"
+
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDAggregate.h"
-
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CScalarAggFunc.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDAggregate.h"
 
 
 using namespace gpopt;

@@ -8,13 +8,11 @@
 //	@doc:
 //		Test for CExpression
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/operators/CExpressionTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
-
-#include "naucrates/base/CDatumInt8GPDB.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDScalarOp.h"
 
 #include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
@@ -22,11 +20,13 @@
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CAutoMDAccessor.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CLogicalDynamicGetBase.h"
+#include "gpopt/operators/ops.h"
+#include "naucrates/base/CDatumInt8GPDB.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDScalarOp.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/operators/CExpressionTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpos;

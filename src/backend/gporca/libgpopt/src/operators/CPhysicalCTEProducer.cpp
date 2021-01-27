@@ -9,15 +9,15 @@
 //		Implementation of CTE producer operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalCTEProducer.h"
+
 #include "gpos/base.h"
 
+#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalCTEProducer.h"
 #include "gpopt/operators/CPhysicalSpool.h"
-
-#include "gpopt/base/CCTEMap.h"
 
 using namespace gpopt;
 

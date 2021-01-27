@@ -9,17 +9,17 @@
 //		Statistics helper routines for processing limit operations
 //---------------------------------------------------------------------------
 
+#include "naucrates/statistics/CFilterStatsProcessor.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
-#include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CFilterStatsProcessor.h"
-#include "naucrates/statistics/CJoinStatsProcessor.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CScaleFactorUtils.h"
 #include "naucrates/statistics/CBucket.h"
+#include "naucrates/statistics/CJoinStatsProcessor.h"
+#include "naucrates/statistics/CScaleFactorUtils.h"
+#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
 

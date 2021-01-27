@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 
 #include "unittest/gpopt/minidump/CCastTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"

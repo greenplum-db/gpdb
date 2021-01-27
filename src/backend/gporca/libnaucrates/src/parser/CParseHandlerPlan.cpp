@@ -9,12 +9,13 @@
 //		Implementation of the SAX parse handler class for parsing physical plans.
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
-#include "naucrates/dxl/parser/CParseHandlerDirectDispatchInfo.h"
 #include "naucrates/dxl/parser/CParseHandlerPlan.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+
+#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerDirectDispatchInfo.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 
 using namespace gpdxl;

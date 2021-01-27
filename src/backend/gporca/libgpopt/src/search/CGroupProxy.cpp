@@ -9,6 +9,8 @@
 //		Implementation of proxy object for group access
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CGroupProxy.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CSyncHashtableAccessByKey.h"
 
@@ -17,7 +19,6 @@
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CJobGroup.h"
-#include "gpopt/search/CGroupProxy.h"
 
 using namespace gpopt;
 

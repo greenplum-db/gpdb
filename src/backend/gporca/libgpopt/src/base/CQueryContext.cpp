@@ -9,13 +9,14 @@
 //		Implementation of optimization context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CQueryContext.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 
-#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/base/CQueryContext.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CLogicalLimit.h"
 

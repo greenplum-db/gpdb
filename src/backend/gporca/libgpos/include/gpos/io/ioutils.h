@@ -16,8 +16,8 @@
 #include <dlfcn.h>
 #include <unistd.h>
 
-#include "gpos/types.h"
 #include "gpos/io/iotypes.h"
+#include "gpos/types.h"
 
 // macro for I/O error simulation
 #ifdef GPOS_FPSIMULATOR

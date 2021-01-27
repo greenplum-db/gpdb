@@ -9,18 +9,18 @@
 //		Tests for minidump handler
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/error/CMiniDumperTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/string/CWStringStatic.h"
 #include "gpos/string/CWStringDynamic.h"
+#include "gpos/string/CWStringStatic.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/error/CMiniDumperTest.h"
 
 using namespace gpos;
 

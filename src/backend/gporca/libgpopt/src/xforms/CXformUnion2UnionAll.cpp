@@ -10,8 +10,9 @@
 //		coverts it into an aggregate over a logical union all
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformUnion2UnionAll.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalUnion.h"

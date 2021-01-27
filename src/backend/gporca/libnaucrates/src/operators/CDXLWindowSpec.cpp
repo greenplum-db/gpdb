@@ -16,8 +16,9 @@
 //
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLWindowSpec.h"
+
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

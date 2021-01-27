@@ -9,6 +9,8 @@
 //		Test for CColumnFactory
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/base/CColumnFactoryTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
@@ -18,13 +20,11 @@
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
-
-#include "unittest/gpopt/base/CColumnFactoryTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
-#include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDTypeInt4.h"
+
+#include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 
 using namespace gpopt;
 

@@ -16,6 +16,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
+
 #include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpopt;

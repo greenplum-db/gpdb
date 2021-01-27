@@ -9,11 +9,9 @@
 //		Implementation of base class of logical operators
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
+#include "gpopt/operators/CLogical.h"
 
-#include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDColumn.h"
-#include "naucrates/md/IMDCheckConstraint.h"
+#include "gpos/base.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
@@ -21,26 +19,25 @@
 #include "gpopt/base/CConstraintConjunction.h"
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CDrvdPropRelational.h"
-#include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CLogical.h"
+#include "gpopt/base/CPartIndexMap.h"
+#include "gpopt/base/CReqdPropRelational.h"
+#include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalApply.h"
 #include "gpopt/operators/CLogicalBitmapTableGet.h"
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
-#include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarIdent.h"
-
 #include "gpopt/optimizer/COptimizerConfig.h"
-
+#include "naucrates/md/IMDCheckConstraint.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDIndex.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 

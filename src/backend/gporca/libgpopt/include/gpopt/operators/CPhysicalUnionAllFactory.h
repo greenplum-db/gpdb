@@ -4,6 +4,7 @@
 #define GPOPT_CPhysicalUnionAllFactory_H
 
 #include "gpos/types.h"
+
 #include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 

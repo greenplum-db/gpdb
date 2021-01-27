@@ -9,8 +9,10 @@
 //		Implementation of histogram point
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "naucrates/statistics/CPoint.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "naucrates/statistics/CStatistics.h"
 

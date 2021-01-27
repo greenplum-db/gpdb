@@ -9,15 +9,15 @@
 //		Implementation of union operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalUnion.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-
-#include "gpopt/operators/CLogicalUnion.h"
-#include "gpopt/operators/CLogicalUnionAll.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/CLogicalUnionAll.h"
 
 using namespace gpopt;
 

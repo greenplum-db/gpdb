@@ -9,14 +9,14 @@
 //		Wrapper for serializing MD objects
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CSerializableMDAccessor.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 
-#include "naucrates/dxl/xml/CDXLSections.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/minidump/CSerializableMDAccessor.h"
+#include "naucrates/dxl/xml/CDXLSections.h"
 
 using namespace gpos;
 using namespace gpopt;

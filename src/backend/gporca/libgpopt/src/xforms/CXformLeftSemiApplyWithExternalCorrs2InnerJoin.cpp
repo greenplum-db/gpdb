@@ -11,8 +11,10 @@
 //		that use columns not defined by the outer child of LSA
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformLeftSemiApplyWithExternalCorrs2InnerJoin.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/operators/CScalarProjectList.h"
 
 using namespace gpopt;

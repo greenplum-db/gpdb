@@ -12,18 +12,17 @@
 #define GPNAUCRATES_CStatistics_H
 
 #include "gpos/base.h"
+#include "gpos/common/CBitSet.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/IStatistics.h"
-#include "naucrates/statistics/CStatsPredDisj.h"
-#include "naucrates/statistics/CStatsPredConj.h"
-#include "naucrates/statistics/CStatsPredLike.h"
+#include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatsPredArrayCmp.h"
+#include "naucrates/statistics/CStatsPredConj.h"
+#include "naucrates/statistics/CStatsPredDisj.h"
+#include "naucrates/statistics/CStatsPredLike.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
 #include "naucrates/statistics/CUpperBoundNDVs.h"
-
-#include "naucrates/statistics/CHistogram.h"
-#include "gpos/common/CBitSet.h"
+#include "naucrates/statistics/IStatistics.h"
 
 namespace gpopt
 {

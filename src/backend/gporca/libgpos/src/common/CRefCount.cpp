@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/common/CRefCount.h"
+
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CTask.h"
 

@@ -10,17 +10,17 @@
 //		delayed cross joins
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
-#include "gpos/common/clibwrapper.h"
-#include "gpos/common/CBitSet.h"
-
-#include "gpopt/base/CDrvdPropScalar.h"
-#include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CNormalizer.h"
 #include "gpopt/xforms/CJoinOrderGreedy.h"
+
+#include "gpos/base.h"
+#include "gpos/common/CBitSet.h"
+#include "gpos/common/clibwrapper.h"
+
+#include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CNormalizer.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
 

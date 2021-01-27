@@ -16,12 +16,15 @@
 #ifndef GPDXL_CMappingElementColIdTE_H
 #define GPDXL_CMappingElementColIdTE_H
 
+extern "C" {
 #include "postgres.h"
+
+#include "nodes/primnodes.h"
+}
 
 #include "gpos/base.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "nodes/primnodes.h"
 
 // fwd decl
 struct TargetEntry;

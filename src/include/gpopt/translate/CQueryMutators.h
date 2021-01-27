@@ -17,14 +17,12 @@
 #ifndef GPDXL_CWalkerUtils_H
 #define GPDXL_CWalkerUtils_H
 
+#include "gpos/base.h"
+
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
-#include "gpos/base.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDType.h"
 
 // fwd declarations

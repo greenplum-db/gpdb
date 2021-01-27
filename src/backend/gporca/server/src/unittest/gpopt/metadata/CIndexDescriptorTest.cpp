@@ -8,22 +8,21 @@
 //	@doc:
 //		Test for CIndexDescriptor
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/metadata/CIndexDescriptorTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDIndex.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/metadata/CIndexDescriptorTest.h"
-#include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/CMDProviderMemory.h"
 
 
 //---------------------------------------------------------------------------

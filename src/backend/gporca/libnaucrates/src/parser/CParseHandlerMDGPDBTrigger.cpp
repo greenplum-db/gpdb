@@ -11,10 +11,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerMDGPDBTrigger.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #define GPMD_TRIGGER_ROW_BIT 0
 #define GPMD_TRIGGER_BEFORE_BIT 1

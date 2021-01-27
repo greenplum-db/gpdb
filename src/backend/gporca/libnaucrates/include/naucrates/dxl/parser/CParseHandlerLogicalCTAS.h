@@ -13,8 +13,8 @@
 #define GPDXL_CParseHandlerLogicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
+#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 #include "naucrates/md/IMDRelation.h"
 
 

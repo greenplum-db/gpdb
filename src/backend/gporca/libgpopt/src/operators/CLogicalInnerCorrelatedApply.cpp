@@ -9,9 +9,9 @@
 //		Implementation of inner correlated apply operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalInnerCorrelatedApply.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

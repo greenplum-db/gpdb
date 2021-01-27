@@ -2,13 +2,13 @@
 //	Greenplum Database
 //	Copyright (C) 2017 Pivotal Software, Inc
 
+#include "unittest/gpos/common/CHashSetIterTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CHashSetIter.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CHashSetIterTest.h"
 
 using namespace gpos;
 

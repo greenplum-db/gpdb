@@ -12,6 +12,7 @@
 #define GPOPT_CXformGbAggDedup2StreamAggDedup_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformGbAgg2StreamAgg.h"
 
 namespace gpopt

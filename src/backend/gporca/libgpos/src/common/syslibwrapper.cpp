@@ -10,16 +10,15 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpos/common/syslibwrapper.h"
+
+#include <sys/stat.h>
+#include <sys/time.h>
 #include <syslog.h>
 
-#include <sys/time.h>
-#include <sys/stat.h>
-
 #include "gpos/assert.h"
-#include "gpos/utils.h"
-
-#include "gpos/common/syslibwrapper.h"
 #include "gpos/error/CException.h"
+#include "gpos/utils.h"
 
 
 using namespace gpos;

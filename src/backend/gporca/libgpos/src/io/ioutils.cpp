@@ -9,22 +9,22 @@
 //		Implementation of I/O utilities
 //---------------------------------------------------------------------------
 
+#include "gpos/io/ioutils.h"
+
 #include <errno.h>
 #include <fcntl.h>
-#include <string.h>
-#include <stdio.h>
 #include <sched.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-
-#include <sys/types.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/error/CFSimulator.h"
 #include "gpos/error/CLogger.h"
-#include "gpos/io/ioutils.h"
 #include "gpos/string/CStringStatic.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/task/CTaskContext.h"

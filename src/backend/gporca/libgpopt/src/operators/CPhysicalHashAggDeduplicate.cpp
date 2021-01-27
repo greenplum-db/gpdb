@@ -9,12 +9,13 @@
 //		Implementation of Hash Aggregate operator for deduplicating join outputs
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalHashAggDeduplicate.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalHashAggDeduplicate.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 
 using namespace gpopt;

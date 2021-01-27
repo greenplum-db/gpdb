@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalRowTrigger_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogical.h"
 
 namespace gpopt

@@ -16,13 +16,12 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
-
 #include "gpos/string/CWStringBase.h"
 #include "gpos/string/CWStringConst.h"
 
+#include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
-#include "naucrates/md/IMDFunction.h"
 
 namespace gpmd
 {

@@ -13,7 +13,6 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CList.h"
-
 #include "gpos/task/ITask.h"
 
 namespace gpopt

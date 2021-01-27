@@ -9,11 +9,11 @@
 //		Implementation of trace flags routines
 //---------------------------------------------------------------------------
 
+#include "naucrates/traceflags/traceflags.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CBitSetIter.h"
 #include "gpos/task/CAutoTraceFlag.h"
-
-#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpos;
 

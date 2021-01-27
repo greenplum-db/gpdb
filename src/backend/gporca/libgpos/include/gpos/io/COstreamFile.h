@@ -11,9 +11,9 @@
 #ifndef GPOS_COstreamFile_H
 #define GPOS_COstreamFile_H
 
-#include "gpos/io/ioutils.h"
 #include "gpos/io/CFileWriter.h"
 #include "gpos/io/COstream.h"
+#include "gpos/io/ioutils.h"
 
 namespace gpos
 {

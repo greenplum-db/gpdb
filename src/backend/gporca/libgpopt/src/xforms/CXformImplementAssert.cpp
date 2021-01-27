@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementAssert.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalAssert.h"
 #include "gpopt/operators/CPatternLeaf.h"

@@ -6,9 +6,8 @@
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-
-#include "gpopt/operators/CPhysical.h"
 #include "gpopt/operators/COperator.h"
+#include "gpopt/operators/CPhysical.h"
 
 
 namespace gpopt

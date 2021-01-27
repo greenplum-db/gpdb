@@ -12,19 +12,15 @@
 
 #include "naucrates/dxl/parser/CParseHandlerMDRelationCtas.h"
 
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataColumns.h"
-#include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
-
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
 #include "naucrates/md/CMDRelationCtasGPDB.h"
-
-#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 
 using namespace gpdxl;

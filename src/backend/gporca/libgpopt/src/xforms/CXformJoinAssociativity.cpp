@@ -9,14 +9,15 @@
 //		Implementation of associativity transform for left-deep joins
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformJoinAssociativity.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;
 using namespace gpmd;

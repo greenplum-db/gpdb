@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpopt/search/CSearchStage.h"
+
 #include "gpopt/xforms/CXformFactory.h"
 
 using namespace gpopt;

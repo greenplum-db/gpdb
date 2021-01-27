@@ -9,9 +9,10 @@
 //		Implementation of DXL column descriptors
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLColDescr.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/md/CMDIdGPDB.h"
 

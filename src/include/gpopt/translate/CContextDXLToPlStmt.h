@@ -17,16 +17,15 @@
 #ifndef GPDXL_CContextDXLToPlStmt_H
 #define GPDXL_CContextDXLToPlStmt_H
 
+#include "gpos/base.h"
+
+#include "gpopt/gpdbwrappers.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-#include "gpos/base.h"
-
-#include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/CIdGenerator.h"
+#include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
-
-#include "gpopt/gpdbwrappers.h"
 
 // fwd decl
 struct RangeTblEntry;

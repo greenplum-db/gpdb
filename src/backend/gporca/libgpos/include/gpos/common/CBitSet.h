@@ -12,8 +12,8 @@
 #define GPOS_CBitSet_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CBitVector.h"
+#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CList.h"
 
 

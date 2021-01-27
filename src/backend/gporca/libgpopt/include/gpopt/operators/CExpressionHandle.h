@@ -15,12 +15,11 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/statistics/IStatistics.h"
-
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/CReqdProp.h"
 #include "gpopt/base/CDrvdPropRelational.h"
+#include "gpopt/base/CReqdProp.h"
 #include "gpopt/search/CGroupExpression.h"
+#include "naucrates/statistics/IStatistics.h"
 
 
 namespace gpopt

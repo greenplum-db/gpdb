@@ -17,8 +17,8 @@
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/CPartInfo.h"
 #include "gpopt/base/CFunctionProp.h"
+#include "gpopt/base/CPartInfo.h"
 
 namespace gpopt
 {

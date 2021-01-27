@@ -9,9 +9,10 @@
 //		Implementation of scalar switch operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarSwitch.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CScalarSwitch.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 

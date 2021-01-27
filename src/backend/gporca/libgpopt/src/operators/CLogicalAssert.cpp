@@ -9,14 +9,14 @@
 //		Implementation of assert operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalAssert.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalAssert.h"
-#include "gpopt/base/CColRefSet.h"
-#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"

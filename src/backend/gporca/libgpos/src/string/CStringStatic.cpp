@@ -10,8 +10,9 @@
 //		with static buffer allocation
 //---------------------------------------------------------------------------
 
-#include "gpos/common/clibwrapper.h"
 #include "gpos/string/CStringStatic.h"
+
+#include "gpos/common/clibwrapper.h"
 #include "gpos/string/CWStringStatic.h"
 
 

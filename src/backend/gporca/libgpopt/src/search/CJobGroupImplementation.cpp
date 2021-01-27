@@ -9,18 +9,19 @@
 //		Implementation of group implementation job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroupImplementation.h"
+
+#include "gpopt/base/CQueryContext.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupExploration.h"
-#include "gpopt/search/CJobGroupImplementation.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
 #include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
-#include "gpopt/base/CQueryContext.h"
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;

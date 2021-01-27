@@ -10,30 +10,27 @@
 //		config params
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/parser/CParseHandlerOptimizerConfig.h"
+
 #include "gpos/common/CBitSet.h"
 
-#include "naucrates/dxl/parser/CParseHandlerOptimizerConfig.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerTraceFlags.h"
-#include "naucrates/dxl/parser/CParseHandlerEnumeratorConfig.h"
-#include "naucrates/dxl/parser/CParseHandlerStatisticsConfig.h"
-#include "naucrates/dxl/parser/CParseHandlerCTEConfig.h"
-#include "naucrates/dxl/parser/CParseHandlerCostModel.h"
-#include "naucrates/dxl/parser/CParseHandlerHint.h"
-#include "naucrates/dxl/parser/CParseHandlerWindowOids.h"
-
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/traceflags/traceflags.h"
-
-#include "naucrates/dxl/xml/dxltokens.h"
-
 #include "gpopt/base/CWindowOids.h"
+#include "gpopt/cost/ICostModel.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/cost/ICostModel.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerCTEConfig.h"
+#include "naucrates/dxl/parser/CParseHandlerCostModel.h"
+#include "naucrates/dxl/parser/CParseHandlerEnumeratorConfig.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerHint.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerStatisticsConfig.h"
+#include "naucrates/dxl/parser/CParseHandlerTraceFlags.h"
+#include "naucrates/dxl/parser/CParseHandlerWindowOids.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpdxl;
 

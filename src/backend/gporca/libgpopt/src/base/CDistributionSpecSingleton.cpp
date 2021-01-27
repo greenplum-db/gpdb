@@ -9,10 +9,11 @@
 //		Specification of singleton distribution
 //---------------------------------------------------------------------------
 
-#include "naucrates/traceflags/traceflags.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+
+#include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
+#include "naucrates/traceflags/traceflags.h"
 
 
 using namespace gpopt;

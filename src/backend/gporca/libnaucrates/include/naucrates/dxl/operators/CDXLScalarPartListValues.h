@@ -10,6 +10,7 @@
 #define GPDXL_CDXLScalarPartListValues_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl

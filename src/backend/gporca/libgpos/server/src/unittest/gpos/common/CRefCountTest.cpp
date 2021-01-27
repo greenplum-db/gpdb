@@ -9,13 +9,13 @@
 //		Tests for CRefCount
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CRefCountTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CRefCountTest.h"
 
 using namespace gpos;
 

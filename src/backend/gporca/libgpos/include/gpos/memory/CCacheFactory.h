@@ -18,7 +18,6 @@
 #define CCACHEFACTORY_H_
 
 #include "gpos/base.h"
-
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/memory/CCache.h"
 

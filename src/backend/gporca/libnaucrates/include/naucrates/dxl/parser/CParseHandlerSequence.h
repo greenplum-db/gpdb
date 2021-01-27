@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerSequence_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl

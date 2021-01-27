@@ -15,7 +15,6 @@
 
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogical.h"
-
 #include "naucrates/base/IDatum.h"
 
 namespace gpopt

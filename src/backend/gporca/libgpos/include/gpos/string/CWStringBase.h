@@ -11,8 +11,8 @@
 #ifndef GPOS_CWStringBase_H
 #define GPOS_CWStringBase_H
 
-#include "gpos/types.h"
 #include "gpos/common/clibwrapper.h"
+#include "gpos/types.h"
 
 #define GPOS_WSZ_LENGTH(x) gpos::clib::Wcslen(x)
 #define GPOS_WSZ_STR_LENGTH(x) GPOS_WSZ_LIT(x), GPOS_WSZ_LENGTH(GPOS_WSZ_LIT(x))

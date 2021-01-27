@@ -9,9 +9,9 @@
 //		Implementation of left anti semi correlated apply with NOT-IN/ANY semantics
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftAntiSemiCorrelatedApplyNotIn.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

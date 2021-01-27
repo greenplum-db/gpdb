@@ -13,6 +13,7 @@
 #define GPDXL_CDXLLogicalGroupBy_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 

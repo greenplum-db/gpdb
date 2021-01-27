@@ -14,9 +14,9 @@
 #define GPDXL_CParseHandlerScalarWindowRef_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 namespace gpdxl
 {

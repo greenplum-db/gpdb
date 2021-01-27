@@ -8,17 +8,17 @@
 //	@doc:
 //		Tests for contradiction detection
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/operators/CContradictionTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/ops.h"
+#include "naucrates/md/IMDScalarOp.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/operators/CContradictionTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/IMDScalarOp.h"
 
 
 

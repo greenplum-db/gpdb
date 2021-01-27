@@ -9,12 +9,12 @@
 //		Tests for CList
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CListTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CList.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CListTest.h"
 
 using namespace gpos;
 

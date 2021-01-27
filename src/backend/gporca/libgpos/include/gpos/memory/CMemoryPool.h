@@ -26,10 +26,10 @@
 #define GPOS_CMemoryPool_H
 
 #include "gpos/assert.h"
-#include "gpos/types.h"
-#include "gpos/error/CException.h"
 #include "gpos/common/CLink.h"
 #include "gpos/common/CStackDescriptor.h"
+#include "gpos/error/CException.h"
+#include "gpos/types.h"
 
 
 // 8-byte alignment

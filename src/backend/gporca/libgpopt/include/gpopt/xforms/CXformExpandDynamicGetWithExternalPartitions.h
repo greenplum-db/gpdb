@@ -14,9 +14,10 @@
 #define GPOPT_CXformExpandDynamicGetWithExternalPartitions_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformExploration.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
 {

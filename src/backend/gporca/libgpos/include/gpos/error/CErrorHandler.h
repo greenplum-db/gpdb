@@ -11,9 +11,9 @@
 #ifndef GPOS_CErrorHandler_H
 #define GPOS_CErrorHandler_H
 
-#include "gpos/types.h"
 #include "gpos/assert.h"
 #include "gpos/error/CException.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

@@ -15,8 +15,9 @@
 #define GPOPT_CLogicalLeftAntiSemiCorrelatedApplyNotIn_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CLogicalLeftAntiSemiApplyNotIn.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiApplyNotIn.h"
 
 namespace gpopt
 {

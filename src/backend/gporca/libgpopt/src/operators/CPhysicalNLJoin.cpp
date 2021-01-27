@@ -9,16 +9,17 @@
 //		Implementation of base nested-loops join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalNLJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CRewindabilitySpec.h"
-#include "gpopt/operators/CPhysicalNLJoin.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CPhysicalCorrelatedInLeftSemiNLJoin.h"
 #include "gpopt/operators/CPhysicalCorrelatedInnerNLJoin.h"
 #include "gpopt/operators/CPhysicalCorrelatedLeftOuterNLJoin.h"
-#include "gpopt/operators/CPhysicalCorrelatedInLeftSemiNLJoin.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
 

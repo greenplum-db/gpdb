@@ -11,6 +11,7 @@
 
 
 #include "naucrates/md/CMDIdCast.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

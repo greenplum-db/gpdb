@@ -19,8 +19,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/dxl/operators/CDXLLogical.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/operators/CDXLLogical.h"
 
 namespace gpdxl
 {

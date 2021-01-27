@@ -9,11 +9,11 @@
 //		Implementation of NOT EXISTS subqueries
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarSubqueryNotExists.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLScalarSubqueryNotExists.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

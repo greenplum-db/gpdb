@@ -9,9 +9,10 @@
 //		Statistics helper routines for processing Left Anti-Semi Join
 //---------------------------------------------------------------------------
 
-#include "naucrates/statistics/CStatisticsUtils.h"
 #include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"
+
 #include "naucrates/statistics/CScaleFactorUtils.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpmd;
 

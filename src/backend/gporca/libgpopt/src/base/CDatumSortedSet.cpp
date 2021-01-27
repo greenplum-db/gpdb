@@ -1,11 +1,13 @@
 //	Greenplum Database
 //	Copyright (C) 2016 Pivotal Software, Inc.
 
-#include "gpopt/operators/COperator.h"
 #include "gpopt/base/CDatumSortedSet.h"
-#include "gpopt/operators/CScalarConst.h"
-#include "gpopt/base/CUtils.h"
+
 #include "gpos/common/CAutoRef.h"
+
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/COperator.h"
+#include "gpopt/operators/CScalarConst.h"
 
 using namespace gpopt;
 

@@ -1,9 +1,11 @@
 //	Greenplum Database
 //	Copyright (C) 2016 Pivotal Software, Inc.
 
-#include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/minidump/CMetadataAccessorFactory.h"
+
 #include "gpos/common/CAutoRef.h"
+
+#include "gpopt/mdcache/CMDCache.h"
 #include "naucrates/md/CMDProviderMemory.h"
 
 namespace gpopt

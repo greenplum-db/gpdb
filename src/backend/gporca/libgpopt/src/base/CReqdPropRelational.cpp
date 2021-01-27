@@ -9,15 +9,17 @@
 //		Required relational properties;
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CReqdPropRelational.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CReqdPropRelational.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CEngine.h"
-#include "gpopt/operators/CLogical.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogical.h"
 
 using namespace gpopt;
 

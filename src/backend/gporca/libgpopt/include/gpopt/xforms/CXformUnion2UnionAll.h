@@ -18,6 +18,7 @@
 #define GPOPT_CXformUnion2UnionAll_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt

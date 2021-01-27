@@ -10,24 +10,24 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpos/common/clibwrapper.h"
+
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fenv.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <wchar.h>
 
-#include "gpos/base.h"
 #include "gpos/assert.h"
-#include "gpos/utils.h"
-
-#include "gpos/common/clibwrapper.h"
+#include "gpos/base.h"
 #include "gpos/error/CException.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 

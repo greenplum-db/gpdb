@@ -9,11 +9,11 @@
 //		Implementation of logical unary operators
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalUnary.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CLogicalUnary.h"
 #include "gpopt/xforms/CXformUtils.h"
-
 #include "naucrates/statistics/CProjectStatsProcessor.h"
 
 using namespace gpopt;

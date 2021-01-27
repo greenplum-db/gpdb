@@ -5,6 +5,7 @@
 #define GPOPT_CPhysicalSerialUnionAll_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalUnionAll.h"
 
 namespace gpopt

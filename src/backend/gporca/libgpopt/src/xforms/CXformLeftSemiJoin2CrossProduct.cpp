@@ -9,16 +9,16 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftSemiJoin2CrossProduct.h"
+
 #include "gpos/base.h"
 
-
 #include "gpopt/operators/CLogicalInnerJoin.h"
-#include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/operators/CLogicalLimit.h"
+#include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
-#include "gpopt/operators/CNormalizer.h"
-#include "gpopt/xforms/CXformLeftSemiJoin2CrossProduct.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 

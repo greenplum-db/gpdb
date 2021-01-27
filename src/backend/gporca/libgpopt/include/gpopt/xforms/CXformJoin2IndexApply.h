@@ -8,6 +8,9 @@
 #define GPOPT_CXformJoin2IndexApply_H
 
 #include "gpos/base.h"
+
+#include "gpopt/operators/CLogicalApply.h"
+#include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/xforms/CXformUtils.h"
 

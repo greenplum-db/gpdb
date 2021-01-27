@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerOptimizerConfig_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 // fwd decl

@@ -9,21 +9,20 @@
 //		Implementation of index access for partitioned tables
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CPartConstraint.h"
-
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;

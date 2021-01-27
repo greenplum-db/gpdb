@@ -9,9 +9,10 @@
 //		Implementation of a key for metadata cache objects
 //---------------------------------------------------------------------------
 
+#include "gpopt/mdcache/CMDKey.h"
+
 #include "gpos/io/COstreamString.h"
 
-#include "gpopt/mdcache/CMDKey.h"
 #include "naucrates/dxl/CDXLUtils.h"
 
 using namespace gpos;

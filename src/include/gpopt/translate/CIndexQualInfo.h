@@ -17,7 +17,9 @@
 #ifndef GPDXL_CIndexQualInfo_H
 #define GPDXL_CIndexQualInfo_H
 
+extern "C" {
 #include "postgres.h"
+}
 
 namespace gpdxl
 {

@@ -38,6 +38,7 @@
 #define GPOPT_CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt

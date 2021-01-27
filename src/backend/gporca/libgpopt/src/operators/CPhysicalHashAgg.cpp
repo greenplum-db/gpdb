@@ -9,13 +9,14 @@
 //		Implementation of hash aggregation operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalHashAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalHashAgg.h"
 
 using namespace gpopt;
 

@@ -9,9 +9,9 @@
 //		Implementation of scalar arrayref
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CScalarArrayRef.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

@@ -9,9 +9,13 @@
 //		Implementation of minidump utility functions
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CMinidumperUtils.h"
+
+#include <fstream>
+
 #include "gpos/base.h"
-#include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CAutoRef.h"
+#include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/syslibwrapper.h"
 #include "gpos/error/CAutoTrace.h"
@@ -24,11 +28,6 @@
 #include "gpos/task/CTask.h"
 #include "gpos/task/CWorker.h"
 
-#include "naucrates/traceflags/traceflags.h"
-#include "naucrates/dxl/parser/CParseHandlerDXL.h"
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/md/CMDProviderMemory.h"
-
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/engine/CEngine.h"
@@ -37,13 +36,14 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/minidump/CMetadataAccessorFactory.h"
-#include "gpopt/minidump/CMinidumperUtils.h"
 #include "gpopt/minidump/CMiniDumperDXL.h"
 #include "gpopt/optimizer/COptimizer.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
-
-#include <fstream>
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/parser/CParseHandlerDXL.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpos;
 using namespace gpopt;

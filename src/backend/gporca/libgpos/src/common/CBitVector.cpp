@@ -10,11 +10,12 @@
 //---------------------------------------------------------------------------
 
 
-#include "gpos/base.h"
-#include "gpos/utils.h"
 #include "gpos/common/CBitVector.h"
+
+#include "gpos/base.h"
 #include "gpos/common/CAutoRg.h"
 #include "gpos/common/clibwrapper.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 

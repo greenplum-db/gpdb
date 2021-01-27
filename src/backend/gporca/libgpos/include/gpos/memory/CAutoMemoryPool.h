@@ -19,10 +19,10 @@
 #define GPOS_CAutoMemoryPool_H
 
 #include "gpos/assert.h"
-#include "gpos/types.h"
 #include "gpos/common/CStackObject.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

@@ -9,13 +9,14 @@
 //		Specification of routed distribution
 //---------------------------------------------------------------------------
 
-#include "naucrates/traceflags/traceflags.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDistributionSpecRouted.h"
+
+#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalMotionRoutedDistribute.h"
+#include "naucrates/traceflags/traceflags.h"
 
 
 using namespace gpopt;

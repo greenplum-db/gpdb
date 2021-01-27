@@ -12,13 +12,12 @@
 #define GPOPT_CGroup_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncList.h"
 
-#include "gpopt/search/CJobQueue.h"
 #include "gpopt/operators/CLogical.h"
+#include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CTreeMap.h"
 
 #define GPOPT_INVALID_GROUP_ID gpos::ulong_max

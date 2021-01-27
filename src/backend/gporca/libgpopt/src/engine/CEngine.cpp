@@ -8,39 +8,38 @@
 //	@doc:
 //		Implementation of optimization engine
 //---------------------------------------------------------------------------
+#include "gpopt/engine/CEngine.h"
+
 #include "gpos/base.h"
-#include "gpos/error/CAutoTrace.h"
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/syslibwrapper.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
+#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/exception.h"
-
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CCostContext.h"
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/COptimizationContext.h"
+#include "gpopt/base/CQueryContext.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CReqdPropRelational.h"
-#include "gpopt/base/CQueryContext.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/engine/CEngine.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
+#include "gpopt/exception.h"
 #include "gpopt/minidump/CSerializableStackTrace.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CPattern.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/operators/CPhysicalMotionGather.h"
 #include "gpopt/operators/CPhysicalAgg.h"
+#include "gpopt/operators/CPhysicalMotionGather.h"
 #include "gpopt/operators/CPhysicalSort.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
 #include "gpopt/search/CBinding.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
@@ -51,7 +50,6 @@
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
 #include "gpopt/xforms/CXformFactory.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 

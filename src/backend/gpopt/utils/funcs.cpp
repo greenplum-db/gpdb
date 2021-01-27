@@ -17,15 +17,16 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "fmgr.h"
 #include "utils/builtins.h"
 }
 
-#include "gpopt/utils/funcs.h"
-#include "gpopt/utils/COptTasks.h"
-
 #include "gpos/_api.h"
+
 #include "gpopt/gpdbwrappers.h"
+#include "gpopt/utils/COptTasks.h"
+#include "gpopt/utils/funcs.h"
 
 #include "xercesc/util/XercesVersion.hpp"
 

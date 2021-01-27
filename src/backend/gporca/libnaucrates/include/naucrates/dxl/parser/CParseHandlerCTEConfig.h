@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerCTEConfig_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
+
 #include "gpopt/engine/CCTEConfig.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {

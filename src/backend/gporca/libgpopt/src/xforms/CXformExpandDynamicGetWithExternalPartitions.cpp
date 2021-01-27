@@ -9,15 +9,15 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformExpandDynamicGetWithExternalPartitions.h"
 
-#include "gpopt/operators/CLogicalUnionAll.h"
-#include "gpopt/operators/CLogicalMultiExternalGet.h"
-#include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/xforms/CXformUtils.h"
+#include "gpos/base.h"
 
 #include "gpopt/exception.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CLogicalMultiExternalGet.h"
+#include "gpopt/operators/CLogicalUnionAll.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 

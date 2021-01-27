@@ -11,6 +11,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/statistics/CUpperBoundNDVs.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 

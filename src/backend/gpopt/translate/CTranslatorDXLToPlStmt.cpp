@@ -14,41 +14,40 @@
 //
 //---------------------------------------------------------------------------
 
+extern "C" {
 #include "postgres.h"
 
-#include "nodes/nodes.h"
-#include "nodes/plannodes.h"
-#include "nodes/primnodes.h"
 #include "catalog/gp_policy.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_collation.h"
+#include "catalog/pg_exttable.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/partitionselection.h"
+#include "nodes/nodes.h"
+#include "nodes/plannodes.h"
+#include "nodes/primnodes.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 #include "utils/uri.h"
+}
 #include "gpos/base.h"
 
+#include "gpopt/gpdbwrappers.h"
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/translate/CIndexQualInfo.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CIndexQualInfo.h"
-
-#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
-
-#include "naucrates/md/IMDFunction.h"
-#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDRelationExternal.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDRelationExternal.h"
-
-#include "gpopt/gpdbwrappers.h"
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpdxl;

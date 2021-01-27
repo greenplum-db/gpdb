@@ -9,21 +9,21 @@
 //		Implementation of GPOS wrapper interface for GPDB.
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpos/_api.h"
+
+#include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
+#include "gpos/common/CDebugCounter.h"
+#include "gpos/common/CMainArgs.h"
 #include "gpos/error/CFSimulator.h"
-#include "gpos/error/CMessageRepository.h"
 #include "gpos/error/CLoggerStream.h"
+#include "gpos/error/CMessageRepository.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/memory/CCacheFactory.h"
 #include "gpos/string/CWStringStatic.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/task/CWorkerPoolManager.h"
-
-#include "gpos/common/CMainArgs.h"
-#include "gpos/common/CDebugCounter.h"
 
 #include "gpopt/exception.h"
 #include "naucrates/exception.h"

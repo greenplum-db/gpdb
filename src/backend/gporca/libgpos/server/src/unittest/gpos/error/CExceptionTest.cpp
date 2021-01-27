@@ -9,14 +9,13 @@
 //		Tests for CException
 //---------------------------------------------------------------------------
 
-#include "gpos/task/CWorkerPoolManager.h"
+#include "unittest/gpos/error/CExceptionTest.h"
 
 #include "gpos/assert.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CErrorContext.h"
+#include "gpos/error/CException.h"
+#include "gpos/task/CWorkerPoolManager.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/error/CExceptionTest.h"
 
 using namespace gpos;
 

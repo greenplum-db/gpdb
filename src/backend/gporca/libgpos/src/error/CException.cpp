@@ -9,8 +9,9 @@
 //		Implements simplified exception handling.
 //---------------------------------------------------------------------------
 
-#include "gpos/common/clibwrapper.h"
 #include "gpos/error/CException.h"
+
+#include "gpos/common/clibwrapper.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 

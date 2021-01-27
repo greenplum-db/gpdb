@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerMaterialize_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalMaterialize.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 
 namespace gpdxl

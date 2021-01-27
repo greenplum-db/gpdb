@@ -10,17 +10,18 @@
 //		to a join tree with single DQA leaves
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformGbAggWithMDQA2Join.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/xforms/CXformGbAggWithMDQA2Join.h"
 
 using namespace gpmd;
 using namespace gpopt;

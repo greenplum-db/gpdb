@@ -9,12 +9,13 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformProject2ComputeScalar.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalProject.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalComputeScalar.h"
-#include "gpopt/xforms/CXformProject2ComputeScalar.h"
 
 
 using namespace gpopt;

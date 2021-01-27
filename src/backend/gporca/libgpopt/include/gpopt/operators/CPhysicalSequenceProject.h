@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalSequenceProject_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/operators/CPhysical.h"
 

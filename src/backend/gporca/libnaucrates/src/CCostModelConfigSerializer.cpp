@@ -2,11 +2,12 @@
 //	Copyright (C) 2018 Pivotal Software, Inc.
 
 #include "naucrates/dxl/CCostModelConfigSerializer.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "gpdbcost/CCostModelParamsGPDB.h"
 
 #include "gpos/common/CAutoRef.h"
+
+#include "gpdbcost/CCostModelParamsGPDB.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpdxl;
 using gpos::CAutoRef;

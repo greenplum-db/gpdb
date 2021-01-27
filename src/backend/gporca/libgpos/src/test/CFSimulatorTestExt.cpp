@@ -9,13 +9,14 @@
 //		Extended FS tests
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/error/CFSimulator.h"
-#include "gpos/error/CErrorHandlerStandard.h"
-#include "gpos/common/CMainArgs.h"
 #include "gpos/test/CFSimulatorTestExt.h"
+
+#include "gpos/base.h"
+#include "gpos/common/CMainArgs.h"
+#include "gpos/error/CAutoTrace.h"
+#include "gpos/error/CErrorHandlerStandard.h"
+#include "gpos/error/CFSimulator.h"
+#include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
 
 

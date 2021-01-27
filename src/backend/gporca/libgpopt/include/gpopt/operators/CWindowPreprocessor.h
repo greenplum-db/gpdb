@@ -13,6 +13,8 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/COrderSpec.h"
+#include "gpopt/base/CWindowFrame.h"
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt
@@ -35,8 +37,8 @@ private:
 	static void SplitPrjList(CMemoryPool *mp, CExpression *pexprSeqPrj,
 							 CExpressionArray **ppdrgpexprDistinctAggsPrjElems,
 							 CExpressionArray **ppdrgpexprOtherPrjElems,
-							 COrderSpecArray **ppdrgposOther,
-							 CWindowFrameArray **ppdrgpwfOther);
+							 gpopt::COrderSpecArray **ppdrgposOther,
+							 gpopt::CWindowFrameArray **ppdrgpwfOther);
 
 	// split given SeqPrj expression into:
 	//	- A GbAgg expression containing distinct Aggs, and

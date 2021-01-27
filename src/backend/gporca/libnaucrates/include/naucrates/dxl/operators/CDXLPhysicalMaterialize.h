@@ -13,6 +13,7 @@
 #define GPDXL_CDXLPhysicalMaterialize_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 #include "naucrates/dxl/operators/CDXLSpoolInfo.h"
 

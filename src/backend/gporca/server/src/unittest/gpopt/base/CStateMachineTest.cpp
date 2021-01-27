@@ -12,16 +12,16 @@
 //		of states and events;
 //---------------------------------------------------------------------------
 
-#include "gpos/types.h"
+#include "unittest/gpopt/base/CStateMachineTest.h"
+
+#include "gpos/common/CRandom.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/string/CWStringDynamic.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpopt/base/CStateMachineTest.h"
+#include "gpos/types.h"
 
 #include "gpopt/base/CStateMachine.h"
-#include "gpos/common/CRandom.h"
 
 using namespace gpopt;
 

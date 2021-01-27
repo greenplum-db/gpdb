@@ -9,8 +9,9 @@
 //		Implementation of the wide character string class.
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpos/string/CWString.h"
+
+#include "gpos/base.h"
 
 using namespace gpos;
 

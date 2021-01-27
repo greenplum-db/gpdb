@@ -9,16 +9,17 @@
 //		Implementation of physical partition selector
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalPartitionSelector.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CColRef.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/base/CColRef.h"
 
 using namespace gpopt;
 

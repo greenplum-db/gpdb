@@ -10,15 +10,16 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/CMDIndexGPDB.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/CMDIndexGPDB.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/exception.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/IMDPartConstraint.h"
 #include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/exception.h"
 
 using namespace gpdxl;
 using namespace gpmd;

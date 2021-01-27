@@ -9,14 +9,14 @@
 //		Implementation of DXL logical "CREATE TABLE AS" (CTAS) operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLLogicalCTAS.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLLogicalCTAS.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
-
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
 using namespace gpdxl;

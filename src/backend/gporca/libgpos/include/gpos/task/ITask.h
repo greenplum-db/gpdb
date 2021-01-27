@@ -11,10 +11,9 @@
 #ifndef GPOS_ITask_H
 #define GPOS_ITask_H
 
-#include "gpos/types.h"
 #include "gpos/task/IWorker.h"
-
 #include "gpos/task/traceflags.h"
+#include "gpos/types.h"
 
 // trace flag macro definitions
 #define GPOS_FTRACE(x) ITask::Self()->IsTraceSet(x)

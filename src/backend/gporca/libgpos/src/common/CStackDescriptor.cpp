@@ -9,10 +9,11 @@
 //		Implementation of interface class for execution stack tracing.
 //---------------------------------------------------------------------------
 
-#include "gpos/utils.h"
 #include "gpos/common/CStackDescriptor.h"
+
 #include "gpos/string/CWString.h"
 #include "gpos/task/IWorker.h"
+#include "gpos/utils.h"
 
 #define GPOS_STACK_DESCR_TRACE_BUF (4096)
 

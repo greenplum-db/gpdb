@@ -9,13 +9,14 @@
 //		Implementation of operator base class
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/COperator.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CDrvdPropRelational.h"
 #include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/COperator.h"
 
 using namespace gpopt;
 

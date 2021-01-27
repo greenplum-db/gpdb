@@ -14,12 +14,12 @@
 #ifndef GPDXL_dxltokens_H
 #define GPDXL_dxltokens_H
 
-#include "gpos/base.h"
-#include "gpos/string/CWStringConst.h"
-#include "gpos/common/CHashMap.h"
-
-#include <xercesc/util/XMLUniDefs.hpp>
 #include <xercesc/sax2/DefaultHandler.hpp>
+#include <xercesc/util/XMLUniDefs.hpp>
+
+#include "gpos/base.h"
+#include "gpos/common/CHashMap.h"
+#include "gpos/string/CWStringConst.h"
 
 namespace gpdxl
 {

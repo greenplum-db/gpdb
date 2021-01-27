@@ -9,29 +9,30 @@
 //		Required plan properties;
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/common/CPrintablePointer.h"
+#include "gpopt/base/CReqdPropPlan.h"
 
-#include "gpopt/base/CUtils.h"
+#include "gpos/base.h"
+#include "gpos/common/CPrintablePointer.h"
+#include "gpos/error/CAutoTrace.h"
+
+#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CEnfdOrder.h"
 #include "gpopt/base/CEnfdDistribution.h"
-#include "gpopt/base/CEnfdRewindability.h"
+#include "gpopt/base/CEnfdOrder.h"
 #include "gpopt/base/CEnfdPartitionPropagation.h"
+#include "gpopt/base/CEnfdRewindability.h"
 #include "gpopt/base/CPartFilterMap.h"
-#include "gpopt/base/CReqdPropPlan.h"
+#include "gpopt/base/CPartIndexMap.h"
+#include "gpopt/base/CPartInfo.h"
+#include "gpopt/base/CPartitionPropagationSpec.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CPhysical.h"
 #include "gpopt/search/CGroupExpression.h"
-#include "gpopt/base/CPartIndexMap.h"
-#include "gpopt/base/CPartitionPropagationSpec.h"
-#include "gpopt/base/CCTEReq.h"
-#include "gpopt/base/CPartInfo.h"
 
 
 using namespace gpopt;

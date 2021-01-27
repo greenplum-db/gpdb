@@ -9,9 +9,9 @@
 //		Implementation of left semi correlated apply for EXISTS subqueries
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftSemiCorrelatedApply.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

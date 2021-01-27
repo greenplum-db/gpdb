@@ -15,8 +15,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropCtxt.h"
 #include "gpopt/base/CCTEMap.h"
+#include "gpopt/base/CDrvdPropCtxt.h"
 
 
 namespace gpopt

@@ -19,6 +19,7 @@
 #define GPDXL_CDXLScalarNullTest_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 

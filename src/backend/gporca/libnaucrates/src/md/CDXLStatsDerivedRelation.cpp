@@ -9,10 +9,12 @@
 //		Implementation of the class for representing DXL derived relation statistics
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
 #include "naucrates/md/CDXLStatsDerivedRelation.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
+
+#include "gpos/string/CWStringDynamic.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
 using namespace gpmd;

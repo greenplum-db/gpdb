@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerScalarIdent_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 namespace gpdxl
 {

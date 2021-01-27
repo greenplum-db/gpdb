@@ -9,14 +9,15 @@
 //		Derived plan properties context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropPlan.h"
-#include "gpopt/operators/CPhysicalScan.h"
-#include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalDynamicScan.h"
+#include "gpopt/operators/CPhysicalPartitionSelector.h"
+#include "gpopt/operators/CPhysicalScan.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 
 

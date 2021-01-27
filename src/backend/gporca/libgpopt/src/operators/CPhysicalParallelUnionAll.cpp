@@ -2,9 +2,10 @@
 //	Copyright (C) 2016 Pivotal Software, Inc.
 
 #include "gpopt/operators/CPhysicalParallelUnionAll.h"
+
+#include "gpopt/base/CDistributionSpecHashedNoOp.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecStrictHashed.h"
-#include "gpopt/base/CDistributionSpecHashedNoOp.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CStrictHashedDistributions.h"

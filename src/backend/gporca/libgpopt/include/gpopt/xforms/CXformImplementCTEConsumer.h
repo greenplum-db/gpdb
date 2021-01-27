@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementCTEConsumer_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt

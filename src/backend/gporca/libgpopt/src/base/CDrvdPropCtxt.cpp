@@ -9,9 +9,9 @@
 //		Implementation of derived properties context
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/base/CDrvdPropCtxt.h"
+
+#include "gpos/base.h"
 
 #ifdef GPOS_DEBUG
 #include "gpos/error/CAutoTrace.h"

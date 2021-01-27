@@ -12,8 +12,9 @@
 #define GPNAUCRATES_CPoint_H
 
 #include "gpos/base.h"
-#include "naucrates/base/IDatum.h"
 #include "gpos/common/CDouble.h"
+
+#include "naucrates/base/IDatum.h"
 
 namespace gpopt
 {

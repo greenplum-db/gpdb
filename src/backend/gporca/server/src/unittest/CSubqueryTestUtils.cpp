@@ -9,16 +9,15 @@
 //		Implementation of test utility functions
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/CUtils.h"
+#include "unittest/gpopt/CSubqueryTestUtils.h"
+
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/ops.h"
-
-#include "unittest/gpopt/CSubqueryTestUtils.h"
-
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDTypeBool.h"
 

@@ -14,9 +14,9 @@
 
 #include "gpos/base.h"
 
+#include "naucrates/dxl/operators/CDXLPhysicalProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/md/CDXLStatsDerivedRelation.h"
-#include "naucrates/dxl/operators/CDXLPhysicalProperties.h"
 
 namespace gpdxl
 {

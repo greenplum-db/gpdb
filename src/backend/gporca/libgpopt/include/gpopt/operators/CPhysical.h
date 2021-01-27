@@ -13,16 +13,16 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/COperator.h"
-#include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CDistributionSpec.h"
-#include "gpopt/base/CEnfdOrder.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CEnfdDistribution.h"
-#include "gpopt/base/CEnfdRewindability.h"
+#include "gpopt/base/CEnfdOrder.h"
 #include "gpopt/base/CEnfdPartitionPropagation.h"
+#include "gpopt/base/CEnfdRewindability.h"
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CRewindabilitySpec.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/operators/COperator.h"
 
 // number of plan properties requested during optimization, currently, there are 4 properties:
 // order, distribution, rewindability and partition propagation

@@ -9,13 +9,13 @@
 //		Tests for the floating-point wrapper class.
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CDoubleTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CDoubleTest.h"
 
 
 using namespace gpos;

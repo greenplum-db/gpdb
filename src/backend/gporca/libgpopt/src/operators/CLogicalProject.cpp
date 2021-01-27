@@ -9,18 +9,18 @@
 //		Implementation of project operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalProject.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefTable.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/CPartIndexMap.h"
-#include "gpopt/base/CConstraintInterval.h"
-
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalProject.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 

@@ -19,6 +19,7 @@
 #define GPDXL_CDXLScalarArrayCoerceExpr_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalarCoerceBase.h"
 #include "naucrates/md/IMDId.h"
 

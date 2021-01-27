@@ -20,17 +20,16 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/utils/gpdbdefs.h"
+#include "gpopt/gpdbwrappers.h"
 
 #include "gpos/base.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CAutoExceptionStack.h"
+#include "gpos/error/CException.h"
 
+#include "gpopt/utils/gpdbdefs.h"
 #include "naucrates/exception.h"
-
-#include "gpopt/gpdbwrappers.h"
-#include "catalog/pg_collation.h"
 extern "C" {
+#include "catalog/pg_collation.h"
 #include "utils/memutils.h"
 }
 #define GP_WRAP_START                                            \

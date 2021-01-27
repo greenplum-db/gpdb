@@ -9,13 +9,13 @@
 //		Implementation of left semi-apply operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalLeftSemiApply.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
-#include "gpopt/operators/CLogicalLeftSemiApply.h"
 
 using namespace gpopt;
 

@@ -9,11 +9,11 @@
 //		Tests the memory manager to be plugged in Xerces.
 //---------------------------------------------------------------------------
 
+#include "unittest/dxl/CDXLMemoryManagerTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/dxl/CDXLMemoryManagerTest.h"
 
 using namespace gpos;
 using namespace gpdxl;

@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalDynamicTableScan_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 

@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalRoutedDistributeMotion_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
 
 namespace gpdxl

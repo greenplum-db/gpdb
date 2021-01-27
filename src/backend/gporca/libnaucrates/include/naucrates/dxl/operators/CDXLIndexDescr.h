@@ -13,6 +13,7 @@
 #define GPDXL_CDXLIndexDescriptor_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/CMDName.h"
 #include "naucrates/md/IMDId.h"
 

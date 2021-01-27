@@ -12,8 +12,9 @@
 #define GPOPT_CPhysicalMotionBroadcast_H
 
 #include "gpos/base.h"
-#include "gpopt/base/COrderSpec.h"
+
 #include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/COrderSpec.h"
 #include "gpopt/operators/CPhysicalMotion.h"
 
 namespace gpopt

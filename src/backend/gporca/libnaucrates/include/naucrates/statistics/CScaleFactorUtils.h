@@ -12,8 +12,8 @@
 #define GPOPT_CScaleFactorUtils_H
 
 #include "gpos/base.h"
-#include "gpopt/engine/CStatisticsConfig.h"
 
+#include "gpopt/engine/CStatisticsConfig.h"
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 

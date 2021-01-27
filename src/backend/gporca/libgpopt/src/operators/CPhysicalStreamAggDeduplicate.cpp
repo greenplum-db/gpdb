@@ -9,10 +9,11 @@
 //		Implementation of stream aggregation operator for deduplicating join outputs
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalStreamAggDeduplicate.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalStreamAggDeduplicate.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 
 using namespace gpopt;

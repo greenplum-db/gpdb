@@ -12,6 +12,7 @@
 #define GPOPT_CScalarBooleanTest_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CScalar.h"
 
 namespace gpopt

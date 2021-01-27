@@ -9,16 +9,16 @@
 //		Tests for CFileWriter and CFileReader
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/io/CFileTest.h"
+
 #include "gpos/assert.h"
 #include "gpos/error/CMessage.h"
-#include "gpos/io/ioutils.h"
-#include "gpos/io/CFileWriter.h"
 #include "gpos/io/CFileReader.h"
+#include "gpos/io/CFileWriter.h"
+#include "gpos/io/ioutils.h"
 #include "gpos/string/CStringStatic.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/io/CFileTest.h"
 
 using namespace gpos;
 

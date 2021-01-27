@@ -11,6 +11,7 @@
 
 #include "gpos/base.h"
 #include "gpos/memory/CMemoryPoolManager.h"
+
 #include "gpopt/xforms/xforms.h"
 
 using namespace gpopt;

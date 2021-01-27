@@ -9,31 +9,30 @@
 //		Implementation of the factory methods for creation of DXL elements.
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+
+#include <xercesc/util/NumberFormatException.hpp>
+
+#include "gpos/common/clibwrapper.h"
 #include "gpos/string/CWStringConst.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "gpos/common/clibwrapper.h"
-
-#include "naucrates/md/CMDIdColStats.h"
-#include "naucrates/md/CMDIdRelStats.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/CMDIdGPDBCtas.h"
-#include "naucrates/md/CMDIdCast.h"
-#include "naucrates/md/CMDIdScCmp.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
-#include "naucrates/dxl/operators/CDXLDatumStatsLintMappable.h"
-#include "naucrates/dxl/operators/CDXLDatumStatsDoubleMappable.h"
 #include "naucrates/dxl/operators/CDXLDatumInt2.h"
 #include "naucrates/dxl/operators/CDXLDatumInt4.h"
 #include "naucrates/dxl/operators/CDXLDatumInt8.h"
-#include "naucrates/dxl/operators/CDXLDatumBool.h"
 #include "naucrates/dxl/operators/CDXLDatumOid.h"
-
+#include "naucrates/dxl/operators/CDXLDatumStatsDoubleMappable.h"
+#include "naucrates/dxl/operators/CDXLDatumStatsLintMappable.h"
 #include "naucrates/dxl/operators/dxlops.h"
-
-#include <xercesc/util/NumberFormatException.hpp>
+#include "naucrates/md/CMDIdCast.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDIdGPDBCtas.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDIdScCmp.h"
 
 using namespace gpos;
 using namespace gpdxl;

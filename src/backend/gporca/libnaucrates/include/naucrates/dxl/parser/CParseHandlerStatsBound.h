@@ -13,9 +13,10 @@
 #define GPDXL_CParseHandlerStatsBound_H
 
 #include "gpos/base.h"
+
+#include "naucrates/dxl/operators/CDXLDatum.h"
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
 {

@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
 
-#include "naucrates/dxl/operators/CDXLPhysical.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLPhysical.h"
 
 namespace gpdxl
 {

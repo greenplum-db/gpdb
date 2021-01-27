@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerMDIndexInfoList_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 #include "naucrates/md/IMDIndex.h"
 #include "naucrates/md/IMDRelation.h"

@@ -9,9 +9,9 @@
 //		Implementation of basic exploration transformation
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/xforms/CXformExploration.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

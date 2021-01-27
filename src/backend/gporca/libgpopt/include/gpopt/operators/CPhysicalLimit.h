@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLimit_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/operators/CPhysical.h"
 

@@ -9,9 +9,10 @@
 //		Implementation of the base abstract wide character string class
 //---------------------------------------------------------------------------
 
+#include "gpos/string/CWStringBase.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
-#include "gpos/string/CWStringBase.h"
 #include "gpos/string/CWStringConst.h"
 
 using namespace gpos;

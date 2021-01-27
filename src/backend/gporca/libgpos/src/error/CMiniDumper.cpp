@@ -9,10 +9,11 @@
 //		Partial implementation of interface for minidump handler
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CMiniDumper.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/error/CErrorContext.h"
-#include "gpos/error/CMiniDumper.h"
 #include "gpos/string/CWStringConst.h"
 #include "gpos/task/CTask.h"
 

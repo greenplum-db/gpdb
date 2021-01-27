@@ -13,21 +13,21 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/gpopt/metadata/CPartConstraintTest.h"
+
 #include <stdint.h>
 
 #include "gpos/task/CAutoTraceFlag.h"
 
-#include "naucrates/md/CMDIdGPDB.h"
-
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "gpopt/metadata/CPartConstraint.h"
+#include "naucrates/md/CMDIdGPDB.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/metadata/CPartConstraintTest.h"
 #include "unittest/gpopt/CConstExprEvaluatorForDates.h"
 #include "unittest/gpopt/CTestUtils.h"
 

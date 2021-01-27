@@ -10,11 +10,12 @@
 //		window specifications in the logical window operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerWindowSpec.h"
 #include "naucrates/dxl/parser/CParseHandlerWindowSpecList.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerWindowSpec.h"
 
 using namespace gpdxl;
 

@@ -9,10 +9,11 @@
 //		Singleton to keep error messages;
 //---------------------------------------------------------------------------
 
-#include "gpos/utils.h"
-#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/error/CMessageRepository.h"
+
+#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/utils.h"
 
 
 using namespace gpos;

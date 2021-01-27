@@ -9,14 +9,14 @@
 //		Implementation of Intersect all operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalIntersectAll.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalIntersectAll.h"
-#include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;

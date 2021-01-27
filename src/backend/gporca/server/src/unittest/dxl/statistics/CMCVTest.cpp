@@ -13,21 +13,21 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CMCVTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CPoint.h"
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
-#include "naucrates/dxl/CDXLUtils.h"
-
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CMCVTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;

@@ -13,12 +13,12 @@
 #define GPOPT_COptimizationContext_H
 
 #include "gpos/base.h"
+#include "gpos/task/CAutoTraceFlag.h"
 
-#include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/base/CReqdPropPlan.h"
+#include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/search/CJobQueue.h"
 #include "naucrates/statistics/IStatistics.h"
-#include "gpos/task/CAutoTraceFlag.h"
 
 #define GPOPT_INVALID_OPTCTXT_ID gpos::ulong_max
 

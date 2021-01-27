@@ -9,11 +9,12 @@
 //		Implementation of assert operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CRewindabilitySpec.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalAssert.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CRewindabilitySpec.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;

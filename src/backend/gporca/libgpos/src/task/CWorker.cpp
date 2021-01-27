@@ -9,11 +9,12 @@
 //		Worker abstraction, e.g. thread
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CWorker.h"
+
 #include "gpos/common/syslibwrapper.h"
 #include "gpos/error/CFSimulator.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/string/CWStringStatic.h"
-#include "gpos/task/CWorker.h"
 #include "gpos/task/CWorkerPoolManager.h"
 
 using namespace gpos;

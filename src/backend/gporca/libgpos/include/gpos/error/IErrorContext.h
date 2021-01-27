@@ -11,8 +11,8 @@
 #ifndef GPOS_IErrorContext_H
 #define GPOS_IErrorContext_H
 
-#include "gpos/types.h"
 #include "gpos/error/CException.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

@@ -9,12 +9,12 @@
 //		Specification of partition propagation requirements
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CPartitionPropagationSpec.h"
+
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/exception.h"
-
-#include "gpopt/base/CPartitionPropagationSpec.h"
 #include "gpopt/base/CPartIndexMap.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPredicateUtils.h"
 

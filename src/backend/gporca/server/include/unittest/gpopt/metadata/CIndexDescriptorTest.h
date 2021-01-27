@@ -12,8 +12,9 @@
 #define GPOPT_CIndexDescriptorTest_H
 
 #include "gpos/base.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+
 #include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 
 namespace gpopt
 {

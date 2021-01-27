@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalMergeJoin_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalJoin.h"
 
 namespace gpdxl

@@ -9,17 +9,18 @@
 //		Implementation of basic aggregate operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalAgg.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecStrictSingleton.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;

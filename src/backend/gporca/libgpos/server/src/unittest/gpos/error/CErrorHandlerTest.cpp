@@ -9,11 +9,11 @@
 //		Tests for error handler
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/error/CErrorHandlerTest.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorHandlerStandard.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/error/CErrorHandlerTest.h"
 
 
 using namespace gpos;

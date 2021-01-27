@@ -9,10 +9,11 @@
 //		Implementation of scalar project operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarProjectElement.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
-#include "gpopt/operators/CScalarProjectElement.h"
 
 using namespace gpopt;
 

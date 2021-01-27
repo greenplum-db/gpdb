@@ -11,9 +11,9 @@
 #ifndef GPNAUCRATES_CStatisticsTest_H
 #define GPNAUCRATES_CStatisticsTest_H
 
-#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 

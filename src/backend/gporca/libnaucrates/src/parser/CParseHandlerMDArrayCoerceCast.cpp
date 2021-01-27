@@ -10,13 +10,12 @@
 //		GPDB array coerce cast functions
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-
 #include "naucrates/dxl/parser/CParseHandlerMDArrayCoerceCast.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 
 using namespace gpdxl;
 

@@ -9,11 +9,12 @@
 //		Implementation of index scan operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalIndexScan.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalIndexScan.h"
 
 
 using namespace gpopt;

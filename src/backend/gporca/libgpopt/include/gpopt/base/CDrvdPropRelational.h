@@ -16,10 +16,10 @@
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/CMaxCard.h"
-#include "gpopt/base/CFunctionalDependency.h"
-#include "gpopt/base/CPropConstraint.h"
 #include "gpopt/base/CFunctionProp.h"
+#include "gpopt/base/CFunctionalDependency.h"
+#include "gpopt/base/CMaxCard.h"
+#include "gpopt/base/CPropConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 namespace gpopt

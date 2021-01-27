@@ -9,13 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftOuterJoin2HashJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalLeftOuterHashJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformLeftOuterJoin2HashJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;

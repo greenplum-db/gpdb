@@ -9,14 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformGbAgg2HashAgg.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalHashAgg.h"
-
 #include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/xforms/CXformGbAgg2HashAgg.h"
 #include "naucrates/md/IMDAggregate.h"
 
 using namespace gpopt;

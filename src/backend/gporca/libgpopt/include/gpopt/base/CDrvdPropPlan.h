@@ -15,8 +15,8 @@
 #include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CColRef.h"
-#include "gpopt/base/CPartFilterMap.h"
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/base/CPartFilterMap.h"
 
 namespace gpopt
 {

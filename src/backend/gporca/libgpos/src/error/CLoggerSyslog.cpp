@@ -9,10 +9,11 @@
 //		Implementation of Syslog logging
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CLoggerSyslog.h"
+
 #include <syslog.h>
 
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/error/CLoggerSyslog.h"
 #include "gpos/string/CStringStatic.h"
 
 using namespace gpos;

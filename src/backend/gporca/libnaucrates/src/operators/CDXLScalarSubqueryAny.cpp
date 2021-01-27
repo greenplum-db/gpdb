@@ -9,11 +9,11 @@
 //		Implementation of subquery ANY
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarSubqueryAny.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLScalarSubqueryAny.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

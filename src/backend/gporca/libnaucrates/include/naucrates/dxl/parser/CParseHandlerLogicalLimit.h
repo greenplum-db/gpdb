@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerLogicalLimit_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 namespace gpdxl
 {

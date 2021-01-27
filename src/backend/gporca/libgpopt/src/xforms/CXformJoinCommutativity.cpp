@@ -9,12 +9,13 @@
 //		Implementation of commutativity transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformJoinCommutativity.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;
 

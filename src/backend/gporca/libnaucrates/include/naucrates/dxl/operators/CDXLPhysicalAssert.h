@@ -13,6 +13,7 @@
 #define GPDXL_CDXLPhysicalAssert_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/errorcodes.h"
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 

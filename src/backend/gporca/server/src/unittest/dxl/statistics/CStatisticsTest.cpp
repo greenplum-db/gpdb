@@ -13,41 +13,37 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CStatisticsTest.h"
+
 #include <stdint.h>
 
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CPoint.h"
-#include "naucrates/statistics/CBucket.h"
-#include "naucrates/statistics/CHistogram.h"
-#include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CLimitStatsProcessor.h"
-#include "naucrates/statistics/CGroupByStatsProcessor.h"
-#include "naucrates/statistics/CUnionAllStatsProcessor.h"
-#include "naucrates/statistics/CFilterStatsProcessor.h"
-
-#include "naucrates/base/CDatumGenericGPDB.h"
-#include "naucrates/base/CDatumInt4GPDB.h"
-#include "naucrates/base/CDatumBoolGPDB.h"
-
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CScalarProjectElement.h"
-
+#include "naucrates/base/CDatumBoolGPDB.h"
+#include "naucrates/base/CDatumGenericGPDB.h"
+#include "naucrates/base/CDatumInt4GPDB.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/statistics/CBucket.h"
+#include "naucrates/statistics/CFilterStatsProcessor.h"
+#include "naucrates/statistics/CGroupByStatsProcessor.h"
+#include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CLimitStatsProcessor.h"
+#include "naucrates/statistics/CPoint.h"
+#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
+#include "naucrates/statistics/CUnionAllStatsProcessor.h"
 
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CStatisticsTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/CMDTypeGenericGPDB.h"
 
 using namespace gpopt;
 

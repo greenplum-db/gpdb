@@ -1,8 +1,9 @@
 //	Greenplum Database
 //	Copyright (C) 2016 Pivotal Software, Inc.
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CHashedDistributions.h"
+
+#include "gpopt/base/CUtils.h"
 
 using namespace gpopt;
 CHashedDistributions::CHashedDistributions(CMemoryPool *mp,

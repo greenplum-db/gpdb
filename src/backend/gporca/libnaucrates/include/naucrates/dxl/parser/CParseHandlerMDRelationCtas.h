@@ -13,8 +13,8 @@
 #define GPDXL_CParseHandlerMDRelationCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerMDRelation.h"
 
+#include "naucrates/dxl/parser/CParseHandlerMDRelation.h"
 #include "naucrates/md/CMDRelationExternalGPDB.h"
 
 namespace gpdxl

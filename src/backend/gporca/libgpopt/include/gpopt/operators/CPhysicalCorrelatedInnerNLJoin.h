@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalCorrelatedInnerNLJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalInnerNLJoin.h"
 
 namespace gpopt

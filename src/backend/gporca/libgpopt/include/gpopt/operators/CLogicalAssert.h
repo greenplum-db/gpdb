@@ -13,10 +13,9 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/dxl/errorcodes.h"
-
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalUnary.h"
+#include "naucrates/dxl/errorcodes.h"
 
 namespace gpopt
 {

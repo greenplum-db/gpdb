@@ -13,64 +13,58 @@
 //
 //---------------------------------------------------------------------------
 
+extern "C" {
 #include "postgres.h"
+
+#include "access/heapam.h"
+#include "catalog/namespace.h"
+#include "catalog/pg_exttable.h"
+#include "catalog/pg_proc.h"
+#include "catalog/pg_statistic.h"
+#include "cdb/cdbhash.h"
+#include "cdb/cdbpartition.h"
 #include "utils/array.h"
-#include "utils/rel.h"
-#include "utils/relcache.h"
-#include "utils/lsyscache.h"
-#include "utils/syscache.h"
-#include "utils/typcache.h"
 #include "utils/datum.h"
 #include "utils/elog.h"
 #include "utils/guc.h"
-#include "cdb/cdbhash.h"
-#include "access/heapam.h"
-#include "catalog/pg_exttable.h"
-#include "catalog/pg_proc.h"
-
-#include "cdb/cdbpartition.h"
-#include "catalog/namespace.h"
-#include "catalog/pg_statistic.h"
-
-#include "naucrates/md/CMDIdCast.h"
-#include "naucrates/md/CMDIdScCmp.h"
-
-#include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/CMDCastGPDB.h"
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-#include "naucrates/md/CMDScCmpGPDB.h"
-
-#include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
-#include "gpopt/translate/CTranslatorScalarToDXL.h"
-#include "gpopt/mdcache/CMDAccessor.h"
+#include "utils/lsyscache.h"
+#include "utils/rel.h"
+#include "utils/relcache.h"
+#include "utils/syscache.h"
+#include "utils/typcache.h"
+}
 
 #include "gpos/base.h"
 #include "gpos/error/CException.h"
 #include "gpos/io/COstreamString.h"
 
-#include "naucrates/exception.h"
-
+#include "gpopt/base/CUtils.h"
+#include "gpopt/gpdbwrappers.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
+#include "gpopt/translate/CTranslatorScalarToDXL.h"
+#include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-
+#include "naucrates/exception.h"
+#include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CDXLRelStats.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
+#include "naucrates/md/CMDCastGPDB.h"
+#include "naucrates/md/CMDIdCast.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDIdScCmp.h"
+#include "naucrates/md/CMDIndexGPDB.h"
+#include "naucrates/md/CMDPartConstraintGPDB.h"
+#include "naucrates/md/CMDScCmpGPDB.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
 #include "naucrates/md/CMDTypeInt2GPDB.h"
 #include "naucrates/md/CMDTypeInt4GPDB.h"
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 #include "naucrates/md/CMDTypeOidGPDB.h"
-#include "naucrates/md/CMDIndexGPDB.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
-#include "naucrates/md/CMDIdRelStats.h"
-#include "naucrates/md/CDXLRelStats.h"
-#include "naucrates/md/CMDIdColStats.h"
-#include "naucrates/md/CDXLColStats.h"
-
-#include "gpopt/base/CUtils.h"
-
-#include "gpopt/gpdbwrappers.h"
 
 using namespace gpdxl;
 using namespace gpopt;

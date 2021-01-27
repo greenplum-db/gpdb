@@ -16,8 +16,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDCacheObject.h"
 #include "naucrates/md/CDXLBucket.h"
+#include "naucrates/md/IMDCacheObject.h"
 
 namespace gpmd
 {

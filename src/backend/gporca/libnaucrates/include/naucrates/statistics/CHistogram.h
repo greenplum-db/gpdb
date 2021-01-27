@@ -12,6 +12,7 @@
 #define GPNAUCRATES_CHistogram_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CKHeap.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CStatsPred.h"

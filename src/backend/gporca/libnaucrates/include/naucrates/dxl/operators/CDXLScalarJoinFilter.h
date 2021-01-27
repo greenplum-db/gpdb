@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarJoinFilter_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalarFilter.h"
 
 

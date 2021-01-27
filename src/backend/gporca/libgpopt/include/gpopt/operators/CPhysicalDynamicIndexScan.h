@@ -12,8 +12,9 @@
 #define GPOPT_CPhysicalDynamicIndexScan_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysicalDynamicScan.h"
+
 #include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/operators/CPhysicalDynamicScan.h"
 
 namespace gpopt
 {

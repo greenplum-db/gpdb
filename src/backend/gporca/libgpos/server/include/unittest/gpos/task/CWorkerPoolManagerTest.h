@@ -12,6 +12,7 @@
 #define GPOS_CWorkerPoolManagerTest_H
 
 #include "gpos/task/CWorkerPoolManager.h"
+
 #include "unittest/gpos/task/CAutoTaskProxyTest.h"
 
 namespace gpos

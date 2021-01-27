@@ -9,27 +9,27 @@
 //		Implementation of constraints
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CConstraint.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
-#include "gpopt/base/IColConstraintsMapper.h"
 #include "gpopt/base/CColConstraintsArrayMapper.h"
 #include "gpopt/base/CColConstraintsHashMapper.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
-#include "gpopt/base/CConstraint.h"
-#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintConjunction.h"
 #include "gpopt/base/CConstraintDisjunction.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintNegation.h"
-#include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/base/IColConstraintsMapper.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/operators/CPredicateUtils.h"
-
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 

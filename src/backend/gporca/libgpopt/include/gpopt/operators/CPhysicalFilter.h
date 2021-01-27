@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalFilter_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysical.h"
 
 namespace gpopt

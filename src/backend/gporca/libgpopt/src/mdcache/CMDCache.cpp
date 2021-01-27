@@ -9,9 +9,9 @@
 //		 Function implementation of CMDCache
 //---------------------------------------------------------------------------
 
-#include "gpos/task/CAutoTraceFlag.h"
-
 #include "gpopt/mdcache/CMDCache.h"
+
+#include "gpos/task/CAutoTraceFlag.h"
 
 using namespace gpos;
 using namespace gpmd;

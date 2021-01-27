@@ -14,6 +14,7 @@
 #define GPDXL_CDXLLogicalExternalGet_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
 
 namespace gpdxl

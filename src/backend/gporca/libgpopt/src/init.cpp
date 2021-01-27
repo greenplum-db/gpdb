@@ -10,14 +10,15 @@
 //		libgpopt.
 //---------------------------------------------------------------------------
 
+#include "gpopt/init.h"
+
+#include "gpos/_api.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CWorker.h"
 
-#include "gpopt/init.h"
-#include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/exception.h"
+#include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/xforms/CXformFactory.h"
-#include "gpos/_api.h"
 #include "naucrates/init.h"
 
 using namespace gpos;

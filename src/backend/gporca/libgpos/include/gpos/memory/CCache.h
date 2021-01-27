@@ -17,19 +17,16 @@
 #define GPOS_CCACHE_H_
 
 #include "gpos/base.h"
+#include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CList.h"
 #include "gpos/common/CSyncHashtable.h"
-
-#include "gpos/memory/CMemoryPoolManager.h"
-#include "gpos/memory/CMemoryPool.h"
-#include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/memory/CCacheEntry.h"
-
-#include "gpos/common/CAutoTimer.h"
+#include "gpos/common/CSyncHashtableAccessByIter.h"
 #include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/CSyncHashtableIter.h"
-#include "gpos/common/CSyncHashtableAccessByIter.h"
-
+#include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/memory/CCacheEntry.h"
+#include "gpos/memory/CMemoryPool.h"
+#include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CWorker.h"
 

@@ -13,8 +13,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CEnfdProp.h"
+#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CPartitionPropagationSpec.h"
 
 

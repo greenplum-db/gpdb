@@ -13,23 +13,22 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/gpopt/base/CConstraintTest.h"
+
 #include <stdint.h>
 
 #include "gpos/task/CAutoTraceFlag.h"
-
-#include "unittest/base.h"
-#include "unittest/gpopt/base/CConstraintTest.h"
-#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
-
-#include "naucrates/base/CDatumInt8GPDB.h"
 
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
+#include "naucrates/base/CDatumInt8GPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDScalarOp.h"
+
+#include "unittest/base.h"
+#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
 
 // number of microseconds in one day
 const LINT CConstraintTest::lMicrosecondsPerDay =

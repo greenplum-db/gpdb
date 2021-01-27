@@ -19,9 +19,8 @@
 #include "gpos/string/CWStringConst.h"
 
 #include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/IMDId.h"
 #include "naucrates/md/CSystemId.h"
+#include "naucrates/md/IMDId.h"
 
 
 // TODO:  - Feb 1, 2012; remove once system id is part of the mdid

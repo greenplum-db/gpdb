@@ -13,14 +13,13 @@
 #define GPOPT_CTableDescriptor_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CBitSet.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDRelationGPDB.h"
+#include "gpos/common/CDynamicPtrArray.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
+#include "naucrates/md/CMDRelationGPDB.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {

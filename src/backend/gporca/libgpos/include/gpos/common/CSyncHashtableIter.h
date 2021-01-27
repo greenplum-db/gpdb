@@ -26,10 +26,9 @@
 
 
 #include "gpos/base.h"
-
-#include "gpos/common/clibwrapper.h"
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncHashtableAccessByIter.h"
+#include "gpos/common/clibwrapper.h"
 
 
 namespace gpos

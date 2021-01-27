@@ -8,36 +8,36 @@
 //	@doc:
 //		Test for DXL-based minidumps
 //---------------------------------------------------------------------------
-#include "gpos/io/COstreamString.h"
-#include "gpos/io/COstreamFile.h"
-#include "gpos/task/CAutoTraceFlag.h"
+#include "unittest/gpopt/minidump/CMiniDumperDXLTest.h"
 
-#include "naucrates/base/CQueryToDXLResult.h"
-#include "naucrates/dxl/CDXLUtils.h"
+#include <fstream>
+
+#include "gpos/io/COstreamFile.h"
+#include "gpos/io/COstreamString.h"
+#include "gpos/task/CAutoTraceFlag.h"
 
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/minidump/CDXLMinidump.h"
 #include "gpopt/minidump/CMiniDumperDXL.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
-#include "gpopt/minidump/CSerializableQuery.h"
 #include "gpopt/minidump/CSerializableMDAccessor.h"
-#include "gpopt/minidump/CSerializablePlan.h"
-#include "gpopt/minidump/CSerializableStackTrace.h"
 #include "gpopt/minidump/CSerializableOptimizerConfig.h"
+#include "gpopt/minidump/CSerializablePlan.h"
+#include "gpopt/minidump/CSerializableQuery.h"
+#include "gpopt/minidump/CSerializableStackTrace.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
+#include "naucrates/base/CQueryToDXLResult.h"
+#include "naucrates/dxl/CDXLUtils.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/minidump/CMiniDumperDXLTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include <fstream>
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 
 static const CHAR *szQueryFile = "../data/dxl/minidump/Query.xml";
 

@@ -10,18 +10,19 @@
 //		local and global aggregate
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSplitGbAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefComputed.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternMultiTree.h"
-#include "gpopt/operators/COperator.h"
-#include "gpopt/xforms/CXformSplitGbAgg.h"
-#include "gpopt/xforms/CXformUtils.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
+#include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDAggregate.h"
 
 using namespace gpmd;
