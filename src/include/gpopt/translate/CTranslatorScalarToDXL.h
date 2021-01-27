@@ -16,19 +16,17 @@
 #ifndef GPDXL_CTranslatorScalarToDXL_H
 #define GPDXL_CTranslatorScalarToDXL_H
 
+#include "postgres.h"
+
 #include "gpos/base.h"
 
-#include "postgres.h"
-#include "nodes/primnodes.h"
-
-#include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CCTEListEntry.h"
-
-#include "naucrates/dxl/CIdGenerator.h"
-
+#include "gpopt/translate/CMappingVarColId.h"
 #include "naucrates/base/IDatum.h"
-
+#include "naucrates/dxl/CIdGenerator.h"
 #include "naucrates/md/IMDType.h"
+
+#include "nodes/primnodes.h"
 
 // fwd declarations
 namespace gpopt

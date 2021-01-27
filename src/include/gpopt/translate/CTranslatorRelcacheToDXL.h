@@ -18,30 +18,31 @@
 #ifndef GPDXL_CTranslatorRelcacheToDXL_H
 #define GPDXL_CTranslatorRelcacheToDXL_H
 
-#include "gpos/base.h"
-#include "c.h"
 #include "postgres.h"
-#include "access/tupdesc.h"
-#include "catalog/gp_policy.h"
+
+#include "gpos/base.h"
 
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDRelationGPDB.h"
-#include "naucrates/md/CMDRelationExternalGPDB.h"
-#include "naucrates/md/CMDAggregateGPDB.h"
-#include "naucrates/md/CMDFunctionGPDB.h"
-#include "naucrates/md/CMDTriggerGPDB.h"
-#include "naucrates/md/CMDCheckConstraintGPDB.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
-#include "naucrates/md/CMDScalarOpGPDB.h"
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CMDAggregateGPDB.h"
+#include "naucrates/md/CMDCheckConstraintGPDB.h"
+#include "naucrates/md/CMDFunctionGPDB.h"
+#include "naucrates/md/CMDPartConstraintGPDB.h"
+#include "naucrates/md/CMDRelationExternalGPDB.h"
+#include "naucrates/md/CMDRelationGPDB.h"
+#include "naucrates/md/CMDScalarOpGPDB.h"
+#include "naucrates/md/CMDTriggerGPDB.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/md/IMDIndex.h"
+
+#include "access/tupdesc.h"
+#include "c.h"
+#include "catalog/gp_policy.h"
 
 // fwd decl
 struct RelationData;

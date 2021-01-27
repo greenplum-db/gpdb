@@ -20,12 +20,11 @@
 #define GPDXL_CTE_ID_START 1
 #define GPDXL_COL_ID_START 1
 
+#include "gpos/base.h"
+
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
-#include "gpos/base.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
 
 // fwd declarations

@@ -21,6 +21,7 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
+
 #include "nodes/primnodes.h"
 
 // fwd decl

@@ -65,7 +65,7 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 IncludeCategories:
   - Regex:           '^<ext/.*\.h>'
     Priority:        2
@@ -76,8 +76,14 @@ IncludeCategories:
   - Regex:           '^<.*'
     Priority:        2
     SortPriority:    0
-  - Regex:           '.*'
+  - Regex:           '"postgres\.h"'
+    Priority:        -1
+    SortPriority:    0
+  - Regex:           '"gpos/.*'
     Priority:        3
+    SortPriority:    0
+  - Regex:           '"(gpopt|naucrates|gpdbcost)/.*'
+    Priority:        4
     SortPriority:    0
 IncludeIsMainRegex: '([-_](test|unittest))?$'
 IncludeIsMainSourceRegex: ''
@@ -135,7 +141,7 @@ RawStringFormats:
     CanonicalDelimiter: ''
     BasedOnStyle:    google
 ReflowComments:  false
-SortIncludes:    false
+SortIncludes:    true
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: false

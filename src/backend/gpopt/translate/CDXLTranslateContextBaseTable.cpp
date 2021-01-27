@@ -14,6 +14,7 @@
 //---------------------------------------------------------------------------
 
 #include "postgres.h"
+
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
 
 using namespace gpdxl;

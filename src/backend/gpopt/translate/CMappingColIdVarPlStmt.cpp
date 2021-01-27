@@ -15,19 +15,19 @@
 //---------------------------------------------------------------------------
 
 #include "postgres.h"
-#include "nodes/primnodes.h"
 
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
-#include "gpopt/translate/CDXLTranslateContextBaseTable.h"
-
-#include "naucrates/exception.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/dxl/operators/CDXLScalarIdent.h"
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 
 #include "gpopt/gpdbwrappers.h"
+#include "gpopt/translate/CDXLTranslateContextBaseTable.h"
+#include "naucrates/dxl/operators/CDXLScalarIdent.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdGPDB.h"
+
+#include "nodes/primnodes.h"
 
 using namespace gpdxl;
 using namespace gpos;

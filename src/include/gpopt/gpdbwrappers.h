@@ -16,9 +16,10 @@
 #define GPDB_gpdbwrappers_H
 
 #include "postgres.h"
+
 #include "access/attnum.h"
-#include "utils/faultinjector.h"
 #include "parser/parse_coerce.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 
 // fwd declarations

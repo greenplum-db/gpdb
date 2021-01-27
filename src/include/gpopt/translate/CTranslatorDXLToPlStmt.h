@@ -17,21 +17,21 @@
 #define GPDXL_CTranslatorDxlToPlStmt_H
 
 #include "postgres.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/translate/CContextDXLToPlStmt.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
-#include "gpopt/translate/CTranslatorDXLToScalar.h"
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
+#include "gpopt/translate/CTranslatorDXLToScalar.h"
+#include "naucrates/dxl/CIdGenerator.h"
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/md/IMDRelationExternal.h"
 
 #include "access/attnum.h"
 #include "nodes/nodes.h"
 #include "nodes/plannodes.h"
-
-#include "gpos/base.h"
-
-#include "naucrates/dxl/operators/dxlops.h"
-#include "naucrates/dxl/CIdGenerator.h"
-#include "naucrates/md/IMDRelationExternal.h"
 
 // fwd declarations
 namespace gpopt
