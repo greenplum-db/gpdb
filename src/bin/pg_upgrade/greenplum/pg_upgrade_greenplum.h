@@ -11,8 +11,10 @@
 #include "pg_upgrade.h"
 
 
-#define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_role=utility' "
-
+#define PG_OPTIONS_UTILITY_MODE_VERSION(major_version) \
+	( (GET_MAJOR_VERSION(major_version)) < 1200 ?      \
+		" PGOPTIONS='-c gp_session_role=utility' " :   \
+		" PGOPTIONS='-c gp_role=utility' ")
 
 /*
  * Enumeration for operations in the progress report
