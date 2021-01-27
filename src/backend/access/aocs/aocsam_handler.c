@@ -435,10 +435,8 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 	found |= extractcolumns_from_node((Node *)qual, cols, natts);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: is this still true? varattno == 0 is checked inside
-	 * extractcolumns_from_node.
-	 *
-	 * In some cases (for example, count(*)), no columns are specified.
+	 * In some cases (for example, count(*)), targetlist and qual may be null,
+	 * extractcolumns_walker will return immediately, so no columns are specified.
 	 * We always scan the first column.
 	 */
 	if (!found)
@@ -1840,7 +1838,7 @@ static const TableAmRoutine ao_column_methods = {
 	.slot_callbacks = aoco_slot_callbacks,
 
 	/*
-	 * GPDB_12_MERGE_FIXME: it is needed to extract the column information for
+	 * GPDB: it is needed to extract the column information for
 	 * scans before calling beginscan. This can not happen in beginscan because
 	 * the needed information is not available at that time. It is the caller's
 	 * responsibility to choose to call aoco_beginscan_extractcolumns or
@@ -1849,7 +1847,7 @@ static const TableAmRoutine ao_column_methods = {
 	.scan_begin_extractcolumns = aoco_beginscan_extractcolumns,
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Like above but for bitmap scans.
+	 * GPDB: Like above but for bitmap scans.
 	 */
 	.scan_begin_extractcolumns_bm = aoco_beginscan_extractcolumns_bm,
 

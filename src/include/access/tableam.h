@@ -205,7 +205,8 @@ typedef struct TableAmRoutine
 								 uint32 flags);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Extract columns for scan from targetlist and quals.
+	 * GPDB: Extract columns for scan from targetlist and quals. This is mainly
+	 * for AOCS tables.
 	 */
 	TableScanDesc	(*scan_begin_extractcolumns) (Relation rel,
 												  Snapshot snapshot,
@@ -214,8 +215,9 @@ typedef struct TableAmRoutine
 												  uint32 flags);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Extract columns for scan from targetlist and quals,
-	 * stored in key as struct ScanKeyData.
+	 * GPDB: Extract columns for scan from targetlist and quals,
+	 * stored in key as struct ScanKeyData. This is mainly
+	 * for AOCS tables.
 	 */
 	TableScanDesc (*scan_begin_extractcolumns_bm) (Relation rel, Snapshot snapshot,
 												   List *targetList, List *quals,
@@ -762,9 +764,9 @@ table_beginscan(Relation rel, Snapshot snapshot,
 }
 
 /*
- * GPDB_12_MERGE_FIXME: Like table_beginscan(), but first attempt to create a
+ * GPDB: Like table_beginscan(), but first attempt to create a
  * scan key array from the targetList and the quals if the corresponding method
- * is implemented.
+ * is implemented. This is an optimization needed for AOCO relations.
  * Otherwise, it is equivalent as passing the last two arguments as, 0, NULL.
  */
 static inline TableScanDesc
@@ -829,7 +831,7 @@ table_beginscan_bm(Relation rel, Snapshot snapshot,
 }
 
 /*
- * GPDB_12_MERGE_FIXME: Like table_beginscan_bm but with extended information in
+ * GPDB: Like table_beginscan_bm but with extended information in
  * order to extract columns and set up all the needed state for AOCO relations.
  * In case that the access method does not implement the extract function, this
  * defaults to table_beginscan_bm with nkeys and key set to 0 and NULL
