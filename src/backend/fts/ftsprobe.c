@@ -676,15 +676,9 @@ ftsReceive(fts_context *context)
 				/* Parse the response. */
 				if (PQisBusy(ftsInfo->conn))
 				{
-					elog(LOG, "FTS: error parsing response from (content=%d, "
-						 "dbid=%d) state=%d, retry_count=%d, "
-						 "conn->asyncStatus=%d %s",
-						 ftsInfo->primary_cdbinfo->config->segindex,
-						 ftsInfo->primary_cdbinfo->config->dbid,
-						 ftsInfo->state, ftsInfo->retry_count,
-						 ftsInfo->conn->asyncStatus,
-						 PQerrorMessage(ftsInfo->conn));
-					ftsInfo->state = nextFailedState(ftsInfo->state);
+					/*
+					 * There is not enough data in the buffer.
+					 */
 					break;
 				}
 
