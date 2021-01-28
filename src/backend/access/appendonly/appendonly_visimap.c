@@ -482,16 +482,16 @@ AppendOnlyVisimapDelete_Unstash(
 
 	elogif(Debug_appendonly_print_visimap, LOG,
 		   "Append-only visi map delete: Unstash dirty visimap entry %d/" INT64_FORMAT
-		   ", (fileno %d, offset %lu)",
-		   segno, firstRowNum, deleteData->workFileno, deleteData->workFileOffset);
+		   ", (fileno %d, offset " INT64_FORMAT ")",
+		   segno, firstRowNum, deleteData->workFileno, (int64)deleteData->workFileOffset);
 
 	if (BufFileSeek(visiMapDelete->workfile, deleteData->workFileno,
 					deleteData->workFileOffset, SEEK_SET) != 0)
 	{
 		ereport(ERROR,
 				(errmsg("failed to seek visimap delete buf file"),
-				 errdetail("location (fileno %d, offset %lu) visimap entry: %d/" INT64_FORMAT,
-						   deleteData->workFileno, deleteData->workFileOffset,
+				 errdetail("location (fileno %d, offset " INT64_FORMAT ") visimap entry: %d/" INT64_FORMAT,
+						   deleteData->workFileno, (int64)deleteData->workFileOffset,
 						   segno, firstRowNum)));
 	}
 
@@ -500,8 +500,8 @@ AppendOnlyVisimapDelete_Unstash(
 	{
 		ereport(ERROR,
 				(errmsg("failed to read visimap delete buf file"),
-				 errdetail("location (fileno %d, offset %lu) visimap entry: %d/" INT64_FORMAT,
-						   deleteData->workFileno, deleteData->workFileOffset,
+				 errdetail("location (fileno %d, offset " INT64_FORMAT ") visimap entry: %d/" INT64_FORMAT,
+						   deleteData->workFileno, (int64)deleteData->workFileOffset,
 						   segno, firstRowNum)));
 	}
 
@@ -522,9 +522,9 @@ AppendOnlyVisimapDelete_Unstash(
 	{
 		ereport(ERROR,
 				(errmsg("failed to read visimap delete buf file"),
-				 errdetail("location (fileno %d, offset %lu) visimap entry: %d/"
+				 errdetail("location (fileno %d, offset " INT64_FORMAT ") visimap entry: %d/"
 							INT64_FORMAT ", len " INT64_FORMAT,
-							deleteData->workFileno, deleteData->workFileOffset,
+							deleteData->workFileno, (int64)deleteData->workFileOffset,
 							segno, firstRowNum, dataLen)));
 	}
 
@@ -660,7 +660,7 @@ AppendOnlyVisimapDelete_Stash(
 		elog(ERROR, "Failed to write visimap delete spill key information: "
 			 "segno " INT64_FORMAT ", first row " INT64_FORMAT ", offset "
 			 INT64_FORMAT ", length %lu",
-			 key.segno, key.firstRowNum, offset, sizeof(key));
+			 key.segno, key.firstRowNum, (int64)offset, sizeof(key));
 	}
 	int size = VARSIZE(visiMap->visimapEntry.data);
 	if (BufFileWrite(visiMapDelete->workfile, visiMap->visimapEntry.data, size) != size)
@@ -668,7 +668,7 @@ AppendOnlyVisimapDelete_Stash(
 		elog(ERROR, "Failed to write visimap delete spill key information: "
 			 "segno " INT64_FORMAT ", first row " INT64_FORMAT ", offset "
 			 INT64_FORMAT ", length %d", key.segno, key.firstRowNum,
-			 offset + sizeof(key), VARSIZE(visiMap->visimapEntry.data));
+			 (int64)(offset + sizeof(key)), VARSIZE(visiMap->visimapEntry.data));
 	}
 	memcpy(&r->tupleTid, &visiMap->visimapEntry.tupleTid, sizeof(ItemPointerData));
 	r->workFileOffset = offset;
@@ -758,7 +758,7 @@ AppendOnlyVisimapDelete_WriteBackStashedEntries(AppendOnlyVisimapDelete *visiMap
 		elogif(Debug_appendonly_print_visimap, LOG,
 			   "Append-only visi map delete: Got next dirty visimap: "
 			   INT64_FORMAT "/" INT64_FORMAT ", offset " INT64_FORMAT,
-			   key.segno, key.firstRowNum, currentOffset);
+			   key.segno, key.firstRowNum, (int64)currentOffset);
 
 		/* VARSIZE is only using the first four byte */
 		len = BufFileRead(visiMapDelete->workfile, visiMap->visimapEntry.data, 4);
@@ -788,7 +788,7 @@ AppendOnlyVisimapDelete_WriteBackStashedEntries(AppendOnlyVisimapDelete *visiMap
 		if (!found)
 		{
 			elog(ERROR, "Found a stashed visimap entry without corresponding meta data: "
-				 "offset " INT64_FORMAT, currentOffset);
+				 "offset " INT64_FORMAT, (int64)currentOffset);
 		}
 		Assert(deleteData);
 		Assert(deleteData->key.firstRowNum == key.firstRowNum);
@@ -798,9 +798,9 @@ AppendOnlyVisimapDelete_WriteBackStashedEntries(AppendOnlyVisimapDelete *visiMap
 		{
 			elogif(Debug_appendonly_print_visimap, LOG,
 				   "Append-only visi map delete: Found out-dated stashed dirty visimap: "
-				   "current (fileno %d, offset %lu) expected (fileno %d, offset %lu)",
-				   currentFileno, currentOffset,
-				   deleteData->workFileno, deleteData->workFileOffset);
+				   "current (fileno %d, offset " INT64_FORMAT ") expected (fileno %d, offset " INT64_FORMAT ")",
+				   currentFileno, (int64)currentOffset,
+				   deleteData->workFileno, (int64)deleteData->workFileOffset);
 		}
 		else
 		{
