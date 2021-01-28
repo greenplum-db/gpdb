@@ -41,8 +41,6 @@
 #define RET_STATUS_OK 0
 #define RET_STATUS_ERROR 1
 
-#define PGLOCKS_BATCH_SIZE 32
-
 typedef struct VertSatelliteData
 {
 	int   pid;
@@ -198,7 +196,6 @@ doDeadLockCheck(void)
 		if (!GddCtxEmpty(ctx))
 		{
 			StringInfoData wait_graph_str;
-			StringInfoData pglock_str;
 
 			/*
 			 * At least one deadlock cycle is detected, and as all the invalid
@@ -206,7 +203,6 @@ doDeadLockCheck(void)
 			 * deadlock cycles are all valid ones.
 			 */
 
-			initStringInfo(&pglock_str);
 			initStringInfo(&wait_graph_str);
 			dumpGddCtx(ctx, &wait_graph_str);
 
@@ -241,7 +237,6 @@ buildWaitGraph(GddCtx *ctx)
 	int			tuple_num;
 	int			i;
 	int         res;
-	MemoryContext spiContext = NULL;
 	volatile bool connected = false;
 
 	/*
@@ -275,7 +270,7 @@ buildWaitGraph(GddCtx *ctx)
 			 * Switch back to gdd memory context otherwise the graphs will be
 			 * created in SPI memory context and freed in SPI_finish().
 			 */
-			spiContext = MemoryContextSwitchTo(gddContext);
+			MemoryContextSwitchTo(gddContext);
 
 			/* Get all valid gxids, any other gxids are considered invalid. */
 			gxids = ListAllGxid();
