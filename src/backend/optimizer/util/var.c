@@ -68,8 +68,9 @@ typedef struct
 {
 	PlannerInfo *root;
 	int			sublevels_up;
-	bool		possible_sublink;		/* could aliases include a SubLink? */
-	bool		inserted_sublink;		/* have we inserted a SubLink? */
+	bool		possible_sublink;		    /* could aliases include a SubLink? */
+	bool		inserted_sublink;	     	/* have we inserted a SubLink? */
+	Node      **root_parse_rtable_arrray;   /* array form of root->parse->rtable */
 } flatten_join_alias_vars_context;
 
 static bool pull_varnos_walker(Node *node,
@@ -85,7 +86,7 @@ static bool pull_var_clause_walker(Node *node,
 static Node *flatten_join_alias_vars_mutator(Node *node,
 								flatten_join_alias_vars_context *context);
 static Relids alias_relid_set(PlannerInfo *root, Relids relids);
-
+static Node **rtable_to_array(List *rtable);
 
 /*
  * cdb_walk_vars
@@ -806,6 +807,17 @@ flatten_join_alias_vars(PlannerInfo *root, Node *node)
 	/* if hasSubLinks is already true, no need to work hard */
 	context.inserted_sublink = root->parse->hasSubLinks;
 
+	/*
+	 * The following funcation call flatten_join_alias_vars_mutator()
+	 * will walk the expr and it will frequently access root
+	 * parse tree's rtable using list_nth. When the rtable is huge,
+	 * performance is poor. Here we cache the rtable list into array
+	 * to achieve random access to speed up a lot when rtable is huge.
+	 * See Github issue https://github.com/greenplum-db/gpdb/issues/11379
+	 * for details.
+	 */
+	context.root_parse_rtable_arrray = rtable_to_array(root->parse->rtable);
+
 	return flatten_join_alias_vars_mutator(node, &context);
 }
 
@@ -824,7 +836,7 @@ flatten_join_alias_vars_mutator(Node *node,
 		/* No change unless Var belongs to a JOIN of the target level */
 		if (var->varlevelsup != context->sublevels_up)
 			return node;		/* no need to copy, really */
-		rte = rt_fetch(var->varno, context->root->parse->rtable);
+		rte = (RangeTblEntry *) (context->root_parse_rtable_arrray[var->varno-1]);
 		if (rte->rtekind != RTE_JOIN)
 			return node;
 		if (var->varattno == InvalidAttrNumber)
@@ -970,4 +982,24 @@ alias_relid_set(PlannerInfo *root, Relids relids)
 	}
 	bms_free(tmprelids);
 	return result;
+}
+
+/*
+ * Turn parse tree's rtable to array.
+ * This can speed up a lot when it uses list_nth
+ * very often and the rtable is huge.
+ */
+static Node **
+rtable_to_array(List *rtable)
+{
+	ListCell   *lc;
+	int         i;
+	Node      **arr = (Node **)palloc(sizeof(Node*) * list_length(rtable));
+
+	foreach_with_count(lc, rtable, i)
+	{
+		arr[i] = (Node *) lfirst(lc);
+	}
+
+	return arr;
 }
