@@ -31,6 +31,10 @@ private:
 	// private copy ctor
 	CPhysicalRightOuterHashJoin(const CPhysicalRightOuterHashJoin &);
 
+protected:
+	// create optimization requests
+	virtual void CreateOptRequests(CMemoryPool *mp);
+
 public:
 	// ctor
 	CPhysicalRightOuterHashJoin(CMemoryPool *mp,
@@ -79,6 +83,7 @@ public:
 	virtual CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								   CReqdPropPlan *prppInput, ULONG child_index,
 								   CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+
 };	// class CPhysicalRightOuterHashJoin
 
 }  // namespace gpopt

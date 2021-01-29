@@ -49,9 +49,6 @@ private:
 	// private copy ctor
 	CPhysicalHashJoin(const CPhysicalHashJoin &);
 
-	// create the set of redistribute requests to send to first hash join child
-	void CreateHashRedistributeRequests(CMemoryPool *mp);
-
 	// compute a distribution matching the distribution delivered by given child
 	CDistributionSpec *PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 								ULONG ulSourceChildIndex) const;
@@ -68,6 +65,9 @@ protected:
 											   ULONG child_index,
 											   CDrvdPropArray *pdrgpdpCtxt,
 											   ULONG ulOptReq) const;
+
+	// create the set of redistribute requests to send to first hash join child
+	void CreateHashRedistributeRequests(CMemoryPool *mp);
 
 private:
 	// create (non-singleton, replicate) optimization request
@@ -108,6 +108,9 @@ protected:
 	{
 		return m_pdrgpdsRedistributeRequests->Size();
 	}
+
+	// create optimization requests
+	virtual void CreateOptRequests(CMemoryPool *mp);
 
 public:
 	// ctor

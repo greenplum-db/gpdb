@@ -136,4 +136,21 @@ CPhysicalRightOuterHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		dmatch);
 }
 
+void
+CPhysicalRightOuterHashJoin::CreateOptRequests(CMemoryPool *mp)
+{
+	CreateHashRedistributeRequests(mp);
+
+	// given an optimization context, Right Hash Join creates 2 optimization requests
+	// to enforce distribution of its children:
+	// Req(1 to N) (redistribute, redistribute), where we request the first hash join child
+	//              to be distributed on single hash join keys separately, as well as the set
+	//              of all hash join keys, the second hash join child is always required to
+	// 				match the distribution returned by first child
+	// Req(N + 1) (singleton, singleton)
+	ULONG ulDistrReqs = 1 + NumDistrReq();
+	SetDistrRequests(ulDistrReqs);
+
+	SetPartPropagateRequests(2);
+}
 // EOF
