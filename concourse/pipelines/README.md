@@ -72,7 +72,7 @@ $ ./gen_pipeline.py -t prod
   Generate Pipeline type: .. : prod
   Pipeline file ............ : 5X_STABLE-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win']
   Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep', 'AA']
   test_trigger ............. : True
 ======================================================================
@@ -116,7 +116,7 @@ $ ./gen_pipeline.py -t dpm -u curry -a DPM
   Generate Pipeline type: .. : dpm
   Pipeline file ............ : gpdb-dpm-curry.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win']
   Test sections ............ : ['DPM']
   test_trigger ............. : True
 ======================================================================
@@ -145,7 +145,7 @@ $ ./gen_pipeline.py -t cs -u durant -a {ICW,CS}
   Generate Pipeline type: .. : cs
   Pipeline file ............ : gpdb-cs-durant.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win']
   Test sections ............ : ['ICW', 'CS']
   test_trigger ............. : True
 ======================================================================

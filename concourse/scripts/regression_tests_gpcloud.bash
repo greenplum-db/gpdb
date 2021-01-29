@@ -8,9 +8,7 @@ GPDB_INSTALL_DIR="/usr/local/gpdb"
 function gen_local_regression_script(){
 cat > /home/gpadmin/run_regression_test.sh <<-EOF
 set -exo pipefail
-if [ \$TARGET_OS != "ubuntu" ]; then
 source /opt/gcc_env.sh
-fi
 INSTALL_DIR=/usr/local/gpdb
 GPDB_SRC_DIR=\${1}/gpdb_src
 

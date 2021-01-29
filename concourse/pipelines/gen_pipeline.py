@@ -60,7 +60,7 @@ JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_compile_end',
                        'gate_filerep_start', 'gate_filerep_end',
                        'gate_release_candidate_start']
 JOBS_THAT_ARE_PAUSED = ['DPM_backup-restore_netbackup_part1', 'DPM_backup-restore_netbackup_part2', 'DPM_backup-restore_netbackup_part3']
-JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['prepare_binary_swap_gpdb_centos6', 'compile_gpdb_ubuntu16_oss_abi', 'client_loader_remote_test_aix'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES + JOBS_THAT_ARE_PAUSED
+JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['prepare_binary_swap_gpdb_centos6', 'client_loader_remote_test_aix'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES + JOBS_THAT_ARE_PAUSED
 
 def suggested_git_remote():
     default_remote = "<https://github.com/<github-user>/gpdb>"
@@ -215,8 +215,8 @@ if __name__ == "__main__":
     # PARSER.add_argument('-O', '--os_types',
     #                     action='store',
     #                     dest='os_types',
-    #                     default=['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16'],
-    #                     choices=['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16'],
+    #                     default=['centos6', 'centos7', 'sles', 'aix7', 'win'],
+    #                     choices=['centos6', 'centos7', 'sles', 'aix7', 'win'],
     #                     nargs='+',
     #                     help='List of OS values to support')
 
@@ -247,10 +247,10 @@ if __name__ == "__main__":
 
     ARGS = PARSER.parse_args()
 
-    ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+    ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
 
     if ARGS.pipeline_type == 'prod':
-        ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+        ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win']
         ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep', 'AA']
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite

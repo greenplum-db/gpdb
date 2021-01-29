@@ -1,9 +1,0 @@
-platform: linux
-inputs:
-- name: gpdb_src
-- name: gpaddon_src
-- name: docker-in-concourse
-outputs:
-- name: gpdb_artifacts
-run:
-  path: gpdb_src/concourse/scripts/compile_gpdb_ubuntu16.bash
