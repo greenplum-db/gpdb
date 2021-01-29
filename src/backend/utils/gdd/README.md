@@ -91,9 +91,9 @@ are automatically changed if the holder object changed, but some are not. An
 example of unchanged waiting relations is waiting for a Xid lock(it can be only
 released after the holding transaction is over). An example of changed waiting
 relations is waiting for a tuple lock(the tuple lock can be released before the
-holding transaction is over. For concrete examples, please refer the test cases.
+holding transaction is over). For concrete examples, please refer the test cases.
 
-A proper global deadlock detector must be designed with these distrbuted
+A proper global deadlock detector must be designed with these distributed
 system specific characteristics in consideration. The basic requirements are
 that if there is a deadlock then find it out and break it, and make sure don't
 make false alarms.
