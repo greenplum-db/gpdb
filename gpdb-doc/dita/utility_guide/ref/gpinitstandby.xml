@@ -9,7 +9,8 @@
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gpinitstandby</b> { <b>-s</b> <varname>standby_hostname</varname> [<b>-P</b> port] | <b>-r</b> | <b>-n</b> } [<b>-a</b>] [<b>-q</b>] 
-    [<b>-D</b>] [<b>-S</b> <varname>standby_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
+    [<b>-D</b>] [<b>-S</b> <varname>standby_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
+    [<b>--hba-hostnames</b> <varname>boolean</varname>] 
 
 <b>gpinitstandby</b> <b>-v</b> 
 
@@ -72,6 +73,16 @@
                 <plentry>
                     <pt>-D (debug)</pt>
                     <pd>Sets logging level to debug.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--hba-hostnames <varname>boolean</varname></pt>
+                    <pd>Optional. Controls whether <codeph>gprecoverseg</codeph> uses IP addresses or host
+                        names in the <codeph>pg_hba.conf</codeph> file when updating the file with addresses
+                        that can connect to Greenplum Database. When set to 0 -- the default value --
+                        <codeph>gprecoverseg</codeph> uses IP addresses when updating the file. When set to 1,
+                        <codeph>gprecoverseg</codeph>uses host names when updating this file. For information
+                        about how Greenplum Database resolves host names in the <codeph>pg_hba.conf</codeph>
+                        file, see <xref href="../../admin_guide/client_auth.xml"/>.</pd>
                 </plentry>
                 <plentry>
                     <pt>-l <varname>logfile_directory</varname></pt>
