@@ -46,17 +46,17 @@
  */
 typedef struct TestWaitRelation
 {
-	int 			seg_id;
+	int 		seg_id;
 	TransactionId	waiter_xid;
 	TransactionId	holder_xid;
-	bool			solid_edge;
-	int 			waiter_pid;
-	int 			holder_pid;
+	bool		solid_edge;
+	int 		waiter_pid;
+	int 		holder_pid;
 	LOCKMETHODID	lock_methodid;
-	LOCKMODE 		lock_mode;
-	LockTagType		lock_tagtype;
-	int 			waiter_sessionid;
-	int 			holder_sessionid;
+	LOCKMODE 	lock_mode;
+	LockTagType	lock_tagtype;
+	int 		waiter_sessionid;
+	int 		holder_sessionid;
 } TestWaitRelation;
 
 /*
