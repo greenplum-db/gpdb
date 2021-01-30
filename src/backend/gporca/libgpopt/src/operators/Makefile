@@ -65,6 +65,7 @@ OBJS        = CExpression.o \
               CLogicalNAryJoin.o \
               CLogicalPartitionSelector.o \
               CLogicalProject.o \
+              CLogicalRightOuterJoin.o \
               CLogicalRowTrigger.o \
               CLogicalSelect.o \
               CLogicalSequence.o \
@@ -123,6 +124,7 @@ OBJS        = CExpression.o \
               CPhysicalParallelUnionAll.o \
               CPhysicalPartitionSelector.o \
               CPhysicalPartitionSelectorDML.o \
+              CPhysicalRightOuterHashJoin.o \
               CPhysicalRowTrigger.o \
               CPhysicalScalarAgg.o \
               CPhysicalScan.o \

@@ -627,8 +627,13 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                  ->  Seq Scan on t3
                ->  Hash
-                     ->  Seq Scan on t2
- Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
+                     ->  Hash Join
+                           Hash Cond: (t1.b = t3.b)
+                           ->  Seq Scan on t1
+                           ->  Hash
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                       ->  Seq Scan on t3
+ Optimizer: Pivotal Optimizer (GPORCA)
 (14 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a IS NULL OR (t1.c = t3.c));
@@ -675,8 +680,13 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                  ->  Seq Scan on t3
                ->  Hash
-                     ->  Seq Scan on t2
- Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
+                     ->  Hash Join
+                           Hash Cond: (t1.b = t3.b)
+                           ->  Seq Scan on t1
+                           ->  Hash
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                       ->  Seq Scan on t3
+ Optimizer: Pivotal Optimizer (GPORCA)
 (14 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a is distinct from t3.a);
@@ -688,21 +698,21 @@ select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t
 
 -- ensure plan has a filter over left outer join
 explain select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2.b t2b, t2.c t2c from t1 left join t2 on (t1.a = t2.a)) t on (t1a = t3.a) WHERE (t2a IS NULL OR (t1c = t3.a));
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.22 rows=4 width=36)
-   ->  Result  (cost=0.00..1293.22 rows=2 width=36)
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.15 rows=4 width=36)
+   ->  Result  (cost=0.00..1293.15 rows=2 width=36)
          Filter: ((t2.a IS NULL) OR (t1.c = t3.a))
-         ->  Hash Left Join  (cost=0.00..1293.22 rows=2 width=36)
-               Hash Cond: (t1.a = t2.a)
-               ->  Hash Join  (cost=0.00..862.08 rows=1 width=24)
-                     Hash Cond: (t1.a = t3.a)
-                     ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=12)
-                     ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-                           ->  Seq Scan on t3  (cost=0.00..431.00 rows=1 width=12)
-               ->  Hash  (cost=431.01..431.01 rows=333 width=12)
-                     ->  Seq Scan on t2  (cost=0.00..431.01 rows=333 width=12)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
+         ->  Hash Right Join  (cost=0.00..1293.15 rows=2 width=36)
+               Hash Cond: (t2.a = t1.a)
+               ->  Seq Scan on t2  (cost=0.00..431.01 rows=333 width=12)
+               ->  Hash  (cost=862.08..862.08 rows=1 width=24)
+                     ->  Hash Join  (cost=0.00..862.08 rows=1 width=24)
+                           Hash Cond: (t1.a = t3.a)
+                           ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=12)
+                           ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+                                 ->  Seq Scan on t3  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2.b t2b, t2.c t2c from t1 left join t2 on (t1.a = t2.a)) t on (t1a = t3.a) WHERE (t2a IS NULL OR (t1c = t3.a));

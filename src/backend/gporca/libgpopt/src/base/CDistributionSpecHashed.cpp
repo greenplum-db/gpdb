@@ -461,7 +461,6 @@ CDistributionSpecHashed::HashValue() const
 			}
 		}
 	}
-	// FIGGY
 	return ulHash;
 }
 

@@ -756,13 +756,13 @@
               <dxl:Filter/>
               <dxl:SortingColumnList/>
               <dxl:HashExprList>
-                <dxl:HashExpr TypeMdid="0.1043.1.0">
+                <dxl:HashExpr>
                   <dxl:Ident ColId="30" ColName="s1" TypeMdid="0.1043.1.0" TypeModifier="54"/>
                 </dxl:HashExpr>
-                <dxl:HashExpr TypeMdid="0.1043.1.0">
+                <dxl:HashExpr>
                   <dxl:Ident ColId="31" ColName="s2" TypeMdid="0.1043.1.0" TypeModifier="259"/>
                 </dxl:HashExpr>
-                <dxl:HashExpr TypeMdid="0.20.1.0">
+                <dxl:HashExpr>
                   <dxl:Ident ColId="43" ColName="coalesce" TypeMdid="0.20.1.0"/>
                 </dxl:HashExpr>
               </dxl:HashExprList>
@@ -875,7 +875,7 @@
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
                         <dxl:HashExprList>
-                          <dxl:HashExpr TypeMdid="0.1043.1.0">
+                          <dxl:HashExpr>
                             <dxl:Ident ColId="32" ColName="s3" TypeMdid="0.1043.1.0" TypeModifier="54"/>
                           </dxl:HashExpr>
                         </dxl:HashExprList>
@@ -1001,7 +1001,7 @@
                                 <dxl:Filter/>
                                 <dxl:SortingColumnList/>
                                 <dxl:HashExprList>
-                                  <dxl:HashExpr TypeMdid="0.25.1.0">
+                                  <dxl:HashExpr>
                                     <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                                       <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                                         <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
@@ -1075,7 +1075,7 @@
                                 <dxl:Filter/>
                                 <dxl:SortingColumnList/>
                                 <dxl:HashExprList>
-                                  <dxl:HashExpr TypeMdid="0.25.1.0">
+                                  <dxl:HashExpr>
                                     <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                         <dxl:Ident ColId="10" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
@@ -1227,7 +1227,7 @@
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
                         <dxl:HashExprList>
-                          <dxl:HashExpr TypeMdid="0.1043.1.0">
+                          <dxl:HashExpr>
                             <dxl:Ident ColId="34" ColName="desc3" TypeMdid="0.1043.1.0" TypeModifier="54"/>
                           </dxl:HashExpr>
                         </dxl:HashExprList>

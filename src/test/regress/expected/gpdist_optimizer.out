@@ -664,7 +664,7 @@ explain (costs off) select even.i from even right outer join odd on (even.i = od
                            ->  Seq Scan on odd
                            ->  Hash
                                  ->  Seq Scan on even
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 -- Check that we can track the distribution through multiple FULL OUTER JOINs.

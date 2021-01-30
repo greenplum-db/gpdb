@@ -46,18 +46,18 @@ private:
 	// array redistribute request sent to the first hash join child
 	CDistributionSpecArray *m_pdrgpdsRedistributeRequests;
 
-	// create the set of redistribute requests to send to first hash join child
-	void CreateHashRedistributeRequests(CMemoryPool *mp);
+	// private copy ctor
+	CPhysicalHashJoin(const CPhysicalHashJoin &);
 
 	// compute a distribution matching the distribution delivered by given child
 	CDistributionSpec *PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 								ULONG ulSourceChildIndex) const;
 
+protected:
 	// compute required hashed distribution from the n-th child
 	CDistributionSpecHashed *PdshashedRequired(CMemoryPool *mp,
 											   ULONG child_index,
 											   ULONG ulReqIndex) const;
-
 	// create (redistribute, redistribute) optimization request
 	CDistributionSpec *PdsRequiredRedistribute(CMemoryPool *mp,
 											   CExpressionHandle &exprhdl,
@@ -66,18 +66,15 @@ private:
 											   CDrvdPropArray *pdrgpdpCtxt,
 											   ULONG ulOptReq) const;
 
+	// create the set of redistribute requests to send to first hash join child
+	void CreateHashRedistributeRequests(CMemoryPool *mp);
+
+private:
 	// create (non-singleton, replicate) optimization request
 	CDistributionSpec *PdsRequiredReplicate(
 		CMemoryPool *mp, CExpressionHandle &exprhdl,
 		CDistributionSpec *pdsInput, ULONG child_index,
 		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq, CReqdPropPlan *prppInput);
-
-	// create (singleton, singleton) optimization request
-	CDistributionSpec *PdsRequiredSingleton(CMemoryPool *mp,
-											CExpressionHandle &exprhdl,
-											CDistributionSpec *pdsInput,
-											ULONG child_index,
-											CDrvdPropArray *pdrgpdpCtxt) const;
 
 	// create a child hashed distribution request based on input hashed distribution,
 	// return NULL if no such request can be created
@@ -96,8 +93,24 @@ protected:
 		CMemoryPool *mp, CDistributionSpecHashed *pdshashed,
 		ULONG ulSourceChild) const;
 
+	// create (singleton, singleton) optimization request
+	CDistributionSpec *PdsRequiredSingleton(CMemoryPool *mp,
+											CExpressionHandle &exprhdl,
+											CDistributionSpec *pdsInput,
+											ULONG child_index,
+											CDrvdPropArray *pdrgpdpCtxt) const;
+
 	// check whether the hash keys from one child are nullable
 	BOOL FNullableHashKeys(CColRefSet *pcrsNotNullInner, BOOL fInner) const;
+
+	ULONG
+	NumDistrReq() const
+	{
+		return m_pdrgpdsRedistributeRequests->Size();
+	}
+
+	// create optimization requests
+	virtual void CreateOptRequests(CMemoryPool *mp);
 
 public:
 	CPhysicalHashJoin(const CPhysicalHashJoin &) = delete;

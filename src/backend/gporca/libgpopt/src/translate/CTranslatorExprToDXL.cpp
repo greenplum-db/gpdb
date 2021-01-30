@@ -272,6 +272,8 @@ CTranslatorExprToDXL::InitPhysicalTranslators()
 		 &gpopt::CTranslatorExprToDXL::PdxlnHashJoin},
 		{COperator::EopPhysicalLeftAntiSemiHashJoinNotIn,
 		 &gpopt::CTranslatorExprToDXL::PdxlnHashJoin},
+		{COperator::EopPhysicalRightOuterHashJoin,
+		 &gpopt::CTranslatorExprToDXL::PdxlnHashJoin},
 		{COperator::EopPhysicalMotionGather,
 		 &gpopt::CTranslatorExprToDXL::PdxlnMotion},
 		{COperator::EopPhysicalMotionBroadcast,
@@ -4087,6 +4089,9 @@ CTranslatorExprToDXL::EdxljtHashJoin(CPhysicalHashJoin *popHJ)
 
 		case COperator::EopPhysicalLeftOuterHashJoin:
 			return EdxljtLeft;
+
+		case COperator::EopPhysicalRightOuterHashJoin:
+			return EdxljtRight;
 
 		case COperator::EopPhysicalLeftSemiHashJoin:
 			return EdxljtIn;

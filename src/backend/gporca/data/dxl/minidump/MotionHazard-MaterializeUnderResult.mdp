@@ -510,10 +510,10 @@ Optimizer status: PQO version 2.67.0
                   </dxl:Materialize>
                 </dxl:Result>
                 <dxl:LimitCount>
-                  <dxl:ConstValue TypeMdid="0.20.1.0" IsNull="false" Value="1"/>
+                  <dxl:ConstValue TypeMdid="0.20.1.0" Value="1"/>
                 </dxl:LimitCount>
                 <dxl:LimitOffset>
-                  <dxl:ConstValue TypeMdid="0.20.1.0" IsNull="false" Value="0"/>
+                  <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                 </dxl:LimitOffset>
               </dxl:Limit>
             </dxl:SubPlan>
