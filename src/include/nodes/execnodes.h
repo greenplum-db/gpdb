@@ -2192,6 +2192,8 @@ typedef struct ExternalScanState
 	struct FileScanDescData *ess_ScanDesc;
 	bool		cdb_want_ctid;
 	ItemPointerData cdb_fake_ctid;
+	bool		delayEagerFree;		/* is it safe to free memory used by this node,
+									 * when this node has outputted its last row? */
 } ExternalScanState;
 
 /*

@@ -166,7 +166,10 @@ ExternalNext(ExternalScanState *node)
 		{
 			ExecClearTuple(slot);
 
-			ExecEagerFreeExternalScan(node);
+			if (!node->delayEagerFree)
+			{
+				ExecEagerFreeExternalScan(node);
+			}
 		}
 		scanNext = false;
 	}
@@ -284,6 +287,13 @@ ExecInitExternalScan(ExternalScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&externalstate->ss.ps);
 	ExecAssignScanProjectionInfo(&externalstate->ss);
 
+	/*
+	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
+	 * then this node is not eager free safe.
+	 */
+	externalstate->delayEagerFree =
+		((eflags & (EXEC_FLAG_REWIND | EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)) != 0);
+
 	return externalstate;
 }
 
@@ -379,5 +389,6 @@ ExecSquelchExternalScan(ExternalScanState *node)
 	 */
 	external_stopscan(fileScanDesc);
 
-	ExecEagerFreeExternalScan(node);
+	if (!node->delayEagerFree)
+		ExecEagerFreeExternalScan(node);
 }
