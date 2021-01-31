@@ -3546,3 +3546,31 @@ CREATE EXTERNAL WEB TABLE web_exec_on_coordinator_with_err_limit_reached (c1 int
 SELECT * FROM web_exec_on_coordinator_with_err_limit_reached;
 
 DROP EXTERNAL TABLE web_exec_on_coordinator_with_err_limit_reached;
+
+-- Test re-scan the external tables in a subplan
+
+CREATE EXTERNAL WEB TABLE ext_subplan_t1(c1 int) EXECUTE'seq 1 5' ON MASTER FORMAT 'text';
+CREATE EXTERNAL WEB TABLE ext_subplan_t2(c1 int) EXECUTE'seq 1 10' ON MASTER FORMAT 'text';
+
+EXPLAIN SELECT
+     c1,
+     (
+         SELECT c1
+         FROM ext_subplan_t2
+         WHERE ext_subplan_t2.c1 = ext_subplan_t1.c1
+         LIMIT 1
+     )
+FROM ext_subplan_t1;
+
+SELECT
+     c1,
+     (
+         SELECT c1
+         FROM ext_subplan_t2
+         WHERE ext_subplan_t2.c1 = ext_subplan_t1.c1
+         LIMIT 1
+     )
+FROM ext_subplan_t1;
+
+DROP EXTERNAL TABLE ext_subplan_t1;
+DROP EXTERNAL TABLE ext_subplan_t2;

@@ -4818,3 +4818,45 @@ ERROR:  segment reject limit reached, aborting operation
 DETAIL:  Last error was: invalid input syntax for type integer: "1 3", column c1
 CONTEXT:  External table web_exec_on_coordinator_with_err_limit_reached, line 3 of execute:for i in `seq 1 3`; do echo 1 3;done; echo 22, column c1
 DROP EXTERNAL TABLE web_exec_on_coordinator_with_err_limit_reached;
+-- Test re-scan the external tables in a subplan
+CREATE EXTERNAL WEB TABLE ext_subplan_t1(c1 int) EXECUTE'seq 1 5' ON MASTER FORMAT 'text';
+CREATE EXTERNAL WEB TABLE ext_subplan_t2(c1 int) EXECUTE'seq 1 10' ON MASTER FORMAT 'text';
+EXPLAIN SELECT
+     c1,
+     (
+         SELECT c1
+         FROM ext_subplan_t2
+         WHERE ext_subplan_t2.c1 = ext_subplan_t1.c1
+         LIMIT 1
+     )
+FROM ext_subplan_t1;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Foreign Scan on ext_subplan_t1  (cost=0.00..0.00 rows=1 width=8)
+   SubPlan 1
+     ->  Limit  (cost=0.00..0.00 rows=1 width=4)
+           ->  Foreign Scan on ext_subplan_t2  (cost=0.00..0.00 rows=1 width=4)
+                 Filter: (c1 = ext_subplan_t1.c1)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+SELECT
+     c1,
+     (
+         SELECT c1
+         FROM ext_subplan_t2
+         WHERE ext_subplan_t2.c1 = ext_subplan_t1.c1
+         LIMIT 1
+     )
+FROM ext_subplan_t1;
+ c1 | c1 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+(5 rows)
+
+DROP EXTERNAL TABLE ext_subplan_t1;
+DROP EXTERNAL TABLE ext_subplan_t2;
