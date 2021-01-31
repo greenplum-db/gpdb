@@ -47,3 +47,7 @@ rpt_tpch.sql
 session_reset.sql
 dropdb_check_shared_buffer_cache.sql
 createdb.sql
+/alter_db_set_tablespace.sql
+/autovacuum-template0-segment.sql
+/default_tablespace.sql
+/external_table_persistent_error_log.sql

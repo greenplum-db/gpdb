@@ -48,3 +48,6 @@ dropdb_check_shared_buffer_cache.out
 /oid_wraparound.out
 /gp_tablespace_path_too_long.out
 createdb.out
+/autovacuum-template0-segment.out
+/default_tablespace.out
+/external_table_persistent_error_log.out
