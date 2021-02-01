@@ -3,7 +3,7 @@ include $(top_builddir)/src/Makefile.global
 
 default: installcheck
 
-REGRESS = exttab1 custom_format gpfdist2
+REGRESS = exttab1 custom_format gpfdist2 gpfdist_path
 
 ifeq ($(enable_gpfdist),yes)
 ifeq ($(with_openssl),yes)

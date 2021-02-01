@@ -9,9 +9,10 @@
 //		Worker abstraction, e.g. thread
 //---------------------------------------------------------------------------
 
+#include "gpos/error/ILogger.h"
+
 #include "gpos/common/clibwrapper.h"
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/error/ILogger.h"
 #include "gpos/error/CLoggerStream.h"
 #include "gpos/error/CLoggerSyslog.h"
 #include "gpos/error/CMessageRepository.h"

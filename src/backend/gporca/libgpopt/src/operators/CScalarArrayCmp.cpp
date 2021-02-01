@@ -9,19 +9,16 @@
 //		Implementation of scalar array comparison operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarArrayCmp.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-
-#include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
 #include "gpopt/optimizer/COptimizerConfig.h"
-
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;

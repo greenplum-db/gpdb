@@ -6,7 +6,7 @@ create schema qp_misc_jiras;
 
 -- Test that "INSERT INTO SELECT * FROM <external table>" works.
 create table qp_misc_jiras.tbl3301_foo (c1 int);
-create external web table qp_misc_jiras.tbl3301_bar(like qp_misc_jiras.tbl3301_foo) execute 'echo 1' on master format 'csv';
+create external web table qp_misc_jiras.tbl3301_bar(like qp_misc_jiras.tbl3301_foo) execute 'echo 1' on coordinator format 'csv';
 
 insert into qp_misc_jiras.tbl3301_foo select * from qp_misc_jiras.tbl3301_bar;
 select * from qp_misc_jiras.tbl3301_foo;
@@ -534,9 +534,9 @@ group by n;
 select n
 from ( select row_number() over () from (values (0)) as t(x) ) as r(n)
 group by n;
-create external web table qp_misc_jiras.tbl4622_ext1 (i int, j int) execute 'echo " | 20" ' on master format 'text' (delimiter as E'|' null as ' ');
+create external web table qp_misc_jiras.tbl4622_ext1 (i int, j int) execute 'echo " | 20" ' on coordinator format 'text' (delimiter as E'|' null as ' ');
 select * from qp_misc_jiras.tbl4622_ext1;
-create external web table qp_misc_jiras.tbl4622_ext2 (i int, j int) execute 'echo "  | 20" ' on master format 'text' (delimiter as E'|' null as '  ');
+create external web table qp_misc_jiras.tbl4622_ext2 (i int, j int) execute 'echo "  | 20" ' on coordinator format 'text' (delimiter as E'|' null as '  ');
 select * from qp_misc_jiras.tbl4622_ext2;
 drop external web table qp_misc_jiras.tbl4622_ext1;
 drop external web table qp_misc_jiras.tbl4622_ext2;

@@ -10,16 +10,17 @@
 //		libgpdxl.
 //---------------------------------------------------------------------------
 
-#include "gpos/memory/CAutoMemoryPool.h"
-
-#include "naucrates/exception.h"
 #include "naucrates/init.h"
-#include "naucrates/dxl/xml/CDXLMemoryManager.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 #include <xercesc/framework/MemBufInputSource.hpp>
 #include <xercesc/util/XMLString.hpp>
+
+#include "gpos/memory/CAutoMemoryPool.h"
+
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/xml/CDXLMemoryManager.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/exception.h"
 
 using namespace gpos;
 using namespace gpdxl;

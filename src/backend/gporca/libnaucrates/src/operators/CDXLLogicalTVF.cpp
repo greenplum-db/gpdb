@@ -9,9 +9,10 @@
 //		Implementation of DXL table-valued function
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLLogicalTVF.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLLogicalTVF.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

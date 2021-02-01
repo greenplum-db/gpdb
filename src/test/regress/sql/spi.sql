@@ -23,6 +23,7 @@ drop function bu();
 drop table test;
 create table test (a integer, b integer, c integer);
 insert into test select a, a%25, a%30 from generate_series(1, 100) a;
+analyze test;
 
 create or replace function refcursor(int, int) returns setof int as $$
 declare

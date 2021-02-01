@@ -8,30 +8,30 @@
 //	@doc:
 //		Test for translating CExpressions into DXL
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/exception.h"
-#include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CPrintPrefix.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
 #include "gpopt/operators/ops.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 
 
 

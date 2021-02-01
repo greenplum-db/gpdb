@@ -1,9 +1,10 @@
 #include "unittest/gpopt/operators/CScalarIsDistinctFromTest.h"
 
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/string/CWStringConst.h"
 
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
-#include "gpos/string/CWStringConst.h"
+
 #include "unittest/gpopt/CTestUtils.h"
 
 namespace gpopt

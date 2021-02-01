@@ -70,12 +70,12 @@ class CompareSegmentGucTest(GpTestCase):
 
     def test_when_segment_report_success_format(self):
         self.assertEqual(self.subject.report_success_format(),
-                          "Segment value: sql_value | file: file_value")
+                          "Segment     value: sql_value | file: file_value")
 
     def test_when_values_match_report_success_format_file_compare(self):
         self.subject.db_seg_guc.value = 'value'
         self.subject.primary_file_seg_guc.value = 'value'
-        self.assertEqual(self.subject.report_success_format(), "Segment value: value | file: value")
+        self.assertEqual(self.subject.report_success_format(), "Segment     value: value | file: value")
 
     def test_is_internally_consistent_fails(self):
         self.assertEqual(self.subject.is_internally_consistent(), False)

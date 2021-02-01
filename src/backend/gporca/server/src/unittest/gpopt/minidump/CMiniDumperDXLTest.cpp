@@ -10,6 +10,8 @@
 //---------------------------------------------------------------------------
 #include "unittest/gpopt/minidump/CMiniDumperDXLTest.h"
 
+#include <fstream>
+
 #include "gpos/io/CFileDescriptor.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/task/CAutoTraceFlag.h"
@@ -36,8 +38,6 @@
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
-
-#include <fstream>
 
 static const CHAR *szQueryFile = "../data/dxl/minidump/Query.xml";
 

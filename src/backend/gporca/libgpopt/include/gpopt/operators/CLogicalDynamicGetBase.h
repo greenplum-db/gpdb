@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalDynamicGetBase_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogical.h"
 
 namespace gpopt
@@ -47,18 +48,6 @@ protected:
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcrPart;
 
-	// secondary scan id in case of a partial scan
-	ULONG m_ulSecondaryScanId;
-
-	// is scan partial -- only used with heterogeneous indexes defined on a subset of partitions
-	BOOL m_is_partial;
-
-	// dynamic get part constraint
-	CPartConstraint *m_part_constraint;
-
-	// relation part constraint
-	CPartConstraint *m_ppartcnstrRel;
-
 	// distribution columns (empty for master only tables)
 	CColRefSet *m_pcrsDist;
 
@@ -80,11 +69,8 @@ public:
 
 	CLogicalDynamicGetBase(CMemoryPool *mp, const CName *pnameAlias,
 						   CTableDescriptor *ptabdesc, ULONG scan_id,
-						   CColRefArray *colref_array,
-						   CColRef2dArray *pdrgpdrgpcrPart,
-						   ULONG ulSecondaryScanId, BOOL is_partial,
-						   CPartConstraint *ppartcnstr,
-						   CPartConstraint *ppartcnstrRel);
+						   CColRefArray *pdrgpcrOutput,
+						   CColRef2dArray *pdrgpdrgpcrPart);
 
 	CLogicalDynamicGetBase(CMemoryPool *mp, const CName *pnameAlias,
 						   CTableDescriptor *ptabdesc, ULONG scan_id);
@@ -133,43 +119,6 @@ public:
 	{
 		return m_pdrgpdrgpcrPart;
 	}
-
-	// return secondary scan id
-	virtual ULONG
-	UlSecondaryScanId() const
-	{
-		return m_ulSecondaryScanId;
-	}
-
-	// is this a partial scan -- true if the scan operator corresponds to heterogeneous index
-	virtual BOOL
-	IsPartial() const
-	{
-		return m_is_partial;
-	}
-
-	// return dynamic get part constraint
-	virtual CPartConstraint *
-	Ppartcnstr() const
-	{
-		return m_part_constraint;
-	}
-
-	// return relation part constraint
-	virtual CPartConstraint *
-	PpartcnstrRel() const
-	{
-		return m_ppartcnstrRel;
-	}
-
-	// set part constraint
-	virtual void SetPartConstraint(CPartConstraint *ppartcnstr);
-
-	// set secondary scan id
-	virtual void SetSecondaryScanId(ULONG scan_id);
-
-	// set scan to partial
-	virtual void SetPartial();
 
 	//-------------------------------------------------------------------------------------
 	// Derived Relational Properties

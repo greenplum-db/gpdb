@@ -13,10 +13,10 @@
 #define GPDXL_CDXLLogicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
 
+#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/dxl/operators/CDXLLogical.h"
+#include "naucrates/md/IMDRelation.h"
 
 namespace gpdxl
 {

@@ -10,4 +10,4 @@ SELECT *, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
 DELETE FROM foo WHERE a = 2;
 UPDATE foo SET b = -1 WHERE a = 3;
 VACUUM foo;
-SELECT segment_id, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
+SELECT segment_id, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo') where state = 1 and tupcount > 0;

@@ -160,7 +160,7 @@ query_planner(PlannerInfo *root,
 
 					exec_location = check_execute_on_functions((Node *) parse->targetList);
 
-					if (exec_location == PROEXECLOCATION_MASTER || exec_location == PROEXECLOCATION_INITPLAN)
+					if (exec_location == PROEXECLOCATION_COORDINATOR || exec_location == PROEXECLOCATION_INITPLAN)
 						CdbPathLocus_MakeEntry(&result_path->locus);
 					else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 						CdbPathLocus_MakeStrewn(&result_path->locus,

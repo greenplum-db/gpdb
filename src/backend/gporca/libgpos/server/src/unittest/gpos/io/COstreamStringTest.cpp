@@ -9,15 +9,15 @@
 //		Tests for COstreamString
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/io/COstreamStringTest.h"
+
 #include "gpos/assert.h"
 #include "gpos/error/CMessage.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/string/CWStringDynamic.h"
 #include "gpos/string/CWStringConst.h"
+#include "gpos/string/CWStringDynamic.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/io/COstreamStringTest.h"
 
 using namespace gpos;
 

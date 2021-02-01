@@ -253,7 +253,7 @@ CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_log_master_ext
     logline int,
     logstack text
 )
-EXECUTE E'cat $GP_SEG_DATADIR/log/*.csv' ON MASTER
+EXECUTE E'cat $GP_SEG_DATADIR/log/*.csv' ON COORDINATOR
 FORMAT 'CSV' (DELIMITER AS ',' NULL AS '' QUOTE AS '"');
 
 REVOKE ALL ON TABLE gp_toolkit.__gp_log_master_ext FROM public;
@@ -425,7 +425,7 @@ $$
     SELECT gp_execution_segment(), $1, current_setting($1);
 $$
 LANGUAGE SQL
-VOLATILE CONTAINS SQL EXECUTE ON MASTER;
+VOLATILE CONTAINS SQL EXECUTE ON COORDINATOR;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_setting_on_master(varchar) TO public;
 
@@ -437,7 +437,7 @@ $$
   UNION ALL
   SELECT * FROM gp_toolkit.__gp_param_setting_on_segments($1);
 $$
-LANGUAGE SQL READS SQL DATA EXECUTE ON MASTER;
+LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.gp_param_setting(varchar) TO public;
 
@@ -2007,7 +2007,7 @@ LANGUAGE plpgsql;
 CREATE FUNCTION gp_toolkit.__gp_workfile_entries_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
-LANGUAGE C VOLATILE EXECUTE ON MASTER;
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f_on_master() TO public;
 
@@ -2128,7 +2128,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_query TO public;
 CREATE FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
-LANGUAGE C VOLATILE EXECUTE ON MASTER;
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master() TO public;
 

@@ -40,7 +40,6 @@ public:
 		EpstOrder,
 		EpstDistribution,
 		EpstRewindability,
-		EpstPartPropagation,
 
 		EpstSentinel
 	};
@@ -70,6 +69,8 @@ public:
 
 	// property type
 	virtual EPropSpecType Epst() const = 0;
+
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 
 };	// class CPropSpec
 

@@ -388,7 +388,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	/*
 	 * When running queries on all segments, master makes the fragmenter call
 	 * and segments receive a List of FragmentData from master. When the query
-	 * only runs on master or any, the fragment list is retrieved by the
+	 * only runs on coordinator or any, the fragment list is retrieved by the
 	 * executing process.
 	 */
 	if (rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS || Gp_role == GP_ROLE_DISPATCH)

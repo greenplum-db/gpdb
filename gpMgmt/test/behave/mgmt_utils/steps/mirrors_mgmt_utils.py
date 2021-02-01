@@ -1,4 +1,5 @@
 from os import path
+from gppylib.commands.gp import get_coordinatordatadir
 
 from behave import given, when, then
 from test.behave_utils.utils import *
@@ -77,9 +78,9 @@ def add_mirrors(context, options):
 
 
 def make_data_directory_called(data_directory_name):
-    mdd_parent_parent = os.path.realpath(
-        os.getenv("MASTER_DATA_DIRECTORY") + "../../../")
-    mirror_data_dir = os.path.join(mdd_parent_parent, data_directory_name)
+    cdd_parent_parent = os.path.realpath(
+        get_coordinatordatadir()+ "../../../")
+    mirror_data_dir = os.path.join(cdd_parent_parent, data_directory_name)
     if not os.path.exists(mirror_data_dir):
         os.mkdir(mirror_data_dir)
     return mirror_data_dir
@@ -162,13 +163,13 @@ def impl(context, options=" "):
 @given('gpaddmirrors adds mirrors with temporary data dir')
 def impl(context):
     context.mirror_config = _generate_input_config()
-    mdd = os.getenv('MASTER_DATA_DIRECTORY', "")
-    del os.environ['MASTER_DATA_DIRECTORY']
+    cdd = get_coordinatordatadir()
+    del os.environ['COORDINATOR_DATA_DIRECTORY']
     try:
-        cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s -d %s' % (context.mirror_config, mdd))
+        cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s -d %s' % (context.mirror_config, cdd))
         cmd.run(validateAfter=True)
     finally:
-        os.environ['MASTER_DATA_DIRECTORY'] = mdd
+        os.environ['COORDINATOR_DATA_DIRECTORY'] = cdd
 
 
 @given('gpaddmirrors adds mirrors in spread configuration')
@@ -193,7 +194,7 @@ def impl(context):
     # Map content IDs to hostnames for every mirror, for both the saved GpArray
     # and the current one.
     for (array, hostMap) in [(context.gparray, old_content_to_host), (gparray, curr_content_to_host)]:
-        for host in array.get_hostlist(includeMaster=False):
+        for host in array.get_hostlist(includeCoordinator=False):
             for mirror in array.get_list_of_mirror_segments_on_host(host):
                 hostMap[mirror.getSegmentContentId()] = host
 
@@ -242,7 +243,7 @@ def impl(context, mirror_config):
         raise Exception('"%s" is not a valid mirror configuration for this step; options are "group" and "spread".')
 
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    host_list = gparray.get_hostlist(includeMaster=False)
+    host_list = gparray.get_hostlist(includeCoordinator=False)
 
     primary_to_mirror_host_map = {}
     primary_content_map = {}

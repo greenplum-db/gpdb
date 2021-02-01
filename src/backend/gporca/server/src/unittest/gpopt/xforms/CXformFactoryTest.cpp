@@ -9,13 +9,13 @@
 //		Unittests for management of the global xform set
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/xforms/CXformFactoryTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
 
 #include "gpopt/xforms/xforms.h"
-
-#include "unittest/gpopt/xforms/CXformFactoryTest.h"
 
 using namespace gpopt;
 

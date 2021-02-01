@@ -8,41 +8,44 @@
 //	@doc:
 //		Implementation of general utility functions
 //---------------------------------------------------------------------------
+#include "gpopt/base/CUtils.h"
+
 #include "gpos/common/clibwrapper.h"
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/string/CWStringDynamic.h"
 #include "gpos/io/CFileDescriptor.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CWorker.h"
 
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
-#include "gpopt/base/CKeyCollection.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CCastUtils.h"
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/operators/CPhysicalMotionRandom.h"
-#include "gpopt/operators/CLogicalCTEProducer.h"
-#include "gpopt/operators/CLogicalCTEConsumer.h"
-#include "gpopt/translate/CTranslatorExprToDXLUtils.h"
-#include "gpopt/search/CMemo.h"
-#include "gpopt/mdcache/CMDAccessorUtils.h"
+#include "gpopt/base/CKeyCollection.h"
 #include "gpopt/exception.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CExpressionPreprocessor.h"
-
-#include "naucrates/exception.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/operators/CLogicalCTEProducer.h"
+#include "gpopt/operators/CPhysicalMotionRandom.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/search/CMemo.h"
+#include "gpopt/translate/CTranslatorExprToDXLUtils.h"
 #include "naucrates/base/IDatumBool.h"
 #include "naucrates/base/IDatumInt2.h"
 #include "naucrates/base/IDatumInt4.h"
 #include "naucrates/base/IDatumInt8.h"
 #include "naucrates/base/IDatumOid.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDIdScCmp.h"
 #include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDScCmp.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeGeneric.h"
@@ -50,10 +53,6 @@
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/md/IMDTypeOid.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDCast.h"
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-#include "naucrates/md/CMDIdScCmp.h"
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
@@ -642,6 +641,13 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 	IMDId *pmdidColType = colref->RetrieveType()->MDId();
 	IMDId *pmdidArrType = colref->RetrieveType()->GetArrayTypeMdid();
 	IMDId *pmdidCmpOp = colref->RetrieveType()->GetMdidForCmpType(ecmptype);
+
+	if (!IMDId::IsValid(pmdidColType) || !IMDId::IsValid(pmdidArrType) ||
+		!IMDId::IsValid(pmdidCmpOp))
+	{
+		// cannot construct an ArrayCmp expression if any of these are invalid
+		return NULL;
+	}
 
 	pmdidColType->AddRef();
 	pmdidArrType->AddRef();
@@ -3902,47 +3908,6 @@ CUtils::PcrMap(CColRef *pcrSource, CColRefArray *pdrgpcrSource,
 	}
 
 	return pcrTarget;
-}
-
-// check if the given operator is a motion and the derived relational
-// properties contain a consumer which is not in the required part consumers
-BOOL
-CUtils::FMotionOverUnresolvedPartConsumers(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CPartIndexMap *ppimReqd)
-{
-	GPOS_ASSERT(NULL != ppimReqd);
-
-	if (!FPhysicalMotion(exprhdl.Pop()))
-	{
-		return false;
-	}
-
-	CPartIndexMap *ppimDrvd = exprhdl.Pdpplan(0 /*child_index*/)->Ppim();
-	ULongPtrArray *pdrgpulScanIds =
-		ppimDrvd->PdrgpulScanIds(mp, true /*fConsumersOnly*/);
-	BOOL fHasUnresolvedConsumers = false;
-
-	const ULONG ulConsumers = pdrgpulScanIds->Size();
-	if (0 < ulConsumers && !ppimReqd->FContainsUnresolved())
-	{
-		fHasUnresolvedConsumers = true;
-	}
-
-	for (ULONG ul = 0; !fHasUnresolvedConsumers && ul < ulConsumers; ul++)
-	{
-		ULONG *pulScanId = (*pdrgpulScanIds)[ul];
-		if (!ppimReqd->Contains(*pulScanId))
-		{
-			// there is an unresolved consumer which is not included in the
-			// requirements and will therefore be resolved elsewhere
-			fHasUnresolvedConsumers = true;
-		}
-	}
-
-	pdrgpulScanIds->Release();
-
-	return fHasUnresolvedConsumers;
 }
 
 // Check if duplicate values can be generated when executing the given Motion expression,

@@ -19,20 +19,20 @@ class GpsshExkeysMgmtContext:
     series of steps.
     """
     def __init__(self, context):
-        self.master_host = None
+        self.coordinator_host = None
         self.segment_hosts = None
         make_temp_dir(context, '/tmp/gpssh-exkeys', '0700')
         self.working_directory = context.temp_base_dir
 
     def allHosts(self):
-        allHosts = [self.master_host]
+        allHosts = [self.coordinator_host]
         allHosts.extend(self.segment_hosts)
         return allHosts
 
 
-@given('the gpssh-exkeys master host is set to "{host}"')
+@given('the gpssh-exkeys coordinator host is set to "{host}"')
 def impl(context, host):
-    context.gpssh_exkeys_context.master_host = host
+    context.gpssh_exkeys_context.coordinator_host = host
 
 @given('the gpssh-exkeys segment host is set to "{hosts}"')
 def impl(context, hosts):
@@ -174,8 +174,8 @@ def impl(context):
 def impl(context, works):
     steps = '''
     Then the segment hosts "{0}" reach each other or themselves automatically
-     And the segment hosts "{0}" reach the master
-     And the master host "{0}" reach itself
+     And the segment hosts "{0}" reach the coordinator
+     And the coordinator host "{0}" reach itself
     '''.format(works)
     context.execute_steps(steps)
 
@@ -199,7 +199,7 @@ def impl(context, works):
             context.execute_steps(cmd)
 
 
-@then('the segment hosts "{works}" reach the master')
+@then('the segment hosts "{works}" reach the coordinator')
 def impl(context, works):
     host_opts = []
     for host in context.gpssh_exkeys_context.segment_hosts:
@@ -215,7 +215,7 @@ def impl(context, works):
     ])
 
 
-@then('the master host "{works}" reach itself')
+@then('the coordinator host "{works}" reach itself')
 def impl(context, works):
     result = subprocess.call(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', 'mdw', 'true'])
     should_work = (works == 'can')
@@ -287,7 +287,7 @@ def impl(context):
 
     context.add_cleanup(cleanup)
 
-@given('the segments can only be accessed using the master key')
+@given('the segments can only be accessed using the coordinator key')
 def impl(context):
     host_opts = []
     for host in context.gpssh_exkeys_context.segment_hosts:

@@ -9,9 +9,9 @@
 //		Implementation of left outer apply operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftOuterApply.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

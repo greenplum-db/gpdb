@@ -3,6 +3,7 @@
 --
 create table gpd1 (c1 char(1), c2 numeric, c3 numeric) distributed by (c1);
 insert into gpd1 values ('a', 1, 1);
+analyze gpd1;
 insert into gpd1 values ('a', 1, 2);
 insert into gpd1 values ('b', 2, 1);
 insert into gpd1 values ('b', 1, 2);

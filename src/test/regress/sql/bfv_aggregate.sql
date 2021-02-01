@@ -1458,6 +1458,7 @@ SELECT a.x, b.y, count(*) FROM pagg_tab1 a FULL JOIN pagg_tab2 b ON a.x = b.y GR
 --
 create temp table group_by_const (col1 int, col2 int);
 insert into group_by_const select i from generate_series(1, 1000) i;
+analyze group_by_const;
 
 explain (costs off)
 select 1, sum(col1) from group_by_const group by 1;

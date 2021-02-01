@@ -633,7 +633,7 @@ class spawn(object):
             self.pid, self.child_fd = self.__fork_pty()
 
         # Some platforms must call setwinsize() and setecho() from the
-        # child process, and others from the master process. We do both,
+        # child process, and others from the coordinator process. We do both,
         # allowing IOError for either.
 
         if self.pid == pty.CHILD:

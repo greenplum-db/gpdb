@@ -3053,6 +3053,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into nlj1 values (1, 1), (NULL, NULL);
 insert into nlj2 values (1, 5), (NULL, 6);
+analyze nlj1;
+analyze nlj2;
 set optimizer_enable_hashjoin=off;
 set enable_hashjoin=off; set enable_mergejoin=off; set enable_nestloop=on;
 explain select * from nlj1, nlj2 where nlj1.a = nlj2.a;
@@ -3153,6 +3155,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into a select g from generate_series(1,1) g;
 insert into b select g from generate_series(1,1) g;
 insert into c select g, g from generate_series(1, 100) g;
+analyze a;
+analyze b;
+analyze c;
 create index on c (j, i);
 -- In order to get the plan we want, Index Scan on 'c' must appear
 -- much cheaper than a Seq Scan. In order to keep this test quick and small,

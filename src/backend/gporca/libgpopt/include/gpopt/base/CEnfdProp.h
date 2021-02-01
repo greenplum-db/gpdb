@@ -123,6 +123,7 @@ public:
 			   CEnfdProp::EpetUnnecessary == epet;
 	}
 
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 };	// class CEnfdProp
 
 

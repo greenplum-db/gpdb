@@ -11,14 +11,13 @@
 
 #include "naucrates/dxl/parser/CParseHandlerMDRelation.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerMDIndexInfoList.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataColumns.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerMDIndexInfoList.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -52,7 +51,7 @@ CParseHandlerMDRelation::CParseHandlerMDRelation(
 	  m_key_sets_arrays(NULL),
 	  m_part_constraint(NULL),
 	  m_opfamilies_parse_handler(NULL),
-	  m_level_with_default_part_array(NULL)
+	  m_child_partitions_parse_handler(NULL)
 {
 }
 
@@ -76,39 +75,13 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 	{
 		GPOS_ASSERT(NULL == m_part_constraint);
 
-		const XMLCh *xmlszDefParts =
-			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenDefaultPartition));
-		if (NULL != xmlszDefParts)
-		{
-			m_level_with_default_part_array =
-				CDXLOperatorFactory::ExtractIntsToUlongArray(
-					m_parse_handler_mgr->GetDXLMemoryManager(), xmlszDefParts,
-					EdxltokenDefaultPartition, EdxltokenRelation);
-		}
-		else
-		{
-			// construct an empty keyset
-			m_level_with_default_part_array =
-				GPOS_NEW(m_mp) ULongPtrArray(m_mp);
-		}
-		m_part_constraint_unbounded =
-			CDXLOperatorFactory::ExtractConvertAttrValueToBool(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenPartConstraintUnbounded, EdxltokenRelation);
-
-		CParseHandlerMDIndexInfoList *pphMdlIndexInfo =
-			dynamic_cast<CParseHandlerMDIndexInfoList *>((*this)[1]);
-		// relcache translator will send partition constraint expression only when a partitioned relation has indices
-		if (pphMdlIndexInfo->GetMdIndexInfoArray()->Size() > 0)
-		{
-			// parse handler for part constraints
-			CParseHandlerBase *pphPartConstraint =
-				CParseHandlerFactory::GetParseHandler(
-					m_mp, CDXLTokens::XmlstrToken(EdxltokenScalar),
-					m_parse_handler_mgr, this);
-			m_parse_handler_mgr->ActivateParseHandler(pphPartConstraint);
-			this->Append(pphPartConstraint);
-		}
+		// parse handler for part constraints
+		CParseHandlerBase *pphPartConstraint =
+			CParseHandlerFactory::GetParseHandler(
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenScalar),
+				m_parse_handler_mgr, this);
+		m_parse_handler_mgr->ActivateParseHandler(pphPartConstraint);
+		this->Append(pphPartConstraint);
 
 		return;
 	}
@@ -124,6 +97,24 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 		m_parse_handler_mgr->ActivateParseHandler(m_opfamilies_parse_handler);
 		this->Append(m_opfamilies_parse_handler);
 		m_opfamilies_parse_handler->startElement(
+			element_uri, element_local_name, element_qname, attrs);
+
+		return;
+	}
+
+	if (0 ==
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenPartitions),
+								 element_local_name))
+	{
+		// parse handler for external_partitions
+		m_child_partitions_parse_handler =
+			CParseHandlerFactory::GetParseHandler(
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+				m_parse_handler_mgr, this);
+		m_parse_handler_mgr->ActivateParseHandler(
+			m_child_partitions_parse_handler);
+		this->Append(m_child_partitions_parse_handler);
+		m_child_partitions_parse_handler->startElement(
 			element_uri, element_local_name, element_qname, attrs);
 
 		return;
@@ -230,24 +221,10 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 				 CDXLTokens::XmlstrToken(EdxltokenPartConstraint),
 				 element_local_name))
 	{
-		// relcache translator will send partition constraint expression only when a partitioned relation has indices
-		if (pphMdlIndexInfo->GetMdIndexInfoArray()->Size() > 0)
-		{
-			CParseHandlerScalarOp *pphPartCnstr =
-				dynamic_cast<CParseHandlerScalarOp *>((*this)[Length() - 1]);
-			CDXLNode *pdxlnPartConstraint = pphPartCnstr->CreateDXLNode();
-			pdxlnPartConstraint->AddRef();
-			m_part_constraint = GPOS_NEW(m_mp) CMDPartConstraintGPDB(
-				m_mp, m_level_with_default_part_array,
-				m_part_constraint_unbounded, pdxlnPartConstraint);
-		}
-		else
-		{
-			// no partition constraint expression
-			m_part_constraint = GPOS_NEW(m_mp)
-				CMDPartConstraintGPDB(m_mp, m_level_with_default_part_array,
-									  m_part_constraint_unbounded, NULL);
-		}
+		CParseHandlerScalarOp *pphPartCnstr =
+			dynamic_cast<CParseHandlerScalarOp *>((*this)[Length() - 1]);
+		m_part_constraint = pphPartCnstr->CreateDXLNode();
+		m_part_constraint->AddRef();
 		return;
 	}
 
@@ -296,13 +273,22 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 		distr_opfamilies->AddRef();
 	}
 
+	IMdIdArray *child_partitions = NULL;
+	if (NULL != m_child_partitions_parse_handler)
+	{
+		child_partitions = dynamic_cast<CParseHandlerMetadataIdList *>(
+							   m_child_partitions_parse_handler)
+							   ->GetMdIdArray();
+		child_partitions->AddRef();
+	}
+
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationGPDB(
 		m_mp, m_mdid, m_mdname, m_is_temp_table, m_rel_storage_type,
 		m_rel_distr_policy, md_col_array, m_distr_col_array, distr_opfamilies,
 		m_partition_cols_array, m_str_part_types_array, m_num_of_partitions,
-		m_convert_hash_to_random, m_key_sets_arrays, md_index_info_array,
-		mdid_triggers_array, mdid_check_constraint_array, m_part_constraint,
-		m_has_oids);
+		child_partitions, m_convert_hash_to_random, m_key_sets_arrays,
+		md_index_info_array, mdid_triggers_array, mdid_check_constraint_array,
+		m_part_constraint, m_has_oids);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

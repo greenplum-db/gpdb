@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerXform_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 // forward declarations

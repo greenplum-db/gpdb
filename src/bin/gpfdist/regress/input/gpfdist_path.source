@@ -1,0 +1,117 @@
+-- --------------------------------------
+-- Test different input paths for 'gpfdist'
+-- --------------------------------------
+CREATE EXTERNAL WEB TABLE gpfdist_path_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl @hostname@:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE gpfdist_path_stop (x text)
+execute E'(ps -A -o pid,comm |grep [g]pfdist |grep -v postgres: |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+-- start_ignore
+select * from gpfdist_path_stop;
+select * from gpfdist_path_start;
+-- end_ignore
+
+-- start_ignore
+drop external table if exists gpfdist_path_test;
+-- end_ignore
+
+-- test1 relative path '..' will be stripped by the sender, and works
+-- NOTE: Depends on the different version of libcurl on the gpdb side,
+--       the '..' could be kept or stripped. Skip this test to make CI
+--       happy.
+-- start_ignore
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/../path/simple.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+);
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+-- end_ignore
+
+-- test2 relative path with '\.\.' returns error
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/\.\./NON_EXISTS'
+)
+FORMAT 'text';
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- test3 relative path with URL-encoding '%2e%2e' returns error
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/%2e%2e/NON_EXISTS'
+)
+FORMAT 'text';
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- test4 path contains one escape char '\' is stripped by
+-- apr_tokenize_to_argv and 404 error returned
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/\/NON_EXISTS'
+)
+FORMAT 'text';
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- test5 path contains one escape char '\\' returns error
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/\\/NON_EXISTS'
+)
+FORMAT 'text';
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- test6 path contains one escape char '%5c' returns error
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/%5c/NON_EXISTS'
+)
+FORMAT 'text';
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- test7 path contains multiple escape chars returns error
+CREATE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/%5c.\\\.\\%2e/NON_EXISTS'
+)
+FORMAT 'text';
+SELECT * FROM gpfdist_path_test;
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- test8 POST to gpfdist should follow the same restrictions
+-- Note: The POST/GET share the same check functions now. If
+-- this is changed in the future, add more tests.
+CREATE WRITABLE EXTERNAL TABLE gpfdist_path_test (id INTEGER, content TEXT)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/%5c.\\\.\\%2e/NON_EXISTS'
+)
+FORMAT 'text';
+INSERT INTO gpfdist_path_test VALUES(1, 'a');
+DROP EXTERNAL TABLE gpfdist_path_test;
+
+-- start_ignore
+select * from gpfdist_path_stop;
+drop external table if exists gpfdist_path_test;
+-- end_ignore

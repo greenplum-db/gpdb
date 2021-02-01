@@ -41,7 +41,7 @@
 #include "utils/rel.h"
 
 /* GPDB includes */
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "executor/executor.h"
 #include "storage/procarray.h"
 #include "utils/snapshot.h"

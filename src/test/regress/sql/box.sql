@@ -147,6 +147,7 @@ INSERT INTO box_temp
 		   ('(-infinity,0)(0,infinity)'),
 		   ('(-infinity,-infinity)(infinity,infinity)');
 
+ANALYZE box_temp;
 SET enable_seqscan = false;
 
 SELECT * FROM box_temp WHERE f1 << '(10,20),(30,40)';
@@ -213,6 +214,7 @@ INSERT INTO quad_box_tbl
 		('((-infinity,-infinity),(700,infinity))');
 
 CREATE INDEX quad_box_tbl_idx ON quad_box_tbl USING spgist(b);
+ANALYZE quad_box_tbl;
 
 SET enable_seqscan = OFF;
 SET enable_indexscan = ON;

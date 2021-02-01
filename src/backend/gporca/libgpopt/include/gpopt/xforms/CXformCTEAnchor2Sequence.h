@@ -12,6 +12,7 @@
 #define GPOPT_CXformCTEAnchor2Sequence_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt

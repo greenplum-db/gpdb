@@ -1,0 +1,7 @@
+alter system set autovacuum = on;
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+

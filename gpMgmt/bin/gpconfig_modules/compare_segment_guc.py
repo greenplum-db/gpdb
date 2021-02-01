@@ -79,7 +79,7 @@ class MultiValueGuc(SegmentGuc):
             if self.db_seg_guc:
                 result = "%s value: %s | not set in file" % (self.get_label(), self.db_seg_guc.value)
             else:
-                result = "No value is set on %s" % ("master" if self.get_label() == "Master " else "segments")
+                result = "No value is set on %s" % ("coordinator" if self.get_label() == "Coordinator" else "segments")
         return result
 
     def report_fail_format(self):

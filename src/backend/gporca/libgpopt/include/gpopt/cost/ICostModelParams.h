@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 
-
 #include "naucrates/md/IMDRelation.h"
+
 #include "CCost.h"
 
 namespace gpopt
@@ -131,6 +131,8 @@ public:
 	virtual BOOL Equals(ICostModelParams *pcm) const = 0;
 
 	virtual const CHAR *SzNameLookup(ULONG id) const = 0;
+
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 };
 }  // namespace gpopt
 

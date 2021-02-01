@@ -13380,8 +13380,10 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	{
 		/* the default, omit */
 	}
-	else if (proexeclocation[0] == PROEXECLOCATION_MASTER)
-		appendPQExpBuffer(q, " EXECUTE ON MASTER");
+	else if (proexeclocation[0] == 'm')
+		appendPQExpBuffer(q, " EXECUTE ON COORDINATOR");
+	else if (proexeclocation[0] == PROEXECLOCATION_COORDINATOR)
+		appendPQExpBuffer(q, " EXECUTE ON COORDINATOR");
 	else if (proexeclocation[0] == PROEXECLOCATION_ALL_SEGMENTS)
 		appendPQExpBuffer(q, " EXECUTE ON ALL SEGMENTS");
 	else if (proexeclocation[0] == PROEXECLOCATION_INITPLAN)
@@ -17213,7 +17215,9 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 			else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
 				appendPQExpBufferStr(q, "ON HOST ");
 			else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
-				appendPQExpBufferStr(q, "ON MASTER ");
+				appendPQExpBufferStr(q, "ON COORDINATOR ");
+			else if (strncmp(on_clause, "COORDINATOR_ONLY", strlen("COORDINATOR_ONLY")) == 0)
+				appendPQExpBufferStr(q, "ON COORDINATOR ");
 			else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
 				appendPQExpBuffer(q, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
 			else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)

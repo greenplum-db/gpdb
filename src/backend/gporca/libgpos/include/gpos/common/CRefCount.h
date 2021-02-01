@@ -14,13 +14,12 @@
 #ifndef GPOS_CRefCount_H
 #define GPOS_CRefCount_H
 
-#include "gpos/utils.h"
 #include "gpos/assert.h"
-#include "gpos/types.h"
-
-#include "gpos/error/CException.h"
 #include "gpos/common/CHeapObject.h"
+#include "gpos/error/CException.h"
 #include "gpos/task/ITask.h"
+#include "gpos/types.h"
+#include "gpos/utils.h"
 
 // pattern used to mark deallocated memory, this must match
 // GPOS_MEM_FREED_PATTERN_CHAR in CMemoryPool.h
@@ -128,19 +127,6 @@ public:
 			rc->Release();
 		}
 	}
-
-#ifdef GPOS_DEBUG
-	// debug print for interactive debugging sessions only
-	void DbgPrint() const;
-#endif	// GPOS_DEBUG
-
-	// print function
-	virtual IOstream &
-	OsPrint(IOstream &os) const
-	{
-		return os;
-	}
-
 
 };	// class CRefCount
 }  // namespace gpos

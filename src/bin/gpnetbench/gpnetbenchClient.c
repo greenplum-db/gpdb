@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -35,31 +34,29 @@ main(int argc, char** argv)
 	int socketFd;
 	int retVal;
 	int c;
-	int i;
 	int displayHeaders = 1;
-	int serverPort = 0;
+	char* serverPort = "0";
 	int duration = 60;
 	double actual_duration;
 	char* hostname = NULL;
 	char* sendBuffer = NULL;
 	int kilobytesBufSize = 32;
 	int bytesBufSize;
-	struct sockaddr_in address;
-	struct hostent* host_entry;
+	struct addrinfo hints, *servinfo, *p;
 	time_t start_time;
 	time_t end_time;
 	unsigned int buffers_sent = 0;
 	double megaBytesSent;
 	double megaBytesPerSecond;
-    struct timeval beginTimeDetails;
-    struct timeval endTimeDetails;
+	struct timeval beginTimeDetails;
+	struct timeval endTimeDetails;
 
 	while ((c = getopt (argc, argv, "p:l:b:P:H:f:t:h")) != -1)
 	{
 		switch (c)
 		{
 			case 'p':
-				serverPort = atoi(optarg);
+				serverPort = optarg;
 				break;
 			case 'l':
 				duration = atoi(optarg);
@@ -83,7 +80,7 @@ main(int argc, char** argv)
 				break;
 			case 'h':
 			case '?':
-        	default:
+			default:
 				usage();
 				return 1;
 		}
@@ -124,43 +121,56 @@ main(int argc, char** argv)
 		return 1;
 	}
 
-	socketFd = socket(PF_INET, SOCK_STREAM, 0); 
-	if (socketFd < 0)
-	{ 
-		fprintf(stderr, "socket call failed\n");
-		return 1;
-	}   
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = 0;		/* Any protocol - TCP implied for network use due to SOCK_STREAM */
 
-	host_entry = gethostbyname(hostname);
-	memset(&address, 0, sizeof(struct sockaddr_in));
-	address.sin_family = AF_INET;
-	memcpy((char *)&address.sin_addr,(char *)host_entry->h_addr, host_entry->h_length);
-	address.sin_port = htons(serverPort);
-
-	for (i = 0; i < INIT_RETRIES; ++i)
+	retVal = getaddrinfo(hostname, serverPort, &hints, &servinfo);
+	if (retVal != 0)
 	{
-		retVal = connect(socketFd,(struct sockaddr *)&address, sizeof(address));
-		if (retVal == 0)
-			break;
-		sleep(1);
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retVal));
+		exit(1);
+    }
+
+	for (p = servinfo; p != NULL; p = p->ai_next)
+	{
+		socketFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (socketFd < 0)
+		{
+			fprintf(stderr, "socket call failed, trying next if available..\n");
+			continue;
+		}
+
+		if (connect(socketFd, p->ai_addr, p->ai_addrlen) == -1)
+		{
+			perror("connect");
+			close(socketFd);
+			continue;
+		}
+
+		break; // successfully connected
 	}
 
-	if (retVal < 0)
+	if (p == NULL)
 	{
-		fprintf(stderr, "Could not connect to server after %d retries\n", INIT_RETRIES);
-		return 1;
+		fprintf(stderr, "failed to connect\n");
+		exit(1);
 	}
+
+	freeaddrinfo(servinfo);
+
 	printf("Connected to server\n");
 
 	start_time = time(NULL);
 	end_time = start_time + duration;
-    gettimeofday(&beginTimeDetails, NULL);
+	gettimeofday(&beginTimeDetails, NULL);
 	while (time(NULL) < end_time)
 	{
 		send_buffer(socketFd, sendBuffer, bytesBufSize);
 		buffers_sent++;
 	}
-    gettimeofday(&endTimeDetails, NULL);
+	gettimeofday(&endTimeDetails, NULL);
 
 	actual_duration = subtractTimeOfDay(&beginTimeDetails, &endTimeDetails);
 	megaBytesSent = buffers_sent * (double)bytesBufSize / (1024.0*1024.0);
@@ -170,6 +180,7 @@ main(int argc, char** argv)
 		print_headers();
 
 	printf("0     0        %d       %.2f     %.2f\n", bytesBufSize, (double)actual_duration, megaBytesPerSecond);
+
 	return 0;
 }
 

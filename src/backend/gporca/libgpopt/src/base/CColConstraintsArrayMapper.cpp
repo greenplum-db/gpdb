@@ -2,6 +2,7 @@
 //	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #include "gpopt/base/CColConstraintsArrayMapper.h"
+
 #include "gpopt/base/CConstraint.h"
 
 using namespace gpopt;

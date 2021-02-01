@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerExternalScan_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerTableScan.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
+#include "naucrates/dxl/parser/CParseHandlerTableScan.h"
 
 
 namespace gpdxl

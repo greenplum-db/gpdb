@@ -653,11 +653,11 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 			appendPQExpBuffer(&buf,
 						  ",\n CASE\n"
 						  "  WHEN p.proexeclocation = 'a' THEN '%s'\n"
-						  "  WHEN p.proexeclocation = 'm' THEN '%s'\n"
+						  "  WHEN p.proexeclocation = 'c' THEN '%s'\n"
 						  "  WHEN p.proexeclocation = 's' THEN '%s'\n"
 						  "END as \"%s\"",
 						  gettext_noop("any"),
-						  gettext_noop("master"),
+						  gettext_noop("coordinator"),
 						  gettext_noop("all segments"),
 						  gettext_noop("Execute on"));
 		appendPQExpBuffer(&buf,
@@ -3897,6 +3897,8 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 			printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
 		else if(strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
 			printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
+		else if(strncmp(on_clause, "COORDINATOR_ONLY", strlen("COORDINATOR_ONLY")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: coordinator"));
 		else if(strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
 			printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), on_clause + strlen("SEGMENT_ID:"));
 		else if(strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
@@ -3929,6 +3931,8 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 				printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
 			else if(strncmp(execlocation, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
 				printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
+			else if(strncmp(execlocation, "COORDINATOR_ONLY", strlen("COORDINATOR_ONLY")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: coordinator"));
 			else if(strncmp(execlocation, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
 				printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), execlocation + strlen("SEGMENT_ID:"));
 			else if(strncmp(execlocation, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)

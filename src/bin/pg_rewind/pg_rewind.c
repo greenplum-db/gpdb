@@ -39,7 +39,6 @@ static void createBackupLabel(XLogRecPtr startpoint, TimeLineID starttli,
 
 static void digestControlFile(ControlFileData *ControlFile, char *source,
 							  size_t size);
-static void greenplum_pre_syncTargetDirectory_SanityCheck(const char *argv0);
 static void syncTargetDirectory(void);
 static void sanityChecks(void);
 static void findCommonAncestorTimeline(XLogRecPtr *recptr, int *tliIndex);
@@ -462,7 +461,6 @@ main(int argc, char **argv)
 
 	if (showprogress)
 		pg_log_info("syncing target data directory");
-	greenplum_pre_syncTargetDirectory_SanityCheck(argv[0]);
 	syncTargetDirectory();
 
 	if (writerecoveryconf)
@@ -804,36 +802,6 @@ digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
 
 	/* Additional checks on control file */
 	checkControlFile(ControlFile);
-}
-
-static void
-greenplum_pre_syncTargetDirectory_SanityCheck(const char *argv0)
-{
-	int			ret;
-#define MAXCMDLEN (2 * MAXPGPATH)
-	char		exec_path[MAXPGPATH];
-
-	/* locate initdb binary */
-	if ((ret = find_other_exec(argv0, "initdb",
-							   "initdb (Greenplum Database) " PG_VERSION "\n",
-							   exec_path)) < 0)
-	{
-		char		full_path[MAXPGPATH];
-
-		if (find_my_exec(argv0, full_path) < 0)
-			strlcpy(full_path, progname, sizeof(full_path));
-
-		if (ret == -1)
-			pg_fatal("The program \"initdb\" is needed by %s but was\n"
-					 "not found in the same directory as \"%s\".\n"
-					 "Check your installation.\n", progname, full_path);
-		else
-			pg_fatal("The program \"initdb\" was found by \"%s\"\n"
-					 "but was not the same version as %s.\n"
-					 "Check your installation.\n", full_path, progname);
-	}
-
-	/* All good */
 }
 
 /*

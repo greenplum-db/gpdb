@@ -14,8 +14,8 @@
 
 
 #include "gpos/base.h"
-#include "gpos/types.h"
 #include "gpos/common/CEnumSet.h"
+#include "gpos/types.h"
 
 #include "gpopt/base/CStateMachine.h"
 #include "gpopt/engine/CEngine.h"

@@ -73,7 +73,10 @@ get_db_conn(ClusterInfo *cluster, const char *db_name)
 	}
 
 	appendPQExpBuffer(&conn_opts, " options=");
-	appendConnStrVal(&conn_opts, "-c gp_role=utility");
+	appendConnStrVal(&conn_opts,
+				(GET_MAJOR_VERSION(cluster->major_version) < 1200) ?
+					"-c gp_session_role=utility" :
+					"-c gp_role=utility");
 
 	conn = PQconnectdb(conn_opts.data);
 	termPQExpBuffer(&conn_opts);
@@ -260,8 +263,11 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	}
 
 	snprintf(cmd, sizeof(cmd),
-			 "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility %s%s %s%s %s\" start",
+			 "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c %s %s%s %s%s %s\" start",
 			 cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
+			 (GET_MAJOR_VERSION(cluster->major_version) < 1200) ?
+			 "gp_session_role=utility" :
+			 "gp_role=utility",
 			 (cluster->controldata.cat_ver >=
 			  BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? " -b" :
 			 " -c autovacuum=off -c autovacuum_freeze_max_age=2000000000",

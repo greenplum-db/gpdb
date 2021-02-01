@@ -1,0 +1,3 @@
+header_column_1,header_column_1,header_column_1,header_column_1,header_column_1,header_column_1,header_column_1,header_column_1,header_column_1,header_column_1,header_column_1
+aaa|qwer|shjhjg|2012-06-01 15:30:30|1|732|834567|45.67|789.123|7.12345|123.456789
+bbb|twob|shpits|2011-06-01 12:30:30|2|732|834567|45.67|789.123|7.12345|987.654321

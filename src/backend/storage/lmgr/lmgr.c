@@ -1358,6 +1358,33 @@ CondUpgradeRelLock(Oid relid)
 	return upgrade;
 }
 
+int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded)
+{
+	/*
+	 * Since we have introduced GDD(global deadlock detector), for heap table
+	 * we do not need to upgrade the requested lock. For ao table, because of
+	 * the design of ao table's visibilitymap, we have to upgrade the lock
+	 * (More details please refer https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/iDj8WkLus4g)
+	 *
+	 * And we select for update statement's lock is upgraded at addRangeTableEntry.
+	 *
+	 * Note: This code could be improved substantially after we redesign ao table
+	 * and select for update.
+	 */
+	if (lockmode == RowExclusiveLock)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH &&
+			CondUpgradeRelLock(relid))
+		{
+			lockmode = ExclusiveLock;
+			if (lockUpgraded != NULL)
+			*lockUpgraded = true;
+		}
+	}
+
+	return lockmode;
+}
+
 /*
  * GetLockNameFromTagType
  *

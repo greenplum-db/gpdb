@@ -9,8 +9,9 @@
 //		Implementation of stream logging
 //---------------------------------------------------------------------------
 
-#include "gpos/utils.h"
 #include "gpos/error/CLoggerStream.h"
+
+#include "gpos/utils.h"
 
 using namespace gpos;
 

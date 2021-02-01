@@ -28,8 +28,8 @@
               <codeph>segment_id</codeph>
             </entry>
             <entry colname="col2">smallint</entry>
-            <entry colname="col3">gp_segment_ configuration.content</entry>
-            <entry colname="col4">The content id if the segment. The master is always -1 (no
+            <entry colname="col3">gp_segment_configuration.content</entry>
+            <entry colname="col4">The content id of the segment. The master is always -1 (no
               content).</entry>
           </row>
           <row>
@@ -37,7 +37,7 @@
               <codeph>dbid</codeph>
             </entry>
             <entry colname="col2">smallint</entry>
-            <entry colname="col3">gp_segment_ configuration.dbid</entry>
+            <entry colname="col3">gp_segment_configuration.dbid</entry>
             <entry colname="col4">The unique id of the segment instance. </entry>
           </row>
           <row>

@@ -9,13 +9,14 @@
 //		Implements context container for error handling
 //---------------------------------------------------------------------------
 
-#include "gpos/utils.h"
 #include "gpos/error/CErrorContext.h"
+
 #include "gpos/error/CMessageRepository.h"
 #include "gpos/error/CMiniDumper.h"
 #include "gpos/error/CSerializable.h"
 #include "gpos/io/ioutils.h"
 #include "gpos/task/CAutoSuspendAbort.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 

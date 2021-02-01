@@ -9,19 +9,18 @@
 //		Implementation of select over a partitioned table to a dynamic index get
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSelect2DynamicIndexGet.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CConstraint.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CPartConstraint.h"
-
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/xforms/CXformSelect2DynamicIndexGet.h"
 #include "gpopt/xforms/CXformUtils.h"
-
-#include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDIndexGPDB.h"
+#include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/IMDPartConstraint.h"
 
 using namespace gpopt;
@@ -128,7 +127,7 @@ CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 		CExpression *pexprDynamicIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
 			pcrsReqd, pcrsScalarExpr, NULL /*outer_refs*/, pmdindex, pmdrel,
-			false /*fAllowPartialIndex*/, ppartcnstrIndex);
+			ppartcnstrIndex);
 		if (NULL != pexprDynamicIndexGet)
 		{
 			// create a redundant SELECT on top of DynamicIndexGet to be able to use predicate in partition elimination

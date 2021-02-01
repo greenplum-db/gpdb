@@ -171,7 +171,7 @@ public:
 	}
 
 	// print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// matching function over frame arrays
 	static BOOL Equals(const CWindowFrameArray *pdrgpwfFirst,

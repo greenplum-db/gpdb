@@ -13,8 +13,8 @@
 #ifndef GPOS_syslibwrapper_H
 #define GPOS_syslibwrapper_H
 
-#include "gpos/types.h"
 #include "gpos/common/clibtypes.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

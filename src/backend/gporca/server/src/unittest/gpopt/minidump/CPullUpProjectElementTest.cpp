@@ -2,6 +2,7 @@
 //	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #include "unittest/gpopt/minidump/CPullUpProjectElementTest.h"
+
 #include "unittest/gpopt/CTestUtils.h"
 
 namespace gpopt

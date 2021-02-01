@@ -88,17 +88,17 @@
         files and metadata:</p>
       <ul>
         <li id="jh159754"><b>System Metadata</b> — For each Greenplum Database segment instance
-          (primary or mirror) or master instance running on a host, estimate approximately 20 MB for
+          (primary or mirror) or coordinator instance running on a host, estimate approximately 20 MB for
           the system catalogs and metadata. </li>
         <li id="jh159758"><b>Write Ahead Log</b> — For each Greenplum Database segment (primary or
-          mirror) or master instance running on a host, allocate space for the write ahead log
+          mirror) or coordinator instance running on a host, allocate space for the write ahead log
           (WAL). The WAL is divided into segment files of 64 MB each. At most, the number of WAL
           files will be: <codeblock>2 * <varname>checkpoint_segments</varname> + 1</codeblock><p>You
             can use this to estimate space requirements for WAL. The default
               <varname>checkpoint_segments</varname> setting for a Greenplum Database instance is 8,
-            meaning 1088 MB WAL space allocated for each segment or master instance on a
+            meaning 1088 MB WAL space allocated for each segment or coordinator instance on a
           host.</p></li>
-        <li id="jh159765"><b>Greenplum Database Log Files</b> — Each segment instance and the master
+        <li id="jh159765"><b>Greenplum Database Log Files</b> — Each segment instance and the coordinator
           instance generates database log files, which will grow over time. Sufficient space should
           be allocated for these log files, and some type of log rotation facility should be used to
           ensure that to log files do not grow too large. </li>

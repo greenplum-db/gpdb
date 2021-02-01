@@ -21,6 +21,10 @@ data/wet_text?.tbl
 data/wet_syntax?.tbl
 data/wet_execute.tbl
 
+data/gpsd-without-hll.sql
+data/gpsd-with-hll.sql
+data/minirepro.sql
+
 regression.diffs
 regression.out
 

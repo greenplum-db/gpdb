@@ -11,8 +11,8 @@
 #ifndef GPOS_CErrorHandlerTest_H
 #define GPOS_CErrorHandlerTest_H
 
-#include "gpos/types.h"
 #include "gpos/assert.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

@@ -67,8 +67,8 @@ class GpStop(GpTestCase):
         super(GpStop, self).tearDown()
 
     def createGpArrayWith4Primary4Mirrors(self):
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
 
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
@@ -87,7 +87,7 @@ class GpStop(GpTestCase):
             "8|2|m|m|s|u|sdw1|sdw1|50002|/data/mirror2")
         self.mirror3 = Segment.initFromString(
             "9|3|m|m|s|u|sdw1|sdw1|50003|/data/mirror3")
-        return GpArray([self.master, self.primary0, self.primary1, self.primary2, self.primary3, self.mirror0, self.mirror1, self.mirror2, self.mirror3])
+        return GpArray([self.coordinator, self.primary0, self.primary1, self.primary2, self.primary3, self.mirror0, self.mirror1, self.mirror2, self.mirror3])
 
     def get_info_messages(self):
         return [args[0][0] for args in self.subject.logger.info.call_args_list]
@@ -97,7 +97,7 @@ class GpStop(GpTestCase):
 
 
     @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
-    def test_option_master_success_without_auto_accept(self, mock_userinput):
+    def test_option_coordinator_success_without_auto_accept(self, mock_userinput):
         sys.argv = ["gpstop", "-m"]
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
@@ -106,10 +106,10 @@ class GpStop(GpTestCase):
         gpstop = self.subject.GpStop.createProgram(options, args)
         gpstop.run()
         self.assertEqual(mock_userinput.ask_yesno.call_count, 1)
-        mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with master-only shutdown', 'N')
+        mock_userinput.ask_yesno.assert_called_once_with(None, '\nContinue with coordinator-only shutdown', 'N')
 
     @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
-    def test_option_master_success_with_auto_accept(self, mock_userinput):
+    def test_option_coordinator_success_with_auto_accept(self, mock_userinput):
         sys.argv = ["gpstop", "-m", "-a"]
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
@@ -193,7 +193,7 @@ class GpStop(GpTestCase):
             "2|0|p|p|c|u|sdw1|sdw1|40000|/data/primary0")
         self.mirror0 = Segment.initFromString(
             "6|0|m|m|s|d|sdw2|sdw2|50000|/data/mirror0")
-        self.mock_gparray.return_value = GpArray([self.master, self.primary0,
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.primary0,
                                                   self.primary1, self.primary2,
                                                   self.primary3, self.mirror0,
                                                   self.mirror1, self.mirror2,
@@ -214,7 +214,7 @@ class GpStop(GpTestCase):
             "2|0|p|p|r|u|sdw1|sdw1|40000|/data/primary0")
         self.mirror0 = Segment.initFromString(
             "6|0|m|m|r|u|sdw2|sdw2|50000|/data/mirror0")
-        self.mock_gparray.return_value = GpArray([self.master, self.primary0,
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.primary0,
                                                   self.primary1, self.primary2,
                                                   self.primary3, self.mirror0,
                                                   self.mirror1, self.mirror2,
@@ -235,7 +235,7 @@ class GpStop(GpTestCase):
             "2|0|m|p|s|d|sdw1|sdw1|40000|/data/primary0")
         self.mirror0 = Segment.initFromString(
             "6|0|p|m|c|u|sdw2|sdw2|50000|/data/mirror0")
-        self.mock_gparray.return_value = GpArray([self.master, self.primary0,
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.primary0,
                                                   self.primary1, self.primary2,
                                                   self.primary3, self.mirror0,
                                                   self.mirror1, self.mirror2,
@@ -256,14 +256,14 @@ class GpStop(GpTestCase):
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
 
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
 
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.mirror0 = Segment.initFromString(
             "3|0|m|m|s|u|sdw1|sdw1|50000|/data/mirror0")
-        self.mock_gparray.return_value = GpArray([self.master, self.primary0, self.mirror0])
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.primary0, self.mirror0])
 
         gpstop = self.subject.GpStop.createProgram(options, args)
 
@@ -271,23 +271,23 @@ class GpStop(GpTestCase):
             gpstop.run()
         self.assertEqual(0, self.mock_GpSegStopCmdInit.call_count)
 
-    def test_host_option_if_master_running_on_the_host_fails(self):
-        sys.argv = ["gpstop", "-a", "--host", "mdw"]
+    def test_host_option_if_coordinator_running_on_the_host_fails(self):
+        sys.argv = ["gpstop", "-a", "--host", "cdw"]
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
 
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.mirror0 = Segment.initFromString(
             "3|0|m|m|s|u|sdw1|sdw1|50000|/data/mirror0")
-        self.mock_gparray.return_value = GpArray([self.master, self.primary0, self.mirror0])
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.primary0, self.mirror0])
 
         gpstop = self.subject.GpStop.createProgram(options, args)
 
-        with self.assertRaisesRegex(Exception,"Specified host '%s' has the master or standby master on it. This node can only be stopped as part of a full-cluster gpstop, without '--host'." %
-                                     self.master.getSegmentHostName()):
+        with self.assertRaisesRegex(Exception,"Specified host '%s' has the coordinator or standby coordinator on it. This node can only be stopped as part of a full-cluster gpstop, without '--host'." %
+                                     self.coordinator.getSegmentHostName()):
             gpstop.run()
         self.assertEqual(0, self.mock_GpSegStopCmdInit.call_count)
 
@@ -296,19 +296,19 @@ class GpStop(GpTestCase):
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
 
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.standby = Segment.initFromString(
-            "2|-1|m|m|s|u|sdw1|sdw1|25432|/data/master")
+            "2|-1|m|m|s|u|sdw1|sdw1|25432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "3|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.mirror0 = Segment.initFromString(
             "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
-        self.mock_gparray.return_value = GpArray([self.master, self.standby, self.primary0, self.mirror0])
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.standby, self.primary0, self.mirror0])
 
         gpstop = self.subject.GpStop.createProgram(options, args)
 
-        with self.assertRaisesRegex(Exception,"Specified host '%s' has the master or standby master on it. This node can only be stopped as part of a full-cluster gpstop, without '--host'." %
+        with self.assertRaisesRegex(Exception,"Specified host '%s' has the coordinator or standby coordinator on it. This node can only be stopped as part of a full-cluster gpstop, without '--host'." %
                                      self.standby.getSegmentHostName()):
             gpstop.run()
         self.assertEqual(0, self.mock_GpSegStopCmdInit.call_count)
@@ -318,15 +318,15 @@ class GpStop(GpTestCase):
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
 
-        self.master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+            "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.standby = Segment.initFromString(
-            "2|-1|m|m|s|u|sdw1|sdw1|25432|/data/master")
+            "2|-1|m|m|s|u|sdw1|sdw1|25432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "3|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.primary1 = Segment.initFromString(
             "4|0|p|p|s|u|sdw2|sdw2|40001|/data/primary1")
-        self.mock_gparray.return_value = GpArray([self.master, self.standby, self.primary0, self.primary1])
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.standby, self.primary0, self.primary1])
 
         gpstop = self.subject.GpStop.createProgram(options, args)
 
@@ -334,13 +334,13 @@ class GpStop(GpTestCase):
             gpstop.run()
         self.assertEqual(0, self.mock_GpSegStopCmdInit.call_count)
 
-    def test_host_option_with_master_option_fails(self):
+    def test_host_option_with_coordinator_option_fails(self):
         sys.argv = ["gpstop", "--host", "sdw1", "-m"]
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
 
         with self.assertRaisesRegex(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
-                                                                         "option with '-m' for master-only."):
+                                                                         "option with '-m' for coordinator-only."):
             self.subject.GpStop.createProgram(options, args)
 
     def test_host_option_with_restart_option_fails(self):
@@ -353,13 +353,13 @@ class GpStop(GpTestCase):
             self.subject.GpStop.createProgram(options, args)
 
     def test_reload_config_use_local_context(self):
-        self.mock_socket.return_value = 'mdw'
+        self.mock_socket.return_value = 'cdw'
         sys.argv = ["gpstop", "-u"]
         parser = self.subject.GpStop.createParser()
         options, args = parser.parse_args()
-        self.mock_gparray.return_value = GpArray([self.master, self.primary0, self.primary1])
+        self.mock_gparray.return_value = GpArray([self.coordinator, self.primary0, self.primary1])
         gpstop = self.subject.GpStop.createProgram(options, args)
-        gpstop.gparray = GpArray([self.master, self.primary0, self.primary1])
+        gpstop.gparray = GpArray([self.coordinator, self.primary0, self.primary1])
         gpstop._sighup_cluster()
         self.assertEqual(3, self.mock_workerpool.addCommand.call_count)
         self.assertEqual(None, self.mock_workerpool.addCommand.call_args_list[0][0][0].remoteHost)
@@ -387,8 +387,8 @@ class GpStop(GpTestCase):
     @patch('gpstop.SegmentStop')
     def test_stop_standby_option(self, mock):
         self.standby = Segment.initFromString(
-            "10|-1|m|m|s|u|smdw|smdw|5432|/data/standby_master")
-        self.gparray = GpArray([self.master, self.primary0, self.primary1, self.primary2, self.primary3, self.mirror0, self.mirror1, self.mirror2, self.mirror3, self.standby])
+            "10|-1|m|m|s|u|scdw|scdw|5432|/data/standby_coordinator")
+        self.gparray = GpArray([self.coordinator, self.primary0, self.primary1, self.primary2, self.primary3, self.mirror0, self.mirror1, self.mirror2, self.mirror3, self.standby])
         self.mock_gparray.return_value = self.gparray
 
         sys.argv = ["gpstop", "-a", "-y"]
@@ -399,8 +399,8 @@ class GpStop(GpTestCase):
         gpstop.run()
         assert not mock.called
         log_message = self.get_info_messages()
-        self.assertTrue("Stopping master standby host smdw mode=fast" not in log_message)
-        self.assertTrue("No standby master host configured" not in log_message)
+        self.assertTrue("Stopping coordinator standby host scdw mode=fast" not in log_message)
+        self.assertTrue("No standby coordinator host configured" not in log_message)
 
 
 # Perform an 'import gpstop', as above.
@@ -480,21 +480,21 @@ class GpStopSmartModeTestCase(unittest.TestCase):
 
         subprocess_call.side_effect = _call
 
-    def test_stop_master_smart_issues_pg_ctl_stop(self, subprocess_call, dbconn_connect):
+    def test_stop_coordinator_smart_issues_pg_ctl_stop(self, subprocess_call, dbconn_connect):
         self._setup_subprocess(subprocess_call)
 
-        self.gpstop.master_datadir = 'datadir'
-        self.gpstop._stop_master_smart()
+        self.gpstop.coordinator_datadir = 'datadir'
+        self.gpstop._stop_coordinator_smart()
         subprocess_call.assert_any_call(['pg_ctl', 'stop', '-W', '-m', 'smart', '-D', 'datadir'])
 
-    def test_stop_master_smart_raises_exception_if_stop_fails(self, subprocess_call, dbconn_connect):
+    def test_stop_coordinator_smart_raises_exception_if_stop_fails(self, subprocess_call, dbconn_connect):
         self._setup_subprocess(subprocess_call)
         self.stop_retval = 1
 
         with self.assertRaises(Exception):
-            self.gpstop._stop_master_smart()
+            self.gpstop._stop_coordinator_smart()
 
-    def test_stop_master_smart_calls_pg_ctl_status_until_server_stops(self, subprocess_call, dbconn_connect):
+    def test_stop_coordinator_smart_calls_pg_ctl_status_until_server_stops(self, subprocess_call, dbconn_connect):
         self._setup_subprocess(subprocess_call)
         self.gpstop.conn = dbconn_connect
 
@@ -510,15 +510,15 @@ class GpStopSmartModeTestCase(unittest.TestCase):
             return gpstop.PG_CTL_STATUS_STOPPED
         self.status_callback = _status
 
-        self.gpstop._stop_master_smart()
-        self.assertEqual(self.i, 3, "expected _stop_master_smart to return after the third call to pg_ctl status")
+        self.gpstop._stop_coordinator_smart()
+        self.assertEqual(self.i, 3, "expected _stop_coordinator_smart to return after the third call to pg_ctl status")
 
-    def test_stop_master_smart_raises_exception_if_status_fails(self, subprocess_call, dbconn_connect):
+    def test_stop_coordinator_smart_raises_exception_if_status_fails(self, subprocess_call, dbconn_connect):
         self._setup_subprocess(subprocess_call)
         self.status_callback = lambda: 1 # indicate general failure
 
         with self.assertRaises(Exception):
-            self.gpstop._stop_master_smart()
+            self.gpstop._stop_coordinator_smart()
 
     def test_SigIntHandler_must_have_SIGINT_ignored_on_entry(self, subprocess_call, dbconn_connect):
         handler = lambda num, frame: None

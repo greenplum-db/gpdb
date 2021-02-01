@@ -31,6 +31,7 @@ import time
 import configparser
 from gppylib.util import ssh_utils
 from gppylib.gpparseopts import OptParser
+from gppylib.commands.gp import get_coordinatordatadir
 
 
 #
@@ -108,7 +109,7 @@ def parseConfigFile():
 
     try:
         config = configparser.RawConfigParser()
-        config.read(os.environ.get('MASTER_DATA_DIRECTORY') + '/gpssh.conf')
+        config.read(gp.get_coordinator_datadir() + '/gpssh.conf')
         if GV.DELAY_BEFORE_SEND is None:
             GV.DELAY_BEFORE_SEND = config.getfloat('gpssh', 'delaybeforesend')
         if GV.PROMPT_VALIDATION_TIMEOUT is None:
@@ -117,7 +118,7 @@ def parseConfigFile():
             GV.SYNC_RETRIES = config.getint('gpssh', 'sync_retries')
     except Exception:
         if GV.opt['-v']:
-            print('[WARN] Reference default values as $MASTER_DATA_DIRECTORY/gpssh.conf could not be found')
+            print('[WARN] Reference default values as $COORDINATOR_DATA_DIRECTORY/gpssh.conf could not be found')
 
         if GV.DELAY_BEFORE_SEND is None:
             GV.DELAY_BEFORE_SEND = 0.05

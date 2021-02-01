@@ -21,8 +21,8 @@ NEW_GPHOME=
 DATADIR_PREFIX=
 
 # The old and new clusters' master data directories.
-OLD_MASTER_DATA_DIRECTORY=
-NEW_MASTER_DATA_DIRECTORY=
+OLD_COORDINATOR_DATA_DIRECTORY=
+NEW_COORDINATOR_DATA_DIRECTORY=
 
 # The locations of the gpinitsystem configuration and hostfile.
 GPINITSYSTEM_CONFIG=
@@ -40,8 +40,8 @@ validate_local_envvars() {
     if [ -z "${GPHOME:-}" ]; then
         missing+='GPHOME '
     fi
-    if [ -z "${MASTER_DATA_DIRECTORY:-}" ]; then
-        missing+='MASTER_DATA_DIRECTORY '
+    if [ -z "${COORDINATOR_DATA_DIRECTORY:-}" ]; then
+        missing+='COORDINATOR_DATA_DIRECTORY '
     fi
     if [ -z "${PGPORT:-}" ]; then
         missing+='PGPORT '
@@ -63,13 +63,13 @@ validate_local_envvars() {
 
     # Quickly check to see if this looks like a demo cluster; for now, it's the
     # only thing we support.
-    local demodir=$(dirname $(dirname $(dirname ${MASTER_DATA_DIRECTORY})))
+    local demodir=$(dirname $(dirname $(dirname ${COORDINATOR_DATA_DIRECTORY})))
     if [[ $demodir != */gpAux/gpdemo ]]; then
         echo 'At the moment, this script only supports clusters that have been '
         echo 'created using the gpdemo scripts in gpAux. Your master data '
         echo 'directory does not appear to be part of a demo cluster:'
         echo
-        echo "    ${MASTER_DATA_DIRECTORY}"
+        echo "    ${COORDINATOR_DATA_DIRECTORY}"
         echo
         echo 'Patches welcome!'
 
@@ -201,7 +201,7 @@ gpinitsystem_for_upgrade() {
     # Greenplum clusters should be upgraded when GUC settings' defaults change.
     ssh -ttn ${MASTER_HOST} '
         source '"${OLD_GPHOME}"'/greenplum_path.sh
-        gpstop -a -d '"${OLD_MASTER_DATA_DIRECTORY}"'
+        gpstop -a -d '"${OLD_COORDINATOR_DATA_DIRECTORY}"'
 
         source '"${NEW_GPHOME}"'/greenplum_path.sh
         sed -E -e '\''s|('"${DATADIR_PREFIX}"'/[[:alnum:]_-]+)|\1-new|g'\'' '"${GPINITSYSTEM_CONFIG}"' > gpinitsystem_config_new
@@ -214,7 +214,7 @@ gpinitsystem_for_upgrade() {
         # echo "standard_conforming_strings = off" >> upgrade_addopts
         # echo "escape_string_warning = off" >> upgrade_addopts
         gpinitsystem -a -c gpinitsystem_config_new -h '"${GPINITSYSTEM_HOSTFILE}"' # -p ~gpadmin/upgrade_addopts
-        gpstop -a -d '"${NEW_MASTER_DATA_DIRECTORY}"'
+        gpstop -a -d '"${NEW_COORDINATOR_DATA_DIRECTORY}"'
     '
 }
 
@@ -277,7 +277,7 @@ get_new_datadir() {
 start_upgraded_cluster() {
     ssh -n ${MASTER_HOST} "
         source ${NEW_GPHOME}/greenplum_path.sh
-        MASTER_DATA_DIRECTORY='${NEW_MASTER_DATA_DIRECTORY}' gpstart -a -v
+        COORDINATOR_DATA_DIRECTORY='${NEW_COORDINATOR_DATA_DIRECTORY}' gpstart -a -v
     "
 }
 
@@ -375,8 +375,8 @@ if (( $CONCOURSE_MODE )); then
     OLD_GPHOME=/usr/local/greenplum-db-devel
     NEW_GPHOME=/usr/local/gpdb_master
     DATADIR_PREFIX=/data/gpdata
-    OLD_MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
-    NEW_MASTER_DATA_DIRECTORY=/data/gpdata/master-new/gpseg-1
+    OLD_COORDINATOR_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+    NEW_COORDINATOR_DATA_DIRECTORY=/data/gpdata/master-new/gpseg-1
     PSQL_ADDOPTS=
     GPINITSYSTEM_CONFIG=gpinitsystem_config
     GPINITSYSTEM_HOSTFILE=segment_host_list
@@ -389,9 +389,9 @@ else
     MASTER_HOST=localhost
     OLD_GPHOME=${GPHOME}
     NEW_GPHOME=${GPHOME}
-    DATADIR_PREFIX=$(dirname $(dirname ${MASTER_DATA_DIRECTORY}))
-    OLD_MASTER_DATA_DIRECTORY=${MASTER_DATA_DIRECTORY}
-    NEW_MASTER_DATA_DIRECTORY=$(get_new_datadir "${MASTER_DATA_DIRECTORY}")
+    DATADIR_PREFIX=$(dirname $(dirname ${COORDINATOR_DATA_DIRECTORY}))
+    OLD_COORDINATOR_DATA_DIRECTORY=${COORDINATOR_DATA_DIRECTORY}
+    NEW_COORDINATOR_DATA_DIRECTORY=$(get_new_datadir "${COORDINATOR_DATA_DIRECTORY}")
     PSQL_ADDOPTS="-p ${PGPORT}"
     GPINITSYSTEM_CONFIG=$(dirname ${DATADIR_PREFIX})/clusterConfigFile
     GPINITSYSTEM_HOSTFILE=$(dirname ${DATADIR_PREFIX})/hostfile
@@ -420,7 +420,7 @@ gpinitsystem_for_upgrade
 
 # TODO: we need to switch the mode argument according to GPDB version
 echo "Upgrading master at ${MASTER_HOST}..."
-run_upgrade ${MASTER_HOST} "${OLD_MASTER_DATA_DIRECTORY}" --mode=dispatcher
+run_upgrade ${MASTER_HOST} "${OLD_COORDINATOR_DATA_DIRECTORY}" --mode=dispatcher
 
 while read -u30 hostname datadir; do
     echo "Upgrading segment at '$hostname' ($datadir)..."
@@ -429,7 +429,7 @@ while read -u30 hostname datadir; do
 
     # NOTE: the trailing slash on the rsync source directory is important! It
     # means to transfer the directory's contents and not the directory itself.
-    ssh -n ${MASTER_HOST} rsync -r --delete "${NEW_MASTER_DATA_DIRECTORY}/" "$hostname:$newdatadir" \
+    ssh -n ${MASTER_HOST} rsync -r --delete "${NEW_COORDINATOR_DATA_DIRECTORY}/" "$hostname:$newdatadir" \
         --exclude /postgresql.conf \
         --exclude /pg_hba.conf \
         --exclude /postmaster.opts \

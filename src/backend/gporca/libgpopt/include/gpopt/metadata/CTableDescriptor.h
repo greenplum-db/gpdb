@@ -13,14 +13,13 @@
 #define GPOPT_CTableDescriptor_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CBitSet.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDRelationGPDB.h"
+#include "gpos/common/CDynamicPtrArray.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
+#include "naucrates/md/CMDRelationGPDB.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {
@@ -91,6 +90,9 @@ private:
 	// returns true if this table descriptor has partial indexes
 	BOOL FDescriptorWithPartialIndexes();
 
+	// lockmode from the parser
+	INT m_lockmode;
+
 public:
 	CTableDescriptor(const CTableDescriptor &) = delete;
 
@@ -99,7 +101,7 @@ public:
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser);
+					 ULONG ulExecuteAsUser, INT lockmode);
 
 	// dtor
 	~CTableDescriptor() override;
@@ -139,6 +141,12 @@ public:
 	GetExecuteAsUserId() const
 	{
 		return m_execute_as_user_id;
+	}
+
+	INT
+	LockMode() const
+	{
+		return m_lockmode;
 	}
 
 	// return the position of a particular attribute (identified by attno)
@@ -216,7 +224,7 @@ public:
 	ULONG UlPos(const CColumnDescriptor *,
 				const CColumnDescriptorArray *) const;
 
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// returns number of indices
 	ULONG IndexCount();

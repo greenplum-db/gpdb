@@ -9,13 +9,13 @@
 //		Test for CHashMapIter
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CHashMapIterTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CHashMapIter.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CHashMapIterTest.h"
 
 using namespace gpos;
 

@@ -10,15 +10,16 @@
 //		Implementation of the SAX parse handler class for parsing scalar SubPlan
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSubPlan.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanTestExpr.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanTestExpr.h"
 
 using namespace gpdxl;
 

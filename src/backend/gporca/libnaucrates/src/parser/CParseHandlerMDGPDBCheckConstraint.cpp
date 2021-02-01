@@ -15,14 +15,13 @@
 //
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/CMDCheckConstraintGPDB.h"
-
 #include "naucrates/dxl/parser/CParseHandlerMDGPDBCheckConstraint.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/md/CMDCheckConstraintGPDB.h"
 
 using namespace gpdxl;
 using namespace gpmd;

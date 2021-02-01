@@ -7,10 +7,12 @@
 --
 
 INSERT INTO tenk2 SELECT * FROM tenk1;
+ANALYZE tenk2;
 
 SELECT * INTO TABLE onek2 FROM onek;
 
 INSERT INTO fast_emp4000 SELECT * FROM slow_emp4000;
+ANALYZE fast_emp4000;
 
 SELECT *
    INTO TABLE Bprime
@@ -191,6 +193,13 @@ INSERT INTO f_star (class, f)
    VALUES ('f', '(11111111,33333333),(22222222,44444444)'::polygon);
 
 INSERT INTO f_star (class) VALUES ('f');
+
+ANALYZE a_star;
+ANALYZE b_star;
+ANALYZE c_star;
+ANALYZE d_star;
+ANALYZE e_star;
+ANALYZE f_star;
 
 
 --

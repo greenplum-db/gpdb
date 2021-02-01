@@ -9,13 +9,13 @@
 //		Implementation of DifferenceAll operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDifferenceAll.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalDifferenceAll.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;

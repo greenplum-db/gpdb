@@ -17,7 +17,7 @@ class IsVersionCompatibleTestCase(GpTestCase):
              'postupdate': [],
              'pkgname': 'plperl',
              'description': 'some description.',
-             'postinstall': [{'Master': "some reason to restart database"}],
+             'postinstall': [{'Coordinator': "some reason to restart database"}],
              'postuninstall': [],
              'abspath': 'plperl-ossv5.12.4_pv1.3_gpdb4.3-rhel5-x86_64.gppkg',
              'preinstall': [],
@@ -235,7 +235,7 @@ class SyncPackagesTestCase(GpTestCase):
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
         self.assertNotIn('The packages on %s are consistent.' % hostname, log_messages)
 
-    def test__execute_uninstall_on_segments_when_package_is_missing_on_master(self):
+    def test__execute_uninstall_on_segments_when_package_is_missing_on_coordinator(self):
         self.check_dir_mock.return_value.run.return_value = False
         self.check_remote_dir_mock.return_value.run.return_value = False
         self.make_dir_mock.return_value.run.return_value = None

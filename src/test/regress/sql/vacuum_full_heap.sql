@@ -1,6 +1,7 @@
 drop table if exists vfheap;
 create table vfheap (a, b, c) as
 select 1, i, repeat('x', 1000) from generate_series(1, 100)i distributed by (a);
+analyze vfheap;
 create index ivfheap on vfheap(b, c);
 
 -- delete half of table
@@ -50,6 +51,7 @@ select max(b), min(length(c)) from vfheap;
 drop table if exists vfheaptoast;
 create table vfheaptoast (a, b, c) as
 select 1, i, array(select generate_series(1, 10000)) from generate_series(1, 100)i;
+analyze vfheaptoast;
 
 select pg_relation_size((select reltoastrelid from pg_class where oid = 'vfheaptoast'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 1;
 

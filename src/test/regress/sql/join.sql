@@ -906,12 +906,15 @@ create temp table nt3 (
 );
 
 insert into nt1 values (1,true,true);
+ANALYZE nt1;
 insert into nt1 values (2,true,false);
 insert into nt1 values (3,false,false);
 insert into nt2 values (1,1,true,true);
+ANALYZE nt2;
 insert into nt2 values (2,2,true,false);
 insert into nt2 values (3,3,false,false);
 insert into nt3 values (1,1,true);
+ANALYZE nt3;
 insert into nt3 values (2,2,false);
 insert into nt3 values (3,3,true);
 
@@ -1478,6 +1481,10 @@ INSERT INTO a VALUES (0, 0), (1, NULL);
 INSERT INTO b VALUES (0, 0), (1, NULL);
 INSERT INTO c VALUES (0), (1);
 INSERT INTO d VALUES (1,3), (2,2), (3,1);
+ANALYZE a;
+ANALYZE b;
+ANALYZE c;
+ANALYZE d;
 
 -- all three cases should be optimizable into a simple seqscan
 explain (costs off) SELECT a.* FROM a LEFT JOIN b ON a.b_id = b.id;
@@ -2167,9 +2174,11 @@ drop table j2;
 drop table j3;
 
 -- check that semijoin inner is not seen as unique for a portion of the outerrel
+set enable_hashjoin = off;
 set enable_nestloop = on;
 set enable_seqscan = off;
 set enable_bitmapscan = off;
+analyze onek;
 
 explain (verbose, costs off)
 select t1.unique1, t2.hundred
@@ -2192,6 +2201,7 @@ where exists (select 1 from j3
 
 drop table j3;
 
+reset enable_hashjoin;
 reset enable_nestloop;
 reset enable_seqscan;
 reset enable_bitmapscan;

@@ -28,13 +28,14 @@ from gppylib.commands import gp, pg, unix
 from gppylib.commands.base import Command, WorkerPool
 from gppylib.db import dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
+from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
 from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
-from gppylib.system.environment import GpMasterEnvironment
+from gppylib.system.environment import GpCoordinatorEnvironment
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import writeLinesToFile, normalizeAndValidateInputPath, TableLogger
 from gppylib.operations.utils import ParallelOperation
@@ -285,6 +286,10 @@ class GpRecoverSegmentProgram:
             peerForFailedSegment = peersForFailedSegments[index]
 
             peerForFailedSegmentDbId = peerForFailedSegment.getSegmentDbId()
+
+            if failedSegment.unreachable:
+                continue
+
             segs.append(GpMirrorToBuild(failedSegment, peerForFailedSegment, failoverSegments[index],
                                         self.__options.forceFullResynchronization))
 
@@ -398,6 +403,9 @@ class GpRecoverSegmentProgram:
                 failoverSegment.setSegmentAddress(newRecoverAddress)
                 port = portAssigner.findAndReservePort(newRecoverHost, newRecoverAddress)
                 failoverSegment.setSegmentPort(port)
+
+            if failedSegment.unreachable:
+                continue
 
             segs.append(GpMirrorToBuild(failedSegment, liveSegment, failoverSegment, forceFull))
 
@@ -536,7 +544,7 @@ class GpRecoverSegmentProgram:
                 "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
 
         self.__pool = WorkerPool(self.__options.parallelDegree)
-        gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True)
+        gpEnv = GpCoordinatorEnvironment(self.__options.coordinatorDataDirectory, True)
 
         # verify "where to recover" options
         optionCnt = 0
@@ -549,11 +557,23 @@ class GpRecoverSegmentProgram:
         if optionCnt > 1:
             raise ProgramArgumentValidationException("Only one of -i, -p, and -r may be specified")
 
-        faultProberInterface.getFaultProber().initializeProber(gpEnv.getMasterPort())
+        faultProberInterface.getFaultProber().initializeProber(gpEnv.getCoordinatorPort())
 
-        confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
+        confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getCoordinatorPort())
 
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
+
+        num_workers = min(len(gpArray.get_hostlist()), self.__options.parallelDegree)
+        hosts = set(gpArray.get_hostlist(includeCoordinator=False))
+        unreachable_hosts = get_unreachable_segment_hosts(hosts, num_workers)
+        for i, segmentPair in enumerate(gpArray.segmentPairs):
+            if segmentPair.primaryDB.getSegmentHostName() in unreachable_hosts:
+                logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.primaryDB.dbid, segmentPair.primaryDB.getSegmentHostName()))
+                gpArray.segmentPairs[i].primaryDB.unreachable = True
+
+            if segmentPair.mirrorDB.getSegmentHostName() in unreachable_hosts:
+                logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.mirrorDB.dbid, segmentPair.mirrorDB.getSegmentHostName()))
+                gpArray.segmentPairs[i].mirrorDB.unreachable = True
 
         if not gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded(
@@ -645,7 +665,7 @@ class GpRecoverSegmentProgram:
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 
-            self.trigger_fts_probe(port=gpEnv.getMasterPort())
+            self.trigger_fts_probe(port=gpEnv.getCoordinatorPort())
 
             self.logger.info("******************************************************************")
             self.logger.info("Updating segments for streaming is completed.")
@@ -677,17 +697,17 @@ class GpRecoverSegmentProgram:
         # go forward if we have at least one segment that has replied
         if len(successes) == 0:
             raise Exception("No segments responded to ssh query for heap checksum validation.")
-        consistent, inconsistent, master_checksum_value = heap_checksum.check_segment_consistency(successes)
+        consistent, inconsistent, coordinator_checksum_value = heap_checksum.check_segment_consistency(successes)
         if len(inconsistent) > 0:
             self.logger.fatal("Heap checksum setting differences reported on segments")
             self.logger.fatal("Failed checksum consistency validation:")
             for gpdb in inconsistent:
                 segment_name = gpdb.getSegmentHostName()
                 checksum = gpdb.heap_checksum
-                self.logger.fatal("%s checksum set to %s differs from master checksum set to %s" %
-                                  (segment_name, checksum, master_checksum_value))
+                self.logger.fatal("%s checksum set to %s differs from coordinator checksum set to %s" %
+                                  (segment_name, checksum, coordinator_checksum_value))
             raise Exception("Heap checksum setting differences reported on segments")
-        self.logger.info("Heap checksum setting is consistent between master and the segments that are candidates "
+        self.logger.info("Heap checksum setting is consistent between coordinator and the segments that are candidates "
                          "for recoverseg")
 
     def cleanup(self):
@@ -712,14 +732,14 @@ class GpRecoverSegmentProgram:
         loggingGroup = addStandardLoggingAndHelpOptions(parser, True)
         loggingGroup.add_option("-s", None, default=None, action='store_false',
                                 dest='showProgressInplace',
-                                help='Show pg_basebackup progress sequentially instead of inplace')
+                                help='Show pg_basebackup/pg_rewind progress sequentially instead of inplace')
         loggingGroup.add_option("--no-progress",
                                 dest="showProgress", default=True, action="store_false",
-                                help="Suppress pg_basebackup progress output")
+                                help="Suppress pg_basebackup/pg_rewind progress output")
 
         addTo = OptionGroup(parser, "Connection Options")
         parser.add_option_group(addTo)
-        addMasterDirectoryOptionForSingleClusterProgram(addTo)
+        addCoordinatorDirectoryOptionForSingleClusterProgram(addTo)
 
         addTo = OptionGroup(parser, "Recovery Source Options")
         parser.add_option_group(addTo)
@@ -768,8 +788,8 @@ class GpRecoverSegmentProgram:
     def mainOptions():
         """
         The dictionary this method returns instructs the simple_main framework
-        to check for a gprecoverseg.lock file under MASTER_DATA_DIRECTORY to
-        prevent the customer from trying to run more than one instance of
+        to check for a gprecoverseg.lock file under COORDINATOR_DATA_DIRECTORY
+        to prevent the customer from trying to run more than one instance of
         gprecoverseg at the same time.
         """
         return {'pidlockpath': 'gprecoverseg.lock', 'parentpidvar': 'GPRECOVERPID'}

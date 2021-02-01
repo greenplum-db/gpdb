@@ -15,9 +15,10 @@
 #define GPDXL_CDXLTableDescriptor_H
 
 #include "gpos/base.h"
+
+#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/md/CMDName.h"
 #include "naucrates/md/IMDId.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
 
 namespace gpdxl
 {
@@ -46,6 +47,9 @@ private:
 	// id of user the table needs to be accessed with
 	ULONG m_execute_as_user_id;
 
+	// lock mode from the parser
+	INT m_lockmode;
+
 	void SerializeMDId(CXMLSerializer *xml_serializer) const;
 
 public:
@@ -53,7 +57,7 @@ public:
 
 	// ctor/dtor
 	CDXLTableDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-				   ULONG ulExecuteAsUser);
+				   ULONG ulExecuteAsUser, int lockmode);
 
 	~CDXLTableDescr() override;
 
@@ -73,6 +77,9 @@ public:
 
 	// user id
 	ULONG GetExecuteAsUserId() const;
+
+	// lock mode
+	INT LockMode() const;
 
 	// get the column descriptor at the given position
 	const CDXLColDescr *GetColumnDescrAt(ULONG idx) const;

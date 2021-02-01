@@ -13,7 +13,7 @@ from test.behave.mgmt_utils.steps.mgmt_utils import *
 # a series of steps.
 class GpConfigContext:
     def __init__(self):
-        self.master_postgres_file = ''
+        self.coordinator_postgres_file = ''
         self.standby_postgres_file = ''
 
 @given('the gpconfig context is setup')
@@ -37,7 +37,7 @@ def impl(context):
 
         if segment.content == -1:
             if segment.role == 'p':
-                context.gpconfig_context.master_postgres_file = original_path
+                context.gpconfig_context.coordinator_postgres_file = original_path
             else:
                 context.gpconfig_context.standby_postgres_file = original_path
 
@@ -61,12 +61,12 @@ def impl(context, guc, value):
         Then gpconfig should return a return code of 0
     ''' % cmd)
 
-# FIXME: this assumes the standby host is the same as the master host
+# FIXME: this assumes the standby host is the same as the coordinator host
 #  This is currently true for our demo_cluster and concourse_cluster
-@when('the user writes "{guc}" as "{value}" to the master config file')
+@when('the user writes "{guc}" as "{value}" to the coordinator config file')
 def impl(context, guc, value):
-    if context.gpconfig_context.master_postgres_file:
-        with open(context.gpconfig_context.master_postgres_file, 'a') as fd:
+    if context.gpconfig_context.coordinator_postgres_file:
+        with open(context.gpconfig_context.coordinator_postgres_file, 'a') as fd:
             fd.write("%s=%s\n" % (guc, value))
             fd.flush()
     if context.gpconfig_context.standby_postgres_file:

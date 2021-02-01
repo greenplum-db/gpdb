@@ -6,6 +6,8 @@
 -- We will reset the value to 250 finally so sanity check the current value here.
 6: show max_prepared_transactions;
 !\retcode gpconfig -c max_prepared_transactions -v 3 --skipvalidation;
+-- Enable gp_autostats_mode to make sure the single value insert triger 2pc
+!\retcode gpconfig -c gp_autostats_mode -v 'on_no_stats' --skipvalidation;
 !\retcode gpstop -ari;
 
 5: create table prepare_limit1 (a int);
@@ -59,4 +61,5 @@
 -- (50) and some isolation2 tests will fail due to "too many clients". Hardcode
 -- to 250 which is the default value when demo cluster is created.
 !\retcode gpconfig -c max_prepared_transactions -v 250 --skipvalidation;
+!\retcode gpconfig -c gp_autostats_mode -v 'none' --skipvalidation;
 !\retcode gpstop -ari;

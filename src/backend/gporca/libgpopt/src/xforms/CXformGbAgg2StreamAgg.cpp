@@ -9,15 +9,15 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformGbAgg2StreamAgg.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalStreamAgg.h"
-
-#include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/xforms/CXformGbAgg2StreamAgg.h"
 #include "gpopt/xforms/CXformGbAgg2HashAgg.h"
+#include "gpopt/xforms/CXformUtils.h"
 using namespace gpopt;
 
 

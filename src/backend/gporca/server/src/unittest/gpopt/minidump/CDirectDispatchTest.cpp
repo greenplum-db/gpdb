@@ -9,6 +9,8 @@
 //		Test for direct dispatch
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/minidump/CDirectDispatchTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
@@ -18,8 +20,6 @@
 #include "gpopt/minidump/CMinidumperUtils.h"
 
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "unittest/gpopt/minidump/CDirectDispatchTest.h"
 
 using namespace gpopt;
 

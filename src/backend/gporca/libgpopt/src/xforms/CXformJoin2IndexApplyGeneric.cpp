@@ -5,12 +5,14 @@
 // CXformJoin2IndexApplyGeneric.cpp
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformJoin2IndexApplyGeneric.h"
+
 #include "gpos/common/CAutoRef.h"
+
 #include "gpopt/operators/CLogicalApply.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
-#include "gpopt/xforms/CXformJoin2IndexApplyGeneric.h"
+#include "gpopt/operators/CLogicalGet.h"
 
 using namespace gpmd;
 using namespace gpopt;

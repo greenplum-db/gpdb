@@ -20,9 +20,9 @@
 #define GPDXL_CParseHandlerScalarArrayCoerceExpr_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarArrayCoerceExpr.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl

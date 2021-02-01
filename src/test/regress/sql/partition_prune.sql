@@ -8,6 +8,12 @@
 -- start_matchsubs
 -- m/ Gather Motion [12]:1  \(slice1; segments: [12]\)/
 -- s/ Gather Motion [12]:1  \(slice1; segments: [12]\)/ Gather Motion XXX/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
 -- end_matchsubs
 
 create table lp (a char) partition by list (a);
@@ -611,6 +617,7 @@ drop table ab, lprt_a;
 -- Join
 create table tbl1(col1 int);
 insert into tbl1 values (501), (505);
+analyze tbl1;
 
 -- Basic table
 create table tprt (col1 int) partition by range (col1);

@@ -9,13 +9,13 @@
 //		Serializable query object
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CSerializableQuery.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
-
-#include "gpopt/minidump/CSerializableQuery.h"
 
 using namespace gpos;
 using namespace gpopt;

@@ -10,11 +10,11 @@ SYNOPSIS
 
 
 gpaddmirrors [-p <port_offset>] [-m <datadir_config_file> [-a]] [-s] 
-             [-d <master_data_directory>] [-B <parallel_processes>] 
+             [-d <coordinator_data_directory>] [-B <parallel_processes>] 
              [-l <logfile_directory>] [-v]
 
 gpaddmirrors -i <mirror_config_file> [-s] [-a] 
-             [-d <master_data_directory>] [-B <parallel_processes>] 
+             [-d <coordinator_data_directory>] [-B <parallel_processes>] 
              [-l <logfile_directory>] [-v]
 
 gpaddmirrors -o <output_sample_mirror_config> [-m <datadir_config_file>]
@@ -109,10 +109,10 @@ OPTIONS
  depending on how many mirror segment instances it needs to set up.
 
 
--d <master_data_directory>
+-d <coordinator_data_directory>
 
- The master data directory. If not specified, the value set for 
- $MASTER_DATA_DIRECTORY will be used.
+ The coordinator data directory. If not specified, the value set for 
+ $COORDINATOR_DATA_DIRECTORY will be used.
 
 
 -i <mirror_config_file>

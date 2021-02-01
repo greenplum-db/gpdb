@@ -8,33 +8,33 @@
 //	@doc:
 //		Test for expression preprocessing
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/operators/CExpressionPreprocessorTest.h"
+
 #include <string.h>
 
+#include "gpos/common/CAutoRef.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/common/CAutoRef.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CAutoMDAccessor.h"
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CScalarProjectElement.h"
-#include "gpopt/operators/CLogicalNAryJoin.h"
-#include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
-#include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CXformUtils.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDProviderMemory.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/operators/CExpressionPreprocessorTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/CMDProviderMemory.h"
-#include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpopt;
 using namespace gpmd;

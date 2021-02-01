@@ -1,0 +1,16 @@
+2020-12-18 18:08:39|INFO|gpload session started 2020-12-18 18:08:39
+2020-12-18 18:08:39|INFO|setting schema 'public' for table 'texttable2'
+2020-12-18 18:08:39|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-18 18:08:39|INFO|running time: 0.08 seconds
+2020-12-18 18:08:39|INFO|rows Inserted          = 5
+2020-12-18 18:08:39|INFO|rows Updated           = 0
+2020-12-18 18:08:39|INFO|data formatting errors = 0
+2020-12-18 18:08:39|INFO|gpload succeeded
+2020-12-18 18:08:40|INFO|gpload session started 2020-12-18 18:08:40
+2020-12-18 18:08:40|INFO|setting schema 'public' for table 'texttable2'
+2020-12-18 18:08:40|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-18 18:08:40|INFO|running time: 0.08 seconds
+2020-12-18 18:08:40|INFO|rows Inserted          = 5
+2020-12-18 18:08:40|INFO|rows Updated           = 0
+2020-12-18 18:08:40|INFO|data formatting errors = 0
+2020-12-18 18:08:40|INFO|gpload succeeded

@@ -57,6 +57,8 @@ CREATE TABLE abstab_a (a int) DISTRIBUTED BY (a);
 INSERT INTO abstab_a VALUES (-1), (0), (1);
 CREATE TABLE abstab_b (b int) DISTRIBUTED BY (b);
 INSERT INTO abstab_b VALUES (-1), (0), (1), (2);
+ANALYZE abstab_a;
+ANALYZE abstab_b;
 
 -- The default opclass isn't helpful with the |=| operator, so this needs
 -- a Motion.
@@ -67,6 +69,7 @@ SELECT a, b FROM abstab_a, abstab_b WHERE a |=| b;
 DROP TABLE abstab_a;
 CREATE TABLE abstab_a (a int) DISTRIBUTED BY (a abs_int_hash_ops);
 INSERT INTO abstab_a VALUES (-1), (0), (1);
+ANALYZE abstab_a;
 
 -- The other side is still distributed using the default opclass,
 -- so we still need a Motion.

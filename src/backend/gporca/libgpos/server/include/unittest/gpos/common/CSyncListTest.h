@@ -11,10 +11,10 @@
 #ifndef GPOS_CSyncListTest_H
 #define GPOS_CSyncListTest_H
 
-#include "gpos/types.h"
 #include "gpos/common/CSyncList.h"
 #include "gpos/common/CSyncPool.h"
 #include "gpos/task/CAutoTaskProxy.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

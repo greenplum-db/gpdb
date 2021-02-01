@@ -14,6 +14,7 @@
 #define GPDXL_CParseHandlerGroupingColList_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl

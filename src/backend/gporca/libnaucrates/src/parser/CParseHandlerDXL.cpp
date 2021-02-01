@@ -9,25 +9,24 @@
 //		Implementation of the SAX parse handler class for parsing a DXL document
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/parser/CParseHandlerDXL.h"
+
 #include "gpos/task/CWorker.h"
 
-#include "naucrates/dxl/parser/CParseHandlerDXL.h"
-#include "naucrates/dxl/parser/CParseHandlerMetadata.h"
-#include "naucrates/dxl/parser/CParseHandlerMDRequest.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerCostParams.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerMDRequest.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerMetadata.h"
+#include "naucrates/dxl/parser/CParseHandlerOptimizerConfig.h"
 #include "naucrates/dxl/parser/CParseHandlerPlan.h"
 #include "naucrates/dxl/parser/CParseHandlerQuery.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarExpr.h"
-#include "naucrates/dxl/parser/CParseHandlerStatistics.h"
-#include "naucrates/dxl/parser/CParseHandlerOptimizerConfig.h"
-#include "naucrates/dxl/parser/CParseHandlerTraceFlags.h"
 #include "naucrates/dxl/parser/CParseHandlerSearchStrategy.h"
-#include "naucrates/dxl/parser/CParseHandlerCostParams.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/dxl/parser/CParseHandlerStatistics.h"
+#include "naucrates/dxl/parser/CParseHandlerTraceFlags.h"
 
 using namespace gpdxl;
 

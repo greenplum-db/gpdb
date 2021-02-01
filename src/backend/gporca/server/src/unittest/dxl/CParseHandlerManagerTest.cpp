@@ -9,24 +9,24 @@
 //		Tests parsing DXL documents into DXL trees.
 //---------------------------------------------------------------------------
 
+#include "unittest/dxl/CParseHandlerManagerTest.h"
+
+#include <xercesc/sax2/XMLReaderFactory.hpp>
+
 #include "gpos/base.h"
 #include "gpos/io/COstreamString.h"
-#include "gpos/string/CWStringDynamic.h"
 #include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/parser/CParseHandlerHashJoin.h"
 #include "naucrates/dxl/operators/CDXLPhysicalTableScan.h"
-#include "naucrates/dxl/parser/CParseHandlerPlan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerHashJoin.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerPlan.h"
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
-
-#include <xercesc/sax2/XMLReaderFactory.hpp>
-
-#include "unittest/dxl/CParseHandlerManagerTest.h"
 
 using namespace gpos;
 using namespace gpdxl;

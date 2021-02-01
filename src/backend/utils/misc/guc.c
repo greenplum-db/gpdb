@@ -1490,21 +1490,7 @@ static struct config_bool ConfigureNamesBool[] =
 			NULL
 		},
 		&autovacuum_start_daemon,
-		/*
-		 * GPDB: The default for autovacuum is intentionally 'off', even though it's 'on'
-		 * in PostgreSQL. We may want to revisit this later, but people had bad experience
-		 * with autovacuum on GPDB 4.3 versions. Mainly, it's problematic in a cluster when
-		 * autovacuum kicks in in a single segment: the performance of the cluster is often
-		 * only as good as the slowest segment, so autovacuum running on one segment slows
-		 * down the whole system. Also, auto-analyze is problematic, because we actually
-		 * need to collect statistics across all segments in the master, rather than collect
-		 * per-segment statistics at different times in different segments.
-		 *
-		 * So, disabled by default for now. You can still turn it on manually if you know what
-		 * you're doing (e.g. it might be ok to let autovacuum handle small fact tables and
-		 * catalog tables, and schedule manual vacuums for all the big tables).
-		 */
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 

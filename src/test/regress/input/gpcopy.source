@@ -675,7 +675,7 @@ CREATE EXTERNAL WEB TABLE copy_cmd_utility(a text, b int)
   EXECUTE E'PGOPTIONS="-c gp_role=utility" \\
     psql -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
       "COPY (SELECT * FROM pg_class) TO \'/dev/null\'"'
-  ON MASTER FORMAT 'text' (DELIMITER ' ');
+  ON COORDINATOR FORMAT 'text' (DELIMITER ' ');
 SELECT a FROM copy_cmd_utility;
 DROP EXTERNAL WEB TABLE copy_cmd_utility;
 
@@ -947,6 +947,7 @@ CREATE TABLE LINEITEM_7 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_8 (LIKE LINEITEM);
 
 COPY LINEITEM FROM '@abs_srcdir@/data/lineitem.csv' WITH DELIMITER '|' CSV;
+ANALYZE LINEITEM;
 SELECT COUNT(*) FROM LINEITEM;
 COPY LINEITEM TO '/tmp/lineitem.csv' CSV;
 COPY LINEITEM TO '/tmp/lineitem_s<SEGID>.csv' ON SEGMENT CSV;
@@ -1207,7 +1208,7 @@ COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT;
 TRUNCATE sales;
 COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT;
 
-CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t21.00\n"' ON MASTER FORMAT 'text';
+CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t21.00\n"' ON COORDINATOR FORMAT 'text';
 ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
 DROP TABLE ext_dec17;
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
@@ -1216,7 +1217,7 @@ COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL
 -- Verify that the files don't contain the row from the external partition.
 \set QUIET 'on'
 
-CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_all' ON MASTER FORMAT 'text' (DELIMITER 'off');
+CREATE EXTERNAL WEB TABLE pg_temp.read_result(line text) EXECUTE 'cat /tmp/test_sales_all' ON COORDINATOR FORMAT 'text' (DELIMITER 'off');
 SELECT * FROM pg_temp.read_result;
 DROP EXTERNAL TABLE pg_temp.read_result;
 

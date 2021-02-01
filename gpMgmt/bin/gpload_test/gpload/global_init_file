@@ -34,8 +34,8 @@ s/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:-----------------
 m/YYYYMMDD:HH:MI:SS:gpcheckcat:default-\[INFO\]:------------------------------------\n/
 s/YYYYMMDD:HH:MI:SS:gpcheckcat:default-\[INFO\]:------------------------------------\n//
 
-# Ignore MasterMirror WARNING message
-m/^WARNING:  Master mirroring is not synchronized/
+# Ignore CoordinatorMirror WARNING message
+m/^WARNING:  Coordinator mirroring is not synchronized/
 s/WARNING/GP_IGNORE: WARNING/
 
 # More insignificant gpcheckcat output to ignore...

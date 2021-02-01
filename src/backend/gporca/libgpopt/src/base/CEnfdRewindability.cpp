@@ -9,9 +9,10 @@
 //		Implementation of rewindability property
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CEnfdRewindability.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CEnfdRewindability.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CPhysicalSpool.h"
 

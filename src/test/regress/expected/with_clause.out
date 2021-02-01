@@ -4,12 +4,14 @@ create table with_test1 (i int, t text, value int) distributed by (i);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
+analyze with_test1;
 drop table if exists with_test2 cascade;
 NOTICE:  table "with_test2" does not exist, skipping
 create table with_test2 (i int, t text, value int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into with_test2 select i%100, 'text' || i%200, i%300 from generate_series(0, 999) i;
+analyze with_test2;
 -- With clause with one common table expression
 --begin_equivalent
 with my_sum(total) as (select sum(value) from with_test1)
@@ -2204,6 +2206,7 @@ CREATE TEMP TABLE foo (i int, j int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO foo SELECT g, g FROM generate_series(1, 2) g;
+ANALYZE foo;
 WITH a1 as (select * from foo),
      a2 as (select * from foo)
 SELECT a1.i

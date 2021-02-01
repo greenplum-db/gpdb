@@ -4,7 +4,7 @@ AS
 $$ select t.*, indrelid::regclass as tablename, pg_get_expr(indpred, relid), indnatts, indnkeyatts, indkey
    from pg_partition_tree($1) as t, pg_index as i where relid = indexrelid
 $$
-LANGUAGE SQL EXECUTE ON MASTER;
+LANGUAGE SQL EXECUTE ON COORDINATOR;
 
 --
 -- ************************************************************

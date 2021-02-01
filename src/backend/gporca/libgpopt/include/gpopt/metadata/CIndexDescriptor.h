@@ -14,12 +14,11 @@
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
 
+#include "gpopt/base/CColRef.h"
+#include "gpopt/metadata/CColumnDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDIndex.h"
-
-#include "gpopt/base/CColRef.h"
-#include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/metadata/CColumnDescriptor.h"
 
 namespace gpopt
 {
@@ -121,7 +120,7 @@ public:
 										const CTableDescriptor *ptabdesc,
 										const IMDIndex *pmdindex);
 
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CIndexDescriptor
 }  // namespace gpopt

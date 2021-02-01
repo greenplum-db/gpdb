@@ -490,13 +490,13 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	else
 		uri = NULL;
 
-	/* get the ON clause information, and restrict 'ON MASTER' to custom
+	/* get the ON clause information, and restrict 'ON COORDINATOR' to custom
 	 * protocols only */
 	on_clause = (char *) strVal(linitial(ext->execlocations));
-	if ((strcmp(on_clause, "MASTER_ONLY") == 0)
+	if ((strcmp(on_clause, "COORDINATOR_ONLY") == 0)
 		&& using_location && (uri->protocol != URI_CUSTOM)) {
 		ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				errmsg("\'ON MASTER\' is not supported by this protocol yet")));
+				errmsg("\'ON COORDINATOR\' is not supported by this protocol yet")));
 	}
 
 	/* get the total valid primary segdb count */
@@ -661,7 +661,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 							   uri->protocol == URI_GPFDISTS ||
 							   uri->protocol == URI_CUSTOM))
 	{
-		if ((strcmp(on_clause, "MASTER_ONLY") == 0) && (uri->protocol == URI_CUSTOM))
+		if ((strcmp(on_clause, "COORDINATOR_ONLY") == 0) && (uri->protocol == URI_CUSTOM))
 		{
 			const char *uri_str = strVal(linitial(ext->urilocations));
 			segdb_file_map[0] = pstrdup(uri_str);
@@ -1006,7 +1006,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 				}
 			}
 		}
-		else if (strcmp(on_clause, "MASTER_ONLY") == 0)
+		else if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
 		{
 			/*
 			 * store the command in first array entry and indicate that it is

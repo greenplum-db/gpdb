@@ -72,7 +72,7 @@
 #include "catalog/aoblkdir.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/oid_dispatch.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"

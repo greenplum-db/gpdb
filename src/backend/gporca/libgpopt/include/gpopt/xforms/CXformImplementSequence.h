@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementSequence_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt

@@ -13,29 +13,27 @@
 //		expression or a stand-alone tree;
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CExpressionHandle.h"
+
 #include "gpos/base.h"
 
-
+#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CCostContext.h"
-#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPattern.h"
-#include "gpopt/operators/CPhysicalScan.h"
-#include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CPhysicalCTEConsumer.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CKeyCollection.h"
-
-#include "gpopt/exception.h"
-
+#include "gpopt/operators/CPhysicalScan.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpnaucrates;
@@ -349,8 +347,7 @@ CExpressionHandle::PdrgpstatOuterRefs(IStatisticsArray *statistics_array,
 	if (gpos::ulong_max != ulStartIndex)
 	{
 		// copy stats starting from index of outer-most stats object referenced by child
-		CUtils::AddRefAppend<IStatistics, CleanupStats>(
-			pdrgpstatResult, statistics_array, ulStartIndex);
+		CUtils::AddRefAppend(pdrgpstatResult, statistics_array, ulStartIndex);
 	}
 
 	return pdrgpstatResult;
@@ -428,8 +425,7 @@ CExpressionHandle::DeriveStats(IStatisticsArray *stats_ctxt,
 	// copy input context
 	IStatisticsArray *pdrgpstatCurrentCtxt =
 		GPOS_NEW(m_mp) IStatisticsArray(m_mp);
-	CUtils::AddRefAppend<IStatistics, CleanupStats>(pdrgpstatCurrentCtxt,
-													stats_ctxt);
+	CUtils::AddRefAppend(pdrgpstatCurrentCtxt, stats_ctxt);
 
 	// create array of children stats
 	m_pdrgpstat = GPOS_NEW(m_mp) IStatisticsArray(m_mp);
@@ -520,6 +516,7 @@ CExpressionHandle::DeriveCostContextStats()
 		return;
 	}
 
+#if 0
 	CEnfdPartitionPropagation *pepp = m_pcc->Poc()->Prpp()->Pepp();
 	COperator *pop = Pop();
 	if (CUtils::FPhysicalScan(pop) &&
@@ -547,6 +544,7 @@ CExpressionHandle::DeriveCostContextStats()
 
 		return;
 	}
+#endif
 
 	// release current stats since we will derive new stats
 	CRefCount::SafeRelease(m_pstats);
@@ -690,9 +688,6 @@ CExpressionHandle::DerivePlanPropsForCostContext()
 		}
 	}
 
-	// set the number of expected partition selectors in the context
-	pdpctxtplan->SetExpectedPartitionSelectors(pop, m_pcc);
-
 	// create/derive local properties
 	m_pdpplan = Pop()->PdpCreate(m_mp);
 	m_pdpplan->Derive(m_mp, *this, pdpctxtplan);
@@ -718,16 +713,6 @@ CExpressionHandle::InitReqdProps(CReqdProp *prpInput)
 	// set required properties of attached expr/gexpr
 	m_prp = prpInput;
 	m_prp->AddRef();
-
-	if (m_prp->FPlan())
-	{
-		CReqdPropPlan *prpp = CReqdPropPlan::Prpp(prpInput);
-		if (NULL == prpp->Pepp())
-		{
-			CPartInfo *ppartinfo = DerivePartitionInfo();
-			prpp->InitReqdPartitionPropagation(m_mp, ppartinfo);
-		}
-	}
 
 	// compute required properties of children
 	m_pdrgprp = GPOS_NEW(m_mp) CReqdPropArray(m_mp);

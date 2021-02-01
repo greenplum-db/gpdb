@@ -1350,15 +1350,19 @@
                 <xref href="guc-list.xml#gp_interconnect_queue_depth" type="section"
                   >gp_interconnect_queue_depth</xref>
               </p>
-            </stentry>
-            <stentry>
               <p>
                 <xref href="guc-list.xml#gp_interconnect_setup_timeout" type="section"
                   >gp_interconnect_setup_timeout</xref>
               </p>
+            </stentry>
+            <stentry>
               <p>
                 <xref href="guc-list.xml#gp_interconnect_snd_queue_depth" type="section"
                   >gp_interconnect_snd_queue_depth</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#gp_interconnect_transmit_timeout" type="section"
+                  >gp_interconnect_transmit_timeout</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_interconnect_type" type="section"

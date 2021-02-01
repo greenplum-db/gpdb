@@ -9,13 +9,13 @@
 //		Test of bitset iterator
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CBitSetIterTest.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CBitSetIter.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CBitSetIterTest.h"
 
 using namespace gpos;
 

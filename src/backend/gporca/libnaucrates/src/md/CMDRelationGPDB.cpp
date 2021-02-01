@@ -10,12 +10,13 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/CMDRelationGPDB.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/exception.h"
-#include "naucrates/md/CMDRelationGPDB.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/exception.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -34,10 +35,10 @@ CMDRelationGPDB::CMDRelationGPDB(
 	CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
 	IMdIdArray *distr_opfamilies, ULongPtrArray *partition_cols_array,
 	CharPtrArray *str_part_types_array, ULONG num_of_partitions,
-	BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
-	CMDIndexInfoArray *md_index_info_array, IMdIdArray *mdid_triggers_array,
-	IMdIdArray *mdid_check_constraint_array,
-	IMDPartConstraint *mdpart_constraint, BOOL has_oids)
+	IMdIdArray *partition_oids, BOOL convert_hash_to_random,
+	ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
+	IMdIdArray *mdid_triggers_array, IMdIdArray *mdid_check_constraint_array,
+	CDXLNode *mdpart_constraint, BOOL has_oids)
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
@@ -52,6 +53,7 @@ CMDRelationGPDB::CMDRelationGPDB(
 	  m_partition_cols_array(partition_cols_array),
 	  m_str_part_types_array(str_part_types_array),
 	  m_num_of_partitions(num_of_partitions),
+	  m_partition_oids(partition_oids),
 	  m_keyset_array(keyset_array),
 	  m_mdindex_info_array(md_index_info_array),
 	  m_mdid_trigger_array(mdid_triggers_array),
@@ -132,6 +134,7 @@ CMDRelationGPDB::~CMDRelationGPDB()
 	m_md_col_array->Release();
 	CRefCount::SafeRelease(m_distr_col_array);
 	CRefCount::SafeRelease(m_distr_opfamilies);
+	CRefCount::SafeRelease(m_partition_oids);
 	CRefCount::SafeRelease(m_partition_cols_array);
 	CRefCount::SafeRelease(m_str_part_types_array);
 	CRefCount::SafeRelease(m_keyset_array);
@@ -641,7 +644,7 @@ CMDRelationGPDB::CheckConstraintMDidAt(ULONG pos) const
 //		Return the part constraint
 //
 //---------------------------------------------------------------------------
-IMDPartConstraint *
+CDXLNode *
 CMDRelationGPDB::MDPartConstraint() const
 {
 	return m_mdpart_constraint;
@@ -792,7 +795,28 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	// serialize part constraint
 	if (NULL != m_mdpart_constraint)
 	{
-		m_mdpart_constraint->Serialize(xml_serializer);
+		xml_serializer->OpenElement(
+			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+			CDXLTokens::GetDXLTokenStr(EdxltokenPartConstraint));
+
+		// serialize the scalar expression
+		if (NULL != m_mdpart_constraint)
+			m_mdpart_constraint->SerializeToDXL(xml_serializer);
+
+		xml_serializer->CloseElement(
+			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+			CDXLTokens::GetDXLTokenStr(EdxltokenPartConstraint));
+
+		GPOS_CHECK_ABORT;
+	}
+
+	// GPDB_12_MERGE_FIXME: Convert m_partition_oids check to an assert
+	// after md.xml is fixed
+	if (IsPartitioned() && m_partition_oids)
+	{
+		SerializeMDIdList(xml_serializer, m_partition_oids,
+						  CDXLTokens::GetDXLTokenStr(EdxltokenPartitions),
+						  CDXLTokens::GetDXLTokenStr(EdxltokenPartition));
 	}
 
 	xml_serializer->CloseElement(
@@ -800,6 +824,12 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelation));
 
 	GPOS_CHECK_ABORT;
+}
+
+IMdIdArray *
+CMDRelationGPDB::ChildPartitionMdids() const
+{
+	return m_partition_oids;
 }
 
 #ifdef GPOS_DEBUG

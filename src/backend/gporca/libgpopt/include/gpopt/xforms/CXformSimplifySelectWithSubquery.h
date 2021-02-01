@@ -12,9 +12,10 @@
 #define GPOPT_CXformSimplifySelectWithSubquery_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPatternTree.h"
-#include "gpopt/operators/CPatternLeaf.h"
+
 #include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/xforms/CXformSimplifySubquery.h"
 
 namespace gpopt

@@ -25,7 +25,7 @@
 #include "catalog/catalog.h"
 #include "catalog/gp_fastsequence.h"
 #include "catalog/namespace.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"

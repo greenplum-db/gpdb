@@ -9,10 +9,11 @@
 //		Implementation of random motion operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalMotionRandom.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalMotionRandom.h"
 
 using namespace gpopt;
 

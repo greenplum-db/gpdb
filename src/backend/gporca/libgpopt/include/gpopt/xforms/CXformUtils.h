@@ -13,19 +13,17 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDScalarOp.h"
-
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRef.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalDML.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CPhysicalJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
 #include "gpopt/xforms/CXform.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDScalarOp.h"
 
 namespace gpopt
 {
@@ -39,49 +37,6 @@ class CLogical;
 class CLogicalDynamicGet;
 class CPartConstraint;
 class CTableDescriptor;
-
-// structure describing a candidate for a partial dynamic index scan
-struct SPartDynamicIndexGetInfo
-{
-	// md index
-	const IMDIndex *m_pmdindex;
-
-	// part constraint
-	CPartConstraint *m_part_constraint;
-
-	// index predicate expressions
-	CExpressionArray *m_pdrgpexprIndex;
-
-	// residual expressions
-	CExpressionArray *m_pdrgpexprResidual;
-
-	// ctor
-	SPartDynamicIndexGetInfo(const IMDIndex *pmdindex,
-							 CPartConstraint *ppartcnstr,
-							 CExpressionArray *pdrgpexprIndex,
-							 CExpressionArray *pdrgpexprResidual)
-		: m_pmdindex(pmdindex),
-		  m_part_constraint(ppartcnstr),
-		  m_pdrgpexprIndex(pdrgpexprIndex),
-		  m_pdrgpexprResidual(pdrgpexprResidual)
-	{
-		GPOS_ASSERT(NULL != ppartcnstr);
-	}
-
-	// dtor
-	~SPartDynamicIndexGetInfo()
-	{
-		m_part_constraint->Release();
-		CRefCount::SafeRelease(m_pdrgpexprIndex);
-		CRefCount::SafeRelease(m_pdrgpexprResidual);
-	}
-};
-
-// arrays over partial dynamic index get candidates
-typedef CDynamicPtrArray<SPartDynamicIndexGetInfo, CleanupDelete>
-	SPartDynamicIndexGetInfoArray;
-typedef CDynamicPtrArray<SPartDynamicIndexGetInfoArray, CleanupRelease>
-	SPartDynamicIndexGetInfoArrays;
 
 // map of expression to array of expressions
 typedef CHashMap<CExpression, CExpressionArray, CExpression::HashValue,
@@ -119,9 +74,7 @@ private:
 	typedef CLogical *(*PDynamicIndexOpConstructor)(
 		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
 		ULONG ulOriginOpId, CName *pname, ULONG ulPartIndex,
-		CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-		ULONG ulSecondaryPartIndexId, CPartConstraint *ppartcnstr,
-		CPartConstraint *ppartcnstrRel);
+		CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart);
 
 	typedef CLogical *(*PStaticIndexOpConstructor)(
 		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
@@ -260,24 +213,22 @@ private:
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsReqd, CColRefSet *pcrsScalarExpr,
 		CColRefSet *outer_refs, const IMDIndex *pmdindex,
-		const IMDRelation *pmdrel, BOOL fAllowPartialIndex,
-		CPartConstraint *ppcForPartialIndexes,
+		const IMDRelation *pmdrel, CPartConstraint *ppcForPartialIndexes,
 		IMDIndex::EmdindexType emdindtype, PDynamicIndexOpConstructor pdiopc,
 		PStaticIndexOpConstructor psiopc, PRewrittenIndexPath prip);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
-	PopDynamicBtreeIndexOpConstructor(
-		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
-		ULONG ulOriginOpId, CName *pname, ULONG ulPartIndex,
-		CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-		ULONG ulSecondaryPartIndexId, CPartConstraint *ppartcnstr,
-		CPartConstraint *ppartcnstrRel)
+	PopDynamicBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
+									  CTableDescriptor *ptabdesc,
+									  ULONG ulOriginOpId, CName *pname,
+									  ULONG ulPartIndex,
+									  CColRefArray *pdrgpcrOutput,
+									  CColRef2dArray *pdrgpdrgpcrPart)
 	{
 		return GPOS_NEW(mp) CLogicalDynamicIndexGet(
 			mp, pmdindex, ptabdesc, ulOriginOpId, pname, ulPartIndex,
-			pdrgpcrOutput, pdrgpdrgpcrPart, ulSecondaryPartIndexId, ppartcnstr,
-			ppartcnstrRel);
+			pdrgpcrOutput, pdrgpdrgpcrPart);
 	}
 
 	//	create a static operator for a btree index plan
@@ -304,11 +255,6 @@ private:
 			mp, GPOS_NEW(mp) CExpression(mp, popLogical, pexprIndexCond),
 			pexprResidualCond);
 	}
-
-	// create a candidate dynamic get scan to suplement the partial index scans
-	static SPartDynamicIndexGetInfo *PpartdigDynamicGet(
-		CMemoryPool *mp, CExpressionArray *pdrgpexprScalar,
-		CPartConstraint *ppartcnstrCovered, CPartConstraint *ppartcnstrRel);
 
 	// returns true iff the given expression is a Not operator whose child is a
 	// scalar identifier
@@ -579,15 +525,13 @@ public:
 						 CExpressionArray *pdrgpexprConds, CColRefSet *pcrsReqd,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-						 BOOL fAllowPartialIndex,
 						 CPartConstraint *ppcartcnstrIndex)
 	{
 		return PexprBuildIndexPlan(
 			mp, md_accessor, pexprGet, ulOriginOpId, pdrgpexprConds, pcrsReqd,
-			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, fAllowPartialIndex,
-			ppcartcnstrIndex, IMDIndex::EmdindBtree,
-			PopDynamicBtreeIndexOpConstructor, PopStaticBtreeIndexOpConstructor,
-			PexprRewrittenBtreeIndexPath);
+			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, ppcartcnstrIndex,
+			IMDIndex::EmdindBtree, PopDynamicBtreeIndexOpConstructor,
+			PopStaticBtreeIndexOpConstructor, PexprRewrittenBtreeIndexPath);
 	}
 
 	// helper for creating bitmap bool op expressions
@@ -644,17 +588,6 @@ public:
 	static CExpression *PexprSelect2BitmapBoolOp(CMemoryPool *mp,
 												 CExpression *pexpr);
 
-	// find a set of partial index combinations
-	static SPartDynamicIndexGetInfoArrays *PdrgpdrgppartdigCandidates(
-		CMemoryPool *mp, CMDAccessor *md_accessor,
-		CExpressionArray *pdrgpexprScalar, CColRef2dArray *pdrgpdrgpcrPartKey,
-		const IMDRelation *pmdrel, CPartConstraint *ppartcnstrRel,
-		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
-		CColRefSet *pcrsScalarExpr,
-		CColRefSet *
-			pcrsAcceptedOuterRefs  // set of columns to be considered for index apply
-	);
-
 	// compute the newly covered part constraint based on the old covered part
 	// constraint and the given part constraint
 	static CPartConstraint *PpartcnstrUpdateCovered(
@@ -672,16 +605,6 @@ public:
 										  CColRefArray *pdrgpcrRemappedA,
 										  CColRefArray *pdrgpcrB,
 										  CColRefArray *pdrgpcrRemappedB);
-
-	// construct a partial dynamic index get
-	static CExpression *PexprPartialDynamicIndexGet(
-		CMemoryPool *mp, CLogicalDynamicGet *popGet, ULONG ulOriginOpId,
-		CExpressionArray *pdrgpexprIndex, CExpressionArray *pdrgpexprResidual,
-		CColRefArray *pdrgpcrDIG, const IMDIndex *pmdindex,
-		const IMDRelation *pmdrel, CPartConstraint *ppartcnstr,
-		CColRefSet *
-			pcrsAcceptedOuterRefs,	// set of columns to be considered for index apply
-		CColRefArray *pdrgpcrOuter, CColRefArray *pdrgpcrNewOuter);
 
 	// create a new CTE consumer for the given CTE id
 	static CExpression *PexprCTEConsumer(CMemoryPool *mp, ULONG ulCTEId,

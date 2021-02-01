@@ -9,18 +9,17 @@
 //		Implementation of dynamic table scan operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalDynamicTableScan.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
+
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CPartIndexMap.h"
-
-#include "gpopt/operators/CPhysicalDynamicTableScan.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
-
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
@@ -35,14 +34,14 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalDynamicTableScan::CPhysicalDynamicTableScan(
-	CMemoryPool *mp, BOOL is_partial, const CName *pnameAlias,
-	CTableDescriptor *ptabdesc, ULONG ulOriginOpId, ULONG scan_id,
-	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrParts,
-	ULONG ulSecondaryScanId, CPartConstraint *ppartcnstr,
-	CPartConstraint *ppartcnstrRel)
-	: CPhysicalDynamicScan(mp, is_partial, ptabdesc, ulOriginOpId, pnameAlias,
-						   scan_id, pdrgpcrOutput, pdrgpdrgpcrParts,
-						   ulSecondaryScanId, ppartcnstr, ppartcnstrRel)
+	CMemoryPool *mp, const CName *pnameAlias, CTableDescriptor *ptabdesc,
+	ULONG ulOriginOpId, ULONG scan_id, CColRefArray *pdrgpcrOutput,
+	CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
+	ColRefToUlongMapArray *root_col_mapping_per_part)
+	: CPhysicalDynamicScan(mp, ptabdesc, ulOriginOpId, pnameAlias, scan_id,
+						   pdrgpcrOutput, pdrgpdrgpcrParts),
+	  m_partition_mdids(partition_mdids),
+	  m_root_col_mapping_per_part(root_col_mapping_per_part)
 {
 }
 
@@ -71,14 +70,13 @@ CPhysicalDynamicTableScan::Matches(COperator *pop) const
 IStatistics *
 CPhysicalDynamicTableScan::PstatsDerive(CMemoryPool *mp,
 										CExpressionHandle &exprhdl,
-										CReqdPropPlan *prpplan,
+										CReqdPropPlan *prpplan GPOS_UNUSED,
 										IStatisticsArray *	// stats_ctxt
 ) const
 {
 	GPOS_ASSERT(NULL != prpplan);
 
-	return CStatisticsUtils::DeriveStatsForDynamicScan(
-		mp, exprhdl, ScanId(), prpplan->Pepp()->PpfmDerived());
+	return CStatisticsUtils::DeriveStatsForDynamicScan(mp, exprhdl, ScanId());
 }
 
 // EOF

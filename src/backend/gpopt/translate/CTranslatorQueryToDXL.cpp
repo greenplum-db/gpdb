@@ -19,9 +19,9 @@ extern "C" {
 
 #include "access/sysattr.h"
 #include "catalog/pg_class.h"
-#include "nodes/plannodes.h"
-#include "nodes/parsenodes.h"
 #include "nodes/makefuncs.h"
+#include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
 #include "optimizer/walkers.h"
 #include "utils/rel.h"
 }
@@ -30,34 +30,29 @@ extern "C" {
 #include "gpos/common/CAutoTimer.h"
 
 #include "gpopt/base/CUtils.h"
+#include "gpopt/gpdbwrappers.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/translate/CCTEListEntry.h"
 #include "gpopt/translate/CQueryMutators.h"
-#include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CTranslatorQueryToDXL.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
+#include "gpopt/translate/CTranslatorQueryToDXL.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
-
-#include "naucrates/exception.h"
-
+#include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/operators/dxlops.h"
-#include "naucrates/dxl/operators/CDXLScalarBooleanTest.h"
 #include "naucrates/dxl/operators/CDXLDatumInt4.h"
 #include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLScalarBooleanTest.h"
+#include "naucrates/dxl/operators/dxlops.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdGPDBCtas.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
-#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
-#include "naucrates/md/CMDIdGPDBCtas.h"
-
 #include "naucrates/traceflags/traceflags.h"
-
-#include "gpopt/gpdbwrappers.h"
 
 using namespace gpdxl;
 using namespace gpos;
@@ -3139,6 +3134,36 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
+
+	IMdIdArray *partition_mdids = md_rel->ChildPartitionMdids();
+	IMDRelation::Erelstoragetype rel_storage_type =
+		IMDRelation::ErelstorageSentinel;
+	for (ULONG ul = 0; partition_mdids && ul < partition_mdids->Size(); ++ul)
+	{
+		IMDId *part_mdid = (*partition_mdids)[ul];
+		const IMDRelation *partrel = m_md_accessor->RetrieveRel(part_mdid);
+
+		if (partrel->IsPartitioned())
+		{
+			// Multi-level partitioned tables are unsupported - fall back
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("Multi-level partitioned tables"));
+		}
+
+
+		if (partrel->RetrieveRelStorageType() != rel_storage_type)
+		{
+			if (rel_storage_type == IMDRelation::ErelstorageSentinel)
+			{
+				rel_storage_type = partrel->RetrieveRelStorageType();
+				continue;
+			}
+
+			// Multi-level partitioned tables are unsupported - fall back
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("Heterogeneous partition storage types"));
+		}
+	}
 
 	return dxl_node;
 }

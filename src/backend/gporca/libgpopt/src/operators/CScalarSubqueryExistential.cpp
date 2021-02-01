@@ -9,14 +9,14 @@
 //		Implementation of existential subquery operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
-#include "gpopt/base/CDrvdPropScalar.h"
-#include "gpopt/base/CColRefSet.h"
-#include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarSubqueryExistential.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;

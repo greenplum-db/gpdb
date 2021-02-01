@@ -22,7 +22,7 @@
 #include "utils/guc.h"
 #include "utils/resowner.h"
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 #include <zstd.h>
 #endif
 
@@ -119,7 +119,7 @@ void gp_decompress(
 /*
  * Support for tracking ZSTD handles with resource owners.
  */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 
 static dlist_head open_zstd_handles;
 static bool zstd_resowner_callback_registered;
@@ -187,4 +187,4 @@ zstd_free_callback(ResourceReleasePhase phase,
 	}
 }
 
-#endif	/* HAVE_LIBZSTD */
+#endif	/* USE_ZSTD */

@@ -12,9 +12,9 @@
 #ifndef GPDXL_CParseHandlerDummy_H
 #define GPDXL_CParseHandlerDummy_H
 
-#include "gpos/base.h"
-
 #include <xercesc/sax2/DefaultHandler.hpp>
+
+#include "gpos/base.h"
 
 namespace gpdxl
 {

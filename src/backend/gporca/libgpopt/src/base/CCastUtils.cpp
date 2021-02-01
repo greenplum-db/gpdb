@@ -9,16 +9,18 @@
 //		Implementation of cast utility functions
 //---------------------------------------------------------------------------
 
-#include "gpos/memory/CAutoMemoryPool.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
+
+#include "gpos/memory/CAutoMemoryPool.h"
+
+#include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-#include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArrayCoerceExpr.h"
 #include "gpopt/operators/CScalarCast.h"
-#include "naucrates/md/IMDCast.h"
+#include "gpopt/operators/CScalarIdent.h"
 #include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-#include "gpopt/operators/CPredicateUtils.h"
+#include "naucrates/md/IMDCast.h"
 
 using namespace gpopt;
 using namespace gpmd;

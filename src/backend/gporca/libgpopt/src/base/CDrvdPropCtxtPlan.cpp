@@ -9,15 +9,12 @@
 //		Derived plan properties context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropPlan.h"
-#include "gpopt/operators/CPhysicalScan.h"
-#include "gpopt/operators/CPhysicalPartitionSelector.h"
-#include "gpopt/operators/CPhysicalDynamicScan.h"
-#include "gpopt/operators/CPhysicalUnionAll.h"
 
 
 using namespace gpopt;
@@ -31,10 +28,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDrvdPropCtxtPlan::CDrvdPropCtxtPlan(CMemoryPool *mp, BOOL fUpdateCTEMap)
-	: CDrvdPropCtxt(mp),
-	  m_phmulpdpCTEs(NULL),
-	  m_ulExpectedPartitionSelectors(0),
-	  m_fUpdateCTEMap(fUpdateCTEMap)
+	: CDrvdPropCtxt(mp), m_phmulpdpCTEs(NULL), m_fUpdateCTEMap(fUpdateCTEMap)
 {
 	m_phmulpdpCTEs = GPOS_NEW(m_mp) UlongToDrvdPropPlanMap(m_mp);
 }
@@ -66,8 +60,6 @@ CDrvdPropCtxt *
 CDrvdPropCtxtPlan::PdpctxtCopy(CMemoryPool *mp) const
 {
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
-	pdpctxtplan->m_ulExpectedPartitionSelectors =
-		m_ulExpectedPartitionSelectors;
 
 	UlongToDrvdPropPlanMapIter hmulpdpiter(m_phmulpdpCTEs);
 	while (hmulpdpiter.Advance())
@@ -186,46 +178,4 @@ CDrvdPropCtxtPlan::CopyCTEProducerProps(CDrvdPropPlan *pdpplan, ULONG ulCTEId)
 		m_phmulpdpCTEs->Insert(GPOS_NEW(m_mp) ULONG(ulCTEId), pdpplan);
 	GPOS_ASSERT(fInserted);
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CDrvdPropCtxtPlan::SetExpectedPartitionSelectors
-//
-//	@doc:
-//		Set the number of expected partition selectors based on the given
-//		operator and the given cost context
-//
-//---------------------------------------------------------------------------
-void
-CDrvdPropCtxtPlan::SetExpectedPartitionSelectors(COperator *pop,
-												 CCostContext *pcc)
-{
-	ULONG scan_id = 0;
-	if (CUtils::FPhysicalScan(pop) &&
-		CPhysicalScan::PopConvert(pop)->FDynamicScan())
-	{
-		scan_id = CPhysicalDynamicScan::PopConvert(pop)->ScanId();
-	}
-	else if (COperator::EopPhysicalSerialUnionAll == pop->Eopid() &&
-			 CPhysicalUnionAll::PopConvert(pop)->IsPartialIndex())
-	{
-		scan_id = CPhysicalUnionAll::PopConvert(pop)->UlScanIdPartialIndex();
-	}
-	else if (COperator::EopPhysicalPartitionSelector == pop->Eopid())
-	{
-		scan_id = CPhysicalPartitionSelector::PopConvert(pop)->ScanId();
-	}
-	else
-	{
-		return;
-	}
-
-	m_ulExpectedPartitionSelectors = pcc->Poc()
-										 ->Prpp()
-										 ->Pepp()
-										 ->PppsRequired()
-										 ->Ppim()
-										 ->UlExpectedPropagators(scan_id);
-}
-
 // EOF

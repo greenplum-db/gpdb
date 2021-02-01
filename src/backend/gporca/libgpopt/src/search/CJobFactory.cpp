@@ -9,12 +9,13 @@
 //		Implementation of optimizer job base class
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobFactory.h"
+
 #include "gpos/base.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CWorker.h"
 
 #include "gpopt/search/CGroupExpression.h"
-#include "gpopt/search/CJobFactory.h"
 
 
 using namespace gpopt;

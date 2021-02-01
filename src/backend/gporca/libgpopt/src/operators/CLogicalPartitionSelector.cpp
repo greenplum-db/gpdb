@@ -9,13 +9,14 @@
 //		Implementation of Logical partition selector
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalPartitionSelector.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalPartitionSelector.h"
 
 using namespace gpopt;
 

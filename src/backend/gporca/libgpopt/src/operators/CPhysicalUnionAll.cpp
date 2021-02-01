@@ -1,13 +1,14 @@
-#include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/operators/CPhysicalUnionAll.h"
+
 #include "gpos/error/CAutoTrace.h"
 
-#include "gpopt/operators/CPhysicalUnionAll.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CHashedDistributions.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
+#include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CHashedDistributions.h"
 #include "gpopt/operators/CScalarIdent.h"
-#include "gpopt/base/CColRefSetIter.h"
 
 using namespace gpopt;
 
@@ -269,36 +270,6 @@ CPhysicalUnionAll::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalUnionAll::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalUnionAll::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								CPartitionPropagationSpec *pppsRequired,
-								ULONG child_index,
-								CDrvdPropArray *,  //pdrgpdpCtxt,
-								ULONG			   //ulOptReq
-)
-{
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	if (IsPartialIndex())
-	{
-		// if this union came from the partial index xform, push an
-		// empty partition request below
-		return GPOS_NEW(mp) CPartitionPropagationSpec(
-			GPOS_NEW(mp) CPartIndexMap(mp), GPOS_NEW(mp) CPartFilterMap(mp));
-	}
-
-	return CPhysical::PppsRequiredPushThruNAry(mp, exprhdl, pppsRequired,
-											   child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalUnionAll::PcteRequired
 //
 //	@doc:
@@ -427,111 +398,6 @@ CPhysicalUnionAll::EpetRewindability(CExpressionHandle &exprhdl,
 	}
 
 	return CEnfdProp::EpetRequired;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalUnionAll::EpetPartitionPropagation
-//
-//	@doc:
-//		Compute the enforcing type for the operator
-//
-//---------------------------------------------------------------------------
-CEnfdProp::EPropEnforcingType
-CPhysicalUnionAll::EpetPartitionPropagation(
-	CExpressionHandle &exprhdl, const CEnfdPartitionPropagation *pepp) const
-{
-	CPartIndexMap *ppimReqd = pepp->PppsRequired()->Ppim();
-	if (!ppimReqd->FContainsUnresolved())
-	{
-		// no unresolved partition consumers left
-		return CEnfdProp::EpetUnnecessary;
-	}
-
-	CPartIndexMap *ppimDrvd = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Ppim();
-	GPOS_ASSERT(NULL != ppimDrvd);
-
-	BOOL fInScope = pepp->FInScope(m_mp, ppimDrvd);
-	BOOL fResolved = pepp->FResolved(m_mp, ppimDrvd);
-
-	if (fResolved)
-	{
-		// all required partition consumers are resolved
-		return CEnfdProp::EpetUnnecessary;
-	}
-
-	if (!fInScope)
-	{
-		// some partition consumers are not covered downstream
-		return CEnfdProp::EpetRequired;
-	}
-
-
-	ULongPtrArray *pdrgpul = ppimReqd->PdrgpulScanIds(m_mp);
-	const ULONG ulScanIds = pdrgpul->Size();
-
-	const ULONG arity = exprhdl.UlNonScalarChildren();
-	for (ULONG ul = 0; ul < ulScanIds; ul++)
-	{
-		ULONG scan_id = *((*pdrgpul)[ul]);
-
-		ULONG ulChildrenWithConsumers = 0;
-		for (ULONG ulChildIdx = 0; ulChildIdx < arity; ulChildIdx++)
-		{
-			if (exprhdl.DerivePartitionInfo(ulChildIdx)
-					->FContainsScanId(scan_id))
-			{
-				ulChildrenWithConsumers++;
-			}
-		}
-
-		if (1 < ulChildrenWithConsumers)
-		{
-			// partition consumer exists in more than one child, so enforce it here
-			pdrgpul->Release();
-
-			return CEnfdProp::EpetRequired;
-		}
-	}
-
-	pdrgpul->Release();
-
-	// required part propagation can be enforced here or passed to the children
-	return CEnfdProp::EpetOptional;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalUnionAll::PpimDerive
-//
-//	@doc:
-//		Derive partition index map
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysicalUnionAll::PpimDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
-							  CDrvdPropCtxt *pdpctxt) const
-{
-	CPartIndexMap *ppim = PpimDeriveCombineRelational(mp, exprhdl);
-	if (IsPartialIndex())
-	{
-		GPOS_ASSERT(NULL != pdpctxt);
-		ULONG ulExpectedPartitionSelectors =
-			CDrvdPropCtxtPlan::PdpctxtplanConvert(pdpctxt)
-				->UlExpectedPartitionSelectors();
-		ppim->SetExpectedPropagators(UlScanIdPartialIndex(),
-									 ulExpectedPartitionSelectors);
-	}
-
-	return ppim;
-}
-
-// derive partition filter map
-CPartFilterMap *
-CPhysicalUnionAll::PpfmDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
-{
-	// combine part filter maps from relational children
-	return PpfmDeriveCombineRelational(mp, exprhdl);
 }
 
 BOOL

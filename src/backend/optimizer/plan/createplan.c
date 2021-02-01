@@ -1831,29 +1831,18 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path, int flags)
 	copy_generic_path_info(plan, &best_path->path);
 
 	/*
-	 * If we changed the target list, and CP_EXACT_TLIST was requested,
-	 * insert a Result node to change the target list back.
+	 * If we changed the target list, and CP_EXACT_TLIST was requested, insert
+	 * a Result node to change the target list back.
 	 *
-	 * GPDB_12_MERGE_FIXME: As far as I can see, PostgreSQL has this
-	 * same problem, but doesn't check for this. In GPDB, this led to
-	 * an assertion failure with this test (from 'join_gp' regression
-	 * test):
-
-create table foo(a int) distributed by (a);
-create table bar(b int) distributed by (b);
-insert into foo select i from generate_series(1,10)i;
-insert into bar select i from generate_series(1,1000)i;
-analyze foo;
-analyze bar;
-set enable_hashagg to off;
-explain (costs off)
-select * from foo where exists (select 1 from bar where foo.a = bar.b);
-FATAL:  Unexpected internal error (tlist.c:393)
-DETAIL:  FailedAssertion("!(list_length(dest_tlist) == list_length(src_tlist))", File: "tlist.c", Line: 393)
-
-	 * PostgreSQL doesn't create the kind of RowIdExpr Unique paths that
-	 * we do. But maybe this could be reproduced upstream with some other
-	 * query?
+	 * We need to do this because the topmost plan node's targetlist should be
+	 * consistent with the original targetlist, otherwise an assertion failure
+	 * would be triggered in apply_tlist_labeling(). In GPDB, it's possible
+	 * that the Unique plan node created here is the topmost plan, or there is
+	 * no projection capable node above it (such as for RowIdExpr Unique
+	 * paths). So we need to make sure its targetlist is consistent with the
+	 * original targetlist. In PostgreSQL, we don't have this same problem,
+	 * because there would always be a join node above the Unique plan node
+	 * created here, which is projection capable.
 	 */
 	if (newitems || best_path->umethod == UNIQUE_PATH_SORT)
 	{
@@ -6320,8 +6309,6 @@ make_subqueryscan(List *qptlist,
 	plan->qual = qpqual;
 	plan->lefttree = NULL;
 	plan->righttree = NULL;
-	plan->extParam = bms_copy(subplan->extParam);
-	plan->allParam = bms_copy(subplan->allParam);
 
 	/*
 	 * Note that, in most scan nodes, scanrelid refers to an entry in the rtable of the
@@ -7283,9 +7270,6 @@ make_motion(PlannerInfo *root, Plan *lefttree,
 
 	node->sendSorted = (numSortCols > 0);
 
-	plan->extParam = bms_copy(lefttree->extParam);
-	plan->allParam = bms_copy(lefttree->allParam);
-
 	return node;
 }
 
@@ -7387,14 +7371,6 @@ make_agg(List *tlist, List *qual,
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
 
-	/* GPDB_12_MERGE_FIXME: We had these in GPDB since forever, but now
-	 * the caller can pass lefttree == NULL. I assume this isn't really
-	 * needed and can be removed? */
-#if 0
-	plan->extParam = bms_copy(lefttree->extParam);
-	plan->allParam = bms_copy(lefttree->allParam);
-#endif
-
 	return node;
 }
 
@@ -7412,9 +7388,6 @@ make_tup_split(List *tlist, List *dqa_expr_lst, int numGroupCols,
 	plan->targetlist = tlist;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
-
-	plan->extParam = bms_copy(lefttree->extParam);
-	plan->allParam = bms_copy(lefttree->allParam);
 
 	return node;
 }

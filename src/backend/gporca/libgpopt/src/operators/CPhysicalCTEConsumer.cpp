@@ -9,12 +9,14 @@
 //		Implementation of CTE consumer operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalCTEConsumer.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/COptCtxt.h"
+
 #include "gpopt/base/CCTEMap.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
 
 using namespace gpopt;
@@ -132,27 +134,6 @@ CPhysicalCTEConsumer::PrsRequired(CMemoryPool *,		 // mp,
 								  CDrvdPropArray *,		 // pdrgpdpCtxt
 								  ULONG					 // ulOptReq
 ) const
-{
-	GPOS_ASSERT(!"CPhysicalCTEConsumer has no relational children");
-	return NULL;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalCTEConsumer::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalCTEConsumer::PppsRequired(CMemoryPool *,				 //mp,
-								   CExpressionHandle &,			 //exprhdl,
-								   CPartitionPropagationSpec *,	 //pppsRequired,
-								   ULONG,						 //child_index,
-								   CDrvdPropArray *,			 //pdrgpdpCtxt,
-								   ULONG						 //ulOptReq
-)
 {
 	GPOS_ASSERT(!"CPhysicalCTEConsumer has no relational children");
 	return NULL;

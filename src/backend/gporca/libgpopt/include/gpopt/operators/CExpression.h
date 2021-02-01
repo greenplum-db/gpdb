@@ -12,20 +12,21 @@
 #define GPOPT_CExpression_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
+#include "gpos/common/DbgPrintMixin.h"
 
-#include "naucrates/statistics/IStatistics.h"
-#include "gpopt/cost/CCost.h"
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CCostContext.h"
 #include "gpopt/base/CDrvdPropRelational.h"
 #include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/CPrintPrefix.h"
 #include "gpopt/base/CReqdProp.h"
 #include "gpopt/base/CReqdPropRelational.h"
-#include "gpopt/base/CPrintPrefix.h"
+#include "gpopt/cost/CCost.h"
 #include "gpopt/operators/COperator.h"
-#include "gpopt/base/CKeyCollection.h"
+#include "naucrates/statistics/IStatistics.h"
 
 namespace gpopt
 {
@@ -53,7 +54,7 @@ using namespace gpnaucrates;
 //		Simply dynamic array for pointer types
 //
 //---------------------------------------------------------------------------
-class CExpression : public CRefCount
+class CExpression : public CRefCount, public gpos::DbgPrintMixin<CExpression>
 {
 	friend class CExpressionHandle;
 
@@ -107,8 +108,10 @@ private:
 
 #endif	// GPOS_DEBUG
 
+#if 0
 	// check if the expression satisfies partition enforcer condition
 	BOOL FValidPartEnforcers(CDrvdPropCtxtPlan *pdpctxtplan);
+#endif
 
 	// check if the distributions of all children are compatible
 	BOOL FValidChildrenDistribution(CDrvdPropCtxtPlan *pdpctxtplan);
@@ -242,7 +245,7 @@ public:
 	BOOL HasOuterRefs();
 
 	// print driver
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// print driver, customized for expressions
 	IOstream &OsPrintExpression(IOstream &os, const CPrintPrefix * = NULL,

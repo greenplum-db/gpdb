@@ -9,13 +9,13 @@
 //      Test for CName
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/metadata/CNameTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
 
 #include "gpopt/metadata/CName.h"
-
-#include "unittest/gpopt/metadata/CNameTest.h"
 
 using namespace gpopt;
 

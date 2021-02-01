@@ -45,3 +45,6 @@ SELECT * FROM m_aocs;
 \dm m_heap
 \dm m_ao
 \dm m_aocs
+RESET ROLE;
+DROP OWNED BY matview_ao_role CASCADE;
+DROP ROLE matview_ao_role;

@@ -9,13 +9,14 @@
 //		Implementation of Physical row-level trigger operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalRowTrigger.h"
+
 #include "gpos/base.h"
 
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalRowTrigger.h"
-#include "gpopt/base/CDistributionSpecAny.h"
 
 using namespace gpopt;
 
@@ -210,29 +211,6 @@ CPhysicalRowTrigger::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == child_index);
 
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalRowTrigger::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalRowTrigger::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								  CPartitionPropagationSpec *pppsRequired,
-								  ULONG child_index,
-								  CDrvdPropArray *,	 //pdrgpdpCtxt,
-								  ULONG				 //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
-										   child_index);
 }
 
 //---------------------------------------------------------------------------

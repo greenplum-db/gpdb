@@ -120,7 +120,7 @@ DROP EXTERNAL WEB TABLE IF EXISTS ext_delim_off;
 -- end_ignore
 
 -- Create external table with delimiter off
-CREATE EXTERNAL WEB TABLE ext_delim_off ( junk text) execute 'echo hi' on master FORMAT 'text' (delimiter 'OFF' null E'\\N' escape E'\\');
+CREATE EXTERNAL WEB TABLE ext_delim_off ( junk text) execute 'echo hi' on coordinator FORMAT 'text' (delimiter 'OFF' null E'\\N' escape E'\\');
 
 -- Query the ext_delim_off table
 SELECT * FROM ext_delim_off;
@@ -131,7 +131,7 @@ DROP EXTERNAL TABLE IF EXISTS ext_delimiter_off_text;
 
 -- Create external table(format text) with delimiter off, and a row with 'O'
 CREATE EXTERNAL WEB TABLE ext_delimiter_off_text
-(a text) EXECUTE E'echo O' ON MASTER FORMAT 'text' (delimiter 'OFF') ENCODING 'UTF8';
+(a text) EXECUTE E'echo O' ON COORDINATOR FORMAT 'text' (delimiter 'OFF') ENCODING 'UTF8';
 
 SELECT * FROM ext_delimiter_off_text;
 
@@ -141,6 +141,6 @@ DROP EXTERNAL TABLE IF EXISTS ext_delimiter_off_csv;
 
 -- Create external table(format csv) with delimiter off, and a row with 'O'
 CREATE EXTERNAL WEB TABLE ext_delimiter_off_csv
-(a text) EXECUTE E'echo O' ON MASTER FORMAT 'csv' (delimiter 'OFF') ENCODING 'UTF8';
+(a text) EXECUTE E'echo O' ON COORDINATOR FORMAT 'csv' (delimiter 'OFF') ENCODING 'UTF8';
 
 SELECT * FROM ext_delimiter_off_csv;

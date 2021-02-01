@@ -14,8 +14,8 @@
 #define GPOPT_CDXLMemoryManagerTest_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
 
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
 
 

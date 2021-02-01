@@ -9,13 +9,13 @@
 //		Helper routines to compute scale factors / damping factors
 //---------------------------------------------------------------------------
 
+#include "naucrates/statistics/CScaleFactorUtils.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
-#include "naucrates/statistics/CScaleFactorUtils.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;

@@ -1,8 +1,4 @@
 -- CREATE TABLESPACE
--- start_matchsubs
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
--- end_matchsubs
 --
 -- We need to update the restart point on the mirrors
 -- so downstream tests do not attempt to replay records

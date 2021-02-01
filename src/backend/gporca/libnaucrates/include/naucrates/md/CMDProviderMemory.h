@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDCacheObject.h"
+#include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDProvider.h"
 
 namespace gpmd

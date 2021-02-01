@@ -663,6 +663,9 @@ CREATE TABLE qp_tab3(e int, f int);
 INSERT INTO qp_tab1 VALUES (1,2);
 INSERT INTO qp_tab2 VALUES (3,4);
 INSERT INTO qp_tab3 VALUES (4,5);
+ANALYZE qp_tab1;
+ANALYZE qp_tab2;
+ANALYZE qp_tab3;
 
 EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELECT 1 FROM qp_tab1 f2 WHERE f1.a = f2.a);
 
@@ -676,6 +679,8 @@ CREATE TABLE qp_non_eq_a (i int, f float8);
 CREATE TABLE qp_non_eq_b (i int, f float8);
 INSERT INTO qp_non_eq_a VALUES (1, '0'), (2, '-0');
 INSERT INTO qp_non_eq_b VALUES (3, '0'), (1, '-0');
+ANALYZE qp_non_eq_a;
+ANALYZE qp_non_eq_b;
 
 EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
 SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
@@ -699,6 +704,7 @@ CREATE TABLE qp_nl_tab1 (c1 int, c2 int);
 CREATE TABLE qp_nl_tab2 (c1 int, c2 int);
 INSERT INTO qp_nl_tab1 values (1, 0), (1, 1);
 INSERT INTO qp_nl_tab2 values (1, 1), (1, 1);
+ANALYZE qp_nl_tab2;
 VACUUM qp_nl_tab2;
 SELECT * FROM qp_nl_tab1 t1 WHERE t1.c1 + 5 > ANY(SELECT t2.c2 FROM qp_nl_tab2 t2, generate_series(1, 1) i WHERE i = t1.c2 LIMIT 1);
 

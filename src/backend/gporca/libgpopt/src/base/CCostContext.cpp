@@ -9,30 +9,28 @@
 //		Implementation of cost context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CCostContext.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "gpopt/base/CCostContext.h"
+
 #include "gpopt/base/CDistributionSpecHashed.h"
-
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
-#include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CDrvdPropCtxtRelational.h"
+#include "gpopt/base/CDrvdPropPlan.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/cost/ICostModel.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalDynamicTableScan.h"
-#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
-#include "gpopt/operators/CPhysicalSpool.h"
 #include "gpopt/operators/CPhysicalAgg.h"
-
+#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
+#include "gpopt/operators/CPhysicalDynamicTableScan.h"
+#include "gpopt/operators/CPhysicalSpool.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CGroupExpression.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
-
-#include "gpopt/exception.h"
 
 using namespace gpopt;
 using namespace gpnaucrates;
@@ -138,6 +136,7 @@ CCostContext::FNeedsNewStats() const
 		return false;
 	}
 
+#if 0
 	if (!m_pdpplan->Ppim()->FContainsUnresolved())
 	{
 		// All partition selectors have been resolved at this level.
@@ -145,12 +144,10 @@ CCostContext::FNeedsNewStats() const
 		// nodes above it, that aren't affected by the partition selector.
 		return false;
 	}
-
-	CEnfdPartitionPropagation *pepp = Poc()->Prpp()->Pepp();
-
+#endif
+	// GPDB_12_MERGE_FIXME: Re-enable this when DPE is re-implemented
 	if (GPOS_FTRACE(EopttraceDeriveStatsForDPE) && CUtils::FPhysicalScan(pop) &&
-		CPhysicalScan::PopConvert(pop)->FDynamicScan() &&
-		!pepp->PpfmDerived()->IsEmpty())
+		CPhysicalScan::PopConvert(pop)->FDynamicScan() && false)
 	{
 		// context is attached to a dynamic scan that went through
 		// partition elimination in another part of the plan

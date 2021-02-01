@@ -17,18 +17,17 @@
 #include "gpos/base.h"
 #include "gpos/memory/CMemoryPool.h"
 
-#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
-#include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
-#include "naucrates/dxl/operators/CDXLColRef.h"
-#include "naucrates/dxl/operators/CDXLPhysicalDML.h"
-#include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
-#include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
-#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
-#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
-
-#include "gpopt/operators/ops.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/ops.h"
+#include "naucrates/dxl/operators/CDXLColRef.h"
+#include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDML.h"
+#include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
+#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
+#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarSubPlan.h"
+#include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
 
 // fwd declaration
 namespace gpnaucrates
@@ -51,9 +50,8 @@ using namespace gpdxl;
 using namespace gpnaucrates;
 
 // hash map mapping CColRef -> CDXLNode
-typedef CHashMap<CColRef, CDXLNode, gpos::HashValue<CColRef>,
-				 gpos::Equals<CColRef>, CleanupNULL<CColRef>,
-				 CleanupRelease<CDXLNode> >
+typedef CHashMap<CColRef, CDXLNode, CColRef::HashValue, CColRef::Equals,
+				 CleanupNULL<CColRef>, CleanupRelease<CDXLNode> >
 	ColRefToDXLNodeMap;
 
 //---------------------------------------------------------------------------
@@ -113,6 +111,10 @@ private:
 
 	// mappings CColRef -> CDXLNode used to for index predicates with outer references
 	ColRefToDXLNodeMap *m_phmcrdxlnIndexLookup;
+
+	// mappings CColRef -> ColId for translating filters for child partitions
+	// (see PdxlnFilterForChildPart())
+	ColRefToUlongMap *m_phmcrulPartColId = NULL;
 
 	// derived plan properties of the translated expression
 	CDrvdPropPlan *m_pdpplan;
@@ -375,6 +377,10 @@ private:
 		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
 		BOOL *pfDML);
 
+	// Construct a table descr for a child partition
+	CTableDescriptor *MakeTableDescForPart(const IMDRelation *part,
+										   CTableDescriptor *root_table_desc);
+
 	// translate a dynamic bitmap table scan
 	CDXLNode *PdxlnDynamicBitmapTableScan(
 		CExpression *pexprDynamicBitmapTableScan, CColRefArray *colref_array,
@@ -449,13 +455,6 @@ private:
 	// or no filters on all partitioning levels. return false if it has
 	// non-equality filters.
 	BOOL FEqPartFiltersAllLevels(CExpression *pexpr, BOOL fCheckGeneralFilters);
-
-	// translate a filter-based partition selector
-	CDXLNode *PdxlnPartitionSelectorFilter(
-		CExpression *pexpr, CColRefArray *colref_array,
-		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-		BOOL *pfDML, CExpression *pexprScalarCond,
-		CDXLPhysicalProperties *dxl_properties);
 
 	// translate partition selector filters
 	void TranslatePartitionFilters(CExpression *pexprPartSelector,
@@ -645,6 +644,18 @@ private:
 	// translate a colref set of output col into a dxl proj list
 	CDXLNode *PdxlnProjList(const CColRefSet *pcrsOutput,
 							CColRefArray *colref_array);
+
+	// Construct a project list for a child partition
+	CDXLNode *PdxlnProjListForChildPart(
+		const ColRefToUlongMap *root_col_mapping,
+		const CColRefArray *part_colrefs, const CColRefSet *reqd_colrefs,
+		const CColRefArray *colref_array);
+
+	// translate a filter expr on the root for a child partition
+	CDXLNode *PdxlnFilterForChildPart(const ColRefToUlongMap *root_col_mapping,
+									  const CColRefArray *part_colrefs,
+									  const CColRefArray *root_colrefs,
+									  CExpression *pred);
 
 	// translate a project list expression into a DXL proj list node
 	// according to the order specified in the dynamic array

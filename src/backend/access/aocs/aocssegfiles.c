@@ -29,7 +29,6 @@
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_appendonly.h"
-#include "catalog/pg_appendonly_fn.h"
 #include "catalog/namespace.h"
 #include "catalog/indexing.h"
 #include "catalog/gp_fastsequence.h"
@@ -767,10 +766,13 @@ UpdateAOCSFileSegInfo(AOCSInsertDesc idesc)
 	d[Anum_pg_aocs_varblockcount - 1] += idesc->varblockCount;
 	repl[Anum_pg_aocs_varblockcount - 1] = true;
 
-	d[Anum_pg_aocs_modcount - 1] = fastgetattr(oldtup, Anum_pg_aocs_modcount, tupdesc, &null[Anum_pg_aocs_modcount - 1]);
-	Assert(!null[Anum_pg_aocs_modcount - 1]);
-	d[Anum_pg_aocs_modcount - 1] += 1;
-	repl[Anum_pg_aocs_modcount - 1] = true;
+	if (!idesc->skipModCountIncrement)
+	{
+		d[Anum_pg_aocs_modcount - 1] = fastgetattr(oldtup, Anum_pg_aocs_modcount, tupdesc, &null[Anum_pg_aocs_modcount - 1]);
+		Assert(!null[Anum_pg_aocs_modcount - 1]);
+		d[Anum_pg_aocs_modcount - 1] += 1;
+		repl[Anum_pg_aocs_modcount - 1] = true;
+	}
 
 	/*
 	 * Lets fetch the vpinfo structure from the existing tuple in pg_aocsseg.

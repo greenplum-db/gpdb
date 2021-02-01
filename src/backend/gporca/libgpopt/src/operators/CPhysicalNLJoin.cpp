@@ -9,16 +9,17 @@
 //		Implementation of base nested-loops join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalNLJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CRewindabilitySpec.h"
-#include "gpopt/operators/CPhysicalNLJoin.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CPhysicalCorrelatedInLeftSemiNLJoin.h"
 #include "gpopt/operators/CPhysicalCorrelatedInnerNLJoin.h"
 #include "gpopt/operators/CPhysicalCorrelatedLeftOuterNLJoin.h"
-#include "gpopt/operators/CPhysicalCorrelatedInLeftSemiNLJoin.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
 
@@ -197,37 +198,6 @@ CPhysicalNLJoin::EpetOrder(CExpressionHandle &exprhdl,
 	}
 
 	return CEnfdProp::EpetRequired;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalNLJoin::PppsRequiredNLJoinChild
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalNLJoin::PppsRequiredNLJoinChild(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
-{
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	if (1 == ulOptReq)
-	{
-		// request (1): push partition propagation requests to join's children,
-		// do not consider possible dynamic partition elimination using join predicate here,
-		// this is handled by optimization request (0) below
-		return CPhysical::PppsRequiredPushThruNAry(mp, exprhdl, pppsRequired,
-												   child_index);
-	}
-	GPOS_ASSERT(0 == ulOptReq);
-
-	return PppsRequiredJoinChild(mp, exprhdl, pppsRequired, child_index,
-								 pdrgpdpCtxt, true);
 }
 
 

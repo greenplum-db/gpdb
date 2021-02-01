@@ -9,10 +9,10 @@
 //		Task context implementation
 //---------------------------------------------------------------------------
 
-#include "gpos/common/CAutoRef.h"
-
-#include "gpos/error/CLoggerStream.h"
 #include "gpos/task/CTaskContext.h"
+
+#include "gpos/common/CAutoRef.h"
+#include "gpos/error/CLoggerStream.h"
 
 
 using namespace gpos;

@@ -37,6 +37,27 @@ relation = 'gp_configuration_history'::regclass;
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
 
+alter system set gp_fts_probe_retries to 0;
+select pg_reload_conf();
+
+set optimizer = off;
+
+-- start_ignore
+\! gpconfig -c client_min_messages -v DEBUG1
+\! gpstop -u
+-- end_ignore
+
+select gp_request_fts_probe_scan();
+
+select count(*) from gp_segment_configuration where status = 'd';
+
+-- start_ignore
+\! gpconfig -r client_min_messages
+\! gpstop -u
+-- end_ignore
+
+reset optimizer;
+
 alter system reset gp_fts_probe_interval;
 alter system reset gp_fts_probe_retries;
 select pg_reload_conf();

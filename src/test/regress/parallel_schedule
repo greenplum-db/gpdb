@@ -62,7 +62,9 @@ test: create_aggregate create_function_3 create_cast constraints triggers select
 # Because vacuum will detect concurrently running transactions, it is necessary to
 # run this test on its own, or it might not detect the pages are 'all visible'
 # ----------
+test: disable_autovacuum
 test: vacuum_stats
+test: enable_autovacuum
 
 # ----------
 # sanity_check does a vacuum, affecting the sort order of SELECT *

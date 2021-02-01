@@ -60,7 +60,7 @@
 #include "catalog/catalog.h"
 #include "catalog/heap.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/oid_dispatch.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbdisp_query.h"
@@ -1783,7 +1783,10 @@ vac_update_datfrozenxid(void)
 
 		heap_inplace_update(relation, tuple);
 		heap_freetuple(tuple);
-		SIMPLE_FAULT_INJECTOR("vacuum_update_dat_frozen_xid");
+
+		FaultInjector_InjectFaultIfSet(
+			"vacuum_update_dat_frozen_xid", DDLNotSpecified,
+			NameStr(cached_dbform->datname), "");
 	}
 
 	ReleaseSysCache(cached_tuple);

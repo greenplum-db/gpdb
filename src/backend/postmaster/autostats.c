@@ -294,9 +294,6 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
 
-	if (AutoVacuumingActive())
-		return;
-
 	if (relationOid == InvalidOid)
 		return;
 

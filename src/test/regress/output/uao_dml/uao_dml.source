@@ -106,6 +106,7 @@ ROLLBACK;
 DROP TABLE IF EXISTS ao2_@amname@;
 create table ao2_@amname@ (i int, j varchar(10)) distributed by (i);
 insert into ao2_@amname@ select i,'aa'||i from generate_series(21,30) as i;
+analyze ao2_@amname@;
 select reltuples from pg_class where relname = 'ao2_@amname@';
  reltuples 
 -----------
@@ -1211,6 +1212,7 @@ DROP TABLE IF EXISTS foo_@amname@;
 CREATE TABLE foo_@amname@ (a INT, b INT, c CHAR(128)) DISTRIBUTED BY (a);
 CREATE INDEX foo_@amname@_index ON foo_@amname@(b);
 INSERT INTO foo_@amname@ SELECT i as a, i as b, 'hello world' as c FROM generate_series(1,1000) AS i;
+ANALYZE foo_@amname@;
 SELECT reltuples FROM pg_class WHERE relname = 'foo_@amname@';
  reltuples 
 -----------
@@ -1532,8 +1534,10 @@ create table uao_ooo_upd_tab2 (i int, j int );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into  uao_ooo_upd_tab1 values (1,10) ,(1,10) ;
+analyze uao_ooo_upd_tab1;
 update uao_ooo_upd_tab1 set j = j + 3 where j = 10;
 insert  into uao_ooo_upd_tab2 values (1,11),(1,22),(1,33),(1,44),(1,55)  ;
+analyze uao_ooo_upd_tab2;
 select * from uao_ooo_upd_tab1 order by 2;
  i | j  
 ---+----
@@ -1599,6 +1603,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into  uao_ooo_upd_tab1 values (1,10) ,(1,10) ;
 insert  into uao_ooo_upd_tab2 values (1,11),(1,22),(1,33),(1,44),(1,55)  ;
+analyze uao_ooo_upd_tab1;
+analyze uao_ooo_upd_tab2;
 BEGIN;
 update uao_ooo_upd_tab1 set j = j + 3 where j = 10;
 select * from uao_ooo_upd_tab1 order by 2;

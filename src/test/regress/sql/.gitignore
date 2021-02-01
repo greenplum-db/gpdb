@@ -15,6 +15,7 @@
 /appendonly.sql
 /auth_constraint.sql
 /autovacuum-template0.sql
+/autovacuum-template0-segment.sql
 /bb_memory_quota.sql
 /bb_mpph.sql
 /collect_tabstat.sql
@@ -34,6 +35,7 @@
 /hooktest.sql
 /oid_wraparound.sql
 /partition_ddl.sql
+/pgstat_qd_tabstat.sql
 /qp_gist_indexes2.sql
 /qp_regexp.sql
 /query_info_hook_test.sql

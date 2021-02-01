@@ -9955,7 +9955,7 @@
 
 # event triggers
 { oid => '3566', descr => 'list objects dropped by the current command',
-  proexeclocation => 'm',
+  proexeclocation => 'c',
   proname => 'pg_event_trigger_dropped_objects', procost => '10',
   prorows => '100', proretset => 't', provolatile => 's', proparallel => 'r',
   prorettype => 'record', proargtypes => '',
@@ -10838,11 +10838,11 @@
    prosrc => 'pg_resgroup_move_query' },
 
 { oid => 6065, descr => 'statistics: information about resource groups in key-value style',
-   proexeclocation => 'm',
+   proexeclocation => 'c',
    proname => 'pg_resgroup_get_status_kv', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'text', proallargtypes => 'text,oid,text,text', proargmodes => '{i,o,o,o}', proargnames => '{prop_in,rsgid,prop,value}', prosrc => 'pg_resgroup_get_status_kv' },
 
 { oid => 6066, descr => 'statistics: information about resource groups',
-   proexeclocation => 'm',
+   proexeclocation => 'c',
    proname => 'pg_resgroup_get_status', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => 'oid', proallargtypes => 'oid,oid,int4,int4,int4,int4,interval,json,json', proargmodes => '{i,o,o,o,o,o,o,o,o}', proargnames => '{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage,memory_usage}', prosrc => 'pg_resgroup_get_status' },
 
 { oid => 6036, descr => 'waiting relation information',
@@ -10976,6 +10976,9 @@
 { oid => 6068, descr => 'dbid executing function',
    proname => 'gp_execution_dbid', proisstrict => 'f', provolatile => 'v', proparallel => 'u', prorettype => 'int4', proargtypes => '', prosrc => 'gp_execution_dbid' },
 
+{ oid => 7000, descr => 'Get the next available distributed transaction id',
+   proname => 'gp_get_next_gxid', provolatile => 'v', proparallel => 'u', prorettype => 'int8', proargtypes => '', prosrc => 'gp_get_next_gxid' },
+
 { oid => 7169, descr => 'show append only table tuple distribution across segment databases',
    proname => 'get_ao_distribution', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => 'regclass', proallargtypes => '{regclass,int4,int8}', proargmodes => '{i,o,o}', proargnames => '{rel,segmentid,tupcount}', prosrc => 'get_ao_distribution', prodataaccess => 'r' },
 
@@ -11061,7 +11064,7 @@
    proname => 'gp_remove_segment', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'bool', proargtypes => 'int2', prosrc => 'gp_remove_segment' },
 
 { oid => 5035, descr => 'Request a FTS probe scan and wait for response',
-   proname => 'gp_request_fts_probe_scan', proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'gp_request_fts_probe_scan', proexeclocation => 'm' },
+   proname => 'gp_request_fts_probe_scan', proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'gp_request_fts_probe_scan', proexeclocation => 'c' },
 
 
 { oid => 7054, descr => 'anytable type serialization input function',

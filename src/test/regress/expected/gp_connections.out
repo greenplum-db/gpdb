@@ -6,12 +6,12 @@ drop user if exists user_disallowed_via_local;
 create user user_disallowed_via_local with login;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- cleanup previous settings if any
-\! sed -i '/user_disallowed_via_local/d' $MASTER_DATA_DIRECTORY/pg_hba.conf;
+\! sed -i '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
 -- allow it to login via the [tcp] protocol
-\! echo 'host all user_disallowed_via_local samenet trust' | tee -a $MASTER_DATA_DIRECTORY/pg_hba.conf;
+\! echo 'host all user_disallowed_via_local samenet trust' | tee -a $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
 host all user_disallowed_via_local samenet trust
 -- disallow it to login via the [local] protocol
-\! echo 'local all user_disallowed_via_local reject' | tee -a $MASTER_DATA_DIRECTORY/pg_hba.conf;
+\! echo 'local all user_disallowed_via_local reject' | tee -a $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
 local all user_disallowed_via_local reject
 -- inform the cluster to reload the settings
 \! gpstop -qu;
@@ -36,7 +36,7 @@ select * from t1_of_user_disallowed_via_local, pg_sleep(0);
 (0 rows)
 
 -- cleanup settings if any
-\! sed -i '/user_disallowed_via_local/d' $MASTER_DATA_DIRECTORY/pg_hba.conf;
+\! sed -i '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
 --
 -- Segment connection tests
 --

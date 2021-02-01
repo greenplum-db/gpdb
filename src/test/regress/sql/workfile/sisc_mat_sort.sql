@@ -32,6 +32,7 @@ create table testsiscm (i1 int, i2 int, i3 int, i4 int);
 insert into testsiscm select i, i % 1000, i % 100000, i % 75 from
 	(select generate_series(1, nsegments * 150000) as i from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+analyze testsiscm;
 
 
 set statement_mem="3MB";

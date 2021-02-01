@@ -12,8 +12,9 @@
 #define GPOPT_CFunctionalDependency_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
+
 #include "gpopt/base/CColRefSet.h"
 
 
@@ -88,7 +89,7 @@ public:
 	}
 
 	// print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// hash function
 	static ULONG HashValue(const CFunctionalDependencyArray *pdrgpfd);

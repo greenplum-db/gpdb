@@ -837,7 +837,7 @@ exttable_EndForeignScan(ForeignScanState *node)
 		external_stopscan(fdw_state->ess_ScanDesc);
 
 	/*
-	 * report Sreh results if external web table execute on master with reject limit.
+	 * report Sreh results if external web table execute on coordinator with reject limit.
 	 * if external web table execute on segment, these messages are printed
 	 * in cdbdisp_sumRejectedRows()
 	*/

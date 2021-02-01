@@ -485,7 +485,7 @@ QUERY PLAN
       "Parallel Aware": false,
       "Plans": [
         {
-          "Node Type": "Sequence",
+          "Node Type": "Append",
           "Parent Relationship": "Outer",
           "Slice": 1,
           "Segments": 1,
@@ -493,23 +493,14 @@ QUERY PLAN
           "Parallel Aware": false,
           "Plans": [
             {
-              "Node Type": "Result",
-              "Parent Relationship": "Member",
-              "Slice": 1,
-              "Segments": 1,
-              "Gang Type": "primary reader",
-              "Parallel Aware": false
-            },
-            {
-              "Node Type": "Dynamic Seq Scan",
+              "Node Type": "Seq Scan",
               "Parent Relationship": "Member",
               "Slice": 1,
               "Segments": 1,
               "Gang Type": "primary reader",
               "Parallel Aware": false,
-              "Relation Name": "jsonexplaintest",
-              "Alias": "jsonexplaintest",
-              "Number of partitions to scan": 1,
+              "Relation Name": "jsonexplaintest_1_prt_2",
+              "Alias": "jsonexplaintest_1_prt_2",
               "Filter": "(i = 2)"
             }
           ]

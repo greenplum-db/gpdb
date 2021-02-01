@@ -12,6 +12,7 @@ char* receiveBuffer = NULL;
 
 static void handleIncomingConnection(int fd);
 static void usage(void);
+static int setupListen(char hostname[], char port[], int protocol);
 
 static void
 usage(void)
@@ -22,22 +23,15 @@ usage(void)
 int
 main(int argc, char** argv)
 {
-	int socketFd;
-	int clientFd;
-	int retVal;
-	int one = 1;
-	struct sockaddr_in serverSocketAddress;
-	socklen_t socket_length;
-	int c;
-	int serverPort = 0;
-	int pid;
-     
+	int c, rc;
+	char* serverPort = "0";
+
 	while ((c = getopt (argc, argv, "hp:")) != -1)
 	{
 		switch (c)
 		{
 			case 'p':
-				serverPort = atoi(optarg);
+				serverPort = optarg;
 				break;
 			default:
 				usage();
@@ -59,69 +53,101 @@ main(int argc, char** argv)
 		return 1;
 	}
 
-	socketFd = socket(PF_INET, SOCK_STREAM, 0); 
+	rc = setupListen("::0", serverPort, AF_INET6);
+	if (rc != 0)
+		rc = setupListen("0.0.0.0", serverPort, AF_INET);
 
-	if (socketFd < 0)
-	{ 
-		perror("Socket creation failed");
-		return 1;
-	}   
+	return rc;
+}
 
-	retVal = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-	if (retVal)
+static int setupListen(char hostname[], char port[], int protocol) {
+	struct addrinfo hints;
+	struct addrinfo *addrs;
+	int s, clientFd, clientPid;
+	int one = 1;
+	int fd = -1;
+	int pid = -1;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = protocol;	/* Allow IPv4 or IPv6 */
+	hints.ai_socktype = SOCK_STREAM;	/* Two-way, out of band connection */
+	hints.ai_protocol = IPPROTO_TCP;		/* Any protocol - TCP implied for network use due to SOCK_STREAM */
+
+	s = getaddrinfo((char *)hostname, port, &hints, &addrs);
+	if (s != 0)
 	{
-		perror("Could not set SO_REUSEADDR on socket");
+		fprintf(stderr, "getaddrinfo says %s", gai_strerror(s));
 		return 1;
 	}
 
-	memset(&serverSocketAddress, 0, sizeof(struct sockaddr_in));
-	serverSocketAddress.sin_family = AF_INET;
-	serverSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-	serverSocketAddress.sin_port = htons(serverPort);
-
-	retVal = bind(socketFd,(struct sockaddr *)&serverSocketAddress, sizeof(serverSocketAddress));
-	if (retVal)
+	while (addrs != NULL)
 	{
-		perror("Could not bind port");
-		return 1;
+		fd = socket(addrs->ai_family, SOCK_STREAM, 0);
+		if (fd < 0)
+		{
+			fprintf(stderr, "socket creation failed\n");
+			addrs = addrs->ai_next;
+			continue;
+		}
+
+		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(one)) < 0)
+		{
+			fprintf(stderr, "could not set SO_REUSEADDR\n");
+			close(fd);
+			addrs = addrs->ai_next;
+			continue;
+		}
+
+		if (bind(fd, addrs->ai_addr, addrs->ai_addrlen) != -1 &&
+				listen(fd, SOMAXCONN) != -1)
+		{
+			pid = fork();
+			if (pid > 0)
+			{
+				return 0; // we exit the parent cleanly and leave the child process open as a listening server
+			}
+			else if (pid == 0)
+			{
+				break;
+			}
+			else
+			{
+				fprintf(stderr, "failed to fork process");
+				exit(1);
+			}
+		}
+		else
+			close(fd);
+
+		addrs = addrs->ai_next;
 	}
 
-	retVal = listen(socketFd, SOMAXCONN);
-  	if (retVal < 0)
+	if (pid < 0)
 	{
-		perror("listen system call failed");
-  		return 1;
-  	}
-
-	pid = fork();
-	if (pid < 0) 
-	{ 
-		perror("error forking process for incoming connection");
+		fprintf(stderr, "failed to listen on port");
 		return 1;
 	}
-	if (pid > 0)
-	{ 
-		return 0; // we exit the parent cleanly and leave the child process open as a listening server
-	}
 
-	socket_length = sizeof(serverSocketAddress);
+	struct sockaddr_storage clientAddr;
+	socklen_t clientAddrlen = sizeof(clientAddr);
 	while(1)
 	{
-		clientFd = accept(socketFd, (struct sockaddr *)&serverSocketAddress, &socket_length);
+		clientFd = accept(fd, (struct sockaddr *)&clientAddr, &clientAddrlen);
 		if (clientFd < 0)
 		{
 			perror("error from accept call on server");
-			return 1;
+			exit(1);
 		}
 
-		pid = fork();
-		if (pid < 0) 
-		{ 
+		clientPid = fork();
+		if (clientPid < 0)
+		{
 			perror("error forking process for incoming connection");
-			return 1;
+			exit(1);
 		}
-		if (pid == 0)
-		{ 
+
+		if (clientPid == 0)
+		{
 			handleIncomingConnection(clientFd);
 		}
 	}

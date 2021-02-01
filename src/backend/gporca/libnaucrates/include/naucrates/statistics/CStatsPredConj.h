@@ -12,6 +12,7 @@
 #define GPNAUCRATES_CStatsPredConj_H
 
 #include "gpos/base.h"
+
 #include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatsPred.h"
 

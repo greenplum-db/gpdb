@@ -1,51 +1,67 @@
-Enable auto-ANALYZE through autovacuum daemon on Master(QD) in GPDB.
+Enable auto-ANALYZE through autovacuum daemon on Coordinator(QD) in GPDB.
 
-The basic idea for only enabling auto-ANALYZE through Master’s autovacuum
-daemon is to collect pgstat info into Master when executing queries. Start
-the Master’s autovacuum launcher process. Fire an autovacuum work process for
-a database on Master when the naptime reaches. Then the autovacuum worker
+The basic idea for only enabling auto-ANALYZE through Coordinator’s autovacuum
+daemon is to collect pgstat info into Coordinator when executing queries. Start
+the Coordinator’s autovacuum launcher process. Fire an autovacuum work process for
+a database on Coordinator when the naptime reaches. Then the autovacuum worker
 will iterate through all tables/materialized views under a specified database,
 and execute ANALYZE for tables which reached the analyze threshold. Note the
-ANALYZE statement issued in the autovacuum worker on Master is the same as
+ANALYZE statement issued in the autovacuum worker on Coordinator is the same as
 executing it through query on QD. ie. The auto-ANALYZE is coordinated by the
-master and segments do not start it’s own autovacuum launcher and autovacuum
+coordinator and segments do not start it’s own autovacuum launcher and autovacuum
 worker.
 
 Implementations
 =================================================
-### Collect pgstat on master for relations.
-Since the auto-ANALYZE is fired from Master, we need to collect pgstat info
-into master. GPDB used to call `auto_stats` for queries that may process tuples
-for different command types like INSERT/UPDATE/COPY/… to execute ANALYZE based
-on the `auto_stats` configuration(it’ll add overhead for a simple command,
-more details please refer to the discussion
-https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/gqordopb6Gg).
+### Collect pgstat on coordinator for relations.
+Since the auto-ANALYZE is fired from Coordinator, we need to collect pgstat info
+into coordinator. With commit: 259cb9e74cd899edaae63bf9a89a664db19c1ab1, we are
+able to collect tuple relead pgstat table info from segments. Then the
+auto-analyze could consider partition tables now.
+The idea is, for writer QE, report current nest level xact tables pgstat
+to QD through libpq at the end of a query statement. For a single
+statement, it wouldn't operate too many tables, so the effort is really
+small.
+And on QD, retrieve and combine these tables' stat from the dispatch
+result and add to current nest level xact pgstats.
 
-The normal pgstat logic(from Postgres upstream) only updates table stats in the
-table modification level(like `heap_insert`, `heap_update`, `heap_delete` ...).
-On Master, since there’s no data existing for these distributed tables, the
-pgstat will never get updated before.
-Now we bring in another function `gp_pgstat_report_tabstat` which should be
-called at the end of command execution when tuples are processed like
-`auto_stats`.
-GPDB collects processed tuples from all segments, and passes the count to
-report pgstat for the processed table with the current command on Master.
-`gp_pgstat_report_tabstat` will choose to report INSERT/UPDATE/DELETE based
-on command type.
+Currently auto-ANALYZE is not supported for partition root/mid-layer tables,
+because we don't have accurate pgstat for mid-layer tables and root tables.
+This is same with Postres.
+There's already a discussion on Postgres upstream to enable auto-ANALYZE for
+root/mid-layer partition tables. Once it merged into upstream, we can cherry
+pick the patch. See:
+https://www.postgresql.org/message-id/CAKkQ508_PwVgwJyBY=0Lmkz90j8CmWNPUxgHvCUwGhMrouz6UA@mail.gmail.com
 
-We wrap the `auto_stats` and `gp_pgstat_report_tabstat` in a function called
-`collect_tabstat`. And put it as where `auto_stats` used to be.
-In the `collect_tabstat`, when `autovacuum` is enabled on Master (now for
-ANALYZE only). It’ll call `gp_pgstat_report_tabstat` to collect pgstat to
-support auto-ANALYZE. Currently this is not supported for the partition table,
-because we don't have accurate pgstat on QD for parent tables and child tables.
-So still execute `auto_stats` for the partition table. For relation who's
-storage parameter `autovacuum_enable=false` with autovacuum enabled, neither
-autovacuum ANALYZE nor `auto_stat`s will execute for it. Users need to manually
-run ANALYZE for it. This is the same with Postgres. If the `autovacuum` is not
-enabled on Master, `auto_stats` will be executed. `collect_tabstat` only gets
-called on QD.
+For relation who's storage parameter `autovacuum_enable=false` with autovacuum enabled,
+if `auto_stat` is configured, the ANALYZE will follow `auto_stats` logic.
 
+And since `auto_stats` runs in same transaction that modify the table,
+the `n_mod_since_analyze` of the table's pgstat will not set to 0 after
+`auto_stat`'s ANALYZE.
+We can simulate this with below query:
+```
+=# CREATE TABLE autostatstbl (id bigint);
+CREATE TABLE
+=# begin;
+BEGIN
+=*# INSERT INTO autostatstbl select i from generate_series(1, 1000) as i;
+INSERT 0 1000
+=*# analyze autostatstbl;
+ANALYZE
+=*# end;
+COMMIT
+=# select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
+ analyze_count | autoanalyze_count | n_mod_since_analyze
+---------------+-------------------+---------------------
+             1 |                 0 |                1000
+(1 row)
+```
+This is because ANALYZE call `pgstat_report_analyze` immediately.
+but the INSERT statement's pgstat change only gets sent out(pgstat_report_stat)
+after commit and ready for the next query.
+So `auto_stats` does not affect whether auto-ANALYZE will be executed
+for the table.
 
 ### Make the autovacuum guc work to start the autovacuum launcher.
 We used to disable modifying autovacuum ANALYZE related GUCs. Now, only enable
@@ -59,14 +75,14 @@ the database’s `datallowconn` field. If it’s false, it means not allowing us
 to connect it directly. That’s also the reason why we enable force xid wraparound
 VACUUM for template0. In `get_database_list` under autovacuum.c, it used to only
 return the databases whos `datallowconn=false`. Note the force xid wraparound
-VACUUM for template0 could be run on both **Master** and **segments**.
+VACUUM for template0 could be run on both **Coordinator** and **segments**.
 
 Then we reuse the `datallowconn` for auto-ANALYZE logic. If the current
 database’s `datallowconn` sets to true, we only perform ANALYZE in autovacuum
-workers on Master. Now in `get_database_list`, we check if the
+workers on Coordinator. Now in `get_database_list`, we check if the
 `datallowconn=true`, autovacuum is enabled and current autovacuum daemon is
-Master’s, we perverse the `datallowconn` in the returned database list. The new
-logic limit only the **Master’s** autovacuum daemon has the ability to fire
+Coordinator’s, we perverse the `datallowconn` in the returned database list. The new
+logic limit only the **Coordinator’s** autovacuum daemon has the ability to fire
 autovacuum workers on databases other than template0( so if enable autovacuum
 on segments, it still only executes force xid wraparound on template0).
 Also a new field `wi_for_analyze` in `WorkerInfoData` is added to pass this
@@ -82,10 +98,10 @@ be trapped into a database who needs to execute xid wraparound. But autovacuum
 workers never execute VACUUM on it.
 
 ### Change autovacuum worker’s Gp_role for ANALYZE.
-Since auto-ANALYZE is coordinated by the Master and segments do not start it’s
-own autovacuum launcher and autovacuum worker. We need Master’s autovacuum
+Since auto-ANALYZE is coordinated by the Coordinator and segments do not start it’s
+own autovacuum launcher and autovacuum worker. We need Coordinator’s autovacuum
 workers which do auto-ANALYZE on a database have `Gp_role = GP_ROLE_DISPATCH`.
-So it’ll do the ANALYZE on master to calculate statistics with right behavior,
+So it’ll do the ANALYZE on coordinator to calculate statistics with right behavior,
 for example, acquire sample rows from segments.
 But for VACUUM on template0, we still keep it running as `GP_ROLE_UTILITY`.
 
@@ -121,32 +137,21 @@ SELECT count(*) FROM pg_statistic where starelid = 'anaabort'::regclass;
 Limitations
 ==================================================
 
-### Partition table support
-Current implementation does not collect pgstat for partition tables. So the
-auto-ANALYZE will not execute for them.
-The reason is we can not collect accurate pgstat for the partition table.
+### Fully partition table support
+As discussed, mid-layer and root partition tables are still not supported
+for auto-ANALYZE.
 
-For examples:
-- Insert into the child table, it updates the pgstat for the child table, but
-the root table's pgstat does not get updated on master. (Although we can
-simply add it to the root table)
-- Insert into the root table, it updates the pgstat for the root table on master,
-but underly child tables' pgstat not get updated, since GPDB only gets
-processed tuple count on master at each command execution end phase where
-`collect_tabstat` gets called. We need to collect tuple count for each child
-table on segments into master.
-
-Once we did the PG12 merge, we could try to resolve it.
-And for Postgres, it only collects pgstat for child tables, this makes
-auto-ANALYZE only executed for child tables. User still needs to manually
-ANALYZE on the parent table. See related discussions in pg-hackers:
-- https://www.postgresql.org/message-id/2674.1262040064@sss.pgh.pa.us
-- https://www.postgresql.org/message-id/CAM-w4HMQKC8hw7nB9TW3OV%2BhkB5OUcPtvr_U_EiSOjByoa-e4Q%40mail.gmail.com
-
+### Clean orphan temp tables in autovacuum
+For GPDB, the temp table schema is named as "pg_temp_<gp_session_id>" while
+Postgres is "pg_temp_<backendid>".
+During the autovacuum orphan temp table checking, we can not parse the
+backendid in GPDB. So, autovacuum will failed to find the backend which using
+the temp table. And it'll treat all temp tables as orphan. So disable clean up
+orphan temp tables in GPDB for now.
 
 ### Cost-based delay
 In Postgres, the cost-base delay feature is used to limit the VACUUM and
-ANALYZE IO cost. Since the IO cost is not collected to master, so feature
+ANALYZE IO cost. Since the IO cost is not collected to coordinator, so feature
 is not working in cluster wide. But we can still use it to limit IO cost for
 each segment.
 We plan to support the disk io limit in the resource group. Once it is ready,

@@ -521,10 +521,10 @@ transformExecOnClause(List *on_clause)
 				/* result: "PER_HOST" */
 				exec_location_str = "PER_HOST";
 			}
-			else if (strcmp(defel->defname, "master") == 0)
+			else if (strcmp(defel->defname, "coordinator") == 0)
 			{
-				/* result: "MASTER_ONLY" */
-				exec_location_str = "MASTER_ONLY";
+				/* result: "COORDINATOR_ONLY" */
+				exec_location_str = "COORDINATOR_ONLY";
 			}
 			else if (strcmp(defel->defname, "segment") == 0)
 			{

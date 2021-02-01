@@ -12,6 +12,7 @@
 #define GPOPT_CXformCollapseProject_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformSubqueryUnnest.h"
 
 namespace gpopt

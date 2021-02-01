@@ -1,10 +1,12 @@
 drop table if exists with_test1 cascade;
 create table with_test1 (i int, t text, value int) distributed by (i);
 insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
+analyze with_test1;
 
 drop table if exists with_test2 cascade;
 create table with_test2 (i int, t text, value int);
 insert into with_test2 select i%100, 'text' || i%200, i%300 from generate_series(0, 999) i;
+analyze with_test2;
 
 -- With clause with one common table expression
 --begin_equivalent
@@ -373,6 +375,7 @@ set gp_cte_sharing=on;
 
 CREATE TEMP TABLE foo (i int, j int);
 INSERT INTO foo SELECT g, g FROM generate_series(1, 2) g;
+ANALYZE foo;
 
 WITH a1 as (select * from foo),
      a2 as (select * from foo)

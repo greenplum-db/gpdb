@@ -11,13 +11,12 @@
 
 #include "naucrates/dxl/parser/CParseHandlerMetadata.h"
 
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include <xercesc/util/XMLStringTokenizer.hpp>
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include <xercesc/util/XMLStringTokenizer.hpp>
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 
 using namespace gpdxl;
 

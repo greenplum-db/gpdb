@@ -48,7 +48,6 @@
 #include "catalog/gp_fastsequence.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_appendonly.h"
-#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbappendonlystorage.h"
@@ -535,7 +534,7 @@ CloseWritableFileSeg(AppendOnlyInsertDesc aoInsertDesc)
 					  fileLen_uncompressed,
 					  aoInsertDesc->insertCount,
 					  aoInsertDesc->varblockCount,
-					  1,
+					  (aoInsertDesc->skipModCountIncrement ? 0 : 1),
 					  AOSEG_STATE_USECURRENT);
 
 	pfree(aoInsertDesc->fsInfo);

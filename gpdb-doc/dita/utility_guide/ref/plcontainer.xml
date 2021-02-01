@@ -59,7 +59,7 @@
                     <codeph>192.168.0.1:5000/images/mytest_plc_r:devel</codeph></li>
               </ul></pd>
               <pd>By default, the <codeph>image-add</codeph> command copies the image to each
-                Greenplum Database segment and standby master host, and installs the image.
+                Greenplum Database segment and standby coordinator host, and installs the image.
                 When you specify an <varname>image_file</varname> and provide the
                 [<b>-ulc</b> | <b>--use_local_copy</b>] option, <codeph>plcontainer</codeph>
                 installs the image only on the host on which you execute the command.</pd>
@@ -253,7 +253,7 @@
             <pt>runtime-verify</pt>
             <pd>
               <p dir="ltr">Checks the PL/Container configuration information on the Greenplum
-                Database instances with the configuration information on the master. If the utility
+                Database instances with the configuration information on the coordinator. If the utility
                 finds inconsistencies, you are prompted to replace the remote copy with the local
                 copy. The utility also performs XML validation.</p>
             </pd>

@@ -7025,7 +7025,7 @@ bmcostestimate(struct PlannerInfo *root,
 {
 	IndexOptInfo *index = path->indexinfo;
 	RelOptInfo *baserel = index->rel;
-	RangeTblEntry *rte = planner_rt_fetch(baserel->relid, root);
+	RangeTblEntry *rte PG_USED_FOR_ASSERTS_ONLY = planner_rt_fetch(baserel->relid, root);
 	GenericCosts costs;
 
 	Assert(rte->rtekind == RTE_RELATION);

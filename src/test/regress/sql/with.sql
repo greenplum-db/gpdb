@@ -839,6 +839,8 @@ SELECT * FROM bug6051;
 SELECT * FROM bug6051_2;
 
 -- a truly recursive CTE in the same list
+ANALYZE y; -- There is a bug, the below case will fail for generating plan which execute ModifyTable on reader gang.
+
 WITH RECURSIVE t(a) AS (
 	SELECT 0
 		UNION ALL

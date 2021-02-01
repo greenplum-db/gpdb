@@ -9,18 +9,18 @@
 //		Class for serializing optimizer config objects
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CSerializableOptimizerConfig.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 
-#include "naucrates/dxl/xml/CDXLSections.h"
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-
-#include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/minidump/CSerializableOptimizerConfig.h"
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CDXLSections.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
 using namespace gpopt;

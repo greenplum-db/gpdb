@@ -93,7 +93,7 @@ public:
 		CPropConstraint *constraintsForOuterRefs) const;
 
 	// print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CPropConstraint
 

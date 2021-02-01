@@ -1,0 +1,16 @@
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'Field1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-08 16:05:22|INFO|gpload session started 2021-01-08 16:05:22
+2021-01-08 16:05:22|INFO|setting schema 'public' for table 'testspecialchar'
+2021-01-08 16:05:22|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file2.txt" -t 30
+2021-01-08 16:05:22|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_a1101b5024707ea34f55e778f329e548
+2021-01-08 16:05:22|INFO|did not find an external table to reuse. creating ext_gpload_reusable_418b1b42_5188_11eb_93db_00505698707d
+2021-01-08 16:05:22|ERROR|ERROR:  column "Field1" is of type bigint but expression is of type text
+LINE 1: ...07ea34f55e778f329e548 ("Field1","Field#2") SELECT "Field1","...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+ encountered while running INSERT INTO staging_gpload_reusable_a1101b5024707ea34f55e778f329e548 ("Field1","Field#2") SELECT "Field1","Field#2" FROM ext_gpload_reusable_418b1b42_5188_11eb_93db_00505698707d
+2021-01-08 16:05:22|INFO|rows Inserted          = 0
+2021-01-08 16:05:22|INFO|rows Updated           = 0
+2021-01-08 16:05:22|INFO|data formatting errors = 0
+2021-01-08 16:05:22|INFO|gpload failed

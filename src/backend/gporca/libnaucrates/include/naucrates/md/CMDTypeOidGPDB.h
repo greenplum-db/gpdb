@@ -14,8 +14,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDTypeOid.h"
 #include "naucrates/md/CGPDBTypeHelper.h"
+#include "naucrates/md/IMDTypeOid.h"
 
 #define GPDB_OID_OID OID(26)
 #define GPDB_OID_OPFAMILY OID(1990)

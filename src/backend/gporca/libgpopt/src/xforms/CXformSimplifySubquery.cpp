@@ -10,14 +10,14 @@
 //		into count(*) subqueries
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSimplifySubquery.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CNormalizer.h"
-#include "gpopt/xforms/CXformSimplifySubquery.h"
+#include "gpopt/operators/COperator.h"
 #include "gpopt/xforms/CXformUtils.h"
-
 #include "naucrates/md/IMDScalarOp.h"
 
 using namespace gpmd;

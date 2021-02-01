@@ -121,11 +121,11 @@
               column storage tables in the database)</p>
             <p><codeph>duplicate</codeph> - Check for duplicate entries</p>
             <p><codeph>foreign_key</codeph> - Check foreign keys</p>
-            <p><codeph>inconsistent</codeph> - Cross consistency check for master segment
+            <p><codeph>inconsistent</codeph> - Cross consistency check for coordinator segment
               inconsistency</p>
             <p><codeph>missing_extraneous</codeph> - Cross consistency check for missing or
               extraneous entries</p>
-            <p><codeph>owner</codeph> - Check table ownership that is inconsistent with the master
+            <p><codeph>owner</codeph> - Check table ownership that is inconsistent with the coordinator
               database</p>
 
             <p><codeph>orphaned_toast_tables</codeph> - Check for orphaned TOAST tables. 

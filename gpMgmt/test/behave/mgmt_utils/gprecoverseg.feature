@@ -48,7 +48,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
-    Scenario: gprecoverseg displays pg_basebackup progress to the user
+    Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -60,6 +60,20 @@ Feature: gprecoverseg tests
         And gpAdminLogs directory has no "pg_basebackup*" files
         And all the segments are running
         And the segments are synchronized
+
+    Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all primary processes
+        And user can start transactions
+        When the user runs "gprecoverseg -a -s"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each primary
+        And gpAdminLogs directory has no "pg_rewind*" files
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
         Given the database is running
@@ -135,6 +149,38 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And pg_isready reports all primaries are accepting connections
 
+    @demo_cluster
+    @concourse_cluster
+    Scenario Outline: <scenario> recovery skips unreachable segments
+      Given the database is running
+      And all the segments are running
+      And the segments are synchronized
+
+      And the primary on content 0 is stopped
+      And user can start transactions
+      And the primary on content 1 is stopped
+      And user can start transactions
+      And the status of the primary on content 0 should be "d"
+      And the status of the primary on content 1 should be "d"
+
+      And the host for the primary on content 1 is made unreachable
+
+      And the user runs psql with "-c 'CREATE TABLE IF NOT EXISTS foo (i int)'" against database "postgres"
+      And the user runs psql with "-c 'INSERT INTO foo SELECT generate_series(1, 10000)'" against database "postgres"
+
+      When the user runs "gprecoverseg <args>"
+      Then gprecoverseg should print "Not recovering segment \d because invalid_host is unreachable" to stdout
+      And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+      And the status of the primary on content 0 should be "u"
+      And the status of the primary on content 1 should be "d"
+
+      And the user runs psql with "-c 'DROP TABLE foo'" against database "postgres"
+      And the cluster is returned to a good state
+
+      Examples:
+        | scenario    | args |
+        | incremental | -a   |
+        | full        | -aF  |
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
@@ -237,10 +283,10 @@ Feature: gprecoverseg tests
         Then the saved "primary" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
         And the segments are synchronized
         # validate the new segment has the correct setting by getting admin connection to that segment

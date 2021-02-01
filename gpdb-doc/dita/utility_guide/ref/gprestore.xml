@@ -5,7 +5,7 @@
   <body>
     <p>Restore a Greenplum Database backup that was created using the <codeph>gpbackup</codeph>
       utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
-      located in the Greenplum Database master host data directory, with table data stored locally
+      located in the Greenplum Database coordinator host data directory, with table data stored locally
       on segment hosts in CSV data files.</p>
     <section>
       <title>Synopsis</title>
@@ -103,8 +103,8 @@
             <varname>YYYYMMDDHHMMSS</varname></pt>
           <pd>Required. Specifies the timestamp of the <codeph>gpbackup</codeph> backup set to
             restore. By default <codeph>gprestore</codeph> tries to locate metadata files for the
-            timestamp on the Greenplum Database master host in the
-              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            timestamp on the Greenplum Database coordinator host in the
+              <filepath>$COORDINATOR_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory, and CSV data files in the
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory of each
             segment host.</pd>
@@ -115,8 +115,8 @@
           <pd>Optional. Sources all backup files (metadata files and data files) from the specified
             directory. You must specify <varname>directory</varname> as an absolute path (not
             relative). If you do not supply this option, <codeph>gprestore</codeph> tries to locate
-            metadata files for the timestamp on the Greenplum Database master host in the
-              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            metadata files for the timestamp on the Greenplum Database coordinator host in the
+              <filepath>$COORDINATOR_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory. CSV data files must be available on each segment in the
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. Include
             this option when you specify a custom backup directory with

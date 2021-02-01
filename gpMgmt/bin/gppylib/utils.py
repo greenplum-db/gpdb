@@ -6,6 +6,7 @@ from sys import *
 from xml.dom import minidom
 from xml.dom import Node
 
+import pgdb
 from gppylib.gplog import *
 
 logger = get_default_logger()
@@ -501,3 +502,93 @@ def escapeDoubleQuoteInSQLString(string, forceDoubleQuote=True):
     if forceDoubleQuote:
         string = '"' + string + '"'
     return string
+
+
+def Escape(query_str):
+    return pgdb.escape_string(query_str)
+
+
+# Transform Python list to Postgres array literal (of the form: '{...}')
+def format_array_literal(val):
+    if len(val) == 0:
+        val = "'{}'"
+    elif isinstance(val[0], str):
+        # Convert ['..', '..', ...] to '{"..", "..", ...}'
+        val = ['"%s"' % Escape(e) for e in val]
+        val = ','.join(val)
+        val = "'{%s}'" % val
+    else:
+        # Convert [.., .., ...] to '{.., .., ...}'
+        val = str(val)
+        val = "'{%s}'" % val[1:-1]
+    return val
+
+
+def formatInsertValuesList(row, starelid, inclHLL):
+    """
+    @return rowVals
+    """
+
+    rowVals = ["\t%s" % (starelid)]
+
+    types = ['smallint',  # staattnum
+             'boolean',
+             'real',
+             'integer',
+             'real',
+             'smallint',  # stakind1
+             'smallint',
+             'smallint',
+             'smallint',
+             'smallint',
+             'oid',       # staop1
+             'oid',
+             'oid',
+             'oid',
+             'oid',
+             'oid',       # stacoll1
+             'oid',
+             'oid',
+             'oid',
+             'oid',
+             'real[]',    # stanumbers1
+             'real[]',
+             'real[]',
+             'real[]',
+             'real[]'
+             ]
+    i = 0
+    hll = False
+
+    # Populate types for stavaluesN: infer the type from pg_type.typname
+    if row[3][0] == '_':
+        rowTypes = types + [row[3]] * 5
+    else:
+        rowTypes = types + [row[3] + '[]'] * 5
+
+    for val, typ in zip(row[5:], rowTypes):
+        i = i + 1
+        # Check stakind1 to see if slot is a hll slot or a full hll slot
+        if i == 10 and (val == 98 or val == 99):
+            if inclHLL == False:
+                val = 0
+            hll = True
+        elif val is None:
+            val = 'NULL'
+        # Format stavalues5 for an hll slot
+        elif i == 30 and hll:
+            if inclHLL:
+                val = '\'{"%s"}\'' % pgdb.escape_bytea(val[0])
+                rowVals.append('\t{0}::{1}'.format(val, 'bytea[]'))
+            else:
+                rowVals.append('\t{0}'.format('NULL::int4[]'))
+            continue
+        # Postgres array types are adapted to Python lists by pgdb
+        # We have to transform these lists to Postgres array literals in the
+        # output file.
+        elif isinstance(val, list):
+            val = format_array_literal(val)
+
+        rowVals.append('\t{0}::{1}'.format(val, typ))
+
+    return rowVals

@@ -121,6 +121,7 @@
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
             <topicref href="guc-list.xml#gp_interconnect_setup_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_snd_queue_depth"/>
+            <topicref href="guc-list.xml#gp_interconnect_transmit_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_type"/>
             <topicref href="guc-list.xml#gp_log_format"/>
             <topicref href="guc-list.xml#gp_log_fts"/>

@@ -9,13 +9,13 @@
 //		Implementation of logical sequence operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalSequence.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
-#include "gpopt/operators/CLogicalSequence.h"
 
 using namespace gpopt;
 

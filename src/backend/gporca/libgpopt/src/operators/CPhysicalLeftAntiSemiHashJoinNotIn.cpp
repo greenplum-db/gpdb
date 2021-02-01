@@ -9,9 +9,11 @@
 //		Implementation of left anti semi hash join operator with NotIn semantics
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoinNotIn.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
 using namespace gpopt;

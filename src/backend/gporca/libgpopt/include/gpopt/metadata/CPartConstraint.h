@@ -12,7 +12,6 @@
 #define GPOPT_CPartConstraint_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
 
@@ -173,7 +172,7 @@ public:
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
 	// print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// construct a disjunction of the two constraints
 	static CPartConstraint *PpartcnstrDisjunction(

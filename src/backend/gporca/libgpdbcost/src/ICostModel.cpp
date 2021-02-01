@@ -11,6 +11,7 @@
 
 #include "gpos/base.h"
 #include "gpos/string/CWStringConst.h"
+
 #include "gpdbcost/CCostModelGPDB.h"
 
 using namespace gpopt;

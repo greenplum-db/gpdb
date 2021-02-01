@@ -9,27 +9,27 @@
 //		Implementation of constraints
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CConstraint.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
-#include "gpopt/base/IColConstraintsMapper.h"
 #include "gpopt/base/CColConstraintsArrayMapper.h"
 #include "gpopt/base/CColConstraintsHashMapper.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
-#include "gpopt/base/CConstraint.h"
-#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintConjunction.h"
 #include "gpopt/base/CConstraintDisjunction.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintNegation.h"
-#include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/base/IColConstraintsMapper.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/operators/CPredicateUtils.h"
-
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 
@@ -49,8 +49,8 @@ BOOL CConstraint::m_fFalse(false);
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CConstraint::CConstraint(CMemoryPool *mp)
-	: m_phmcontain(NULL), m_mp(mp), m_pcrsUsed(NULL), m_pexprScalar(NULL)
+CConstraint::CConstraint(CMemoryPool *mp, CColRefSet *pcrsUsed)
+	: m_phmcontain(NULL), m_mp(mp), m_pcrsUsed(pcrsUsed), m_pexprScalar(NULL)
 {
 	m_phmcontain = GPOS_NEW(m_mp) ConstraintContainmentMap(m_mp);
 }
@@ -66,6 +66,7 @@ CConstraint::CConstraint(CMemoryPool *mp)
 CConstraint::~CConstraint()
 {
 	CRefCount::SafeRelease(m_pexprScalar);
+	m_pcrsUsed->Release();
 	m_phmcontain->Release();
 }
 
@@ -673,7 +674,7 @@ CConstraint::PdrgpcnstrOnColumn(
 //---------------------------------------------------------------------------
 CExpression *
 CConstraint::PexprScalarConjDisj(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
-								 BOOL fConj) const
+								 BOOL fConj)
 {
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -705,7 +706,7 @@ CConstraint::PexprScalarConjDisj(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 //---------------------------------------------------------------------------
 CConstraintArray *
 CConstraint::PdrgpcnstrFlatten(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
-							   EConstraintType ect) const
+							   EConstraintType ect)
 {
 	CConstraintArray *pdrgpcnstrNew = GPOS_NEW(mp) CConstraintArray(mp);
 
@@ -719,15 +720,13 @@ CConstraint::PdrgpcnstrFlatten(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 		{
 			CConstraintConjunction *pcconj =
 				(CConstraintConjunction *) pcnstrChild;
-			CUtils::AddRefAppend<CConstraint, CleanupRelease>(
-				pdrgpcnstrNew, pcconj->Pdrgpcnstr());
+			CUtils::AddRefAppend(pdrgpcnstrNew, pcconj->Pdrgpcnstr());
 		}
 		else if (EctDisjunction == ectChild && EctDisjunction == ect)
 		{
 			CConstraintDisjunction *pcdisj =
 				(CConstraintDisjunction *) pcnstrChild;
-			CUtils::AddRefAppend<CConstraint, CleanupRelease>(
-				pdrgpcnstrNew, pcdisj->Pdrgpcnstr());
+			CUtils::AddRefAppend(pdrgpcnstrNew, pcdisj->Pdrgpcnstr());
 		}
 		else
 		{
@@ -753,7 +752,7 @@ CConstraint::PdrgpcnstrFlatten(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 CConstraintArray *
 CConstraint::PdrgpcnstrDeduplicate(CMemoryPool *mp,
 								   CConstraintArray *pdrgpcnstr,
-								   EConstraintType ect) const
+								   EConstraintType ect)
 {
 	CConstraintArray *pdrgpcnstrNew = GPOS_NEW(mp) CConstraintArray(mp);
 
@@ -888,7 +887,7 @@ CConstraint::Phmcolconstr(CMemoryPool *mp, CColRefSet *pcrs,
 CConstraint *
 CConstraint::PcnstrConjDisjRemapForColumn(CMemoryPool *mp, CColRef *colref,
 										  CConstraintArray *pdrgpcnstr,
-										  BOOL fConj) const
+										  BOOL fConj)
 {
 	GPOS_ASSERT(NULL != colref);
 
@@ -1040,6 +1039,23 @@ CConstraint::PrintConjunctionDisjunction(IOstream &os,
 	os << ")";
 
 	return os;
+}
+
+CColRefSet *
+CConstraint::PcrsFromConstraints(CMemoryPool *mp, CConstraintArray *pdrgpcnstr)
+{
+	CColRefSet *crs = GPOS_NEW(mp) CColRefSet(mp);
+
+	ULONG const length = pdrgpcnstr->Size();
+	GPOS_ASSERT(0 < length);
+
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		CConstraint *pcnstr = (*pdrgpcnstr)[ul];
+		crs->Include(pcnstr->PcrsUsed());
+	}
+
+	return crs;
 }
 
 // EOF

@@ -27,7 +27,7 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbappendonlyam.h"

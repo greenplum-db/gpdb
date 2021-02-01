@@ -12,7 +12,6 @@
 #define GPNAUCRATES_CUnionAllStatsProcessor_H
 
 #include "gpopt/optimizer/COptimizerConfig.h"
-
 #include "naucrates/statistics/CStatistics.h"
 
 namespace gpnaucrates

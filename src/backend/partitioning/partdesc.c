@@ -141,10 +141,6 @@ RelationBuildPartitionDesc(Relation rel)
 			scan = systable_beginscan(pg_class, ClassOidIndexId, true,
 									  NULL, 1, key);
 			tuple = systable_getnext(scan);
-			/* GPDB_12_MERGE_FIXME: We're hitting this in the regression test.
-			 * We should fix that, but in the meanwhile, avoid the crash by
-			 * throwing an error instead.
-			 */
 			if (!tuple)
 				elog(ERROR, "could not find pg_class entry for oid %u", inhrelid);
 			datum = heap_getattr(tuple, Anum_pg_class_relpartbound,

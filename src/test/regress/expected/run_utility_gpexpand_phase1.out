@@ -2,7 +2,7 @@
 -- m/^\S+ (.*):.*:.*-(\[\S+\]):-/
 -- s/^\S+ (.*):.*:.*-(\[\S+\]):-/TIMESTAMP $1:HOST:USER-$2:-/
 -- end_matchsubs
-\! echo 'EXPANSION_PREPARE_STARTED:<path> to inputfile' > $MASTER_DATA_DIRECTORY/gpexpand.status
+\! echo 'EXPANSION_PREPARE_STARTED:<path> to inputfile' > $COORDINATOR_DATA_DIRECTORY/gpexpand.status
 \! gpcheckcat
 ERROR: Usage of gpcheckcat is not supported while the cluster is in a reconfiguration state, exit gpcheckcat
 -- most gppkg actions should be disallowed while gpexpand is in progress
@@ -15,4 +15,4 @@ ERROR: Usage of gpcheckcat is not supported while the cluster is in a reconfigur
 20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[INFO]:-Building gppkg
 20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[ERROR]:-no-such-package is an Invalid directory
 20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[CRITICAL]:-gppkg failed. (Reason='') exiting...
-\! rm $MASTER_DATA_DIRECTORY/gpexpand.status
+\! rm $COORDINATOR_DATA_DIRECTORY/gpexpand.status

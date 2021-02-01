@@ -9,25 +9,24 @@
 //		Tests the file-based metadata provider.
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/mdcache/CMDProviderTest.h"
+
 #include "gpos/base.h"
-#include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/io/ioutils.h"
 #include "gpos/io/COstreamString.h"
+#include "gpos/io/ioutils.h"
+#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/test/CUnittest.h"
 
-#include "unittest/gpopt/mdcache/CMDProviderTest.h"
-#include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/CMDProviderMemory.h"
-#include "naucrates/md/CMDIdRelStats.h"
-#include "naucrates/md/CMDIdColStats.h"
-
-#include "naucrates/exception.h"
-#include "naucrates/dxl/CDXLUtils.h"
-
 #include "gpopt/mdcache/CAutoMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDProviderMemory.h"
+
+#include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpos;
 using namespace gpdxl;

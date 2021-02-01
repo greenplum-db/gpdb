@@ -13,6 +13,8 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CPointTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
@@ -21,7 +23,6 @@
 #include "naucrates/statistics/CPoint.h"
 
 #include "unittest/base.h"
-#include "unittest/dxl/statistics/CPointTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;

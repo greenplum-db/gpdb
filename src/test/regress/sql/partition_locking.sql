@@ -8,6 +8,12 @@
 -- max_locks_per_transactions.
 --
 
+-- ORCA doesn't support DDL queries on partitioned tables and falls back to
+-- planner. However, the locking pattern when ORCA falls back is be different
+-- when ICG is run in assert vs non-assert modes.  Revisit this once DML
+-- queries are supported by ORCA
+set optimizer = off;
+
 -- Show locks in master and in segments. Because the number of segments
 -- in the cluster depends on configuration, we print only summary information
 -- of the locks in segments. If a relation is locked only on one segment,
@@ -160,3 +166,5 @@ drop table partlockt;
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
+
+reset optimizer;

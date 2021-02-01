@@ -17,11 +17,10 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDColumn.h"
-
 #include "naucrates/md/CMDColumn.h"
 #include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDRelation.h"
 
 namespace gpdxl
 {
@@ -89,6 +88,9 @@ private:
 	// number of partition
 	ULONG m_num_of_partitions;
 
+	// Child partition oids
+	IMdIdArray *m_partition_oids;
+
 	// array of key sets
 	ULongPtr2dArray *m_keyset_array;
 
@@ -102,7 +104,7 @@ private:
 	IMdIdArray *m_mdid_check_constraint_array;
 
 	// partition constraint
-	IMDPartConstraint *m_mdpart_constraint;
+	CDXLNode *m_mdpart_constraint;
 
 	// does this table have oids
 	BOOL m_has_oids;
@@ -134,11 +136,12 @@ public:
 					IMdIdArray *distr_opfamilies,
 					ULongPtrArray *partition_cols_array,
 					CharPtrArray *str_part_types_array, ULONG num_of_partitions,
-					BOOL convert_hash_to_random, ULongPtr2dArray *keyset_array,
+					IMdIdArray *partition_oids, BOOL convert_hash_to_random,
+					ULongPtr2dArray *keyset_array,
 					CMDIndexInfoArray *md_index_info_array,
 					IMdIdArray *mdid_triggers_array,
 					IMdIdArray *mdid_check_constraint_array,
-					IMDPartConstraint *mdpart_constraint, BOOL has_oids);
+					CDXLNode *mdpart_constraint, BOOL has_oids);
 
 	// dtor
 	~CMDRelationGPDB() override;
@@ -255,7 +258,10 @@ public:
 	IMDId *CheckConstraintMDidAt(ULONG pos) const override;
 
 	// part constraint
-	IMDPartConstraint *MDPartConstraint() const override;
+	CDXLNode *MDPartConstraint() const override;
+
+	// child partition oids
+	IMdIdArray *ChildPartitionMdids() const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation

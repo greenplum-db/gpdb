@@ -2817,7 +2817,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						if (!contain_mutables)
 							contain_mutables = contain_mutable_functions((Node *) funcexpr);
 						break;
-					case PROEXECLOCATION_MASTER:
+					case PROEXECLOCATION_COORDINATOR:
 						/*
 						 * This function forces the execution to master.
 						 */
@@ -2827,7 +2827,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
 						}
-						exec_location = PROEXECLOCATION_MASTER;
+						exec_location = PROEXECLOCATION_COORDINATOR;
 						break;
 					case PROEXECLOCATION_INITPLAN:
 						/*
@@ -2845,7 +2845,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						/*
 						 * This function forces the execution to segments.
 						 */
-						if (exec_location == PROEXECLOCATION_MASTER)
+						if (exec_location == PROEXECLOCATION_COORDINATOR)
 						{
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -2887,7 +2887,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 				else
 					CdbPathLocus_MakeGeneral(&pathnode->locus);
 				break;
-			case PROEXECLOCATION_MASTER:
+			case PROEXECLOCATION_COORDINATOR:
 				if (contain_outer_params)
 					elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
 				CdbPathLocus_MakeEntry(&pathnode->locus);
@@ -3177,7 +3177,7 @@ create_resultscan_path(PlannerInfo *root, RelOptInfo *rel,
 
 		exec_location = check_execute_on_functions((Node *) rel->reltarget->exprs);
 
-		if (exec_location == PROEXECLOCATION_MASTER)
+		if (exec_location == PROEXECLOCATION_COORDINATOR)
 			CdbPathLocus_MakeEntry(&pathnode->locus);
 		else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 		{
@@ -3304,7 +3304,7 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 		case FTEXECLOCATION_ALL_SEGMENTS:
 			CdbPathLocus_MakeStrewn(&(pathnode->path.locus), getgpsegmentCount());
 			break;
-		case FTEXECLOCATION_MASTER:
+		case FTEXECLOCATION_COORDINATOR:
 			CdbPathLocus_MakeEntry(&(pathnode->path.locus));
 			break;
 		default:

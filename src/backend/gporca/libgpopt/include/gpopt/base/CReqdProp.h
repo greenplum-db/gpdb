@@ -12,8 +12,8 @@
 #define GPOPT_CReqdProp_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CDrvdProp.h"
 
@@ -104,6 +104,8 @@ public:
 	virtual void Compute(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						 CReqdProp *prpInput, ULONG child_index,
 						 CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) = 0;
+
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 
 };	// class CReqdProp
 

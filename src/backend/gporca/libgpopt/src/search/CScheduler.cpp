@@ -9,13 +9,13 @@
 //		Implementation of optimizer job scheduler
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CScheduler.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;

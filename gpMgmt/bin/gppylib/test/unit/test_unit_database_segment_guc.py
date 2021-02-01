@@ -11,11 +11,11 @@ class DatabaseSegmentGucTest(GpTestCase):
 
     def test_when_segment_report_success_format_database(self):
         self.subject.context = '0'
-        self.assertEqual(self.subject.report_success_format(), "Segment value: sql_value")
+        self.assertEqual(self.subject.report_success_format(), "Segment     value: sql_value")
 
-    def test_when_master_report_success_format_database(self):
+    def test_when_coordinator_report_success_format_database(self):
         self.subject.context = '-1'
-        self.assertEqual(self.subject.report_success_format(), "Master  value: sql_value")
+        self.assertEqual(self.subject.report_success_format(), "Coordinator value: sql_value")
 
     def test_report_fail_format_database(self):
         self.assertEqual(self.subject.report_fail_format(),

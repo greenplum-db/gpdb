@@ -17,10 +17,10 @@
 
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
 
+#include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXform.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
@@ -38,13 +38,9 @@ using namespace gpos;
 CLogicalDynamicBitmapTableGet::CLogicalDynamicBitmapTableGet(
 	CMemoryPool *mp, CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
 	const CName *pnameTableAlias, ULONG ulPartIndex,
-	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-	ULONG ulSecondaryPartIndexId, BOOL is_partial, CPartConstraint *ppartcnstr,
-	CPartConstraint *ppartcnstrRel)
+	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart)
 	: CLogicalDynamicGetBase(mp, pnameTableAlias, ptabdesc, ulPartIndex,
-							 pdrgpcrOutput, pdrgpdrgpcrPart,
-							 ulSecondaryPartIndexId, is_partial, ppartcnstr,
-							 ppartcnstrRel),
+							 pdrgpcrOutput, pdrgpdrgpcrPart),
 	  m_ulOriginOpId(ulOriginOpId)
 
 {
@@ -208,17 +204,10 @@ CLogicalDynamicBitmapTableGet::PopCopyWithRemappedColumns(
 
 	CColRef2dArray *pdrgpdrgpcrPart = CUtils::PdrgpdrgpcrRemap(
 		mp, m_pdrgpdrgpcrPart, colref_mapping, must_exist);
-	CPartConstraint *ppartcnstr =
-		m_part_constraint->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
-															 must_exist);
-	CPartConstraint *ppartcnstrRel =
-		m_ppartcnstrRel->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
-														   must_exist);
 
 	return GPOS_NEW(mp) CLogicalDynamicBitmapTableGet(
 		mp, m_ptabdesc, m_ulOriginOpId, pnameAlias, m_scan_id, pdrgpcrOutput,
-		pdrgpdrgpcrPart, m_ulSecondaryScanId, m_is_partial, ppartcnstr,
-		ppartcnstrRel);
+		pdrgpdrgpcrPart);
 }
 
 //---------------------------------------------------------------------------

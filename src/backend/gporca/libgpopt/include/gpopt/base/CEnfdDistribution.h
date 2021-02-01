@@ -22,8 +22,6 @@ namespace gpopt
 {
 using namespace gpos;
 
-class CPartitionPropagationSpec;
-
 //---------------------------------------------------------------------------
 //	@class:
 //		CEnfdDistribution
@@ -103,7 +101,6 @@ public:
 
 	// get distribution enforcing type for the given operator
 	EPropEnforcingType Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
-							CPartitionPropagationSpec *pppsReqd,
 							BOOL fDistribReqd) const;
 
 	// print function

@@ -12,8 +12,9 @@
 #define GPOPT_CPhysicalConstTableGet_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysical.h"
+
 #include "gpopt/operators/CLogicalConstTableGet.h"
+#include "gpopt/operators/CPhysical.h"
 
 namespace gpopt
 {
@@ -131,20 +132,6 @@ public:
 									CDrvdPropArray *pdrgpdpCtxt,
 									ULONG ulOptReq) const override;
 
-	// compute required partition propagation of the n-th child
-	CPartitionPropagationSpec *
-	PppsRequired(CMemoryPool *,				   //mp,
-				 CExpressionHandle &,		   //exprhdl,
-				 CPartitionPropagationSpec *,  //pppsRequired,
-				 ULONG,						   //child_index,
-				 CDrvdPropArray *,			   //pdrgpdpCtxt,
-				 ULONG						   //ulOptReq
-				 ) override
-	{
-		GPOS_ASSERT(!"CPhysicalConstTableGet has no relational children");
-		return NULL;
-	}
-
 	// check if required columns are included in output columns
 	BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired,
 						   ULONG ulOptReq) const override;
@@ -169,26 +156,6 @@ public:
 	CCTEMap *PcmDerive(CMemoryPool *mp,
 					   CExpressionHandle &exprhdl) const override;
 
-	// derive partition index map
-	CPartIndexMap *
-	PpimDerive(CMemoryPool *mp,
-			   CExpressionHandle &,	 //exprhdl
-			   CDrvdPropCtxt *		 //pdpctxt
-	) const override
-	{
-		return GPOS_NEW(mp) CPartIndexMap(mp);
-	}
-
-	// derive partition filter map
-	CPartFilterMap *
-	PpfmDerive(CMemoryPool *mp,
-			   CExpressionHandle &	// exprhdl
-	) const override
-	{
-		// return empty part filter map
-		return GPOS_NEW(mp) CPartFilterMap(mp);
-	}
-
 	//-------------------------------------------------------------------------------------
 	// Enforced Properties
 	//-------------------------------------------------------------------------------------
@@ -202,15 +169,6 @@ public:
 		CExpressionHandle &,		// exprhdl
 		const CEnfdRewindability *	// per
 	) const override;
-
-	// return partition propagation property enforcing type for this operator
-	CEnfdProp::EPropEnforcingType
-	EpetPartitionPropagation(CExpressionHandle &,				// exprhdl,
-							 const CEnfdPartitionPropagation *	// pepp
-	) const override
-	{
-		return CEnfdProp::EpetRequired;
-	}
 
 	// return true if operator passes through stats obtained from children,
 	// this is used when computing stats during costing

@@ -9,9 +9,11 @@
 //		Base class for all transformations
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXform.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/operators/CExpressionHandle.h"
 
 
 using namespace gpopt;
@@ -136,10 +138,6 @@ CBitSet *
 CXform::PbsIndexJoinXforms(CMemoryPool *mp)
 {
 	CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
-	(void) pbs->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
-		CXform::ExfInnerJoin2PartialDynamicIndexGetApply));
-	(void) pbs->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
-		CXform::ExfInnerJoinWithInnerSelect2PartialDynamicIndexGetApply));
 	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfJoin2BitmapIndexGetApply));
 	(void) pbs->ExchangeSet(
@@ -167,30 +165,6 @@ CXform::PbsBitmapIndexXforms(CMemoryPool *mp)
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfSelect2DynamicBitmapBoolOp));
 	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfJoin2BitmapIndexGetApply));
-
-	return pbs;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXform::PbsHeterogeneousIndexXforms
-//
-//	@doc:
-//		Returns a set containing all xforms related to heterogeneous indexes.
-//		Caller takes ownership of the returned set
-//
-//---------------------------------------------------------------------------
-CBitSet *
-CXform::PbsHeterogeneousIndexXforms(CMemoryPool *mp)
-{
-	CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
-
-	(void) pbs->ExchangeSet(
-		GPOPT_DISABLE_XFORM_TF(CXform::ExfSelect2PartialDynamicIndexGet));
-	(void) pbs->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
-		CXform::ExfInnerJoin2PartialDynamicIndexGetApply));
-	(void) pbs->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
-		CXform::ExfInnerJoinWithInnerSelect2PartialDynamicIndexGetApply));
 
 	return pbs;
 }

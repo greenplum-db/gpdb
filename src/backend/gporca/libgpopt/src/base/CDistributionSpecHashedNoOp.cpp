@@ -2,8 +2,9 @@
 //	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #include "gpopt/base/CDistributionSpecHashedNoOp.h"
-#include "gpopt/operators/CPhysicalMotionHashDistribute.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalMotionHashDistribute.h"
 
 using namespace gpopt;
 

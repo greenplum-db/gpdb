@@ -15,14 +15,13 @@
 //
 //---------------------------------------------------------------------------
 
-#include "naucrates/base/IDatum.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDType.h"
+#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/ops.h"
-
-#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
+#include "naucrates/base/IDatum.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDType.h"
 
 using namespace gpnaucrates;
 using namespace gpopt;

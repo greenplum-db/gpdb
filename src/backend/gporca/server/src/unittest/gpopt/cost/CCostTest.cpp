@@ -8,25 +8,24 @@
 //	@doc:
 //		Tests for basic operations on cost
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/cost/CCostTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
+#include "gpdbcost/CCostModelGPDB.h"
 #include "gpopt/cost/CCost.h"
 #include "gpopt/cost/ICostModelParams.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
-
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/parser/CParseHandlerDXL.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/cost/CCostTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "gpdbcost/CCostModelGPDB.h"
 
 //---------------------------------------------------------------------------
 //	@function:

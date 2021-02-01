@@ -37,9 +37,9 @@
         <title>Installing Tanzu Greenplum 6</title>
         <ol class="- topic/ol " id="ol_ctw_ltv_yq">
           <li class="- topic/li ">Download or copy the Greenplum Database DCA installer file to the
-            Greenplum Database master host.</li>
+            Greenplum Database coordinator host.</li>
           <li class="- topic/li ">As root, run the DCA installer for Greenplum 6 on the Greenplum
-            Database master host and specify the file <codeph>hostfile</codeph> that lists all hosts
+            Database coordinator host and specify the file <codeph>hostfile</codeph> that lists all hosts
             in the cluster, one host name per line. If necessary, copy <codeph>hostfile</codeph> to
             the directory containing the installer before running the installer.<p>This example
               command runs the installer for Greenplum Database
@@ -58,17 +58,17 @@
         For information about upgrading on non-DCA systems, see <xref
           href="upgrading.xml#topic_tbx_szy_kbb"/>.</note>
       <ol class="- topic/ol " id="ol_fql_2xl_xq">
-        <li class="- topic/li ">Log in to your Greenplum Database master host as the Greenplum
+        <li class="- topic/li ">Log in to your Greenplum Database coordinator host as the Greenplum
           administrative user (<codeph>gpadmin</codeph>):<codeblock># su - gpadmin</codeblock></li>
         <li class="- topic/li ">Download or copy the installer file
             <codeph>greenplum-db-appliance-&lt;6.new>-RHEL6-x86_64.bin</codeph> to the Greenplum
-          Database master host.</li>
+          Database coordinator host.</li>
         <li class="- topic/li ">Perform a smart shutdown of your existing Greenplum Database 6.x
           system (there can be no active connections to the database). This example uses the
             <codeph>-a</codeph> option to disable confirmation
           prompts:<codeblock>$ gpstop -a</codeblock></li>
         <li class="- topic/li ">As root, run the Greenplum Database DCA installer for 6.new on the
-          Greenplum Database master host and specify the file <codeph>hostfile</codeph> that lists
+          Greenplum Database coordinator host and specify the file <codeph>hostfile</codeph> that lists
           all hosts in the cluster. If necessary, copy <codeph>hostfile</codeph> to the directory
           containing the installer before running the installer.<p>This example command runs the
             installer for Greenplum Database 6.new for Red Hat Enterprise Linux

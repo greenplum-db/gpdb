@@ -20,15 +20,15 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/utils/gpdbdefs.h"
+#include "gpopt/gpdbwrappers.h"
 
 #include "gpos/base.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CAutoExceptionStack.h"
+#include "gpos/error/CException.h"
 
+#include "gpopt/utils/gpdbdefs.h"
 #include "naucrates/exception.h"
 
-#include "gpopt/gpdbwrappers.h"
 #include "catalog/pg_collation.h"
 extern "C" {
 #include "access/external.h"
@@ -37,8 +37,11 @@ extern "C" {
 #include "optimizer/optimizer.h"
 #include "optimizer/plancat.h"
 #include "parser/parse_agg.h"
+#include "partitioning/partdesc.h"
+#include "storage/lmgr.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/partcache.h"
 }
 #define GP_WRAP_START                                            \
 	sigjmp_buf local_sigjmp_buf;                                 \
@@ -816,23 +819,24 @@ gpdb::GetCheckConstraintOids(Oid rel_oid)
 	GP_WRAP_END;
 	return NULL;
 }
-#if 0
+
 Node *
-gpdb::GetRelationPartContraints
-	(
-	Oid rel_oid,
-	List **default_levels
-	)
+gpdb::GetRelationPartConstraints(Relation rel)
 {
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_partition, pg_partition_rule, pg_constraint */
-		return get_relation_part_constraints(rel_oid, default_levels);
+		List *part_quals = RelationGetPartitionQual(rel);
+		if (part_quals)
+		{
+			return (Node *) make_ands_explicit(part_quals);
+		}
 	}
 	GP_WRAP_END;
 	return NULL;
 }
 
+#if 0
 bool
 gpdb::HasExternalPartition
 	(
@@ -2817,6 +2821,18 @@ gpdb::RelIsPartitioned(Oid relid)
 	GP_WRAP_START;
 	{
 		return relation_is_partitioned(relid);
+	}
+	GP_WRAP_END;
+}
+
+void
+gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
+{
+	GP_WRAP_START;
+	{
+		bool lockUpgraded;
+		lockmode = UpgradeRelLockIfNecessary(reloid, lockmode, &lockUpgraded);
+		LockRelationOid(reloid, lockmode);
 	}
 	GP_WRAP_END;
 }

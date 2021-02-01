@@ -12,6 +12,7 @@
 #define GPOPT_CPartKeys_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 
 namespace gpopt
@@ -80,7 +81,7 @@ public:
 							  UlongToColRefMap *colref_mapping) const;
 
 	// print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// copy array of part keys into given memory pool
 	static CPartKeysArray *PdrgppartkeysCopy(

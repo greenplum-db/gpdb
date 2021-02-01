@@ -9,6 +9,10 @@
 //		Tests for CWStringBase, CWString, and CWStringConst
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/string/CWStringTest.h"
+
+#include <locale.h>
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
@@ -16,9 +20,6 @@
 #include "gpos/string/CWStringDynamic.h"
 #include "gpos/string/CWStringStatic.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/string/CWStringTest.h"
-#include <locale.h>
 
 using namespace gpos;
 

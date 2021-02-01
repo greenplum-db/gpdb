@@ -2445,7 +2445,7 @@
   <topic id="gp_dbid">
     <title>gp_dbid</title>
     <body>
-      <p>The local content dbid if a segment.</p>
+      <p>The local content dbid of a segment.</p>
       <table id="gp_dbid_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3795,8 +3795,8 @@
   <topic id="gp_interconnect_setup_timeout">
     <title>gp_interconnect_setup_timeout</title>
     <body>
-      <p>Specifies the amount of time to wait for the Greenplum Database interconnect to complete
-        setup before it times out.</p>
+      <p>Specifies the amount of time, in seconds, that Greenplum Database waits
+        for the interconnect to complete setup before it times out.</p>
       <table id="gp_interconnect_setup_timeout_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3811,8 +3811,8 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">Any valid time expression (number and unit)</entry>
-              <entry colname="col2">2 hours</entry>
+              <entry colname="col1">0 - 7200 seconds</entry>
+              <entry colname="col2">7200 seconds (2 hours)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -3844,6 +3844,35 @@
             <row>
               <entry colname="col1">1 - 4096</entry>
               <entry colname="col2">2 </entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_interconnect_transmit_timeout">
+    <title>gp_interconnect_transmit_timeout</title>
+    <body>
+      <p>Specifies the amount of time, in seconds, that Greenplum Database waits
+        for network transmission of interconnect traffic to complete before it
+        times out.</p>
+      <table id="gp_interconnect_transmit_timeout_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">1 - 7200 seconds</entry>
+              <entry colname="col2">3600 seconds (1 hour)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

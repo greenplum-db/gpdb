@@ -22,6 +22,7 @@ CREATE TABLE qf.lineitem (
 )
 DISTRIBUTED BY (l_orderkey);
 \copy qf.lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'data/lineitem_small.csv' with delimiter '|'; 
+ANALYZE qf.lineitem;
 
 CREATE TABLE qf.orders (
     o_orderkey bigint NOT NULL,
@@ -36,6 +37,7 @@ CREATE TABLE qf.orders (
 )
 DISTRIBUTED BY (o_orderkey);
 \copy qf.orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'data/order_small.csv' with delimiter '|'; 
+ANALYZE qf.orders;
 
 CREATE TABLE qf.supplier (
     s_suppkey integer NOT NULL,
@@ -48,6 +50,7 @@ CREATE TABLE qf.supplier (
 )
 DISTRIBUTED BY (s_suppkey);
 \copy qf.supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'data/supplier.csv' with delimiter '|';
+ANALYZE qf.supplier;
 
 create table skewed_lineitem as
 select 1 AS l_skewkey, *

@@ -9,12 +9,13 @@
 //		Implementation of inner hash join operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/operators/CExpressionHandle.h"
-
 #include "gpopt/operators/CPhysicalInnerHashJoin.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
 
 using namespace gpopt;
 
@@ -255,38 +256,5 @@ CPhysicalInnerHashJoin::PdsDerive(CMemoryPool *mp,
 	return pdsOuter;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalInnerHashJoin::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalInnerHashJoin::PppsRequired(CMemoryPool *mp,
-									 CExpressionHandle &exprhdl,
-									 CPartitionPropagationSpec *pppsRequired,
-									 ULONG child_index,
-									 CDrvdPropArray *pdrgpdpCtxt,
-									 ULONG ulOptReq)
-{
-	if (1 == ulOptReq)
-	{
-		// request (1): push partition propagation requests to join's children,
-		// do not consider possible dynamic partition elimination using join predicate here,
-		// this is handled by optimization request (0) below
-		return CPhysical::PppsRequiredPushThruNAry(mp, exprhdl, pppsRequired,
-												   child_index);
-	}
-
-	// request (0): push partition progagation requests to join child considering
-	// DPE possibility. For HJ, PS request is pushed to the inner child if there
-	// is a consumer (DTS) on the outer side of the join.
-	GPOS_ASSERT(0 == ulOptReq);
-	return PppsRequiredJoinChild(mp, exprhdl, pppsRequired, child_index,
-								 pdrgpdpCtxt, false);
-}
 
 // EOF

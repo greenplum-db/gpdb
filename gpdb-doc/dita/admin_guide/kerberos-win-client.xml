@@ -368,9 +368,9 @@ Service key for svcPostgresprod1 is saved in svcPostgresProd1.keytab</codeblock>
           Database master directory. This example copies the
             <codeph>svcPostgresProd1.keytab</codeph> that was created in <xref
             href="#topic_uzb_t5m_sv/ad_setup" format="dita">Active Directory Setup</xref>.</p>
-        <codeblock>mv svcPostgresProd1.keytab $MASTER_DATA_DIRECTORY
-chown gpadmin:gpadmin $MASTER_DATA_DIRECTORY/svcPostgresProd1.keytab
-chmod 600 $MASTER_DATA_DIRECTORY/svcPostgresProd1.keytab</codeblock>
+        <codeblock>mv svcPostgresProd1.keytab $COORDINATOR_DATA_DIRECTORY
+chown gpadmin:gpadmin $COORDINATOR_DATA_DIRECTORY/svcPostgresProd1.keytab
+chmod 600 $COORDINATOR_DATA_DIRECTORY/svcPostgresProd1.keytab</codeblock>
         <p>Add this line as the last line in the Greenplum Database <codeph>pg_hba.conf</codeph>
           file. This line configures Greenplum Database authentication to use Active Directory for
           authentication for connection any attempt that is not matched by a previous line.</p>

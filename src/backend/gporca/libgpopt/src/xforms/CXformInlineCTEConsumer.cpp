@@ -9,11 +9,12 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformInlineCTEConsumer.h"
-#include "gpopt/xforms/CXformUtils.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 

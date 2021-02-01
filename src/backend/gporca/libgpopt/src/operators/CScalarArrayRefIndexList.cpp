@@ -9,9 +9,9 @@
 //		Implementation of scalar arrayref index list
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CScalarArrayRefIndexList.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

@@ -3124,7 +3124,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 					if (localXid != InvalidTransactionId)
 					{
 						if (distribXid >= FirstDistributedTransactionId)
-							appendStringInfo(buf, "dx%u, ", distribXid);
+							appendStringInfo(buf, "dx"UINT64_FORMAT", ", distribXid);
 
 						appendStringInfo(buf, "x%u", localXid);
 
@@ -4070,11 +4070,11 @@ send_message_to_server_log(ErrorData *edata)
 												edata->message,
 												edata->detail_log != NULL ? edata->detail_log : edata->detail,
 												edata->hint,
-												debug_query_string,
+												edata->hide_stmt ? NULL : debug_query_string,
 												edata->cursorpos,
 												edata->internalpos,
 												edata->internalquery,
-												edata->context,
+												edata->hide_ctx ? NULL : edata->context,
 												edata->funcname,
 												edata->show_funcname,
 												edata->filename,

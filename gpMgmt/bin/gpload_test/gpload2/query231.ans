@@ -1,0 +1,18 @@
+2020-12-21 11:41:21|INFO|gpload session started 2020-12-21 11:41:21
+2020-12-21 11:41:21|INFO|setting schema 'public' for table 'texttable'
+2020-12-21 11:41:21|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-21 11:41:21|INFO|did not find an external table to reuse. creating ext_gpload_reusable_64860308_433e_11eb_9278_00505698d059
+2020-12-21 11:41:21|INFO|running time: 0.10 seconds
+2020-12-21 11:41:21|INFO|rows Inserted          = 16
+2020-12-21 11:41:21|INFO|rows Updated           = 0
+2020-12-21 11:41:21|INFO|data formatting errors = 0
+2020-12-21 11:41:21|INFO|gpload succeeded
+2020-12-21 11:41:22|INFO|gpload session started 2020-12-21 11:41:22
+2020-12-21 11:41:22|INFO|setting schema 'public' for table 'texttable'
+2020-12-21 11:41:22|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-21 11:41:22|INFO|did not find an external table to reuse. creating ext_gpload_reusable_64b4ed62_433e_11eb_abcb_00505698d059
+2020-12-21 11:41:22|INFO|running time: 0.08 seconds
+2020-12-21 11:41:22|INFO|rows Inserted          = 16
+2020-12-21 11:41:22|INFO|rows Updated           = 0
+2020-12-21 11:41:22|INFO|data formatting errors = 0
+2020-12-21 11:41:22|INFO|gpload succeeded

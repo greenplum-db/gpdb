@@ -12,8 +12,9 @@
 #define GPOPT_CPhysicalIndexOnlyScan_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysicalScan.h"
+
 #include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/operators/CPhysicalScan.h"
 
 namespace gpopt
 {
@@ -114,16 +115,6 @@ public:
 	{
 		m_pos->AddRef();
 		return m_pos;
-	}
-
-	// derive partition index map
-	CPartIndexMap *
-	PpimDerive(CMemoryPool *mp,
-			   CExpressionHandle &,	 // exprhdl
-			   CDrvdPropCtxt *		 //pdpctxt
-	) const override
-	{
-		return GPOS_NEW(mp) CPartIndexMap(mp);
 	}
 
 	CRewindabilitySpec *

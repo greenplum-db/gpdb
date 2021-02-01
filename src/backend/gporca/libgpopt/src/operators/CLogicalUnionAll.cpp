@@ -9,10 +9,11 @@
 //		Implementation of UnionAll operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalUnionAll.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "naucrates/statistics/CUnionAllStatsProcessor.h"
 

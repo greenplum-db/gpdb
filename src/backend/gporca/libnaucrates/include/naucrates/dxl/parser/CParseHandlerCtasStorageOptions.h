@@ -13,8 +13,8 @@
 #define GPDXL_CParseHandlerCTASStorageOptions_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl

@@ -9,45 +9,43 @@
 //		Statistics helper routines
 //---------------------------------------------------------------------------
 
+#include "naucrates/statistics/CStatisticsUtils.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/base/CColRefTable.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/exception.h"
-#include "gpopt/operators/CLogicalDynamicIndexGet.h"
-#include "gpopt/operators/CLogicalIndexGet.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CJoinStatsProcessor.h"
-#include "naucrates/statistics/CFilterStatsProcessor.h"
-#include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CStatsPredUtils.h"
-#include "naucrates/statistics/CStatsPredDisj.h"
-#include "naucrates/statistics/CStatsPredConj.h"
-#include "naucrates/statistics/CStatsPredLike.h"
-#include "naucrates/statistics/CScaleFactorUtils.h"
-#include "naucrates/statistics/CHistogram.h"
-
+#include "naucrates/base/IDatumInt2.h"
+#include "naucrates/base/IDatumInt4.h"
+#include "naucrates/base/IDatumInt8.h"
+#include "naucrates/base/IDatumOid.h"
+#include "naucrates/md/CMDIdColStats.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeInt2.h"
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/md/IMDTypeOid.h"
-#include "naucrates/md/CMDIdColStats.h"
-
-#include "naucrates/base/IDatumInt2.h"
-#include "naucrates/base/IDatumInt4.h"
-#include "naucrates/base/IDatumInt8.h"
-#include "naucrates/base/IDatumOid.h"
+#include "naucrates/statistics/CFilterStatsProcessor.h"
+#include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CJoinStatsProcessor.h"
+#include "naucrates/statistics/CScaleFactorUtils.h"
+#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/CStatsPredConj.h"
+#include "naucrates/statistics/CStatsPredDisj.h"
+#include "naucrates/statistics/CStatsPredLike.h"
+#include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -1038,22 +1036,23 @@ CStatisticsUtils::DatumNull(const CColRef *colref)
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
+CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp GPOS_UNUSED,
 											CExpressionHandle &expr_handle,
-											ULONG part_idx_id,
-											CPartFilterMap *part_filter_map)
+											ULONG part_idx_id GPOS_UNUSED)
 {
 	// extract part table base stats from passed handle
 	IStatistics *base_table_stats = expr_handle.Pstats();
 	GPOS_ASSERT(NULL != base_table_stats);
 
-	if (!GPOS_FTRACE(EopttraceDeriveStatsForDPE))
+	// GPDB_12_MERGE_FIXME: Re-enable this when DPE is re-implemented
+	if (true || !GPOS_FTRACE(EopttraceDeriveStatsForDPE))
 	{
 		// if stats derivation with dynamic partition elimitaion is disabled, we return base stats
 		base_table_stats->AddRef();
 		return base_table_stats;
 	}
 
+#if 0
 	if (!part_filter_map->FContainsScanId(part_idx_id) ||
 		NULL == part_filter_map->Pstats(part_idx_id))
 	{
@@ -1107,6 +1106,8 @@ CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
 	join_preds_stats->Release();
 
 	return left_semi_join_stats;
+#endif
+	return NULL;
 }
 
 //---------------------------------------------------------------------------

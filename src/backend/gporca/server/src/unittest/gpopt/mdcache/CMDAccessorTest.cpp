@@ -9,44 +9,40 @@
 //		Tests accessing objects from the metadata cache.
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/mdcache/CMDAccessorTest.h"
+
 #include "gpos/error/CAutoTrace.h"
-#include "gpos/string/CWStringDynamic.h"
 #include "gpos/io/COstreamString.h"
-
 #include "gpos/memory/CCacheFactory.h"
+#include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CAutoTaskProxy.h"
-
-
-#include "naucrates/md/CMDProviderMemory.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/IMDTypeBool.h"
-#include "naucrates/md/IMDTypeOid.h"
-#include "naucrates/md/IMDTypeGeneric.h"
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/IMDFunction.h"
-#include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDColumn.h"
-#include "naucrates/md/IMDCheckConstraint.h"
-#include "naucrates/md/IMDPartConstraint.h"
-#include "naucrates/md/IMDCast.h"
-#include "naucrates/md/IMDScCmp.h"
-
-#include "naucrates/exception.h"
-
-#include "naucrates/base/IDatumInt4.h"
-#include "naucrates/base/IDatumBool.h"
-#include "naucrates/base/IDatumOid.h"
 
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/base/IDatumBool.h"
+#include "naucrates/base/IDatumInt4.h"
+#include "naucrates/base/IDatumOid.h"
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDCheckConstraint.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDPartConstraint.h"
+#include "naucrates/md/IMDRelation.h"
+#include "naucrates/md/IMDScCmp.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeGeneric.h"
+#include "naucrates/md/IMDTypeInt4.h"
+#include "naucrates/md/IMDTypeOid.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/mdcache/CMDAccessorTest.h"
-#include "unittest/gpopt/mdcache/CMDProviderTest.h"
 #include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/mdcache/CMDProviderTest.h"
 
 
 #define GPOPT_MDCACHE_LOOKUP_THREADS 8

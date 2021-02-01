@@ -19,9 +19,9 @@
 #define GPOS_CMemoryVisitorPrint_H
 
 #include "gpos/assert.h"
+#include "gpos/memory/IMemoryVisitor.h"
 #include "gpos/types.h"
 #include "gpos/utils.h"
-#include "gpos/memory/IMemoryVisitor.h"
 
 namespace gpos
 {

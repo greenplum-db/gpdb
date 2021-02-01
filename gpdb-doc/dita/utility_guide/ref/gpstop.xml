@@ -8,15 +8,15 @@
         <p>Stops or restarts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstop</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
+            <codeblock><b>gpstop</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
        [<b>-M</b> smart | fast | immediate] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-r</b>] [<b>-y</b>] [<b>-a</b>] 
        [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
 
-<b>gpstop</b> <b>-m</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-y</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
+<b>gpstop</b> <b>-m</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-y</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
 
-<b>gpstop</b> <b>-u</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
+<b>gpstop</b> <b>-u</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
  
-<b>gpstop</b> <b>--host</b> <varname>host_name</varname> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
+<b>gpstop</b> <b>--host</b> <varname>host_name</varname> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
        [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-a</b>] [<b>-v</b> | <b>-q</b>]
 
 <b>gpstop</b> <b>--version</b> 
@@ -28,7 +28,7 @@
             <p>The <codeph>gpstop</codeph> utility is used to stop the database servers that
                 comprise a Greenplum Database system. When you stop a Greenplum Database system, you
                 are actually stopping several <codeph>postgres</codeph> database server processes at
-                once (the master and all of the segment instances). The <codeph>gpstop</codeph>
+                once (the coordinator and all of the segment instances). The <codeph>gpstop</codeph>
                 utility handles the shutdown of the individual instances. Each instance is shutdown
                 in parallel. </p>
             <p>The default shutdown mode (<codeph>-M smart</codeph>) waits for current client
@@ -40,9 +40,9 @@
                         <varname>timeout_seconds</varname></codeph> option.</p>
             <p>Specify the <codeph>-M fast</codeph> shutdown mode to roll back all in-progress
                 transactions and terminate any connections before shutting down. </p>
-            <p>With the <codeph>-u</codeph> option, the utility uploads changes made to the master
+            <p>With the <codeph>-u</codeph> option, the utility uploads changes made to the coordinator
                     <codeph>pg_hba.conf</codeph> file or to <i>runtime</i> configuration parameters
-                in the master <codeph>postgresql.conf</codeph> file without interruption of service.
+                in the coordinator <codeph>postgresql.conf</codeph> file without interruption of service.
                 Note that any active sessions will not pickup the changes until they reconnect to
                 the database.</p>
         </section>
@@ -60,9 +60,9 @@
                         instances it needs to stop.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-d <varname>master_data_directory</varname></pt>
-                    <pd>Optional. The master host data directory. If not specified, the value set
-                        for <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
+                    <pt>-d <varname>coordinator_data_directory</varname></pt>
+                    <pd>Optional. The coordinator host data directory. If not specified, the value set
+                        for <codeph>$COORDINATOR_DATA_DIRECTORY</codeph> will be used.</pd>
                 </plentry>
                 <plentry>
                     <pt>--host <varname>host_name</varname></pt>
@@ -74,7 +74,7 @@
                     <pd>The segment instances are not shut down and the utility returns an error in
                         these cases:<ul id="ul_at2_kk3_ccb">
                             <li>Segment mirroring is not enabled for the system.</li>
-                            <li>The master or standby master is on the host.</li>
+                            <li>The coordinator or standby coordinator is on the host.</li>
                             <li>Both a primary segment instance and its mirror are on the host.</li>
                         </ul></pd>
                     <pd>This option cannot be specified with the <codeph>-m</codeph>,
@@ -91,7 +91,7 @@
                 </plentry>
                 <plentry>
                     <pt>-m</pt>
-                    <pd>Optional. Shuts down a Greenplum master instance that was started in
+                    <pd>Optional. Shuts down a Greenplum coordinator instance that was started in
                         maintenance mode.</pd>
                 </plentry>
                 <plentry>
@@ -138,7 +138,7 @@
                 </plentry>
                 <plentry>
                     <pt>-u</pt>
-                    <pd>This option reloads the <codeph>pg_hba.conf</codeph> files of the master and
+                    <pd>This option reloads the <codeph>pg_hba.conf</codeph> files of the coordinator and
                         segments and the runtime parameters of the <codeph>postgresql.conf</codeph>
                         files but does not shutdown the Greenplum Database array. Use this option to
                         make new configuration settings active after editing
@@ -153,8 +153,8 @@
                 </plentry>
                 <plentry>
                     <pt>-y</pt>
-                    <pd>Do not stop the standby master process. The default is to stop the standby
-                        master.</pd>
+                    <pd>Do not stop the standby coordinator process. The default is to stop the standby
+                        coordinator.</pd>
                 </plentry>
                 <plentry>
                     <pt>-? | -h | --help</pt>
@@ -174,7 +174,7 @@
             <codeblock>gpstop -M fast</codeblock>
             <p>Stop all segment instances and then restart the system:</p>
             <codeblock>gpstop -r</codeblock>
-            <p>Stop a master instance that was started in maintenance mode:</p>
+            <p>Stop a coordinator instance that was started in maintenance mode:</p>
             <codeblock>gpstop -m</codeblock>
             <p>Reload the <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph> files
                 after making configuration changes but do not shutdown the Greenplum Database

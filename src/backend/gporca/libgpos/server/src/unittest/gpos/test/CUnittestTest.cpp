@@ -9,10 +9,10 @@
 //		Test for CUnittest with subtests
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/test/CUnittestTest.h"
+
 #include "gpos/base.h"
 #include "gpos/types.h"
-
-#include "unittest/gpos/test/CUnittestTest.h"
 
 namespace gpos
 {

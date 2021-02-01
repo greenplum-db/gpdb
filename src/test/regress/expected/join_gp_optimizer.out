@@ -1112,32 +1112,29 @@ analyze t_joinsize_2;
 analyze t_joinsize_3;
 -- the following query should not broadcast the join result of t_joinsize_1, t_joinsize_2.
 explain select * from (t_joinsize_1 join t_joinsize_2 on t_joinsize_1.c2 = t_joinsize_2.c2) join t_joinsize_3 on t_joinsize_3.c = t_joinsize_1.c1;
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=24.17..386.00 rows=20000 width=20)
-   ->  Hash Join  (cost=24.17..119.33 rows=6667 width=20)
-         Hash Cond: (t_joinsize_2.c2 = t_joinsize_1_1_prt_2.c2)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..11.00 rows=333 width=8)
-               Hash Key: t_joinsize_2.c2
-               ->  Seq Scan on t_joinsize_2  (cost=0.00..4.33 rows=333 width=8)
-         ->  Hash  (cost=21.67..21.67 rows=200 width=12)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=2.42..21.67 rows=200 width=12)
-                     Hash Key: t_joinsize_1_1_prt_2.c2
-                     ->  Hash Join  (cost=2.42..17.67 rows=200 width=12)
-                           Hash Cond: (t_joinsize_1_1_prt_2.c1 = t_joinsize_3.c)
-                           ->  Append  (cost=0.00..12.00 rows=400 width=8)
-                                 ->  Seq Scan on t_joinsize_1_1_prt_2  (cost=0.00..1.13 rows=13 width=8)
-                                 ->  Seq Scan on t_joinsize_1_1_prt_3  (cost=0.00..1.13 rows=13 width=8)
-                                 ->  Seq Scan on t_joinsize_1_1_prt_4  (cost=0.00..1.13 rows=13 width=8)
-                                 ->  Seq Scan on t_joinsize_1_1_prt_5  (cost=0.00..1.13 rows=13 width=8)
-                                 ->  Seq Scan on t_joinsize_1_1_prt_6  (cost=0.00..1.13 rows=13 width=8)
-                                 ->  Seq Scan on t_joinsize_1_1_prt_extra  (cost=0.00..4.33 rows=333 width=8)
-                           ->  Hash  (cost=2.00..2.00 rows=33 width=4)
-                                 ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..2.00 rows=33 width=4)
-                                       Hash Key: t_joinsize_3.c
-                                       ->  Seq Scan on t_joinsize_3  (cost=0.00..1.33 rows=33 width=4)
- Optimizer: Postgres query optimizer
-(23 rows)
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..1300.53 rows=99503 width=20)
+   Hash Cond: (t_joinsize_1_1_prt_2.c2 = t_joinsize_2.c2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.13 rows=598 width=12)
+         ->  Hash Join  (cost=0.00..862.10 rows=200 width=12)
+               Hash Cond: (t_joinsize_1_1_prt_2.c1 = t_joinsize_3.c)
+               ->  Append  (cost=0.00..431.01 rows=400 width=8)
+                     ->  Seq Scan on t_joinsize_1_1_prt_2  (cost=0.00..431.01 rows=400 width=8)
+                     ->  Seq Scan on t_joinsize_1_1_prt_3  (cost=0.00..431.01 rows=400 width=8)
+                     ->  Seq Scan on t_joinsize_1_1_prt_4  (cost=0.00..431.01 rows=400 width=8)
+                     ->  Seq Scan on t_joinsize_1_1_prt_5  (cost=0.00..431.01 rows=400 width=8)
+                     ->  Seq Scan on t_joinsize_1_1_prt_6  (cost=0.00..431.01 rows=400 width=8)
+                     ->  Seq Scan on t_joinsize_1_1_prt_extra  (cost=0.00..431.01 rows=400 width=8)
+               ->  Hash  (cost=431.00..431.00 rows=34 width=4)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=34 width=4)
+                           Hash Key: t_joinsize_3.c
+                           ->  Seq Scan on t_joinsize_3  (cost=0.00..431.00 rows=34 width=4)
+   ->  Hash  (cost=431.04..431.04 rows=1000 width=8)
+         ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.04 rows=1000 width=8)
+               ->  Seq Scan on t_joinsize_2  (cost=0.00..431.01 rows=334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(20 rows)
 
 drop table t_joinsize_1;
 drop table t_joinsize_2;

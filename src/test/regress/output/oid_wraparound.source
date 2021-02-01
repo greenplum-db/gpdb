@@ -9,7 +9,7 @@ CREATE DATABASE oid_wraparound;
 CREATE OR REPLACE FUNCTION gp_set_next_oid_master(new_oid Oid)
 	RETURNS VOID
 	AS '@abs_builddir@/regress.so', 'gp_set_next_oid'
-	LANGUAGE C EXECUTE ON MASTER;
+	LANGUAGE C EXECUTE ON COORDINATOR;
 CREATE OR REPLACE FUNCTION gp_set_next_oid_segments(new_oid Oid)
 	RETURNS VOID
 	AS '@abs_builddir@/regress.so', 'gp_set_next_oid'
@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION gp_set_next_oid_segments(new_oid Oid)
 CREATE OR REPLACE FUNCTION gp_get_next_oid_master()
 	RETURNS OID
 	AS '@abs_builddir@/regress.so', 'gp_get_next_oid'
-	LANGUAGE C EXECUTE ON MASTER;
+	LANGUAGE C EXECUTE ON COORDINATOR;
 CREATE OR REPLACE FUNCTION gp_get_next_oid_segments()
 	RETURNS SETOF OID
 	AS '@abs_builddir@/regress.so', 'gp_get_next_oid'

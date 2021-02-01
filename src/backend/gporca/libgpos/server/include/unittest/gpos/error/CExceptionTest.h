@@ -11,8 +11,8 @@
 #ifndef GPOS_CExceptionTest_H
 #define GPOS_CExceptionTest_H
 
-#include "gpos/types.h"
 #include "gpos/assert.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

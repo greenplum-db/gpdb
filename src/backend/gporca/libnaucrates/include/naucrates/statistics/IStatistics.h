@@ -15,13 +15,12 @@
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CHashMapIter.h"
 
-#include "naucrates/statistics/CStatsPred.h"
-#include "naucrates/statistics/CStatsPredPoint.h"
-#include "naucrates/statistics/CStatsPredJoin.h"
-#include "naucrates/statistics/CHistogram.h"
-#include "naucrates/md/CDXLStatsDerivedRelation.h"
-
 #include "gpopt/base/CColRef.h"
+#include "naucrates/md/CDXLStatsDerivedRelation.h"
+#include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CStatsPred.h"
+#include "naucrates/statistics/CStatsPredJoin.h"
+#include "naucrates/statistics/CStatsPredPoint.h"
 
 namespace gpopt
 {
@@ -186,7 +185,7 @@ public:
 	virtual CColRefSet *GetColRefSet(CMemoryPool *mp) const = 0;
 
 	// print function
-	IOstream &OsPrint(IOstream &os) const override = 0;
+	virtual IOstream &OsPrint(IOstream &os) const = 0;
 
 	// generate the DXL representation of the statistics object
 	virtual CDXLStatsDerivedRelation *GetDxlStatsDrvdRelation(
@@ -207,18 +206,9 @@ operator<<(IOstream &os, IStatistics &stats)
 {
 	return stats.OsPrint(os);
 }
-// release istats
-inline void
-CleanupStats(IStatistics *stats)
-{
-	if (NULL != stats)
-	{
-		(dynamic_cast<CRefCount *>(stats))->Release();
-	}
-}
 
 // dynamic array for derived stats
-typedef CDynamicPtrArray<IStatistics, CleanupStats> IStatisticsArray;
+typedef CDynamicPtrArray<IStatistics, CleanupRelease> IStatisticsArray;
 }  // namespace gpnaucrates
 
 #endif	// !GPNAUCRATES_IStatistics_H

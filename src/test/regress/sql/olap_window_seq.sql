@@ -1600,6 +1600,8 @@ create table foo (a int4) distributed by (a);
 create table bar (a int4, b int4) distributed by (a, b);
 insert into foo select g from generate_series(1, 10) g;
 insert into bar select g%2, g from generate_series(1, 5) g;
+analyze foo;
+analyze bar;
 
 select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
 explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
@@ -1637,6 +1639,7 @@ drop table foo;
 drop table if exists window_preds;
 create table window_preds(i int, j int, k int);
 insert into window_preds values(1,2,3);
+analyze window_preds;
 insert into window_preds values(2,3,4);
 insert into window_preds values(3,4,5);
 insert into window_preds values(4,5,6);

@@ -16,6 +16,7 @@
 #include "gpos/base.h"
 #include "gpos/memory/CCache.h"
 #include "gpos/memory/CCacheFactory.h"
+
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDKey.h"
 

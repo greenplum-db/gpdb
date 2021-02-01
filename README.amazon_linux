@@ -52,12 +52,12 @@ sudo make install
 cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_test .
 mkdir /home/ec2-user/primary
 mkdir /home/ec2-user/mirror
-mkdir /home/ec2-user/master
+mkdir /home/ec2-user/coordinator
 
 # update these line to reflect accurate names
 declare -a DATA_DIRECTORY=(/home/ec2-user/primary /home/ec2-user/primary)
 declare -a MIRROR_DATA_DIRECTORY=(/home/ec2-user/mirror /home/ec2-user/mirror)
-MASTER_DIRECTORY=/home/ec2-user/master
+MASTER_DIRECTORY=/home/ec2-user/coordinator
 MASTER_HOSTNAME=mydev
 MACHINE_LIST_FILE=/home/ec2-user/hostfile_gpinitsystem
 

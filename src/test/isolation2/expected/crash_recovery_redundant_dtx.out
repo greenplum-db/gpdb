@@ -34,7 +34,7 @@ CREATE
  Success:                      
 (1 row)
 -- the 'COMMIT' record is logically after REDO pointer
-2&:insert into crash_test_redundant values (1);  <waiting ...>
+2&:insert into crash_test_redundant values (1), (2), (3);  <waiting ...>
 
 -- resume checkpoint
 3:select gp_inject_fault('checkpoint_dtx_info', 'reset', 1);
@@ -78,4 +78,6 @@ server closed the connection unexpectedly
  c1 
 ----
  1  
-(1 row)
+ 2  
+ 3  
+(3 rows)

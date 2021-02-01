@@ -9,9 +9,10 @@
 //		Implementation
 //---------------------------------------------------------------------------
 
+#include "naucrates/md/IMDRelation.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelation.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;

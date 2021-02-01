@@ -99,12 +99,12 @@ from pg_class
 where relname like '__star' order by relname;
  relname | relpages | reltuples 
 ---------+----------+-----------
- a_star  |        1 |         1
- b_star  |        1 |         1
- c_star  |        1 |         1
- d_star  |        1 |         1
- e_star  |        1 |         1
- f_star  |        1 |         1
+ a_star  |        1 |         3
+ b_star  |        1 |         4
+ c_star  |        1 |         4
+ d_star  |        1 |        16
+ e_star  |        1 |         7
+ f_star  |        1 |        16
 (6 rows)
 
 select relname, vacuum_count, analyze_count, autovacuum_count, autoanalyze_count
@@ -620,6 +620,7 @@ reset effective_io_concurrency;
 drop table bmscantest;
 drop function explain_parallel_sort_stats();
 -- test parallel merge join path.
+analyze tenk2;
 set enable_hashjoin to off;
 set enable_nestloop to off;
 explain (costs off)
@@ -632,11 +633,9 @@ explain (costs off)
                ->  Merge Join
                      Merge Cond: (tenk1.unique1 = tenk2.unique1)
                      ->  Index Only Scan using tenk1_unique1 on tenk1
-                     ->  Sort
-                           Sort Key: tenk2.unique1
-                           ->  Seq Scan on tenk2
+                     ->  Index Only Scan using tenk2_unique1 on tenk2
  Optimizer: Postgres query optimizer
-(10 rows)
+(8 rows)
 
 select  count(*) from tenk1, tenk2 where tenk1.unique1 = tenk2.unique1;
  count 

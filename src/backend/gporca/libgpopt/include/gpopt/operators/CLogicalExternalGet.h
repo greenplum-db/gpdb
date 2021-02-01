@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalExternalGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalGet.h"
 
 namespace gpopt

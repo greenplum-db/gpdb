@@ -6,7 +6,7 @@ create schema qp_misc_jiras;
 create table qp_misc_jiras.tbl3301_foo (c1 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create external web table qp_misc_jiras.tbl3301_bar(like qp_misc_jiras.tbl3301_foo) execute 'echo 1' on master format 'csv';
+create external web table qp_misc_jiras.tbl3301_bar(like qp_misc_jiras.tbl3301_foo) execute 'echo 1' on coordinator format 'csv';
 insert into qp_misc_jiras.tbl3301_foo select * from qp_misc_jiras.tbl3301_bar;
 select * from qp_misc_jiras.tbl3301_foo;
  c1 
@@ -758,14 +758,14 @@ group by n;
  1
 (1 row)
 
-create external web table qp_misc_jiras.tbl4622_ext1 (i int, j int) execute 'echo " | 20" ' on master format 'text' (delimiter as E'|' null as ' ');
+create external web table qp_misc_jiras.tbl4622_ext1 (i int, j int) execute 'echo " | 20" ' on coordinator format 'text' (delimiter as E'|' null as ' ');
 select * from qp_misc_jiras.tbl4622_ext1;
  i | j  
 ---+----
    | 20
 (1 row)
 
-create external web table qp_misc_jiras.tbl4622_ext2 (i int, j int) execute 'echo "  | 20" ' on master format 'text' (delimiter as E'|' null as '  ');
+create external web table qp_misc_jiras.tbl4622_ext2 (i int, j int) execute 'echo "  | 20" ' on coordinator format 'text' (delimiter as E'|' null as '  ');
 select * from qp_misc_jiras.tbl4622_ext2;
  i | j  
 ---+----
@@ -4631,7 +4631,7 @@ drop table qp_misc_jiras.tbl7285_axg;
 show autovacuum;
  autovacuum 
 ------------
- off
+ on
 (1 row)
 
 set autovacuum=on;

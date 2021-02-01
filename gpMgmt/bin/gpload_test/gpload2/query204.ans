@@ -1,0 +1,8 @@
+2020-12-17 11:22:58|INFO|gpload session started 2020-12-17 11:22:58
+2020-12-17 11:22:58|INFO|setting schema 'public' for table 'texttable2'
+2020-12-17 11:22:58|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-17 11:22:58|ERROR|A gpload control file processing error occurred. gpload:input:delimiter must be a string 
+2020-12-17 11:22:58|INFO|rows Inserted          = 0
+2020-12-17 11:22:58|INFO|rows Updated           = 0
+2020-12-17 11:22:58|INFO|data formatting errors = 0
+2020-12-17 11:22:58|INFO|gpload failed

@@ -9,41 +9,38 @@
 //		Implementation of predicate normalization
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPredicateUtils.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
-#include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CConstraintInterval.h"
+#include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintDisjunction.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CFunctionProp.h"
-
+#include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
-
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CLogicalSetOp.h"
 #include "gpopt/operators/CNormalizer.h"
-#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CPhysicalJoin.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarFunc.h"
 #include "gpopt/operators/CScalarIdent.h"
-
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/mdcache/CMDAccessorUtils.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDCast.h"
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-
 #include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDTypeBoolGPDB.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
 #include "naucrates/md/CMDTypeInt2GPDB.h"
 #include "naucrates/md/CMDTypeInt4GPDB.h"
 #include "naucrates/md/CMDTypeInt8GPDB.h"
-#include "naucrates/md/CMDTypeBoolGPDB.h"
-#include "naucrates/md/CMDTypeGenericGPDB.h"
+#include "naucrates/md/IMDCast.h"
 #include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDType.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -382,8 +379,8 @@ CPredicateUtils::PdrgpexprExpandDisjuncts(CMemoryPool *mp,
 			{
 				CExpressionArray *pdrgpexprArrayCmpDisjuncts =
 					PdrgpexprDisjuncts(mp, pexprExpanded);
-				CUtils::AddRefAppend<CExpression, CleanupRelease>(
-					pdrgpexprExpanded, pdrgpexprArrayCmpDisjuncts);
+				CUtils::AddRefAppend(pdrgpexprExpanded,
+									 pdrgpexprArrayCmpDisjuncts);
 				pdrgpexprArrayCmpDisjuncts->Release();
 				pexprExpanded->Release();
 			}
@@ -441,8 +438,8 @@ CPredicateUtils::PdrgpexprExpandConjuncts(CMemoryPool *mp,
 			{
 				CExpressionArray *pdrgpexprArrayCmpConjuncts =
 					PdrgpexprConjuncts(mp, pexprExpanded);
-				CUtils::AddRefAppend<CExpression, CleanupRelease>(
-					pdrgpexprExpanded, pdrgpexprArrayCmpConjuncts);
+				CUtils::AddRefAppend(pdrgpexprExpanded,
+									 pdrgpexprArrayCmpConjuncts);
 				pdrgpexprArrayCmpConjuncts->Release();
 				pexprExpanded->Release();
 			}
@@ -791,8 +788,8 @@ CPredicateUtils::PexprConjDisj(CMemoryPool *mp, CExpression *pexprOne,
 	}
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	CUtils::AddRefAppend<CExpression, CleanupRelease>(pdrgpexpr, pdrgpexprOne);
-	CUtils::AddRefAppend<CExpression, CleanupRelease>(pdrgpexpr, pdrgpexprTwo);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprOne);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprTwo);
 
 	pdrgpexprOne->Release();
 	pdrgpexprTwo->Release();

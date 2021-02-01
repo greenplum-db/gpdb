@@ -15,9 +15,9 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 
+#include "gpopt/base/COptimizationContext.h"
 #include "gpopt/cost/CCost.h"
 #include "gpopt/cost/ICostModel.h"
-#include "gpopt/base/COptimizationContext.h"
 
 // infinite plan cost
 #define GPOPT_INFINITE_COST CCost(1e+100)
@@ -298,7 +298,7 @@ public:
 	}
 
 	// debug print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CCostContext
 

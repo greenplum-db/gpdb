@@ -41,7 +41,7 @@ external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char 
 }
 
 void
-external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, int eol_type, bool header,
+external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, EolType eol_type, bool header,
 						  uint32 scancounter, List *params)
 {
 	time_t		now = time(0);
@@ -52,7 +52,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	int			line_delim_len;
 
 	snprintf(extvar->GP_CSVOPT, sizeof(extvar->GP_CSVOPT),
-			"m%dx%dq%dn%dh%d",
+			"m%1dx%3dq%3dn%1dh%1d",
 			csv ? 1 : 0,
 			escape ? 255 & *escape : 0,
 			quote ? 255 & *quote : 0,
@@ -101,7 +101,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	if (!getDistributedTransactionIdentifier(extvar->GP_XID))
 		sprintf(extvar->GP_XID, "%u-%.10u", gp_session_id, gp_command_count);
 
-	sprintf(extvar->GP_CID, "%x", QEDtxContextInfo.curcid);
+	sprintf(extvar->GP_CID, "%x", gp_command_count);
 	sprintf(extvar->GP_SN, "%x", scancounter);
 	sprintf(extvar->GP_SEGMENT_ID, "%d", GpIdentity.segindex);
 	sprintf(extvar->GP_SEG_PORT, "%d", PostPortNumber);

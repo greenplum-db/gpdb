@@ -9,13 +9,14 @@
 //		Implementation of physical const table get operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalConstTableGet.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDistributionSpecUniversal.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCTEMap.h"
+#include "gpopt/base/CDistributionSpecUniversal.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CPhysicalConstTableGet.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
 

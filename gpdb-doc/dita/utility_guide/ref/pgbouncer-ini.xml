@@ -65,7 +65,7 @@ db = ...
           </plentry>
           <plentry>
             <pt>host</pt>
-            <pd>The name or IP address of the Greenplum master host. Host names are resolved at
+            <pd>The name or IP address of the Greenplum coordinator host. Host names are resolved at
               connect time. If DNS returns several results, they are used in a round-robin
               manner. The DNS result is cached and the <codeph>dns_max_ttl</codeph> parameter
               determines when the cache entry expires. </pd>
@@ -75,7 +75,7 @@ db = ...
           </plentry>
           <plentry>
             <pt>port</pt>
-            <pd>The Greenplum Database master port.</pd>
+            <pd>The Greenplum Database coordinator port.</pd>
             <pd><p>Default: 5432</p></pd>
           </plentry>
           <plentry>

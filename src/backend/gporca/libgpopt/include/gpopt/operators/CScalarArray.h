@@ -12,10 +12,10 @@
 #define GPOPT_CScalarArray_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
 
 #include "gpopt/operators/CScalar.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {

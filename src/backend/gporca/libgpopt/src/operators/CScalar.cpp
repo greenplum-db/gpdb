@@ -9,12 +9,13 @@
 //		Implementation of base class of scalar operators
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalar.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CScalar.h"
 
 
 using namespace gpopt;

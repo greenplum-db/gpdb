@@ -124,4 +124,12 @@ s/nodename nor servname provided, or not known/Name or service not known/
 m/ERROR:  could not devise a query plan for the given query \(.*\)/
 s/ERROR:  could not devise a query plan for the given query \(.*\)/ERROR:  could not devise a query plan for the given query/
 
+m/^DETAIL:.*gid=.*/
+s/gid=\d+/gid DUMMY/
+
+m/NOTICE:  One or more columns in the following table\(s\) do not have statistics: /
+s/.//gs
+m/HINT:  For non-partitioned tables, run analyze .+\. For partitioned tables, run analyze rootpartition .+\. See log for columns missing statistics\./
+s/.//gs
+
 -- end_matchsubs

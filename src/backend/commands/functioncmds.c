@@ -727,8 +727,8 @@ interpret_exec_location(DefElem *defel)
 
 	if (strcmp(str, "any") == 0)
 		exec_location = PROEXECLOCATION_ANY;
-	else if (strcmp(str, "master") == 0)
-		exec_location = PROEXECLOCATION_MASTER;
+	else if (strcmp(str, "coordinator") == 0)
+		exec_location = PROEXECLOCATION_COORDINATOR;
 	else if (strcmp(str, "initplan") == 0)
 		exec_location = PROEXECLOCATION_INITPLAN;
 	else if (strcmp(str, "all_segments") == 0)
@@ -744,7 +744,7 @@ static void
 validate_sql_exec_location(char exec_location, bool proretset)
 {
 	/*
-	 * ON MASTER and ON ALL SEGMENTS are only supported for set-returning
+	 * ON COORDINATOR and ON ALL SEGMENTS are only supported for set-returning
 	 * functions.
 	 */
 	switch (exec_location)
@@ -753,11 +753,11 @@ validate_sql_exec_location(char exec_location, bool proretset)
 			/* ok */
 			break;
 
-		case PROEXECLOCATION_MASTER:
+		case PROEXECLOCATION_COORDINATOR:
 			if (!proretset)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("EXECUTE ON MASTER is only supported for set-returning functions")));
+						 errmsg("EXECUTE ON COORDINATOR is only supported for set-returning functions")));
 			break;
 
 		case PROEXECLOCATION_INITPLAN:

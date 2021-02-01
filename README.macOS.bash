@@ -19,6 +19,8 @@ brew install libyaml   # enables `--enable-mapreduce`
 brew install libevent # gpfdist
 brew install apr # gpfdist
 brew install apr-util # gpfdist
+brew install zstd
+brew install pkg-config
 brew link --force apr
 brew link --force apr-util
 

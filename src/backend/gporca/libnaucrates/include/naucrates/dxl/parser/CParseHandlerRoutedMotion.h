@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerRoutedMotion_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalRoutedDistributeMotion.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl
 {

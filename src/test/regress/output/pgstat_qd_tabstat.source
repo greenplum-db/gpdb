@@ -1,3 +1,4 @@
+create extension if not exists gp_debug_numsegments;
 -- Turn off auto_stat to avoid ANALYZE
 set gp_autostats_mode = none;
 -- Test pgstat table stat for copy on QD
@@ -164,10 +165,13 @@ select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n
 
 -- Test pgstat table stat in ALTER TABLE EXPAND TABLE on QD;
 -- Thanks @uglthinx for telling me this way to execute ALTER TABLE EXPAND manually
+select gp_debug_set_create_table_default_numsegments(1);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 1
+(1 row)
+
 create table table_for_expand(i int, j varchar) distributed by (i);
-set allow_system_table_mods=true;
-update gp_distribution_policy set numsegments = 1 where localoid = 'table_for_expand'::regclass;
-set allow_system_table_mods to default;
 insert into table_for_expand select i, 'hello' || i from generate_series(1, 333) f(i);
 select count(distinct gp_segment_id) from table_for_expand;
  count 
@@ -204,6 +208,12 @@ select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n
  n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
 -----------+-----------+-----------+---------------+------------+------------+---------------------
        333 |         0 |         0 |             0 |        333 |          0 |                 333
+(1 row)
+
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
 (1 row)
 
 -- Test pgstat table stat in INSERT/UPDATE/DELETE on QD

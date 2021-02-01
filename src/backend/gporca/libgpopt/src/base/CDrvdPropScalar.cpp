@@ -9,11 +9,12 @@
 //		Scalar derived properties
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdPropScalar.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CScalar.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
 

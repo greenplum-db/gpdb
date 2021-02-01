@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementRowTrigger.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalRowTrigger.h"
 #include "gpopt/operators/CPatternLeaf.h"

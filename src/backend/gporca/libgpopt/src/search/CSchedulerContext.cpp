@@ -9,12 +9,13 @@
 //		Implementation of optimizer job scheduler
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CSchedulerContext.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/search/CScheduler.h"
-#include "gpopt/search/CSchedulerContext.h"
 
 
 using namespace gpos;

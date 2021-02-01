@@ -8,23 +8,22 @@
 //	@doc:
 //		Test for subquery handling
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CSubqueryHandlerTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/ops.h"
-
-#include "gpopt/xforms/CXformFactory.h"
 #include "gpopt/xforms/CSubqueryHandler.h"
+#include "gpopt/xforms/CXformFactory.h"
+#include "naucrates/md/CMDIdGPDB.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CSubqueryHandlerTest.h"
 #include "unittest/gpopt/CSubqueryTestUtils.h"
-
-#include "naucrates/md/CMDIdGPDB.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 ULONG CSubqueryHandlerTest::m_ulSubqueryHandlerMinidumpTestCounter =

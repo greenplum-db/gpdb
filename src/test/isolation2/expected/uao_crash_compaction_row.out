@@ -108,7 +108,7 @@ ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=15584: server closed the c
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 248 | 5        | 1             | 248              | 2        | 3             | 2     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
 (2 rows)
 -- do vacuum again, there should be no await-dropping segment files, no concurrent
 -- transactions exist this time when the VACUUM is performed.
@@ -118,9 +118,9 @@ VACUUM
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
  1          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 1          | 2     | 0   | 0        | 0             | 0                | 1        | 3             | 1     
+ 1          | 2     | 0   | 0        | 0             | 0                | 0        | 3             | 1     
  2          | 1     | 200 | 4        | 1             | 200              | 1        | 3             | 1     
 (5 rows)
 1:INSERT INTO crash_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
@@ -144,9 +144,9 @@ UPDATE 1
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
  1          | 1     | 64  | 1        | 1             | 64               | 3        | 3             | 1     
- 1          | 2     | 0   | 0        | 0             | 0                | 1        | 3             | 1     
+ 1          | 2     | 0   | 0        | 0             | 0                | 0        | 3             | 1     
  2          | 1     | 328 | 6        | 3             | 328              | 3        | 3             | 1     
 (5 rows)
 1:VACUUM crash_before_cleanup_phase;
@@ -155,11 +155,11 @@ VACUUM
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
  1          | 1     | 64  | 1        | 1             | 64               | 3        | 3             | 1     
- 1          | 2     | 0   | 0        | 0             | 0                | 1        | 3             | 1     
+ 1          | 2     | 0   | 0        | 0             | 0                | 0        | 3             | 1     
  2          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
- 2          | 2     | 248 | 5        | 1             | 248              | 1        | 3             | 1     
+ 2          | 2     | 248 | 5        | 1             | 248              | 0        | 3             | 1     
 (6 rows)
 1:INSERT INTO crash_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
 INSERT 2
@@ -201,11 +201,11 @@ VACUUM
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 0          | 2     | 248 | 5        | 1             | 248              | 1        | 3             | 1     
+ 0          | 2     | 248 | 5        | 1             | 248              | 0        | 3             | 1     
  1          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 1          | 2     | 64  | 1        | 1             | 64               | 1        | 3             | 1     
+ 1          | 2     | 64  | 1        | 1             | 64               | 0        | 3             | 1     
  2          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 2          | 2     | 200 | 4        | 1             | 200              | 1        | 3             | 1     
+ 2          | 2     | 200 | 4        | 1             | 200              | 0        | 3             | 1     
 (6 rows)
 1:INSERT INTO crash_vacuum_in_appendonly_insert VALUES(21, 1, 'c'), (26, 1, 'c');
 INSERT 2
@@ -275,9 +275,9 @@ server closed the connection unexpectedly
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 248 | 5        | 1             | 248              | 2        | 3             | 2     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
  1          | 1     | 64  | 1        | 1             | 64               | 2        | 3             | 2     
- 1          | 2     | 0   | 0        | 0             | 0                | 1        | 3             | 1     
+ 1          | 2     | 0   | 0        | 0             | 0                | 0        | 3             | 1     
  2          | 1     | 200 | 4        | 1             | 200              | 1        | 3             | 1     
 (5 rows)
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
@@ -301,9 +301,9 @@ UPDATE 1
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 248 | 5        | 1             | 248              | 2        | 3             | 2     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
  1          | 1     | 64  | 1        | 1             | 64               | 2        | 3             | 2     
- 1          | 2     | 64  | 1        | 1             | 64               | 2        | 3             | 1     
+ 1          | 2     | 64  | 1        | 1             | 64               | 1        | 3             | 1     
  2          | 1     | 328 | 6        | 3             | 328              | 3        | 3             | 1     
 (5 rows)
 4:VACUUM crash_master_before_cleanup_phase;
@@ -312,11 +312,11 @@ VACUUM
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 0          | 2     | 160 | 3        | 1             | 160              | 1        | 3             | 1     
+ 0          | 2     | 160 | 3        | 1             | 160              | 0        | 3             | 1     
  1          | 1     | 0   | 0        | 0             | 0                | 2        | 3             | 1     
- 1          | 2     | 64  | 1        | 1             | 64               | 2        | 3             | 1     
+ 1          | 2     | 64  | 1        | 1             | 64               | 1        | 3             | 1     
  2          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
- 2          | 2     | 248 | 5        | 1             | 248              | 1        | 3             | 1     
+ 2          | 2     | 248 | 5        | 1             | 248              | 0        | 3             | 1     
 (6 rows)
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
 INSERT 2

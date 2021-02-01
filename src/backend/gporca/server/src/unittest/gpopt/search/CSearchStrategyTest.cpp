@@ -8,22 +8,22 @@
 //	@doc:
 //		Test for search strategy
 //---------------------------------------------------------------------------
-#include "gpopt/exception.h"
+#include "unittest/gpopt/search/CSearchStrategyTest.h"
+
+#include "gpos/error/CAutoTrace.h"
+#include "gpos/task/CAutoTraceFlag.h"
 
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/exception.h"
 #include "gpopt/search/CSearchStage.h"
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/task/CAutoTraceFlag.h"
 #include "gpopt/xforms/CXformFactory.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/parser/CParseHandlerDXL.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/engine/CEngineTest.h"
-#include "unittest/gpopt/search/CSearchStrategyTest.h"
-
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/parser/CParseHandlerDXL.h"
 
 //---------------------------------------------------------------------------
 //	@function:

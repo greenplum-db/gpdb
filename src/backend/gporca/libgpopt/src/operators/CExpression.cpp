@@ -11,23 +11,22 @@
 
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
-#include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/task/CWorker.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
-
-#include "gpopt/exception.h"
+#include "gpos/task/CAutoSuspendAbort.h"
+#include "gpos/task/CAutoTraceFlag.h"
+#include "gpos/task/CWorker.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDistributionSpec.h"
-#include "gpopt/base/CDrvdPropCtxtRelational.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/CDrvdPropCtxtRelational.h"
 #include "gpopt/base/CDrvdPropRelational.h"
+#include "gpopt/base/CPrintPrefix.h"
 #include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/base/CPrintPrefix.h"
+#include "gpopt/exception.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/COperator.h"
@@ -37,7 +36,6 @@
 #include "gpopt/search/CGroupExpression.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/traceflags/traceflags.h"
-
 
 using namespace gpnaucrates;
 using namespace gpopt;
@@ -1124,6 +1122,8 @@ CExpression::DbgPrintWithProperties() const
 
 #endif	// GPOS_DEBUG
 
+FORCE_GENERATE_DBGSTR(gpopt::CExpression);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CExpression::OsPrint
@@ -1307,9 +1307,6 @@ CExpression::PexprRehydrate(CMemoryPool *mp, CCostContext *pcc,
 	CExpression *pexpr = GPOS_NEW(mp)
 		CExpression(mp, pop, pgexpr, pdrgpexpr, pcc->Pstats(), CCost(cost));
 
-	// set the number of expected partition selectors in the context
-	pdpctxtplan->SetExpectedPartitionSelectors(pop, pcc);
-
 	if (pop->FPhysical() && !pexpr->FValidPlan(pcc->Poc()->Prpp(), pdpctxtplan))
 	{
 #ifdef GPOS_DEBUG
@@ -1362,10 +1359,10 @@ CExpression::FValidPlan(const CReqdPropPlan *prpp,
 
 	CDrvdPropRelational *pdprel = GetDrvdPropRelational();
 
+	// GPDB_12_MERGE_FIXME: Also check FValidPartEnforcers()
 	return prpp->FCompatible(exprhdl, CPhysical::PopConvert(m_pop), pdprel,
 							 pdpplan) &&
-		   FValidChildrenDistribution(pdpctxtplan) &&
-		   FValidPartEnforcers(pdpctxtplan);
+		   FValidChildrenDistribution(pdpctxtplan);
 }
 
 //---------------------------------------------------------------------------
@@ -1407,6 +1404,7 @@ CExpression::FValidChildrenDistribution(CDrvdPropCtxtPlan *pdpctxtplan)
 	return true;
 }
 
+#if 0
 //---------------------------------------------------------------------------
 //	@function:
 //		CExpression::FValidPartEnforcers
@@ -1441,6 +1439,7 @@ CExpression::FValidPartEnforcers(CDrvdPropCtxtPlan *pdpctxtplan)
 
 	return true;
 }
+#endif
 
 CColRefSet *
 CExpression::DeriveOuterReferences()

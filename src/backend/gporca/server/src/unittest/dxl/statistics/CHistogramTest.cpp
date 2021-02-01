@@ -13,18 +13,19 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CHistogramTest.h"
+
 #include <stdint.h>
 
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
 
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CHistogramTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;

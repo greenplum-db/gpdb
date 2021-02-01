@@ -9,12 +9,14 @@
 //		Test of tree map facility
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/search/CTreeMapTest.h"
+
 #include "gpos/error/CAutoTrace.h"
-#include "gpos/types.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/task/CTask.h"
+#include "gpos/types.h"
 
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/engine/CEngine.h"
@@ -23,7 +25,6 @@
 #include "gpopt/operators/ops.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/search/CTreeMapTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 

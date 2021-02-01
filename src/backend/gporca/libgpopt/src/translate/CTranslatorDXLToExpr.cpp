@@ -11,35 +11,33 @@
 //		the caller is responsible for freeing it.
 //---------------------------------------------------------------------------
 
+#include "gpopt/translate/CTranslatorDXLToExpr.h"
+
 #include "gpos/common/CAutoTimer.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDFunction.h"
-#include "naucrates/md/IMDScalarOp.h"
-#include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/IMDCast.h"
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-#include "naucrates/md/CMDRelationCtasGPDB.h"
-#include "naucrates/md/CMDProviderMemory.h"
-
-#include "naucrates/dxl/operators/dxlops.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColumnFactory.h"
-#include "gpopt/base/CEnfdOrder.h"
-#include "gpopt/base/CEnfdDistribution.h"
 #include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CEnfdDistribution.h"
+#include "gpopt/base/CEnfdOrder.h"
 #include "gpopt/base/CUtils.h"
+#include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
-#include "gpopt/exception.h"
-
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/CMDRelationCtasGPDB.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDRelation.h"
+#include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/traceflags/traceflags.h"
 
 #define GPDB_DENSE_RANK_OID 7002
@@ -564,20 +562,44 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 	CColRefArray *colref_array = NULL;
 
 	const IMDRelation *pmdrel = m_pmda->RetrieveRel(table_descr->MDId());
+	IMDRelation::Erelstoragetype root_storage_type =
+		pmdrel->RetrieveRelStorageType();
 	if (pmdrel->IsPartitioned())
 	{
 		GPOS_ASSERT(EdxlopLogicalGet == edxlopid);
 
+		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
+		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
+		{
+			IMDId *part_mdid = (*partition_mdids)[ul];
+			const IMDRelation *partrel = m_pmda->RetrieveRel(part_mdid);
+			if (partrel->RetrieveRelStorageType() != root_storage_type)
+			{
+				GPOS_RAISE(
+					gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+					GPOS_WSZ_LIT(
+						"Partitioned table with heterogeneous storage types"));
+			}
+			if (partrel->IsPartitioned())
+			{
+				// Multi-level partitioned tables are unsupported - fall back
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						   GPOS_WSZ_LIT("Multi-level partitioned tables"));
+			}
+		}
+
 		// generate a part index id
 		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
-		popGet = GPOS_NEW(m_mp)
-			CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id);
+		partition_mdids->AddRef();
+		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(
+			m_mp, pname, ptabdesc, part_idx_id, partition_mdids);
 		CLogicalDynamicGet *popDynamicGet =
 			CLogicalDynamicGet::PopConvert(popGet);
 
 		// get the output column references from the dynamic get
 		colref_array = popDynamicGet->PdrgpcrOutput();
 
+#if 0
 		// if there are no indices, we only generate a dummy partition constraint because
 		// the constraint might be expensive to compute and it is not needed
 		BOOL fDummyConstraint = 0 == pmdrel->IndexCount();
@@ -585,6 +607,7 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 			m_mp, m_pmda, popDynamicGet->PdrgpdrgpcrPart(),
 			pmdrel->MDPartConstraint(), colref_array, fDummyConstraint);
 		popDynamicGet->SetPartConstraint(ppartcnstr);
+#endif
 	}
 	else
 	{
@@ -2073,7 +2096,8 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	mdid->AddRef();
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
-		rel_distr_policy, rel_storage_type, table_descr->GetExecuteAsUserId());
+		rel_distr_policy, rel_storage_type, table_descr->GetExecuteAsUserId(),
+		table_descr->LockMode());
 
 	const ULONG ulColumns = table_descr->Arity();
 	for (ULONG ul = 0; ul < ulColumns; ul++)
@@ -2272,7 +2296,8 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type,
-		0  // TODO:  - Mar 5, 2014; ulExecuteAsUser
+		0,	// TODO:  - Mar 5, 2014; ulExecuteAsUser
+		-1	// GPDB_12_MERGE_FIXME: Extract the lockmode from CTE
 	);
 
 	// populate column information from the dxl table descriptor

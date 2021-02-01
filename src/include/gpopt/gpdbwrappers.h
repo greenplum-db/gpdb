@@ -17,19 +17,17 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "access/attnum.h"
-#include "utils/faultinjector.h"
 #include "parser/parse_coerce.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 }
 
 #include "gpos/types.h"
 
-#include "gpos/types.h"
-
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
-typedef int LOCKMODE;
 struct TypeCacheEntry;
 typedef struct NumericData *Numeric;
 typedef struct HeapTupleData *HeapTuple;
@@ -262,10 +260,8 @@ Node *PnodeCheckConstraint(Oid check_constraint_oid);
 // get the list of check constraints for a given relation
 List *GetCheckConstraintOids(Oid rel_oid);
 
-#if 0
-	// part constraint expression tree
-	Node *GetRelationPartContraints(Oid rel_oid, List **default_levels);
-#endif
+// part constraint expression tree
+Node *GetRelationPartConstraints(Relation rel);
 
 // get the cast function for the specified source and destination types
 bool GetCastFunc(Oid src_oid, Oid dest_oid, bool *is_binary_coercible,
@@ -752,6 +748,8 @@ void *GPDBMemoryContextAlloc(MemoryContext context, Size size);
 MemoryContext GPDBAllocSetContextCreate();
 
 void GPDBMemoryContextDelete(MemoryContext context);
+
+void GPDBLockRelationOid(Oid reloid, int lockmode);
 
 }  //namespace gpdb
 

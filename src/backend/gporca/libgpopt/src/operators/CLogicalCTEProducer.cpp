@@ -9,10 +9,12 @@
 //		Implementation of CTE producer operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalCTEProducer.h"
+
 #include "gpos/base.h"
+
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalCTEProducer.h"
 
 using namespace gpopt;
 

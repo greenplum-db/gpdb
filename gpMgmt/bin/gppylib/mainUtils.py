@@ -124,7 +124,7 @@ class PIDLockFile:
 class SimpleMainLock:
     """
     Tools like gprecoverseg prohibit running multiple instances at the same time
-    via a simple lock file created in the MASTER_DATA_DIRECTORY.  This class takes
+    via a simple lock file created in the COORDINATOR_DATA_DIRECTORY.  This class takes
     care of the work to manage this lock as appropriate based on the mainOptions
     specified.
 
@@ -147,7 +147,7 @@ class SimpleMainLock:
             self.parentpid = int(os.environ[self.parentpidvar])
 
         if self.pidlockpath is not None:
-            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidlockpath)
+            self.ppath = os.path.join(gp.get_coordinatordatadir(), self.pidlockpath)
             self.pidlockfile = PIDLockFile(self.ppath)
 
     def acquire(self):
@@ -261,7 +261,7 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
 def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):
     """
     If caller specifies 'pidlockpath' in mainOptions then we manage the
-    specified pid file within the MASTER_DATA_DIRECTORY before proceeding
+    specified pid file within the COORDINATOR_DATA_DIRECTORY before proceeding
     to execute the specified program and we clean up the pid file when
     we're done.
     """
@@ -332,8 +332,8 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
             if options.ensure_value("quiet", False):
                 gplog.quiet_stdout_logging()
 
-        if options.ensure_value("masterDataDirectory", None) is not None:
-            options.master_data_directory = os.path.abspath(options.masterDataDirectory)
+        if options.ensure_value("coordinatorDataDirectory", None) is not None:
+            options.coordinator_data_directory = os.path.abspath(options.coordinatorDataDirectory)
 
         if not suppressStartupLogMessage:
             logger.info("Starting %s with args: %s" % (gProgramName, ' '.join(sys.argv[1:])))
@@ -406,17 +406,17 @@ def addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption, includ
     return addTo
 
 
-def addMasterDirectoryOptionForSingleClusterProgram(addTo):
+def addCoordinatorDirectoryOptionForSingleClusterProgram(addTo):
     """
-    Add the -d master directory option to the specified parser object
-    which is intended to provide the value of the master data directory.
+    Add the -d coordinator directory option to the specified parser object
+    which is intended to provide the value of the coordinator data directory.
 
     For programs that operate on multiple clusters at once, this function/option
     is not appropriate.
     """
     addTo.add_option('-d', '--master_data_directory', type='string',
-                     dest="masterDataDirectory",
-                     metavar="<master data directory>",
-                     help="Optional. The master host data directory. If not specified, the value set" \
-                          "for $MASTER_DATA_DIRECTORY will be used.")
+                     dest="coordinatorDataDirectory",
+                     metavar="<coordinator data directory>",
+                     help="Optional. The coordinator host data directory. If not specified, the value set" \
+                          "for $COORDINATOR_DATA_DIRECTORY will be used.")
 

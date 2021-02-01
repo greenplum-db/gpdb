@@ -13,11 +13,11 @@
 #define GPDXL_CParseHandlerMDRelation_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-
-#include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDPartConstraintGPDB.h"
+#include "naucrates/md/CMDRelationGPDB.h"
 
 namespace gpdxl
 {
@@ -77,13 +77,13 @@ protected:
 	ULongPtr2dArray *m_key_sets_arrays;
 
 	// part constraint
-	CMDPartConstraintGPDB *m_part_constraint;
+	CDXLNode *m_part_constraint;
 
 	// distribution opfamilies parse handler
 	CParseHandlerBase *m_opfamilies_parse_handler;
 
-	// levels that include default partitions
-	ULongPtrArray *m_level_with_default_part_array;
+	// child partition oids parse handler
+	CParseHandlerBase *m_child_partitions_parse_handler;
 
 	// is part constraint unbounded
 	BOOL m_part_constraint_unbounded;

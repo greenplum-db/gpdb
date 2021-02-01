@@ -801,7 +801,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 %token <keyword>
 	ACTIVE
 
-	CONTAINS CPUSET CPU_RATE_LIMIT
+	CONTAINS COORDINATOR CPUSET CPU_RATE_LIMIT
 
 	CREATEEXTTABLE
 
@@ -6176,7 +6176,11 @@ ext_on_clause_item:
 			}
 			| ON MASTER
 			{
-				$$ = makeDefElem("master", (Node *)makeInteger(true), @1);
+				$$ = makeDefElem("coordinator", (Node *)makeInteger(true), @1);
+			}
+			| ON COORDINATOR
+			{
+				$$ = makeDefElem("coordinator", (Node *)makeInteger(true), @1);
 			}
 			| ON SEGMENT Iconst
 			{
@@ -10399,7 +10403,11 @@ common_func_opt_item:
 				}
 			| EXECUTE ON MASTER
 				{
-					$$ = makeDefElem("exec_location", (Node *)makeString("master"), @1);
+					$$ = makeDefElem("exec_location", (Node *)makeString("coordinator"), @1);
+				}
+			| EXECUTE ON COORDINATOR
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("coordinator"), @1);
 				}
 			| EXECUTE ON INITPLAN
 				{
@@ -17885,6 +17893,7 @@ unreserved_keyword:
 			| CONTENT_P
 			| CONTINUE_P
 			| CONVERSION_P
+			| COORDINATOR
 			| COPY
 			| COST
 			| CPUSET

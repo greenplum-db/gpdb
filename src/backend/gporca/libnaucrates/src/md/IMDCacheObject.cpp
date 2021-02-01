@@ -10,9 +10,10 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/IMDCacheObject.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDCacheObject.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;

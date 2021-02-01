@@ -12,10 +12,11 @@
 #define GPOPT_CPhysicalScan_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysical.h"
-#include "gpopt/operators/CExpressionHandle.h"
+
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysical.h"
 
 namespace gpopt
 {
@@ -49,13 +50,6 @@ protected:
 	// stats of base table -- used for costing
 	// if operator is index scan, this is the stats of table on which index is created
 	IStatistics *m_pstatsBaseTable;
-
-	// derive part index map from a dynamic scan operator
-	static CPartIndexMap *PpimDeriveFromDynamicScan(
-		CMemoryPool *mp, ULONG part_idx_id, IMDId *rel_mdid,
-		CColRef2dArray *pdrgpdrgpcrPart, ULONG ulSecondaryPartIndexId,
-		CPartConstraint *ppartcnstr, CPartConstraint *ppartcnstrRel,
-		ULONG ulExpectedPropagators);
 
 private:
 	// compute stats of underlying table
@@ -171,20 +165,6 @@ public:
 	}
 
 
-	// compute required partition propagation of the n-th child
-	CPartitionPropagationSpec *
-	PppsRequired(CMemoryPool *,				   //mp,
-				 CExpressionHandle &,		   //exprhdl,
-				 CPartitionPropagationSpec *,  //pppsRequired,
-				 ULONG,						   //child_index,
-				 CDrvdPropArray *,			   //pdrgpdpCtxt,
-				 ULONG						   // ulOptReq
-				 ) override
-	{
-		GPOS_ASSERT(!"CPhysicalScan has no children");
-		return NULL;
-	}
-
 	// check if required columns are included in output columns
 	BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired,
 						   ULONG ulOptReq) const override;
@@ -228,16 +208,6 @@ public:
 							   CRewindabilitySpec::EmhtNoMotion);
 	}
 
-	// derive partition filter map
-	CPartFilterMap *
-	PpfmDerive(CMemoryPool *mp,
-			   CExpressionHandle &	// exprhdl
-	) const override
-	{
-		// return empty part filter map
-		return GPOS_NEW(mp) CPartFilterMap(mp);
-	}
-
 	//-------------------------------------------------------------------------------------
 	// Enforced Properties
 	//-------------------------------------------------------------------------------------
@@ -260,19 +230,6 @@ public:
 	{
 		// no need for enforcing rewindability on output
 		return CEnfdProp::EpetUnnecessary;
-	}
-
-	// return partition propagation property enforcing type for this operator
-	CEnfdProp::EPropEnforcingType
-	EpetPartitionPropagation(
-		CExpressionHandle &,  // exprhdl,
-		const CEnfdPartitionPropagation *pepp) const override
-	{
-		if (!pepp->PppsRequired()->Ppim()->FContainsUnresolvedZeroPropagators())
-		{
-			return CEnfdProp::EpetUnnecessary;
-		}
-		return CEnfdProp::EpetRequired;
 	}
 
 	// return true if operator passes through stats obtained from children,

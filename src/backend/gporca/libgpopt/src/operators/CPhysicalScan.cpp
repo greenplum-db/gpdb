@@ -9,17 +9,17 @@
 //		Implementation of base scan operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalScan.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-
-#include "gpopt/operators/CPhysicalScan.h"
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
 
@@ -209,39 +209,6 @@ CPhysicalScan::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	m_pds->AddRef();
 
 	return m_pds;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalScan::PpimDeriveFromDynamicScan
-//
-//	@doc:
-//		Derive partition index map from a dynamic scan operator
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysicalScan::PpimDeriveFromDynamicScan(CMemoryPool *mp, ULONG part_idx_id,
-										 IMDId *rel_mdid,
-										 CColRef2dArray *pdrgpdrgpcrPart,
-										 ULONG ulSecondaryPartIndexId,
-										 CPartConstraint *ppartcnstr,
-										 CPartConstraint *ppartcnstrRel,
-										 ULONG ulExpectedPropagators)
-{
-	CPartIndexMap *ppim = GPOS_NEW(mp) CPartIndexMap(mp);
-	UlongToPartConstraintMap *ppartcnstrmap =
-		GPOS_NEW(mp) UlongToPartConstraintMap(mp);
-
-	(void) ppartcnstrmap->Insert(GPOS_NEW(mp) ULONG(ulSecondaryPartIndexId),
-								 ppartcnstr);
-
-	CPartKeysArray *pdrgppartkeys = GPOS_NEW(mp) CPartKeysArray(mp);
-	pdrgppartkeys->Append(GPOS_NEW(mp) CPartKeys(pdrgpdrgpcrPart));
-
-	ppim->Insert(part_idx_id, ppartcnstrmap, CPartIndexMap::EpimConsumer,
-				 ulExpectedPropagators, rel_mdid, pdrgppartkeys, ppartcnstrRel);
-
-	return ppim;
 }
 
 //---------------------------------------------------------------------------

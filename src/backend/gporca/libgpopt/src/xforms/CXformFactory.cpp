@@ -11,6 +11,7 @@
 
 #include "gpos/base.h"
 #include "gpos/memory/CMemoryPoolManager.h"
+
 #include "gpopt/xforms/xforms.h"
 
 using namespace gpopt;
@@ -154,7 +155,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformSelect2Filter(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2IndexGet(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2DynamicIndexGet(m_mp));
-	Add(GPOS_NEW(m_mp) CXformSelect2PartialDynamicIndexGet(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformSimplifySelectWithSubquery(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSimplifyProjectWithSubquery(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2Apply(m_mp));
@@ -260,7 +261,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformSelect2DynamicBitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementBitmapTableGet(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementDynamicBitmapTableGet(m_mp));
-	Add(GPOS_NEW(m_mp) CXformInnerJoin2PartialDynamicIndexGetApply(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementLeftSemiCorrelatedApply(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementLeftSemiCorrelatedApplyIn(m_mp));
@@ -272,10 +273,7 @@ CXformFactory::Instantiate()
 	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformImplementPartitionSelector(m_mp));
 	Add(GPOS_NEW(m_mp) CXformMaxOneRow2Assert(m_mp));
-	SkipUnused(2);
-	Add(GPOS_NEW(m_mp)
-			CXformInnerJoinWithInnerSelect2PartialDynamicIndexGetApply(m_mp));
-	SkipUnused(3);
+	SkipUnused(6);
 	Add(GPOS_NEW(m_mp) CXformGbAggWithMDQA2Join(m_mp));
 	Add(GPOS_NEW(m_mp) CXformCollapseProject(m_mp));
 	Add(GPOS_NEW(m_mp) CXformRemoveSubqDistinct(m_mp));

@@ -9,9 +9,9 @@
 //		Implementation of scalar case test operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CScalarCaseTest.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

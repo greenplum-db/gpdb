@@ -1,0 +1,9 @@
+2021-01-04 11:15:43|INFO|gpload session started 2021-01-04 11:15:43
+2021-01-04 11:15:43|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 11:15:43|INFO|started gpfdist -p 8000 -P 9000 -f "pathto/data_file.txt" -t 30
+2021-01-04 11:15:43|INFO|did not find an external table to reuse. creating ext_gpload_reusable_218be84e_4e3b_11eb_bc83_00505698707d
+2021-01-04 11:15:43|INFO|running time: 0.12 seconds
+2021-01-04 11:15:43|INFO|rows Inserted          = 16
+2021-01-04 11:15:43|INFO|rows Updated           = 0
+2021-01-04 11:15:43|INFO|data formatting errors = 0
+2021-01-04 11:15:43|INFO|gpload succeeded

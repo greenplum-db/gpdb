@@ -12,8 +12,9 @@
 #define GPOPT_CSearchStrategyTest_H
 
 #include "gpos/base.h"
-#include "gpopt/search/CSearchStage.h"
+
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/search/CSearchStage.h"
 
 namespace gpopt
 {

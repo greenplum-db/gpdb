@@ -3,7 +3,7 @@
 #include "access/aocssegfiles.h"
 #include "access/table.h"
 #include "access/tuptoaster.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"

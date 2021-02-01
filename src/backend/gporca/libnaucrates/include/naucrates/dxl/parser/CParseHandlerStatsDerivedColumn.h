@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerStatsDerivedColumn_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/md/CDXLStatsDerivedColumn.h"
 

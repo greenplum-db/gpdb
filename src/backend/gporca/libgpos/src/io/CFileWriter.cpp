@@ -9,11 +9,12 @@
 //		Implementation of file handler for raw output
 //---------------------------------------------------------------------------
 
+#include "gpos/io/CFileWriter.h"
+
 #include <fcntl.h>
 
 #include "gpos/base.h"
 #include "gpos/io/ioutils.h"
-#include "gpos/io/CFileWriter.h"
 #include "gpos/task/IWorker.h"
 
 using namespace gpos;

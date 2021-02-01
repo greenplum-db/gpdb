@@ -5,7 +5,7 @@ from gppylib.commands.pg import PgControlData
 
 class HeapChecksum:
     """
-    check whether heap checksum is the same between master and all segments
+    check whether heap checksum is the same between coordinator and all segments
     """
 
     def __init__(self, gparray, num_workers=8, logger=None):
@@ -15,13 +15,13 @@ class HeapChecksum:
         self.workers = num_workers
         self.logger = logger
 
-    def get_master_value(self):
+    def get_coordinator_value(self):
         """
         can raise
-        :return: the heap checksum setting (1 or 0) for the master
+        :return: the heap checksum setting (1 or 0) for the coordinator
         """
-        master_gpdb = self.gparray.master
-        cmd = PgControlData(name='run pg_controldata', datadir=master_gpdb.getSegmentDataDirectory())
+        coordinator_gpdb = self.gparray.coordinator
+        cmd = PgControlData(name='run pg_controldata', datadir=coordinator_gpdb.getSegmentDataDirectory())
         cmd.run(validateAfter=True)
         value = cmd.get_value('Data page checksum version')
         return value
@@ -29,11 +29,11 @@ class HeapChecksum:
     def get_standby_value(self):
         """
         can raise
-        :return: the heap checksum setting (1 or 0) for the standby master
+        :return: the heap checksum setting (1 or 0) for the standby coordinator
         """
-        standbyMaster_gpdb = self.gparray.standbyMaster
-        cmd = PgControlData(name='run pg_controldata', datadir=standbyMaster_gpdb.getSegmentDataDirectory(),
-                            ctxt=REMOTE, remoteHost=standbyMaster_gpdb.getSegmentHostName())
+        standbyCoordinator_gpdb = self.gparray.standbyCoordinator
+        cmd = PgControlData(name='run pg_controldata', datadir=standbyCoordinator_gpdb.getSegmentDataDirectory(),
+                            ctxt=REMOTE, remoteHost=standbyCoordinator_gpdb.getSegmentHostName())
         cmd.run(validateAfter=True)
         value = cmd.get_value('Data page checksum version')
         return value
@@ -75,26 +75,26 @@ class HeapChecksum:
     def check_segment_consistency(self, successes):
         """
         :param successes: list of segments (Segment objects) for which we successfully determined checksum setting
-        :return: lists of segments that are consistent with master and inconsistent with master, respectively,
-        along with master GpDb itself
+        :return: lists of segments that are consistent with coordinator and inconsistent with coordinator, respectively,
+        along with coordinator GpDb itself
         """
-        master = self.get_master_value()
+        coordinator = self.get_coordinator_value()
         consistent = []
         inconsistent = []
 
         for gparray_gpdb in successes:
             checksum = gparray_gpdb.heap_checksum
-            if checksum == master:
+            if checksum == coordinator:
                 consistent.append(gparray_gpdb)
             else:
                 inconsistent.append(gparray_gpdb)
 
-        return consistent, inconsistent, master
+        return consistent, inconsistent, coordinator
 
     @staticmethod
     def are_segments_consistent(consistent, inconsistent):
         """
-        :return: True if there is at least 1 segment that agrees with master and no segments that disagree
+        :return: True if there is at least 1 segment that agrees with coordinator and no segments that disagree
         """
         return len(consistent) >= 1 and len(inconsistent) == 0
 

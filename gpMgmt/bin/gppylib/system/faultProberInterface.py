@@ -21,7 +21,7 @@ class GpFaultProber:
     #
     # returns self
     #
-    def initializeProber( self, masterPort ) :
+    def initializeProber( self, coordinatorPort ) :
         return self
 
     def pauseFaultProber(self):

@@ -52,7 +52,9 @@ SeparateOutMppExecute(List **options)
 			if (pg_strcasecmp(mpp_execute, "any") == 0)
 				exec_location = FTEXECLOCATION_ANY;
 			else if (pg_strcasecmp(mpp_execute, "master") == 0)
-				exec_location = FTEXECLOCATION_MASTER;
+				exec_location = FTEXECLOCATION_COORDINATOR;
+			else if (pg_strcasecmp(mpp_execute, "coordinator") == 0)
+				exec_location = FTEXECLOCATION_COORDINATOR;
 			else if (pg_strcasecmp(mpp_execute, "all segments") == 0)
 				exec_location = FTEXECLOCATION_ALL_SEGMENTS;
 			else
@@ -126,7 +128,7 @@ GetForeignDataWrapperExtended(Oid fdwid, bits16 flags)
 
 	fdw->exec_location = SeparateOutMppExecute(&fdw->options);
 	if (fdw->exec_location == FTEXECLOCATION_NOT_DEFINED)
-		fdw->exec_location = FTEXECLOCATION_MASTER;
+		fdw->exec_location = FTEXECLOCATION_COORDINATOR;
 
 	ReleaseSysCache(tp);
 

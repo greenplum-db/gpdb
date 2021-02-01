@@ -71,13 +71,6 @@ public:
 		ShtCC;
 
 private:
-	// FIXME: this is ONLY used by DbgPrint. Find an alternative way to supply
-	// memory pool to that method
-#ifdef GPOS_DEBUG
-	// memory pool
-	CMemoryPool *m_mp;
-#endif
-
 	// definition of context hash table accessor
 	typedef CSyncHashtableAccessByKey<CCostContext,	 // entry
 									  OPTCTXT_PTR>
@@ -183,11 +176,7 @@ private:
 
 	//private dummy ctor; used for creating invalid gexpr
 	CGroupExpression()
-		:
-#ifdef GPOS_DEBUG
-		  m_mp(NULL),
-#endif
-		  m_id(GPOPT_INVALID_GEXPR_ID),
+		: m_id(GPOPT_INVALID_GEXPR_ID),
 		  m_pop(NULL),
 		  m_pdrgpgroup(NULL),
 		  m_pdrgpgroupSorted(NULL),
@@ -418,7 +407,7 @@ public:
 									   BOOL fComputeRootStats = true);
 
 	// print driver
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 	IOstream &OsPrintWithPrefix(IOstream &os, const CHAR *prefix) const;
 
 	// link for list in Group

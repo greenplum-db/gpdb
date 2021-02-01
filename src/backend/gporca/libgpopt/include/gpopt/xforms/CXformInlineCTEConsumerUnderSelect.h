@@ -14,6 +14,7 @@
 #define GPOPT_CXformInlineCTEConsumerUnderSelect_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt

@@ -9,12 +9,14 @@
 //		Implementation of column reference class
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CColRef.h"
 
+#include "gpos/base.h"
+
 #ifdef GPOS_DEBUG
-#include "gpopt/base/COptCtxt.h"
 #include "gpos/error/CAutoTrace.h"
+
+#include "gpopt/base/COptCtxt.h"
 #endif	// GPOS_DEBUG
 
 using namespace gpopt;
@@ -90,6 +92,8 @@ CColRef::HashValue(const CColRef *colref)
 	return gpos::HashValue<ULONG>(&id);
 }
 
+
+FORCE_GENERATE_DBGSTR(gpopt::CColRef);
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -174,15 +178,3 @@ CColRef::Equals(const CColRef2dArray *pdrgdrgpcr1,
 
 	return true;
 }
-
-#ifdef GPOS_DEBUG
-void
-CColRef::DbgPrint() const
-{
-	CMemoryPool *pmp = COptCtxt::PoctxtFromTLS()->Pmp();
-	CAutoTrace at(pmp);
-	(void) this->OsPrint(at.Os());
-}
-#endif	// GPOS_DEBUG
-
-// EOF

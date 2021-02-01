@@ -28,6 +28,7 @@ COPY GistTable1 FROM
 '@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
+ANALYZE GistTable1;
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------

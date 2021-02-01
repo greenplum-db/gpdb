@@ -12,6 +12,8 @@
 #define GPNAUCRATES_CHistogram_H
 
 #include "gpos/base.h"
+#include "gpos/common/DbgPrintMixin.h"
+
 #include "gpopt/base/CKHeap.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CStatsPred.h"
@@ -36,7 +38,7 @@ typedef CDynamicPtrArray<CDouble, CleanupDelete> CDoubleArray;
 //	@doc:
 //
 //---------------------------------------------------------------------------
-class CHistogram
+class CHistogram : public gpos::DbgPrintMixin<CHistogram>
 {
 	// hash map from column id to a histogram
 	typedef CHashMap<ULONG, CHistogram, gpos::HashValue<ULONG>,
@@ -342,10 +344,6 @@ public:
 
 	// print function
 	IOstream &OsPrint(IOstream &os) const;
-
-#ifdef GPOS_DEBUG
-	void DbgPrint() const;
-#endif
 
 	// total frequency from buckets and null fraction
 	CDouble GetFrequency() const;

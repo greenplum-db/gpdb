@@ -17,13 +17,12 @@
 #ifndef GPDXL_CTranslatorQueryToDXL_H
 #define GPDXL_CTranslatorQueryToDXL_H
 
+#include "gpos/base.h"
+
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
-#include "gpos/base.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
 
 // fwd declarations

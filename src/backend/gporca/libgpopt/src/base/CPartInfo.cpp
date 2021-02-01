@@ -9,9 +9,11 @@
 //		Implementation of derived partition information at the logical level
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CPartInfo.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
-#include "gpopt/base/CPartInfo.h"
+
 #include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CPartConstraint.h"
 
@@ -27,17 +29,12 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPartInfo::CPartInfoEntry::CPartInfoEntry(ULONG scan_id, IMDId *mdid,
-										  CPartKeysArray *pdrgppartkeys,
-										  CPartConstraint *ppartcnstrRel)
-	: m_scan_id(scan_id),
-	  m_mdid(mdid),
-	  m_pdrgppartkeys(pdrgppartkeys),
-	  m_ppartcnstrRel(ppartcnstrRel)
+										  CPartKeysArray *pdrgppartkeys)
+	: m_scan_id(scan_id), m_mdid(mdid), m_pdrgppartkeys(pdrgppartkeys)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(pdrgppartkeys != NULL);
 	GPOS_ASSERT(0 < pdrgppartkeys->Size());
-	GPOS_ASSERT(NULL != ppartcnstrRel);
 }
 
 //---------------------------------------------------------------------------
@@ -52,7 +49,6 @@ CPartInfo::CPartInfoEntry::~CPartInfoEntry()
 {
 	m_mdid->Release();
 	m_pdrgppartkeys->Release();
-	m_ppartcnstrRel->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -88,12 +84,8 @@ CPartInfo::CPartInfoEntry::PpartinfoentryAddRemappedKeys(
 	}
 
 	m_mdid->AddRef();
-	CPartConstraint *ppartcnstrRel =
-		m_ppartcnstrRel->PpartcnstrCopyWithRemappedColumns(
-			mp, colref_mapping, false /*must_exist*/);
 
-	return GPOS_NEW(mp)
-		CPartInfoEntry(m_scan_id, m_mdid, pdrgppartkeys, ppartcnstrRel);
+	return GPOS_NEW(mp) CPartInfoEntry(m_scan_id, m_mdid, pdrgppartkeys);
 }
 
 //---------------------------------------------------------------------------
@@ -133,13 +125,9 @@ CPartInfo::CPartInfoEntry::PpartinfoentryCopy(CMemoryPool *mp)
 
 	// copy part constraint using empty remapping to get exact copy
 	UlongToColRefMap *colref_mapping = GPOS_NEW(mp) UlongToColRefMap(mp);
-	CPartConstraint *ppartcnstrRel =
-		PpartcnstrRel()->PpartcnstrCopyWithRemappedColumns(
-			mp, colref_mapping, false /*must_exist*/);
 	colref_mapping->Release();
 
-	return GPOS_NEW(mp)
-		CPartInfoEntry(ScanId(), mdid, pdrgppartkeysCopy, ppartcnstrRel);
+	return GPOS_NEW(mp) CPartInfoEntry(ScanId(), mdid, pdrgppartkeysCopy);
 }
 
 
@@ -193,14 +181,13 @@ CPartInfo::~CPartInfo()
 //---------------------------------------------------------------------------
 void
 CPartInfo::AddPartConsumer(CMemoryPool *mp, ULONG scan_id, IMDId *mdid,
-						   CColRef2dArray *pdrgpdrgpcrPart,
-						   CPartConstraint *ppartcnstrRel)
+						   CColRef2dArray *pdrgpdrgpcrPart)
 {
 	CPartKeysArray *pdrgppartkeys = GPOS_NEW(mp) CPartKeysArray(mp);
 	pdrgppartkeys->Append(GPOS_NEW(mp) CPartKeys(pdrgpdrgpcrPart));
 
-	m_pdrgppartentries->Append(GPOS_NEW(mp) CPartInfoEntry(
-		scan_id, mdid, pdrgppartkeys, ppartcnstrRel));
+	m_pdrgppartentries->Append(
+		GPOS_NEW(mp) CPartInfoEntry(scan_id, mdid, pdrgppartkeys));
 }
 
 //---------------------------------------------------------------------------
@@ -268,20 +255,6 @@ CPartKeysArray *
 CPartInfo::Pdrgppartkeys(ULONG ulPos) const
 {
 	return (*m_pdrgppartentries)[ulPos]->Pdrgppartkeys();
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPartInfo::Ppartcnstr
-//
-//	@doc:
-//		Return part constraint of the entry at the given position
-//
-//---------------------------------------------------------------------------
-CPartConstraint *
-CPartInfo::Ppartcnstr(ULONG ulPos) const
-{
-	return (*m_pdrgppartentries)[ulPos]->PpartcnstrRel();
 }
 
 //---------------------------------------------------------------------------

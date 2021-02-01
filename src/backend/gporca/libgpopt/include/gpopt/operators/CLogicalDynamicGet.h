@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalDynamicGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalDynamicGetBase.h"
 
 namespace gpopt
@@ -32,6 +33,18 @@ class CColRefSet;
 class CLogicalDynamicGet : public CLogicalDynamicGetBase
 {
 private:
+	// GPDB_12_MERGE_FIXME: Move this to the base class once supported by siblings
+	IMdIdArray *m_partition_mdids = NULL;
+
+	// Map of Root colref -> col index in child tabledesc
+	// per child partition in m_partition_mdid
+	ColRefToUlongMapArray *m_root_col_mapping_per_part = NULL;
+
+	// Construct a mapping from each column in root table to an index in each
+	// child partition's table descr by matching column names$
+	static ColRefToUlongMapArray *ConstructRootColMappingPerPart(
+		CMemoryPool *mp, CColRefArray *root_cols, IMdIdArray *partition_mdids);
+
 public:
 	CLogicalDynamicGet(const CLogicalDynamicGet &) = delete;
 
@@ -40,14 +53,13 @@ public:
 
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
-					   CColRefArray *colref_array,
+					   CColRefArray *pdrgpcrOutput,
 					   CColRef2dArray *pdrgpdrgpcrPart,
-					   ULONG ulSecondaryPartIndexId, BOOL is_partial,
-					   CPartConstraint *ppartcnstr,
-					   CPartConstraint *ppartcnstrRel);
+					   IMdIdArray *partition_mdids);
 
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
-					   CTableDescriptor *ptabdesc, ULONG ulPartIndex);
+					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
+					   IMdIdArray *partition_mdids);
 
 	// dtor
 	~CLogicalDynamicGet() override;
@@ -74,6 +86,18 @@ public:
 
 	// sensitivity to order of inputs
 	BOOL FInputOrderSensitive() const override;
+
+	IMdIdArray *
+	GetPartitionMdids() const
+	{
+		return m_partition_mdids;
+	}
+
+	ColRefToUlongMapArray *
+	GetRootColMappingPerPart() const
+	{
+		return m_root_col_mapping_per_part;
+	}
 
 	// return a copy of the operator with remapped columns
 	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
@@ -102,6 +126,11 @@ public:
 	{
 		return m_ptabdesc;
 	}
+
+	// derive max card
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
+
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties

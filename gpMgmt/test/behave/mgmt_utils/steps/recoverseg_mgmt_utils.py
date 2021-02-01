@@ -2,7 +2,7 @@ from time import sleep
 from gppylib.commands.base import Command, ExecutionError, REMOTE, WorkerPool
 from gppylib.db import dbconn
 from gppylib.commands import gp
-from gppylib.gparray import GpArray
+from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from test.behave_utils.utils import *
 import platform
 from behave import given, when, then
@@ -106,15 +106,18 @@ def runCommandOnRemoteSegment(context, cid, sql_cmd):
     psql_cmd = "PGDATABASE=\'template1\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (host, port, sql_cmd)
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd).run(validateAfter=True)
 
-@then('gprecoverseg should print "{output}" to stdout for each mirror')
-def impl(context, output):
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    segments = gparray.getDbList()
+@then('gprecoverseg should print "{output}" to stdout for each {segment_type}')
+def impl(context, output, segment_type):
+    if segment_type not in ("primary", "mirror"):
+        raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)
+    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
 
+    # use preferred_role as that is the dbid that runs the recovery process
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    segments = filter(lambda seg: seg.getSegmentPreferredRole() == role and seg.content >= 0, all_segments)
     for segment in segments:
-        if segment.isSegmentMirror():
-            expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
-            check_stdout_msg(context, expected)
+        expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
+        check_stdout_msg(context, expected)
 
 @then('pg_isready reports all primaries are accepting connections')
 def impl(context):
@@ -122,3 +125,12 @@ def impl(context):
     primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
     for seg in primary_segs:
         subprocess.check_call(['pg_isready', '-h', seg.getSegmentHostName(), '-p', str(seg.getSegmentPort())])
+
+@then('the cluster is rebalanced')
+def impl(context):
+    context.execute_steps(u'''
+        Then the user runs "gprecoverseg -a -s -r"
+        And gprecoverseg should return a return code of 0
+        And user can start transactions
+        And the segments are synchronized
+        ''')

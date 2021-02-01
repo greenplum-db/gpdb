@@ -9,11 +9,11 @@
 //		Tests for COstreamBasic
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/io/COstreamBasicTest.h"
+
 #include "gpos/assert.h"
 #include "gpos/error/CMessage.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/io/COstreamBasicTest.h"
 
 
 using namespace gpos;

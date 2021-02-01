@@ -9,22 +9,21 @@
 //		Implementation of basic physical operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysical.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropPlan.h"
-#include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CCTEReq.h"
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecAny.h"
-
+#include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/CDrvdPropPlan.h"
+#include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysical.h"
 #include "gpopt/operators/CScalarIdent.h"
 
 using namespace gpopt;
@@ -613,28 +612,6 @@ CPhysical::PdssMatching(CMemoryPool *mp, CDistributionSpecSingleton *pdss)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysical::PppsRequiredPushThru
-//
-//	@doc:
-//		Helper for pushing required partition propagation to the child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysical::PppsRequiredPushThru(CMemoryPool *,		  // mp,
-								CExpressionHandle &,  // exprhdl,
-								CPartitionPropagationSpec *pppsRequired,
-								ULONG  // child_index
-)
-{
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	// required partition propagation has been initialized already: pass it down
-	pppsRequired->AddRef();
-	return pppsRequired;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysical::PcterPushThru
 //
 //	@doc:
@@ -728,108 +705,6 @@ CPhysical::PcterNAry(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysical::PppsRequiredPushThruNAry
-//
-//	@doc:
-//		Helper for pushing required partition propagation to the children of
-//		an n-ary operator
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysical::PppsRequiredPushThruNAry(CMemoryPool *mp, CExpressionHandle &exprhdl,
-									CPartitionPropagationSpec *pppsReqd,
-									ULONG child_index)
-{
-	GPOS_ASSERT(NULL != pppsReqd);
-
-
-	CPartIndexMap *ppimReqd = pppsReqd->Ppim();
-	CPartFilterMap *ppfmReqd = pppsReqd->Ppfm();
-
-	ULongPtrArray *pdrgpul = ppimReqd->PdrgpulScanIds(mp);
-
-	CPartIndexMap *ppimResult = GPOS_NEW(mp) CPartIndexMap(mp);
-	CPartFilterMap *ppfmResult = GPOS_NEW(mp) CPartFilterMap(mp);
-
-	const ULONG ulPartIndexIds = pdrgpul->Size();
-	const ULONG arity = exprhdl.UlNonScalarChildren();
-
-	// iterate over required part index ids and decide which ones to push to the outer
-	// and which to the inner side of the n-ary op
-	for (ULONG ul = 0; ul < ulPartIndexIds; ul++)
-	{
-		ULONG part_idx_id = *((*pdrgpul)[ul]);
-		GPOS_ASSERT(ppimReqd->Contains(part_idx_id));
-
-		CBitSet *pbsPartConsumer = GPOS_NEW(mp) CBitSet(mp);
-		for (ULONG ulChildIdx = 0; ulChildIdx < arity; ulChildIdx++)
-		{
-			if (exprhdl.DerivePartitionInfo(ulChildIdx)
-					->FContainsScanId(part_idx_id))
-			{
-				(void) pbsPartConsumer->ExchangeSet(ulChildIdx);
-			}
-		}
-
-		if (arity == pbsPartConsumer->Size() &&
-			COperator::EopPhysicalSequence == exprhdl.Pop()->Eopid() &&
-			(*(exprhdl.Pgexpr()))[0]->FHasCTEProducer())
-		{
-			GPOS_ASSERT(2 == arity);
-
-			// this is a part index id that comes from both sides of a sequence
-			// with a CTE producer on the outer side, so pretend that part index
-			// id is not defined the inner sides
-			pbsPartConsumer->ExchangeClear(1);
-		}
-
-		if (!FCanPushPartReqToChild(pbsPartConsumer, child_index))
-		{
-			// clean up
-			pbsPartConsumer->Release();
-
-			continue;
-		}
-
-		// clean up
-		pbsPartConsumer->Release();
-
-		CPartKeysArray *pdrgppartkeys =
-			exprhdl.DerivePartitionInfo(child_index)
-				->PdrgppartkeysByScanId(part_idx_id);
-		GPOS_ASSERT(NULL != pdrgppartkeys);
-		pdrgppartkeys->AddRef();
-
-		// push requirements to child node
-		ppimResult->AddRequiredPartPropagation(
-			ppimReqd, part_idx_id, CPartIndexMap::EppraPreservePropagators,
-			pdrgppartkeys);
-
-		// check if there is a filter on the part index id and propagate that further down
-		if (ppfmReqd->FContainsScanId(part_idx_id))
-		{
-			CExpression *pexpr = ppfmReqd->Pexpr(part_idx_id);
-			// if the current child is inner child and the predicate is IsNull check and the parent is outer join,
-			// don't push IsNull check predicate to the partition filter.
-			// for all the other cases, push the filter down.
-			if (!(1 == child_index && CUtils::FScalarNullTest(pexpr) &&
-				  CUtils::FPhysicalOuterJoin(exprhdl.Pop())))
-			{
-				pexpr->AddRef();
-				ppfmResult->AddPartFilter(mp, part_idx_id, pexpr,
-										  NULL /*stats */);
-			}
-		}
-	}
-
-	pdrgpul->Release();
-
-	return GPOS_NEW(mp) CPartitionPropagationSpec(ppimResult, ppfmResult);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysical::FCanPushPartReqToChild
 //
 //	@doc:
@@ -850,162 +725,6 @@ CPhysical::FCanPushPartReqToChild(CBitSet *pbsPartConsumer, ULONG child_index)
 
 	// child where the part index is defined should be the same child being processed
 	return (pbsPartConsumer->Get(child_index));
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysical::PppsRequiredPushThruUnresolvedUnary
-//
-//	@doc:
-//		Helper function for pushing unresolved partition propagation in unary
-//		operators
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysical::PppsRequiredPushThruUnresolvedUnary(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired,
-	EPropogatePartConstraint eppcPropogate, CColRefSet *filter_colrefs)
-{
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	CPartInfo *ppartinfo = exprhdl.DerivePartitionInfo(0);
-
-	CPartIndexMap *ppimReqd = pppsRequired->Ppim();
-	CPartFilterMap *ppfmReqd = pppsRequired->Ppfm();
-
-	ULongPtrArray *pdrgpul = ppimReqd->PdrgpulScanIds(mp);
-
-	CPartIndexMap *ppimResult = GPOS_NEW(mp) CPartIndexMap(mp);
-	CPartFilterMap *ppfmResult = GPOS_NEW(mp) CPartFilterMap(mp);
-
-	const ULONG ulPartIndexIds = pdrgpul->Size();
-
-	// iterate over required part index ids and decide which ones to push through
-	for (ULONG ul = 0; ul < ulPartIndexIds; ul++)
-	{
-		ULONG part_idx_id = *((*pdrgpul)[ul]);
-		GPOS_ASSERT(ppimReqd->Contains(part_idx_id));
-
-		// if part index id is defined in child, push it to the child
-		if (ppartinfo->FContainsScanId(part_idx_id))
-		{
-			// push requirements to child node
-			ppimResult->AddRequiredPartPropagation(
-				ppimReqd, part_idx_id, CPartIndexMap::EppraPreservePropagators);
-			if (CPhysical::EppcAllowed == eppcPropogate)
-			{
-				// for some logical operators such as limit while we push the part index map, we cannot push the constraints
-				// since they are NOT semantically equivalent. So only push the constraints when the operator asks this
-				// utility function to do so
-				(void) ppfmResult->FCopyPartFilter(mp, part_idx_id, ppfmReqd,
-												   filter_colrefs);
-			}
-		}
-	}
-
-	pdrgpul->Release();
-
-	return GPOS_NEW(mp) CPartitionPropagationSpec(ppimResult, ppfmResult);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysical::PpimDeriveCombineRelational
-//
-//	@doc:
-//		Common case of common case of combining partition index maps
-//		of all logical children
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysical::PpimDeriveCombineRelational(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl)
-{
-	GPOS_ASSERT(0 < exprhdl.Arity());
-
-	CPartIndexMap *ppim = GPOS_NEW(mp) CPartIndexMap(mp);
-	const ULONG arity = exprhdl.Arity();
-	for (ULONG ul = 0; ul < arity; ul++)
-	{
-		if (!exprhdl.FScalarChild(ul))
-		{
-			CPartIndexMap *ppimChild = exprhdl.Pdpplan(ul)->Ppim();
-			GPOS_ASSERT(NULL != ppimChild);
-
-			CPartIndexMap *ppimCombined =
-				CPartIndexMap::PpimCombine(mp, *ppim, *ppimChild);
-			ppim->Release();
-			ppim = ppimCombined;
-		}
-	}
-
-	return ppim;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysical::PpimPassThruOuter
-//
-//	@doc:
-//		Common case of common case of passing through partition index map
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysical::PpimPassThruOuter(CExpressionHandle &exprhdl)
-{
-	CPartIndexMap *ppim = exprhdl.Pdpplan(0 /*child_index*/)->Ppim();
-	GPOS_ASSERT(NULL != ppim);
-
-	ppim->AddRef();
-
-	return ppim;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysical::PpfmPassThruOuter
-//
-//	@doc:
-//		Common case of common case of passing through partition filter map
-//
-//---------------------------------------------------------------------------
-CPartFilterMap *
-CPhysical::PpfmPassThruOuter(CExpressionHandle &exprhdl)
-{
-	CPartFilterMap *ppfm = exprhdl.Pdpplan(0 /*child_index*/)->Ppfm();
-	GPOS_ASSERT(NULL != ppfm);
-
-	ppfm->AddRef();
-
-	return ppfm;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysical::PpfmDeriveCombineRelational
-//
-//	@doc:
-//		Combine derived part filter maps of relational children
-//
-//---------------------------------------------------------------------------
-CPartFilterMap *
-CPhysical::PpfmDeriveCombineRelational(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl)
-{
-	CPartFilterMap *ppfmCombined = GPOS_NEW(mp) CPartFilterMap(mp);
-	const ULONG arity = exprhdl.Arity();
-	for (ULONG ul = 0; ul < arity; ul++)
-	{
-		if (!exprhdl.FScalarChild(ul))
-		{
-			CPartFilterMap *ppfm = exprhdl.Pdpplan(ul)->Ppfm();
-			GPOS_ASSERT(NULL != ppfm);
-			ppfmCombined->CopyPartFilterMap(mp, ppfm);
-		}
-	}
-
-	return ppfmCombined;
 }
 
 
@@ -1076,48 +795,6 @@ CPhysical::EpetDistribution(CExpressionHandle &exprhdl,
 	return CEnfdProp::EpetRequired;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysical::EpetPartitionPropagation
-//
-//	@doc:
-//		Compute the enforcing type for the operator
-//
-//---------------------------------------------------------------------------
-CEnfdProp::EPropEnforcingType
-CPhysical::EpetPartitionPropagation(CExpressionHandle &exprhdl,
-									const CEnfdPartitionPropagation *pepp) const
-{
-	CPartIndexMap *ppimReqd = pepp->PppsRequired()->Ppim();
-	if (!ppimReqd->FContainsUnresolved())
-	{
-		// no unresolved partition consumers left
-		return CEnfdProp::EpetUnnecessary;
-	}
-
-	CPartIndexMap *ppimDrvd = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Ppim();
-	GPOS_ASSERT(NULL != ppimDrvd);
-
-	BOOL fInScope = pepp->FInScope(m_mp, ppimDrvd);
-	BOOL fResolved = pepp->FResolved(m_mp, ppimDrvd);
-
-	if (fResolved)
-	{
-		// all required partition consumers are resolved
-		return CEnfdProp::EpetUnnecessary;
-	}
-
-	if (!fInScope)
-	{
-		// some partition consumers are not in scope of the operator: need to enforce these on top
-		return CEnfdProp::EpetRequired;
-	}
-
-
-	// all partition resolvers are in scope of the operator: do not enforce them on top
-	return CEnfdProp::EpetProhibited;
-}
 
 // Generate a singleton distribution spec request
 CDistributionSpec *

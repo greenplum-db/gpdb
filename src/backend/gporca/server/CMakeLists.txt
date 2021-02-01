@@ -503,15 +503,10 @@ add_orca_test(CXformTest)
 add_orca_test(CConstExprEvaluatorDefaultTest)
 add_orca_test(CConstExprEvaluatorDXLTest)
 
-file(GLOB_RECURSE hdrs ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
-                       ${CMAKE_CURRENT_SOURCE_DIR}/include/*.inl
-                       ${mdp_test_hdr_dir}/*.h
-                       ${mdp_test_hdr_dir}/*.inl)
-file(GLOB_RECURSE srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-                       ${mdp_test_src_dir}/*.cpp)
-
+file(GLOB_RECURSE srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/startup/*.cpp)
 # Add headers to make them visible in some IDEs (Clion, VS, Xcode)
-list(APPEND srcs ${hdrs})
+list(APPEND srcs "${CMAKE_CURRENT_SOURCE_DIR}/src/unittest/CTestUtils.cpp")
+list(APPEND srcs "${CMAKE_CURRENT_SOURCE_DIR}/src/unittest/CSubqueryTestUtils.cpp")
 
 add_executable(gporca_test ${srcs})
 

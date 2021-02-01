@@ -121,7 +121,7 @@
 #include "access/multixact.h"
 #include "access/visibilitymap.h"
 #include "access/xact.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"

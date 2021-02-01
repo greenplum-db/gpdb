@@ -5,15 +5,17 @@
 //	Implementation of left outer index nested-loops join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
+
 #include "gpos/base.h"
-#include "gpopt/exception.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
+
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
-#include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
 
 using namespace gpopt;
 

@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerWindowFrame_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLWindowFrame.h"
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/dxl/xml/dxltokens.h"

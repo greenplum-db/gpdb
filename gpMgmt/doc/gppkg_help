@@ -9,7 +9,7 @@ SYNOPSIS
 *****************************************************
 
 gppkg [-i <package>| -u <package> | -r <name-version> | -c] 
-[-d <master_data_directory>] [-a] [-v]
+[-d <coordinator_data_directory>] [-a] [-v]
 
 gppkg --migrate <GPHOME_1> <GPHOME_2> [-a] [-v]
 
@@ -30,7 +30,7 @@ system expansion and segment recovery.
 
 First, download one or more of the available packages 
 from the EMC Download Center (https://emc.subscribenet.com)
-then copy it to the master host. Use the Greenplum 
+then copy it to the coordinator host. Use the Greenplum 
 Package Manager to install each package using the 
 options described below.
 
@@ -67,15 +67,15 @@ Options
 -c | --clean
 
  Reconciles the package state of the cluster to match the 
- state of the master host. Running this option after a failed
+ state of the coordinator host. Running this option after a failed
  or partial install/uninstall ensures that the package 
  installation state is consistent across the cluster.
 
  
--d <master_data_directory>
+-d <coordinator_data_directory>
 
- The master data directory. If not specified, the value set
- for $MASTER_DATA_DIRECTORY will be used.
+ The coordinator data directory. If not specified, the value set
+ for $COORDINATOR_DATA_DIRECTORY will be used.
 
  
 -i <package> | --install=<package>

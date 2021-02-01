@@ -146,7 +146,7 @@ sdw3-1</codeblock>
                         you must download <codeph>netperf</codeph> from <xref
                             href="http://www.netperf.org" format="html" scope="external"/> and
                         install it into <codeph>$GPHOME/bin/lib</codeph> on all Greenplum hosts
-                        (master and segments).</pd>
+                        (coordinator and segments).</pd>
                 </plentry>
                 <plentry>
                     <pt>-r ds{n|N|M}</pt>
@@ -165,7 +165,7 @@ sdw3-1</codeblock>
                                         href="http://www.netperf.org" format="html" scope="external"
                                     />) instead of the Greenplum network test, you can download it
                                     and install it into <codeph>$GPHOME/bin/lib</codeph> on all
-                                    Greenplum hosts (master and segments). You would then specify
+                                    Greenplum hosts (coordinator and segments). You would then specify
                                     the optional <codeph>--netperf</codeph> option to use the
                                         <codeph>netperf</codeph> binary instead of the default
                                         <codeph>gpnetbench*</codeph> utilities.</p></li>

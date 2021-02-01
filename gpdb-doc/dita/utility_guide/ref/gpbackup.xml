@@ -49,13 +49,13 @@
       <p>For materialized views, data is not backed up, only the materialized view definition is
         backed up.</p>
       <p><codeph>gpbackup</codeph> stores the object metadata files and DDL files for a backup in
-        the Greenplum Database master data directory by default. Greenplum Database segments use the
+        the Greenplum Database coordinator data directory by default. Greenplum Database segments use the
           <codeph>COPY ... ON SEGMENT</codeph> command to store their data for backed-up tables in
         compressed CSV data files, located in each segment's data directory. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_xnj_b4c_tbb"/> for additional
         information.</p>
       <p>You can add the <codeph>--backup-dir</codeph> option to copy all backup files from the
-        Greenplum Database master and segment hosts to an absolute path for later use. Additional
+        Greenplum Database coordinator and segment hosts to an absolute path for later use. Additional
         options are provided to filter the backup set in order to include or exclude specific
         tables.</p>
       <p>You can create an incremental backup with the <codeph><xref href="#topic1/incremental"
@@ -65,7 +65,7 @@
           href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/> for information about
         incremental backups. </p>
       <p>With the default <codeph>--jobs</codeph> option (1 job), each <codeph>gpbackup</codeph>
-        operation uses a single transaction on the Greenplum Database master host. The <codeph>COPY
+        operation uses a single transaction on the Greenplum Database coordinator host. The <codeph>COPY
           ... ON SEGMENT</codeph> command performs the backup task in parallel on each segment host.
         The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table that is
         backed up. During the table locking process, the database should be in a quiescent
@@ -102,8 +102,8 @@
           <pd>Optional. Copies all required backup files (metadata files and data files) to the
             specified directory. You must specify <varname>directory</varname> as an absolute path
             (not relative). If you do not supply this option, metadata files are created on the
-            Greenplum Database master host in the
-              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            Greenplum Database coordinator host in the
+              <filepath>$COORDINATOR_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory. Segment hosts create CSV data files in the
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. When you
             specify a custom backup directory, files are copied to these paths in subdirectories of

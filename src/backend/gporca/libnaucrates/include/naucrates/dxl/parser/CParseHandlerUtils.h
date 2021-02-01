@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerUtils_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerProperties.h"
+
 #include "naucrates/dxl/operators/CDXLOperator.h"
+#include "naucrates/dxl/parser/CParseHandlerProperties.h"
 
 namespace gpdxl
 {

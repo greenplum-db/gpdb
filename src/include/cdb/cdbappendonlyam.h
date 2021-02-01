@@ -80,6 +80,7 @@ typedef struct AppendOnlyInsertDescData
 	bool			shouldCompress;
 	bool			usingChecksum;
 	bool			useNoToast;
+	bool			skipModCountIncrement;
 	int32			completeHeaderLen;
 	uint8			*tempSpace;
 	uint8			*uncompressedBuffer; /* used for compression */

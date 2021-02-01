@@ -8,7 +8,7 @@ using gpinitsystem.
 SYNOPSIS
 *****************************************************
 
-gpdeletesystem -d <master_data_directory> [-B <parallel_processes>] 
+gpdeletesystem -d <coordinator_data_directory> [-B <parallel_processes>] 
 [-f] [-l <logfile_directory>] [-D] 
 
 gpdeletesystem -? 
@@ -22,12 +22,12 @@ DESCRIPTION
 
 The gpdeletesystem script will perform the following actions:
 
-* Stop all postmaster processes (the segment instances and master instance).
+* Stop all postmaster processes (the segment instances and coordinator instance).
 
 * Delete all data directories.
 
 Before running this script, you should move any backup files
-(created by gp_dump) out of the master and segment data directories.
+(created by gp_dump) out of the coordinator and segment data directories.
 
 This script will not uninstall the Greenplum Database software.
 
@@ -36,12 +36,12 @@ This script will not uninstall the Greenplum Database software.
 OPTIONS
 *****************************************************
 
--d <master_data_directory>
+-d <coordinator_data_directory>
 
-Used to specify master host data directory. When this parameter is specified 
-it overrides the value of environment variable MASTER_DATA_DIRECTORY. If not
-specified, master data directory is read from environment variable 
-MASTER_DATA_DIRECTORY.
+Used to specify coordinator host data directory. When this parameter is specified 
+it overrides the value of environment variable COORDINATOR_DATA_DIRECTORY. If not
+specified, coordinator data directory is read from environment variable 
+COORDINATOR_DATA_DIRECTORY.
 
 
 -B <parallel_processes>

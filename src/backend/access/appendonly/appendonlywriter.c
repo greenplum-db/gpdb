@@ -29,7 +29,7 @@
 #include "access/xact.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_authid.h"
 #include "cdb/cdbvars.h"
 #include "libpq-fe.h"

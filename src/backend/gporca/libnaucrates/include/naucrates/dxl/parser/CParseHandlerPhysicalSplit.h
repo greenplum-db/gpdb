@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerPhysicalSplit_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 

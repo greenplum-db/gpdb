@@ -12,6 +12,7 @@
 #define GPOPT_CXformLeftSemiJoin2CrossProduct_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt

@@ -13,8 +13,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/COrderSpec.h"
 #include "gpopt/operators/CPhysicalMotion.h"
 
 namespace gpopt

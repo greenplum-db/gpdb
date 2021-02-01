@@ -87,16 +87,6 @@ public:
 	// match function
 	BOOL Matches(COperator *pop) const override;
 
-	// derive partition index map
-	CPartIndexMap *
-	PpimDerive(CMemoryPool *mp,
-			   CExpressionHandle &,	 // exprhdl
-			   CDrvdPropCtxt *		 //pdpctxt
-	) const override
-	{
-		return GPOS_NEW(mp) CPartIndexMap(mp);
-	}
-
 	// statistics derivation during costing
 	IStatistics *
 	PstatsDerive(CMemoryPool *,		   // mp

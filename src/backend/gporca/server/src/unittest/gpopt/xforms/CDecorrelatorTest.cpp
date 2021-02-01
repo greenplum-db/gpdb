@@ -8,18 +8,19 @@
 //	@doc:
 //		Test for decorrelation
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/ops.h"
 #include "gpopt/xforms/CDecorrelator.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 

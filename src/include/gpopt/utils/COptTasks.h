@@ -15,12 +15,11 @@
 #ifndef COptTasks_H
 #define COptTasks_H
 
-#include "gpopt/translate/CTranslatorUtils.h"
-
 #include "gpos/error/CException.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/search/CSearchStage.h"
+#include "gpopt/translate/CTranslatorUtils.h"
 
 
 

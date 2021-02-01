@@ -9,9 +9,10 @@
 //		Implements message records
 //---------------------------------------------------------------------------
 
-#include "gpos/utils.h"
 #include "gpos/error/CMessage.h"
+
 #include "gpos/error/CMessageRepository.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 

@@ -9,17 +9,18 @@
 //		Implementation of basic aggregate operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalAgg.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecStrictSingleton.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -380,33 +381,6 @@ CPhysicalAgg::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == child_index);
 
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalAgg::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalAgg::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-						   CPartitionPropagationSpec *pppsRequired,
-						   ULONG
-#ifdef GPOS_DEBUG
-							   child_index
-#endif
-						   ,
-						   CDrvdPropArray *,  //pdrgpdpCtxt,
-						   ULONG			  //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThruUnresolvedUnary(
-		mp, exprhdl, pppsRequired, CPhysical::EppcAllowed, NULL);
 }
 
 //---------------------------------------------------------------------------

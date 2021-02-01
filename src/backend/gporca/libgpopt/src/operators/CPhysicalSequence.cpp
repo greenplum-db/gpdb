@@ -9,16 +9,16 @@
 //		Implementation of physical sequence operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSequence.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CCTEReq.h"
-
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalSequence.h"
 
 using namespace gpopt;
 
@@ -106,28 +106,6 @@ CPhysicalSequence::PcrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == m_pcrsEmpty->Size());
 
 	return m_pcrsEmpty;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalSequence::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalSequence::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								CPartitionPropagationSpec *pppsRequired,
-								ULONG child_index,
-								CDrvdPropArray *,  //pdrgpdpCtxt,
-								ULONG			   //ulOptReq
-)
-{
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThruNAry(mp, exprhdl, pppsRequired,
-											   child_index);
 }
 
 //---------------------------------------------------------------------------

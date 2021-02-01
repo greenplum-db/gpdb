@@ -12,10 +12,9 @@
 #define GPOS_clibtypes_H
 
 #include <dlfcn.h>
-#include <time.h>
-
-#include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "gpos/types.h"
 

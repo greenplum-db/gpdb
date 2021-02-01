@@ -1,0 +1,13 @@
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+2020-12-17 16:29:13|INFO|gpload session started 2020-12-17 16:29:13
+2020-12-17 16:29:13|INFO|setting schema 'public' for table 'texttable'
+2020-12-17 16:29:13|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-17 16:29:13|INFO|did not find an external table to reuse. creating ext_gpload_reusable_f190cc4c_4041_11eb_ab49_000c299afcc5
+2020-12-17 16:29:13|WARN|2 bad rows
+2020-12-17 16:29:13|WARN|Please use following query to access the detailed error
+2020-12-17 16:29:13|WARN|select * from gp_read_error_log('ext_gpload_reusable_f190cc4c_4041_11eb_ab49_000c299afcc5') where cmdtime > to_timestamp('1608193753.4780817')
+2020-12-17 16:29:13|INFO|running time: 0.07 seconds
+2020-12-17 16:29:13|INFO|rows Inserted          = 11
+2020-12-17 16:29:13|INFO|rows Updated           = 0
+2020-12-17 16:29:13|INFO|data formatting errors = 2
+2020-12-17 16:29:13|INFO|gpload succeeded with warnings

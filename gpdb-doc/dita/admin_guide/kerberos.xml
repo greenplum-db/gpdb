@@ -246,12 +246,12 @@ postgres=# select current_user;
         <li>If the <codeph>map=&lt;map-name></codeph> option is specified, the
           Kerberos principal name is compared to entries labeled with the
           specified <codeph>&lt;map-name></codeph> in the
-            <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> file and
+            <codeph>$COORDINATOR_DATA_DIRECTORY/pg_ident.conf</codeph> file and
           replaced with the Greenplum Database role name specified in the first
           matching entry.</li>
       </ul>
       <p>A user name map is defined in the
-          <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> configuration
+          <codeph>$COORDINATOR_DATA_DIRECTORY/pg_ident.conf</codeph> configuration
         file. This example defines a map named <codeph>mymap</codeph> with two
         entries.</p>
       <p>

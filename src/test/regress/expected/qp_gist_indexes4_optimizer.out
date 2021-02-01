@@ -172,6 +172,7 @@ INSERT INTO geometricTypes (seed, c, b, p)
    SeedToPolygon(x)
   FROM generate_series(1, 20000)x
  ;
+ANALYZE geometricTypes;
 -- ----------------------------------------------------------------------
 -- Test: test05_select.sql
 -- ----------------------------------------------------------------------
@@ -751,20 +752,16 @@ SELECT * FROM geometricTypesPartition
 
 EXPLAIN SELECT * FROM geometricTypesPartition 
  WHERE c ~= SeedToCircle(101);
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=4.49..132.44 rows=54 width=92)
-   ->  Append  (cost=4.49..131.37 rows=18 width=92)
-         ->  Bitmap Heap Scan on geometrictypespartition_1_prt_1  (cost=4.49..65.55 rows=9 width=92)
-               Recheck Cond: (c ~= '<(8479,-3121),8441>'::circle)
-               ->  Bitmap Index Scan on geometrictypespartition_1_prt_1_c_idx  (cost=0.00..4.48 rows=9 width=0)
-                     Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
-         ->  Bitmap Heap Scan on geometrictypespartition_1_prt_2  (cost=4.49..65.55 rows=9 width=92)
-               Recheck Cond: (c ~= '<(8479,-3121),8441>'::circle)
-               ->  Bitmap Index Scan on geometrictypespartition_1_prt_2_c_idx  (cost=0.00..4.48 rows=9 width=0)
-                     Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
- Optimizer: Postgres query optimizer
-(11 rows)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=68)
+   ->  Append  (cost=0.00..431.00 rows=1 width=68)
+         ->  Seq Scan on geometrictypespartition_1_prt_1  (cost=0.00..431.00 rows=1 width=68)
+               Filter: (c ~= '<(8479,-3121),8441>'::circle)
+         ->  Seq Scan on geometrictypespartition_1_prt_2  (cost=0.00..431.00 rows=1 width=68)
+               Filter: (c ~= '<(8479,-3121),8441>'::circle)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 DROP TABLE IF EXISTS geometricTypesPartition;
 -- ----------------------------------------------------------------------
@@ -796,6 +793,7 @@ INSERT INTO textSearch VALUES (4, 'orca');
 INSERT INTO textSearch VALUES (3, 'gpdb');
 INSERT INTO textSearch VALUES (4, 'gist');
 INSERT INTO textSearch VALUES (3, 'cool');
+ANALYZE textSearch;
 SELECT * FROM textSearch 
  WHERE t @@ to_tsquery('test'); 
  seed |   t    

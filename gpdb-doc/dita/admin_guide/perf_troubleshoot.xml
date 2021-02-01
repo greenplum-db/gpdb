@@ -146,7 +146,7 @@ a.query
                         <codeph>gpdb-</codeph><i><codeph>YYYY</codeph></i><codeph>-</codeph><i><codeph>MM</codeph></i><codeph>-</codeph><i><codeph>DD_hhmmss.csv</codeph></i>.
                 To locate the log files on the master host:</p>
             <p>
-                <codeblock>$ cd $MASTER_DATA_DIRECTORY/log
+                <codeblock>$ cd $COORDINATOR_DATA_DIRECTORY/log
 </codeblock>
             </p>
             <p>Log lines have the format of:</p>

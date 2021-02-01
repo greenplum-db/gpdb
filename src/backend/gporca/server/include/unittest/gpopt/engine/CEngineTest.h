@@ -16,8 +16,8 @@
 #include "gpos/common/CDynamicPtrArray.h"
 
 #include "gpopt/base/COptimizationContext.h"
-#include "gpopt/search/CSearchStage.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/search/CSearchStage.h"
 
 namespace gpopt
 {

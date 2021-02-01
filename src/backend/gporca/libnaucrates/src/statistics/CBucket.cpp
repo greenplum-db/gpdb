@@ -8,15 +8,16 @@
 //	@doc:
 //		Implementation of histogram bucket
 //---------------------------------------------------------------------------
+#include "naucrates/statistics/CBucket.h"
+
 #include <stdlib.h>
+
 #include "gpos/base.h"
 
-#include "naucrates/base/IDatum.h"
-#include "naucrates/statistics/CBucket.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CStatistics.h"
-
 #include "gpopt/base/COptCtxt.h"
+#include "naucrates/base/IDatum.h"
+#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpnaucrates;
 
@@ -197,6 +198,8 @@ CBucket::GetOverlapPercentage(const CPoint *point, BOOL include_point) const
 	return CDouble(std::min(res.Get(), DOUBLE(1.0)));
 }
 
+FORCE_GENERATE_DBGSTR(gpnaucrates::CBucket);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CBucket::OsPrint
@@ -238,15 +241,6 @@ CBucket::OsPrint(IOstream &os) const
 
 	return os;
 }
-
-#ifdef GPOS_DEBUG
-void
-CBucket::DbgPrint() const
-{
-	CAutoTrace at(CTask::Self()->Pmp());
-	OsPrint(at.Os());
-}
-#endif
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -115,7 +115,6 @@ OBJS        = CDecorrelator.o \
               CXformSelect2DynamicIndexGet.o \
               CXformSelect2Filter.o \
               CXformSelect2IndexGet.o \
-              CXformSelect2PartialDynamicIndexGet.o \
               CXformSequenceProject2Apply.o \
               CXformSimplifyGbAgg.o \
               CXformSimplifyLeftOuterJoin.o \

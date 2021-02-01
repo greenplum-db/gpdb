@@ -59,6 +59,7 @@ typedef struct AOCSInsertDescData
 	int32 compLevel;
 	int32 blocksz;
 	bool  checksum;
+	bool  skipModCountIncrement;
 
     Oid         segrelid;
     Oid         blkdirrelid;

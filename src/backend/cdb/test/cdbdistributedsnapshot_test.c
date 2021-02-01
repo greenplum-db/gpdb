@@ -14,7 +14,6 @@ static void
 test__DistributedSnapshotWithLocalMapping_CommittedTest(void **state)
 {
 	DistributedSnapshotCommitted retval;
-	DistributedTransactionTimeStamp timeStamp = time(NULL);
 	DistributedSnapshotWithLocalMapping dslm;
 	DistributedSnapshot *ds = &dslm.ds;
 
@@ -30,7 +29,6 @@ test__DistributedSnapshotWithLocalMapping_CommittedTest(void **state)
 		ds->inProgressXidArray =
 			(DistributedTransactionId*)malloc(SIZE_OF_IN_PROGRESS_ARRAY);
 		ds->distribSnapshotId = 12345;
-		ds->distribTransactionTimeStamp = timeStamp;
 	}
 
 	/*
@@ -38,29 +36,20 @@ test__DistributedSnapshotWithLocalMapping_CommittedTest(void **state)
 	 * the testing keep it extremely simple distribXid == 10 * localXid.
 	 */
 	{
-		expect_any_count(DistributedLog_CommittedCheck, distribTimeStamp, -1);
 		expect_any_count(DistributedLog_CommittedCheck, distribXid, -1);
 		will_return_count(DistributedLog_CommittedCheck, true, -1);
 
 		expect_value(DistributedLog_CommittedCheck, localXid, 10);
 		will_assign_value(DistributedLog_CommittedCheck, distribXid, 10 * 10);
-		will_assign_value(DistributedLog_CommittedCheck,
-						  distribTimeStamp, timeStamp);
 
 		expect_value(DistributedLog_CommittedCheck, localXid, 20);
 		will_assign_value(DistributedLog_CommittedCheck, distribXid, 10 * 20);
-		will_assign_value(DistributedLog_CommittedCheck,
-						  distribTimeStamp, timeStamp);
 
 		expect_value(DistributedLog_CommittedCheck, localXid, 5);
 		will_assign_value(DistributedLog_CommittedCheck, distribXid, 10 * 5);
-		will_assign_value(DistributedLog_CommittedCheck,
-						  distribTimeStamp, timeStamp);
 
 		expect_value(DistributedLog_CommittedCheck, localXid, 15);
 		will_assign_value(DistributedLog_CommittedCheck, distribXid, 10 * 15);
-		will_assign_value(DistributedLog_CommittedCheck,
-						  distribTimeStamp, timeStamp);
 	}
 
 	/* Empty in-progress array test */

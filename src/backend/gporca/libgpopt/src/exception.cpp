@@ -9,10 +9,10 @@
 //		Initialization of GPOPT-specific exception messages
 //---------------------------------------------------------------------------
 
+#include "gpopt/exception.h"
+
 #include "gpos/error/CMessage.h"
 #include "gpos/error/CMessageRepository.h"
-
-#include "gpopt/exception.h"
 
 using namespace gpos;
 

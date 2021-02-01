@@ -9,12 +9,13 @@
 //		Implementation of index description
 //---------------------------------------------------------------------------
 
+#include "gpopt/metadata/CIndexDescriptor.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/metadata/CIndexDescriptor.h"
 
 using namespace gpopt;
 

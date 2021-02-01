@@ -9,18 +9,19 @@
 //		Implementation of basic index access
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
-#include "gpos/common/CAutoP.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/metadata/CName.h"
+
+#include "gpos/base.h"
+#include "gpos/common/CAutoP.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/COptCtxt.h"
-
+#include "gpopt/base/CUtils.h"
+#include "gpopt/metadata/CName.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;

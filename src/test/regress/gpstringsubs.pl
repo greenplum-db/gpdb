@@ -141,7 +141,7 @@ if (1)
 	$psql_str .= $glob_connect
 		if (defined($glob_connect));
 
-	$psql_str .= " -t -A -c 'show LC_CTYPE'";
+	$psql_str .= " -X -t -A -c 'show LC_CTYPE'";
 
 	my $syslocale = `$psql_str`;
 	my $syslocaleexp = '\\@gp_syslocale\\@';

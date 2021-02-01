@@ -11,8 +11,8 @@
 #ifndef GPOS_CMessageTableTest_H
 #define GPOS_CMessageTableTest_H
 
-#include "gpos/types.h"
 #include "gpos/assert.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

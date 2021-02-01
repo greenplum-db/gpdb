@@ -9,16 +9,17 @@
 //		Derived plan properties
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/operators/CPhysical.h"
-#include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CPartIndexMap.h"
-#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropPlan.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysical.h"
 #include "gpopt/operators/CPhysicalCTEConsumer.h"
+#include "gpopt/operators/CScalar.h"
 
 
 using namespace gpopt;
@@ -32,12 +33,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDrvdPropPlan::CDrvdPropPlan()
-	: m_pos(NULL),
-	  m_pds(NULL),
-	  m_prs(NULL),
-	  m_ppim(NULL),
-	  m_ppfm(NULL),
-	  m_pcm(NULL)
+	: m_pos(NULL), m_pds(NULL), m_prs(NULL), m_pcm(NULL)
 {
 }
 
@@ -55,8 +51,6 @@ CDrvdPropPlan::~CDrvdPropPlan()
 	CRefCount::SafeRelease(m_pos);
 	CRefCount::SafeRelease(m_pds);
 	CRefCount::SafeRelease(m_prs);
-	CRefCount::SafeRelease(m_ppim);
-	CRefCount::SafeRelease(m_ppfm);
 	CRefCount::SafeRelease(m_pcm);
 }
 
@@ -104,10 +98,7 @@ CDrvdPropPlan::Derive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		m_pos = popPhysical->PosDerive(mp, exprhdl);
 		m_pds = popPhysical->PdsDerive(mp, exprhdl);
 		m_prs = popPhysical->PrsDerive(mp, exprhdl);
-		m_ppim = popPhysical->PpimDerive(mp, exprhdl, pdpctxt);
-		m_ppfm = popPhysical->PpfmDerive(mp, exprhdl);
 
-		GPOS_ASSERT(NULL != m_ppim);
 		GPOS_ASSERT(CDistributionSpec::EdtAny != m_pds->Edt() &&
 					"CDistributionAny is a require-only, cannot be derived");
 	}
@@ -148,13 +139,6 @@ CDrvdPropPlan::CopyCTEProducerPlanProps(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt,
 		pdpplan->Prs()->AddRef();
 		m_prs = pdpplan->Prs();
 
-		pdpplan->Ppfm()->AddRef();
-		m_ppfm = pdpplan->Ppfm();
-
-		// no need to copy the part index map. return an empty one. This is to
-		// distinguish between a CTE consumer and the inlined expression
-		m_ppim = GPOS_NEW(mp) CPartIndexMap(mp);
-
 		GPOS_ASSERT(CDistributionSpec::EdtAny != m_pds->Edt() &&
 					"CDistributionAny is a require-only, cannot be derived");
 	}
@@ -176,13 +160,11 @@ CDrvdPropPlan::FSatisfies(const CReqdPropPlan *prpp) const
 	GPOS_ASSERT(NULL != prpp->Peo());
 	GPOS_ASSERT(NULL != prpp->Ped());
 	GPOS_ASSERT(NULL != prpp->Per());
-	GPOS_ASSERT(NULL != prpp->Pepp());
 	GPOS_ASSERT(NULL != prpp->Pcter());
 
 	return m_pos->FSatisfies(prpp->Peo()->PosRequired()) &&
 		   m_pds->FSatisfies(prpp->Ped()->PdsRequired()) &&
 		   m_prs->FSatisfies(prpp->Per()->PrsRequired()) &&
-		   m_ppim->FSatisfies(prpp->Pepp()->PppsRequired()) &&
 		   m_pcm->FSatisfies(prpp->Pcter());
 }
 
@@ -200,7 +182,6 @@ CDrvdPropPlan::HashValue() const
 {
 	ULONG ulHash = gpos::CombineHashes(m_pos->HashValue(), m_pds->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, m_prs->HashValue());
-	ulHash = gpos::CombineHashes(ulHash, m_ppim->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, m_pcm->HashValue());
 
 	return ulHash;
@@ -218,7 +199,7 @@ ULONG
 CDrvdPropPlan::Equals(const CDrvdPropPlan *pdpplan) const
 {
 	return m_pos->Matches(pdpplan->Pos()) && m_pds->Equals(pdpplan->Pds()) &&
-		   m_prs->Matches(pdpplan->Prs()) && m_ppim->Equals(pdpplan->Ppim()) &&
+		   m_prs->Matches(pdpplan->Prs()) &&
 		   m_pcm->Equals(pdpplan->GetCostModel());
 }
 
@@ -236,10 +217,7 @@ CDrvdPropPlan::OsPrint(IOstream &os) const
 	os << "Drvd Plan Props ("
 	   << "ORD: " << (*m_pos) << ", DIST: " << (*m_pds)
 	   << ", REWIND: " << (*m_prs) << ")"
-	   << ", Part-Index Map: [" << *m_ppim << "]";
-	os << ", Part Filter Map: ";
-	m_ppfm->OsPrint(os);
-	os << ", CTE Map: [" << *m_pcm << "]";
+	   << ", CTE Map: [" << *m_pcm << "]";
 
 	return os;
 }

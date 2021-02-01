@@ -21,8 +21,8 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/COperator.h"
 
 namespace gpopt
 {

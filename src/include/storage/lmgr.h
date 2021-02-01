@@ -116,6 +116,7 @@ extern const char *GetLockNameFromTagType(uint16 locktag_type);
 extern bool LockTagIsTemp(const LOCKTAG *tag);
 
 extern bool CondUpgradeRelLock(Oid relid);
+extern int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded);
 
 extern void GxactLockTableInsert(DistributedTransactionId xid);
 extern void GxactLockTableWait(DistributedTransactionId xid);

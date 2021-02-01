@@ -9,12 +9,12 @@
 //		Tests for CMessageTable
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/error/CMessageTableTest.h"
+
 #include "gpos/assert.h"
 #include "gpos/error/CMessageTable.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/error/CMessageTableTest.h"
 
 
 using namespace gpos;

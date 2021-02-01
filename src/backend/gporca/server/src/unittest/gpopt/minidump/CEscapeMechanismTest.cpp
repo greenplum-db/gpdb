@@ -10,14 +10,17 @@
 //		run optimization process faster
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/minidump/CEscapeMechanismTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
+
 #include "gpopt/exception.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
+
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/minidump/CEscapeMechanismTest.h"
 
 
 using namespace gpopt;

@@ -2,6 +2,8 @@
 -- PARTITION_AGGREGATE
 -- Test partitionwise aggregation on partitioned tables
 --
+-- Disable ORCA since it does support partition-wise aggregates
+set optimizer to off;
 -- Enable partitionwise aggregate, which by default is disabled.
 SET enable_partitionwise_aggregate TO true;
 -- Enable partitionwise join, which by default is disabled.

@@ -267,7 +267,7 @@ Feature: gpcheckcat tests
         And the user runs "dropdb extra_pk_db"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
-    Scenario: gpcheckcat should report and repair extra entries in master as well as all the segments
+    Scenario: gpcheckcat should report and repair extra entries in coordinator as well as all the segments
         Given database "extra_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
         And the user runs "psql extra_db -c "CREATE TABLE foo(i int)""
@@ -470,7 +470,7 @@ Feature: gpcheckcat tests
         And the user runs "dropdb gpcheckcat_orphans"
         And the path "repair_dir" is removed from current working directory
 
-    Scenario: gpcheckcat should repair orphaned toast tables that are only orphaned on the master
+    Scenario: gpcheckcat should repair orphaned toast tables that are only orphaned on the coordinator
 		# TODO: should we just combine this into the test above?
         Given the database "gpcheckcat_orphans" is broken with "bad reference" orphaned toast tables only on segments with content IDs "-1"
         When the user runs "gpcheckcat -R orphaned_toast_tables -g repair_dir gpcheckcat_orphans"

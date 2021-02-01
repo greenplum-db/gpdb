@@ -11,15 +11,14 @@
 
 #include "naucrates/dxl/parser/CParseHandlerPhysicalDML.h"
 
-#include "naucrates/dxl/parser/CParseHandlerDirectDispatchInfo.h"
-#include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
-#include "naucrates/dxl/parser/CParseHandlerProperties.h"
-#include "naucrates/dxl/parser/CParseHandlerProjList.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerUtils.h"
-
 #include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerDirectDispatchInfo.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerProjList.h"
+#include "naucrates/dxl/parser/CParseHandlerProperties.h"
+#include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
+#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 using namespace gpdxl;
 

@@ -317,6 +317,7 @@ DROP TABLE IF EXISTS test_join_card2;
 DROP TABLE IF EXISTS test_statistic_1;
 CREATE TABLE test_statistic_1(a int, b int);
 INSERT INTO test_statistic_1 SELECT i, i FROM generate_series(1, 1000)i;
+ANALYZE test_statistic_1;
 
 select count(*) from pg_class c, pg_statistic s where c.oid = s.starelid and relname = 'test_statistic_1';
 select count(*) from pg_class c, gp_dist_random('pg_statistic') s where c.oid = s.starelid and relname = 'test_statistic_1';

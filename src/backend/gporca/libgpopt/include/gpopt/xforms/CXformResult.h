@@ -12,6 +12,7 @@
 #define GPOPT_CXformResult_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt
@@ -58,7 +59,7 @@ public:
 	CExpression *PexprNext();
 
 	// print function
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CXformResult
 

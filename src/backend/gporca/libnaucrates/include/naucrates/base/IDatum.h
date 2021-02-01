@@ -12,9 +12,9 @@
 #define GPNAUCRATES_IDatum_H
 
 #include "gpos/base.h"
-#include "gpos/string/CWStringConst.h"
 #include "gpos/common/CDouble.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/string/CWStringConst.h"
 
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
@@ -140,6 +140,7 @@ public:
 	// check if the given pair of datums are stats comparable
 	virtual BOOL StatsAreComparable(const IDatum *datum) const;
 
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 };	// class IDatum
 
 // array of idatums

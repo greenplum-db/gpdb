@@ -1,7 +1,7 @@
 import pytest
 pytest.register_assert_rewrite('TEST')
-from TEST import AnsFile
-from TEST import read_diff
+from TEST_local_base import AnsFile
+from TEST_local_base import read_diff
 import os
 
 def pytest_assertrepr_compare(config,op, left, right):

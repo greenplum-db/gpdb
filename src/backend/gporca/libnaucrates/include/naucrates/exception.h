@@ -11,8 +11,8 @@
 #ifndef DXL_exception_H
 #define DXL_exception_H
 
-#include "gpos/types.h"
 #include "gpos/memory/CMemoryPool.h"
+#include "gpos/types.h"
 
 namespace gpdxl
 {

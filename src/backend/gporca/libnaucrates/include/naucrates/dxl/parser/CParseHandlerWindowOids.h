@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerWindowOids_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
+
 #include "gpopt/base/CWindowOids.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {

@@ -15,8 +15,9 @@
 #define GPDXL_CDXLPhysicalNLJoin_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLPhysicalJoin.h"
+
 #include "naucrates/dxl/operators/CDXLColRef.h"
+#include "naucrates/dxl/operators/CDXLPhysicalJoin.h"
 
 namespace gpdxl
 {

@@ -9,13 +9,14 @@
 //		Implementation of enforced property
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/base/CEnfdProp.h"
 
+#include "gpos/base.h"
+
 #ifdef GPOS_DEBUG
-#include "gpopt/base/COptCtxt.h"
 #include "gpos/error/CAutoTrace.h"
+
+#include "gpopt/base/COptCtxt.h"
 #endif	// GPOS_DEBUG
 
 namespace gpopt

@@ -1006,7 +1006,7 @@ class UninstallPackageLocally(Operation):
 
 class SyncPackages(Operation):
     """
-    Synchronizes packages from master to a remote host
+    Synchronizes packages from coordinator to a remote host
 
     TODO: AK: MPP-15568
     """
@@ -1020,14 +1020,14 @@ class SyncPackages(Operation):
         if not CheckRemoteDir(GPPKG_ARCHIVE_PATH, self.host).run():
             MakeRemoteDir(GPPKG_ARCHIVE_PATH, self.host).run()
 
-        # set of packages on the master
-        master_package_set = set(ListFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION).run())
+        # set of packages on the coordinator
+        coordinator_package_set = set(ListFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION).run())
         # set of packages on the remote host
         remote_package_set = set(ListRemoteFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION, self.host).run())
         # packages to be uninstalled on the remote host
-        uninstall_package_set = remote_package_set - master_package_set
+        uninstall_package_set = remote_package_set - coordinator_package_set
         # packages to be installed on the remote host
-        install_package_set = master_package_set - remote_package_set
+        install_package_set = coordinator_package_set - remote_package_set
 
         if not install_package_set and not uninstall_package_set:
             logger.info('The packages on %s are consistent.' % self.host)
@@ -1060,10 +1060,10 @@ class SyncPackages(Operation):
 
 
 class InstallPackage(Operation):
-    def __init__(self, gppkg, master_host, standby_host, segment_host_list):
+    def __init__(self, gppkg, coordinator_host, standby_host, segment_host_list):
         self.gppkg = gppkg
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = None
@@ -1072,7 +1072,7 @@ class InstallPackage(Operation):
     def execute(self):
         logger.info('Installing package %s' % self.gppkg.pkg)
 
-        # TODO: AK: MPP-15736 - precheck package state on master
+        # TODO: AK: MPP-15736 - precheck package state on coordinator
         ExtractPackage(self.gppkg).run()
         if platform.linux_distribution()[0] == 'Ubuntu':
             ValidateInstallDebPackage(self.gppkg).run()
@@ -1081,7 +1081,7 @@ class InstallPackage(Operation):
 
         # perform any pre-installation steps
         PerformHooks(hooks=self.gppkg.preinstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1103,7 +1103,7 @@ class InstallPackage(Operation):
                     dstHost=self.standby_host).run(validateAfter=True)
                 RemoteOperation(InstallDebPackageLocally(dstFile), self.standby_host).run()
 
-            # install package on master
+            # install package on coordinator
             InstallDebPackageLocally(srcFile).run()
         else:
             # install package on segments
@@ -1119,12 +1119,12 @@ class InstallPackage(Operation):
                     dstHost=self.standby_host).run(validateAfter=True)
                 RemoteOperation(InstallPackageLocally(dstFile), self.standby_host).run()
 
-            # install package on master
+            # install package on coordinator
             InstallPackageLocally(srcFile).run()
 
         # perform any post-installation steps
         PerformHooks(hooks=self.gppkg.postinstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1132,7 +1132,7 @@ class InstallPackage(Operation):
 
 
 class PerformHooks(Operation):
-    def __init__(self, hooks, master_host, standby_host, segment_host_list):
+    def __init__(self, hooks, coordinator_host, standby_host, segment_host_list):
         """
         Performs steps that have been specified in the yaml file for a particular
         stage of gppkg execution
@@ -1142,12 +1142,12 @@ class PerformHooks(Operation):
         the spec file, rpms, and other artifacts (external scripts, perhaps.) To support
         this, these commands should be prefixed with a "cd".
 
-        TODO: AK: I'm adding master_host for consistency.
-        But, why would we ever need master_host?  We're on the master host!
+        TODO: AK: I'm adding coordinator_host for consistency.
+        But, why would we ever need coordinator_host?  We're on the coordinator host!
         """
         self.hooks = hooks
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = []
@@ -1161,7 +1161,7 @@ class PerformHooks(Operation):
             if key is None:
                 return
             key_str = key[0]
-            if key_str.lower() == 'master':
+            if key_str.lower() == 'coordinator':
                 if self.standby_host:
                     RemoteCommand(hook[key_str], [self.standby_host]).run()
                 LocalCommand(hook[key_str], True).run()
@@ -1170,7 +1170,7 @@ class PerformHooks(Operation):
             elif key_str.lower() == 'all':
                 if self.standby_host:
                     RemoteCommand(hook[key_str], [self.standby_host]).run()
-                # Change on Master
+                # Change on Coordinator
                 LocalCommand(hook[key_str], True).run()
                 # Change on Segment hosts
                 RemoteCommand(hook[key_str], self.segment_host_list).run()
@@ -1178,10 +1178,10 @@ class PerformHooks(Operation):
 
 
 class UninstallPackage(Operation):
-    def __init__(self, gppkg, master_host, standby_host, segment_host_list):
+    def __init__(self, gppkg, coordinator_host, standby_host, segment_host_list):
         self.gppkg = gppkg
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = []
@@ -1190,7 +1190,7 @@ class UninstallPackage(Operation):
     def execute(self):
         logger.info('Uninstalling package %s' % self.gppkg.pkg)
 
-        # TODO: AK: MPP-15736 - precheck package state on master
+        # TODO: AK: MPP-15736 - precheck package state on coordinator
         ExtractPackage(self.gppkg).run()
 
         if platform.linux_distribution()[0] == 'Ubuntu':
@@ -1200,7 +1200,7 @@ class UninstallPackage(Operation):
 
         # perform any pre-uninstallation steps
         PerformHooks(hooks=self.gppkg.preuninstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1223,7 +1223,7 @@ class UninstallPackage(Operation):
 
         # perform any post-installation steps
         PerformHooks(hooks=self.gppkg.postuninstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1407,10 +1407,10 @@ class BuildGppkg(Operation):
 class UpdatePackage(Operation):
     """ TODO: AK: Enforce gppkg version is higher than currently installed version """
 
-    def __init__(self, gppkg, master_host, standby_host, segment_host_list):
+    def __init__(self, gppkg, coordinator_host, standby_host, segment_host_list):
         self.gppkg = gppkg
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = []
@@ -1441,12 +1441,12 @@ class UpdatePackage(Operation):
                 dstHost=self.standby_host).run(validateAfter=True)
             RemoteOperation(UpdatePackageLocally(dstFile), self.standby_host).run()
 
-        # update package on master
+        # update package on coordinator
         UpdatePackageLocally(srcFile).run()
 
         # perform any post-update steps
         PerformHooks(hooks=self.gppkg.postupdate,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 

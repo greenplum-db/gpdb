@@ -15,8 +15,8 @@
 #include "gpos/base.h"
 #include "gpos/task/CTaskLocalStorageObject.h"
 
-#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CCTEInfo.h"
+#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/IComparator.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 

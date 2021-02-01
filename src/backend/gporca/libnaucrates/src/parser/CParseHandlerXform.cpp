@@ -9,13 +9,13 @@
 //		Implementation of the SAX parse handler class for parsing xform
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerXform.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #include "gpopt/xforms/CXform.h"
 #include "gpopt/xforms/CXformFactory.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 
 using namespace gpdxl;

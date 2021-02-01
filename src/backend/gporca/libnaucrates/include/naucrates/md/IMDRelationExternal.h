@@ -99,7 +99,7 @@ public:
 	}
 
 	// part constraint
-	IMDPartConstraint *
+	CDXLNode *
 	MDPartConstraint() const override
 	{
 		return NULL;

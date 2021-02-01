@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerLogicalExternalGet_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerLogicalGet.h"
 
 namespace gpdxl

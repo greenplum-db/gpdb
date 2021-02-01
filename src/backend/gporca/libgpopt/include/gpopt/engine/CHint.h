@@ -12,8 +12,8 @@
 #define GPOPT_CHint_H
 
 #include "gpos/base.h"
-#include "gpos/memory/CMemoryPool.h"
 #include "gpos/common/CRefCount.h"
+#include "gpos/memory/CMemoryPool.h"
 
 #define JOIN_ORDER_DP_THRESHOLD ULONG(10)
 #define BROADCAST_THRESHOLD ULONG(10000000)

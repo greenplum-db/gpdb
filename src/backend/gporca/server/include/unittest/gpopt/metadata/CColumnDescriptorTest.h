@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
+
 #include "gpopt/metadata/CName.h"
 
 namespace gpopt

@@ -9,14 +9,15 @@
 //		Implementation of physical partition selector for DML
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalPartitionSelectorDML.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRouted.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalPartitionSelectorDML.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
@@ -75,21 +76,6 @@ ULONG
 CPhysicalPartitionSelectorDML::HashValue() const
 {
 	return gpos::CombineHashes(Eopid(), m_mdid->HashValue());
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalPartitionSelectorDML::PpfmDerive
-//
-//	@doc:
-//		Derive partition filter map
-//
-//---------------------------------------------------------------------------
-CPartFilterMap *
-CPhysicalPartitionSelectorDML::PpfmDerive(CMemoryPool *,  //mp,
-										  CExpressionHandle &exprhdl) const
-{
-	return PpfmPassThruOuter(exprhdl);
 }
 
 //---------------------------------------------------------------------------
@@ -204,46 +190,6 @@ CPhysicalPartitionSelectorDML::FProvidesReqdCols(CExpressionHandle &exprhdl,
 	pcrs->Release();
 
 	return fProvidesCols;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalPartitionSelectorDML::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalPartitionSelectorDML::PppsRequired(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-	CDrvdPropArray *,  //pdrgpdpCtxt,
-	ULONG			   //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
-										   child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalPartitionSelectorDML::PpimDerive
-//
-//	@doc:
-//		Derive partition index map
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysicalPartitionSelectorDML::PpimDerive(CMemoryPool *,  //mp,
-										  CExpressionHandle &exprhdl,
-										  CDrvdPropCtxt *  //pdpctxt
-) const
-{
-	return PpimPassThruOuter(exprhdl);
 }
 
 //---------------------------------------------------------------------------

@@ -15,8 +15,8 @@
 #define GPOS_CMemoryPoolManager_H
 
 #include "gpos/common/CSyncHashtable.h"
-#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/CSyncHashtableAccessByIter.h"
+#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/CSyncHashtableIter.h"
 #include "gpos/memory/CMemoryPool.h"
 

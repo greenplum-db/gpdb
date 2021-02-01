@@ -13,8 +13,9 @@
 #define GPDXL_CDXLScalarSubPlan_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLScalar.h"
+
 #include "naucrates/dxl/operators/CDXLColRef.h"
+#include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl
 {

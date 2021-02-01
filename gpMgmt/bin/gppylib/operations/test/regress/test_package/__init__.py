@@ -44,7 +44,7 @@ RPM_DATABASE = os.path.join(GPHOME, 'share/packages/database')
 GPPKG_EXTENSION = ".gppkg"
 SCRATCH_SPACE = os.path.join(tempfile.gettempdir(), getpass.getuser())
 GPDB_VERSION = '.'.join([str(n) for n in MAIN_VERSION[:2]])
-MASTER_PORT = os.getenv("PGPORT")
+COORDINATOR_PORT = os.getenv("PGPORT")
 
 def skipIfNoStandby():
     """
@@ -73,26 +73,26 @@ def get_host_list():
              tuple[0] contains standby
              tuple[1] contains segment hosts
     """
-    gparr = GpArray.initFromCatalog(dbconn.DbURL(port = MASTER_PORT), utility = True)
+    gparr = GpArray.initFromCatalog(dbconn.DbURL(port = COORDINATOR_PORT), utility = True)
     segs = gparr.getDbList()
 
-    master = None
+    coordinator = None
     standby_host = None
     segment_host_list = []
 
     for seg in segs:
         if seg.isSegmentStandby(current_role=True):
             standby_host = seg.getSegmentHostName()
-        elif not seg.isSegmentMaster(current_role=True):
+        elif not seg.isSegmentCoordinator(current_role=True):
             segment_host_list.append(seg.getSegmentHostName())
-        elif seg.isSegmentMaster(current_role=True):
-            master = seg.getSegmentHostName()
+        elif seg.isSegmentCoordinator(current_role=True):
+            coordinator = seg.getSegmentHostName()
 
     #Deduplicate the hosts so that we
     #dont install multiple times on the same host
     segment_host_list = list(set(segment_host_list))
-    if master in segment_host_list:
-        segment_host_list.remove(master)
+    if coordinator in segment_host_list:
+        segment_host_list.remove(coordinator)
 
     return (standby_host, segment_host_list)
 

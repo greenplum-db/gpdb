@@ -53,7 +53,7 @@ select lanname, lanispl, lanpltrusted from pg_language;
 CREATE EXTERNAL WEB TABLE env_segment(var text, value text) 
 EXECUTE 'env | grep "^[^=]*=[^=]*$"' format 'text' (delimiter '=');
 CREATE EXTERNAL WEB TABLE env_master(var text, value text) 
-EXECUTE 'env | grep "^[^=]*=[^=]*$"' on master format 'text' (delimiter '=');
+EXECUTE 'env | grep "^[^=]*=[^=]*$"' ON COORDINATOR format 'text' (delimiter '=');
 CREATE VIEW env AS
   SELECT gp_execution_segment(), * FROM env_segment
   UNION ALL

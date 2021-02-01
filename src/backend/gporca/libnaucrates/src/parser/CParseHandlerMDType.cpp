@@ -13,10 +13,9 @@
 #include "naucrates/dxl/parser/CParseHandlerMDType.h"
 
 #include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
 #include "naucrates/md/CMDTypeInt2GPDB.h"

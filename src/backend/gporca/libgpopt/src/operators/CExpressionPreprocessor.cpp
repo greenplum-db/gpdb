@@ -10,20 +10,25 @@
 //		logical expression to be optimized
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CExpressionPreprocessor.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
+#include "gpos/common/CAutoRef.h"
+#include "gpos/common/CAutoTimer.h"
+
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
-#include "gpos/common/CAutoTimer.h"
-#include "gpos/common/CAutoRef.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
-
-#include "gpopt/operators/CWindowPreprocessor.h"
-#include "gpopt/operators/CLogicalConstTableGet.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/operators/CExpressionFactorizer.h"
+#include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
+#include "gpopt/operators/CLogicalConstTableGet.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLimit.h"
@@ -33,11 +38,8 @@
 #include "gpopt/operators/CLogicalSetOp.h"
 #include "gpopt/operators/CLogicalUnion.h"
 #include "gpopt/operators/CLogicalUnionAll.h"
-#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CNormalizer.h"
-#include "gpopt/operators/CExpressionUtils.h"
-#include "gpopt/operators/CExpressionFactorizer.h"
-#include "gpopt/operators/CExpressionPreprocessor.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
@@ -47,14 +49,13 @@
 #include "gpopt/operators/CScalarSubqueryAny.h"
 #include "gpopt/operators/CScalarSubqueryExists.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
+#include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
-#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/xforms/CXform.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/CStatistics.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
@@ -2534,6 +2535,163 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 	return pexprNew;
 }
 
+
+CExpression *
+CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
+{
+	GPOS_ASSERT(NULL != expr);
+	CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	COperator *pop = expr->Pop();
+	if (pop->Eopid() == COperator::EopLogicalSelect &&
+		(*expr)[0]->Pop()->Eopid() == COperator::EopLogicalDynamicGet)
+	{
+		CExpression *filter_pred = (*expr)[1];
+		CLogicalDynamicGet *dyn_get =
+			CLogicalDynamicGet::PopConvert((*expr)[0]->Pop());
+
+		CColRefSetArray *pdrgpcrsChild = NULL;
+		CConstraint *pred_cnstr =
+			CConstraint::PcnstrFromScalarExpr(mp, filter_pred, &pdrgpcrsChild);
+		CRefCount::SafeRelease(pdrgpcrsChild);
+
+		// GPDB_12_MERGE_FIXME: skip all this if pred_cnstr = NULL
+
+		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
+
+		IMdIdArray *all_partition_mdids = dyn_get->GetPartitionMdids();
+		for (ULONG ul = 0; ul < all_partition_mdids->Size(); ++ul)
+		{
+			IMDId *part_mdid = (*all_partition_mdids)[ul];
+			const IMDRelation *partrel = mda->RetrieveRel(part_mdid);
+
+			CConstraint *rel_cnstr = PcnstrFromChildPartition(
+				partrel, dyn_get->PdrgpcrOutput(),
+				(*dyn_get->GetRootColMappingPerPart())[ul]);
+
+			CConstraint *pcnstr = NULL;
+			{
+				CConstraintArray *preds = GPOS_NEW(mp) CConstraintArray(mp);
+				if (pred_cnstr != NULL)
+				{
+					pred_cnstr->AddRef();
+					preds->Append(pred_cnstr);
+				}
+				if (rel_cnstr != NULL)
+				{
+					preds->Append(rel_cnstr);
+				}
+				pcnstr = CConstraint::PcnstrConjunction(mp, preds);
+			}
+
+			// Include the partition if it's not a contradiction, or if it's
+			// undefined (e.g default partition)
+			if (NULL == pcnstr || !pcnstr->FContradiction())
+			{
+				part_mdid->AddRef();
+				selected_partition_mdids->Append(part_mdid);
+			}
+			CRefCount::SafeRelease(pcnstr);
+		}
+		CRefCount::SafeRelease(pred_cnstr);
+
+		if (selected_partition_mdids->Size() == 0)
+		{
+			// Return const false if there are no partitions left to scan
+			selected_partition_mdids->Release();
+			CColRefArray *colref_array =
+				expr->DeriveOutputColumns()->Pdrgpcr(mp);
+
+			IDatum2dArray *pdrgpdrgpdatum = GPOS_NEW(mp) IDatum2dArray(mp);
+			COperator *popCTG = GPOS_NEW(mp)
+				CLogicalConstTableGet(mp, colref_array, pdrgpdrgpdatum);
+			return GPOS_NEW(mp) CExpression(mp, popCTG);
+		}
+
+		CName *new_alias = GPOS_NEW(mp) CName(mp, dyn_get->Name());
+		dyn_get->Ptabdesc()->AddRef();
+		dyn_get->PdrgpcrOutput()->AddRef();
+		dyn_get->PdrgpdrgpcrPart()->AddRef();
+		CLogicalDynamicGet *new_dyn_get = GPOS_NEW(mp) CLogicalDynamicGet(
+			mp, new_alias, dyn_get->Ptabdesc(), dyn_get->ScanId(),
+			dyn_get->PdrgpcrOutput(), dyn_get->PdrgpdrgpcrPart(),
+			selected_partition_mdids);
+
+		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
+		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));
+		select_children->Append(PrunePartitions(mp, filter_pred));
+
+		pop->AddRef();
+		return GPOS_NEW(mp) CExpression(mp, pop, select_children);
+	}
+
+	// process children
+	CExpressionArray *children = GPOS_NEW(mp) CExpressionArray(mp);
+
+	for (ULONG ul = 0; ul < expr->Arity(); ul++)
+	{
+		CExpression *expr_child = (*expr)[ul];
+		CExpression *new_expr_child = PrunePartitions(mp, expr_child);
+		children->Append(new_expr_child);
+	}
+
+	pop->AddRef();
+	return GPOS_NEW(mp) CExpression(mp, pop, children);
+}
+
+// Translate the part constraint of a child partition into an ORCA expr using
+// corresponding colrefs of the root table, instead of those from the child
+// partition.
+CConstraint *
+CExpressionPreprocessor::PcnstrFromChildPartition(
+	const IMDRelation *partrel, CColRefArray *pdrgpcrOutput,
+	ColRefToUlongMap *root_col_mapping)
+{
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
+
+	CExpression *part_constraint_expr = NULL;
+
+	CDXLNode *dxlnode = partrel->MDPartConstraint();
+
+	if (NULL == dxlnode)
+	{
+		return NULL;
+	}
+
+	// Create a list of indexes into the columns of the table descriptor of the
+	// child partition. This is used in PexprTranslateScalar() to construct a
+	// reverse mapping from the colid of  each (non-dropped) column in the child
+	// partition to it's corresponding colref in the root table.
+	// NB: For the indexes in root_col_mapping to be applied correctly here, the
+	// part constraint should have been translated without dropped cols
+	// (see RetrievePartConstraintForRel()).
+	ULongPtrArray *mapped_colids = GPOS_NEW(mp) ULongPtrArray(mp);
+	for (ULONG ul = 0; ul < pdrgpcrOutput->Size(); ++ul)
+	{
+		CColRef *colref = (*pdrgpcrOutput)[ul];
+		ULONG *colid = root_col_mapping->Find(colref);
+		GPOS_ASSERT(NULL != colid);
+		mapped_colids->Append(GPOS_NEW(mp) ULONG(*colid));
+	}
+
+	CTranslatorDXLToExpr dxltr(mp, md_accessor);
+	part_constraint_expr =
+		dxltr.PexprTranslateScalar(dxlnode, pdrgpcrOutput, mapped_colids);
+	mapped_colids->Release();
+
+	GPOS_ASSERT(CUtils::FPredicate(part_constraint_expr));
+
+	CColRefSetArray *pdrgpcrsChild = NULL;
+	CConstraint *cnstr = CConstraint::PcnstrFromScalarExpr(
+		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */);
+
+	CRefCount::SafeRelease(part_constraint_expr);
+	CRefCount::SafeRelease(pdrgpcrsChild);
+	GPOS_ASSERT(cnstr);
+	return cnstr;
+}
+
 // main driver, pre-processing of input logical expression
 CExpression *
 CExpressionPreprocessor::PexprPreprocess(
@@ -2609,7 +2767,10 @@ CExpressionPreprocessor::PexprPreprocess(
 
 	CExpression *pexprConvert2In = pexprUnnested;
 
-	if (GPOS_FTRACE(EopttraceArrayConstraints))
+	// GPDB_12_MERGE_FIXME: Although we've enabled EopttraceArrayConstraints,
+	// the following conversion is causing problems; and might be very
+	// inefficient! Disable for noe.
+	if (GPOS_FTRACE(EopttraceArrayConstraints) && false)
 	{
 		// (9.5) ensure predicates are array IN or NOT IN where applicable
 		pexprConvert2In = PexprConvert2In(mp, pexprUnnested);
@@ -2709,11 +2870,17 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexrReorderedScalarCmpChildren->Release();
 
-	// (26) normalize expression again
-	CExpression *pexprNormalized2 =
-		CNormalizer::PexprNormalize(mp, pexprExistWithPredFromINSubq);
+	// (26) prune partitions
+	CExpression *pexprPrunedPartitions =
+		PrunePartitions(mp, pexprExistWithPredFromINSubq);
 	GPOS_CHECK_ABORT;
 	pexprExistWithPredFromINSubq->Release();
+
+	// (27) normalize expression again
+	CExpression *pexprNormalized2 =
+		CNormalizer::PexprNormalize(mp, pexprPrunedPartitions);
+	GPOS_CHECK_ABORT;
+	pexprPrunedPartitions->Release();
 
 	return pexprNormalized2;
 }

@@ -9,11 +9,10 @@
 //		Implementation of scalar IDF comparison operator
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/mdcache/CMDAccessorUtils.h"
-
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
+
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 
 using namespace gpopt;
 using namespace gpmd;

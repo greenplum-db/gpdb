@@ -15,8 +15,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropCtxt.h"
 #include "gpopt/base/CCTEMap.h"
+#include "gpopt/base/CDrvdPropCtxt.h"
 
 
 namespace gpopt
@@ -38,9 +38,6 @@ private:
 	// map of CTE id to producer plan properties
 	UlongToDrvdPropPlanMap *m_phmulpdpCTEs;
 
-	// the number of expected partition selectors
-	ULONG m_ulExpectedPartitionSelectors;
-
 	// if true, a call to AddProps updates the CTE.
 	BOOL m_fUpdateCTEMap;
 
@@ -60,18 +57,8 @@ public:
 	// dtor
 	~CDrvdPropCtxtPlan() override;
 
-	ULONG
-	UlExpectedPartitionSelectors() const
-	{
-		return m_ulExpectedPartitionSelectors;
-	}
-
-	// set the number of expected partition selectors based on the given
-	// operator and the given cost context
-	void SetExpectedPartitionSelectors(COperator *pop, CCostContext *pcc);
-
 	// print
-	IOstream &OsPrint(IOstream &os) const override;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// return the plan properties of CTE producer with given id
 	CDrvdPropPlan *PdpplanCTEProducer(ULONG ulCTEId) const;

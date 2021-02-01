@@ -9,8 +9,9 @@
 //		Implementation of basic wide character output stream
 //---------------------------------------------------------------------------
 
-#include "gpos/common/clibwrapper.h"
 #include "gpos/io/COstream.h"
+
+#include "gpos/common/clibwrapper.h"
 
 using namespace gpos;
 
@@ -211,6 +212,10 @@ COstream::operator<<(LINT input_long_int)
 IOstream &
 COstream::operator<<(const DOUBLE input_double)
 {
+	if (m_fullPrecision)
+	{
+		return AppendFormat(GPOS_WSZ_LIT("%.17f"), input_double);
+	}
 	return AppendFormat(GPOS_WSZ_LIT("%f"), input_double);
 }
 

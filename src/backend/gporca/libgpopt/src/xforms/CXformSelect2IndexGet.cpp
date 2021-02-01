@@ -9,15 +9,15 @@
 //		Implementation of select over a table to an index get transformation
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSelect2IndexGet.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/xforms/CXformSelect2IndexGet.h"
 #include "gpopt/xforms/CXformUtils.h"
-
-#include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDIndexGPDB.h"
+#include "naucrates/md/CMDRelationGPDB.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -117,7 +117,7 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
 			pcrsReqd, pcrsScalarExpr, NULL /*outer_refs*/, pmdindex, pmdrel,
-			false /*fAllowPartialIndex*/, NULL /*ppartcnstrIndex*/
+			NULL /*ppartcnstrIndex*/
 		);
 		if (NULL != pexprIndexGet)
 		{

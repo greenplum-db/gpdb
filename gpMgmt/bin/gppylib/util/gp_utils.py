@@ -6,8 +6,8 @@
 
 import os
 
-def get_gp_prefix(masterDatadir):
-    base = os.path.basename(masterDatadir)
+def get_gp_prefix(coordinatorDatadir):
+    base = os.path.basename(coordinatorDatadir)
     idx = base.rfind('-1')
     if idx == -1:
         return None

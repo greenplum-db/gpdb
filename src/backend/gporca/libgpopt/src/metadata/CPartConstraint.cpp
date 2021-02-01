@@ -9,14 +9,14 @@
 //		Implementation of part constraints
 //---------------------------------------------------------------------------
 
+#include "gpopt/metadata/CPartConstraint.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CConstraint.h"
-#include "gpopt/base/CConstraintNegation.h"
 #include "gpopt/base/CConstraintConjunction.h"
+#include "gpopt/base/CConstraintNegation.h"
 #include "gpopt/base/CUtils.h"
-
-#include "gpopt/metadata/CPartConstraint.h"
 
 using namespace gpopt;
 

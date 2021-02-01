@@ -17,9 +17,9 @@ from gppylib.operations.startSegments import StartSegmentsResult
 
 class buildMirrorSegmentsTestCase(GpTestCase):
     def setUp(self):
-        self.master = Segment(content=-1, preferred_role='p', dbid=1, role='p', mode='s',
-                              status='u', hostname='masterhost', address='masterhost-1',
-                              port=1111, datadir='/masterdir')
+        self.coordinator = Segment(content=-1, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='coordinatorhost', address='coordinatorhost-1',
+                              port=1111, datadir='/coordinatordir')
 
         self.primary = Segment(content=0, preferred_role='p', dbid=2, role='p', mode='s',
                                status='u', hostname='primaryhost', address='primaryhost-1',
@@ -130,8 +130,8 @@ class buildMirrorSegmentsTestCase(GpTestCase):
                                          'Segment: sdw1:/data/primary0:content=0:dbid=2:role=p:preferred_role=p:mode=s:status=u: REASON: reason')
 
     def _createGpArrayWith2Primary2Mirrors(self):
-        self.master = Segment.initFromString(
-                "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.coordinator = Segment.initFromString(
+                "1|-1|p|p|s|u|cdw|cdw|5432|/data/coordinator")
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.primary1 = Segment.initFromString(
@@ -141,28 +141,28 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         mirror1 = Segment.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
 
-        return GpArray([self.master, self.primary0, self.primary1, mirror0, mirror1])
+        return GpArray([self.coordinator, self.primary0, self.primary1, mirror0, mirror1])
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_ports_differ(self):
-        self.master.hostname = "samehost"
+        self.coordinator.hostname = "samehost"
         self.primary.hostname = "samehost"
 
-        self.master.port = 1111
+        self.coordinator.port = 1111
         self.primary.port = 1111
 
-        gpArray = GpArray([self.master, self.primary])
+        gpArray = GpArray([self.coordinator, self.primary])
 
         with self.assertRaisesRegex(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same port 1111"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_data_directories_differ(self):
-        self.master.hostname = "samehost"
+        self.coordinator.hostname = "samehost"
         self.primary.hostname = "samehost"
 
-        self.master.datadir = "/data"
+        self.coordinator.datadir = "/data"
         self.primary.datadir = "/data"
 
-        gpArray = GpArray([self.master, self.primary])
+        gpArray = GpArray([self.coordinator, self.primary])
 
         with self.assertRaisesRegex(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)

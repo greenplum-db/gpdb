@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerResult_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalResult.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 
 namespace gpdxl

@@ -9,17 +9,17 @@
 //		Implementation of partial plans created during optimization
 //---------------------------------------------------------------------------
 
+#include "gpopt/engine/CPartialPlan.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/engine/CPartialPlan.h"
-#include "gpopt/search/CGroupExpression.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalMotion.h"
 #include "gpopt/search/CGroup.h"
-
-#include "gpopt/exception.h"
+#include "gpopt/search/CGroupExpression.h"
 
 using namespace gpopt;
 

@@ -9,12 +9,13 @@
 //		Implementation of interface class for task management and execution.
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CAutoTaskProxy.h"
+
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CWallClock.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/task/CAutoTaskProxy.h"
 
 using namespace gpos;
 

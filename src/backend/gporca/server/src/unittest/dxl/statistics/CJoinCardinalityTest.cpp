@@ -13,19 +13,19 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CJoinCardinalityTest.h"
+
 #include <stdint.h>
 
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CStatisticsUtils.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CJoinCardinalityTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 // unittest for join cardinality estimation

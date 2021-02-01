@@ -9,15 +9,16 @@
 //		Tests serializing XML.
 //---------------------------------------------------------------------------
 
+#include "unittest/dxl/CXMLSerializerTest.h"
+
 #include "gpos/base.h"
-#include "gpos/io/COstreamString.h"
 #include "gpos/common/CRandom.h"
+#include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-
-#include "unittest/dxl/CXMLSerializerTest.h"
 
 using namespace gpos;
 using namespace gpdxl;

@@ -11,6 +11,7 @@
 
 
 #include "naucrates/dxl/operators/CDXLColRef.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

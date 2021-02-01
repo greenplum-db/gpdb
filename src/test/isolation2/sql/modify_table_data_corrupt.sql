@@ -28,6 +28,10 @@ insert into tab1 values (1, 1);
 insert into tab2 values (1, 1);
 insert into tab3 values (1, 1);
 
+analyze tab1;
+analyze tab2;
+analyze tab3;
+
 set allow_system_table_mods=true;
 update pg_class set relpages = 10000 where relname='tab2';
 update pg_class set reltuples = 100000000 where relname='tab2';

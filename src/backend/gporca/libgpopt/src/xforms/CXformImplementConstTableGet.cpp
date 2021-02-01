@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementConstTableGet.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CPhysicalConstTableGet.h"

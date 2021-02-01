@@ -15,66 +15,59 @@
 
 extern "C" {
 #include "postgres.h"
+
+#include "access/external.h"
+#include "access/heapam.h"
+#include "catalog/namespace.h"
+#include "catalog/pg_am.h"
+#include "catalog/pg_proc.h"
+#include "catalog/pg_statistic.h"
+#include "cdb/cdbhash.h"
+#include "partitioning/partdesc.h"
 #include "utils/array.h"
-#include "utils/rel.h"
-#include "utils/relcache.h"
-#include "utils/lsyscache.h"
-#include "utils/syscache.h"
-#include "utils/typcache.h"
 #include "utils/datum.h"
 #include "utils/elog.h"
 #include "utils/guc.h"
-#include "cdb/cdbhash.h"
-#include "access/external.h"
-#include "access/heapam.h"
-#include "catalog/pg_am.h"
-#include "catalog/pg_proc.h"
-
-#include "catalog/namespace.h"
-#include "catalog/pg_statistic.h"
+#include "utils/lsyscache.h"
 #include "utils/partcache.h"
-#include "partitioning/partdesc.h"
+#include "utils/rel.h"
+#include "utils/relcache.h"
+#include "utils/syscache.h"
+#include "utils/typcache.h"
 }
 
-#include "naucrates/md/CMDIdCast.h"
-#include "naucrates/md/CMDIdScCmp.h"
-
-#include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/CMDCastGPDB.h"
-#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
-#include "naucrates/md/CMDScCmpGPDB.h"
-
-#include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
-#include "gpopt/translate/CTranslatorScalarToDXL.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-
 #include "gpos/base.h"
+#include "gpos/common/CAutoRef.h"
 #include "gpos/error/CException.h"
 #include "gpos/io/COstreamString.h"
 
-#include "naucrates/exception.h"
-
+#include "gpopt/base/CUtils.h"
+#include "gpopt/gpdbwrappers.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
+#include "gpopt/translate/CTranslatorScalarToDXL.h"
+#include "gpopt/translate/CTranslatorUtils.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-
+#include "naucrates/exception.h"
+#include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CDXLRelStats.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
+#include "naucrates/md/CMDCastGPDB.h"
+#include "naucrates/md/CMDIdCast.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDIdScCmp.h"
+#include "naucrates/md/CMDIndexGPDB.h"
+#include "naucrates/md/CMDPartConstraintGPDB.h"
+#include "naucrates/md/CMDScCmpGPDB.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
 #include "naucrates/md/CMDTypeInt2GPDB.h"
 #include "naucrates/md/CMDTypeInt4GPDB.h"
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 #include "naucrates/md/CMDTypeOidGPDB.h"
-#include "naucrates/md/CMDIndexGPDB.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
-#include "naucrates/md/CMDIdRelStats.h"
-#include "naucrates/md/CDXLRelStats.h"
-#include "naucrates/md/CMDIdColStats.h"
-#include "naucrates/md/CDXLColStats.h"
-
-#include "gpopt/base/CUtils.h"
-
-#include "gpopt/gpdbwrappers.h"
 
 using namespace gpdxl;
 using namespace gpopt;
@@ -516,6 +509,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	BOOL has_oids = false;
 	BOOL is_partitioned = false;
 	IMDRelation *md_rel = NULL;
+	IMdIdArray *partition_oids = NULL;
 
 	/*
 	 * Pretend that there are no triggers, because we don't want ORCA to handle
@@ -569,6 +563,13 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		// FIXME_GPDB_12_MERGE_FIXME: misestimate (most likely underestimate) the number of leaf partitions
 		// ORCA doesn't really care, except to determine whether to sort before inserting
 		num_leaf_partitions = rel->rd_partdesc->nparts;
+		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
+
+		for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
+		{
+			Oid oid = rel->rd_partdesc->oids[i];
+			partition_oids->Append(GPOS_NEW(mp) CMDIdGPDB(oid));
+		}
 	}
 
 	// get key sets
@@ -607,22 +608,21 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	}
 	else
 	{
-		CMDPartConstraintGPDB *mdpart_constraint = NULL;
+		CDXLNode *mdpart_constraint = NULL;
 
-#if 0
 		// retrieve the part constraints if relation is partitioned
-		if (is_partitioned)
-			mdpart_constraint = RetrievePartConstraintForRel(mp, md_accessor, oid, mdcol_array, md_index_info_array->Size() > 0 /*has_index*/);
-#endif
+		// FIMXE: Do this only if Relation::rd_rel::relispartition is true
+		mdpart_constraint = RetrievePartConstraintForRel(
+			mp, md_accessor, rel.get(), mdcol_array);
 
 		// GPDB_12_MERGE_FIXME: this leaves dead code in CMDRelationGPDB. We
 		// should gut it all the way
 		md_rel = GPOS_NEW(mp) CMDRelationGPDB(
 			mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
 			distr_cols, distr_op_families, part_keys, part_types,
-			num_leaf_partitions, convert_hash_to_random, keyset_array,
-			md_index_info_array, mdid_triggers_array, check_constraint_mdids,
-			mdpart_constraint, has_oids);
+			num_leaf_partitions, partition_oids, convert_hash_to_random,
+			keyset_array, md_index_info_array, mdid_triggers_array,
+			check_constraint_mdids, mdpart_constraint, has_oids);
 	}
 
 	return md_rel;
@@ -1887,6 +1887,8 @@ CTranslatorRelcacheToDXL::RetrieveCheckConstraints(CMemoryPool *mp,
 		CMDIdGPDB *mdid_col_type = CMDIdGPDB::CastMdid(md_col->MdidType());
 		mdid_col_type->AddRef();
 
+		// GPDB_12_MERGE_FIXME: Skip dropped columns similar to RetrievePartConstraintForRel()
+
 		// create a column descriptor for the column
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
 			md_colname, ul + 1 /*colid*/, md_col->AttrNum(), mdid_col_type,
@@ -3148,7 +3150,6 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex(
 	return mdpart_constraint;
 }
 
-#if 0
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
@@ -3157,90 +3158,58 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex(
 //		Retrieve part constraint for relation
 //
 //---------------------------------------------------------------------------
-CMDPartConstraintGPDB *
-CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	OID rel_oid,
-	CMDColumnArray *mdcol_array,
-	bool has_index
-	)
+CDXLNode *
+CTranslatorRelcacheToDXL::RetrievePartConstraintForRel(
+	CMemoryPool *mp, CMDAccessor *md_accessor, Relation rel,
+	CMDColumnArray *mdcol_array)
 {
 	// get the part constraints
-	List *default_levels_rel = NIL;
-	Node *node = gpdb::GetRelationPartContraints(rel_oid, &default_levels_rel);
+	Node *node = gpdb::GetRelationPartConstraints(rel);
 
-	// don't retrieve part constraints if there are no indices
-	// and no default partitions at any level
-	if (!has_index && NIL == default_levels_rel)
+	if (NULL == node)
 	{
 		return NULL;
 	}
 
-	List *part_keys = gpdb::GetPartitionAttrs(rel_oid);
-	const ULONG num_of_levels = gpdb::ListLength(part_keys);
-	gpdb::ListFree(part_keys);
-
-	BOOL is_unbounded = true;
-	ULongPtrArray *default_levels_derived = GPOS_NEW(mp) ULongPtrArray(mp);
-	for (ULONG ul = 0; ul < num_of_levels; ul++)
+	// create var-colid mapping for translating part constraints
+	CAutoRef<CDXLColDescrArray> dxl_col_descr_array(GPOS_NEW(mp)
+														CDXLColDescrArray(mp));
+	const ULONG num_columns = mdcol_array->Size();
+	for (ULONG ul = 0, idx = 0; ul < num_columns; ul++)
 	{
-		if (LevelHasDefaultPartition(default_levels_rel, ul))
-		{
-			default_levels_derived->Append(GPOS_NEW(mp) ULONG(ul));
-		}
-		else
-		{
-			is_unbounded = false;
-		}
-	}
+		const IMDColumn *md_col = (*mdcol_array)[ul];
 
-	CMDPartConstraintGPDB *mdpart_constraint = NULL;
-
-	if (!has_index)
-	{
-		// if there are no indices then we don't need to construct the partition constraint
-		// expression since ORCA is never going to use it.
-		// only send the default partition information.
-		default_levels_derived->AddRef();
-		mdpart_constraint = GPOS_NEW(mp) CMDPartConstraintGPDB(mp, default_levels_derived, is_unbounded, NULL);
-	}
-	else
-	{
-		CDXLColDescrArray *dxl_col_descr_array = GPOS_NEW(mp) CDXLColDescrArray(mp);
-		const ULONG num_columns = mdcol_array->Size();
-		for (ULONG ul = 0; ul < num_columns; ul++)
+		if (md_col->IsDropped())
 		{
-			const IMDColumn *md_col = (*mdcol_array)[ul];
-			CMDName *md_colname = GPOS_NEW(mp) CMDName(mp, md_col->Mdname().GetMDName());
-			CMDIdGPDB *mdid_col_type = CMDIdGPDB::CastMdid(md_col->MdidType());
-			mdid_col_type->AddRef();
-
-			// create a column descriptor for the column
-			CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr
-											(
-											mp,
-											md_colname,
-											ul + 1, // colid
-											md_col->AttrNum(),
-											mdid_col_type,
-											md_col->TypeModifier(),
-											false // fColDropped
-											);
-			dxl_col_descr_array->Append(dxl_col_descr);
+			continue;
 		}
 
-		mdpart_constraint = RetrievePartConstraintFromNode(mp, md_accessor, dxl_col_descr_array, node, default_levels_derived, is_unbounded);
-		dxl_col_descr_array->Release();
+		CMDName *md_colname =
+			GPOS_NEW(mp) CMDName(mp, md_col->Mdname().GetMDName());
+		CMDIdGPDB *mdid_col_type = CMDIdGPDB::CastMdid(md_col->MdidType());
+		mdid_col_type->AddRef();
+
+		// create a column descriptor for the column
+		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
+			md_colname,
+			idx + 1,  // colid
+			md_col->AttrNum(), mdid_col_type, md_col->TypeModifier(),
+			false  // fColDropped
+		);
+		dxl_col_descr_array->Append(dxl_col_descr);
+		++idx;
 	}
 
-	gpdb::ListFree(default_levels_rel);
-	default_levels_derived->Release();
+	CMappingVarColId var_colid_mapping(mp);
+	var_colid_mapping.LoadColumns(0 /*query_level */, 1 /* rteIndex */,
+								  dxl_col_descr_array.Value());
+	CDXLNode *scalar_dxlnode =
+		CTranslatorScalarToDXL::TranslateStandaloneExprToDXL(
+			mp, md_accessor, &var_colid_mapping, (Expr *) node);
 
-	return mdpart_constraint;
+	return scalar_dxlnode;
 }
-#endif
+
 
 //---------------------------------------------------------------------------
 //	@function:

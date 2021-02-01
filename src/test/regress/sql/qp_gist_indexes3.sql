@@ -62,6 +62,7 @@ BEGIN
    s2 = CAST((seed - 1) AS VARCHAR);
    str1 = '((' || ss || ', ' || ss || '), (' || s2 || ', ' || s2 || '))';
    INSERT INTO GistTable3(id, property) VALUES (seed, TO_BOX(CAST(str1 AS TEXT)) );
+   ANALYZE GistTable3;
 END;
 $$
 LANGUAGE PLPGSQL

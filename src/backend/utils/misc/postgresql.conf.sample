@@ -578,11 +578,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #log_executor_stats = off
 #log_statement_stats = off
 
-
-gp_autostats_mode=on_no_stats		# none, on_no_stats, on_change. see documentation for semantics.
-gp_autostats_on_change_threshold=2147483647 # [0..INT_MAX]. see documentation for semantics.
-log_autostats=off	# print additional autostats information
-
 #------------------------------------------------------------------------------
 # AUTOVACUUM
 #------------------------------------------------------------------------------

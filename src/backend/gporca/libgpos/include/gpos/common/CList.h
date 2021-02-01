@@ -15,10 +15,10 @@
 #ifndef GPOS_CList_H
 #define GPOS_CList_H
 
+#include "gpos/common/CLink.h"
+#include "gpos/task/ITask.h"
 #include "gpos/types.h"
 #include "gpos/utils.h"
-#include "gpos/task/ITask.h"
-#include "gpos/common/CLink.h"
 
 namespace gpos
 {

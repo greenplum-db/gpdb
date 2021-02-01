@@ -66,6 +66,7 @@ static bool guessed = false;	/* T if we had to guess at any values */
 static const char *progname;
 static uint32 set_xid_epoch = (uint32) -1;
 static TransactionId set_xid = 0;
+static DistributedTransactionId set_gxid = 0;
 static TransactionId set_oldest_commit_ts_xid = 0;
 static TransactionId set_newest_commit_ts_xid = 0;
 static Oid	set_oid = 0;
@@ -122,6 +123,7 @@ main(int argc, char *argv[])
 		 */
 		{"binary-upgrade", no_argument, NULL, 1000},
 		{"system-identifier", required_argument, NULL, 1001},
+		{"next-gxid", required_argument, NULL, 1002},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -388,6 +390,21 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 1002: /* --next-gxid */
+				set_gxid = strtoul(optarg, &endptr, 0);
+				if (endptr == optarg || *endptr != '\0')
+				{
+					pg_log_error("invalid argument for option %s", "--next-gxid");
+					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+					exit(1);
+				}
+				if (set_gxid == 0)
+				{
+					pg_log_error("distributed transaction ID (--next-gxid) must not be 0");
+					exit(1);
+				}
+				break;
+
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(1);
@@ -536,6 +553,9 @@ main(int argc, char *argv[])
 			ControlFile.checkPointCopy.oldestXid += FirstNormalTransactionId;
 		ControlFile.checkPointCopy.oldestXidDB = InvalidOid;
 	}
+
+	if (set_gxid != 0)
+		ControlFile.checkPointCopy.nextGxid = set_gxid;
 
 	if (set_oldest_commit_ts_xid != 0)
 		ControlFile.checkPointCopy.oldestCommitTsXid = set_oldest_commit_ts_xid;
@@ -838,6 +858,7 @@ GuessControlValues(void)
 	ControlFile.checkPointCopy.fullPageWrites = false;
 	ControlFile.checkPointCopy.nextFullXid =
 		FullTransactionIdFromEpochAndXid(0, FirstNormalTransactionId);
+	ControlFile.checkPointCopy.nextGxid = FirstDistributedTransactionId;
 	ControlFile.checkPointCopy.nextOid = FirstBootstrapObjectId;
 	ControlFile.checkPointCopy.nextRelfilenode = FirstBootstrapObjectId;
 	ControlFile.checkPointCopy.nextMulti = FirstMultiXactId;
@@ -922,6 +943,8 @@ PrintControlValues(bool guessed)
 	printf(_("Latest checkpoint's NextXID:          %u:%u\n"),
 		   EpochFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid),
 		   XidFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid));
+	printf(_("Latest checkpoint's NextGxid:         "UINT64_FORMAT"\n"),
+		   ControlFile.checkPointCopy.nextGxid);
 	printf(_("Latest checkpoint's NextOID:          %u\n"),
 		   ControlFile.checkPointCopy.nextOid);
 	printf(_("Latest checkpoint's NextRelfilenode:  %u\n"),
@@ -1033,6 +1056,10 @@ PrintNewControlValues(void)
 		printf(_("NextXID epoch:                        %u\n"),
 			   EpochFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid));
 	}
+
+	if (set_gxid != 0)
+		printf(_("NextGxid:                             "UINT64_FORMAT"\n"),
+			   ControlFile.checkPointCopy.nextGxid);
 
 	if (set_data_checksum_version != -1)
 	{
@@ -1527,6 +1554,7 @@ usage(void)
 	printf(_("      --system-identifier=ID     set database system identifier\n"));
 	printf(_("  -V, --version                  output version information, then exit\n"));
 	printf(_("  -x, --next-transaction-id=XID  set next transaction ID\n"));
+	printf(_("      --next-gxid=GXID           set next distributed transaction ID\n"));
 	printf(_("      --wal-segsize=SIZE         size of WAL segments, in megabytes\n"));
 	printf(_("  -?, --help                     show this help, then exit\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));

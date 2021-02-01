@@ -9,16 +9,17 @@
 //		Implementation of optimizer context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/COptCtxt.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 
-#include "naucrates/traceflags/traceflags.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDefaultComparator.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/eval/IConstExprEvaluator.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
 

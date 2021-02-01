@@ -92,7 +92,7 @@
                <row>
                   <entry colname="col1">$GP_SEGMENT_ID</entry>
                   <entry colname="col2">The ID number of the segment instance executing the external
-                     table command (same as <codeph>dbid</codeph> in
+                     table command (same as <codeph>content</codeph> in
                         <codeph>gp_segment_configuration</codeph>).</entry>
                </row>
                <row>

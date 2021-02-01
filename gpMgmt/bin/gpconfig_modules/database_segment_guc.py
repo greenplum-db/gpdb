@@ -14,7 +14,7 @@ class DatabaseSegmentGuc(SegmentGuc):
     def report_success_format(self):
         if self.get_value() is not None:
             return "%s value: %s" % (self.get_label(), self.get_value())
-        return "No value is set on %s" % ("master" if self.get_label() == "Master " else "segments")
+        return "No value is set on %s" % ("coordinator" if self.get_label() == "Coordinator" else "segments")
 
     def report_fail_format(self):
         return ["[context: %s] [name: %s] [value: %s]" % (self.context, self.name, self.get_value())]

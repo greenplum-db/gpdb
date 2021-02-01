@@ -587,7 +587,7 @@ CREATE VIEW pg_stat_all_tables_internal AS
     WHERE C.relkind IN ('r', 't', 'm')
     GROUP BY C.oid, N.nspname, C.relname;
 
--- Gather data from segments on user tables, and use data on master on system tables.
+-- Gather data from segments on user tables, and use data on coordinator on system tables.
 
 CREATE VIEW pg_stat_all_tables AS
 SELECT
@@ -744,7 +744,7 @@ CREATE VIEW pg_stat_all_indexes_internal AS
             LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm');
 
--- Gather data from segments on user tables, and use data on master on system tables.
+-- Gather data from segments on user tables, and use data on coordinator on system tables.
 
 CREATE VIEW pg_stat_all_indexes AS
 SELECT
@@ -1628,7 +1628,7 @@ AS
   'SELECT * FROM pg_catalog.gp_tablespace_segment_location($1)
    UNION ALL
    SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
-LANGUAGE SQL EXECUTE ON MASTER;
+LANGUAGE SQL EXECUTE ON COORDINATOR;
 
 CREATE OR REPLACE FUNCTION
   parse_ident(str text, strict boolean DEFAULT true)
@@ -1756,4 +1756,4 @@ $$
   -- brin_summarize_new_values_internal is marked as EXECUTE ON ALL SEGMENTS.
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
-LANGUAGE sql READS SQL DATA EXECUTE ON MASTER;
+LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;

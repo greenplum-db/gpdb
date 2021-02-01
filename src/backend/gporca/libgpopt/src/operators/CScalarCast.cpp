@@ -9,16 +9,14 @@
 //		Implementation of scalar relabel type  operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarCast.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-
-#include "gpopt/operators/CScalarCast.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;

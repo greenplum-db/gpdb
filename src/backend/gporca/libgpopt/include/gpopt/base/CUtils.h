@@ -18,10 +18,10 @@
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/CScalarArrayCmp.h"
-#include "gpopt/operators/CScalarConst.h"
-#include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarAggFunc.h"
+#include "gpopt/operators/CScalarArrayCmp.h"
+#include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarConst.h"
 
 // fwd declarations
 namespace gpmd
@@ -890,12 +890,6 @@ public:
 	static CColRef *PcrMap(CColRef *pcrSource, CColRefArray *pdrgpcrSource,
 						   CColRefArray *pdrgpcrTarget);
 
-	// check if group expression is a motion and there is an unresolved consumer
-	// not specified in the required properties
-	static BOOL FMotionOverUnresolvedPartConsumers(CMemoryPool *mp,
-												   CExpressionHandle &exprhdl,
-												   CPartIndexMap *ppimReqd);
-
 	//	return index of the set containing given column
 	static ULONG UlPcrIndexContainingSet(CColRefSetArray *pdrgpcrs,
 										 const CColRef *colref);
@@ -1277,13 +1271,10 @@ CUtils::FMatchDynamicIndex(T *pop1, COperator *pop2)
 	// indexes.
 	return pop1->UlOriginOpId() == popIndex2->UlOriginOpId() &&
 		   pop1->ScanId() == popIndex2->ScanId() &&
-		   pop1->UlSecondaryScanId() == popIndex2->UlSecondaryScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popIndex2->Ptabdesc()->MDId()) &&
 		   pop1->Pindexdesc()->MDId()->Equals(
 			   popIndex2->Pindexdesc()->MDId()) &&
-		   pop1->PdrgpcrOutput()->Equals(popIndex2->PdrgpcrOutput()) &&
-		   (!pop1->IsPartial() ||
-			(pop1->Ppartcnstr() == popIndex2->Ppartcnstr()));
+		   pop1->PdrgpcrOutput()->Equals(popIndex2->PdrgpcrOutput());
 }
 
 //---------------------------------------------------------------------------
@@ -1311,11 +1302,8 @@ CUtils::FMatchDynamicScan(T *pop1, COperator *pop2)
 	// memory allocation because matching function was used while holding spin locks.
 	// Using a match function would mean improved matches for partial scans.
 	return pop1->ScanId() == popScan2->ScanId() &&
-		   pop1->UlSecondaryScanId() == popScan2->UlSecondaryScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popScan2->Ptabdesc()->MDId()) &&
-		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput()) &&
-		   ((!pop1->IsPartial() && !popScan2->IsPartial()) ||
-			(pop1->Ppartcnstr() == popScan2->Ppartcnstr()));
+		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput());
 }
 
 

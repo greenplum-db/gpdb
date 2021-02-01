@@ -15,8 +15,9 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

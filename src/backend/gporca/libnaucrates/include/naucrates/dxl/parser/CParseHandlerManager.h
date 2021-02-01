@@ -14,12 +14,12 @@
 #ifndef GPDXL_CParseHandlerManager_H
 #define GPDXL_CParseHandlerManager_H
 
+#include <xercesc/sax2/SAX2XMLReader.hpp>
+
 #include "gpos/base.h"
 #include "gpos/common/CStack.h"
 
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
-
-#include <xercesc/sax2/SAX2XMLReader.hpp>
 
 namespace gpdxl
 {

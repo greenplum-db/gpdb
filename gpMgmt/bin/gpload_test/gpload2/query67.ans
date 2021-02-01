@@ -1,0 +1,12 @@
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'Field1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-08 16:05:21|INFO|gpload session started 2021-01-08 16:05:21
+2021-01-08 16:05:21|INFO|setting schema 'public' for table 'testspecialchar'
+2021-01-08 16:05:21|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-01-08 16:05:21|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_12847f47fea3b38d3c1876d13742f6ed
+2021-01-08 16:05:21|INFO|did not find an external table to reuse. creating ext_gpload_reusable_413cafd4_5188_11eb_b24b_00505698707d
+2021-01-08 16:05:21|ERROR|column "Field###2" in gpload:output:match_columns does not exist
+2021-01-08 16:05:21|INFO|rows Inserted          = 0
+2021-01-08 16:05:21|INFO|rows Updated           = 0
+2021-01-08 16:05:21|INFO|data formatting errors = 0
+2021-01-08 16:05:21|INFO|gpload failed

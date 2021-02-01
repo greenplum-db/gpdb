@@ -9,12 +9,12 @@
 //		Implementation of logical MaxOneRow operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalMaxOneRow.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalMaxOneRow.h"
-
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;

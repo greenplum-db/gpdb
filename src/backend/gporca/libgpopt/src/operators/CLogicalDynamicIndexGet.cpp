@@ -9,21 +9,20 @@
 //		Implementation of index access for partitioned tables
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CPartConstraint.h"
-
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
@@ -56,13 +55,9 @@ CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(CMemoryPool *mp)
 CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(
 	CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
 	ULONG ulOriginOpId, const CName *pnameAlias, ULONG part_idx_id,
-	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-	ULONG ulSecondaryPartIndexId, CPartConstraint *ppartcnstr,
-	CPartConstraint *ppartcnstrRel)
-	: CLogicalDynamicGetBase(
-		  mp, pnameAlias, ptabdesc, part_idx_id, pdrgpcrOutput, pdrgpdrgpcrPart,
-		  ulSecondaryPartIndexId, IsPartialIndex(ptabdesc, pmdindex),
-		  ppartcnstr, ppartcnstrRel),
+	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart)
+	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, part_idx_id,
+							 pdrgpcrOutput, pdrgpdrgpcrPart),
 	  m_pindexdesc(NULL),
 	  m_ulOriginOpId(ulOriginOpId)
 {
@@ -166,30 +161,12 @@ CLogicalDynamicIndexGet::PopCopyWithRemappedColumns(
 
 	CColRef2dArray *pdrgpdrgpcrPart = CUtils::PdrgpdrgpcrRemap(
 		mp, m_pdrgpdrgpcrPart, colref_mapping, must_exist);
-	CPartConstraint *ppartcnstr =
-		m_part_constraint->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
-															 must_exist);
-	CPartConstraint *ppartcnstrRel =
-		m_ppartcnstrRel->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
-														   must_exist);
 
 	m_ptabdesc->AddRef();
 
 	return GPOS_NEW(mp) CLogicalDynamicIndexGet(
 		mp, pmdindex, m_ptabdesc, m_ulOriginOpId, pnameAlias, m_scan_id,
-		pdrgpcrOutput, pdrgpdrgpcrPart, m_ulSecondaryScanId, ppartcnstr,
-		ppartcnstrRel);
-}
-
-// Checking if index is partial given the table descriptor and mdid of the index
-BOOL
-CLogicalDynamicIndexGet::IsPartialIndex(CTableDescriptor *ptabdesc,
-										const IMDIndex *pmdindex)
-{
-	// refer to the relation on which this index is defined for index partial information
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
-	return pmdrel->IsPartialIndex(pmdindex->MDId());
+		pdrgpcrOutput, pdrgpdrgpcrPart);
 }
 
 //---------------------------------------------------------------------------
@@ -265,16 +242,10 @@ CLogicalDynamicIndexGet::OsPrint(IOstream &os) const
 	os << ", Table Name: (";
 	m_pnameAlias->OsPrint(os);
 	os << "), ";
-	m_part_constraint->OsPrint(os);
-	os << ", Columns: [";
+	os << "Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
-	os << "] Scan Id: " << m_scan_id << "." << m_ulSecondaryScanId;
+	os << "] Scan Id: " << m_scan_id;
 
-	if (!m_part_constraint->IsConstraintUnbounded())
-	{
-		os << ", ";
-		m_part_constraint->OsPrint(os);
-	}
 
 	return os;
 }

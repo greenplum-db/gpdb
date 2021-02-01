@@ -16,22 +16,18 @@ $query$ AS qry \gset
 SET optimizer_trace_fallback TO on;
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: non-trivial part filter not supported
-                QUERY PLAN                 
--------------------------------------------
+                   QUERY PLAN                    
+-------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: rp2.a, rp2.b, rp2.c
-   ->  Seq Scan on orca_static_pruning.rp2
-         Output: rp2.a, rp2.b, rp2.c
-         Filter: (rp2.b > 4200)
- Optimizer: Postgres query optimizer
- Settings: optimizer=on
+   Output: a, b, c
+   ->  Append
+         ->  Seq Scan on orca_static_pruning.rp2
+               Output: a, b, c
+               Filter: (rp2.b > 4200)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: non-trivial part filter not supported
   a   |  b   | c 
 ------+------+---
  4201 | 4201 | 0
@@ -48,16 +44,12 @@ EXPLAIN (COSTS OFF, VERBOSE)
 --------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: a, b, c
-   ->  Sequence
-         Output: a, b, c
-         ->  Result
-         ->  Dynamic Seq Scan on orca_static_pruning.rp
+   ->  Append
+         ->  Seq Scan on orca_static_pruning.rp2
                Output: a, b, c
-               Number of partitions to scan: 1 
-               Filter: (rp.b = 4201)
+               Filter: (rp2.b = 4201)
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: optimizer=on
-(11 rows)
+(7 rows)
 
 :qry ;
   a   |  b   | c 
@@ -72,22 +64,18 @@ WHERE b IN (4201, 4200)
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: non-trivial part filter not supported
-                        QUERY PLAN                        
-----------------------------------------------------------
+                           QUERY PLAN                           
+----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: rp2.a, rp2.b, rp2.c
-   ->  Seq Scan on orca_static_pruning.rp2
-         Output: rp2.a, rp2.b, rp2.c
-         Filter: (rp2.b = ANY ('{4201,4200}'::integer[]))
- Optimizer: Postgres query optimizer
- Settings: optimizer=on
+   Output: a, b, c
+   ->  Append
+         ->  Seq Scan on orca_static_pruning.rp2
+               Output: a, b, c
+               Filter: (rp2.b = ANY ('{4201,4200}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: non-trivial part filter not supported
   a   |  b   | c 
 ------+------+---
  4201 | 4201 | 0
@@ -110,22 +98,18 @@ WHERE b > 42
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: non-trivial part filter not supported
-                QUERY PLAN                 
--------------------------------------------
+                   QUERY PLAN                    
+-------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: lp2.a, lp2.b
-   ->  Seq Scan on orca_static_pruning.lp2
-         Output: lp2.a, lp2.b
-         Filter: (lp2.b > 42)
- Optimizer: Postgres query optimizer
- Settings: optimizer=on
+   Output: a, b
+   ->  Append
+         ->  Seq Scan on orca_static_pruning.lp2
+               Output: a, b
+               Filter: (lp2.b > 42)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: non-trivial part filter not supported
  a | b 
 ---+---
 (0 rows)
@@ -141,16 +125,12 @@ EXPLAIN (COSTS OFF, VERBOSE)
 --------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: a, b
-   ->  Sequence
-         Output: a, b
-         ->  Result
-         ->  Dynamic Seq Scan on orca_static_pruning.lp
+   ->  Append
+         ->  Seq Scan on orca_static_pruning.lp2
                Output: a, b
-               Number of partitions to scan: 1 
-               Filter: (lp.b = 42)
+               Filter: (lp2.b = 42)
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: optimizer=on
-(11 rows)
+(7 rows)
 
 :qry ;
  a  | b  

@@ -4,7 +4,7 @@ minirepro utility
 
 USAGE
 
-minirepro <db-name> [-h <master-host>] [-U <username>] [-p <port>]
+minirepro <db-name> [-h <coordinator-host>] [-U <username>] [-p <port>]
   -q <SQL-file> -f <repo-data-file>
 
 minirepro -?
@@ -30,8 +30,8 @@ PARAMETERS
 <db-name>
   Name of the Greenplum Database.
 
--h <master-host>
-  Greenplum Database master host. Default is localhost.
+-h <coordinator-host>
+  Greenplum Database coordinator host. Default is localhost.
 
 -U <username>
   Greenplum Database user name to log into the database and run the
@@ -59,26 +59,26 @@ EXAMPLE
 minirepro gptest -h locahost -U gpadmin -p 4444 -q ~/in.sql -f ~/out.sql
 '''
 
+import pwd
 import os, sys, re, json, platform, subprocess
 import pgdb
 from optparse import OptionParser
 from datetime import datetime
+from gppylib.utils import formatInsertValuesList, Escape
 
 version = '1.13'
 PATH_PREFIX = '/tmp/'
 PGDUMP_FILE = 'pg_dump_out.sql'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
+# turn off optimizer to fall back to planner and speed up statistic queries
 # unset search path due to CVE-2018-1058
-pgoptions = '-c gp_role=utility -c search_path='
+pgoptions = '-c optimizer=off -c gp_role=utility -c search_path='
 
 class MRQuery(object):
     def __init__(self):
         self.schemas = []
         self.funcids = []
         self.relids = []
-
-def E(query_str):
-    return pgdb.escape_string(query_str)
 
 def generate_timestamp():
     timestamp = datetime.now()
@@ -126,7 +126,7 @@ def dump_query(connectionInfo, query_file):
 
     with open(query_file, 'r') as query_f:
         sql_text = query_f.read()
-    query = "select pg_catalog.gp_dump_query_oids('%s')" % E(sql_text)
+    query = "select pg_catalog.gp_dump_query_oids('%s')" % Escape(sql_text)
 
     toolkit_sql = PATH_PREFIX + 'toolkit.sql'
     with open(toolkit_sql, 'w') as toolkit_f:
@@ -182,7 +182,7 @@ def pg_dump_object(mr_query, connectionInfo, envOpts):
     out_file = PATH_PREFIX + PGDUMP_FILE
     dmp_cmd = 'pg_dump -h %s -p %s -U %s -sxO %s' % connectionInfo
     dmp_cmd = "%s --relation-oids %s --function-oids %s -f %s" % \
-        (dmp_cmd, mr_query.relids, mr_query.funcids, E(out_file))
+        (dmp_cmd, mr_query.relids, mr_query.funcids, Escape(out_file))
     print(dmp_cmd)
     p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
@@ -207,7 +207,7 @@ def dump_tuple_count(cur, oid_str, f_out):
         for col, val, typ in zip(columns[2:], vals[2:], types):
             # i.e. relpages = 1::int, reltuples = 1.0::real
             lines.append('\t%s = %s::%s' % (col, val, typ))
-        updateStmt = templateStmt.format(E(',\n'.join(lines)), E(vals[0]), E(vals[1]))
+        updateStmt = templateStmt.format(Escape(',\n'.join(lines)), Escape(vals[0]), Escape(vals[1]))
         f_out.writelines(updateStmt)
 
 def dump_stats(cur, oid_str, f_out, inclHLL):
@@ -227,60 +227,13 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
         '{2}DELETE FROM pg_statistic WHERE starelid={3} AND staattnum={4};\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
         '{5});\n\n'
-    types = ['smallint',  # staattnum
-             'boolean',
-             'real',
-             'integer',
-             'real',
-             'smallint',
-             'smallint',
-             'smallint',
-             'smallint',
-             'smallint',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'real[]',
-             'real[]',
-             'real[]',
-             'real[]',
-             'real[]'
-             ]
 
     cur.execute(query)
 
     for vals in result_iter(cur):
-        starelid = "'%s.%s'::regclass" % (E(vals[1]), E(vals[0]))
-        rowVals = ["\t%s" % (starelid)]
         schemaname = vals[1]
-        i = 0
-        hll = False
-
-        if vals[3][0] == '_':
-            rowTypes = types + [vals[3]] * 5
-        else:
-            rowTypes = types + [vals[3] + '[]'] * 5
-        for val, typ in zip(vals[5:], rowTypes):
-            i = i + 1
-            str_val = "'%s'" % val
-            if i == 10 and (val == 98 or val == 99):
-                if inclHLL == False:
-                    val = 0
-                hll = True
-
-            if val is None:
-                val = 'NULL'
-            elif isinstance(val, str) and val[0] == '{':
-                val = "E'%s'" % E(val)
-            if i == 25 and hll == True:
-                if inclHLL == True:
-                    rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
-                else:
-                    rowVals.append('\t{0}'.format('NULL::int4[]'))
-            else:
-                rowVals.append('\t{0}::{1}'.format(val, typ))
+        starelid = "'%s.%s'::regclass" % (Escape(vals[1]), Escape(vals[0]))
+        rowVals = formatInsertValuesList(vals, starelid, inclHLL)
 
         # For non-catalog tables we don't need to delete stats first
         # stats need to be deleted only for catalog tables
@@ -288,7 +241,7 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
         if schemaname != 'pg_catalog':
             linecomment = '-- ' # This will comment out the DELETE query
 
-        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), linecomment, starelid, vals[5], ',\n'.join(rowVals)))
+        f_out.writelines(pstring.format(Escape(vals[0]), Escape(vals[2]), linecomment, starelid, vals[5], ',\n'.join(rowVals)))
 
 def main():
     parser = parse_cmd_line()
@@ -301,7 +254,7 @@ def main():
     envOpts = os.environ
     db = args[0]
     host = options.host or platform.node()
-    user = options.user or ('PGUSER' in envOpts and envOpts['PGUSER']) or os.getlogin()
+    user = options.user or ('PGUSER' in envOpts and envOpts['PGUSER']) or pwd.getpwuid(os.geteuid())[0]
     port = options.port or ('PGPORT' in envOpts and envOpts['PGPORT']) or '5432'
     query_file = options.query_file
     output_file = options.output_file
@@ -382,7 +335,7 @@ def main():
 
     # first create schema DDLs
     print("Writing schema DDLs ...")
-    table_schemas = ["CREATE SCHEMA %s;\n" % E(schema) for schema in mr_query.schemas if schema != 'public']
+    table_schemas = ["CREATE SCHEMA %s;\n" % Escape(schema) for schema in mr_query.schemas if schema != 'public']
     f_out.writelines(table_schemas)
 
     # write relation and function DDLs

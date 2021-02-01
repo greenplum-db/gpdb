@@ -15,6 +15,7 @@
 /appendonly.out
 /auth_constraint.out
 /autovacuum-template0.out
+/autovacuum-template0-segment.out
 /bb_memory_quota.out
 /bb_mpph.out
 /collect_tabstat.out
@@ -35,6 +36,7 @@
 /hooktest.out
 /oid_wraparound.out
 /partition_ddl.out
+/pgstat_qd_tabstat.out
 /qp_gist_indexes2_optimizer.out
 /qp_gist_indexes2.out
 /qp_regexp.out

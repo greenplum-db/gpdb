@@ -2,6 +2,7 @@
 -- in the same tablespace, the data of that table should not be deleted
 
 -- create a tablespace directory
+!\retcode rm -rf /tmp/concurrent_tblspace;
 !\retcode mkdir -p /tmp/concurrent_tblspace;
 
 CREATE TABLESPACE concurrent_tblspace LOCATION '/tmp/concurrent_tblspace';

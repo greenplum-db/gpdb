@@ -14,6 +14,7 @@
 #define GPDXL_CParseHandlerPhysicalTVF_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl

@@ -43,35 +43,20 @@ private:
 	// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
 	ULONG m_ulOriginOpId;
 
-	// true iff it is a partial scan
-	BOOL m_is_partial;
-
 	// id of the dynamic scan
 	ULONG m_scan_id;
 
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcrPart;
 
-	// secondary scan id in case of partial scan
-	ULONG m_ulSecondaryScanId;
-
-	// dynamic index part constraint
-	CPartConstraint *m_part_constraint;
-
-	// relation part constraint
-	CPartConstraint *m_ppartcnstrRel;
-
 public:
 	CPhysicalDynamicScan(const CPhysicalDynamicScan &) = delete;
 
 	// ctor
-	CPhysicalDynamicScan(CMemoryPool *mp, BOOL is_partial,
-						 CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
-						 const CName *pnameAlias, ULONG scan_id,
-						 CColRefArray *pdrgpcrOutput,
-						 CColRef2dArray *pdrgpdrgpcrParts,
-						 ULONG ulSecondaryScanId, CPartConstraint *ppartcnstr,
-						 CPartConstraint *ppartcnstrRel);
+	CPhysicalDynamicScan(CMemoryPool *mp, CTableDescriptor *ptabdesc,
+						 ULONG ulOriginOpId, const CName *pnameAlias,
+						 ULONG scan_id, CColRefArray *pdrgpcrOutput,
+						 CColRef2dArray *pdrgpdrgpcrParts);
 
 	// dtor
 	~CPhysicalDynamicScan() override;
@@ -81,13 +66,6 @@ public:
 	UlOriginOpId() const
 	{
 		return m_ulOriginOpId;
-	}
-
-	// true iff the scan is partial
-	BOOL
-	IsPartial() const
-	{
-		return m_is_partial;
 	}
 
 	// return scan id
@@ -104,27 +82,6 @@ public:
 		return m_pdrgpdrgpcrPart;
 	}
 
-	// secondary scan id
-	ULONG
-	UlSecondaryScanId() const
-	{
-		return m_ulSecondaryScanId;
-	}
-
-	// dynamic index part constraint
-	CPartConstraint *
-	Ppartcnstr() const
-	{
-		return m_part_constraint;
-	}
-
-	// relation part constraint
-	CPartConstraint *
-	PpartcnstrRel() const
-	{
-		return m_ppartcnstrRel;
-	}
-
 	// sensitivity to order of inputs
 	BOOL
 	FInputOrderSensitive() const override
@@ -134,10 +91,6 @@ public:
 
 	// operator specific hash function
 	ULONG HashValue() const override;
-
-	// derive partition index map
-	CPartIndexMap *PpimDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
-							  CDrvdPropCtxt *pdpctxt) const override;
 
 	// return true if operator is dynamic scan
 	BOOL

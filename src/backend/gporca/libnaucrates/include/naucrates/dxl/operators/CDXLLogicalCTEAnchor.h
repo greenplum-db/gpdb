@@ -12,6 +12,7 @@
 #define GPDXL_CDXLLogicalCTEAnchor_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
 
 namespace gpdxl

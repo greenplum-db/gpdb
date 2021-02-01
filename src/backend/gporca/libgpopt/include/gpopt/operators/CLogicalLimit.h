@@ -13,10 +13,9 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDId.h"
-
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/operators/CLogical.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {

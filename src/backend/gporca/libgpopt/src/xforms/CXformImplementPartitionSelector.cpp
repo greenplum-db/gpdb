@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementPartitionSelector.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalPartitionSelector.h"
 #include "gpopt/operators/CPatternLeaf.h"

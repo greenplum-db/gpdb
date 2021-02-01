@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalDynamicTableScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalDynamicScan.h"
 
 namespace gpopt
@@ -27,18 +28,23 @@ namespace gpopt
 class CPhysicalDynamicTableScan : public CPhysicalDynamicScan
 {
 private:
+	// GPDB_12_MERGE_FIXME: Move this to the base class once supported by siblings
+	IMdIdArray *m_partition_mdids;
+
+	// Map of Root colref -> col index in child tabledesc
+	// per child partition in m_partition_mdid
+	ColRefToUlongMapArray *m_root_col_mapping_per_part = NULL;
+
 public:
 	CPhysicalDynamicTableScan(const CPhysicalDynamicTableScan &) = delete;
 
 	// ctors
-	CPhysicalDynamicTableScan(CMemoryPool *mp, BOOL is_partial,
-							  const CName *pname, CTableDescriptor *ptabdesc,
-							  ULONG ulOriginOpId, ULONG scan_id,
-							  CColRefArray *colref_array,
+	CPhysicalDynamicTableScan(CMemoryPool *mp, const CName *pnameAlias,
+							  CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
+							  ULONG scan_id, CColRefArray *pdrgpcrOutput,
 							  CColRef2dArray *pdrgpdrgpcrParts,
-							  ULONG ulSecondaryScanId,
-							  CPartConstraint *ppartcnstr,
-							  CPartConstraint *ppartcnstrRel);
+							  IMdIdArray *partition_mdids,
+							  ColRefToUlongMapArray *root_col_mapping_per_part);
 
 	// ident accessors
 	EOperatorId
@@ -62,6 +68,18 @@ public:
 							  CReqdPropPlan *prpplan,
 							  IStatisticsArray *stats_ctxt) const override;
 
+	IMdIdArray *
+	GetPartitionMdids() const
+	{
+		return m_partition_mdids;
+	}
+
+	ColRefToUlongMapArray *
+	GetRootColMappingPerPart() const
+	{
+		return m_root_col_mapping_per_part;
+	}
+
 	// conversion function
 	static CPhysicalDynamicTableScan *
 	PopConvert(COperator *pop)
@@ -70,6 +88,12 @@ public:
 		GPOS_ASSERT(EopPhysicalDynamicTableScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicTableScan *>(pop);
+	}
+
+	~CPhysicalDynamicTableScan() override
+	{
+		CRefCount::SafeRelease(m_partition_mdids);
+		CRefCount::SafeRelease(m_root_col_mapping_per_part);
 	}
 
 };	// class CPhysicalDynamicTableScan

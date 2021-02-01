@@ -808,6 +808,9 @@
 /* Define to select Win32-style semaphores. */
 #define USE_WIN32_SEMAPHORES 1
 
+/* Define to build with zstd support. (--with-zstd) */
+#undef USE_ZSTD
+
 /* Define to 1 if `wcstombs_l' requires <xlocale.h>. */
 /* #undef WCSTOMBS_L_IN_XLOCALE */
 

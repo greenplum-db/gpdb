@@ -9,14 +9,15 @@
 //		Implementation of setops
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalSetOp.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintNegation.h"
-#include "gpopt/operators/CLogicalSetOp.h"
+#include "gpopt/base/CKeyCollection.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
 using namespace gpopt;

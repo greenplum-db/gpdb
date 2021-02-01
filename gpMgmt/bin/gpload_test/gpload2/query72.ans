@@ -1,0 +1,9 @@
+2021-01-08 16:28:22|INFO|gpload session started 2021-01-08 16:28:22
+2021-01-08 16:28:23|INFO|setting schema 'public' for table 'chinese表'
+2021-01-08 16:28:23|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-01-08 16:28:23|INFO|reusing external table ext_gpload_reusable_77b87a04_518b_11eb_afbf_00505698707d
+2021-01-08 16:28:23|INFO|running time: 0.07 seconds
+2021-01-08 16:28:23|INFO|rows Inserted          = 8
+2021-01-08 16:28:23|INFO|rows Updated           = 0
+2021-01-08 16:28:23|INFO|data formatting errors = 0
+2021-01-08 16:28:23|INFO|gpload succeeded

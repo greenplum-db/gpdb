@@ -12,6 +12,7 @@
 #define GPOPT_CPartInfo_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CPartKeys.h"
 
@@ -60,16 +61,12 @@ private:
 		// partition keys
 		CPartKeysArray *m_pdrgppartkeys;
 
-		// part constraint of the relation
-		CPartConstraint *m_ppartcnstrRel;
-
 	public:
 		CPartInfoEntry(const CPartInfoEntry &) = delete;
 
 		// ctor
 		CPartInfoEntry(ULONG scan_id, IMDId *mdid,
-					   CPartKeysArray *pdrgppartkeys,
-					   CPartConstraint *ppartcnstrRel);
+					   CPartKeysArray *pdrgppartkeys);
 
 		// dtor
 		~CPartInfoEntry() override;
@@ -79,13 +76,6 @@ private:
 		ScanId() const
 		{
 			return m_scan_id;
-		}
-
-		// relation part constraint
-		CPartConstraint *
-		PpartcnstrRel() const
-		{
-			return m_ppartcnstrRel;
 		}
 
 		// create a copy of the current object, and add a set of remapped
@@ -109,7 +99,7 @@ private:
 		}
 
 		// print function
-		IOstream &OsPrint(IOstream &os) const override;
+		IOstream &OsPrint(IOstream &os) const;
 
 		// copy part info entry into given memory pool
 		CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp);
@@ -143,8 +133,7 @@ public:
 
 	// add part table consumer
 	void AddPartConsumer(CMemoryPool *mp, ULONG scan_id, IMDId *mdid,
-						 CColRef2dArray *pdrgpdrgpcrPart,
-						 CPartConstraint *ppartcnstrRel);
+						 CColRef2dArray *pdrgpdrgpcrPart);
 
 	// scan id of the entry at the given position
 	ULONG ScanId(ULONG ulPos) const;
@@ -154,9 +143,6 @@ public:
 
 	// part keys of the entry at the given position
 	CPartKeysArray *Pdrgppartkeys(ULONG ulPos) const;
-
-	// part constraint of the entry at the given position
-	CPartConstraint *Ppartcnstr(ULONG ulPos) const;
 
 	// check if part info contains given scan id
 	BOOL FContainsScanId(ULONG scan_id) const;
@@ -170,7 +156,7 @@ public:
 										 CColRefArray *pdrgpcrDest) const;
 
 	// print
-	IOstream &OsPrint(IOstream &) const override;
+	IOstream &OsPrint(IOstream &) const;
 
 	// combine two part info objects
 	static CPartInfo *PpartinfoCombine(CMemoryPool *mp, CPartInfo *ppartinfoFst,

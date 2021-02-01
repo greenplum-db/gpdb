@@ -87,6 +87,7 @@ select * from gp_aovisimap_count('uao_table_gp_aovisimap_after_update');
 -- Verify the tupcount changes in pg_aoseg when deleting from uao table
 create table uao_table_tupcount_changes_after_delete(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_tupcount_changes_after_delete select i,'aa'||i,i+10 from generate_series(1,10) as i;
+analyze uao_table_tupcount_changes_after_delete;
 select sum(tupcount) from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_delete');
 select count(*) from uao_table_tupcount_changes_after_delete;
 delete from uao_table_tupcount_changes_after_delete where i = 1;
@@ -99,6 +100,7 @@ select count(*) from uao_table_tupcount_changes_after_delete;
 -- Verify the tupcount changes in pg_aoseg when updating uao table
 create table uao_table_tupcount_changes_after_update(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_tupcount_changes_after_update select i,'aa'||i,i+10 from generate_series(1,10) as i;
+analyze uao_table_tupcount_changes_after_update;
 select sum(tupcount) from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_update');
 select count(*) from uao_table_tupcount_changes_after_update;
 update uao_table_tupcount_changes_after_update set j=j||'test11' where i = 1;

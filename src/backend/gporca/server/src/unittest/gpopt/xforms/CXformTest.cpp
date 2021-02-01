@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for CXForm
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CXformTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
@@ -18,10 +20,9 @@
 #include "gpopt/xforms/xforms.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CXformTest.h"
-#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 #include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
+#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
 
 
 //---------------------------------------------------------------------------

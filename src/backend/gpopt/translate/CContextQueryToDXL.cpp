@@ -18,7 +18,6 @@ extern "C" {
 
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
 #include "naucrates/dxl/CIdGenerator.h"
 
 using namespace gpdxl;

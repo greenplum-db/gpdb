@@ -15,20 +15,15 @@
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CStack.h"
 
+#include "gpopt/base/CColRef.h"
+#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/base/CColRefSet.h"
 
 namespace gpopt
 {
 // fwd declarations
 class CLogicalCTEConsumer;
-
-// hash map: CColRef -> ULONG
-typedef CHashMap<CColRef, ULONG, gpos::HashValue<CColRef>,
-				 gpos::Equals<CColRef>, CleanupNULL<CColRef>,
-				 CleanupDelete<ULONG> >
-	ColRefToUlongMap;
 
 //---------------------------------------------------------------------------
 //	@class:

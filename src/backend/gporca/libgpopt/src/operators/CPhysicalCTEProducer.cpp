@@ -9,15 +9,15 @@
 //		Implementation of CTE producer operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalCTEProducer.h"
+
 #include "gpos/base.h"
 
+#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalCTEProducer.h"
 #include "gpopt/operators/CPhysicalSpool.h"
-
-#include "gpopt/base/CCTEMap.h"
 
 using namespace gpopt;
 
@@ -140,27 +140,6 @@ CPhysicalCTEProducer::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == child_index);
 
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalCTEProducer::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalCTEProducer::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								   CPartitionPropagationSpec *pppsRequired,
-								   ULONG child_index,
-								   CDrvdPropArray *,  //pdrgpdpCtxt,
-								   ULONG			  //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-
-	return PppsRequiredPushThru(mp, exprhdl, pppsRequired, child_index);
 }
 
 //---------------------------------------------------------------------------

@@ -161,6 +161,8 @@ public:
 	{
 		return NULL != mdid && mdid->IsValid();
 	}
+
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 };
 
 // common structures over metadata id elements

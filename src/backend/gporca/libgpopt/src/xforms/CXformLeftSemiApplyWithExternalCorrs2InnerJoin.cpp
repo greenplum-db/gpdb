@@ -11,8 +11,10 @@
 //		that use columns not defined by the outer child of LSA
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformLeftSemiApplyWithExternalCorrs2InnerJoin.h"
+
+#include "gpos/base.h"
+
 #include "gpopt/operators/CScalarProjectList.h"
 
 using namespace gpopt;
@@ -144,7 +146,7 @@ CXformLeftSemiApplyWithExternalCorrs2InnerJoin::FDecorrelate(
 	// add all original scalar conjuncts to correlations
 	CExpressionArray *pdrgpexprOriginal =
 		CPredicateUtils::PdrgpexprConjuncts(mp, pexprScalar);
-	CUtils::AddRefAppend<CExpression>(pdrgpexpr, pdrgpexprOriginal);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprOriginal);
 	pdrgpexprOriginal->Release();
 
 	*ppdrgpexprCorr = pdrgpexpr;

@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 
-#include "naucrates/md/CMDName.h"
 #include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDName.h"
 
 namespace gpdxl
 {

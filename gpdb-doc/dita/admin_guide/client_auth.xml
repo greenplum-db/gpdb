@@ -178,7 +178,7 @@
         <section id="ip144328">
           <title>Editing pg_hba.conf</title>
           <ol id="ol_xz4_x15_jp">
-            <li id="ip142837">Open the file <filepath>$MASTER_DATA_DIRECTORY/pg_hba.conf</filepath>
+            <li id="ip142837">Open the file <filepath>$COORDINATOR_DATA_DIRECTORY/pg_hba.conf</filepath>
               in a text editor.</li>
             <li id="ip141930">Add a line to the file for each type of connection you want to allow.
               Records are read sequentially, so the order of the records is significant. Typically,
@@ -232,7 +232,7 @@ host    all   all   192.168.0.0/32  ldap ldapserver=usldap1 ldapport=138
       <p>For example:</p>
       <ul id="ul_jlg_3b5_jp">
         <li>
-          <p>In <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph> (including standby
+          <p>In <codeph>$COORDINATOR_DATA_DIRECTORY/postgresql.conf</codeph> (including standby
             master):</p>
           <p>
             <codeblock>max_connections=100
@@ -324,14 +324,14 @@ max_prepared_transactions=100
             mode, the Greenplum Database master looks for <filepath>server.key</filepath> and
               <filepath>server.crt</filepath>. As the default, Greenplum Database does not start if
             the files are not in the master data directory
-            (<codeph>$MASTER_DATA_DIRECTORY</codeph>). Also, if you use other SSL authentication
+            (<codeph>$COORDINATOR_DATA_DIRECTORY</codeph>). Also, if you use other SSL authentication
             files such as <codeph>root.crt</codeph> (trusted certificate authorities), the files
             must be on the master host.<p>If Greenplum Database master mirroring is enabled with SSL
               client authentication, SSL authentication files must be on both the master host and
               standby master host and <i>should not be placed</i> in the default directory
-                <codeph>$MASTER_DATA_DIRECTORY</codeph>. When master mirroring is enabled, an
+                <codeph>$COORDINATOR_DATA_DIRECTORY</codeph>. When master mirroring is enabled, an
                 <codeph>initstandby</codeph> operation copies the contents of the
-                <codeph>$MASTER_DATA_DIRECTORY</codeph> from the master to the standby master and
+                <codeph>$COORDINATOR_DATA_DIRECTORY</codeph> from the master to the standby master and
               the incorrect SSL key, and cert files (the master files, and not the standby master
               files) will prevent standby master start up. </p><p>You can specify a different
               directory for the location of the SSL server files with the

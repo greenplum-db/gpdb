@@ -441,8 +441,8 @@ prepare_new_cluster(void)
 	{
 		prep_status("Analyzing all rows in the new cluster");
 		exec_prog(UTILITY_LOG_FILE, NULL, true, true,
-				  PG_OPTIONS_UTILITY_MODE
-				  "\"%s/vacuumdb\" %s --all --analyze %s",
+				  "%s \"%s/vacuumdb\" %s --all --analyze %s",
+				  PG_OPTIONS_UTILITY_MODE_VERSION(new_cluster.major_version),
 				  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 				  log_opts.verbose ? "--verbose" : "");
 		check_ok();
@@ -457,8 +457,8 @@ prepare_new_cluster(void)
 	 */
 	prep_status("Freezing all rows in the new cluster");
 	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
-			  PG_OPTIONS_UTILITY_MODE
-			  "\"%s/vacuumdb\" %s --all --freeze %s",
+			  "%s \"%s/vacuumdb\" %s --all --freeze %s",
+			  PG_OPTIONS_UTILITY_MODE_VERSION(new_cluster.major_version),
 			  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 			  log_opts.verbose ? "--verbose" : "");
 	check_ok();
@@ -479,8 +479,8 @@ prepare_new_globals(void)
 	prep_status("Restoring global objects in the new cluster");
 
 	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
-			  PG_OPTIONS_UTILITY_MODE
-			  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
+			  "%s \"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
+			  PG_OPTIONS_UTILITY_MODE_VERSION(new_cluster.major_version),
 			  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 			  GLOBALS_DUMP_FILE);
 	check_ok();
@@ -564,10 +564,10 @@ create_new_objects(void)
 
 		parallel_exec_prog(log_file_name,
 						   NULL,
-		 				   PG_OPTIONS_UTILITY_MODE
-						   "\"%s/pg_restore\" %s %s --exit-on-error --verbose "
+						   "%s \"%s/pg_restore\" %s %s --exit-on-error --verbose "
 						   "--binary-upgrade "
 						   "--dbname template1 \"%s\"",
+						   PG_OPTIONS_UTILITY_MODE_VERSION(new_cluster.major_version),
 						   new_cluster.bindir,
 						   cluster_conn_opts(&new_cluster),
 						   create_opts,
@@ -643,6 +643,18 @@ copy_subdir_files(const char *old_subdir, const char *new_subdir)
 static void
 copy_xact_xlog_xid(void)
 {
+	/*
+	 * FIXME: Definitely need more work to make pre-gp7 to gp7 upgrade
+	 * work for the 64bit gxid work.
+	 */
+	/* set the next distributed transaction id of the new cluster */
+	prep_status("Setting next distributed transaction ID for new cluster");
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+			  "\"%s/pg_resetwal\" --binary-upgrade -f --next-gxid "UINT64_FORMAT" \"%s\"",
+			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtgxid,
+			  new_cluster.pgdata);
+	check_ok();
+
 	/*
 	 * Copy old commit logs to new data dir. pg_clog has been renamed to
 	 * pg_xact in post-10 clusters.

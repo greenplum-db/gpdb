@@ -9,10 +9,12 @@
 //		Implementation of the class for creating XML documents.
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/xml/dxltokens.h"
+
+#include "gpos/string/CWStringDynamic.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpdxl;
 

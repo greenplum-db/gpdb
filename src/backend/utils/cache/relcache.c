@@ -1261,8 +1261,15 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 		relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE ||
 		relation->rd_rel->relkind == RELKIND_MATVIEW)
 	{
+		/*
+		 * There are many memory allocations in GpPolicyFetch(), especially 
+		 * when targetRelId is a foreign table. These allocations are not bound to RelationData, 
+		 * so they cannot be freed during RelationDestroyRelation(),
+		 * that is, these allocations will never be freed.
+		 */
+		GpPolicy *policy = GpPolicyFetch(targetRelId);
 		MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
-		relation->rd_cdbpolicy = GpPolicyFetch(targetRelId);
+		relation->rd_cdbpolicy = GpPolicyCopy(policy);
 		MemoryContextSwitchTo(oldcontext);
 	}
 

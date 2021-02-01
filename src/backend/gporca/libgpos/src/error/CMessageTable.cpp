@@ -9,10 +9,11 @@
 //		Implements message tables
 //---------------------------------------------------------------------------
 
-#include "gpos/utils.h"
-#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/error/CMessageTable.h"
+
+#include "gpos/common/CSyncHashtableAccessByKey.h"
 #include "gpos/common/clibwrapper.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 

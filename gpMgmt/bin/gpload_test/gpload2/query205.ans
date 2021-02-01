@@ -1,0 +1,9 @@
+2020-12-17 11:42:02|INFO|gpload session started 2020-12-17 11:42:02
+2020-12-17 11:42:02|INFO|setting schema 'public' for table 'texttable2'
+2020-12-17 11:42:02|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-17 11:42:02|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d311e440_4019_11eb_aedb_00505698d059
+2020-12-17 11:42:02|ERROR|unexpected error -- backtrace written to log file
+2020-12-17 11:42:02|INFO|rows Inserted          = 0
+2020-12-17 11:42:02|INFO|rows Updated           = 0
+2020-12-17 11:42:02|INFO|data formatting errors = 0
+2020-12-17 11:42:02|INFO|gpload failed

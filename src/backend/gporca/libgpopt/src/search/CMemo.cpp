@@ -9,28 +9,26 @@
 //		Implementation of Memo structure
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CMemo.h"
+
 #include "gpos/base.h"
-#include "gpos/error/CAutoTrace.h"
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CSyncHashtableAccessByIter.h"
 #include "gpos/common/CSyncHashtableAccessByKey.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/exception.h"
-
 #include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
-#include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/base/COptimizationContext.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/search/CGroupProxy.h"
-#include "gpopt/search/CMemo.h"
+#include "gpopt/base/COptimizationContext.h"
+#include "gpopt/base/CReqdPropPlan.h"
+#include "gpopt/engine/CEngine.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
-
-#include "gpopt/engine/CEngine.h"
+#include "gpopt/search/CGroupProxy.h"
 
 using namespace gpopt;
 
@@ -612,6 +610,8 @@ CMemo::Trace()
 }
 
 
+FORCE_GENERATE_DBGSTR(gpopt::CMemo);
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMemo::OsPrint
@@ -808,14 +808,3 @@ CMemo::UlGrpExprs()
 
 	return ulGExprs;
 }
-
-#ifdef GPOS_DEBUG
-void
-CMemo::DbgPrint()
-{
-	CAutoTrace at(m_mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif	// GPOS_DEBUG
-
-// EOF

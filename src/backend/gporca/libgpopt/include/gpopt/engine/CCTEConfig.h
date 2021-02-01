@@ -12,9 +12,9 @@
 #define GPOPT_CCTEConfig_H
 
 #include "gpos/base.h"
-#include "gpos/memory/CMemoryPool.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDouble.h"
+#include "gpos/common/CRefCount.h"
+#include "gpos/memory/CMemoryPool.h"
 
 namespace gpopt
 {
