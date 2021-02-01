@@ -278,18 +278,13 @@ vacuum(List *relations, VacuumParams *params,
 	volatile bool in_outer_xact,
 				use_own_xacts;
 
-	/* GPDB_12_MERGE_FIXME: what to do about this? Do we still need ROOTPARTITION option
-	 * at all?
-	 */
-#if 0
-	if ((options & VACOPT_VACUUM) &&
-		(options & VACOPT_ROOTONLY))
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("ROOTPARTITION option cannot be used together with VACUUM, try ANALYZE ROOTPARTITION")));
-#endif
-
 	Assert(params != NULL);
+
+	/*
+	 * VACUUM does not support ROOTPARTITION option. Normally it's not possible
+	 * that VACOPT_VACUUM and VACOPT_ROOTONLY set at same time.
+	 */
+	Assert(!((params->options & VACOPT_VACUUM) && (params->options & VACOPT_ROOTONLY)));
 
 	stmttype = (params->options & VACOPT_VACUUM) ? "VACUUM" : "ANALYZE";
 
@@ -839,8 +834,6 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * root level with optimizer_analyze_midlevel_partition GUC set to ON.
 		 * Planner uses the stats on leaf partitions, so it's unnecessary to collect stats on
 		 * midlevel partitions.
-		 *
-		 * GPDB_12_MERGE_FIXME: Does this still make sense?
 		 */
 		else if (classForm->relkind == RELKIND_PARTITIONED_TABLE &&
 				 classForm->relispartition &&
@@ -857,13 +850,12 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		else
 		{
 			/*
-			 * If optimizer_analyze_root_partition is 'off' and ROOTPARTITION
-			 * option was not explicitly specified, analyze all the children,
-			 * but skip the partitioned table itself.
+			 * If current table is root partition table, optimizer_analyze_root_partition
+			 * is set to 'off' and ROOTPARTITION option was not explicitly specified,
+			 * analyze all the children, but skip the partitioned table itself.
 			 *
 			 * Analyzing the children will update the root table's statistics
-			 * too, by merging the stats of the children. (GPDB_12_MERGE_FIXME:
-			 * I think that's the idea here?)
+			 * too, by merging the stats of the children.
 			 */
 			if (classForm->relkind == RELKIND_PARTITIONED_TABLE &&
 				!optimizer_analyze_root_partition)
@@ -964,8 +956,14 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * GPDB: If you explicitly ANALYZE a partition, also update the
 		 * parent's stats after the partition has been ANALYZEd. (Thanks to
 		 * the code to merge leaf statistics, it should be fast.)
+		 *
+		 * If ROOTPARTITION is specified, that means we only analyze on root
+		 * partition table. The root table's ispartition is false. And the root
+		 * table doesn't have parent to merge stats.
+		 * If current table is skipped, no need to merge stats for it's parent
+		 * since current table's stats is not get updated.
 		 */
-		if (optimizer_analyze_root_partition || (options & VACOPT_ROOTONLY))
+		if (optimizer_analyze_root_partition && !skip_this)
 		{
 			Oid			child_relid = relid;
 
@@ -1666,15 +1664,6 @@ vac_update_datfrozenxid(void)
 			classForm->relkind != RELKIND_AOVISIMAP &&
 			classForm->relkind != RELKIND_AOBLOCKDIR)
 		{
-			/* GPDB_12_MERGE_FIXME: this was crashing in regression test.
-			 * Add a runtime check to avoid the crash, until we've fixed the list of
-			 * relkinds above. */
-			if (TransactionIdIsValid(classForm->relfrozenxid))
-				elog(ERROR, "relation \"%s\" of kind \"%c\" has non-zero relfrozenxid",
-					 NameStr(classForm->relname), classForm->relkind);
-			if (MultiXactIdIsValid(classForm->relminmxid))
-				elog(ERROR, "relation \"%s\" of kind \"%c\" has non-zero relminmxid",
-					 NameStr(classForm->relname), classForm->relkind);
 			Assert(!TransactionIdIsValid(classForm->relfrozenxid));
 			Assert(!MultiXactIdIsValid(classForm->relminmxid));
 			continue;
@@ -2027,7 +2016,6 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		 * which is probably Not Good.
 		 */
 		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-		/* GPDB_12_MERGE_FIXME: is the comment bellow still valid? */
 #if 0 /* Upstream code not applicable to GPDB */
 		MyPgXact->vacuumFlags |= PROC_IN_VACUUM;
 #endif
