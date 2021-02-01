@@ -17,6 +17,7 @@ inputs:
 - name: bin_gpdb_clients_photon3
 - name: bin_gpdb_clients_ubuntu18.04
 - name: bin_gpdb_clients_windows
+- name: bin_gpdb_clients_sles12
 
 outputs:
 - name: release_candidates
@@ -39,6 +40,7 @@ run:
     cp -v bin_gpdb_clients_centos8/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-rhel8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
     cp -v bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
     cp -v bin_gpdb_clients_ubuntu18.04/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-ubuntu18.04_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    cp -v bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-sles12_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
     pushd bin_gpdb_clients_windows
         tar xzvf *.tar.gz
     popd

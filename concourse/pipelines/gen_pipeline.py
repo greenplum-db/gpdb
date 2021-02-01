@@ -75,9 +75,6 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'test_gpdb_clients_windows',
         'walrep_2',
         'Publish Server Builds',
-        'compile_gpdb_sles12',
-        'icw_gporca_sles12',
-        'icw_planner_sles12',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 

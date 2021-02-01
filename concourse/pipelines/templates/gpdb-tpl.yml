@@ -208,6 +208,7 @@ groups:
 {% endif %}
 {% if "sles12" in os_types %}
   - compile_gpdb_sles12
+  - test_gpdb_clients_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -242,10 +243,6 @@ groups:
   - icw_planner_ubuntu18.04
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - icw_gporca_sles12
-  - icw_planner_sles12
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -335,6 +332,7 @@ groups:
 {% endif %}
 {% if "sles12" in os_types %}
   - compile_gpdb_sles12
+  - test_gpdb_clients_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -375,11 +373,6 @@ groups:
   - icw_planner_ubuntu18.04
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - icw_gporca_sles12
-  - icw_planner_sles12
-  - compile_gpdb_sles12
 {% endif %}
   - gate_icw_end
 
@@ -806,6 +799,7 @@ resources:
 
 {% endif %}
 
+{% if "sles12" in os_types %}
 - name: gpdb6-sles12-build
   type: docker-image
   source:
@@ -813,16 +807,6 @@ resources:
     tag: latest
     username: ((docker_username))
     password: ((docker_password))
-
-{% if "sles12" in os_types %}
-- name: gpdb6-sles12-test
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb6-sles12-test
-    tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
-
 {% endif %}
 
 {% if "centos6" in os_types %}
@@ -929,6 +913,13 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/gpdb6/clients-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
+
+- name: bin_gpdb_clients_sles12_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: clients/published/gpdb6/clients-rc-(.*)-sles12_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_clients_ubuntu18.04_rc
   type: gcs
@@ -1469,6 +1460,8 @@ jobs:
         - get: reduced-frequency-trigger
           trigger: ((reduced-frequency-trigger-flag))
         - get: gpdb_src
+          passed:
+            - check_format
           trigger: ((gpdb_src-trigger-flag))
         - get: gpdb6-sles12-build
         - get: libquicklz-installer
@@ -1496,6 +1489,25 @@ jobs:
         - put: bin_gpdb_clients_sles12
           params:
             file: gpdb_artifacts/gpdb-clients-sles12.tar.gz
+
+- name: test_gpdb_clients_sles12
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            trigger: true
+            passed: [compile_gpdb_sles12]
+          - get: bin_gpdb
+            resource: bin_gpdb_sles12
+            passed: [compile_gpdb_sles12]
+          - get: bin_gpdb_clients
+            resource: bin_gpdb_clients_sles12
+            passed: [compile_gpdb_sles12]
+          - get: gpdb6-sles12-build
+    - task: run_tests
+      image: gpdb6-sles12-build
+      file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
+
 {% endif %}
 {% if "win" in os_types %}
 - name: compile_gpdb_clients_windows
@@ -1980,46 +1992,6 @@ jobs:
       <<: *ccp_destroy
   ensure:
     <<: *set_failed
-{% endif %}
-{% if "sles12" in os_types %}
-- name: icw_gporca_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: gpdb_src
-          passed: [compile_gpdb_sles12]
-        - get: bin_gpdb
-          resource: bin_gpdb_sles12
-          passed: [compile_gpdb_sles12]
-          trigger: [[ test_trigger ]]
-        - get: gpdb6-sles12-test
-    - task: ic_gpdb
-      file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb6-sles12-test
-      params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
-        TEST_OS: sles
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_planner_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: gpdb_src
-          passed: [compile_gpdb_sles12]
-        - get: bin_gpdb
-          passed: [compile_gpdb_sles12]
-          resource: bin_gpdb_sles12
-          trigger: [[ test_trigger ]]
-        - get: gpdb6-sles12-test
-    - task: ic_gpdb
-      file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb6-sles12-test
-      params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
-        TEST_OS: sles
-        CONFIGURE_FLAGS: {{configure_flags}}
-
 {% endif %}
 - name: gate_icw_end
   plan:
@@ -2857,6 +2829,7 @@ jobs:
         - compile_gpdb_centos8
         - compile_gpdb_photon3
         - compile_gpdb_ubuntu18.04
+        - compile_gpdb_sles12
         - icw_planner_centos6
         - icw_gporca_centos6
         - icw_planner_icproxy_centos6
@@ -2874,6 +2847,7 @@ jobs:
         - icw_planner_ictcp_centos6
         - icw_extensions_gpcloud_centos6
         - test_gpdb_clients_centos8
+        - test_gpdb_clients_sles12
         - resource_group_centos6
         - resource_group_centos7
         - gpperfmon_centos6
@@ -2961,6 +2935,9 @@ jobs:
       - get: bin_gpdb_clients_centos8
         passed:
         - test_gpdb_clients_centos8
+      - get: bin_gpdb_clients_sles12
+        passed:
+        - test_gpdb_clients_sles12
 
 - name: Publish Server Builds
   plan:
@@ -3035,6 +3012,9 @@ jobs:
       - get: bin_gpdb_clients_centos8
         trigger: true
         passed: [gate_release_candidate_start]
+      - get: bin_gpdb_clients_sles12
+        trigger: true
+        passed: [gate_release_candidate_start]
       - get: gpdb6-centos6-build
   - in_parallel:
       steps:
@@ -3076,6 +3056,9 @@ jobs:
       - put: bin_gpdb_clients_centos8_rc
         params:
           file: "release_candidates/clients-rc-*rhel8*.tar.gz"
+      - put: bin_gpdb_clients_sles12_rc
+        params:
+          file: "release_candidates/clients-rc-*sles12*.tar.gz"
 
 - name: Build_Release_Candidate_RPMs
   plan:
@@ -3223,5 +3206,6 @@ jobs:
           gpcloud_access_key_id: ((gpcloud-access-key-id))
           gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
+{% endif %}
 {% endif %}
 {% endif %}
