@@ -964,8 +964,10 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * GPDB: If you explicitly ANALYZE a partition, also update the
 		 * parent's stats after the partition has been ANALYZEd. (Thanks to
 		 * the code to merge leaf statistics, it should be fast.)
+		 * If optimizer_analyze_enable_merge_of_leaf_stats is off, do not
+		 * analyze(merge) parent
 		 */
-		if (optimizer_analyze_root_partition || (options & VACOPT_ROOTONLY))
+		if (optimizer_analyze_enable_merge_of_leaf_stats && (optimizer_analyze_root_partition || (options & VACOPT_ROOTONLY)))
 		{
 			Oid			child_relid = relid;
 

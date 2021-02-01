@@ -833,3 +833,18 @@ ANALYZE simple_table_no_hll;
 SELECT staattnum, stakind1, stakind2, stakind3, stakind4, stakind5,
        stavalues1, stavalues2, stavalues3, stavalues4, stavalues5
 FROM pg_statistic WHERE starelid = 'simple_table_no_hll'::regclass;
+
+-- optimizer_analyze_enable_merge_of_leaf_stats GUC works correctly
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo(a int) PARTITION BY RANGE(a) (start (0) INCLUSIVE END (20) EVERY (10));
+set optimizer_analyze_enable_merge_of_leaf_stats=off;
+INSERT INTO foo values (5),(15);
+ANALYZE foo_1_prt_1;
+ANALYZE foo_1_prt_2;
+-- root should not have stats
+SELECT count(*) from pg_stats where tablename='foo';
+
+reset optimizer_analyze_enable_merge_of_leaf_stats;
+-- root should have stats
+ANALYZE foo_1_prt_2;
+SELECT count(*) from pg_stats where tablename='foo';
