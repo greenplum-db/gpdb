@@ -833,3 +833,22 @@ ANALYZE simple_table_no_hll;
 SELECT staattnum, stakind1, stakind2, stakind3, stakind4, stakind5,
        stavalues1, stavalues2, stavalues3, stavalues4, stavalues5
 FROM pg_statistic WHERE starelid = 'simple_table_no_hll'::regclass;
+
+-- Make sure analyze rootpartition option works in an option list
+set optimizer_analyze_root_partition to off;
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo(a int) PARTITION BY RANGE(a) (start (0) INCLUSIVE END (20) EVERY (10));
+INSERT INTO foo values (5),(15);
+ANALYZE (verbose, rootpartition off) foo;
+
+-- root should not have stats
+SELECT count(*) from pg_statistic where starelid='foo'::regclass;
+
+-- root should have stats
+ANALYZE (verbose, rootpartition on) foo;
+SELECT count(*) from pg_statistic where starelid='foo'::regclass;
+
+-- Make sure analyze hll fullscan option works in an option list
+ANALYZE (verbose, fullscan on) foo;
+ANALYZE (verbose, fullscan off) foo;
+reset optimizer_analyze_root_partition;

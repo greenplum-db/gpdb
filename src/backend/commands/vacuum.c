@@ -145,9 +145,9 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel)
 		else if (strcmp(opt->defname, "skip_locked") == 0)
 			skip_locked = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "rootpartition") == 0)
-			rootonly = get_vacopt_ternary_value(opt);
+			rootonly = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "fullscan") == 0)
-			fullscan = get_vacopt_ternary_value(opt);
+			fullscan = defGetBoolean(opt);
 		else if (!vacstmt->is_vacuumcmd)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
