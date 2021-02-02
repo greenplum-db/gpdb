@@ -7431,7 +7431,7 @@
         <li><codeph>exhaustive</codeph> - Applies transformation rules to find and
           evaluate up to a configurable threshold number 
           (<codeph>optimizer_join_order_threshold</codeph>, default 10) of n-way
-          inner joins, and then abruptly changes to and uses the
+          inner joins, and then changes to and uses the
           <codeph>greedy</codeph> method beyond that. While planning time drops
           significantly at that point, plan quality and execution time may get
           worse.</li>
