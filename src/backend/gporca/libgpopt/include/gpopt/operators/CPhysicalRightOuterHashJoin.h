@@ -28,14 +28,13 @@ namespace gpopt
 class CPhysicalRightOuterHashJoin : public CPhysicalHashJoin
 {
 private:
-	// private copy ctor
-	CPhysicalRightOuterHashJoin(const CPhysicalRightOuterHashJoin &);
-
 protected:
 	// create optimization requests
-	virtual void CreateOptRequests(CMemoryPool *mp);
+	void CreateOptRequests(CMemoryPool *mp) override;
 
 public:
+	CPhysicalRightOuterHashJoin(const CPhysicalRightOuterHashJoin &) = delete;
+
 	// ctor
 	CPhysicalRightOuterHashJoin(CMemoryPool *mp,
 								CExpressionArray *pdrgpexprOuterKeys,
@@ -43,18 +42,18 @@ public:
 								IMdIdArray *hash_opfamilies = NULL);
 
 	// dtor
-	virtual ~CPhysicalRightOuterHashJoin();
+	~CPhysicalRightOuterHashJoin() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalRightOuterHashJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalRightOuterHashJoin";
 	}
@@ -73,9 +72,10 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// compute required distribution of the n-th child
-	virtual CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								   CReqdPropPlan *prppInput, ULONG child_index,
-								   CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulOptReq) override;
 
 };	// class CPhysicalRightOuterHashJoin
 

@@ -49,9 +49,7 @@ CPhysicalRightOuterHashJoin::CPhysicalRightOuterHashJoin(
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CPhysicalRightOuterHashJoin::~CPhysicalRightOuterHashJoin()
-{
-}
+CPhysicalRightOuterHashJoin::~CPhysicalRightOuterHashJoin() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

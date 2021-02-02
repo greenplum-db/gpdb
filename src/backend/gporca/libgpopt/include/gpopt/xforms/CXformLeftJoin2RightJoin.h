@@ -30,38 +30,35 @@ using namespace gpos;
 class CXformLeftJoin2RightJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformLeftJoin2RightJoin(const CXformLeftJoin2RightJoin &);
-
 public:
+	CXformLeftJoin2RightJoin(const CXformLeftJoin2RightJoin &) = delete;
+
 	// ctor
 	explicit CXformLeftJoin2RightJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformLeftJoin2RightJoin()
-	{
-	}
+	~CXformLeftJoin2RightJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftJoin2RightJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftJoin2RightJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftJoin2RightJoin
 
