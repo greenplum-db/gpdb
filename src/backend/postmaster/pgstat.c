@@ -4781,8 +4781,6 @@ pgstat_combine_from_qe(CdbDispatchResults *results, int writerSliceIndex)
 	for (dispatchResult = cdbdisp_resultBegin(results, writerSliceIndex);
 		 dispatchResult < resultEnd; ++dispatchResult)
 	{
-		Assert(dispatchResult->okindex >= 0);
-
 		pgresult = cdbdisp_getPGresult(dispatchResult, dispatchResult->okindex);
 		if (pgresult && !dispatchResult->errcode && pgresult->extraslen > 0 &&
 			pgresult->extraType == PGExtraTypeTableStats)
