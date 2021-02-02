@@ -55,38 +55,6 @@ CPhysicalRightOuterHashJoin::~CPhysicalRightOuterHashJoin()
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalRightOuterHashJoin::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalRightOuterHashJoin::PppsRequired(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
-{
-	// This is identical to the inner join partition request
-	if (1 == ulOptReq)
-	{
-		// request (1): push partition propagation requests to join's children,
-		// do not consider possible dynamic partition elimination using join predicate here,
-		// this is handled by optimization request (0) below
-		return CPhysical::PppsRequiredPushThruNAry(mp, exprhdl, pppsRequired,
-												   child_index);
-	}
-
-	// request (0): push partition progagation requests to join child considering
-	// DPE possibility. For HJ, PS request is pushed to the inner child if there
-	// is a consumer (DTS) on the outer side of the join.
-	GPOS_ASSERT(0 == ulOptReq);
-	return PppsRequiredJoinChild(mp, exprhdl, pppsRequired, child_index,
-								 pdrgpdpCtxt, false);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalRightOuterHashJoin::PdsRequired
 //
 //	@doc:

@@ -13032,20 +13032,18 @@ select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.
 explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
                          QUERY PLAN                         
 ------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  HashAggregate
          Group Key: t2.c
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: t2.c
-               ->  HashAggregate
-                     Group Key: t2.c
-                     ->  Hash Right Join
-                           Hash Cond: (t2.c = t1.a)
-                           ->  Seq Scan on roj2 t2
-                           ->  Hash
-                                 ->  Seq Scan on roj1 t1
+               ->  Hash Right Join
+                     Hash Cond: (t2.c = t1.a)
+                     ->  Seq Scan on roj2 t2
+                     ->  Hash
+                           ->  Seq Scan on roj1 t1
  Optimizer: Postgres query optimizer
-(13 rows)
+(11 rows)
 
 reset optimizer_enable_motion_redistribute;
 reset optimizer_trace_fallback;

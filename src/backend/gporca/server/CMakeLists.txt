@@ -57,6 +57,9 @@ endfunction()
 # IN-ArrayCmp
 # NOT-IN-ArrayCmp
 
+# GPDB_12_MERGE_FIXME: re-add the following test to Right Join once DPE is supported
+# RightJoinDPS PartTbl-RightOuterHashJoin-DPE-IsNull
+
 # minidump tests must follow rule:
 # "CxxxTest: file1 file2; CxxxTest: file3 file4"
 # each test case should end with ";", EXCEPT LAST ONE.
@@ -282,7 +285,7 @@ CIndexOnlyScanTest:
 IndexOnlyScan-NoDistKeyInIndex;
 
 CRightJoinTest:
-RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinDPS RightJoinNoDPSNonDistKey RightJoinTVF
+RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF
 ")
 
 set(mdp_dir "../data/dxl/minidump/")
