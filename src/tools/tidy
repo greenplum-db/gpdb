@@ -44,8 +44,7 @@ chk() {
 	compdb=$1/compile_commands.json
 	test -f "${compdb}" || die "compilation database not found at ${compdb}"
 
-	files_to_tidy | parallel -0 -qn64 --halt now,fail=1 \
-		--tty -P +0 \
+	files_to_tidy | parallel -0 -qn1 --halt now,fail=1 \
 		"${CLANG_TIDY}" -p "${build_dir}" -quiet
 }
 
