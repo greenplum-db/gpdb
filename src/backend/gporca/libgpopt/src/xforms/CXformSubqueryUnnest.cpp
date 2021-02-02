@@ -58,14 +58,14 @@ CExpression *
 CXformSubqueryUnnest::PexprSubqueryUnnest(CMemoryPool *mp, CExpression *pexpr,
 										  BOOL fEnforceCorrelatedApply)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	if (GPOS_FTRACE(EopttraceEnforceCorrelatedExecution) &&
 		!fEnforceCorrelatedApply)
 	{
 		// if correlated execution is enforced, we cannot generate an expression
 		// that does not use correlated Apply
-		return NULL;
+		return nullptr;
 	}
 
 	// extract components
@@ -75,8 +75,8 @@ CXformSubqueryUnnest::PexprSubqueryUnnest(CMemoryPool *mp, CExpression *pexpr,
 	// we add-ref the logical child since the resulting expression must re-use it
 	pexprOuter->AddRef();
 
-	CExpression *pexprNewOuter = NULL;
-	CExpression *pexprResidualScalar = NULL;
+	CExpression *pexprNewOuter = nullptr;
+	CExpression *pexprResidualScalar = nullptr;
 
 	CSubqueryHandler::ESubqueryCtxt esqctxt = CSubqueryHandler::EsqctxtFilter;
 
@@ -88,15 +88,15 @@ CXformSubqueryUnnest::PexprSubqueryUnnest(CMemoryPool *mp, CExpression *pexpr,
 		CRefCount::SafeRelease(pexprNewOuter);
 		CRefCount::SafeRelease(pexprResidualScalar);
 
-		return NULL;
+		return nullptr;
 	}
 
 	// create a new alternative using the new logical and scalar expressions
-	CExpression *pexprResult = NULL;
+	CExpression *pexprResult = nullptr;
 	if (COperator::EopScalarProjectList == pexprScalar->Pop()->Eopid())
 	{
-		CLogicalSequenceProject *popSeqPrj = NULL;
-		CLogicalGbAgg *popGbAgg = NULL;
+		CLogicalSequenceProject *popSeqPrj = nullptr;
+		CLogicalGbAgg *popGbAgg = nullptr;
 		COperator::EOperatorId op_id = pexpr->Pop()->Eopid();
 
 		switch (op_id)
@@ -157,7 +157,7 @@ CXformSubqueryUnnest::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	CExpression *pexprAvoidCorrelatedApply =
 		PexprSubqueryUnnest(pmp, pexpr, fEnforceCorrelatedApply);
-	if (NULL != pexprAvoidCorrelatedApply)
+	if (nullptr != pexprAvoidCorrelatedApply)
 	{
 		// add alternative to results
 		pxfres->Add(pexprAvoidCorrelatedApply);
@@ -178,7 +178,7 @@ void
 CXformSubqueryUnnest::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

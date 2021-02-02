@@ -73,7 +73,7 @@ public:
 	static CStatsPredUnsupported *
 	ConvertPredStats(CStatsPred *pred_stats)
 	{
-		GPOS_ASSERT(NULL != pred_stats);
+		GPOS_ASSERT(nullptr != pred_stats);
 		GPOS_ASSERT(CStatsPred::EsptUnsupported ==
 					pred_stats->GetPredStatsType());
 

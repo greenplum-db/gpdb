@@ -31,7 +31,7 @@ using namespace gpopt;
 CLogicalLeftAntiSemiJoinNotIn::CLogicalLeftAntiSemiJoinNotIn(CMemoryPool *mp)
 	: CLogicalLeftAntiSemiJoin(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 //---------------------------------------------------------------------------

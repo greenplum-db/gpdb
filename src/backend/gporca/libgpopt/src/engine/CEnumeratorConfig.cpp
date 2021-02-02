@@ -43,13 +43,13 @@ CEnumeratorConfig::CEnumeratorConfig(CMemoryPool *mp, ULLONG plan_id,
 	  m_costBest(GPOPT_INVALID_COST),
 	  m_costMax(GPOPT_INVALID_COST),
 	  m_dCostThreshold(cost_threshold),
-	  m_pdrgpsp(NULL),
+	  m_pdrgpsp(nullptr),
 	  m_dStep(0.5),
-	  m_pdX(NULL),
-	  m_pdY(NULL),
+	  m_pdX(nullptr),
+	  m_pdY(nullptr),
 	  m_ulDistrSize(0),
 	  m_fSampleValidPlans(true),
-	  m_pfpc(NULL)
+	  m_pfpc(nullptr)
 {
 	m_pdrgpsp = GPOS_NEW(mp) SSamplePlanArray(mp);
 }
@@ -82,7 +82,7 @@ CEnumeratorConfig::~CEnumeratorConfig()
 CDouble
 CEnumeratorConfig::DCostDistrX(ULONG ulPos) const
 {
-	GPOS_ASSERT(NULL != m_pdX);
+	GPOS_ASSERT(nullptr != m_pdX);
 
 	return m_pdX[ulPos];
 }
@@ -99,7 +99,7 @@ CEnumeratorConfig::DCostDistrX(ULONG ulPos) const
 CDouble
 CEnumeratorConfig::DCostDistrY(ULONG ulPos) const
 {
-	GPOS_ASSERT(NULL != m_pdY);
+	GPOS_ASSERT(nullptr != m_pdY);
 
 	return m_pdY[ulPos];
 }
@@ -212,10 +212,10 @@ CEnumeratorConfig::GussianKernelDensity(
 	ULONG size	  // number of input X-values
 )
 {
-	GPOS_ASSERT(NULL != pdObervationX);
-	GPOS_ASSERT(NULL != pdObervationY);
-	GPOS_ASSERT(NULL != pdX);
-	GPOS_ASSERT(NULL != pdY);
+	GPOS_ASSERT(nullptr != pdObervationX);
+	GPOS_ASSERT(nullptr != pdObervationY);
+	GPOS_ASSERT(nullptr != pdX);
+	GPOS_ASSERT(nullptr != pdY);
 	GPOS_ASSERT(pdX != pdY);
 
 	// finding observations span to determine kernel bandwidth
@@ -310,7 +310,7 @@ void
 CEnumeratorConfig::DumpSamples(CWStringDynamic *str,  // samples dump
 							   ULONG ulSessionId, ULONG ulCommandId)
 {
-	GPOS_ASSERT(NULL != str);
+	GPOS_ASSERT(nullptr != str);
 
 	CAutoSuspendAbort asa;
 
@@ -338,7 +338,7 @@ CEnumeratorConfig::DumpCostDistr(
 	CWStringDynamic *str,  // cost distribution dump
 	ULONG ulSessionId, ULONG ulCommandId)
 {
-	GPOS_ASSERT(NULL != str);
+	GPOS_ASSERT(nullptr != str);
 
 	CAutoSuspendAbort asa;
 

@@ -80,7 +80,7 @@ public:
 	BOOL
 	Matches(CEnfdDistribution *ped)
 	{
-		GPOS_ASSERT(NULL != ped);
+		GPOS_ASSERT(nullptr != ped);
 
 		return m_edm == ped->Edm() && m_pds->Equals(ped->PdsRequired());
 	}

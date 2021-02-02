@@ -130,7 +130,7 @@ public:
 	static CJobGroupImplementation *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupImplementation == pj->Ejt());
 
 		return dynamic_cast<CJobGroupImplementation *>(pj);

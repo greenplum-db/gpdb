@@ -32,7 +32,7 @@ IMDCacheObject::SerializeMDIdAsElem(CXMLSerializer *xml_serializer,
 									const CWStringConst *element_name,
 									const IMDId *mdid) const
 {
-	if (NULL == mdid)
+	if (nullptr == mdid)
 	{
 		return;
 	}

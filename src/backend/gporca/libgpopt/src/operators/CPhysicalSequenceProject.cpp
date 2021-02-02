@@ -42,18 +42,18 @@ CPhysicalSequenceProject::CPhysicalSequenceProject(CMemoryPool *mp,
 	  m_pds(pds),
 	  m_pdrgpos(pdrgpos),
 	  m_pdrgpwf(pdrgpwf),
-	  m_pos(NULL),
-	  m_pcrsRequiredLocal(NULL)
+	  m_pos(nullptr),
+	  m_pcrsRequiredLocal(nullptr)
 {
-	GPOS_ASSERT(NULL != pds);
-	GPOS_ASSERT(NULL != pdrgpos);
-	GPOS_ASSERT(NULL != pdrgpwf);
+	GPOS_ASSERT(nullptr != pds);
+	GPOS_ASSERT(nullptr != pdrgpos);
+	GPOS_ASSERT(nullptr != pdrgpwf);
 	GPOS_ASSERT(CDistributionSpec::EdtHashed == pds->Edt() ||
 				CDistributionSpec::EdtSingleton == pds->Edt());
 	// we don't create LogicalSequenceProject with equivalent hashed distribution specs at this time
 	if (CDistributionSpec::EdtHashed == pds->Edt())
 	{
-		GPOS_ASSERT(NULL ==
+		GPOS_ASSERT(nullptr ==
 					CDistributionSpecHashed::PdsConvert(pds)->PdshashedEquiv());
 	}
 	CreateOrderSpec(mp);
@@ -72,9 +72,9 @@ CPhysicalSequenceProject::CPhysicalSequenceProject(CMemoryPool *mp,
 void
 CPhysicalSequenceProject::CreateOrderSpec(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL == m_pos);
-	GPOS_ASSERT(NULL != m_pds);
-	GPOS_ASSERT(NULL != m_pdrgpos);
+	GPOS_ASSERT(nullptr == m_pos);
+	GPOS_ASSERT(nullptr != m_pds);
+	GPOS_ASSERT(nullptr != m_pdrgpos);
 
 	m_pos = GPOS_NEW(mp) COrderSpec(mp);
 
@@ -143,11 +143,11 @@ CPhysicalSequenceProject::CreateOrderSpec(CMemoryPool *mp)
 void
 CPhysicalSequenceProject::ComputeRequiredLocalColumns(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != m_pos);
-	GPOS_ASSERT(NULL != m_pds);
-	GPOS_ASSERT(NULL != m_pdrgpos);
-	GPOS_ASSERT(NULL != m_pdrgpwf);
-	GPOS_ASSERT(NULL == m_pcrsRequiredLocal);
+	GPOS_ASSERT(nullptr != m_pos);
+	GPOS_ASSERT(nullptr != m_pds);
+	GPOS_ASSERT(nullptr != m_pdrgpos);
+	GPOS_ASSERT(nullptr != m_pdrgpwf);
+	GPOS_ASSERT(nullptr == m_pcrsRequiredLocal);
 
 	m_pcrsRequiredLocal = m_pos->PcrsUsed(mp);
 	if (CDistributionSpec::EdtHashed == m_pds->Edt())
@@ -163,12 +163,12 @@ CPhysicalSequenceProject::ComputeRequiredLocalColumns(CMemoryPool *mp)
 	for (ULONG ul = 0; ul < size; ul++)
 	{
 		CWindowFrame *pwf = (*m_pdrgpwf)[ul];
-		if (NULL != pwf->PexprLeading())
+		if (nullptr != pwf->PexprLeading())
 		{
 			m_pcrsRequiredLocal->Union(
 				pwf->PexprLeading()->DeriveUsedColumns());
 		}
-		if (NULL != pwf->PexprTrailing())
+		if (nullptr != pwf->PexprTrailing())
 		{
 			m_pcrsRequiredLocal->Union(
 				pwf->PexprTrailing()->DeriveUsedColumns());
@@ -204,7 +204,7 @@ CPhysicalSequenceProject::~CPhysicalSequenceProject()
 BOOL
 CPhysicalSequenceProject::Matches(COperator *pop) const
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	if (Eopid() == pop->Eopid())
 	{
 		CPhysicalSequenceProject *popPhysicalSequenceProject =
@@ -414,7 +414,7 @@ CPhysicalSequenceProject::FProvidesReqdCols(CExpressionHandle &exprhdl,
 											ULONG  // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(2 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -505,7 +505,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalSequenceProject::EpetOrder(CExpressionHandle &exprhdl,
 									const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();

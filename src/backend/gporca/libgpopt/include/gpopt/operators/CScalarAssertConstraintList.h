@@ -95,7 +95,7 @@ public:
 	static CScalarAssertConstraintList *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarAssertConstraintList == pop->Eopid());
 
 		return dynamic_cast<CScalarAssertConstraintList *>(pop);

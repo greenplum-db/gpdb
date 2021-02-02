@@ -36,12 +36,12 @@ CParseHandlerLogicalCTAS::CParseHandlerLogicalCTAS(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerLogicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname_schema(NULL),
-	  m_mdname(NULL),
-	  m_distr_column_pos_array(NULL),
-	  m_src_colids_array(NULL),
-	  m_vartypemod_array(NULL),
+	  m_mdid(nullptr),
+	  m_mdname_schema(nullptr),
+	  m_mdname(nullptr),
+	  m_distr_column_pos_array(nullptr),
+	  m_src_colids_array(nullptr),
+	  m_vartypemod_array(nullptr),
 	  m_is_temp_table(false)
 {
 }
@@ -85,7 +85,7 @@ CParseHandlerLogicalCTAS::StartElement(
 
 	const XMLCh *xml_str_schema_name =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenSchema));
-	if (NULL != xml_str_schema_name)
+	if (nullptr != xml_str_schema_name)
 	{
 		m_mdname_schema = CDXLUtils::CreateMDNameFromXMLChar(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_schema_name);
@@ -214,11 +214,12 @@ CParseHandlerLogicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 	CParseHandlerLogicalOp *child_parse_handler =
 		dynamic_cast<CParseHandlerLogicalOp *>((*this)[4]);
 
-	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
-	GPOS_ASSERT(NULL != ctas_options_parse_handler->GetDxlCtasStorageOption());
-	GPOS_ASSERT(NULL != opfamilies_parse_handler->GetMdIdArray());
-	GPOS_ASSERT(NULL != opclasses_parse_handler->GetMdIdArray());
-	GPOS_ASSERT(NULL != child_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != col_descr_parse_handler->GetDXLColumnDescrArray());
+	GPOS_ASSERT(nullptr !=
+				ctas_options_parse_handler->GetDxlCtasStorageOption());
+	GPOS_ASSERT(nullptr != opfamilies_parse_handler->GetMdIdArray());
+	GPOS_ASSERT(nullptr != opclasses_parse_handler->GetMdIdArray());
+	GPOS_ASSERT(nullptr != child_parse_handler->CreateDXLNode());
 
 	CDXLColDescrArray *dxl_column_descr_array =
 		col_descr_parse_handler->GetDXLColumnDescrArray();

@@ -67,7 +67,7 @@ CAutoRgTest::EresUnittest_Basics()
 	GPOS_ASSERT(ch == sz2[0]);
 #endif	// GPOS_DEBUG
 
-	asz2 = NULL;
+	asz2 = nullptr;
 	GPOS_DELETE_ARRAY(asz3.RgtReset());
 
 	// ctor

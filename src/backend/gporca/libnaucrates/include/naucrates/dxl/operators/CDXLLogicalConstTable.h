@@ -95,7 +95,7 @@ public:
 	static CDXLLogicalConstTable *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalConstTable == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalConstTable *>(dxl_op);

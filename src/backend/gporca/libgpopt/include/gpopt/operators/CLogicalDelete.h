@@ -187,7 +187,7 @@ public:
 	static CLogicalDelete *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDelete == pop->Eopid());
 
 		return dynamic_cast<CLogicalDelete *>(pop);

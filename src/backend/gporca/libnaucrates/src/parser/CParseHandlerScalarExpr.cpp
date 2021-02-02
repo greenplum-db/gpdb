@@ -31,7 +31,7 @@ CParseHandlerScalarExpr::CParseHandlerScalarExpr(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_node(NULL)
+	  m_dxl_node(nullptr)
 {
 }
 
@@ -98,7 +98,7 @@ CParseHandlerScalarExpr::StartElement(const XMLCh *const,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 				   str->GetBuffer());
 	}
-	GPOS_ASSERT(NULL != m_mp);
+	GPOS_ASSERT(nullptr != m_mp);
 
 	// parse handler for child node
 	CParseHandlerBase *child_parse_handler =
@@ -136,8 +136,8 @@ CParseHandlerScalarExpr::EndElement(const XMLCh *const,	 //= element_uri,
 	CParseHandlerScalarOp *child_parse_handler =
 		dynamic_cast<CParseHandlerScalarOp *>((*this)[0]);
 	// extract constructed element
-	GPOS_ASSERT(NULL != child_parse_handler &&
-				NULL != child_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != child_parse_handler &&
+				nullptr != child_parse_handler->CreateDXLNode());
 	m_dxl_node = child_parse_handler->CreateDXLNode();
 	m_dxl_node->AddRef();
 

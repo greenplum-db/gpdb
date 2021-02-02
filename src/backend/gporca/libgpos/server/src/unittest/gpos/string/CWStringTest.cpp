@@ -178,7 +178,7 @@ CWStringTest::EresUnittest_AppendFormatInvalidLocale()
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcExc);
 	CMemoryPool *mp = amp.Pmp();
 
-	CHAR *oldLocale = setlocale(LC_CTYPE, NULL);
+	CHAR *oldLocale = setlocale(LC_CTYPE, nullptr);
 	CWStringDynamic *pstr1 = GPOS_NEW(mp) CWStringDynamic(mp);
 
 	GPOS_RESULT eres = GPOS_OK;
@@ -435,7 +435,7 @@ CWStringTest::EresUnittest_Copy()
 	// cleanup
 	GPOS_DELETE(pstr1);
 
-	GPOS_ASSERT(NULL != pcstr1->GetBuffer());
+	GPOS_ASSERT(nullptr != pcstr1->GetBuffer());
 	GPOS_DELETE(pcstr1);
 
 	return GPOS_OK;

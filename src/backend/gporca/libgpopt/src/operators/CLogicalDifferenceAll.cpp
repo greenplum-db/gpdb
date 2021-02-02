@@ -115,7 +115,7 @@ CLogicalDifferenceAll::DeriveKeyCollection(CMemoryPool *,		// mp,
 ) const
 {
 	// TODO: Add keys on columns contributing to the setop from the outer child
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

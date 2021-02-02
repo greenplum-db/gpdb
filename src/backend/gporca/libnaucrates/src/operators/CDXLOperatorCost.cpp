@@ -70,7 +70,7 @@ CDXLOperatorCost::GetWidthStr() const
 void
 CDXLOperatorCost::SetRows(CWStringDynamic *rows_str)
 {
-	GPOS_ASSERT(NULL != rows_str);
+	GPOS_ASSERT(nullptr != rows_str);
 	GPOS_DELETE(m_rows_out_str);
 	m_rows_out_str = rows_str;
 }
@@ -86,7 +86,7 @@ CDXLOperatorCost::SetRows(CWStringDynamic *rows_str)
 void
 CDXLOperatorCost::SetCost(CWStringDynamic *cost_str)
 {
-	GPOS_ASSERT(NULL != cost_str);
+	GPOS_ASSERT(nullptr != cost_str);
 	GPOS_DELETE(m_total_cost_str);
 	m_total_cost_str = cost_str;
 }

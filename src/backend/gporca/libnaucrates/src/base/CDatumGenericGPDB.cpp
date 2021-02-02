@@ -46,15 +46,15 @@ CDatumGenericGPDB::CDatumGenericGPDB(CMemoryPool *mp, IMDId *mdid,
 									 CDouble stats_comp_val_double)
 	: m_mp(mp),
 	  m_size(size),
-	  m_bytearray_value(NULL),
+	  m_bytearray_value(nullptr),
 	  m_is_null(is_null),
 	  m_mdid(mdid),
 	  m_type_modifier(type_modifier),
-	  m_cached_type(NULL),
+	  m_cached_type(nullptr),
 	  m_stats_comp_val_int(stats_comp_val_int),
 	  m_stats_comp_val_double(stats_comp_val_double)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(mdid->IsValid());
 
 	if (!IsNull())
@@ -303,7 +303,7 @@ CDatumGenericGPDB::IsDatumMappableToDouble() const
 BOOL
 CDatumGenericGPDB::IsDatumMappableToLINT() const
 {
-	if (NULL == m_cached_type)
+	if (nullptr == m_cached_type)
 	{
 		m_cached_type = COptCtxt::PoctxtFromTLS()->Pmda()->RetrieveType(MDId());
 	}
@@ -374,7 +374,7 @@ BYTE *
 CDatumGenericGPDB::MakeCopyOfValue(CMemoryPool *mp, ULONG *dest_length) const
 {
 	ULONG length = 0;
-	BYTE *dest = NULL;
+	BYTE *dest = nullptr;
 
 	if (!IsNull())
 	{
@@ -426,7 +426,7 @@ CDatumGenericGPDB::MakePaddedDatum(CMemoryPool *mp, ULONG col_len) const
 	if (gpos::ulong_max != adjusted_col_width && datum_len < adjusted_col_width)
 	{
 		const BYTE *original = this->GetByteArrayValue();
-		BYTE *dest = NULL;
+		BYTE *dest = nullptr;
 
 		dest = GPOS_NEW_ARRAY(m_mp, BYTE, adjusted_col_width);
 		(void) clib::Memcpy(dest, original, datum_len);
@@ -533,7 +533,7 @@ CDouble
 CDatumGenericGPDB::GetTrailingWildcardSelectivity(const BYTE *dest,
 												  ULONG pos) const
 {
-	GPOS_ASSERT(NULL != dest);
+	GPOS_ASSERT(nullptr != dest);
 
 	// If no trailing wildcard, reduce selectivity
 	BOOL wildcard = (0 < pos) && ('%' != dest[pos - 1]);

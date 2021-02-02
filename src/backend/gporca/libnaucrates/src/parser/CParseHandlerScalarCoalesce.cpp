@@ -34,7 +34,7 @@ CParseHandlerScalarCoalesce::CParseHandlerScalarCoalesce(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_type(NULL)
+	  m_mdid_type(nullptr)
 {
 }
 
@@ -55,7 +55,7 @@ CParseHandlerScalarCoalesce::StartElement(const XMLCh *const element_uri,
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarCoalesce),
 				 element_local_name) &&
-		NULL == m_mdid_type)
+		nullptr == m_mdid_type)
 	{
 		// parse type id
 		m_mdid_type = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(

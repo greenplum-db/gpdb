@@ -117,7 +117,7 @@ public:
 	static CScalarIf *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarIf == pop->Eopid());
 
 		return dynamic_cast<CScalarIf *>(pop);

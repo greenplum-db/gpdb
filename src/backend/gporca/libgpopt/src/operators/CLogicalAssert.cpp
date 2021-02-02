@@ -32,7 +32,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalAssert::CLogicalAssert(CMemoryPool *mp)
-	: CLogicalUnary(mp), m_pexc(NULL)
+	: CLogicalUnary(mp), m_pexc(nullptr)
 {
 	m_fPattern = true;
 }
@@ -48,7 +48,7 @@ CLogicalAssert::CLogicalAssert(CMemoryPool *mp)
 CLogicalAssert::CLogicalAssert(CMemoryPool *mp, CException *pexc)
 	: CLogicalUnary(mp), m_pexc(pexc)
 {
-	GPOS_ASSERT(NULL != pexc);
+	GPOS_ASSERT(nullptr != pexc);
 }
 
 //---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ CLogicalAssert::DeriveMaxCard(CMemoryPool *,  // mp
 	// in case of a false condition or a contradiction, maxcard should be 1
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(1);
 
-	if ((NULL != pexprScalar && CUtils::FScalarConstFalse(pexprScalar)) ||
+	if ((nullptr != pexprScalar && CUtils::FScalarConstFalse(pexprScalar)) ||
 		exprhdl.DerivePropertyConstraint()->FContradiction())
 	{
 		return CMaxCard(1 /*ull*/);
@@ -142,7 +142,7 @@ CLogicalAssert::DeriveMaxCard(CMemoryPool *,  // mp
 
 	// if Assert operator was generated from MaxOneRow operator,
 	// then a max cardinality of 1 is expected
-	if (NULL != exprhdl.Pgexpr() &&
+	if (nullptr != exprhdl.Pgexpr() &&
 		CXform::ExfMaxOneRow2Assert == exprhdl.Pgexpr()->ExfidOrigin())
 	{
 		return CMaxCard(1 /*ull*/);

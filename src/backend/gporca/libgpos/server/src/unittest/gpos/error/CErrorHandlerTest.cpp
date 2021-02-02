@@ -59,7 +59,7 @@ CErrorHandlerTest::EresUnittest_Basic()
 	GPOS_TRY_HDL(&errhdl)
 	{
 		// raise an OOM exception
-		GPOS_OOM_CHECK(NULL);
+		GPOS_OOM_CHECK(nullptr);
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -89,7 +89,7 @@ CErrorHandlerTest::EresUnittest_BadRethrow()
 	GPOS_TRY
 	{
 		// raise an OOM exception
-		GPOS_OOM_CHECK(NULL);
+		GPOS_OOM_CHECK(nullptr);
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -124,7 +124,7 @@ CErrorHandlerTest::EresUnittest_BadReset()
 	GPOS_TRY
 	{
 		// raise an OOM exception
-		GPOS_OOM_CHECK(NULL);
+		GPOS_OOM_CHECK(nullptr);
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -158,7 +158,7 @@ CErrorHandlerTest::EresUnittest_Unhandled()
 	GPOS_TRY
 	{
 		// raise an OOM exception
-		GPOS_OOM_CHECK(NULL);
+		GPOS_OOM_CHECK(nullptr);
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -171,7 +171,7 @@ CErrorHandlerTest::EresUnittest_Unhandled()
 	GPOS_CATCH_END;
 
 	// try raising another OOM exception -- this must assert
-	GPOS_OOM_CHECK(NULL);
+	GPOS_OOM_CHECK(nullptr);
 
 	return GPOS_FAILED;
 }

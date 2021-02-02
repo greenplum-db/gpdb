@@ -47,7 +47,7 @@ public:
 	static CDXLLogicalSelect *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalSelect == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalSelect *>(dxl_op);

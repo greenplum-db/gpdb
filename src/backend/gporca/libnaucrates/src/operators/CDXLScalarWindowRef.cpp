@@ -107,7 +107,7 @@ CDXLScalarWindowRef::GetWindStageStr() const
 	}
 
 	GPOS_ASSERT(!"Unrecognized window stage");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

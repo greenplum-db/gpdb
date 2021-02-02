@@ -46,7 +46,7 @@ CDXLColStats::CDXLColStats(CMemoryPool *mp, CMDIdColStats *mdid_col_stats,
 	  m_is_col_stats_missing(is_col_stats_missing)
 {
 	GPOS_ASSERT(mdid_col_stats->IsValid());
-	GPOS_ASSERT(NULL != dxl_stats_bucket_array);
+	GPOS_ASSERT(nullptr != dxl_stats_bucket_array);
 	m_dxl_str = CDXLUtils::SerializeMDObj(
 		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }

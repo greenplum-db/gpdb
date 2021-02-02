@@ -29,7 +29,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalMotionBroadcast::CPhysicalMotionBroadcast(CMemoryPool *mp)
-	: CPhysicalMotion(mp), m_pdsReplicated(NULL)
+	: CPhysicalMotion(mp), m_pdsReplicated(nullptr)
 {
 	m_pdsReplicated = GPOS_NEW(mp)
 		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
@@ -199,7 +199,7 @@ CPhysicalMotionBroadcast::OsPrint(IOstream &os) const
 CPhysicalMotionBroadcast *
 CPhysicalMotionBroadcast::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopPhysicalMotionBroadcast == pop->Eopid());
 
 	return dynamic_cast<CPhysicalMotionBroadcast *>(pop);

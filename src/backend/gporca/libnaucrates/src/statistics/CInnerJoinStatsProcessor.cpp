@@ -19,9 +19,9 @@ CInnerJoinStatsProcessor::CalcInnerJoinStatsStatic(
 	CMemoryPool *mp, const IStatistics *outer_stats_input,
 	const IStatistics *inner_stats_input, CStatsPredJoinArray *join_preds_stats)
 {
-	GPOS_ASSERT(NULL != outer_stats_input);
-	GPOS_ASSERT(NULL != inner_stats_input);
-	GPOS_ASSERT(NULL != join_preds_stats);
+	GPOS_ASSERT(nullptr != outer_stats_input);
+	GPOS_ASSERT(nullptr != inner_stats_input);
+	GPOS_ASSERT(nullptr != join_preds_stats);
 	const CStatistics *outer_stats =
 		dynamic_cast<const CStatistics *>(outer_stats_input);
 

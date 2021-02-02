@@ -39,7 +39,7 @@ CParseHandlerLogicalSetOp::CParseHandlerLogicalSetOp(
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerLogicalOp(mp, parse_handler_mgr, parse_handler_root),
 	  m_setop_type(EdxlsetopSentinel),
-	  m_input_colids_arrays(NULL),
+	  m_input_colids_arrays(nullptr),
 	  m_cast_across_input_req(false)
 {
 }
@@ -210,7 +210,7 @@ CParseHandlerLogicalSetOp::EndElement(const XMLCh *const,  // element_uri,
 	// get the columns descriptors
 	CParseHandlerColDescr *col_descr_parse_handler =
 		dynamic_cast<CParseHandlerColDescr *>((*this)[0]);
-	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
+	GPOS_ASSERT(nullptr != col_descr_parse_handler->GetDXLColumnDescrArray());
 	CDXLColDescrArray *cold_descr_dxl_array =
 		col_descr_parse_handler->GetDXLColumnDescrArray();
 

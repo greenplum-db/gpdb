@@ -443,7 +443,7 @@ public:
 	static CHAR *ExtractConvertAttrValueToSz(
 		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
 		Edxltoken target_attr, Edxltoken target_elem, BOOL is_optional = false,
-		CHAR *default_value = NULL);
+		CHAR *default_value = nullptr);
 
 	// parse a string value from the value for a given attribute
 	static CHAR *ConvertAttrValueToSz(CDXLMemoryManager *dxl_memory_manager,
@@ -474,7 +474,7 @@ public:
 	static IMDId *ExtractConvertAttrValueToMdId(
 		CDXLMemoryManager *dxl_memory_manager, const Attributes &attr,
 		Edxltoken target_attr, Edxltoken target_elem, BOOL is_optional = false,
-		IMDId *default_val = NULL);
+		IMDId *default_val = nullptr);
 
 	// parse an mdid object from an XMLCh
 	static IMDId *MakeMdIdFromStr(CDXLMemoryManager *dxl_memory_manager,
@@ -659,7 +659,7 @@ CDXLOperatorFactory::ExtractIntsToArray(CDXLMemoryManager *dxl_memory_manager,
 	{
 		XMLCh *xmlszNext = mdid_components.nextToken();
 
-		GPOS_ASSERT(NULL != xmlszNext);
+		GPOS_ASSERT(nullptr != xmlszNext);
 
 		T *pt = GPOS_NEW(mp) T(ValueFromXmlstr(dxl_memory_manager, xmlszNext,
 											   target_attr, target_elem));

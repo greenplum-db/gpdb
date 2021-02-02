@@ -28,7 +28,7 @@ using namespace gpmd;
 BOOL
 IDatum::StatsAreEqual(const IDatum *datum) const
 {
-	GPOS_ASSERT(NULL != datum);
+	GPOS_ASSERT(nullptr != datum);
 
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 #ifdef GPOS_DEBUG
@@ -77,7 +77,7 @@ IDatum::StatsAreEqual(const IDatum *datum) const
 BOOL
 IDatum::StatsAreLessThan(const IDatum *datum) const
 {
-	GPOS_ASSERT(NULL != datum);
+	GPOS_ASSERT(nullptr != datum);
 
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 #ifdef GPOS_DEBUG
@@ -126,7 +126,7 @@ IDatum::StatsAreLessThan(const IDatum *datum) const
 CDouble
 IDatum::GetStatsDistanceFrom(const IDatum *datum) const
 {
-	GPOS_ASSERT(NULL != datum);
+	GPOS_ASSERT(nullptr != datum);
 
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 #ifdef GPOS_DEBUG
@@ -199,7 +199,7 @@ IDatum::GetValAsDouble() const
 BOOL
 IDatum::StatsAreComparable(const IDatum *datum) const
 {
-	GPOS_ASSERT(NULL != datum);
+	GPOS_ASSERT(nullptr != datum);
 
 	BOOL is_types_match = this->MDId()->Equals(datum->MDId());
 

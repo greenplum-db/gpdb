@@ -29,7 +29,7 @@ const ULONG_PTR CMemoryPool::m_invalid = ULONG_PTR_MAX;
 ULONG
 CMemoryPool::UserSizeOfAlloc(const void *ptr)
 {
-	GPOS_ASSERT(NULL != ptr);
+	GPOS_ASSERT(nullptr != ptr);
 
 	return CMemoryPoolManager::GetMemoryPoolMgr()->UserSizeOfAlloc(ptr);
 }
@@ -57,7 +57,7 @@ CMemoryPool::OsPrint(IOstream &os)
 	os << "Memory pool: " << this;
 
 	ITask *task = ITask::Self();
-	if (NULL != task && task->IsTraceSet(EtracePrintMemoryLeakStackTrace))
+	if (nullptr != task && task->IsTraceSet(EtracePrintMemoryLeakStackTrace))
 	{
 		os << ", stack trace: " << std::endl;
 		m_stack_desc.AppendTrace(os, 8 /*ulDepth*/);
@@ -89,7 +89,7 @@ CMemoryPool::OsPrint(IOstream &os)
 void
 CMemoryPool::AssertEmpty(IOstream &os)
 {
-	if (SupportsLiveObjectWalk() && NULL != ITask::Self() &&
+	if (SupportsLiveObjectWalk() && nullptr != ITask::Self() &&
 		!GPOS_FTRACE(EtraceDisablePrintMemoryLeak))
 	{
 		CMemoryVisitorPrint visitor(os);

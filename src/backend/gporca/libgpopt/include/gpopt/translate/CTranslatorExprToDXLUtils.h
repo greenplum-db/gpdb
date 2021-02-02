@@ -302,7 +302,7 @@ public:
 		CDXLPhysicalProperties *dxl_properties, CDXLNode *pdxlnPrL,
 		CDXLNode *pdxlnEqFilters, CDXLNode *pdxlnFilters,
 		CDXLNode *pdxlnResidual, CDXLNode *pdxlnPropagation,
-		CDXLNode *pdxlnPrintable, CDXLNode *child_dxlnode = NULL);
+		CDXLNode *pdxlnPrintable, CDXLNode *child_dxlnode = nullptr);
 
 	// create a DXL result node
 	static CDXLNode *PdxlnResult(CMemoryPool *mp,

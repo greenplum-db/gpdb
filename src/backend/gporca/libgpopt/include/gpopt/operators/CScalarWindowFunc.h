@@ -108,7 +108,7 @@ public:
 	static CScalarWindowFunc *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarWindowFunc == pop->Eopid());
 
 		return reinterpret_cast<CScalarWindowFunc *>(pop);

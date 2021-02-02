@@ -36,18 +36,18 @@ CParseHandlerMDGPDBScalarOp::CParseHandlerMDGPDBScalarOp(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname(NULL),
-	  m_mdid_type_left(NULL),
-	  m_mdid_type_right(NULL),
-	  m_mdid_type_result(NULL),
-	  m_func_mdid(NULL),
-	  m_mdid_commute_opr(NULL),
-	  m_mdid_inverse_opr(NULL),
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
+	  m_mdid_type_left(nullptr),
+	  m_mdid_type_right(nullptr),
+	  m_mdid_type_result(nullptr),
+	  m_func_mdid(nullptr),
+	  m_mdid_commute_opr(nullptr),
+	  m_mdid_inverse_opr(nullptr),
 	  m_comparision_type(IMDType::EcmptOther),
 	  m_returns_null_on_null_input(false),
-	  m_mdid_hash_opfamily(NULL),
-	  m_mdid_legacy_hash_opfamily(NULL),
+	  m_mdid_hash_opfamily(nullptr),
+	  m_mdid_legacy_hash_opfamily(nullptr),
 	  m_is_ndv_preserving(false)
 {
 }
@@ -97,7 +97,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 		// null-returning property is optional
 		const XMLCh *xml_str_returns_null_on_null_input = attrs.getValue(
 			CDXLTokens::XmlstrToken(EdxltokenReturnsNullOnNullInput));
-		if (NULL != xml_str_returns_null_on_null_input)
+		if (nullptr != xml_str_returns_null_on_null_input)
 		{
 			m_returns_null_on_null_input =
 				CDXLOperatorFactory::ExtractConvertAttrValueToBool(
@@ -119,7 +119,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// parse left operand's type
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_type_left = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -130,7 +130,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// parse right operand's type
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_type_right = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -142,7 +142,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 				 element_local_name))
 	{
 		// parse result type
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_type_result = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -153,7 +153,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// parse op func id
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_func_mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -164,7 +164,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// parse commutator operator
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_commute_opr = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -175,7 +175,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// parse inverse operator id
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_inverse_opr = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -202,7 +202,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 				 element_local_name))
 	{
 		// parse inverse operator id
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_hash_opfamily =
 			CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -215,7 +215,7 @@ CParseHandlerMDGPDBScalarOp::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// parse inverse operator id
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_legacy_hash_opfamily =
 			CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -251,11 +251,11 @@ CParseHandlerMDGPDBScalarOp::EndElement(const XMLCh *const,	 // element_uri,
 								 element_local_name))
 	{
 		// construct the MD scalar operator object from its part
-		GPOS_ASSERT(m_mdid->IsValid() && NULL != m_mdname);
+		GPOS_ASSERT(m_mdid->IsValid() && nullptr != m_mdname);
 
 		GPOS_ASSERT(0 == this->Length() || 1 == this->Length());
 
-		IMdIdArray *mdid_opfamilies_array = NULL;
+		IMdIdArray *mdid_opfamilies_array = nullptr;
 		if (0 < this->Length())
 		{
 			CParseHandlerMetadataIdList *mdid_list_parse_handler =

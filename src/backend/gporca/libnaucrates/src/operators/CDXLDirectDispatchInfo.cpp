@@ -36,7 +36,7 @@ CDXLDirectDispatchInfo::CDXLDirectDispatchInfo(
 	: m_dispatch_identifer_datum_array(dispatch_identifer_datum_array),
 	  m_contains_raw_values(contains_raw_values)
 {
-	GPOS_ASSERT(NULL != dispatch_identifer_datum_array);
+	GPOS_ASSERT(nullptr != dispatch_identifer_datum_array);
 
 #ifdef GPOS_DEBUG
 	const ULONG length = dispatch_identifer_datum_array->Size();
@@ -89,7 +89,7 @@ CDXLDirectDispatchInfo::Serialize(CXMLSerializer *xml_serializer)
 	}
 
 	const ULONG num_of_dispatch_identifiers =
-		(m_dispatch_identifer_datum_array == NULL)
+		(m_dispatch_identifer_datum_array == nullptr)
 			? 0
 			: m_dispatch_identifer_datum_array->Size();
 

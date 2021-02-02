@@ -60,7 +60,7 @@ CParseHandlerIndexCondList::StartElement(const XMLCh *const element_uri,
 	}
 	else
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
@@ -97,7 +97,7 @@ CParseHandlerIndexCondList::EndElement(const XMLCh *const,	// element_uri,
 									   const XMLCh *const  // element_qname
 )
 {
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 
 	if (0 != XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarIndexCondList),

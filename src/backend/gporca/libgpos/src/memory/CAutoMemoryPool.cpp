@@ -62,7 +62,7 @@ CMemoryPool *
 CAutoMemoryPool::Detach()
 {
 	CMemoryPool *mp = m_mp;
-	m_mp = NULL;
+	m_mp = nullptr;
 
 	return mp;
 }
@@ -80,7 +80,7 @@ CAutoMemoryPool::Detach()
 //---------------------------------------------------------------------------
 CAutoMemoryPool::~CAutoMemoryPool() noexcept(false)
 {
-	if (NULL == m_mp)
+	if (nullptr == m_mp)
 	{
 		return;
 	}
@@ -93,7 +93,7 @@ CAutoMemoryPool::~CAutoMemoryPool() noexcept(false)
 	ITask *task = ITask::Self();
 
 	// ElcExc must be used inside tasks only
-	GPOS_ASSERT_IMP(ElcExc == m_leak_check_type, NULL != task);
+	GPOS_ASSERT_IMP(ElcExc == m_leak_check_type, nullptr != task);
 
 	GPOS_TRY
 	{

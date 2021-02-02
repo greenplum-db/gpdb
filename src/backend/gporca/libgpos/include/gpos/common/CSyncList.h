@@ -68,7 +68,7 @@ public:
 	{
 		if (!m_list.IsEmpty())
 			return m_list.RemoveHead();
-		return NULL;
+		return nullptr;
 	}
 
 	// get first element

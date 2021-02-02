@@ -425,7 +425,7 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfImplementFullOuterMergeJoin));
 	}
 
-	CBitSet *join_heuristic_bitset = NULL;
+	CBitSet *join_heuristic_bitset = nullptr;
 	switch (optimizer_join_order)
 	{
 		case JOIN_ORDER_IN_QUERY:

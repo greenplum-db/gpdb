@@ -100,7 +100,7 @@ CParseHandlerLogicalCTEConsumer::EndElement(
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 #ifdef GPOS_DEBUG
 	m_dxl_node->GetOperator()->AssertValid(m_dxl_node,
 										   false /* validate_children */);

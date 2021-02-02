@@ -49,7 +49,7 @@ CScaleFactorUtils::GenerateScaleFactorMap(
 	CMemoryPool *mp, SJoinConditionArray *join_conds_scale_factors,
 	CDoubleArray *independent_join_preds)
 {
-	GPOS_ASSERT(join_conds_scale_factors != NULL);
+	GPOS_ASSERT(join_conds_scale_factors != nullptr);
 
 	// create a hashmap of size 7 as we don't anticipate many join conditions here. Creating a larger map
 	// would be wasted memory.
@@ -69,7 +69,7 @@ CScaleFactorUtils::GenerateScaleFactorMap(
 		IMdIdArray *oid_pair = (*(*join_conds_scale_factors)[ul]).m_oid_pair;
 		BOOL both_dist_keys = (*(*join_conds_scale_factors)[ul]).m_dist_keys;
 
-		if (oid_pair != NULL && oid_pair->Size() == 2)
+		if (oid_pair != nullptr && oid_pair->Size() == 2)
 		{
 			// the array of scale factors in the order of damping
 			// i.e. the scale_factor_array[0] is not damped, and any subsequent
@@ -202,8 +202,8 @@ CScaleFactorUtils::CumulativeJoinScaleFactor(
 	CMemoryPool *mp, const CStatisticsConfig *stats_config,
 	SJoinConditionArray *join_conds_scale_factors)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != join_conds_scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != join_conds_scale_factors);
 
 	const ULONG num_join_conds = join_conds_scale_factors->Size();
 	if (1 < num_join_conds)
@@ -309,7 +309,7 @@ CDouble
 CScaleFactorUtils::DampedFilterScaleFactor(
 	const CStatisticsConfig *stats_config, ULONG num_columns)
 {
-	GPOS_ASSERT(NULL != stats_config);
+	GPOS_ASSERT(nullptr != stats_config);
 
 	if (1 >= num_columns)
 	{
@@ -332,7 +332,7 @@ CDouble
 CScaleFactorUtils::DampedGroupByScaleFactor(
 	const CStatisticsConfig *stats_config, ULONG num_columns)
 {
-	GPOS_ASSERT(NULL != stats_config);
+	GPOS_ASSERT(nullptr != stats_config);
 
 	if (1 > num_columns)
 	{
@@ -355,7 +355,7 @@ void
 CScaleFactorUtils::SortScalingFactor(CDoubleArray *scale_factors,
 									 BOOL is_descending)
 {
-	GPOS_ASSERT(NULL != scale_factors);
+	GPOS_ASSERT(nullptr != scale_factors);
 	const ULONG num_cols = scale_factors->Size();
 	if (1 < num_cols)
 	{
@@ -384,7 +384,7 @@ CScaleFactorUtils::SortScalingFactor(CDoubleArray *scale_factors,
 INT
 CScaleFactorUtils::DescendingOrderCmpFunc(const void *val1, const void *val2)
 {
-	GPOS_ASSERT(NULL != val1 && NULL != val2);
+	GPOS_ASSERT(nullptr != val1 && nullptr != val2);
 	const CDouble *double_val1 = *(const CDouble **) val1;
 	const CDouble *double_val2 = *(const CDouble **) val2;
 
@@ -403,7 +403,7 @@ INT
 CScaleFactorUtils::DescendingOrderCmpJoinFunc(const void *val1,
 											  const void *val2)
 {
-	GPOS_ASSERT(NULL != val1 && NULL != val2);
+	GPOS_ASSERT(nullptr != val1 && nullptr != val2);
 	const CDouble double_val1 =
 		(*(const SJoinCondition **) val1)->m_scale_factor;
 	const CDouble double_val2 =
@@ -424,7 +424,7 @@ CScaleFactorUtils::DescendingOrderCmpJoinFunc(const void *val1,
 INT
 CScaleFactorUtils::AscendingOrderCmpFunc(const void *val1, const void *val2)
 {
-	GPOS_ASSERT(NULL != val1 && NULL != val2);
+	GPOS_ASSERT(nullptr != val1 && nullptr != val2);
 	const CDouble *double_val1 = *(const CDouble **) val1;
 	const CDouble *double_val2 = *(const CDouble **) val2;
 
@@ -444,8 +444,8 @@ INT
 CScaleFactorUtils::DoubleCmpFunc(const CDouble *double_val1,
 								 const CDouble *double_val2, BOOL is_descending)
 {
-	GPOS_ASSERT(NULL != double_val1);
-	GPOS_ASSERT(NULL != double_val2);
+	GPOS_ASSERT(nullptr != double_val1);
+	GPOS_ASSERT(nullptr != double_val2);
 
 	if (double_val1->Get() == double_val2->Get())
 	{
@@ -478,8 +478,8 @@ CDouble
 CScaleFactorUtils::CalcScaleFactorCumulativeConj(
 	const CStatisticsConfig *stats_config, CDoubleArray *scale_factors)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != scale_factors);
 
 	const ULONG num_cols = scale_factors->Size();
 	CDouble scale_factor(1.0);
@@ -519,8 +519,8 @@ CScaleFactorUtils::CalcScaleFactorCumulativeDisj(
 	const CStatisticsConfig *stats_config, CDoubleArray *scale_factors,
 	CDouble total_rows)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != scale_factors);
 
 	const ULONG num_cols = scale_factors->Size();
 	GPOS_ASSERT(0 < num_cols);

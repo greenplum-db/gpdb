@@ -48,7 +48,7 @@ public:
 		  m_pdrgpcrInner(pdrgpcrInner),
 		  m_eopidOriginSubq(eopidOriginSubq)
 	{
-		GPOS_ASSERT(NULL != pdrgpcrInner);
+		GPOS_ASSERT(nullptr != pdrgpcrInner);
 
 		SetDistrRequests(UlDistrRequestsForCorrelatedJoin());
 		GPOS_ASSERT(0 < UlDistrRequests());
@@ -170,7 +170,7 @@ public:
 	static CPhysicalCorrelatedLeftSemiNLJoin *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalCorrelatedLeftSemiNLJoin == pop->Eopid());
 
 		return dynamic_cast<CPhysicalCorrelatedLeftSemiNLJoin *>(pop);

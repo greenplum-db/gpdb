@@ -35,7 +35,7 @@ CDXLPhysicalDynamicTableScan::CDXLPhysicalDynamicTableScan(
 	  m_part_index_id(part_idx_id),
 	  m_part_index_id_printable(part_idx_id_printable)
 {
-	GPOS_ASSERT(NULL != table_descr);
+	GPOS_ASSERT(nullptr != table_descr);
 }
 
 
@@ -171,8 +171,8 @@ CDXLPhysicalDynamicTableScan::AssertValid(const CDXLNode *node,
 	GPOS_ASSERT(2 == node->Arity());
 
 	// assert validity of table descriptor
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

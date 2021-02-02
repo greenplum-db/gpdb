@@ -72,7 +72,7 @@ public:
 	static CDXLDatumGeneric *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumGeneric == dxl_datum->GetDatumType() ||
 					CDXLDatum::EdxldatumStatsDoubleMappable ==
 						dxl_datum->GetDatumType() ||

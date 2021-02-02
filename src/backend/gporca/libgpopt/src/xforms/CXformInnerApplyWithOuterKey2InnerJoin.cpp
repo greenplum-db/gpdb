@@ -68,7 +68,7 @@ CXform::EXformPromise
 CXformInnerApplyWithOuterKey2InnerJoin::Exfp(CExpressionHandle &exprhdl) const
 {
 	// check if outer child has key and inner child has outer references
-	if (NULL == exprhdl.DeriveKeyCollection(0) ||
+	if (nullptr == exprhdl.DeriveKeyCollection(0) ||
 		0 == exprhdl.DeriveOuterReferences(1)->Size())
 	{
 		return ExfpNone;
@@ -91,7 +91,7 @@ CXformInnerApplyWithOuterKey2InnerJoin::Transform(CXformContext *pxfctxt,
 												  CXformResult *pxfres,
 												  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -116,7 +116,7 @@ CXformInnerApplyWithOuterKey2InnerJoin::Transform(CXformContext *pxfctxt,
 
 	// decorrelate Gb's relational child
 	(*pexprGb)[0]->ResetDerivedProperties();
-	CExpression *pexprInner = NULL;
+	CExpression *pexprInner = nullptr;
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 	if (!CDecorrelator::FProcess(mp, (*pexprGb)[0], false /*fEqualityOnly*/,
 								 &pexprInner, pdrgpexpr,
@@ -126,7 +126,7 @@ CXformInnerApplyWithOuterKey2InnerJoin::Transform(CXformContext *pxfctxt,
 		return;
 	}
 
-	GPOS_ASSERT(NULL != pexprInner);
+	GPOS_ASSERT(nullptr != pexprInner);
 	CExpression *pexprPredicate =
 		CPredicateUtils::PexprConjunction(mp, pdrgpexpr);
 
@@ -137,7 +137,7 @@ CXformInnerApplyWithOuterKey2InnerJoin::Transform(CXformContext *pxfctxt,
 								 pexprOuter, pexprInner, pexprPredicate);
 
 	// create grouping columns from the output of outer child
-	CColRefArray *pdrgpcrKey = NULL;
+	CColRefArray *pdrgpcrKey = nullptr;
 	CColRefArray *colref_array =
 		CUtils::PdrgpcrGroupingKey(mp, pexprOuter, &pdrgpcrKey);
 	pdrgpcrKey->Release();	// key is not used here

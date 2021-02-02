@@ -94,7 +94,7 @@ public:
 	static CDistributionSpecRouted *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRouted == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecRouted *>(pds);
@@ -104,7 +104,7 @@ public:
 	static const CDistributionSpecRouted *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRouted == pds->Edt());
 
 		return dynamic_cast<const CDistributionSpecRouted *>(pds);

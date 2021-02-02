@@ -218,7 +218,7 @@ public:
 	// main driver
 	static CExpression *PexprPreprocess(
 		CMemoryPool *mp, CExpression *pexpr,
-		CColRefSet *pcrsOutputAndOrderCols = NULL);
+		CColRefSet *pcrsOutputAndOrderCols = nullptr);
 
 	// add predicates collected from CTE consumers to producer expressions
 	static void AddPredsToCTEProducers(CMemoryPool *mp, CExpression *pexpr);

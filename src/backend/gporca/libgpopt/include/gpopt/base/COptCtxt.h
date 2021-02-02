@@ -261,7 +261,7 @@ public:
 	void
 	SetReqdSystemCols(CColRefArray *pdrgpcrSystemCols)
 	{
-		GPOS_ASSERT(NULL != pdrgpcrSystemCols);
+		GPOS_ASSERT(nullptr != pdrgpcrSystemCols);
 
 		CRefCount::SafeRelease(m_pdrgpcrSystemCols);
 		m_pdrgpcrSystemCols = pdrgpcrSystemCols;

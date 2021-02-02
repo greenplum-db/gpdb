@@ -90,9 +90,9 @@ public:
 	static CDrvdPropCtxt *
 	PdpctxtCopy(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt)
 	{
-		if (NULL == pdpctxt)
+		if (nullptr == pdpctxt)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		return pdpctxt->PdpctxtCopy(mp);
@@ -102,7 +102,7 @@ public:
 	static void
 	AddDerivedProps(CDrvdProp *pdp, CDrvdPropCtxt *pdpctxt)
 	{
-		if (NULL != pdpctxt)
+		if (nullptr != pdpctxt)
 		{
 			pdpctxt->AddProps(pdp);
 		}

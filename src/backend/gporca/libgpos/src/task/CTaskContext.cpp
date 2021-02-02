@@ -26,7 +26,7 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 CTaskContext::CTaskContext(CMemoryPool *mp)
-	: m_bitset(NULL),
+	: m_bitset(nullptr),
 	  m_log_out(&CLoggerStream::m_stdout_stream_logger),
 	  m_log_err(&CLoggerStream::m_stderr_stream_logger),
 	  m_locale(ElocEnUS_Utf8)
@@ -44,7 +44,7 @@ CTaskContext::CTaskContext(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 CTaskContext::CTaskContext(CMemoryPool *mp, const CTaskContext &task_ctxt)
-	: m_bitset(NULL),
+	: m_bitset(nullptr),
 	  m_log_out(task_ctxt.GetOutputLogger()),
 	  m_log_err(task_ctxt.GetErrorLogger()),
 	  m_locale(task_ctxt.Locale())

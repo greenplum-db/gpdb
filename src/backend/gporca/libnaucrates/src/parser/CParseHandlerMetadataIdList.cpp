@@ -33,7 +33,7 @@ CParseHandlerMetadataIdList::CParseHandlerMetadataIdList(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_array(NULL)
+	  m_mdid_array(nullptr)
 {
 }
 
@@ -69,7 +69,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 	if (FSupportedListType(element_local_name))
 	{
 		// start of an index or partition metadata id list
-		GPOS_ASSERT(NULL == m_mdid_array);
+		GPOS_ASSERT(nullptr == m_mdid_array);
 
 		m_mdid_array = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 	}
@@ -78,7 +78,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 									  element_local_name))
 	{
 		// index metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -90,7 +90,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 									  element_local_name))
 	{
 		// trigger metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -102,7 +102,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// partition metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -114,7 +114,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// check constraint metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -126,7 +126,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// opfamily metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -138,7 +138,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// distr opfamily metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -150,7 +150,7 @@ CParseHandlerMetadataIdList::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// distr opclass metadata id: array must be initialized already
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -200,7 +200,7 @@ CParseHandlerMetadataIdList::EndElement(const XMLCh *const,	 // element_uri,
 				 element_local_name))
 	{
 		// end the index or partition metadata id list
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		// deactivate handler
 		m_parse_handler_mgr->DeactivateHandler();

@@ -94,7 +94,7 @@ CDXLScalarPartListNullTest::AssertValid(const CDXLNode *dxlnode,
 CDXLScalarPartListNullTest *
 CDXLScalarPartListNullTest::Cast(CDXLOperator *dxl_op)
 {
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 	GPOS_ASSERT(EdxlopScalarPartListNullTest == dxl_op->GetDXLOperator());
 
 	return dynamic_cast<CDXLScalarPartListNullTest *>(dxl_op);

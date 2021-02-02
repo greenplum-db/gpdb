@@ -30,10 +30,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalRowTrigger::CLogicalRowTrigger(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_rel_mdid(NULL),
+	  m_rel_mdid(nullptr),
 	  m_type(0),
-	  m_pdrgpcrOld(NULL),
-	  m_pdrgpcrNew(NULL),
+	  m_pdrgpcrOld(nullptr),
+	  m_pdrgpcrNew(nullptr),
 	  m_efs(IMDFunction::EfsImmutable),
 	  m_efda(IMDFunction::EfdaNoSQL)
 {
@@ -61,8 +61,8 @@ CLogicalRowTrigger::CLogicalRowTrigger(CMemoryPool *mp, IMDId *rel_mdid,
 {
 	GPOS_ASSERT(rel_mdid->IsValid());
 	GPOS_ASSERT(0 != type);
-	GPOS_ASSERT(NULL != pdrgpcrNew || NULL != pdrgpcrOld);
-	GPOS_ASSERT_IMP(NULL != pdrgpcrNew && NULL != pdrgpcrOld,
+	GPOS_ASSERT(nullptr != pdrgpcrNew || nullptr != pdrgpcrOld);
+	GPOS_ASSERT_IMP(nullptr != pdrgpcrNew && nullptr != pdrgpcrOld,
 					pdrgpcrNew->Size() == pdrgpcrOld->Size());
 	InitFunctionProperties();
 }
@@ -198,13 +198,13 @@ CLogicalRowTrigger::HashValue() const
 		gpos::CombineHashes(COperator::HashValue(), m_rel_mdid->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, gpos::HashValue<INT>(&m_type));
 
-	if (NULL != m_pdrgpcrOld)
+	if (nullptr != m_pdrgpcrOld)
 	{
 		ulHash =
 			gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOld));
 	}
 
-	if (NULL != m_pdrgpcrNew)
+	if (nullptr != m_pdrgpcrNew)
 	{
 		ulHash =
 			gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrNew));
@@ -226,15 +226,15 @@ CLogicalRowTrigger::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,
 											   BOOL must_exist)
 {
-	CColRefArray *pdrgpcrOld = NULL;
-	if (NULL != m_pdrgpcrOld)
+	CColRefArray *pdrgpcrOld = nullptr;
+	if (nullptr != m_pdrgpcrOld)
 	{
 		pdrgpcrOld =
 			CUtils::PdrgpcrRemap(mp, m_pdrgpcrOld, colref_mapping, must_exist);
 	}
 
-	CColRefArray *pdrgpcrNew = NULL;
-	if (NULL != m_pdrgpcrNew)
+	CColRefArray *pdrgpcrNew = nullptr;
+	if (nullptr != m_pdrgpcrNew)
 	{
 		pdrgpcrNew =
 			CUtils::PdrgpcrRemap(mp, m_pdrgpcrNew, colref_mapping, must_exist);
@@ -360,14 +360,14 @@ CLogicalRowTrigger::OsPrint(IOstream &os) const
 
 	os << SzId() << " (Type: " << m_type << ")";
 
-	if (NULL != m_pdrgpcrOld)
+	if (nullptr != m_pdrgpcrOld)
 	{
 		os << ", Old Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrOld);
 		os << "]";
 	}
 
-	if (NULL != m_pdrgpcrNew)
+	if (nullptr != m_pdrgpcrNew)
 	{
 		os << ", New Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrNew);

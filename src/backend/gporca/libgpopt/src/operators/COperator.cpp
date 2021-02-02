@@ -34,7 +34,7 @@ ULONG COperator::m_aulOpIdCounter(0);
 COperator::COperator(CMemoryPool *mp)
 	: m_ulOpId(m_aulOpIdCounter++), m_mp(mp), m_fPattern(false)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 

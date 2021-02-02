@@ -33,7 +33,7 @@ CPartInfo::CPartInfoEntry::CPartInfoEntry(ULONG scan_id, IMDId *mdid,
 	: m_scan_id(scan_id), m_mdid(mdid), m_pdrgppartkeys(pdrgppartkeys)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(pdrgppartkeys != NULL);
+	GPOS_ASSERT(pdrgppartkeys != nullptr);
 	GPOS_ASSERT(0 < pdrgppartkeys->Size());
 }
 
@@ -64,8 +64,8 @@ CPartInfo::CPartInfoEntry *
 CPartInfo::CPartInfoEntry::PpartinfoentryAddRemappedKeys(
 	CMemoryPool *mp, CColRefSet *pcrs, UlongToColRefMap *colref_mapping)
 {
-	GPOS_ASSERT(NULL != pcrs);
-	GPOS_ASSERT(NULL != colref_mapping);
+	GPOS_ASSERT(nullptr != pcrs);
+	GPOS_ASSERT(nullptr != colref_mapping);
 
 	CPartKeysArray *pdrgppartkeys =
 		CPartKeys::PdrgppartkeysCopy(mp, m_pdrgppartkeys);
@@ -142,7 +142,7 @@ CPartInfo::CPartInfoEntry::PpartinfoentryCopy(CMemoryPool *mp)
 CPartInfo::CPartInfo(CPartInfoEntryArray *pdrgppartentries)
 	: m_pdrgppartentries(pdrgppartentries)
 {
-	GPOS_ASSERT(NULL != pdrgppartentries);
+	GPOS_ASSERT(nullptr != pdrgppartentries);
 }
 
 //---------------------------------------------------------------------------
@@ -279,7 +279,7 @@ CPartInfo::PdrgppartkeysByScanId(ULONG scan_id) const
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -294,8 +294,8 @@ CPartInfo *
 CPartInfo::PpartinfoWithRemappedKeys(CMemoryPool *mp, CColRefArray *pdrgpcrSrc,
 									 CColRefArray *pdrgpcrDest) const
 {
-	GPOS_ASSERT(NULL != pdrgpcrSrc);
-	GPOS_ASSERT(NULL != pdrgpcrDest);
+	GPOS_ASSERT(nullptr != pdrgpcrSrc);
+	GPOS_ASSERT(nullptr != pdrgpcrDest);
 
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrSrc);
 	UlongToColRefMap *colref_mapping =
@@ -335,8 +335,8 @@ CPartInfo *
 CPartInfo::PpartinfoCombine(CMemoryPool *mp, CPartInfo *ppartinfoFst,
 							CPartInfo *ppartinfoSnd)
 {
-	GPOS_ASSERT(NULL != ppartinfoFst);
-	GPOS_ASSERT(NULL != ppartinfoSnd);
+	GPOS_ASSERT(nullptr != ppartinfoFst);
+	GPOS_ASSERT(nullptr != ppartinfoSnd);
 
 	CPartInfoEntryArray *pdrgppartentries =
 		GPOS_NEW(mp) CPartInfoEntryArray(mp);
@@ -353,7 +353,7 @@ CPartInfo::PpartinfoCombine(CMemoryPool *mp, CPartInfo *ppartinfoFst,
 		CPartKeysArray *pdrgppartkeys =
 			ppartinfoFst->PdrgppartkeysByScanId(ppartinfoentry->ScanId());
 
-		if (NULL != pdrgppartkeys)
+		if (nullptr != pdrgppartkeys)
 		{
 			// there is already an entry with the same scan id; need to add to it
 			// the keys from the current entry

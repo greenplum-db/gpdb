@@ -21,9 +21,9 @@ CLeftSemiJoinStatsProcessor::CalcLSJoinStatsStatic(
 	CMemoryPool *mp, const IStatistics *outer_stats_input,
 	const IStatistics *inner_stats_input, CStatsPredJoinArray *join_preds_stats)
 {
-	GPOS_ASSERT(NULL != outer_stats_input);
-	GPOS_ASSERT(NULL != inner_stats_input);
-	GPOS_ASSERT(NULL != join_preds_stats);
+	GPOS_ASSERT(nullptr != outer_stats_input);
+	GPOS_ASSERT(nullptr != inner_stats_input);
+	GPOS_ASSERT(nullptr != join_preds_stats);
 
 	const ULONG length = join_preds_stats->Size();
 
@@ -43,7 +43,7 @@ CLeftSemiJoinStatsProcessor::CalcLSJoinStatsStatic(
 	IStatistics *inner_stats = CGroupByStatsProcessor::CalcGroupByStats(
 		mp, dynamic_cast<const CStatistics *>(inner_stats_input), inner_colids,
 		aggs,
-		NULL  // keys: no keys, use all grouping cols
+		nullptr	 // keys: no keys, use all grouping cols
 	);
 
 	const CStatistics *outer_stats =

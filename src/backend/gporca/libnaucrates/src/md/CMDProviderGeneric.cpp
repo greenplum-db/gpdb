@@ -93,7 +93,7 @@ CMDProviderGeneric::MDId(IMDType::ETypeInfo type_info) const
 			return m_mdid_oid;
 
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 

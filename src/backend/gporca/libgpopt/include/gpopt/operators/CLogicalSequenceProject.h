@@ -191,7 +191,7 @@ public:
 	static CLogicalSequenceProject *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalSequenceProject == pop->Eopid());
 
 		return dynamic_cast<CLogicalSequenceProject *>(pop);

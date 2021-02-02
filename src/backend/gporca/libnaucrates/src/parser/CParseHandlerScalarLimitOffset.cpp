@@ -65,7 +65,7 @@ CParseHandlerScalarLimitOffset::StartElement(
 	else
 	{
 		// we must have seen a LIMITOffset already and initialized its corresponding node
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

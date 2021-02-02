@@ -50,20 +50,20 @@ CMDRelationExternalGPDB::CMDRelationExternalGPDB(
 	  m_is_rej_limit_in_rows(is_reject_limit_in_rows),
 	  m_mdid_fmt_err_table(mdid_fmt_err_table),
 	  m_system_columns(0),
-	  m_colpos_nondrop_colpos_map(NULL),
-	  m_attrno_nondrop_col_pos_map(NULL),
-	  m_nondrop_col_pos_array(NULL)
+	  m_colpos_nondrop_colpos_map(nullptr),
+	  m_attrno_nondrop_col_pos_map(nullptr),
+	  m_nondrop_col_pos_array(nullptr)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != mdcol_array);
-	GPOS_ASSERT(NULL != md_index_info_array);
-	GPOS_ASSERT(NULL != mdid_triggers_array);
-	GPOS_ASSERT(NULL != mdid_check_constraint_array);
+	GPOS_ASSERT(nullptr != mdcol_array);
+	GPOS_ASSERT(nullptr != md_index_info_array);
+	GPOS_ASSERT(nullptr != mdid_triggers_array);
+	GPOS_ASSERT(nullptr != mdid_check_constraint_array);
 	GPOS_ASSERT_IMP(
 		convert_hash_to_random,
 		IMDRelation::EreldistrHash == rel_distr_policy &&
 			"Converting hash distributed table to random only possible for hash distributed tables");
-	GPOS_ASSERT(NULL == distr_opfamilies ||
+	GPOS_ASSERT(nullptr == distr_opfamilies ||
 				distr_opfamilies->Size() == m_distr_col_array->Size());
 
 	m_colpos_nondrop_colpos_map = GPOS_NEW(m_mp) UlongToUlongMap(m_mp);
@@ -189,7 +189,7 @@ CMDRelationExternalGPDB::GetRelDistribution() const
 ULONG
 CMDRelationExternalGPDB::ColumnCount() const
 {
-	GPOS_ASSERT(NULL != m_md_col_array);
+	GPOS_ASSERT(nullptr != m_md_col_array);
 
 	return m_md_col_array->Size();
 }
@@ -278,14 +278,14 @@ CMDRelationExternalGPDB::NonDroppedColAt(ULONG pos) const
 
 	ULONG *pul = m_colpos_nondrop_colpos_map->Find(&pos);
 
-	GPOS_ASSERT(NULL != pul);
+	GPOS_ASSERT(nullptr != pul);
 	return *pul;
 }
 
 IMDId *
 CMDRelationExternalGPDB::GetDistrOpfamilyAt(ULONG pos) const
 {
-	if (m_distr_opfamilies == NULL)
+	if (m_distr_opfamilies == nullptr)
 	{
 		GPOS_RAISE(CException::ExmaInvalid, CException::ExmiInvalid,
 				   GPOS_WSZ_LIT("GetDistrOpfamilyAt() returning NULL."));
@@ -306,7 +306,7 @@ ULONG
 CMDRelationExternalGPDB::GetPosFromAttno(INT attno) const
 {
 	ULONG *pul = m_attrno_nondrop_col_pos_map->Find(&attno);
-	GPOS_ASSERT(NULL != pul);
+	GPOS_ASSERT(nullptr != pul);
 
 	return *pul;
 }
@@ -377,7 +377,7 @@ CMDRelationExternalGPDB::GetFormatErrTableMdid() const
 ULONG
 CMDRelationExternalGPDB::KeySetCount() const
 {
-	return (m_keyset_array == NULL) ? 0 : m_keyset_array->Size();
+	return (m_keyset_array == nullptr) ? 0 : m_keyset_array->Size();
 }
 
 //---------------------------------------------------------------------------
@@ -391,7 +391,7 @@ CMDRelationExternalGPDB::KeySetCount() const
 const ULongPtrArray *
 CMDRelationExternalGPDB::KeySetAt(ULONG pos) const
 {
-	GPOS_ASSERT(NULL != m_keyset_array);
+	GPOS_ASSERT(nullptr != m_keyset_array);
 
 	return (*m_keyset_array)[pos];
 }
@@ -407,7 +407,7 @@ CMDRelationExternalGPDB::KeySetAt(ULONG pos) const
 ULONG
 CMDRelationExternalGPDB::DistrColumnCount() const
 {
-	return (m_distr_col_array == NULL) ? 0 : m_distr_col_array->Size();
+	return (m_distr_col_array == nullptr) ? 0 : m_distr_col_array->Size();
 }
 
 //---------------------------------------------------------------------------
@@ -554,7 +554,7 @@ CMDRelationExternalGPDB::Serialize(CXMLSerializer *xml_serializer) const
 
 	if (EreldistrHash == m_rel_distr_policy)
 	{
-		GPOS_ASSERT(NULL != m_distr_col_array);
+		GPOS_ASSERT(nullptr != m_distr_col_array);
 
 		// serialize distribution columns
 		CWStringDynamic *pstrDistrColumns =
@@ -566,7 +566,7 @@ CMDRelationExternalGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	}
 
 	// serialize key sets
-	if (m_keyset_array != NULL && 0 < m_keyset_array->Size())
+	if (m_keyset_array != nullptr && 0 < m_keyset_array->Size())
 	{
 		CWStringDynamic *pstrKeys = CDXLUtils::Serialize(m_mp, m_keyset_array);
 		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenKeys),
@@ -584,7 +584,7 @@ CMDRelationExternalGPDB::Serialize(CXMLSerializer *xml_serializer) const
 			m_is_rej_limit_in_rows);
 	}
 
-	if (NULL != m_mdid_fmt_err_table)
+	if (nullptr != m_mdid_fmt_err_table)
 	{
 		m_mdid_fmt_err_table->Serialize(
 			xml_serializer,
@@ -640,7 +640,7 @@ CMDRelationExternalGPDB::Serialize(CXMLSerializer *xml_serializer) const
 					  CDXLTokens::GetDXLTokenStr(EdxltokenCheckConstraint));
 
 	// serialize operator class information, if present
-	if (EreldistrHash == m_rel_distr_policy && NULL != m_distr_opfamilies)
+	if (EreldistrHash == m_rel_distr_policy && nullptr != m_distr_opfamilies)
 	{
 		SerializeMDIdList(
 			xml_serializer, m_distr_opfamilies,
@@ -722,7 +722,7 @@ CMDRelationExternalGPDB::DebugPrint(IOstream &os) const
 		os << " Percent" << std::endl;
 	}
 
-	if (NULL != GetFormatErrTableMdid())
+	if (nullptr != GetFormatErrTableMdid())
 	{
 		os << "Format Error Table: ";
 		GetFormatErrTableMdid()->OsPrint(os);

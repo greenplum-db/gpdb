@@ -96,7 +96,7 @@ void
 CXformPushGbBelowJoin::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -104,7 +104,7 @@ CXformPushGbBelowJoin::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	CExpression *pexprResult = CXformUtils::PexprPushGbBelowJoin(mp, pexpr);
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		// add alternative to results
 		pxfres->Add(pexprResult);

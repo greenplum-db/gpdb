@@ -29,7 +29,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalApply::CLogicalApply(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pdrgpcrInner(NULL),
+	  m_pdrgpcrInner(nullptr),
 	  m_eopidOriginSubq(COperator::EopSentinel)
 {
 }
@@ -49,7 +49,7 @@ CLogicalApply::CLogicalApply(CMemoryPool *mp, CColRefArray *pdrgpcrInner,
 	  m_pdrgpcrInner(pdrgpcrInner),
 	  m_eopidOriginSubq(eopidOriginSubq)
 {
-	GPOS_ASSERT(NULL != pdrgpcrInner);
+	GPOS_ASSERT(nullptr != pdrgpcrInner);
 }
 
 //---------------------------------------------------------------------------
@@ -112,9 +112,9 @@ CLogicalApply::Matches(COperator *pop) const
 	{
 		CColRefArray *pdrgpcrInner =
 			CLogicalApply::PopConvert(pop)->PdrgPcrInner();
-		if (NULL == m_pdrgpcrInner || NULL == pdrgpcrInner)
+		if (nullptr == m_pdrgpcrInner || nullptr == pdrgpcrInner)
 		{
-			return (NULL == m_pdrgpcrInner && NULL == pdrgpcrInner);
+			return (nullptr == m_pdrgpcrInner && nullptr == pdrgpcrInner);
 		}
 
 		return m_pdrgpcrInner->Equals(pdrgpcrInner);
@@ -135,7 +135,7 @@ IOstream &
 CLogicalApply::OsPrint(IOstream &os) const
 {
 	os << this->SzId();
-	if (NULL != m_pdrgpcrInner)
+	if (nullptr != m_pdrgpcrInner)
 	{
 		os << " (Reqd Inner Cols: ";
 		(void) CUtils::OsPrintDrgPcr(os, m_pdrgpcrInner);

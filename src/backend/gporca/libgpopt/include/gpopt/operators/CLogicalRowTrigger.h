@@ -199,7 +199,7 @@ public:
 	static CLogicalRowTrigger *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalRowTrigger == pop->Eopid());
 
 		return dynamic_cast<CLogicalRowTrigger *>(pop);

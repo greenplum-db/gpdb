@@ -49,7 +49,7 @@ CScalar::PrpCreate(CMemoryPool *  // mp
 ) const
 {
 	GPOS_ASSERT(!"Cannot compute required properties on scalar");
-	return NULL;
+	return nullptr;
 }
 
 
@@ -98,7 +98,7 @@ CScalar::FHasSubquery(CExpressionHandle &exprhdl)
 CScalar::EBoolEvalResult
 CScalar::EberConjunction(ULongPtrArray *pdrgpulChildren)
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 	GPOS_ASSERT(1 < pdrgpulChildren->Size());
 
 	// Here are the rules:
@@ -159,7 +159,7 @@ CScalar::EberConjunction(ULongPtrArray *pdrgpulChildren)
 CScalar::EBoolEvalResult
 CScalar::EberDisjunction(ULongPtrArray *pdrgpulChildren)
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 	GPOS_ASSERT(1 < pdrgpulChildren->Size());
 
 	BOOL fAllChildrenFalse = true;
@@ -244,7 +244,7 @@ CScalar::EberDisjunction(ULongPtrArray *pdrgpulChildren)
 CScalar::EBoolEvalResult
 CScalar::EberNullOnAnyNullChild(ULongPtrArray *pdrgpulChildren)
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 
 	const ULONG ulChildren = pdrgpulChildren->Size();
 	for (ULONG ul = 0; ul < ulChildren; ul++)
@@ -271,7 +271,7 @@ CScalar::EberNullOnAnyNullChild(ULongPtrArray *pdrgpulChildren)
 CScalar::EBoolEvalResult
 CScalar::EberNullOnAllNullChildren(ULongPtrArray *pdrgpulChildren)
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 
 	const ULONG ulChildren = pdrgpulChildren->Size();
 	for (ULONG ul = 0; ul < ulChildren; ul++)
@@ -299,13 +299,13 @@ CScalar::EBoolEvalResult
 CScalar::EberEvaluate(CMemoryPool *mp, CExpression *pexprScalar)
 {
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != pexprScalar);
+	GPOS_ASSERT(nullptr != pexprScalar);
 
 	COperator *pop = pexprScalar->Pop();
 	GPOS_ASSERT(pop->FScalar());
 
 	const ULONG arity = pexprScalar->Arity();
-	ULongPtrArray *pdrgpulChildren = NULL;
+	ULongPtrArray *pdrgpulChildren = nullptr;
 
 	if (!CUtils::FSubquery(pop))
 	{
@@ -385,7 +385,7 @@ CScalar::PpartinfoDeriveCombineScalar(CMemoryPool *mp,
 		if (exprhdl.FScalarChild(ul))
 		{
 			CPartInfo *ppartinfoChild = exprhdl.DeriveScalarPartitionInfo(ul);
-			GPOS_ASSERT(NULL != ppartinfoChild);
+			GPOS_ASSERT(nullptr != ppartinfoChild);
 			CPartInfo *ppartinfoCombined =
 				CPartInfo::PpartinfoCombine(mp, ppartinfo, ppartinfoChild);
 			ppartinfo->Release();

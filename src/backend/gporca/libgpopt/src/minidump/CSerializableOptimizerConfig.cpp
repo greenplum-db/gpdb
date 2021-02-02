@@ -41,7 +41,7 @@ CSerializableOptimizerConfig::CSerializableOptimizerConfig(
 	CMemoryPool *mp, const COptimizerConfig *optimizer_config)
 	: CSerializable(), m_mp(mp), m_optimizer_config(optimizer_config)
 {
-	GPOS_ASSERT(NULL != optimizer_config);
+	GPOS_ASSERT(nullptr != optimizer_config);
 }
 
 //---------------------------------------------------------------------------

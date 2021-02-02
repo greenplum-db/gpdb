@@ -15,9 +15,9 @@ using namespace gpopt;
 
 CLogicalIndexApply::CLogicalIndexApply(CMemoryPool *mp)
 	: CLogicalApply(mp),
-	  m_pdrgpcrOuterRefs(NULL),
+	  m_pdrgpcrOuterRefs(nullptr),
 	  m_fOuterJoin(false),
-	  m_origJoinPred(NULL)
+	  m_origJoinPred(nullptr)
 {
 	m_fPattern = true;
 }
@@ -31,8 +31,8 @@ CLogicalIndexApply::CLogicalIndexApply(CMemoryPool *mp,
 	  m_fOuterJoin(fOuterJoin),
 	  m_origJoinPred(origJoinPred)
 {
-	GPOS_ASSERT(NULL != pdrgpcrOuterRefs);
-	if (NULL != origJoinPred)
+	GPOS_ASSERT(nullptr != pdrgpcrOuterRefs);
+	if (nullptr != origJoinPred)
 	{
 		// We don't allow subqueries in the expression that we
 		// store in the logical operator, since such expressions
@@ -69,7 +69,7 @@ CLogicalIndexApply::PxfsCandidates(CMemoryPool *mp) const
 BOOL
 CLogicalIndexApply::Matches(COperator *pop) const
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 
 	if (pop->Eopid() == Eopid())
 	{
@@ -112,12 +112,12 @@ CLogicalIndexApply::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,
 											   BOOL must_exist)
 {
-	COperator *result = NULL;
+	COperator *result = nullptr;
 	CColRefArray *colref_array = CUtils::PdrgpcrRemap(
 		mp, m_pdrgpcrOuterRefs, colref_mapping, must_exist);
-	CExpression *remapped_orig_join_pred = NULL;
+	CExpression *remapped_orig_join_pred = nullptr;
 
-	if (NULL != m_origJoinPred)
+	if (nullptr != m_origJoinPred)
 	{
 		remapped_orig_join_pred = m_origJoinPred->PexprCopyWithRemappedColumns(
 			mp, colref_mapping, must_exist);

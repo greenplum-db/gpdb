@@ -84,7 +84,7 @@ public:
 	static CDXLPhysicalIndexScan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalIndexScan == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalIndexScan *>(dxl_op);

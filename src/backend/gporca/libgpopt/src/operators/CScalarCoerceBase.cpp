@@ -40,7 +40,7 @@ CScalarCoerceBase::CScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type,
 	  m_ecf(ecf),
 	  m_location(location)
 {
-	GPOS_ASSERT(NULL != mdid_type);
+	GPOS_ASSERT(nullptr != mdid_type);
 	GPOS_ASSERT(mdid_type->IsValid());
 }
 

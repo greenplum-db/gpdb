@@ -75,7 +75,7 @@ CParseHandlerManagerTest::EresUnittest_Basic()
 
 	// create some parse handlers
 	CParseHandlerPlan *pphPlan =
-		GPOS_NEW(mp) CParseHandlerPlan(mp, parse_handler_mgr, NULL);
+		GPOS_NEW(mp) CParseHandlerPlan(mp, parse_handler_mgr, nullptr);
 	CParseHandlerHashJoin *pphHJ =
 		GPOS_NEW(mp) CParseHandlerHashJoin(mp, parse_handler_mgr, pphPlan);
 
@@ -94,8 +94,8 @@ CParseHandlerManagerTest::EresUnittest_Basic()
 
 	parse_handler_mgr->DeactivateHandler();
 	// no more parse handlers
-	GPOS_ASSERT(NULL == parse_handler_mgr->GetCurrentParseHandler());
-	GPOS_ASSERT(NULL == parser->getContentHandler());
+	GPOS_ASSERT(nullptr == parse_handler_mgr->GetCurrentParseHandler());
+	GPOS_ASSERT(nullptr == parser->getContentHandler());
 
 	// cleanup
 	GPOS_DELETE(parse_handler_mgr);

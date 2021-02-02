@@ -62,7 +62,7 @@ public:
 	static CDXLScalarIfStmt *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarIfStmt == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarIfStmt *>(dxl_op);

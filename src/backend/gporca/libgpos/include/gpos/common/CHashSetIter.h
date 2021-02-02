@@ -41,7 +41,7 @@ public:
 	CHashSetIter<T, HashFn, EqFn, CleanupFn>(TSet *set)
 		: m_set(set), m_chain_idx(0), m_elem_idx(0)
 	{
-		GPOS_ASSERT(NULL != set);
+		GPOS_ASSERT(nullptr != set);
 	}
 
 	// dtor
@@ -64,14 +64,14 @@ public:
 	const T *
 	Get() const
 	{
-		const typename TSet::CHashSetElem *elem = NULL;
+		const typename TSet::CHashSetElem *elem = nullptr;
 		T *t = (*(m_set->m_elements))[m_elem_idx - 1];
 		elem = m_set->Lookup(t);
-		if (NULL != elem)
+		if (nullptr != elem)
 		{
 			return elem->Value();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 };	// class CHashSetIter

@@ -129,7 +129,7 @@ CScalarBoolOp::Eber(ULongPtrArray *pdrgpulChildren) const
 	}
 
 	GPOS_ASSERT(EboolopNot == m_eboolop);
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 	GPOS_ASSERT(1 == pdrgpulChildren->Size());
 
 	EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[0]);

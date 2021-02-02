@@ -25,7 +25,9 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLPhysicalMotion::CDXLPhysicalMotion(CMemoryPool *mp)
-	: CDXLPhysical(mp), m_input_segids_array(NULL), m_output_segids_array(NULL)
+	: CDXLPhysical(mp),
+	  m_input_segids_array(nullptr),
+	  m_output_segids_array(nullptr)
 {
 }
 
@@ -74,8 +76,8 @@ CDXLPhysicalMotion::GetOutputSegIdsArray() const
 void
 CDXLPhysicalMotion::SetInputSegIds(IntPtrArray *input_segids_array)
 {
-	GPOS_ASSERT(NULL == m_input_segids_array);
-	GPOS_ASSERT(NULL != input_segids_array);
+	GPOS_ASSERT(nullptr == m_input_segids_array);
+	GPOS_ASSERT(nullptr != input_segids_array);
 	m_input_segids_array = input_segids_array;
 }
 
@@ -90,8 +92,8 @@ CDXLPhysicalMotion::SetInputSegIds(IntPtrArray *input_segids_array)
 void
 CDXLPhysicalMotion::SetOutputSegIds(IntPtrArray *output_segids_array)
 {
-	GPOS_ASSERT(NULL == m_output_segids_array);
-	GPOS_ASSERT(NULL != output_segids_array);
+	GPOS_ASSERT(nullptr == m_output_segids_array);
+	GPOS_ASSERT(nullptr != output_segids_array);
 	m_output_segids_array = output_segids_array;
 }
 
@@ -107,8 +109,10 @@ void
 CDXLPhysicalMotion::SetSegmentInfo(IntPtrArray *input_segids_array,
 								   IntPtrArray *output_segids_array)
 {
-	GPOS_ASSERT(NULL == m_output_segids_array && NULL == m_input_segids_array);
-	GPOS_ASSERT(NULL != output_segids_array && NULL != input_segids_array);
+	GPOS_ASSERT(nullptr == m_output_segids_array &&
+				nullptr == m_input_segids_array);
+	GPOS_ASSERT(nullptr != output_segids_array &&
+				nullptr != input_segids_array);
 
 	m_input_segids_array = input_segids_array;
 	m_output_segids_array = output_segids_array;
@@ -126,7 +130,7 @@ CWStringDynamic *
 CDXLPhysicalMotion::GetSegIdsCommaSeparatedStr(
 	const IntPtrArray *segment_ids_array) const
 {
-	GPOS_ASSERT(segment_ids_array != NULL && 0 < segment_ids_array->Size());
+	GPOS_ASSERT(segment_ids_array != nullptr && 0 < segment_ids_array->Size());
 
 	CWStringDynamic *str = GPOS_NEW(m_mp) CWStringDynamic(m_mp);
 

@@ -52,7 +52,7 @@ public:
 	CUpperBoundNDVs(CColRefSet *column_refset, CDouble upper_bound_ndv)
 		: m_column_refset(column_refset), m_upper_bound_ndv(upper_bound_ndv)
 	{
-		GPOS_ASSERT(NULL != m_column_refset);
+		GPOS_ASSERT(nullptr != m_column_refset);
 	}
 
 	// dtor

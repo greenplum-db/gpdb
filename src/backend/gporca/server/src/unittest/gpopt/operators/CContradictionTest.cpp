@@ -92,7 +92,7 @@ CContradictionTest::EresUnittest_Constraint()
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpf); i++)
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// generate simple expression

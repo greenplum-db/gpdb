@@ -66,7 +66,7 @@ CParseHandlerDefaultValueExpr::StartElement(
 			CParseHandlerFactory::GetParseHandler(m_mp, element_local_name,
 												  m_parse_handler_mgr, this);
 
-		GPOS_ASSERT(NULL != scalar_op_parse_handler);
+		GPOS_ASSERT(nullptr != scalar_op_parse_handler);
 
 		// activate the child parse handler
 		m_parse_handler_mgr->ActivateParseHandler(scalar_op_parse_handler);

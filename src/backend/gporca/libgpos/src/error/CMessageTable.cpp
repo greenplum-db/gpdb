@@ -67,7 +67,7 @@ CMessageTable::AddMessage(CMessage *msg)
 {
 	MTAccessor acc(m_hash_table, msg->m_exception);
 
-	if (NULL == acc.Find())
+	if (nullptr == acc.Find())
 	{
 		acc.Insert(msg);
 	}

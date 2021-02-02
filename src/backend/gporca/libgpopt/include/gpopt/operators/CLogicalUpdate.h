@@ -208,7 +208,7 @@ public:
 	static CLogicalUpdate *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalUpdate == pop->Eopid());
 
 		return dynamic_cast<CLogicalUpdate *>(pop);

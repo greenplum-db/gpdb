@@ -45,7 +45,7 @@ using gpnaucrates::IDatum;
 CDefaultComparator::CDefaultComparator(IConstExprEvaluator *pceeval)
 	: m_pceeval(pceeval)
 {
-	GPOS_ASSERT(NULL != pceeval);
+	GPOS_ASSERT(nullptr != pceeval);
 }
 
 //---------------------------------------------------------------------------

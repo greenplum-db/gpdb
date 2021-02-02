@@ -81,7 +81,7 @@ public:
 	static CLogicalLeftOuterCorrelatedApply *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalLeftOuterCorrelatedApply == pop->Eopid());
 
 		return dynamic_cast<CLogicalLeftOuterCorrelatedApply *>(pop);

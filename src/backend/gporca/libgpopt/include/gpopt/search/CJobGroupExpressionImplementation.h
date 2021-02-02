@@ -131,7 +131,7 @@ public:
 	static CJobGroupExpressionImplementation *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupExpressionImplementation == pj->Ejt());
 
 		return dynamic_cast<CJobGroupExpressionImplementation *>(pj);

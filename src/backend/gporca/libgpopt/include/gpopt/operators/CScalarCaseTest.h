@@ -87,7 +87,7 @@ public:
 	static CScalarCaseTest *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCaseTest == pop->Eopid());
 
 		return dynamic_cast<CScalarCaseTest *>(pop);

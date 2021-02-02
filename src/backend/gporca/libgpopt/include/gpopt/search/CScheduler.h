@@ -86,7 +86,7 @@ private:
 		Init(CJob *pj)
 		{
 			m_pj = pj;
-			m_link.m_prev = m_link.m_next = NULL;
+			m_link.m_prev = m_link.m_next = nullptr;
 		}
 	};
 

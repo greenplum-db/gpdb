@@ -223,7 +223,7 @@ private:
 public:
 	// ctor
 	CCostModelGPDB(CMemoryPool *mp, ULONG ulSegments,
-				   CCostModelParamsGPDB *pcp = NULL);
+				   CCostModelParamsGPDB *pcp = nullptr);
 
 	// dtor
 	~CCostModelGPDB() override;

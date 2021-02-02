@@ -82,7 +82,7 @@ public:
 	{
 		GPOS_ASSERT(
 			!"Invalid function call: CScalarNAryJoinPredList::MdidType()");
-		return NULL;
+		return nullptr;
 	}
 
 };	// class CScalarNAryJoinPredList

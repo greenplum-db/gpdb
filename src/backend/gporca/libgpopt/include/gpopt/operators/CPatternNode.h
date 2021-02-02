@@ -67,7 +67,7 @@ public:
 	static CPatternNode *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(COperator::EopPatternNode == pop->Eopid());
 
 		return static_cast<CPatternNode *>(pop);

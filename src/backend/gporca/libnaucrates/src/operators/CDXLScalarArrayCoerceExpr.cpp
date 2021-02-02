@@ -41,7 +41,7 @@ CDXLScalarArrayCoerceExpr::CDXLScalarArrayCoerceExpr(
 	  m_coerce_func_mdid(coerce_func_mdid),
 	  m_explicit(is_explicit)
 {
-	GPOS_ASSERT(NULL != coerce_func_mdid);
+	GPOS_ASSERT(nullptr != coerce_func_mdid);
 }
 
 //---------------------------------------------------------------------------

@@ -29,7 +29,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CName::CName(CMemoryPool *mp, const CWStringBase *str)
-	: m_str_name(NULL), m_fDeepCopy(true)
+	: m_str_name(nullptr), m_fDeepCopy(true)
 {
 	m_str_name = GPOS_NEW(mp) CWStringConst(mp, str->GetBuffer());
 }
@@ -47,7 +47,7 @@ CName::CName(CMemoryPool *mp, const CWStringBase *str)
 CName::CName(const CWStringConst *str, BOOL fOwnsMemory)
 	: m_str_name(str), m_fDeepCopy(fOwnsMemory)
 {
-	GPOS_ASSERT(NULL != m_str_name);
+	GPOS_ASSERT(nullptr != m_str_name);
 	GPOS_ASSERT(m_str_name->IsValid());
 }
 
@@ -62,7 +62,7 @@ CName::CName(const CWStringConst *str, BOOL fOwnsMemory)
 //
 //---------------------------------------------------------------------------
 CName::CName(CMemoryPool *mp, const CName &nameFirst, const CName &nameSecond)
-	: m_str_name(NULL), m_fDeepCopy(false)
+	: m_str_name(nullptr), m_fDeepCopy(false)
 {
 	CWStringDynamic *pstrTmp =
 		GPOS_NEW(mp) CWStringDynamic(mp, (nameFirst.Pstr())->GetBuffer());
@@ -87,7 +87,7 @@ CName::CName(CMemoryPool *mp, const CName &nameFirst, const CName &nameSecond)
 //---------------------------------------------------------------------------
 CName::CName(const CName &name) : m_str_name(name.Pstr()), m_fDeepCopy(false)
 {
-	GPOS_ASSERT(NULL != m_str_name->GetBuffer());
+	GPOS_ASSERT(nullptr != m_str_name->GetBuffer());
 	GPOS_ASSERT(m_str_name->IsValid());
 }
 
@@ -102,7 +102,7 @@ CName::CName(const CName &name) : m_str_name(name.Pstr()), m_fDeepCopy(false)
 //
 //---------------------------------------------------------------------------
 CName::CName(CMemoryPool *mp, const CName &name)
-	: m_str_name(NULL), m_fDeepCopy(false)
+	: m_str_name(nullptr), m_fDeepCopy(false)
 {
 	DeepCopy(mp, name.Pstr());
 }

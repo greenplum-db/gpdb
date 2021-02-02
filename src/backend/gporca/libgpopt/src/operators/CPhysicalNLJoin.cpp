@@ -189,7 +189,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalNLJoin::EpetOrder(CExpressionHandle &exprhdl,
 						   const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	if (FSortColsInOuterChild(m_mp, exprhdl, peo->PosRequired()))

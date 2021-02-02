@@ -74,7 +74,7 @@ CDXLUtilsTest::EresUnittest_SerializeQuery()
 	CHAR *dxl_string = CDXLUtils::Read(mp, szQueryFile);
 
 	CQueryToDXLResult *presult = CDXLUtils::ParseQueryToQueryDXLTree(
-		mp, dxl_string, NULL /*xsd_file_path*/);
+		mp, dxl_string, nullptr /*xsd_file_path*/);
 
 	// serialize with document header
 	BOOL rgfIndentation[] = {true, false};
@@ -131,7 +131,7 @@ CDXLUtilsTest::EresUnittest_SerializePlan()
 	ULLONG plan_id = gpos::ullong_max;
 	ULLONG plan_space_size = gpos::ullong_max;
 	CDXLNode *node = CDXLUtils::GetPlanDXLNode(
-		mp, dxl_string, NULL /*xsd_file_path*/, &plan_id, &plan_space_size);
+		mp, dxl_string, nullptr /*xsd_file_path*/, &plan_id, &plan_space_size);
 
 	// serialize with document header
 	BOOL rgfIndentation[] = {true, false};

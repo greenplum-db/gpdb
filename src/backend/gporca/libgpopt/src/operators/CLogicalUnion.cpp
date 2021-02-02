@@ -158,7 +158,7 @@ CLogicalUnion::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		mp, pstatsUnionAll,
 		m_pdrgpcrOutput,	  // we group by the output columns
 		pdrgpulComputedCols,  // no computed columns for set ops
-		NULL				  // no keys, use all grouping cols
+		nullptr				  // no keys, use all grouping cols
 	);
 
 	// clean up

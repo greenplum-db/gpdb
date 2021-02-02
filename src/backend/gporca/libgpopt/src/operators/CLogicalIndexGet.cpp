@@ -37,14 +37,14 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pindexdesc(NULL),
-	  m_ptabdesc(NULL),
+	  m_pindexdesc(nullptr),
+	  m_ptabdesc(nullptr),
 	  m_ulOriginOpId(gpos::ulong_max),
-	  m_pnameAlias(NULL),
-	  m_pdrgpcrOutput(NULL),
-	  m_pcrsOutput(NULL),
-	  m_pos(NULL),
-	  m_pcrsDist(NULL)
+	  m_pnameAlias(nullptr),
+	  m_pdrgpcrOutput(nullptr),
+	  m_pcrsOutput(nullptr),
+	  m_pos(nullptr),
+	  m_pcrsDist(nullptr)
 {
 	m_fPattern = true;
 }
@@ -63,18 +63,18 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 								   ULONG ulOriginOpId, const CName *pnameAlias,
 								   CColRefArray *pdrgpcrOutput)
 	: CLogical(mp),
-	  m_pindexdesc(NULL),
+	  m_pindexdesc(nullptr),
 	  m_ptabdesc(ptabdesc),
 	  m_ulOriginOpId(ulOriginOpId),
 	  m_pnameAlias(pnameAlias),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
-	  m_pcrsOutput(NULL),
-	  m_pcrsDist(NULL)
+	  m_pcrsOutput(nullptr),
+	  m_pcrsDist(nullptr)
 {
-	GPOS_ASSERT(NULL != pmdindex);
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pnameAlias);
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pmdindex);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pnameAlias);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 
 	// create the index descriptor
 	m_pindexdesc = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
@@ -157,7 +157,7 @@ CLogicalIndexGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	const IMDIndex *pmdindex = md_accessor->RetrieveIndex(m_pindexdesc->MDId());
 
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =

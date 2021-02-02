@@ -65,7 +65,7 @@ public:
 	static CDXLScalarIdent *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarIdent == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarIdent *>(dxl_op);

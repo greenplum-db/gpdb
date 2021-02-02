@@ -82,8 +82,8 @@ public:
 	BOOL
 	FFunctionallyDependent(CColRefSet *pcrsKey, CColRef *colref)
 	{
-		GPOS_ASSERT(NULL != pcrsKey);
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != pcrsKey);
+		GPOS_ASSERT(nullptr != colref);
 
 		return m_pcrsKey->Equals(pcrsKey) && m_pcrsDetermined->FMember(colref);
 	}

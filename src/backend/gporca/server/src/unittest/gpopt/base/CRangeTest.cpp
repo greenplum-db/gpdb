@@ -92,7 +92,7 @@ CRangeTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
@@ -243,12 +243,12 @@ CRangeTest::EresInitAndCheckRanges(CMemoryPool *mp, IMDId *mdid, PfPdatum pf)
 	// generate ranges
 	mdid->AddRef();
 	CRange *prange1 = GPOS_NEW(mp)
-		CRange(mdid, &comp, (*pf)(mp, 10), CRange::EriIncluded, NULL,
+		CRange(mdid, &comp, (*pf)(mp, 10), CRange::EriIncluded, nullptr,
 			   CRange::EriExcluded);  // [10, inf)
 
 	mdid->AddRef();
 	CRange *prange2 = GPOS_NEW(mp)
-		CRange(mdid, &comp, NULL, CRange::EriExcluded, (*pf)(mp, 20),
+		CRange(mdid, &comp, nullptr, CRange::EriExcluded, (*pf)(mp, 20),
 			   CRange::EriIncluded);  // (-inf, 20]
 
 	mdid->AddRef();

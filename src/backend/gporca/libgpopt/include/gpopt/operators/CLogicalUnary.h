@@ -37,9 +37,9 @@ class CLogicalUnary : public CLogical
 private:
 protected:
 	// derive statistics for projection operators
-	IStatistics *PstatsDeriveProject(CMemoryPool *mp,
-									 CExpressionHandle &exprhdl,
-									 UlongToIDatumMap *phmuldatum = NULL) const;
+	IStatistics *PstatsDeriveProject(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		UlongToIDatumMap *phmuldatum = nullptr) const;
 
 public:
 	CLogicalUnary(const CLogicalUnary &) = delete;

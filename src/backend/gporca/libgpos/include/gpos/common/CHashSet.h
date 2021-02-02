@@ -72,7 +72,7 @@ private:
 		// ctor
 		CHashSetElem(T *value, BOOL fOwn) : m_value(value), m_owns_object(fOwn)
 		{
-			GPOS_ASSERT(NULL != value);
+			GPOS_ASSERT(nullptr != value);
 		}
 
 		// dtor
@@ -126,7 +126,7 @@ private:
 	HashSetElemArray **
 	GetChain(const T *value) const
 	{
-		GPOS_ASSERT(NULL != m_chains);
+		GPOS_ASSERT(nullptr != m_chains);
 		return &m_chains[HashFn(value) % m_num_chains];
 	}
 
@@ -148,12 +148,12 @@ private:
 	Lookup(const T *value) const
 	{
 		CHashSetElem hse(const_cast<T *>(value), false /*fOwn*/);
-		CHashSetElem *found_hse = NULL;
+		CHashSetElem *found_hse = nullptr;
 		HashSetElemArray **chain = GetChain(value);
-		if (NULL != *chain)
+		if (nullptr != *chain)
 		{
 			found_hse = (*chain)->Find(&hse);
-			GPOS_ASSERT_IMP(NULL != found_hse, *found_hse == hse);
+			GPOS_ASSERT_IMP(nullptr != found_hse, *found_hse == hse);
 		}
 
 		return found_hse;
@@ -197,7 +197,7 @@ public:
 		}
 
 		HashSetElemArray **chain = GetChain(value);
-		if (NULL == *chain)
+		if (nullptr == *chain)
 		{
 			*chain = GPOS_NEW(m_mp) HashSetElemArray(m_mp);
 			INT chain_idx = HashFn(value) % m_num_chains;
@@ -219,11 +219,11 @@ public:
 	{
 		CHashSetElem hse(const_cast<T *>(value), false /*fOwn*/);
 		HashSetElemArray **chain = GetChain(value);
-		if (NULL != *chain)
+		if (nullptr != *chain)
 		{
 			CHashSetElem *found_hse = (*chain)->Find(&hse);
 
-			return (NULL != found_hse);
+			return (nullptr != found_hse);
 		}
 
 		return false;

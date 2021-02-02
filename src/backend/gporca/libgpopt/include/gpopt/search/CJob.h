@@ -228,8 +228,8 @@ protected:
 
 	// ctor
 	CJob()
-		: m_pjParent(NULL),
-		  m_pjq(NULL),
+		: m_pjParent(nullptr),
+		  m_pjq(nullptr),
 		  m_ulpRefs(0),
 		  m_id(0),
 		  m_fInit(false)
@@ -290,7 +290,7 @@ public:
 	void
 	SetJobQueue(CJobQueue *pjq)
 	{
-		GPOS_ASSERT(NULL != pjq);
+		GPOS_ASSERT(nullptr != pjq);
 		m_pjq = pjq;
 	}
 

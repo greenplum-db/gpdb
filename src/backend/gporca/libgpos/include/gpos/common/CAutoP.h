@@ -42,7 +42,7 @@ public:
 	CAutoP<T>(const CAutoP &) = delete;
 
 	// ctor
-	explicit CAutoP<T>() : m_object(NULL)
+	explicit CAutoP<T>() : m_object(nullptr)
 	{
 	}
 
@@ -65,7 +65,7 @@ public:
 	T &
 	operator*()
 	{
-		GPOS_ASSERT(NULL != m_object);
+		GPOS_ASSERT(nullptr != m_object);
 		return *m_object;
 	}
 
@@ -88,7 +88,7 @@ public:
 	Reset()
 	{
 		T *object = m_object;
-		m_object = NULL;
+		m_object = nullptr;
 		return object;
 	}
 

@@ -41,9 +41,9 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CMDProviderMemory::CMDProviderMemory(CMemoryPool *mp, const CHAR *file_name)
-	: m_mdmap(NULL)
+	: m_mdmap(nullptr)
 {
-	GPOS_ASSERT(NULL != file_name);
+	GPOS_ASSERT(nullptr != file_name);
 
 	// read DXL file
 	CAutoRg<CHAR> dxl_file;
@@ -51,7 +51,7 @@ CMDProviderMemory::CMDProviderMemory(CMemoryPool *mp, const CHAR *file_name)
 
 	CAutoRef<IMDCacheObjectArray> mdcache_obj_array;
 	mdcache_obj_array = CDXLUtils::ParseDXLToIMDObjectArray(
-		mp, dxl_file.Rgt(), NULL /*xsd_file_path*/);
+		mp, dxl_file.Rgt(), nullptr /*xsd_file_path*/);
 
 	LoadMetadataObjectsFromArray(mp, mdcache_obj_array.Value());
 }
@@ -66,7 +66,7 @@ CMDProviderMemory::CMDProviderMemory(CMemoryPool *mp, const CHAR *file_name)
 //---------------------------------------------------------------------------
 CMDProviderMemory::CMDProviderMemory(CMemoryPool *mp,
 									 IMDCacheObjectArray *mdcache_obj_array)
-	: m_mdmap(NULL)
+	: m_mdmap(nullptr)
 {
 	LoadMetadataObjectsFromArray(mp, mdcache_obj_array);
 }
@@ -83,7 +83,7 @@ void
 CMDProviderMemory::LoadMetadataObjectsFromArray(
 	CMemoryPool *mp, IMDCacheObjectArray *mdcache_obj_array)
 {
-	GPOS_ASSERT(NULL != mdcache_obj_array);
+	GPOS_ASSERT(nullptr != mdcache_obj_array);
 
 	// load metadata objects from the file
 	CAutoRef<MDIdToSerializedMDIdMap> md_map;
@@ -148,16 +148,16 @@ CMDProviderMemory::GetMDObjDXLStr(CMemoryPool *mp,
 								  CMDAccessor *,  //md_accessor
 								  IMDId *mdid) const
 {
-	GPOS_ASSERT(NULL != m_mdmap);
+	GPOS_ASSERT(nullptr != m_mdmap);
 
 	const CWStringDynamic *pstrObj = m_mdmap->Find(mdid);
 
 	// result string
 	CAutoP<CWStringDynamic> a_pstrResult;
 
-	a_pstrResult = NULL;
+	a_pstrResult = nullptr;
 
-	if (NULL == pstrObj)
+	if (nullptr == pstrObj)
 	{
 		// Relstats and colstats are special as they may not
 		// exist in the metadata file. Provider must return dummy objects
@@ -204,7 +204,7 @@ CMDProviderMemory::GetMDObjDXLStr(CMemoryPool *mp,
 		a_pstrResult = GPOS_NEW(mp) CWStringDynamic(mp, pstrObj->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != a_pstrResult.Value());
+	GPOS_ASSERT(nullptr != a_pstrResult.Value());
 
 	return a_pstrResult.Reset();
 }

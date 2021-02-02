@@ -401,7 +401,7 @@ public:
 	// translate a dxl scalar expression
 	CExpression *PexprTranslateScalar(const CDXLNode *dxlnode,
 									  CColRefArray *colref_array,
-									  ULongPtrArray *colids = NULL);
+									  ULongPtrArray *colids = nullptr);
 
 	// return the array of query output column reference id
 	ULongPtrArray *PdrgpulOutputColRefs();
@@ -410,7 +410,7 @@ public:
 	CMDNameArray *
 	Pdrgpmdname()
 	{
-		GPOS_ASSERT(NULL != m_pdrgpmdname);
+		GPOS_ASSERT(nullptr != m_pdrgpmdname);
 		return m_pdrgpmdname;
 	}
 };

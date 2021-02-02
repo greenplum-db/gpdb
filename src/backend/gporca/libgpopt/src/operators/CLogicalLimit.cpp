@@ -35,7 +35,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalLimit::CLogicalLimit(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pos(NULL),
+	  m_pos(nullptr),
 	  m_fGlobal(true),
 	  m_fHasCount(false),
 	  m_top_limit_under_dml(false)
@@ -60,7 +60,7 @@ CLogicalLimit::CLogicalLimit(CMemoryPool *mp, COrderSpec *pos, BOOL fGlobal,
 	  m_fHasCount(fHasCount),
 	  m_top_limit_under_dml(fTopLimitUnderDML)
 {
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pos);
 	CColRefSet *pcrsSort = m_pos->PcrsUsed(mp);
 	m_pcrsLocalUsed->Include(pcrsSort);
 	pcrsSort->Release();
@@ -197,7 +197,7 @@ CLogicalLimit::DeriveMaxCard(CMemoryPool *,	 // mp
 	// max card is a precise property, so we need an exact scalar expr to derive it
 	CExpression *pexprCount = exprhdl.PexprScalarExactChild(2 /*child_index*/);
 
-	if (NULL != pexprCount &&
+	if (nullptr != pexprCount &&
 		CUtils::FScalarConstInt<IMDTypeInt8>(pexprCount) &&
 		!pexprCount->DeriveHasSubquery())
 	{

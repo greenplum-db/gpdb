@@ -118,7 +118,7 @@ public:
 	static CScalarBitmapIndexProbe *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBitmapIndexProbe == pop->Eopid());
 
 		return dynamic_cast<CScalarBitmapIndexProbe *>(pop);

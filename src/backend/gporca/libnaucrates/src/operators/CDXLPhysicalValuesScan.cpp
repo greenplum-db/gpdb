@@ -43,7 +43,7 @@ CDXLPhysicalValuesScan::GetOpNameStr() const
 CDXLPhysicalValuesScan *
 CDXLPhysicalValuesScan::Cast(CDXLOperator *dxl_op)
 {
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 	GPOS_ASSERT(EdxlopPhysicalValuesScan == dxl_op->GetDXLOperator());
 
 	return dynamic_cast<CDXLPhysicalValuesScan *>(dxl_op);

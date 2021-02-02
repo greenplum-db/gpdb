@@ -85,7 +85,7 @@ public:
 	virtual CColRefArray *
 	PdrgPcrInner() const
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// conversion function

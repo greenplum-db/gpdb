@@ -92,7 +92,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 
 		// parse the DXL query tree from the given DXL document
 		CQueryToDXLResult *ptroutput =
-			CDXLUtils::ParseQueryToQueryDXLTree(mp, szQueryDXL, NULL);
+			CDXLUtils::ParseQueryToQueryDXLTree(mp, szQueryDXL, nullptr);
 		GPOS_CHECK_ABORT;
 
 		CSerializableQuery serQuery(mp, ptroutput->CreateDXLNode(),
@@ -129,7 +129,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 			CHint::PhintDefault(mp), CWindowOids::GetWindowOids(mp));
 
 		// setup opt ctx
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// translate DXL Tree -> Expr Tree
@@ -152,7 +152,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 
 		CSerializableOptimizerConfig serOptConfig(mp, optimizer_config);
 
-		eng.Init(pqc, NULL /*search_stage_array*/);
+		eng.Init(pqc, nullptr /*search_stage_array*/);
 		eng.Optimize();
 
 		CExpression *pexprPlan = eng.PexprExtractPlan();
@@ -172,7 +172,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 		CTranslatorExprToDXL ptrexprtodxl(mp, &mda, pdrgpiSegments);
 		CDXLNode *pdxlnPlan = ptrexprtodxl.PdxlnTranslate(
 			pexprPlan, pqc->PdrgPcr(), pqc->Pdrgpmdname());
-		GPOS_ASSERT(NULL != pdxlnPlan);
+		GPOS_ASSERT(nullptr != pdxlnPlan);
 
 		CSerializablePlan serPlan(
 			mp, pdxlnPlan, optimizer_config->GetEnumeratorCfg()->GetPlanId(),
@@ -180,7 +180,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 		GPOS_CHECK_ABORT;
 
 		// simulate an exception
-		GPOS_OOM_CHECK(NULL);
+		GPOS_OOM_CHECK(nullptr);
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -204,7 +204,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 
 		CMinidumperUtils::GenerateMinidumpFileName(
 			file_name, GPOS_FILE_NAME_BUF_SIZE, ulSessionId, ulCommandId,
-			NULL /*szMinidumpFileName*/);
+			nullptr /*szMinidumpFileName*/);
 
 		std::wofstream osMinidump(file_name);
 		osMinidump << minidumpstr.GetBuffer();

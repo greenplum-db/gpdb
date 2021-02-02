@@ -35,9 +35,9 @@ void
 CJobGroupExpression::Init(CGroupExpression *pgexpr)
 {
 	GPOS_ASSERT(!FInit());
-	GPOS_ASSERT(NULL != pgexpr);
-	GPOS_ASSERT(NULL != pgexpr->Pgroup());
-	GPOS_ASSERT(NULL != pgexpr->Pop());
+	GPOS_ASSERT(nullptr != pgexpr);
+	GPOS_ASSERT(nullptr != pgexpr->Pgroup());
+	GPOS_ASSERT(nullptr != pgexpr->Pop());
 
 	m_fChildrenScheduled = false;
 	m_fXformsScheduled = false;

@@ -89,7 +89,7 @@ public:
 	static CStatsPredLike *
 	ConvertPredStats(CStatsPred *pred_stats)
 	{
-		GPOS_ASSERT(NULL != pred_stats);
+		GPOS_ASSERT(nullptr != pred_stats);
 		GPOS_ASSERT(CStatsPred::EsptLike == pred_stats->GetPredStatsType());
 
 		return dynamic_cast<CStatsPredLike *>(pred_stats);

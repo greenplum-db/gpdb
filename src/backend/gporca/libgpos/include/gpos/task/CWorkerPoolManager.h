@@ -130,7 +130,7 @@ public:
 	// dtor
 	~CWorkerPoolManager()
 	{
-		GPOS_ASSERT(NULL == m_worker_pool_manager &&
+		GPOS_ASSERT(nullptr == m_worker_pool_manager &&
 					"Worker pool has not been shut down");
 	}
 

@@ -41,7 +41,7 @@ CConstExprEvaluatorDXL::CConstExprEvaluatorDXL(
 	CMemoryPool *mp, CMDAccessor *md_accessor,
 	IConstDXLNodeEvaluator *pconstdxleval)
 	: m_pconstdxleval(pconstdxleval),
-	  m_trexpr2dxl(mp, md_accessor, NULL /*pdrgpiSegments*/,
+	  m_trexpr2dxl(mp, md_accessor, nullptr /*pdrgpiSegments*/,
 				   false /*fInitColumnFactory*/),
 	  m_trdxl2expr(mp, md_accessor, false /*fInitColumnFactory*/)
 {
@@ -69,7 +69,7 @@ CConstExprEvaluatorDXL::~CConstExprEvaluatorDXL() = default;
 CExpression *
 CConstExprEvaluatorDXL::PexprEval(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	if (!CPredicateUtils::FCompareConstToConstIgnoreCast(pexpr))
 	{
@@ -81,8 +81,8 @@ CConstExprEvaluatorDXL::PexprEval(CExpression *pexpr)
 	GPOS_ASSERT(EdxloptypeScalar ==
 				pdxlnResult->GetOperator()->GetDXLOperatorType());
 
-	CExpression *pexprResult =
-		m_trdxl2expr.PexprTranslateScalar(pdxlnResult, NULL /*colref_array*/);
+	CExpression *pexprResult = m_trdxl2expr.PexprTranslateScalar(
+		pdxlnResult, nullptr /*colref_array*/);
 	pdxlnResult->Release();
 	pdxlnExpr->Release();
 

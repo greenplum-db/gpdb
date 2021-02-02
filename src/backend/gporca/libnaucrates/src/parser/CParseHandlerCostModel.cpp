@@ -40,8 +40,8 @@ CParseHandlerCostModel::CParseHandlerCostModel(
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_num_of_segments(0),
-	  m_cost_model(NULL),
-	  m_parse_handler_cost_params(NULL)
+	  m_cost_model(nullptr),
+	  m_parse_handler_cost_params(nullptr)
 {
 }
 
@@ -143,15 +143,15 @@ CParseHandlerCostModel::EndElement(const XMLCh *const,	// element_uri,
 		case ICostModel::EcmtGPDBCalibrated:
 			CCostModelParamsGPDB *pcp;
 
-			if (NULL == m_parse_handler_cost_params)
+			if (nullptr == m_parse_handler_cost_params)
 			{
-				pcp = NULL;
+				pcp = nullptr;
 			}
 			else
 			{
 				pcp = dynamic_cast<CCostModelParamsGPDB *>(
 					m_parse_handler_cost_params->GetCostModelParams());
-				GPOS_ASSERT(NULL != pcp);
+				GPOS_ASSERT(nullptr != pcp);
 				pcp->AddRef();
 			}
 			m_cost_model =

@@ -84,7 +84,7 @@ CSyncListTest::EresUnittest_Basics()
 
 		GPOS_ASSERT(pe == &rgelem[GPOS_ARRAY_SIZE(rgelem) - i - 1]);
 	}
-	GPOS_ASSERT(NULL == list.Pop());
+	GPOS_ASSERT(nullptr == list.Pop());
 
 	// insert all elements in reverse order
 	for (ULONG i = GPOS_ARRAY_SIZE(rgelem); i > 0; i--)
@@ -101,7 +101,7 @@ CSyncListTest::EresUnittest_Basics()
 
 		GPOS_ASSERT(pe == &rgelem[i]);
 	}
-	GPOS_ASSERT(NULL == list.Pop());
+	GPOS_ASSERT(nullptr == list.Pop());
 
 	return GPOS_OK;
 }

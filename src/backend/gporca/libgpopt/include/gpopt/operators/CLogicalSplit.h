@@ -207,7 +207,7 @@ public:
 	static CLogicalSplit *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalSplit == pop->Eopid());
 
 		return dynamic_cast<CLogicalSplit *>(pop);

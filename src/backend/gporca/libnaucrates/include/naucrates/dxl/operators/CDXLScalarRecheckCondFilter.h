@@ -66,7 +66,7 @@ public:
 	static CDXLScalarRecheckCondFilter *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarRecheckCondFilter == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarRecheckCondFilter *>(dxl_op);

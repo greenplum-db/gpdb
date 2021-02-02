@@ -72,7 +72,7 @@ void
 CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -142,8 +142,8 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	}
 
 	// generate oid column and project operator
-	CExpression *pexprProject = NULL;
-	CColRef *pcrTableOid = NULL;
+	CExpression *pexprProject = nullptr;
+	CColRef *pcrTableOid = nullptr;
 	if (ptabdesc->IsPartitioned())
 	{
 		// generate a partition selector
@@ -167,7 +167,7 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pcrTableOid = CUtils::PcrFromProjElem((*pexprPrL)[0]);
 	}
 
-	GPOS_ASSERT(NULL != pcrTableOid);
+	GPOS_ASSERT(nullptr != pcrTableOid);
 
 	const ULONG num_cols = pdrgpcrInsert->Size();
 

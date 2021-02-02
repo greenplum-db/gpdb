@@ -29,17 +29,17 @@ using namespace gpos::clib;
 
 
 // global instance of memory pool manager
-CMemoryPoolManager *CMemoryPoolManager::m_memory_pool_mgr = NULL;
+CMemoryPoolManager *CMemoryPoolManager::m_memory_pool_mgr = nullptr;
 
 // ctor
 CMemoryPoolManager::CMemoryPoolManager(CMemoryPool *internal,
 									   EMemoryPoolType memory_pool_type)
 	: m_internal_memory_pool(internal),
 	  m_allow_global_new(true),
-	  m_ht_all_pools(NULL),
+	  m_ht_all_pools(nullptr),
 	  m_memory_pool_type(memory_pool_type)
 {
-	GPOS_ASSERT(NULL != internal);
+	GPOS_ASSERT(nullptr != internal);
 	GPOS_ASSERT(GPOS_OFFSET(CMemoryPool, m_link) ==
 				GPOS_OFFSET(CMemoryPoolTracker, m_link));
 }
@@ -68,7 +68,7 @@ CMemoryPoolManager::Setup()
 GPOS_RESULT
 CMemoryPoolManager::Init()
 {
-	if (NULL == CMemoryPoolManager::m_memory_pool_mgr)
+	if (nullptr == CMemoryPoolManager::m_memory_pool_mgr)
 	{
 		return SetupGlobalMemoryPoolManager<CMemoryPoolManager,
 											CMemoryPoolTracker>();
@@ -108,7 +108,7 @@ CMemoryPoolManager::NewMemoryPool()
 void
 CMemoryPoolManager::Destroy(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// accessor scope
 	{
@@ -135,7 +135,7 @@ CMemoryPoolManager::TotalAllocatedSize()
 	{
 		MemoryPoolIterAccessor acc(iter);
 		CMemoryPool *mp = acc.Value();
-		if (NULL != mp)
+		if (nullptr != mp)
 		{
 			total_size = total_size + mp->TotalAllocatedSize();
 		}
@@ -170,13 +170,13 @@ CMemoryPoolManager::OsPrint(IOstream &os)
 	MemoryPoolIter iter(*m_ht_all_pools);
 	while (iter.Advance())
 	{
-		CMemoryPool *mp = NULL;
+		CMemoryPool *mp = nullptr;
 		{
 			MemoryPoolIterAccessor acc(iter);
 			mp = acc.Value();
 		}
 
-		if (NULL != mp)
+		if (nullptr != mp)
 		{
 			os << *mp << std::endl;
 		}
@@ -199,7 +199,7 @@ CMemoryPoolManager::PrintOverSizedPools(
 		MemoryPoolIterAccessor acc(iter);
 		CMemoryPool *mp = acc.Value();
 
-		if (NULL != mp)
+		if (nullptr != mp)
 		{
 			ULLONG size = mp->TotalAllocatedSize();
 			if (size > size_threshold)
@@ -219,7 +219,7 @@ CMemoryPoolManager::PrintOverSizedPools(
 void
 CMemoryPoolManager::DestroyMemoryPoolAtShutdown(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 #ifdef GPOS_DEBUG
 	gpos::oswcerr << "Leaked " << *mp << std::endl;
@@ -244,7 +244,7 @@ CMemoryPoolManager::Cleanup()
 	}
 #endif	// GPOS_DEBUG
 
-	GPOS_ASSERT(NULL != m_global_memory_pool);
+	GPOS_ASSERT(nullptr != m_global_memory_pool);
 	Destroy(m_global_memory_pool);
 
 	// cleanup left-over memory pools;
@@ -265,7 +265,7 @@ CMemoryPoolManager::Shutdown()
 	CMemoryPool *internal = m_internal_memory_pool;
 
 	::delete CMemoryPoolManager::m_memory_pool_mgr;
-	CMemoryPoolManager::m_memory_pool_mgr = NULL;
+	CMemoryPoolManager::m_memory_pool_mgr = nullptr;
 
 #ifdef GPOS_DEBUG
 	internal->AssertEmpty(oswcerr);

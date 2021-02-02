@@ -34,8 +34,8 @@ CDXLLogicalConstTable::CDXLLogicalConstTable(
 	  m_col_descr_array(col_descr_array),
 	  m_const_tuples_datum_array(const_tuples_datum_array)
 {
-	GPOS_ASSERT(NULL != col_descr_array);
-	GPOS_ASSERT(NULL != const_tuples_datum_array);
+	GPOS_ASSERT(nullptr != col_descr_array);
+	GPOS_ASSERT(nullptr != const_tuples_datum_array);
 
 #ifdef GPOS_DEBUG
 	const ULONG length = const_tuples_datum_array->Size();
@@ -222,7 +222,7 @@ CDXLLogicalConstTable::AssertValid(const CDXLNode *node,
 ) const
 {
 	// assert validity of col descr
-	GPOS_ASSERT(m_col_descr_array != NULL);
+	GPOS_ASSERT(m_col_descr_array != nullptr);
 	GPOS_ASSERT(0 < m_col_descr_array->Size());
 	GPOS_ASSERT(0 == node->Arity());
 }

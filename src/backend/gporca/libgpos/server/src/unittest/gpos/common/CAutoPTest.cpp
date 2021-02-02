@@ -76,7 +76,7 @@ CAutoPTest::EresUnittest_Basics()
 	GPOS_ASSERT(*sz2 == *asz3);
 
 	// wipe out asz2 to prevent double free
-	asz2 = NULL;
+	asz2 = nullptr;
 
 	// unhooking of object
 	GPOS_DELETE(asz3.Reset());

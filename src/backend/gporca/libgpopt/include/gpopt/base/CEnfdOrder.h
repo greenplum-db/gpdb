@@ -99,7 +99,7 @@ public:
 	BOOL
 	Matches(CEnfdOrder *peo)
 	{
-		GPOS_ASSERT(NULL != peo);
+		GPOS_ASSERT(nullptr != peo);
 
 		return m_eom == peo->Eom() && m_pos->Matches(peo->PosRequired());
 	}

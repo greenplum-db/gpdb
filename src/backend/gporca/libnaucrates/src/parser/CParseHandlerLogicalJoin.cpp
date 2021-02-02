@@ -63,7 +63,7 @@ CParseHandlerLogicalJoin::StartElement(const XMLCh *const element_uri,
 		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenLogicalJoin),
 								 element_local_name))
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			// parse and create logical join operator
 			CDXLLogicalJoin *pdxlopJoin =
@@ -91,7 +91,7 @@ CParseHandlerLogicalJoin::StartElement(const XMLCh *const element_uri,
 	}
 	else
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
@@ -138,7 +138,7 @@ CParseHandlerLogicalJoin::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 	ULONG num_of_child = this->Length();
 
 	// Joins must atleast have 3 children (2 logical operators and 1 scalar operator)
@@ -151,7 +151,7 @@ CParseHandlerLogicalJoin::EndElement(const XMLCh *const,  // element_uri,
 	{
 		CParseHandlerOp *op_parse_handler =
 			dynamic_cast<CParseHandlerOp *>((*this)[idx]);
-		GPOS_ASSERT(NULL != op_parse_handler->CreateDXLNode());
+		GPOS_ASSERT(nullptr != op_parse_handler->CreateDXLNode());
 		AddChildFromParseHandler(op_parse_handler);
 	}
 

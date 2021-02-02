@@ -178,7 +178,7 @@ CExpressionTest::EresUnittest_SimpleOps()
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpf); i++)
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// generate simple expression
@@ -187,18 +187,18 @@ CExpressionTest::EresUnittest_SimpleOps()
 		CLogicalGet *popGet = dynamic_cast<CLogicalGet *>(pexpr->Pop());
 		CLogicalDynamicGetBase *popDynGet =
 			dynamic_cast<CLogicalDynamicGetBase *>(pexpr->Pop());
-		CColRefArray *colrefs = NULL;
+		CColRefArray *colrefs = nullptr;
 
-		if (NULL != popGet)
+		if (nullptr != popGet)
 		{
 			colrefs = popGet->PdrgpcrOutput();
 		}
-		else if (NULL != popDynGet)
+		else if (nullptr != popDynGet)
 		{
 			colrefs = popDynGet->PdrgpcrOutput();
 		}
 
-		if (NULL != colrefs)
+		if (nullptr != colrefs)
 		{
 			for (ULONG ul = 0; ul < colrefs->Size(); ul++)
 			{
@@ -249,7 +249,7 @@ CExpressionTest::EresUnittest_SimpleOps()
 			GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
 		IStatisticsArray *stats_ctxt = GPOS_NEW(mp) IStatisticsArray(mp);
 		IStatistics *stats = pexpr->PstatsDerive(prprel, stats_ctxt);
-		GPOS_ASSERT(NULL != stats);
+		GPOS_ASSERT(nullptr != stats);
 
 		oss << "Expected risk: " << rgulRisk[i] << std::endl;
 		oss << std::endl << "STATS:" << *stats << std::endl;
@@ -287,7 +287,7 @@ CExpressionTest::EresUnittest_Union()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// build union tree of depth 2
@@ -308,7 +308,7 @@ CExpressionTest::EresUnittest_Union()
 		GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
 	IStatisticsArray *stats_ctxt = GPOS_NEW(mp) IStatisticsArray(mp);
 	IStatistics *stats = pexpr->PstatsDerive(prprel, stats_ctxt);
-	GPOS_ASSERT(NULL != stats);
+	GPOS_ASSERT(nullptr != stats);
 
 	// We expect a risk of 3 because every Union increments the risk.
 	GPOS_ASSERT(3 == stats->StatsEstimationRisk());
@@ -341,7 +341,7 @@ CExpressionTest::EresUnittest_BitmapGet()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	CWStringConst strRelName(GPOS_WSZ_LIT("MyTable"));
@@ -490,7 +490,7 @@ CExpressionTest::EresUnittest_Const()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	BOOL value = true;
@@ -564,7 +564,7 @@ CExpressionTest::EresUnittest_ComparisonTypes()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	const IMDType *pmdtype = mda.PtMDType<IMDTypeInt4>();
@@ -629,7 +629,7 @@ CExpressionTest::SetupPlanForFValidPlanTest(CMemoryPool *mp,
 	CEngine eng(mp);
 	CAutoP<CQueryContext> pqc;
 	pqc = CTestUtils::PqcGenerate(mp, *ppexprGby);
-	eng.Init(pqc.Value(), NULL /*search_stage_array*/);
+	eng.Init(pqc.Value(), nullptr /*search_stage_array*/);
 	eng.Optimize();
 	*ppexprPlan = eng.PexprExtractPlan();
 }
@@ -656,17 +656,17 @@ CExpressionTest::EresUnittest_FValidPlan()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 	const IMDType *pmdtype = mda.PtMDType<IMDTypeInt4>();
 
 	// Create a group-by with a get child. Properties required contain one of the columns in the group by.
 	// Test that the plan is valid.
 	{
-		CExpression *pexprGby = NULL;
-		CColRefSet *pcrs = NULL;
-		CExpression *pexprPlan = NULL;
-		CReqdPropPlan *prpp = NULL;
+		CExpression *pexprGby = nullptr;
+		CColRefSet *pcrs = nullptr;
+		CExpression *pexprPlan = nullptr;
+		CReqdPropPlan *prpp = nullptr;
 
 		SetupPlanForFValidPlanTest(mp, &pexprGby, &pcrs, &pexprPlan, &prpp);
 		CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
@@ -702,7 +702,7 @@ CExpressionTest::EresUnittest_FValidPlan()
 		CEngine eng(mp);
 		CAutoP<CQueryContext> pqc;
 		pqc = CTestUtils::PqcGenerate(mp, pexprGby);
-		eng.Init(pqc.Value(), NULL /*search_stage_array*/);
+		eng.Init(pqc.Value(), nullptr /*search_stage_array*/);
 		eng.Optimize();
 		CExpression *pexprPlan = eng.PexprExtractPlan();
 
@@ -739,13 +739,13 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidOrder()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
-	CExpression *pexprGby = NULL;
-	CColRefSet *pcrs = NULL;
-	CExpression *pexprPlan = NULL;
-	CReqdPropPlan *prpp = NULL;
+	CExpression *pexprGby = nullptr;
+	CColRefSet *pcrs = nullptr;
+	CExpression *pexprPlan = nullptr;
+	CReqdPropPlan *prpp = nullptr;
 
 	SetupPlanForFValidPlanTest(mp, &pexprGby, &pcrs, &pexprPlan, &prpp);
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
@@ -811,13 +811,13 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidDistribution()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
-	CExpression *pexprGby = NULL;
-	CColRefSet *pcrs = NULL;
-	CExpression *pexprPlan = NULL;
-	CReqdPropPlan *prpp = NULL;
+	CExpression *pexprGby = nullptr;
+	CColRefSet *pcrs = nullptr;
+	CExpression *pexprPlan = nullptr;
+	CReqdPropPlan *prpp = nullptr;
 
 	SetupPlanForFValidPlanTest(mp, &pexprGby, &pcrs, &pexprPlan, &prpp);
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
@@ -867,13 +867,13 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidRewindability()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
-	CExpression *pexprGby = NULL;
-	CColRefSet *pcrs = NULL;
-	CExpression *pexprPlan = NULL;
-	CReqdPropPlan *prpp = NULL;
+	CExpression *pexprGby = nullptr;
+	CColRefSet *pcrs = nullptr;
+	CExpression *pexprPlan = nullptr;
+	CReqdPropPlan *prpp = nullptr;
 
 	SetupPlanForFValidPlanTest(mp, &pexprGby, &pcrs, &pexprPlan, &prpp);
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
@@ -924,13 +924,13 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidCTEs()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
-	CExpression *pexprGby = NULL;
-	CColRefSet *pcrs = NULL;
-	CExpression *pexprPlan = NULL;
-	CReqdPropPlan *prpp = NULL;
+	CExpression *pexprGby = nullptr;
+	CColRefSet *pcrs = nullptr;
+	CExpression *pexprPlan = nullptr;
+	CReqdPropPlan *prpp = nullptr;
 
 	SetupPlanForFValidPlanTest(mp, &pexprGby, &pcrs, &pexprPlan, &prpp);
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
@@ -993,7 +993,7 @@ CExpressionTest::EresUnittest_FValidPlanError()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 	const IMDType *pmdtype = mda.PtMDType<IMDTypeInt4>();
 
@@ -1066,8 +1066,8 @@ CExpressionTest::EresCheckCachedReqdCols(CMemoryPool *mp, CExpression *pexpr,
 	}
 
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != prppInput);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != prppInput);
 
 	CExpressionHandle exprhdl(mp);
 	exprhdl.Attach(pexpr);
@@ -1087,7 +1087,7 @@ CExpressionTest::EresCheckCachedReqdCols(CMemoryPool *mp, CExpression *pexpr,
 		{
 			continue;
 		}
-		GPOS_ASSERT(NULL != pexprChild->Prpp());
+		GPOS_ASSERT(nullptr != pexprChild->Prpp());
 
 		// extract cached required columns of the n-th child
 		CColRefSet *pcrsChildReqd = pexprChild->Prpp()->PcrsRequired();
@@ -1155,7 +1155,7 @@ CExpressionTest::EresComputeReqdCols(const CHAR *szFilePath)
 	GPOS_RESULT eres = GPOS_FAILED;
 	{
 		CAutoMDAccessor amda(mp, pmdp, CTestUtils::m_sysidDefault);
-		CAutoOptCtxt aoc(mp, amda.Pmda(), NULL,
+		CAutoOptCtxt aoc(mp, amda.Pmda(), nullptr,
 						 /* pceeval */ CTestUtils::GetCostModel(mp));
 
 		// read query expression
@@ -1164,7 +1164,7 @@ CExpressionTest::EresComputeReqdCols(const CHAR *szFilePath)
 		// optimize query
 		CEngine eng(mp);
 		CQueryContext *pqc = CTestUtils::PqcGenerate(mp, pexpr);
-		eng.Init(pqc, NULL /*search_stage_array*/);
+		eng.Init(pqc, nullptr /*search_stage_array*/);
 		eng.Optimize();
 
 		// extract plan and decorate it with required columns
@@ -1254,7 +1254,7 @@ CExpressionTest::EresUnittest_InvalidSetOp()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	{
-		CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+		CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 						 CTestUtils::GetCostModel(mp));
 
 		// create two different Get expressions

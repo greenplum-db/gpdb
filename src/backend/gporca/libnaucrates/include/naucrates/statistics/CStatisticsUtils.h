@@ -311,8 +311,8 @@ public:
 INT
 CStatisticsUtils::GetMcvPairCmpFunc(const void *val1, const void *val2)
 {
-	GPOS_ASSERT(NULL != val1);
-	GPOS_ASSERT(NULL != val2);
+	GPOS_ASSERT(nullptr != val1);
+	GPOS_ASSERT(nullptr != val2);
 	const SMcvPair *mcv_pair1 = *(const SMcvPair **) (val1);
 	const SMcvPair *mcv_pair2 = *(const SMcvPair **) (val2);
 

@@ -49,7 +49,7 @@ CGPOptimizer::GPOPTOptimizedPlan(
 )
 {
 	SOptContext gpopt_context;
-	PlannedStmt *plStmt = NULL;
+	PlannedStmt *plStmt = nullptr;
 
 	*had_unexpected_failure = false;
 
@@ -79,19 +79,19 @@ CGPOptimizer::GPOPTOptimizedPlan(
 			{
 				errcode(ERRCODE_NOT_NULL_VIOLATION);
 				errmsg("%s", serialized_error_msg);
-				errfinish(ex.Filename(), ex.Line(), NULL);
+				errfinish(ex.Filename(), ex.Line(), nullptr);
 			}
 		}
 
 		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL, gpdxl::ExmiOptimizerError) ||
 				 gpopt_context.m_should_error_out)
 		{
-			Assert(NULL != serialized_error_msg);
+			Assert(nullptr != serialized_error_msg);
 			if (errstart(ERROR, TEXTDOMAIN))
 			{
 				errcode(ERRCODE_INTERNAL_ERROR);
 				errmsg("%s", serialized_error_msg);
-				errfinish(ex.Filename(), ex.Line(), NULL);
+				errfinish(ex.Filename(), ex.Line(), nullptr);
 			}
 		}
 		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
@@ -105,7 +105,7 @@ CGPOptimizer::GPOPTOptimizedPlan(
 			{
 				errcode(ERRCODE_INTERNAL_ERROR);
 				errmsg("no available memory to allocate string buffer");
-				errfinish(ex.Filename(), ex.Line(), NULL);
+				errfinish(ex.Filename(), ex.Line(), nullptr);
 			}
 		}
 		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL,
@@ -116,7 +116,7 @@ CGPOptimizer::GPOPTOptimizedPlan(
 				errcode(ERRCODE_INTERNAL_ERROR);
 				errmsg(
 					"invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq.");
-				errfinish(ex.Filename(), ex.Line(), NULL);
+				errfinish(ex.Filename(), ex.Line(), nullptr);
 			}
 		}
 
@@ -134,7 +134,7 @@ CGPOptimizer::GPOPTOptimizedPlan(
 					"GPORCA failed to produce a plan, falling back to planner");
 				if (serialized_error_msg)
 					errdetail("%s", serialized_error_msg);
-				errfinish(ex.Filename(), ex.Line(), NULL);
+				errfinish(ex.Filename(), ex.Line(), nullptr);
 			}
 		}
 
@@ -169,11 +169,11 @@ CGPOptimizer::SerializeDXLPlan(Query *query)
 		{
 			errcode(ERRCODE_INTERNAL_ERROR);
 			errmsg("optimizer failed to produce plan");
-			errfinish(ex.Filename(), ex.Line(), NULL);
+			errfinish(ex.Filename(), ex.Line(), nullptr);
 		}
 	}
 	GPOS_CATCH_END;
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

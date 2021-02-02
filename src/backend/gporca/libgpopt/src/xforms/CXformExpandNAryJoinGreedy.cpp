@@ -75,8 +75,8 @@ CXformExpandNAryJoinGreedy::Transform(CXformContext *pxfctxt,
 									  CXformResult *pxfres,
 									  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -101,7 +101,7 @@ CXformExpandNAryJoinGreedy::Transform(CXformContext *pxfctxt,
 	CJoinOrderGreedy jomc(pmp, pdrgpexpr, pdrgpexprPreds);
 	CExpression *pexprResult = jomc.PexprExpand();
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		// normalize resulting expression
 		CExpression *pexprNormalized =

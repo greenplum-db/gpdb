@@ -50,19 +50,19 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
 	  m_pcrTupleOid(pcrTupleOid),
-	  m_pds(NULL),
-	  m_pos(NULL),
-	  m_pcrsRequiredLocal(NULL),
+	  m_pds(nullptr),
+	  m_pos(nullptr),
+	  m_pcrsRequiredLocal(nullptr),
 	  m_input_sort_req(false)
 {
 	GPOS_ASSERT(CLogicalDML::EdmlSentinel != edmlop);
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pdrgpcrSource);
-	GPOS_ASSERT(NULL != pbsModified);
-	GPOS_ASSERT(NULL != pcrAction);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pdrgpcrSource);
+	GPOS_ASSERT(nullptr != pbsModified);
+	GPOS_ASSERT(nullptr != pcrAction);
 	GPOS_ASSERT_IMP(
 		CLogicalDML::EdmlDelete == edmlop || CLogicalDML::EdmlUpdate == edmlop,
-		NULL != pcrCtid && NULL != pcrSegmentId);
+		nullptr != pcrCtid && nullptr != pcrSegmentId);
 
 	m_pds = CPhysical::PdsCompute(m_mp, m_ptabdesc, pdrgpcrSource);
 
@@ -190,7 +190,7 @@ CPhysicalDML::PosDerive(CMemoryPool *mp,
 CEnfdProp::EPropEnforcingType
 CPhysicalDML::EpetOrder(CExpressionHandle &exprhdl, const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// get the order delivered by the DML node
@@ -549,7 +549,7 @@ CPhysicalDML::FInsertSortOnParquet()
 BOOL
 CPhysicalDML::FInsertSortOnRows(COptimizerConfig *optimizer_config)
 {
-	GPOS_ASSERT(NULL != optimizer_config);
+	GPOS_ASSERT(nullptr != optimizer_config);
 
 	return (IMDRelation::ErelstorageAppendOnlyRows ==
 			m_ptabdesc->RetrieveRelStorageType()) &&
@@ -569,7 +569,7 @@ CPhysicalDML::FInsertSortOnRows(COptimizerConfig *optimizer_config)
 void
 CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL == m_pcrsRequiredLocal);
+	GPOS_ASSERT(nullptr == m_pcrsRequiredLocal);
 
 	m_pcrsRequiredLocal = GPOS_NEW(mp) CColRefSet(mp);
 
@@ -577,7 +577,7 @@ CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 	m_pcrsRequiredLocal->Include(m_pdrgpcrSource);
 	m_pcrsRequiredLocal->Include(m_pcrAction);
 
-	if (m_pcrTableOid != NULL)
+	if (m_pcrTableOid != nullptr)
 	{
 		m_pcrsRequiredLocal->Include(m_pcrTableOid);
 	}
@@ -589,7 +589,7 @@ CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 		m_pcrsRequiredLocal->Include(m_pcrSegmentId);
 	}
 
-	if (NULL != m_pcrTupleOid)
+	if (nullptr != m_pcrTupleOid)
 	{
 		m_pcrsRequiredLocal->Include(m_pcrTupleOid);
 	}
@@ -620,7 +620,7 @@ CPhysicalDML::OsPrint(IOstream &os) const
 	m_pcrAction->OsPrint(os);
 	os << ")";
 
-	if (m_pcrTableOid != NULL)
+	if (m_pcrTableOid != nullptr)
 	{
 		os << ", Oid: (";
 		m_pcrTableOid->OsPrint(os);

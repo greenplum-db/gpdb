@@ -39,8 +39,8 @@ CMDCheckConstraintGPDB::CMDCheckConstraintGPDB(CMemoryPool *mp, IMDId *mdid,
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(rel_mdid->IsValid());
-	GPOS_ASSERT(NULL != mdname);
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != mdname);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	m_dxl_str = CDXLUtils::SerializeMDObj(
 		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
@@ -76,7 +76,7 @@ CMDCheckConstraintGPDB::GetCheckConstraintExpr(CMemoryPool *mp,
 											   CMDAccessor *md_accessor,
 											   CColRefArray *colref_array) const
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 
 	const IMDRelation *mdrel = md_accessor->RetrieveRel(m_rel_mdid);
 #ifdef GPOS_DEBUG

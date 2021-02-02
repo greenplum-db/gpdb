@@ -69,7 +69,7 @@ public:
 	static CDXLDatumInt8 *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumInt8 == dxl_datum->GetDatumType());
 
 		return dynamic_cast<CDXLDatumInt8 *>(dxl_datum);

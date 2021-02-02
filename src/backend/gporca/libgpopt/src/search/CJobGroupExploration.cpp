@@ -147,7 +147,7 @@ CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc)
 
 	// iterate on expressions and schedule them as needed
 	CGroupExpression *pgexpr = PgexprFirstUnsched();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		if (!pgexpr->FTransitioned(CGroupExpression::estExplored))
 		{

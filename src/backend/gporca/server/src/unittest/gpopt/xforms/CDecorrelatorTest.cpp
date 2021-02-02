@@ -72,7 +72,7 @@ CDecorrelatorTest::EresUnittest_Decorrelate()
 	for (ULONG ulCase = 0; ulCase < GPOS_ARRAY_SIZE(rgpf); ulCase++)
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// generate expression
@@ -84,7 +84,7 @@ CDecorrelatorTest::EresUnittest_Decorrelate()
 		GPOS_TRACE(str.GetBuffer());
 		str.Reset();
 
-		CExpression *pexprResult = NULL;
+		CExpression *pexprResult = nullptr;
 		CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 		CColRefSet *outerRefs = pexpr->DeriveOuterReferences();
 #ifdef GPOS_DEBUG

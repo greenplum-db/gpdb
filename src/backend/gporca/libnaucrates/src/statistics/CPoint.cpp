@@ -29,7 +29,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPoint::CPoint(IDatum *datum) : m_datum(datum)
 {
-	GPOS_ASSERT(NULL != m_datum);
+	GPOS_ASSERT(nullptr != m_datum);
 }
 
 //---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ CPoint::CPoint(IDatum *datum) : m_datum(datum)
 BOOL
 CPoint::Equals(const CPoint *point) const
 {
-	GPOS_ASSERT(NULL != point);
+	GPOS_ASSERT(nullptr != point);
 	return m_datum->StatsAreEqual(point->m_datum);
 }
 
@@ -72,7 +72,7 @@ CPoint::IsNotEqual(const CPoint *point) const
 BOOL
 CPoint::IsLessThan(const CPoint *point) const
 {
-	GPOS_ASSERT(NULL != point);
+	GPOS_ASSERT(nullptr != point);
 	return m_datum->StatsAreComparable(point->m_datum) &&
 		   m_datum->StatsAreLessThan(point->m_datum);
 }
@@ -136,7 +136,7 @@ CPoint::Width(const CPoint *point, BOOL include_lower, BOOL include_upper) const
 	// default to a non zero constant for overlap computation
 	CDouble width = CDouble(1.0);
 	CDouble adjust = CDouble(0.0);
-	GPOS_ASSERT(NULL != point);
+	GPOS_ASSERT(nullptr != point);
 	if (m_datum->StatsAreComparable(point->m_datum))
 	{
 		// default case [this, point) or (this, point]

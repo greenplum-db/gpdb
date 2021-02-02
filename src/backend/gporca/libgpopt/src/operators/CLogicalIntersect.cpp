@@ -163,7 +163,7 @@ CLogicalIntersect::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		mp, pstatsIntersectAll,
 		(*m_pdrgpdrgpcrInput)[0],  // we group by the columns of the first child
 		pdrgpulComputedCols,	   // no computed columns for set ops
-		NULL					   // no keys, use all grouping cols
+		nullptr					   // no keys, use all grouping cols
 	);
 	// clean up
 	pdrgpulComputedCols->Release();

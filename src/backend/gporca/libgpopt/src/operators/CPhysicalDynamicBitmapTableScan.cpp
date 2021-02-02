@@ -73,15 +73,15 @@ CPhysicalDynamicBitmapTableScan::PstatsDerive(
 	CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CReqdPropPlan *prpplan GPOS_UNUSED, IStatisticsArray *stats_ctxt) const
 {
-	GPOS_ASSERT(NULL != prpplan);
+	GPOS_ASSERT(nullptr != prpplan);
 
 	IStatistics *pstatsBaseTable =
 		CStatisticsUtils::DeriveStatsForDynamicScan(mp, exprhdl, ScanId());
 
 	CExpression *pexprCondChild =
 		exprhdl.PexprScalarRepChild(0 /*ulChidIndex*/);
-	CExpression *local_expr = NULL;
-	CExpression *expr_with_outer_refs = NULL;
+	CExpression *local_expr = nullptr;
+	CExpression *expr_with_outer_refs = nullptr;
 
 	// get outer references from expression handle
 	CColRefSet *outer_refs = exprhdl.DeriveOuterReferences();

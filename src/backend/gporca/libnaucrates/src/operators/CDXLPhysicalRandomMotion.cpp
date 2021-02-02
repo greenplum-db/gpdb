@@ -112,9 +112,9 @@ CDXLPhysicalRandomMotion::AssertValid(const CDXLNode *dxlnode,
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(dxlnode, validate_children);
 
-	GPOS_ASSERT(m_input_segids_array != NULL);
+	GPOS_ASSERT(m_input_segids_array != nullptr);
 	GPOS_ASSERT(0 < m_input_segids_array->Size());
-	GPOS_ASSERT(m_output_segids_array != NULL);
+	GPOS_ASSERT(m_output_segids_array != nullptr);
 	GPOS_ASSERT(0 < m_output_segids_array->Size());
 
 	GPOS_ASSERT(EdxlrandommIndexSentinel == dxlnode->Arity());

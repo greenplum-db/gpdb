@@ -156,7 +156,7 @@ public:
 	static CLogicalCTEAnchor *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalCTEAnchor == pop->Eopid());
 
 		return dynamic_cast<CLogicalCTEAnchor *>(pop);

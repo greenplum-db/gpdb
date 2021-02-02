@@ -29,7 +29,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CXform::CXform(CExpression *pexpr) : m_pexpr(pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(FCheckPattern(pexpr));
 }
 
@@ -98,12 +98,12 @@ CXform::FCheckPattern(CExpression *pexpr) const
 BOOL
 CXform::FPromising(CMemoryPool *mp, const CXform *pxform, CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pxform);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pxform);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	CExpressionHandle exprhdl(mp);
 	exprhdl.Attach(pexpr);
-	exprhdl.DeriveProps(NULL /*pdpctxt*/);
+	exprhdl.DeriveProps(nullptr /*pdpctxt*/);
 
 	return ExfpNone < pxform->Exfp(exprhdl);
 }

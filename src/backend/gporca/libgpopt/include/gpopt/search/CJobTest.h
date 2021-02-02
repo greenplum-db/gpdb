@@ -119,7 +119,7 @@ public:
 	static CJobTest *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtTest == pj->Ejt());
 
 		return dynamic_cast<CJobTest *>(pj);

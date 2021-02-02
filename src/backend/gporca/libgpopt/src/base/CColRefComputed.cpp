@@ -29,9 +29,9 @@ CColRefComputed::CColRefComputed(const IMDType *pmdtype, INT type_modifier,
 								 ULONG id, const CName *pname)
 	: CColRef(pmdtype, type_modifier, id, pname)
 {
-	GPOS_ASSERT(NULL != pmdtype);
+	GPOS_ASSERT(nullptr != pmdtype);
 	GPOS_ASSERT(pmdtype->MDId()->IsValid());
-	GPOS_ASSERT(NULL != pname);
+	GPOS_ASSERT(nullptr != pname);
 }
 
 

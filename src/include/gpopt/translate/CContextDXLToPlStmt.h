@@ -70,7 +70,7 @@ private:
 		void
 		AddCTEPlan(ShareInputScan *share_input_scan)
 		{
-			GPOS_ASSERT(NULL != share_input_scan);
+			GPOS_ASSERT(nullptr != share_input_scan);
 			m_cte_consumer_list =
 				gpdb::LAppend(m_cte_consumer_list, share_input_scan);
 		}

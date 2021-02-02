@@ -43,23 +43,23 @@ XERCES_CPP_NAMESPACE_USE
 //---------------------------------------------------------------------------
 CParseHandlerDXL::CParseHandlerDXL(CMemoryPool *mp,
 								   CParseHandlerManager *parse_handler_mgr)
-	: CParseHandlerBase(mp, parse_handler_mgr, NULL),
-	  m_trace_flags_bitset(NULL),
-	  m_optimizer_config(NULL),
-	  m_mdrequest(NULL),
-	  m_query_dxl_root(NULL),
-	  m_output_colums_dxl_array(NULL),
-	  m_cte_producers(NULL),
-	  m_plan_dxl_root(NULL),
-	  m_mdid_cached_obj_array(NULL),
-	  m_mdid_array(NULL),
-	  m_scalar_expr_dxl(NULL),
-	  m_system_id_array(NULL),
-	  m_dxl_stats_derived_rel_array(NULL),
-	  m_search_stage_array(NULL),
+	: CParseHandlerBase(mp, parse_handler_mgr, nullptr),
+	  m_trace_flags_bitset(nullptr),
+	  m_optimizer_config(nullptr),
+	  m_mdrequest(nullptr),
+	  m_query_dxl_root(nullptr),
+	  m_output_colums_dxl_array(nullptr),
+	  m_cte_producers(nullptr),
+	  m_plan_dxl_root(nullptr),
+	  m_mdid_cached_obj_array(nullptr),
+	  m_mdid_array(nullptr),
+	  m_scalar_expr_dxl(nullptr),
+	  m_system_id_array(nullptr),
+	  m_dxl_stats_derived_rel_array(nullptr),
+	  m_search_stage_array(nullptr),
 	  m_plan_id(gpos::ullong_max),
 	  m_plan_space_size(gpos::ullong_max),
-	  m_cost_model_params(NULL)
+	  m_cost_model_params(nullptr)
 {
 }
 
@@ -436,7 +436,7 @@ CParseHandlerDXL::endDocument()
 		// find parse handler for the current type
 		ParseHandler parse_handler_func = FindParseHandler(parse_handler_type);
 
-		if (NULL != parse_handler_func)
+		if (nullptr != parse_handler_func)
 		{
 			(this->*parse_handler_func)(parse_handler_base);
 		}
@@ -472,7 +472,7 @@ CParseHandlerDXL::FindParseHandler(EDxlParseHandlerType parse_handler_type)
 
 	const ULONG num_of_parse_handler =
 		GPOS_ARRAY_SIZE(parse_element_type_func_map);
-	ParseHandler parse_handler_func = NULL;
+	ParseHandler parse_handler_func = nullptr;
 	for (ULONG idx = 0; idx < num_of_parse_handler; idx++)
 	{
 		SParseElem elem = parse_element_type_func_map[idx];
@@ -499,9 +499,9 @@ CParseHandlerDXL::ExtractTraceFlags(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerTraceFlags *parse_handler_tf =
 		(CParseHandlerTraceFlags *) parse_handler_base;
-	GPOS_ASSERT(NULL != parse_handler_tf);
+	GPOS_ASSERT(nullptr != parse_handler_tf);
 
-	GPOS_ASSERT(NULL == m_trace_flags_bitset && "Traceflags already set");
+	GPOS_ASSERT(nullptr == m_trace_flags_bitset && "Traceflags already set");
 
 	m_trace_flags_bitset = parse_handler_tf->GetTraceFlagBitSet();
 	m_trace_flags_bitset->AddRef();
@@ -520,14 +520,14 @@ CParseHandlerDXL::ExtractOptimizerConfig(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerOptimizerConfig *parse_handler_opt_config =
 		(CParseHandlerOptimizerConfig *) parse_handler_base;
-	GPOS_ASSERT(NULL != parse_handler_opt_config);
+	GPOS_ASSERT(nullptr != parse_handler_opt_config);
 
-	GPOS_ASSERT(NULL == m_trace_flags_bitset && "Traceflags already set");
+	GPOS_ASSERT(nullptr == m_trace_flags_bitset && "Traceflags already set");
 
 	m_trace_flags_bitset = parse_handler_opt_config->Pbs();
 	m_trace_flags_bitset->AddRef();
 
-	GPOS_ASSERT(NULL == m_optimizer_config &&
+	GPOS_ASSERT(nullptr == m_optimizer_config &&
 				"Optimizer configuration already set");
 
 	m_optimizer_config = parse_handler_opt_config->GetOptimizerConfig();
@@ -547,8 +547,8 @@ CParseHandlerDXL::ExtractDXLPlan(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerPlan *parse_handler_plan =
 		(CParseHandlerPlan *) parse_handler_base;
-	GPOS_ASSERT(NULL != parse_handler_plan &&
-				NULL != parse_handler_plan->CreateDXLNode());
+	GPOS_ASSERT(nullptr != parse_handler_plan &&
+				nullptr != parse_handler_plan->CreateDXLNode());
 
 	m_plan_dxl_root = parse_handler_plan->CreateDXLNode();
 	m_plan_dxl_root->AddRef();
@@ -570,8 +570,8 @@ CParseHandlerDXL::ExtractMetadataObjects(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerMetadata *parse_handler_md =
 		dynamic_cast<CParseHandlerMetadata *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_md &&
-				NULL != parse_handler_md->GetMdIdCachedObjArray());
+	GPOS_ASSERT(nullptr != parse_handler_md &&
+				nullptr != parse_handler_md->GetMdIdCachedObjArray());
 
 	m_mdid_cached_obj_array = parse_handler_md->GetMdIdCachedObjArray();
 	m_mdid_cached_obj_array->AddRef();
@@ -581,7 +581,7 @@ CParseHandlerDXL::ExtractMetadataObjects(CParseHandlerBase *parse_handler_base)
 
 	m_system_id_array = parse_handler_md->GetSysidPtrArray();
 
-	if (NULL != m_system_id_array)
+	if (nullptr != m_system_id_array)
 	{
 		m_system_id_array->AddRef();
 	}
@@ -600,11 +600,11 @@ CParseHandlerDXL::ExtractStats(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerStatistics *parse_handler_stats =
 		dynamic_cast<CParseHandlerStatistics *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_stats);
+	GPOS_ASSERT(nullptr != parse_handler_stats);
 
 	CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array =
 		parse_handler_stats->GetStatsDerivedRelDXLArray();
-	GPOS_ASSERT(NULL != dxl_derived_rel_stats_array);
+	GPOS_ASSERT(nullptr != dxl_derived_rel_stats_array);
 
 	dxl_derived_rel_stats_array->AddRef();
 	m_dxl_stats_derived_rel_array = dxl_derived_rel_stats_array;
@@ -623,13 +623,13 @@ CParseHandlerDXL::ExtractDXLQuery(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerQuery *parse_handler_query =
 		dynamic_cast<CParseHandlerQuery *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_query &&
-				NULL != parse_handler_query->CreateDXLNode());
+	GPOS_ASSERT(nullptr != parse_handler_query &&
+				nullptr != parse_handler_query->CreateDXLNode());
 
 	m_query_dxl_root = parse_handler_query->CreateDXLNode();
 	m_query_dxl_root->AddRef();
 
-	GPOS_ASSERT(NULL != parse_handler_query->GetOutputColumnsDXLArray());
+	GPOS_ASSERT(nullptr != parse_handler_query->GetOutputColumnsDXLArray());
 
 	m_output_colums_dxl_array = parse_handler_query->GetOutputColumnsDXLArray();
 	m_output_colums_dxl_array->AddRef();
@@ -652,8 +652,8 @@ CParseHandlerDXL::ExtractMDRequest(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerMDRequest *parse_handler_mdrequest =
 		dynamic_cast<CParseHandlerMDRequest *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_mdrequest &&
-				NULL != parse_handler_mdrequest->GetMdIdArray());
+	GPOS_ASSERT(nullptr != parse_handler_mdrequest &&
+				nullptr != parse_handler_mdrequest->GetMdIdArray());
 
 	IMdIdArray *mdid_array = parse_handler_mdrequest->GetMdIdArray();
 	CMDRequest::SMDTypeRequestArray *md_type_request_array =
@@ -680,8 +680,9 @@ CParseHandlerDXL::ExtractSearchStrategy(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerSearchStrategy *parse_handler_search_strategy =
 		dynamic_cast<CParseHandlerSearchStrategy *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_search_strategy &&
-				NULL != parse_handler_search_strategy->GetSearchStageArray());
+	GPOS_ASSERT(nullptr != parse_handler_search_strategy &&
+				nullptr !=
+					parse_handler_search_strategy->GetSearchStageArray());
 
 	CSearchStageArray *search_stage_array =
 		parse_handler_search_strategy->GetSearchStageArray();
@@ -704,8 +705,8 @@ CParseHandlerDXL::ExtractCostParams(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerCostParams *parse_handler_cost_params =
 		dynamic_cast<CParseHandlerCostParams *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_cost_params &&
-				NULL != parse_handler_cost_params->GetCostModelParams());
+	GPOS_ASSERT(nullptr != parse_handler_cost_params &&
+				nullptr != parse_handler_cost_params->GetCostModelParams());
 
 	ICostModelParams *cost_model_params =
 		parse_handler_cost_params->GetCostModelParams();
@@ -727,8 +728,8 @@ CParseHandlerDXL::ExtractScalarExpr(CParseHandlerBase *parse_handler_base)
 {
 	CParseHandlerScalarExpr *parse_handler_scalar_expr =
 		dynamic_cast<CParseHandlerScalarExpr *>(parse_handler_base);
-	GPOS_ASSERT(NULL != parse_handler_scalar_expr &&
-				NULL != parse_handler_scalar_expr->CreateDXLNode());
+	GPOS_ASSERT(nullptr != parse_handler_scalar_expr &&
+				nullptr != parse_handler_scalar_expr->CreateDXLNode());
 
 	m_scalar_expr_dxl = parse_handler_scalar_expr->CreateDXLNode();
 	m_scalar_expr_dxl->AddRef();

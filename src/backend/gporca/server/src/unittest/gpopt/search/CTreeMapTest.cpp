@@ -102,7 +102,7 @@ CTreeMapTest::CNode::CNode(CMemoryPool *,  // mp
 						   ULONG *pulData, CNodeArray *pdrgpnd)
 	: m_ulData(gpos::ulong_max), m_pdrgpnd(pdrgpnd)
 {
-	if (NULL != pulData)
+	if (nullptr != pulData)
 	{
 		m_ulData = *pulData;
 	}
@@ -136,7 +136,7 @@ CTreeMapTest::Pnd(CMemoryPool *mp, ULONG *pul, CNodeArray *pdrgpnd,
 				  BOOL *fTestTrue)
 {
 	// The test passes 'true' to PrUnrank and the rehydrate function expects to find it here.
-	GPOS_ASSERT(NULL != fTestTrue);
+	GPOS_ASSERT(nullptr != fTestTrue);
 	GPOS_ASSERT(*fTestTrue && "Flag is expected to be true");
 	*fTestTrue = true;
 	return GPOS_NEW(mp) CNode(mp, pul, pdrgpnd);
@@ -227,7 +227,7 @@ CTreeMapTest::EresUnittest_Basic()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	TestMap *ptmap = NULL;
+	TestMap *ptmap = nullptr;
 
 	// create blank map
 	ptmap = GPOS_NEW(mp) TestMap(mp, &Pnd);
@@ -343,13 +343,13 @@ CTreeMapTest::EresUnittest_Memo()
 	pmdp->AddRef();
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
-	CEngine *peng = NULL;
-	CExpression *pexpr = NULL;
-	CQueryContext *pqc = NULL;
-	CExpression *pexprPlan = NULL;
+	CEngine *peng = nullptr;
+	CExpression *pexpr = nullptr;
+	CQueryContext *pqc = nullptr;
+	CExpression *pexprPlan = nullptr;
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		CAutoTraceFlag atf(EopttraceEnumeratePlans, true);
@@ -363,14 +363,14 @@ CTreeMapTest::EresUnittest_Memo()
 		pqc = CTestUtils::PqcGenerate(mp, pexpr);
 
 		// Initialize engine
-		peng->Init(pqc, NULL /*search_stage_array*/);
+		peng->Init(pqc, nullptr /*search_stage_array*/);
 
 		// optimize query
 		peng->Optimize();
 
 		// extract plan
 		pexprPlan = peng->PexprExtractPlan();
-		GPOS_ASSERT(NULL != pexprPlan);
+		GPOS_ASSERT(nullptr != pexprPlan);
 
 		peng->Trace();
 		{
@@ -387,7 +387,7 @@ CTreeMapTest::EresUnittest_Memo()
 			{
 				CDrvdPropCtxtPlan *pdpctxtplan =
 					GPOS_NEW(mp) CDrvdPropCtxtPlan(mp, false /*fUpdateCTEMap*/);
-				CExpression *pexprAlt = NULL;
+				CExpression *pexprAlt = nullptr;
 				GPOS_TRY
 				{
 					pexprAlt =

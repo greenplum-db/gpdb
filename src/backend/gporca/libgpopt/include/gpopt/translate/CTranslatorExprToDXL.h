@@ -114,7 +114,7 @@ private:
 
 	// mappings CColRef -> ColId for translating filters for child partitions
 	// (see PdxlnFilterForChildPart())
-	ColRefToUlongMap *m_phmcrulPartColId = NULL;
+	ColRefToUlongMap *m_phmcrulPartColId = nullptr;
 
 	// derived plan properties of the translated expression
 	CDrvdPropPlan *m_pdpplan;

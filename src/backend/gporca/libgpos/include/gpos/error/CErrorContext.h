@@ -72,7 +72,7 @@ public:
 	CErrorContext(const CErrorContext &) = delete;
 
 	// ctor
-	explicit CErrorContext(CMiniDumper *mini_dumper_handle = NULL);
+	explicit CErrorContext(CMiniDumper *mini_dumper_handle = nullptr);
 
 	// dtor
 	~CErrorContext() override;
@@ -112,7 +112,7 @@ public:
 	void
 	Register(CMiniDumper *mini_dumper_handle)
 	{
-		GPOS_ASSERT(NULL == m_mini_dumper_handle);
+		GPOS_ASSERT(nullptr == m_mini_dumper_handle);
 
 		m_mini_dumper_handle = mini_dumper_handle;
 	}
@@ -126,7 +126,7 @@ public:
 	)
 	{
 		GPOS_ASSERT(mini_dumper_handle == m_mini_dumper_handle);
-		m_mini_dumper_handle = NULL;
+		m_mini_dumper_handle = nullptr;
 	}
 
 	// register object to serialize

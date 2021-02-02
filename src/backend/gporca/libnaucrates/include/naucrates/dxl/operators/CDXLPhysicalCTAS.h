@@ -179,7 +179,7 @@ public:
 	static CDXLPhysicalCTAS *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalCTAS == dxl_op->GetDXLOperator());
 		return dynamic_cast<CDXLPhysicalCTAS *>(dxl_op);
 	}

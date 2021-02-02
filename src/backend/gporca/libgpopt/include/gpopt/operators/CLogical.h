@@ -68,7 +68,7 @@ protected:
 	// output column generation given a list of column descriptors
 	CColRefArray *PdrgpcrCreateMapping(
 		CMemoryPool *mp, const CColumnDescriptorArray *pdrgpcoldesc,
-		ULONG ulOpSourceId, IMDId *mdid_table = NULL) const;
+		ULONG ulOpSourceId, IMDId *mdid_table = nullptr) const;
 
 	// initialize the array of partition columns
 	CColRef2dArray *PdrgpdrgpcrCreatePartCols(CMemoryPool *mp,
@@ -204,7 +204,8 @@ public:
 	virtual CColRefSet *
 	DeriveOuterReferences(CMemoryPool *mp, CExpressionHandle &exprhdl)
 	{
-		return DeriveOuterReferences(mp, exprhdl, NULL /*pcrsUsedAdditional*/);
+		return DeriveOuterReferences(mp, exprhdl,
+									 nullptr /*pcrsUsedAdditional*/);
 	}
 
 	// derive outer references for index get and dynamic index get operators
@@ -312,13 +313,13 @@ public:
 	static IStatistics *PstatsBaseTable(CMemoryPool *mp,
 										CExpressionHandle &exprhdl,
 										CTableDescriptor *ptabdesc,
-										CColRefSet *pcrsStatExtra = NULL);
+										CColRefSet *pcrsStatExtra = nullptr);
 
 	// conversion function
 	static CLogical *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FLogical());
 
 		return reinterpret_cast<CLogical *>(pop);

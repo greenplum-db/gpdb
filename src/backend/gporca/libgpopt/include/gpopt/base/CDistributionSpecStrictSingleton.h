@@ -77,7 +77,7 @@ public:
 	static CDistributionSpecStrictSingleton *
 	PdssConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtStrictSingleton == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecStrictSingleton *>(pds);

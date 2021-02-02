@@ -33,7 +33,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalJoin::CLogicalJoin(CMemoryPool *mp) : CLogical(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 

@@ -32,7 +32,7 @@ CWStringConst::CWStringConst(const WCHAR *w_str_buffer)
 				   ),
 	  m_w_str_buffer(w_str_buffer)
 {
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 	GPOS_ASSERT(IsValid());
 }
 
@@ -49,10 +49,10 @@ CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer)
 	: CWStringBase(GPOS_WSZ_LENGTH(w_str_buffer),
 				   true	 // owns_memory
 				   ),
-	  m_w_str_buffer(NULL)
+	  m_w_str_buffer(nullptr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 
 	if (0 == m_length)
 	{
@@ -84,7 +84,7 @@ CWStringConst::CWStringConst(const CWStringConst &str)
 				   ),
 	  m_w_str_buffer(str.GetBuffer())
 {
-	GPOS_ASSERT(NULL != m_w_str_buffer);
+	GPOS_ASSERT(nullptr != m_w_str_buffer);
 	GPOS_ASSERT(IsValid());
 }
 //---------------------------------------------------------------------------

@@ -36,14 +36,14 @@ SetTraceflags(
 		*ppbsDisabled  // output: disabled trace flags before function is called
 )
 {
-	if (NULL == pbsInput)
+	if (nullptr == pbsInput)
 	{
 		// bail out if input set is null
 		return;
 	}
 
-	GPOS_ASSERT(NULL != ppbsEnabled);
-	GPOS_ASSERT(NULL != ppbsDisabled);
+	GPOS_ASSERT(nullptr != ppbsEnabled);
+	GPOS_ASSERT(nullptr != ppbsDisabled);
 
 	*ppbsEnabled = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
 	*ppbsDisabled = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
@@ -83,14 +83,14 @@ SetTraceflags(
 void
 ResetTraceflags(CBitSet *pbsEnabled, CBitSet *pbsDisabled)
 {
-	if (NULL == pbsEnabled || NULL == pbsDisabled)
+	if (nullptr == pbsEnabled || nullptr == pbsDisabled)
 	{
 		// bail out if input sets are null
 		return;
 	}
 
-	GPOS_ASSERT(NULL != pbsEnabled);
-	GPOS_ASSERT(NULL != pbsDisabled);
+	GPOS_ASSERT(nullptr != pbsEnabled);
+	GPOS_ASSERT(nullptr != pbsDisabled);
 
 	CBitSetIter bsiterEnabled(*pbsEnabled);
 	while (bsiterEnabled.Advance())

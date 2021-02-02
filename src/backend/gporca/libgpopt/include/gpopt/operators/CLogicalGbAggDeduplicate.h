@@ -53,13 +53,13 @@ public:
 	// ctor
 	CLogicalGbAggDeduplicate(CMemoryPool *mp, CColRefArray *colref_array,
 							 COperator::EGbAggType egbaggtype,
-							 CColRefArray *pdrgpcrKeys = NULL);
+							 CColRefArray *pdrgpcrKeys = nullptr);
 
 	// ctor
 	CLogicalGbAggDeduplicate(CMemoryPool *mp, CColRefArray *colref_array,
 							 CColRefArray *pdrgpcrMinimal,
 							 COperator::EGbAggType egbaggtype,
-							 CColRefArray *pdrgpcrKeys = NULL);
+							 CColRefArray *pdrgpcrKeys = nullptr);
 
 	// dtor
 	~CLogicalGbAggDeduplicate() override;
@@ -133,7 +133,7 @@ public:
 	static CLogicalGbAggDeduplicate *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalGbAggDeduplicate == pop->Eopid());
 
 		return dynamic_cast<CLogicalGbAggDeduplicate *>(pop);

@@ -31,7 +31,7 @@ CParseHandlerManager::CParseHandlerManager(
 	CDXLMemoryManager *dxl_memory_manager, SAX2XMLReader *sax_2_xml_reader)
 	: m_dxl_memory_manager(dxl_memory_manager),
 	  m_xml_reader(sax_2_xml_reader),
-	  m_curr_parse_handler(NULL),
+	  m_curr_parse_handler(nullptr),
 	  m_iteration_since_last_abortcheck(0)
 {
 	m_parse_handler_stack = GPOS_NEW(dxl_memory_manager->Pmp())
@@ -72,7 +72,7 @@ CParseHandlerManager::ActivateParseHandler(
 		m_parse_handler_stack->Push(m_curr_parse_handler);
 	}
 
-	GPOS_ASSERT(NULL != parse_handler_base);
+	GPOS_ASSERT(nullptr != parse_handler_base);
 
 	m_curr_parse_handler = parse_handler_base;
 	m_xml_reader->setContentHandler(parse_handler_base);
@@ -93,10 +93,10 @@ CParseHandlerManager::ReplaceHandler(CParseHandlerBase *parse_handler_base,
 {
 	CheckForAborts();
 
-	GPOS_ASSERT(NULL != m_curr_parse_handler);
-	GPOS_ASSERT(NULL != parse_handler_base);
+	GPOS_ASSERT(nullptr != m_curr_parse_handler);
+	GPOS_ASSERT(nullptr != parse_handler_base);
 
-	if (NULL != parse_handler_root)
+	if (nullptr != parse_handler_root)
 	{
 		parse_handler_root->ReplaceParseHandler(m_curr_parse_handler,
 												parse_handler_base);
@@ -122,7 +122,7 @@ CParseHandlerManager::DeactivateHandler()
 {
 	CheckForAborts();
 
-	GPOS_ASSERT(NULL != m_curr_parse_handler);
+	GPOS_ASSERT(nullptr != m_curr_parse_handler);
 
 	if (!m_parse_handler_stack->IsEmpty())
 	{
@@ -130,7 +130,7 @@ CParseHandlerManager::DeactivateHandler()
 	}
 	else
 	{
-		m_curr_parse_handler = NULL;
+		m_curr_parse_handler = nullptr;
 	}
 
 	m_xml_reader->setContentHandler(m_curr_parse_handler);

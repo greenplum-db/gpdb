@@ -115,7 +115,7 @@ public:
 	static CJobTransformation *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtTransformation == pj->Ejt());
 
 		return dynamic_cast<CJobTransformation *>(pj);

@@ -181,7 +181,7 @@ public:
 	static CPhysicalAssert *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalAssert == pop->Eopid());
 
 		return reinterpret_cast<CPhysicalAssert *>(pop);

@@ -75,7 +75,7 @@ CDatumTest::EresUnittest_Basics()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	typedef IDatum *(*Pfpdatum)(CMemoryPool *, BOOL);
@@ -256,7 +256,7 @@ CDatumTest::StatsComparisonDoubleEqualWithinEpsilon()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// create accesssor
@@ -303,7 +303,7 @@ CDatumTest::StatsComparisonDoubleLessThan()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// create accesssor
@@ -350,7 +350,7 @@ CDatumTest::StatsComparisonIntLessThan()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	IDatum *datum1 = GPOS_NEW(mp) CDatumInt4GPDB(CTestUtils::m_sysidDefault,
@@ -390,7 +390,7 @@ CDatumTest::StatsComparisonIntEqual()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	IDatum *datum1 = GPOS_NEW(mp) CDatumInt4GPDB(CTestUtils::m_sysidDefault,

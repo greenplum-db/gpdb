@@ -187,7 +187,7 @@ public:
 	static CLogicalLimit *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalLimit == pop->Eopid());
 
 		return dynamic_cast<CLogicalLimit *>(pop);

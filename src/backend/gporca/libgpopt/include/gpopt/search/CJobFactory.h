@@ -90,7 +90,7 @@ private:
 	T *
 	PtRetrieve(CSyncPool<T> *&pspt)
 	{
-		if (NULL == pspt)
+		if (nullptr == pspt)
 		{
 			pspt = GPOS_NEW(m_mp) CSyncPool<T>(m_mp, m_ulJobs);
 			pspt->Init(GPOS_OFFSET(T, m_id));
@@ -104,8 +104,8 @@ private:
 	void
 	Release(T *pt, CSyncPool<T> *pspt)
 	{
-		GPOS_ASSERT(NULL != pt);
-		GPOS_ASSERT(NULL != pspt);
+		GPOS_ASSERT(nullptr != pt);
+		GPOS_ASSERT(nullptr != pspt);
 
 		pspt->Recycle(pt);
 	}
@@ -116,7 +116,7 @@ private:
 	TruncatePool(CSyncPool<T> *&pspt)
 	{
 		GPOS_DELETE(pspt);
-		pspt = NULL;
+		pspt = nullptr;
 	}
 
 public:

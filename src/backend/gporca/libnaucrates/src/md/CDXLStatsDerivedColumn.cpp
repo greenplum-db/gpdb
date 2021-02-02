@@ -42,7 +42,7 @@ CDXLStatsDerivedColumn::CDXLStatsDerivedColumn(
 	GPOS_ASSERT(0 <= m_null_freq);
 	GPOS_ASSERT(0 <= m_distinct_remaining);
 	GPOS_ASSERT(0 <= m_freq_remaining);
-	GPOS_ASSERT(NULL != m_dxl_stats_bucket_array);
+	GPOS_ASSERT(nullptr != m_dxl_stats_bucket_array);
 }
 
 //---------------------------------------------------------------------------

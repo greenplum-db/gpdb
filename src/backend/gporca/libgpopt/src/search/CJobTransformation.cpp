@@ -90,8 +90,8 @@ void
 CJobTransformation::Init(CGroupExpression *pgexpr, CXform *pxform)
 {
 	GPOS_ASSERT(!FInit());
-	GPOS_ASSERT(NULL != pgexpr);
-	GPOS_ASSERT(NULL != pxform);
+	GPOS_ASSERT(nullptr != pgexpr);
+	GPOS_ASSERT(nullptr != pxform);
 
 	m_pgexpr = pgexpr;
 	m_xform = pxform;

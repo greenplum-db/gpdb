@@ -177,16 +177,16 @@ private:
 	//private dummy ctor; used for creating invalid gexpr
 	CGroupExpression()
 		: m_id(GPOPT_INVALID_GEXPR_ID),
-		  m_pop(NULL),
-		  m_pdrgpgroup(NULL),
-		  m_pdrgpgroupSorted(NULL),
-		  m_pgroup(NULL),
+		  m_pop(nullptr),
+		  m_pdrgpgroup(nullptr),
+		  m_pdrgpgroupSorted(nullptr),
+		  m_pgroup(nullptr),
 		  m_exfidOrigin(CXform::ExfInvalid),
-		  m_pgexprOrigin(NULL),
+		  m_pgexprOrigin(nullptr),
 		  m_fIntermediate(false),
 		  m_estate(estUnexplored),
 		  m_eol(EolLow),
-		  m_ppartialplancostmap(NULL)
+		  m_ppartialplancostmap(nullptr)
 	{
 	}
 
@@ -213,7 +213,7 @@ public:
 	void
 	SetDuplicate(CGroupExpression *pgexpr)
 	{
-		GPOS_ASSERT(NULL != pgexpr);
+		GPOS_ASSERT(nullptr != pgexpr);
 
 		m_pgexprDuplicate = pgexpr;
 	}
@@ -257,7 +257,7 @@ public:
 	CGroup *
 	operator[](ULONG ulPos) const
 	{
-		GPOS_ASSERT(NULL != m_pdrgpgroup);
+		GPOS_ASSERT(nullptr != m_pdrgpgroup);
 
 		CGroup *pgroup = (*m_pdrgpgroup)[ulPos];
 

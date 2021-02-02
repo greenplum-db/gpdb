@@ -36,7 +36,7 @@ CParseHandlerScalarSubPlanParam::CParseHandlerScalarSubPlanParam(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_colref(NULL)
+	  m_dxl_colref(nullptr)
 {
 }
 
@@ -101,7 +101,7 @@ CParseHandlerScalarSubPlanParam::EndElement(
 	if (0 != XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarSubPlanParam),
 				 element_local_name) &&
-		NULL != m_dxl_node)
+		nullptr != m_dxl_node)
 	{
 		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

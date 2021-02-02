@@ -48,8 +48,8 @@ CParseHandlerOptimizerConfig::CParseHandlerOptimizerConfig(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_pbs(NULL),
-	  m_optimizer_config(NULL)
+	  m_pbs(nullptr),
+	  m_optimizer_config(nullptr)
 {
 }
 
@@ -188,7 +188,7 @@ CParseHandlerOptimizerConfig::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL == m_optimizer_config);
+	GPOS_ASSERT(nullptr == m_optimizer_config);
 	GPOS_ASSERT(7 >= this->Length());
 
 	CParseHandlerEnumeratorConfig *pphEnumeratorConfig =
@@ -209,11 +209,11 @@ CParseHandlerOptimizerConfig::EndElement(const XMLCh *const,  // element_uri,
 	CParseHandlerWindowOids *pphDefoidsGPDB =
 		dynamic_cast<CParseHandlerWindowOids *>((*this)[3]);
 	CWindowOids *pwindowoidsGPDB = pphDefoidsGPDB->GetWindowOids();
-	GPOS_ASSERT(NULL != pwindowoidsGPDB);
+	GPOS_ASSERT(nullptr != pwindowoidsGPDB);
 	pwindowoidsGPDB->AddRef();
 
-	ICostModel *pcm = NULL;
-	CHint *phint = NULL;
+	ICostModel *pcm = nullptr;
+	CHint *phint = nullptr;
 	if (5 == this->Length())
 	{
 		// no cost model: use default one
@@ -225,7 +225,7 @@ CParseHandlerOptimizerConfig::EndElement(const XMLCh *const,  // element_uri,
 		CParseHandlerCostModel *pphCostModelConfig =
 			dynamic_cast<CParseHandlerCostModel *>((*this)[4]);
 		pcm = pphCostModelConfig->GetCostModel();
-		GPOS_ASSERT(NULL != pcm);
+		GPOS_ASSERT(nullptr != pcm);
 		pcm->AddRef();
 
 		if (6 == this->Length())
@@ -237,7 +237,7 @@ CParseHandlerOptimizerConfig::EndElement(const XMLCh *const,  // element_uri,
 			CParseHandlerHint *pphHint =
 				dynamic_cast<CParseHandlerHint *>((*this)[5]);
 			phint = pphHint->GetHint();
-			GPOS_ASSERT(NULL != phint);
+			GPOS_ASSERT(nullptr != phint);
 			phint->AddRef();
 		}
 	}

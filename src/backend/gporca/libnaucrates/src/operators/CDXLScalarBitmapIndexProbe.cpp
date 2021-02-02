@@ -32,7 +32,7 @@ CDXLScalarBitmapIndexProbe::CDXLScalarBitmapIndexProbe(
 	CMemoryPool *mp, CDXLIndexDescr *dxl_index_descr)
 	: CDXLScalar(mp), m_dxl_index_descr(dxl_index_descr)
 {
-	GPOS_ASSERT(NULL != m_dxl_index_descr);
+	GPOS_ASSERT(nullptr != m_dxl_index_descr);
 }
 
 //---------------------------------------------------------------------------
@@ -114,7 +114,7 @@ CDXLScalarBitmapIndexProbe::AssertValid(const CDXLNode *dxlnode,
 	}
 
 	// assert validity of index descriptor
-	GPOS_ASSERT(NULL != m_dxl_index_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_index_descr->MdName());
 	GPOS_ASSERT(m_dxl_index_descr->MdName()->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

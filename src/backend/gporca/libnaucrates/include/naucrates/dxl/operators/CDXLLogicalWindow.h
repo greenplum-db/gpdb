@@ -62,7 +62,7 @@ public:
 	static CDXLLogicalWindow *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalWindow == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalWindow *>(dxl_op);

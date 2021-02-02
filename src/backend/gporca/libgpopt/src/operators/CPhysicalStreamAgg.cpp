@@ -40,9 +40,9 @@ CPhysicalStreamAgg::CPhysicalStreamAgg(
 	: CPhysicalAgg(mp, colref_array, pdrgpcrMinimal, egbaggtype,
 				   fGeneratesDuplicates, pdrgpcrArgDQA, fMultiStage,
 				   isAggFromSplitDQA, aggStage, should_enforce_distribution),
-	  m_pos(NULL)
+	  m_pos(nullptr)
 {
-	GPOS_ASSERT(NULL != m_pdrgpcrMinimal);
+	GPOS_ASSERT(nullptr != m_pdrgpcrMinimal);
 	m_pcrsMinimalGrpCols = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcrMinimal);
 	InitOrderSpec(mp, m_pdrgpcrMinimal);
 }
@@ -58,7 +58,7 @@ CPhysicalStreamAgg::CPhysicalStreamAgg(
 void
 CPhysicalStreamAgg::InitOrderSpec(CMemoryPool *mp, CColRefArray *pdrgpcrOrder)
 {
-	GPOS_ASSERT(NULL != pdrgpcrOrder);
+	GPOS_ASSERT(nullptr != pdrgpcrOrder);
 
 	CRefCount::SafeRelease(m_pos);
 	m_pos = GPOS_NEW(mp) COrderSpec(mp);
@@ -107,18 +107,18 @@ COrderSpec *
 CPhysicalStreamAgg::PosCovering(CMemoryPool *mp, COrderSpec *posRequired,
 								CColRefArray *pdrgpcrGrp) const
 {
-	GPOS_ASSERT(NULL != posRequired);
+	GPOS_ASSERT(nullptr != posRequired);
 
 	if (0 == posRequired->UlSortColumns())
 	{
 		// required order must be non-empty
-		return NULL;
+		return nullptr;
 	}
 
 	// create a set of required sort columns
 	CColRefSet *pcrsReqd = posRequired->PcrsUsed(mp);
 
-	COrderSpec *pos = NULL;
+	COrderSpec *pos = nullptr;
 
 	CColRefSet *pcrsGrpCols = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrGrp);
 	if (pcrsGrpCols->ContainsAll(pcrsReqd))
@@ -180,7 +180,7 @@ CPhysicalStreamAgg::PosRequiredStreamAgg(CMemoryPool *mp,
 	GPOS_ASSERT(0 == child_index);
 
 	COrderSpec *pos = PosCovering(mp, posRequired, pdrgpcrGrp);
-	if (NULL == pos)
+	if (nullptr == pos)
 	{
 		// failed to find a covering order spec, use local order spec
 		m_pos->AddRef();
@@ -193,7 +193,7 @@ CPhysicalStreamAgg::PosRequiredStreamAgg(CMemoryPool *mp,
 	// get key collection of the relational child
 	CKeyCollection *pkc = exprhdl.DeriveKeyCollection(0);
 
-	if (NULL != pkc && pkc->FKey(pcrs, false /*fExactMatch*/))
+	if (nullptr != pkc && pkc->FKey(pcrs, false /*fExactMatch*/))
 	{
 		CColRefSet *pcrsReqd = posRequired->PcrsUsed(m_mp);
 		BOOL fUsesDefinedCols = FUnaryUsesDefinedColumns(pcrsReqd, exprhdl);
@@ -242,7 +242,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalStreamAgg::EpetOrder(CExpressionHandle &exprhdl,
 							  const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// get the order delivered by the stream agg node

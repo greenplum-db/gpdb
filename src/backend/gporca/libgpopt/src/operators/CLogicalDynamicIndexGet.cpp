@@ -38,9 +38,9 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(CMemoryPool *mp)
 	: CLogicalDynamicGetBase(mp),
-	  m_pindexdesc(NULL),
+	  m_pindexdesc(nullptr),
 	  m_ulOriginOpId(gpos::ulong_max),
-	  m_pos(NULL)
+	  m_pos(nullptr)
 {
 }
 
@@ -58,10 +58,10 @@ CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(
 	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, part_idx_id,
 							 pdrgpcrOutput, pdrgpdrgpcrPart),
-	  m_pindexdesc(NULL),
+	  m_pindexdesc(nullptr),
 	  m_ulOriginOpId(ulOriginOpId)
 {
-	GPOS_ASSERT(NULL != pmdindex);
+	GPOS_ASSERT(nullptr != pmdindex);
 
 	// create the index descriptor
 	m_pindexdesc = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
@@ -147,7 +147,7 @@ CLogicalDynamicIndexGet::PopCopyWithRemappedColumns(
 	const IMDIndex *pmdindex = md_accessor->RetrieveIndex(m_pindexdesc->MDId());
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =

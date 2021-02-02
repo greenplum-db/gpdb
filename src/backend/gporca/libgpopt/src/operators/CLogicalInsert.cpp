@@ -29,7 +29,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalInsert::CLogicalInsert(CMemoryPool *mp)
-	: CLogical(mp), m_ptabdesc(NULL), m_pdrgpcrSource(NULL)
+	: CLogical(mp), m_ptabdesc(nullptr), m_pdrgpcrSource(nullptr)
 {
 	m_fPattern = true;
 }
@@ -47,8 +47,8 @@ CLogicalInsert::CLogicalInsert(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 	: CLogical(mp), m_ptabdesc(ptabdesc), m_pdrgpcrSource(pdrgpcrSource)
 
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pdrgpcrSource);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pdrgpcrSource);
 
 	m_pcrsLocalUsed->Include(m_pdrgpcrSource);
 }

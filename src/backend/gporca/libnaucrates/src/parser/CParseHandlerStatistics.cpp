@@ -33,7 +33,7 @@ CParseHandlerStatistics::CParseHandlerStatistics(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_stats_derived_rel_array(NULL)
+	  m_dxl_stats_derived_rel_array(nullptr)
 {
 }
 
@@ -99,7 +99,7 @@ CParseHandlerStatistics::StartElement(const XMLCh *const element_uri,
 								 CDXLTokens::XmlstrToken(EdxltokenStatistics)))
 	{
 		// start of the statistics section in the DXL document
-		GPOS_ASSERT(NULL == m_dxl_stats_derived_rel_array);
+		GPOS_ASSERT(nullptr == m_dxl_stats_derived_rel_array);
 
 		m_dxl_stats_derived_rel_array =
 			GPOS_NEW(m_mp) CDXLStatsDerivedRelationArray(m_mp);
@@ -107,7 +107,7 @@ CParseHandlerStatistics::StartElement(const XMLCh *const element_uri,
 	else
 	{
 		// currently we only have derived relation statistics objects
-		GPOS_ASSERT(NULL != m_dxl_stats_derived_rel_array);
+		GPOS_ASSERT(nullptr != m_dxl_stats_derived_rel_array);
 
 		// install a parse handler for the given element
 		CParseHandlerBase *parse_handler_base =
@@ -148,7 +148,7 @@ CParseHandlerStatistics::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_stats_derived_rel_array);
+	GPOS_ASSERT(nullptr != m_dxl_stats_derived_rel_array);
 
 	const ULONG num_of_stats = this->Length();
 	for (ULONG idx = 0; idx < num_of_stats; idx++)

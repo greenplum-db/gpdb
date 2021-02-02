@@ -46,9 +46,9 @@ CScalarBitmapBoolOp::CScalarBitmapBoolOp(CMemoryPool *mp,
 	  m_ebitmapboolop(ebitmapboolop),
 	  m_pmdidBitmapType(pmdidBitmapType)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(EbitmapboolSentinel > ebitmapboolop);
-	GPOS_ASSERT(NULL != pmdidBitmapType);
+	GPOS_ASSERT(nullptr != pmdidBitmapType);
 }
 
 //---------------------------------------------------------------------------

@@ -81,7 +81,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CLogicalExternalGet has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -99,7 +99,7 @@ public:
 	static CLogicalExternalGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalExternalGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalExternalGet *>(pop);

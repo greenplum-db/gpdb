@@ -111,7 +111,7 @@ CDXLScalarArrayRefIndexList::GetDXLIndexListBoundStr(
 
 		default:
 			GPOS_ASSERT("Invalid array bound");
-			return NULL;
+			return nullptr;
 	}
 }
 

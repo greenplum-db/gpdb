@@ -69,13 +69,13 @@ CTranslatorDXLToExpr::CTranslatorDXLToExpr(CMemoryPool *mp,
 	: m_mp(mp),
 	  m_sysid(IMDId::EmdidGPDB, GPMD_GPDB_SYSID),
 	  m_pmda(md_accessor),
-	  m_phmulcr(NULL),
-	  m_phmululCTE(NULL),
-	  m_pdrgpulOutputColRefs(NULL),
-	  m_pdrgpmdname(NULL),
-	  m_phmulpdxlnCTEProducer(NULL),
+	  m_phmulcr(nullptr),
+	  m_phmululCTE(nullptr),
+	  m_pdrgpulOutputColRefs(nullptr),
+	  m_pdrgpmdname(nullptr),
+	  m_phmulpdxlnCTEProducer(nullptr),
 	  m_ulCTEId(gpos::ulong_max),
-	  m_pcf(NULL)
+	  m_pcf(nullptr)
 {
 	// initialize hash tables
 	m_phmulcr = GPOS_NEW(m_mp) UlongToColRefMap(m_mp);
@@ -86,7 +86,7 @@ CTranslatorDXLToExpr::CTranslatorDXLToExpr(CMemoryPool *mp,
 	const ULONG size = GPOS_ARRAY_SIZE(m_rgpfTranslators);
 	for (ULONG ul = 0; ul < size; ul++)
 	{
-		m_rgpfTranslators[ul] = NULL;
+		m_rgpfTranslators[ul] = nullptr;
 	}
 
 	InitTranslators();
@@ -96,7 +96,7 @@ CTranslatorDXLToExpr::CTranslatorDXLToExpr(CMemoryPool *mp,
 		// get column factory from optimizer context object
 		m_pcf = COptCtxt::PoctxtFromTLS()->Pcf();
 
-		GPOS_ASSERT(NULL != m_pcf);
+		GPOS_ASSERT(nullptr != m_pcf);
 	}
 }
 
@@ -218,7 +218,7 @@ CTranslatorDXLToExpr::InitTranslators()
 ULongPtrArray *
 CTranslatorDXLToExpr::PdrgpulOutputColRefs()
 {
-	GPOS_ASSERT(NULL != m_pdrgpulOutputColRefs);
+	GPOS_ASSERT(nullptr != m_pdrgpulOutputColRefs);
 	return m_pdrgpulOutputColRefs;
 }
 
@@ -235,10 +235,10 @@ CTranslatorDXLToExpr::Pexpr(const CDXLNode *dxlnode,
 							const CDXLNodeArray *query_output_dxlnode_array,
 							const CDXLNodeArray *cte_producers)
 {
-	GPOS_ASSERT(NULL == m_pdrgpulOutputColRefs);
-	GPOS_ASSERT(NULL == m_phmulpdxlnCTEProducer);
-	GPOS_ASSERT(NULL != dxlnode && NULL != dxlnode->GetOperator());
-	GPOS_ASSERT(NULL != query_output_dxlnode_array);
+	GPOS_ASSERT(nullptr == m_pdrgpulOutputColRefs);
+	GPOS_ASSERT(nullptr == m_phmulpdxlnCTEProducer);
+	GPOS_ASSERT(nullptr != dxlnode && nullptr != dxlnode->GetOperator());
+	GPOS_ASSERT(nullptr != query_output_dxlnode_array);
 
 	m_phmulpdxlnCTEProducer = GPOS_NEW(m_mp) IdToCDXLNodeMap(m_mp);
 	const ULONG ulCTEs = cte_producers->Size();
@@ -256,10 +256,10 @@ CTranslatorDXLToExpr::Pexpr(const CDXLNode *dxlnode,
 
 	// translate main DXL tree
 	CExpression *pexpr = Pexpr(dxlnode);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	m_phmulpdxlnCTEProducer->Release();
-	m_phmulpdxlnCTEProducer = NULL;
+	m_phmulpdxlnCTEProducer = nullptr;
 
 	// generate the array of output column reference ids and column names
 	m_pdrgpulOutputColRefs = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
@@ -279,7 +279,7 @@ CTranslatorDXLToExpr::Pexpr(const CDXLNode *dxlnode,
 
 		// get the dxl column reference
 		const CDXLColRef *dxl_colref = pdxlopIdent->GetDXLColRef();
-		GPOS_ASSERT(NULL != dxl_colref);
+		GPOS_ASSERT(nullptr != dxl_colref);
 		const ULONG colid = dxl_colref->Id();
 
 		// get its column reference from the hash map
@@ -315,11 +315,11 @@ CTranslatorDXLToExpr::Pexpr(const CDXLNode *dxlnode)
 {
 	// recursive function - check stack
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != dxlnode && NULL != dxlnode->GetOperator());
+	GPOS_ASSERT(nullptr != dxlnode && nullptr != dxlnode->GetOperator());
 
 	CDXLOperator *dxl_op = dxlnode->GetOperator();
 
-	CExpression *pexpr = NULL;
+	CExpression *pexpr = nullptr;
 	switch (dxl_op->GetDXLOperatorType())
 	{
 		case EdxloptypeLogical:
@@ -379,8 +379,9 @@ CTranslatorDXLToExpr::PexprTranslateScalar(const CDXLNode *dxlnode,
 										   CColRefArray *colref_array,
 										   ULongPtrArray *pdrgpul)
 {
-	GPOS_ASSERT_IMP(NULL != pdrgpul, NULL != colref_array);
-	GPOS_ASSERT_IMP(NULL != pdrgpul, pdrgpul->Size() == colref_array->Size());
+	GPOS_ASSERT_IMP(nullptr != pdrgpul, nullptr != colref_array);
+	GPOS_ASSERT_IMP(nullptr != pdrgpul,
+					pdrgpul->Size() == colref_array->Size());
 
 	if (EdxloptypeScalar != dxlnode->GetOperator()->GetDXLOperatorType())
 	{
@@ -388,15 +389,15 @@ CTranslatorDXLToExpr::PexprTranslateScalar(const CDXLNode *dxlnode,
 				   dxlnode->GetOperator()->GetOpNameStr()->GetBuffer());
 	}
 
-	if (NULL != colref_array)
+	if (nullptr != colref_array)
 	{
 		const ULONG length = colref_array->Size();
 		for (ULONG ul = 0; ul < length; ul++)
 		{
 			CColRef *colref = (*colref_array)[ul];
 			// copy key
-			ULONG *pulKey = NULL;
-			if (NULL == pdrgpul)
+			ULONG *pulKey = nullptr;
+			if (nullptr == pdrgpul)
 			{
 				pulKey = GPOS_NEW(m_mp) ULONG(ul + 1);
 			}
@@ -429,7 +430,7 @@ CTranslatorDXLToExpr::PexprLogical(const CDXLNode *dxlnode)
 	// recursive function - check stack
 	GPOS_CHECK_STACK_SIZE;
 
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	GPOS_ASSERT(EdxloptypeLogical ==
 				dxlnode->GetOperator()->GetDXLOperatorType());
 	CDXLOperator *dxl_op = dxlnode->GetOperator();
@@ -437,7 +438,7 @@ CTranslatorDXLToExpr::PexprLogical(const CDXLNode *dxlnode)
 	ULONG ulOpId = (ULONG) dxl_op->GetDXLOperator();
 	PfPexpr pf = m_rgpfTranslators[ulOpId];
 
-	if (NULL == pf)
+	if (nullptr == pf)
 	{
 		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 				   dxl_op->GetOpNameStr()->GetBuffer());
@@ -458,7 +459,7 @@ CExpression *
 CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 {
 	CDXLLogicalTVF *dxl_op = CDXLLogicalTVF::Cast(dxlnode->GetOperator());
-	GPOS_ASSERT(NULL != dxl_op->MdName()->GetMDName());
+	GPOS_ASSERT(nullptr != dxl_op->MdName()->GetMDName());
 
 	// populate column information
 	const ULONG ulColumns = dxl_op->Arity();
@@ -474,7 +475,7 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 
 		const IMDType *pmdtype = m_pmda->RetrieveType(pdxlcoldesc->MdidType());
 
-		GPOS_ASSERT(NULL != pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
+		GPOS_ASSERT(nullptr != pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
 		CWStringConst strColName(
 			m_mp, pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
 
@@ -500,7 +501,7 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 		pdrgpcoldesc);
 
 	// create expression containing the logical TVF operator
-	CExpression *pexpr = NULL;
+	CExpression *pexpr = nullptr;
 	const ULONG arity = dxlnode->Arity();
 	if (0 < arity)
 	{
@@ -548,8 +549,8 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 	CDXLTableDescr *table_descr =
 		CDXLLogicalGet::Cast(dxl_op)->GetDXLTableDescr();
 
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != table_descr->MdName()->GetMDName());
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != table_descr->MdName()->GetMDName());
 
 	CTableDescriptor *ptabdesc = Ptabdesc(table_descr);
 
@@ -558,8 +559,8 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 
 	// create a logical get or dynamic get operator
 	CName *pname = GPOS_NEW(m_mp) CName(m_mp, CName(&strAlias));
-	CLogical *popGet = NULL;
-	CColRefArray *colref_array = NULL;
+	CLogical *popGet = nullptr;
+	CColRefArray *colref_array = nullptr;
 
 	const IMDRelation *pmdrel = m_pmda->RetrieveRel(table_descr->MDId());
 	IMDRelation::Erelstoragetype root_storage_type =
@@ -627,7 +628,7 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 
 	CExpression *pexpr = GPOS_NEW(m_mp) CExpression(m_mp, popGet);
 
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 	GPOS_ASSERT(colref_array->Size() == table_descr->Arity());
 
 	const ULONG ulColumns = colref_array->Size();
@@ -636,8 +637,8 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 	{
 		CColRef *colref = (*colref_array)[ul];
 		const CDXLColDescr *pdxlcd = table_descr->GetColumnDescrAt(ul);
-		GPOS_ASSERT(NULL != colref);
-		GPOS_ASSERT(NULL != pdxlcd && !pdxlcd->IsDropped());
+		GPOS_ASSERT(nullptr != colref);
+		GPOS_ASSERT(nullptr != pdxlcd && !pdxlcd->IsDropped());
 
 		// copy key
 		ULONG *pulKey = GPOS_NEW(m_mp) ULONG(pdxlcd->Id());
@@ -664,7 +665,7 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalSetOp(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	CDXLLogicalSetOp *dxl_op = CDXLLogicalSetOp::Cast(dxlnode->GetOperator());
 
@@ -689,7 +690,7 @@ CTranslatorDXLToExpr::PexprLogicalSetOp(const CDXLNode *dxlnode)
 
 	pdrgpulOutput->Release();
 
-	CLogicalSetOp *pop = NULL;
+	CLogicalSetOp *pop = nullptr;
 	switch (dxl_op->GetSetOpType())
 	{
 		case EdxlsetopUnion:
@@ -739,7 +740,7 @@ CTranslatorDXLToExpr::PexprLogicalSetOp(const CDXLNode *dxlnode)
 					   dxl_op->GetOpNameStr()->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, pop, pdrgpexpr);
 }
@@ -811,11 +812,11 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 		ppdrgpexprChildProjElems  // output: project elements to remap child input columns
 )
 {
-	GPOS_ASSERT(NULL != pdxlnSetOp);
-	GPOS_ASSERT(NULL != ppexprChild);
-	GPOS_ASSERT(NULL != ppdrgpcrChild);
-	GPOS_ASSERT(NULL != ppdrgpexprChildProjElems);
-	GPOS_ASSERT(NULL == *ppdrgpexprChildProjElems);
+	GPOS_ASSERT(nullptr != pdxlnSetOp);
+	GPOS_ASSERT(nullptr != ppexprChild);
+	GPOS_ASSERT(nullptr != ppdrgpcrChild);
+	GPOS_ASSERT(nullptr != ppdrgpexprChildProjElems);
+	GPOS_ASSERT(nullptr == *ppdrgpexprChildProjElems);
 
 	const CDXLLogicalSetOp *dxl_op =
 		CDXLLogicalSetOp::Cast(pdxlnSetOp->GetOperator());
@@ -871,7 +872,7 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 											fFirstChild, pdxlcdOutput->Id());
 			(*ppdrgpcrChild)->Append(new_colref);
 
-			CExpression *pexprChildProjElem = NULL;
+			CExpression *pexprChildProjElem = nullptr;
 			if (fEqualTypes)
 			{
 				// project child input column
@@ -932,9 +933,9 @@ CTranslatorDXLToExpr::PdrgpexprPreprocessSetOpInputs(
 	const CDXLNode *dxlnode, CColRef2dArray *pdrgdrgpcrInput,
 	ULongPtrArray *pdrgpulOutput)
 {
-	GPOS_ASSERT(NULL != dxlnode);
-	GPOS_ASSERT(NULL != pdrgdrgpcrInput);
-	GPOS_ASSERT(NULL != pdrgpulOutput);
+	GPOS_ASSERT(nullptr != dxlnode);
+	GPOS_ASSERT(nullptr != pdrgdrgpcrInput);
+	GPOS_ASSERT(nullptr != pdrgpulOutput);
 
 	// array of child expression
 	CExpressionArray *pdrgpexpr = GPOS_NEW(m_mp) CExpressionArray(m_mp);
@@ -949,13 +950,13 @@ CTranslatorDXLToExpr::PdrgpexprPreprocessSetOpInputs(
 
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
-		CExpression *pexprChild = NULL;
-		CColRefArray *pdrgpcrInput = NULL;
-		CExpressionArray *pdrgpexprChildProjElems = NULL;
+		CExpression *pexprChild = nullptr;
+		CColRefArray *pdrgpcrInput = nullptr;
+		CExpressionArray *pdrgpexprChildProjElems = nullptr;
 		BuildSetOpChild(dxlnode, ul, &pexprChild, &pdrgpcrInput,
 						&pdrgpexprChildProjElems);
 		GPOS_ASSERT(ulOutputCols == pdrgpcrInput->Size());
-		GPOS_ASSERT(NULL != pexprChild);
+		GPOS_ASSERT(nullptr != pexprChild);
 
 		pdrgdrgpcrInput->Append(pdrgpcrInput);
 
@@ -1014,12 +1015,12 @@ CColRef *
 CTranslatorDXLToExpr::LookupColRef(UlongToColRefMap *colref_mapping,
 								   ULONG colid)
 {
-	GPOS_ASSERT(NULL != colref_mapping);
+	GPOS_ASSERT(nullptr != colref_mapping);
 	GPOS_ASSERT(gpos::ulong_max != colid);
 
 	// get its column reference from the hash map
 	CColRef *colref = colref_mapping->Find(&colid);
-	if (NULL == colref)
+	if (nullptr == colref)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2ExprAttributeNotFound, colid);
 	}
@@ -1069,7 +1070,7 @@ CTranslatorDXLToExpr::PcrCreate(const CColRef *colref, const IMDType *pmdtype,
 CColRefArray *
 CTranslatorDXLToExpr::Pdrgpcr(const CDXLColDescrArray *dxl_col_descr_array)
 {
-	GPOS_ASSERT(NULL != dxl_col_descr_array);
+	GPOS_ASSERT(nullptr != dxl_col_descr_array);
 	CColRefArray *pdrgpcrOutput = GPOS_NEW(m_mp) CColRefArray(m_mp);
 	ULONG ulOutputCols = dxl_col_descr_array->Size();
 	for (ULONG ul = 0; ul < ulOutputCols; ul++)
@@ -1101,8 +1102,8 @@ CTranslatorDXLToExpr::ConstructDXLColId2ColRefMapping(
 	const CDXLColDescrArray *dxl_col_descr_array,
 	const CColRefArray *colref_array)
 {
-	GPOS_ASSERT(NULL != dxl_col_descr_array);
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != dxl_col_descr_array);
+	GPOS_ASSERT(nullptr != colref_array);
 
 	const ULONG ulColumns = dxl_col_descr_array->Size();
 	GPOS_ASSERT(colref_array->Size() == ulColumns);
@@ -1111,10 +1112,10 @@ CTranslatorDXLToExpr::ConstructDXLColId2ColRefMapping(
 	for (ULONG ul = 0; ul < ulColumns; ul++)
 	{
 		CColRef *colref = (*colref_array)[ul];
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != colref);
 
 		const CDXLColDescr *pdxlcd = (*dxl_col_descr_array)[ul];
-		GPOS_ASSERT(NULL != pdxlcd && !pdxlcd->IsDropped());
+		GPOS_ASSERT(nullptr != pdxlcd && !pdxlcd->IsDropped());
 
 		// copy key
 		ULONG *pulKey = GPOS_NEW(m_mp) ULONG(pdxlcd->Id());
@@ -1135,7 +1136,7 @@ CTranslatorDXLToExpr::ConstructDXLColId2ColRefMapping(
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalSelect(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	// translate the child dxl node
 	CDXLNode *child_dxlnode = (*dxlnode)[1];
@@ -1162,7 +1163,7 @@ CTranslatorDXLToExpr::PexprLogicalSelect(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalProject(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	// translate the child dxl node
 	CDXLNode *child_dxlnode = (*dxlnode)[1];
@@ -1192,13 +1193,13 @@ CTranslatorDXLToExpr::PexprLogicalProject(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalCTEAnchor(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	CDXLLogicalCTEAnchor *pdxlopCTEAnchor =
 		CDXLLogicalCTEAnchor::Cast(dxlnode->GetOperator());
 	ULONG ulCTEId = pdxlopCTEAnchor->Id();
 
 	CDXLNode *pdxlnCTEProducer = m_phmulpdxlnCTEProducer->Find(&ulCTEId);
-	GPOS_ASSERT(NULL != pdxlnCTEProducer);
+	GPOS_ASSERT(nullptr != pdxlnCTEProducer);
 
 	ULONG id = UlMapCTEId(ulCTEId);
 	// mark that we are about to start processing this new CTE and keep track
@@ -1206,7 +1207,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEAnchor(const CDXLNode *dxlnode)
 	ULONG ulCTEPrevious = m_ulCTEId;
 	m_ulCTEId = id;
 	CExpression *pexprProducer = Pexpr(pdxlnCTEProducer);
-	GPOS_ASSERT(NULL != pexprProducer);
+	GPOS_ASSERT(nullptr != pexprProducer);
 	m_ulCTEId = ulCTEPrevious;
 
 	CColRefSet *pcrsProducerOuter = pexprProducer->DeriveOuterReferences();
@@ -1237,7 +1238,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEAnchor(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalCTEProducer(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	CDXLLogicalCTEProducer *pdxlopCTEProducer =
 		CDXLLogicalCTEProducer::Cast(dxlnode->GetOperator());
 	ULONG id = UlMapCTEId(pdxlopCTEProducer->Id());
@@ -1260,7 +1261,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEProducer(const CDXLNode *dxlnode)
 	{
 		ULONG *pulColId = (*pdrgpulCols)[ul];
 		CColRef *colref = LookupColRef(m_phmulcr, *pulColId);
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != colref);
 
 		if (pcrsProducer->FMember(colref))
 		{
@@ -1311,7 +1312,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEProducer(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalCTEConsumer(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	CDXLLogicalCTEConsumer *pdxlopCTEConsumer =
 		CDXLLogicalCTEConsumer::Cast(dxlnode->GetOperator());
@@ -1322,7 +1323,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEConsumer(const CDXLNode *dxlnode)
 	// create new col refs
 	CCTEInfo *pcteinfo = COptCtxt::PoctxtFromTLS()->Pcteinfo();
 	CExpression *pexprProducer = pcteinfo->PexprCTEProducer(id);
-	GPOS_ASSERT(NULL != pexprProducer);
+	GPOS_ASSERT(nullptr != pexprProducer);
 
 	CColRefArray *pdrgpcrProducer =
 		CLogicalCTEProducer::PopConvert(pexprProducer->Pop())->Pdrgpcr();
@@ -1358,7 +1359,7 @@ ULONG
 CTranslatorDXLToExpr::UlMapCTEId(const ULONG ulIdOld)
 {
 	ULONG *pulNewId = m_phmululCTE->Find(&ulIdOld);
-	if (NULL == pulNewId)
+	if (nullptr == pulNewId)
 	{
 		pulNewId = GPOS_NEW(m_mp)
 			ULONG(COptCtxt::PoctxtFromTLS()->Pcteinfo()->next_id());
@@ -1382,7 +1383,7 @@ CTranslatorDXLToExpr::UlMapCTEId(const ULONG ulIdOld)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalInsert(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	CDXLLogicalInsert *pdxlopInsert =
 		CDXLLogicalInsert::Cast(dxlnode->GetOperator());
 
@@ -1412,7 +1413,7 @@ CTranslatorDXLToExpr::PexprLogicalInsert(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalDelete(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	CDXLLogicalDelete *pdxlopDelete =
 		CDXLLogicalDelete::Cast(dxlnode->GetOperator());
 
@@ -1456,7 +1457,7 @@ CTranslatorDXLToExpr::PexprLogicalDelete(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	CDXLLogicalUpdate *pdxlopUpdate =
 		CDXLLogicalUpdate::Cast(dxlnode->GetOperator());
 
@@ -1486,7 +1487,7 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 	CColRefArray *pdrgpcrDelete =
 		CTranslatorDXLToExprUtils::Pdrgpcr(m_mp, m_phmulcr, pdrgpulDeleteCols);
 
-	CColRef *pcrTupleOid = NULL;
+	CColRef *pcrTupleOid = nullptr;
 	if (pdxlopUpdate->IsOidsPreserved())
 	{
 		ULONG tuple_oid = pdxlopUpdate->GetTupleOid();
@@ -1512,7 +1513,7 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalCTAS(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 	CDXLLogicalCTAS *pdxlopCTAS = CDXLLogicalCTAS::Cast(dxlnode->GetOperator());
 
 	// translate the child dxl node
@@ -1583,7 +1584,7 @@ CTranslatorDXLToExpr::PexprLogicalGroupBy(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalLimit(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode &&
+	GPOS_ASSERT(nullptr != dxlnode &&
 				EdxlopLogicalLimit == dxlnode->GetOperator()->GetDXLOperator());
 
 	// get children
@@ -1594,7 +1595,7 @@ CTranslatorDXLToExpr::PexprLogicalLimit(const CDXLNode *dxlnode)
 	CDXLNode *child_dxlnode = (*dxlnode)[EdxllogicallimitIndexChildPlan];
 
 	// translate count
-	CExpression *pexprLimitCount = NULL;
+	CExpression *pexprLimitCount = nullptr;
 	BOOL fHasCount = false;
 	if (1 == pdxlnCount->Arity())
 	{
@@ -1617,7 +1618,7 @@ CTranslatorDXLToExpr::PexprLogicalLimit(const CDXLNode *dxlnode)
 	}
 
 	// translate offset
-	CExpression *pexprLimitOffset = NULL;
+	CExpression *pexprLimitOffset = nullptr;
 
 	if (1 == pdxlnOffset->Arity())
 	{
@@ -1654,7 +1655,7 @@ CTranslatorDXLToExpr::PexprLogicalLimit(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	CDXLLogicalWindow *pdxlopWindow =
 		CDXLLogicalWindow::Cast(dxlnode->GetOperator());
@@ -1677,7 +1678,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 	{
 		CDXLNode *pdxlnProjElem = (*pdxlnPrL)[ul];
 
-		GPOS_ASSERT(NULL != pdxlnProjElem);
+		GPOS_ASSERT(nullptr != pdxlnProjElem);
 		GPOS_ASSERT(EdxlopScalarProjectElem ==
 						pdxlnProjElem->GetOperator()->GetDXLOperator() &&
 					1 == pdxlnProjElem->Arity());
@@ -1724,7 +1725,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 			ULONG ulSpecPos = pdxlopWindowRef->GetWindSpecPos();
 			const CExpressionArray *pdrgpexpr =
 				phmulpdrgpexpr->Find(&ulSpecPos);
-			if (NULL == pdrgpexpr)
+			if (nullptr == pdrgpexpr)
 			{
 				CExpressionArray *pdrgpexprNew =
 					GPOS_NEW(m_mp) CExpressionArray(m_mp);
@@ -1742,7 +1743,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 	}
 
 	// create the window operators (or when applicable a tree of window operators)
-	CExpression *pexprLgSequence = NULL;
+	CExpression *pexprLgSequence = nullptr;
 	UlongToExprArrayMapIter hmiterulpdrgexpr(phmulpdrgpexpr);
 
 	while (hmiterulpdrgexpr.Advance())
@@ -1751,22 +1752,22 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		CDXLWindowSpec *pdxlws = pdxlopWindow->GetWindowKeyAt(ulPos);
 
 		const CExpressionArray *pdrgpexpr = hmiterulpdrgexpr.Value();
-		GPOS_ASSERT(NULL != pdrgpexpr);
+		GPOS_ASSERT(nullptr != pdrgpexpr);
 		CScalarProjectList *popPrL = GPOS_NEW(m_mp) CScalarProjectList(m_mp);
 		CExpression *pexprProjList = GPOS_NEW(m_mp) CExpression(
 			m_mp, popPrL, const_cast<CExpressionArray *>(pdrgpexpr));
 
 		CColRefArray *colref_array =
 			PdrgpcrPartitionByCol(pdxlws->GetPartitionByColIdArray());
-		CDistributionSpec *pds = NULL;
+		CDistributionSpec *pds = nullptr;
 		if (0 < colref_array->Size())
 		{
 			CExpressionArray *pdrgpexprScalarIdents =
 				CUtils::PdrgpexprScalarIdents(m_mp, colref_array);
 			pds = CDistributionSpecHashed::MakeHashedDistrSpec(
 				m_mp, pdrgpexprScalarIdents, true /* fNullsCollocated */,
-				NULL /* pdshashedEquiv */, NULL /* opfamilies */);
-			if (NULL == pds)
+				nullptr /* pdshashedEquiv */, nullptr /* opfamilies */);
+			if (nullptr == pds)
 			{
 				// FIXME: Handle PARTITION BY clauses that cannot be capture using CDistributionSpecHashed
 				// CScalarProjectList uses CDistributionSpecHashed to represent PARTITION BY clauses, even
@@ -1787,8 +1788,8 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		colref_array->Release();
 
 		CWindowFrameArray *pdrgpwf = GPOS_NEW(m_mp) CWindowFrameArray(m_mp);
-		CWindowFrame *pwf = NULL;
-		if (NULL != pdxlws->GetWindowFrame())
+		CWindowFrame *pwf = nullptr;
+		if (nullptr != pdxlws->GetWindowFrame())
 		{
 			pwf = Pwf(pdxlws->GetWindowFrame());
 		}
@@ -1801,7 +1802,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		pdrgpwf->Append(pwf);
 
 		COrderSpecArray *pdrgpos = GPOS_NEW(m_mp) COrderSpecArray(m_mp);
-		if (NULL != pdxlws->GetSortColListDXL())
+		if (nullptr != pdxlws->GetSortColListDXL())
 		{
 			COrderSpec *pos = Pos(pdxlws->GetSortColListDXL());
 			pdrgpos->Append(pos);
@@ -1818,7 +1819,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		pexprWindowChild = pexprLgSequence;
 	}
 
-	GPOS_ASSERT(NULL != pexprLgSequence);
+	GPOS_ASSERT(nullptr != pexprLgSequence);
 
 	// clean up
 	phmulpdrgpexpr->Release();
@@ -1874,13 +1875,13 @@ CTranslatorDXLToExpr::Pwf(const CDXLWindowFrame *window_frame)
 		Efb(CDXLScalarWindowFrameEdge::Cast(pdxlnTrail->GetOperator())
 				->ParseDXLFrameBoundary());
 
-	CExpression *pexprTrail = NULL;
+	CExpression *pexprTrail = nullptr;
 	if (0 != pdxlnTrail->Arity())
 	{
 		pexprTrail = Pexpr((*pdxlnTrail)[0]);
 	}
 
-	CExpression *pexprLead = NULL;
+	CExpression *pexprLead = nullptr;
 	if (0 != pdxlnLead->Arity())
 	{
 		pexprLead = Pexpr((*pdxlnLead)[0]);
@@ -1977,7 +1978,7 @@ CTranslatorDXLToExpr::Efes(EdxlFrameExclusionStrategy edxlfeb) const
 CExpression *
 CTranslatorDXLToExpr::PexprLogicalJoin(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	CDXLLogicalJoin *pdxlopJoin = CDXLLogicalJoin::Cast(dxlnode->GetOperator());
 	EdxlJoinType join_type = pdxlopJoin->GetJoinType();
@@ -2106,7 +2107,7 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 		INT attno = pdxlcoldesc->AttrNum();
 
 		ULONG *pulPos = phmiulAttnoPosMapping->Find(&attno);
-		GPOS_ASSERT(NULL != pulPos);
+		GPOS_ASSERT(nullptr != pulPos);
 		const IMDColumn *pmdcolNext = pmdrel->GetMdCol(*pulPos);
 
 		BOOL is_nullable = pmdcolNext->IsNullable();
@@ -2114,7 +2115,7 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 		GPOS_ASSERT(pdxlcoldesc->MdidType()->IsValid());
 		const IMDType *pmdtype = m_pmda->RetrieveType(pdxlcoldesc->MdidType());
 
-		GPOS_ASSERT(NULL != pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
+		GPOS_ASSERT(nullptr != pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
 		CWStringConst strColName(
 			m_mp, pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
 
@@ -2142,7 +2143,7 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 			const IMDColumn *pmdcol = pmdrel->PartColAt(ul);
 			INT attrnum = pmdcol->AttrNum();
 			ULONG *pulPos = phmiulAttnoColMapping->Find(&attrnum);
-			GPOS_ASSERT(NULL != pulPos);
+			GPOS_ASSERT(nullptr != pulPos);
 			ptabdesc->AddPartitionColumn(*pulPos);
 		}
 	}
@@ -2179,11 +2180,11 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 void
 CTranslatorDXLToExpr::RegisterMDRelationCtas(CDXLLogicalCTAS *pdxlopCTAS)
 {
-	GPOS_ASSERT(NULL != pdxlopCTAS);
+	GPOS_ASSERT(nullptr != pdxlopCTAS);
 
 	pdxlopCTAS->MDId()->AddRef();
 
-	if (NULL != pdxlopCTAS->GetDistrColPosArray())
+	if (nullptr != pdxlopCTAS->GetDistrColPosArray())
 	{
 		pdxlopCTAS->GetDistrColPosArray()->AddRef();
 	}
@@ -2203,13 +2204,13 @@ CTranslatorDXLToExpr::RegisterMDRelationCtas(CDXLLogicalCTAS *pdxlopCTAS)
 			pdxlcd->AttrNum(), pdxlcd->MdidType(), pdxlcd->TypeModifier(),
 			true,  // is_nullable,
 			pdxlcd->IsDropped(),
-			NULL,  // pdxlnDefaultValue,
+			nullptr,  // pdxlnDefaultValue,
 			pdxlcd->Width());
 		mdcol_array->Append(pmdcol);
 	}
 
-	CMDName *mdname_schema = NULL;
-	if (NULL != pdxlopCTAS->GetMdNameSchema())
+	CMDName *mdname_schema = nullptr;
+	if (nullptr != pdxlopCTAS->GetMdNameSchema())
 	{
 		mdname_schema = GPOS_NEW(m_mp)
 			CMDName(m_mp, pdxlopCTAS->GetMdNameSchema()->GetMDName());
@@ -2317,7 +2318,7 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 		GPOS_ASSERT(pdxlcoldesc->MdidType()->IsValid());
 		const IMDType *pmdtype = m_pmda->RetrieveType(pdxlcoldesc->MdidType());
 
-		GPOS_ASSERT(NULL != pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
+		GPOS_ASSERT(nullptr != pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
 		CWStringConst strColName(
 			m_mp, pdxlcoldesc->MdName()->GetMDName()->GetBuffer());
 
@@ -2358,12 +2359,12 @@ CTranslatorDXLToExpr::PexprScalarSubqueryExistential(
 {
 	GPOS_ASSERT(EdxlopScalarSubqueryExists == edxlopid ||
 				EdxlopScalarSubqueryNotExists == edxlopid);
-	GPOS_ASSERT(NULL != pdxlnLogicalChild);
+	GPOS_ASSERT(nullptr != pdxlnLogicalChild);
 
 	CExpression *pexprLogicalChild = Pexpr(pdxlnLogicalChild);
-	GPOS_ASSERT(NULL != pexprLogicalChild);
+	GPOS_ASSERT(nullptr != pexprLogicalChild);
 
-	CScalar *popScalarSubquery = NULL;
+	CScalar *popScalarSubquery = nullptr;
 	if (EdxlopScalarSubqueryExists == edxlopid)
 	{
 		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryExists(m_mp);
@@ -2454,9 +2455,9 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 {
 	GPOS_ASSERT(EdxlopScalarSubqueryAny == edxlopid ||
 				EdxlopScalarSubqueryAll == edxlopid);
-	GPOS_ASSERT(NULL != str);
-	GPOS_ASSERT(NULL != pdxlnLogicalChild);
-	GPOS_ASSERT(NULL != pdxlnScalarChild);
+	GPOS_ASSERT(nullptr != str);
+	GPOS_ASSERT(nullptr != pdxlnLogicalChild);
+	GPOS_ASSERT(nullptr != pdxlnScalarChild);
 
 	// translate children
 
@@ -2466,7 +2467,7 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 	// get colref for subquery colid
 	const CColRef *colref = LookupColRef(m_phmulcr, colid);
 
-	CScalar *popScalarSubquery = NULL;
+	CScalar *popScalarSubquery = nullptr;
 	if (EdxlopScalarSubqueryAny == edxlopid)
 	{
 		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAny(
@@ -2501,15 +2502,15 @@ CExpression *
 CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 	const CDXLNode *pdxlnSubquery)
 {
-	GPOS_ASSERT(NULL != pdxlnSubquery);
+	GPOS_ASSERT(nullptr != pdxlnSubquery);
 
 	CDXLScalar *dxl_op =
 		dynamic_cast<CDXLScalar *>(pdxlnSubquery->GetOperator());
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 
 	CDXLScalarSubqueryQuantified *pdxlopSubqueryQuantified =
 		CDXLScalarSubqueryQuantified::Cast(pdxlnSubquery->GetOperator());
-	GPOS_ASSERT(NULL != pdxlopSubqueryQuantified);
+	GPOS_ASSERT(nullptr != pdxlopSubqueryQuantified);
 
 	IMDId *mdid = pdxlopSubqueryQuantified->GetScalarOpMdId();
 	mdid->AddRef();
@@ -2535,7 +2536,7 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 CExpression *
 CTranslatorDXLToExpr::PexprScalar(const CDXLNode *pdxlnOp)
 {
-	GPOS_ASSERT(NULL != pdxlnOp);
+	GPOS_ASSERT(nullptr != pdxlnOp);
 	CDXLOperator *dxl_op = pdxlnOp->GetOperator();
 	ULONG ulOpId = (ULONG) dxl_op->GetDXLOperator();
 
@@ -2548,7 +2549,7 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *pdxlnOp)
 
 	PfPexpr pf = m_rgpfTranslators[ulOpId];
 
-	if (NULL == pf)
+	if (nullptr == pf)
 	{
 		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 				   dxl_op->GetOpNameStr()->GetBuffer());
@@ -2569,7 +2570,7 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *pdxlnOp)
 CExpression *
 CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 {
-	GPOS_ASSERT(NULL != pdxlnNotExpr);
+	GPOS_ASSERT(nullptr != pdxlnNotExpr);
 	GPOS_ASSERT(CTranslatorDXLToExprUtils::FScalarBool(pdxlnNotExpr, Edxlnot));
 
 	CDXLNode *pdxlnNotChild = (*pdxlnNotExpr)[0];
@@ -2608,9 +2609,9 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 			m_pmda->RetrieveScOp(mdid_op)->GetInverseOpMdid();
 
 		// if inverse operator cannot be found in metadata, the optimizer won't collapse NOT node
-		if (NULL == pmdidInverseOp)
+		if (nullptr == pmdidInverseOp)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		const CWStringConst *pstrInverseOp =
@@ -2627,7 +2628,7 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 	}
 
 	// collapsing NOT node failed
-	return NULL;
+	return nullptr;
 }
 
 
@@ -2643,7 +2644,7 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarBoolOp(const CDXLNode *pdxlnBoolExpr)
 {
-	GPOS_ASSERT(NULL != pdxlnBoolExpr);
+	GPOS_ASSERT(nullptr != pdxlnBoolExpr);
 
 	EdxlBoolExprType edxlbooltype =
 		CDXLScalarBoolExpr::Cast(pdxlnBoolExpr->GetOperator())
@@ -2657,7 +2658,7 @@ CTranslatorDXLToExpr::PexprScalarBoolOp(const CDXLNode *pdxlnBoolExpr)
 	{
 		// attempt collapsing NOT node
 		CExpression *pexprResult = PexprCollapseNot(pdxlnBoolExpr);
-		if (NULL != pexprResult)
+		if (nullptr != pexprResult)
 		{
 			return pexprResult;
 		}
@@ -2685,7 +2686,7 @@ CTranslatorDXLToExpr::PexprScalarOp(const CDXLNode *pdxlnOpExpr)
 {
 	// TODO: Aug 22 2011; In GPDB the opexpr can only have two children. However, in other
 	// databases this may not be the case
-	GPOS_ASSERT(NULL != pdxlnOpExpr &&
+	GPOS_ASSERT(nullptr != pdxlnOpExpr &&
 				(1 == pdxlnOpExpr->Arity() || (2 == pdxlnOpExpr->Arity())));
 
 	CDXLScalarOpExpr *dxl_op =
@@ -2697,7 +2698,7 @@ CTranslatorDXLToExpr::PexprScalarOp(const CDXLNode *pdxlnOpExpr)
 	mdid->AddRef();
 
 	IMDId *return_type_mdid = dxl_op->GetReturnTypeMdId();
-	if (NULL != return_type_mdid)
+	if (nullptr != return_type_mdid)
 	{
 		return_type_mdid->AddRef();
 	}
@@ -2722,7 +2723,7 @@ CTranslatorDXLToExpr::PexprScalarOp(const CDXLNode *pdxlnOpExpr)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarIsDistinctFrom(const CDXLNode *pdxlnDistCmp)
 {
-	GPOS_ASSERT(NULL != pdxlnDistCmp && 2 == pdxlnDistCmp->Arity());
+	GPOS_ASSERT(nullptr != pdxlnDistCmp && 2 == pdxlnDistCmp->Arity());
 	CDXLScalarDistinctComp *pdxlopDistCmp =
 		CDXLScalarDistinctComp::Cast(pdxlnDistCmp->GetOperator());
 	// get children
@@ -2759,7 +2760,7 @@ CTranslatorDXLToExpr::PexprScalarIsDistinctFrom(const CDXLNode *pdxlnDistCmp)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarNullIf(const CDXLNode *pdxlnNullIf)
 {
-	GPOS_ASSERT(NULL != pdxlnNullIf && 2 == pdxlnNullIf->Arity());
+	GPOS_ASSERT(nullptr != pdxlnNullIf && 2 == pdxlnNullIf->Arity());
 	CDXLScalarNullIf *dxl_op =
 		CDXLScalarNullIf::Cast(pdxlnNullIf->GetOperator());
 
@@ -2789,7 +2790,7 @@ CTranslatorDXLToExpr::PexprScalarNullIf(const CDXLNode *pdxlnNullIf)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarCmp(const CDXLNode *pdxlnCmp)
 {
-	GPOS_ASSERT(NULL != pdxlnCmp && 2 == pdxlnCmp->Arity());
+	GPOS_ASSERT(nullptr != pdxlnCmp && 2 == pdxlnCmp->Arity());
 	CDXLScalarComp *pdxlopComp = CDXLScalarComp::Cast(pdxlnCmp->GetOperator());
 	// get children
 	CDXLNode *dxlnode_left = (*pdxlnCmp)[0];
@@ -2808,9 +2809,9 @@ CTranslatorDXLToExpr::PexprScalarCmp(const CDXLNode *pdxlnCmp)
 			CWStringConst(m_mp, pdxlopComp->GetComparisonOpName()->GetBuffer()),
 		CUtils::ParseCmpType(mdid));
 
-	GPOS_ASSERT(NULL != popScCmp);
-	GPOS_ASSERT(NULL != popScCmp->Pstr());
-	GPOS_ASSERT(NULL != popScCmp->Pstr()->GetBuffer());
+	GPOS_ASSERT(nullptr != popScCmp);
+	GPOS_ASSERT(nullptr != popScCmp->Pstr());
+	GPOS_ASSERT(nullptr != popScCmp->Pstr()->GetBuffer());
 
 	CExpression *pexpr =
 		GPOS_NEW(m_mp) CExpression(m_mp, popScCmp, pexprLeft, pexprRight);
@@ -2829,14 +2830,14 @@ CTranslatorDXLToExpr::PexprScalarCmp(const CDXLNode *pdxlnCmp)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 {
-	GPOS_ASSERT(NULL != pdxlnFunc);
+	GPOS_ASSERT(nullptr != pdxlnFunc);
 
 	const ULONG length = pdxlnFunc->Arity();
 
 	CDXLScalarFuncExpr *pdxlopFuncExpr =
 		CDXLScalarFuncExpr::Cast(pdxlnFunc->GetOperator());
 
-	COperator *pop = NULL;
+	COperator *pop = nullptr;
 
 	IMDId *mdid_func = pdxlopFuncExpr->FuncMdId();
 	mdid_func->AddRef();
@@ -2845,8 +2846,8 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 	IMDId *mdid_return_type = pdxlopFuncExpr->ReturnTypeMdId();
 	mdid_return_type->AddRef();
 
-	CExpressionArray *pdrgpexprArgs = NULL;
-	IMDId *pmdidInput = NULL;
+	CExpressionArray *pdrgpexprArgs = nullptr;
+	IMDId *pmdidInput = nullptr;
 	if (0 < length)
 	{
 		// translate function arguments
@@ -2892,8 +2893,8 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()));
 	}
 
-	CExpression *pexprFunc = NULL;
-	if (NULL != pdrgpexprArgs)
+	CExpression *pexprFunc = nullptr;
+	if (nullptr != pdrgpexprArgs)
 	{
 		pexprFunc = GPOS_NEW(m_mp) CExpression(m_mp, pop, pdrgpexprArgs);
 	}
@@ -2938,13 +2939,13 @@ CTranslatorDXLToExpr::PexprWindowFunc(const CDXLNode *pdxlnWindowRef)
 	IMDId *mdid_return_type = pdxlopWinref->ReturnTypeMdId();
 	mdid_return_type->AddRef();
 
-	GPOS_ASSERT(NULL != str_name);
+	GPOS_ASSERT(nullptr != str_name);
 	CScalarWindowFunc *popWindowFunc = GPOS_NEW(m_mp)
 		CScalarWindowFunc(m_mp, mdid_func, mdid_return_type, str_name, ews,
 						  pdxlopWinref->IsDistinct(), pdxlopWinref->IsStarArg(),
 						  pdxlopWinref->IsSimpleAgg());
 
-	CExpression *pexprWindowFunc = NULL;
+	CExpression *pexprWindowFunc = nullptr;
 	if (0 < pdxlnWindowRef->Arity())
 	{
 		CExpressionArray *pdrgpexprArgs = PdrgpexprChildren(pdxlnWindowRef);
@@ -2998,7 +2999,7 @@ CTranslatorDXLToExpr::Ews(EdxlWinStage edxlws) const
 CExpression *
 CTranslatorDXLToExpr::PexprScalarCoalesce(const CDXLNode *pdxlnCoalesce)
 {
-	GPOS_ASSERT(NULL != pdxlnCoalesce);
+	GPOS_ASSERT(nullptr != pdxlnCoalesce);
 	GPOS_ASSERT(0 < pdxlnCoalesce->Arity());
 
 	CDXLScalarCoalesce *dxl_op =
@@ -3024,7 +3025,7 @@ CTranslatorDXLToExpr::PexprScalarCoalesce(const CDXLNode *pdxlnCoalesce)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarMinMax(const CDXLNode *pdxlnMinMax)
 {
-	GPOS_ASSERT(NULL != pdxlnMinMax);
+	GPOS_ASSERT(nullptr != pdxlnMinMax);
 	GPOS_ASSERT(0 < pdxlnMinMax->Arity());
 
 	CDXLScalarMinMax *dxl_op =
@@ -3076,7 +3077,7 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 	BOOL fSplit = (EdxlaggstageNormal != dxl_op->GetDXLAggStage());
 
 	IMDId *resolved_return_type_mdid = dxl_op->GetDXLResolvedRetTypeMDid();
-	if (NULL != resolved_return_type_mdid)
+	if (nullptr != resolved_return_type_mdid)
 	{
 		// use the resolved type provided in DXL
 		resolved_return_type_mdid->AddRef();
@@ -3089,7 +3090,7 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		dxl_op->IsDistinct(), agg_func_stage, fSplit,
 		resolved_return_type_mdid);
 
-	CExpression *pexprAggFunc = NULL;
+	CExpression *pexprAggFunc = nullptr;
 
 	if (0 < pdxlnAggref->Arity())
 	{
@@ -3340,7 +3341,7 @@ CTranslatorDXLToExpr::PdrgpexprChildren(const CDXLNode *dxlnode)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarIf(const CDXLNode *pdxlnIfStmt)
 {
-	GPOS_ASSERT(NULL != pdxlnIfStmt);
+	GPOS_ASSERT(nullptr != pdxlnIfStmt);
 	GPOS_ASSERT(3 == pdxlnIfStmt->Arity());
 
 	CDXLScalarIfStmt *dxl_op =
@@ -3368,7 +3369,7 @@ CTranslatorDXLToExpr::PexprScalarIf(const CDXLNode *pdxlnIfStmt)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarSwitch(const CDXLNode *pdxlnSwitch)
 {
-	GPOS_ASSERT(NULL != pdxlnSwitch);
+	GPOS_ASSERT(nullptr != pdxlnSwitch);
 	GPOS_ASSERT(1 < pdxlnSwitch->Arity());
 
 	CDXLScalarSwitch *dxl_op =
@@ -3394,7 +3395,7 @@ CTranslatorDXLToExpr::PexprScalarSwitch(const CDXLNode *pdxlnSwitch)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarSwitchCase(const CDXLNode *pdxlnSwitchCase)
 {
-	GPOS_ASSERT(NULL != pdxlnSwitchCase);
+	GPOS_ASSERT(nullptr != pdxlnSwitchCase);
 
 	GPOS_ASSERT(2 == pdxlnSwitchCase->Arity());
 
@@ -3416,7 +3417,7 @@ CTranslatorDXLToExpr::PexprScalarSwitchCase(const CDXLNode *pdxlnSwitchCase)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarCaseTest(const CDXLNode *pdxlnCaseTest)
 {
-	GPOS_ASSERT(NULL != pdxlnCaseTest);
+	GPOS_ASSERT(nullptr != pdxlnCaseTest);
 
 	CDXLScalarCaseTest *dxl_op =
 		CDXLScalarCaseTest::Cast(pdxlnCaseTest->GetOperator());
@@ -3443,7 +3444,7 @@ CTranslatorDXLToExpr::PexprScalarNullTest(const CDXLNode *pdxlnNullTest)
 	CDXLScalarNullTest *dxl_op =
 		CDXLScalarNullTest::Cast(pdxlnNullTest->GetOperator());
 
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 
 	// translate child expression
 	GPOS_ASSERT(1 == pdxlnNullTest->Arity());
@@ -3490,7 +3491,7 @@ CTranslatorDXLToExpr::PexprScalarBooleanTest(const CDXLNode *pdxlnScBoolTest)
 	CDXLScalarBooleanTest *dxl_op =
 		CDXLScalarBooleanTest::Cast(pdxlnScBoolTest->GetOperator());
 
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 
 	// translate child expression
 	GPOS_ASSERT(1 == pdxlnScBoolTest->Arity());
@@ -3519,7 +3520,7 @@ CTranslatorDXLToExpr::PexprScalarCast(const CDXLNode *pdxlnCast)
 {
 	// get dxl scalar relabel type
 	CDXLScalarCast *dxl_op = CDXLScalarCast::Cast(pdxlnCast->GetOperator());
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 
 	// translate child expression
 	GPOS_ASSERT(1 == pdxlnCast->Arity());
@@ -3578,7 +3579,7 @@ CTranslatorDXLToExpr::PexprScalarCoerceToDomain(const CDXLNode *pdxlnCoerce)
 	// get dxl scalar coerce operator
 	CDXLScalarCoerceToDomain *dxl_op =
 		CDXLScalarCoerceToDomain::Cast(pdxlnCoerce->GetOperator());
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 
 	// translate child expression
 	GPOS_ASSERT(1 == pdxlnCoerce->Arity());
@@ -3615,7 +3616,7 @@ CTranslatorDXLToExpr::PexprScalarCoerceViaIO(const CDXLNode *pdxlnCoerce)
 	// get dxl scalar coerce operator
 	CDXLScalarCoerceViaIO *dxl_op =
 		CDXLScalarCoerceViaIO::Cast(pdxlnCoerce->GetOperator());
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 
 	// translate child expression
 	GPOS_ASSERT(1 == pdxlnCoerce->Arity());
@@ -3649,7 +3650,7 @@ CExpression *
 CTranslatorDXLToExpr::PexprScalarArrayCoerceExpr(
 	const CDXLNode *pdxlnArrayCoerceExpr)
 {
-	GPOS_ASSERT(NULL != pdxlnArrayCoerceExpr);
+	GPOS_ASSERT(nullptr != pdxlnArrayCoerceExpr);
 
 	CDXLScalarArrayCoerceExpr *dxl_op =
 		CDXLScalarArrayCoerceExpr::Cast(pdxlnArrayCoerceExpr->GetOperator());
@@ -3688,7 +3689,7 @@ CTranslatorDXLToExpr::PexprScalarArrayCoerceExpr(
 CExpression *
 CTranslatorDXLToExpr::PexprScalarConst(const CDXLNode *pdxlnConstVal)
 {
-	GPOS_ASSERT(NULL != pdxlnConstVal);
+	GPOS_ASSERT(nullptr != pdxlnConstVal);
 
 	// translate the dxl scalar const value
 	CDXLScalarConstValue *dxl_op =
@@ -3710,7 +3711,7 @@ CTranslatorDXLToExpr::PexprScalarConst(const CDXLNode *pdxlnConstVal)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarSubquery(const CDXLNode *pdxlnSubquery)
 {
-	GPOS_ASSERT(NULL != pdxlnSubquery);
+	GPOS_ASSERT(nullptr != pdxlnSubquery);
 	CDXLScalarSubquery *pdxlopSubquery =
 		CDXLScalarSubquery::Cast(pdxlnSubquery->GetOperator());
 
@@ -3725,7 +3726,7 @@ CTranslatorDXLToExpr::PexprScalarSubquery(const CDXLNode *pdxlnSubquery)
 	CScalarSubquery *popScalarSubquery = GPOS_NEW(m_mp)
 		CScalarSubquery(m_mp, colref, false /*fGeneratedByExist*/,
 						false /*fGeneratedByQuantified*/);
-	GPOS_ASSERT(NULL != popScalarSubquery);
+	GPOS_ASSERT(nullptr != popScalarSubquery);
 	CExpression *pexpr =
 		GPOS_NEW(m_mp) CExpression(m_mp, popScalarSubquery, pexprChild);
 
@@ -3743,7 +3744,7 @@ CTranslatorDXLToExpr::PexprScalarSubquery(const CDXLNode *pdxlnSubquery)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarProjElem(const CDXLNode *pdxlnPrEl)
 {
-	GPOS_ASSERT(NULL != pdxlnPrEl &&
+	GPOS_ASSERT(nullptr != pdxlnPrEl &&
 				EdxlopScalarProjectElem ==
 					pdxlnPrEl->GetOperator()->GetDXLOperator());
 	GPOS_ASSERT(1 == pdxlnPrEl->Arity());
@@ -3788,12 +3789,12 @@ CTranslatorDXLToExpr::PexprScalarProjElem(const CDXLNode *pdxlnPrEl)
 CExpression *
 CTranslatorDXLToExpr::PexprScalarProjList(const CDXLNode *pdxlnPrL)
 {
-	GPOS_ASSERT(NULL != pdxlnPrL &&
+	GPOS_ASSERT(nullptr != pdxlnPrL &&
 				EdxlopScalarProjectList ==
 					pdxlnPrL->GetOperator()->GetDXLOperator());
 
 	// translate project elements
-	CExpression *pexprProjList = NULL;
+	CExpression *pexprProjList = nullptr;
 
 	if (0 == pdxlnPrL->Arity())
 	{
@@ -3831,7 +3832,7 @@ CTranslatorDXLToExpr::PexprScalarProjList(const CDXLNode *pdxlnPrL)
 COrderSpec *
 CTranslatorDXLToExpr::Pos(const CDXLNode *dxlnode)
 {
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	COrderSpec *pos = GPOS_NEW(m_mp) COrderSpec(m_mp);
 
@@ -3875,8 +3876,8 @@ CTranslatorDXLToExpr::AddDistributionColumns(
 	CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
 	IntToUlongMap *phmiulAttnoColMapping)
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pmdrel);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pmdrel);
 
 	// compute distribution columns for table descriptor
 	ULONG num_cols = pmdrel->DistrColumnCount();
@@ -3885,13 +3886,13 @@ CTranslatorDXLToExpr::AddDistributionColumns(
 		const IMDColumn *pmdcol = pmdrel->GetDistrColAt(ul);
 		INT attno = pmdcol->AttrNum();
 		ULONG *pulPos = phmiulAttnoColMapping->Find(&attno);
-		GPOS_ASSERT(NULL != pulPos);
+		GPOS_ASSERT(nullptr != pulPos);
 
-		IMDId *opfamily = NULL;
+		IMDId *opfamily = nullptr;
 		if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 		{
 			opfamily = pmdrel->GetDistrOpfamilyAt(ul);
-			GPOS_ASSERT(NULL != opfamily && opfamily->IsValid());
+			GPOS_ASSERT(nullptr != opfamily && opfamily->IsValid());
 			//opfamily->AddRef();
 		}
 

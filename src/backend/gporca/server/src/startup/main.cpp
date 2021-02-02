@@ -253,14 +253,14 @@ PvExec(void *pv)
 
 	CHAR ch = '\0';
 
-	CHAR *file_name = NULL;
+	CHAR *file_name = nullptr;
 	BOOL fMinidump = false;
 	BOOL fUnittest = false;
 	ULLONG ullPlanId = 0;
 
 	while (pma->Getopt(&ch))
 	{
-		CHAR *szTestName = NULL;
+		CHAR *szTestName = nullptr;
 
 		switch (ch)
 		{
@@ -274,7 +274,7 @@ PvExec(void *pv)
 
 			case 'x':
 				CUnittest::FindTest(bv, CUnittest::EttExtended,
-									NULL /*szTestName*/);
+									nullptr /*szTestName*/);
 				fUnittest = true;
 				break;
 
@@ -302,7 +302,7 @@ PvExec(void *pv)
 	{
 		GPOS_TRACE(GPOS_WSZ_LIT(
 			"Cannot specify -d and -U/-u options at the same time"));
-		return NULL;
+		return nullptr;
 	}
 
 	if (fMinidump)
@@ -321,7 +321,7 @@ PvExec(void *pv)
 
 		COptimizerConfig *optimizer_config = pdxlmd->GetOptimizerConfig();
 
-		if (NULL == optimizer_config)
+		if (nullptr == optimizer_config)
 		{
 			optimizer_config = COptimizerConfig::PoconfDefault(mp);
 		}
@@ -339,7 +339,7 @@ PvExec(void *pv)
 
 		CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(
 			mp, file_name, ulSegments, 1 /*ulSessionId*/, 1 /*ulCmdId*/,
-			optimizer_config, NULL /*pceeval*/
+			optimizer_config, nullptr /*pceeval*/
 		);
 
 		GPOS_DELETE(pdxlmd);
@@ -360,7 +360,7 @@ PvExec(void *pv)
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -377,7 +377,7 @@ INT
 main(INT iArgs, const CHAR **rgszArgs)
 {
 	// Use default allocator
-	struct gpos_init_params gpos_params = {NULL};
+	struct gpos_init_params gpos_params = {nullptr};
 
 	gpos_init(&gpos_params);
 	gpdxl_init();
@@ -395,9 +395,9 @@ main(INT iArgs, const CHAR **rgszArgs)
 	params.func = PvExec;
 	params.arg = &ma;
 	params.stack_start = &params;
-	params.error_buffer = NULL;
+	params.error_buffer = nullptr;
 	params.error_buffer_size = -1;
-	params.abort_requested = NULL;
+	params.abort_requested = nullptr;
 
 	if (gpos_exec(&params) || (tests_failed != 0))
 	{

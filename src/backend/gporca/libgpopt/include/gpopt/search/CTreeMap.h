@@ -91,8 +91,8 @@ private:
 			  m_ulChildIndex(child_index),
 			  m_ptChild(ptChild)
 		{
-			GPOS_ASSERT(NULL != ptParent);
-			GPOS_ASSERT(NULL != ptChild);
+			GPOS_ASSERT(nullptr != ptParent);
+			GPOS_ASSERT(nullptr != ptChild);
 		}
 
 		// dtor
@@ -193,7 +193,7 @@ private:
 			CTreeNodeArray *pdrgptn = (*m_pdrgdrgptn)[ulChild];
 			ULONG ulCandidates = pdrgptn->Size();
 
-			CTreeNode *ptn = NULL;
+			CTreeNode *ptn = nullptr;
 
 			for (ULONG ul = 0; ul < ulCandidates; ul++)
 			{
@@ -209,7 +209,7 @@ private:
 				ullRank -= ullLocalCount;
 			}
 
-			GPOS_ASSERT(NULL != ptn);
+			GPOS_ASSERT(nullptr != ptn);
 			return ptn->PrUnrank(mp, prfn, pU, ullRank);
 		}
 
@@ -219,7 +219,7 @@ private:
 			: m_mp(mp),
 			  m_ul(ul),
 			  m_value(value),
-			  m_pdrgdrgptn(NULL),
+			  m_pdrgdrgptn(nullptr),
 			  m_ullCount(gpos::ullong_max),
 			  m_ulIncoming(0),
 			  m_ens(EnsUncounted)
@@ -254,7 +254,7 @@ private:
 
 			// insert to appropriate array
 			CTreeNodeArray *pdrg = (*m_pdrgdrgptn)[ulPos];
-			GPOS_ASSERT(NULL != pdrg);
+			GPOS_ASSERT(nullptr != pdrg);
 			pdrg->Append(ptn);
 		}
 
@@ -323,7 +323,7 @@ private:
 		{
 			GPOS_CHECK_STACK_SIZE;
 
-			R *pr = NULL;
+			R *pr = nullptr;
 
 			if (0 == this->m_ul)
 			{
@@ -426,10 +426,10 @@ private:
 	CTreeNode *
 	Ptn(const T *value)
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 		CTreeNode *ptn = const_cast<CTreeNode *>(m_ptmap->Find(value));
 
-		if (NULL == ptn)
+		if (nullptr == ptn)
 		{
 			ptn = GPOS_NEW(m_mp) CTreeNode(m_mp, ++m_ulCountNodes, value);
 			(void) m_ptmap->Insert(const_cast<T *>(value), ptn);
@@ -448,19 +448,19 @@ public:
 		  m_ulCountNodes(0),
 		  m_ulCountLinks(0),
 		  m_prfn(prfn),
-		  m_ptnRoot(NULL),
-		  m_ptmap(NULL),
-		  m_plinkmap(NULL)
+		  m_ptnRoot(nullptr),
+		  m_ptmap(nullptr),
+		  m_plinkmap(nullptr)
 	{
-		GPOS_ASSERT(NULL != mp);
-		GPOS_ASSERT(NULL != prfn);
+		GPOS_ASSERT(nullptr != mp);
+		GPOS_ASSERT(nullptr != prfn);
 
 		m_ptmap = GPOS_NEW(mp) TMap(mp);
 		m_plinkmap = GPOS_NEW(mp) LinkMap(mp);
 
 		// insert dummy node as global root -- the only node with NULL payload
 		m_ptnRoot =
-			GPOS_NEW(mp) CTreeNode(mp, 0 /* ulCounter */, NULL /* value */);
+			GPOS_NEW(mp) CTreeNode(mp, 0 /* ulCounter */, nullptr /* value */);
 	}
 
 	// dtor
@@ -480,7 +480,7 @@ public:
 
 		// exit function if link already exists
 		STreeLink *ptlink = GPOS_NEW(m_mp) STreeLink(ptParent, ulPos, ptChild);
-		if (NULL != m_plinkmap->Find(ptlink))
+		if (nullptr != m_plinkmap->Find(ptlink))
 		{
 			GPOS_DELETE(ptlink);
 			return;
@@ -564,7 +564,7 @@ public:
 	UllCount(const T *value)
 	{
 		CTreeNode *ptn = m_ptmap->Find(value);
-		GPOS_ASSERT(NULL != ptn);
+		GPOS_ASSERT(nullptr != ptn);
 
 		return ptn->UllCount();
 	}

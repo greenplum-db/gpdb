@@ -27,7 +27,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalCTEProducer::CLogicalCTEProducer(CMemoryPool *mp)
-	: CLogical(mp), m_id(0), m_pdrgpcr(NULL), m_pcrsOutput(NULL)
+	: CLogical(mp), m_id(0), m_pdrgpcr(nullptr), m_pcrsOutput(nullptr)
 {
 	m_fPattern = true;
 }
@@ -44,7 +44,7 @@ CLogicalCTEProducer::CLogicalCTEProducer(CMemoryPool *mp, ULONG id,
 										 CColRefArray *colref_array)
 	: CLogical(mp), m_id(id), m_pdrgpcr(colref_array)
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 
 	m_pcrsOutput = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcr);
 	GPOS_ASSERT(m_pdrgpcr->Size() == m_pcrsOutput->Size());

@@ -93,7 +93,7 @@ void
 CXformGbAgg2HashAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -120,9 +120,9 @@ CXformGbAgg2HashAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pexprScalar->AddRef();
 
 	CColRefArray *pdrgpcrArgDQA = popAgg->PdrgpcrArgDQA();
-	if (pdrgpcrArgDQA != NULL && 0 != pdrgpcrArgDQA->Size())
+	if (pdrgpcrArgDQA != nullptr && 0 != pdrgpcrArgDQA->Size())
 	{
-		GPOS_ASSERT(NULL != pdrgpcrArgDQA);
+		GPOS_ASSERT(nullptr != pdrgpcrArgDQA);
 		pdrgpcrArgDQA->AddRef();
 	}
 

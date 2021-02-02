@@ -194,7 +194,7 @@ public:
 	static CLogicalPartitionSelector *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalPartitionSelector == pop->Eopid());
 
 		return dynamic_cast<CLogicalPartitionSelector *>(pop);

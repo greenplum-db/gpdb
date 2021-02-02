@@ -114,7 +114,7 @@ public:
 	static const CMDIdScCmp *
 	CastMdid(const IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidScCmp == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidScCmp == mdid->MdidType());
 
 		return dynamic_cast<const CMDIdScCmp *>(mdid);
 	}
@@ -123,7 +123,7 @@ public:
 	static CMDIdScCmp *
 	CastMdid(IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidScCmp == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidScCmp == mdid->MdidType());
 
 		return dynamic_cast<CMDIdScCmp *>(mdid);
 	}

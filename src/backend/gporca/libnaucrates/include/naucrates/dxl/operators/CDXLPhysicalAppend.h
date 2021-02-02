@@ -67,7 +67,7 @@ public:
 	static CDXLPhysicalAppend *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalAppend == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalAppend *>(dxl_op);

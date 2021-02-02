@@ -66,7 +66,7 @@ public:
 	static CDXLPhysicalSort *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalSort == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalSort *>(dxl_op);

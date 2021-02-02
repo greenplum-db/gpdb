@@ -116,7 +116,7 @@ public:
 	static CScalarSubquery *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarSubquery == pop->Eopid());
 
 		return reinterpret_cast<CScalarSubquery *>(pop);

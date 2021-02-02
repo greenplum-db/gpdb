@@ -63,7 +63,7 @@ CParseHandlerScalarBoolExpr::StartElement(const XMLCh *const element_uri,
 				  CDXLTokens::XmlstrToken(EdxltokenScalarBoolNot),
 				  element_local_name)))
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			if (0 == XMLString::compareString(
 						 CDXLTokens::XmlstrToken(EdxltokenScalarBoolNot),
@@ -105,7 +105,7 @@ CParseHandlerScalarBoolExpr::StartElement(const XMLCh *const element_uri,
 	}
 	else
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 					   CDXLUtils::CreateDynamicStringFromXMLChArray(

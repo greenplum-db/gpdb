@@ -45,8 +45,8 @@ CDXLLogicalSetOp::CDXLLogicalSetOp(CMemoryPool *mp, EdxlSetOpType edxlsetoptype,
 	  m_input_colids_arrays(input_colids_arrays),
 	  m_cast_across_input_req(fCastAcrossInputs)
 {
-	GPOS_ASSERT(NULL != m_col_descr_array);
-	GPOS_ASSERT(NULL != m_input_colids_arrays);
+	GPOS_ASSERT(nullptr != m_col_descr_array);
+	GPOS_ASSERT(nullptr != m_input_colids_arrays);
 	GPOS_ASSERT(EdxlsetopSentinel > edxlsetoptype);
 
 #ifdef GPOS_DEBUG
@@ -122,7 +122,7 @@ CDXLLogicalSetOp::GetOpNameStr() const
 
 		default:
 			GPOS_ASSERT(!"Unrecognized set operator type");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -157,7 +157,7 @@ CDXLLogicalSetOp::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenColumns));
-	GPOS_ASSERT(NULL != m_col_descr_array);
+	GPOS_ASSERT(nullptr != m_col_descr_array);
 
 	const ULONG length = m_col_descr_array->Size();
 	for (ULONG idx = 0; idx < length; idx++)
@@ -214,7 +214,7 @@ CDXLLogicalSetOp::AssertValid(const CDXLNode *node,
 							  BOOL validate_children) const
 {
 	GPOS_ASSERT(2 <= node->Arity());
-	GPOS_ASSERT(NULL != m_col_descr_array);
+	GPOS_ASSERT(nullptr != m_col_descr_array);
 
 	// validate output columns
 	const ULONG num_of_output_cols = m_col_descr_array->Size();

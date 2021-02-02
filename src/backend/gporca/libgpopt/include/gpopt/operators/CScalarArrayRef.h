@@ -122,7 +122,7 @@ public:
 	static CScalarArrayRef *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarArrayRef == pop->Eopid());
 
 		return dynamic_cast<CScalarArrayRef *>(pop);

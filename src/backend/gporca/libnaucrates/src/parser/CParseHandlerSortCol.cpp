@@ -91,7 +91,7 @@ CParseHandlerSortCol::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 
 #ifdef GPOS_DEBUG
 	m_dxl_node->GetOperator()->AssertValid(m_dxl_node,

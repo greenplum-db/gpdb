@@ -59,7 +59,7 @@ public:
 	// private dtor
 	~CCacheFactory()
 	{
-		GPOS_ASSERT(NULL == m_factory &&
+		GPOS_ASSERT(nullptr == m_factory &&
 					"Cache factory has not been shut down");
 	}
 
@@ -83,7 +83,7 @@ public:
 				typename CCache<T, K>::HashFuncPtr hash_func,
 				typename CCache<T, K>::EqualFuncPtr equal_func)
 	{
-		GPOS_ASSERT(NULL != GetFactory() &&
+		GPOS_ASSERT(nullptr != GetFactory() &&
 					"Cache factory has not been initialized");
 
 		CMemoryPool *mp = GetFactory()->Pmp();

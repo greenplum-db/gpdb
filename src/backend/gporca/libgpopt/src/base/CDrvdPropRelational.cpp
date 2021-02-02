@@ -36,17 +36,17 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CDrvdPropRelational::CDrvdPropRelational(CMemoryPool *mp)
 	: m_mp(mp),
-	  m_is_prop_derived(NULL),
-	  m_pcrsOutput(NULL),
-	  m_pcrsOuter(NULL),
-	  m_pcrsNotNull(NULL),
-	  m_pcrsCorrelatedApply(NULL),
-	  m_pkc(NULL),
-	  m_pdrgpfd(NULL),
+	  m_is_prop_derived(nullptr),
+	  m_pcrsOutput(nullptr),
+	  m_pcrsOuter(nullptr),
+	  m_pcrsNotNull(nullptr),
+	  m_pcrsCorrelatedApply(nullptr),
+	  m_pkc(nullptr),
+	  m_pdrgpfd(nullptr),
 	  m_ulJoinDepth(0),
-	  m_ppartinfo(NULL),
-	  m_ppc(NULL),
-	  m_pfp(NULL),
+	  m_ppartinfo(nullptr),
+	  m_ppc(nullptr),
+	  m_pfp(nullptr),
 	  m_is_complete(false)
 {
 	m_is_prop_derived = GPOS_NEW(mp) CBitSet(mp, EdptSentinel);
@@ -128,7 +128,7 @@ CDrvdPropRelational::Derive(CMemoryPool *,	//mp,
 
 	// derive partition consumers
 	DerivePartitionInfo(exprhdl);
-	GPOS_ASSERT(NULL != m_ppartinfo);
+	GPOS_ASSERT(nullptr != m_ppartinfo);
 
 	DeriveHasPartialIndexes(exprhdl);
 
@@ -148,8 +148,8 @@ CDrvdPropRelational::Derive(CMemoryPool *,	//mp,
 BOOL
 CDrvdPropRelational::FSatisfies(const CReqdPropPlan *prpp) const
 {
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != prpp->PcrsRequired());
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != prpp->PcrsRequired());
 
 	BOOL fSatisfies = GetOutputColumns()->ContainsAll(prpp->PcrsRequired());
 
@@ -168,7 +168,7 @@ CDrvdPropRelational::FSatisfies(const CReqdPropPlan *prpp) const
 CDrvdPropRelational *
 CDrvdPropRelational::GetRelationalProperties(CDrvdProp *pdp)
 {
-	GPOS_ASSERT(NULL != pdp);
+	GPOS_ASSERT(nullptr != pdp);
 	GPOS_ASSERT(EptRelational == pdp->Ept() &&
 				"This is not a relational properties container");
 	return dynamic_cast<CDrvdPropRelational *>(pdp);
@@ -246,7 +246,7 @@ CDrvdPropRelational::DeriveLocalFunctionalDependencies(
 	// get local key
 	CKeyCollection *pkc = exprhdl.DeriveKeyCollection();
 
-	if (NULL == pkc)
+	if (nullptr == pkc)
 	{
 		return pdrgpfd;
 	}
@@ -299,7 +299,7 @@ CDrvdPropRelational::OsPrint(IOstream &os) const
 	   << ", Not Null Cols: [" << *GetNotNullColumns() << "]"
 	   << ", Corr. Apply Cols: [" << *GetCorrelatedApplyColumns() << "]";
 
-	if (NULL == GetKeyCollection())
+	if (nullptr == GetKeyCollection())
 	{
 		os << ", Keys: []";
 	}
@@ -434,7 +434,7 @@ CDrvdPropRelational::DeriveKeyCollection(CExpressionHandle &exprhdl)
 		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
 		m_pkc = popLogical->DeriveKeyCollection(m_mp, exprhdl);
 
-		if (NULL == m_pkc && 1 == DeriveMaxCard(exprhdl))
+		if (nullptr == m_pkc && 1 == DeriveMaxCard(exprhdl))
 		{
 			m_pcrsOutput = DeriveOutputColumns(exprhdl);
 
@@ -545,7 +545,7 @@ CDrvdPropRelational::DerivePartitionInfo(CExpressionHandle &exprhdl)
 		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
 		m_ppartinfo = popLogical->DerivePartitionInfo(m_mp, exprhdl);
 
-		GPOS_ASSERT(NULL != m_ppartinfo);
+		GPOS_ASSERT(nullptr != m_ppartinfo);
 	}
 
 	return m_ppartinfo;

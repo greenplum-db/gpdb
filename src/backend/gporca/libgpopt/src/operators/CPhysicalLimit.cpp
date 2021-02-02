@@ -38,10 +38,10 @@ CPhysicalLimit::CPhysicalLimit(CMemoryPool *mp, COrderSpec *pos, BOOL fGlobal,
 	  m_fGlobal(fGlobal),
 	  m_fHasCount(fHasCount),
 	  m_top_limit_under_dml(fTopLimitUnderDML),
-	  m_pcrsSort(NULL)
+	  m_pcrsSort(nullptr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pos);
 
 	m_pcrsSort = m_pos->PcrsUsed(mp);
 }
@@ -388,7 +388,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalLimit::EpetOrder(CExpressionHandle &,	// exprhdl
 						  const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	if (peo->FCompatible(m_pos))
@@ -414,7 +414,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalLimit::EpetDistribution(CExpressionHandle &exprhdl,
 								 const CEnfdDistribution *ped) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// get distribution delivered by the limit node
 	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();

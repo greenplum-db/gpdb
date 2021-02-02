@@ -79,12 +79,12 @@ public:
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
-							IMdIdArray *opfamilies = NULL);
+							IMdIdArray *opfamilies = nullptr);
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
 							CDistributionSpecHashed *pdshashedEquiv,
-							IMdIdArray *opfamilies = NULL);
+							IMdIdArray *opfamilies = nullptr);
 
 	static CDistributionSpecHashed *MakeHashedDistrSpec(
 		CMemoryPool *mp, CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
@@ -188,10 +188,10 @@ public:
 	static CDistributionSpecHashed *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		CDistributionSpecHashed *pdsHashed =
 			dynamic_cast<CDistributionSpecHashed *>(pds);
-		GPOS_ASSERT(NULL != pdsHashed);
+		GPOS_ASSERT(nullptr != pdsHashed);
 
 		return pdsHashed;
 	}
@@ -200,10 +200,10 @@ public:
 	static const CDistributionSpecHashed *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		const CDistributionSpecHashed *pdsHashed =
 			dynamic_cast<const CDistributionSpecHashed *>(pds);
-		GPOS_ASSERT(NULL != pdsHashed);
+		GPOS_ASSERT(nullptr != pdsHashed);
 
 		return pdsHashed;
 	}

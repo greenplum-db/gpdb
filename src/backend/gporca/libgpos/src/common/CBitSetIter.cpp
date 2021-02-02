@@ -26,7 +26,7 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 CBitSetIter::CBitSetIter(const CBitSet &bs)
-	: m_bs(bs), m_cursor((ULONG) -1), m_bsl(NULL), m_active(true)
+	: m_bs(bs), m_cursor((ULONG) -1), m_bsl(nullptr), m_active(true)
 {
 }
 
@@ -44,12 +44,12 @@ CBitSetIter::Advance()
 {
 	GPOS_ASSERT(m_active && "called advance on exhausted iterator");
 
-	if (NULL == m_bsl)
+	if (nullptr == m_bsl)
 	{
 		m_bsl = m_bs.m_bsllist.First();
 	}
 
-	while (NULL != m_bsl)
+	while (nullptr != m_bsl)
 	{
 		if (m_cursor + 1 <= m_bs.m_vector_size &&
 			m_bsl->GetVec()->GetNextSetBit(m_cursor + 1, m_cursor))
@@ -61,7 +61,7 @@ CBitSetIter::Advance()
 		m_cursor = (ULONG) -1;
 	}
 
-	m_active = (NULL != m_bsl);
+	m_active = (nullptr != m_bsl);
 	return m_active;
 }
 
@@ -77,7 +77,7 @@ CBitSetIter::Advance()
 ULONG
 CBitSetIter::Bit() const
 {
-	GPOS_ASSERT(m_active && NULL != m_bsl && "iterator uninitialized");
+	GPOS_ASSERT(m_active && nullptr != m_bsl && "iterator uninitialized");
 	GPOS_ASSERT(m_bsl->GetVec()->Get(m_cursor));
 
 	return m_bsl->GetOffset() + m_cursor;

@@ -56,7 +56,7 @@ CMCVTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgutSharedOptCtxt,
@@ -186,9 +186,11 @@ CMCVTest::EresUnittest_MergeHistMCV()
 
 		// parse the stats objects
 		CDXLStatsDerivedRelationArray *pdrgpdxlstatsderrelMCV =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputMCV, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputMCV,
+													  nullptr);
 		CDXLStatsDerivedRelationArray *pdrgpdxlstatsderrelHist =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputHist, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputHist,
+													  nullptr);
 
 		GPOS_CHECK_ABORT;
 

@@ -151,7 +151,7 @@ CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc)
 
 	// iterate on expression and schedule them as needed
 	CGroupExpression *pgexpr = PgexprFirstUnsched();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		if (!pgexpr->FTransitioned(CGroupExpression::estImplemented) &&
 			!pgexpr->ContainsCircularDependencies())

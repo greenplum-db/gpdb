@@ -758,7 +758,7 @@ private:
 		CWStringConst *m_pstr;
 
 		// ctor
-		SStrMapElem() : m_edxlt(EdxltokenSentinel), m_pstr(NULL)
+		SStrMapElem() : m_edxlt(EdxltokenSentinel), m_pstr(nullptr)
 		{
 		}
 
@@ -784,7 +784,7 @@ private:
 		XMLCh *m_xmlsz;
 
 		// ctor
-		SXMLStrMapElem() : m_edxlt(EdxltokenSentinel), m_xmlsz(NULL)
+		SXMLStrMapElem() : m_edxlt(EdxltokenSentinel), m_xmlsz(nullptr)
 		{
 		}
 
@@ -793,7 +793,7 @@ private:
 			: m_edxlt(edxlt), m_xmlsz(xml_val)
 		{
 			GPOS_ASSERT(edxlt < EdxltokenSentinel);
-			GPOS_ASSERT(NULL != xml_val);
+			GPOS_ASSERT(nullptr != xml_val);
 		}
 
 		//dtor

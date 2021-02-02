@@ -65,7 +65,11 @@ public:
 
 	// default ctor
 	CReqdPropPlan()
-		: m_pcrs(NULL), m_peo(NULL), m_ped(NULL), m_per(NULL), m_pcter(NULL)
+		: m_pcrs(nullptr),
+		  m_peo(nullptr),
+		  m_ped(nullptr),
+		  m_per(nullptr),
+		  m_pcter(nullptr)
 	{
 	}
 
@@ -160,7 +164,7 @@ public:
 	static CReqdPropPlan *
 	Prpp(CReqdProp *prp)
 	{
-		GPOS_ASSERT(NULL != prp);
+		GPOS_ASSERT(nullptr != prp);
 
 		return dynamic_cast<CReqdPropPlan *>(prp);
 	}

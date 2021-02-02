@@ -197,7 +197,7 @@ public:
 	static CLogicalBitmapTableGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalBitmapTableGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalBitmapTableGet *>(pop);

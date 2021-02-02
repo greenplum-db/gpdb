@@ -29,10 +29,10 @@ CSearchStage::CSearchStage(CXformSet *xform_set, ULONG ulTimeThreshold,
 	: m_xforms(xform_set),
 	  m_time_threshold(ulTimeThreshold),
 	  m_cost_threshold(costThreshold),
-	  m_pexprBest(NULL),
+	  m_pexprBest(nullptr),
 	  m_costBest(GPOPT_INVALID_COST)
 {
-	GPOS_ASSERT(NULL != xform_set);
+	GPOS_ASSERT(nullptr != xform_set);
 	GPOS_ASSERT(0 < xform_set->Size());
 
 	// include all implementation rules in any search strategy
@@ -76,7 +76,7 @@ CSearchStage::OsPrint(IOstream &os) const
 	   << ", cost threshold:" << m_cost_threshold
 	   << ", best plan found: " << std::endl;
 
-	if (NULL != m_pexprBest)
+	if (nullptr != m_pexprBest)
 	{
 		os << *m_pexprBest;
 	}
@@ -95,10 +95,10 @@ CSearchStage::OsPrint(IOstream &os) const
 void
 CSearchStage::SetBestExpr(CExpression *pexpr)
 {
-	GPOS_ASSERT_IMP(NULL != pexpr, pexpr->Pop()->FPhysical());
+	GPOS_ASSERT_IMP(nullptr != pexpr, pexpr->Pop()->FPhysical());
 
 	m_pexprBest = pexpr;
-	if (NULL != m_pexprBest)
+	if (nullptr != m_pexprBest)
 	{
 		m_costBest = m_pexprBest->Cost();
 	}

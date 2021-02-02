@@ -66,7 +66,7 @@ CPredicateUtilsTest::EresUnittest_Conjunctions()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// build conjunction
@@ -87,14 +87,14 @@ CPredicateUtilsTest::EresUnittest_Conjunctions()
 	// collapse into single conjunct
 	CExpression *pexpr =
 		CPredicateUtils::PexprConjunction(mp, pdrgpexprExtract);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(CUtils::FScalarConstTrue(pexpr));
 	pexpr->Release();
 
 	// collapse empty input array to conjunct
 	CExpression *pexprSingleton =
-		CPredicateUtils::PexprConjunction(mp, NULL /*pdrgpexpr*/);
-	GPOS_ASSERT(NULL != pexprSingleton);
+		CPredicateUtils::PexprConjunction(mp, nullptr /*pdrgpexpr*/);
+	GPOS_ASSERT(nullptr != pexprSingleton);
 	pexprSingleton->Release();
 
 	pexprConjunction->Release();
@@ -145,7 +145,7 @@ CPredicateUtilsTest::EresUnittest_Disjunctions()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// build disjunction
@@ -166,14 +166,14 @@ CPredicateUtilsTest::EresUnittest_Disjunctions()
 	// collapse into single disjunct
 	CExpression *pexpr =
 		CPredicateUtils::PexprDisjunction(mp, pdrgpexprExtract);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(CUtils::FScalarConstFalse(pexpr));
 	pexpr->Release();
 
 	// collapse empty input array to disjunct
 	CExpression *pexprSingleton =
-		CPredicateUtils::PexprDisjunction(mp, NULL /*pdrgpexpr*/);
-	GPOS_ASSERT(NULL != pexprSingleton);
+		CPredicateUtils::PexprDisjunction(mp, nullptr /*pdrgpexpr*/);
+	GPOS_ASSERT(nullptr != pexprSingleton);
 	pexprSingleton->Release();
 
 	pexprDisjunction->Release();
@@ -268,7 +268,7 @@ CPredicateUtilsTest::EresUnittest_PlainEqualities()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	CExpression *pexprLeft = CTestUtils::PexprLogicalGet(mp);
@@ -343,7 +343,7 @@ CPredicateUtilsTest::EresUnittest_Implication()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// generate a two cascaded joins

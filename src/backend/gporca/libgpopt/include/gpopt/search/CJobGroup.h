@@ -42,7 +42,7 @@ protected:
 	CGroupExpression *m_pgexprLastScheduled;
 
 	// ctor
-	CJobGroup() : m_pgroup(NULL)
+	CJobGroup() : m_pgroup(nullptr)
 	{
 	}
 

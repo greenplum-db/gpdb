@@ -69,7 +69,7 @@ private:
 		CHashMapElem(K *key, T *value, BOOL fOwn)
 			: m_key(key), m_value(value), m_owns_objects(fOwn)
 		{
-			GPOS_ASSERT(NULL != key);
+			GPOS_ASSERT(nullptr != key);
 		}
 
 		// dtor
@@ -142,7 +142,7 @@ private:
 	CHashSetElemArray **
 	GetChain(const K *key) const
 	{
-		GPOS_ASSERT(NULL != m_chains);
+		GPOS_ASSERT(nullptr != m_chains);
 		return &m_chains[HashFn(key) % m_num_chains];
 	}
 
@@ -163,13 +163,13 @@ private:
 	CHashMapElem *
 	Lookup(const K *key) const
 	{
-		CHashMapElem hme(const_cast<K *>(key), NULL /*T*/, false /*fOwn*/);
-		CHashMapElem *found_hme = NULL;
+		CHashMapElem hme(const_cast<K *>(key), nullptr /*T*/, false /*fOwn*/);
+		CHashMapElem *found_hme = nullptr;
 		CHashSetElemArray **chain = GetChain(key);
-		if (NULL != *chain)
+		if (nullptr != *chain)
 		{
 			found_hme = (*chain)->Find(&hme);
-			GPOS_ASSERT_IMP(NULL != found_hme, *found_hme == hme);
+			GPOS_ASSERT_IMP(nullptr != found_hme, *found_hme == hme);
 		}
 
 		return found_hme;
@@ -209,13 +209,13 @@ public:
 	BOOL
 	Insert(K *key, T *value)
 	{
-		if (NULL != Find(key))
+		if (nullptr != Find(key))
 		{
 			return false;
 		}
 
 		CHashSetElemArray **chain = GetChain(key);
-		if (NULL == *chain)
+		if (nullptr == *chain)
 		{
 			*chain = GPOS_NEW(m_mp) CHashSetElemArray(m_mp);
 			INT chain_idx = HashFn(key) % m_num_chains;
@@ -237,23 +237,23 @@ public:
 	Find(const K *key) const
 	{
 		CHashMapElem *elem = Lookup(key);
-		if (NULL != elem)
+		if (nullptr != elem)
 		{
 			return elem->Value();
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	// replace the value in a map entry with a new given value
 	BOOL
 	Replace(const K *key, T *ptNew)
 	{
-		GPOS_ASSERT(NULL != key);
+		GPOS_ASSERT(nullptr != key);
 
 		BOOL fSuccess = false;
 		CHashMapElem *elem = Lookup(key);
-		if (NULL != elem)
+		if (nullptr != elem)
 		{
 			elem->ReplaceValue(ptNew);
 			fSuccess = true;
@@ -267,7 +267,7 @@ public:
 	{
 		CHashSetElemArray **chain = GetChain(key);
 
-		if (NULL != *chain)
+		if (nullptr != *chain)
 		{
 			for (ULONG ul = 0; ul < (*chain)->Size(); ul++)
 			{

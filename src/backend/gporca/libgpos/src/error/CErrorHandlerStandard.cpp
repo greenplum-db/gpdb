@@ -34,7 +34,7 @@ CErrorHandlerStandard::Process(CException exception)
 {
 	CTask *task = CTask::Self();
 
-	GPOS_ASSERT(NULL != task && "No task in current context");
+	GPOS_ASSERT(nullptr != task && "No task in current context");
 
 	IErrorContext *err_ctxt = task->GetErrCtxt();
 	CLogger *log = dynamic_cast<CLogger *>(task->GetErrorLogger());

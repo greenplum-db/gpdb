@@ -46,7 +46,7 @@ CPointTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgutSharedOptCtxt,

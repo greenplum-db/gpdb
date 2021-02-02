@@ -55,8 +55,8 @@ BOOL
 IMDType::StatsAreComparable(const IMDType *mdtype_first,
 							const IMDType *mdtype_second)
 {
-	GPOS_ASSERT(NULL != mdtype_first);
-	GPOS_ASSERT(NULL != mdtype_second);
+	GPOS_ASSERT(nullptr != mdtype_first);
+	GPOS_ASSERT(nullptr != mdtype_second);
 
 	const IDatum *datum_first = mdtype_first->DatumNull();
 	const IDatum *datum_second = mdtype_second->DatumNull();
@@ -78,8 +78,8 @@ BOOL
 IMDType::StatsAreComparable(const IMDType *mdtype_first,
 							const IDatum *datum_second)
 {
-	GPOS_ASSERT(NULL != mdtype_first);
-	GPOS_ASSERT(NULL != datum_second);
+	GPOS_ASSERT(nullptr != mdtype_first);
+	GPOS_ASSERT(nullptr != datum_second);
 
 	const IDatum *datum_first = mdtype_first->DatumNull();
 

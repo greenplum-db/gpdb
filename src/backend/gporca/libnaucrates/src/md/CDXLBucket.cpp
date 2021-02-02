@@ -38,8 +38,8 @@ CDXLBucket::CDXLBucket(CDXLDatum *dxl_datum_lower, CDXLDatum *dxl_datum_upper,
 	  m_frequency(frequency),
 	  m_distinct(distinct)
 {
-	GPOS_ASSERT(NULL != dxl_datum_lower);
-	GPOS_ASSERT(NULL != dxl_datum_upper);
+	GPOS_ASSERT(nullptr != dxl_datum_lower);
+	GPOS_ASSERT(nullptr != dxl_datum_upper);
 	GPOS_ASSERT(m_frequency >= 0.0 && m_frequency <= 1.0);
 	GPOS_ASSERT(m_distinct >= 0);
 }

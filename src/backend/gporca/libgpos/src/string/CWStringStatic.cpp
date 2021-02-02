@@ -34,7 +34,7 @@ CWStringStatic::CWStringStatic(WCHAR w_str_buffer[],
 			   ),
 	  m_capacity(capacity)
 {
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 	GPOS_ASSERT(0 < m_capacity);
 
 	m_w_str_buffer = w_str_buffer;
@@ -56,7 +56,7 @@ CWStringStatic::CWStringStatic(WCHAR w_str_buffer[], ULONG capacity,
 			   ),
 	  m_capacity(capacity)
 {
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 	GPOS_ASSERT(0 < m_capacity);
 
 	m_w_str_buffer = w_str_buffer;
@@ -75,7 +75,7 @@ CWStringStatic::CWStringStatic(WCHAR w_str_buffer[], ULONG capacity,
 void
 CWStringStatic::AppendBuffer(const WCHAR *w_str_buffer)
 {
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 	ULONG length = GPOS_WSZ_LENGTH(w_str_buffer);
 	if (0 == length || m_capacity == m_length)
 	{
@@ -127,7 +127,7 @@ CWStringStatic::AppendWideCharArray(const WCHAR *w_str)
 void
 CWStringStatic::AppendCharArray(const CHAR *sz)
 {
-	GPOS_ASSERT(NULL != sz);
+	GPOS_ASSERT(nullptr != sz);
 	if (0 == GPOS_SZ_LENGTH(sz) || m_capacity == m_length)
 	{
 		return;
@@ -203,7 +203,7 @@ CWStringStatic::AppendFormat(const WCHAR *format, ...)
 void
 CWStringStatic::AppendFormatVA(const WCHAR *format, VA_LIST va_args)
 {
-	GPOS_ASSERT(NULL != format);
+	GPOS_ASSERT(nullptr != format);
 
 	// available space in buffer
 	ULONG ulAvailable = m_capacity - m_length;
@@ -249,7 +249,7 @@ void
 CWStringStatic::AppendEscape(const CWStringBase *str, WCHAR wc,
 							 const WCHAR *w_str_replace)
 {
-	GPOS_ASSERT(NULL != str);
+	GPOS_ASSERT(nullptr != str);
 
 	if (str->IsEmpty())
 	{

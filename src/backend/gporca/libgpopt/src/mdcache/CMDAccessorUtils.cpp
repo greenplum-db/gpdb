@@ -81,9 +81,9 @@ BOOL
 CMDAccessorUtils::FCmpExists(CMDAccessor *md_accessor, IMDId *left_mdid,
 							 IMDId *right_mdid, IMDType::ECmpType cmp_type)
 {
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != left_mdid);
-	GPOS_ASSERT(NULL != left_mdid);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != left_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	GPOS_TRY
@@ -110,9 +110,9 @@ IMDId *
 CMDAccessorUtils::GetScCmpMdid(CMDAccessor *md_accessor, IMDId *left_mdid,
 							   IMDId *right_mdid, IMDType::ECmpType cmp_type)
 {
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != left_mdid);
-	GPOS_ASSERT(NULL != left_mdid);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != left_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	IMDId *sc_cmp_mdid;
@@ -148,9 +148,9 @@ CMDAccessorUtils::FCmpOrCastedCmpExists(IMDId *left_mdid, IMDId *right_mdid,
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != left_mdid);
-	GPOS_ASSERT(NULL != left_mdid);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != left_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	GPOS_TRY
@@ -180,8 +180,8 @@ CMDAccessorUtils::GetScCmpMdIdConsiderCasts(CMDAccessor *md_accessor,
 											IMDId *left_mdid, IMDId *right_mdid,
 											IMDType::ECmpType cmp_type)
 {
-	GPOS_ASSERT(NULL != left_mdid);
-	GPOS_ASSERT(NULL != right_mdid);
+	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	// left op right
@@ -336,9 +336,9 @@ BOOL
 CMDAccessorUtils::FCastExists(CMDAccessor *md_accessor, IMDId *mdid_src,
 							  IMDId *mdid_dest)
 {
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != mdid_src);
-	GPOS_ASSERT(NULL != mdid_dest);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != mdid_src);
+	GPOS_ASSERT(nullptr != mdid_dest);
 
 	GPOS_TRY
 	{
@@ -370,9 +370,9 @@ BOOL
 CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(CMDAccessor *md_accessor,
 												  IMDId *mdid_op)
 {
-	GPOS_ASSERT(NULL != md_accessor);
+	GPOS_ASSERT(nullptr != md_accessor);
 
-	if (NULL == mdid_op || !mdid_op->IsValid())
+	if (nullptr == mdid_op || !mdid_op->IsValid())
 	{
 		// invalid mdid
 		return false;
@@ -407,9 +407,9 @@ CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(CMDAccessor *md_accessor,
 BOOL
 CMDAccessorUtils::FBoolType(CMDAccessor *md_accessor, IMDId *mdid_type)
 {
-	GPOS_ASSERT(NULL != md_accessor);
+	GPOS_ASSERT(nullptr != md_accessor);
 
-	if (NULL != mdid_type && mdid_type->IsValid())
+	if (nullptr != mdid_type && mdid_type->IsValid())
 	{
 		return (IMDType::EtiBool ==
 				md_accessor->RetrieveType(mdid_type)->GetDatumType());
@@ -429,8 +429,8 @@ CMDAccessorUtils::FBoolType(CMDAccessor *md_accessor, IMDId *mdid_type)
 BOOL
 CMDAccessorUtils::FCommutativeScalarOp(CMDAccessor *md_accessor, IMDId *mdid_op)
 {
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != mdid_op);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != mdid_op);
 
 	const IMDScalarOp *md_scalar_op = md_accessor->RetrieveScOp(mdid_op);
 

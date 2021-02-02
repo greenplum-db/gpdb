@@ -120,7 +120,7 @@ public:
 	static CDistributionSpecSingleton *
 	PdssConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtSingleton == pds->Edt() ||
 					EdtStrictSingleton == pds->Edt());
 
@@ -131,7 +131,7 @@ public:
 	static const CDistributionSpecSingleton *
 	PdssConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtSingleton == pds->Edt() ||
 					EdtStrictSingleton == pds->Edt());
 

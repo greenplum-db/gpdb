@@ -29,9 +29,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CConstraintConjunction::CConstraintConjunction(CMemoryPool *mp,
 											   CConstraintArray *pdrgpcnstr)
-	: CConstraint(mp, PcrsFromConstraints(mp, pdrgpcnstr)), m_pdrgpcnstr(NULL)
+	: CConstraint(mp, PcrsFromConstraints(mp, pdrgpcnstr)),
+	  m_pdrgpcnstr(nullptr)
 {
-	GPOS_ASSERT(NULL != pdrgpcnstr);
+	GPOS_ASSERT(nullptr != pdrgpcnstr);
 	m_pdrgpcnstr = PdrgpcnstrFlatten(mp, pdrgpcnstr, EctConjunction);
 
 	m_phmcolconstr = Phmcolconstr(mp, m_pcrsUsed, m_pdrgpcnstr);
@@ -85,7 +86,7 @@ BOOL
 CConstraintConjunction::FConstraint(const CColRef *colref) const
 {
 	CConstraintArray *pdrgpcnstrCol = m_phmcolconstr->Find(colref);
-	return (NULL != pdrgpcnstrCol && 0 < pdrgpcnstrCol->Size());
+	return (nullptr != pdrgpcnstrCol && 0 < pdrgpcnstrCol->Size());
 }
 
 //---------------------------------------------------------------------------
@@ -128,9 +129,9 @@ CConstraintConjunction::Pcnstr(CMemoryPool *mp, const CColRef *colref)
 {
 	// all children referencing given column
 	CConstraintArray *pdrgpcnstrCol = m_phmcolconstr->Find(colref);
-	if (NULL == pdrgpcnstrCol)
+	if (nullptr == pdrgpcnstrCol)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
@@ -140,7 +141,7 @@ CConstraintConjunction::Pcnstr(CMemoryPool *mp, const CColRef *colref)
 	{
 		// the part of the child that references this column
 		CConstraint *pcnstrCol = (*pdrgpcnstrCol)[ul]->Pcnstr(mp, colref);
-		if (NULL == pcnstrCol || pcnstrCol->IsConstraintUnbounded())
+		if (nullptr == pcnstrCol || pcnstrCol->IsConstraintUnbounded())
 		{
 			CRefCount::SafeRelease(pcnstrCol);
 			continue;
@@ -176,7 +177,7 @@ CConstraintConjunction::Pcnstr(CMemoryPool *mp, CColRefSet *pcrs)
 
 		// the part of the child that references these columns
 		CConstraint *pcnstrCol = pcnstr->Pcnstr(mp, pcrs);
-		if (NULL != pcnstrCol)
+		if (nullptr != pcnstrCol)
 		{
 			pdrgpcnstr->Append(pcnstrCol);
 		}
@@ -212,7 +213,7 @@ CConstraintConjunction::PcnstrRemapForColumn(CMemoryPool *mp,
 CExpression *
 CConstraintConjunction::PexprScalar(CMemoryPool *mp)
 {
-	if (NULL == m_pexprScalar)
+	if (nullptr == m_pexprScalar)
 	{
 		if (FContradiction())
 		{

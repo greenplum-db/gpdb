@@ -34,7 +34,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalInnerJoin::CLogicalInnerJoin(CMemoryPool *mp) : CLogicalJoin(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 
@@ -96,7 +96,7 @@ BOOL
 CLogicalInnerJoin::FFewerConj(CMemoryPool *mp, CGroupExpression *pgexprFst,
 							  CGroupExpression *pgexprSnd)
 {
-	if (NULL == pgexprFst || NULL == pgexprSnd)
+	if (nullptr == pgexprFst || nullptr == pgexprSnd)
 	{
 		return false;
 	}

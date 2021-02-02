@@ -216,7 +216,7 @@ public:
 	static CExpression *PexprScalarOp(CMemoryPool *mp, const CColRef *pcrLeft,
 									  CExpression *pexpr, CWStringConst strOp,
 									  IMDId *mdid_op,
-									  IMDId *return_type_mdid = NULL);
+									  IMDId *return_type_mdid = nullptr);
 
 	// generate a scalar bool op expression
 	static CExpression *PexprScalarBoolOp(CMemoryPool *mp,
@@ -240,7 +240,7 @@ public:
 		CMemoryPool *mp, IMDId *pmdidAggFunc, const CWStringConst *pstrAggFunc,
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
 		IMDId *pmdidResolvedReturnType =
-			NULL  // return type to be used if original return type is ambiguous
+			nullptr	 // return type to be used if original return type is ambiguous
 	);
 
 	// generate an aggregate function
@@ -324,7 +324,7 @@ public:
 	// to the map 'colref_mapping', and add the mappings to the colref_mapping map if not NULL
 	static CExpression *PexprLogicalProjectNulls(
 		CMemoryPool *mp, CColRefArray *colref_array, CExpression *pexpr,
-		UlongToColRefMap *colref_mapping = NULL);
+		UlongToColRefMap *colref_mapping = nullptr);
 
 	// construct a project list using the given columns and datums
 	// store the mapping in the colref_mapping map if not NULL
@@ -395,28 +395,28 @@ public:
 	static CExpression *PexprLogicalApply(CMemoryPool *mp,
 										  CExpression *pexprLeft,
 										  CExpression *pexprRight,
-										  CExpression *pexprPred = NULL);
+										  CExpression *pexprPred = nullptr);
 
 	// generate an apply expression with a known inner column
 	template <class T>
 	static CExpression *PexprLogicalApply(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		const CColRef *pcrInner, COperator::EOperatorId eopidOriginSubq,
-		CExpression *pexprPred = NULL);
+		CExpression *pexprPred = nullptr);
 
 	// generate an apply expression with a known array of inner columns
 	template <class T>
 	static CExpression *PexprLogicalApply(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		CColRefArray *pdrgpcrInner, COperator::EOperatorId eopidOriginSubq,
-		CExpression *pexprPred = NULL);
+		CExpression *pexprPred = nullptr);
 
 	// generate a correlated apply for quantified subquery with a known array of inner columns
 	template <class T>
 	static CExpression *PexprLogicalCorrelatedQuantifiedApply(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		CColRefArray *pdrgpcrInner, COperator::EOperatorId eopidOriginSubq,
-		CExpression *pexprPred = NULL);
+		CExpression *pexprPred = nullptr);
 
 	//-------------------------------------------------------------------
 	// Helpers for partitioning
@@ -820,10 +820,9 @@ public:
 	// create an array of new column references with the same names and
 	// types as the given column references.
 	// if the passed map is not null, mappings from old to copied variables are added to it
-	static CColRefArray *PdrgpcrCopy(CMemoryPool *mp,
-									 CColRefArray *colref_array,
-									 BOOL fAllComputed = false,
-									 UlongToColRefMap *colref_mapping = NULL);
+	static CColRefArray *PdrgpcrCopy(
+		CMemoryPool *mp, CColRefArray *colref_array, BOOL fAllComputed = false,
+		UlongToColRefMap *colref_mapping = nullptr);
 
 	// equality check between two arrays of column refs. Inputs can be NULL
 	static BOOL Equals(CColRefArray *pdrgpcrFst, CColRefArray *pdrgpcrSnd);
@@ -1004,9 +1003,9 @@ CExpression *
 CUtils::PexprLogicalJoin(CMemoryPool *mp, CExpression *pexprLeft,
 						 CExpression *pexprRight, CExpression *pexprPredicate)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pexprPredicate);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pexprPredicate);
 
 	return GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) T(mp), pexprLeft,
 									pexprRight, pexprPredicate);
@@ -1025,11 +1024,11 @@ CExpression *
 CUtils::PexprLogicalApply(CMemoryPool *mp, CExpression *pexprLeft,
 						  CExpression *pexprRight, CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1054,12 +1053,12 @@ CUtils::PexprLogicalApply(CMemoryPool *mp, CExpression *pexprLeft,
 						  COperator::EOperatorId eopidOriginSubq,
 						  CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pcrInner);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pcrInner);
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1086,13 +1085,13 @@ CUtils::PexprLogicalApply(CMemoryPool *mp, CExpression *pexprLeft,
 						  COperator::EOperatorId eopidOriginSubq,
 						  CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pdrgpcrInner);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pdrgpcrInner);
 	GPOS_ASSERT(0 < pdrgpcrInner->Size());
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1117,13 +1116,13 @@ CUtils::PexprLogicalCorrelatedQuantifiedApply(
 	CColRefArray *pdrgpcrInner, COperator::EOperatorId eopidOriginSubq,
 	CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pdrgpcrInner);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pdrgpcrInner);
 	GPOS_ASSERT(0 < pdrgpcrInner->Size());
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1170,8 +1169,8 @@ void
 CUtils::AddRefAppend(CDynamicPtrArray<T, CleanupFn> *pdrgptOutput,
 					 CDynamicPtrArray<T, CleanupFn> *pdrgptInput, ULONG ulStart)
 {
-	GPOS_ASSERT(NULL != pdrgptOutput);
-	GPOS_ASSERT(NULL != pdrgptInput);
+	GPOS_ASSERT(nullptr != pdrgptOutput);
+	GPOS_ASSERT(nullptr != pdrgptInput);
 
 	const ULONG size = pdrgptInput->Size();
 	GPOS_ASSERT_IMP(0 < size, ulStart < size);
@@ -1198,7 +1197,7 @@ template <class T>
 BOOL
 CUtils::FScalarConstInt(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	IMDType::ETypeInfo type_info = T::GetTypeInfo();
 	GPOS_ASSERT(IMDType::EtiInt2 == type_info ||

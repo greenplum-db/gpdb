@@ -30,7 +30,7 @@ CDXLScalarAssertConstraint::CDXLScalarAssertConstraint(CMemoryPool *mp,
 													   CWStringBase *error_msg)
 	: CDXLScalar(mp), m_error_msg(error_msg)
 {
-	GPOS_ASSERT(NULL != error_msg);
+	GPOS_ASSERT(nullptr != error_msg);
 }
 
 //---------------------------------------------------------------------------

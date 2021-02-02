@@ -30,7 +30,7 @@ CParseHandlerMDRequest::CParseHandlerMDRequest(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_array(NULL)
+	  m_mdid_array(nullptr)
 {
 }
 
@@ -68,7 +68,7 @@ CParseHandlerMDRequest::StartElement(const XMLCh *const,  // element_uri,
 								 element_local_name))
 	{
 		// start of MD request section
-		GPOS_ASSERT(NULL == m_mdid_array);
+		GPOS_ASSERT(nullptr == m_mdid_array);
 		m_mdid_array = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 		m_mdtype_request_array =
 			GPOS_NEW(m_mp) CMDRequest::SMDTypeRequestArray(m_mp);
@@ -79,7 +79,7 @@ CParseHandlerMDRequest::StartElement(const XMLCh *const,  // element_uri,
 	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenMdid),
 									  element_local_name))
 	{
-		GPOS_ASSERT(NULL != m_mdid_array);
+		GPOS_ASSERT(nullptr != m_mdid_array);
 
 		// parse mdid
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -93,7 +93,7 @@ CParseHandlerMDRequest::StartElement(const XMLCh *const,  // element_uri,
 	GPOS_ASSERT(0 == XMLString::compareString(
 						 CDXLTokens::XmlstrToken(EdxltokenMDTypeRequest),
 						 element_local_name));
-	GPOS_ASSERT(NULL != m_mdtype_request_array);
+	GPOS_ASSERT(nullptr != m_mdtype_request_array);
 
 	CSystemId sysid = CDXLOperatorFactory::Sysid(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenSysid,

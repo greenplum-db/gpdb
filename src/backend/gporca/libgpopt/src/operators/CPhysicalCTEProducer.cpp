@@ -31,9 +31,9 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalCTEProducer::CPhysicalCTEProducer(CMemoryPool *mp, ULONG id,
 										   CColRefArray *colref_array)
-	: CPhysical(mp), m_id(id), m_pdrgpcr(colref_array), m_pcrs(NULL)
+	: CPhysical(mp), m_id(id), m_pdrgpcr(colref_array), m_pcrs(nullptr)
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 	m_pcrs = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcr);
 }
 
@@ -268,7 +268,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalCTEProducer::EpetOrder(CExpressionHandle &exprhdl,
 								const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();
@@ -293,7 +293,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalCTEProducer::EpetRewindability(CExpressionHandle &exprhdl,
 										const CEnfdRewindability *per) const
 {
-	GPOS_ASSERT(NULL != per);
+	GPOS_ASSERT(nullptr != per);
 
 	CRewindabilitySpec *prs = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Prs();
 	if (per->FCompatible(prs))

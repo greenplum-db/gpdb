@@ -169,7 +169,7 @@ public:
 	static CScalar *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FScalar());
 
 		return reinterpret_cast<CScalar *>(pop);

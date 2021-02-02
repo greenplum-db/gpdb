@@ -76,7 +76,7 @@ private:
 
 	// print query or plan tree
 	static void PrintQueryOrPlan(CMemoryPool *mp, CExpression *pexpr,
-								 CQueryContext *pqc = NULL);
+								 CQueryContext *pqc = nullptr);
 
 	// Check for a plan with CTE, if both CTEProducer and CTEConsumer are executed on the same locality.
 	static void CheckCTEConsistency(CMemoryPool *mp, CExpression *pexpr);
@@ -97,7 +97,7 @@ public:
 		CSearchStageArray *search_stage_array,	// search strategy
 		COptimizerConfig *optimizer_config,		// optimizer configurations
 		const CHAR *szMinidumpFileName =
-			NULL  // name of minidump file to be created
+			nullptr	 // name of minidump file to be created
 	);
 };	// class COptimizer
 }  // namespace gpopt

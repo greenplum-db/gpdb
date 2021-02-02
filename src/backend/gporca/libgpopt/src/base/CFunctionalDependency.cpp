@@ -93,7 +93,7 @@ CFunctionalDependency::HashValue() const
 BOOL
 CFunctionalDependency::Equals(const CFunctionalDependency *pfd) const
 {
-	if (NULL == pfd)
+	if (nullptr == pfd)
 	{
 		return false;
 	}
@@ -132,7 +132,7 @@ ULONG
 CFunctionalDependency::HashValue(const CFunctionalDependencyArray *pdrgpfd)
 {
 	ULONG ulHash = 0;
-	if (NULL != pdrgpfd)
+	if (nullptr != pdrgpfd)
 	{
 		const ULONG size = pdrgpfd->Size();
 		for (ULONG ul = 0; ul < size; ul++)
@@ -157,10 +157,10 @@ BOOL
 CFunctionalDependency::Equals(const CFunctionalDependencyArray *pdrgpfdFst,
 							  const CFunctionalDependencyArray *pdrgpfdSnd)
 {
-	if (NULL == pdrgpfdFst && NULL == pdrgpfdSnd)
+	if (nullptr == pdrgpfdFst && nullptr == pdrgpfdSnd)
 		return true; /* both empty */
 
-	if (NULL == pdrgpfdFst || NULL == pdrgpfdSnd)
+	if (nullptr == pdrgpfdFst || nullptr == pdrgpfdSnd)
 		return false; /* one is empty, the other is not */
 
 	const ULONG ulLenFst = pdrgpfdFst->Size();
@@ -200,7 +200,7 @@ CFunctionalDependency::PcrsKeys(CMemoryPool *mp,
 {
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 
-	if (pdrgpfd != NULL)
+	if (pdrgpfd != nullptr)
 	{
 		const ULONG size = pdrgpfd->Size();
 		for (ULONG ul = 0; ul < size; ul++)

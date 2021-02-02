@@ -36,14 +36,14 @@ CQueryContext::CQueryContext(CMemoryPool *mp, CExpression *pexpr,
 							 CMDNameArray *pdrgpmdname, BOOL fDeriveStats)
 	: m_prpp(prpp),
 	  m_pdrgpcr(colref_array),
-	  m_pdrgpcrSystemCols(NULL),
+	  m_pdrgpcrSystemCols(nullptr),
 	  m_pdrgpmdname(pdrgpmdname),
 	  m_fDeriveStats(fDeriveStats)
 {
-	GPOS_ASSERT(NULL != pexpr);
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != colref_array);
-	GPOS_ASSERT(NULL != pdrgpmdname);
+	GPOS_ASSERT(nullptr != pexpr);
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != colref_array);
+	GPOS_ASSERT(nullptr != pdrgpmdname);
 	GPOS_ASSERT(colref_array->Size() == pdrgpmdname->Size());
 
 #ifdef GPOS_DEBUG
@@ -111,14 +111,14 @@ CQueryContext::~CQueryContext()
 COperator *
 CQueryContext::PopTop(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	// skip CTE anchors if any
 	CExpression *pexprCurr = pexpr;
 	while (COperator::EopLogicalCTEAnchor == pexprCurr->Pop()->Eopid())
 	{
 		pexprCurr = (*pexprCurr)[0];
-		GPOS_ASSERT(NULL != pexprCurr);
+		GPOS_ASSERT(nullptr != pexprCurr);
 	}
 
 	return pexprCurr->Pop();
@@ -135,8 +135,8 @@ CQueryContext::PopTop(CExpression *pexpr)
 void
 CQueryContext::SetSystemCols(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL == m_pdrgpcrSystemCols);
-	GPOS_ASSERT(NULL != m_pdrgpcr);
+	GPOS_ASSERT(nullptr == m_pdrgpcrSystemCols);
+	GPOS_ASSERT(nullptr != m_pdrgpcr);
 
 	m_pdrgpcrSystemCols = GPOS_NEW(mp) CColRefArray(mp);
 	const ULONG ulReqdCols = m_pdrgpcr->Size();
@@ -165,24 +165,24 @@ CQueryContext::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 						   ULongPtrArray *pdrgpulQueryOutputColRefId,
 						   CMDNameArray *pdrgpmdname, BOOL fDeriveStats)
 {
-	GPOS_ASSERT(NULL != pexpr && NULL != pdrgpulQueryOutputColRefId);
+	GPOS_ASSERT(nullptr != pexpr && nullptr != pdrgpulQueryOutputColRefId);
 
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 	CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
 
 	COptCtxt *poptctxt = COptCtxt::PoctxtFromTLS();
 	CColumnFactory *col_factory = poptctxt->Pcf();
-	GPOS_ASSERT(NULL != col_factory);
+	GPOS_ASSERT(nullptr != col_factory);
 
 	// Collect required column references (colref_array)
 	const ULONG length = pdrgpulQueryOutputColRefId->Size();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		ULONG *pul = (*pdrgpulQueryOutputColRefId)[ul];
-		GPOS_ASSERT(NULL != pul);
+		GPOS_ASSERT(nullptr != pul);
 
 		CColRef *colref = col_factory->LookupColRef(*pul);
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != colref);
 
 		pcrs->Include(colref);
 		colref_array->Append(colref);
@@ -193,7 +193,7 @@ CQueryContext::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 	// By default no sort order requirement is added, unless the root operator in
 	// the input logical expression is a LIMIT. This is because Orca always
 	// attaches top level Sort to a LIMIT node.
-	COrderSpec *pos = NULL;
+	COrderSpec *pos = nullptr;
 	CExpression *pexprResult = pexpr;
 	COperator *popTop = PopTop(pexpr);
 	if (COperator::EopLogicalLimit == popTop->Eopid())
@@ -208,7 +208,7 @@ CQueryContext::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 		pos = GPOS_NEW(mp) COrderSpec(mp);
 	}
 
-	CDistributionSpec *pds = NULL;
+	CDistributionSpec *pds = nullptr;
 
 	BOOL fDML = CUtils::FLogicalDML(pexpr->Pop());
 	poptctxt->MarkDMLQuery(fDML);
@@ -283,7 +283,7 @@ void
 CQueryContext::MapComputedToUsedCols(CColumnFactory *col_factory,
 									 CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	if (COperator::EopLogicalProject == pexpr->Pop()->Eopid())
 	{

@@ -32,7 +32,7 @@ using namespace gpdxl;
 CDXLScalarIdent::CDXLScalarIdent(CMemoryPool *mp, CDXLColRef *dxl_colref)
 	: CDXLScalar(mp), m_dxl_colref(dxl_colref)
 {
-	GPOS_ASSERT(NULL != m_dxl_colref);
+	GPOS_ASSERT(nullptr != m_dxl_colref);
 }
 
 
@@ -183,7 +183,7 @@ CDXLScalarIdent::AssertValid(const CDXLNode *node,
 {
 	GPOS_ASSERT(0 == node->Arity());
 	GPOS_ASSERT(m_dxl_colref->MdidType()->IsValid());
-	GPOS_ASSERT(NULL != m_dxl_colref);
+	GPOS_ASSERT(nullptr != m_dxl_colref);
 }
 #endif	// GPOS_DEBUG
 

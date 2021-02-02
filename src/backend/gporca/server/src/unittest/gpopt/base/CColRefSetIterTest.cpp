@@ -62,7 +62,7 @@ CColRefSetIterTest::EresUnittest_Basics()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object

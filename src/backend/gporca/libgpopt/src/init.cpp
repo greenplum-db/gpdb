@@ -24,7 +24,7 @@
 using namespace gpos;
 using namespace gpopt;
 
-static CMemoryPool *mp = NULL;
+static CMemoryPool *mp = nullptr;
 
 
 //---------------------------------------------------------------------------

@@ -73,7 +73,7 @@ public:
 	static CDXLDatumBool *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::CDXLDatum::EdxldatumBool ==
 					dxl_datum->GetDatumType());
 

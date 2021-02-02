@@ -56,7 +56,7 @@ void
 CXformLeftOuterApply2LeftOuterJoinNoCorrelations::Transform(
 	CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

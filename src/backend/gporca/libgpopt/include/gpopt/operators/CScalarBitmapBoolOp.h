@@ -121,7 +121,7 @@ public:
 	static CScalarBitmapBoolOp *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBitmapBoolOp == pop->Eopid());
 
 		return dynamic_cast<CScalarBitmapBoolOp *>(pop);

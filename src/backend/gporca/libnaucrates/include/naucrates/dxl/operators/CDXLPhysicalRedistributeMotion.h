@@ -82,7 +82,7 @@ public:
 	static CDXLPhysicalRedistributeMotion *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalMotionRedistribute ==
 					dxl_op->GetDXLOperator());
 

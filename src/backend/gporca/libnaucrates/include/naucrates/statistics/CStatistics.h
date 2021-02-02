@@ -331,7 +331,7 @@ public:
 	static CStatistics *
 	CastStats(IStatistics *pstats)
 	{
-		GPOS_ASSERT(NULL != pstats);
+		GPOS_ASSERT(nullptr != pstats);
 		return dynamic_cast<CStatistics *>(pstats);
 	}
 

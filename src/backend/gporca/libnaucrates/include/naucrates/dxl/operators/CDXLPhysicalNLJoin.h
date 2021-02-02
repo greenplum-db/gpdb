@@ -91,7 +91,7 @@ public:
 	static CDXLPhysicalNLJoin *
 	PdxlConvert(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalNLJoin == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalNLJoin *>(dxl_op);

@@ -130,7 +130,7 @@ public:
 	static CLogicalSelect *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalSelect == pop->Eopid());
 
 		return reinterpret_cast<CLogicalSelect *>(pop);

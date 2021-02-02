@@ -203,7 +203,7 @@ public:
 	static CPhysicalTVF *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalTVF == pop->Eopid());
 
 		return dynamic_cast<CPhysicalTVF *>(pop);

@@ -46,8 +46,8 @@ private:
 	{
 		T *curr = value;
 
-		while (NULL != curr && !Base::GetHashTable().m_eqfn(
-								   Base::GetHashTable().Key(curr), m_key))
+		while (nullptr != curr && !Base::GetHashTable().m_eqfn(
+									  Base::GetHashTable().Key(curr), m_key))
 		{
 			curr = Base::Next(curr);
 		}
@@ -91,7 +91,7 @@ public:
 	T *
 	Next(T *value) const
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 
 		return NextMatch(Base::Next(value));
 	}
@@ -100,7 +100,7 @@ public:
 	void
 	Insert(T *value)
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 
 #ifdef GPOS_DEBUG
 		K &key = Base::GetHashTable().Key(value);

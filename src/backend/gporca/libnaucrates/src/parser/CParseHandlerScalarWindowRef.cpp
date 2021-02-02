@@ -64,7 +64,7 @@ CParseHandlerScalarWindowRef::StartElement(
 	else
 	{
 		// we must have seen an window ref already and initialized the window ref node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		CParseHandlerBase *op_parse_handler =
 			CParseHandlerFactory::GetParseHandler(

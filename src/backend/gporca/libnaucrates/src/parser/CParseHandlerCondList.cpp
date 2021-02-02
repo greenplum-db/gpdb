@@ -71,7 +71,7 @@ CParseHandlerCondList::StartElement(const XMLCh *const element_uri,
 	else
 	{
 		// we must have seen a cond list already and initialized the cond list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 		// start new hash cond element
 		CParseHandlerBase *child_parse_handler =
 			CParseHandlerFactory::GetParseHandler(

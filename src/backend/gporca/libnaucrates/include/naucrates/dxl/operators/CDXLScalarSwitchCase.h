@@ -57,7 +57,7 @@ public:
 	static CDXLScalarSwitchCase *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarSwitchCase == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarSwitchCase *>(dxl_op);

@@ -129,7 +129,7 @@ public:
 	static CScalarCast *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCast == pop->Eopid());
 
 		return dynamic_cast<CScalarCast *>(pop);

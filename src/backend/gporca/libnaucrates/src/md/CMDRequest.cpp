@@ -34,9 +34,9 @@ CMDRequest::CMDRequest(CMemoryPool *mp, IMdIdArray *mdid_array,
 	  m_mdid_array(mdid_array),
 	  m_mdtype_request_array(mdtype_request_array)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != mdid_array);
-	GPOS_ASSERT(NULL != mdtype_request_array);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != mdid_array);
+	GPOS_ASSERT(nullptr != mdtype_request_array);
 }
 
 //---------------------------------------------------------------------------
@@ -48,10 +48,10 @@ CMDRequest::CMDRequest(CMemoryPool *mp, IMdIdArray *mdid_array,
 //
 //---------------------------------------------------------------------------
 CMDRequest::CMDRequest(CMemoryPool *mp, SMDTypeRequest *md_type_request)
-	: m_mp(mp), m_mdid_array(NULL), m_mdtype_request_array(NULL)
+	: m_mp(mp), m_mdid_array(nullptr), m_mdtype_request_array(nullptr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != md_type_request);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != md_type_request);
 
 	m_mdid_array = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 	m_mdtype_request_array = GPOS_NEW(m_mp) SMDTypeRequestArray(m_mp);

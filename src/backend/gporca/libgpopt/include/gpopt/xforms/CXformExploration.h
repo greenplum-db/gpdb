@@ -72,7 +72,7 @@ public:
 	static CXformExploration *
 	Pxformexp(CXform *pxform)
 	{
-		GPOS_ASSERT(NULL != pxform);
+		GPOS_ASSERT(nullptr != pxform);
 		GPOS_ASSERT(pxform->FExploration());
 
 		return dynamic_cast<CXformExploration *>(pxform);

@@ -88,7 +88,7 @@ private:
 			  m_fReturnedPcrIsOuterRef(false),
 			  m_fHasSkipLevelCorrelations(false),
 			  m_fHasCountAgg(false),
-			  m_pcrCountAgg(NULL),
+			  m_pcrCountAgg(nullptr),
 			  m_fProjectCount(false),
 			  m_fValueSubquery(false),
 			  m_fCorrelatedExecution(false)

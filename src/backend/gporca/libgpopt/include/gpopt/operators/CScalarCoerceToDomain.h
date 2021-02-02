@@ -80,7 +80,7 @@ public:
 	static CScalarCoerceToDomain *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCoerceToDomain == pop->Eopid());
 
 		return dynamic_cast<CScalarCoerceToDomain *>(pop);

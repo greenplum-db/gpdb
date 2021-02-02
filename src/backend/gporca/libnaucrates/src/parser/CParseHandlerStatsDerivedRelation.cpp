@@ -38,7 +38,7 @@ CParseHandlerStatsDerivedRelation::CParseHandlerStatsDerivedRelation(
 	  m_empty(false),
 	  m_relpages(0),
 	  m_relallvisible(0),
-	  m_dxl_stats_derived_relation(NULL)
+	  m_dxl_stats_derived_relation(nullptr)
 {
 }
 
@@ -100,7 +100,7 @@ CParseHandlerStatsDerivedRelation::StartElement(
 		m_empty = false;
 		const XMLCh *xml_is_empty =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenEmptyRelation));
-		if (NULL != xml_is_empty)
+		if (nullptr != xml_is_empty)
 		{
 			m_empty = CDXLOperatorFactory::ConvertAttrValueToBool(
 				m_parse_handler_mgr->GetDXLMemoryManager(), xml_is_empty,
@@ -110,7 +110,7 @@ CParseHandlerStatsDerivedRelation::StartElement(
 		m_relpages = 0;
 		const XMLCh *xml_relpages =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelPages));
-		if (NULL != xml_relpages)
+		if (nullptr != xml_relpages)
 		{
 			m_relpages = CDXLOperatorFactory::ConvertAttrValueToUlong(
 				m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows,
@@ -120,7 +120,7 @@ CParseHandlerStatsDerivedRelation::StartElement(
 		m_relallvisible = 0;
 		const XMLCh *xml_relallvisible =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelAllVisible));
-		if (NULL != xml_relallvisible)
+		if (nullptr != xml_relallvisible)
 		{
 			m_relallvisible = CDXLOperatorFactory::ConvertAttrValueToUlong(
 				m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows,

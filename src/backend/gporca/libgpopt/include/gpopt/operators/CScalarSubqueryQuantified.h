@@ -103,7 +103,7 @@ public:
 	static CScalarSubqueryQuantified *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarSubqueryAny == pop->Eopid() ||
 					EopScalarSubqueryAll == pop->Eopid());
 

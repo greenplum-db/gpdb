@@ -71,7 +71,7 @@ private:
 	static ULONG
 	UlHashBitSet(const CBitSet *pbs)
 	{
-		GPOS_ASSERT(NULL != pbs);
+		GPOS_ASSERT(nullptr != pbs);
 
 		return pbs->HashValue();
 	}
@@ -80,8 +80,8 @@ private:
 	static BOOL
 	FEqualBitSet(const CBitSet *pbsFst, const CBitSet *pbsSnd)
 	{
-		GPOS_ASSERT(NULL != pbsFst);
-		GPOS_ASSERT(NULL != pbsSnd);
+		GPOS_ASSERT(nullptr != pbsFst);
+		GPOS_ASSERT(nullptr != pbsSnd);
 
 		return pbsFst->Equals(pbsSnd);
 	}

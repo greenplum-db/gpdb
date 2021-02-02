@@ -57,23 +57,23 @@ private:
 public:
 	// ctor; protected to disable instantiation unless from child class
 	CCacheAccessor(CCache<T, K> *cache)
-		: m_cache(cache), m_mp(NULL), m_entry(NULL), m_inserted(false)
+		: m_cache(cache), m_mp(nullptr), m_entry(nullptr), m_inserted(false)
 
 	{
-		GPOS_ASSERT(NULL != cache);
+		GPOS_ASSERT(nullptr != cache);
 	}
 
 	// dtor
 	~CCacheAccessor()
 	{
 		// check if a memory pool was created but insertion failed
-		if (NULL != m_mp && !m_inserted)
+		if (nullptr != m_mp && !m_inserted)
 		{
 			CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(m_mp);
 		}
 
 		// release entry if one was created
-		if (NULL != m_entry)
+		if (nullptr != m_entry)
 		{
 			m_cache->ReleaseEntry(m_entry);
 		}
@@ -87,11 +87,11 @@ public:
 	T
 	Insert(K key, T val)
 	{
-		GPOS_ASSERT(NULL != m_mp);
+		GPOS_ASSERT(nullptr != m_mp);
 
 		GPOS_ASSERT(!m_inserted && "Accessor was already used for insertion");
 
-		GPOS_ASSERT(NULL == m_entry && "Accessor already holds an entry");
+		GPOS_ASSERT(nullptr == m_entry && "Accessor already holds an entry");
 
 		CCacheEntry<T, K> *entry = GPOS_NEW(m_cache->m_mp)
 			CCacheEntry<T, K>(m_mp, key, val, m_cache->m_gclock_init_counter);
@@ -119,7 +119,7 @@ public:
 	Val() const
 	{
 		T ret = NULL;
-		if (NULL != m_entry)
+		if (nullptr != m_entry)
 		{
 			ret = m_entry->Val();
 		}
@@ -131,7 +131,7 @@ public:
 	T
 	Next()
 	{
-		GPOS_ASSERT(NULL != m_entry);
+		GPOS_ASSERT(nullptr != m_entry);
 
 		typename CCache<T, K>::CCacheHashTableEntry *entry = m_entry;
 		m_entry = m_cache->Next(m_entry);
@@ -147,7 +147,7 @@ public:
 	CMemoryPool *
 	Pmp()
 	{
-		GPOS_ASSERT(NULL == m_mp);
+		GPOS_ASSERT(nullptr == m_mp);
 
 		// construct a memory pool for cache entry
 		m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
@@ -159,11 +159,11 @@ public:
 	void
 	Lookup(K key)
 	{
-		GPOS_ASSERT(NULL == m_entry && "Accessor already holds an entry");
+		GPOS_ASSERT(nullptr == m_entry && "Accessor already holds an entry");
 
 		m_entry = m_cache->Get(key);
 
-		if (NULL != m_entry)
+		if (nullptr != m_entry)
 		{
 			// increase ref count before return the object to the customer
 			// customer is responsible for decreasing the ref count after use
@@ -175,7 +175,7 @@ public:
 	void
 	MarkForDeletion()
 	{
-		GPOS_ASSERT(NULL != m_entry);
+		GPOS_ASSERT(nullptr != m_entry);
 
 		m_entry->MarkForDeletion();
 	}

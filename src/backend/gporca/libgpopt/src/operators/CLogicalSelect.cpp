@@ -34,7 +34,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalSelect::CLogicalSelect(CMemoryPool *mp)
-	: CLogicalUnary(mp), m_ptabdesc(NULL)
+	: CLogicalUnary(mp), m_ptabdesc(nullptr)
 {
 	m_phmPexprPartPred = GPOS_NEW(mp) ExprPredToExprPredPartMap(mp);
 }
@@ -122,8 +122,9 @@ CLogicalSelect::DeriveMaxCard(CMemoryPool *,  // mp
 {
 	// in case of a false condition or a contradiction, maxcard should be zero
 	CExpression *pexprScalar = exprhdl.PexprScalarRepChild(1);
-	if ((NULL != pexprScalar && (CUtils::FScalarConstFalse(pexprScalar) ||
-								 CUtils::FScalarConstBoolNull(pexprScalar))) ||
+	if ((nullptr != pexprScalar &&
+		 (CUtils::FScalarConstFalse(pexprScalar) ||
+		  CUtils::FScalarConstBoolNull(pexprScalar))) ||
 		exprhdl.DerivePropertyConstraint()->FContradiction())
 	{
 		return CMaxCard(0 /*ull*/);
@@ -163,8 +164,8 @@ CLogicalSelect::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 
 	// split selection predicate into local predicate and predicate involving outer references
-	CExpression *local_expr = NULL;
-	CExpression *expr_with_outer_refs = NULL;
+	CExpression *local_expr = nullptr;
+	CExpression *expr_with_outer_refs = nullptr;
 
 	// get outer references from expression handle
 	CColRefSet *outer_refs = exprhdl.DeriveOuterReferences();
@@ -215,27 +216,27 @@ CLogicalSelect::PexprPartPred(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(1 /*child_index*/);
 
-	if (NULL == pexprScalar)
+	if (nullptr == pexprScalar)
 	{
 		// no exact predicate is available (e.g. when we have a subquery in the predicate)
-		return NULL;
+		return nullptr;
 	}
 
 	// get partition keys
 	CPartInfo *ppartinfo = exprhdl.DerivePartitionInfo();
-	GPOS_ASSERT(NULL != ppartinfo);
+	GPOS_ASSERT(nullptr != ppartinfo);
 
 	// we assume that the select is right on top of the dynamic get, so there
 	// should be only one part consumer. If there is more, then we are higher up so
 	// we do not push down any predicates
 	if (1 != ppartinfo->UlConsumers())
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// check if a corresponding predicate has already been cached
 	CExpression *pexprPredOnPartKey = m_phmPexprPartPred->Find(pexprScalar);
-	if (pexprPredOnPartKey != NULL)
+	if (pexprPredOnPartKey != nullptr)
 	{
 		// predicate on partition key found in cache
 		pexprPredOnPartKey->AddRef();
@@ -244,16 +245,16 @@ CLogicalSelect::PexprPartPred(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	CPartKeysArray *pdrgppartkeys = ppartinfo->Pdrgppartkeys(0 /*ulPos*/);
 	const ULONG ulKeySets = pdrgppartkeys->Size();
-	for (ULONG ul = 0; NULL == pexprPredOnPartKey && ul < ulKeySets; ul++)
+	for (ULONG ul = 0; nullptr == pexprPredOnPartKey && ul < ulKeySets; ul++)
 	{
 		pexprPredOnPartKey = CPredicateUtils::PexprExtractPredicatesOnPartKeys(
 			mp, pexprScalar, (*pdrgppartkeys)[ul]->Pdrgpdrgpcr(),
-			NULL,  //pcrsAllowedRefs
-			true   //fUseConstraints
+			nullptr,  //pcrsAllowedRefs
+			true	  //fUseConstraints
 		);
 	}
 
-	if (pexprPredOnPartKey != NULL)
+	if (pexprPredOnPartKey != nullptr)
 	{
 		// insert the scalar expression and the corresponding partitioning predicate
 		// in the hashmap

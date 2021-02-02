@@ -66,7 +66,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CTAS tables have no partition columns");
-		return NULL;
+		return nullptr;
 	}
 
 	// retrieve list of partition types
@@ -74,7 +74,7 @@ public:
 	GetPartitionTypes() const override
 	{
 		GPOS_ASSERT(!"CTAS tables have no partition types");
-		return NULL;
+		return nullptr;
 	}
 
 	// retrieve the partition column at the given position
@@ -103,14 +103,14 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CTAS tables have no keys");
-		return NULL;
+		return nullptr;
 	}
 
 	// part constraint
 	CDXLNode *
 	MDPartConstraint() const override
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// CTAS storage options

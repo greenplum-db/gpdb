@@ -31,7 +31,7 @@ using namespace gpopt;
 CPhysicalAssert::CPhysicalAssert(CMemoryPool *mp, CException *pexc)
 	: CPhysical(mp), m_pexc(pexc)
 {
-	GPOS_ASSERT(NULL != pexc);
+	GPOS_ASSERT(nullptr != pexc);
 
 	// when Assert includes outer references, correlated execution has to be enforced,
 	// in this case, we create two optimization requests to guarantee correct evaluation of parameters
@@ -279,7 +279,7 @@ CPhysicalAssert::EpetOrder(CExpressionHandle &,	 // exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// always force sort to be on top of assert

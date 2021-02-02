@@ -34,7 +34,7 @@ CParseHandlerWindowFrame::CParseHandlerWindowFrame(
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_dxl_win_frame_spec(EdxlfsSentinel),
 	  m_dxl_frame_exclusion_strategy(EdxlfesSentinel),
-	  m_window_frame(NULL)
+	  m_window_frame(nullptr)
 {
 }
 
@@ -113,19 +113,19 @@ CParseHandlerWindowFrame::EndElement(const XMLCh *const,  // element_uri,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 				   str->GetBuffer());
 	}
-	GPOS_ASSERT(NULL == m_window_frame);
+	GPOS_ASSERT(nullptr == m_window_frame);
 	GPOS_ASSERT(2 == this->Length());
 
 	CParseHandlerScalarOp *trailing_val_parse_handler_base =
 		dynamic_cast<CParseHandlerScalarOp *>((*this)[0]);
-	GPOS_ASSERT(NULL != trailing_val_parse_handler_base);
+	GPOS_ASSERT(nullptr != trailing_val_parse_handler_base);
 	CDXLNode *dxlnode_trailing =
 		trailing_val_parse_handler_base->CreateDXLNode();
 	dxlnode_trailing->AddRef();
 
 	CParseHandlerScalarOp *leading_val_parse_handler_base =
 		dynamic_cast<CParseHandlerScalarOp *>((*this)[1]);
-	GPOS_ASSERT(NULL != leading_val_parse_handler_base);
+	GPOS_ASSERT(nullptr != leading_val_parse_handler_base);
 	CDXLNode *dxlnode_leading = leading_val_parse_handler_base->CreateDXLNode();
 	dxlnode_leading->AddRef();
 

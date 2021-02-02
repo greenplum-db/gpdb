@@ -93,7 +93,7 @@ private:
 			: m_id(id), m_ect(ect), m_pdpplan(pdpplan)
 		{
 			GPOS_ASSERT(EctSentinel > ect);
-			GPOS_ASSERT_IMP(EctProducer == ect, NULL != pdpplan);
+			GPOS_ASSERT_IMP(EctProducer == ect, nullptr != pdpplan);
 		}
 
 		// dtor
@@ -137,7 +137,7 @@ private:
 		OsPrint(IOstream &os) const
 		{
 			os << m_id << (EctProducer == m_ect ? "p" : "c");
-			if (NULL != m_pdpplan)
+			if (nullptr != m_pdpplan)
 			{
 				os << "(" << *m_pdpplan << ")";
 			}

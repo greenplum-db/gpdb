@@ -74,11 +74,11 @@ const CHAR rgszCostParamNames[CCostModelParamsGPDBLegacy::EcpSentinel]
 CCostModelParamsGPDBLegacy::CCostModelParamsGPDBLegacy(CMemoryPool *mp)
 	: m_mp(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
-		m_rgpcp[ul] = NULL;
+		m_rgpcp[ul] = nullptr;
 	}
 
 	// populate param array with default param values
@@ -128,7 +128,7 @@ CCostModelParamsGPDBLegacy::~CCostModelParamsGPDBLegacy()
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
 		GPOS_DELETE(m_rgpcp[ul]);
-		m_rgpcp[ul] = NULL;
+		m_rgpcp[ul] = nullptr;
 	}
 }
 
@@ -164,7 +164,7 @@ CCostModelParamsGPDBLegacy::PcpLookup(ULONG id) const
 CCostModelParamsGPDBLegacy::SCostParam *
 CCostModelParamsGPDBLegacy::PcpLookup(const CHAR *szName) const
 {
-	GPOS_ASSERT(NULL != szName);
+	GPOS_ASSERT(nullptr != szName);
 
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
@@ -174,7 +174,7 @@ CCostModelParamsGPDBLegacy::PcpLookup(const CHAR *szName) const
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -194,7 +194,7 @@ CCostModelParamsGPDBLegacy::SetParam(ULONG id, CDouble dVal,
 	GPOS_ASSERT(EcpSentinel > ecp);
 
 	GPOS_DELETE(m_rgpcp[ecp]);
-	m_rgpcp[ecp] = NULL;
+	m_rgpcp[ecp] = nullptr;
 	m_rgpcp[ecp] =
 		GPOS_NEW(m_mp) SCostParam(ecp, dVal, dLowerBound, dUpperBound);
 }
@@ -212,14 +212,14 @@ void
 CCostModelParamsGPDBLegacy::SetParam(const CHAR *szName, CDouble dVal,
 									 CDouble dLowerBound, CDouble dUpperBound)
 {
-	GPOS_ASSERT(NULL != szName);
+	GPOS_ASSERT(nullptr != szName);
 
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
 		if (0 == clib::Strcmp(szName, rgszCostParamNames[ul]))
 		{
 			GPOS_DELETE(m_rgpcp[ul]);
-			m_rgpcp[ul] = NULL;
+			m_rgpcp[ul] = nullptr;
 			m_rgpcp[ul] =
 				GPOS_NEW(m_mp) SCostParam(ul, dVal, dLowerBound, dUpperBound);
 
@@ -255,7 +255,7 @@ CCostModelParamsGPDBLegacy::Equals(ICostModelParams *pcm) const
 {
 	CCostModelParamsGPDBLegacy *pcmgOther =
 		dynamic_cast<CCostModelParamsGPDBLegacy *>(pcm);
-	if (NULL == pcmgOther)
+	if (nullptr == pcmgOther)
 		return false;
 
 	for (ULONG ul = 0U; ul < GPOS_ARRAY_SIZE(m_rgpcp); ul++)

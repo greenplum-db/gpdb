@@ -113,7 +113,7 @@ public:
 	static const CMDIdCast *
 	CastMdid(const IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidCastFunc == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidCastFunc == mdid->MdidType());
 
 		return dynamic_cast<const CMDIdCast *>(mdid);
 	}
@@ -122,7 +122,7 @@ public:
 	static CMDIdCast *
 	CastMdid(IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidCastFunc == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidCastFunc == mdid->MdidType());
 
 		return dynamic_cast<CMDIdCast *>(mdid);
 	}

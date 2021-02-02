@@ -31,7 +31,7 @@ public:
 		: m_amp(),
 		  m_mda(m_amp.Pmp(), CMDCache::Pcache(), CTestUtils::m_sysidDefault,
 				Pmdp()),
-		  m_aoc(m_amp.Pmp(), &m_mda, NULL /* pceeval */,
+		  m_aoc(m_amp.Pmp(), &m_mda, nullptr /* pceeval */,
 				CTestUtils::GetCostModel(m_amp.Pmp())),
 		  m_pScalarIDF(GPOS_NEW(m_amp.Pmp()) CScalarIsDistinctFrom(
 			  Pmp(), GPOS_NEW(m_amp.Pmp()) CMDIdGPDB(GPDB_INT4_EQ_OP),

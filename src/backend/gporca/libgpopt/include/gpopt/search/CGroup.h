@@ -502,7 +502,7 @@ public:
 	BOOL
 	FDuplicateGroup() const
 	{
-		return NULL != m_pgroupDuplicate;
+		return nullptr != m_pgroupDuplicate;
 	}
 
 	// duplicate group accessor

@@ -88,7 +88,7 @@ CMessage::FormatMessage(CWStringStatic *str, ULONG major, ULONG minor, ...)
 
 	// during bootstrap there's no context object otherwise, record
 	// all details in the context object
-	if (NULL != ITask::Self())
+	if (nullptr != ITask::Self())
 	{
 		VA_LIST valist;
 		VA_START(valist, minor);

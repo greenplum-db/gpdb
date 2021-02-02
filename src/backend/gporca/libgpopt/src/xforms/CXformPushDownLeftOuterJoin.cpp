@@ -104,8 +104,8 @@ CXformPushDownLeftOuterJoin::Transform(CXformContext *pxfctxt,
 									   CXformResult *pxfres,
 									   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -144,7 +144,7 @@ CXformPushDownLeftOuterJoin::Transform(CXformContext *pxfctxt,
 		// normalization at the end of this function takes care of pushing NAry
 		// join predicates down
 		pdrgpexprLOJChildren->Append(
-			CPredicateUtils::PexprConjunction(mp, NULL /*pdrgpexpr*/));
+			CPredicateUtils::PexprConjunction(mp, nullptr /*pdrgpexpr*/));
 		pexprLOJOuterChild = GPOS_NEW(mp) CExpression(
 			mp, GPOS_NEW(mp) CLogicalNAryJoin(mp), pdrgpexprLOJChildren);
 

@@ -96,7 +96,7 @@ public:
 	static CDXLScalarMinMax *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarMinMax == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarMinMax *>(dxl_op);

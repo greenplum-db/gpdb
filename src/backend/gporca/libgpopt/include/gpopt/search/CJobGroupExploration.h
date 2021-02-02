@@ -128,7 +128,7 @@ public:
 	static CJobGroupExploration *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupExploration == pj->Ejt());
 
 		return dynamic_cast<CJobGroupExploration *>(pj);

@@ -70,7 +70,7 @@ private:
 	BOOL
 	SetBit(ULONG *dest, ULONG bit_val)
 	{
-		GPOS_ASSERT(NULL != dest);
+		GPOS_ASSERT(nullptr != dest);
 
 		ULONG old_val = *dest;
 
@@ -96,7 +96,7 @@ private:
 	BOOL
 	UnsetBit(ULONG *dest, ULONG bit_val)
 	{
-		GPOS_ASSERT(NULL != dest);
+		GPOS_ASSERT(nullptr != dest);
 
 		ULONG old_val = *dest;
 
@@ -124,9 +124,9 @@ public:
 	// ctor
 	CSyncPool(CMemoryPool *mp, ULONG size)
 		: m_mp(mp),
-		  m_objects(NULL),
-		  m_objs_reserved(NULL),
-		  m_objs_recycled(NULL),
+		  m_objects(nullptr),
+		  m_objs_reserved(nullptr),
+		  m_objs_recycled(nullptr),
 		  m_numobjs(size),
 		  m_bitmap_size(size / BITS_PER_ULONG + 1),
 		  m_last_lookup_idx(0),
@@ -139,9 +139,9 @@ public:
 	{
 		if (gpos::ulong_max != m_id_offset)
 		{
-			GPOS_ASSERT(NULL != m_objects);
-			GPOS_ASSERT(NULL != m_objs_reserved);
-			GPOS_ASSERT(NULL != m_objs_recycled);
+			GPOS_ASSERT(nullptr != m_objects);
+			GPOS_ASSERT(nullptr != m_objs_reserved);
+			GPOS_ASSERT(nullptr != m_objs_recycled);
 
 #ifdef GPOS_DEBUG
 			if (!ITask::Self()->HasPendingExceptions())

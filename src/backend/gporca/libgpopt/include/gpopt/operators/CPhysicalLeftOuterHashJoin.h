@@ -35,7 +35,7 @@ public:
 	CPhysicalLeftOuterHashJoin(CMemoryPool *mp,
 							   CExpressionArray *pdrgpexprOuterKeys,
 							   CExpressionArray *pdrgpexprInnerKeys,
-							   IMdIdArray *hash_opfamilies = NULL);
+							   IMdIdArray *hash_opfamilies = nullptr);
 
 	// dtor
 	~CPhysicalLeftOuterHashJoin() override;
@@ -58,7 +58,7 @@ public:
 	static CPhysicalLeftOuterHashJoin *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalLeftOuterHashJoin == pop->Eopid());
 
 		return dynamic_cast<CPhysicalLeftOuterHashJoin *>(pop);

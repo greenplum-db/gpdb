@@ -171,7 +171,7 @@ public:
 
 	// initialize job
 	void Init(CGroupExpression *pgexpr, COptimizationContext *poc,
-			  ULONG ulOptReq, CReqdPropPlan *prppCTEProducer = NULL);
+			  ULONG ulOptReq, CReqdPropPlan *prppCTEProducer = nullptr);
 
 	// cleanup internal state
 	void Cleanup() override;
@@ -213,7 +213,7 @@ public:
 	static CJobGroupExpressionOptimization *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupExpressionOptimization == pj->Ejt());
 
 		return dynamic_cast<CJobGroupExpressionOptimization *>(pj);

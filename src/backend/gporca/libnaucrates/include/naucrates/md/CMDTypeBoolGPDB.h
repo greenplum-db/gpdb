@@ -209,7 +209,7 @@ public:
 	IMDId *
 	GetBaseRelMdid() const override
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// return the null constant for this type

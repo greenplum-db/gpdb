@@ -209,7 +209,7 @@ public:
 	static CPhysicalLimit *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalLimit == pop->Eopid());
 
 		return dynamic_cast<CPhysicalLimit *>(pop);

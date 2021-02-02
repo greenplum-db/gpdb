@@ -62,7 +62,7 @@ public:
 	static CDXLPhysicalProperties *
 	PdxlpropConvert(CDXLProperties *dxl_properties)
 	{
-		GPOS_ASSERT(NULL != dxl_properties);
+		GPOS_ASSERT(nullptr != dxl_properties);
 		GPOS_ASSERT(EdxlpropertyPhysical ==
 					dxl_properties->GetDXLPropertyType());
 		return dynamic_cast<CDXLPhysicalProperties *>(dxl_properties);

@@ -175,7 +175,7 @@ public:
 	static CLogicalApply *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(CUtils::FApply(pop));
 
 		return dynamic_cast<CLogicalApply *>(pop);

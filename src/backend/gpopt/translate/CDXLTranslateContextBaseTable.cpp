@@ -122,7 +122,7 @@ INT
 CDXLTranslateContextBaseTable::GetAttnoForColId(ULONG colid) const
 {
 	const INT *pi = m_colid_to_attno_map->Find(&colid);
-	if (NULL != pi)
+	if (nullptr != pi)
 	{
 		return *pi;
 	}

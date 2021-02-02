@@ -197,7 +197,7 @@ public:
 	BOOL
 	IsConstraintUnbounded() const
 	{
-		return (NULL == m_pdatumLeft && NULL == m_pdatumRight);
+		return (nullptr == m_pdatumLeft && nullptr == m_pdatumRight);
 	}
 
 	// print

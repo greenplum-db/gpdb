@@ -39,7 +39,7 @@ CStatisticsConfig::CStatisticsConfig(CMemoryPool *mp,
 	  m_damping_factor_join(damping_factor_join),
 	  m_damping_factor_groupby(damping_factor_groupby),
 	  m_max_stats_buckets(max_stats_buckets),
-	  m_phsmdidcolinfo(NULL)
+	  m_phsmdidcolinfo(nullptr)
 {
 	GPOS_ASSERT(CDouble(0.0) < damping_factor_filter);
 	GPOS_ASSERT(CDouble(0.0) <= damping_factor_join);
@@ -76,7 +76,7 @@ CStatisticsConfig::~CStatisticsConfig()
 void
 CStatisticsConfig::AddMissingStatsColumn(CMDIdColStats *pmdidCol)
 {
-	GPOS_ASSERT(NULL != pmdidCol);
+	GPOS_ASSERT(nullptr != pmdidCol);
 
 	// add the new column information to the hash set
 	if (m_phsmdidcolinfo->Insert(pmdidCol))
@@ -97,7 +97,7 @@ CStatisticsConfig::AddMissingStatsColumn(CMDIdColStats *pmdidCol)
 void
 CStatisticsConfig::CollectMissingStatsColumns(IMdIdArray *pdrgmdid)
 {
-	GPOS_ASSERT(NULL != pdrgmdid);
+	GPOS_ASSERT(nullptr != pdrgmdid);
 
 	MdidHashSetIter hsiter(m_phsmdidcolinfo);
 	while (hsiter.Advance())

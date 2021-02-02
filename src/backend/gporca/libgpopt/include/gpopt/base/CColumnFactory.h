@@ -61,7 +61,7 @@ private:
 					   const CName &name);
 	CColRef *PcrCreate(const CColumnDescriptor *pcoldesc, ULONG id,
 					   const CName &name, ULONG ulOpSource,
-					   BOOL mark_as_used = true, IMDId *mdid_table = NULL);
+					   BOOL mark_as_used = true, IMDId *mdid_table = nullptr);
 
 public:
 	CColumnFactory(const CColumnFactory &) = delete;

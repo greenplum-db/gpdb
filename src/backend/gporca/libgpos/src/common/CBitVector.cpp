@@ -33,7 +33,7 @@ using namespace gpos;
 void
 CBitVector::Clear()
 {
-	GPOS_ASSERT(NULL != m_vec);
+	GPOS_ASSERT(nullptr != m_vec);
 	clib::Memset(m_vec, 0, m_len * BYTES_PER_UNIT);
 }
 
@@ -47,7 +47,7 @@ CBitVector::Clear()
 //
 //---------------------------------------------------------------------------
 CBitVector::CBitVector(CMemoryPool *mp, ULONG nbits)
-	: m_nbits(nbits), m_len(0), m_vec(NULL)
+	: m_nbits(nbits), m_len(0), m_vec(nullptr)
 {
 	// determine units needed to represent the number
 	m_len = m_nbits / BITS_PER_UNIT;
@@ -95,7 +95,7 @@ CBitVector::~CBitVector()
 //
 //---------------------------------------------------------------------------
 CBitVector::CBitVector(CMemoryPool *mp, const CBitVector &bv)
-	: m_nbits(bv.m_nbits), m_len(bv.m_len), m_vec(NULL)
+	: m_nbits(bv.m_nbits), m_len(bv.m_len), m_vec(nullptr)
 {
 	// deep copy
 	m_vec = GPOS_NEW_ARRAY(mp, ULLONG, m_len);

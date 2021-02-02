@@ -103,8 +103,8 @@ CMinidumpWithConstExprEvaluatorTest::
 		1,	// ulSessionId
 		1,	// ulCmdId
 		fMatchPlans,
-		false,	// fTestSpacePruning
-		NULL,	// szMDFilePath
+		false,	  // fTestSpacePruning
+		nullptr,  // szMDFilePath
 		pceeval);
 	pceeval->Release();
 

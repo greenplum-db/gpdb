@@ -30,10 +30,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalDelete::CLogicalDelete(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_ptabdesc(NULL),
-	  m_pdrgpcr(NULL),
-	  m_pcrCtid(NULL),
-	  m_pcrSegmentId(NULL)
+	  m_ptabdesc(nullptr),
+	  m_pdrgpcr(nullptr),
+	  m_pcrCtid(nullptr),
+	  m_pcrSegmentId(nullptr)
 {
 	m_fPattern = true;
 }
@@ -56,10 +56,10 @@ CLogicalDelete::CLogicalDelete(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 	  m_pcrSegmentId(pcrSegmentId)
 
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != colref_array);
-	GPOS_ASSERT(NULL != pcrCtid);
-	GPOS_ASSERT(NULL != pcrSegmentId);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != colref_array);
+	GPOS_ASSERT(nullptr != pcrCtid);
+	GPOS_ASSERT(nullptr != pcrSegmentId);
 
 	m_pcrsLocalUsed->Include(m_pdrgpcr);
 	m_pcrsLocalUsed->Include(m_pcrCtid);

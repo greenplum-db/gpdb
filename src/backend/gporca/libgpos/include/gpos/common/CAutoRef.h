@@ -65,13 +65,13 @@ public:
 template <class T>
 CAutoRef<T>::~CAutoRef()
 {
-	if (NULL != CAutoP<T>::m_object)
+	if (nullptr != CAutoP<T>::m_object)
 	{
 		reinterpret_cast<CRefCount *>(CAutoP<T>::m_object)->Release();
 	}
 
 	// null out pointer before ~CAutoP() gets called
-	CAutoP<T>::m_object = NULL;
+	CAutoP<T>::m_object = nullptr;
 }
 }  // namespace gpos
 

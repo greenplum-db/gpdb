@@ -45,10 +45,10 @@ private:
 	T *
 	FirstValid(T *value) const
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 
 		T *curr = value;
-		while (NULL != curr &&
+		while (nullptr != curr &&
 			   !Base::GetHashTable().IsValid(Base::GetHashTable().Key(curr)))
 		{
 			curr = Base::Next(curr);

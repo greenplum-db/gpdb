@@ -29,7 +29,7 @@ CParseHandlerNLJIndexParam::CParseHandlerNLJIndexParam(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_manager,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_manager, parse_handler_root),
-	  m_nest_param_colref_dxl(NULL)
+	  m_nest_param_colref_dxl(nullptr)
 {
 }
 

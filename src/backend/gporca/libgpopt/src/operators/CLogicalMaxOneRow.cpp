@@ -33,7 +33,7 @@ CLogicalMaxOneRow::Esp(CExpressionHandle &exprhdl) const
 	// low promise for stat derivation if logical expression has outer-refs
 	// or is part of an Apply expression
 	if (exprhdl.HasOuterRefs() ||
-		(NULL != exprhdl.Pgexpr() &&
+		(nullptr != exprhdl.Pgexpr() &&
 		 CXformUtils::FGenerateApply(exprhdl.Pgexpr()->ExfidOrigin())))
 	{
 		return EspLow;

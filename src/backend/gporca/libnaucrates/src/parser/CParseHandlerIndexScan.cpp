@@ -212,7 +212,7 @@ CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
 		index_descr_parse_handler->GetDXLIndexDescr();
 	dxl_index_descr->AddRef();
 
-	CDXLPhysical *dxl_op = NULL;
+	CDXLPhysical *dxl_op = nullptr;
 	if (EdxltokenPhysicalIndexOnlyScan == token_type)
 	{
 		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexOnlyScan(

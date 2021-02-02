@@ -412,7 +412,7 @@ CParseHandlerTest::EresParseAndSerializePlan(CMemoryPool *mp,
 
 	GPOS_CHECK_ABORT;
 
-	const CHAR *szValidationPath = NULL;
+	const CHAR *szValidationPath = nullptr;
 
 	if (fValidate)
 	{
@@ -477,7 +477,7 @@ CParseHandlerTest::EresParseAndSerializeQuery(CMemoryPool *mp,
 	// read DXL file
 	CHAR *dxl_string = CDXLUtils::Read(mp, dxl_filename);
 
-	const CHAR *szValidationPath = NULL;
+	const CHAR *szValidationPath = nullptr;
 
 	if (fValidate)
 	{
@@ -487,7 +487,7 @@ CParseHandlerTest::EresParseAndSerializeQuery(CMemoryPool *mp,
 	// the root of the parsed DXL tree
 	CQueryToDXLResult *pq2dxlresult =
 		CDXLUtils::ParseQueryToQueryDXLTree(mp, dxl_string, szValidationPath);
-	GPOS_ASSERT(NULL != pq2dxlresult);
+	GPOS_ASSERT(nullptr != pq2dxlresult);
 
 	oss << "Serializing parsed tree" << std::endl;
 
@@ -543,7 +543,7 @@ CParseHandlerTest::EresParseAndSerializeMetadata(CMemoryPool *mp,
 	GPOS_CHECK_ABORT;
 
 	// parse the metadata objects into a dynamic array
-	const CHAR *szValidationPath = NULL;
+	const CHAR *szValidationPath = nullptr;
 
 	if (fValidate)
 	{
@@ -553,7 +553,7 @@ CParseHandlerTest::EresParseAndSerializeMetadata(CMemoryPool *mp,
 	IMDCacheObjectArray *mdcache_obj_array =
 		CDXLUtils::ParseDXLToIMDObjectArray(mp, dxl_string, szValidationPath);
 
-	GPOS_ASSERT(NULL != mdcache_obj_array);
+	GPOS_ASSERT(nullptr != mdcache_obj_array);
 
 	GPOS_CHECK_ABORT;
 
@@ -602,7 +602,7 @@ CParseHandlerTest::EresParseAndSerializeMDRequest(CMemoryPool *mp,
 	GPOS_CHECK_ABORT;
 
 	// parse the mdid objects into a dynamic array
-	const CHAR *szValidationPath = NULL;
+	const CHAR *szValidationPath = nullptr;
 
 	if (fValidate)
 	{
@@ -612,7 +612,7 @@ CParseHandlerTest::EresParseAndSerializeMDRequest(CMemoryPool *mp,
 	CMDRequest *pmdr =
 		CDXLUtils::ParseDXLToMDRequest(mp, dxl_string, szValidationPath);
 
-	GPOS_ASSERT(NULL != pmdr);
+	GPOS_ASSERT(nullptr != pmdr);
 
 	GPOS_CHECK_ABORT;
 
@@ -653,7 +653,7 @@ CParseHandlerTest::EresParseAndSerializeStatistics(CMemoryPool *mp,
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	CWStringDynamic str(mp);
@@ -665,7 +665,7 @@ CParseHandlerTest::EresParseAndSerializeStatistics(CMemoryPool *mp,
 	GPOS_CHECK_ABORT;
 
 	// parse the metadata objects into a dynamic array
-	const CHAR *szValidationPath = NULL;
+	const CHAR *szValidationPath = nullptr;
 	if (fValidate)
 	{
 		szValidationPath = CTestUtils::m_szXSDPath;
@@ -682,7 +682,7 @@ CParseHandlerTest::EresParseAndSerializeStatistics(CMemoryPool *mp,
 	dxl_derived_rel_stats_array->Release();
 
 
-	GPOS_ASSERT(NULL != statistics_array);
+	GPOS_ASSERT(nullptr != statistics_array);
 
 	CStatistics *stats = (*statistics_array)[0];
 	GPOS_ASSERT(stats);
@@ -730,7 +730,7 @@ CParseHandlerTest::EresParseAndSerializeScalarExpr(CMemoryPool *mp,
 	CHAR *dxl_string = CDXLUtils::Read(mp, dxl_filename);
 	GPOS_CHECK_ABORT;
 
-	const CHAR *szValidationPath = NULL;
+	const CHAR *szValidationPath = nullptr;
 	if (fValidate)
 	{
 		szValidationPath = CTestUtils::m_szXSDPath;

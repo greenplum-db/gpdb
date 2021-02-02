@@ -36,7 +36,7 @@ CScalarSubquery::CScalarSubquery(CMemoryPool *mp, const CColRef *colref,
 	  m_fGeneratedByExist(fGeneratedByExist),
 	  m_fGeneratedByQuantified(fGeneratedByQuantified)
 {
-	GPOS_ASSERT(NULL != colref);
+	GPOS_ASSERT(nullptr != colref);
 	GPOS_ASSERT(!(fGeneratedByExist && fGeneratedByQuantified));
 }
 
@@ -166,7 +166,7 @@ CScalarSubquery::PpartinfoDerive(CMemoryPool *,	 // mp,
 								 CExpressionHandle &exprhdl) const
 {
 	CPartInfo *ppartinfoChild = exprhdl.DerivePartitionInfo(0);
-	GPOS_ASSERT(NULL != ppartinfoChild);
+	GPOS_ASSERT(nullptr != ppartinfoChild);
 	ppartinfoChild->AddRef();
 	return ppartinfoChild;
 }

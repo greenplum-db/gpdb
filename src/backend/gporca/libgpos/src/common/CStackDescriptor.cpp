@@ -43,7 +43,7 @@ CStackDescriptor::BackTrace(ULONG top_frames_to_skip)
 	// get stack start address
 	ULONG_PTR stack_start = 0;
 	IWorker *worker = IWorker::Self();
-	if (NULL == worker)
+	if (nullptr == worker)
 	{
 		// no worker in stack, return immediately
 		return;

@@ -38,8 +38,8 @@ CDXLPhysicalRowTrigger::CDXLPhysicalRowTrigger(CMemoryPool *mp, IMDId *rel_mdid,
 {
 	GPOS_ASSERT(rel_mdid->IsValid());
 	GPOS_ASSERT(0 != type);
-	GPOS_ASSERT(NULL != colids_new || NULL != colids_old);
-	GPOS_ASSERT_IMP(NULL != colids_new && NULL != colids_old,
+	GPOS_ASSERT(nullptr != colids_new || nullptr != colids_old);
+	GPOS_ASSERT_IMP(nullptr != colids_new && nullptr != colids_old,
 					colids_new->Size() == colids_old->Size());
 }
 
@@ -106,7 +106,7 @@ CDXLPhysicalRowTrigger::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenMDType),
 								 m_type);
 
-	if (NULL != m_colids_old)
+	if (nullptr != m_colids_old)
 	{
 		CWStringDynamic *pstrColsOld = CDXLUtils::Serialize(m_mp, m_colids_old);
 		xml_serializer->AddAttribute(
@@ -114,7 +114,7 @@ CDXLPhysicalRowTrigger::SerializeToDXL(CXMLSerializer *xml_serializer,
 		GPOS_DELETE(pstrColsOld);
 	}
 
-	if (NULL != m_colids_new)
+	if (nullptr != m_colids_new)
 	{
 		CWStringDynamic *pstrColsNew = CDXLUtils::Serialize(m_mp, m_colids_new);
 		xml_serializer->AddAttribute(

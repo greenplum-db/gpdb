@@ -60,7 +60,7 @@ public:
 	static CDXLLogicalGet *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalGet == dxl_op->GetDXLOperator() ||
 					EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
 

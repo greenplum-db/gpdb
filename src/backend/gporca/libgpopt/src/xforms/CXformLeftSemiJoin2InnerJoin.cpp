@@ -74,8 +74,8 @@ CXformLeftSemiJoin2InnerJoin::Exfp(CExpressionHandle &exprhdl) const
 	CAutoMemoryPool amp;
 
 	// examine join predicate to determine xform applicability
-	if (NULL == pexprScalar || !CPredicateUtils::FSimpleEqualityUsingCols(
-								   amp.Pmp(), pexprScalar, pcrsInnerOutput))
+	if (nullptr == pexprScalar || !CPredicateUtils::FSimpleEqualityUsingCols(
+									  amp.Pmp(), pexprScalar, pcrsInnerOutput))
 	{
 		return ExfpNone;
 	}
@@ -97,7 +97,7 @@ CXformLeftSemiJoin2InnerJoin::Transform(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -122,8 +122,8 @@ CXformLeftSemiJoin2InnerJoin::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(0 < pcrsGb->Size());
 
 	CKeyCollection *pkc = pexprInner->DeriveKeyCollection();
-	if (NULL == pkc ||
-		(NULL != pkc && !pkc->FKey(pcrsGb, false /*fExactMatch*/)))
+	if (nullptr == pkc ||
+		(nullptr != pkc && !pkc->FKey(pcrsGb, false /*fExactMatch*/)))
 	{
 		// grouping columns do not cover a key on the inner side,
 		// we need to create a group by on inner side

@@ -34,12 +34,12 @@ BOOL
 CPhysicalMotion::FValidContext(CMemoryPool *, COptimizationContext *poc,
 							   COptimizationContextArray *pdrgpocChild) const
 {
-	GPOS_ASSERT(NULL != pdrgpocChild);
+	GPOS_ASSERT(nullptr != pdrgpocChild);
 	GPOS_ASSERT(1 == pdrgpocChild->Size());
 
 	COptimizationContext *pocChild = (*pdrgpocChild)[0];
 	CCostContext *pccBest = pocChild->PccBest();
-	GPOS_ASSERT(NULL != pccBest);
+	GPOS_ASSERT(nullptr != pccBest);
 
 	CDrvdPropPlan *pdpplanChild = pccBest->Pdpplan();
 	// GPDB_12_MERGE_FIXME: Check partition propagation spec
@@ -251,7 +251,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalMotion::EpetDistribution(CExpressionHandle &,	// exprhdl
 								  const CEnfdDistribution *ped) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	if (ped->FCompatible(Pds()))
 	{

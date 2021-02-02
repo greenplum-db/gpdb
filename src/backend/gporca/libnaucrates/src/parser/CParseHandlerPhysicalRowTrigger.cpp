@@ -35,7 +35,7 @@ CParseHandlerPhysicalRowTrigger::CParseHandlerPhysicalRowTrigger(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -74,8 +74,8 @@ CParseHandlerPhysicalRowTrigger::StartElement(
 
 	const XMLCh *xmlszOldColIds =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenOldCols));
-	ULongPtrArray *colids_old = NULL;
-	if (NULL != xmlszOldColIds)
+	ULongPtrArray *colids_old = nullptr;
+	if (nullptr != xmlszOldColIds)
 	{
 		colids_old = CDXLOperatorFactory::ExtractIntsToUlongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszOldColIds,
@@ -84,8 +84,8 @@ CParseHandlerPhysicalRowTrigger::StartElement(
 
 	const XMLCh *xmlszNewColIds =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenNewCols));
-	ULongPtrArray *colids_new = NULL;
-	if (NULL != xmlszNewColIds)
+	ULongPtrArray *colids_new = nullptr;
+	if (nullptr != xmlszNewColIds)
 	{
 		colids_new = CDXLOperatorFactory::ExtractIntsToUlongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszNewColIds,
@@ -159,12 +159,12 @@ CParseHandlerPhysicalRowTrigger::EndElement(
 
 	CParseHandlerProjList *proj_list_parse_handler =
 		dynamic_cast<CParseHandlerProjList *>((*this)[1]);
-	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != proj_list_parse_handler->CreateDXLNode());
 	AddChildFromParseHandler(proj_list_parse_handler);
 
 	CParseHandlerPhysicalOp *child_parse_handler =
 		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[2]);
-	GPOS_ASSERT(NULL != child_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != child_parse_handler->CreateDXLNode());
 	AddChildFromParseHandler(child_parse_handler);
 
 #ifdef GPOS_DEBUG

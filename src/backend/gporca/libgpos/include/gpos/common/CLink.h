@@ -24,7 +24,7 @@ public:
 	void *m_prev;
 
 	// ctor
-	SLink() : m_next(NULL), m_prev(NULL)
+	SLink() : m_next(nullptr), m_prev(nullptr)
 	{
 	}
 };

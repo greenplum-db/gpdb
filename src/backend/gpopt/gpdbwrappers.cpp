@@ -303,7 +303,7 @@ gpdb::PointerFromDatum(Datum d)
 		return DatumGetPointer(d);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 float4
@@ -358,7 +358,7 @@ gpdb::BmsAddMember(Bitmapset *a, int x)
 		return bms_add_member(a, x);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void *
@@ -369,7 +369,7 @@ gpdb::CopyObject(void *from)
 		return copyObjectImpl(from);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Size
@@ -391,7 +391,7 @@ gpdb::MutateExpressionTree(Node *node, Node *(*mutator)(), void *context)
 		return expression_tree_mutator(node, mutator, context);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 bool
@@ -673,7 +673,7 @@ gpdb::FlattenJoinAliasVar(Query *query, gpos::ULONG query_level)
 	}
 	GP_WRAP_END;
 
-	return NULL;
+	return nullptr;
 }
 
 bool
@@ -745,7 +745,7 @@ gpdb::GetAttStats(Oid relid, AttrNumber attnum)
 		return get_att_stats(relid, attnum);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Oid
@@ -781,7 +781,7 @@ gpdb::GetCheckConstraintName(Oid check_constraint_oid)
 		return get_check_constraint_name(check_constraint_oid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Oid
@@ -805,7 +805,7 @@ gpdb::PnodeCheckConstraint(Oid check_constraint_oid)
 		return get_check_constraint_expr_tree(check_constraint_oid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 List *
@@ -817,7 +817,7 @@ gpdb::GetCheckConstraintOids(Oid rel_oid)
 		return get_check_constraint_oids(rel_oid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Node *
@@ -833,7 +833,7 @@ gpdb::GetRelationPartConstraints(Relation rel)
 		}
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 #if 0
@@ -930,8 +930,8 @@ gpdb::GetEqualityOp(Oid type_oid)
 		/* catalog tables: pg_type */
 		Oid eq_opr;
 
-		get_sort_group_operators(type_oid, false, true, false, NULL, &eq_opr,
-								 NULL, NULL);
+		get_sort_group_operators(type_oid, false, true, false, nullptr, &eq_opr,
+								 nullptr, nullptr);
 
 		return eq_opr;
 	}
@@ -972,7 +972,7 @@ gpdb::GetFuncName(Oid funcid)
 		return get_func_name(funcid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 List *
@@ -1056,7 +1056,7 @@ gpdb::GetOpName(Oid opno)
 		return get_opname(opno);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 #if 0
 List *
@@ -1144,7 +1144,7 @@ gpdb::GetTypeName(Oid typid)
 		return get_type_name(typid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 int
@@ -1163,7 +1163,7 @@ gpdb::HeapAttIsNull(HeapTuple tup, int attno)
 {
 	GP_WRAP_START;
 	{
-		return heap_attisnull(tup, attno, NULL);
+		return heap_attisnull(tup, attno, nullptr);
 	}
 	GP_WRAP_END;
 	return false;
@@ -1369,7 +1369,7 @@ gpdb::ListHead(List *l)
 		return list_head(l);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 ListCell *
@@ -1380,7 +1380,7 @@ gpdb::ListTail(List *l)
 		return list_tail(l);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 uint32
@@ -1402,7 +1402,7 @@ gpdb::ListNth(List *list, int n)
 		return list_nth(list, n);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 int
@@ -1499,7 +1499,7 @@ gpdb::LookupTypeCache(Oid type_id, int flags)
 		return lookup_type_cache(type_id, flags);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Value *
@@ -1510,7 +1510,7 @@ gpdb::MakeStringValue(char *str)
 		return makeString(str);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Value *
@@ -1521,7 +1521,7 @@ gpdb::MakeIntegerValue(long i)
 		return makeInteger(i);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Node *
@@ -1543,7 +1543,7 @@ gpdb::MakeBoolConst(bool value, bool isnull)
 		return makeBoolConst(value, isnull);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Node *
@@ -1554,7 +1554,7 @@ gpdb::MakeNULLConst(Oid type_oid)
 		return (Node *) makeNullConst(type_oid, -1 /*consttypmod*/, InvalidOid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Node *
@@ -1575,7 +1575,7 @@ gpdb::MakeTargetEntry(Expr *expr, AttrNumber resno, char *resname, bool resjunk)
 		return makeTargetEntry(expr, resno, resname, resjunk);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Var *
@@ -1590,7 +1590,7 @@ gpdb::MakeVar(Index varno, AttrNumber varattno, Oid vartype, int32 vartypmod,
 					   varlevelsup);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void *
@@ -1601,7 +1601,7 @@ gpdb::MemCtxtAllocZeroAligned(MemoryContext context, Size size)
 		return MemoryContextAllocZeroAligned(context, size);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void *
@@ -1612,7 +1612,7 @@ gpdb::MemCtxtAllocZero(MemoryContext context, Size size)
 		return MemoryContextAllocZero(context, size);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void *
@@ -1623,7 +1623,7 @@ gpdb::MemCtxtRealloc(void *pointer, Size size)
 		return repalloc(pointer, size);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 char *
@@ -1634,7 +1634,7 @@ gpdb::MemCtxtStrdup(MemoryContext context, const char *string)
 		return MemoryContextStrdup(context, string);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 // Helper function to throw an error with errcode, message and hint, like you
@@ -1672,7 +1672,7 @@ gpdb::NodeToString(void *obj)
 		return nodeToString(obj);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Node *
@@ -1683,7 +1683,7 @@ gpdb::StringToNode(char *string)
 		return (Node *) stringToNode(string);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1696,7 +1696,7 @@ gpdb::GetTypeDefault(Oid typid)
 		return get_typdefault(typid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1829,7 +1829,7 @@ gpdb::GPDBAlloc(Size size)
 		return palloc(size);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void
@@ -1864,7 +1864,7 @@ gpdb::MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(), void *context,
 		return query_or_expression_tree_mutator(node, mutator, context, flags);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Query *
@@ -1876,7 +1876,7 @@ gpdb::MutateQueryTree(Query *query, Node *(*mutator)(), void *context,
 		return query_tree_mutator(query, mutator, context, flags);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 #if 0
@@ -1950,7 +1950,7 @@ gpdb::GetDistributionPolicy(Relation rel)
 		return relation_policy(rel);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 #if 0
@@ -2082,7 +2082,7 @@ gpdb::GetExternalTableEntry(Oid rel_oid)
 		return GetExtTableEntry(rel_oid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 
@@ -2096,7 +2096,7 @@ gpdb::CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
 												targetlist);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 // GPDB_12_MERGE_FIXME: Change signature to take in Expr instead of Node
@@ -2108,7 +2108,7 @@ gpdb::FindFirstMatchingMemberInTargetList(Node *node, List *targetlist)
 		return tlist_member((Expr *) node, targetlist);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 List *
@@ -2194,7 +2194,7 @@ gpdb::ParseExternalTableUri(const char *uri)
 		return ParseExternalTableUri(uri);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 CdbComponentDatabases *
@@ -2206,7 +2206,7 @@ gpdb::GetComponentDatabases(void)
 		return cdbcomponent_getCdbComponents();
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 int
@@ -2228,7 +2228,7 @@ gpdb::ConstructRandomSegMap(int total_primaries, int total_to_skip)
 		return makeRandomSegMap(total_primaries, total_to_skip);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 StringInfo
@@ -2239,7 +2239,7 @@ gpdb::MakeStringInfo(void)
 		return makeStringInfo();
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void
@@ -2285,7 +2285,7 @@ gpdb::CoerceToCommonType(ParseState *pstate, Node *node, Oid target_type,
 		return coerce_to_common_type(pstate, node, target_type, context);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 bool
@@ -2451,7 +2451,7 @@ gpdb::EvaluateExpr(Expr *expr, Oid result_type, int32 typmod)
 		return evaluate_expr(expr, result_type, typmod, InvalidOid);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 // interpret the value of "With oids" option from a list of defelems
@@ -2475,7 +2475,7 @@ gpdb::DefGetString(DefElem *defelem)
 		return defGetString(defelem);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Expr *
@@ -2486,7 +2486,7 @@ gpdb::TransformArrayConstToArrayExpr(Const *c)
 		return transform_array_Const_to_ArrayExpr(c);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 Node *
@@ -2494,10 +2494,10 @@ gpdb::EvalConstExpressions(Node *node)
 {
 	GP_WRAP_START;
 	{
-		return eval_const_expressions(NULL, node);
+		return eval_const_expressions(nullptr, node);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 #if 0
 SelectedParts *
@@ -2770,7 +2770,7 @@ gpdb::GPDBMemoryContextAlloc(MemoryContext context, Size size)
 		return MemoryContextAlloc(context, size);
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 void
@@ -2802,7 +2802,7 @@ gpdb::GPDBAllocSetContextCreate()
 		return cxt;
 	}
 	GP_WRAP_END;
-	return NULL;
+	return nullptr;
 }
 
 bool

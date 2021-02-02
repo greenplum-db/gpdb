@@ -33,8 +33,8 @@ CDXLPhysicalWindow::CDXLPhysicalWindow(CMemoryPool *mp,
 	  m_part_by_colid_array(part_by_colid_array),
 	  m_dxl_window_key_array(window_key_array)
 {
-	GPOS_ASSERT(NULL != m_part_by_colid_array);
-	GPOS_ASSERT(NULL != m_dxl_window_key_array);
+	GPOS_ASSERT(nullptr != m_part_by_colid_array);
+	GPOS_ASSERT(nullptr != m_dxl_window_key_array);
 }
 
 //---------------------------------------------------------------------------
@@ -187,8 +187,8 @@ CDXLPhysicalWindow::AssertValid(const CDXLNode *dxlnode,
 {
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(dxlnode, validate_children);
-	GPOS_ASSERT(NULL != m_part_by_colid_array);
-	GPOS_ASSERT(NULL != m_dxl_window_key_array);
+	GPOS_ASSERT(nullptr != m_part_by_colid_array);
+	GPOS_ASSERT(nullptr != m_dxl_window_key_array);
 	GPOS_ASSERT(EdxlwindowIndexSentinel == dxlnode->Arity());
 	CDXLNode *child_dxlnode = (*dxlnode)[EdxlwindowIndexChild];
 	if (validate_children)

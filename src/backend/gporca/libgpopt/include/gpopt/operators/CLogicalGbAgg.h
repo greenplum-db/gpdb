@@ -241,7 +241,7 @@ public:
 	static CLogicalGbAgg *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalGbAgg == pop->Eopid() ||
 					EopLogicalGbAggDeduplicate == pop->Eopid());
 

@@ -103,7 +103,7 @@ public:
 	static CScalarArray *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarArray == pop->Eopid());
 
 		return reinterpret_cast<CScalarArray *>(pop);

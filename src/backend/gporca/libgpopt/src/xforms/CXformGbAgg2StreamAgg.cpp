@@ -91,7 +91,7 @@ void
 CXformGbAgg2StreamAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 	CLogicalGbAgg *popAgg = CLogicalGbAgg::PopConvert(pexpr->Pop());
@@ -108,7 +108,7 @@ CXformGbAgg2StreamAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pexprScalar->AddRef();
 
 	CColRefArray *pdrgpcrArgDQA = popAgg->PdrgpcrArgDQA();
-	if (pdrgpcrArgDQA != NULL && 0 != pdrgpcrArgDQA->Size())
+	if (pdrgpcrArgDQA != nullptr && 0 != pdrgpcrArgDQA->Size())
 	{
 		pdrgpcrArgDQA->AddRef();
 	}

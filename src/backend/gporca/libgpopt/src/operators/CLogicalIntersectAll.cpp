@@ -123,7 +123,7 @@ CLogicalIntersectAll::DeriveKeyCollection(CMemoryPool *,	   //mp,
 ) const
 {
 	// TODO: Add the keys from outer and inner child
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

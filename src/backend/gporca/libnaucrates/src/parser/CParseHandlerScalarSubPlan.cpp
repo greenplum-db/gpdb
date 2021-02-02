@@ -38,7 +38,7 @@ CParseHandlerScalarSubPlan::CParseHandlerScalarSubPlan(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_first_col(NULL),
+	  m_mdid_first_col(nullptr),
 	  m_dxl_subplan_type(EdxlSubPlanTypeSentinel)
 {
 }
@@ -54,7 +54,7 @@ CParseHandlerScalarSubPlan::CParseHandlerScalarSubPlan(
 EdxlSubPlanType
 CParseHandlerScalarSubPlan::GetDXLSubplanType(const XMLCh *xml_subplan_type)
 {
-	GPOS_ASSERT(NULL != xml_subplan_type);
+	GPOS_ASSERT(nullptr != xml_subplan_type);
 
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarSubPlanTypeScalar),
@@ -174,7 +174,7 @@ CParseHandlerScalarSubPlan::EndElement(const XMLCh *const,	// element_uri,
 	if (0 != XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarSubPlan),
 				 element_local_name) &&
-		NULL != m_dxl_node)
+		nullptr != m_dxl_node)
 	{
 		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
@@ -195,7 +195,7 @@ CParseHandlerScalarSubPlan::EndElement(const XMLCh *const,	// element_uri,
 
 	CDXLNode *dxl_subplan_test_expr =
 		parse_handler_subplan_test_expr->GetDXLTestExpr();
-	if (NULL != dxl_subplan_test_expr)
+	if (nullptr != dxl_subplan_test_expr)
 	{
 		dxl_subplan_test_expr->AddRef();
 	}

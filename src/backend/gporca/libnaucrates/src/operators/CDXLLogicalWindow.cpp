@@ -39,7 +39,7 @@ CDXLLogicalWindow::CDXLLogicalWindow(CMemoryPool *mp,
 									 CDXLWindowSpecArray *window_spec_array)
 	: CDXLLogical(mp), m_window_spec_array(window_spec_array)
 {
-	GPOS_ASSERT(NULL != m_window_spec_array);
+	GPOS_ASSERT(nullptr != m_window_spec_array);
 	GPOS_ASSERT(0 < m_window_spec_array->Size());
 }
 
@@ -178,7 +178,7 @@ CDXLLogicalWindow::AssertValid(const CDXLNode *node,
 					proj_elem->GetOperator()->GetDXLOperator());
 	}
 
-	GPOS_ASSERT(NULL != m_window_spec_array);
+	GPOS_ASSERT(nullptr != m_window_spec_array);
 	GPOS_ASSERT(0 < m_window_spec_array->Size());
 }
 

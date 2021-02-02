@@ -295,7 +295,7 @@ CPhysicalSpool::EpetOrder(CExpressionHandle &,	// exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// spool is order-preserving, sort enforcers have already been added
@@ -319,7 +319,7 @@ CPhysicalSpool::EpetDistribution(CExpressionHandle & /*exprhdl*/,
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// spool is distribution-preserving,
 	// distribution enforcers have already been added
@@ -349,12 +349,12 @@ BOOL
 CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 							  COptimizationContextArray *pdrgpocChild) const
 {
-	GPOS_ASSERT(NULL != pdrgpocChild);
+	GPOS_ASSERT(nullptr != pdrgpocChild);
 	GPOS_ASSERT(1 == pdrgpocChild->Size());
 
 	COptimizationContext *pocChild = (*pdrgpocChild)[0];
 	CCostContext *pccBest = pocChild->PccBest();
-	GPOS_ASSERT(NULL != pccBest);
+	GPOS_ASSERT(nullptr != pccBest);
 	CDrvdPropPlan *pdpplanChild = pccBest->Pdpplan();
 
 	// GPDB_12_MERGE_FIXME: Check part propagation spec

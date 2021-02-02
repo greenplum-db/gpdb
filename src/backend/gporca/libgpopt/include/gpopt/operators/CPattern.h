@@ -73,7 +73,7 @@ public:
 	static CPattern *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FPattern());
 
 		return reinterpret_cast<CPattern *>(pop);

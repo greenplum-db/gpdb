@@ -90,7 +90,7 @@ public:
 	static CDistributionSpecNonSingleton *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtNonSingleton == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecNonSingleton *>(pds);
@@ -100,7 +100,7 @@ public:
 	static const CDistributionSpecNonSingleton *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtNonSingleton == pds->Edt());
 
 		return dynamic_cast<const CDistributionSpecNonSingleton *>(pds);

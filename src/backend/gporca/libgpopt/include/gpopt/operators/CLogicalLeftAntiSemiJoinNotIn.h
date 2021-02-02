@@ -74,7 +74,7 @@ public:
 	static CLogicalLeftAntiSemiJoinNotIn *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalLeftAntiSemiJoinNotIn == pop->Eopid());
 
 		return dynamic_cast<CLogicalLeftAntiSemiJoinNotIn *>(pop);

@@ -32,7 +32,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CGroupProxy::CGroupProxy(CGroup *pgroup) : m_pgroup(pgroup)
 {
-	GPOS_ASSERT(NULL != pgroup);
+	GPOS_ASSERT(nullptr != pgroup);
 }
 
 
@@ -130,7 +130,7 @@ CGroupProxy::InitStats(IStatistics *stats)
 CGroupExpression *
 CGroupProxy::PgexprNext(CGroupExpression *pgexpr)
 {
-	GPOS_ASSERT(NULL != pgexpr);
+	GPOS_ASSERT(nullptr != pgexpr);
 	return m_pgroup->PgexprNext(pgexpr);
 }
 
@@ -164,7 +164,7 @@ CGroupExpression *
 CGroupProxy::PgexprSkip(CGroupExpression *pgexprStart, BOOL fSkipLogical)
 {
 	CGroupExpression *pgexpr = pgexprStart;
-	while (NULL != pgexpr && fSkipLogical == pgexpr->Pop()->FLogical())
+	while (nullptr != pgexpr && fSkipLogical == pgexpr->Pop()->FLogical())
 	{
 		pgexpr = PgexprNext(pgexpr);
 	}
@@ -185,7 +185,7 @@ CGroupProxy::PgexprSkip(CGroupExpression *pgexprStart, BOOL fSkipLogical)
 CGroupExpression *
 CGroupProxy::PgexprSkipLogical(CGroupExpression *pgexpr)
 {
-	if (NULL == pgexpr)
+	if (nullptr == pgexpr)
 	{
 		return PgexprSkip(PgexprFirst(), true /*fSkipLogical*/);
 	}
@@ -208,7 +208,7 @@ CGroupProxy::PgexprNextLogical(CGroupExpression *pgexpr)
 {
 	GPOS_ASSERT(!m_pgroup->FScalar());
 
-	if (NULL == pgexpr)
+	if (nullptr == pgexpr)
 	{
 		return PgexprSkip(PgexprFirst(), false /*fSkipLogical*/);
 	}

@@ -39,7 +39,7 @@ CParseHandlerStatsDerivedColumn::CParseHandlerStatsDerivedColumn(
 	  m_null_freq(0.0),
 	  m_distinct_remaining(0.0),
 	  m_freq_remaining(0.0),
-	  m_dxl_stats_derived_col(NULL)
+	  m_dxl_stats_derived_col(nullptr)
 {
 }
 
@@ -88,7 +88,7 @@ CParseHandlerStatsDerivedColumn::StartElement(
 
 		const XMLCh *parsed_null_freq =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNullFreq));
-		if (NULL != parsed_null_freq)
+		if (nullptr != parsed_null_freq)
 		{
 			m_null_freq = CDXLOperatorFactory::ConvertAttrValueToDouble(
 				m_parse_handler_mgr->GetDXLMemoryManager(), parsed_null_freq,
@@ -97,7 +97,7 @@ CParseHandlerStatsDerivedColumn::StartElement(
 
 		const XMLCh *parsed_distinct_remaining =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNdvRemain));
-		if (NULL != parsed_distinct_remaining)
+		if (nullptr != parsed_distinct_remaining)
 		{
 			m_distinct_remaining =
 				CDXLOperatorFactory::ConvertAttrValueToDouble(
@@ -108,7 +108,7 @@ CParseHandlerStatsDerivedColumn::StartElement(
 
 		const XMLCh *parsed_freq_remaining =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColFreqRemain));
-		if (NULL != parsed_freq_remaining)
+		if (nullptr != parsed_freq_remaining)
 		{
 			m_freq_remaining = CDXLOperatorFactory::ConvertAttrValueToDouble(
 				m_parse_handler_mgr->GetDXLMemoryManager(),

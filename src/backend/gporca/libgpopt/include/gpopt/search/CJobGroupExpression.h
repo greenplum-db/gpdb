@@ -47,7 +47,7 @@ protected:
 	CGroupExpression *m_pgexpr;
 
 	// ctor
-	CJobGroupExpression() : m_pgexpr(NULL)
+	CJobGroupExpression() : m_pgexpr(nullptr)
 	{
 	}
 

@@ -34,7 +34,7 @@ CDXLStatsDerivedRelation::CDXLStatsDerivedRelation(
 	  m_empty(is_empty),
 	  m_dxl_stats_derived_col_array(dxl_stats_derived_col_array)
 {
-	GPOS_ASSERT(NULL != dxl_stats_derived_col_array);
+	GPOS_ASSERT(nullptr != dxl_stats_derived_col_array);
 }
 
 //---------------------------------------------------------------------------

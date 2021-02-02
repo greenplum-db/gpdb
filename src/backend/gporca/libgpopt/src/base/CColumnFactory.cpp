@@ -36,7 +36,7 @@ using namespace gpmd;
 //		ctor
 //
 //---------------------------------------------------------------------------
-CColumnFactory::CColumnFactory() : m_mp(NULL), m_phmcrcrs(NULL), m_aul(0)
+CColumnFactory::CColumnFactory() : m_mp(nullptr), m_phmcrcrs(nullptr), m_aul(0)
 {
 	CAutoMemoryPool amp;
 	m_mp = amp.Pmp();
@@ -149,7 +149,7 @@ CColumnFactory::PcrCreate(const IMDType *pmdtype, INT type_modifier, ULONG id,
 	CAutoP<CColRef> a_pcr(colref);
 
 	// ensure uniqueness
-	GPOS_ASSERT(NULL == LookupColRef(id));
+	GPOS_ASSERT(nullptr == LookupColRef(id));
 	m_sht.Insert(colref);
 	colref->MarkAsUsed();
 
@@ -181,7 +181,7 @@ CColumnFactory::PcrCreate(const CColumnDescriptor *pcoldesc, ULONG id,
 	CAutoP<CColRef> a_pcr(colref);
 
 	// ensure uniqueness
-	GPOS_ASSERT(NULL == LookupColRef(id));
+	GPOS_ASSERT(nullptr == LookupColRef(id));
 	m_sht.Insert(colref);
 	if (mark_as_used)
 	{
@@ -222,7 +222,7 @@ CColumnFactory::PcrCreate(const IMDType *pmdtype, INT type_modifier,
 	CAutoP<CColRef> a_pcr(colref);
 
 	// ensure uniqueness
-	GPOS_ASSERT(NULL == LookupColRef(id));
+	GPOS_ASSERT(nullptr == LookupColRef(id));
 	m_sht.Insert(colref);
 	colref->MarkAsUsed();
 	colref->SetMdidTable(mdid_table);
@@ -306,7 +306,7 @@ CColumnFactory::LookupColRef(ULONG id)
 void
 CColumnFactory::Destroy(CColRef *colref)
 {
-	GPOS_ASSERT(NULL != colref);
+	GPOS_ASSERT(nullptr != colref);
 
 	ULONG id = colref->m_id;
 
@@ -336,8 +336,8 @@ CColumnFactory::Destroy(CColRef *colref)
 const CColRefSet *
 CColumnFactory::PcrsUsedInComputedCol(const CColRef *colref)
 {
-	GPOS_ASSERT(NULL != colref);
-	GPOS_ASSERT(NULL != m_phmcrcrs);
+	GPOS_ASSERT(nullptr != colref);
+	GPOS_ASSERT(nullptr != m_phmcrcrs);
 
 	// get its column reference set from the hash map
 	const CColRefSet *pcrs = m_phmcrcrs->Find(colref);
@@ -357,15 +357,15 @@ CColumnFactory::PcrsUsedInComputedCol(const CColRef *colref)
 void
 CColumnFactory::AddComputedToUsedColsMap(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
-	GPOS_ASSERT(NULL != m_phmcrcrs);
+	GPOS_ASSERT(nullptr != pexpr);
+	GPOS_ASSERT(nullptr != m_phmcrcrs);
 
 	const CScalarProjectElement *popScPrEl =
 		CScalarProjectElement::PopConvert(pexpr->Pop());
 	CColRef *pcrComputedCol = popScPrEl->Pcr();
 
 	CColRefSet *pcrsUsed = pexpr->DeriveUsedColumns();
-	if (NULL != pcrsUsed && 0 < pcrsUsed->Size())
+	if (nullptr != pcrsUsed && 0 < pcrsUsed->Size())
 	{
 		BOOL fres GPOS_ASSERTS_ONLY = m_phmcrcrs->Insert(
 			pcrComputedCol, GPOS_NEW(m_mp) CColRefSet(m_mp, *pcrsUsed));

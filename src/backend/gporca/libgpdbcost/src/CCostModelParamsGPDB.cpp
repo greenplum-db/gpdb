@@ -248,11 +248,11 @@ const CHAR rgszCostParamNames[CCostModelParamsGPDB::EcpSentinel]
 //---------------------------------------------------------------------------
 CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
-		m_rgpcp[ul] = NULL;
+		m_rgpcp[ul] = nullptr;
 	}
 
 	// populate param array with default param values
@@ -442,7 +442,7 @@ CCostModelParamsGPDB::~CCostModelParamsGPDB()
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
 		GPOS_DELETE(m_rgpcp[ul]);
-		m_rgpcp[ul] = NULL;
+		m_rgpcp[ul] = nullptr;
 	}
 }
 
@@ -478,7 +478,7 @@ CCostModelParamsGPDB::PcpLookup(ULONG id) const
 CCostModelParamsGPDB::SCostParam *
 CCostModelParamsGPDB::PcpLookup(const CHAR *szName) const
 {
-	GPOS_ASSERT(NULL != szName);
+	GPOS_ASSERT(nullptr != szName);
 
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
@@ -488,7 +488,7 @@ CCostModelParamsGPDB::PcpLookup(const CHAR *szName) const
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -508,7 +508,7 @@ CCostModelParamsGPDB::SetParam(ULONG id, CDouble dVal, CDouble dLowerBound,
 	GPOS_ASSERT(EcpSentinel > ecp);
 
 	GPOS_DELETE(m_rgpcp[ecp]);
-	m_rgpcp[ecp] = NULL;
+	m_rgpcp[ecp] = nullptr;
 	m_rgpcp[ecp] =
 		GPOS_NEW(m_mp) SCostParam(ecp, dVal, dLowerBound, dUpperBound);
 }
@@ -526,14 +526,14 @@ void
 CCostModelParamsGPDB::SetParam(const CHAR *szName, CDouble dVal,
 							   CDouble dLowerBound, CDouble dUpperBound)
 {
-	GPOS_ASSERT(NULL != szName);
+	GPOS_ASSERT(nullptr != szName);
 
 	for (ULONG ul = 0; ul < EcpSentinel; ul++)
 	{
 		if (0 == clib::Strcmp(szName, rgszCostParamNames[ul]))
 		{
 			GPOS_DELETE(m_rgpcp[ul]);
-			m_rgpcp[ul] = NULL;
+			m_rgpcp[ul] = nullptr;
 			m_rgpcp[ul] =
 				GPOS_NEW(m_mp) SCostParam(ul, dVal, dLowerBound, dUpperBound);
 
@@ -568,7 +568,7 @@ BOOL
 CCostModelParamsGPDB::Equals(ICostModelParams *pcm) const
 {
 	CCostModelParamsGPDB *pcmgOther = dynamic_cast<CCostModelParamsGPDB *>(pcm);
-	if (NULL == pcmgOther)
+	if (nullptr == pcmgOther)
 		return false;
 
 	for (ULONG ul = 0U; ul < GPOS_ARRAY_SIZE(m_rgpcp); ul++)

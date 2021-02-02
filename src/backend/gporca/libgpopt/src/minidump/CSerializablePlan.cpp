@@ -34,11 +34,11 @@ CSerializablePlan::CSerializablePlan(CMemoryPool *mp, const CDXLNode *pdxlnPlan,
 	: CSerializable(),
 	  m_mp(mp),
 	  m_plan_dxl_root(pdxlnPlan),
-	  m_pstrPlan(NULL),
+	  m_pstrPlan(nullptr),
 	  m_plan_id(plan_id),
 	  m_plan_space_size(plan_space_size)
 {
-	GPOS_ASSERT(NULL != pdxlnPlan);
+	GPOS_ASSERT(nullptr != pdxlnPlan);
 }
 
 

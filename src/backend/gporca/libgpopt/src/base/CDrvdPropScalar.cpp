@@ -30,13 +30,13 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CDrvdPropScalar::CDrvdPropScalar(CMemoryPool *mp)
 	: m_mp(mp),
-	  m_is_prop_derived(NULL),
-	  m_pcrsDefined(NULL),
-	  m_pcrsSetReturningFunction(NULL),
-	  m_pcrsUsed(NULL),
+	  m_is_prop_derived(nullptr),
+	  m_pcrsDefined(nullptr),
+	  m_pcrsSetReturningFunction(nullptr),
+	  m_pcrsUsed(nullptr),
 	  m_fHasSubquery(false),
-	  m_ppartinfo(NULL),
-	  m_pfp(NULL),
+	  m_ppartinfo(nullptr),
+	  m_pfp(nullptr),
 	  m_fHasNonScalarFunction(false),
 	  m_ulDistinctAggs(0),
 	  m_fHasMultipleDistinctAggs(false),
@@ -117,7 +117,7 @@ CDrvdPropScalar::Derive(CMemoryPool *, CExpressionHandle &exprhdl,
 CDrvdPropScalar *
 CDrvdPropScalar::GetDrvdScalarProps(CDrvdProp *pdp)
 {
-	GPOS_ASSERT(NULL != pdp);
+	GPOS_ASSERT(nullptr != pdp);
 	GPOS_ASSERT(EptScalar == pdp->Ept() &&
 				"This is not a scalar properties container");
 
@@ -136,8 +136,8 @@ CDrvdPropScalar::GetDrvdScalarProps(CDrvdProp *pdp)
 BOOL
 CDrvdPropScalar::FSatisfies(const CReqdPropPlan *prpp) const
 {
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != prpp->PcrsRequired());
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != prpp->PcrsRequired());
 
 	BOOL fSatisfies = m_pcrsDefined->ContainsAll(prpp->PcrsRequired());
 

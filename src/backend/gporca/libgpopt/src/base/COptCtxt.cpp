@@ -44,21 +44,21 @@ COptCtxt::COptCtxt(CMemoryPool *mp, CColumnFactory *col_factory,
 	  m_pceeval(pceeval),
 	  m_pcomp(GPOS_NEW(m_mp) CDefaultComparator(pceeval)),
 	  m_auPartId(m_ulFirstValidPartId),
-	  m_pcteinfo(NULL),
-	  m_pdrgpcrSystemCols(NULL),
+	  m_pcteinfo(nullptr),
+	  m_pdrgpcrSystemCols(nullptr),
 	  m_optimizer_config(optimizer_config),
 	  m_fDMLQuery(false),
 	  m_has_master_only_tables(false),
 	  m_has_volatile_or_SQL_func(false),
 	  m_has_replicated_tables(false)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != col_factory);
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != pceeval);
-	GPOS_ASSERT(NULL != m_pcomp);
-	GPOS_ASSERT(NULL != optimizer_config);
-	GPOS_ASSERT(NULL != optimizer_config->GetCostModel());
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != col_factory);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != pceeval);
+	GPOS_ASSERT(nullptr != m_pcomp);
+	GPOS_ASSERT(nullptr != optimizer_config);
+	GPOS_ASSERT(nullptr != optimizer_config->GetCostModel());
 
 	m_pcteinfo = GPOS_NEW(m_mp) CCTEInfo(m_mp);
 	m_cost_model = optimizer_config->GetCostModel();
@@ -100,13 +100,13 @@ COptCtxt::PoctxtCreate(CMemoryPool *mp, CMDAccessor *md_accessor,
 					   IConstExprEvaluator *pceeval,
 					   COptimizerConfig *optimizer_config)
 {
-	GPOS_ASSERT(NULL != optimizer_config);
+	GPOS_ASSERT(nullptr != optimizer_config);
 
 	// CONSIDER:  - 1/5/09; allocate column factory out of given mem pool
 	// instead of having it create its own;
 	CColumnFactory *col_factory = GPOS_NEW(mp) CColumnFactory;
 
-	COptCtxt *poctxt = NULL;
+	COptCtxt *poctxt = nullptr;
 	{
 		// safe handling of column factory; since it owns a pool that would be
 		// leaked if below allocation fails

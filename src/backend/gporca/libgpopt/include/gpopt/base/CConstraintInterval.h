@@ -244,7 +244,7 @@ public:
 	// create interval from any general constraint that references
 	// only one column
 	static CConstraintInterval *PciIntervalFromConstraint(
-		CMemoryPool *mp, CConstraint *pcnstr, CColRef *colref = NULL);
+		CMemoryPool *mp, CConstraint *pcnstr, CColRef *colref = nullptr);
 
 	// generate a ConstraintInterval from the given expression
 	static CConstraintInterval *PcnstrIntervalFromScalarArrayCmp(

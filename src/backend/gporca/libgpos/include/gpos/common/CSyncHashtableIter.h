@@ -72,10 +72,10 @@ private:
 			CSyncHashtableAccessByIter<T, K> acc(*this);
 
 			T *first = acc.First();
-			T *first_valid = NULL;
+			T *first_valid = nullptr;
 
-			if (NULL != first &&
-				(NULL != (first_valid = acc.FirstValid(first))))
+			if (nullptr != first &&
+				(nullptr != (first_valid = acc.FirstValid(first))))
 			{
 				// insert invalid element before the found element
 				acc.Prepend(m_invalid_elem, first_valid);
@@ -101,7 +101,7 @@ private:
 		m_invalid_elem_inserted = false;
 
 		// check that we did not find the last element in bucket
-		if (NULL != value && NULL != acc.Next(value))
+		if (nullptr != value && nullptr != acc.Next(value))
 		{
 			// insert invalid element after the found element
 			acc.Append(m_invalid_elem, value);
@@ -119,7 +119,7 @@ public:
 	explicit CSyncHashtableIter<T, K>(CSyncHashtable<T, K> &ht)
 		: m_ht(ht),
 		  m_bucket_idx(0),
-		  m_invalid_elem(NULL),
+		  m_invalid_elem(nullptr),
 		  m_invalid_elem_inserted(false)
 	{
 		m_invalid_elem = (T *) m_invalid_elem_data;

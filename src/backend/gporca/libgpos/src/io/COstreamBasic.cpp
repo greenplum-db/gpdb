@@ -27,7 +27,7 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 COstreamBasic::COstreamBasic(WOSTREAM *pos) : COstream(), m_ostream(pos)
 {
-	GPOS_ASSERT(NULL != m_ostream && "Output stream cannot be NULL");
+	GPOS_ASSERT(nullptr != m_ostream && "Output stream cannot be NULL");
 }
 
 //---------------------------------------------------------------------------

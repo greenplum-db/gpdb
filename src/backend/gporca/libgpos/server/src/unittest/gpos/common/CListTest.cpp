@@ -89,7 +89,7 @@ CListTest::EresUnittest_Basics()
 		// make sure it's still in the other list
 		GPOS_ASSERT(GPOS_OK == listBwd.Find(&rgelem[i]));
 	}
-	GPOS_ASSERT(NULL == listFwd.First());
+	GPOS_ASSERT(nullptr == listFwd.First());
 	GPOS_ASSERT(0 == listFwd.Size());
 
 	// insert all elements in reverse order,
@@ -105,8 +105,8 @@ CListTest::EresUnittest_Basics()
 	{
 		listFwd.Remove(&rgelem[(cSize / 2 + i) % cSize]);
 	}
-	GPOS_ASSERT(NULL == listFwd.First());
-	GPOS_ASSERT(NULL == listFwd.Last());
+	GPOS_ASSERT(nullptr == listFwd.First());
+	GPOS_ASSERT(nullptr == listFwd.Last());
 	GPOS_ASSERT(0 == listFwd.Size());
 
 	GPOS_DELETE_ARRAY(rgelem);
@@ -154,7 +154,7 @@ CListTest::EresUnittest_Navigate()
 		GPOS_ASSERT(pelem == &rgelem[i]);
 		pelem = listFwd.Next(pelem);
 	}
-	GPOS_ASSERT(NULL == pelem);
+	GPOS_ASSERT(nullptr == pelem);
 
 	// go to end of list -- then traverse backward
 	pelem = listFwd.First();
@@ -169,7 +169,7 @@ CListTest::EresUnittest_Navigate()
 		GPOS_ASSERT(pelem == &rgelem[i - 1]);
 		pelem = listFwd.Prev(pelem);
 	}
-	GPOS_ASSERT(NULL == pelem);
+	GPOS_ASSERT(nullptr == pelem);
 
 	GPOS_DELETE_ARRAY(rgelem);
 	return GPOS_OK;

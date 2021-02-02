@@ -146,7 +146,7 @@ public:
 	static CPhysicalComputeScalar *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalComputeScalar == pop->Eopid());
 
 		return dynamic_cast<CPhysicalComputeScalar *>(pop);

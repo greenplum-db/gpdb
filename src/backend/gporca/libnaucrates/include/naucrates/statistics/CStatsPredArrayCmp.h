@@ -76,7 +76,7 @@ public:
 	static CStatsPredArrayCmp *
 	ConvertPredStats(CStatsPred *pred_stats)
 	{
-		GPOS_ASSERT(NULL != pred_stats);
+		GPOS_ASSERT(nullptr != pred_stats);
 		GPOS_ASSERT(CStatsPred::EsptArrayCmp == pred_stats->GetPredStatsType());
 
 		return dynamic_cast<CStatsPredArrayCmp *>(pred_stats);

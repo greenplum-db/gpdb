@@ -109,7 +109,7 @@ public:
 	static CScalarNullIf *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarNullIf == pop->Eopid());
 
 		return reinterpret_cast<CScalarNullIf *>(pop);

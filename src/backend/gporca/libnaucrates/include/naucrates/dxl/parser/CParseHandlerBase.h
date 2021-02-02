@@ -82,7 +82,7 @@ protected:
 	inline void
 	Append(CParseHandlerBase *parse_handler_base)
 	{
-		GPOS_ASSERT(NULL != parse_handler_base);
+		GPOS_ASSERT(nullptr != parse_handler_base);
 		m_parse_handler_base_array->Append(parse_handler_base);
 	};
 

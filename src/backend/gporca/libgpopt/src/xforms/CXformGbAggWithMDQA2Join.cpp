@@ -92,7 +92,7 @@ CXformGbAggWithMDQA2Join::Exfp(CExpressionHandle &exprhdl) const
 CExpression *
 CXformGbAggWithMDQA2Join::PexprMDQAs2Join(CMemoryPool *mp, CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(COperator::EopLogicalGbAgg == pexpr->Pop()->Eopid());
 	GPOS_ASSERT((*pexpr)[1]->DeriveHasMultipleDistinctAggs());
 
@@ -121,7 +121,7 @@ CXformGbAggWithMDQA2Join::PexprMDQAs2Join(CMemoryPool *mp, CExpression *pexpr)
 
 	CExpression *pexprJoinDQAs =
 		CXformUtils::PexprGbAggOnCTEConsumer2Join(mp, pexprGbAggWithConsumer);
-	GPOS_ASSERT(NULL != pexprJoinDQAs);
+	GPOS_ASSERT(nullptr != pexprJoinDQAs);
 
 	pexprGbAggWithConsumer->Release();
 
@@ -143,7 +143,7 @@ CXformGbAggWithMDQA2Join::PexprMDQAs2Join(CMemoryPool *mp, CExpression *pexpr)
 CExpression *
 CXformGbAggWithMDQA2Join::PexprExpandMDQAs(CMemoryPool *mp, CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(COperator::EopLogicalGbAgg == pexpr->Pop()->Eopid());
 
 	COperator *pop = pexpr->Pop();
@@ -163,7 +163,7 @@ CXformGbAggWithMDQA2Join::PexprExpandMDQAs(CMemoryPool *mp, CExpression *pexpr)
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -180,14 +180,14 @@ CXformGbAggWithMDQA2Join::PexprTransform(CMemoryPool *mp, CExpression *pexpr)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	COperator *pop = pexpr->Pop();
 	if (COperator::EopLogicalGbAgg == pop->Eopid())
 	{
 		CExpression *pexprResult = PexprExpandMDQAs(mp, pexpr);
-		if (NULL != pexprResult)
+		if (nullptr != pexprResult)
 		{
 			return pexprResult;
 		}
@@ -221,15 +221,15 @@ CXformGbAggWithMDQA2Join::Transform(CXformContext *pxfctxt,
 									CXformResult *pxfres,
 									CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	CExpression *pexprResult = PexprTransform(mp, pexpr);
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		pxfres->Add(pexprResult);
 	}

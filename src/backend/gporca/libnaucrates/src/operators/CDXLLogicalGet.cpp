@@ -152,8 +152,8 @@ CDXLLogicalGet::AssertValid(const CDXLNode *,  //dxlnode
 ) const
 {
 	// assert validity of table descriptor
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

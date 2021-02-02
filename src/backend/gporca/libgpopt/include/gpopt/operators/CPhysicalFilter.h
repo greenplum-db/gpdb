@@ -146,7 +146,7 @@ public:
 	static CPhysicalFilter *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalFilter == pop->Eopid());
 
 		return reinterpret_cast<CPhysicalFilter *>(pop);

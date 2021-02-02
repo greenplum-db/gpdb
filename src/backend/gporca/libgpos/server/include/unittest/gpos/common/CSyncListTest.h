@@ -64,7 +64,7 @@ private:
 		}
 
 		// ctor
-		SArg() : m_plist(NULL), m_psp(NULL), m_ulCount(0)
+		SArg() : m_plist(nullptr), m_psp(nullptr), m_ulCount(0)
 		{
 		}
 	};

@@ -44,7 +44,7 @@ CFileWriter::CFileWriter() : CFileDescriptor(), m_file_size(0)
 void
 CFileWriter::Open(const CHAR *file_path, ULONG permission_bits)
 {
-	GPOS_ASSERT(NULL != file_path);
+	GPOS_ASSERT(nullptr != file_path);
 
 	OpenFile(file_path, O_CREAT | O_WRONLY | O_RDONLY | O_TRUNC,
 			 permission_bits);
@@ -86,7 +86,7 @@ CFileWriter::Write(const BYTE *read_buffer, const ULONG_PTR write_size)
 	GPOS_ASSERT(CFileDescriptor::IsFileOpen() &&
 				"Attempt to write to invalid file descriptor");
 	GPOS_ASSERT(0 < write_size);
-	GPOS_ASSERT(NULL != read_buffer);
+	GPOS_ASSERT(nullptr != read_buffer);
 
 	ULONG_PTR bytes_left_to_write = write_size;
 

@@ -81,7 +81,7 @@ CStatisticsTest::EresUnittest()
 						pmdp);
 
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+		CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 						 CTestUtils::GetCostModel(mp));
 
 		eres = CUnittest::EresExecute(rgutSharedOptCtxt,
@@ -125,13 +125,13 @@ CStatisticsTest::EresUnittest_UnionAll()
 
 		// parse the input statistics objects
 		CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, nullptr);
 		CStatisticsArray *pdrgpstatBefore =
 			CDXLUtils::ParseDXLToOptimizerStatisticObjArray(
 				mp, md_accessor, dxl_derived_rel_stats_array);
 		dxl_derived_rel_stats_array->Release();
 
-		GPOS_ASSERT(NULL != pdrgpstatBefore);
+		GPOS_ASSERT(nullptr != pdrgpstatBefore);
 		GPOS_ASSERT(2 == pdrgpstatBefore->Size());
 		CStatistics *pstats1 = (*pdrgpstatBefore)[0];
 		CStatistics *pstats2 = (*pdrgpstatBefore)[1];
@@ -147,7 +147,7 @@ CStatisticsTest::EresUnittest_UnionAll()
 				mp, pstats1, pstats2, pdrgpulColIdOutput, pdrgpulColIdInput1,
 				pdrgpulColIdInput2);
 
-		GPOS_ASSERT(NULL != pstatsOutput);
+		GPOS_ASSERT(nullptr != pstatsOutput);
 
 		CStatisticsArray *pdrgpstatOutput = GPOS_NEW(mp) CStatisticsArray(mp);
 		pdrgpstatOutput->Append(pstatsOutput);
@@ -208,7 +208,7 @@ CStatisticsTest::EresUnittest_GbAggWithRepeatedGbCols()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	CExpression *pexpr = CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(mp);
@@ -246,9 +246,9 @@ CStatisticsTest::EresUnittest_GbAggWithRepeatedGbCols()
 	// derive stats on different GbAgg expressions
 	CReqdPropRelational *prprel =
 		GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
-	(void) pexprGbAgg1->PstatsDerive(prprel, NULL /* stats_ctxt */);
-	(void) pexprGbAgg2->PstatsDerive(prprel, NULL /* stats_ctxt */);
-	(void) pexprGbAgg3->PstatsDerive(prprel, NULL /* stats_ctxt */);
+	(void) pexprGbAgg1->PstatsDerive(prprel, nullptr /* stats_ctxt */);
+	(void) pexprGbAgg2->PstatsDerive(prprel, nullptr /* stats_ctxt */);
+	(void) pexprGbAgg3->PstatsDerive(prprel, nullptr /* stats_ctxt */);
 
 	BOOL fRows1EqualRows2 =
 		(pexprGbAgg1->Pstats()->Rows() == pexprGbAgg2->Pstats()->Rows());
@@ -390,29 +390,29 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 	CExpression *pexprGet =
 		CTestUtils::PexprLogicalGet(mp, ptabdesc, &strRelAlias);
 
-	if (NULL == col_factory->LookupColRef(1 /*id*/))
+	if (nullptr == col_factory->LookupColRef(1 /*id*/))
 	{
 		// create column references for grouping columns
 		(void) col_factory->PcrCreate(
-			pmdtypeint4, default_type_modifier, NULL, 0 /* attno */,
+			pmdtypeint4, default_type_modifier, nullptr, 0 /* attno */,
 			false /*IsNullable*/, 1 /* id */, CName(&strColA),
 			pexprGet->Pop()->UlOpId(), false /*IsDistCol*/
 		);
 	}
 
-	if (NULL == col_factory->LookupColRef(2 /*id*/))
+	if (nullptr == col_factory->LookupColRef(2 /*id*/))
 	{
 		(void) col_factory->PcrCreate(
-			pmdtypeint4, default_type_modifier, NULL, 1 /* attno */,
+			pmdtypeint4, default_type_modifier, nullptr, 1 /* attno */,
 			false /*IsNullable*/, 2 /* id */, CName(&strColB),
 			pexprGet->Pop()->UlOpId(), false /*IsDistCol*/
 		);
 	}
 
-	if (NULL == col_factory->LookupColRef(10 /*id*/))
+	if (nullptr == col_factory->LookupColRef(10 /*id*/))
 	{
 		(void) col_factory->PcrCreate(
-			pmdtypeint4, default_type_modifier, NULL, 2 /* attno */,
+			pmdtypeint4, default_type_modifier, nullptr, 2 /* attno */,
 			false /*IsNullable*/, 10 /* id */, CName(&strColC),
 			pexprGet->Pop()->UlOpId(), false /*IsDistCol*/
 		);
@@ -499,7 +499,7 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 
 	ULongPtrArray *aggs = GPOS_NEW(mp) ULongPtrArray(mp);
 	CStatistics *pstats4 = CGroupByStatsProcessor::CalcGroupByStats(
-		mp, stats, GCs, aggs, NULL /*keys*/);
+		mp, stats, GCs, aggs, nullptr /*keys*/);
 
 	GPOS_TRACE(GPOS_WSZ_LIT("pstats4 = stats group by"));
 	CCardinalityTestUtils::PrintStats(mp, pstats4);

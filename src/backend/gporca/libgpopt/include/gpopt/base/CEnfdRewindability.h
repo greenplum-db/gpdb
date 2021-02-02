@@ -99,7 +99,7 @@ public:
 	BOOL
 	Matches(CEnfdRewindability *per)
 	{
-		GPOS_ASSERT(NULL != per);
+		GPOS_ASSERT(nullptr != per);
 
 		return m_erm == per->Erm() && m_prs->Matches(per->PrsRequired());
 	}

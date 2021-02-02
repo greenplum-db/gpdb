@@ -37,7 +37,7 @@ CParseHandlerPlan::CParseHandlerPlan(CMemoryPool *mp,
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_plan_id(0),
 	  m_plan_space_size(0),
-	  m_dxl_node(NULL)
+	  m_dxl_node(nullptr)
 {
 }
 
@@ -139,7 +139,7 @@ CParseHandlerPlan::StartElement(const XMLCh *const element_uri,
 		EdxltokenPlanSpaceSize, EdxltokenPlan);
 
 	// create a parse handler for physical nodes and activate it
-	GPOS_ASSERT(NULL != m_mp);
+	GPOS_ASSERT(nullptr != m_mp);
 	CParseHandlerBase *base_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
 			m_mp, CDXLTokens::XmlstrToken(EdxltokenPhysical),
@@ -176,7 +176,7 @@ CParseHandlerPlan::EndElement(const XMLCh *const,  // element_uri,
 	CParseHandlerPhysicalOp *operator_parse_handler =
 		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[0]);
 
-	GPOS_ASSERT(NULL != operator_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != operator_parse_handler->CreateDXLNode());
 
 	// store constructed child
 	m_dxl_node = operator_parse_handler->CreateDXLNode();
@@ -188,7 +188,7 @@ CParseHandlerPlan::EndElement(const XMLCh *const,  // element_uri,
 			dynamic_cast<CParseHandlerDirectDispatchInfo *>((*this)[1]);
 		CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
 			direct_dispatch_info_parse_handler->GetDXLDirectDispatchInfo();
-		GPOS_ASSERT(NULL != dxl_direct_dispatch_info);
+		GPOS_ASSERT(nullptr != dxl_direct_dispatch_info);
 
 		dxl_direct_dispatch_info->AddRef();
 		m_dxl_node->SetDirectDispatchInfo(dxl_direct_dispatch_info);

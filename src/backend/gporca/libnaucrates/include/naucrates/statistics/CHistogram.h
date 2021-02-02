@@ -315,7 +315,7 @@ public:
 	ULONG
 	GetNumBuckets() const
 	{
-		GPOS_ASSERT(m_histogram_buckets != NULL);
+		GPOS_ASSERT(m_histogram_buckets != nullptr);
 		return m_histogram_buckets->Size();
 	}
 

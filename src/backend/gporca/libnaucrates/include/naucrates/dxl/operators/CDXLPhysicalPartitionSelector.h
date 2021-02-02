@@ -102,7 +102,7 @@ public:
 	static CDXLPhysicalPartitionSelector *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalPartitionSelector ==
 					dxl_op->GetDXLOperator());
 

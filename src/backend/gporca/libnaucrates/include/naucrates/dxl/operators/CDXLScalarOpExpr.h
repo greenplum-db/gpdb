@@ -73,7 +73,7 @@ public:
 	static CDXLScalarOpExpr *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarOpExpr == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarOpExpr *>(dxl_op);

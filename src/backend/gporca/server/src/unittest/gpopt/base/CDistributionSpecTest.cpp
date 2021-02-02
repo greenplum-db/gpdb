@@ -117,7 +117,8 @@ CDistributionSpecTest::EresUnittest_Random()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /*pceeval*/, CTestUtils::GetCostModel(mp));
+	CAutoOptCtxt aoc(mp, &mda, nullptr /*pceeval*/,
+					 CTestUtils::GetCostModel(mp));
 	COptCtxt *poptctxt = COptCtxt::PoctxtFromTLS();
 
 	// basic tests with random distribution
@@ -183,7 +184,8 @@ CDistributionSpecTest::EresUnittest_Replicated()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /*pceeval*/, CTestUtils::GetCostModel(mp));
+	CAutoOptCtxt aoc(mp, &mda, nullptr /*pceeval*/,
+					 CTestUtils::GetCostModel(mp));
 
 	// basic tests with replicated distributions
 	CDistributionSpecReplicated *pdsreplicated = GPOS_NEW(mp)
@@ -236,7 +238,8 @@ CDistributionSpecTest::EresUnittest_Singleton()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /*pceeval*/, CTestUtils::GetCostModel(mp));
+	CAutoOptCtxt aoc(mp, &mda, nullptr /*pceeval*/,
+					 CTestUtils::GetCostModel(mp));
 
 	// basic tests with singleton distributions
 	CDistributionSpecSingleton *pdssSegment = GPOS_NEW(mp)
@@ -311,7 +314,8 @@ CDistributionSpecTest::EresUnittest_Universal()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /*pceeval*/, CTestUtils::GetCostModel(mp));
+	CAutoOptCtxt aoc(mp, &mda, nullptr /*pceeval*/,
+					 CTestUtils::GetCostModel(mp));
 
 	// basic tests with universal distributions
 	CDistributionSpecUniversal *pdsuniversal =
@@ -375,7 +379,7 @@ CDistributionSpecTest::EresUnittest_Hashed()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object
@@ -517,8 +521,8 @@ CDistributionSpecTest::EresUnittest_NegativeAny()
 	CDistributionSpecAny *pdsany =
 		GPOS_NEW(mp) CDistributionSpecAny(COperator::EopSentinel);
 	CExpressionHandle *pexprhdl = GPOS_NEW(mp) CExpressionHandle(mp);
-	pdsany->AppendEnforcers(NULL /*mp*/, *pexprhdl, NULL /*prpp*/,
-							NULL /*pdrgpexpr*/, NULL /*pexpr*/);
+	pdsany->AppendEnforcers(nullptr /*mp*/, *pexprhdl, nullptr /*prpp*/,
+							nullptr /*pdrgpexpr*/, nullptr /*pexpr*/);
 	pdsany->Release();
 	GPOS_DELETE(pexprhdl);
 
@@ -545,8 +549,8 @@ CDistributionSpecTest::EresUnittest_NegativeUniversal()
 		GPOS_NEW(mp) CDistributionSpecUniversal();
 	CExpressionHandle *pexprhdl = GPOS_NEW(mp) CExpressionHandle(mp);
 
-	pdsuniversal->AppendEnforcers(NULL /*mp*/, *pexprhdl, NULL /*prpp*/,
-								  NULL /*pdrgpexpr*/, NULL /*pexpr*/);
+	pdsuniversal->AppendEnforcers(nullptr /*mp*/, *pexprhdl, nullptr /*prpp*/,
+								  nullptr /*pdrgpexpr*/, nullptr /*pexpr*/);
 	pdsuniversal->Release();
 	GPOS_DELETE(pexprhdl);
 
@@ -573,14 +577,15 @@ CDistributionSpecTest::EresUnittest_NegativeRandom()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /*pceeval*/, CTestUtils::GetCostModel(mp));
+	CAutoOptCtxt aoc(mp, &mda, nullptr /*pceeval*/,
+					 CTestUtils::GetCostModel(mp));
 
 	// cannot add enforcers for Random distribution
 	CDistributionSpecRandom *pdsrandom = GPOS_NEW(mp) CDistributionSpecRandom();
 	CExpressionHandle *pexprhdl = GPOS_NEW(mp) CExpressionHandle(mp);
 
-	pdsrandom->AppendEnforcers(NULL /*mp*/, *pexprhdl, NULL /*prpp*/,
-							   NULL /*pdrgpexpr*/, NULL /*pexpr*/);
+	pdsrandom->AppendEnforcers(nullptr /*mp*/, *pexprhdl, nullptr /*prpp*/,
+							   nullptr /*pdrgpexpr*/, nullptr /*pexpr*/);
 	pdsrandom->Release();
 	GPOS_DELETE(pexprhdl);
 

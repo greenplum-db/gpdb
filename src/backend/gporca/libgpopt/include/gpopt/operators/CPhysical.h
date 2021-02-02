@@ -96,7 +96,7 @@ private:
 			  m_ulChildIndex(child_index),
 			  m_ulScalarChildIndex(ulScalarChildIndex)
 		{
-			GPOS_ASSERT(NULL != pcrsRequired);
+			GPOS_ASSERT(nullptr != pcrsRequired);
 		}
 
 		// dtor
@@ -487,7 +487,7 @@ public:
 	static CPhysical *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FPhysical());
 
 		return dynamic_cast<CPhysical *>(pop);

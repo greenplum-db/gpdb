@@ -34,7 +34,7 @@ CParseHandlerScalarSubqueryExists::CParseHandlerScalarSubqueryExists(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -55,7 +55,7 @@ CParseHandlerScalarSubqueryExists::StartElement(
 	const Attributes &	 // attrs
 )
 {
-	GPOS_ASSERT(NULL == m_dxl_op);
+	GPOS_ASSERT(nullptr == m_dxl_op);
 
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarSubqueryExists),
@@ -117,7 +117,7 @@ CParseHandlerScalarSubqueryExists::EndElement(
 	}
 
 	// construct node from parsed components
-	GPOS_ASSERT(NULL != m_dxl_op);
+	GPOS_ASSERT(nullptr != m_dxl_op);
 	GPOS_ASSERT(1 == this->Length());
 
 	CParseHandlerLogicalOp *child_parse_handler =

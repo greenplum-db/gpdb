@@ -33,9 +33,9 @@ CParseHandlerWindowSpec::CParseHandlerWindowSpec(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_part_by_colid_array(NULL),
-	  m_dxl_window_spec_gen(NULL),
-	  m_mdname(NULL),
+	  m_part_by_colid_array(nullptr),
+	  m_dxl_window_spec_gen(nullptr),
+	  m_mdname(nullptr),
 	  m_has_window_frame(false)
 {
 }
@@ -59,13 +59,13 @@ CParseHandlerWindowSpec::StartElement(const XMLCh *const element_uri,
 								 element_local_name))
 	{
 		GPOS_ASSERT(0 == this->Length());
-		GPOS_ASSERT(NULL == m_dxl_window_spec_gen);
-		GPOS_ASSERT(NULL == m_mdname);
+		GPOS_ASSERT(nullptr == m_dxl_window_spec_gen);
+		GPOS_ASSERT(nullptr == m_mdname);
 
 		// parse alias from attributes
 		const XMLCh *xml_alias =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenAlias));
-		if (NULL != xml_alias)
+		if (nullptr != xml_alias)
 		{
 			CWStringDynamic *str_alias =
 				CDXLUtils::CreateDynamicStringFromXMLChArray(
@@ -79,7 +79,7 @@ CParseHandlerWindowSpec::StartElement(const XMLCh *const element_uri,
 		m_part_by_colid_array = CDXLOperatorFactory::ExtractIntsToUlongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xml_part_cols,
 			EdxltokenPartKeys, EdxltokenPhysicalWindow);
-		GPOS_ASSERT(NULL != m_part_by_colid_array);
+		GPOS_ASSERT(nullptr != m_part_by_colid_array);
 	}
 	else if (0 == XMLString::compareString(
 					  CDXLTokens::XmlstrToken(EdxltokenScalarSortColList),
@@ -148,10 +148,10 @@ CParseHandlerWindowSpec::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 	// sorting columns
-	CDXLNode *sort_col_list_dxlnode = NULL;
+	CDXLNode *sort_col_list_dxlnode = nullptr;
 
 	// window frame associated with the window key
-	CDXLWindowFrame *window_frame = NULL;
+	CDXLWindowFrame *window_frame = nullptr;
 
 	if (1 == this->Length())
 	{

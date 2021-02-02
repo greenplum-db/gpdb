@@ -114,7 +114,7 @@ CPhysicalScalarAgg::EpetOrder(CExpressionHandle &,	// exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// TODO: , 06/20/2012: scalar agg produces one row, and hence it should satisfy any order;

@@ -44,7 +44,7 @@ CPhysicalDynamicScan::CPhysicalDynamicScan(
 	  m_scan_id(scan_id),
 	  m_pdrgpdrgpcrPart(pdrgpdrgpcrParts)
 {
-	GPOS_ASSERT(NULL != pdrgpdrgpcrParts);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcrParts);
 	GPOS_ASSERT(0 < pdrgpdrgpcrParts->Size());
 }
 
@@ -121,7 +121,7 @@ CPhysicalDynamicScan::OsPrint(IOstream &os) const
 CPhysicalDynamicScan *
 CPhysicalDynamicScan::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(CUtils::FPhysicalScan(pop) &&
 				CPhysicalScan::PopConvert(pop)->FDynamicScan());
 

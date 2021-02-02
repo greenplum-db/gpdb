@@ -82,7 +82,7 @@ CDistributionSpecUniversal::Edpt() const
 CDistributionSpecUniversal *
 CDistributionSpecUniversal::PdsConvert(CDistributionSpec *pds)
 {
-	GPOS_ASSERT(NULL != pds);
+	GPOS_ASSERT(nullptr != pds);
 	GPOS_ASSERT(EdtAny == pds->Edt());
 
 	return dynamic_cast<CDistributionSpecUniversal *>(pds);

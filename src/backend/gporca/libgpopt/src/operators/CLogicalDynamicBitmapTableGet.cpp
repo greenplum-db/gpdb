@@ -187,7 +187,7 @@ COperator *
 CLogicalDynamicBitmapTableGet::PopCopyWithRemappedColumns(
 	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
 {
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =

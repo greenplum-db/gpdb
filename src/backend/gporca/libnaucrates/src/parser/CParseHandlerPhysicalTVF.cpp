@@ -39,9 +39,9 @@ CParseHandlerPhysicalTVF::CParseHandlerPhysicalTVF(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_func_mdid(NULL),
-	  m_return_type_mdid(NULL),
-	  m_pstr(NULL)
+	  m_func_mdid(nullptr),
+	  m_return_type_mdid(nullptr),
+	  m_pstr(nullptr)
 {
 }
 

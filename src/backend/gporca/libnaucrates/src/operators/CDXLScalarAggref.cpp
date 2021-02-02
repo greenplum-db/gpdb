@@ -38,8 +38,8 @@ CDXLScalarAggref::CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_func_mdid,
 	  m_is_distinct(is_distinct),
 	  m_agg_stage(agg_stage)
 {
-	GPOS_ASSERT(NULL != agg_func_mdid);
-	GPOS_ASSERT_IMP(NULL != resolved_rettype_mdid,
+	GPOS_ASSERT(nullptr != agg_func_mdid);
+	GPOS_ASSERT_IMP(nullptr != resolved_rettype_mdid,
 					resolved_rettype_mdid->IsValid());
 	GPOS_ASSERT(m_agg_func_mdid->IsValid());
 }
@@ -109,7 +109,7 @@ CDXLScalarAggref::GetDXLStrAggStage() const
 			return CDXLTokens::GetDXLTokenStr(EdxltokenAggrefStageFinal);
 		default:
 			GPOS_ASSERT(!"Unrecognized aggregate stage");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -193,7 +193,7 @@ CDXLScalarAggref::SerializeToDXL(CXMLSerializer *xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefDistinct), m_is_distinct);
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenAggrefStage), GetDXLStrAggStage());
-	if (NULL != m_resolved_rettype_mdid)
+	if (nullptr != m_resolved_rettype_mdid)
 	{
 		m_resolved_rettype_mdid->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));

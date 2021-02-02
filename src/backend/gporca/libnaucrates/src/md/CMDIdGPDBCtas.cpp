@@ -64,7 +64,7 @@ CMDIdGPDBCtas::CMDIdGPDBCtas(const CMDIdGPDBCtas &mdid_source)
 BOOL
 CMDIdGPDBCtas::Equals(const IMDId *mdid) const
 {
-	if (NULL == mdid || EmdidGPDBCtas != mdid->MdidType())
+	if (nullptr == mdid || EmdidGPDBCtas != mdid->MdidType())
 	{
 		return false;
 	}

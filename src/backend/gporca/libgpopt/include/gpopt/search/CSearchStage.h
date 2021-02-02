@@ -97,7 +97,7 @@ public:
 	BOOL
 	FAchievedReqdCost() const
 	{
-		return (NULL != m_pexprBest && m_costBest <= m_cost_threshold);
+		return (nullptr != m_pexprBest && m_costBest <= m_cost_threshold);
 	}
 
 	// xforms set accessor

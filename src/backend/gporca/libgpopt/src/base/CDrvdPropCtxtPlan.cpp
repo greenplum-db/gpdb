@@ -28,7 +28,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDrvdPropCtxtPlan::CDrvdPropCtxtPlan(CMemoryPool *mp, BOOL fUpdateCTEMap)
-	: CDrvdPropCtxt(mp), m_phmulpdpCTEs(NULL), m_fUpdateCTEMap(fUpdateCTEMap)
+	: CDrvdPropCtxt(mp), m_phmulpdpCTEs(nullptr), m_fUpdateCTEMap(fUpdateCTEMap)
 {
 	m_phmulpdpCTEs = GPOS_NEW(m_mp) UlongToDrvdPropPlanMap(m_mp);
 }
@@ -102,7 +102,7 @@ CDrvdPropCtxtPlan::AddProps(CDrvdProp *pdp)
 	ULONG ulProducerId = gpos::ulong_max;
 	CDrvdPropPlan *pdpplanProducer =
 		pdpplan->GetCostModel()->PdpplanProducer(&ulProducerId);
-	if (NULL == pdpplanProducer)
+	if (nullptr == pdpplanProducer)
 	{
 		return;
 	}
@@ -154,7 +154,7 @@ CDrvdPropCtxtPlan::OsPrint(IOstream &os) const
 CDrvdPropPlan *
 CDrvdPropCtxtPlan::PdpplanCTEProducer(ULONG ulCTEId) const
 {
-	GPOS_ASSERT(NULL != m_phmulpdpCTEs);
+	GPOS_ASSERT(nullptr != m_phmulpdpCTEs);
 
 	return m_phmulpdpCTEs->Find(&ulCTEId);
 }
@@ -171,7 +171,7 @@ CDrvdPropCtxtPlan::PdpplanCTEProducer(ULONG ulCTEId) const
 void
 CDrvdPropCtxtPlan::CopyCTEProducerProps(CDrvdPropPlan *pdpplan, ULONG ulCTEId)
 {
-	GPOS_ASSERT(NULL != pdpplan);
+	GPOS_ASSERT(nullptr != pdpplan);
 
 	pdpplan->AddRef();
 	BOOL fInserted GPOS_ASSERTS_ONLY =

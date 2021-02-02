@@ -64,7 +64,7 @@ public:
 	static CDXLScalarCoerceViaIO *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarCoerceViaIO == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarCoerceViaIO *>(dxl_op);

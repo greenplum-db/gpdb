@@ -88,7 +88,7 @@ public:
 	static CScalarNullTest *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarNullTest == pop->Eopid());
 
 		return dynamic_cast<CScalarNullTest *>(pop);

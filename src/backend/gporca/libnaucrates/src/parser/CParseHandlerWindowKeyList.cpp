@@ -33,7 +33,7 @@ CParseHandlerWindowKeyList::CParseHandlerWindowKeyList(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_window_key_array(NULL)
+	  m_dxl_window_key_array(nullptr)
 {
 }
 
@@ -62,7 +62,7 @@ CParseHandlerWindowKeyList::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a window key list already
-		GPOS_ASSERT(NULL != m_dxl_window_key_array);
+		GPOS_ASSERT(nullptr != m_dxl_window_key_array);
 		// start new window key element
 		CParseHandlerBase *window_key_parse_handler =
 			CParseHandlerFactory::GetParseHandler(
@@ -108,7 +108,7 @@ CParseHandlerWindowKeyList::EndElement(const XMLCh *const,	// element_uri,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 				   str->GetBuffer());
 	}
-	GPOS_ASSERT(NULL != m_dxl_window_key_array);
+	GPOS_ASSERT(nullptr != m_dxl_window_key_array);
 
 	const ULONG size = this->Length();
 	// add the window keys to the list

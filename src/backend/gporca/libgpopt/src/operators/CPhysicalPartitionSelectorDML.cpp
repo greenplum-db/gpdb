@@ -36,7 +36,7 @@ CPhysicalPartitionSelectorDML::CPhysicalPartitionSelectorDML(
 	: CPhysicalPartitionSelector(mp, mdid, phmulexprEqPredicates),
 	  m_pcrOid(pcrOid)
 {
-	GPOS_ASSERT(NULL != pcrOid);
+	GPOS_ASSERT(nullptr != pcrOid);
 }
 
 //---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ CPhysicalPartitionSelectorDML::PdsRequired(CMemoryPool *mp,
 
 	// if required distribution uses any defined column, it has to be enforced on top,
 	// in this case, we request Any distribution from the child
-	CColRefSet *pcrs = NULL;
+	CColRefSet *pcrs = nullptr;
 	CDistributionSpec::EDistributionType edtRequired = pdsInput->Edt();
 	if (CDistributionSpec::EdtHashed == edtRequired)
 	{
@@ -116,7 +116,7 @@ CPhysicalPartitionSelectorDML::PdsRequired(CMemoryPool *mp,
 		pcrs->Include(pdsrouted->Pcr());
 	}
 
-	BOOL fUsesDefinedCols = (NULL != pcrs && pcrs->FMember(m_pcrOid));
+	BOOL fUsesDefinedCols = (nullptr != pcrs && pcrs->FMember(m_pcrOid));
 	CRefCount::SafeRelease(pcrs);
 	if (fUsesDefinedCols)
 	{
@@ -176,7 +176,7 @@ CPhysicalPartitionSelectorDML::FProvidesReqdCols(CExpressionHandle &exprhdl,
 												 ULONG	// ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(1 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -204,7 +204,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalPartitionSelectorDML::EpetOrder(CExpressionHandle &exprhdl,
 										 const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();
@@ -238,7 +238,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalPartitionSelectorDML::EpetDistribution(
 	CExpressionHandle &exprhdl, const CEnfdDistribution *ped) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// get distribution delivered by the filter node
 	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();

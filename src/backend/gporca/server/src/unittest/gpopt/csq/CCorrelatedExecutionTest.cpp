@@ -83,7 +83,7 @@ CCorrelatedExecutionTest::EresUnittest_RunAllPositiveTests()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// loop over all test files
@@ -92,7 +92,7 @@ CCorrelatedExecutionTest::EresUnittest_RunAllPositiveTests()
 	{
 		// TODO:  06/15/2012; enable plan matching
 		GPOS_RESULT eres = CTestUtils::EresTranslate(mp, rgszPositiveTests[ul],
-													 NULL /* plan file */,
+													 nullptr /* plan file */,
 													 true /*fIgnoreMismatch*/
 		);
 

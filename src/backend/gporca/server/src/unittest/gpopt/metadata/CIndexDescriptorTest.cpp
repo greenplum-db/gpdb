@@ -62,7 +62,7 @@ CIndexDescriptorTest::EresUnittest_Basic()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	CWStringConst strName(GPOS_WSZ_LIT("MyTable"));

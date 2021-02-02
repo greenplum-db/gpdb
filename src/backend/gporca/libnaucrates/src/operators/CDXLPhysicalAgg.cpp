@@ -29,7 +29,7 @@ CDXLPhysicalAgg::CDXLPhysicalAgg(CMemoryPool *mp,
 								 EdxlAggStrategy dxl_agg_strategy,
 								 BOOL stream_safe)
 	: CDXLPhysical(mp),
-	  m_grouping_colids_array(NULL),
+	  m_grouping_colids_array(nullptr),
 	  m_dxl_agg_strategy(dxl_agg_strategy),
 	  m_stream_safe(stream_safe)
 {
@@ -117,7 +117,7 @@ CDXLPhysicalAgg::GetAggStrategyNameStr() const
 			return CDXLTokens::GetDXLTokenStr(EdxltokenAggStrategyHashed);
 		default:
 			GPOS_ASSERT(!"Unrecognized aggregation strategy");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -148,7 +148,7 @@ CDXLPhysicalAgg::GetGroupingColidArray() const
 void
 CDXLPhysicalAgg::SetGroupingCols(ULongPtrArray *grouping_colids_array)
 {
-	GPOS_ASSERT(NULL != grouping_colids_array);
+	GPOS_ASSERT(nullptr != grouping_colids_array);
 	m_grouping_colids_array = grouping_colids_array;
 }
 
@@ -165,7 +165,7 @@ void
 CDXLPhysicalAgg::SerializeGroupingColsToDXL(
 	CXMLSerializer *xml_serializer) const
 {
-	GPOS_ASSERT(NULL != m_grouping_colids_array);
+	GPOS_ASSERT(nullptr != m_grouping_colids_array);
 
 	const CWStringConst *grouping_cols_str =
 		CDXLTokens::GetDXLTokenStr(EdxltokenGroupingCols);
@@ -178,7 +178,7 @@ CDXLPhysicalAgg::SerializeGroupingColsToDXL(
 
 	for (ULONG idx = 0; idx < m_grouping_colids_array->Size(); idx++)
 	{
-		GPOS_ASSERT(NULL != (*m_grouping_colids_array)[idx]);
+		GPOS_ASSERT(nullptr != (*m_grouping_colids_array)[idx]);
 		ULONG grouping_colid = *((*m_grouping_colids_array)[idx]);
 
 		xml_serializer->OpenElement(
@@ -249,7 +249,7 @@ CDXLPhysicalAgg::AssertValid(const CDXLNode *node, BOOL validate_children) const
 				(EdxlaggstrategyPlain <= m_dxl_agg_strategy));
 
 	GPOS_ASSERT(EdxlaggIndexSentinel == node->Arity());
-	GPOS_ASSERT(NULL != m_grouping_colids_array);
+	GPOS_ASSERT(nullptr != m_grouping_colids_array);
 
 	CDXLNode *child_dxlnode = (*node)[EdxlaggIndexChild];
 	GPOS_ASSERT(EdxloptypePhysical ==

@@ -81,7 +81,7 @@ public:
 	static CDrvdPropCtxtPlan *
 	PdpctxtplanConvert(CDrvdPropCtxt *pdpctxt)
 	{
-		GPOS_ASSERT(NULL != pdpctxt);
+		GPOS_ASSERT(nullptr != pdpctxt);
 
 		return reinterpret_cast<CDrvdPropCtxtPlan *>(pdpctxt);
 	}

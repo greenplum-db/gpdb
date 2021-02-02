@@ -76,7 +76,7 @@ public:
 	static CScalarCoerceViaIO *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCoerceViaIO == pop->Eopid());
 
 		return dynamic_cast<CScalarCoerceViaIO *>(pop);

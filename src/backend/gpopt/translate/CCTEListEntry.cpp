@@ -35,9 +35,9 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CCTEListEntry::CCTEListEntry(CMemoryPool *mp, ULONG query_level,
 							 CommonTableExpr *cte, CDXLNode *cte_producer)
-	: m_query_level(query_level), m_cte_info(NULL)
+	: m_query_level(query_level), m_cte_info(nullptr)
 {
-	GPOS_ASSERT(NULL != cte && NULL != cte_producer);
+	GPOS_ASSERT(nullptr != cte && nullptr != cte_producer);
 
 	m_cte_info = GPOS_NEW(mp) HMSzCTEInfo(mp);
 	Query *cte_query = (Query *) cte->ctequery;
@@ -59,9 +59,9 @@ CCTEListEntry::CCTEListEntry(CMemoryPool *mp, ULONG query_level,
 //---------------------------------------------------------------------------
 CCTEListEntry::CCTEListEntry(CMemoryPool *mp, ULONG query_level, List *cte_list,
 							 CDXLNodeArray *cte_dxl_arr)
-	: m_query_level(query_level), m_cte_info(NULL)
+	: m_query_level(query_level), m_cte_info(nullptr)
 {
-	GPOS_ASSERT(NULL != cte_dxl_arr);
+	GPOS_ASSERT(nullptr != cte_dxl_arr);
 	GPOS_ASSERT(cte_dxl_arr->Size() == gpdb::ListLength(cte_list));
 
 	m_cte_info = GPOS_NEW(mp) HMSzCTEInfo(mp);
@@ -79,7 +79,7 @@ CCTEListEntry::CCTEListEntry(CMemoryPool *mp, ULONG query_level, List *cte_list,
 			GPOS_NEW(mp) SCTEProducerInfo(cte_producer, cte_query->targetList));
 
 		GPOS_ASSERT(result);
-		GPOS_ASSERT(NULL != m_cte_info->Find(cte->ctename));
+		GPOS_ASSERT(nullptr != m_cte_info->Find(cte->ctename));
 	}
 }
 
@@ -95,9 +95,9 @@ const CDXLNode *
 CCTEListEntry::GetCTEProducer(const CHAR *cte_str) const
 {
 	SCTEProducerInfo *cte_info = m_cte_info->Find(cte_str);
-	if (NULL == cte_info)
+	if (nullptr == cte_info)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return cte_info->m_cte_producer;
@@ -115,9 +115,9 @@ List *
 CCTEListEntry::GetCTEProducerTargetList(const CHAR *cte_str) const
 {
 	SCTEProducerInfo *cte_info = m_cte_info->Find(cte_str);
-	if (NULL == cte_info)
+	if (nullptr == cte_info)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return cte_info->m_target_list;
@@ -135,7 +135,7 @@ void
 CCTEListEntry::AddCTEProducer(CMemoryPool *mp, CommonTableExpr *cte,
 							  const CDXLNode *cte_producer)
 {
-	GPOS_ASSERT(NULL == m_cte_info->Find(cte->ctename) &&
+	GPOS_ASSERT(nullptr == m_cte_info->Find(cte->ctename) &&
 				"CTE entry already exists");
 	Query *cte_query = (Query *) cte->ctequery;
 

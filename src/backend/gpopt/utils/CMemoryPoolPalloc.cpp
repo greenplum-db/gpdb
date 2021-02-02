@@ -25,7 +25,7 @@ extern "C" {
 using namespace gpos;
 
 // ctor
-CMemoryPoolPalloc::CMemoryPoolPalloc() : m_cxt(NULL)
+CMemoryPoolPalloc::CMemoryPoolPalloc() : m_cxt(nullptr)
 {
 	m_cxt = gpdb::GPDBAllocSetContextCreate();
 }
@@ -47,9 +47,9 @@ CMemoryPoolPalloc::NewImpl(const ULONG bytes, const CHAR *, const ULONG,
 
 		void *ptr = gpdb::GPDBMemoryContextAlloc(m_cxt, alloc_size);
 
-		if (NULL == ptr)
+		if (nullptr == ptr)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		SArrayAllocHeader *header = static_cast<SArrayAllocHeader *>(ptr);
@@ -93,7 +93,7 @@ CMemoryPoolPalloc::TotalAllocatedSize() const
 ULONG
 CMemoryPoolPalloc::UserSizeOfAlloc(const void *ptr)
 {
-	GPOS_ASSERT(ptr != NULL);
+	GPOS_ASSERT(ptr != nullptr);
 	void *void_header = static_cast<BYTE *>(const_cast<void *>(ptr)) -
 						GPOS_MEM_ALIGNED_STRUCT_SIZE(SArrayAllocHeader);
 	const SArrayAllocHeader *header =

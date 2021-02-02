@@ -103,7 +103,7 @@ public:
 	static CLogicalProject *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalProject == pop->Eopid());
 
 		return dynamic_cast<CLogicalProject *>(pop);

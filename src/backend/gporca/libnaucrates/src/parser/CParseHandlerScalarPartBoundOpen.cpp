@@ -97,7 +97,7 @@ CParseHandlerScalarPartBoundOpen::EndElement(
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

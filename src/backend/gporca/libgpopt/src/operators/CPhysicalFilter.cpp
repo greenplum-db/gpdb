@@ -229,13 +229,13 @@ CPhysicalFilter::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		// Also, if there is no equivalent spec, try to find a predicate on the
 		// filter op itself, that can be used to create a complete equivalent spec
 		// here.
-		if (NULL == pdshashedEquiv ||
+		if (nullptr == pdshashedEquiv ||
 			!pdshashedOriginal->HasCompleteEquivSpec(mp))
 		{
 			CDistributionSpecHashed *pdshashed;
 
 			// use the original preds if no equivalent spec exists
-			if (NULL == pdshashedEquiv)
+			if (nullptr == pdshashedEquiv)
 			{
 				pdshashed = pdshashedOriginal;
 			}
@@ -255,13 +255,13 @@ CPhysicalFilter::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 				pdshashedOriginal->Pdrgpexpr();
 			pdrgpexprOriginal->AddRef();
 			IMdIdArray *opfamiliesOriginal = pdshashedOriginal->Opfamilies();
-			if (NULL != opfamiliesOriginal)
+			if (nullptr != opfamiliesOriginal)
 			{
 				opfamiliesOriginal->AddRef();
 			}
 
 			CDistributionSpecHashed *pdsResult;
-			if (NULL == pdshashedComplete)
+			if (nullptr == pdshashedComplete)
 			{
 				// could not complete the spec, return the original without any equiv spec
 				pdsResult = GPOS_NEW(mp) CDistributionSpecHashed(
@@ -352,7 +352,7 @@ CPhysicalFilter::EpetOrder(CExpressionHandle &,	 // exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// always force sort to be on top of filter

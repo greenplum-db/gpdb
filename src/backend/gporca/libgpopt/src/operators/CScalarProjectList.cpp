@@ -83,7 +83,7 @@ CScalarProjectList::UlDistinctAggs(CExpressionHandle &exprhdl)
 	// exact are subqueries. This is better than just returning 0 for project lists with subqueries.
 	CExpression *pexprPrjList = exprhdl.PexprScalarRep();
 
-	GPOS_ASSERT(NULL != pexprPrjList);
+	GPOS_ASSERT(nullptr != pexprPrjList);
 	GPOS_ASSERT(COperator::EopScalarProjectList ==
 				pexprPrjList->Pop()->Eopid());
 
@@ -146,7 +146,7 @@ CScalarProjectList::FHasMultipleDistinctAggs(CExpressionHandle &exprhdl)
 	}
 
 	CAutoMemoryPool amp;
-	ExprToExprArrayMap *phmexprdrgpexpr = NULL;
+	ExprToExprArrayMap *phmexprdrgpexpr = nullptr;
 	ULONG ulDifferentDQAs = 0;
 	CXformUtils::MapPrjElemsWithDistinctAggs(
 		amp.Pmp(), pexprPrjList, &phmexprdrgpexpr, &ulDifferentDQAs);

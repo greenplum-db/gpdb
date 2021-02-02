@@ -80,7 +80,7 @@ public:
 	}
 
 	// create new task
-	CTask *Create(void *(*pfunc)(void *), void *argv, BOOL *cancel = NULL);
+	CTask *Create(void *(*pfunc)(void *), void *argv, BOOL *cancel = nullptr);
 
 	// schedule task for execution
 	void Schedule(CTask *task);

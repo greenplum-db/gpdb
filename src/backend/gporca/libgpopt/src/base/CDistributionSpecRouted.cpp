@@ -33,7 +33,7 @@ using namespace gpopt;
 CDistributionSpecRouted::CDistributionSpecRouted(CColRef *pcrSegmentId)
 	: m_pcrSegmentId(pcrSegmentId)
 {
-	GPOS_ASSERT(NULL != pcrSegmentId);
+	GPOS_ASSERT(nullptr != pcrSegmentId);
 }
 
 
@@ -88,7 +88,7 @@ CDistributionSpecRouted::PdsCopyWithRemappedColumns(
 {
 	ULONG id = m_pcrSegmentId->Id();
 	CColRef *pcrSegmentId = colref_mapping->Find(&id);
-	if (NULL == pcrSegmentId)
+	if (nullptr == pcrSegmentId)
 	{
 		if (must_exist)
 		{
@@ -128,10 +128,10 @@ CDistributionSpecRouted::AppendEnforcers(CMemoryPool *mp,
 										 CExpressionArray *pdrgpexpr,
 										 CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != pdrgpexpr);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != pdrgpexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(!GPOS_FTRACE(EopttraceDisableMotions));
 	GPOS_ASSERT(
 		this == prpp->Ped()->PdsRequired() &&

@@ -133,7 +133,7 @@ CParseHandlerSequence::EndElement(const XMLCh *const,  // element_uri,
 	// add project list
 	CParseHandlerProjList *proj_list_parse_handler =
 		dynamic_cast<CParseHandlerProjList *>((*this)[1]);
-	GPOS_ASSERT(NULL != proj_list_parse_handler);
+	GPOS_ASSERT(nullptr != proj_list_parse_handler);
 	AddChildFromParseHandler(proj_list_parse_handler);
 
 	const ULONG size = this->Length();
@@ -142,7 +142,7 @@ CParseHandlerSequence::EndElement(const XMLCh *const,  // element_uri,
 	{
 		CParseHandlerPhysicalOp *child_parse_handler =
 			dynamic_cast<CParseHandlerPhysicalOp *>((*this)[idx]);
-		GPOS_ASSERT(NULL != child_parse_handler);
+		GPOS_ASSERT(nullptr != child_parse_handler);
 		AddChildFromParseHandler(child_parse_handler);
 	}
 

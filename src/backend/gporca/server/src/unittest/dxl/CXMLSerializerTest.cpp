@@ -66,8 +66,8 @@ CXMLSerializerTest::Pstr(CMemoryPool *mp, BOOL indentation)
 		CDXLTokens::GetDXLTokenStr(EdxltokenPlan));
 
 	CWStringConst strSubplan(GPOS_WSZ_LIT("Subplan"));
-	xml_serializer.OpenElement(NULL, &strSubplan);
-	xml_serializer.CloseElement(NULL, &strSubplan);
+	xml_serializer.OpenElement(nullptr, &strSubplan);
+	xml_serializer.CloseElement(nullptr, &strSubplan);
 
 	xml_serializer.CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

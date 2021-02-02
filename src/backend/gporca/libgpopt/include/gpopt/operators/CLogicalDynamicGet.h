@@ -34,11 +34,11 @@ class CLogicalDynamicGet : public CLogicalDynamicGetBase
 {
 private:
 	// GPDB_12_MERGE_FIXME: Move this to the base class once supported by siblings
-	IMdIdArray *m_partition_mdids = NULL;
+	IMdIdArray *m_partition_mdids = nullptr;
 
 	// Map of Root colref -> col index in child tabledesc
 	// per child partition in m_partition_mdid
-	ColRefToUlongMapArray *m_root_col_mapping_per_part = NULL;
+	ColRefToUlongMapArray *m_root_col_mapping_per_part = nullptr;
 
 	// Construct a mapping from each column in root table to an index in each
 	// child partition's table descr by matching column names$
@@ -145,7 +145,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CLogicalDynamicGet has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ public:
 	static CLogicalDynamicGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDynamicGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalDynamicGet *>(pop);

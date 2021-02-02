@@ -681,8 +681,8 @@ CXformUtils::TransformImplementBinaryOp(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 
@@ -724,9 +724,9 @@ CXformUtils::AddHashOrMergeJoinAlternative(CMemoryPool *mp,
 {
 	GPOS_ASSERT(CUtils::FLogicalJoin(pexprJoin->Pop()));
 	GPOS_ASSERT(3 == pexprJoin->Arity());
-	GPOS_ASSERT(NULL != pdrgpexprOuter);
-	GPOS_ASSERT(NULL != pdrgpexprInner);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pdrgpexprOuter);
+	GPOS_ASSERT(nullptr != pdrgpexprInner);
+	GPOS_ASSERT(nullptr != pxfres);
 
 	for (ULONG ul = 0; ul < 3; ul++)
 	{
@@ -752,7 +752,7 @@ void
 CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 							   CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 
 	// if there are outer references, then we cannot build a hash join
 	if (CUtils::HasOuterRefs(pexpr))
@@ -761,16 +761,16 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 	}
 
 	CMemoryPool *mp = pxfctxt->Pmp();
-	CExpressionArray *pdrgpexprOuter = NULL;
-	CExpressionArray *pdrgpexprInner = NULL;
-	IMdIdArray *join_opfamilies = NULL;
+	CExpressionArray *pdrgpexprOuter = nullptr;
+	CExpressionArray *pdrgpexprInner = nullptr;
+	IMdIdArray *join_opfamilies = nullptr;
 
 	// check if we have already computed hash join keys for the scalar child
 	LookupJoinKeys(mp, pexpr, &pdrgpexprOuter, &pdrgpexprInner,
 				   &join_opfamilies);
-	if (NULL != pdrgpexprOuter)
+	if (nullptr != pdrgpexprOuter)
 	{
-		GPOS_ASSERT(NULL != pdrgpexprInner);
+		GPOS_ASSERT(nullptr != pdrgpexprInner);
 		if (0 == pdrgpexprOuter->Size())
 		{
 			GPOS_ASSERT(0 == pdrgpexprInner->Size());
@@ -832,7 +832,8 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 				CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
 				IMDId *hash_opfamily =
 					mda->RetrieveScOp(mdid_scop)->HashOpfamilyMdid();
-				GPOS_ASSERT(NULL != hash_opfamily && hash_opfamily->IsValid());
+				GPOS_ASSERT(nullptr != hash_opfamily &&
+							hash_opfamily->IsValid());
 				hash_opfamily->AddRef();
 				join_opfamilies->Append(hash_opfamily);
 			}
@@ -876,7 +877,7 @@ void
 CXformUtils::ImplementMergeJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 								CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 
 	// if there are outer references, then we cannot build a merge join
 	if (CUtils::HasOuterRefs(pexpr))
@@ -885,16 +886,16 @@ CXformUtils::ImplementMergeJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 	}
 
 	CMemoryPool *mp = pxfctxt->Pmp();
-	CExpressionArray *pdrgpexprOuter = NULL;
-	CExpressionArray *pdrgpexprInner = NULL;
-	IMdIdArray *join_opfamilies = NULL;
+	CExpressionArray *pdrgpexprOuter = nullptr;
+	CExpressionArray *pdrgpexprInner = nullptr;
+	IMdIdArray *join_opfamilies = nullptr;
 
 	// check if we have already computed join keys for the scalar child
 	LookupJoinKeys(mp, pexpr, &pdrgpexprOuter, &pdrgpexprInner,
 				   &join_opfamilies);
-	if (NULL != pdrgpexprOuter)
+	if (nullptr != pdrgpexprOuter)
 	{
-		GPOS_ASSERT(NULL != pdrgpexprInner);
+		GPOS_ASSERT(nullptr != pdrgpexprInner);
 		if (0 == pdrgpexprOuter->Size())
 		{
 			GPOS_ASSERT(0 == pdrgpexprInner->Size());
@@ -956,7 +957,8 @@ CXformUtils::ImplementMergeJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 				CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
 				IMDId *hash_opfamily =
 					mda->RetrieveScOp(mdid_scop)->HashOpfamilyMdid();
-				GPOS_ASSERT(NULL != hash_opfamily && hash_opfamily->IsValid());
+				GPOS_ASSERT(nullptr != hash_opfamily &&
+							hash_opfamily->IsValid());
 				hash_opfamily->AddRef();
 				join_opfamilies->Append(hash_opfamily);
 			}
@@ -1018,7 +1020,7 @@ void
 CXformUtils::ImplementNLJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 							 CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 

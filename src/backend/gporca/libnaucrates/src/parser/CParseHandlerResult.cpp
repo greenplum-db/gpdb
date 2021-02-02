@@ -36,7 +36,7 @@ CParseHandlerResult::CParseHandlerResult(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -52,7 +52,7 @@ void
 CParseHandlerResult::SetupInitialHandlers()
 {
 	// seeing a result tag
-	GPOS_ASSERT(m_dxl_op == NULL &&
+	GPOS_ASSERT(m_dxl_op == nullptr &&
 				"Result dxl node should not have been created yet");
 	GPOS_ASSERT(0 == this->Length() &&
 				"No handlers should have been added yet");
@@ -111,11 +111,11 @@ CParseHandlerResult::StartElement(const XMLCh *const element_uri,
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenPhysicalResult),
 				 element_local_name) &&
-		NULL == m_dxl_op)
+		nullptr == m_dxl_op)
 	{
 		SetupInitialHandlers();
 	}
-	else if (NULL != m_dxl_op)
+	else if (nullptr != m_dxl_op)
 	{
 		// parse handler for child node
 		CParseHandlerBase *child_parse_handler =

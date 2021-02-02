@@ -79,7 +79,7 @@ public:
 	static CDistributionSpecExternal *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtExternal == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecExternal *>(pds);
@@ -89,7 +89,7 @@ public:
 	static const CDistributionSpecExternal *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtExternal == pds->Edt());
 
 		return dynamic_cast<const CDistributionSpecExternal *>(pds);

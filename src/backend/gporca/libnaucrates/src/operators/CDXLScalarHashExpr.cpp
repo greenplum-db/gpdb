@@ -104,7 +104,7 @@ CDXLScalarHashExpr::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
-	if (NULL != m_mdid_opfamily)
+	if (nullptr != m_mdid_opfamily)
 	{
 		m_mdid_opfamily->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenOpfamily));

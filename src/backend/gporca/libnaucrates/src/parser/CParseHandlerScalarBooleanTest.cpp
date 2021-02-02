@@ -58,7 +58,7 @@ CParseHandlerScalarBooleanTest::StartElement(
 
 	if (EdxlbooleantestSentinel == dxl_boolean_test_type)
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 					   CDXLUtils::CreateDynamicStringFromXMLChArray(

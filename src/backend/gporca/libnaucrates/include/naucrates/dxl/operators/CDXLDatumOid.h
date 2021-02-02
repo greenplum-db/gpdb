@@ -69,7 +69,7 @@ public:
 	static CDXLDatumOid *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumOid == dxl_datum->GetDatumType());
 
 		return dynamic_cast<CDXLDatumOid *>(dxl_datum);

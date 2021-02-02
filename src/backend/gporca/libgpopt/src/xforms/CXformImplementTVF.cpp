@@ -89,7 +89,7 @@ void
 CXformImplementTVF::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -118,9 +118,9 @@ CXformImplementTVF::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CPhysicalTVF *pphTVF = GPOS_NEW(mp)
 		CPhysicalTVF(mp, mdid_func, mdid_return_type, str, pdrgpcoldesc, pcrs);
 
-	CExpression *pexprAlt = NULL;
+	CExpression *pexprAlt = nullptr;
 	// create alternative expression
-	if (NULL == pdrgpexpr || 0 == pdrgpexpr->Size())
+	if (nullptr == pdrgpexpr || 0 == pdrgpexpr->Size())
 	{
 		pexprAlt = GPOS_NEW(mp) CExpression(mp, pphTVF);
 	}

@@ -126,7 +126,7 @@ PvExec(void *pv)
 	CMainArgs *pma = (CMainArgs *) pv;
 	tests_failed = CUnittest::Driver(pma);
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -144,22 +144,22 @@ main(INT iArgs, const CHAR **rgszArgs)
 	// setup args for unittest params
 	CMainArgs ma(iArgs, rgszArgs, "cuU:xT:");
 
-	struct gpos_init_params init_params = {NULL};
+	struct gpos_init_params init_params = {nullptr};
 	gpos_init(&init_params);
 
 	GPOS_ASSERT(iArgs >= 0);
 
 	// initialize unittest framework
-	CUnittest::Init(rgut, GPOS_ARRAY_SIZE(rgut), NULL, NULL);
+	CUnittest::Init(rgut, GPOS_ARRAY_SIZE(rgut), nullptr, nullptr);
 
 	gpos_exec_params params;
 	params.func = PvExec;
 	params.arg = &ma;
-	params.result = NULL;
+	params.result = nullptr;
 	params.stack_start = &params;
-	params.error_buffer = NULL;
+	params.error_buffer = nullptr;
 	params.error_buffer_size = -1;
-	params.abort_requested = NULL;
+	params.abort_requested = nullptr;
 
 	if (gpos_exec(&params) || (tests_failed != 0))
 	{

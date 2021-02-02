@@ -34,7 +34,7 @@ CParseHandlerEnumeratorConfig::CParseHandlerEnumeratorConfig(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_enumerator_cfg(NULL)
+	  m_enumerator_cfg(nullptr)
 {
 }
 
@@ -117,7 +117,7 @@ CParseHandlerEnumeratorConfig::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_enumerator_cfg);
+	GPOS_ASSERT(nullptr != m_enumerator_cfg);
 	GPOS_ASSERT(0 == this->Length());
 
 	// deactivate handler

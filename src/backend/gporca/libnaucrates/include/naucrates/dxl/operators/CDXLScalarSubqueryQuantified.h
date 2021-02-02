@@ -90,7 +90,7 @@ public:
 	static CDXLScalarSubqueryQuantified *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarSubqueryAll == dxl_op->GetDXLOperator() ||
 					EdxlopScalarSubqueryAny == dxl_op->GetDXLOperator());
 

@@ -35,10 +35,10 @@ CParseHandlerMetadataColumn::CParseHandlerMetadataColumn(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdcol(NULL),
-	  m_mdname(NULL),
-	  m_mdid_type(NULL),
-	  m_dxl_default_val(NULL),
+	  m_mdcol(nullptr),
+	  m_mdname(nullptr),
+	  m_mdid_type(nullptr),
+	  m_dxl_default_val(nullptr),
 	  m_width(gpos::ulong_max)
 {
 }
@@ -114,7 +114,7 @@ CParseHandlerMetadataColumn::StartElement(const XMLCh *const,  // element_uri,
 	const XMLCh *col_len_xml =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColWidth));
 
-	if (NULL != col_len_xml)
+	if (nullptr != col_len_xml)
 	{
 		m_width = CDXLOperatorFactory::ConvertAttrValueToUlong(
 			m_parse_handler_mgr->GetDXLMemoryManager(), col_len_xml,
@@ -125,7 +125,7 @@ CParseHandlerMetadataColumn::StartElement(const XMLCh *const,  // element_uri,
 	const XMLCh *xmlszDropped =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColDropped));
 
-	if (NULL != xmlszDropped)
+	if (nullptr != xmlszDropped)
 	{
 		m_is_dropped = CDXLOperatorFactory::ConvertAttrValueToBool(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszDropped,
@@ -173,7 +173,7 @@ CParseHandlerMetadataColumn::EndElement(const XMLCh *const,	 // element_uri,
 
 	m_dxl_default_val = op_parse_handler->CreateDXLNode();
 
-	if (NULL != m_dxl_default_val)
+	if (nullptr != m_dxl_default_val)
 	{
 		m_dxl_default_val->AddRef();
 	}

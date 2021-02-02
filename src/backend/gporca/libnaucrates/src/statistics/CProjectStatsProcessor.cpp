@@ -23,7 +23,7 @@ CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
 									  ULongPtrArray *projection_colids,
 									  UlongToIDatumMap *datum_map)
 {
-	GPOS_ASSERT(NULL != projection_colids);
+	GPOS_ASSERT(nullptr != projection_colids);
 
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
@@ -39,17 +39,17 @@ CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
 		ULONG colid = *(*projection_colids)[ul];
 		const CHistogram *histogram = input_stats->GetHistogram(colid);
 
-		if (NULL == histogram)
+		if (nullptr == histogram)
 		{
 			// create histogram for the new project column
 			CBucketArray *proj_col_bucket = GPOS_NEW(mp) CBucketArray(mp);
 			CDouble null_freq = 0.0;
 
 			BOOL is_well_defined = false;
-			if (NULL != datum_map)
+			if (nullptr != datum_map)
 			{
 				IDatum *datum = datum_map->Find(&colid);
-				if (NULL != datum)
+				if (nullptr != datum)
 				{
 					is_well_defined = true;
 					if (!datum->IsNull())
@@ -64,9 +64,9 @@ CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
 				}
 			}
 
-			CHistogram *proj_col_histogram = NULL;
+			CHistogram *proj_col_histogram = nullptr;
 			CColRef *colref = col_factory->LookupColRef(colid);
-			GPOS_ASSERT(NULL != colref);
+			GPOS_ASSERT(nullptr != colref);
 
 			if (0 == proj_col_bucket->Size() &&
 				IMDType::EtiBool == colref->RetrieveType()->GetDatumType())
@@ -93,10 +93,10 @@ CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
 
 		// look up width
 		const CDouble *width = input_stats->GetWidth(colid);
-		if (NULL == width)
+		if (nullptr == width)
 		{
 			CColRef *colref = col_factory->LookupColRef(colid);
-			GPOS_ASSERT(NULL != colref);
+			GPOS_ASSERT(nullptr != colref);
 
 			CDouble width =
 				CStatisticsUtils::DefaultColumnWidth(colref->RetrieveType());

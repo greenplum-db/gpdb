@@ -114,7 +114,7 @@ public:
 	static CLogicalIntersect *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalIntersect == pop->Eopid());
 
 		return reinterpret_cast<CLogicalIntersect *>(pop);

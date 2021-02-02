@@ -58,7 +58,7 @@ public:
 	CDXLPhysicalAbstractBitmapScan(CMemoryPool *mp, CDXLTableDescr *table_descr)
 		: CDXLPhysical(mp), m_dxl_table_descr(table_descr)
 	{
-		GPOS_ASSERT(NULL != table_descr);
+		GPOS_ASSERT(nullptr != table_descr);
 	}
 
 	// dtor

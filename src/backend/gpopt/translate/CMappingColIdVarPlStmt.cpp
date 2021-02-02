@@ -94,15 +94,15 @@ CMappingColIdVarPlStmt::GetOutputContext()
 Param *
 CMappingColIdVarPlStmt::ParamFromDXLNodeScId(const CDXLScalarIdent *dxlop)
 {
-	GPOS_ASSERT(NULL != m_output_context);
+	GPOS_ASSERT(nullptr != m_output_context);
 
-	Param *param = NULL;
+	Param *param = nullptr;
 
 	const ULONG colid = dxlop->GetDXLColRef()->Id();
 	const CMappingElementColIdParamId *elem =
 		m_output_context->GetParamIdMappingElement(colid);
 
-	if (NULL != elem)
+	if (nullptr != elem)
 	{
 		param = MakeNode(Param);
 		param->paramkind = PARAM_EXEC;
@@ -132,7 +132,7 @@ CMappingColIdVarPlStmt::VarFromDXLNodeScId(const CDXLScalarIdent *dxlop)
 	AttrNumber attno_old = 0;
 
 	const ULONG colid = dxlop->GetDXLColRef()->Id();
-	if (NULL != m_base_table_context)
+	if (nullptr != m_base_table_context)
 	{
 		// scalar id is used in a base table operator node
 		varno = m_base_table_context->GetRelIndex();
@@ -143,19 +143,19 @@ CMappingColIdVarPlStmt::VarFromDXLNodeScId(const CDXLScalarIdent *dxlop)
 	}
 
 	// if lookup has failed in the first step, attempt lookup again using outer and inner contexts
-	if (0 == attno && NULL != m_child_contexts)
+	if (0 == attno && nullptr != m_child_contexts)
 	{
 		GPOS_ASSERT(0 != m_child_contexts->Size());
 
 		const CDXLTranslateContext *left_context = (*m_child_contexts)[0];
 
 		// not a base table
-		GPOS_ASSERT(NULL != left_context);
+		GPOS_ASSERT(nullptr != left_context);
 
 		// lookup column in the left child translation context
 		const TargetEntry *target_entry = left_context->GetTargetEntry(colid);
 
-		if (NULL != target_entry)
+		if (nullptr != target_entry)
 		{
 			// identifier comes from left child
 			varno = OUTER_VAR;
@@ -167,26 +167,27 @@ CMappingColIdVarPlStmt::VarFromDXLNodeScId(const CDXLScalarIdent *dxlop)
 			{
 				// there are no more children. col id not found in this tree
 				// and must be an outer ref
-				return NULL;
+				return nullptr;
 			}
 
 			const CDXLTranslateContext *right_context = (*m_child_contexts)[1];
 
 			// identifier must come from right child
-			GPOS_ASSERT(NULL != right_context);
+			GPOS_ASSERT(nullptr != right_context);
 
 			target_entry = right_context->GetTargetEntry(colid);
 
 			varno = INNER_VAR;
 
 			// check any additional contexts if col is still not found yet
-			for (ULONG ul = 2; NULL == target_entry && ul < num_contexts; ul++)
+			for (ULONG ul = 2; nullptr == target_entry && ul < num_contexts;
+				 ul++)
 			{
 				const CDXLTranslateContext *context = (*m_child_contexts)[ul];
-				GPOS_ASSERT(NULL != context);
+				GPOS_ASSERT(nullptr != context);
 
 				target_entry = context->GetTargetEntry(colid);
-				if (NULL == target_entry)
+				if (nullptr == target_entry)
 				{
 					continue;
 				}
@@ -196,7 +197,7 @@ CMappingColIdVarPlStmt::VarFromDXLNodeScId(const CDXLScalarIdent *dxlop)
 			}
 		}
 
-		if (NULL == target_entry)
+		if (nullptr == target_entry)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound,
 					   colid);

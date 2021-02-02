@@ -59,7 +59,7 @@ CXform::EXformPromise
 CXformSimplifyLeftOuterJoin::Exfp(CExpressionHandle &exprhdl) const
 {
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(2 /*child_index*/);
-	if (NULL != pexprScalar && CUtils::FScalarConstFalse(pexprScalar))
+	if (nullptr != pexprScalar && CUtils::FScalarConstFalse(pexprScalar))
 	{
 		// if LOJ predicate is False, we can replace inner child with empty table
 		return CXform::ExfpHigh;
@@ -82,8 +82,8 @@ CXformSimplifyLeftOuterJoin::Transform(CXformContext *pxfctxt,
 									   CXformResult *pxfres,
 									   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -96,7 +96,7 @@ CXformSimplifyLeftOuterJoin::Transform(CXformContext *pxfctxt,
 
 	pexprOuter->AddRef();
 	pexprScalar->AddRef();
-	CExpression *pexprResult = NULL;
+	CExpression *pexprResult = nullptr;
 
 	// inner child of LOJ can be replaced with empty table
 	GPOS_ASSERT(CUtils::FScalarConstFalse(pexprScalar));

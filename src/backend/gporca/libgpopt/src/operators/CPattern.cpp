@@ -30,7 +30,7 @@ CPattern::PdpCreate(CMemoryPool *  // mp
 ) const
 {
 	GPOS_ASSERT(!"Cannot derive properties on pattern");
-	return NULL;
+	return nullptr;
 }
 
 
@@ -48,7 +48,7 @@ CPattern::PrpCreate(CMemoryPool *  // mp
 ) const
 {
 	GPOS_ASSERT(!"Cannot compute required properties on pattern");
-	return NULL;
+	return nullptr;
 }
 
 
@@ -98,7 +98,7 @@ CPattern::PopCopyWithRemappedColumns(CMemoryPool *,		  //mp,
 {
 	GPOS_ASSERT(
 		!"PopCopyWithRemappedColumns should not be called for a pattern");
-	return NULL;
+	return nullptr;
 }
 
 // EOF

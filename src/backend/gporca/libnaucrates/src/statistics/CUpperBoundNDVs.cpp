@@ -39,7 +39,7 @@ CUpperBoundNDVs::CopyUpperBoundNDVWithRemap(
 	{
 		ULONG colid = column_refset_iter.Pcr()->Id();
 		CColRef *column_ref = colid_to_colref_map->Find(&colid);
-		if (NULL != column_ref)
+		if (nullptr != column_ref)
 		{
 			column_refset_copy->Include(column_ref);
 		}
@@ -57,7 +57,7 @@ CUpperBoundNDVs::CopyUpperBoundNDVWithRemap(
 
 	column_refset_copy->Release();
 
-	return NULL;
+	return nullptr;
 }
 
 

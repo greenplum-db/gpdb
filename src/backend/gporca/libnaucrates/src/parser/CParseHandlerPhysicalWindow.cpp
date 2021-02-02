@@ -38,7 +38,7 @@ CParseHandlerPhysicalWindow::CParseHandlerPhysicalWindow(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_part_by_colid_array(NULL)
+	  m_part_by_colid_array(nullptr)
 {
 }
 
@@ -71,7 +71,7 @@ CParseHandlerPhysicalWindow::StartElement(const XMLCh *const,  // element_uri,
 	m_part_by_colid_array = CDXLOperatorFactory::ExtractIntsToUlongArray(
 		m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_part_by_cols,
 		EdxltokenPartKeys, EdxltokenPhysicalWindow);
-	GPOS_ASSERT(NULL != m_part_by_colid_array);
+	GPOS_ASSERT(nullptr != m_part_by_colid_array);
 
 	// parse handler for window key list
 	CParseHandlerBase *window_key_list_parse_handler =

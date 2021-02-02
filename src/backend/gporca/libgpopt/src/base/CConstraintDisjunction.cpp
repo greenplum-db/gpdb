@@ -29,9 +29,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CConstraintDisjunction::CConstraintDisjunction(CMemoryPool *mp,
 											   CConstraintArray *pdrgpcnstr)
-	: CConstraint(mp, PcrsFromConstraints(mp, pdrgpcnstr)), m_pdrgpcnstr(NULL)
+	: CConstraint(mp, PcrsFromConstraints(mp, pdrgpcnstr)),
+	  m_pdrgpcnstr(nullptr)
 {
-	GPOS_ASSERT(NULL != pdrgpcnstr);
+	GPOS_ASSERT(nullptr != pdrgpcnstr);
 	m_pdrgpcnstr = PdrgpcnstrFlatten(mp, pdrgpcnstr, EctDisjunction);
 
 	m_phmcolconstr = Phmcolconstr(mp, m_pcrsUsed, m_pdrgpcnstr);
@@ -85,7 +86,7 @@ BOOL
 CConstraintDisjunction::FConstraint(const CColRef *colref) const
 {
 	CConstraintArray *pdrgpcnstrCol = m_phmcolconstr->Find(colref);
-	return (NULL != pdrgpcnstrCol &&
+	return (nullptr != pdrgpcnstrCol &&
 			m_pdrgpcnstr->Size() == pdrgpcnstrCol->Size());
 }
 
@@ -126,9 +127,9 @@ CConstraintDisjunction::Pcnstr(CMemoryPool *mp, const CColRef *colref)
 {
 	// all children referencing given column
 	CConstraintArray *pdrgpcnstrCol = m_phmcolconstr->Find(colref);
-	if (NULL == pdrgpcnstrCol)
+	if (nullptr == pdrgpcnstrCol)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// if not all children have this col, return unbounded constraint
@@ -145,7 +146,7 @@ CConstraintDisjunction::Pcnstr(CMemoryPool *mp, const CColRef *colref)
 	{
 		// the part of the child that references this column
 		CConstraint *pcnstrCol = (*pdrgpcnstrCol)[ul]->Pcnstr(mp, colref);
-		if (NULL == pcnstrCol)
+		if (nullptr == pcnstrCol)
 		{
 			pcnstrCol =
 				CConstraintInterval::PciUnbounded(mp, colref, true /*is_null*/);
@@ -190,12 +191,12 @@ CConstraintDisjunction::Pcnstr(CMemoryPool *mp, CColRefSet *pcrs)
 		// the part of the child that references these columns
 		CConstraint *pcnstrCol = pcnstr->Pcnstr(mp, pcrs);
 
-		if (NULL == pcnstrCol)
+		if (nullptr == pcnstrCol)
 		{
 			pcnstrCol = CConstraintInterval::PciUnbounded(
 				mp, pcrs, true /*fIncludesNull*/);
 		}
-		GPOS_ASSERT(NULL != pcnstrCol);
+		GPOS_ASSERT(nullptr != pcnstrCol);
 		pdrgpcnstr->Append(pcnstrCol);
 	}
 
@@ -229,7 +230,7 @@ CConstraintDisjunction::PcnstrRemapForColumn(CMemoryPool *mp,
 CExpression *
 CConstraintDisjunction::PexprScalar(CMemoryPool *mp)
 {
-	if (NULL == m_pexprScalar)
+	if (nullptr == m_pexprScalar)
 	{
 		if (FContradiction())
 		{

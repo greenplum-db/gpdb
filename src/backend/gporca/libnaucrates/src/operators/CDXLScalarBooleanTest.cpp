@@ -90,7 +90,7 @@ CDXLScalarBooleanTest::GetOpNameStr() const
 			return CDXLTokens::GetDXLTokenStr(
 				EdxltokenScalarBoolTestIsNotUnknown);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -108,7 +108,7 @@ CDXLScalarBooleanTest::SerializeToDXL(CXMLSerializer *xml_serializer,
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	GPOS_ASSERT(NULL != element_name);
+	GPOS_ASSERT(nullptr != element_name);
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 

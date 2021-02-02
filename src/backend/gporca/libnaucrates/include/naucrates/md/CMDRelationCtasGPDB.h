@@ -244,7 +244,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no indexes");
-		return 0;
+		return nullptr;
 	}
 
 	// retrieve the id of the metadata cache trigger at the given position
@@ -252,7 +252,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no triggers");
-		return 0;
+		return nullptr;
 	}
 
 	// serialize metadata relation in DXL format given a serializer object
@@ -270,7 +270,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no constraints");
-		return 0;
+		return nullptr;
 	}
 
 	// list of vartypmod for target expressions

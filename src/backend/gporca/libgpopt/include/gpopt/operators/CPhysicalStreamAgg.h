@@ -126,7 +126,7 @@ public:
 	static CPhysicalStreamAgg *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalStreamAgg == pop->Eopid() ||
 					EopPhysicalStreamAggDeduplicate == pop->Eopid());
 

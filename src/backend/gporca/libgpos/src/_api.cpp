@@ -85,7 +85,7 @@ gpos::BOOL
 FoundException(gpos::CException &exc, const gpos::ULONG *exceptions,
 			   gpos::ULONG size)
 {
-	GPOS_ASSERT(NULL != exceptions);
+	GPOS_ASSERT(nullptr != exceptions);
 
 	gpos::ULONG minor = exc.Minor();
 	gpos::BOOL found = false;
@@ -170,7 +170,7 @@ int
 gpos_exec(gpos_exec_params *params)
 {
 	// check if passed parameters are valid
-	if (NULL == params || NULL == params->func)
+	if (nullptr == params || nullptr == params->func)
 	{
 		return 1;
 	}
@@ -180,14 +180,14 @@ gpos_exec(gpos_exec_params *params)
 		CWorkerPoolManager *pwpm = CWorkerPoolManager::WorkerPoolManager();
 
 		// check if worker pool is initialized
-		if (NULL == pwpm)
+		if (nullptr == pwpm)
 		{
 			return 1;
 		}
 
 		// if no stack start address is passed, use address in current stack frame
 		void *pvStackStart = params->stack_start;
-		if (NULL == pvStackStart)
+		if (nullptr == pvStackStart)
 		{
 			pvStackStart = &pwpm;
 		}
@@ -217,7 +217,7 @@ gpos_exec(gpos_exec_params *params)
 				CAutoP<CLoggerStream> aplogger;
 
 				// use passed buffer for logging
-				if (NULL != params->error_buffer)
+				if (nullptr != params->error_buffer)
 				{
 					GPOS_ASSERT(0 < params->error_buffer_size);
 

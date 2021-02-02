@@ -88,7 +88,7 @@ public:
 	static CDistributionSpecReplicated *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtStrictReplicated == pds->Edt() ||
 					EdtReplicated == pds->Edt() ||
 					EdtTaintedReplicated == pds->Edt());

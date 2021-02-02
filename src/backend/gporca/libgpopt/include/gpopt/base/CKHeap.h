@@ -136,7 +136,7 @@ public:
 	void
 	Insert(E *elem)
 	{
-		GPOS_ASSERT(NULL != elem);
+		GPOS_ASSERT(nullptr != elem);
 		// since the cost may change as we find more expressions in the group,
 		// we just append to the array now and heapify at the end
 		GPOS_ASSERT(!m_is_heapified);
@@ -156,7 +156,7 @@ public:
 	{
 		if (0 == m_topk->Size() || m_k <= m_num_returned)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		m_num_returned++;
@@ -170,7 +170,7 @@ public:
 	{
 		if (0 == m_topk->Size())
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		if (!m_is_heapified)

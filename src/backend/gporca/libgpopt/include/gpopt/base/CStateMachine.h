@@ -411,7 +411,7 @@ public:
 	BOOL
 	FReachable(CMemoryPool *mp) const
 	{
-		TEnumState *pestate = NULL;
+		TEnumState *pestate = nullptr;
 		ULONG size = 0;
 		Unreachable(mp, &pestate, &size);
 		GPOS_DELETE_ARRAY(pestate);
@@ -423,8 +423,8 @@ public:
 	void
 	Unreachable(CMemoryPool *mp, TEnumState **ppestate, ULONG *pulSize) const
 	{
-		GPOS_ASSERT(NULL != ppestate);
-		GPOS_ASSERT(NULL != pulSize);
+		GPOS_ASSERT(nullptr != ppestate);
+		GPOS_ASSERT(nullptr != pulSize);
 
 		// initialize output array
 		*ppestate = GPOS_NEW_ARRAY(mp, TEnumState, tenumstateSentinel);

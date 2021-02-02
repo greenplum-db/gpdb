@@ -82,13 +82,13 @@ ULONG
 CGroup::SContextLink::HashValue(const SContextLink *pclink)
 {
 	ULONG ulHashPcc = 0;
-	if (NULL != pclink->m_pccParent)
+	if (nullptr != pclink->m_pccParent)
 	{
 		ulHashPcc = CCostContext::HashValue(*pclink->m_pccParent);
 	}
 
 	ULONG ulHashPoc = 0;
-	if (NULL != pclink->m_poc)
+	if (nullptr != pclink->m_poc)
 	{
 		ulHashPoc = COptimizationContext::HashValue(*pclink->m_poc);
 	}
@@ -115,10 +115,10 @@ CGroup::SContextLink::Equals(const SContextLink *pclink1,
 	BOOL fEqual = false;
 	if (fEqualChildIndexes)
 	{
-		if (NULL == pclink1->m_pccParent || NULL == pclink2->m_pccParent)
+		if (nullptr == pclink1->m_pccParent || nullptr == pclink2->m_pccParent)
 		{
-			fEqual =
-				(NULL == pclink1->m_pccParent && NULL == pclink2->m_pccParent);
+			fEqual = (nullptr == pclink1->m_pccParent &&
+					  nullptr == pclink2->m_pccParent);
 		}
 		else
 		{
@@ -128,9 +128,9 @@ CGroup::SContextLink::Equals(const SContextLink *pclink1,
 
 	if (fEqual)
 	{
-		if (NULL == pclink1->m_poc || NULL == pclink2->m_poc)
+		if (nullptr == pclink1->m_poc || nullptr == pclink2->m_poc)
 		{
-			return (NULL == pclink1->m_poc && NULL == pclink2->m_poc);
+			return (nullptr == pclink1->m_poc && nullptr == pclink2->m_poc);
 		}
 
 		return COptimizationContext::Equals(*pclink1->m_poc, *pclink2->m_poc);
@@ -152,19 +152,19 @@ CGroup::CGroup(CMemoryPool *mp, BOOL fScalar)
 	: m_mp(mp),
 	  m_id(GPOPT_INVALID_GROUP_ID),
 	  m_fScalar(fScalar),
-	  m_pdrgpexprJoinKeysOuter(NULL),
-	  m_pdrgpexprJoinKeysInner(NULL),
-	  m_join_opfamilies(NULL),
-	  m_pdp(NULL),
-	  m_pstats(NULL),
-	  m_pexprScalarRep(NULL),
+	  m_pdrgpexprJoinKeysOuter(nullptr),
+	  m_pdrgpexprJoinKeysInner(nullptr),
+	  m_join_opfamilies(nullptr),
+	  m_pdp(nullptr),
+	  m_pstats(nullptr),
+	  m_pexprScalarRep(nullptr),
 	  m_pexprScalarRepIsExact(false),
-	  m_pccDummy(NULL),
-	  m_pgroupDuplicate(NULL),
-	  m_plinkmap(NULL),
-	  m_pstatsmap(NULL),
+	  m_pccDummy(nullptr),
+	  m_pgroupDuplicate(nullptr),
+	  m_plinkmap(nullptr),
+	  m_pstatsmap(nullptr),
 	  m_ulGExprs(0),
-	  m_pcostmap(NULL),
+	  m_pcostmap(nullptr),
 	  m_ulpOptCtxts(0),
 	  m_estate(estUnexplored),
 	  m_eolMax(EolLow),
@@ -172,7 +172,7 @@ CGroup::CGroup(CMemoryPool *mp, BOOL fScalar)
 	  m_ulCTEProducerId(gpos::ulong_max),
 	  m_fCTEConsumer(false)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	m_listGExprs.Init(GPOS_OFFSET(CGroupExpression, m_linkGroup));
 	m_listDupGExprs.Init(GPOS_OFFSET(CGroupExpression, m_linkGroup));
@@ -211,7 +211,7 @@ CGroup::~CGroup()
 
 	// cleaning-up group expressions
 	CGroupExpression *pgexpr = m_listGExprs.First();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		CGroupExpression *pgexprNext = m_listGExprs.Next(pgexpr);
 		pgexpr->CleanupContexts();
@@ -222,7 +222,7 @@ CGroup::~CGroup()
 
 	// cleaning-up duplicate expressions
 	pgexpr = m_listDupGExprs.First();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		CGroupExpression *pgexprNext = m_listDupGExprs.Next(pgexpr);
 		pgexpr->CleanupContexts();
@@ -251,17 +251,17 @@ CGroup::CleanupContexts()
 	{
 		CAutoSuspendAbort asa;
 
-		COptimizationContext *poc = NULL;
+		COptimizationContext *poc = nullptr;
 		ShtIter shtit(m_sht);
 
-		while (NULL != poc || shtit.Advance())
+		while (nullptr != poc || shtit.Advance())
 		{
 			CRefCount::SafeRelease(poc);
 
 			// iter's accessor scope
 			{
 				ShtAccIter shtitacc(shtit);
-				if (NULL != (poc = shtitacc.Value()))
+				if (nullptr != (poc = shtitacc.Value()))
 				{
 					shtitacc.Remove(poc);
 				}
@@ -285,7 +285,7 @@ CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc)
 {
 	GPOS_ASSERT(CCostContext::estCosted == pcc->Est());
 
-	COptimizationContext *pocFound = NULL;
+	COptimizationContext *pocFound = nullptr;
 
 	{
 		// scope for accessor
@@ -293,7 +293,7 @@ CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc)
 		pocFound = shta.Find();
 	}
 
-	if (NULL == pocFound)
+	if (nullptr == pocFound)
 	{
 		// it should never happen, but instead of crashing, raise an exception
 		GPOS_RAISE(CException::ExmaInvalid, CException::ExmiInvalid,
@@ -304,7 +304,7 @@ CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc)
 	// update best cost context
 	CCostContext *pccBest = pocFound->PccBest();
 	if (GPOPT_INVALID_COST != pcc->Cost() &&
-		(NULL == pccBest || pcc->FBetterThan(pccBest)))
+		(nullptr == pccBest || pcc->FBetterThan(pccBest)))
 	{
 		pocFound->SetBest(pcc);
 	}
@@ -332,7 +332,7 @@ CGroup::PocLookup(CMemoryPool *mp, CReqdPropPlan *prpp,
 			mp),  // stats context is not used when looking up contexts
 		ulSearchStageIndex);
 
-	COptimizationContext *pocFound = NULL;
+	COptimizationContext *pocFound = nullptr;
 	{
 		ShtAcc shta(Sht(), *poc);
 		pocFound = shta.Find();
@@ -357,19 +357,19 @@ COptimizationContext *
 CGroup::PocLookupBest(CMemoryPool *mp, ULONG ulSearchStages,
 					  CReqdPropPlan *prpp)
 {
-	COptimizationContext *pocBest = NULL;
-	CCostContext *pccBest = NULL;
+	COptimizationContext *pocBest = nullptr;
+	CCostContext *pccBest = nullptr;
 	for (ULONG ul = 0; ul < ulSearchStages; ul++)
 	{
 		COptimizationContext *pocCurrent = PocLookup(mp, prpp, ul);
-		if (NULL == pocCurrent)
+		if (nullptr == pocCurrent)
 		{
 			continue;
 		}
 
 		CCostContext *pccCurrent = pocCurrent->PccBest();
-		if (NULL == pccBest ||
-			(NULL != pccCurrent && pccCurrent->FBetterThan(pccBest)))
+		if (nullptr == pccBest ||
+			(nullptr != pccCurrent && pccCurrent->FBetterThan(pccBest)))
 		{
 			pocBest = pocCurrent;
 			pccBest = pccCurrent;
@@ -391,7 +391,7 @@ CGroup::PocLookupBest(CMemoryPool *mp, ULONG ulSearchStages,
 COptimizationContext *
 CGroup::Ppoc(ULONG id) const
 {
-	COptimizationContext *poc = NULL;
+	COptimizationContext *poc = nullptr;
 	ShtIter shtit(const_cast<CGroup *>(this)->m_sht);
 	while (shtit.Advance())
 	{
@@ -405,7 +405,7 @@ CGroup::Ppoc(ULONG id) const
 			}
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -425,7 +425,7 @@ CGroup::PocInsert(COptimizationContext *poc)
 	ShtAcc shta(Sht(), *poc);
 
 	COptimizationContext *pocFound = shta.Find();
-	if (NULL == pocFound)
+	if (nullptr == pocFound)
 	{
 		poc->SetId((ULONG) UlpIncOptCtxts());
 		shta.Insert(poc);
@@ -449,12 +449,12 @@ CGroup::PgexprBest(COptimizationContext *poc)
 {
 	ShtAcc shta(Sht(), *poc);
 	COptimizationContext *pocFound = shta.Find();
-	if (NULL != pocFound)
+	if (nullptr != pocFound)
 	{
 		return pocFound->PgexprBest();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -488,8 +488,8 @@ CGroup::SetId(ULONG id)
 void
 CGroup::InitProperties(CDrvdProp *pdp)
 {
-	GPOS_ASSERT(NULL == m_pdp);
-	GPOS_ASSERT(NULL != pdp);
+	GPOS_ASSERT(nullptr == m_pdp);
+	GPOS_ASSERT(nullptr != pdp);
 	GPOS_ASSERT_IMP(FScalar(), CDrvdProp::EptScalar == pdp->Ept());
 	GPOS_ASSERT_IMP(!FScalar(), CDrvdProp::EptRelational == pdp->Ept());
 
@@ -508,8 +508,8 @@ CGroup::InitProperties(CDrvdProp *pdp)
 void
 CGroup::InitStats(IStatistics *stats)
 {
-	GPOS_ASSERT(NULL == m_pstats);
-	GPOS_ASSERT(NULL != stats);
+	GPOS_ASSERT(nullptr == m_pstats);
+	GPOS_ASSERT(nullptr != stats);
 
 	m_pstats = stats;
 }
@@ -538,12 +538,12 @@ CGroup::SetJoinKeys(CExpressionArray *pdrgpexprOuter,
 					IMdIdArray *join_opfamilies)
 {
 	GPOS_ASSERT(m_fScalar);
-	GPOS_ASSERT(NULL != pdrgpexprOuter);
-	GPOS_ASSERT(NULL != pdrgpexprInner);
+	GPOS_ASSERT(nullptr != pdrgpexprOuter);
+	GPOS_ASSERT(nullptr != pdrgpexprInner);
 
-	if (NULL != m_pdrgpexprJoinKeysOuter)
+	if (nullptr != m_pdrgpexprJoinKeysOuter)
 	{
-		GPOS_ASSERT(NULL != m_pdrgpexprJoinKeysInner);
+		GPOS_ASSERT(nullptr != m_pdrgpexprJoinKeysInner);
 
 		// hash join keys have been already set, exit here
 		return;
@@ -557,12 +557,12 @@ CGroup::SetJoinKeys(CExpressionArray *pdrgpexprOuter,
 
 	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 	{
-		GPOS_ASSERT(join_opfamilies != NULL);
+		GPOS_ASSERT(join_opfamilies != nullptr);
 		join_opfamilies->AddRef();
 	}
 	else
 	{
-		GPOS_ASSERT(NULL == join_opfamilies);
+		GPOS_ASSERT(nullptr == join_opfamilies);
 	}
 	m_join_opfamilies = join_opfamilies;
 }
@@ -657,15 +657,15 @@ CGroup::PgexprAnyCTEConsumer()
 {
 	BOOL fFoundCTEConsumer = false;
 	// get first logical group expression
-	CGroupExpression *pgexprCurrent = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprNextLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprNextLogical(nullptr /*pgexpr*/);
 		fFoundCTEConsumer =
 			(COperator::EopLogicalCTEConsumer == pgexprCurrent->Pop()->Eopid());
 	}
 
-	while (NULL != pgexprCurrent && !fFoundCTEConsumer)
+	while (nullptr != pgexprCurrent && !fFoundCTEConsumer)
 	{
 		GPOS_CHECK_ABORT;
 		// move to next logical group expression
@@ -674,7 +674,7 @@ CGroup::PgexprAnyCTEConsumer()
 			pgexprCurrent = gp.PgexprNextLogical(pgexprCurrent);
 		}
 
-		if (NULL != pgexprCurrent)
+		if (nullptr != pgexprCurrent)
 		{
 			COperator *popCurrent = pgexprCurrent->Pop();
 			fFoundCTEConsumer =
@@ -687,7 +687,7 @@ CGroup::PgexprAnyCTEConsumer()
 		return pgexprCurrent;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -759,8 +759,8 @@ BOOL
 CGroup::FMatchNonScalarGroups(CGroupArray *pdrgpgroupFst,
 							  CGroupArray *pdrgpgroupSnd)
 {
-	GPOS_ASSERT(NULL != pdrgpgroupFst);
-	GPOS_ASSERT(NULL != pdrgpgroupSnd);
+	GPOS_ASSERT(nullptr != pdrgpgroupFst);
+	GPOS_ASSERT(nullptr != pdrgpgroupSnd);
 
 	if (pdrgpgroupFst->Size() != pdrgpgroupSnd->Size())
 	{
@@ -801,8 +801,8 @@ CGroup::FMatchNonScalarGroups(CGroupArray *pdrgpgroupFst,
 BOOL
 CGroup::FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd)
 {
-	GPOS_ASSERT(NULL != pgroupFst);
-	GPOS_ASSERT(NULL != pgroupSnd);
+	GPOS_ASSERT(nullptr != pgroupFst);
+	GPOS_ASSERT(nullptr != pgroupSnd);
 
 	CGroup *pgroupFstDup = pgroupFst->PgroupDuplicate();
 	CGroup *pgroupSndDup = pgroupSnd->PgroupDuplicate();
@@ -813,7 +813,7 @@ CGroup::FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd)
 		   (pgroupSnd ==
 			pgroupFstDup) ||  // second group is duplicate of first group
 		   // both groups have the same duplicate group
-		   (NULL != pgroupFstDup && NULL != pgroupSndDup &&
+		   (nullptr != pgroupFstDup && nullptr != pgroupSndDup &&
 			pgroupFstDup == pgroupSndDup);
 }
 
@@ -829,10 +829,10 @@ CGroup::FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd)
 BOOL
 CGroup::FInitStats(IStatistics *stats)
 {
-	GPOS_ASSERT(NULL != stats);
+	GPOS_ASSERT(nullptr != stats);
 
 	CGroupProxy gp(this);
-	if (NULL == Pstats())
+	if (nullptr == Pstats())
 	{
 		gp.InitStats(stats);
 		return true;
@@ -856,22 +856,22 @@ CGroup::FInitStats(IStatistics *stats)
 void
 CGroup::AppendStats(CMemoryPool *mp, IStatistics *stats)
 {
-	GPOS_ASSERT(NULL != stats);
-	GPOS_ASSERT(NULL != Pstats());
+	GPOS_ASSERT(nullptr != stats);
+	GPOS_ASSERT(nullptr != Pstats());
 
 	IStatistics *stats_copy = Pstats()->CopyStats(mp);
 	stats_copy->AppendStats(mp, stats);
 
-	IStatistics *current_stats = NULL;
+	IStatistics *current_stats = nullptr;
 	{
 		CGroupProxy gp(this);
 		current_stats = m_pstats;
-		m_pstats = NULL;
+		m_pstats = nullptr;
 		gp.InitStats(stats_copy);
 	}
 
 	current_stats->Release();
-	current_stats = NULL;
+	current_stats = nullptr;
 }
 
 
@@ -886,7 +886,7 @@ CGroup::AppendStats(CMemoryPool *mp, IStatistics *stats)
 void
 CGroup::AddDuplicateGrp(CGroup *pgroup)
 {
-	GPOS_ASSERT(NULL != pgroup);
+	GPOS_ASSERT(nullptr != pgroup);
 
 	// add link following monotonic ordering of group IDs
 	CGroup *pgroupSrc = this;
@@ -899,7 +899,7 @@ CGroup::AddDuplicateGrp(CGroup *pgroup)
 	// keep looping until we add link
 	while (pgroupSrc->m_pgroupDuplicate != pgroupDest)
 	{
-		if (NULL == pgroupSrc->m_pgroupDuplicate)
+		if (nullptr == pgroupSrc->m_pgroupDuplicate)
 		{
 			pgroupSrc->m_pgroupDuplicate = pgroupDest;
 		}
@@ -931,7 +931,7 @@ CGroup::ResolveDuplicateMaster()
 		return;
 	}
 	CGroup *pgroupTarget = m_pgroupDuplicate;
-	while (NULL != pgroupTarget->m_pgroupDuplicate)
+	while (nullptr != pgroupTarget->m_pgroupDuplicate)
 	{
 		GPOS_ASSERT(pgroupTarget->Id() < pgroupTarget->m_pgroupDuplicate->Id());
 		pgroupTarget = pgroupTarget->m_pgroupDuplicate;
@@ -993,14 +993,14 @@ void
 CGroup::CreateScalarExpression()
 {
 	GPOS_ASSERT(FScalar());
-	GPOS_ASSERT(NULL == m_pexprScalarRep);
+	GPOS_ASSERT(nullptr == m_pexprScalarRep);
 
-	CGroupExpression *pgexprFirst = NULL;
+	CGroupExpression *pgexprFirst = nullptr;
 	{
 		CGroupProxy gp(this);
 		pgexprFirst = gp.PgexprFirst();
 	}
-	GPOS_ASSERT(NULL != pgexprFirst);
+	GPOS_ASSERT(nullptr != pgexprFirst);
 	COperator *pop = pgexprFirst->Pop();
 
 	if (CUtils::FSubquery(pop))
@@ -1064,14 +1064,14 @@ void
 CGroup::CreateDummyCostContext()
 {
 	GPOS_ASSERT(FScalar());
-	GPOS_ASSERT(NULL == m_pccDummy);
+	GPOS_ASSERT(nullptr == m_pccDummy);
 
-	CGroupExpression *pgexprFirst = NULL;
+	CGroupExpression *pgexprFirst = nullptr;
 	{
 		CGroupProxy gp(this);
 		pgexprFirst = gp.PgexprFirst();
 	}
-	GPOS_ASSERT(NULL != pgexprFirst);
+	GPOS_ASSERT(nullptr != pgexprFirst);
 
 	COptimizationContext *poc = GPOS_NEW(m_mp) COptimizationContext(
 		m_mp, this, CReqdPropPlan::PrppEmpty(m_mp),
@@ -1088,12 +1088,12 @@ CGroup::CreateDummyCostContext()
 	m_pccDummy->SetState(CCostContext::estCosted);
 
 #ifdef GPOS_DEBUG
-	CGroupExpression *pgexprNext = NULL;
+	CGroupExpression *pgexprNext = nullptr;
 	{
 		CGroupProxy gp(this);
 		pgexprNext = gp.PgexprNext(pgexprFirst);
 	}
-	GPOS_ASSERT(NULL == pgexprNext &&
+	GPOS_ASSERT(nullptr == pgexprNext &&
 				"scalar group can only have one group expression");
 #endif	// GPOS_DEBUG
 }
@@ -1119,8 +1119,8 @@ CGroup::RecursiveBuildTreeMap(
 			 CCostContext::HashValue, CCostContext::Equals> *ptmap)
 {
 	GPOS_ASSERT(pgexprCurrent->Pop()->FPhysical());
-	GPOS_ASSERT(NULL != ptmap);
-	GPOS_ASSERT_IMP(NULL != pccParent,
+	GPOS_ASSERT(nullptr != ptmap);
+	GPOS_ASSERT_IMP(nullptr != pccParent,
 					child_index < pccParent->Pgexpr()->Arity());
 
 	CCostContextArray *pdrgpcc = pgexprCurrent->PdrgpccLookupAll(mp, poc);
@@ -1139,14 +1139,14 @@ CGroup::RecursiveBuildTreeMap(
 		GPOS_CHECK_ABORT;
 
 		CCostContext *pccCurrent = (*pdrgpcc)[ulCC];
-		if (NULL != pccParent)
+		if (nullptr != pccParent)
 		{
 			// link parent cost context to child cost context
 			ptmap->Insert(pccParent, child_index, pccCurrent);
 		}
 
 		COptimizationContextArray *pdrgpoc = pccCurrent->Pdrgpoc();
-		if (NULL != pdrgpoc)
+		if (nullptr != pdrgpoc)
 		{
 			// process children recursively
 			const ULONG arity = pgexprCurrent->Arity();
@@ -1155,11 +1155,11 @@ CGroup::RecursiveBuildTreeMap(
 				GPOS_CHECK_ABORT;
 
 				CGroup *pgroupChild = (*pgexprCurrent)[ul];
-				COptimizationContext *pocChild = NULL;
+				COptimizationContext *pocChild = nullptr;
 				if (!pgroupChild->FScalar())
 				{
 					pocChild = (*pdrgpoc)[ul];
-					GPOS_ASSERT(NULL != pocChild);
+					GPOS_ASSERT(nullptr != pocChild);
 				}
 				pgroupChild->BuildTreeMap(mp, pocChild, pccCurrent, ul, ptmap);
 			}
@@ -1194,20 +1194,20 @@ CGroup::BuildTreeMap(
 )
 {
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != ptmap);
-	GPOS_ASSERT_IMP(NULL == poc, FScalar());
+	GPOS_ASSERT(nullptr != ptmap);
+	GPOS_ASSERT_IMP(nullptr == poc, FScalar());
 
 #ifdef GPOS_DEBUG
-	CGroupExpression *pgexprParent = NULL;
+	CGroupExpression *pgexprParent = nullptr;
 #endif	// GPOS_DEBUG
-	if (NULL != pccParent)
+	if (nullptr != pccParent)
 	{
 		pccParent->AddRef();
 #ifdef GPOS_DEBUG
 		pgexprParent = pccParent->Pgexpr();
 #endif	// GPOS_DEBUG
 	}
-	if (NULL != poc)
+	if (nullptr != poc)
 	{
 		poc->AddRef();
 	}
@@ -1224,13 +1224,13 @@ CGroup::BuildTreeMap(
 	}
 
 	// start with first non-logical group expression
-	CGroupExpression *pgexprCurrent = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprSkipLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprSkipLogical(nullptr /*pgexpr*/);
 	}
 
-	while (NULL != pgexprCurrent)
+	while (nullptr != pgexprCurrent)
 	{
 		COperator *pop = pgexprCurrent->Pop();
 		if (pop->FPhysical())
@@ -1242,7 +1242,7 @@ CGroup::BuildTreeMap(
 		else
 		{
 			GPOS_ASSERT(pop->FScalar());
-			GPOS_ASSERT(NULL == poc);
+			GPOS_ASSERT(nullptr == poc);
 			GPOS_ASSERT(child_index < pgexprParent->Arity());
 
 			// this is a scalar group, link parent cost context to group's dummy context
@@ -1255,7 +1255,7 @@ CGroup::BuildTreeMap(
 				CGroup *pgroupChild = (*pgexprCurrent)[ul];
 				GPOS_ASSERT(pgroupChild->FScalar());
 
-				pgroupChild->BuildTreeMap(mp, NULL /*poc*/, PccDummy(), ul,
+				pgroupChild->BuildTreeMap(mp, nullptr /*poc*/, PccDummy(), ul,
 										  ptmap);
 			}
 		}
@@ -1266,7 +1266,7 @@ CGroup::BuildTreeMap(
 			pgexprCurrent = gp.PgexprSkipLogical(pgexprCurrent);
 		}
 		GPOS_ASSERT_IMP(
-			FScalar(), NULL == pgexprCurrent &&
+			FScalar(), nullptr == pgexprCurrent &&
 						   "a scalar group can only have one group expression");
 
 		GPOS_CHECK_ABORT;
@@ -1292,22 +1292,22 @@ CGroup::FStatsDerivable(CMemoryPool *mp)
 {
 	GPOS_CHECK_STACK_SIZE;
 
-	if (NULL != m_pstats)
+	if (nullptr != m_pstats)
 	{
 		return true;
 	}
 
-	CGroupExpression *pgexprBest = NULL;
+	CGroupExpression *pgexprBest = nullptr;
 	CLogical::EStatPromise espBest = CLogical::EspNone;
 
-	CGroupExpression *pgexprCurrent = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
 	// get first logical group expression
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprNextLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprNextLogical(nullptr /*pgexpr*/);
 	}
 
-	while (NULL != pgexprCurrent)
+	while (nullptr != pgexprCurrent)
 	{
 		CExpressionHandle exprhdl(mp);
 		exprhdl.Attach(pgexprCurrent);
@@ -1334,7 +1334,7 @@ CGroup::FStatsDerivable(CMemoryPool *mp)
 		GPOS_CHECK_ABORT;
 	}
 
-	if (NULL == pgexprBest)
+	if (nullptr == pgexprBest)
 	{
 		return false;
 	}
@@ -1439,7 +1439,7 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 	GPOS_CHECK_STACK_SIZE;
 
 	GPOS_ASSERT(!FImplemented());
-	GPOS_ASSERT(NULL != stats_ctxt);
+	GPOS_ASSERT(nullptr != stats_ctxt);
 	GPOS_CHECK_ABORT;
 
 	// create empty stats if a scalar group
@@ -1448,7 +1448,7 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 		return PstatsInitEmpty(pmpGlobal);
 	}
 
-	IStatistics *stats = NULL;
+	IStatistics *stats = nullptr;
 	// if this is a duplicate group, return stats from the duplicate
 	if (FDuplicateGroup())
 	{
@@ -1461,14 +1461,14 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 	prprel->AddRef();
 	CReqdPropRelational *prprelInput = prprel;
 
-	if (NULL == stats)
+	if (nullptr == stats)
 	{
 		stats = Pstats();
 	}
 	// if group has derived stats, check if requirements are covered
 	// by what's already derived
 
-	if (NULL != stats)
+	if (nullptr != stats)
 	{
 		prprelInput->Release();
 		CReqdPropRelational *prprelExisting =
@@ -1490,7 +1490,7 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 	CGroupExpression *pgexprBest =
 		PgexprBestPromise(pmpLocal, pmpGlobal, prprelInput, stats_ctxt);
 
-	if (NULL == pgexprBest)
+	if (nullptr == pgexprBest)
 	{
 		GPOS_RAISE(
 			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
@@ -1507,7 +1507,7 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 		AppendStats(pmpGlobal, stats);
 		stats->Release();
 	}
-	GPOS_ASSERT(NULL != Pstats());
+	GPOS_ASSERT(nullptr != Pstats());
 
 	prprelInput->Release();
 
@@ -1526,22 +1526,22 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 CGroupExpression *
 CGroup::PgexprBestPromise(CMemoryPool *mp, CGroupExpression *pgexprToMatch)
 {
-	GPOS_ASSERT(NULL != pgexprToMatch);
+	GPOS_ASSERT(nullptr != pgexprToMatch);
 
 	CReqdPropRelational *prprel =
 		GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
 	IStatisticsArray *stats_ctxt = GPOS_NEW(mp) IStatisticsArray(mp);
 
 	CLogical::EStatPromise espBest = CLogical::EspNone;
-	CGroupExpression *pgexprCurrent = NULL;
-	CGroupExpression *pgexprBest = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
+	CGroupExpression *pgexprBest = nullptr;
 	// get first logical group expression
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprNextLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprNextLogical(nullptr /*pgexpr*/);
 	}
 
-	while (NULL != pgexprCurrent)
+	while (nullptr != pgexprCurrent)
 	{
 		CLogical::EStatPromise espCurrent =
 			EspDerive(mp, mp, pgexprCurrent, prprel, stats_ctxt,
@@ -1583,16 +1583,16 @@ CGroup::PgexprBestPromise(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 						  CReqdPropRelational *prprelInput,
 						  IStatisticsArray *stats_ctxt)
 {
-	CGroupExpression *pgexprBest = NULL;
+	CGroupExpression *pgexprBest = nullptr;
 	CLogical::EStatPromise espBest = CLogical::EspNone;
-	CGroupExpression *pgexprCurrent = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
 	// get first logical group expression
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprNextLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprNextLogical(nullptr /*pgexpr*/);
 	}
 
-	while (NULL != pgexprCurrent)
+	while (nullptr != pgexprCurrent)
 	{
 		if (!pgexprCurrent->ContainsCircularDependencies())
 		{
@@ -1663,7 +1663,7 @@ CGroup::OsPrintGrpOptCtxts(IOstream &os, const CHAR *szPrefix) const
 		{
 			COptimizationContext *poc = Ppoc(ul);
 
-			if (NULL != poc)
+			if (nullptr != poc)
 			{
 				os << szPrefix;
 				(void) poc->OsPrintWithPrefix(os, szPrefix);
@@ -1690,7 +1690,7 @@ CGroup::OsPrintGrpScalarProps(IOstream &os, const CHAR *szPrefix) const
 {
 	GPOS_ASSERT(FScalar());
 
-	if (NULL != PexprScalarRep())
+	if (nullptr != PexprScalarRep())
 	{
 		os << szPrefix << "Scalar Expression:";
 		if (!FScalarRepIsExact())
@@ -1702,7 +1702,7 @@ CGroup::OsPrintGrpScalarProps(IOstream &os, const CHAR *szPrefix) const
 
 	GPOS_CHECK_ABORT;
 
-	if (NULL != m_pdrgpexprJoinKeysOuter)
+	if (nullptr != m_pdrgpexprJoinKeysOuter)
 	{
 		os << szPrefix << "Outer Join Keys: " << std::endl;
 
@@ -1715,7 +1715,7 @@ CGroup::OsPrintGrpScalarProps(IOstream &os, const CHAR *szPrefix) const
 
 	GPOS_CHECK_ABORT;
 
-	if (NULL != m_pdrgpexprJoinKeysInner)
+	if (nullptr != m_pdrgpexprJoinKeysInner)
 	{
 		os << szPrefix << "Inner Join Keys: " << std::endl;
 
@@ -1728,7 +1728,7 @@ CGroup::OsPrintGrpScalarProps(IOstream &os, const CHAR *szPrefix) const
 
 	GPOS_CHECK_ABORT;
 
-	if (NULL != m_join_opfamilies)
+	if (nullptr != m_join_opfamilies)
 	{
 		os << szPrefix << "Inner Join Opfamilies: " << std::endl;
 
@@ -1760,7 +1760,7 @@ CGroup::OsPrintGrpProps(IOstream &os, const CHAR *szPrefix) const
 	{
 		os << szPrefix << "Grp Props:" << std::endl
 		   << szPrefix << szPrefix << *m_pdp << std::endl;
-		if (!FScalar() && NULL != m_pstats)
+		if (!FScalar() && nullptr != m_pstats)
 		{
 			os << szPrefix << "Grp Stats:" << std::endl
 			   << szPrefix << szPrefix << *m_pstats;
@@ -1792,7 +1792,7 @@ CGroup::ResetGroupState()
 {
 	// reset group expression states
 	CGroupExpression *pgexpr = m_listGExprs.First();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		pgexpr->ResetState();
 		pgexpr = m_listGExprs.Next(pgexpr);
@@ -1819,7 +1819,7 @@ CGroup::ResetGroupState()
 IStatistics *
 CGroup::Pstats() const
 {
-	if (NULL != m_pstats)
+	if (nullptr != m_pstats)
 	{
 		return m_pstats;
 	}
@@ -1829,7 +1829,7 @@ CGroup::Pstats() const
 		return PgroupDuplicate()->Pstats();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1847,14 +1847,14 @@ CGroup::ResetStats()
 {
 	GPOS_ASSERT(!FScalar());
 
-	IStatistics *stats = NULL;
+	IStatistics *stats = nullptr;
 	{
 		CGroupProxy gp(this);
 		stats = m_pstats;
-		m_pstats = NULL;
+		m_pstats = nullptr;
 	}
 	CRefCount::SafeRelease(stats);
-	stats = NULL;
+	stats = nullptr;
 }
 
 
@@ -1871,7 +1871,7 @@ CGroup::ResetStats()
 void
 CGroup::ResetLinkMap()
 {
-	GPOS_ASSERT(NULL != m_plinkmap);
+	GPOS_ASSERT(nullptr != m_plinkmap);
 
 	m_plinkmap->Release();
 	m_plinkmap = GPOS_NEW(m_mp) LinkMap(m_mp);
@@ -1897,7 +1897,7 @@ CGroup::FResetStats()
 {
 	GPOS_CHECK_STACK_SIZE;
 
-	if (NULL == Pstats())
+	if (nullptr == Pstats())
 	{
 		// end recursion early if group stats have been already reset
 		return true;
@@ -1910,14 +1910,14 @@ CGroup::FResetStats()
 	}
 
 	// get first logical group expression
-	CGroupExpression *pgexprCurrent = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprNextLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprNextLogical(nullptr /*pgexpr*/);
 	}
 
 	// recursively process child groups reachable from current group
-	while (NULL != pgexprCurrent)
+	while (nullptr != pgexprCurrent)
 	{
 		const ULONG arity = pgexprCurrent->Arity();
 		for (ULONG ul = 0; ul < arity; ul++)
@@ -1977,19 +1977,19 @@ IStatistics *
 CGroup::PstatsCompute(COptimizationContext *poc, CExpressionHandle &exprhdl,
 					  CGroupExpression *pgexpr)
 {
-	GPOS_ASSERT(NULL != poc);
-	GPOS_ASSERT(NULL != pgexpr);
+	GPOS_ASSERT(nullptr != poc);
+	GPOS_ASSERT(nullptr != pgexpr);
 	GPOS_ASSERT(this == pgexpr->Pgroup());
 
 	IStatistics *stats = m_pstatsmap->Find(poc);
-	if (NULL != stats)
+	if (nullptr != stats)
 	{
 		return stats;
 	}
 
 	stats = CLogical::PopConvert(pgexpr->Pop())
 				->PstatsDerive(m_mp, exprhdl, poc->Pdrgpstat());
-	GPOS_ASSERT(NULL != stats);
+	GPOS_ASSERT(nullptr != stats);
 
 	// add computed stats to local map
 	poc->AddRef();
@@ -2030,7 +2030,7 @@ CGroup::OsPrint(IOstream &os) const
 	os << "):" << std::endl;
 
 	CGroupExpression *pgexpr = m_listGExprs.First();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		(void) pgexpr->OsPrintWithPrefix(os, szPrefix);
 		pgexpr = m_listGExprs.Next(pgexpr);
@@ -2057,11 +2057,11 @@ CGroup::OsPrint(IOstream &os) const
 CCost
 CGroup::CostLowerBound(CMemoryPool *mp, CReqdPropPlan *prppInput)
 {
-	GPOS_ASSERT(NULL != prppInput);
+	GPOS_ASSERT(nullptr != prppInput);
 	GPOS_ASSERT(!FScalar());
 
 	CCost *pcostLowerBound = m_pcostmap->Find(prppInput);
-	if (NULL != pcostLowerBound)
+	if (nullptr != pcostLowerBound)
 	{
 		return *pcostLowerBound;
 	}
@@ -2069,13 +2069,13 @@ CGroup::CostLowerBound(CMemoryPool *mp, CReqdPropPlan *prppInput)
 	CCost costLowerBound = GPOPT_INFINITE_COST;
 
 	// start with first non-logical group expression
-	CGroupExpression *pgexprCurrent = NULL;
+	CGroupExpression *pgexprCurrent = nullptr;
 	{
 		CGroupProxy gp(this);
-		pgexprCurrent = gp.PgexprSkipLogical(NULL /*pgexpr*/);
+		pgexprCurrent = gp.PgexprSkipLogical(nullptr /*pgexpr*/);
 	}
 
-	while (NULL != pgexprCurrent)
+	while (nullptr != pgexprCurrent)
 	{
 		// considering an enforcer introduces a deadlock here since its child is
 		// the same group that contains it,
@@ -2084,9 +2084,9 @@ CGroup::CostLowerBound(CMemoryPool *mp, CReqdPropPlan *prppInput)
 
 		if (!CUtils::FEnforcer(pgexprCurrent->Pop()))
 		{
-			CCost costLowerBoundGExpr =
-				pgexprCurrent->CostLowerBound(mp, prppInput, NULL /*pccChild*/,
-											  gpos::ulong_max /*child_index*/);
+			CCost costLowerBoundGExpr = pgexprCurrent->CostLowerBound(
+				mp, prppInput, nullptr /*pccChild*/,
+				gpos::ulong_max /*child_index*/);
 			if (costLowerBoundGExpr < costLowerBound)
 			{
 				costLowerBound = costLowerBoundGExpr;

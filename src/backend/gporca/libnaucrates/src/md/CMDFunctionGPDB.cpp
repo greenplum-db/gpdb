@@ -179,7 +179,7 @@ CMDFunctionGPDB::ReturnsSet() const
 CWStringDynamic *
 CMDFunctionGPDB::GetOutputArgTypeArrayStr() const
 {
-	GPOS_ASSERT(NULL != m_mdid_types_array);
+	GPOS_ASSERT(nullptr != m_mdid_types_array);
 	CWStringDynamic *str = GPOS_NEW(m_mp) CWStringDynamic(m_mp);
 
 	const ULONG len = m_mdid_types_array->Size();
@@ -245,7 +245,7 @@ CMDFunctionGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncResultTypeId),
 		m_mdid_type_result);
 
-	if (NULL != m_mdid_types_array)
+	if (nullptr != m_mdid_types_array)
 	{
 		xml_serializer->OpenElement(
 			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
@@ -284,7 +284,7 @@ CMDFunctionGPDB::GetFuncStabilityStr() const
 	}
 
 	GPOS_ASSERT(!"Unrecognized function stability setting");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -305,7 +305,7 @@ CMDFunctionGPDB::GetFuncDataAccessStr() const
 	}
 
 	GPOS_ASSERT(!"Unrecognized function data access setting");
-	return NULL;
+	return nullptr;
 }
 
 #ifdef GPOS_DEBUG

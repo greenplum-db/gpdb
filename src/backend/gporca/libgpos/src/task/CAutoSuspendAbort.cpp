@@ -30,7 +30,7 @@ CAutoSuspendAbort::CAutoSuspendAbort()
 {
 	m_task = CTask::Self();
 
-	if (NULL != m_task)
+	if (nullptr != m_task)
 	{
 		m_task->SuspendAbort();
 	}
@@ -47,7 +47,7 @@ CAutoSuspendAbort::CAutoSuspendAbort()
 //---------------------------------------------------------------------------
 CAutoSuspendAbort::~CAutoSuspendAbort()
 {
-	if (NULL != m_task)
+	if (nullptr != m_task)
 	{
 		m_task->ResumeAbort();
 	}

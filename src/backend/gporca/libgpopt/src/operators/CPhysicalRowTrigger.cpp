@@ -36,21 +36,21 @@ CPhysicalRowTrigger::CPhysicalRowTrigger(CMemoryPool *mp, IMDId *rel_mdid,
 	  m_type(type),
 	  m_pdrgpcrOld(pdrgpcrOld),
 	  m_pdrgpcrNew(pdrgpcrNew),
-	  m_pcrsRequiredLocal(NULL)
+	  m_pcrsRequiredLocal(nullptr)
 {
 	GPOS_ASSERT(rel_mdid->IsValid());
 	GPOS_ASSERT(0 != type);
-	GPOS_ASSERT(NULL != pdrgpcrNew || NULL != pdrgpcrOld);
-	GPOS_ASSERT_IMP(NULL != pdrgpcrNew && NULL != pdrgpcrOld,
+	GPOS_ASSERT(nullptr != pdrgpcrNew || nullptr != pdrgpcrOld);
+	GPOS_ASSERT_IMP(nullptr != pdrgpcrNew && nullptr != pdrgpcrOld,
 					pdrgpcrNew->Size() == pdrgpcrOld->Size());
 
 	m_pcrsRequiredLocal = GPOS_NEW(mp) CColRefSet(mp);
-	if (NULL != m_pdrgpcrOld)
+	if (nullptr != m_pdrgpcrOld)
 	{
 		m_pcrsRequiredLocal->Include(m_pdrgpcrOld);
 	}
 
-	if (NULL != m_pdrgpcrNew)
+	if (nullptr != m_pdrgpcrNew)
 	{
 		m_pcrsRequiredLocal->Include(m_pdrgpcrNew);
 	}
@@ -130,7 +130,7 @@ CPhysicalRowTrigger::EpetOrder(CExpressionHandle &,	 // exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	return CEnfdProp::EpetRequired;
@@ -300,13 +300,13 @@ CPhysicalRowTrigger::HashValue() const
 		gpos::CombineHashes(COperator::HashValue(), m_rel_mdid->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, gpos::HashValue<INT>(&m_type));
 
-	if (NULL != m_pdrgpcrOld)
+	if (nullptr != m_pdrgpcrOld)
 	{
 		ulHash =
 			gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOld));
 	}
 
-	if (NULL != m_pdrgpcrNew)
+	if (nullptr != m_pdrgpcrNew)
 	{
 		ulHash =
 			gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrNew));
@@ -384,14 +384,14 @@ CPhysicalRowTrigger::OsPrint(IOstream &os) const
 
 	os << SzId() << " (Type: " << m_type << ")";
 
-	if (NULL != m_pdrgpcrOld)
+	if (nullptr != m_pdrgpcrOld)
 	{
 		os << ", Old Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrOld);
 		os << "]";
 	}
 
-	if (NULL != m_pdrgpcrNew)
+	if (nullptr != m_pdrgpcrNew)
 	{
 		os << ", New Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrNew);

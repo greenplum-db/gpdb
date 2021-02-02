@@ -93,8 +93,8 @@ CMissingStatsTest::EresUnittest_RunTests()
 
 		CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(
 			mp, testCase.m_szInputFile, GPOPT_TEST_SEGMENTS /*ulSegments*/,
-			1 /*ulSessionId*/, 1,  /*ulCmdId*/
-			optimizer_config, NULL /*pceeval*/
+			1 /*ulSessionId*/, 1,	  /*ulCmdId*/
+			optimizer_config, nullptr /*pceeval*/
 		);
 
 		CStatisticsConfig *stats_config = optimizer_config->GetStatsConf();

@@ -105,7 +105,7 @@ CDXLScalarWindowFrameEdge::GetFrameBoundaryStr(
 	}
 
 	GPOS_ASSERT(!"Unrecognized window frame boundary");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

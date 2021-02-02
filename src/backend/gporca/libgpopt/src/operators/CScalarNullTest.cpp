@@ -65,7 +65,7 @@ CScalarNullTest::MdidType() const
 CScalar::EBoolEvalResult
 CScalarNullTest::Eber(ULongPtrArray *pdrgpulChildren) const
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 	GPOS_ASSERT(1 == pdrgpulChildren->Size());
 
 	EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[0]);

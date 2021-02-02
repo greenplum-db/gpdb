@@ -38,12 +38,12 @@ CJoinOrderGreedy::CJoinOrderGreedy(CMemoryPool *pmp,
 								   CExpressionArray *pdrgpexprConjuncts)
 	: CJoinOrder(pmp, pdrgpexprComponents, pdrgpexprConjuncts,
 				 true /* m_include_loj_childs */),
-	  m_pcompResult(NULL)
+	  m_pcompResult(nullptr)
 {
 #ifdef GPOS_DEBUG
 	for (ULONG ul = 0; ul < m_ulComps; ul++)
 	{
-		GPOS_ASSERT(NULL != m_rgpcomp[ul]->m_pexpr->Pstats() &&
+		GPOS_ASSERT(nullptr != m_rgpcomp[ul]->m_pexpr->Pstats() &&
 					"stats were not derived on input component");
 	}
 #endif	// GPOS_DEBUG
@@ -72,7 +72,7 @@ CJoinOrderGreedy::GetStartingJoins()
 	ULONG ul1Counter = 0;
 	ULONG ul2Counter = 0;
 	CJoinOrder::SComponent *pcompBest =
-		GPOS_NEW(m_mp) SComponent(m_mp, NULL /*pexpr*/);
+		GPOS_NEW(m_mp) SComponent(m_mp, nullptr /*pexpr*/);
 
 	for (ULONG ul1 = 0; ul1 < m_ulComps; ul1++)
 	{
@@ -112,7 +112,7 @@ CJoinOrderGreedy::GetStartingJoins()
 	if ((ul1Counter == 0) && (ul2Counter == 0))
 	{
 		pcompBest->Release();
-		return NULL;
+		return nullptr;
 	}
 
 	SComponent *comp1 = m_rgpcomp[ul1Counter];
@@ -135,11 +135,11 @@ CJoinOrderGreedy::GetStartingJoins()
 CExpression *
 CJoinOrderGreedy::PexprExpand()
 {
-	GPOS_ASSERT(NULL == m_pcompResult && "join order is already expanded");
+	GPOS_ASSERT(nullptr == m_pcompResult && "join order is already expanded");
 
 	m_pcompResult = GetStartingJoins();
 
-	if (NULL != m_pcompResult)
+	if (nullptr != m_pcompResult)
 	{
 		// found atleast one non cross join
 		MarkUsedEdges(m_pcompResult);
@@ -147,7 +147,7 @@ CJoinOrderGreedy::PexprExpand()
 	else
 	{
 		// every join combination is a cross join
-		m_pcompResult = GPOS_NEW(m_mp) SComponent(m_mp, NULL /*pexpr*/);
+		m_pcompResult = GPOS_NEW(m_mp) SComponent(m_mp, nullptr /*pexpr*/);
 	}
 
 	// create a bitset for all the unused components
@@ -192,7 +192,7 @@ CJoinOrderGreedy::PexprExpand()
 			// could not pick a component to create the join tree
 			unused_components_set->Release();
 			candidate_comp_set->Release();
-			return NULL;
+			return nullptr;
 		}
 		else
 		{
@@ -203,7 +203,7 @@ CJoinOrderGreedy::PexprExpand()
 		GPOS_ASSERT(gpos::ulong_max != best_comp_idx);
 	}
 	unused_components_set->Release();
-	GPOS_ASSERT(NULL != m_pcompResult->m_pexpr);
+	GPOS_ASSERT(nullptr != m_pcompResult->m_pexpr);
 
 	CExpression *pexprResult = m_pcompResult->m_pexpr;
 	pexprResult->AddRef();
@@ -221,9 +221,9 @@ ULONG
 CJoinOrderGreedy::PickBestJoin(CBitSet *candidate_comp_set)
 {
 	SComponent *pcompBestComponent =
-		NULL;  // component which gives minimum cardinality when joined with m_pcompResult
+		nullptr;  // component which gives minimum cardinality when joined with m_pcompResult
 	SComponent *pcompBest =
-		NULL;  // resulting join component using pcompBestComponent and original m_pcompResult which gives minimum cardinality
+		nullptr;  // resulting join component using pcompBestComponent and original m_pcompResult which gives minimum cardinality
 	CDouble dMinRows = 0.0;
 	ULONG best_comp_idx = gpos::ulong_max;
 
@@ -241,7 +241,7 @@ CJoinOrderGreedy::PickBestJoin(CBitSet *candidate_comp_set)
 		CDouble dRows = pcompTemp->m_pexpr->Pstats()->Rows();
 
 		// pick the component which will give the lowest cardinality
-		if (NULL == pcompBestComponent || dRows < dMinRows)
+		if (nullptr == pcompBestComponent || dRows < dMinRows)
 		{
 			dMinRows = dRows;
 			best_comp_idx = iter.Bit();
@@ -260,7 +260,7 @@ CJoinOrderGreedy::PickBestJoin(CBitSet *candidate_comp_set)
 	}
 
 	GPOS_ASSERT(gpos::ulong_max != best_comp_idx);
-	GPOS_ASSERT(NULL != pcompBest);
+	GPOS_ASSERT(nullptr != pcompBest);
 	GPOS_ASSERT(!pcompBestComponent->m_fUsed);
 	pcompBestComponent->m_fUsed = true;
 	m_pcompResult->Release();

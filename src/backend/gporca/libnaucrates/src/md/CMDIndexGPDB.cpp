@@ -52,17 +52,17 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(IMDIndex::EmdindSentinel > index_type);
-	GPOS_ASSERT(NULL != index_key_cols_array);
+	GPOS_ASSERT(nullptr != index_key_cols_array);
 	GPOS_ASSERT(0 < index_key_cols_array->Size());
-	GPOS_ASSERT(NULL != included_cols_array);
-	GPOS_ASSERT_IMP(NULL != mdid_item_type,
+	GPOS_ASSERT(nullptr != included_cols_array);
+	GPOS_ASSERT_IMP(nullptr != mdid_item_type,
 					IMDIndex::EmdindBitmap == index_type ||
 						IMDIndex::EmdindBtree == index_type ||
 						IMDIndex::EmdindGist == index_type ||
 						IMDIndex::EmdindGin == index_type);
 	GPOS_ASSERT_IMP(IMDIndex::EmdindBitmap == index_type,
-					NULL != mdid_item_type && mdid_item_type->IsValid());
-	GPOS_ASSERT(NULL != mdid_opfamilies_array);
+					nullptr != mdid_item_type && mdid_item_type->IsValid());
+	GPOS_ASSERT(nullptr != mdid_opfamilies_array);
 
 	m_dxl_str = CDXLUtils::SerializeMDObj(
 		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
@@ -288,7 +288,7 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenIndexType),
 								 GetDXLStr(m_index_type));
-	if (NULL != m_mdid_item_type)
+	if (nullptr != m_mdid_item_type)
 	{
 		m_mdid_item_type->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenIndexItemType));
@@ -313,7 +313,7 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 					  CDXLTokens::GetDXLTokenStr(EdxltokenOpfamilies),
 					  CDXLTokens::GetDXLTokenStr(EdxltokenOpfamily));
 
-	if (NULL != m_mdpart_constraint)
+	if (nullptr != m_mdpart_constraint)
 	{
 		m_mdpart_constraint->Serialize(xml_serializer);
 	}
@@ -395,7 +395,7 @@ CMDIndexGPDB::GetIndexRetItemTypeMdid() const
 BOOL
 CMDIndexGPDB::IsCompatible(const IMDScalarOp *md_scalar_op, ULONG key_pos) const
 {
-	GPOS_ASSERT(NULL != md_scalar_op);
+	GPOS_ASSERT(nullptr != md_scalar_op);
 	GPOS_ASSERT(key_pos < m_mdid_opfamilies_array->Size());
 
 	// check if the index opfamily for the key at the given position is one of

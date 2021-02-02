@@ -158,7 +158,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CLogicalCTEConsumer has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// stat promise
@@ -185,7 +185,7 @@ public:
 	static CLogicalCTEConsumer *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalCTEConsumer == pop->Eopid());
 
 		return dynamic_cast<CLogicalCTEConsumer *>(pop);

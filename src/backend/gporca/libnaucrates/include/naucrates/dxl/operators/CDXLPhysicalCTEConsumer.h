@@ -80,7 +80,7 @@ public:
 	static CDXLPhysicalCTEConsumer *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalCTEConsumer == dxl_op->GetDXLOperator());
 		return dynamic_cast<CDXLPhysicalCTEConsumer *>(dxl_op);
 	}

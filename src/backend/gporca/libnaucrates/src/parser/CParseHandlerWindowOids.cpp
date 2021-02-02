@@ -25,7 +25,7 @@ CParseHandlerWindowOids::CParseHandlerWindowOids(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_window_oids(NULL)
+	  m_window_oids(nullptr)
 {
 }
 
@@ -78,7 +78,7 @@ CParseHandlerWindowOids::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_window_oids);
+	GPOS_ASSERT(nullptr != m_window_oids);
 	GPOS_ASSERT(0 == this->Length());
 
 	// deactivate handler

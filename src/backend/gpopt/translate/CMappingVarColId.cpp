@@ -58,7 +58,7 @@ CMappingVarColId::GetGPDBAttOptColMapping(
 	ULONG current_query_level, const Var *var,
 	EPlStmtPhysicalOpType plstmt_physical_op_type) const
 {
-	GPOS_ASSERT(NULL != var);
+	GPOS_ASSERT(nullptr != var);
 	GPOS_ASSERT(current_query_level >= var->varlevelsup);
 
 	// absolute query level of var
@@ -80,7 +80,7 @@ CMappingVarColId::GetGPDBAttOptColMapping(
 	CGPDBAttOptCol *gpdb_att_opt_col_info =
 		m_gpdb_att_opt_col_mapping->Find(gpdb_att_info);
 
-	if (NULL == gpdb_att_opt_col_info)
+	if (nullptr == gpdb_att_opt_col_info)
 	{
 		// TODO: Sept 09 2013, remove temporary fix (revert exception to assert) to avoid crash during algebrization
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError,
@@ -175,7 +175,7 @@ void
 CMappingVarColId::LoadTblColumns(ULONG query_level, ULONG RTE_index,
 								 const CDXLTableDescr *table_descr)
 {
-	GPOS_ASSERT(NULL != table_descr);
+	GPOS_ASSERT(nullptr != table_descr);
 	const ULONG size = table_descr->Arity();
 
 	// add mapping information for columns
@@ -202,7 +202,7 @@ CMappingVarColId::LoadIndexColumns(ULONG query_level, ULONG RTE_index,
 								   const IMDIndex *index,
 								   const CDXLTableDescr *table_descr)
 {
-	GPOS_ASSERT(NULL != table_descr);
+	GPOS_ASSERT(nullptr != table_descr);
 
 	const ULONG size = index->Keys();
 
@@ -228,7 +228,7 @@ void
 CMappingVarColId::Load(ULONG query_level, ULONG RTE_index,
 					   CIdGenerator *id_generator, List *col_names)
 {
-	ListCell *col_name = NULL;
+	ListCell *col_name = nullptr;
 	ULONG i = 0;
 
 	// add mapping information for columns
@@ -261,7 +261,7 @@ void
 CMappingVarColId::LoadColumns(ULONG query_level, ULONG RTE_index,
 							  const CDXLColDescrArray *column_descrs)
 {
-	GPOS_ASSERT(NULL != column_descrs);
+	GPOS_ASSERT(nullptr != column_descrs);
 	const ULONG size = column_descrs->Size();
 
 	// add mapping information for columns
@@ -287,13 +287,13 @@ CMappingVarColId::LoadDerivedTblColumns(
 	ULONG query_level, ULONG RTE_index,
 	const CDXLNodeArray *derived_columns_dxl, List *target_list)
 {
-	GPOS_ASSERT(NULL != derived_columns_dxl);
+	GPOS_ASSERT(nullptr != derived_columns_dxl);
 	GPOS_ASSERT((ULONG) gpdb::ListLength(target_list) >=
 				derived_columns_dxl->Size());
 
 	ULONG drvd_tbl_col_counter =
 		0;	// counter for the dynamic array of DXL nodes
-	ListCell *lc = NULL;
+	ListCell *lc = nullptr;
 	ForEach(lc, target_list)
 	{
 		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
@@ -301,7 +301,7 @@ CMappingVarColId::LoadDerivedTblColumns(
 		{
 			GPOS_ASSERT(0 < target_entry->resno);
 			CDXLNode *dxlnode = (*derived_columns_dxl)[drvd_tbl_col_counter];
-			GPOS_ASSERT(NULL != dxlnode);
+			GPOS_ASSERT(nullptr != dxlnode);
 			CDXLScalarIdent *dxl_sc_ident =
 				CDXLScalarIdent::Cast(dxlnode->GetOperator());
 			const CDXLColRef *dxl_colref = dxl_sc_ident->GetDXLColRef();
@@ -326,11 +326,11 @@ CMappingVarColId::LoadCTEColumns(ULONG query_level, ULONG RTE_index,
 								 const ULongPtrArray *CTE_columns,
 								 List *target_list)
 {
-	GPOS_ASSERT(NULL != CTE_columns);
+	GPOS_ASSERT(nullptr != CTE_columns);
 	GPOS_ASSERT((ULONG) gpdb::ListLength(target_list) >= CTE_columns->Size());
 
 	ULONG idx = 0;
-	ListCell *lc = NULL;
+	ListCell *lc = nullptr;
 	ForEach(lc, target_list)
 	{
 		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
@@ -361,7 +361,7 @@ void
 CMappingVarColId::LoadProjectElements(ULONG query_level, ULONG RTE_index,
 									  const CDXLNode *project_list_dxlnode)
 {
-	GPOS_ASSERT(NULL != project_list_dxlnode);
+	GPOS_ASSERT(nullptr != project_list_dxlnode);
 	const ULONG size = project_list_dxlnode->Arity();
 	// add mapping information for columns
 	for (ULONG i = 0; i < size; i++)
@@ -478,8 +478,8 @@ CMappingVarColId *
 CMappingVarColId::CopyRemapColId(CMemoryPool *mp, ULongPtrArray *old_colids,
 								 ULongPtrArray *new_colids) const
 {
-	GPOS_ASSERT(NULL != old_colids);
-	GPOS_ASSERT(NULL != new_colids);
+	GPOS_ASSERT(nullptr != old_colids);
+	GPOS_ASSERT(nullptr != new_colids);
 	GPOS_ASSERT(new_colids->Size() == old_colids->Size());
 
 	// construct a mapping old cols -> new cols
@@ -502,7 +502,7 @@ CMappingVarColId::CopyRemapColId(CMemoryPool *mp, ULongPtrArray *old_colids,
 						 gpdb_att_info->GetVarNo(), gpdb_att_info->GetAttNo());
 		ULONG colid = opt_col_info->GetColId();
 		ULONG *new_colid = old_new_col_mapping->Find(&colid);
-		if (NULL != new_colid)
+		if (nullptr != new_colid)
 		{
 			colid = *new_colid;
 		}

@@ -76,7 +76,7 @@ public:
 	static CPhysicalDynamicBitmapTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalDynamicBitmapTableScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicBitmapTableScan *>(pop);

@@ -110,7 +110,7 @@ public:
 			return EspLow;
 		}
 
-		if (NULL != exprhdl.Pgexpr() &&
+		if (nullptr != exprhdl.Pgexpr() &&
 			exprhdl.Pgexpr()->ExfidOrigin() == CXform::ExfExpandNAryJoin)
 		{
 			return EspMedium;

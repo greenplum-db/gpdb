@@ -33,7 +33,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDrvdPropPlan::CDrvdPropPlan()
-	: m_pos(NULL), m_pds(NULL), m_prs(NULL), m_pcm(NULL)
+	: m_pos(nullptr), m_pds(nullptr), m_prs(nullptr), m_pcm(nullptr)
 {
 }
 
@@ -66,7 +66,7 @@ CDrvdPropPlan::~CDrvdPropPlan()
 CDrvdPropPlan *
 CDrvdPropPlan::Pdpplan(CDrvdProp *pdp)
 {
-	GPOS_ASSERT(NULL != pdp);
+	GPOS_ASSERT(nullptr != pdp);
 	GPOS_ASSERT(EptPlan == pdp->Ept() &&
 				"This is not a plan properties container");
 
@@ -87,7 +87,7 @@ CDrvdPropPlan::Derive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 					  CDrvdPropCtxt *pdpctxt)
 {
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
-	if (NULL != pdpctxt &&
+	if (nullptr != pdpctxt &&
 		COperator::EopPhysicalCTEConsumer == popPhysical->Eopid())
 	{
 		CopyCTEProducerPlanProps(mp, pdpctxt, popPhysical);
@@ -126,7 +126,7 @@ CDrvdPropPlan::CopyCTEProducerPlanProps(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt,
 	ULONG ulCTEId = popCTEConsumer->UlCTEId();
 	UlongToColRefMap *colref_mapping = popCTEConsumer->Phmulcr();
 	CDrvdPropPlan *pdpplan = pdpctxtplan->PdpplanCTEProducer(ulCTEId);
-	if (NULL != pdpplan)
+	if (nullptr != pdpplan)
 	{
 		// copy producer plan properties after remapping columns
 		m_pos = pdpplan->Pos()->PosCopyWithRemappedColumns(mp, colref_mapping,
@@ -156,11 +156,11 @@ CDrvdPropPlan::CopyCTEProducerPlanProps(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt,
 BOOL
 CDrvdPropPlan::FSatisfies(const CReqdPropPlan *prpp) const
 {
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != prpp->Peo());
-	GPOS_ASSERT(NULL != prpp->Ped());
-	GPOS_ASSERT(NULL != prpp->Per());
-	GPOS_ASSERT(NULL != prpp->Pcter());
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != prpp->Peo());
+	GPOS_ASSERT(nullptr != prpp->Ped());
+	GPOS_ASSERT(nullptr != prpp->Per());
+	GPOS_ASSERT(nullptr != prpp->Pcter());
 
 	return m_pos->FSatisfies(prpp->Peo()->PosRequired()) &&
 		   m_pds->FSatisfies(prpp->Ped()->PdsRequired()) &&

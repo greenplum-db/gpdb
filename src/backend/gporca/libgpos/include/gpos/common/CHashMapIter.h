@@ -51,7 +51,7 @@ private:
 	const typename TMap::CHashMapElem *
 	Get() const
 	{
-		typename TMap::CHashMapElem *elem = NULL;
+		typename TMap::CHashMapElem *elem = nullptr;
 		K *k = (*(m_map->m_keys))[m_key_idx - 1];
 		elem = m_map->Lookup(k);
 
@@ -66,7 +66,7 @@ public:
 	CHashMapIter<K, T, HashFn, EqFn, DestroyKFn, DestroyTFn>(TMap *ptm)
 		: m_map(ptm), m_chain_idx(0), m_key_idx(0)
 	{
-		GPOS_ASSERT(NULL != ptm);
+		GPOS_ASSERT(nullptr != ptm);
 	}
 
 	// dtor
@@ -91,11 +91,11 @@ public:
 	Key() const
 	{
 		const typename TMap::CHashMapElem *elem = Get();
-		if (NULL != elem)
+		if (nullptr != elem)
 		{
 			return elem->Key();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 	// current value
@@ -103,11 +103,11 @@ public:
 	Value() const
 	{
 		const typename TMap::CHashMapElem *elem = Get();
-		if (NULL != elem)
+		if (nullptr != elem)
 		{
 			return elem->Value();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 };	// class CHashMapIter

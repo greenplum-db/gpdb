@@ -129,7 +129,7 @@ public:
 
 	// ctor for leaf nodes
 	CExpression(CMemoryPool *mp, COperator *pop,
-				CGroupExpression *pgexpr = NULL);
+				CGroupExpression *pgexpr = nullptr);
 
 	// ctor for unary expressions
 	CExpression(CMemoryPool *mp, COperator *pop, CExpression *pexpr);
@@ -157,7 +157,7 @@ public:
 	CExpression *
 	operator[](ULONG ulPos) const
 	{
-		GPOS_ASSERT(NULL != m_pdrgpexpr);
+		GPOS_ASSERT(nullptr != m_pdrgpexpr);
 		return (*m_pdrgpexpr)[ulPos];
 	};
 
@@ -165,14 +165,14 @@ public:
 	ULONG
 	Arity() const
 	{
-		return m_pdrgpexpr == NULL ? 0 : m_pdrgpexpr->Size();
+		return m_pdrgpexpr == nullptr ? 0 : m_pdrgpexpr->Size();
 	}
 
 	// accessor for operator
 	COperator *
 	Pop() const
 	{
-		GPOS_ASSERT(NULL != m_pop);
+		GPOS_ASSERT(nullptr != m_pop);
 		return m_pop;
 	}
 
@@ -223,7 +223,7 @@ public:
 	// Derive all properties immediately. The suitable derived property is
 	// determined internally. To derive properties on an on-demand bases, use
 	// DeriveXXX() methods.
-	CDrvdProp *PdpDerive(CDrvdPropCtxt *pdpctxt = NULL);
+	CDrvdProp *PdpDerive(CDrvdPropCtxt *pdpctxt = nullptr);
 
 	// derive statistics
 	IStatistics *PstatsDerive(CReqdPropRelational *prprel,
@@ -248,7 +248,7 @@ public:
 	IOstream &OsPrint(IOstream &os) const;
 
 	// print driver, customized for expressions
-	IOstream &OsPrintExpression(IOstream &os, const CPrintPrefix * = NULL,
+	IOstream &OsPrintExpression(IOstream &os, const CPrintPrefix * = nullptr,
 								BOOL fLast = true) const;
 
 	// match with group expression

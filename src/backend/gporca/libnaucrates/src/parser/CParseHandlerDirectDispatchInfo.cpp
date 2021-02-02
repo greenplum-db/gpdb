@@ -38,9 +38,9 @@ CParseHandlerDirectDispatchInfo::CParseHandlerDirectDispatchInfo(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_datum_array(NULL),
-	  m_datum_array_combination(NULL),
-	  m_direct_dispatch_info(NULL),
+	  m_dxl_datum_array(nullptr),
+	  m_datum_array_combination(nullptr),
+	  m_direct_dispatch_info(nullptr),
 	  m_dispatch_is_raw(false)
 {
 }
@@ -100,7 +100,7 @@ CParseHandlerDirectDispatchInfo::StartElement(
 			 XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenDatum),
 									  element_local_name))
 	{
-		GPOS_ASSERT(NULL != m_dxl_datum_array);
+		GPOS_ASSERT(nullptr != m_dxl_datum_array);
 
 		CDXLDatum *dxl_datum = CDXLOperatorFactory::GetDatumVal(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
@@ -143,7 +143,7 @@ CParseHandlerDirectDispatchInfo::EndElement(
 					  CDXLTokens::XmlstrToken(EdxltokenDirectDispatchKeyValue),
 					  element_local_name))
 	{
-		GPOS_ASSERT(NULL != m_dxl_datum_array);
+		GPOS_ASSERT(nullptr != m_dxl_datum_array);
 		m_dxl_datum_array->AddRef();
 		m_datum_array_combination->Append(m_dxl_datum_array);
 	}

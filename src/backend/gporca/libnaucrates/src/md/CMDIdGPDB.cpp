@@ -295,7 +295,7 @@ CMDIdGPDB::VersionMinor() const
 BOOL
 CMDIdGPDB::Equals(const IMDId *mdid) const
 {
-	if (NULL == mdid || EmdidGPDB != mdid->MdidType())
+	if (nullptr == mdid || EmdidGPDB != mdid->MdidType())
 	{
 		return false;
 	}

@@ -40,7 +40,7 @@ IMDRelation::GetDistrPolicyStr(Ereldistrpolicy rel_distr_policy)
 		case EreldistrReplicated:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrReplicated);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -73,7 +73,7 @@ IMDRelation::GetStorageTypeStr(IMDRelation::Erelstoragetype rel_storage_type)
 		case ErelstorageVirtual:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageVirtual);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 

@@ -60,7 +60,7 @@ public:
 	static BOOL
 	FInitialized()
 	{
-		return (NULL != m_pcache);
+		return (nullptr != m_pcache);
 	}
 
 	// destroy global instance

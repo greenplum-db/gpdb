@@ -74,7 +74,7 @@ CPhysicalDynamicTableScan::PstatsDerive(CMemoryPool *mp,
 										IStatisticsArray *	// stats_ctxt
 ) const
 {
-	GPOS_ASSERT(NULL != prpplan);
+	GPOS_ASSERT(nullptr != prpplan);
 
 	return CStatisticsUtils::DeriveStatsForDynamicScan(mp, exprhdl, ScanId());
 }

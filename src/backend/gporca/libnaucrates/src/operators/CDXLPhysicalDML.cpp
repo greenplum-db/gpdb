@@ -48,8 +48,8 @@ CDXLPhysicalDML::CDXLPhysicalDML(
 	  m_input_sort_req(input_sort_req)
 {
 	GPOS_ASSERT(EdxldmlSentinel > dxl_dml_type);
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != src_colids_array);
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != src_colids_array);
 }
 
 //---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ CDXLPhysicalDML::GetOpNameStr() const
 		case Edxldmlupdate:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalDMLUpdate);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -152,7 +152,7 @@ CDXLPhysicalDML::SerializeToDXL(CXMLSerializer *xml_serializer,
 
 	node->SerializePropertiesToDXL(xml_serializer);
 
-	if (NULL != m_direct_dispatch_info)
+	if (nullptr != m_direct_dispatch_info)
 	{
 		m_direct_dispatch_info->Serialize(xml_serializer);
 	}

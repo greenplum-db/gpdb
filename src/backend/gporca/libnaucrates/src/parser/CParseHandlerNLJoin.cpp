@@ -37,7 +37,7 @@ CParseHandlerNLJoin::CParseHandlerNLJoin(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -73,7 +73,7 @@ CParseHandlerNLJoin::StartElement(const XMLCh *const,  // element_uri,
 	// order of their expected appearance
 
 	// parse handler for the nest loop params list
-	CParseHandlerBase *nest_params_parse_handler = NULL;
+	CParseHandlerBase *nest_params_parse_handler = nullptr;
 	if (m_dxl_op->NestParamsExists())
 	{
 		nest_params_parse_handler = CParseHandlerFactory::GetParseHandler(
@@ -131,7 +131,7 @@ CParseHandlerNLJoin::StartElement(const XMLCh *const,  // element_uri,
 	this->Append(join_filter_parse_handler);
 	this->Append(left_child_parse_handler);
 	this->Append(right_child_parse_handler);
-	if (NULL != nest_params_parse_handler)
+	if (nullptr != nest_params_parse_handler)
 	{
 		this->Append(nest_params_parse_handler);
 	}

@@ -65,7 +65,7 @@ public:
 	{
 		// enforce strict ref-counting unless we're in a pending exception,
 		// e.g., a ctor has thrown
-		GPOS_ASSERT(NULL == ITask::Self() ||
+		GPOS_ASSERT(nullptr == ITask::Self() ||
 					ITask::Self()->HasPendingExceptions() || 0 == m_refs);
 	}
 
@@ -122,7 +122,7 @@ public:
 	static void
 	SafeRelease(CRefCount *rc)
 	{
-		if (NULL != rc)
+		if (nullptr != rc)
 		{
 			rc->Release();
 		}

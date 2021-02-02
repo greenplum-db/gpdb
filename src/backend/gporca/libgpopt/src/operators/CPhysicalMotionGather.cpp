@@ -29,7 +29,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalMotionGather::CPhysicalMotionGather(
 	CMemoryPool *mp, CDistributionSpecSingleton::ESegmentType est)
-	: CPhysicalMotion(mp), m_pdssSingeton(NULL), m_pcrsSort(NULL)
+	: CPhysicalMotion(mp), m_pdssSingeton(nullptr), m_pcrsSort(nullptr)
 {
 	GPOS_ASSERT(CDistributionSpecSingleton::EstSentinel != est);
 
@@ -49,10 +49,13 @@ CPhysicalMotionGather::CPhysicalMotionGather(
 CPhysicalMotionGather::CPhysicalMotionGather(
 	CMemoryPool *mp, CDistributionSpecSingleton::ESegmentType est,
 	COrderSpec *pos)
-	: CPhysicalMotion(mp), m_pdssSingeton(NULL), m_pos(pos), m_pcrsSort(NULL)
+	: CPhysicalMotion(mp),
+	  m_pdssSingeton(nullptr),
+	  m_pos(pos),
+	  m_pcrsSort(nullptr)
 {
 	GPOS_ASSERT(CDistributionSpecSingleton::EstSentinel != est);
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pos);
 
 	m_pdssSingeton = GPOS_NEW(mp) CDistributionSpecSingleton(est);
 	m_pcrsSort = m_pos->PcrsUsed(mp);
@@ -151,7 +154,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalMotionGather::EpetOrder(CExpressionHandle &,  // exprhdl
 								 const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	if (!FOrderPreserving())
@@ -248,7 +251,7 @@ CPhysicalMotionGather::OsPrint(IOstream &os) const
 CPhysicalMotionGather *
 CPhysicalMotionGather::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopPhysicalMotionGather == pop->Eopid());
 
 	return dynamic_cast<CPhysicalMotionGather *>(pop);

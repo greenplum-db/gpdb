@@ -53,7 +53,7 @@ IMDProvider::GetGPDBTypeMdid(CMemoryPool *mp,
 			return GPOS_NEW(mp) CMDIdGPDB(GPDB_OID);
 
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 

@@ -123,7 +123,7 @@ CParseHandlerLogicalGroupBy::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 	GPOS_ASSERT(3 == this->Length());
 
 	CParseHandlerGroupingColList *grouping_col_parse_handler =
@@ -133,8 +133,8 @@ CParseHandlerLogicalGroupBy::EndElement(const XMLCh *const,	 // element_uri,
 	CParseHandlerLogicalOp *lg_op_parse_handler =
 		dynamic_cast<CParseHandlerLogicalOp *>((*this)[2]);
 
-	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
-	GPOS_ASSERT(NULL != lg_op_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != proj_list_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != lg_op_parse_handler->CreateDXLNode());
 
 	AddChildFromParseHandler(proj_list_parse_handler);
 	AddChildFromParseHandler(lg_op_parse_handler);
@@ -143,7 +143,7 @@ CParseHandlerLogicalGroupBy::EndElement(const XMLCh *const,	 // element_uri,
 		static_cast<CDXLLogicalGroupBy *>(m_dxl_node->GetOperator());
 
 	// set grouping cols list
-	GPOS_ASSERT(NULL != grouping_col_parse_handler->GetGroupingColidArray());
+	GPOS_ASSERT(nullptr != grouping_col_parse_handler->GetGroupingColidArray());
 
 	ULongPtrArray *grouping_col_array =
 		grouping_col_parse_handler->GetGroupingColidArray();

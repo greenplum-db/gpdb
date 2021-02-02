@@ -78,7 +78,7 @@ CException::CException(ULONG major, ULONG minor, const CHAR *filename,
 //
 //---------------------------------------------------------------------------
 CException::CException(ULONG major, ULONG minor)
-	: m_major(major), m_minor(minor), m_filename(NULL), m_line(0)
+	: m_major(major), m_minor(minor), m_filename(nullptr), m_line(0)
 {
 	m_severity_level = CException::ExsevSentinel;
 	m_sql_state = GetSQLState(major, minor);
@@ -105,7 +105,7 @@ CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
 
 	// during bootstrap there's no context object otherwise, record
 	// all details in the context object
-	if (NULL != ITask::Self())
+	if (nullptr != ITask::Self())
 	{
 		CErrorContext *err_ctxt = CTask::Self()->ConvertErrCtxt();
 
@@ -132,7 +132,7 @@ CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
 
 	// during bootstrap there's no context object otherwise, record
 	// all details in the context object
-	if (NULL != ITask::Self())
+	if (nullptr != ITask::Self())
 	{
 		CErrorContext *err_ctxt = CTask::Self()->ConvertErrCtxt();
 
@@ -162,7 +162,7 @@ CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
 void
 CException::Reraise(CException exc, BOOL propagate)
 {
-	if (NULL != ITask::Self())
+	if (nullptr != ITask::Self())
 	{
 		CErrorContext *err_ctxt = CTask::Self()->ConvertErrCtxt();
 		GPOS_ASSERT(err_ctxt->IsPending());
@@ -194,7 +194,7 @@ void
 CException::Raise(CException exc)
 {
 #ifdef GPOS_DEBUG
-	if (NULL != ITask::Self())
+	if (nullptr != ITask::Self())
 	{
 		IErrorContext *err_ctxt = ITask::Self()->GetErrCtxt();
 		GPOS_ASSERT_IMP(err_ctxt->IsPending(),

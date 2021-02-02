@@ -29,7 +29,10 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalPartitionSelector::CLogicalPartitionSelector(CMemoryPool *mp)
-	: CLogical(mp), m_mdid(NULL), m_pdrgpexprFilters(NULL), m_pcrOid(NULL)
+	: CLogical(mp),
+	  m_mdid(nullptr),
+	  m_pdrgpexprFilters(nullptr),
+	  m_pcrOid(nullptr)
 {
 	m_fPattern = true;
 }
@@ -51,9 +54,9 @@ CLogicalPartitionSelector::CLogicalPartitionSelector(
 	  m_pcrOid(pcrOid)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != pdrgpexprFilters);
+	GPOS_ASSERT(nullptr != pdrgpexprFilters);
 	GPOS_ASSERT(0 < pdrgpexprFilters->Size());
-	GPOS_ASSERT(NULL != pcrOid);
+	GPOS_ASSERT(nullptr != pcrOid);
 }
 
 //---------------------------------------------------------------------------

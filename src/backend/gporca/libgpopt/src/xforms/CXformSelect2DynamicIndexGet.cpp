@@ -79,7 +79,7 @@ CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -126,9 +126,9 @@ CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 			popDynamicGet->PdrgpcrOutput());
 		CExpression *pexprDynamicIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
-			pcrsReqd, pcrsScalarExpr, NULL /*outer_refs*/, pmdindex, pmdrel,
+			pcrsReqd, pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
 			ppartcnstrIndex);
-		if (NULL != pexprDynamicIndexGet)
+		if (nullptr != pexprDynamicIndexGet)
 		{
 			// create a redundant SELECT on top of DynamicIndexGet to be able to use predicate in partition elimination
 

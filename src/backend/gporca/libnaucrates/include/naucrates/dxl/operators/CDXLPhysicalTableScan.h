@@ -74,7 +74,7 @@ public:
 	static CDXLPhysicalTableScan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalTableScan == dxl_op->GetDXLOperator() ||
 					EdxlopPhysicalExternalScan == dxl_op->GetDXLOperator());
 

@@ -96,7 +96,7 @@ protected:
 	CBitSet(const CBitSet &);
 
 	// find link with offset less or equal to given value
-	CBitSetLink *FindLinkByOffset(ULONG, CBitSetLink * = NULL) const;
+	CBitSetLink *FindLinkByOffset(ULONG, CBitSetLink * = nullptr) const;
 
 	// reset set
 	void Clear();

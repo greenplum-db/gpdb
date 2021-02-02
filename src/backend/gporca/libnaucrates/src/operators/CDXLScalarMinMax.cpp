@@ -80,7 +80,7 @@ CDXLScalarMinMax::GetOpNameStr() const
 		case EmmtMax:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenScalarMax);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 

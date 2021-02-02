@@ -218,7 +218,7 @@ public:
 		   const CColRef *	//colref
 	)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// return constraint on a given set of columns
@@ -227,7 +227,7 @@ public:
 		   CColRefSet *	   //pcrs
 	)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// return a clone of the constraint for a different column

@@ -32,12 +32,12 @@ CAutoOptCtxt::CAutoOptCtxt(CMemoryPool *mp, CMDAccessor *md_accessor,
 						   IConstExprEvaluator *pceeval,
 						   COptimizerConfig *optimizer_config)
 {
-	if (NULL == optimizer_config)
+	if (nullptr == optimizer_config)
 	{
 		// create default statistics configuration
 		optimizer_config = COptimizerConfig::PoconfDefault(mp);
 	}
-	if (NULL == pceeval)
+	if (nullptr == pceeval)
 	{
 		// use the default constant expression evaluator which cannot evaluate any expression
 		pceeval = GPOS_NEW(mp) CConstExprEvaluatorDefault();
@@ -60,13 +60,13 @@ CAutoOptCtxt::CAutoOptCtxt(CMemoryPool *mp, CMDAccessor *md_accessor,
 CAutoOptCtxt::CAutoOptCtxt(CMemoryPool *mp, CMDAccessor *md_accessor,
 						   IConstExprEvaluator *pceeval, ICostModel *pcm)
 {
-	GPOS_ASSERT(NULL != pcm);
+	GPOS_ASSERT(nullptr != pcm);
 
 	// create default statistics configuration
 	COptimizerConfig *optimizer_config =
 		COptimizerConfig::PoconfDefault(mp, pcm);
 
-	if (NULL == pceeval)
+	if (nullptr == pceeval)
 	{
 		// use the default constant expression evaluator which cannot evaluate any expression
 		pceeval = GPOS_NEW(mp) CConstExprEvaluatorDefault();

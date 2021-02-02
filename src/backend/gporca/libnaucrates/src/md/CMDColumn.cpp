@@ -180,7 +180,7 @@ CMDColumn::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenColumnDefaultValue));
 
-	if (NULL != m_dxl_default_val)
+	if (nullptr != m_dxl_default_val)
 	{
 		m_dxl_default_val->SerializeToDXL(xml_serializer);
 	}

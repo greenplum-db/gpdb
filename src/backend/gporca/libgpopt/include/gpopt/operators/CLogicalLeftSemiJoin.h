@@ -118,7 +118,7 @@ public:
 	static CLogicalLeftSemiJoin *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalLeftSemiJoin == pop->Eopid());
 
 		return dynamic_cast<CLogicalLeftSemiJoin *>(pop);

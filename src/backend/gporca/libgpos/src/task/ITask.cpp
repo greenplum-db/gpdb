@@ -27,11 +27,11 @@ ITask *
 ITask::Self()
 {
 	IWorker *worker = IWorker::Self();
-	if (NULL != worker)
+	if (nullptr != worker)
 	{
 		return worker->GetTask();
 	}
-	return NULL;
+	return nullptr;
 }
 
 // EOF

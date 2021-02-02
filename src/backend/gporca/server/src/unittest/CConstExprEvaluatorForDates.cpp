@@ -82,7 +82,7 @@ CConstExprEvaluatorForDates::PexprEval(CExpression *pexpr)
 			break;
 		default:
 			GPOS_ASSERT(false && "Unsupported comparison");
-			return NULL;
+			return nullptr;
 	}
 	CExpression *pexprResult = CUtils::PexprScalarConstBool(m_mp, result);
 

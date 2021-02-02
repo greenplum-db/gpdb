@@ -94,15 +94,15 @@ const CSystemId default_sysid(IMDId::EmdidGPDB, GPOS_WSZ_STR_LENGTH("GPDB"));
 //
 //---------------------------------------------------------------------------
 SOptContext::SOptContext()
-	: m_query_dxl(NULL),
-	  m_query(NULL),
-	  m_plan_dxl(NULL),
-	  m_plan_stmt(NULL),
+	: m_query_dxl(nullptr),
+	  m_query(nullptr),
+	  m_plan_dxl(nullptr),
+	  m_plan_stmt(nullptr),
 	  m_should_generate_plan_stmt(false),
 	  m_should_serialize_plan_dxl(false),
 	  m_is_unexpected_failure(false),
 	  m_should_error_out(false),
-	  m_error_msg(NULL)
+	  m_error_msg(nullptr)
 {
 }
 
@@ -118,27 +118,29 @@ SOptContext::SOptContext()
 void
 SOptContext::Free(SOptContext::EPin input, SOptContext::EPin output)
 {
-	if (NULL != m_query_dxl && epinQueryDXL != input && epinQueryDXL != output)
+	if (nullptr != m_query_dxl && epinQueryDXL != input &&
+		epinQueryDXL != output)
 	{
 		gpdb::GPDBFree(m_query_dxl);
 	}
 
-	if (NULL != m_query && epinQuery != input && epinQuery != output)
+	if (nullptr != m_query && epinQuery != input && epinQuery != output)
 	{
 		gpdb::GPDBFree(m_query);
 	}
 
-	if (NULL != m_plan_dxl && epinPlanDXL != input && epinPlanDXL != output)
+	if (nullptr != m_plan_dxl && epinPlanDXL != input && epinPlanDXL != output)
 	{
 		gpdb::GPDBFree(m_plan_dxl);
 	}
 
-	if (NULL != m_plan_stmt && epinPlStmt != input && epinPlStmt != output)
+	if (nullptr != m_plan_stmt && epinPlStmt != input && epinPlStmt != output)
 	{
 		gpdb::GPDBFree(m_plan_stmt);
 	}
 
-	if (NULL != m_error_msg && epinErrorMsg != input && epinErrorMsg != output)
+	if (nullptr != m_error_msg && epinErrorMsg != input &&
+		epinErrorMsg != output)
 	{
 		gpdb::GPDBFree(m_error_msg);
 	}
@@ -156,9 +158,9 @@ SOptContext::Free(SOptContext::EPin input, SOptContext::EPin output)
 CHAR *
 SOptContext::CloneErrorMsg(MemoryContext context)
 {
-	if (NULL == context || NULL == m_error_msg)
+	if (nullptr == context || nullptr == m_error_msg)
 	{
-		return NULL;
+		return nullptr;
 	}
 	return gpdb::MemCtxtStrdup(context, m_error_msg);
 }
@@ -175,7 +177,7 @@ SOptContext::CloneErrorMsg(MemoryContext context)
 SOptContext *
 SOptContext::Cast(void *ptr)
 {
-	GPOS_ASSERT(NULL != ptr);
+	GPOS_ASSERT(nullptr != ptr);
 
 	return reinterpret_cast<SOptContext *>(ptr);
 }
@@ -191,7 +193,7 @@ SOptContext::Cast(void *ptr)
 CHAR *
 COptTasks::CreateMultiByteCharStringFromWCString(const WCHAR *wcstr)
 {
-	GPOS_ASSERT(NULL != wcstr);
+	GPOS_ASSERT(nullptr != wcstr);
 
 	const ULONG input_len = GPOS_WSZ_LENGTH(wcstr);
 	const ULONG wchar_size = GPOS_SIZEOF(WCHAR);
@@ -285,8 +287,8 @@ COptTasks::ConvertToPlanStmtFromDXL(
 	const CDXLNode *dxlnode, bool can_set_tag,
 	DistributionHashOpsKind distribution_hashops)
 {
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != dxlnode);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != dxlnode);
 
 	/*
 	 * Since GPDB 7 (commit 0ae9004), plan node IDs start from 0 in GPDB.
@@ -319,16 +321,16 @@ COptTasks::ConvertToPlanStmtFromDXL(
 CSearchStageArray *
 COptTasks::LoadSearchStrategy(CMemoryPool *mp, char *path)
 {
-	CSearchStageArray *search_strategy_arr = NULL;
-	CParseHandlerDXL *dxl_parse_handler = NULL;
+	CSearchStageArray *search_strategy_arr = nullptr;
+	CParseHandlerDXL *dxl_parse_handler = nullptr;
 
 	GPOS_TRY
 	{
-		if (NULL != path)
+		if (nullptr != path)
 		{
 			dxl_parse_handler =
-				CDXLUtils::GetParseHandlerForDXLFile(mp, path, NULL);
-			if (NULL != dxl_parse_handler)
+				CDXLUtils::GetParseHandlerForDXLFile(mp, path, nullptr);
+			if (nullptr != dxl_parse_handler)
 			{
 				elog(DEBUG2, "\n[OPT]: Using search strategy in (%s)", path);
 
@@ -412,7 +414,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 void
 COptTasks::SetCostModelParams(ICostModel *cost_model)
 {
-	GPOS_ASSERT(NULL != cost_model);
+	GPOS_ASSERT(nullptr != cost_model);
 
 	if (optimizer_nestloop_factor > 1.0)
 	{
@@ -470,12 +472,12 @@ COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 void *
 COptTasks::OptimizeTask(void *ptr)
 {
-	GPOS_ASSERT(NULL != ptr);
+	GPOS_ASSERT(nullptr != ptr);
 	SOptContext *opt_ctxt = SOptContext::Cast(ptr);
 
-	GPOS_ASSERT(NULL != opt_ctxt->m_query);
-	GPOS_ASSERT(NULL == opt_ctxt->m_plan_dxl);
-	GPOS_ASSERT(NULL == opt_ctxt->m_plan_stmt);
+	GPOS_ASSERT(nullptr != opt_ctxt->m_query);
+	GPOS_ASSERT(nullptr == opt_ctxt->m_plan_dxl);
+	GPOS_ASSERT(nullptr == opt_ctxt->m_plan_stmt);
 
 	AUTO_MEM_POOL(amp);
 	CMemoryPool *mp = amp.Pmp();
@@ -510,13 +512,13 @@ COptTasks::OptimizeTask(void *ptr)
 	CSearchStageArray *search_strategy_arr =
 		LoadSearchStrategy(mp, optimizer_search_strategy_path);
 
-	CBitSet *trace_flags = NULL;
-	CBitSet *enabled_trace_flags = NULL;
-	CBitSet *disabled_trace_flags = NULL;
-	CDXLNode *plan_dxl = NULL;
+	CBitSet *trace_flags = nullptr;
+	CBitSet *enabled_trace_flags = nullptr;
+	CBitSet *disabled_trace_flags = nullptr;
+	CDXLNode *plan_dxl = nullptr;
 
-	IMdIdArray *col_stats = NULL;
-	MdidHashSet *rel_stats = NULL;
+	IMdIdArray *col_stats = nullptr;
+	MdidHashSet *rel_stats = nullptr;
 
 	GPOS_TRY
 	{
@@ -559,7 +561,7 @@ COptTasks::OptimizeTask(void *ptr)
 				query_to_dxl_translator->GetQueryOutputCols();
 			CDXLNodeArray *cte_dxlnode_array =
 				query_to_dxl_translator->GetCTEs();
-			GPOS_ASSERT(NULL != query_output_dxlnode_array);
+			GPOS_ASSERT(nullptr != query_output_dxlnode_array);
 
 			BOOL is_master_only =
 				!optimizer_enable_motions ||
@@ -652,7 +654,7 @@ COptTasks::OptimizeTask(void *ptr)
 		CMDCache::Shutdown();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -669,9 +671,9 @@ COptTasks::PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor,
 									IMdIdArray *col_stats,
 									MdidHashSet *rel_stats)
 {
-	GPOS_ASSERT(NULL != md_accessor);
-	GPOS_ASSERT(NULL != col_stats);
-	GPOS_ASSERT(NULL != rel_stats);
+	GPOS_ASSERT(nullptr != md_accessor);
+	GPOS_ASSERT(nullptr != col_stats);
+	GPOS_ASSERT(nullptr != rel_stats);
 
 	CWStringDynamic wcstr(mp);
 	COstreamString oss(&wcstr);
@@ -709,7 +711,7 @@ COptTasks::PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor,
 						 rel->Mdname().GetMDName()->GetBuffer()),
 					 CreateMultiByteCharStringFromWCString(
 						 mdname.GetMDName()->GetBuffer()));
-			GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION, LOG, msgbuf, NULL);
+			GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION, LOG, msgbuf, nullptr);
 		}
 	}
 
@@ -786,7 +788,7 @@ bool
 COptTasks::SetXform(char *xform_str, bool should_disable)
 {
 	CXform *xform = CXformFactory::Pxff()->Pxf(xform_str);
-	if (NULL != xform)
+	if (nullptr != xform)
 	{
 		optimizer_xforms[xform->Exfid()] = should_disable;
 

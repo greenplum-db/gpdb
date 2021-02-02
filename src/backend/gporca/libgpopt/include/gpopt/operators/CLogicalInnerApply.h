@@ -109,7 +109,7 @@ public:
 	static CLogicalInnerApply *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalInnerApply == pop->Eopid());
 
 		return dynamic_cast<CLogicalInnerApply *>(pop);

@@ -173,7 +173,7 @@ CPhysicalComputeScalar::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		// check if singleton/replicated distribution needs to be requested
 		CDistributionSpec *pds = PdsRequireSingletonOrReplicated(
 			mp, exprhdl, pdsRequired, child_index, ulOptReq);
-		if (NULL != pds)
+		if (nullptr != pds)
 		{
 			return pds;
 		}
@@ -304,7 +304,7 @@ CPhysicalComputeScalar::FProvidesReqdCols(CExpressionHandle &exprhdl,
 										  ULONG	 // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(2 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -419,7 +419,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalComputeScalar::EpetOrder(CExpressionHandle &exprhdl,
 								  const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();

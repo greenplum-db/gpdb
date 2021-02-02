@@ -31,7 +31,7 @@ CParseHandlerCTEList::CParseHandlerCTEList(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_array(NULL)
+	  m_dxl_array(nullptr)
 {
 }
 
@@ -65,14 +65,14 @@ CParseHandlerCTEList::StartElement(const XMLCh *const element_uri,
 	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenCTEList),
 									  element_local_name))
 	{
-		GPOS_ASSERT(NULL == m_dxl_array);
+		GPOS_ASSERT(nullptr == m_dxl_array);
 		m_dxl_array = GPOS_NEW(m_mp) CDXLNodeArray(m_mp);
 	}
 	else if (0 == XMLString::compareString(
 					  CDXLTokens::XmlstrToken(EdxltokenLogicalCTEProducer),
 					  element_local_name))
 	{
-		GPOS_ASSERT(NULL != m_dxl_array);
+		GPOS_ASSERT(nullptr != m_dxl_array);
 
 		// start new CTE producer
 		CParseHandlerBase *cte_producer_parse_handler =
@@ -119,7 +119,7 @@ CParseHandlerCTEList::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_array);
+	GPOS_ASSERT(nullptr != m_dxl_array);
 
 	const ULONG length = this->Length();
 

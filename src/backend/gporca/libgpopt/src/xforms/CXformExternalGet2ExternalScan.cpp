@@ -63,7 +63,7 @@ CXformExternalGet2ExternalScan::Transform(CXformContext *pxfctxt,
 										  CXformResult *pxfres,
 										  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -77,7 +77,7 @@ CXformExternalGet2ExternalScan::Transform(CXformContext *pxfctxt,
 	ptabdesc->AddRef();
 
 	CColRefArray *pdrgpcrOutput = popGet->PdrgpcrOutput();
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 
 	pdrgpcrOutput->AddRef();
 

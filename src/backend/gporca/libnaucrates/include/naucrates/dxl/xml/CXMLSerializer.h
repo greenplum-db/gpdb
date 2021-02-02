@@ -73,7 +73,7 @@ public:
 		: m_mp(mp),
 		  m_os(os),
 		  m_indentation(indentation),
-		  m_strstackElems(NULL),
+		  m_strstackElems(nullptr),
 		  m_fOpenTag(false),
 		  m_ulLevel(0),
 		  m_iteration_since_last_abortcheck(0)

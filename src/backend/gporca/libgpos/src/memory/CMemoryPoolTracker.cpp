@@ -71,7 +71,7 @@ CMemoryPoolTracker::NewImpl(const ULONG bytes, const CHAR *file,
 	GPOS_ASSERT(bytes <= GPOS_MEM_ALLOC_MAX);
 	GPOS_ASSERT(bytes <= gpos::ulong_max);
 	GPOS_ASSERT_IMP(
-		(NULL != CMemoryPoolManager::GetMemoryPoolMgr()) &&
+		(nullptr != CMemoryPoolManager::GetMemoryPoolMgr()) &&
 			(this ==
 			 CMemoryPoolManager::GetMemoryPoolMgr()->GetGlobalMemoryPool()),
 		CMemoryPoolManager::GetMemoryPoolMgr()->IsGlobalNewAllowed() &&
@@ -124,7 +124,7 @@ CMemoryPoolTracker::DeleteImpl(void *ptr, EAllocationType eat)
 	GPOS_RTL_ASSERT(eat == EatUnknown || *alloc_type == eat);
 
 	// update stats and allocation list
-	GPOS_ASSERT(NULL != header->m_mp);
+	GPOS_ASSERT(nullptr != header->m_mp);
 	header->m_mp->RecordFree(header);
 
 #ifdef GPOS_DEBUG
@@ -163,10 +163,10 @@ CMemoryPoolTracker::TearDown()
 void
 CMemoryPoolTracker::WalkLiveObjects(gpos::IMemoryVisitor *visitor)
 {
-	GPOS_ASSERT(NULL != visitor);
+	GPOS_ASSERT(nullptr != visitor);
 
 	SAllocHeader *header = m_allocations_list.First();
-	while (NULL != header)
+	while (nullptr != header)
 	{
 		void *user = header + 1;
 

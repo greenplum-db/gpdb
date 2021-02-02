@@ -63,7 +63,7 @@ CXformImplementCTEConsumer::Transform(CXformContext *pxfctxt,
 									  CXformResult *pxfres,
 									  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -78,7 +78,7 @@ CXformImplementCTEConsumer::Transform(CXformContext *pxfctxt,
 	colref_array->AddRef();
 
 	UlongToColRefMap *colref_mapping = popCTEConsumer->Phmulcr();
-	GPOS_ASSERT(NULL != colref_mapping);
+	GPOS_ASSERT(nullptr != colref_mapping);
 	colref_mapping->AddRef();
 
 	// create physical CTE Consumer

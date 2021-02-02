@@ -44,9 +44,9 @@ CPhysicalTVF::CPhysicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 {
 	GPOS_ASSERT(m_func_mdid->IsValid());
 	GPOS_ASSERT(m_return_type_mdid->IsValid());
-	GPOS_ASSERT(NULL != m_pstr);
-	GPOS_ASSERT(NULL != m_pdrgpcoldesc);
-	GPOS_ASSERT(NULL != m_pcrsOutput);
+	GPOS_ASSERT(nullptr != m_pstr);
+	GPOS_ASSERT(nullptr != m_pdrgpcoldesc);
+	GPOS_ASSERT(nullptr != m_pcrsOutput);
 
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	m_pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
@@ -127,7 +127,7 @@ CPhysicalTVF::PcrsRequired(CMemoryPool *,		 // mp,
 )
 {
 	GPOS_ASSERT(!"CPhysicalTVF has no relational children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ CPhysicalTVF::PosRequired(CMemoryPool *,		// mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalTVF has no relational children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -169,7 +169,7 @@ CPhysicalTVF::PdsRequired(CMemoryPool *,		// mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalTVF has no relational children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -190,7 +190,7 @@ CPhysicalTVF::PrsRequired(CMemoryPool *,		 // mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalTVF has no relational children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ CPhysicalTVF::PcteRequired(CMemoryPool *,		 //mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalTVF has no relational children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -228,7 +228,7 @@ CPhysicalTVF::FProvidesReqdCols(CExpressionHandle &,  // exprhdl,
 								ULONG  // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 
 	return m_pcrsOutput->ContainsAll(pcrsRequired);
 }
@@ -326,7 +326,7 @@ CPhysicalTVF::EpetOrder(CExpressionHandle &,  // exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	return CEnfdProp::EpetRequired;

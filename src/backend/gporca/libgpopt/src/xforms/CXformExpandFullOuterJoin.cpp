@@ -89,7 +89,7 @@ CXformExpandFullOuterJoin::Transform(CXformContext *pxfctxt,
 									 CXformResult *pxfres,
 									 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -184,7 +184,7 @@ CXformExpandFullOuterJoin::PexprLogicalJoinOverCTEs(
 	CColRefArray *pdrgpcrLeft, ULONG ulRightCTEId, CColRefArray *pdrgpcrRight,
 	CExpression *pexprScalar) const
 {
-	GPOS_ASSERT(NULL != pexprScalar);
+	GPOS_ASSERT(nullptr != pexprScalar);
 
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
 	CCTEInfo *pcteinfo = COptCtxt::PoctxtFromTLS()->Pcteinfo();

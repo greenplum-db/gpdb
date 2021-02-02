@@ -34,10 +34,10 @@ CParseHandlerMDGPDBFunc::CParseHandlerMDGPDBFunc(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname(NULL),
-	  m_mdid_type_result(NULL),
-	  m_mdid_types_array(NULL),
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
+	  m_mdid_type_result(nullptr),
+	  m_mdid_types_array(nullptr),
 	  m_func_stability(CMDFunctionGPDB::EfsSentinel)
 {
 }
@@ -122,7 +122,7 @@ CParseHandlerMDGPDBFunc::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// parse result type
-		GPOS_ASSERT(NULL != m_mdname);
+		GPOS_ASSERT(nullptr != m_mdname);
 
 		m_mdid_type_result = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMdid,
@@ -133,8 +133,8 @@ CParseHandlerMDGPDBFunc::StartElement(const XMLCh *const,  // element_uri,
 					  element_local_name))
 	{
 		// parse output column type
-		GPOS_ASSERT(NULL != m_mdname);
-		GPOS_ASSERT(NULL == m_mdid_types_array);
+		GPOS_ASSERT(nullptr != m_mdname);
+		GPOS_ASSERT(nullptr == m_mdid_types_array);
 
 		const XMLCh *xmlszTypes = CDXLOperatorFactory::ExtractAttrValue(
 			attrs, EdxltokenTypeIds, EdxltokenOutputCols);
@@ -164,7 +164,7 @@ CParseHandlerMDGPDBFunc::EndElement(const XMLCh *const,	 // element_uri,
 								 element_local_name))
 	{
 		// construct the MD func object from its part
-		GPOS_ASSERT(m_mdid->IsValid() && NULL != m_mdname);
+		GPOS_ASSERT(m_mdid->IsValid() && nullptr != m_mdname);
 
 		m_imd_obj = GPOS_NEW(m_mp) CMDFunctionGPDB(
 			m_mp, m_mdid, m_mdname, m_mdid_type_result, m_mdid_types_array,

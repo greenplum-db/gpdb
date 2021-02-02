@@ -54,7 +54,7 @@ public:
 		  m_apphm(GPOS_NEW(Pmp()) CParseHandlerManager(GetDXLMemoryManager(),
 													   Pxmlreader())),
 		  m_apphCostModel(GPOS_NEW(Pmp())
-							  CParseHandlerCostModel(Pmp(), Pphm(), NULL))
+							  CParseHandlerCostModel(Pmp(), Pphm(), nullptr))
 	{
 		m_apphm->ActivateParseHandler(PphCostModel());
 	}

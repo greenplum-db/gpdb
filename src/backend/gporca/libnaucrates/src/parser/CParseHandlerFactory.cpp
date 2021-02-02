@@ -24,16 +24,16 @@ using namespace gpdxl;
 XERCES_CPP_NAMESPACE_USE
 
 CParseHandlerFactory::TokenParseHandlerFuncMap
-	*CParseHandlerFactory::m_token_parse_handler_func_map = NULL;
+	*CParseHandlerFactory::m_token_parse_handler_func_map = nullptr;
 
 // adds a new mapping of token to corresponding parse handler
 void
 CParseHandlerFactory::AddMapping(
 	Edxltoken token_type, ParseHandlerOpCreatorFunc *parse_handler_op_func)
 {
-	GPOS_ASSERT(NULL != m_token_parse_handler_func_map);
+	GPOS_ASSERT(nullptr != m_token_parse_handler_func_map);
 	const XMLCh *token_identifier_str = CDXLTokens::XmlstrToken(token_type);
-	GPOS_ASSERT(NULL != token_identifier_str);
+	GPOS_ASSERT(nullptr != token_identifier_str);
 
 	BOOL success GPOS_ASSERTS_ONLY = m_token_parse_handler_func_map->Insert(
 		token_identifier_str, parse_handler_op_func);
@@ -305,12 +305,12 @@ CParseHandlerFactory::GetParseHandler(CMemoryPool *mp,
 									  CParseHandlerManager *parse_handler_mgr,
 									  CParseHandlerBase *parse_handler_root)
 {
-	GPOS_ASSERT(NULL != m_token_parse_handler_func_map);
+	GPOS_ASSERT(nullptr != m_token_parse_handler_func_map);
 
 	ParseHandlerOpCreatorFunc *create_parse_handler_func =
 		m_token_parse_handler_func_map->Find(token_identifier_str);
 
-	if (create_parse_handler_func != NULL)
+	if (create_parse_handler_func != nullptr)
 	{
 		return (*create_parse_handler_func)(mp, parse_handler_mgr,
 											parse_handler_root);
@@ -326,7 +326,7 @@ CParseHandlerFactory::GetParseHandler(CMemoryPool *mp,
 	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnrecognizedOperator,
 			   str->GetBuffer());
 
-	return NULL;
+	return nullptr;
 }
 
 // creates a parse handler for parsing a DXL document.

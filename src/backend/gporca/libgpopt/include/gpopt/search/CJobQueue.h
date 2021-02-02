@@ -51,7 +51,7 @@ public:
 	};
 
 	// ctor
-	CJobQueue() : m_pj(NULL), m_fCompleted(false)
+	CJobQueue() : m_pj(nullptr), m_fCompleted(false)
 	{
 		m_listjQueued.Init(GPOS_OFFSET(CJob, m_linkQueue));
 	}
@@ -60,7 +60,7 @@ public:
 	~CJobQueue()
 	{
 		GPOS_ASSERT_IMP(
-			NULL != ITask::Self() && !ITask::Self()->HasPendingExceptions(),
+			nullptr != ITask::Self() && !ITask::Self()->HasPendingExceptions(),
 			m_listjQueued.IsEmpty());
 	}
 
@@ -70,7 +70,7 @@ public:
 	{
 		GPOS_ASSERT(m_listjQueued.IsEmpty());
 
-		m_pj = NULL;
+		m_pj = nullptr;
 		m_fCompleted = false;
 	}
 

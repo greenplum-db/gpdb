@@ -28,9 +28,9 @@ using namespace gpos;
 IWorker *
 IWorker::Self()
 {
-	IWorker *worker = NULL;
+	IWorker *worker = nullptr;
 
-	if (NULL != CWorkerPoolManager::WorkerPoolManager())
+	if (nullptr != CWorkerPoolManager::WorkerPoolManager())
 	{
 		worker = CWorkerPoolManager::WorkerPoolManager()->Self();
 	}
@@ -51,7 +51,7 @@ void
 IWorker::CheckAbort(const CHAR *file, ULONG line_num)
 {
 	IWorker *worker = Self();
-	if (NULL != worker)
+	if (nullptr != worker)
 	{
 		worker->CheckForAbort(file, line_num);
 	}

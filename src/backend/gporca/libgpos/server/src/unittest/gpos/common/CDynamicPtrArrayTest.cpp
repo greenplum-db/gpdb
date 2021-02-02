@@ -80,7 +80,7 @@ CDynamicPtrArrayTest::EresUnittest_Basic()
 	const CHAR *szElem =
 #endif	// GPOS_DEBUG
 		pdrg->Find(rgsz[0]);
-	GPOS_ASSERT(NULL != szElem);
+	GPOS_ASSERT(nullptr != szElem);
 
 #ifdef GPOS_DEBUG
 	ULONG ulPos =
@@ -320,7 +320,8 @@ CDynamicPtrArrayTest::EresUnittest_PdrgpulSubsequenceIndexes()
 
 	// since target is empty, there are elements in lookup with no match, so the function
 	// should return NULL
-	GPOS_ASSERT(NULL == pdrgULONGTarget->IndexesOfSubsequence(pdrgULONGLookup));
+	GPOS_ASSERT(nullptr ==
+				pdrgULONGTarget->IndexesOfSubsequence(pdrgULONGLookup));
 
 	pdrgULONGTarget->Append(pul1);
 	pdrgULONGTarget->Append(pul3);
@@ -331,7 +332,7 @@ CDynamicPtrArrayTest::EresUnittest_PdrgpulSubsequenceIndexes()
 	ULongPtrArray *pdrgpulIndexes =
 		pdrgULONGTarget->IndexesOfSubsequence(pdrgULONGLookup);
 
-	GPOS_ASSERT(NULL != pdrgpulIndexes);
+	GPOS_ASSERT(nullptr != pdrgpulIndexes);
 	GPOS_ASSERT(4 == pdrgpulIndexes->Size());
 	GPOS_ASSERT(0 == *(*pdrgpulIndexes)[0]);
 	GPOS_ASSERT(4 == *(*pdrgpulIndexes)[1]);

@@ -67,7 +67,7 @@ CParseHandlerHashExprList::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a hash expr list already and initialized the hash expr list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 		// start new hash expr element
 		CParseHandlerBase *hash_expr_parse_handler =
 			CParseHandlerFactory::GetParseHandler(

@@ -93,7 +93,7 @@ CLogicalProject::PdrgpcrsEquivClassFromScIdent(CMemoryPool *mp,
 											   CExpression *pexprPrEl,
 											   CColRefSet *not_null_columns)
 {
-	GPOS_ASSERT(NULL != pexprPrEl);
+	GPOS_ASSERT(nullptr != pexprPrEl);
 
 	CScalarProjectElement *popPrEl =
 		CScalarProjectElement::PopConvert(pexprPrEl->Pop());
@@ -103,7 +103,7 @@ CLogicalProject::PdrgpcrsEquivClassFromScIdent(CMemoryPool *mp,
 
 	if (EopScalarIdent != pexprScalar->Pop()->Eopid())
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	CScalarIdent *popScIdent = CScalarIdent::PopConvert(pexprScalar->Pop());
@@ -114,7 +114,7 @@ CLogicalProject::PdrgpcrsEquivClassFromScIdent(CMemoryPool *mp,
 
 	if (!CUtils::FConstrainableType(pcrPrEl->RetrieveType()->MDId()))
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	BOOL non_nullable = not_null_columns->FMember(pcrScIdent);
@@ -135,7 +135,7 @@ CLogicalProject::PdrgpcrsEquivClassFromScIdent(CMemoryPool *mp,
 		return pdrgpcrs;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -154,9 +154,9 @@ CLogicalProject::ExtractConstraintFromScConst(
 	CColRefSetArray *pdrgpcrs	   // array of equivalence class
 )
 {
-	GPOS_ASSERT(NULL != pexprPrEl);
-	GPOS_ASSERT(NULL != pdrgpcnstr);
-	GPOS_ASSERT(NULL != pdrgpcrs);
+	GPOS_ASSERT(nullptr != pexprPrEl);
+	GPOS_ASSERT(nullptr != pdrgpcnstr);
+	GPOS_ASSERT(nullptr != pdrgpcrs);
 
 	CScalarProjectElement *popPrEl =
 		CScalarProjectElement::PopConvert(pexprPrEl->Pop());
@@ -206,7 +206,7 @@ CLogicalProject::DerivePropertyConstraint(CMemoryPool *mp,
 {
 	CExpression *pexprPrL = exprhdl.PexprScalarExactChild(1);
 
-	if (NULL == pexprPrL)
+	if (nullptr == pexprPrL)
 	{
 		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
 	}
@@ -231,7 +231,7 @@ CLogicalProject::DerivePropertyConstraint(CMemoryPool *mp,
 			CColRefSetArray *pdrgpcrsChild =
 				PdrgpcrsEquivClassFromScIdent(mp, pexprPrEl, not_null_columns);
 
-			if (NULL != pdrgpcrsChild)
+			if (nullptr != pdrgpcrsChild)
 			{
 				// merge with the equivalence classes we have so far
 				CColRefSetArray *pdrgpcrsMerged =
@@ -260,7 +260,7 @@ CLogicalProject::DerivePropertyConstraint(CMemoryPool *mp,
 
 	// equivalence classes coming from child
 	CColRefSetArray *pdrgpcrsChild = ppcChild->PdrgpcrsEquivClasses();
-	if (NULL != pdrgpcrsChild)
+	if (nullptr != pdrgpcrsChild)
 	{
 		// merge with the equivalence classes we have so far
 		CColRefSetArray *pdrgpcrsMerged =
@@ -273,7 +273,7 @@ CLogicalProject::DerivePropertyConstraint(CMemoryPool *mp,
 
 	// constraint coming from child
 	CConstraint *pcnstr = ppcChild->Pcnstr();
-	if (NULL != pcnstr)
+	if (nullptr != pcnstr)
 	{
 		pcnstr->AddRef();
 		pdrgpcnstr->Append(pcnstr);

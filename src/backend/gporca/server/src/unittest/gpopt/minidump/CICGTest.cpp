@@ -213,8 +213,8 @@ CICGTest::EresUnittest_RunUnsupportedMinidumpTests()
 			CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(
 				mp, filename,
 				optimizer_config->GetCostModel()->UlHosts() /*ulSegments*/,
-				1 /*ulSessionId*/, 1,  /*ulCmdId*/
-				optimizer_config, NULL /*pceeval*/
+				1 /*ulSessionId*/, 1,	  /*ulCmdId*/
+				optimizer_config, nullptr /*pceeval*/
 			);
 
 
@@ -313,8 +313,8 @@ CICGTest::EresUnittest_NegativeIndexApplyTests()
 			CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(
 				mp, rgszNegativeIndexApplyFileNames[ul],
 				GPOPT_TEST_SEGMENTS /*ulSegments*/, 1 /*ulSessionId*/,
-				1,					   /*ulCmdId*/
-				optimizer_config, NULL /*pceeval*/
+				1,						  /*ulCmdId*/
+				optimizer_config, nullptr /*pceeval*/
 			);
 			GPOS_CHECK_ABORT;
 			optimizer_config->Release();

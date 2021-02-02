@@ -34,11 +34,11 @@ CDXLTableDescr::CDXLTableDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 							   ULONG ulExecuteAsUser, int lockmode)
 	: m_mdid(mdid),
 	  m_mdname(mdname),
-	  m_dxl_column_descr_array(NULL),
+	  m_dxl_column_descr_array(nullptr),
 	  m_execute_as_user_id(ulExecuteAsUser),
 	  m_lockmode(lockmode)
 {
-	GPOS_ASSERT(NULL != m_mdname);
+	GPOS_ASSERT(nullptr != m_mdname);
 	m_dxl_column_descr_array = GPOS_NEW(mp) CDXLColDescrArray(mp);
 }
 
@@ -98,7 +98,7 @@ CDXLTableDescr::MdName() const
 ULONG
 CDXLTableDescr::Arity() const
 {
-	return (m_dxl_column_descr_array == NULL)
+	return (m_dxl_column_descr_array == nullptr)
 			   ? 0
 			   : m_dxl_column_descr_array->Size();
 }
@@ -149,8 +149,8 @@ CDXLTableDescr::SetColumnDescriptors(CDXLColDescrArray *dxl_column_descr_array)
 void
 CDXLTableDescr::AddColumnDescr(CDXLColDescr *column_descr_dxl)
 {
-	GPOS_ASSERT(NULL != m_dxl_column_descr_array);
-	GPOS_ASSERT(NULL != column_descr_dxl);
+	GPOS_ASSERT(nullptr != m_dxl_column_descr_array);
+	GPOS_ASSERT(nullptr != column_descr_dxl);
 	m_dxl_column_descr_array->Append(column_descr_dxl);
 }
 
@@ -222,7 +222,7 @@ CDXLTableDescr::SerializeToDXL(CXMLSerializer *xml_serializer) const
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenColumns));
-	GPOS_ASSERT(NULL != m_dxl_column_descr_array);
+	GPOS_ASSERT(nullptr != m_dxl_column_descr_array);
 
 	const ULONG arity = Arity();
 	for (ULONG ul = 0; ul < arity; ul++)

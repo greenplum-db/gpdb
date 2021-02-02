@@ -26,7 +26,7 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLLogicalGroupBy::CDXLLogicalGroupBy(CMemoryPool *mp)
-	: CDXLLogical(mp), m_grouping_colid_array(NULL)
+	: CDXLLogical(mp), m_grouping_colid_array(nullptr)
 {
 }
 
@@ -42,7 +42,7 @@ CDXLLogicalGroupBy::CDXLLogicalGroupBy(CMemoryPool *mp,
 									   ULongPtrArray *pdrgpulGrpColIds)
 	: CDXLLogical(mp), m_grouping_colid_array(pdrgpulGrpColIds)
 {
-	GPOS_ASSERT(NULL != pdrgpulGrpColIds);
+	GPOS_ASSERT(nullptr != pdrgpulGrpColIds);
 }
 
 //---------------------------------------------------------------------------
@@ -97,7 +97,7 @@ CDXLLogicalGroupBy::GetOpNameStr() const
 void
 CDXLLogicalGroupBy::SetGroupingColumns(ULongPtrArray *grouping_colid_array)
 {
-	GPOS_ASSERT(NULL != grouping_colid_array);
+	GPOS_ASSERT(nullptr != grouping_colid_array);
 	m_grouping_colid_array = grouping_colid_array;
 }
 
@@ -126,7 +126,7 @@ CDXLLogicalGroupBy::GetGroupingColidArray() const
 void
 CDXLLogicalGroupBy::SerializeGrpColsToDXL(CXMLSerializer *xml_serializer) const
 {
-	if (NULL != m_grouping_colid_array)
+	if (nullptr != m_grouping_colid_array)
 	{
 		const CWStringConst *grouping_cols_str =
 			CDXLTokens::GetDXLTokenStr(EdxltokenGroupingCols);
@@ -139,7 +139,7 @@ CDXLLogicalGroupBy::SerializeGrpColsToDXL(CXMLSerializer *xml_serializer) const
 
 		for (ULONG idx = 0; idx < m_grouping_colid_array->Size(); idx++)
 		{
-			GPOS_ASSERT(NULL != (*m_grouping_colid_array)[idx]);
+			GPOS_ASSERT(nullptr != (*m_grouping_colid_array)[idx]);
 			ULONG grouping_col = *((*m_grouping_colid_array)[idx]);
 
 			xml_serializer->OpenElement(

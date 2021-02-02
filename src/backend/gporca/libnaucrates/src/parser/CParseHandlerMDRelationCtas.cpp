@@ -40,7 +40,7 @@ CParseHandlerMDRelationCtas::CParseHandlerMDRelationCtas(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMDRelation(mp, parse_handler_mgr, parse_handler_root),
-	  m_vartypemod_array(NULL)
+	  m_vartypemod_array(nullptr)
 {
 }
 
@@ -75,7 +75,7 @@ CParseHandlerMDRelationCtas::StartElement(const XMLCh *const,
 
 	const XMLCh *xml_str_schema =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenSchema));
-	if (NULL != xml_str_schema)
+	if (nullptr != xml_str_schema)
 	{
 		m_mdname_schema = CDXLUtils::CreateMDNameFromXMLChar(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_schema);
@@ -89,7 +89,7 @@ CParseHandlerMDRelationCtas::StartElement(const XMLCh *const,
 	// parse whether relation has oids
 	const XMLCh *xml_str_has_oids =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelHasOids));
-	if (NULL != xml_str_has_oids)
+	if (nullptr != xml_str_has_oids)
 	{
 		m_has_oids = CDXLOperatorFactory::ConvertAttrValueToBool(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_has_oids,
@@ -177,10 +177,11 @@ CParseHandlerMDRelationCtas::EndElement(const XMLCh *const,	 // element_uri,
 	CParseHandlerMetadataIdList *opclasses_parse_handler =
 		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[3]);
 
-	GPOS_ASSERT(NULL != md_cols_parse_handler->GetMdColArray());
-	GPOS_ASSERT(NULL != ctas_options_parse_handler->GetDxlCtasStorageOption());
-	GPOS_ASSERT(NULL != opfamilies_parse_handler->GetMdIdArray());
-	GPOS_ASSERT(NULL != opclasses_parse_handler->GetMdIdArray());
+	GPOS_ASSERT(nullptr != md_cols_parse_handler->GetMdColArray());
+	GPOS_ASSERT(nullptr !=
+				ctas_options_parse_handler->GetDxlCtasStorageOption());
+	GPOS_ASSERT(nullptr != opfamilies_parse_handler->GetMdIdArray());
+	GPOS_ASSERT(nullptr != opclasses_parse_handler->GetMdIdArray());
 
 	CMDColumnArray *md_col_array = md_cols_parse_handler->GetMdColArray();
 	CDXLCtasStorageOptions *dxl_ctas_storage_options =

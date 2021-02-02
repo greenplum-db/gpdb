@@ -35,7 +35,7 @@ CParseHandlerTraceFlags::CParseHandlerTraceFlags(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_trace_flags_bitset(NULL)
+	  m_trace_flags_bitset(nullptr)
 {
 	m_trace_flags_bitset = GPOS_NEW(mp) CBitSet(mp, EopttraceSentinel);
 }

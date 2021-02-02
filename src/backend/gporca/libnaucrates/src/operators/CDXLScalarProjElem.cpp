@@ -28,7 +28,7 @@ CDXLScalarProjElem::CDXLScalarProjElem(CMemoryPool *mp, ULONG id,
 									   const CMDName *mdname)
 	: CDXLScalar(mp), m_id(id), m_mdname(mdname)
 {
-	GPOS_ASSERT(NULL != mdname);
+	GPOS_ASSERT(nullptr != mdname);
 }
 
 //---------------------------------------------------------------------------

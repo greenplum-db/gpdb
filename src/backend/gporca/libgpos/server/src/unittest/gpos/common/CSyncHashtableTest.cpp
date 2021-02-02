@@ -136,7 +136,7 @@ CSyncHashtableTest::EresUnittest_Accessor()
 
 		CSyncHashtableAccessByKey<SElem, ULONG> shtacc1(rgsht[1], ulKey);
 
-		if (NULL == shtacc0.Find())
+		if (nullptr == shtacc0.Find())
 		{
 			// must be in the other hashtable
 			GPOS_ASSERT(pelem == shtacc1.Find());
@@ -157,7 +157,7 @@ CSyncHashtableTest::EresUnittest_Accessor()
 
 		CSyncHashtableAccessByKey<SElem, ULONG> shtacc1(rgsht[1], ulKey);
 
-		GPOS_ASSERT(NULL == shtacc1.Find());
+		GPOS_ASSERT(nullptr == shtacc1.Find());
 		GPOS_ASSERT(pelem == shtacc0.Find());
 	}
 
@@ -203,7 +203,7 @@ CSyncHashtableTest::EresUnittest_ComplexEquality()
 
 #ifdef GPOS_DEBUG
 		SElem *pelem = shtacc.Find();
-		GPOS_ASSERT(NULL != pelem && pelem != &elem);
+		GPOS_ASSERT(nullptr != pelem && pelem != &elem);
 		GPOS_ASSERT(pelem->Id() == GPOS_SHT_ELEMENTS + j);
 #endif	// GPOS_DEBUG
 	}
@@ -256,7 +256,7 @@ CSyncHashtableTest::EresUnittest_SameKeyIteration()
 
 		ULONG count = 0;
 		SElem *pelem = shtacc.Find();
-		while (NULL != pelem)
+		while (nullptr != pelem)
 		{
 			count++;
 			pelem = shtacc.Next(pelem);
@@ -323,7 +323,7 @@ CSyncHashtableTest::EresUnittest_NonConcurrentIteration()
 
 		SElem *pelem GPOS_ASSERTS_ONLY = htitacc.Value();
 
-		GPOS_ASSERT(NULL != pelem);
+		GPOS_ASSERT(nullptr != pelem);
 
 		GPOS_ASSERT(SElem::IsValid(pelem->m_ulKey));
 

@@ -42,9 +42,9 @@ CLogicalSequenceProject::CLogicalSequenceProject(CMemoryPool *mp,
 	  m_fHasOrderSpecs(false),
 	  m_fHasFrameSpecs(false)
 {
-	GPOS_ASSERT(NULL != pds);
-	GPOS_ASSERT(NULL != pdrgpos);
-	GPOS_ASSERT(NULL != pdrgpwf);
+	GPOS_ASSERT(nullptr != pds);
+	GPOS_ASSERT(nullptr != pdrgpos);
+	GPOS_ASSERT(nullptr != pdrgpwf);
 	GPOS_ASSERT(CDistributionSpec::EdtHashed == pds->Edt() ||
 				CDistributionSpec::EdtSingleton == pds->Edt());
 
@@ -86,9 +86,9 @@ CLogicalSequenceProject::CLogicalSequenceProject(CMemoryPool *mp,
 //---------------------------------------------------------------------------
 CLogicalSequenceProject::CLogicalSequenceProject(CMemoryPool *mp)
 	: CLogicalUnary(mp),
-	  m_pds(NULL),
-	  m_pdrgpos(NULL),
-	  m_pdrgpwf(NULL),
+	  m_pds(nullptr),
+	  m_pdrgpos(nullptr),
+	  m_pdrgpwf(nullptr),
 	  m_fHasOrderSpecs(false),
 	  m_fHasFrameSpecs(false)
 {
@@ -161,7 +161,7 @@ CLogicalSequenceProject::PopCopyWithRemappedColumns(
 void
 CLogicalSequenceProject::SetHasOrderSpecs(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != m_pdrgpos);
+	GPOS_ASSERT(nullptr != m_pdrgpos);
 
 	const ULONG ulOrderSpecs = m_pdrgpos->Size();
 	if (0 == ulOrderSpecs)
@@ -190,7 +190,7 @@ void
 CLogicalSequenceProject::SetHasFrameSpecs(CMemoryPool *	 // mp
 )
 {
-	GPOS_ASSERT(NULL != m_pdrgpwf);
+	GPOS_ASSERT(nullptr != m_pdrgpwf);
 
 	const ULONG ulFrameSpecs = m_pdrgpwf->Size();
 	if (0 == ulFrameSpecs)
@@ -312,7 +312,7 @@ CLogicalSequenceProject::DeriveMaxCard(CMemoryPool *,  // mp
 BOOL
 CLogicalSequenceProject::Matches(COperator *pop) const
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	if (Eopid() == pop->Eopid())
 	{
 		CLogicalSequenceProject *popLogicalSequenceProject =
@@ -432,7 +432,7 @@ CLogicalSequenceProject::PopRemoveLocalOuterRefs(CMemoryPool *mp,
 		pds =
 			CDistributionSpecHashed::PdsConvert(m_pds)->PdshashedExcludeColumns(
 				mp, outer_refs);
-		if (NULL == pds)
+		if (nullptr == pds)
 		{
 			// if the hashed distribution spec is empty after excluding the outer ref columns,
 			// eliminate Partition clause by creating a singleton spec

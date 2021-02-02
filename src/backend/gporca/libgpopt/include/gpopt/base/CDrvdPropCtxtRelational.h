@@ -77,7 +77,7 @@ public:
 	static CDrvdPropCtxtRelational *
 	PdpctxtrelConvert(CDrvdPropCtxt *pdpctxt)
 	{
-		GPOS_ASSERT(NULL != pdpctxt);
+		GPOS_ASSERT(nullptr != pdpctxt);
 
 		return reinterpret_cast<CDrvdPropCtxtRelational *>(pdpctxt);
 	}

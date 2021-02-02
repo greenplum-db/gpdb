@@ -37,8 +37,8 @@ CPhysicalIndexOnlyScan::CPhysicalIndexOnlyScan(
 	  m_ulOriginOpId(ulOriginOpId),
 	  m_pos(pos)
 {
-	GPOS_ASSERT(NULL != pindexdesc);
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pindexdesc);
+	GPOS_ASSERT(nullptr != pos);
 }
 
 
@@ -68,7 +68,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalIndexOnlyScan::EpetOrder(CExpressionHandle &,	// exprhdl
 								  const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	if (peo->FCompatible(m_pos))

@@ -94,7 +94,7 @@ public:
 	static CDXLScalarPartBound *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarPartBound == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarPartBound *>(dxl_op);

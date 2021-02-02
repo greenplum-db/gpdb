@@ -39,8 +39,8 @@ CDXLLogicalDelete::CDXLLogicalDelete(CMemoryPool *mp,
 	  m_segid_colid(segid_colid),
 	  m_deletion_colid_array(delete_colid_array)
 {
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != delete_colid_array);
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != delete_colid_array);
 }
 
 //---------------------------------------------------------------------------

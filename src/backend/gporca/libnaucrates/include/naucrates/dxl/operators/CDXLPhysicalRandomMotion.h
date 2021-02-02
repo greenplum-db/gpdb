@@ -76,7 +76,7 @@ public:
 	static CDXLPhysicalRandomMotion *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalMotionRandom == dxl_op->GetDXLOperator());
 		return dynamic_cast<CDXLPhysicalRandomMotion *>(dxl_op);
 	}

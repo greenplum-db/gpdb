@@ -91,7 +91,7 @@ public:
 	static CScalarDMLAction *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarDMLAction == pop->Eopid());
 
 		return dynamic_cast<CScalarDMLAction *>(pop);

@@ -34,7 +34,7 @@ CDXLLogicalCTEProducer::CDXLLogicalCTEProducer(
 	CMemoryPool *mp, ULONG id, ULongPtrArray *output_colids_array)
 	: CDXLLogical(mp), m_id(id), m_output_colids_array(output_colids_array)
 {
-	GPOS_ASSERT(NULL != output_colids_array);
+	GPOS_ASSERT(nullptr != output_colids_array);
 }
 
 //---------------------------------------------------------------------------

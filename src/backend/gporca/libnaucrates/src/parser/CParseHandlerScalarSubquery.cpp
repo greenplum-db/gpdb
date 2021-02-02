@@ -34,7 +34,7 @@ CParseHandlerScalarSubquery::CParseHandlerScalarSubquery(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -106,7 +106,7 @@ CParseHandlerScalarSubquery::EndElement(const XMLCh *const,	 // element_uri,
 
 	// construct node from parsed components
 	GPOS_ASSERT(1 == this->Length());
-	GPOS_ASSERT(NULL != m_dxl_op);
+	GPOS_ASSERT(nullptr != m_dxl_op);
 
 	CParseHandlerLogicalOp *child_parse_handler =
 		dynamic_cast<CParseHandlerLogicalOp *>((*this)[0]);

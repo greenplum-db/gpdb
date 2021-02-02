@@ -91,8 +91,8 @@ void
 CXformExpandNAryJoinDP::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -117,7 +117,7 @@ CXformExpandNAryJoinDP::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CJoinOrderDP jodp(mp, pdrgpexpr, pdrgpexprPreds);
 	CExpression *pexprResult = jodp.PexprExpand();
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		// normalize resulting expression
 		CExpression *pexprNormalized =

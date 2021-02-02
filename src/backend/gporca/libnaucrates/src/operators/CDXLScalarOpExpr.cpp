@@ -167,7 +167,7 @@ CDXLScalarOpExpr::SerializeToDXL(CXMLSerializer *xml_serializer,
 	m_mdid->Serialize(xml_serializer,
 					  CDXLTokens::GetDXLTokenStr(EdxltokenOpNo));
 
-	if (NULL != m_return_type_mdid)
+	if (nullptr != m_return_type_mdid)
 	{
 		m_return_type_mdid->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenOpType));

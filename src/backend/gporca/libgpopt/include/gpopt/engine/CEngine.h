@@ -160,7 +160,7 @@ private:
 	FSearchTerminated() const
 	{
 		// at least one stage has completed and achieved required cost
-		return (NULL != PssPrevious() && PssPrevious()->FAchievedReqdCost());
+		return (nullptr != PssPrevious() && PssPrevious()->FAchievedReqdCost());
 	}
 
 	// generate random plan id
@@ -218,7 +218,7 @@ public:
 	CGroup *
 	PgroupRoot() const
 	{
-		GPOS_ASSERT(NULL != m_pmemo);
+		GPOS_ASSERT(nullptr != m_pmemo);
 
 		return m_pmemo->PgroupRoot();
 	}
@@ -326,7 +326,7 @@ public:
 	{
 		if (0 == m_ulCurrSearchStage)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		return (*m_search_stage_array)[m_ulCurrSearchStage - 1];

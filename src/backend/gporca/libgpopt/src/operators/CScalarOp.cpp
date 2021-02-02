@@ -145,7 +145,7 @@ CScalarOp::GetReturnTypeMdId() const
 IMDId *
 CScalarOp::MdidType() const
 {
-	if (NULL != m_return_type_mdid)
+	if (nullptr != m_return_type_mdid)
 	{
 		return m_return_type_mdid;
 	}

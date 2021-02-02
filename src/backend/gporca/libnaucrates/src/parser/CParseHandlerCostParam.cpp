@@ -33,7 +33,7 @@ CParseHandlerCostParam::CParseHandlerCostParam(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_param_name(NULL),
+	  m_param_name(nullptr),
 	  m_value(0),
 	  m_lower_bound_val(0),
 	  m_upper_bound_val(0)

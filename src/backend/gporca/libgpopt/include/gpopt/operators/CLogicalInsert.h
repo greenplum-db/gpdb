@@ -166,7 +166,7 @@ public:
 	static CLogicalInsert *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalInsert == pop->Eopid());
 
 		return dynamic_cast<CLogicalInsert *>(pop);

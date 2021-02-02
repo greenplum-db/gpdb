@@ -35,7 +35,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDatumOidGPDB::CDatumOidGPDB(CSystemId sysid, OID oid_val, BOOL is_null)
-	: m_mdid(NULL), m_val(oid_val), m_is_null(is_null)
+	: m_mdid(nullptr), m_val(oid_val), m_is_null(is_null)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	IMDId *mdid = dynamic_cast<const CMDTypeOidGPDB *>(
@@ -63,7 +63,7 @@ CDatumOidGPDB::CDatumOidGPDB(CSystemId sysid, OID oid_val, BOOL is_null)
 CDatumOidGPDB::CDatumOidGPDB(IMDId *mdid, OID oid_val, BOOL is_null)
 	: m_mdid(mdid), m_val(oid_val), m_is_null(is_null)
 {
-	GPOS_ASSERT(NULL != m_mdid);
+	GPOS_ASSERT(nullptr != m_mdid);
 	GPOS_ASSERT(GPDB_OID_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 
 	if (IsNull())

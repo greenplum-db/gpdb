@@ -213,7 +213,7 @@ public:
 	IMDId *
 	GetBaseRelMdid() const override
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// serialize object in DXL format

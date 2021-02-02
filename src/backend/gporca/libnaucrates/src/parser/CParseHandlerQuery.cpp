@@ -42,9 +42,9 @@ CParseHandlerQuery::CParseHandlerQuery(CMemoryPool *mp,
 									   CParseHandlerManager *parse_handler_mgr,
 									   CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_node(NULL),
-	  m_output_colums_dxl_array(NULL),
-	  m_cte_producers(NULL)
+	  m_dxl_node(nullptr),
+	  m_output_colums_dxl_array(nullptr),
+	  m_cte_producers(nullptr)
 {
 }
 
@@ -142,7 +142,7 @@ CParseHandlerQuery::StartElement(const XMLCh *const,  // element_uri,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 				   str->GetBuffer());
 	}
-	GPOS_ASSERT(NULL != m_mp);
+	GPOS_ASSERT(nullptr != m_mp);
 
 	// create parse handler for the query output node
 	CParseHandlerBase *parse_handler_query_output =
@@ -197,8 +197,9 @@ CParseHandlerQuery::EndElement(const XMLCh *const,	// element_uri,
 
 	CParseHandlerQueryOutput *parse_handler_query_output =
 		dynamic_cast<CParseHandlerQueryOutput *>((*this)[0]);
-	GPOS_ASSERT(NULL != parse_handler_query_output &&
-				NULL != parse_handler_query_output->GetOutputColumnsDXLArray());
+	GPOS_ASSERT(nullptr != parse_handler_query_output &&
+				nullptr !=
+					parse_handler_query_output->GetOutputColumnsDXLArray());
 
 	// store constructed node
 	m_output_colums_dxl_array =
@@ -207,16 +208,16 @@ CParseHandlerQuery::EndElement(const XMLCh *const,	// element_uri,
 
 	CParseHandlerCTEList *parse_handler_cte =
 		dynamic_cast<CParseHandlerCTEList *>((*this)[1]);
-	GPOS_ASSERT(NULL != parse_handler_cte &&
-				NULL != parse_handler_cte->GetDxlCteArray());
+	GPOS_ASSERT(nullptr != parse_handler_cte &&
+				nullptr != parse_handler_cte->GetDxlCteArray());
 
 	m_cte_producers = parse_handler_cte->GetDxlCteArray();
 	m_cte_producers->AddRef();
 
 	CParseHandlerLogicalOp *parse_handler_logical_op =
 		dynamic_cast<CParseHandlerLogicalOp *>((*this)[2]);
-	GPOS_ASSERT(NULL != parse_handler_logical_op &&
-				NULL != parse_handler_logical_op->CreateDXLNode());
+	GPOS_ASSERT(nullptr != parse_handler_logical_op &&
+				nullptr != parse_handler_logical_op->CreateDXLNode());
 
 	// store constructed node
 	m_dxl_node = parse_handler_logical_op->CreateDXLNode();

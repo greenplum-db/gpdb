@@ -32,10 +32,10 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalSetOp::CLogicalSetOp(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pdrgpcrOutput(NULL),
-	  m_pdrgpdrgpcrInput(NULL),
-	  m_pcrsOutput(NULL),
-	  m_pdrgpcrsInput(NULL)
+	  m_pdrgpcrOutput(nullptr),
+	  m_pdrgpdrgpcrInput(nullptr),
+	  m_pcrsOutput(nullptr),
+	  m_pdrgpcrsInput(nullptr)
 {
 	m_fPattern = true;
 }
@@ -53,11 +53,11 @@ CLogicalSetOp::CLogicalSetOp(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
 	: CLogical(mp),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pdrgpdrgpcrInput(pdrgpdrgpcrInput),
-	  m_pcrsOutput(NULL),
-	  m_pdrgpcrsInput(NULL)
+	  m_pcrsOutput(nullptr),
+	  m_pdrgpcrsInput(nullptr)
 {
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
-	GPOS_ASSERT(NULL != pdrgpdrgpcrInput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcrInput);
 
 	BuildColumnSets(mp);
 }
@@ -74,11 +74,11 @@ CLogicalSetOp::CLogicalSetOp(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
 CLogicalSetOp::CLogicalSetOp(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
 							 CColRefArray *pdrgpcrLeft,
 							 CColRefArray *pdrgpcrRight)
-	: CLogical(mp), m_pdrgpcrOutput(pdrgpcrOutput), m_pdrgpdrgpcrInput(NULL)
+	: CLogical(mp), m_pdrgpcrOutput(pdrgpcrOutput), m_pdrgpdrgpcrInput(nullptr)
 {
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
-	GPOS_ASSERT(NULL != pdrgpcrLeft);
-	GPOS_ASSERT(NULL != pdrgpcrRight);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrLeft);
+	GPOS_ASSERT(nullptr != pdrgpcrRight);
 
 	m_pdrgpdrgpcrInput = GPOS_NEW(mp) CColRef2dArray(mp, 2);
 
@@ -117,10 +117,10 @@ CLogicalSetOp::~CLogicalSetOp()
 void
 CLogicalSetOp::BuildColumnSets(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != m_pdrgpcrOutput);
-	GPOS_ASSERT(NULL != m_pdrgpdrgpcrInput);
-	GPOS_ASSERT(NULL == m_pcrsOutput);
-	GPOS_ASSERT(NULL == m_pdrgpcrsInput);
+	GPOS_ASSERT(nullptr != m_pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != m_pdrgpdrgpcrInput);
+	GPOS_ASSERT(nullptr == m_pcrsOutput);
+	GPOS_ASSERT(nullptr == m_pdrgpcrsInput);
 
 	m_pcrsOutput = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcrOutput);
 	m_pdrgpcrsInput = GPOS_NEW(mp) CColRefSetArray(mp);
@@ -210,7 +210,7 @@ CLogicalSetOp::DerivePartitionInfo(CMemoryPool *mp,
 	for (ULONG ul = 1; ul < arity; ul++)
 	{
 		CPartInfo *ppartinfoChild = exprhdl.DerivePartitionInfo(ul);
-		GPOS_ASSERT(NULL != ppartinfoChild);
+		GPOS_ASSERT(nullptr != ppartinfoChild);
 
 		CColRefArray *pdrgpcrInput = (*m_pdrgpdrgpcrInput)[ul];
 		GPOS_ASSERT(pdrgpcrInput->Size() == m_pdrgpcrOutput->Size());
@@ -285,7 +285,7 @@ CLogicalSetOp::PdrgpcrsOutputEquivClasses(CMemoryPool *mp,
 	for (ULONG ul = 1; ul < ulChildren; ul++)
 	{
 		CColRefSetArray *pdrgpcrsChild = PdrgpcrsInputMapped(mp, exprhdl, ul);
-		CColRefSetArray *pdrgpcrsMerged = NULL;
+		CColRefSetArray *pdrgpcrsMerged = nullptr;
 
 		if (fIntersect)
 		{
@@ -371,12 +371,12 @@ CLogicalSetOp::PdrgpcnstrColumn(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	for (ULONG ul = ulStart; ul < ulChildren; ul++)
 	{
 		CConstraint *pcnstr = PcnstrColumn(mp, exprhdl, ulColIndex, ul);
-		if (NULL == pcnstr)
+		if (nullptr == pcnstr)
 		{
 			pcnstr =
 				CConstraintInterval::PciUnbounded(mp, colref, true /*is_null*/);
 		}
-		GPOS_ASSERT(NULL != pcnstr);
+		GPOS_ASSERT(nullptr != pcnstr);
 		pdrgpcnstr->Append(pcnstr);
 	}
 
@@ -400,17 +400,17 @@ CLogicalSetOp::PcnstrColumn(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// constraint from child
 	CConstraint *pcnstrChild =
 		exprhdl.DerivePropertyConstraint(ulChild)->Pcnstr();
-	if (NULL == pcnstrChild)
+	if (nullptr == pcnstrChild)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// part of constraint on the current input column
 	CConstraint *pcnstrCol =
 		pcnstrChild->Pcnstr(mp, (*(*m_pdrgpdrgpcrInput)[ulChild])[ulColIndex]);
-	if (NULL == pcnstrCol)
+	if (nullptr == pcnstrCol)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// make a copy of this constraint but for the output column instead
@@ -442,7 +442,7 @@ CLogicalSetOp::PpcDeriveConstraintIntersectUnion(CMemoryPool *mp,
 		CConstraintArray *pdrgpcnstrCol =
 			PdrgpcnstrColumn(mp, exprhdl, ul, 0 /*ulStart*/);
 
-		CConstraint *pcnstrCol = NULL;
+		CConstraint *pcnstrCol = nullptr;
 		if (fIntersect)
 		{
 			pcnstrCol = CConstraint::PcnstrConjunction(mp, pdrgpcnstrCol);
@@ -452,7 +452,7 @@ CLogicalSetOp::PpcDeriveConstraintIntersectUnion(CMemoryPool *mp,
 			pcnstrCol = CConstraint::PcnstrDisjunction(mp, pdrgpcnstrCol);
 		}
 
-		if (NULL != pcnstrCol)
+		if (nullptr != pcnstrCol)
 		{
 			pdrgpcnstr->Append(pcnstrCol);
 		}

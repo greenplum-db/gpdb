@@ -63,7 +63,7 @@ CPhysicalInnerHashJoin::PdshashedCreateMatching(
 		ulSourceChild  // index of child that delivered the given hashed distribution
 ) const
 {
-	GPOS_ASSERT(NULL != pdshashed);
+	GPOS_ASSERT(nullptr != pdshashed);
 
 	CDistributionSpecHashed *pdshashedMatching =
 		PdshashedMatching(mp, pdshashed, ulSourceChild);
@@ -73,7 +73,7 @@ CPhysicalInnerHashJoin::PdshashedCreateMatching(
 	// NB: The matching spec is added at the beginning.
 	pdshashedMatching->Pdrgpexpr()->AddRef();
 	pdshashed->AddRef();
-	if (NULL != pdshashedMatching->Opfamilies())
+	if (nullptr != pdshashedMatching->Opfamilies())
 	{
 		pdshashedMatching->Opfamilies()->AddRef();
 	}
@@ -102,8 +102,8 @@ CPhysicalInnerHashJoin::PdsDeriveFromHashedChildren(
 	CMemoryPool *mp, CDistributionSpec *pdsOuter,
 	CDistributionSpec *pdsInner) const
 {
-	GPOS_ASSERT(NULL != pdsOuter);
-	GPOS_ASSERT(NULL != pdsInner);
+	GPOS_ASSERT(nullptr != pdsOuter);
+	GPOS_ASSERT(nullptr != pdsInner);
 
 	CDistributionSpecHashed *pdshashedOuter =
 		CDistributionSpecHashed::PdsConvert(pdsOuter);
@@ -121,7 +121,7 @@ CPhysicalInnerHashJoin::PdsDeriveFromHashedChildren(
 		return combined_hashed_spec;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -143,8 +143,8 @@ CPhysicalInnerHashJoin::PdsDeriveFromReplicatedOuter(
 	,
 	CDistributionSpec *pdsInner) const
 {
-	GPOS_ASSERT(NULL != pdsOuter);
-	GPOS_ASSERT(NULL != pdsInner);
+	GPOS_ASSERT(nullptr != pdsOuter);
+	GPOS_ASSERT(nullptr != pdsInner);
 	GPOS_ASSERT(CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt());
 
 	// if outer child is replicated, join results distribution is defined by inner child
@@ -185,8 +185,8 @@ CPhysicalInnerHashJoin::PdsDeriveFromHashedOuter(CMemoryPool *mp,
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != pdsOuter);
-	GPOS_ASSERT(NULL != pdsInner);
+	GPOS_ASSERT(nullptr != pdsOuter);
+	GPOS_ASSERT(nullptr != pdsInner);
 
 	GPOS_ASSERT(CDistributionSpec::EdtHashed == pdsOuter->Edt());
 
@@ -199,7 +199,7 @@ CPhysicalInnerHashJoin::PdsDeriveFromHashedOuter(CMemoryPool *mp,
 		return PdshashedCreateMatching(mp, pdshashedOuter, 0 /*ulSourceChild*/);
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -230,7 +230,7 @@ CPhysicalInnerHashJoin::PdsDerive(CMemoryPool *mp,
 	{
 		CDistributionSpec *pdsDerived =
 			PdsDeriveFromHashedChildren(mp, pdsOuter, pdsInner);
-		if (NULL != pdsDerived)
+		if (nullptr != pdsDerived)
 		{
 			return pdsDerived;
 		}
@@ -245,7 +245,7 @@ CPhysicalInnerHashJoin::PdsDerive(CMemoryPool *mp,
 	{
 		CDistributionSpec *pdsDerived =
 			PdsDeriveFromHashedOuter(mp, pdsOuter, pdsInner);
-		if (NULL != pdsDerived)
+		if (nullptr != pdsDerived)
 		{
 			return pdsDerived;
 		}

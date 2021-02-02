@@ -38,7 +38,7 @@ CDistributionSpecHashedNoOp::AppendEnforcers(CMemoryPool *mp,
 	CDistributionSpecHashed *pdsChildHashed =
 		dynamic_cast<CDistributionSpecHashed *>(pdsChild);
 
-	if (NULL == pdsChildHashed)
+	if (nullptr == pdsChildHashed)
 	{
 		return;
 	}

@@ -157,7 +157,7 @@ public:
 	static CLogicalSequence *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalSequence == pop->Eopid());
 
 		return dynamic_cast<CLogicalSequence *>(pop);

@@ -63,7 +63,7 @@ CXformSimplifyGbAgg::Exfp(CExpressionHandle &exprhdl) const
 
 	GPOS_ASSERT(COperator::EgbaggtypeGlobal == popAgg->Egbaggtype());
 
-	if (0 == popAgg->Pdrgpcr()->Size() || NULL != popAgg->PdrgpcrMinimal())
+	if (0 == popAgg->Pdrgpcr()->Size() || nullptr != popAgg->PdrgpcrMinimal())
 	{
 		return CXform::ExfpNone;
 	}
@@ -96,7 +96,7 @@ CXformSimplifyGbAgg::FDropGbAgg(CMemoryPool *mp, CExpression *pexpr,
 	}
 
 	CKeyCollection *pkc = pexprRelational->DeriveKeyCollection();
-	if (NULL == pkc)
+	if (nullptr == pkc)
 	{
 		// relational child does not have key
 		return false;
@@ -122,7 +122,7 @@ CXformSimplifyGbAgg::FDropGbAgg(CMemoryPool *mp, CExpression *pexpr,
 			pexprRelational->AddRef();
 			CExpression *pexprResult = CUtils::PexprLogicalSelect(
 				mp, pexprRelational,
-				CPredicateUtils::PexprConjunction(mp, NULL));
+				CPredicateUtils::PexprConjunction(mp, nullptr));
 			pxfres->Add(pexprResult);
 			fDrop = true;
 		}
@@ -144,8 +144,8 @@ void
 CXformSimplifyGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -173,7 +173,7 @@ CXformSimplifyGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CFunctionalDependencyArray *pdrgpfd = pexpr->DeriveFunctionalDependencies();
 
 	// collect grouping columns FD's
-	const ULONG size = (pdrgpfd == NULL) ? 0 : pdrgpfd->Size();
+	const ULONG size = (pdrgpfd == nullptr) ? 0 : pdrgpfd->Size();
 	for (ULONG ul = 0; ul < size; ul++)
 	{
 		CFunctionalDependency *pfd = (*pdrgpfd)[ul];

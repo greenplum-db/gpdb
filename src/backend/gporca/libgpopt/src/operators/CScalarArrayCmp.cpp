@@ -189,7 +189,7 @@ CScalarArrayCmp::OsPrint(IOstream &os) const
 CExpression *
 CScalarArrayCmp::PexprExpand(CMemoryPool *mp, CExpression *pexprArrayCmp)
 {
-	GPOS_ASSERT(NULL != pexprArrayCmp);
+	GPOS_ASSERT(nullptr != pexprArrayCmp);
 	GPOS_ASSERT(EopScalarArrayCmp == pexprArrayCmp->Pop()->Eopid());
 
 	COptimizerConfig *optimizer_config =

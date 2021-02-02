@@ -36,8 +36,8 @@ CDXLLogicalInsert::CDXLLogicalInsert(CMemoryPool *mp,
 	  m_dxl_table_descr(table_descr),
 	  m_src_colids_array(src_colids_array)
 {
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != src_colids_array);
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != src_colids_array);
 }
 
 //---------------------------------------------------------------------------

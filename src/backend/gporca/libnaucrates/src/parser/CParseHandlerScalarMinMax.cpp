@@ -34,7 +34,7 @@ CParseHandlerScalarMinMax::CParseHandlerScalarMinMax(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_type(NULL),
+	  m_mdid_type(nullptr),
 	  m_min_max_type(CDXLScalarMinMax::EmmtSentinel)
 {
 }

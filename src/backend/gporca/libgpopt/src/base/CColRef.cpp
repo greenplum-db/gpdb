@@ -39,12 +39,12 @@ CColRef::CColRef(const IMDType *pmdtype, const INT type_modifier, ULONG id,
 	  m_type_modifier(type_modifier),
 	  m_pname(pname),
 	  m_used(EUnknown),
-	  m_mdid_table(NULL),
+	  m_mdid_table(nullptr),
 	  m_id(id)
 {
-	GPOS_ASSERT(NULL != pmdtype);
+	GPOS_ASSERT(nullptr != pmdtype);
 	GPOS_ASSERT(pmdtype->MDId()->IsValid());
-	GPOS_ASSERT(NULL != pname);
+	GPOS_ASSERT(nullptr != pname);
 }
 
 
@@ -145,9 +145,9 @@ CColRef::Pdrgpul(CMemoryPool *mp, CColRefArray *colref_array)
 BOOL
 CColRef::Equals(const CColRefArray *pdrgpcr1, const CColRefArray *pdrgpcr2)
 {
-	if (NULL == pdrgpcr1 || NULL == pdrgpcr2)
+	if (nullptr == pdrgpcr1 || nullptr == pdrgpcr2)
 	{
-		return (NULL == pdrgpcr1 && NULL == pdrgpcr2);
+		return (nullptr == pdrgpcr1 && nullptr == pdrgpcr2);
 	}
 
 	return pdrgpcr1->Equals(pdrgpcr2);
@@ -159,8 +159,8 @@ BOOL
 CColRef::Equals(const CColRef2dArray *pdrgdrgpcr1,
 				const CColRef2dArray *pdrgdrgpcr2)
 {
-	ULONG ulLen1 = (pdrgdrgpcr1 == NULL) ? 0 : pdrgdrgpcr1->Size();
-	ULONG ulLen2 = (pdrgdrgpcr2 == NULL) ? 0 : pdrgdrgpcr2->Size();
+	ULONG ulLen1 = (pdrgdrgpcr1 == nullptr) ? 0 : pdrgdrgpcr1->Size();
+	ULONG ulLen2 = (pdrgdrgpcr2 == nullptr) ? 0 : pdrgdrgpcr2->Size();
 
 	if (ulLen1 != ulLen2)
 	{

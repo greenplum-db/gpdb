@@ -60,7 +60,7 @@ public:
 	CAutoMDAccessor(CMemoryPool *mp, IMDProvider *pmdp, CSystemId sysid)
 		: m_pimdp(pmdp), m_fOwnCache(true), m_sysid(sysid)
 	{
-		GPOS_ASSERT(NULL != pmdp);
+		GPOS_ASSERT(nullptr != pmdp);
 
 		m_pcache =
 			CCacheFactory::CreateCache<gpmd::IMDCacheObject *, gpopt::CMDKey *>(
@@ -74,8 +74,8 @@ public:
 					CMDAccessor::MDCache *pcache)
 		: m_pimdp(pmdp), m_fOwnCache(false), m_pcache(pcache), m_sysid(sysid)
 	{
-		GPOS_ASSERT(NULL != pmdp);
-		GPOS_ASSERT(NULL != pcache);
+		GPOS_ASSERT(nullptr != pmdp);
+		GPOS_ASSERT(nullptr != pcache);
 
 		m_pmda = GPOS_NEW(mp) CMDAccessor(mp, m_pcache, sysid, pmdp);
 	}

@@ -33,7 +33,7 @@ CParseHandlerScalarIdent::CParseHandlerScalarIdent(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -101,7 +101,7 @@ CParseHandlerScalarIdent::EndElement(const XMLCh *const,  // element_uri,
 	}
 
 	// construct scalar ident node
-	GPOS_ASSERT(NULL != m_dxl_op);
+	GPOS_ASSERT(nullptr != m_dxl_op);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp);
 	m_dxl_node->SetOperator(m_dxl_op);
 

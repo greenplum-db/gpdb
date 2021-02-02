@@ -114,7 +114,7 @@ CLogicalDynamicGet::ConstructRootColMappingPerPart(CMemoryPool *mp,
 		IMDId *part_mdid = (*partition_mdids)[ul];
 		const IMDRelation *partrel = mda->RetrieveRel(part_mdid);
 
-		GPOS_ASSERT(NULL != partrel);
+		GPOS_ASSERT(nullptr != partrel);
 
 		ColRefToUlongMap *mapping = GPOS_NEW(mp) ColRefToUlongMap(mp);
 
@@ -207,7 +207,7 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,
 											   BOOL must_exist)
 {
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =
@@ -248,7 +248,7 @@ CMaxCard
 CLogicalDynamicGet::DeriveMaxCard(CMemoryPool *mp,
 								  CExpressionHandle &exprhdl) const
 {
-	if (NULL == GetPartitionMdids() || GetPartitionMdids()->Size() == 0)
+	if (nullptr == GetPartitionMdids() || GetPartitionMdids()->Size() == 0)
 	{
 		return CMaxCard(0);
 	}

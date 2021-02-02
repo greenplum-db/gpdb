@@ -40,10 +40,10 @@ CParseHandlerMDGPDBTrigger::CParseHandlerMDGPDBTrigger(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname(NULL),
-	  m_rel_mdid(NULL),
-	  m_func_mdid(NULL),
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
+	  m_rel_mdid(nullptr),
+	  m_func_mdid(nullptr),
 	  m_type(0),
 	  m_is_enabled(false)
 {
@@ -83,7 +83,7 @@ CParseHandlerMDGPDBTrigger::StartElement(const XMLCh *const,  // element_uri,
 		m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_name);
 	m_mdname = GPOS_NEW(m_mp) CMDName(m_mp, str_name);
 	GPOS_DELETE(str_name);
-	GPOS_ASSERT(m_mdid->IsValid() && NULL != m_mdname);
+	GPOS_ASSERT(m_mdid->IsValid() && nullptr != m_mdname);
 
 	m_rel_mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,

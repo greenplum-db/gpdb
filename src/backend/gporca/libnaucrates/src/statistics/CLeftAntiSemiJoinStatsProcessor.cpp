@@ -28,12 +28,12 @@ CLeftAntiSemiJoinStatsProcessor::JoinHistogramsLASJ(
 	BOOL is_input_empty, IStatistics::EStatsJoinType,
 	BOOL DoIgnoreLASJHistComputation)
 {
-	GPOS_ASSERT(NULL != histogram1);
-	GPOS_ASSERT(NULL != histogram2);
-	GPOS_ASSERT(NULL != join_stats);
-	GPOS_ASSERT(NULL != result_hist1);
-	GPOS_ASSERT(NULL != result_hist2);
-	GPOS_ASSERT(NULL != scale_factor);
+	GPOS_ASSERT(nullptr != histogram1);
+	GPOS_ASSERT(nullptr != histogram2);
+	GPOS_ASSERT(nullptr != join_stats);
+	GPOS_ASSERT(nullptr != result_hist1);
+	GPOS_ASSERT(nullptr != result_hist2);
+	GPOS_ASSERT(nullptr != scale_factor);
 
 	// anti-semi join should give the full outer side.
 	// use 1.0 as scale factor if anti semi join
@@ -44,7 +44,7 @@ CLeftAntiSemiJoinStatsProcessor::JoinHistogramsLASJ(
 	if (is_input_empty)
 	{
 		*result_hist1 = histogram1->CopyHistogram();
-		*result_hist2 = NULL;
+		*result_hist2 = nullptr;
 
 		return;
 	}
@@ -56,7 +56,7 @@ CLeftAntiSemiJoinStatsProcessor::JoinHistogramsLASJ(
 		*result_hist1 = histogram1->MakeLASJHistogramNormalize(
 			stats_cmp_type, num_rows1, histogram2, scale_factor,
 			DoIgnoreLASJHistComputation);
-		*result_hist2 = NULL;
+		*result_hist2 = nullptr;
 
 		if ((*result_hist1)->IsEmpty())
 		{
@@ -72,7 +72,7 @@ CLeftAntiSemiJoinStatsProcessor::JoinHistogramsLASJ(
 	// copy input histograms and use default scale factor
 	*scale_factor = CDouble(CScaleFactorUtils::DefaultJoinPredScaleFactor);
 	*result_hist1 = histogram1->CopyHistogram();
-	*result_hist2 = NULL;
+	*result_hist2 = nullptr;
 }
 
 //	Return statistics object after performing LASJ
@@ -82,9 +82,9 @@ CLeftAntiSemiJoinStatsProcessor::CalcLASJoinStatsStatic(
 	const IStatistics *inner_stats_input, CStatsPredJoinArray *join_preds_stats,
 	BOOL DoIgnoreLASJHistComputation)
 {
-	GPOS_ASSERT(NULL != inner_stats_input);
-	GPOS_ASSERT(NULL != outer_stats_input);
-	GPOS_ASSERT(NULL != join_preds_stats);
+	GPOS_ASSERT(nullptr != inner_stats_input);
+	GPOS_ASSERT(nullptr != outer_stats_input);
+	GPOS_ASSERT(nullptr != join_preds_stats);
 	const CStatistics *outer_stats =
 		dynamic_cast<const CStatistics *>(outer_stats_input);
 
@@ -100,8 +100,8 @@ CLeftAntiSemiJoinStatsProcessor::NullFreqLASJ(
 	CStatsPred::EStatsCmpType stats_cmp_type, const CHistogram *outer_histogram,
 	const CHistogram *inner_histogram)
 {
-	GPOS_ASSERT(NULL != outer_histogram);
-	GPOS_ASSERT(NULL != inner_histogram);
+	GPOS_ASSERT(nullptr != outer_histogram);
+	GPOS_ASSERT(nullptr != inner_histogram);
 
 	if (CStatsPred::EstatscmptINDF != stats_cmp_type)
 	{

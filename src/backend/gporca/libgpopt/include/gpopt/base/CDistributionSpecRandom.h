@@ -118,7 +118,7 @@ public:
 	static CDistributionSpecRandom *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRandom == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecRandom *>(pds);
@@ -128,7 +128,7 @@ public:
 	static const CDistributionSpecRandom *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRandom == pds->Edt());
 
 		return dynamic_cast<const CDistributionSpecRandom *>(pds);

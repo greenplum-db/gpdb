@@ -30,12 +30,12 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalUpdate::CLogicalUpdate(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_ptabdesc(NULL),
-	  m_pdrgpcrDelete(NULL),
-	  m_pdrgpcrInsert(NULL),
-	  m_pcrCtid(NULL),
-	  m_pcrSegmentId(NULL),
-	  m_pcrTupleOid(NULL)
+	  m_ptabdesc(nullptr),
+	  m_pdrgpcrDelete(nullptr),
+	  m_pdrgpcrInsert(nullptr),
+	  m_pcrCtid(nullptr),
+	  m_pcrSegmentId(nullptr),
+	  m_pcrTupleOid(nullptr)
 {
 	m_fPattern = true;
 }
@@ -61,19 +61,19 @@ CLogicalUpdate::CLogicalUpdate(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 	  m_pcrTupleOid(pcrTupleOid)
 
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pdrgpcrDelete);
-	GPOS_ASSERT(NULL != pdrgpcrInsert);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pdrgpcrDelete);
+	GPOS_ASSERT(nullptr != pdrgpcrInsert);
 	GPOS_ASSERT(pdrgpcrDelete->Size() == pdrgpcrInsert->Size());
-	GPOS_ASSERT(NULL != pcrCtid);
-	GPOS_ASSERT(NULL != pcrSegmentId);
+	GPOS_ASSERT(nullptr != pcrCtid);
+	GPOS_ASSERT(nullptr != pcrSegmentId);
 
 	m_pcrsLocalUsed->Include(m_pdrgpcrDelete);
 	m_pcrsLocalUsed->Include(m_pdrgpcrInsert);
 	m_pcrsLocalUsed->Include(m_pcrCtid);
 	m_pcrsLocalUsed->Include(m_pcrSegmentId);
 
-	if (NULL != m_pcrTupleOid)
+	if (nullptr != m_pcrTupleOid)
 	{
 		m_pcrsLocalUsed->Include(m_pcrTupleOid);
 	}
@@ -166,8 +166,8 @@ CLogicalUpdate::PopCopyWithRemappedColumns(CMemoryPool *mp,
 		CUtils::PcrRemap(m_pcrSegmentId, colref_mapping, must_exist);
 	m_ptabdesc->AddRef();
 
-	CColRef *pcrTupleOid = NULL;
-	if (NULL != m_pcrTupleOid)
+	CColRef *pcrTupleOid = nullptr;
+	if (nullptr != m_pcrTupleOid)
 	{
 		pcrTupleOid =
 			CUtils::PcrRemap(m_pcrTupleOid, colref_mapping, must_exist);
@@ -195,7 +195,7 @@ CLogicalUpdate::DeriveOutputColumns(CMemoryPool *mp,
 	pcrsOutput->Include(m_pcrCtid);
 	pcrsOutput->Include(m_pcrSegmentId);
 
-	if (NULL != m_pcrTupleOid)
+	if (nullptr != m_pcrTupleOid)
 	{
 		pcrsOutput->Include(m_pcrTupleOid);
 	}

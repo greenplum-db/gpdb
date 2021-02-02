@@ -36,21 +36,21 @@ CTask::CTask(CMemoryPool *mp, CTaskContext *task_ctxt, IErrorContext *err_ctxt,
 	: m_mp(mp),
 	  m_task_ctxt(task_ctxt),
 	  m_err_ctxt(err_ctxt),
-	  m_err_handle(NULL),
-	  m_func(NULL),
-	  m_arg(NULL),
-	  m_res(NULL),
+	  m_err_handle(nullptr),
+	  m_func(nullptr),
+	  m_arg(nullptr),
+	  m_res(nullptr),
 	  m_status(EtsInit),
 	  m_cancel(cancel),
 	  m_cancel_local(false),
 	  m_abort_suspend_count(false),
 	  m_reported(false)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != task_ctxt);
-	GPOS_ASSERT(NULL != err_ctxt);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != task_ctxt);
+	GPOS_ASSERT(nullptr != err_ctxt);
 
-	if (NULL == cancel)
+	if (nullptr == cancel)
 	{
 		m_cancel = &m_cancel_local;
 	}
@@ -90,7 +90,7 @@ CTask::~CTask()
 void
 CTask::Bind(void *(*func)(void *), void *arg)
 {
-	GPOS_ASSERT(NULL != func);
+	GPOS_ASSERT(nullptr != func);
 
 	m_func = func;
 	m_arg = arg;
@@ -247,7 +247,7 @@ CTask::ResumeAbort()
 #ifdef GPOS_DEBUG
 	CWorker *worker = CWorker::Self();
 
-	GPOS_ASSERT(NULL != worker);
+	GPOS_ASSERT(nullptr != worker);
 #endif
 }
 

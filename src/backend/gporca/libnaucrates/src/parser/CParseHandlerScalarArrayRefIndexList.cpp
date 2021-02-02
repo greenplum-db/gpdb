@@ -88,7 +88,7 @@ CParseHandlerScalarArrayRefIndexList::StartElement(
 	else
 	{
 		// we must have seen a index list already and initialized the index list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		// parse scalar child
 		CParseHandlerBase *child_parse_handler =

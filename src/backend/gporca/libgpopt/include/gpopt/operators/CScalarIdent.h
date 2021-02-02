@@ -101,7 +101,7 @@ public:
 	static CScalarIdent *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarIdent == pop->Eopid());
 
 		return reinterpret_cast<CScalarIdent *>(pop);

@@ -37,7 +37,7 @@ CColumnDescriptor::CColumnDescriptor(CMemoryPool *mp, const IMDType *pmdtype,
 	  m_width(ulWidth),
 	  m_is_dist_col(false)
 {
-	GPOS_ASSERT(NULL != pmdtype);
+	GPOS_ASSERT(nullptr != pmdtype);
 	GPOS_ASSERT(pmdtype->MDId()->IsValid());
 
 	if (m_pmdtype->IsFixedLength())

@@ -140,7 +140,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CLogicalDynamicIndexGet has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// derive statistics
@@ -168,7 +168,7 @@ public:
 	static CLogicalDynamicIndexGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDynamicIndexGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalDynamicIndexGet *>(pop);

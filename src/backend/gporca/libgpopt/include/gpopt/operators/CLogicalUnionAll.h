@@ -122,7 +122,7 @@ public:
 	static CLogicalUnionAll *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalUnionAll == pop->Eopid());
 
 		return reinterpret_cast<CLogicalUnionAll *>(pop);

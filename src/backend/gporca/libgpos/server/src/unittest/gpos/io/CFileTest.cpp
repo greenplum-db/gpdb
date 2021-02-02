@@ -247,8 +247,8 @@ CFileTest::EresUnittest_InconsistentSize()
 void
 CFileTest::Unittest_MkTmpFile(CHAR *szTmpDir, CHAR *szTmpFile)
 {
-	GPOS_ASSERT(NULL != szTmpDir);
-	GPOS_ASSERT(NULL != szTmpFile);
+	GPOS_ASSERT(nullptr != szTmpDir);
+	GPOS_ASSERT(nullptr != szTmpFile);
 
 	CHAR szDir[] = "/tmp/CFileTest.XXXXXX";
 	const CHAR szFile[] = "/CFileTest_file.txt";
@@ -276,8 +276,8 @@ CFileTest::Unittest_MkTmpFile(CHAR *szTmpDir, CHAR *szTmpFile)
 void
 CFileTest::Unittest_DeleteTmpDir(const CHAR *szDir, const CHAR *szFile)
 {
-	GPOS_ASSERT(NULL != szDir);
-	GPOS_ASSERT(NULL != szFile);
+	GPOS_ASSERT(nullptr != szDir);
+	GPOS_ASSERT(nullptr != szFile);
 
 	if (ioutils::PathExists(szFile))
 	{
@@ -306,8 +306,8 @@ void
 CFileTest::Unittest_CheckError(T *pt, R (T::*pfunc)(ARG1, ARG2), ARG1 argFirst,
 							   ARG2 argSec, CException::ExMinor exmi)
 {
-	GPOS_ASSERT(NULL != pt);
-	GPOS_ASSERT(NULL != pfunc);
+	GPOS_ASSERT(nullptr != pt);
+	GPOS_ASSERT(nullptr != pfunc);
 
 	GPOS_TRY
 	{
@@ -337,7 +337,7 @@ CFileTest::Unittest_CheckError(T *pt, R (T::*pfunc)(ARG1, ARG2), ARG1 argFirst,
 void
 CFileTest::Unittest_WriteInconsistentSize(const CHAR *szTmpFile)
 {
-	GPOS_ASSERT(NULL != szTmpFile);
+	GPOS_ASSERT(nullptr != szTmpFile);
 
 	const ULONG ulWdPerms = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 	const BYTE szData[] = "Test file content for CFileTest_file\n";
@@ -382,7 +382,7 @@ CFileTest::Unittest_WriteInconsistentSize(const CHAR *szTmpFile)
 void
 CFileTest::Unittest_ReadInconsistentSize(const CHAR *szTmpFile)
 {
-	GPOS_ASSERT(NULL != szTmpFile);
+	GPOS_ASSERT(nullptr != szTmpFile);
 
 	const ULONG ulWrPerms = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 	const ULONG ulRdPerms = S_IRUSR | S_IRGRP | S_IROTH;

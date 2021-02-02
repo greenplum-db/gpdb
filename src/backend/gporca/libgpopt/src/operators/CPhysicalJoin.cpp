@@ -138,7 +138,7 @@ CPhysicalJoin::FProvidesReqdCols(CExpressionHandle &exprhdl,
 								 ULONG	// ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(3 == exprhdl.Arity());
 
 	// union columns from relational children
@@ -170,7 +170,7 @@ CPhysicalJoin::FSortColsInOuterChild(CMemoryPool *mp,
 									 CExpressionHandle &exprhdl,
 									 COrderSpec *pos)
 {
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pos);
 
 	CColRefSet *pcrsSort = pos->PcrsUsed(mp);
 	CColRefSet *pcrsOuterChild = exprhdl.DeriveOutputColumns(0 /*child_index*/);
@@ -194,7 +194,7 @@ BOOL
 CPhysicalJoin::FOuterProvidesReqdCols(CExpressionHandle &exprhdl,
 									  CColRefSet *pcrsRequired)
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(3 == exprhdl.Arity() && "expected binary join");
 
 	CColRefSet *pcrsOutput = exprhdl.DeriveOutputColumns(0 /*child_index*/);
@@ -359,10 +359,10 @@ CRewindabilitySpec *
 CPhysicalJoin::PrsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 {
 	CRewindabilitySpec *prsOuter = exprhdl.Pdpplan(0 /*child_index*/)->Prs();
-	GPOS_ASSERT(NULL != prsOuter);
+	GPOS_ASSERT(nullptr != prsOuter);
 
 	CRewindabilitySpec *prsInner = exprhdl.Pdpplan(1 /*child_index*/)->Prs();
-	GPOS_ASSERT(NULL != prsInner);
+	GPOS_ASSERT(nullptr != prsInner);
 
 	CRewindabilitySpec::EMotionHazardType motion_hazard =
 		(prsOuter->HasMotionHazard() || prsInner->HasMotionHazard())
@@ -435,10 +435,10 @@ CPhysicalJoin::FPredKeysSeparated(CExpression *pexprInner,
 								  CExpression *pexprPredInner,
 								  CExpression *pexprPredOuter)
 {
-	GPOS_ASSERT(NULL != pexprOuter);
-	GPOS_ASSERT(NULL != pexprInner);
-	GPOS_ASSERT(NULL != pexprPredOuter);
-	GPOS_ASSERT(NULL != pexprPredInner);
+	GPOS_ASSERT(nullptr != pexprOuter);
+	GPOS_ASSERT(nullptr != pexprInner);
+	GPOS_ASSERT(nullptr != pexprPredOuter);
+	GPOS_ASSERT(nullptr != pexprPredInner);
 
 	CColRefSet *pcrsUsedPredOuter = pexprPredOuter->DeriveUsedColumns();
 	CColRefSet *pcrsUsedPredInner = pexprPredInner->DeriveUsedColumns();
@@ -483,14 +483,14 @@ CPhysicalJoin::FHashJoinCompatible(
 	CExpression *pexprInner	  // inner child of the join
 )
 {
-	GPOS_ASSERT(NULL != pexprPred);
-	GPOS_ASSERT(NULL != pexprOuter);
-	GPOS_ASSERT(NULL != pexprInner);
+	GPOS_ASSERT(nullptr != pexprPred);
+	GPOS_ASSERT(nullptr != pexprOuter);
+	GPOS_ASSERT(nullptr != pexprInner);
 	GPOS_ASSERT(pexprOuter != pexprInner);
 
-	CExpression *pexprPredOuter = NULL;
-	CExpression *pexprPredInner = NULL;
-	IMDId *mdid_scop = NULL;
+	CExpression *pexprPredOuter = nullptr;
+	CExpression *pexprPredInner = nullptr;
+	IMDId *mdid_scop = nullptr;
 	if (CPredicateUtils::IsEqualityOp(pexprPred))
 	{
 		pexprPredOuter = (*pexprPred)[0];
@@ -518,7 +518,7 @@ CPhysicalJoin::FHashJoinCompatible(
 
 	const IMDScalarOp *scop = md_accessor->RetrieveScOp(mdid_scop);
 	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution) &&
-		NULL == scop->HashOpfamilyMdid())
+		nullptr == scop->HashOpfamilyMdid())
 	{
 		return false;
 	}
@@ -540,14 +540,14 @@ CPhysicalJoin::FMergeJoinCompatible(
 	CExpression *pexprInner	  // inner child of the join
 )
 {
-	GPOS_ASSERT(NULL != pexprPred);
-	GPOS_ASSERT(NULL != pexprOuter);
-	GPOS_ASSERT(NULL != pexprInner);
+	GPOS_ASSERT(nullptr != pexprPred);
+	GPOS_ASSERT(nullptr != pexprOuter);
+	GPOS_ASSERT(nullptr != pexprInner);
 	GPOS_ASSERT(pexprOuter != pexprInner);
 
-	CExpression *pexprPredOuter = NULL;
-	CExpression *pexprPredInner = NULL;
-	IMDId *mdid_scop = NULL;
+	CExpression *pexprPredOuter = nullptr;
+	CExpression *pexprPredInner = nullptr;
+	IMDId *mdid_scop = nullptr;
 
 	// Only merge join between ScalarIdents of the same types is currently supported
 	if (CPredicateUtils::FEqIdentsOfSameType(pexprPred))
@@ -621,11 +621,11 @@ CPhysicalJoin::AlignJoinKeyOuterInner(CExpression *pexprPred,
 									  IMDId **mdid_scop)
 {
 	// we should not be here if there are outer references
-	GPOS_ASSERT(NULL != ppexprKeyOuter);
-	GPOS_ASSERT(NULL != ppexprKeyInner);
+	GPOS_ASSERT(nullptr != ppexprKeyOuter);
+	GPOS_ASSERT(nullptr != ppexprKeyInner);
 
-	CExpression *pexprPredOuter = NULL;
-	CExpression *pexprPredInner = NULL;
+	CExpression *pexprPredOuter = nullptr;
+	CExpression *pexprPredInner = nullptr;
 
 	// extract left & right children from pexprPred for all supported ops
 	if (CPredicateUtils::IsEqualityOp(pexprPred))
@@ -648,8 +648,8 @@ CPhysicalJoin::AlignJoinKeyOuterInner(CExpression *pexprPred,
 			GPOS_WSZ_LIT("Invalid join expression in AlignJoinKeyOuterInner"));
 	}
 
-	GPOS_ASSERT(NULL != pexprPredOuter);
-	GPOS_ASSERT(NULL != pexprPredInner);
+	GPOS_ASSERT(nullptr != pexprPredOuter);
+	GPOS_ASSERT(nullptr != pexprPredInner);
 
 	CColRefSet *pcrsOuter = pexprOuter->DeriveOutputColumns();
 	CColRefSet *pcrsPredOuter = pexprPredOuter->DeriveUsedColumns();
@@ -853,7 +853,7 @@ CPhysicalJoin::Edm(CReqdPropPlan *,	 // prppInput
 	}
 
 	// extract distribution type of previously optimized child
-	GPOS_ASSERT(NULL != pdrgpdpCtxt);
+	GPOS_ASSERT(nullptr != pdrgpdpCtxt);
 	CDistributionSpec::EDistributionType edtPrevChild =
 		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds()->Edt();
 

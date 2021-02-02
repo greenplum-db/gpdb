@@ -47,7 +47,7 @@ public:
 	static CDXLScalarJoinFilter *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarJoinFilter == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarJoinFilter *>(dxl_op);

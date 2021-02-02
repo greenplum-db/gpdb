@@ -74,7 +74,7 @@ void
 CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -116,10 +116,10 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
 		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
-			pcrsReqd, pcrsScalarExpr, NULL /*outer_refs*/, pmdindex, pmdrel,
-			NULL /*ppartcnstrIndex*/
+			pcrsReqd, pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
+			nullptr /*ppartcnstrIndex*/
 		);
-		if (NULL != pexprIndexGet)
+		if (nullptr != pexprIndexGet)
 		{
 			pxfres->Add(pexprIndexGet);
 		}

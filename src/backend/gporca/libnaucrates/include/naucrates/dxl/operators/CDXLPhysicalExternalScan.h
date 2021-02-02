@@ -48,7 +48,7 @@ public:
 	static CDXLPhysicalExternalScan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalExternalScan == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalExternalScan *>(dxl_op);

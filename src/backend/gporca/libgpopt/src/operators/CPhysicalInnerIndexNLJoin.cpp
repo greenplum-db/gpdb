@@ -40,8 +40,8 @@ CPhysicalInnerIndexNLJoin::CPhysicalInnerIndexNLJoin(CMemoryPool *mp,
 	  m_pdrgpcrOuterRefs(colref_array),
 	  m_origJoinPred(origJoinPred)
 {
-	GPOS_ASSERT(NULL != colref_array);
-	if (NULL != origJoinPred)
+	GPOS_ASSERT(nullptr != colref_array);
+	if (nullptr != origJoinPred)
 	{
 		origJoinPred->AddRef();
 	}

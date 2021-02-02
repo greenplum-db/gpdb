@@ -186,7 +186,7 @@ public:
 	static CPhysicalConstTableGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalConstTableGet == pop->Eopid());
 
 		return dynamic_cast<CPhysicalConstTableGet *>(pop);

@@ -73,12 +73,12 @@ CTaskLocalStorage::Reset(CMemoryPool *mp)
 void
 CTaskLocalStorage::Store(CTaskLocalStorageObject *obj)
 {
-	GPOS_ASSERT(NULL != obj);
+	GPOS_ASSERT(nullptr != obj);
 
 #ifdef GPOS_DEBUG
 	{
 		HashTableAccessor HashTableAccessor(m_hash_table, obj->idx());
-		GPOS_ASSERT(NULL == HashTableAccessor.Find() &&
+		GPOS_ASSERT(nullptr == HashTableAccessor.Find() &&
 					"Duplicate TLS object key");
 	}
 #endif	// GPOS_DEBUG
@@ -114,11 +114,12 @@ CTaskLocalStorage::Get(CTaskLocalStorage::Etlsidx idx)
 void
 CTaskLocalStorage::Remove(CTaskLocalStorageObject *obj)
 {
-	GPOS_ASSERT(NULL != obj);
+	GPOS_ASSERT(nullptr != obj);
 
 	// lookup object
 	HashTableAccessor HashTableAccessor(m_hash_table, obj->idx());
-	GPOS_ASSERT(NULL != HashTableAccessor.Find() && "Object not found in TLS");
+	GPOS_ASSERT(nullptr != HashTableAccessor.Find() &&
+				"Object not found in TLS");
 
 	HashTableAccessor.Remove(obj);
 }

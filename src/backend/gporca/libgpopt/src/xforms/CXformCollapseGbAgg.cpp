@@ -89,8 +89,8 @@ void
 CXformCollapseGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -137,7 +137,7 @@ CXformCollapseGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pexprChild->AddRef();
 	CExpression *pexprSelect = CUtils::PexprLogicalSelect(
 		mp, pexprChild,
-		CPredicateUtils::PexprConjunction(mp, NULL /*pdrgpexpr*/));
+		CPredicateUtils::PexprConjunction(mp, nullptr /*pdrgpexpr*/));
 
 	popTopGbAgg->AddRef();
 	pexprTopProjectList->AddRef();

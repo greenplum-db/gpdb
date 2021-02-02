@@ -34,7 +34,7 @@ CParseHandlerMetadataColumns::CParseHandlerMetadataColumns(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_md_col_array(NULL)
+	  m_md_col_array(nullptr)
 {
 }
 
@@ -68,7 +68,7 @@ CParseHandlerMetadataColumns::StartElement(
 									  element_local_name))
 	{
 		// start of a columns' list
-		GPOS_ASSERT(NULL == m_md_col_array);
+		GPOS_ASSERT(nullptr == m_md_col_array);
 
 		m_md_col_array = GPOS_NEW(m_mp) CMDColumnArray(m_mp);
 	}
@@ -77,7 +77,7 @@ CParseHandlerMetadataColumns::StartElement(
 									  element_local_name))
 	{
 		// column list must be initialized already
-		GPOS_ASSERT(NULL != m_md_col_array);
+		GPOS_ASSERT(nullptr != m_md_col_array);
 
 		// activate parse handler to parse the column info
 		CParseHandlerBase *col_parse_handler =
@@ -118,7 +118,7 @@ CParseHandlerMetadataColumns::EndElement(const XMLCh *const,  // element_uri,
 									  element_local_name))
 	{
 		// end of the columns' list
-		GPOS_ASSERT(NULL != m_md_col_array);
+		GPOS_ASSERT(nullptr != m_md_col_array);
 
 		const ULONG size = this->Length();
 		// add parsed columns to the list
@@ -127,7 +127,7 @@ CParseHandlerMetadataColumns::EndElement(const XMLCh *const,  // element_uri,
 			CParseHandlerMetadataColumn *md_col_parse_handler =
 				dynamic_cast<CParseHandlerMetadataColumn *>((*this)[ul]);
 
-			GPOS_ASSERT(NULL != md_col_parse_handler->GetMdCol());
+			GPOS_ASSERT(nullptr != md_col_parse_handler->GetMdCol());
 
 			CMDColumn *md_col = md_col_parse_handler->GetMdCol();
 			md_col->AddRef();

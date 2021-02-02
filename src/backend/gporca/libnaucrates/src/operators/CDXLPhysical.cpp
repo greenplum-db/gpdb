@@ -65,7 +65,7 @@ CDXLPhysical::GetDXLOperatorType() const
 void
 CDXLPhysical::AssertValid(const CDXLNode *node, BOOL validate_children) const
 {
-	GPOS_ASSERT(NULL != node);
+	GPOS_ASSERT(nullptr != node);
 
 	GPOS_ASSERT(2 <= node->Arity());
 

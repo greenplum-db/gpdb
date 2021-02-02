@@ -33,7 +33,7 @@ private:
 
 	// Map of Root colref -> col index in child tabledesc
 	// per child partition in m_partition_mdid
-	ColRefToUlongMapArray *m_root_col_mapping_per_part = NULL;
+	ColRefToUlongMapArray *m_root_col_mapping_per_part = nullptr;
 
 public:
 	CPhysicalDynamicTableScan(const CPhysicalDynamicTableScan &) = delete;
@@ -84,7 +84,7 @@ public:
 	static CPhysicalDynamicTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalDynamicTableScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicTableScan *>(pop);

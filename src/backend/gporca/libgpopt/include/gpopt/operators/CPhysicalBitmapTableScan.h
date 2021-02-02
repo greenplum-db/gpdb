@@ -98,7 +98,7 @@ public:
 		GPOS_ASSERT(
 			!"stats derivation during costing for bitmap table scan is invalid");
 
-		return NULL;
+		return nullptr;
 	}
 
 	// debug print
@@ -108,7 +108,7 @@ public:
 	static CPhysicalBitmapTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalBitmapTableScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalBitmapTableScan *>(pop);

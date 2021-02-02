@@ -105,7 +105,7 @@ public:
 				 ) override
 	{
 		GPOS_ASSERT(!"CPhysicalScan has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// compute required ctes of the n-th child
@@ -119,7 +119,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CPhysicalScan has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// compute required sort columns of the n-th child
@@ -133,7 +133,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CPhysicalScan has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// compute required distribution of the n-th child
@@ -147,7 +147,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CPhysicalScan has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// compute required rewindability of the n-th child
@@ -161,7 +161,7 @@ public:
 	) const override
 	{
 		GPOS_ASSERT(!"CPhysicalScan has no children");
-		return NULL;
+		return nullptr;
 	}
 
 

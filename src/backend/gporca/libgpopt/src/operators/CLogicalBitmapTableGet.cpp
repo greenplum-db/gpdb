@@ -45,9 +45,9 @@ CLogicalBitmapTableGet::CLogicalBitmapTableGet(CMemoryPool *mp,
 	  m_pnameTableAlias(pnameTableAlias),
 	  m_pdrgpcrOutput(pdrgpcrOutput)
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pnameTableAlias);
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pnameTableAlias);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -60,10 +60,10 @@ CLogicalBitmapTableGet::CLogicalBitmapTableGet(CMemoryPool *mp,
 //---------------------------------------------------------------------------
 CLogicalBitmapTableGet::CLogicalBitmapTableGet(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_ptabdesc(NULL),
+	  m_ptabdesc(nullptr),
 	  m_ulOriginOpId(gpos::ulong_max),
-	  m_pnameTableAlias(NULL),
-	  m_pdrgpcrOutput(NULL)
+	  m_pnameTableAlias(nullptr),
+	  m_pdrgpcrOutput(nullptr)
 {
 }
 
@@ -221,7 +221,7 @@ COperator *
 CLogicalBitmapTableGet::PopCopyWithRemappedColumns(
 	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
 {
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =

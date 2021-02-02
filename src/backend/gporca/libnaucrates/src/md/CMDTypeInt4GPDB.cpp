@@ -47,8 +47,8 @@ CMDTypeInt4GPDB::CMDTypeInt4GPDB(CMemoryPool *mp) : m_mp(mp)
 	}
 	else
 	{
-		m_distr_opfamily = NULL;
-		m_legacy_distr_opfamily = NULL;
+		m_distr_opfamily = nullptr;
+		m_legacy_distr_opfamily = nullptr;
 	}
 	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_EQ_OP);
 	m_mdid_op_neq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4_NEQ_OP);
@@ -187,7 +187,7 @@ CMDTypeInt4GPDB::GetMdidForCmpType(ECmpType cmp_type) const
 			return m_mdid_op_geq;
 		default:
 			GPOS_ASSERT(!"Invalid operator type");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -216,7 +216,7 @@ CMDTypeInt4GPDB::GetMdidForAggType(EAggType agg_type) const
 			return m_mdid_count;
 		default:
 			GPOS_ASSERT(!"Invalid aggregate type");
-			return NULL;
+			return nullptr;
 	}
 }
 //---------------------------------------------------------------------------

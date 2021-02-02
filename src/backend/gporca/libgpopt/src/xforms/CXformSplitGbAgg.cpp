@@ -79,7 +79,7 @@ CXformSplitGbAgg::Exfp(CExpressionHandle &exprhdl) const
 	if (!CLogicalGbAgg::PopConvert(exprhdl.Pop())->FGlobal() ||
 		0 < exprhdl.DeriveTotalDistinctAggs(1) ||
 		0 < exprhdl.DeriveOuterReferences()->Size() ||
-		NULL == exprhdl.PexprScalarExactChild(1) ||
+		nullptr == exprhdl.PexprScalarExactChild(1) ||
 		CXformUtils::FHasAmbiguousType(
 			exprhdl.PexprScalarExactChild(1 /*child_index*/),
 			COptCtxt::PoctxtFromTLS()->Pmda()))
@@ -103,8 +103,8 @@ void
 CXformSplitGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -123,13 +123,14 @@ CXformSplitGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	pexprRelational->AddRef();
 
-	CExpression *pexprProjectListLocal = NULL;
-	CExpression *pexprProjectListGlobal = NULL;
+	CExpression *pexprProjectListLocal = nullptr;
+	CExpression *pexprProjectListGlobal = nullptr;
 
 	(void) PopulateLocalGlobalProjectList(
 		mp, pexprProjectList, &pexprProjectListLocal, &pexprProjectListGlobal);
 
-	GPOS_ASSERT(NULL != pexprProjectListLocal && NULL != pexprProjectListLocal);
+	GPOS_ASSERT(nullptr != pexprProjectListLocal &&
+				nullptr != pexprProjectListLocal);
 
 	CColRefArray *colref_array = popAgg->Pdrgpcr();
 
@@ -140,7 +141,7 @@ CXformSplitGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CColRefArray *pdrgpcrGlobal = colref_array;
 
 	CColRefArray *pdrgpcrMinimal = popAgg->PdrgpcrMinimal();
-	if (NULL != pdrgpcrMinimal)
+	if (nullptr != pdrgpcrMinimal)
 	{
 		// addref minimal grouping columns twice to be used in local and global aggregate
 		pdrgpcrMinimal->AddRef();

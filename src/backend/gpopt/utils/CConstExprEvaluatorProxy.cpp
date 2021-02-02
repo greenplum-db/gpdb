@@ -48,7 +48,7 @@ CConstExprEvaluatorProxy::CEmptyMappingColIdVar::VarFromDXLNodeScId(
 		 "Expression passed to CConstExprEvaluatorProxy contains variables. "
 		 "Evaluation will fail and an exception will be thrown.");
 	GPOS_RAISE(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError);
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ CConstExprEvaluatorProxy::EvaluateExpr(const CDXLNode *dxl_expr)
 	// Translate DXL -> GPDB Expr
 	Expr *expr = m_dxl2scalar_translator.TranslateDXLToScalar(
 		dxl_expr, &m_emptymapcidvar);
-	GPOS_ASSERT(NULL != expr);
+	GPOS_ASSERT(nullptr != expr);
 
 	// Evaluate the expression
 	Expr *result = gpdb::EvaluateExpr(expr, gpdb::ExprType((Node *) expr),

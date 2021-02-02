@@ -30,7 +30,7 @@ CScalarAssertConstraint::CScalarAssertConstraint(CMemoryPool *mp,
 												 CWStringBase *pstrErrorMsg)
 	: CScalar(mp), m_pstrErrorMsg(pstrErrorMsg)
 {
-	GPOS_ASSERT(NULL != pstrErrorMsg);
+	GPOS_ASSERT(nullptr != pstrErrorMsg);
 }
 
 //---------------------------------------------------------------------------

@@ -47,11 +47,11 @@ CReqdPropPlan::CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo,
 							 CCTEReq *pcter)
 	: m_pcrs(pcrs), m_peo(peo), m_ped(ped), m_per(per), m_pcter(pcter)
 {
-	GPOS_ASSERT(NULL != pcrs);
-	GPOS_ASSERT(NULL != peo);
-	GPOS_ASSERT(NULL != ped);
-	GPOS_ASSERT(NULL != per);
-	GPOS_ASSERT(NULL != pcter);
+	GPOS_ASSERT(nullptr != pcrs);
+	GPOS_ASSERT(nullptr != peo);
+	GPOS_ASSERT(nullptr != ped);
+	GPOS_ASSERT(nullptr != per);
+	GPOS_ASSERT(nullptr != pcter);
 }
 
 //---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ CReqdPropPlan::ComputeReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							   CReqdProp *prpInput, ULONG child_index,
 							   CDrvdPropArray *pdrgpdpCtxt)
 {
-	GPOS_ASSERT(NULL == m_pcrs);
+	GPOS_ASSERT(nullptr == m_pcrs);
 
 	CReqdPropPlan *prppInput = CReqdPropPlan::Prpp(prpInput);
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
@@ -107,7 +107,7 @@ CReqdPropPlan::ComputeReqdCTEs(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							   CReqdProp *prpInput, ULONG child_index,
 							   CDrvdPropArray *pdrgpdpCtxt)
 {
-	GPOS_ASSERT(NULL == m_pcter);
+	GPOS_ASSERT(nullptr == m_pcter);
 
 	CReqdPropPlan *prppInput = CReqdPropPlan::Prpp(prpInput);
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
@@ -189,7 +189,7 @@ CReqdPropPlan::Pps(ULONG ul) const
 			GPOS_ASSERT(!"Invalid property spec index");
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -221,7 +221,7 @@ CReqdPropPlan::FProvidesReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	for (ULONG ul = 0; fProvidesReqdCols && ul < CPropSpec::EpstSentinel; ul++)
 	{
 		CPropSpec *pps = Pps(ul);
-		if (NULL == pps)
+		if (nullptr == pps)
 		{
 			continue;
 		}
@@ -246,7 +246,7 @@ CReqdPropPlan::FProvidesReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
 BOOL
 CReqdPropPlan::Equals(const CReqdPropPlan *prpp) const
 {
-	GPOS_ASSERT(NULL != prpp);
+	GPOS_ASSERT(nullptr != prpp);
 
 	BOOL result = PcrsRequired()->Equals(prpp->PcrsRequired()) &&
 				  Pcter()->Equals(prpp->Pcter()) &&
@@ -268,11 +268,11 @@ CReqdPropPlan::Equals(const CReqdPropPlan *prpp) const
 ULONG
 CReqdPropPlan::HashValue() const
 {
-	GPOS_ASSERT(NULL != m_pcrs);
-	GPOS_ASSERT(NULL != m_peo);
-	GPOS_ASSERT(NULL != m_ped);
-	GPOS_ASSERT(NULL != m_per);
-	GPOS_ASSERT(NULL != m_pcter);
+	GPOS_ASSERT(nullptr != m_pcrs);
+	GPOS_ASSERT(nullptr != m_peo);
+	GPOS_ASSERT(nullptr != m_ped);
+	GPOS_ASSERT(nullptr != m_per);
+	GPOS_ASSERT(nullptr != m_pcter);
 
 	ULONG ulHash = m_pcrs->HashValue();
 	ulHash = gpos::CombineHashes(ulHash, m_peo->HashValue());
@@ -296,8 +296,8 @@ BOOL
 CReqdPropPlan::FSatisfied(const CDrvdPropRelational *pdprel,
 						  const CDrvdPropPlan *pdpplan) const
 {
-	GPOS_ASSERT(NULL != pdprel);
-	GPOS_ASSERT(NULL != pdpplan);
+	GPOS_ASSERT(nullptr != pdprel);
+	GPOS_ASSERT(nullptr != pdpplan);
 	GPOS_ASSERT(pdprel->IsComplete());
 
 	// first, check satisfiability of relational properties
@@ -333,8 +333,8 @@ CReqdPropPlan::FCompatible(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 						   const CDrvdPropRelational *pdprel,
 						   const CDrvdPropPlan *pdpplan) const
 {
-	GPOS_ASSERT(NULL != pdpplan);
-	GPOS_ASSERT(NULL != pdprel);
+	GPOS_ASSERT(nullptr != pdpplan);
+	GPOS_ASSERT(nullptr != pdprel);
 
 	// first, check satisfiability of relational properties, including required columns
 	if (!pdprel->FSatisfies(this))
@@ -389,7 +389,7 @@ CReqdPropPlan::OsPrint(IOstream &os) const
 	if (GPOS_FTRACE(EopttracePrintRequiredColumns))
 	{
 		os << "req cols: [";
-		if (NULL != m_pcrs)
+		if (nullptr != m_pcrs)
 		{
 			os << (*m_pcrs);
 		}
@@ -397,25 +397,25 @@ CReqdPropPlan::OsPrint(IOstream &os) const
 	}
 
 	os << "req CTEs: [";
-	if (NULL != m_pcter)
+	if (nullptr != m_pcter)
 	{
 		os << (*m_pcter);
 	}
 
 	os << "], req order: [";
-	if (NULL != m_peo)
+	if (nullptr != m_peo)
 	{
 		os << (*m_peo);
 	}
 
 	os << "], req dist: [";
-	if (NULL != m_ped)
+	if (nullptr != m_ped)
 	{
 		os << (*m_ped);
 	}
 
 	os << "], req rewind: [";
-	if (NULL != m_per)
+	if (nullptr != m_per)
 	{
 		os << "], req rewind: [" << (*m_per);
 	}
@@ -436,11 +436,11 @@ CReqdPropPlan::OsPrint(IOstream &os) const
 ULONG
 CReqdPropPlan::UlHashForCostBounding(const CReqdPropPlan *prpp)
 {
-	GPOS_ASSERT(NULL != prpp);
+	GPOS_ASSERT(nullptr != prpp);
 
 	ULONG ulHash = prpp->PcrsRequired()->HashValue();
 
-	if (NULL != prpp->Ped())
+	if (nullptr != prpp->Ped())
 	{
 		ulHash = CombineHashes(ulHash, prpp->Ped()->HashValue());
 	}
@@ -461,12 +461,12 @@ BOOL
 CReqdPropPlan::FEqualForCostBounding(const CReqdPropPlan *prppFst,
 									 const CReqdPropPlan *prppSnd)
 {
-	GPOS_ASSERT(NULL != prppFst);
-	GPOS_ASSERT(NULL != prppSnd);
+	GPOS_ASSERT(nullptr != prppFst);
+	GPOS_ASSERT(nullptr != prppSnd);
 
-	if (NULL == prppFst->Ped() || NULL == prppSnd->Ped())
+	if (nullptr == prppFst->Ped() || nullptr == prppSnd->Ped())
 	{
-		return NULL == prppFst->Ped() && NULL == prppSnd->Ped() &&
+		return nullptr == prppFst->Ped() && nullptr == prppSnd->Ped() &&
 			   prppFst->PcrsRequired()->Equals(prppSnd->PcrsRequired());
 	}
 
@@ -489,9 +489,9 @@ CReqdPropPlan::PrppRemap(CMemoryPool *mp, CReqdPropPlan *prppInput,
 						 CDrvdPropPlan *pdpplanInput,
 						 UlongToColRefMap *colref_mapping)
 {
-	GPOS_ASSERT(NULL != colref_mapping);
-	GPOS_ASSERT(NULL != prppInput);
-	GPOS_ASSERT(NULL != pdpplanInput);
+	GPOS_ASSERT(nullptr != colref_mapping);
+	GPOS_ASSERT(nullptr != prppInput);
+	GPOS_ASSERT(nullptr != pdpplanInput);
 
 	// remap derived sort order to a required sort order
 
@@ -502,7 +502,7 @@ CReqdPropPlan::PrppRemap(CMemoryPool *mp, CReqdPropPlan *prppInput,
 	// remap derived distribution only if it can be used as required distribution
 
 	CDistributionSpec *pdsDerived = pdpplanInput->Pds();
-	CEnfdDistribution *ped = NULL;
+	CEnfdDistribution *ped = nullptr;
 	if (pdsDerived->FRequirable())
 	{
 		CDistributionSpec *pds = pdsDerived->PdsCopyWithRemappedColumns(

@@ -40,9 +40,9 @@ CPhysicalBitmapTableScan::CPhysicalBitmapTableScan(CMemoryPool *mp,
 	: CPhysicalScan(mp, pnameTableAlias, ptabdesc, pdrgpcrOutput),
 	  m_ulOriginOpId(ulOriginOpId)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------

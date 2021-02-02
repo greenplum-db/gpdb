@@ -33,9 +33,9 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalConstTableGet::CLogicalConstTableGet(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pdrgpcoldesc(NULL),
-	  m_pdrgpdrgpdatum(NULL),
-	  m_pdrgpcrOutput(NULL)
+	  m_pdrgpcoldesc(nullptr),
+	  m_pdrgpdrgpdatum(nullptr),
+	  m_pdrgpcrOutput(nullptr)
 {
 	m_fPattern = true;
 }
@@ -55,10 +55,10 @@ CLogicalConstTableGet::CLogicalConstTableGet(
 	: CLogical(mp),
 	  m_pdrgpcoldesc(pdrgpcoldesc),
 	  m_pdrgpdrgpdatum(pdrgpdrgpdatum),
-	  m_pdrgpcrOutput(NULL)
+	  m_pdrgpcrOutput(nullptr)
 {
-	GPOS_ASSERT(NULL != pdrgpcoldesc);
-	GPOS_ASSERT(NULL != pdrgpdrgpdatum);
+	GPOS_ASSERT(nullptr != pdrgpcoldesc);
+	GPOS_ASSERT(nullptr != pdrgpdrgpdatum);
 
 	// generate a default column set for the list of column descriptors
 	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, pdrgpcoldesc, UlOpId());
@@ -84,12 +84,12 @@ CLogicalConstTableGet::CLogicalConstTableGet(CMemoryPool *mp,
 											 CColRefArray *pdrgpcrOutput,
 											 IDatum2dArray *pdrgpdrgpdatum)
 	: CLogical(mp),
-	  m_pdrgpcoldesc(NULL),
+	  m_pdrgpcoldesc(nullptr),
 	  m_pdrgpdrgpdatum(pdrgpdrgpdatum),
 	  m_pdrgpcrOutput(pdrgpcrOutput)
 {
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
-	GPOS_ASSERT(NULL != pdrgpdrgpdatum);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpdrgpdatum);
 
 	// generate column descriptors for the given output columns
 	m_pdrgpcoldesc = PdrgpcoldescMapping(mp, pdrgpcrOutput);
@@ -176,7 +176,7 @@ COperator *
 CLogicalConstTableGet::PopCopyWithRemappedColumns(
 	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
 {
-	CColRefArray *colref_array = NULL;
+	CColRefArray *colref_array = nullptr;
 	if (must_exist)
 	{
 		colref_array =
@@ -274,7 +274,7 @@ CColumnDescriptorArray *
 CLogicalConstTableGet::PdrgpcoldescMapping(CMemoryPool *mp,
 										   CColRefArray *colref_array) const
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 	CColumnDescriptorArray *pdrgpcoldesc =
 		GPOS_NEW(mp) CColumnDescriptorArray(mp);
 

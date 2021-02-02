@@ -51,7 +51,7 @@ public:
 	static CDXLScalarIndexCondList *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarIndexCondList == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarIndexCondList *>(dxl_op);

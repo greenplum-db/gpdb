@@ -29,7 +29,7 @@ ULONG
 CWallClock::ElapsedUS() const
 {
 	timeval time;
-	syslib::GetTimeOfDay(&time, NULL /*timezone*/);
+	syslib::GetTimeOfDay(&time, nullptr /*timezone*/);
 
 	ULONG diff = (ULONG)(((time.tv_sec - m_time.tv_sec) * GPOS_USEC_IN_SEC) +
 						 (time.tv_usec - m_time.tv_usec));
@@ -49,7 +49,7 @@ CWallClock::ElapsedUS() const
 void
 CWallClock::Restart()
 {
-	syslib::GetTimeOfDay(&m_time, NULL /*timezone*/);
+	syslib::GetTimeOfDay(&m_time, nullptr /*timezone*/);
 }
 
 

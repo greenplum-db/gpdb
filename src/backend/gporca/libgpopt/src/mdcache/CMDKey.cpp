@@ -58,17 +58,17 @@ CMDKey::Equals(const CMDKey &mdkey) const
 BOOL
 CMDKey::FEqualMDKey(CMDKey *const &pvLeft, CMDKey *const &pvRight)
 {
-	if (NULL == pvLeft && NULL == pvRight)
+	if (nullptr == pvLeft && nullptr == pvRight)
 	{
 		return true;
 	}
 
-	if (NULL == pvLeft || NULL == pvRight)
+	if (nullptr == pvLeft || nullptr == pvRight)
 	{
 		return false;
 	}
 
-	GPOS_ASSERT(NULL != pvLeft && NULL != pvRight);
+	GPOS_ASSERT(nullptr != pvLeft && nullptr != pvRight);
 
 	return pvLeft->MDId()->Equals(pvRight->MDId());
 }

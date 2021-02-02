@@ -39,12 +39,12 @@ CJoinOrderMinCard::CJoinOrderMinCard(CMemoryPool *mp,
 									 CExpressionArray *pdrgpexprConjuncts)
 	: CJoinOrder(mp, pdrgpexprComponents, pdrgpexprConjuncts,
 				 true /* m_include_loj_childs */),
-	  m_pcompResult(NULL)
+	  m_pcompResult(nullptr)
 {
 #ifdef GPOS_DEBUG
 	for (ULONG ul = 0; ul < m_ulComps; ul++)
 	{
-		GPOS_ASSERT(NULL != m_rgpcomp[ul]->m_pexpr->Pstats() &&
+		GPOS_ASSERT(nullptr != m_rgpcomp[ul]->m_pexpr->Pstats() &&
 					"stats were not derived on input component");
 	}
 #endif	// GPOS_DEBUG
@@ -75,17 +75,17 @@ CJoinOrderMinCard::~CJoinOrderMinCard()
 CExpression *
 CJoinOrderMinCard::PexprExpand()
 {
-	GPOS_ASSERT(NULL == m_pcompResult && "join order is already expanded");
+	GPOS_ASSERT(nullptr == m_pcompResult && "join order is already expanded");
 
-	m_pcompResult = GPOS_NEW(m_mp) SComponent(m_mp, NULL /*pexpr*/);
+	m_pcompResult = GPOS_NEW(m_mp) SComponent(m_mp, nullptr /*pexpr*/);
 	ULONG ulCoveredComps = 0;
 	while (ulCoveredComps < m_ulComps)
 	{
 		CDouble dMinRows(0.0);
 		SComponent *pcompBest =
-			NULL;  // best component to be added to current result
+			nullptr;  // best component to be added to current result
 		SComponent *pcompBestResult =
-			NULL;  // result after adding best component
+			nullptr;  // result after adding best component
 
 		for (ULONG ul = 0; ul < m_ulComps; ul++)
 		{
@@ -107,7 +107,7 @@ CJoinOrderMinCard::PexprExpand()
 			DeriveStats(pcompTemp->m_pexpr);
 			CDouble rows = pcompTemp->m_pexpr->Pstats()->Rows();
 
-			if (NULL == pcompBestResult || rows < dMinRows)
+			if (nullptr == pcompBestResult || rows < dMinRows)
 			{
 				pcompBest = pcompCurrent;
 				dMinRows = rows;
@@ -119,7 +119,7 @@ CJoinOrderMinCard::PexprExpand()
 		}
 
 #ifndef GPOS_DEBUG
-		if (pcompBest == NULL)
+		if (pcompBest == nullptr)
 		{
 			// ideally we should never have the best result as null
 			GPOS_RAISE(CException::ExmaInvalid, CException::ExmiInvalid,
@@ -127,7 +127,7 @@ CJoinOrderMinCard::PexprExpand()
 		}
 #endif
 
-		GPOS_ASSERT(NULL != pcompBestResult);
+		GPOS_ASSERT(nullptr != pcompBestResult);
 
 		// mark best component as used.
 		// we will never have p_compBest as NULL, as
@@ -142,7 +142,7 @@ CJoinOrderMinCard::PexprExpand()
 		MarkUsedEdges(m_pcompResult);
 		ulCoveredComps++;
 	}
-	GPOS_ASSERT(NULL != m_pcompResult->m_pexpr);
+	GPOS_ASSERT(nullptr != m_pcompResult->m_pexpr);
 
 	CExpression *pexprResult = m_pcompResult->m_pexpr;
 	pexprResult->AddRef();
@@ -162,7 +162,7 @@ CJoinOrderMinCard::PexprExpand()
 IOstream &
 CJoinOrderMinCard::OsPrint(IOstream &os) const
 {
-	if (NULL != m_pcompResult->m_pexpr)
+	if (nullptr != m_pcompResult->m_pexpr)
 	{
 		os << *m_pcompResult->m_pexpr;
 	}

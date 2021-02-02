@@ -62,7 +62,7 @@ CDatumBoolGPDB::CDatumBoolGPDB(CSystemId sysid, BOOL value, BOOL is_null)
 CDatumBoolGPDB::CDatumBoolGPDB(IMDId *mdid, BOOL value, BOOL is_null)
 	: m_mdid(mdid), m_value(value), m_is_null(is_null)
 {
-	GPOS_ASSERT(NULL != m_mdid);
+	GPOS_ASSERT(nullptr != m_mdid);
 	GPOS_ASSERT(GPDB_BOOL_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 
 	if (IsNull())

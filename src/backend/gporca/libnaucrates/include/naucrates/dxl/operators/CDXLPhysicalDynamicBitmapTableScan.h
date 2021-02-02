@@ -54,7 +54,7 @@ public:
 		  m_part_index_id(part_idx_id),
 		  m_part_index_id_printable(part_idx_id_printable)
 	{
-		GPOS_ASSERT(NULL != table_descr);
+		GPOS_ASSERT(nullptr != table_descr);
 	}
 
 	// dtor
@@ -92,7 +92,7 @@ public:
 	static CDXLPhysicalDynamicBitmapTableScan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalDynamicBitmapTableScan ==
 					dxl_op->GetDXLOperator());
 

@@ -35,7 +35,7 @@ CMDPartConstraintGPDB::CMDPartConstraintGPDB(
 	  m_is_unbounded(is_unbounded),
 	  m_dxl_node(dxlnode)
 {
-	GPOS_ASSERT(NULL != level_with_default_part_array);
+	GPOS_ASSERT(nullptr != level_with_default_part_array);
 }
 
 //---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ CMDPartConstraintGPDB::CMDPartConstraintGPDB(
 //---------------------------------------------------------------------------
 CMDPartConstraintGPDB::~CMDPartConstraintGPDB()
 {
-	if (NULL != m_dxl_node)
+	if (nullptr != m_dxl_node)
 		m_dxl_node->Release();
 	m_level_with_default_part_array->Release();
 }
@@ -66,7 +66,7 @@ CMDPartConstraintGPDB::GetPartConstraintExpr(CMemoryPool *mp,
 											 CMDAccessor *md_accessor,
 											 CColRefArray *colref_array) const
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 
 	// translate the DXL representation of the part constraint expression
 	CTranslatorDXLToExpr dxltr(mp, md_accessor);
@@ -129,7 +129,7 @@ CMDPartConstraintGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		m_is_unbounded);
 
 	// serialize the scalar expression
-	if (NULL != m_dxl_node)
+	if (nullptr != m_dxl_node)
 		m_dxl_node->SerializeToDXL(xml_serializer);
 
 	xml_serializer->CloseElement(

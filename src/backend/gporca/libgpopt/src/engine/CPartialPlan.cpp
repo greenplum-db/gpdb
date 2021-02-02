@@ -39,9 +39,9 @@ CPartialPlan::CPartialPlan(CGroupExpression *pgexpr, CReqdPropPlan *prpp,
 	  m_pccChild(pccChild),	 // cost context of an already optimized child
 	  m_ulChildIndex(child_index)
 {
-	GPOS_ASSERT(NULL != pgexpr);
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT_IMP(NULL != pccChild, child_index < pgexpr->Arity());
+	GPOS_ASSERT(nullptr != pgexpr);
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT_IMP(nullptr != pccChild, child_index < pgexpr->Arity());
 }
 
 
@@ -73,8 +73,8 @@ CPartialPlan::ExtractChildrenCostingInfo(CMemoryPool *mp, ICostModel *pcm,
 										 ICostModel::SCostingInfo *pci)
 {
 	GPOS_ASSERT(m_pgexpr == exprhdl.Pgexpr());
-	GPOS_ASSERT(NULL != pci);
-	GPOS_ASSERT_IMP(NULL != m_pccChild, m_ulChildIndex < exprhdl.Arity());
+	GPOS_ASSERT(nullptr != pci);
+	GPOS_ASSERT_IMP(nullptr != m_pccChild, m_ulChildIndex < exprhdl.Arity());
 
 	const ULONG arity = m_pgexpr->Arity();
 	ULONG ulIndex = 0;
@@ -153,7 +153,7 @@ CPartialPlan::ExtractChildrenCostingInfo(CMemoryPool *mp, ICostModel *pcm,
 void
 CPartialPlan::RaiseExceptionIfStatsNull(IStatistics *stats)
 {
-	if (NULL == stats)
+	if (nullptr == stats)
 	{
 		GPOS_RAISE(
 			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
@@ -178,7 +178,7 @@ CPartialPlan::CostCompute(CMemoryPool *mp)
 	exprhdl.Attach(m_pgexpr);
 
 	// init required properties of expression
-	exprhdl.DeriveProps(NULL /*pdpdrvdCtxt*/);
+	exprhdl.DeriveProps(nullptr /*pdpdrvdCtxt*/);
 	exprhdl.InitReqdProps(m_prpp);
 
 	// create array of child derived properties
@@ -203,7 +203,7 @@ CPartialPlan::CostCompute(CMemoryPool *mp)
 
 	CDistributionSpec::EDistributionPartitioningType edpt =
 		CDistributionSpec::EdptSentinel;
-	if (NULL != m_prpp->Ped())
+	if (nullptr != m_prpp->Ped())
 	{
 		edpt = m_prpp->Ped()->PdsRequired()->Edpt();
 	}
@@ -217,7 +217,7 @@ CPartialPlan::CostCompute(CMemoryPool *mp)
 	// extract rows from stats
 	DOUBLE rows = m_pgexpr->Pgroup()->Pstats()->Rows().Get();
 	if (fDataPartitioningMotion ||	// root operator is known to distribute data across segments
-		NULL ==
+		nullptr ==
 			m_prpp
 				->Ped() ||	// required distribution not known yet, we assume data partitioning since we need a lower-bound on number of rows
 		CDistributionSpec::EdptPartitioned ==
@@ -268,7 +268,7 @@ CPartialPlan::CostCompute(CMemoryPool *mp)
 ULONG
 CPartialPlan::HashValue(const CPartialPlan *ppp)
 {
-	GPOS_ASSERT(NULL != ppp);
+	GPOS_ASSERT(nullptr != ppp);
 
 	ULONG ulHash = ppp->Pgexpr()->HashValue();
 	return CombineHashes(ulHash,
@@ -287,13 +287,14 @@ CPartialPlan::HashValue(const CPartialPlan *ppp)
 BOOL
 CPartialPlan::Equals(const CPartialPlan *pppFst, const CPartialPlan *pppSnd)
 {
-	GPOS_ASSERT(NULL != pppFst);
-	GPOS_ASSERT(NULL != pppSnd);
+	GPOS_ASSERT(nullptr != pppFst);
+	GPOS_ASSERT(nullptr != pppSnd);
 
 	BOOL fEqual = false;
-	if (NULL == pppFst->PccChild() || NULL == pppSnd->PccChild())
+	if (nullptr == pppFst->PccChild() || nullptr == pppSnd->PccChild())
 	{
-		fEqual = (NULL == pppFst->PccChild() && NULL == pppSnd->PccChild());
+		fEqual =
+			(nullptr == pppFst->PccChild() && nullptr == pppSnd->PccChild());
 	}
 	else
 	{

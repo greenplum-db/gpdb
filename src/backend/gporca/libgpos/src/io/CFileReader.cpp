@@ -54,7 +54,7 @@ CFileReader::~CFileReader() = default;
 void
 CFileReader::Open(const CHAR *file_path, const ULONG permission_bits)
 {
-	GPOS_ASSERT(NULL != file_path);
+	GPOS_ASSERT(nullptr != file_path);
 
 	OpenFile(file_path, O_RDONLY, permission_bits);
 
@@ -93,7 +93,7 @@ CFileReader::ReadBytesToBuffer(BYTE *read_buffer,
 	GPOS_ASSERT(CFileDescriptor::IsFileOpen() &&
 				"Attempt to read from invalid file descriptor");
 	GPOS_ASSERT(0 < file_read_size);
-	GPOS_ASSERT(NULL != read_buffer);
+	GPOS_ASSERT(nullptr != read_buffer);
 
 	ULONG_PTR bytes_to_read = file_read_size;
 

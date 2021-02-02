@@ -29,9 +29,9 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalMotionHashDistribute::CPhysicalMotionHashDistribute(
 	CMemoryPool *mp, CDistributionSpecHashed *pdsHashed)
-	: CPhysicalMotion(mp), m_pdsHashed(pdsHashed), m_pcrsRequiredLocal(NULL)
+	: CPhysicalMotion(mp), m_pdsHashed(pdsHashed), m_pcrsRequiredLocal(nullptr)
 {
-	GPOS_ASSERT(NULL != pdsHashed);
+	GPOS_ASSERT(nullptr != pdsHashed);
 	GPOS_ASSERT(0 != pdsHashed->Pdrgpexpr()->Size());
 
 	m_pcrsRequiredLocal = m_pdsHashed->PcrsUsed(mp);
@@ -209,7 +209,7 @@ CPhysicalMotionHashDistribute::OsPrint(IOstream &os) const
 CPhysicalMotionHashDistribute *
 CPhysicalMotionHashDistribute::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopPhysicalMotionHashDistribute == pop->Eopid());
 
 	return dynamic_cast<CPhysicalMotionHashDistribute *>(pop);
@@ -222,7 +222,7 @@ CPhysicalMotionHashDistribute::PdsRequired(
 {
 	CDistributionSpecHashedNoOp *pdsNoOp =
 		dynamic_cast<CDistributionSpecHashedNoOp *>(m_pdsHashed);
-	if (NULL == pdsNoOp)
+	if (nullptr == pdsNoOp)
 	{
 		return CPhysicalMotion::PdsRequired(mp, exprhdl, pdsRequired,
 											child_index, pdrgpdpCtxt, ulOptReq);

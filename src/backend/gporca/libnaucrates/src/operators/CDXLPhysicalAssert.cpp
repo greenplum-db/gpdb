@@ -29,7 +29,7 @@ using namespace gpdxl;
 CDXLPhysicalAssert::CDXLPhysicalAssert(CMemoryPool *mp, const CHAR *sql_state)
 	: CDXLPhysical(mp)
 {
-	GPOS_ASSERT(NULL != sql_state);
+	GPOS_ASSERT(nullptr != sql_state);
 	GPOS_ASSERT(GPOS_SQLSTATE_LENGTH == clib::Strlen(sql_state));
 	clib::Strncpy(m_sql_state, sql_state, GPOS_SQLSTATE_LENGTH);
 	m_sql_state[GPOS_SQLSTATE_LENGTH] = '\0';

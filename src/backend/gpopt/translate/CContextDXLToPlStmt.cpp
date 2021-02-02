@@ -50,15 +50,15 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 	  m_param_id_counter(param_id_counter),
 	  m_param_types_list(NIL),
 	  m_distribution_hashops(distribution_hashops),
-	  m_rtable_entries_list(NULL),
-	  m_partitioned_tables_list(NULL),
-	  m_num_partition_selectors_array(NULL),
-	  m_subplan_entries_list(NULL),
-	  m_subplan_sliceids_list(NULL),
-	  m_slices_list(NULL),
+	  m_rtable_entries_list(nullptr),
+	  m_partitioned_tables_list(nullptr),
+	  m_num_partition_selectors_array(nullptr),
+	  m_subplan_entries_list(nullptr),
+	  m_subplan_sliceids_list(nullptr),
+	  m_slices_list(nullptr),
 	  m_result_relation_index(0),
-	  m_into_clause(NULL),
-	  m_distribution_policy(NULL)
+	  m_into_clause(nullptr),
+	  m_distribution_policy(nullptr)
 {
 	m_cte_consumer_info = GPOS_NEW(m_mp) HMUlCTEConsumerInfo(m_mp);
 	m_num_partition_selectors_array = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
@@ -162,10 +162,10 @@ void
 CContextDXLToPlStmt::AddCTEConsumerInfo(ULONG cte_id,
 										ShareInputScan *share_input_scan)
 {
-	GPOS_ASSERT(NULL != share_input_scan);
+	GPOS_ASSERT(nullptr != share_input_scan);
 
 	SCTEConsumerInfo *cte_info = m_cte_consumer_info->Find(&cte_id);
-	if (NULL != cte_info)
+	if (nullptr != cte_info)
 	{
 		cte_info->AddCTEPlan(share_input_scan);
 		return;
@@ -192,12 +192,12 @@ List *
 CContextDXLToPlStmt::GetCTEConsumerList(ULONG cte_id) const
 {
 	SCTEConsumerInfo *cte_info = m_cte_consumer_info->Find(&cte_id);
-	if (NULL != cte_info)
+	if (nullptr != cte_info)
 	{
 		return cte_info->m_cte_consumer_list;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -343,7 +343,7 @@ CContextDXLToPlStmt::GetSlices(int *numSlices_p)
 		i++;
 	}
 
-	m_current_slice = NULL;
+	m_current_slice = nullptr;
 	gpdb::ListFreeDeep(m_slices_list);
 
 	*numSlices_p = numSlices;
@@ -398,7 +398,7 @@ CContextDXLToPlStmt::AddCtasInfo(IntoClause *into_clause,
 								 GpPolicy *distribution_policy)
 {
 	//	GPOS_ASSERT(NULL != into_clause);
-	GPOS_ASSERT(NULL != distribution_policy);
+	GPOS_ASSERT(nullptr != distribution_policy);
 
 	m_into_clause = into_clause;
 	m_distribution_policy = distribution_policy;

@@ -191,7 +191,7 @@ public:
 	virtual IMdIdArray *
 	ChildPartitionMdids() const
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// relation distribution policy as a string value

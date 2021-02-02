@@ -26,7 +26,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalInnerApply::CLogicalInnerApply(CMemoryPool *mp) : CLogicalApply(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	m_fPattern = true;
 }

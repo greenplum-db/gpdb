@@ -61,7 +61,7 @@ CParseHandlerScalarNullTest::StartElement(const XMLCh *const,  // element_uri,
 				  CDXLTokens::XmlstrToken(EdxltokenScalarIsNotNull),
 				  element_local_name)))
 	{
-		if (NULL != m_dxl_node)
+		if (nullptr != m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

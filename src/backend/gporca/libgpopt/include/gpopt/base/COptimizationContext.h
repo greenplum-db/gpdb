@@ -104,14 +104,14 @@ private:
 
 	// private dummy ctor; used for creating invalid context
 	COptimizationContext()
-		: m_mp(NULL),
+		: m_mp(nullptr),
 		  m_id(GPOPT_INVALID_OPTCTXT_ID),
-		  m_pgroup(NULL),
-		  m_prpp(NULL),
-		  m_prprel(NULL),
-		  m_pdrgpstatCtxt(NULL),
+		  m_pgroup(nullptr),
+		  m_prpp(nullptr),
+		  m_prprel(nullptr),
+		  m_pdrgpstatCtxt(nullptr),
 		  m_ulSearchStageIndex(0),
-		  m_pccBest(NULL),
+		  m_pccBest(nullptr),
 		  m_estate(estUnoptimized),
 		  m_fHasMultiStageAggPlan(false)
 	{
@@ -155,14 +155,14 @@ public:
 		  m_prprel(prprel),
 		  m_pdrgpstatCtxt(stats_ctxt),
 		  m_ulSearchStageIndex(ulSearchStageIndex),
-		  m_pccBest(NULL),
+		  m_pccBest(nullptr),
 		  m_estate(estUnoptimized),
 		  m_fHasMultiStageAggPlan(false)
 	{
-		GPOS_ASSERT(NULL != pgroup);
-		GPOS_ASSERT(NULL != prpp);
-		GPOS_ASSERT(NULL != prprel);
-		GPOS_ASSERT(NULL != stats_ctxt);
+		GPOS_ASSERT(nullptr != pgroup);
+		GPOS_ASSERT(nullptr != prpp);
+		GPOS_ASSERT(nullptr != prprel);
+		GPOS_ASSERT(nullptr != stats_ctxt);
 	}
 
 	// dtor
@@ -288,7 +288,7 @@ public:
 	static ULONG
 	HashValue(const COptimizationContext &oc)
 	{
-		GPOS_ASSERT(NULL != oc.Prpp());
+		GPOS_ASSERT(nullptr != oc.Prpp());
 
 		return oc.Prpp()->HashValue();
 	}

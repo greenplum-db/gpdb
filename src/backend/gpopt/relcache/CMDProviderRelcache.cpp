@@ -37,7 +37,7 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMDProviderRelcache::CMDProviderRelcache(CMemoryPool *mp) : m_mp(mp)
 {
-	GPOS_ASSERT(NULL != m_mp);
+	GPOS_ASSERT(nullptr != m_mp);
 }
 
 //---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ CMDProviderRelcache::GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	IMDCacheObject *md_obj =
 		CTranslatorRelcacheToDXL::RetrieveObject(mp, md_accessor, md_id);
 
-	GPOS_ASSERT(NULL != md_obj);
+	GPOS_ASSERT(nullptr != md_obj);
 
 	CWStringDynamic *str = CDXLUtils::SerializeMDObj(
 		m_mp, md_obj, true /*fSerializeHeaders*/, false /*findent*/);

@@ -152,7 +152,7 @@ CPhysicalInnerNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 					// to create CDistributionSpecHashed for inner child
 					CExpression *pexprMatching =
 						CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexpr);
-					fSuccess = (NULL != pexprMatching);
+					fSuccess = (nullptr != pexprMatching);
 					if (fSuccess)
 					{
 						pexprMatching->AddRef();

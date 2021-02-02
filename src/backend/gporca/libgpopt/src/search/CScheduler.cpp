@@ -94,7 +94,7 @@ CScheduler::Run(void *pv)
 	CSchedulerContext *psc = reinterpret_cast<CSchedulerContext *>(pv);
 	psc->Psched()->ExecuteJobs(psc);
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -110,11 +110,11 @@ CScheduler::Run(void *pv)
 void
 CScheduler::ExecuteJobs(CSchedulerContext *psc)
 {
-	CJob *pj = NULL;
+	CJob *pj = nullptr;
 	ULONG count = 0;
 
 	// keep retrieving jobs
-	while (NULL != (pj = PjRetrieve()))
+	while (nullptr != (pj = PjRetrieve()))
 	{
 		// prepare for job execution
 		PreExecute(pj);
@@ -183,11 +183,11 @@ CScheduler::ExecuteJobs(CSchedulerContext *psc)
 void
 CScheduler::Add(CJob *pj, CJob *pjParent)
 {
-	GPOS_ASSERT(NULL != pj);
+	GPOS_ASSERT(nullptr != pj);
 	GPOS_ASSERT(0 == pj->UlpRefs());
 
 	// increment ref counter for parent job
-	if (NULL != pjParent)
+	if (nullptr != pjParent)
 	{
 		pjParent->IncRefs();
 	}
@@ -213,7 +213,7 @@ CScheduler::Add(CJob *pj, CJob *pjParent)
 void
 CScheduler::Resume(CJob *pj)
 {
-	GPOS_ASSERT(NULL != pj);
+	GPOS_ASSERT(nullptr != pj);
 	GPOS_ASSERT(0 == pj->UlpRefs());
 
 	Schedule(pj);
@@ -231,15 +231,15 @@ CScheduler::Resume(CJob *pj)
 void
 CScheduler::Schedule(CJob *pj)
 {
-	GPOS_ASSERT(NULL != pj);
+	GPOS_ASSERT(nullptr != pj);
 
 	// get job link
 	SJobLink *pjl = m_spjl.PtRetrieve();
 
 	// throw OOM if no link can be retrieved
-	if (NULL == pjl)
+	if (nullptr == pjl)
 	{
-		GPOS_OOM_CHECK(NULL);
+		GPOS_OOM_CHECK(nullptr);
 	}
 	pjl->Init(pj);
 
@@ -275,7 +275,7 @@ CScheduler::Schedule(CJob *pj)
 void
 CScheduler::PreExecute(CJob *pj)
 {
-	GPOS_ASSERT(NULL != pj);
+	GPOS_ASSERT(nullptr != pj);
 	GPOS_ASSERT(0 == pj->UlpRefs() &&
 				"Runnable job cannot have pending children");
 
@@ -302,7 +302,7 @@ CScheduler::FExecute(CJob *pj, CSchedulerContext *psc)
 	CJobQueue *pjq = pj->Pjq();
 
 	// check if job is associated to a job queue
-	if (NULL == pjq)
+	if (nullptr == pjq)
 	{
 		fCompleted = pj->FExecute(psc);
 	}
@@ -350,7 +350,7 @@ CScheduler::FExecute(CJob *pj, CSchedulerContext *psc)
 CScheduler::EJobResult
 CScheduler::EjrPostExecute(CJob *pj, BOOL fCompleted)
 {
-	GPOS_ASSERT(NULL != pj);
+	GPOS_ASSERT(nullptr != pj);
 	GPOS_ASSERT(0 < pj->UlpRefs() && "IsRunning job is marked as completed");
 
 	// decrement job ref counter
@@ -390,13 +390,13 @@ CScheduler::PjRetrieve()
 {
 	// retrieve runnable job from lists of waiting jobs
 	SJobLink *pjl = m_listjlWaiting.Pop();
-	CJob *pj = NULL;
+	CJob *pj = nullptr;
 
-	if (NULL != pjl)
+	if (nullptr != pjl)
 	{
 		pj = pjl->m_pj;
 
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(0 == pj->UlpRefs());
 
 		// decrement number of queued jobs
@@ -439,7 +439,7 @@ CScheduler::Suspend(CJob *
 #endif	// GPOS_DEBUG
 )
 {
-	GPOS_ASSERT(NULL != pj);
+	GPOS_ASSERT(nullptr != pj);
 
 #ifdef GPOS_DEBUG
 	if (FTrackingJobs())
@@ -532,7 +532,7 @@ CScheduler::ResumeParent(CJob *pj)
 
 	CJob *pjParent = pj->PjParent();
 
-	if (NULL != pjParent)
+	if (nullptr != pjParent)
 	{
 		// notify parent job
 		if (pj->FResumeParent())
@@ -590,7 +590,7 @@ CScheduler::OsPrintActiveJobs(IOstream &os)
 
 	os << "List of running jobs: " << std::endl;
 	CJob *pj = m_listjRunning.First();
-	while (NULL != pj)
+	while (nullptr != pj)
 	{
 		pj->OsPrint(os);
 		pj = m_listjRunning.Next(pj);
@@ -599,7 +599,7 @@ CScheduler::OsPrintActiveJobs(IOstream &os)
 	os << std::endl << "List of waiting jobs: " << std::endl;
 
 	SJobLink *pjl = m_listjlWaiting.PtFirst();
-	while (NULL != pjl)
+	while (nullptr != pjl)
 	{
 		pjl->m_pj->OsPrint(os);
 		pjl = m_listjlWaiting.Next(pjl);
@@ -607,7 +607,7 @@ CScheduler::OsPrintActiveJobs(IOstream &os)
 
 	os << std::endl << "List of suspended jobs: " << std::endl;
 	pj = m_listjSuspended.First();
-	while (NULL != pj)
+	while (nullptr != pj)
 	{
 		pj->OsPrint(os);
 		pj = m_listjSuspended.Next(pj);

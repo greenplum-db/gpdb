@@ -263,7 +263,7 @@ public:
 	static CPhysicalPartitionSelector *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalPartitionSelector == pop->Eopid() ||
 					EopPhysicalPartitionSelectorDML == pop->Eopid());
 

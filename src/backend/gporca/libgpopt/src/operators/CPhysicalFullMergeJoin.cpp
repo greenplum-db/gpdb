@@ -33,9 +33,9 @@ CPhysicalFullMergeJoin::CPhysicalFullMergeJoin(
 	  m_outer_merge_clauses(outer_merge_clauses),
 	  m_inner_merge_clauses(inner_merge_clauses)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != outer_merge_clauses);
-	GPOS_ASSERT(NULL != inner_merge_clauses);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != outer_merge_clauses);
+	GPOS_ASSERT(nullptr != inner_merge_clauses);
 	GPOS_ASSERT(outer_merge_clauses->Size() == inner_merge_clauses->Size());
 
 	// There is one request per col, up to the max number of requests
@@ -216,7 +216,7 @@ CPhysicalFullMergeJoin::EpetOrder(CExpressionHandle &, const CEnfdOrder *
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// merge join is not order-preserving, at least in

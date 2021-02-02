@@ -23,7 +23,7 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLProperties::CDXLProperties() : m_dxl_stats_derived_relation(NULL)
+CDXLProperties::CDXLProperties() : m_dxl_stats_derived_relation(nullptr)
 {
 }
 
@@ -52,8 +52,8 @@ void
 CDXLProperties::SetStats(CDXLStatsDerivedRelation *dxl_stats_derived_relation)
 {
 	// allow setting properties only once
-	GPOS_ASSERT(NULL == m_dxl_stats_derived_relation);
-	GPOS_ASSERT(NULL != dxl_stats_derived_relation);
+	GPOS_ASSERT(nullptr == m_dxl_stats_derived_relation);
+	GPOS_ASSERT(nullptr != dxl_stats_derived_relation);
 	m_dxl_stats_derived_relation = dxl_stats_derived_relation;
 }
 
@@ -96,7 +96,7 @@ CDXLProperties::SerializePropertiesToDXL(CXMLSerializer *xml_serializer) const
 void
 CDXLProperties::SerializeStatsToDXL(CXMLSerializer *xml_serializer) const
 {
-	if (NULL != m_dxl_stats_derived_relation)
+	if (nullptr != m_dxl_stats_derived_relation)
 	{
 		m_dxl_stats_derived_relation->Serialize(xml_serializer);
 	}

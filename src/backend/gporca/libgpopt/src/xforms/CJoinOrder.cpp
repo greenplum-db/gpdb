@@ -31,8 +31,8 @@ using namespace gpopt;
 // ctor
 CJoinOrder::SComponent::SComponent(CMemoryPool *mp, CExpression *pexpr,
 								   INT parent_loj_id, EPosition position)
-	: m_pbs(NULL),
-	  m_edge_set(NULL),
+	: m_pbs(nullptr),
+	  m_edge_set(nullptr),
 	  m_pexpr(pexpr),
 	  m_fUsed(false),
 	  m_parent_loj_id(parent_loj_id),
@@ -55,7 +55,7 @@ CJoinOrder::SComponent::SComponent(CExpression *pexpr, CBitSet *pbs,
 	  m_parent_loj_id(parent_loj_id),
 	  m_position(position)
 {
-	GPOS_ASSERT(NULL != pbs);
+	GPOS_ASSERT(nullptr != pbs);
 	GPOS_ASSERT_IMP(EpSentinel != m_position,
 					NON_LOJ_DEFAULT_ID < m_parent_loj_id);
 }
@@ -112,7 +112,7 @@ CJoinOrder::SComponent::OsPrint(IOstream &os) const
 //
 //---------------------------------------------------------------------------
 CJoinOrder::SEdge::SEdge(CMemoryPool *mp, CExpression *pexpr, ULONG loj_num)
-	: m_pbs(NULL), m_pexpr(pexpr), m_loj_num(loj_num), m_fUsed(false)
+	: m_pbs(nullptr), m_pexpr(pexpr), m_loj_num(loj_num), m_fUsed(false)
 {
 	m_pbs = GPOS_NEW(mp) CBitSet(mp);
 }
@@ -162,9 +162,9 @@ CJoinOrder::CJoinOrder(CMemoryPool *mp, CExpressionArray *all_components,
 					   CExpressionArray *inner_join_conjuncts,
 					   BOOL include_loj_childs)
 	: m_mp(mp),
-	  m_rgpedge(NULL),
+	  m_rgpedge(nullptr),
 	  m_ulEdges(0),
-	  m_rgpcomp(NULL),
+	  m_rgpcomp(nullptr),
 	  m_ulComps(0),
 	  m_include_loj_childs(include_loj_childs)
 {
@@ -283,9 +283,9 @@ CJoinOrder::CJoinOrder(CMemoryPool *mp, CExpressionArray *all_components,
 					   CExpressionArray *onPreds,
 					   ULongPtrArray *childPredIndexes)
 	: m_mp(mp),
-	  m_rgpedge(NULL),
+	  m_rgpedge(nullptr),
 	  m_ulEdges(0),
-	  m_rgpcomp(NULL),
+	  m_rgpcomp(nullptr),
 	  m_ulComps(0),
 	  m_include_loj_childs(false)  // not used by CXformExpandNAryJoinDPv2
 {
@@ -346,7 +346,8 @@ CJoinOrder::CJoinOrder(CMemoryPool *mp, CExpressionArray *all_components,
 	for (ULONG ul = 0; ul < num_of_nary_children; ul++)
 	{
 		CExpression *expr = (*all_components)[ul];
-		INT lojId = (NULL != childPredIndexes) ? *((*childPredIndexes)[ul]) : 0;
+		INT lojId =
+			(nullptr != childPredIndexes) ? *((*childPredIndexes)[ul]) : 0;
 
 		AddComponent(mp, expr, lojId, EpSentinel /*position not used in DPv2*/,
 					 ul);
@@ -466,11 +467,11 @@ CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2)
 	CExpression *pexprChild1 = comp1->m_pexpr;
 	CExpression *pexprChild2 = comp2->m_pexpr;
 
-	CExpression *pexpr = NULL;
+	CExpression *pexpr = nullptr;
 	INT parent_loj_id = NON_LOJ_DEFAULT_ID;
 	EPosition position = EpSentinel;
 
-	if (NULL == pexprChild1)
+	if (nullptr == pexprChild1)
 	{
 		// first call to this function, we create a Select node
 		parent_loj_id = comp2->ParentLojId();
@@ -490,7 +491,7 @@ CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2)
 	else
 	{
 		// not first call, we create an Inner Join or LOJ
-		GPOS_ASSERT(NULL != pexprChild2);
+		GPOS_ASSERT(nullptr != pexprChild2);
 		pexprChild2->AddRef();
 		pexprChild1->AddRef();
 
@@ -583,14 +584,14 @@ CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2)
 void
 CJoinOrder::DeriveStats(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
-	if (NULL == pexpr->Pstats())
+	if (nullptr == pexpr->Pstats())
 	{
 		CExpressionHandle exprhdl(m_mp);
 		exprhdl.Attach(pexpr);
-		exprhdl.DeriveStats(m_mp, m_mp, NULL /*prprel*/,
-							NULL /*pdrgpstatCtxt*/);
+		exprhdl.DeriveStats(m_mp, m_mp, nullptr /*prprel*/,
+							nullptr /*pdrgpstatCtxt*/);
 	}
 }
 
@@ -712,7 +713,7 @@ CJoinOrder::IsChildOfSameLOJ(SComponent *comp1, SComponent *comp2) const
 void
 CJoinOrder::MarkUsedEdges(SComponent *pcomponent)
 {
-	GPOS_ASSERT(NULL != pcomponent);
+	GPOS_ASSERT(nullptr != pcomponent);
 
 	CExpression *pexpr = pcomponent->m_pexpr;
 

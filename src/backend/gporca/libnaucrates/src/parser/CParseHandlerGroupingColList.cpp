@@ -34,7 +34,7 @@ CParseHandlerGroupingColList::CParseHandlerGroupingColList(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_grouping_colids_array(NULL)
+	  m_grouping_colids_array(nullptr)
 {
 }
 
@@ -78,7 +78,7 @@ CParseHandlerGroupingColList::StartElement(
 					  element_local_name))
 	{
 		// we must have seen a grouping cols list already and initialized the grouping cols array
-		GPOS_ASSERT(NULL != m_grouping_colids_array);
+		GPOS_ASSERT(nullptr != m_grouping_colids_array);
 
 		// parse grouping col id
 		ULONG *pulColId =

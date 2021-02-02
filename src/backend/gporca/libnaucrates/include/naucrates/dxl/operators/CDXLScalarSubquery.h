@@ -61,7 +61,7 @@ public:
 	static CDXLScalarSubquery *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarSubquery == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarSubquery *>(dxl_op);

@@ -44,7 +44,7 @@ public:
 	CScalarProjectElement(CMemoryPool *mp, CColRef *colref)
 		: CScalar(mp), m_pcr(colref)
 	{
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != colref);
 	}
 
 	// dtor
@@ -101,7 +101,7 @@ public:
 	static CScalarProjectElement *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarProjectElement == pop->Eopid());
 
 		return reinterpret_cast<CScalarProjectElement *>(pop);
@@ -111,7 +111,7 @@ public:
 	MdidType() const override
 	{
 		GPOS_ASSERT(!"Invalid function call: CScalarProjectElemet::MdidType()");
-		return NULL;
+		return nullptr;
 	}
 
 	// print

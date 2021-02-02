@@ -76,15 +76,15 @@ void
 CXformCollapseProject::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	CExpression *pexprCollapsed = CUtils::PexprCollapseProjects(mp, pexpr);
 
-	if (NULL != pexprCollapsed)
+	if (nullptr != pexprCollapsed)
 	{
 		pxfres->Add(pexprCollapsed);
 	}

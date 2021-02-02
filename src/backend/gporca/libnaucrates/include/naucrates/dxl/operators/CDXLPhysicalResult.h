@@ -56,7 +56,7 @@ public:
 	static CDXLPhysicalResult *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalResult == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalResult *>(dxl_op);

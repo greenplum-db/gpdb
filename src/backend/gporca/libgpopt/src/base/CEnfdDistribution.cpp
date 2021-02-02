@@ -44,7 +44,7 @@ CEnfdDistribution::CEnfdDistribution(CDistributionSpec *pds,
 									 EDistributionMatching edm)
 	: m_pds(pds), m_edm(edm)
 {
-	GPOS_ASSERT(NULL != pds);
+	GPOS_ASSERT(nullptr != pds);
 	GPOS_ASSERT(EdmSentinel > edm);
 }
 
@@ -75,7 +75,7 @@ CEnfdDistribution::~CEnfdDistribution()
 BOOL
 CEnfdDistribution::FCompatible(CDistributionSpec *pds) const
 {
-	GPOS_ASSERT(NULL != pds);
+	GPOS_ASSERT(nullptr != pds);
 
 	switch (m_edm)
 	{

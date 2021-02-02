@@ -33,7 +33,7 @@ CParseHandlerCostParams::CParseHandlerCostParams(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_cost_model_params(NULL)
+	  m_cost_model_params(nullptr)
 {
 }
 
@@ -77,7 +77,7 @@ CParseHandlerCostParams::StartElement(const XMLCh *const element_uri,
 					  CDXLTokens::XmlstrToken(EdxltokenCostParam),
 					  element_local_name))
 	{
-		GPOS_ASSERT(NULL != m_cost_model_params);
+		GPOS_ASSERT(nullptr != m_cost_model_params);
 
 		// start new search stage
 		CParseHandlerBase *parse_handler_cost_params =

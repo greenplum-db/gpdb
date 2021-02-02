@@ -113,7 +113,7 @@ public:
 	static CLogicalDifference *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDifference == pop->Eopid());
 
 		return reinterpret_cast<CLogicalDifference *>(pop);

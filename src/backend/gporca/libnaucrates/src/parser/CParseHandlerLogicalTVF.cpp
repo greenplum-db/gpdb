@@ -37,9 +37,9 @@ CParseHandlerLogicalTVF::CParseHandlerLogicalTVF(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerLogicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_func_mdid(NULL),
-	  m_return_type_mdid(NULL),
-	  m_mdname(NULL)
+	  m_func_mdid(nullptr),
+	  m_return_type_mdid(nullptr),
+	  m_mdname(nullptr)
 {
 }
 
@@ -142,12 +142,12 @@ CParseHandlerLogicalTVF::EndElement(const XMLCh *const,	 // element_uri,
 	CParseHandlerColDescr *col_descr_parse_handler =
 		dynamic_cast<CParseHandlerColDescr *>((*this)[0]);
 
-	GPOS_ASSERT(NULL != col_descr_parse_handler);
+	GPOS_ASSERT(nullptr != col_descr_parse_handler);
 
 	// get column descriptors
 	CDXLColDescrArray *cold_descr_dxl_array =
 		col_descr_parse_handler->GetDXLColumnDescrArray();
-	GPOS_ASSERT(NULL != cold_descr_dxl_array);
+	GPOS_ASSERT(nullptr != cold_descr_dxl_array);
 
 	cold_descr_dxl_array->AddRef();
 	CDXLLogicalTVF *lg_tvf_op = GPOS_NEW(m_mp) CDXLLogicalTVF(

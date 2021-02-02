@@ -361,7 +361,7 @@ public:
 			*pcrsHist,	// set of column references for which stats are needed
 		CColRefSet *
 			pcrsWidth,	// set of column references for which the widths are needed
-		CStatisticsConfig *stats_config = NULL);
+		CStatisticsConfig *stats_config = nullptr);
 
 	// serialize object to passed stream
 	void Serialize(COstream &oos);

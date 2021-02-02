@@ -103,7 +103,7 @@ CMDAccessorTest::EresUnittest_Basic()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// lookup different objects
@@ -227,7 +227,7 @@ CMDAccessorTest::EresUnittest_Datum()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// create an INT4 datum
@@ -397,7 +397,7 @@ CMDAccessorTest::EresUnittest_Indexes()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// lookup a relation in the MD cache
@@ -467,7 +467,7 @@ CMDAccessorTest::EresUnittest_CheckConstraint()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
@@ -542,7 +542,7 @@ CMDAccessorTest::EresUnittest_IndexPartConstraint()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
@@ -572,7 +572,7 @@ CMDAccessorTest::EresUnittest_IndexPartConstraint()
 
 	// extract and then print the part constraint expression
 	IMDPartConstraint *mdpart_constraint = pmdindex->MDPartConstraint();
-	GPOS_ASSERT(NULL != mdpart_constraint);
+	GPOS_ASSERT(nullptr != mdpart_constraint);
 
 	CExpression *pexpr =
 		mdpart_constraint->GetPartConstraintExpr(mp, &mda, colref_array);
@@ -614,7 +614,7 @@ CMDAccessorTest::EresUnittest_Cast()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	const IMDType *pmdtypeInt =
@@ -675,7 +675,7 @@ CMDAccessorTest::EresUnittest_ScCmp()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	const IMDType *pmdtypeInt =
@@ -742,7 +742,7 @@ CMDAccessorTest::PvLookupSingleObj(void *pv)
 {
 	GPOS_CHECK_ABORT;
 
-	GPOS_ASSERT(NULL != pv);
+	GPOS_ASSERT(nullptr != pv);
 
 	SMDCacheTaskParams *pmdtaskparams = (SMDCacheTaskParams *) pv;
 
@@ -750,8 +750,8 @@ CMDAccessorTest::PvLookupSingleObj(void *pv)
 
 	CMemoryPool *mp = pmdtaskparams->m_mp;
 
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != md_accessor);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != md_accessor);
 
 	// lookup a cache object
 	CMDIdGPDB *mdid =
@@ -762,7 +762,7 @@ CMDAccessorTest::PvLookupSingleObj(void *pv)
 	(void) md_accessor->RetrieveRel(mdid);
 	mdid->Release();
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -778,13 +778,13 @@ CMDAccessorTest::PvLookupMultipleObj(void *pv)
 {
 	GPOS_CHECK_ABORT;
 
-	GPOS_ASSERT(NULL != pv);
+	GPOS_ASSERT(nullptr != pv);
 
 	SMDCacheTaskParams *pmdtaskparams = (SMDCacheTaskParams *) pv;
 
 	CMDAccessor *md_accessor = pmdtaskparams->m_pmda;
 
-	GPOS_ASSERT(NULL != md_accessor);
+	GPOS_ASSERT(nullptr != md_accessor);
 
 	// lookup cache objects
 	const ULONG ulNumberOfObjects = 10;
@@ -800,7 +800,7 @@ CMDAccessorTest::PvLookupMultipleObj(void *pv)
 		mdid->Release();
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -815,7 +815,7 @@ CMDAccessorTest::PvLookupMultipleObj(void *pv)
 void *
 CMDAccessorTest::PvInitMDAAndLookup(void *pv)
 {
-	GPOS_ASSERT(NULL != pv);
+	GPOS_ASSERT(nullptr != pv);
 
 	CMDAccessor::MDCache *pcache = (CMDAccessor::MDCache *) pv;
 
@@ -873,7 +873,7 @@ CMDAccessorTest::PvInitMDAAndLookup(void *pv)
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 // EOF

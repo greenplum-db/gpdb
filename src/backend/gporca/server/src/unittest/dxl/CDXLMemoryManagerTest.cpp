@@ -53,7 +53,7 @@ CDXLMemoryManagerTest::EresUnittest_Basic()
 	CDXLMemoryManager *dxl_memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
 	void *pvMemory = dxl_memory_manager->allocate(5);
 
-	GPOS_ASSERT(NULL != pvMemory);
+	GPOS_ASSERT(nullptr != pvMemory);
 
 	dxl_memory_manager->deallocate(pvMemory);
 

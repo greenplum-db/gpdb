@@ -56,7 +56,7 @@ CDXLPhysicalGatherMotion::GetDXLOperator() const
 INT
 CDXLPhysicalGatherMotion::IOutputSegIdx() const
 {
-	GPOS_ASSERT(NULL != m_output_segids_array);
+	GPOS_ASSERT(nullptr != m_output_segids_array);
 	GPOS_ASSERT(1 == m_output_segids_array->Size());
 	return *((*m_output_segids_array)[0]);
 }
@@ -120,9 +120,9 @@ CDXLPhysicalGatherMotion::AssertValid(const CDXLNode *node,
 {
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(node, validate_children);
-	GPOS_ASSERT(m_input_segids_array != NULL);
+	GPOS_ASSERT(m_input_segids_array != nullptr);
 	GPOS_ASSERT(0 < m_input_segids_array->Size());
-	GPOS_ASSERT(m_output_segids_array != NULL);
+	GPOS_ASSERT(m_output_segids_array != nullptr);
 	GPOS_ASSERT(1 == m_output_segids_array->Size());
 
 	GPOS_ASSERT(EdxlgmIndexSentinel == node->Arity());

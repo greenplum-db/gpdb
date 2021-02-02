@@ -69,7 +69,7 @@ public:
 	static CDXLDatumStatsLintMappable *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumStatsLintMappable ==
 					dxl_datum->GetDatumType());
 

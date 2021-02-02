@@ -35,7 +35,7 @@ CParseHandlerCTEConfig::CParseHandlerCTEConfig(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_cte_conf(NULL)
+	  m_cte_conf(nullptr)
 {
 }
 
@@ -109,7 +109,7 @@ CParseHandlerCTEConfig::EndElement(const XMLCh *const,	// element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_cte_conf);
+	GPOS_ASSERT(nullptr != m_cte_conf);
 	GPOS_ASSERT(0 == this->Length());
 
 	// deactivate handler

@@ -26,7 +26,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CXformResult::CXformResult(CMemoryPool *mp) : m_ulExpr(0)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 	m_pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 }
 
@@ -60,7 +60,7 @@ CXformResult::Add(CExpression *pexpr)
 	GPOS_ASSERT(0 == m_ulExpr &&
 				"Incorrect workflow: cannot add further alternatives");
 
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	m_pdrgpexpr->Append(pexpr);
 }
 
@@ -76,7 +76,7 @@ CXformResult::Add(CExpression *pexpr)
 CExpression *
 CXformResult::PexprNext()
 {
-	CExpression *pexpr = NULL;
+	CExpression *pexpr = nullptr;
 	if (m_ulExpr < m_pdrgpexpr->Size())
 	{
 		pexpr = (*m_pdrgpexpr)[m_ulExpr];

@@ -79,7 +79,7 @@ public:
 	static CLogicalInnerCorrelatedApply *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalInnerCorrelatedApply == pop->Eopid());
 
 		return dynamic_cast<CLogicalInnerCorrelatedApply *>(pop);

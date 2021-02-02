@@ -126,7 +126,7 @@ public:
 	static const CMDIdGPDB *
 	CastMdid(const IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidGPDB == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidGPDB == mdid->MdidType());
 
 		return dynamic_cast<const CMDIdGPDB *>(mdid);
 	}
@@ -135,8 +135,8 @@ public:
 	static CMDIdGPDB *
 	CastMdid(IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && (EmdidGPDB == mdid->MdidType() ||
-									 EmdidGPDBCtas == mdid->MdidType()));
+		GPOS_ASSERT(nullptr != mdid && (EmdidGPDB == mdid->MdidType() ||
+										EmdidGPDBCtas == mdid->MdidType()));
 
 		return dynamic_cast<CMDIdGPDB *>(mdid);
 	}

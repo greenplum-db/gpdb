@@ -195,7 +195,7 @@ private:
 public:
 	// ctor
 	CCostModelGPDBLegacy(CMemoryPool *mp, ULONG ulSegments,
-						 ICostModelParamsArray *pdrgpcp = NULL);
+						 ICostModelParamsArray *pdrgpcp = nullptr);
 
 	// dtor
 	~CCostModelGPDBLegacy() override;

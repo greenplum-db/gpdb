@@ -22,8 +22,8 @@ CUnionAllStatsProcessor::CreateStatsForUnionAll(
 	const CStatistics *stats_second_child, ULongPtrArray *output_colids,
 	ULongPtrArray *first_child_colids, ULongPtrArray *second_child_colids)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != stats_second_child);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != stats_second_child);
 
 	// lengths must match
 	GPOS_ASSERT(output_colids->Size() == first_child_colids->Size());
@@ -56,10 +56,10 @@ CUnionAllStatsProcessor::CreateStatsForUnionAll(
 
 			const CHistogram *first_child_histogram =
 				stats_first_child->GetHistogram(first_child_colid);
-			GPOS_ASSERT(NULL != first_child_histogram);
+			GPOS_ASSERT(nullptr != first_child_histogram);
 			const CHistogram *second_child_histogram =
 				stats_second_child->GetHistogram(second_child_colid);
-			GPOS_ASSERT(NULL != second_child_histogram);
+			GPOS_ASSERT(nullptr != second_child_histogram);
 
 			if (first_child_histogram->IsWellDefined() ||
 				second_child_histogram->IsWellDefined())
@@ -75,7 +75,7 @@ CUnionAllStatsProcessor::CreateStatsForUnionAll(
 			else
 			{
 				CColRef *column_ref = col_factory->LookupColRef(output_colid);
-				GPOS_ASSERT(NULL != column_ref);
+				GPOS_ASSERT(nullptr != column_ref);
 
 				CHistogram *dummy_histogram = CHistogram::MakeDefaultHistogram(
 					mp, column_ref, false /* is_empty*/);
@@ -86,7 +86,7 @@ CUnionAllStatsProcessor::CreateStatsForUnionAll(
 			// look up width
 			const CDouble *col_width =
 				stats_first_child->GetWidth(first_child_colid);
-			GPOS_ASSERT(NULL != col_width);
+			GPOS_ASSERT(nullptr != col_width);
 			column_to_width_map->Insert(GPOS_NEW(mp) ULONG(output_colid),
 										GPOS_NEW(mp) CDouble(*col_width));
 		}

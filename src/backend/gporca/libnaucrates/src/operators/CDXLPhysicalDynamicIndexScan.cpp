@@ -37,8 +37,8 @@ CDXLPhysicalDynamicIndexScan::CDXLPhysicalDynamicIndexScan(
 	  m_dxl_index_descr(dxl_index_descr),
 	  m_index_scan_dir(idx_scan_direction)
 {
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_index_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_index_descr);
 }
 
 //---------------------------------------------------------------------------
@@ -218,13 +218,13 @@ CDXLPhysicalDynamicIndexScan::AssertValid(const CDXLNode *node,
 	GPOS_ASSERT(3 == node->Arity());
 
 	// assert validity of the index descriptor
-	GPOS_ASSERT(NULL != m_dxl_index_descr);
-	GPOS_ASSERT(NULL != m_dxl_index_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_index_descr);
+	GPOS_ASSERT(nullptr != m_dxl_index_descr->MdName());
 	GPOS_ASSERT(m_dxl_index_descr->MdName()->GetMDName()->IsValid());
 
 	// assert validity of the table descriptor
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 
 	CDXLNode *index_filter_dxlnode = (*node)[EdxldisIndexFilter];

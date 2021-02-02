@@ -69,7 +69,7 @@ public:
 	static CPhysicalTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalTableScan == pop->Eopid() ||
 					EopPhysicalExternalScan == pop->Eopid());
 
@@ -87,7 +87,7 @@ public:
 		GPOS_ASSERT(
 			!"stats derivation during costing for table scan is invalid");
 
-		return NULL;
+		return nullptr;
 	}
 
 	CRewindabilitySpec *

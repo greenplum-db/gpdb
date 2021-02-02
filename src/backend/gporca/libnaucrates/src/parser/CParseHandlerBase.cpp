@@ -36,8 +36,8 @@ CParseHandlerBase::CParseHandlerBase(CMemoryPool *mp,
 	  m_parse_handler_mgr(parse_handler_mgr),
 	  m_parse_handler_root(parse_handler_root)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != parse_handler_mgr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != parse_handler_mgr);
 
 	m_parse_handler_base_array = GPOS_NEW(m_mp) CParseHandlerBaseArray(m_mp);
 }
@@ -86,7 +86,7 @@ CParseHandlerBase::ReplaceParseHandler(
 {
 	ULONG idx = 0;
 
-	GPOS_ASSERT(NULL != m_parse_handler_base_array);
+	GPOS_ASSERT(nullptr != m_parse_handler_base_array);
 
 	for (idx = 0; idx < m_parse_handler_base_array->Size(); idx++)
 	{

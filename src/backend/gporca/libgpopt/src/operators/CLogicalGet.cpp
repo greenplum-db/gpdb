@@ -40,11 +40,11 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalGet::CLogicalGet(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pnameAlias(NULL),
-	  m_ptabdesc(NULL),
-	  m_pdrgpcrOutput(NULL),
-	  m_pdrgpdrgpcrPart(NULL),
-	  m_pcrsDist(NULL)
+	  m_pnameAlias(nullptr),
+	  m_ptabdesc(nullptr),
+	  m_pdrgpcrOutput(nullptr),
+	  m_pdrgpdrgpcrPart(nullptr),
+	  m_pcrsDist(nullptr)
 {
 	m_fPattern = true;
 }
@@ -62,12 +62,12 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
 	  m_ptabdesc(ptabdesc),
-	  m_pdrgpcrOutput(NULL),
-	  m_pdrgpdrgpcrPart(NULL),
-	  m_pcrsDist(NULL)
+	  m_pdrgpcrOutput(nullptr),
+	  m_pdrgpdrgpcrPart(nullptr),
+	  m_pcrsDist(nullptr)
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pnameAlias);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pnameAlias);
 
 	// generate a default column set for the table descriptor
 	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(),
@@ -97,10 +97,10 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 	  m_pnameAlias(pnameAlias),
 	  m_ptabdesc(ptabdesc),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
-	  m_pdrgpdrgpcrPart(NULL)
+	  m_pdrgpdrgpcrPart(nullptr)
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pnameAlias);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pnameAlias);
 
 	if (m_ptabdesc->IsPartitioned())
 	{
@@ -184,7 +184,7 @@ CLogicalGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 										UlongToColRefMap *colref_mapping,
 										BOOL must_exist)
 {
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =

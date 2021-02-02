@@ -79,7 +79,7 @@ public:
 	static CDXLPhysicalRoutedDistributeMotion *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalMotionRoutedDistribute ==
 					dxl_op->GetDXLOperator());
 

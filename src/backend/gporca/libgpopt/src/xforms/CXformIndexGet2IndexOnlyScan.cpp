@@ -78,7 +78,7 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -99,7 +99,7 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pindexdesc->MDId());
 
 	CColRefArray *pdrgpcrOutput = pop->PdrgpcrOutput();
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
 	CColRefSet *matched_cols =
@@ -141,7 +141,7 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	ptabdesc->AddRef();
 
 	COrderSpec *pos = pop->Pos();
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pos);
 	pos->AddRef();
 
 

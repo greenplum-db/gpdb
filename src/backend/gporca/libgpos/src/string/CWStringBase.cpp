@@ -88,7 +88,7 @@ CWStringBase::Length() const
 BOOL
 CWStringBase::Equals(const CWStringBase *str) const
 {
-	GPOS_ASSERT(NULL != str);
+	GPOS_ASSERT(nullptr != str);
 	return Equals(str->GetBuffer());
 }
 
@@ -103,7 +103,7 @@ CWStringBase::Equals(const CWStringBase *str) const
 BOOL
 CWStringBase::Equals(const WCHAR *w_str_buffer) const
 {
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 	ULONG length = GPOS_WSZ_LENGTH(w_str_buffer);
 	if (Length() == length &&
 		0 == clib::Wcsncmp(GetBuffer(), w_str_buffer, length))

@@ -108,7 +108,7 @@ public:
 	static CPhysicalDynamicIndexScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalDynamicIndexScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicIndexScan *>(pop);

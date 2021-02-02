@@ -19,7 +19,7 @@
 using namespace gpos;
 
 // global instance of cache factory
-CCacheFactory *CCacheFactory::m_factory = NULL;
+CCacheFactory *CCacheFactory::m_factory = nullptr;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -60,7 +60,7 @@ CCacheFactory::Pmp() const
 GPOS_RESULT
 CCacheFactory::Init()
 {
-	GPOS_ASSERT(NULL == GetFactory() &&
+	GPOS_ASSERT(nullptr == GetFactory() &&
 				"Cache factory was already initialized");
 
 	GPOS_RESULT res = GPOS_OK;
@@ -78,7 +78,7 @@ CCacheFactory::Init()
 		// destroy memory pool if global instance was not created
 		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
 
-		CCacheFactory::m_factory = NULL;
+		CCacheFactory::m_factory = nullptr;
 
 		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
 		{
@@ -107,12 +107,12 @@ CCacheFactory::Shutdown()
 {
 	CCacheFactory *factory = CCacheFactory::GetFactory();
 
-	GPOS_ASSERT(NULL != factory && "Cache factory has not been initialized");
+	GPOS_ASSERT(nullptr != factory && "Cache factory has not been initialized");
 
 	CMemoryPool *mp = factory->m_mp;
 
 	// destroy cache factory
-	CCacheFactory::m_factory = NULL;
+	CCacheFactory::m_factory = nullptr;
 	GPOS_DELETE(factory);
 
 	// release allocated memory pool

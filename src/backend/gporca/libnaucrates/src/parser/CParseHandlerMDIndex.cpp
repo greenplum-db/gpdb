@@ -35,15 +35,15 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname(NULL),
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
 	  m_clustered(false),
 	  m_index_type(IMDIndex::EmdindSentinel),
-	  m_mdid_item_type(NULL),
-	  m_index_key_cols_array(NULL),
-	  m_included_cols_array(NULL),
-	  m_part_constraint(NULL),
-	  m_level_with_default_part_array(NULL),
+	  m_mdid_item_type(nullptr),
+	  m_index_key_cols_array(nullptr),
+	  m_included_cols_array(nullptr),
+	  m_part_constraint(nullptr),
+	  m_level_with_default_part_array(nullptr),
 	  m_part_constraint_unbounded(false)
 {
 }
@@ -66,11 +66,11 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 				 CDXLTokens::XmlstrToken(EdxltokenPartConstraint),
 				 element_local_name))
 	{
-		GPOS_ASSERT(NULL == m_part_constraint);
+		GPOS_ASSERT(nullptr == m_part_constraint);
 
 		const XMLCh *xmlszDefParts =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenDefaultPartition));
-		if (NULL != xmlszDefParts)
+		if (nullptr != xmlszDefParts)
 		{
 			m_level_with_default_part_array =
 				CDXLOperatorFactory::ExtractIntsToUlongArray(
@@ -109,7 +109,7 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 	}
 
 	// new index object
-	GPOS_ASSERT(NULL == m_mdid);
+	GPOS_ASSERT(nullptr == m_mdid);
 
 	// parse mdid
 	m_mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -134,7 +134,7 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 	m_index_type = CDXLOperatorFactory::ParseIndexType(attrs);
 	const XMLCh *xmlszItemType =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenIndexItemType));
-	if (NULL != xmlszItemType)
+	if (nullptr != xmlszItemType)
 	{
 		m_mdid_item_type = CDXLOperatorFactory::MakeMdIdFromStr(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszItemType,

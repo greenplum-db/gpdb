@@ -65,7 +65,7 @@ CMiniDumperTest::EresUnittest_Basic()
 
 	GPOS_TRY
 	{
-		(void) PvRaise(NULL);
+		(void) PvRaise(nullptr);
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -99,9 +99,9 @@ CMiniDumperTest::PvRaise(void *	 // pv
 	clib::USleep(1000);
 
 	// raise exception to trigger minidump
-	GPOS_OOM_CHECK(NULL);
+	GPOS_OOM_CHECK(nullptr);
 
-	return NULL;
+	return nullptr;
 }
 
 

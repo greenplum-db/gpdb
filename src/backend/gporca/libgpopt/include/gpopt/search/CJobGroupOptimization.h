@@ -161,7 +161,7 @@ public:
 	static CJobGroupOptimization *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupOptimization == pj->Ejt());
 
 		return dynamic_cast<CJobGroupOptimization *>(pj);

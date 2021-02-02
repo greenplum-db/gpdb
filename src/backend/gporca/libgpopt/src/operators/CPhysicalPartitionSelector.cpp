@@ -48,12 +48,12 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 {
 	GPOS_ASSERT(0 < scan_id);
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != pdrgpdrgpcr);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcr);
 	GPOS_ASSERT(0 < pdrgpdrgpcr->Size());
-	GPOS_ASSERT(NULL != ppartcnstrmap);
-	GPOS_ASSERT(NULL != ppartcnstr);
-	GPOS_ASSERT(NULL != phmulexprEqPredicates);
-	GPOS_ASSERT(NULL != phmulexprPredicates);
+	GPOS_ASSERT(nullptr != ppartcnstrmap);
+	GPOS_ASSERT(nullptr != ppartcnstr);
+	GPOS_ASSERT(nullptr != phmulexprEqPredicates);
+	GPOS_ASSERT(nullptr != phmulexprPredicates);
 
 	m_pexprCombinedPredicate = PexprCombinedPartPred(mp);
 }
@@ -71,16 +71,16 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	: CPhysical(mp),
 	  m_scan_id(0),
 	  m_mdid(mdid),
-	  m_pdrgpdrgpcr(NULL),
-	  m_ppartcnstrmap(NULL),
-	  m_part_constraint(NULL),
+	  m_pdrgpdrgpcr(nullptr),
+	  m_ppartcnstrmap(nullptr),
+	  m_part_constraint(nullptr),
 	  m_phmulexprEqPredicates(phmulexprEqPredicates),
-	  m_phmulexprPredicates(NULL),
-	  m_pexprResidual(NULL),
-	  m_pexprCombinedPredicate(NULL)
+	  m_phmulexprPredicates(nullptr),
+	  m_pexprResidual(nullptr),
+	  m_pexprCombinedPredicate(nullptr)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != phmulexprEqPredicates);
+	GPOS_ASSERT(nullptr != phmulexprEqPredicates);
 
 	m_phmulexprPredicates = GPOS_NEW(mp) UlongToExprMap(mp);
 	m_pexprCombinedPredicate = PexprCombinedPartPred(mp);
@@ -118,8 +118,8 @@ BOOL
 CPhysicalPartitionSelector::FMatchExprMaps(UlongToExprMap *phmulexprFst,
 										   UlongToExprMap *phmulexprSnd)
 {
-	GPOS_ASSERT(NULL != phmulexprFst);
-	GPOS_ASSERT(NULL != phmulexprSnd);
+	GPOS_ASSERT(nullptr != phmulexprFst);
+	GPOS_ASSERT(nullptr != phmulexprSnd);
 
 	const ULONG ulEntries = phmulexprFst->Size();
 	if (ulEntries != phmulexprSnd->Size())
@@ -155,9 +155,9 @@ BOOL
 CPhysicalPartitionSelector::FMatchPartCnstr(
 	UlongToPartConstraintMap *ppartcnstrmap) const
 {
-	if (NULL == m_ppartcnstrmap || NULL == ppartcnstrmap)
+	if (nullptr == m_ppartcnstrmap || nullptr == ppartcnstrmap)
 	{
-		return NULL == m_ppartcnstrmap && NULL == ppartcnstrmap;
+		return nullptr == m_ppartcnstrmap && nullptr == ppartcnstrmap;
 	}
 
 	return m_ppartcnstrmap->Size() == ppartcnstrmap->Size() &&
@@ -177,8 +177,8 @@ CPhysicalPartitionSelector::FSubsetPartCnstr(
 	UlongToPartConstraintMap *ppartcnstrmapFst,
 	UlongToPartConstraintMap *ppartcnstrmapSnd)
 {
-	GPOS_ASSERT(NULL != ppartcnstrmapFst);
-	GPOS_ASSERT(NULL != ppartcnstrmapSnd);
+	GPOS_ASSERT(nullptr != ppartcnstrmapFst);
+	GPOS_ASSERT(nullptr != ppartcnstrmapSnd);
 	if (ppartcnstrmapFst->Size() > ppartcnstrmapSnd->Size())
 	{
 		return false;
@@ -191,7 +191,7 @@ CPhysicalPartitionSelector::FSubsetPartCnstr(
 		ULONG ulKey = *(partcnstriter.Key());
 		CPartConstraint *ppartcnstr = ppartcnstrmapSnd->Find(&ulKey);
 
-		if (NULL == ppartcnstr ||
+		if (nullptr == ppartcnstr ||
 			!partcnstriter.Value()->FEquivalent(ppartcnstr))
 		{
 			return false;
@@ -212,7 +212,7 @@ CPhysicalPartitionSelector::FSubsetPartCnstr(
 BOOL
 CPhysicalPartitionSelector::FHasFilter() const
 {
-	return (NULL != m_pexprResidual || 0 < m_phmulexprEqPredicates->Size() ||
+	return (nullptr != m_pexprResidual || 0 < m_phmulexprEqPredicates->Size() ||
 			0 < m_phmulexprPredicates->Size());
 }
 
@@ -311,13 +311,13 @@ CPhysicalPartitionSelector::PexprPartPred(CMemoryPool *mp,
 	GPOS_ASSERT(ulPartLevel < UlPartLevels());
 
 	CExpression *pexpr = PexprEqFilter(ulPartLevel);
-	if (NULL != pexpr)
+	if (nullptr != pexpr)
 	{
 		// we have one side of an equality predicate - need to construct the
 		// whole predicate
-		GPOS_ASSERT(NULL == m_phmulexprPredicates->Find(&ulPartLevel));
+		GPOS_ASSERT(nullptr == m_phmulexprPredicates->Find(&ulPartLevel));
 		pexpr->AddRef();
-		if (NULL != m_pdrgpdrgpcr)
+		if (nullptr != m_pdrgpdrgpcr)
 		{
 			CColRef *pcrPartKey = (*(*m_pdrgpdrgpcr)[ulPartLevel])[0];
 			return CUtils::PexprScalarEqCmp(mp, pcrPartKey, pexpr);
@@ -329,7 +329,7 @@ CPhysicalPartitionSelector::PexprPartPred(CMemoryPool *mp,
 	}
 
 	pexpr = m_phmulexprPredicates->Find(&ulPartLevel);
-	if (NULL != pexpr)
+	if (nullptr != pexpr)
 	{
 		pexpr->AddRef();
 	}
@@ -354,13 +354,13 @@ CPhysicalPartitionSelector::PexprCombinedPartPred(CMemoryPool *mp) const
 	for (ULONG ul = 0; ul < ulLevels; ul++)
 	{
 		CExpression *pexpr = PexprPartPred(mp, ul);
-		if (NULL != pexpr)
+		if (nullptr != pexpr)
 		{
 			pdrgpexpr->Append(pexpr);
 		}
 	}
 
-	if (NULL != m_pexprResidual)
+	if (nullptr != m_pexprResidual)
 	{
 		m_pexprResidual->AddRef();
 		pdrgpexpr->Append(m_pexprResidual);
@@ -380,7 +380,7 @@ CPhysicalPartitionSelector::PexprCombinedPartPred(CMemoryPool *mp) const
 ULONG
 CPhysicalPartitionSelector::UlPartLevels() const
 {
-	if (NULL != m_pdrgpdrgpcr)
+	if (nullptr != m_pdrgpdrgpcr)
 	{
 		return m_pdrgpdrgpcr->Size();
 	}

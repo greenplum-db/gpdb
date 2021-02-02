@@ -40,12 +40,12 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalDynamicGetBase::CLogicalDynamicGetBase(CMemoryPool *mp)
 	: CLogical(mp),
-	  m_pnameAlias(NULL),
-	  m_ptabdesc(NULL),
+	  m_pnameAlias(nullptr),
+	  m_ptabdesc(nullptr),
 	  m_scan_id(0),
-	  m_pdrgpcrOutput(NULL),
-	  m_pdrgpdrgpcrPart(NULL),
-	  m_pcrsDist(NULL)
+	  m_pdrgpcrOutput(nullptr),
+	  m_pdrgpdrgpcrPart(nullptr),
+	  m_pcrsDist(nullptr)
 {
 	m_fPattern = true;
 }
@@ -68,12 +68,12 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(
 	  m_scan_id(scan_id),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pdrgpdrgpcrPart(pdrgpdrgpcrPart),
-	  m_pcrsDist(NULL)
+	  m_pcrsDist(nullptr)
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pnameAlias);
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
-	GPOS_ASSERT(NULL != pdrgpdrgpcrPart);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pnameAlias);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcrPart);
 
 	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
 }
@@ -95,11 +95,11 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(CMemoryPool *mp,
 	  m_pnameAlias(pnameAlias),
 	  m_ptabdesc(ptabdesc),
 	  m_scan_id(scan_id),
-	  m_pdrgpcrOutput(NULL),
-	  m_pcrsDist(NULL)
+	  m_pdrgpcrOutput(nullptr),
+	  m_pcrsDist(nullptr)
 {
-	GPOS_ASSERT(NULL != ptabdesc);
-	GPOS_ASSERT(NULL != pnameAlias);
+	GPOS_ASSERT(nullptr != ptabdesc);
+	GPOS_ASSERT(nullptr != pnameAlias);
 
 	// generate a default column set for the table descriptor
 	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(),
@@ -219,9 +219,9 @@ CLogicalDynamicGetBase::PstatsDeriveFilter(CMemoryPool *mp,
 										   CExpressionHandle &exprhdl,
 										   CExpression *pexprFilter) const
 {
-	CExpression *pexprFilterNew = NULL;
+	CExpression *pexprFilterNew = nullptr;
 
-	if (NULL != pexprFilter)
+	if (nullptr != pexprFilter)
 	{
 		pexprFilterNew = pexprFilter;
 		pexprFilterNew->AddRef();
@@ -229,13 +229,13 @@ CLogicalDynamicGetBase::PstatsDeriveFilter(CMemoryPool *mp,
 
 	CColRefSet *pcrsStat = GPOS_NEW(mp) CColRefSet(mp);
 
-	if (NULL != pexprFilterNew)
+	if (nullptr != pexprFilterNew)
 	{
 		pcrsStat->Include(pexprFilterNew->DeriveUsedColumns());
 	}
 
 	// requesting statistics on distribution columns to estimate data skew
-	if (NULL != m_pcrsDist)
+	if (nullptr != m_pcrsDist)
 	{
 		pcrsStat->Include(m_pcrsDist);
 	}
@@ -246,13 +246,13 @@ CLogicalDynamicGetBase::PstatsDeriveFilter(CMemoryPool *mp,
 
 	pcrsStat->Release();
 
-	if (NULL == pexprFilterNew || pexprFilterNew->DeriveHasSubquery())
+	if (nullptr == pexprFilterNew || pexprFilterNew->DeriveHasSubquery())
 	{
 		return pstatsFullTable;
 	}
 
 	CStatsPred *pred_stats = CStatsPredUtils::ExtractPredStats(
-		mp, pexprFilterNew, NULL /*outer_refs*/
+		mp, pexprFilterNew, nullptr /*outer_refs*/
 	);
 	pexprFilterNew->Release();
 

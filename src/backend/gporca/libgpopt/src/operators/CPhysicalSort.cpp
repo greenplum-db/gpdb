@@ -31,9 +31,9 @@ using namespace gpopt;
 CPhysicalSort::CPhysicalSort(CMemoryPool *mp, COrderSpec *pos)
 	: CPhysical(mp),
 	  m_pos(pos),  // caller must add-ref pos
-	  m_pcrsSort(NULL)
+	  m_pcrsSort(nullptr)
 {
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pos);
 
 	m_pcrsSort = Pos()->PcrsUsed(mp);
 }
@@ -302,7 +302,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalSort::EpetOrder(CExpressionHandle &,  // exprhdl
 						 const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	if (peo->FCompatible(m_pos))
@@ -333,7 +333,7 @@ CPhysicalSort::EpetDistribution(CExpressionHandle & /*exprhdl*/,
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// distribution enforcers have already been added
 	return CEnfdProp::EpetUnnecessary;

@@ -60,8 +60,8 @@ public:
 			  m_str_value(str_value),
 			  m_is_null(is_null)
 		{
-			GPOS_ASSERT(NULL != str_name);
-			GPOS_ASSERT(NULL != str_value);
+			GPOS_ASSERT(nullptr != str_name);
+			GPOS_ASSERT(nullptr != str_value);
 		}
 
 		// dtor

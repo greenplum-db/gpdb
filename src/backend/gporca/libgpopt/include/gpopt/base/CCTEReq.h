@@ -165,7 +165,7 @@ public:
 	BOOL
 	Equals(const CCTEReq *pcter) const
 	{
-		GPOS_ASSERT(NULL != pcter);
+		GPOS_ASSERT(nullptr != pcter);
 		return (m_phmcter->Size() == pcter->m_phmcter->Size()) &&
 			   this->FSubset(pcter);
 	}

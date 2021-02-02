@@ -88,7 +88,7 @@ CParseHandlerFilter::StartElement(const XMLCh *const element_uri,
 	}
 	else
 	{
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		// install a scalar element parser for parsing the condition element
 		CParseHandlerBase *op_parse_handler =

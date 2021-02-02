@@ -50,7 +50,7 @@ CJoinCardinalityTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	eres = CUnittest::EresExecute(rgutSharedOptCtxt,
@@ -229,13 +229,13 @@ CJoinCardinalityTest::EresUnittest_Join()
 	for (ULONG ul = 0; ul < cols->Size(); ul++)
 	{
 		ULONG id = *((*cols)[ul]);
-		if (NULL == col_factory->LookupColRef(id))
+		if (nullptr == col_factory->LookupColRef(id))
 		{
 			// for this test the col name doesn't matter
 			CWStringConst str(GPOS_WSZ_LIT("col"));
 			// create column references for grouping columns
 			(void) col_factory->PcrCreate(
-				pmdtypeint4, default_type_modifier, NULL, ul /* attno */,
+				pmdtypeint4, default_type_modifier, nullptr, ul /* attno */,
 				false /*IsNullable*/, id, CName(&str), false /*IsDistCol*/, 0);
 		}
 	}
@@ -255,13 +255,13 @@ CJoinCardinalityTest::EresUnittest_Join()
 
 		// parse the input statistics objects
 		CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, nullptr);
 		CStatisticsArray *pdrgpstatBefore =
 			CDXLUtils::ParseDXLToOptimizerStatisticObjArray(
 				mp, md_accessor, dxl_derived_rel_stats_array);
 		dxl_derived_rel_stats_array->Release();
 
-		GPOS_ASSERT(NULL != pdrgpstatBefore);
+		GPOS_ASSERT(nullptr != pdrgpstatBefore);
 		GPOS_ASSERT(2 == pdrgpstatBefore->Size());
 		CStatistics *pstats1 = (*pdrgpstatBefore)[0];
 		CStatistics *pstats2 = (*pdrgpstatBefore)[1];
@@ -270,11 +270,11 @@ CJoinCardinalityTest::EresUnittest_Join()
 
 		// generate the join conditions
 		FnPdrgpstatjoin *pf = elem.m_pf;
-		GPOS_ASSERT(NULL != pf);
+		GPOS_ASSERT(nullptr != pf);
 		CStatsPredJoinArray *join_preds_stats = pf(mp);
 
 		// calculate the output stats
-		CStatistics *pstatsOutput = NULL;
+		CStatistics *pstatsOutput = nullptr;
 		if (left_outer_join)
 		{
 			pstatsOutput =
@@ -285,7 +285,7 @@ CJoinCardinalityTest::EresUnittest_Join()
 			pstatsOutput =
 				pstats1->CalcInnerJoinStats(mp, pstats2, join_preds_stats);
 		}
-		GPOS_ASSERT(NULL != pstatsOutput);
+		GPOS_ASSERT(nullptr != pstatsOutput);
 
 		CStatisticsArray *pdrgpstatOutput = GPOS_NEW(mp) CStatisticsArray(mp);
 		pdrgpstatOutput->Append(pstatsOutput);

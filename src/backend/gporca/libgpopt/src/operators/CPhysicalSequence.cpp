@@ -31,7 +31,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalSequence::CPhysicalSequence(CMemoryPool *mp)
-	: CPhysical(mp), m_pcrsEmpty(NULL)
+	: CPhysical(mp), m_pcrsEmpty(nullptr)
 {
 	// Sequence generates two distribution requests for its children:
 	// (1) If incoming distribution from above is Singleton, pass it through
@@ -123,7 +123,7 @@ CPhysicalSequence::PcteRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								ULONG  //ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcter);
+	GPOS_ASSERT(nullptr != pcter);
 	if (child_index < exprhdl.Arity() - 1)
 	{
 		return pcter->PcterAllOptional(mp);
@@ -154,7 +154,7 @@ CPhysicalSequence::FProvidesReqdCols(CExpressionHandle &exprhdl,
 									 ULONG	// ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 
 	// last child must provide required columns
 	ULONG arity = exprhdl.Arity();
@@ -373,7 +373,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalSequence::EpetOrder(CExpressionHandle &exprhdl,
 							 const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 
 	// get order delivered by the sequence node
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();

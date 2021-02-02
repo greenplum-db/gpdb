@@ -245,7 +245,7 @@ public:
 	static CLogicalDML *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDML == pop->Eopid());
 
 		return dynamic_cast<CLogicalDML *>(pop);

@@ -20,7 +20,7 @@ private:
 	CAutoRg<CHAR> m_szDXL;
 
 public:
-	Fixture() : m_amp(), m_szDXL(NULL)
+	Fixture() : m_amp(), m_szDXL(nullptr)
 	{
 	}
 
@@ -39,7 +39,7 @@ public:
 		}
 		else
 		{
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -59,8 +59,8 @@ static void
 SerializeOptimizerConfig(CMemoryPool *mp, COptimizerConfig *optimizer_config,
 						 COstream &oos, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != optimizer_config);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != optimizer_config);
 
 	CXMLSerializer xml_serializer(mp, oos, indentation);
 
@@ -105,7 +105,7 @@ CParseHandlerOptimizerConfigSerializeTest::EresUnittest()
 	COptimizerConfig *poc =
 		CDXLUtils::ParseDXLToOptimizerConfig(mp, dxl_string, szValidationPath);
 
-	GPOS_ASSERT(NULL != poc);
+	GPOS_ASSERT(nullptr != poc);
 
 	GPOS_CHECK_ABORT;
 

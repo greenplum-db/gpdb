@@ -40,9 +40,9 @@ CParseHandlerMDGPDBCheckConstraint::CParseHandlerMDGPDBCheckConstraint(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname(NULL),
-	  m_rel_mdid(NULL)
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
+	  m_rel_mdid(nullptr)
 {
 }
 
@@ -72,7 +72,7 @@ CParseHandlerMDGPDBCheckConstraint::StartElement(
 	}
 
 	// new md object
-	GPOS_ASSERT(NULL == m_mdid);
+	GPOS_ASSERT(nullptr == m_mdid);
 
 	// parse mdid
 	m_mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -135,7 +135,7 @@ CParseHandlerMDGPDBCheckConstraint::EndElement(
 		dynamic_cast<CParseHandlerScalarOp *>((*this)[0]);
 
 	CDXLNode *dxlnode_scalar_expr = op_parse_handler->CreateDXLNode();
-	GPOS_ASSERT(NULL != dxlnode_scalar_expr);
+	GPOS_ASSERT(nullptr != dxlnode_scalar_expr);
 	dxlnode_scalar_expr->AddRef();
 
 	m_imd_obj = GPOS_NEW(m_mp) CMDCheckConstraintGPDB(
