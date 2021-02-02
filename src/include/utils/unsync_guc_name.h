@@ -342,7 +342,6 @@
 		"old_snapshot_threshold",
 		"operator_precedence_warning",
 		"optimizer",
-		"optimizer_analyze_enable_merge_of_leaf_stats",
 		"optimizer_analyze_midlevel_partition",
 		"optimizer_analyze_root_partition",
 		"optimizer_apply_left_outer_to_union_all_disregarding_stats",

@@ -43,7 +43,7 @@ EXECNAME = 'analyzedb'
 STATEFILE_DIR = 'db_analyze'
 logger = gplog.get_default_logger()
 WRITE_LOCK_FILE_NAME = "write_lock_semaphore"
-ANALYZE_GUCS = "set optimizer_analyze_enable_merge_of_leaf_stats=off; "
+ANALYZE_GUCS = "set optimizer_analyze_root_partition=off; "
 ANALYZE_SQL = """analyze %s"""
 ANALYZE_ROOT_SQL = """analyze rootpartition %s"""
 

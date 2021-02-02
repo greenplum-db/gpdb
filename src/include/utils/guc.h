@@ -567,7 +567,6 @@ extern bool optimizer_enable_range_predicate_dpe;
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;
 extern bool optimizer_analyze_midlevel_partition;
-extern bool optimizer_analyze_enable_merge_of_leaf_stats;
 
 extern bool optimizer_use_gpdb_allocators;
 
