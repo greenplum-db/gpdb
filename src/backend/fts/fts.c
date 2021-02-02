@@ -69,7 +69,7 @@ static volatile sig_atomic_t got_SIGHUP = false;
  */
 static void FtsLoop(void);
 
-static CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext);
+static CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(void);
 
 /*=========================================================================
  * HELPER FUNCTIONS
@@ -135,12 +135,11 @@ FtsProbeMain(Datum main_arg)
 }
 
 /*
- * Populate cdb_component_dbs object by reading from catalog.  Use
- * probeContext instead of current memory context because current
- * context will be destroyed by CommitTransactionCommand().
+ * Populate cdb_component_dbs object by reading from catalog.
+ * Internally, the object is allocated in CdbComponentsContext.
  */
 static
-CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
+CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(void)
 {
 	int i;
 	CdbComponentDatabases *cdbs = cdbcomponent_getCdbComponents();
@@ -306,7 +305,7 @@ void FtsLoop()
 		/* Need a transaction to access the catalogs */
 		StartTransactionCommand();
 
-		cdbs = readCdbComponentInfoAndUpdateStatus(probeContext);
+		cdbs = readCdbComponentInfoAndUpdateStatus();
 
 		/* Check here gp_segment_configuration if has mirror's */
 		has_mirrors = gp_segment_config_has_mirrors();
@@ -356,7 +355,7 @@ void FtsLoop()
 				/*
 				 * File GPSEGCONFIGDUMPFILE under $PGDATA is used by other
 				 * components to fetch latest gp_segment_configuration outside
-				 * of a transaction. FTS update this file in the first probe
+				 * of a transaction. FTS updates this file in the first probe
 				 * and every probe which updated gp_segment_configuration.
 				 */
 				StartTransactionCommand();
@@ -389,7 +388,7 @@ void FtsLoop()
 		 * MyLatch also in SyncRepWaitForLSN(). The set latch introduced by
 		 * outside fts probe trigger (e.g. gp_request_fts_probe_scan() or
 		 * FtsNotifyProber()) might be consumed by it so we do not WaitLatch()
-		 * here with a long timout here else we may block for that long
+		 * here with a long timeout here else we may block for that long
 		 * timeout, so we recheck probe_requested here before waitLatch().
 		 */
 		if (probe_requested)

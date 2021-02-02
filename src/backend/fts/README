@@ -6,10 +6,9 @@ This document illustrates the mechanism of a GPDB component called
 Fault Tolerance Service (FTS):
 
  - This sections explains how FTS probe process is started. The FTS
-   probe process is running on the Gp_entry_postmaster (master node)
-   only. It starts as a background worker process managed by the
-   BackgroundWorker structure. (see
-   src/include/postmaster/bgworker.h).  Greenplum sets up a group of
+   probe process is running on the master node only. It starts as a
+   background worker process managed by the BackgroundWorker structure
+   (see src/include/postmaster/bgworker.h).  Greenplum sets up a group of
    GP background processes through an array structure PMAuxProcList. A
    entry in that struct represents a GP background process.
 
@@ -22,11 +21,13 @@ Fault Tolerance Service (FTS):
 
       static BackgroundWorker PMAuxProcList[MaxPMAuxProc]
 
-   In Postmaster, we will check the following condition:
+   FtsProbeStartRule() function specifies the following condition under
+   which the FTS probe process should be started by postmaster:
 
-      Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH
+      Gp_role == GP_ROLE_DISPATCH
 
-   The FTS probe process is started when the condition is true.
+   That is, the FTS probe process should only be started on the master
+   node in normal cluster mode.
 
    In the initialization phase, we register one BackgroundWorker entry
    for each GP background process into postmaster's private structure

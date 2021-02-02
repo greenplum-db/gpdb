@@ -35,7 +35,7 @@
  * Check if we can smoothly read and write to data directory.
  *
  * O_DIRECT flag requires buffer to be OS/FS block aligned.
- * Best to have it IO Block alligned henece using BLCKSZ
+ * Best to have it IO Block aligned hence using BLCKSZ
  */
 static bool
 checkIODataDirectory(void)
@@ -46,7 +46,7 @@ checkIODataDirectory(void)
 	char *data = palloc0(size);
 
 	/*
-	 * Buffer needs to be alligned to BLOCK_SIZE for reads and writes if using O_DIRECT
+	 * Buffer needs to be aligned to BLOCK_SIZE for reads and writes if using O_DIRECT
 	 */
 	char* dataAligned = (char *) TYPEALIGN(BLCKSZ, data);
 
