@@ -318,6 +318,11 @@ external_rescan(FileScanDesc scan)
 
 	/* The first call to external_getnext will re-open the scan */
 
+	if (!scan->fs_pstate)
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("The file parse state of external scan is invalid")));
+
 	/* reset some parse state variables */
 	scan->fs_pstate->reached_eof = false;
 	scan->fs_pstate->cur_lineno = 0;
