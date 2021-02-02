@@ -392,14 +392,25 @@ add_orca_test(CMinidumpWithConstExprEvaluatorTest)
 add_orca_test(CParseHandlerManagerTest)
 add_orca_test(CParseHandlerTest)
 add_orca_test(CParseHandlerCostModelTest)
-add_orca_test(CParseHandlerOptimizerConfigTest)
+# FIXME: this following test was first introduced (but as a typo) in
+# greenplum-db/gporca#355. I've corrected the typo but it's not clear whether
+# it ever passed, but we should give it a best-effort resurrection.
+if (FALSE)
+add_orca_test(CParseHandlerOptimizerConfigSerializeTest)
+endif()
 add_orca_test(CStatisticsTest)
 add_orca_test(CPointTest)
 add_orca_test(CBucketTest)
 add_orca_test(CHistogramTest)
 add_orca_test(CMCVTest)
 add_orca_test(CJoinCardinalityTest)
+# FIXME: the following test was first introduced in greenplum-db/gporca#360,
+# reverted in greenplum-db/gporca#442, and re-added in
+# greenplum-db/gporca#506 (NOT! because only the CMakeLists.txt part was
+# added back). Resurrect this.
+if (FALSE)
 add_orca_test(CJoinCardinalityNDVBasedEqPredTest)
+endif()
 add_orca_test(CFilterCardinalityTest)
 add_orca_test(CTranslatorDXLToExprTest)
 add_orca_test(CTranslatorExprToDXLTest)
