@@ -1,5 +1,12 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,-*,modernize-use-override,modernize-use-equals-default,modernize-use-equals-delete'
+Checks: |
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  -*,
+  modernize-use-override,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+
 WarningsAsErrors: '*'
 HeaderFilterRegex: 'gpdbcost|gpopt|gpos|naucrates'
 AnalyzeTemporaryDtors: false
