@@ -925,7 +925,6 @@ updateConfiguration(CdbComponentDatabaseInfo *primary,
 		 * dispatcher, now that changes has been persisted to catalog.
 		 */
 		Assert(ftsProbeInfo);
-		ftsLock();
 		if (IsPrimaryAlive)
 			FTS_STATUS_SET_UP(ftsProbeInfo->status[primary->config->dbid]);
 		else
@@ -935,7 +934,6 @@ updateConfiguration(CdbComponentDatabaseInfo *primary,
 			FTS_STATUS_SET_UP(ftsProbeInfo->status[mirror->config->dbid]);
 		else
 			FTS_STATUS_SET_DOWN(ftsProbeInfo->status[mirror->config->dbid]);
-		ftsUnlock();
 	}
 
 	return UpdateNeeded;
