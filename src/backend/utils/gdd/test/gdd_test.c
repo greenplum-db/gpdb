@@ -227,7 +227,7 @@ static void
 test_reduce_large_graph_pair_deadlocks(void **state)
 {
 	const int num_transactions = 200;
-	TestWaitRelation wait_relations[num_transactions];
+	TestWaitRelation *wait_relations = palloc(num_transactions * sizeof(TestWaitRelation));
 	int i;
 
 	/*
@@ -300,6 +300,7 @@ test_reduce_large_graph_pair_deadlocks(void **state)
 
 	MemoryContextSwitchTo(oldContext);
 	MemoryContextReset(gddContext);
+	pfree(wait_relations);
 
 	assert_int_equal(indeg_count, num_transactions);
 	assert_int_equal(outdeg_count, num_transactions);
@@ -321,7 +322,7 @@ static void
 test_reduce_large_graph_no_deadlock1(void **state)
 {
 	const int num_transactions = 200;
-	TestWaitRelation wait_relations[num_transactions];
+	TestWaitRelation *wait_relations = palloc(num_transactions * sizeof(TestWaitRelation));
 	int i;
 
 	/*
@@ -414,7 +415,7 @@ static void
 test_reduce_large_graph_single_deadlock(void **state)
 {
 	const int num_transactions = 100;
-	TestWaitRelation wait_relations[num_transactions+1];
+	TestWaitRelation *wait_relations = palloc((num_transactions + 1) * sizeof(TestWaitRelation));
 	int i;
 
 	/*
@@ -470,6 +471,7 @@ test_reduce_large_graph_single_deadlock(void **state)
 
 	MemoryContextSwitchTo(oldContext);
 	MemoryContextReset(gddContext);
+	pfree(wait_relations);
 
 	assert_int_equal(indeg_count, num_transactions);
 	assert_int_equal(outdeg_count, num_transactions);
@@ -492,7 +494,7 @@ static void
 test_reduce_large_graph_no_deadlock2(void **state)
 {
 	const int num_transactions = 100;
-	TestWaitRelation wait_relations[num_transactions+1];
+	TestWaitRelation *wait_relations = palloc((num_transactions + 1) * sizeof(TestWaitRelation));
 	int i;
 
 	/*
@@ -549,6 +551,7 @@ test_reduce_large_graph_no_deadlock2(void **state)
 
 	MemoryContextSwitchTo(oldContext);
 	MemoryContextReset(gddContext);
+	pfree(wait_relations);
 
 	assert_true(is_empty);
 }
