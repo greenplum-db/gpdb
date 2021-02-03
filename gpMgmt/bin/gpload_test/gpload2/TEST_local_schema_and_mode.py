@@ -795,3 +795,37 @@ def test_542_gpload_yaml_mapping_target_special_char():
                 table="match_column_special_char",
                 file="data/two_col_one_row.txt")
         append_gpload_cmd(test_num, config_path)
+
+
+@TestBase.prepare_before_test(num=543, times=1)
+def test_543_gpload_mode_merge_insert_with_update_condition():
+    """543 test gpload works in merge mode and do insert with update_condation
+    same time"""
+    TestBase.psql_run(cmd='TRUNCATE TABLE texttable', dbname='reuse_gptest')
+    TestBase.write_config_file(mode='insert')
+    TestBase.write_config_file(
+            mode='merge', config='config/config_file2',
+            file='data/external_file_543.txt', null_as='NUL',
+            update_condition="n7 > 123")
+    f = open(TestBase.mkpath('query543.sql'), 'w')
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file') + "\n")
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file2') + "\n")
+    f.write("\\! psql -d reuse_gptest -c 'select * from texttable order by s1, s2, n1;'")
+    f.close()
+
+
+@TestBase.prepare_before_test(num=544, times=1)
+def test_544_gpload_mode_merge_update_with_update_condition():
+    """544 test gpload works in merge mode and do insert with update_condation
+    same time"""
+    TestBase.psql_run(cmd='TRUNCATE TABLE texttable', dbname='reuse_gptest')
+    TestBase.write_config_file(mode='insert', file='data/external_file_543.txt')
+    TestBase.write_config_file(
+            mode='merge', config='config/config_file2',
+            file='data/external_file_544.txt', null_as='NUL',
+            update_condition="n7 > 123")
+    f = open(TestBase.mkpath('query544.sql'), 'w')
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file') + "\n")
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file2') + "\n")
+    f.write("\\! psql -d reuse_gptest -c 'select * from texttable order by s1, s2, n1;'")
+    f.close()
