@@ -1151,7 +1151,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -i"
 		NOLINE_ECHO="$ECHO -e"
-		DEFAULT_LOCALE_SETTING=`locale -a | grep -i en_US.utf*8 | head -1`
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
@@ -1163,7 +1162,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO=$ECHO
-		DEFAULT_LOCALE_SETTING=en_US.utf-8
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
@@ -1173,7 +1171,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO="$ECHO -e"
-		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		;;
 	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
@@ -1182,7 +1179,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO="echo -e"
-		DEFAULT_LOCALE_SETTING=en_US.UTF-8
 		PING_TIME="-c 1"
 		DF="df -P"
 		;;

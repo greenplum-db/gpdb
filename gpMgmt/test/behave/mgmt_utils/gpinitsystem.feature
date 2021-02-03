@@ -130,11 +130,7 @@ Feature: gpinitsystem tests
         Given the database is not running
         And "TZ" environment variable is not set
         And the system timezone is saved
-        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
-        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
-        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        When a demo cluster is created using gpinitsystem args " "
         And gpinitsystem should return a return code of 0
         Then the database timezone is saved
         And the database timezone matches the system timezone
@@ -144,11 +140,7 @@ Feature: gpinitsystem tests
     Scenario: gpinitsystem creates a cluster using TZ
         Given the database is not running
         And the environment variable "TZ" is set to "US/Hawaii"
-        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
-        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
-        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        When a demo cluster is created using gpinitsystem args " "
         And gpinitsystem should return a return code of 0
         Then the database timezone is saved
         And the database timezone matches "HST"
@@ -195,3 +187,33 @@ Feature: gpinitsystem tests
         Then gpinitsystem should return a return code of 0
         # the log file must have the entry indicating that DCA specific configuration has been set
         And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
+
+    Scenario: gpinitsystem uses the system locale if no locale is specified
+        Given the database is not running
+        And "LC_COLLATE" environment variable is not set
+        And "LC_CTYPE" environment variable is not set
+        And the system locale is saved
+        When a demo cluster is created using gpinitsystem args " "
+        And gpinitsystem should return a return code of 0
+        Then the database locales are saved
+        And the database locales "lc_collate,lc_ctype,lc_messages,lc_monetary,lc_numeric,lc_time" match the system locale
+
+    Scenario: gpinitsystem uses a single locale if one is specified
+        Given the database is not running
+        And the system locale is saved
+        When a demo cluster is created using gpinitsystem args "--locale=C"
+        And gpinitsystem should return a return code of 0
+        Then the database locales are saved
+        And the database locales "lc_collate,lc_ctype,lc_messages,lc_monetary,lc_numeric,lc_time" match the locale "C"
+
+    Scenario: gpinitsystem uses multiple locales if multiple are specified
+        Given the database is not running
+        And the environment variable "LC_COLLATE" is set to "C"
+        And the environment variable "LC_CTYPE" is set to "C"
+        And the system locale is saved
+        When a demo cluster is created using the installed UTF locale
+        And gpinitsystem should return a return code of 0
+        Then the database locales are saved
+        And the database locales "lc_collate" match the locale "C"
+        And the database locales "lc_ctype" match the installed UTF locale
+        And the database locales "lc_messages,lc_monetary,lc_numeric,lc_time" match the system locale

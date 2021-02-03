@@ -2961,7 +2961,6 @@ def impl(context, including):
         if not are_on_different_subnets(segPair.primaryDB.hostname, segPair.mirrorDB.hostname):
             raise Exception("segmentPair on same subnet: %s" % segPair)
 
-
 @then('content {content} is {desired_state}')
 def impl(context, content, desired_state):
     acceptable_states = ["balanced", "unbalanced"]
@@ -2975,3 +2974,64 @@ def impl(context, content, desired_state):
 
     if len(rows) == 0:
         raise Exception("Expected content %s to be %s." % (content, desired_state))
+
+@given('the system locale is saved')
+def impl(context):
+    if "LANG" in os.environ:
+        context.system_locale = os.environ["LANG"]
+        return
+
+    cmd = Command(name='Get system locale', cmdStr='locale -a | head -1')
+    cmd.run(validateAfter=True)
+    context.system_locale = cmd.get_stdout()
+
+@then('the database locales are saved')
+def impl(context):
+    with dbconn.connect(dbconn.DbURL()) as conn:
+        rows = dbconn.query(conn, "SELECT name, setting FROM pg_settings WHERE name LIKE 'lc_%'").fetchall()
+        context.database_locales = {row.name: row.setting for row in rows}
+
+def check_locales(database_locales, locale_names, expected):
+    locale_names = locale_names.split(',')
+    for name in locale_names:
+        if name not in database_locales:
+            raise Exception("Locale %s is invalid" % name)
+        locale = database_locales[name]
+        if locale != expected:
+            raise Exception("Expected %s to be %s, but it was %s" % (name, expected, locale))
+
+def get_en_utf_locale():
+    cmd = Command(name='Get installed US UTF locale', cmdStr='locale -a | grep -i "en[_-]..\.utf.*8" | head -1')
+    cmd.run(validateAfter=True)
+    locale = cmd.get_stdout()
+    if locale == "":
+        raise Exception("This test requires at least one English UTF-8 locale to be installed on this system")
+    return locale
+
+@then('the database locales "{locale_names}" match the locale "{expected}"')
+def step_impl(context, locale_names, expected):
+    check_locales(context.database_locales, locale_names, expected)
+
+@then('the database locales "{locale_names}" match the system locale')
+def step_impl(context, locale_names):
+    check_locales(context.database_locales, locale_names, context.system_locale)
+
+@then('the database locales "{locale_names}" match the installed UTF locale')
+def step_impl(context, locale_names):
+    locale = get_en_utf_locale()
+    check_locales(context.database_locales, locale_names, locale)
+
+@when('a demo cluster is created using gpinitsystem args "{args}"')
+def impl(context, args):
+    context.execute_steps('''
+    Given the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+      And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+      And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+      And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+     When the user runs "gpinitsystem -a %s -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+    ''' % args)
+
+@when('a demo cluster is created using the installed UTF locale')
+def impl(context):
+    locale = get_en_utf_locale()
+    context.execute_steps('''When a demo cluster is created using gpinitsystem args "--lc-ctype=%s"''' % locale)

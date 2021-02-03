@@ -144,7 +144,7 @@ USAGE () {
 		$ECHO "          provide either the -c <cluster_configuration_file> option or the -I"
 		$ECHO "          <input_configuration_file> option to gpinitsystem."
 		$ECHO "      -m, maximum number of connections for coordinator instance [default ${DEFAULT_QD_MAX_CONNECT}]"
-		$ECHO "      -n, <locale>, setting for locale to be set when database initialized [default $DEFAULT_LOCALE_SETTING]"
+		$ECHO "      -n, <locale>, setting for locale to be set when database initialized [defaults to system locale]"
 		$ECHO "      -O, <output_configuration_file>"
 		$ECHO "          When used with the -O option, gpinitsystem does not create a new Greenplum"
 		$ECHO "          Database cluster but instead writes the supplied cluster configuration"
@@ -193,6 +193,18 @@ CHK_OVERLAP() {
 	else
        return 1;
     fi
+}
+
+# Accept a list of variables and output the first one that has
+# a value, or an empty string if none are set.
+USE_FIRST_SET_ARG (){
+	for var in "$@"; do
+		if [ x"" != x"$var" ]; then
+			echo "$var"
+			return
+		fi
+	done
+	echo ""
 }
 
 CHK_PARAMS () {
@@ -291,10 +303,6 @@ CHK_PARAMS () {
 
 		if [ x"" == x"$LOCALE_SETTING" ];then
 			LOG_MSG "[INFO]:-Locale has not been set in $CLUSTER_CONFIG, will set to default value" 1
-			LOCALE_SETTING=$DEFAULT_LOCALE_SETTING
-			# Now check to see if the system has this locale available
-			CHK_LOCALE_KNOWN
-			LOG_MSG "[INFO]:-Locale set to $DEFAULT_LOCALE_SETTING" 1
 		else
 			LOG_MSG "[INFO]:-Locale set to $LOCALE_SETTING"
 			CHK_LOCALE_KNOWN
@@ -467,28 +475,37 @@ CHK_PARAMS () {
 			fi
 		fi
 		
-		# Validate that the different locale settings are available of the system
+		# Validate that the different locale settings are available on the system, first
+		# using passed locale arguments and then falling back to standard environment
+		# variables if necessary.
 		# Note: This check is performed on the coordinator only.  There is an assumption
 		# being made that the locales available on the coordinator are available on the
 		# segment hosts.
-		if [ x"" != x"$REQ_LOCALE_SETTING" ]; then
-			IN_ARRAY $REQ_LOCALE_SETTING "`locale -a`"
+		LOCALE_SETTING=$(USE_FIRST_SET_ARG $REQ_LOCALE_SETTING $LC_ALL)
+		if [ x"" != x"$LOCALE_SETTING" ]; then
+			IN_ARRAY $LOCALE_SETTING "`locale -a`"
 			if [ $? -eq 0 ]; then
-				ERROR_EXIT "[FATAL]-Value $REQ_LOCALE_SETTING is not a valid value for --locale on this system."
+				ERROR_EXIT "[FATAL]-Value $LOCALE_SETTING is not a valid value for --locale on this system."
 			fi
 		fi
+
+		LCCOLLATE=$(USE_FIRST_SET_ARG $LCCOLLATE $LC_COLLATE $LOCALE_SETTING)
 		if [ x"" != x"$LCCOLLATE" ]; then
 			IN_ARRAY $LCCOLLATE "`locale -a`"
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCCOLLATE is not a valid value for --lc-collate on this system."
 			fi	
 		fi
+
+		LCCTYPE=$(USE_FIRST_SET_ARG $LCCTYPE $LC_CTYPE $LOCALE_SETTING)
 		if [ x"" != x"$LCCTYPE" ]; then
 			IN_ARRAY $LCCTYPE "`locale -a`"
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCCTYPE is not a valid value for --lc-ctype on this system."
 			fi
 		fi
+
+		LCMESSAGES=$(USE_FIRST_SET_ARG $LCMESSAGES $LC_MESSAGES $LOCALE_SETTING)
 		if [ x"" != x"$LCMESSAGES" ]; then
 			IN_ARRAY $LCMESSAGES "`locale -a`"
 			if [ $? -eq 0 ]; then
@@ -496,6 +513,7 @@ CHK_PARAMS () {
 			fi
 		fi
 		
+		LCMONETARY=$(USE_FIRST_SET_ARG $LCMONETARY $LC_MONETARY $LOCALE_SETTING)
 		if [ x"" != x"$LCMONETARY" ]; then
 			IN_ARRAY $LCMONETARY "`locale -a`"
 			if [ $? -eq 0 ]; then
@@ -503,6 +521,7 @@ CHK_PARAMS () {
 			fi
 		fi
 		
+		LCNUMERIC=$(USE_FIRST_SET_ARG $LCNUMERIC $LC_NUMERIC $LOCALE_SETTING)
 		if [ x"" != x"$LCNUMERIC" ]; then
 			IN_ARRAY $LCNUMERIC "`locale -a`"
 			if [ $? -eq 0 ]; then
@@ -510,6 +529,7 @@ CHK_PARAMS () {
 			fi
 		fi
 		
+		LCTIME=$(USE_FIRST_SET_ARG $LCTIME $LC_TIME $LOCALE_SETTING)
 		if [ x"" != x"$LCTIME" ]; then
 			IN_ARRAY $LCTIME "`locale -a`"
 			if [ $? -eq 0 ]; then
@@ -621,6 +641,10 @@ CHK_MULTI_HOME () {
 
 
 CHK_LOCALE_KNOWN () {
+	if [ x"" == x"$LOCALE_SETTING" ]; then
+		return # no explicit locale set, no check needed
+	fi
+
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -eq 0 ];then
 		if [ `$LOCALE -a |$GREP -ic $LOCALE_SETTING` -eq 0 ];then
@@ -1127,6 +1151,24 @@ SET_VAR () {
     GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
 }
 
+# Retrieve locale settings from the coordinator and set locale variables
+# appropriately so those values can be used when initializing the segments.
+SET_LOCALE_VARS_BASED_ON_COORDINATOR() {
+	# The below command exports a set of database values like
+	#
+	#     name    |  setting
+	# ------------+------------
+	#  lc_collate | en_US.utf8
+	#  lc_ctype   | en_US.utf8
+	#  ...        | ...
+	#
+	# in the format
+	#
+	# --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8 ...
+	psql_cmd="SELECT '--' || REPLACE(name, '_', '-') || '=' || setting FROM pg_settings WHERE name LIKE 'lc_%' ORDER BY name"
+	export LC_ALL_SETTINGS=$(psql -t -d template1 -c "$psql_cmd")
+}
+
 CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		LOG_MSG "[INFO]:-Building the Coordinator instance database, please wait..." 1
@@ -1165,7 +1207,9 @@ CREATE_QD_DB () {
 		cmd="$INITDB"
 		cmd="$cmd -E $ENCODING"
 		cmd="$cmd -D $GP_DIR"
-		cmd="$cmd --locale=$LOCALE_SETTING"
+		if [ x"" == x"$LOCALE_SETTING" ]; then
+			cmd="$cmd --locale=$LOCALE_SETTING"
+		fi
 		cmd="$cmd $LC_ALL_SETTINGS"
 		cmd="$cmd --max_connections=$COORDINATOR_MAX_CONNECT"
 		cmd="$cmd --shared_buffers=$COORDINATOR_SHARED_BUFFERS"
@@ -1243,6 +1287,7 @@ CREATE_QD_DB () {
 			ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration."
 		fi
 		UPDATE_GPCONFIG $GP_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p
+		SET_LOCALE_VARS_BASED_ON_COORDINATOR
 		LOAD_QE_SYSTEM_DATA $DEFAULTDB
 		SET_VAR $QD_PRIMARY_ARRAY
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"

@@ -448,7 +448,7 @@ main() {
 	export COORDINATOR_DATADIR=${temp_root}
 	cp ${OLD_DATADIR}/../lalshell .
 	
-	BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${temp_root}/../../../../gpAux/gpdemo/demo_cluster.sh ${DEMOCLUSTER_OPTS}
+	LANG=en_US.utf8 BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${temp_root}/../../../../gpAux/gpdemo/demo_cluster.sh ${DEMOCLUSTER_OPTS}
 
 	export COORDINATOR_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
 	export PGPORT=17432
