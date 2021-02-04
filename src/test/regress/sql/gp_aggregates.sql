@@ -163,3 +163,6 @@ explain (costs off)
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
 drop table multiagg_with_subquery;
+
+-- Unique node numGroups > 0 assertion
+SELECT DISTINCT avg(c1) FROM generate_series(1,2) c1;

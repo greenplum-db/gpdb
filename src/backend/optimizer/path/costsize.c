@@ -2368,6 +2368,13 @@ cost_agg(Path *path, PlannerInfo *root,
 	Cost		total_cost;
 	AggClauseCosts dummy_aggcosts;
 
+	/*
+	 * We want to be sure the cost of an agg is never estimated as zero, even
+	 * if passed-in tuple count is zero.  Besides, mustn't do log(0)...
+	 */
+	if (numGroups < 1.0)
+		numGroups = 1.0;
+
 	/* Use all-zero per-aggregate costs if NULL is passed */
 	if (aggcosts == NULL)
 	{
