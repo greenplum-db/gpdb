@@ -4485,29 +4485,14 @@ create_grouping_paths(PlannerInfo *root,
 			 (gd ? gd->any_hashable : grouping_is_hashable(parse->groupClause))))
 			flags |= GROUPING_CAN_USE_HASH;
 
-
-		/* GPDB_12_MERGE_FIXME: this belongs here now, but add a new bitmask bit for it? */
-#if 0
 		/*
 		 * cdb_create_twostage_grouping_paths() can use hashing (in limited ways)
 		 * even if there are DISTINCT aggs or grouping sets.
 		 */
-		can_mpp_hash = (parse->groupClause != NIL &&
-						agg_costs->numPureOrderedAggs == 0 &&
-						grouping_is_hashable(parse->groupClause));
-#endif
-
-		/*
-		 * In GPDB, the hash aggregate can spill to disk, and it needs combine function
-		 * support for that.
-		 *
-		 * GPDB_12_MERGE_FIXME: we ripped spilling out in the merge. But might put it
-		 * back later?
-		 */
-#if 0
-		if (agg_costs->hasNonCombine)
-			can_hash = can_mpp_hash = false;
-#endif
+		if (parse->groupClause != NIL &&
+			agg_costs->numPureOrderedAggs == 0 &&
+			grouping_is_hashable(parse->groupClause))
+			flags |= GROUPING_CAN_USE_MPP_HASH;
 
 		/*
 		 * Determine whether partial aggregation is possible.
@@ -7695,7 +7680,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 	 * Add GPDB two-and three-stage agg plans
 	 */
 	bool try_mpp_multistage_aggregation = false;
-	bool can_mpp_hash = false;
+	bool can_mpp_hash = (extra->flags & GROUPING_CAN_USE_MPP_HASH) != 0;
 
 	/*
 	 * In PostgreSQL, partial_grouping_target and the partial/final agg
@@ -7770,10 +7755,6 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 
 			extra->partial_costs_set = true;
 		}
-
-		can_mpp_hash = (parse->groupClause != NIL &&
-						agg_costs->numPureOrderedAggs == 0 &&
-						grouping_is_hashable(parse->groupClause));
 
 		AggStrategy   strat = AGG_HASHED;
 		List         *new_rollups = NIL;

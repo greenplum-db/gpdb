@@ -45,11 +45,6 @@ extern bool grouping_is_hashable(List *groupClause);
 extern void get_sortgroupclauses_tles(List *clauses, List *targetList,
 									  List **tles, List **sortops, List **eqops);
 
-extern Oid *extract_grouping_ops(List *groupClause);
-extern AttrNumber *extract_grouping_cols(List *groupClause, List *tlist);
-extern bool grouping_is_sortable(List *groupClause);
-extern bool grouping_is_hashable(List *groupClause);
-
 extern Index maxSortGroupRef(List *targetlist, bool include_orderedagg);
 
 extern int get_row_width(List *tlist);
