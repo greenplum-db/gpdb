@@ -256,6 +256,7 @@ PvExec(void *pv)
 	CHAR *file_name = nullptr;
 	BOOL fMinidump = false;
 	BOOL fUnittest = false;
+	BOOL fPrintDXLPlan = false;
 	ULLONG ullPlanId = 0;
 
 	while (pma->Getopt(&ch))
@@ -290,6 +291,10 @@ PvExec(void *pv)
 			case 'd':
 				fMinidump = true;
 				file_name = optarg;
+				break;
+
+			case 'p':
+				fPrintDXLPlan = true;
 				break;
 
 			default:
@@ -342,6 +347,17 @@ PvExec(void *pv)
 			optimizer_config, nullptr /*pceeval*/
 		);
 
+		if (fPrintDXLPlan)
+		{
+			// Print DXL Plan
+			CAutoTrace at(mp);
+			CDXLUtils::SerializePlan(
+				mp, at.Os(), pdxlnPlan,
+				optimizer_config->GetEnumeratorCfg()->GetPlanId(),
+				optimizer_config->GetEnumeratorCfg()->GetPlanSpaceSize(),
+				true /*serialize_header_footer*/, true /*indentation*/);
+		}
+
 		GPOS_DELETE(pdxlmd);
 		optimizer_config->Release();
 		pdxlnPlan->Release();
@@ -386,7 +402,7 @@ main(INT iArgs, const CHAR **rgszArgs)
 	GPOS_ASSERT(iArgs >= 0);
 
 	// setup args for unittest params
-	CMainArgs ma(iArgs, rgszArgs, "uU:d:xT:i:");
+	CMainArgs ma(iArgs, rgszArgs, "uU:d:xT:i:p");
 
 	// initialize unittest framework
 	CUnittest::Init(rgut, GPOS_ARRAY_SIZE(rgut), ConfigureTests, Cleanup);
