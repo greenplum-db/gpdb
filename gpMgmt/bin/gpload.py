@@ -2824,9 +2824,9 @@ class gpload:
         match = self.map_stuff('gpload:output:match_columns'
                             , lambda x,y:'staging_table.%s=into_table.%s' % (x, y)
                             , 0)
-        sql = 'delete from %s staging_table '% self.staging_table_name
-        sql += 'using %s into_table where '% self.get_qualified_tablename()
-        sql += ' %s' % ' and '.join(match)
+        sql = 'DELETE FROM %s staging_table '% self.staging_table_name
+        sql += 'USING %s into_table WHERE '% self.get_qualified_tablename()
+        sql += ' %s' % ' AND '.join(match)
 
         self.log(self.LOG, sql)
         if not self.options.D:
