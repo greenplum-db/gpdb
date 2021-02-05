@@ -94,7 +94,7 @@ set optimizer = off;
 \! gpstop -u
 -- end_ignore
 select gp_request_fts_probe_scan();
-DEBUG:  Message type Q received by from libpq, len = 36
+DEBUG1:  Message type Q received by from libpq, len = 36
 LOG:  statement: select gp_request_fts_probe_scan();
  gp_request_fts_probe_scan 
 ---------------------------
@@ -102,7 +102,7 @@ LOG:  statement: select gp_request_fts_probe_scan();
 (1 row)
 
 select count(*) from gp_segment_configuration where status = 'd';
-DEBUG:  Message type Q received by from libpq, len = 66
+DEBUG1:  Message type Q received by from libpq, len = 66
 LOG:  statement: select count(*) from gp_segment_configuration where status = 'd';
  count 
 -------
@@ -121,4 +121,3 @@ select pg_reload_conf();
 ----------------
  t
 (1 row)
-
