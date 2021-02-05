@@ -3113,3 +3113,17 @@ def impl(context, including):
             raise Exception("no mirror found for segPair: %s" % segPair)
         if not are_on_different_subnets(segPair.primaryDB.hostname, segPair.mirrorDB.hostname):
             raise Exception("segmentPair on same subnet: %s" % segPair)
+
+
+@then('content {content} is {desired_state}')
+def impl(context, content, desired_state):
+    acceptable_states = ["balanced", "unbalanced"]
+    if desired_state not in acceptable_states:
+        raise Exception("expected desired state to be one of %s", acceptable_states)
+
+    role_operator = "=" if desired_state == "balanced" else "<>"
+    with dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False) as conn:
+        rows = dbconn.execSQL(conn, "SELECT role, preferred_role FROM gp_segment_configuration WHERE content = %s and preferred_role %s role" % (content, role_operator)).fetchall()
+
+    if len(rows) == 0:
+        raise Exception("Expected content %s to be %s." % (content, desired_state))

@@ -175,6 +175,13 @@ Feature: gprecoverseg tests
       And the status of the primary on content 0 should be "u"
       And the status of the primary on content 1 should be "d"
 
+      # Rebalance all possible segments and skip unreachable segment pairs.
+      When the user runs "gprecoverseg -ar"
+      Then gprecoverseg should return a return code of 0
+      And gprecoverseg should print "Not rebalancing primary segment dbid \d with its mirror dbid \d because one is either down, unreachable, or not synchronized" to stdout
+      And content 0 is balanced
+      And content 1 is unbalanced
+
       And the user runs psql with "-c 'DROP TABLE foo'" against database "postgres"
       And the cluster is returned to a good state
 

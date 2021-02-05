@@ -453,6 +453,19 @@ class SegmentPair:
             hosts.append(self.mirrorDB.hostname)
         return hosts
 
+    def balanced(self):
+        return self.primaryDB.preferred_role == self.primaryDB.role and \
+               self.mirrorDB.preferred_role == self.mirrorDB.role
+
+    def reachable(self):
+        return not self.primaryDB.unreachable and not self.mirrorDB.unreachable
+
+    def up(self):
+        return self.primaryDB.isSegmentUp() and self.mirrorDB.isSegmentUp()
+
+    def synchronized(self):
+        return self.primaryDB.isSegmentModeSynchronized() and self.mirrorDB.isSegmentModeSynchronized()
+
     def is_segment_pair_valid(self):
         """Validates that the primary/mirror pair are in a valid state"""
         prim_status = self.primaryDB.getSegmentStatus()
