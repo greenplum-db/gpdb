@@ -14,6 +14,8 @@
 
 #include <uv.h>
 
+#define IC_PROXY_PKT_CACHE_MAX_SIZE 20000
+
 extern void ic_proxy_pkt_cache_init(uint32 pkt_size);
 extern void ic_proxy_pkt_cache_uninit(void);
 extern void *ic_proxy_pkt_cache_alloc(size_t *pkt_size);

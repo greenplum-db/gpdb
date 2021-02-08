@@ -18,8 +18,6 @@
  * - many libuv requests, such as uv_write(), needs us to allocate the request
  *   buffer, they are not reused, too, we could consider saving them in a
  *   free list similarly, or even share the same free list with packets;
- * - we need to limit the size of the free list, currently packets are never
- *   freed;
  *
  *
  * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
@@ -149,10 +147,19 @@ ic_proxy_pkt_cache_free(void *pkt)
 		Assert(iter != cpkt);
 #endif
 
-	cpkt->next = ic_proxy_pkt_cache.freelist;
-	ic_proxy_pkt_cache.freelist = cpkt;
-	ic_proxy_pkt_cache.n_free++;
+	/* need to limit the size of the free list */
+	if (ic_proxy_pkt_cache.n_total > IC_PROXY_PKT_CACHE_MAX_SIZE)
+	{
+		ic_proxy_free(pkt);
+		ic_proxy_pkt_cache.n_total--;
+	}
+	else
+	{
+		cpkt->next = ic_proxy_pkt_cache.freelist;
+		ic_proxy_pkt_cache.freelist = cpkt;
+		ic_proxy_pkt_cache.n_free++;
 
-	ic_proxy_log(LOG, "pkt-cache: recycled, %d free, %d total",
-				 ic_proxy_pkt_cache.n_free, ic_proxy_pkt_cache.n_total);
+		ic_proxy_log(LOG, "pkt-cache: recycled, %d free, %d total",
+					 ic_proxy_pkt_cache.n_free, ic_proxy_pkt_cache.n_total);
+	}
 }
