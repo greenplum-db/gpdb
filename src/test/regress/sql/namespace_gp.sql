@@ -67,4 +67,12 @@ WHERE nspname ~ 'test_schema_[12]';
 
 SELECT rolname
 FROM pg_authid a
-WHERE rolname ~ 'tmp_test_schema_role'
+WHERE rolname ~ 'tmp_test_schema_role';
+
+-- OIDs for these built-in namespaces should not change. pg_upgrade
+-- fails if OID for these schemas mismatch across major versions.
+-- Mainly preassigned oid lookup uses these oids in key hence object
+-- lookup fails if it differs between source and destination cluster.
+SELECT oid, nspname FROM pg_namespace
+WHERE nspname IN ('pg_catalog', 'pg_toast', 'pg_aoseg', 'pg_bitmapindex')
+ORDER BY oid;
