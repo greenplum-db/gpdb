@@ -415,14 +415,11 @@ CBucket::MakeBucketSingleton(CMemoryPool *mp, CPoint *point_singleton) const
 	// if the bucket is not already singleton, scale accordingly
 	if (!this->IsSingleton())
 	{
-		CDouble ratio =
-			CDouble(1.0) / m_bucket_upper_bound->Width(m_bucket_lower_bound,
-													   m_is_lower_closed,
-													   m_is_upper_closed);
-		frequency_new =
-			std::min(DOUBLE(1.0), (this->m_frequency * ratio).Get());
-		;
-		distinct_new = CDouble(1.0);
+		// scale NDV down to 1 (or take the entire NDV if it's less than 1),
+		// then scale the frequency by the same ratio
+		CDouble ratio = 1 / std::max(1.0, m_distinct.Get());
+		distinct_new = m_distinct * ratio;
+		frequency_new = m_frequency * ratio;
 	}
 
 	// singleton point is both lower and upper
