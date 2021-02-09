@@ -285,7 +285,7 @@ explain select * from indexonao where a = 21;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="392.963271" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="392.963331" Rows="1.000012" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -296,7 +296,7 @@ explain select * from indexonao where a = 21;
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="392.963250" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="392.963310" Rows="1.000012" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
