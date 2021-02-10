@@ -20,7 +20,6 @@
  * Helper function for getting all strings of a GSSAPI error (of specified
  * stat).  Call once for GSS_CODE and once for MECH_CODE.
  */
-#if 0
 static void
 pg_GSS_error_int(char *s, size_t len, OM_uint32 stat, int type)
 {
@@ -46,7 +45,6 @@ pg_GSS_error_int(char *s, size_t len, OM_uint32 stat, int type)
 		ereport(WARNING,
 				(errmsg_internal("incomplete GSS error report")));
 }
-#endif
 
 /*
  * Fetch and report all error messages from GSSAPI.  To avoid allocation,
@@ -55,11 +53,10 @@ pg_GSS_error_int(char *s, size_t len, OM_uint32 stat, int type)
  */
 /*
  * In GPDB backend, we also link with fe-gssapi-common.o, which contains
- * this same function. Disable it here to avoid linker error.
+ * this same function. Rename it with a "_be" suffix here to avoid linker error.
  */
-#if 0
 void
-pg_GSS_error(int severity, const char *errmsg,
+pg_GSS_error_be(int severity, const char *errmsg,
 			 OM_uint32 maj_stat, OM_uint32 min_stat)
 {
 	char		msg_major[128],
@@ -79,4 +76,3 @@ pg_GSS_error(int severity, const char *errmsg,
 			(errmsg_internal("%s", errmsg),
 			 errdetail_internal("%s: %s", msg_major, msg_minor)));
 }
-#endif
