@@ -193,8 +193,8 @@ static void expand_table_name_patterns(Archive *fout,
 									   SimpleOidList *oids,
 									   bool strict_names);
 static NamespaceInfo *findNamespace(Oid nsoid);
-static void dumpTableData(Archive *fout, TableDataInfo *tdinfo);
-static void refreshMatViewData(Archive *fout, TableDataInfo *tdinfo);
+static void dumpTableData(Archive *fout, const TableDataInfo *tdinfo);
+static void refreshMatViewData(Archive *fout, const TableDataInfo *tdinfo);
 static void guessConstraintInheritance(TableInfo *tblinfo, int numTables);
 static void dumpComment(Archive *fout, const char *type, const char *name,
 						const char *namespace, const char *owner,
@@ -208,55 +208,53 @@ static void dumpSecLabel(Archive *fout, const char *type, const char *name,
 static int	findSecLabels(Archive *fout, Oid classoid, Oid objoid,
 						  SecLabelItem **items);
 static int	collectSecLabels(Archive *fout, SecLabelItem **items);
-static void dumpDumpableObject(Archive *fout, DumpableObject *dobj);
-static void dumpNamespace(Archive *fout, NamespaceInfo *nspinfo);
-static void dumpExtension(Archive *fout, ExtensionInfo *extinfo);
-static void dumpType(Archive *fout, TypeInfo *tyinfo);
-static void dumpBaseType(Archive *fout, TypeInfo *tyinfo);
-static void dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions);
-static void dumpEnumType(Archive *fout, TypeInfo *tyinfo);
-static void dumpRangeType(Archive *fout, TypeInfo *tyinfo);
-static void dumpUndefinedType(Archive *fout, TypeInfo *tyinfo);
-static void dumpDomain(Archive *fout, TypeInfo *tyinfo);
-static void dumpCompositeType(Archive *fout, TypeInfo *tyinfo);
-static void dumpCompositeTypeColComments(Archive *fout, TypeInfo *tyinfo);
-static void dumpShellType(Archive *fout, ShellTypeInfo *stinfo);
-static void dumpProcLang(Archive *fout, ProcLangInfo *plang);
-static void dumpFunc(Archive *fout, FuncInfo *finfo);
-static void dumpCast(Archive *fout, CastInfo *cast);
-static void dumpTransform(Archive *fout, TransformInfo *transform);
-static void dumpOpr(Archive *fout, OprInfo *oprinfo);
-static void dumpAccessMethod(Archive *fout, AccessMethodInfo *oprinfo);
-static void dumpOpclass(Archive *fout, OpclassInfo *opcinfo);
-static void dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo);
-static void dumpCollation(Archive *fout, CollInfo *collinfo);
-static void dumpConversion(Archive *fout, ConvInfo *convinfo);
-static void dumpRule(Archive *fout, RuleInfo *rinfo);
-static void dumpAgg(Archive *fout, AggInfo *agginfo);
-static void dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo);
-static void dumpTrigger(Archive *fout, TriggerInfo *tginfo);
-static void dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo);
-static void dumpTable(Archive *fout, TableInfo *tbinfo);
-static void dumpTableSchema(Archive *fout, TableInfo *tbinfo);
-static void dumpTableAttach(Archive *fout, TableAttachInfo *tbinfo);
-static void dumpAttrDef(Archive *fout, AttrDefInfo *adinfo);
-static void dumpSequence(Archive *fout, TableInfo *tbinfo);
-static void dumpSequenceData(Archive *fout, TableDataInfo *tdinfo);
-static void dumpIndex(Archive *fout, IndxInfo *indxinfo);
-static void dumpIndexAttach(Archive *fout, IndexAttachInfo *attachinfo);
-static void dumpStatisticsExt(Archive *fout, StatsExtInfo *statsextinfo);
-static void dumpConstraint(Archive *fout, ConstraintInfo *coninfo);
-static void dumpTableConstraintComment(Archive *fout, ConstraintInfo *coninfo);
-static void dumpTSParser(Archive *fout, TSParserInfo *prsinfo);
-static void dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo);
-static void dumpTSTemplate(Archive *fout, TSTemplateInfo *tmplinfo);
-static void dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo);
-static void dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo);
-static void dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo);
+static void dumpDumpableObject(Archive *fout, const DumpableObject *dobj);
+static void dumpNamespace(Archive *fout, const NamespaceInfo *nspinfo);
+static void dumpExtension(Archive *fout, const ExtensionInfo *extinfo);
+static void dumpType(Archive *fout, const TypeInfo *tyinfo);
+static void dumpBaseType(Archive *fout, const TypeInfo *tyinfo);
+static void dumpEnumType(Archive *fout, const TypeInfo *tyinfo);
+static void dumpRangeType(Archive *fout, const TypeInfo *tyinfo);
+static void dumpUndefinedType(Archive *fout, const TypeInfo *tyinfo);
+static void dumpDomain(Archive *fout, const TypeInfo *tyinfo);
+static void dumpCompositeType(Archive *fout, const TypeInfo *tyinfo);
+static void dumpCompositeTypeColComments(Archive *fout, const TypeInfo *tyinfo);
+static void dumpShellType(Archive *fout, const ShellTypeInfo *stinfo);
+static void dumpProcLang(Archive *fout, const ProcLangInfo *plang);
+static void dumpFunc(Archive *fout, const FuncInfo *finfo);
+static void dumpCast(Archive *fout, const CastInfo *cast);
+static void dumpTransform(Archive *fout, const TransformInfo *transform);
+static void dumpOpr(Archive *fout, const OprInfo *oprinfo);
+static void dumpAccessMethod(Archive *fout, const AccessMethodInfo *oprinfo);
+static void dumpOpclass(Archive *fout, const OpclassInfo *opcinfo);
+static void dumpOpfamily(Archive *fout, const OpfamilyInfo *opfinfo);
+static void dumpCollation(Archive *fout, const CollInfo *collinfo);
+static void dumpConversion(Archive *fout, const ConvInfo *convinfo);
+static void dumpRule(Archive *fout, const RuleInfo *rinfo);
+static void dumpAgg(Archive *fout, const AggInfo *agginfo);
+static void dumpTrigger(Archive *fout, const TriggerInfo *tginfo);
+static void dumpEventTrigger(Archive *fout, const EventTriggerInfo *evtinfo);
+static void dumpTable(Archive *fout, const TableInfo *tbinfo);
+static void dumpTableSchema(Archive *fout, const TableInfo *tbinfo);
+static void dumpTableAttach(Archive *fout, const TableAttachInfo *tbinfo);
+static void dumpAttrDef(Archive *fout, const AttrDefInfo *adinfo);
+static void dumpSequence(Archive *fout, const TableInfo *tbinfo);
+static void dumpSequenceData(Archive *fout, const TableDataInfo *tdinfo);
+static void dumpIndex(Archive *fout, const IndxInfo *indxinfo);
+static void dumpIndexAttach(Archive *fout, const IndexAttachInfo *attachinfo);
+static void dumpStatisticsExt(Archive *fout, const StatsExtInfo *statsextinfo);
+static void dumpConstraint(Archive *fout, const ConstraintInfo *coninfo);
+static void dumpTableConstraintComment(Archive *fout, const ConstraintInfo *coninfo);
+static void dumpTSParser(Archive *fout, const TSParserInfo *prsinfo);
+static void dumpTSDictionary(Archive *fout, const TSDictInfo *dictinfo);
+static void dumpTSTemplate(Archive *fout, const TSTemplateInfo *tmplinfo);
+static void dumpTSConfig(Archive *fout, const TSConfigInfo *cfginfo);
+static void dumpForeignDataWrapper(Archive *fout, const FdwInfo *fdwinfo);
+static void dumpForeignServer(Archive *fout, const ForeignServerInfo *srvinfo);
 static void dumpUserMappings(Archive *fout,
 							 const char *servername, const char *namespace,
 							 const char *owner, CatalogId catalogId, DumpId dumpId);
-static void dumpDefaultACL(Archive *fout, DefaultACLInfo *daclinfo);
+static void dumpDefaultACL(Archive *fout, const DefaultACLInfo *daclinfo);
 
 static DumpId dumpACL(Archive *fout, DumpId objDumpId, DumpId altDumpId,
 					  const char *type, const char *name, const char *subname,
@@ -266,37 +264,35 @@ static DumpId dumpACL(Archive *fout, DumpId objDumpId, DumpId altDumpId,
 
 static void getDependencies(Archive *fout);
 static void BuildArchiveDependencies(Archive *fout);
-static void findDumpableDependencies(ArchiveHandle *AH, DumpableObject *dobj,
+static void findDumpableDependencies(ArchiveHandle *AH, const DumpableObject *dobj,
 									 DumpId **dependencies, int *nDeps, int *allocDeps);
 
 static DumpableObject *createBoundaryObjects(void);
 static void addBoundaryDependencies(DumpableObject **dobjs, int numObjs,
 									DumpableObject *boundaryObjs);
 
-static void addConstrChildIdxDeps(DumpableObject *dobj, IndxInfo *refidx);
+static void addConstrChildIdxDeps(DumpableObject *dobj, const IndxInfo *refidx);
 static void getDomainConstraints(Archive *fout, TypeInfo *tyinfo);
 static void getTableData(DumpOptions *dopt, TableInfo *tblinfo, int numTables, char relkind);
 static void makeTableDataInfo(DumpOptions *dopt, TableInfo *tbinfo);
 static void buildMatViewRefreshDependencies(Archive *fout);
 static void getTableDataFKConstraints(void);
-static char *format_function_arguments(FuncInfo *finfo, char *funcargs,
+static char *format_function_arguments(const FuncInfo *finfo, const char *funcargs,
 									   bool is_agg);
 static char *format_function_signature(Archive *fout,
-									   FuncInfo *finfo, bool honor_quotes);
+									   const FuncInfo *finfo, bool honor_quotes);
 static char *convertRegProcReference(const char *proc);
 static char *getFormattedOperatorName(const char *oproid);
 static char *convertTSFunction(Archive *fout, Oid funcOid);
 static Oid	findLastBuiltinOid_V71(Archive *fout);
 static char *getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts);
 static void getBlobs(Archive *fout);
-static void dumpBlob(Archive *fout, BlobInfo *binfo);
-static int	dumpBlobs(Archive *fout, void *arg);
-static void dumpPreassignedOidArchiveEntry(Archive *fout, BinaryUpgradeInfo *binfo);
-static void dumpPreassignedOidDefinition(Archive *fout, BinaryUpgradeInfo *binfo);
-static void dumpPolicy(Archive *fout, PolicyInfo *polinfo);
-static void dumpPublication(Archive *fout, PublicationInfo *pubinfo);
-static void dumpPublicationTable(Archive *fout, PublicationRelInfo *pubrinfo);
-static void dumpSubscription(Archive *fout, SubscriptionInfo *subinfo);
+static void dumpBlob(Archive *fout, const BlobInfo *binfo);
+static int	dumpBlobs(Archive *fout, const void *arg);
+static void dumpPolicy(Archive *fout, const PolicyInfo *polinfo);
+static void dumpPublication(Archive *fout, const PublicationInfo *pubinfo);
+static void dumpPublicationTable(Archive *fout, const PublicationRelInfo *pubrinfo);
+static void dumpSubscription(Archive *fout, const SubscriptionInfo *subinfo);
 static void dumpDatabase(Archive *AH);
 static void dumpDatabaseConfig(Archive *AH, PQExpBuffer outbuf,
 							   const char *dbname, Oid dboid);
@@ -331,23 +327,27 @@ static void binary_upgrade_set_pg_class_oids(Archive *fout,
 											 PQExpBuffer upgrade_buffer,
 											 Oid pg_class_oid, bool is_index);
 static void binary_upgrade_extension_member(PQExpBuffer upgrade_buffer,
-											DumpableObject *dobj,
+											const DumpableObject *dobj,
 											const char *objtype,
 											const char *objname,
 											const char *objnamespace);
-static const char *getAttrName(int attrnum, TableInfo *tblInfo);
+static const char *getAttrName(int attrnum, const TableInfo *tblInfo);
 static const char *fmtCopyColumnList(const TableInfo *ti, PQExpBuffer buffer);
 static bool nonemptyReloptions(const char *reloptions);
 static void appendReloptionsArrayAH(PQExpBuffer buffer, const char *reloptions,
 									const char *prefix, Archive *fout);
 static char *get_synchronized_snapshot(Archive *fout);
 static void setupDumpWorker(Archive *AHX);
-static TableInfo *getRootTableInfo(TableInfo *tbinfo);
+static TableInfo *getRootTableInfo(const TableInfo *tbinfo);
 
 
 /* START MPP ADDITION */
+static void dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo);
+static void dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions);
+static void dumpPreassignedOidArchiveEntry(Archive *fout, BinaryUpgradeInfo *binfo);
+static void dumpPreassignedOidDefinition(Archive *fout, BinaryUpgradeInfo *binfo);
 static void setExtPartDependency(TableInfo *tblinfo, int numTables);
-static char *format_table_function_columns(Archive *fout, FuncInfo *finfo, int nallargs,
+static char *format_table_function_columns(Archive *fout, const FuncInfo *finfo, int nallargs,
 							  char **allargtypes,
 							  char **argmodes,
 							  char **argnames);
@@ -359,8 +359,8 @@ static bool testGPbackend(Archive *fout);
 static bool testPartitioningSupport(Archive *fout);
 
 static char *nextToken(register char **stringp, register const char *delim);
-static void addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
-static void addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
+static void addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
+static void addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
 static bool isGPDB(Archive *fout);
 static bool isGPDB6000OrLater(Archive *fout);
 
@@ -2056,7 +2056,7 @@ selectDumpableObject(DumpableObject *dobj, Archive *fout)
  */
 
 static int
-dumpTableData_copy(Archive *fout, void *dcontext)
+dumpTableData_copy(Archive *fout, const void *dcontext)
 {
 	TableDataInfo *tdinfo = (TableDataInfo *) dcontext;
 	TableInfo  *tbinfo = tdinfo->tdtable;
@@ -2209,7 +2209,7 @@ dumpTableData_copy(Archive *fout, void *dcontext)
  * E'' strings, or dollar-quoted strings.  So don't emit anything like that.
  */
 static int
-dumpTableData_insert(Archive *fout, void *dcontext)
+dumpTableData_insert(Archive *fout, const void *dcontext)
 {
 	TableDataInfo *tdinfo = (TableDataInfo *) dcontext;
 	TableInfo  *tbinfo = tdinfo->tdtable;
@@ -2433,7 +2433,7 @@ dumpTableData_insert(Archive *fout, void *dcontext)
  *     get the root TableInfo for the given partition table.
  */
 static TableInfo *
-getRootTableInfo(TableInfo *tbinfo)
+getRootTableInfo(const TableInfo *tbinfo)
 {
 	TableInfo  *parentTbinfo;
 
@@ -2457,7 +2457,7 @@ getRootTableInfo(TableInfo *tbinfo)
  * Actually, this just makes an ArchiveEntry for the table contents.
  */
 static void
-dumpTableData(Archive *fout, TableDataInfo *tdinfo)
+dumpTableData(Archive *fout, const TableDataInfo *tdinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = tdinfo->tdtable;
@@ -2549,7 +2549,7 @@ dumpTableData(Archive *fout, TableDataInfo *tdinfo)
  * statement.
  */
 static void
-refreshMatViewData(Archive *fout, TableDataInfo *tdinfo)
+refreshMatViewData(Archive *fout, const TableDataInfo *tdinfo)
 {
 	TableInfo  *tbinfo = tdinfo->tdtable;
 	PQExpBuffer q;
@@ -3689,7 +3689,7 @@ getBlobs(Archive *fout)
  * dump the definition (metadata) of the given large object
  */
 static void
-dumpBlob(Archive *fout, BlobInfo *binfo)
+dumpBlob(Archive *fout, const BlobInfo *binfo)
 {
 	PQExpBuffer cquery = createPQExpBuffer();
 	PQExpBuffer dquery = createPQExpBuffer();
@@ -3739,7 +3739,7 @@ dumpBlob(Archive *fout, BlobInfo *binfo)
  *	dump the data contents of all large objects
  */
 static int
-dumpBlobs(Archive *fout, void *arg pg_attribute_unused())
+dumpBlobs(Archive *fout, const void *arg)
 {
 	const char *blobQry;
 	const char *blobFetchQry;
@@ -3973,7 +3973,7 @@ getPolicies(Archive *fout, TableInfo tblinfo[], int numTables)
  *	  dump the definition of the given policy
  */
 static void
-dumpPolicy(Archive *fout, PolicyInfo *polinfo)
+dumpPolicy(Archive *fout, const PolicyInfo *polinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = polinfo->poltable;
@@ -4193,7 +4193,7 @@ getPublications(Archive *fout, int *numPublications)
  *	  dump the definition of the given publication
  */
 static void
-dumpPublication(Archive *fout, PublicationInfo *pubinfo)
+dumpPublication(Archive *fout, const PublicationInfo *pubinfo)
 {
 	PQExpBuffer delq;
 	PQExpBuffer query;
@@ -4368,7 +4368,7 @@ getPublicationTables(Archive *fout, TableInfo tblinfo[], int numTables)
  *	  dump the definition of the given publication table mapping
  */
 static void
-dumpPublicationTable(Archive *fout, PublicationRelInfo *pubrinfo)
+dumpPublicationTable(Archive *fout, const PublicationRelInfo *pubrinfo)
 {
 	PublicationInfo *pubinfo = pubrinfo->publication;
 	TableInfo  *tbinfo = pubrinfo->pubtable;
@@ -4529,7 +4529,7 @@ getSubscriptions(Archive *fout)
  *	  dump the definition of the given subscription
  */
 static void
-dumpSubscription(Archive *fout, SubscriptionInfo *subinfo)
+dumpSubscription(Archive *fout, const SubscriptionInfo *subinfo)
 {
 	PQExpBuffer delq;
 	PQExpBuffer query;
@@ -4618,7 +4618,7 @@ dumpSubscription(Archive *fout, SubscriptionInfo *subinfo)
 static void
 append_depends_on_extension(Archive *fout,
 							PQExpBuffer create,
-							DumpableObject *dobj,
+							const DumpableObject *dobj,
 							const char *catalog,
 							const char *keyword,
 							const char *objname)
@@ -5157,7 +5157,7 @@ binary_upgrade_set_pg_class_oids_for_ao(Archive *fout,
  */
 static void
 binary_upgrade_extension_member(PQExpBuffer upgrade_buffer,
-								DumpableObject *dobj,
+								const DumpableObject *dobj,
 								const char *objtype,
 								const char *objname,
 								const char *objnamespace)
@@ -8312,7 +8312,7 @@ getConstraints(Archive *fout, TableInfo tblinfo[], int numTables)
  * valid.
  */
 static void
-addConstrChildIdxDeps(DumpableObject *dobj, IndxInfo *refidx)
+addConstrChildIdxDeps(DumpableObject *dobj, const IndxInfo *refidx)
 {
 	SimplePtrListCell *cell;
 
@@ -9646,7 +9646,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
  * must be kept in sync with this decision.
  */
 bool
-shouldPrintColumn(DumpOptions *dopt, TableInfo *tbinfo, int colno)
+shouldPrintColumn(const DumpOptions *dopt, const TableInfo *tbinfo, int colno)
 {
 	if (dopt->binary_upgrade)
 		return true;
@@ -10543,7 +10543,7 @@ dumpComment(Archive *fout, const char *type, const char *name,
  * and its columns.
  */
 static void
-dumpTableComment(Archive *fout, TableInfo *tbinfo,
+dumpTableComment(Archive *fout, const TableInfo *tbinfo,
 				 const char *reltypename)
 {
 	DumpOptions *dopt = fout->dopt;
@@ -10782,129 +10782,129 @@ collectComments(Archive *fout, CommentItem **items)
  * ArchiveEntries (TOC objects) for each object to be dumped.
  */
 static void
-dumpDumpableObject(Archive *fout, DumpableObject *dobj)
+dumpDumpableObject(Archive *fout, const DumpableObject *dobj)
 {
 	switch (dobj->objType)
 	{
 		case DO_NAMESPACE:
-			dumpNamespace(fout, (NamespaceInfo *) dobj);
+			dumpNamespace(fout, (const NamespaceInfo *) dobj);
 			break;
 		case DO_EXTENSION:
-			dumpExtension(fout, (ExtensionInfo *) dobj);
+			dumpExtension(fout, (const ExtensionInfo *) dobj);
 			break;
 		case DO_TYPE:
-			dumpType(fout, (TypeInfo *) dobj);
+			dumpType(fout, (const TypeInfo *) dobj);
 			break;
 		case DO_TYPE_STORAGE_OPTIONS:
 				dumpTypeStorageOptions(fout, (TypeStorageOptions *) dobj);
 			break;
 		case DO_SHELL_TYPE:
-			dumpShellType(fout, (ShellTypeInfo *) dobj);
+			dumpShellType(fout, (const ShellTypeInfo *) dobj);
 			break;
 		case DO_FUNC:
-			dumpFunc(fout, (FuncInfo *) dobj);
+			dumpFunc(fout, (const FuncInfo *) dobj);
 			break;
 		case DO_AGG:
-			dumpAgg(fout, (AggInfo *) dobj);
+			dumpAgg(fout, (const AggInfo *) dobj);
 			break;
 		case DO_EXTPROTOCOL:
 			dumpExtProtocol(fout, (ExtProtInfo *) dobj);
 			break;
 		case DO_OPERATOR:
-			dumpOpr(fout, (OprInfo *) dobj);
+			dumpOpr(fout, (const OprInfo *) dobj);
 			break;
 		case DO_ACCESS_METHOD:
-			dumpAccessMethod(fout, (AccessMethodInfo *) dobj);
+			dumpAccessMethod(fout, (const AccessMethodInfo *) dobj);
 			break;
 		case DO_OPCLASS:
-			dumpOpclass(fout, (OpclassInfo *) dobj);
+			dumpOpclass(fout, (const OpclassInfo *) dobj);
 			break;
 		case DO_OPFAMILY:
-			dumpOpfamily(fout, (OpfamilyInfo *) dobj);
+			dumpOpfamily(fout, (const OpfamilyInfo *) dobj);
 			break;
 		case DO_COLLATION:
-			dumpCollation(fout, (CollInfo *) dobj);
+			dumpCollation(fout, (const CollInfo *) dobj);
 			break;
 		case DO_CONVERSION:
-			dumpConversion(fout, (ConvInfo *) dobj);
+			dumpConversion(fout, (const ConvInfo *) dobj);
 			break;
 		case DO_TABLE:
-			dumpTable(fout, (TableInfo *) dobj);
+			dumpTable(fout, (const TableInfo *) dobj);
 			break;
 		case DO_TABLE_ATTACH:
-			dumpTableAttach(fout, (TableAttachInfo *) dobj);
+			dumpTableAttach(fout, (const TableAttachInfo *) dobj);
 			break;
 		case DO_ATTRDEF:
-			dumpAttrDef(fout, (AttrDefInfo *) dobj);
+			dumpAttrDef(fout, (const AttrDefInfo *) dobj);
 			break;
 		case DO_INDEX:
-			dumpIndex(fout, (IndxInfo *) dobj);
+			dumpIndex(fout, (const IndxInfo *) dobj);
 			break;
 		case DO_INDEX_ATTACH:
-			dumpIndexAttach(fout, (IndexAttachInfo *) dobj);
+			dumpIndexAttach(fout, (const IndexAttachInfo *) dobj);
 			break;
 		case DO_STATSEXT:
-			dumpStatisticsExt(fout, (StatsExtInfo *) dobj);
+			dumpStatisticsExt(fout, (const StatsExtInfo *) dobj);
 			break;
 		case DO_REFRESH_MATVIEW:
-			refreshMatViewData(fout, (TableDataInfo *) dobj);
+			refreshMatViewData(fout, (const TableDataInfo *) dobj);
 			break;
 		case DO_RULE:
-			dumpRule(fout, (RuleInfo *) dobj);
+			dumpRule(fout, (const RuleInfo *) dobj);
 			break;
 		case DO_TRIGGER:
-			dumpTrigger(fout, (TriggerInfo *) dobj);
+			dumpTrigger(fout, (const TriggerInfo *) dobj);
 			break;
 		case DO_EVENT_TRIGGER:
-			dumpEventTrigger(fout, (EventTriggerInfo *) dobj);
+			dumpEventTrigger(fout, (const EventTriggerInfo *) dobj);
 			break;
 		case DO_CONSTRAINT:
-			dumpConstraint(fout, (ConstraintInfo *) dobj);
+			dumpConstraint(fout, (const ConstraintInfo *) dobj);
 			break;
 		case DO_FK_CONSTRAINT:
-			dumpConstraint(fout, (ConstraintInfo *) dobj);
+			dumpConstraint(fout, (const ConstraintInfo *) dobj);
 			break;
 		case DO_PROCLANG:
-			dumpProcLang(fout, (ProcLangInfo *) dobj);
+			dumpProcLang(fout, (const ProcLangInfo *) dobj);
 			break;
 		case DO_CAST:
-			dumpCast(fout, (CastInfo *) dobj);
+			dumpCast(fout, (const CastInfo *) dobj);
 			break;
 		case DO_TRANSFORM:
-			dumpTransform(fout, (TransformInfo *) dobj);
+			dumpTransform(fout, (const TransformInfo *) dobj);
 			break;
 		case DO_SEQUENCE_SET:
-			dumpSequenceData(fout, (TableDataInfo *) dobj);
+			dumpSequenceData(fout, (const TableDataInfo *) dobj);
 			break;
 		case DO_TABLE_DATA:
-				dumpTableData(fout, (TableDataInfo *) dobj);
+			dumpTableData(fout, (const TableDataInfo *) dobj);
 			break;
 		case DO_DUMMY_TYPE:
 			/* table rowtypes and array types are never dumped separately */
 			break;
 		case DO_TSPARSER:
-			dumpTSParser(fout, (TSParserInfo *) dobj);
+			dumpTSParser(fout, (const TSParserInfo *) dobj);
 			break;
 		case DO_TSDICT:
-			dumpTSDictionary(fout, (TSDictInfo *) dobj);
+			dumpTSDictionary(fout, (const TSDictInfo *) dobj);
 			break;
 		case DO_TSTEMPLATE:
-			dumpTSTemplate(fout, (TSTemplateInfo *) dobj);
+			dumpTSTemplate(fout, (const TSTemplateInfo *) dobj);
 			break;
 		case DO_TSCONFIG:
-			dumpTSConfig(fout, (TSConfigInfo *) dobj);
+			dumpTSConfig(fout, (const TSConfigInfo *) dobj);
 			break;
 		case DO_FDW:
-			dumpForeignDataWrapper(fout, (FdwInfo *) dobj);
+			dumpForeignDataWrapper(fout, (const FdwInfo *) dobj);
 			break;
 		case DO_FOREIGN_SERVER:
-			dumpForeignServer(fout, (ForeignServerInfo *) dobj);
+			dumpForeignServer(fout, (const ForeignServerInfo *) dobj);
 			break;
 		case DO_DEFAULT_ACL:
-			dumpDefaultACL(fout, (DefaultACLInfo *) dobj);
+			dumpDefaultACL(fout, (const DefaultACLInfo *) dobj);
 			break;
 		case DO_BLOB:
-			dumpBlob(fout, (BlobInfo *) dobj);
+			dumpBlob(fout, (const BlobInfo *) dobj);
 			break;
 		case DO_BLOB_DATA:
 			if (dobj->dump & DUMP_COMPONENT_DATA)
@@ -10934,16 +10934,16 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			}
 			break;
 		case DO_POLICY:
-			dumpPolicy(fout, (PolicyInfo *) dobj);
+			dumpPolicy(fout, (const PolicyInfo *) dobj);
 			break;
 		case DO_PUBLICATION:
-			dumpPublication(fout, (PublicationInfo *) dobj);
+			dumpPublication(fout, (const PublicationInfo *) dobj);
 			break;
 		case DO_PUBLICATION_REL:
-			dumpPublicationTable(fout, (PublicationRelInfo *) dobj);
+			dumpPublicationTable(fout, (const PublicationRelInfo *) dobj);
 			break;
 		case DO_SUBSCRIPTION:
-			dumpSubscription(fout, (SubscriptionInfo *) dobj);
+			dumpSubscription(fout, (const SubscriptionInfo *) dobj);
 			break;
 		case DO_PRE_DATA_BOUNDARY:
 		case DO_POST_DATA_BOUNDARY:
@@ -10961,7 +10961,7 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
  *	  writes out to fout the queries to recreate a user-defined namespace
  */
 static void
-dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
+dumpNamespace(Archive *fout, const NamespaceInfo *nspinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -11025,7 +11025,7 @@ dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
  *	  writes out to fout the queries to recreate an extension
  */
 static void
-dumpExtension(Archive *fout, ExtensionInfo *extinfo)
+dumpExtension(Archive *fout, const ExtensionInfo *extinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -11153,7 +11153,7 @@ dumpExtension(Archive *fout, ExtensionInfo *extinfo)
  *	  writes out to fout the queries to recreate a user-defined type
  */
 static void
-dumpType(Archive *fout, TypeInfo *tyinfo)
+dumpType(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 
@@ -11184,7 +11184,7 @@ dumpType(Archive *fout, TypeInfo *tyinfo)
  *	  writes out to fout the queries to recreate a user-defined enum type
  */
 static void
-dumpEnumType(Archive *fout, TypeInfo *tyinfo)
+dumpEnumType(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -11312,7 +11312,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
  *	  writes out to fout the queries to recreate a user-defined range type
  */
 static void
-dumpRangeType(Archive *fout, TypeInfo *tyinfo)
+dumpRangeType(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -11445,7 +11445,7 @@ dumpRangeType(Archive *fout, TypeInfo *tyinfo)
  * depending on it.
  */
 static void
-dumpUndefinedType(Archive *fout, TypeInfo *tyinfo)
+dumpUndefinedType(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -11512,7 +11512,7 @@ dumpUndefinedType(Archive *fout, TypeInfo *tyinfo)
  *	  writes out to fout the queries to recreate a user-defined base type
  */
 static void
-dumpBaseType(Archive *fout, TypeInfo *tyinfo)
+dumpBaseType(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -11802,7 +11802,7 @@ dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions)
  *	  writes out to fout the queries to recreate a user-defined domain
  */
 static void
-dumpDomain(Archive *fout, TypeInfo *tyinfo)
+dumpDomain(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -11978,7 +11978,7 @@ dumpDomain(Archive *fout, TypeInfo *tyinfo)
  *	  composite type
  */
 static void
-dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
+dumpCompositeType(Archive *fout, const TypeInfo *tyinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -12192,7 +12192,7 @@ dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
  *	  a user-defined stand-alone composite type
  */
 static void
-dumpCompositeTypeColComments(Archive *fout, TypeInfo *tyinfo)
+dumpCompositeTypeColComments(Archive *fout, const TypeInfo *tyinfo)
 {
 	CommentItem *comments;
 	int			ncomments;
@@ -12307,7 +12307,7 @@ dumpCompositeTypeColComments(Archive *fout, TypeInfo *tyinfo)
  * We dump a shell definition in advance of the I/O functions for the type.
  */
 static void
-dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
+dumpShellType(Archive *fout, const ShellTypeInfo *stinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -12355,7 +12355,7 @@ dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
  *		  procedural language
  */
 static void
-dumpProcLang(Archive *fout, ProcLangInfo *plang)
+dumpProcLang(Archive *fout, const ProcLangInfo *plang)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer defqry;
@@ -12488,7 +12488,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
  * does not special-case zero-argument aggregates.
  */
 static char *
-format_function_arguments(FuncInfo *finfo, char *funcargs, bool is_agg)
+format_function_arguments(const FuncInfo *finfo, const char *funcargs, bool is_agg)
 {
 	PQExpBufferData fn;
 
@@ -12524,7 +12524,7 @@ is_returns_table_function(int nallargs, char **argmodes)
  * table functions.
  */
 static char *
-format_table_function_columns(Archive *fout, FuncInfo *finfo, int nallargs,
+format_table_function_columns(Archive *fout, const FuncInfo *finfo, int nallargs,
 							  char **allargtypes,
 							  char **argmodes,
 							  char **argnames)
@@ -12575,7 +12575,7 @@ format_table_function_columns(Archive *fout, FuncInfo *finfo, int nallargs,
  * This is appropriate for use in TOC tags, but not in SQL commands.
  */
 static char *
-format_function_signature(Archive *fout, FuncInfo *finfo, bool honor_quotes)
+format_function_signature(Archive *fout, const FuncInfo *finfo, bool honor_quotes)
 {
 	PQExpBufferData fn;
 	int			j;
@@ -12607,7 +12607,7 @@ format_function_signature(Archive *fout, FuncInfo *finfo, bool honor_quotes)
  *	  dump out one function
  */
 static void
-dumpFunc(Archive *fout, FuncInfo *finfo)
+dumpFunc(Archive *fout, const FuncInfo *finfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -13082,7 +13082,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
  * Dump a user-defined cast
  */
 static void
-dumpCast(Archive *fout, CastInfo *cast)
+dumpCast(Archive *fout, const CastInfo *cast)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer defqry;
@@ -13190,7 +13190,7 @@ dumpCast(Archive *fout, CastInfo *cast)
  * Dump a transform
  */
 static void
-dumpTransform(Archive *fout, TransformInfo *transform)
+dumpTransform(Archive *fout, const TransformInfo *transform)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer defqry;
@@ -13320,7 +13320,7 @@ dumpTransform(Archive *fout, TransformInfo *transform)
  *	  write out a single operator definition
  */
 static void
-dumpOpr(Archive *fout, OprInfo *oprinfo)
+dumpOpr(Archive *fout, const OprInfo *oprinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -13614,7 +13614,7 @@ convertTSFunction(Archive *fout, Oid funcOid)
  *	  write out a single access method definition
  */
 static void
-dumpAccessMethod(Archive *fout, AccessMethodInfo *aminfo)
+dumpAccessMethod(Archive *fout, const AccessMethodInfo *aminfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -13682,7 +13682,7 @@ dumpAccessMethod(Archive *fout, AccessMethodInfo *aminfo)
  *	  write out a single operator class definition
  */
 static void
-dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
+dumpOpclass(Archive *fout, const OpclassInfo *opcinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -14054,7 +14054,7 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
  * specific opclass within the opfamily.
  */
 static void
-dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
+dumpOpfamily(Archive *fout, const OpfamilyInfo *opfinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -14317,7 +14317,7 @@ dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
  *	  write out a single collation definition
  */
 static void
-dumpCollation(Archive *fout, CollInfo *collinfo)
+dumpCollation(Archive *fout, const CollInfo *collinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -14468,7 +14468,7 @@ dumpCollation(Archive *fout, CollInfo *collinfo)
  *	  write out a single conversion definition
  */
 static void
-dumpConversion(Archive *fout, ConvInfo *convinfo)
+dumpConversion(Archive *fout, const ConvInfo *convinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -14564,7 +14564,7 @@ dumpConversion(Archive *fout, ConvInfo *convinfo)
  * is never qualified.
  */
 static char *
-format_aggregate_signature(AggInfo *agginfo, Archive *fout, bool honor_quotes)
+format_aggregate_signature(const AggInfo *agginfo, Archive *fout, bool honor_quotes)
 {
 	PQExpBufferData buf;
 	int			j;
@@ -14602,7 +14602,7 @@ format_aggregate_signature(AggInfo *agginfo, Archive *fout, bool honor_quotes)
  *	  write out a single aggregate definition
  */
 static void
-dumpAgg(Archive *fout, AggInfo *agginfo)
+dumpAgg(Archive *fout, const AggInfo *agginfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -15190,7 +15190,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
  *	  write out a single text search parser
  */
 static void
-dumpTSParser(Archive *fout, TSParserInfo *prsinfo)
+dumpTSParser(Archive *fout, const TSParserInfo *prsinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -15254,7 +15254,7 @@ dumpTSParser(Archive *fout, TSParserInfo *prsinfo)
  *	  write out a single text search dictionary
  */
 static void
-dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo)
+dumpTSDictionary(Archive *fout, const TSDictInfo *dictinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -15334,7 +15334,7 @@ dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo)
  *	  write out a single text search template
  */
 static void
-dumpTSTemplate(Archive *fout, TSTemplateInfo *tmplinfo)
+dumpTSTemplate(Archive *fout, const TSTemplateInfo *tmplinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -15392,7 +15392,7 @@ dumpTSTemplate(Archive *fout, TSTemplateInfo *tmplinfo)
  *	  write out a single text search configuration
  */
 static void
-dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo)
+dumpTSConfig(Archive *fout, const TSConfigInfo *cfginfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -15512,7 +15512,7 @@ dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo)
  *	  write out a single foreign-data wrapper definition
  */
 static void
-dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo)
+dumpForeignDataWrapper(Archive *fout, const FdwInfo *fdwinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -15584,7 +15584,7 @@ dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo)
  *	  write out a foreign server definition
  */
 static void
-dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo)
+dumpForeignServer(Archive *fout, const ForeignServerInfo *srvinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -15778,7 +15778,7 @@ dumpUserMappings(Archive *fout,
  * Write out default privileges information
  */
 static void
-dumpDefaultACL(Archive *fout, DefaultACLInfo *daclinfo)
+dumpDefaultACL(Archive *fout, const DefaultACLInfo *daclinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -16056,7 +16056,7 @@ dumpSecLabel(Archive *fout, const char *type, const char *name,
  * and its columns.
  */
 static void
-dumpTableSecLabel(Archive *fout, TableInfo *tbinfo, const char *reltypename)
+dumpTableSecLabel(Archive *fout, const TableInfo *tbinfo, const char *reltypename)
 {
 	DumpOptions *dopt = fout->dopt;
 	SecLabelItem *labels;
@@ -16280,7 +16280,7 @@ collectSecLabels(Archive *fout, SecLabelItem **items)
  *	  write out to fout the declarations (not data) of a user-defined table
  */
 static void
-dumpTable(Archive *fout, TableInfo *tbinfo)
+dumpTable(Archive *fout, const TableInfo *tbinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	DumpId		tableAclDumpId = InvalidDumpId;
@@ -16416,7 +16416,7 @@ dumpTable(Archive *fout, TableInfo *tbinfo)
 }
 
 static void
-dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
+dumpExternal(Archive *fout, const TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 {
 		DumpOptions *dopt = fout->dopt;
 		PGresult   *res;
@@ -16718,7 +16718,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
  * This returns a new buffer which must be freed by the caller.
  */
 static PQExpBuffer
-createViewAsClause(Archive *fout, TableInfo *tbinfo)
+createViewAsClause(Archive *fout, const TableInfo *tbinfo)
 {
 	PQExpBuffer query = createPQExpBuffer();
 	PQExpBuffer result = createPQExpBuffer();
@@ -16767,7 +16767,7 @@ createViewAsClause(Archive *fout, TableInfo *tbinfo)
  * This returns a new buffer which must be freed by the caller.
  */
 static PQExpBuffer
-createDummyViewAsClause(Archive *fout, TableInfo *tbinfo)
+createDummyViewAsClause(Archive *fout, const TableInfo *tbinfo)
 {
 	PQExpBuffer result = createPQExpBuffer();
 	int			j;
@@ -16807,7 +16807,7 @@ createDummyViewAsClause(Archive *fout, TableInfo *tbinfo)
  *	  write the declaration (not data) of one user-defined table or view
  */
 static void
-dumpTableSchema(Archive *fout, TableInfo *tbinfo)
+dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
@@ -17914,7 +17914,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
  * rather than emitting it within the child partition's ArchiveEntry.
  */
 static void
-dumpTableAttach(Archive *fout, TableAttachInfo *attachinfo)
+dumpTableAttach(Archive *fout, const TableAttachInfo *attachinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -17958,7 +17958,7 @@ dumpTableAttach(Archive *fout, TableAttachInfo *attachinfo)
  * dumpAttrDef --- dump an attribute's default-value declaration
  */
 static void
-dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
+dumpAttrDef(Archive *fout, const AttrDefInfo *adinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = adinfo->adtable;
@@ -18027,7 +18027,7 @@ dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
  * We also do a little bit of bounds checking for safety's sake.
  */
 static const char *
-getAttrName(int attrnum, TableInfo *tblInfo)
+getAttrName(int attrnum, const TableInfo *tblInfo)
 {
 	if (attrnum > 0 && attrnum <= tblInfo->numatts)
 		return tblInfo->attnames[attrnum - 1];
@@ -18056,7 +18056,7 @@ getAttrName(int attrnum, TableInfo *tblInfo)
  *	  write out to fout a user-defined index
  */
 static void
-dumpIndex(Archive *fout, IndxInfo *indxinfo)
+dumpIndex(Archive *fout, const IndxInfo *indxinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = indxinfo->indextable;
@@ -18192,7 +18192,7 @@ dumpIndex(Archive *fout, IndxInfo *indxinfo)
  *	  write out to fout a partitioned-index attachment clause
  */
 static void
-dumpIndexAttach(Archive *fout, IndexAttachInfo *attachinfo)
+dumpIndexAttach(Archive *fout, const IndexAttachInfo *attachinfo)
 {
 	if (fout->dopt->dataOnly)
 		return;
@@ -18230,7 +18230,7 @@ dumpIndexAttach(Archive *fout, IndexAttachInfo *attachinfo)
  *	  write out to fout an extended statistics object
  */
 static void
-dumpStatisticsExt(Archive *fout, StatsExtInfo *statsextinfo)
+dumpStatisticsExt(Archive *fout, const StatsExtInfo *statsextinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
@@ -18295,7 +18295,7 @@ dumpStatisticsExt(Archive *fout, StatsExtInfo *statsextinfo)
  *	  write out to fout a user-defined constraint
  */
 static void
-dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
+dumpConstraint(Archive *fout, const ConstraintInfo *coninfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = coninfo->contable;
@@ -18567,7 +18567,7 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
  * or as a separate ALTER command.
  */
 static void
-dumpTableConstraintComment(Archive *fout, ConstraintInfo *coninfo)
+dumpTableConstraintComment(Archive *fout, const ConstraintInfo *coninfo)
 {
 	TableInfo  *tbinfo = coninfo->contable;
 	PQExpBuffer conprefix = createPQExpBuffer();
@@ -18617,7 +18617,7 @@ findLastBuiltinOid_V71(Archive *fout)
  *	  write the declaration (not data) of one user-defined sequence
  */
 static void
-dumpSequence(Archive *fout, TableInfo *tbinfo)
+dumpSequence(Archive *fout, const TableInfo *tbinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PGresult   *res;
@@ -18881,7 +18881,7 @@ dumpSequence(Archive *fout, TableInfo *tbinfo)
  *	  write the data of one user-defined sequence
  */
 static void
-dumpSequenceData(Archive *fout, TableDataInfo *tdinfo)
+dumpSequenceData(Archive *fout, const TableDataInfo *tdinfo)
 {
 	TableInfo  *tbinfo = tdinfo->tdtable;
 	PGresult   *res;
@@ -18934,7 +18934,7 @@ dumpSequenceData(Archive *fout, TableDataInfo *tdinfo)
  *	  write the declaration of one user-defined table trigger
  */
 static void
-dumpTrigger(Archive *fout, TriggerInfo *tginfo)
+dumpTrigger(Archive *fout, const TriggerInfo *tginfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = tginfo->tgtable;
@@ -19147,7 +19147,7 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
  *	  write the declaration of one user-defined event trigger
  */
 static void
-dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo)
+dumpEventTrigger(Archive *fout, const EventTriggerInfo *evtinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
@@ -19232,7 +19232,7 @@ dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo)
  *		Dump a rule
  */
 static void
-dumpRule(Archive *fout, RuleInfo *rinfo)
+dumpRule(Archive *fout, const RuleInfo *rinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = rinfo->ruletable;
@@ -20036,7 +20036,7 @@ BuildArchiveDependencies(Archive *fout)
 
 /* Recursive search subroutine for BuildArchiveDependencies */
 static void
-findDumpableDependencies(ArchiveHandle *AH, DumpableObject *dobj,
+findDumpableDependencies(ArchiveHandle *AH, const DumpableObject *dobj,
 						 DumpId **dependencies, int *nDeps, int *allocDeps)
 {
 	int			i;
@@ -20136,7 +20136,7 @@ testPartitioningSupport(Archive *fout)
  *	DISTRIBUTED BY clause to the passed in dump buffer (q).
  */
 static void
-addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
+addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts)
 {
 	if (isGPDB6000OrLater(fout))
 	{
@@ -20166,7 +20166,7 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
  * backend function is not available.
  */
 static void
-addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
+addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query = createPQExpBuffer();
