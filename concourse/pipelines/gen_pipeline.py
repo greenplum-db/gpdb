@@ -170,7 +170,8 @@ def create_pipeline(args):
         'os_types': args.os_types,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
-        'test_trigger': test_trigger
+        'test_trigger': test_trigger,
+        'use_ICW_workers': args.use_ICW_workers
     }
 
     pipeline_yml = render_template(args.template_filename, context)
@@ -233,13 +234,15 @@ def header(args):
   OS Types ................. : %s
   Test sections ............ : %s
   test_trigger ............. : %s
+  use_ICW_workers .......... : %s
 ======================================================================
 ''' % (args.pipeline_target,
        args.output_filepath,
        args.template_filename,
        args.os_types,
        args.test_sections,
-       args.test_trigger_false
+       args.test_trigger_false,
+       args.use_ICW_workers
        )
 
 
@@ -357,6 +360,14 @@ def main():
         help='Developer userid to use for pipeline name and filename.'
     )
 
+    parser.add_argument(
+        '-U',
+        '--use_ICW_workers',
+        action='store_true',
+        default=False,
+        help='Set use_ICW_workers to "true".'
+    )
+
     args = parser.parse_args()
 
     validate_target(args.pipeline_target)
@@ -368,6 +379,11 @@ def main():
 
     if args.pipeline_target == 'prod':
         args.pipeline_configuration = 'prod'
+
+    # use_ICW_workers adds tags to the specified concourse definitions which
+    # correspond to dedicated concourse workers to increase performance.
+    if args.pipeline_target in ['prod', 'dev', 'cm']:
+        args.use_ICW_workers = True
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full':
         args.os_types = ['centos6', 'centos7', 'centos8', 'oracle7', 'sles12', 'ubuntu18.04', 'photon3', 'win']
