@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * gdd_test.c
+ * gdddetector_test.c
  *	  Unit tests for GDD.
  *
  * NOTES
@@ -29,11 +29,12 @@
 #include "cmockery.h"
 
 #include "postgres.h"
-#include "../gdddetector.h"
-#include "../gdddetectorpriv.h"
 #include "storage/lmgr.h"
 #include "storage/lock.h"
 #include "utils/memutils.h"
+
+/* Actual function body */
+#include "../gdddetector.c"
 
 /*
  * This struct defines a wait relation between two transactions.
