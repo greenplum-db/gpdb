@@ -19,7 +19,7 @@ static BOOL Equals(ULongPtrArray *pdrgpulFst, ULongPtrArray *pdrgpulSnd);
 // helper to assert distribution delivered by UnionAll children
 static void AssertValidChildDistributions(
 	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CDistributionSpec::EDistributionType
+	const CDistributionSpec::EDistributionType
 		*pedt,		 // array of distribution types to check
 	ULONG ulDistrs,	 // number of distribution types to check
 	const CHAR *szAssertMsg);
@@ -849,7 +849,7 @@ CPhysicalUnionAll::MapOutputColRefsToInput(CMemoryPool *mp,
 void
 AssertValidChildDistributions(
 	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CDistributionSpec::EDistributionType
+	const CDistributionSpec::EDistributionType
 		*pedt,		 // array of distribution types to check
 	ULONG ulDistrs,	 // number of distribution types to check
 	const CHAR *szAssertMsg)

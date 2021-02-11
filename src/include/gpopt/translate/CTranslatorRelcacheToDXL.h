@@ -383,7 +383,7 @@ public:
 										   ULONG size);
 
 	// return the position of a given attribute number
-	static ULONG GetAttributePosition(INT attno, ULONG *attno_mapping);
+	static ULONG GetAttributePosition(INT attno, const ULONG *attno_mapping);
 
 	// retrieve a type from the relcache
 	static IMDType *RetrieveType(CMemoryPool *mp, IMDId *mdid);

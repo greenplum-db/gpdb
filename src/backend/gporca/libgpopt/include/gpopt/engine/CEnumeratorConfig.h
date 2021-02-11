@@ -320,9 +320,9 @@ public:
 	void PrintPlanSample() const;
 
 	// compute Gaussian kernel density
-	static void GussianKernelDensity(DOUBLE *pdObervationX,
-									 DOUBLE *pdObervationY,
-									 ULONG ulObservations, DOUBLE *pdX,
+	static void GussianKernelDensity(const DOUBLE *pdObervationX,
+									 const DOUBLE *pdObervationY,
+									 ULONG ulObservations, const DOUBLE *pdX,
 									 DOUBLE *pdY, ULONG size);
 
 	// generate default enumerator configurations

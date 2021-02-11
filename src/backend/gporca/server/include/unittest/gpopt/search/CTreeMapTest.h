@@ -45,7 +45,7 @@ class CTreeMapTest
 		CNode(const CNode &) = delete;
 
 		// ctor
-		CNode(CMemoryPool *mp, ULONG *pulData, CNodeArray *pdrgpnd);
+		CNode(CMemoryPool *mp, const ULONG *pulData, CNodeArray *pdrgpnd);
 
 		// dtor
 		~CNode() override;

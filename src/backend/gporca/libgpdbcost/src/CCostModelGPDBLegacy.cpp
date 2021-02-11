@@ -249,7 +249,7 @@ CCostModelGPDBLegacy::FUnary(COperator::EOperatorId op_id)
 //
 //---------------------------------------------------------------------------
 CCost
-CCostModelGPDBLegacy::CostSum(DOUBLE *pdCost, ULONG size)
+CCostModelGPDBLegacy::CostSum(const DOUBLE *pdCost, ULONG size)
 {
 	GPOS_ASSERT(nullptr != pdCost);
 

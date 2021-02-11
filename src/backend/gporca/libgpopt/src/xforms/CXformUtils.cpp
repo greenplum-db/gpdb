@@ -2012,8 +2012,8 @@ CXformUtils::AddMinAggs(CMemoryPool *mp, CMDAccessor *md_accessor,
 //
 //---------------------------------------------------------------------------
 BOOL
-CXformUtils::FXformInArray(CXform::EXformId exfid, CXform::EXformId rgXforms[],
-						   ULONG ulXforms)
+CXformUtils::FXformInArray(CXform::EXformId exfid,
+						   const CXform::EXformId rgXforms[], ULONG ulXforms)
 {
 	for (ULONG ul = 0; ul < ulXforms; ul++)
 	{

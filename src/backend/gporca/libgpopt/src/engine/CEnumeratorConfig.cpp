@@ -206,10 +206,11 @@ CEnumeratorConfig::InitCostDistrSize()
 //---------------------------------------------------------------------------
 void
 CEnumeratorConfig::GussianKernelDensity(
-	DOUBLE *pdObervationX, DOUBLE *pdObervationY, ULONG ulObservations,
-	DOUBLE *pdX,  // input: X-values we need to compute estimates for
-	DOUBLE *pdY,  // output: estimated Y-values for given X-values
-	ULONG size	  // number of input X-values
+	const DOUBLE *pdObervationX, const DOUBLE *pdObervationY,
+	ULONG ulObservations,
+	const DOUBLE *pdX,	// input: X-values we need to compute estimates for
+	DOUBLE *pdY,		// output: estimated Y-values for given X-values
+	ULONG size			// number of input X-values
 )
 {
 	GPOS_ASSERT(nullptr != pdObervationX);

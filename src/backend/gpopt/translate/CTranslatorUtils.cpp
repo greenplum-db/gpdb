@@ -1240,7 +1240,7 @@ ULongPtrArray *
 CTranslatorUtils::GenerateColIds(
 	CMemoryPool *mp, List *target_list, IMdIdArray *input_mdid_arr,
 	ULongPtrArray *input_colids,
-	BOOL *
+	const BOOL *
 		is_outer_ref,  // array of flags indicating if input columns are outer references
 	CIdGenerator *colid_generator)
 {

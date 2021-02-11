@@ -84,7 +84,7 @@ private:
 	// return the LINT value of byte array
 	static LINT Value(CDXLMemoryManager *dxl_memory_manager,
 					  const Attributes &attrs, Edxltoken target_elem,
-					  BYTE *data);
+					  const BYTE *data);
 
 	// parses a byte array representation of the datum
 	static BYTE *GetByteArray(CDXLMemoryManager *dxl_memory_manager,

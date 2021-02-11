@@ -158,7 +158,8 @@ private:
 
 	// check if given xform id is in the given array of xforms
 	static BOOL FXformInArray(CXform::EXformId exfid,
-							  CXform::EXformId rgXforms[], ULONG ulXforms);
+							  const CXform::EXformId rgXforms[],
+							  ULONG ulXforms);
 
 #ifdef GPOS_DEBUG
 	// check whether the given join type is swapable

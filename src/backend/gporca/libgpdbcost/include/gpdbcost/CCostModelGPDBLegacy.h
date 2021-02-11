@@ -90,7 +90,7 @@ private:
 								  ICostModelParams *pcp);
 
 	// add up array of costs
-	static CCost CostSum(DOUBLE *pdCost, ULONG size);
+	static CCost CostSum(const DOUBLE *pdCost, ULONG size);
 
 	// check if given operator is unary
 	static BOOL FUnary(COperator::EOperatorId op_id);

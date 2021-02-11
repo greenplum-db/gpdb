@@ -99,7 +99,7 @@ CTreeMapTest::CNode::OsPrintWithIndent(IOstream &os, ULONG ulIndent) const
 //
 //---------------------------------------------------------------------------
 CTreeMapTest::CNode::CNode(CMemoryPool *,  // mp
-						   ULONG *pulData, CNodeArray *pdrgpnd)
+						   const ULONG *pulData, CNodeArray *pdrgpnd)
 	: m_ulData(gpos::ulong_max), m_pdrgpnd(pdrgpnd)
 {
 	if (nullptr != pulData)

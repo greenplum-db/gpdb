@@ -697,7 +697,7 @@ public:
 	// create Equivalence Class based on the breakpoints
 	static CColRefSetArray *createEquivalenceClasses(CMemoryPool *mp,
 													 CColRefSet *pcrs,
-													 INT setBoundary[]);
+													 const INT setBoundary[]);
 };	// class CTestUtils
 
 

@@ -2742,7 +2742,7 @@ CDXLOperatorFactory::GetDatumStatsLintMappable(
 LINT
 CDXLOperatorFactory::Value(CDXLMemoryManager *dxl_memory_manager,
 						   const Attributes &attrs, Edxltoken target_elem,
-						   BYTE *data)
+						   const BYTE *data)
 {
 	if (nullptr == data)
 	{

@@ -1382,8 +1382,8 @@ CTranslatorRelcacheToDXL::ComputeIncludedCols(CMemoryPool *mp,
 //
 //---------------------------------------------------------------------------
 ULONG
-CTranslatorRelcacheToDXL::GetAttributePosition(INT attno,
-											   ULONG *GetAttributePosition)
+CTranslatorRelcacheToDXL::GetAttributePosition(
+	INT attno, const ULONG *GetAttributePosition)
 {
 	ULONG idx = (ULONG)(GPDXL_SYSTEM_COLUMNS + attno);
 	ULONG pos = GetAttributePosition[idx];

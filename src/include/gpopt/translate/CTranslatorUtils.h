@@ -207,7 +207,7 @@ public:
 	static ULongPtrArray *GenerateColIds(CMemoryPool *mp, List *target_list,
 										 IMdIdArray *input_mdids,
 										 ULongPtrArray *input_nums,
-										 BOOL *is_outer_ref,
+										 const BOOL *is_outer_ref,
 										 CIdGenerator *colid_generator);
 
 	// construct an array of DXL column descriptors for a target list
