@@ -897,7 +897,7 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
-    {% if pipeline_configuration == "prod" %}
+    {% if use_ICW_workers %}
     tags: [icw-centos7]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -919,7 +919,7 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
-    {% if pipeline_configuration == "prod" %}
+    {% if use_ICW_workers %}
     tags: [icw-centos7]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -946,7 +946,7 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
-    {% if pipeline_configuration == "prod" %}
+    {% if use_ICW_workers %}
     tags: [icw-centos7]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -968,7 +968,7 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
-    {% if pipeline_configuration == "prod" %}
+    {% if use_ICW_workers %}
     tags: [icw-centos7]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -990,7 +990,7 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
   - task: ic_gpdb
-    {% if pipeline_configuration == "prod" %}
+    {% if use_ICW_workers %}
     tags: [icw-centos7]
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -1025,7 +1025,7 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
-      {% if pipeline_configuration == "prod" %}
+      {% if use_ICW_workers %}
       tags: [icw-ubuntu18.04]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -1069,7 +1069,7 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
-      {% if pipeline_configuration == "prod" %}
+      {% if use_ICW_workers %}
       tags: [icw-ubuntu18.04]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
