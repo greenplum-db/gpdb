@@ -77,7 +77,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarProjectList == pop->Eopid());
 
-		return reinterpret_cast<CScalarProjectList *>(pop);
+		return dynamic_cast<CScalarProjectList *>(pop);
 	}
 
 	IMDId *

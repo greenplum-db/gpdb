@@ -117,7 +117,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalIntersect == pop->Eopid());
 
-		return reinterpret_cast<CLogicalIntersect *>(pop);
+		return dynamic_cast<CLogicalIntersect *>(pop);
 	}
 
 };	// class CLogicalIntersect

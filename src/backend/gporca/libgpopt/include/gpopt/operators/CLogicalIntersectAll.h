@@ -121,7 +121,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalIntersectAll == pop->Eopid());
 
-		return reinterpret_cast<CLogicalIntersectAll *>(pop);
+		return dynamic_cast<CLogicalIntersectAll *>(pop);
 	}
 
 	// derive statistics

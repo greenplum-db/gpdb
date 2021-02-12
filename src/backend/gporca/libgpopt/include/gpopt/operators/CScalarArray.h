@@ -106,7 +106,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarArray == pop->Eopid());
 
-		return reinterpret_cast<CScalarArray *>(pop);
+		return dynamic_cast<CScalarArray *>(pop);
 	}
 
 	// element type id

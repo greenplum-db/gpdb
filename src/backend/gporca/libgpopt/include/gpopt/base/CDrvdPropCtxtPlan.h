@@ -83,7 +83,7 @@ public:
 	{
 		GPOS_ASSERT(nullptr != pdpctxt);
 
-		return reinterpret_cast<CDrvdPropCtxtPlan *>(pdpctxt);
+		return dynamic_cast<CDrvdPropCtxtPlan *>(pdpctxt);
 	}
 
 };	// class CDrvdPropCtxtPlan

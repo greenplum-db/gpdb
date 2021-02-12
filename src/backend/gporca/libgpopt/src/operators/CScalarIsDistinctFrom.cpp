@@ -25,7 +25,7 @@ CScalarIsDistinctFrom::PopConvert(COperator *pop)
 	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopScalarIsDistinctFrom == pop->Eopid());
 
-	return reinterpret_cast<CScalarIsDistinctFrom *>(pop);
+	return dynamic_cast<CScalarIsDistinctFrom *>(pop);
 }
 
 // perform boolean expression evaluation

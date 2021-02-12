@@ -133,7 +133,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalSelect == pop->Eopid());
 
-		return reinterpret_cast<CLogicalSelect *>(pop);
+		return dynamic_cast<CLogicalSelect *>(pop);
 	}
 
 	// derive statistics

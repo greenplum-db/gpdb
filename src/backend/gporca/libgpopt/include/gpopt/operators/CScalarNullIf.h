@@ -112,7 +112,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarNullIf == pop->Eopid());
 
-		return reinterpret_cast<CScalarNullIf *>(pop);
+		return dynamic_cast<CScalarNullIf *>(pop);
 	}
 
 };	// class CScalarNullIf

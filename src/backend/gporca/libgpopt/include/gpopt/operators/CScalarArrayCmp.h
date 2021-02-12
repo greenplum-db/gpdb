@@ -126,7 +126,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarArrayCmp == pop->Eopid());
 
-		return reinterpret_cast<CScalarArrayCmp *>(pop);
+		return dynamic_cast<CScalarArrayCmp *>(pop);
 	}
 
 	// name of the comparison operator

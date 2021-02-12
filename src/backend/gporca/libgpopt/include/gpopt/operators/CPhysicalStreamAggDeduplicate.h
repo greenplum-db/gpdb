@@ -122,7 +122,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalStreamAggDeduplicate == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalStreamAggDeduplicate *>(pop);
+		return dynamic_cast<CPhysicalStreamAggDeduplicate *>(pop);
 	}
 
 };	// class CPhysicalStreamAggDeduplicate

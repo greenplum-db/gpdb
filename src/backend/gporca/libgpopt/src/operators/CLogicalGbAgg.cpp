@@ -562,7 +562,7 @@ CLogicalGbAgg::Matches(COperator *pop) const
 		return false;
 	}
 
-	CLogicalGbAgg *popAgg = reinterpret_cast<CLogicalGbAgg *>(pop);
+	CLogicalGbAgg *popAgg = dynamic_cast<CLogicalGbAgg *>(pop);
 
 	return FGeneratesDuplicates() == popAgg->FGeneratesDuplicates() &&
 		   popAgg->Egbaggtype() == m_egbaggtype &&

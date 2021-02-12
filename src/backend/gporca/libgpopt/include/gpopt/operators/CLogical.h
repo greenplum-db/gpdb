@@ -322,7 +322,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FLogical());
 
-		return reinterpret_cast<CLogical *>(pop);
+		return dynamic_cast<CLogical *>(pop);
 	}
 
 	// returns the table descriptor for (Dynamic)(BitmapTable)Get operators

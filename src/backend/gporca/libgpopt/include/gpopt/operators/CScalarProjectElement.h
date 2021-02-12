@@ -104,7 +104,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarProjectElement == pop->Eopid());
 
-		return reinterpret_cast<CScalarProjectElement *>(pop);
+		return dynamic_cast<CScalarProjectElement *>(pop);
 	}
 
 	IMDId *

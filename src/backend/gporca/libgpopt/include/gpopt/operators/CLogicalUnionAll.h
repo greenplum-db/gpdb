@@ -125,7 +125,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalUnionAll == pop->Eopid());
 
-		return reinterpret_cast<CLogicalUnionAll *>(pop);
+		return dynamic_cast<CLogicalUnionAll *>(pop);
 	}
 
 	// derive statistics based on union all semantics

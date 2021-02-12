@@ -149,7 +149,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalFilter == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalFilter *>(pop);
+		return dynamic_cast<CPhysicalFilter *>(pop);
 	}
 
 };	// class CPhysicalFilter

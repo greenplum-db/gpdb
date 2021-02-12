@@ -530,7 +530,7 @@ CPhysicalAgg::Matches(COperator *pop) const
 		return false;
 	}
 
-	CPhysicalAgg *popAgg = reinterpret_cast<CPhysicalAgg *>(pop);
+	CPhysicalAgg *popAgg = dynamic_cast<CPhysicalAgg *>(pop);
 
 	if (FGeneratesDuplicates() != popAgg->FGeneratesDuplicates())
 	{

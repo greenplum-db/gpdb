@@ -97,7 +97,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalScalarAgg == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalScalarAgg *>(pop);
+		return dynamic_cast<CPhysicalScalarAgg *>(pop);
 	}
 
 };	// class CPhysicalScalarAgg

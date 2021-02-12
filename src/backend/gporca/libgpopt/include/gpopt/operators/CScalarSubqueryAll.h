@@ -68,7 +68,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarSubqueryAll == pop->Eopid());
 
-		return reinterpret_cast<CScalarSubqueryAll *>(pop);
+		return dynamic_cast<CScalarSubqueryAll *>(pop);
 	}
 
 };	// class CScalarSubqueryAll

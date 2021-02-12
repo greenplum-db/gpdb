@@ -183,7 +183,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalAssert == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalAssert *>(pop);
+		return dynamic_cast<CPhysicalAssert *>(pop);
 	}
 
 	// debug print

@@ -87,7 +87,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalExternalScan == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalExternalScan *>(pop);
+		return dynamic_cast<CPhysicalExternalScan *>(pop);
 	}
 
 };	// class CPhysicalExternalScan

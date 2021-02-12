@@ -161,7 +161,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalMaxOneRow == pop->Eopid());
 
-		return reinterpret_cast<CLogicalMaxOneRow *>(pop);
+		return dynamic_cast<CLogicalMaxOneRow *>(pop);
 	}
 
 	// derive statistics

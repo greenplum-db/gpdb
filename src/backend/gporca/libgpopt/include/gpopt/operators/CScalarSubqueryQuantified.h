@@ -107,7 +107,7 @@ public:
 		GPOS_ASSERT(EopScalarSubqueryAny == pop->Eopid() ||
 					EopScalarSubqueryAll == pop->Eopid());
 
-		return reinterpret_cast<CScalarSubqueryQuantified *>(pop);
+		return dynamic_cast<CScalarSubqueryQuantified *>(pop);
 	}
 
 	// print

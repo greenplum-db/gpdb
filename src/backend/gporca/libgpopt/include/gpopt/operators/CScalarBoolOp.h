@@ -112,7 +112,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBoolOp == pop->Eopid());
 
-		return reinterpret_cast<CScalarBoolOp *>(pop);
+		return dynamic_cast<CScalarBoolOp *>(pop);
 	}
 
 	// boolean expression evaluation

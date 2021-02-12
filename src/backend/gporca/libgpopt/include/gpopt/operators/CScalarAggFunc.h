@@ -129,7 +129,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarAggFunc == pop->Eopid());
 
-		return reinterpret_cast<CScalarAggFunc *>(pop);
+		return dynamic_cast<CScalarAggFunc *>(pop);
 	}
 
 

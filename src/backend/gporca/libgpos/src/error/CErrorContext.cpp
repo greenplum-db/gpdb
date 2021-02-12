@@ -168,7 +168,7 @@ CErrorContext::CopyPropErrCtxt(const IErrorContext *err_ctxt)
 	// copy error message
 	m_static_buffer.Reset();
 	m_static_buffer.Append(
-		&(reinterpret_cast<const CErrorContext *>(err_ctxt)->m_static_buffer));
+		&(dynamic_cast<const CErrorContext *>(err_ctxt)->m_static_buffer));
 
 	// copy severity
 	m_severity = err_ctxt->GetSeverity();

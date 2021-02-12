@@ -73,7 +73,7 @@ public:
 		GPOS_ASSERT(EopPhysicalTableScan == pop->Eopid() ||
 					EopPhysicalExternalScan == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalTableScan *>(pop);
+		return dynamic_cast<CPhysicalTableScan *>(pop);
 	}
 
 	// statistics derivation during costing

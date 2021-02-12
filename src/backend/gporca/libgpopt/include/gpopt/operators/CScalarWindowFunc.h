@@ -111,7 +111,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarWindowFunc == pop->Eopid());
 
-		return reinterpret_cast<CScalarWindowFunc *>(pop);
+		return dynamic_cast<CScalarWindowFunc *>(pop);
 	}
 
 	// does window function definition include Distinct?

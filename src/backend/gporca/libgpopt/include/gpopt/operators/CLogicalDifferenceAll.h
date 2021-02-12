@@ -114,7 +114,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDifferenceAll == pop->Eopid());
 
-		return reinterpret_cast<CLogicalDifferenceAll *>(pop);
+		return dynamic_cast<CLogicalDifferenceAll *>(pop);
 	}
 
 };	// class CLogicalDifferenceAll

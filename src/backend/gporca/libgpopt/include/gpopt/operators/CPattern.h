@@ -76,7 +76,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FPattern());
 
-		return reinterpret_cast<CPattern *>(pop);
+		return dynamic_cast<CPattern *>(pop);
 	}
 
 	// helper to check multi-node pattern

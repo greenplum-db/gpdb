@@ -172,7 +172,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FScalar());
 
-		return reinterpret_cast<CScalar *>(pop);
+		return dynamic_cast<CScalar *>(pop);
 	}
 
 	// the type of the scalar expression

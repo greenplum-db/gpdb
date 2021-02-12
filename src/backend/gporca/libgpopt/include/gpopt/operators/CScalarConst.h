@@ -97,7 +97,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarConst == pop->Eopid());
 
-		return reinterpret_cast<CScalarConst *>(pop);
+		return dynamic_cast<CScalarConst *>(pop);
 	}
 
 	// the type of the scalar expression

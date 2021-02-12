@@ -130,7 +130,7 @@ public:
 		GPOS_ASSERT(EopPhysicalStreamAgg == pop->Eopid() ||
 					EopPhysicalStreamAggDeduplicate == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalStreamAgg *>(pop);
+		return dynamic_cast<CPhysicalStreamAgg *>(pop);
 	}
 
 };	// class CPhysicalStreamAgg

@@ -117,7 +117,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalUnion == pop->Eopid());
 
-		return reinterpret_cast<CLogicalUnion *>(pop);
+		return dynamic_cast<CLogicalUnion *>(pop);
 	}
 
 };	// class CLogicalUnion

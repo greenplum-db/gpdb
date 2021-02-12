@@ -113,7 +113,7 @@ public:
 		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalAssert == pop->Eopid());
 
-		return reinterpret_cast<CLogicalAssert *>(pop);
+		return dynamic_cast<CLogicalAssert *>(pop);
 	}
 
 	// derive statistics
