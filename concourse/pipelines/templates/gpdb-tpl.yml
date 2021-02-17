@@ -1048,6 +1048,7 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/gpdb6/server-build-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
+{% endif %}
 {% if "sles12" in os_types %}
 - name: bin_gpdb_sles12
   type: gcs
@@ -3206,6 +3207,5 @@ jobs:
           gpcloud_access_key_id: ((gpcloud-access-key-id))
           gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
-{% endif %}
 {% endif %}
 {% endif %}
