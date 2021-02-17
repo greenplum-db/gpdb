@@ -522,11 +522,6 @@ resources:
     repository: alpine
     tag: latest
 
-- name: clang_toolchain
-  type: registry-image
-  source:
-    repository: gcr.io/data-orca/clang-toolchain
-
 - name: ccp-image
   type: registry-image
   source:
@@ -1150,6 +1145,11 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/madlib-snowflakes/boost_(1_61_0).tar.gz
 {% endif %}
+
+- name: clang_toolchain
+  type: registry-image
+  source:
+    repository: gcr.io/data-orca/clang-toolchain
 
 - name: reduced-frequency-trigger
   type: time
