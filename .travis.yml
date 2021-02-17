@@ -50,6 +50,7 @@ matrix:
           env:
               - T=debug C=""
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_ALL="en_US.utf8" LC_CTYPE="en_US.utf8"
           addons:
               apt:
                   sources:
@@ -63,6 +64,7 @@ matrix:
           env:
               - T=debug C=""
               - OVERRIDE_CC="CC=clang-7" OVERRIDE_CXX="CXX=clang++-7"
+              - LC_ALL="en_US.utf8" LC_CTYPE="en_US.utf8"
           addons:
               apt:
                   sources:
@@ -92,6 +94,7 @@ matrix:
           env:
               - T=debug C="--without-zlib --without-libbz2 --without-zstd --without-quicklz"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_ALL="en_US.utf8" LC_CTYPE="en_US.utf8"
           addons:
               apt:
                   sources: *common_sources
@@ -105,6 +108,7 @@ matrix:
           env:
               - tests=unit T=debug C="--disable-orca"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_ALL="en_US.utf8" LC_CTYPE="en_US.utf8"
           addons:
               apt:
                   sources: *common_sources
@@ -117,6 +121,7 @@ matrix:
           env:
               - tests=installcheck T=debug C="--disable-orca"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_ALL="en_US.utf8" LC_CTYPE="en_US.utf8"
           addons:
               apt:
                   sources: *common_sources
