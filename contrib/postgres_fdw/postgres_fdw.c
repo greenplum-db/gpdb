@@ -2927,7 +2927,8 @@ estimate_path_cost_size(PlannerInfo *root,
 														 fpinfo->remote_conds,
 														 0,
 														 JOIN_INNER,
-														 NULL));
+														 NULL,
+														 false));
 				/* Factor in the selectivity of the locally-checked quals */
 				rows = clamp_row_est(retrieved_rows * fpinfo->local_conds_sel);
 			}
@@ -5874,7 +5875,8 @@ add_foreign_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel,
 													 fpinfo->local_conds,
 													 0,
 													 JOIN_INNER,
-													 NULL);
+													 NULL,
+													 false);
 
 	cost_qual_eval(&fpinfo->local_conds_cost, fpinfo->local_conds, root);
 
