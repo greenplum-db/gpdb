@@ -153,7 +153,7 @@ gp_expand_protect_catalog_changes(Relation relation)
 	if (oldVersion != newVersion)
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("cluster is expaneded from version %d to %d, "
+				 errmsg("cluster is expanded from version %d to %d, "
 						"catalog changes are disallowed",
 						oldVersion, newVersion)));
 }
