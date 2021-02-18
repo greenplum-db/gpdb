@@ -1166,7 +1166,7 @@ SET_LOCALE_VARS_BASED_ON_COORDINATOR() {
 	#
 	# --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8 ...
 	psql_cmd="SELECT '--' || REPLACE(name, '_', '-') || '=' || setting FROM pg_settings WHERE name LIKE 'lc_%' ORDER BY name"
-	export LC_ALL_SETTINGS=$(psql -t -d template1 -c "$psql_cmd")
+	export LC_ALL_SETTINGS=$($PSQL -d template1 -X -A -t -c "$psql_cmd")
 }
 
 CREATE_QD_DB () {
@@ -1176,11 +1176,11 @@ CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Initializing Coordinator Postgres instance $GP_DIR"
 		$EXPORT_LIB_PATH
 
-        if [ x"" != x"$LCCOLLATE" ]; then
+		if [ x"" != x"$LCCOLLATE" ]; then
 			LC_COLLATE_SETTING="--lc-collate=$LCCOLLATE"
 		fi
 		
-        if [ x"" != x"$LCCTYPE" ]; then
+		if [ x"" != x"$LCCTYPE" ]; then
 			LC_CTYPE_SETTING="--lc-ctype=$LCCTYPE"
 		fi
 		
@@ -1196,10 +1196,11 @@ CREATE_QD_DB () {
 			LC_NUMERIC_SETTING="--lc-numeric=$LCNUMERIC"
 		fi
 		
-        if [ x"" != x"$LCTIME" ]; then
+		if [ x"" != x"$LCTIME" ]; then
 			LC_TIME_SETTING="--lc-time=$LCTIME"
 		fi
-		
+
+		# Since we explicitly set each LC_* setting, we do not need to pass a --locale option to initdb
 		LC_ALL_SETTINGS=" $LC_COLLATE_SETTING $LC_CTYPE_SETTING $LC_MESSAGES_SETTING $LC_MONETARY_SETTING $LC_NUMERIC_SETTING $LC_TIME_SETTING"
 
 
@@ -1207,9 +1208,6 @@ CREATE_QD_DB () {
 		cmd="$INITDB"
 		cmd="$cmd -E $ENCODING"
 		cmd="$cmd -D $GP_DIR"
-		if [ x"" == x"$LOCALE_SETTING" ]; then
-			cmd="$cmd --locale=$LOCALE_SETTING"
-		fi
 		cmd="$cmd $LC_ALL_SETTINGS"
 		cmd="$cmd --max_connections=$COORDINATOR_MAX_CONNECT"
 		cmd="$cmd --shared_buffers=$COORDINATOR_SHARED_BUFFERS"
