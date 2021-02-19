@@ -1,6 +1,6 @@
 @gpinitsystem
 Feature: gpinitsystem tests
-
+#a comment
     Scenario: gpinitsystem creates a cluster with data_checksums on
         Given the database is initialized with checksum "on"
         When the user runs "gpconfig -s data_checksums"
