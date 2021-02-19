@@ -5,17 +5,17 @@ sudo -K
 sudo true;
 
 if hash brew 2>/dev/null; then
-	  echo "Homebrew is already installed!"
+	echo "Homebrew is already installed!"
 else
-	  echo "Installing Homebrew..."
-	  ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+	echo "Installing Homebrew..."
+	ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 fi
 
 brew install bash-completion
 brew install conan
 brew install cmake # gporca
 brew install xerces-c #gporca
-brew install libyaml   # enables `--enable-mapreduce`
+brew install libyaml # enables `--enable-mapreduce`
 brew install libevent # gpfdist
 brew install apr # gpfdist
 brew install apr-util # gpfdist
@@ -24,19 +24,13 @@ brew install pkg-config
 brew link --force apr
 brew link --force apr-util
 
-# Installing Golang
-mkdir -p ~/go/src
-brew install go # Or get the latest from https://golang.org/dl/
-brew install dep
-
 # Installing python libraries
-brew install python2
-pip install --user -r python-dependencies.txt
-pip install --user -r python-developer-dependencies.txt
+brew install python3
+pip3 install --user -r python-dependencies.txt
+pip3 install --user -r python-developer-dependencies.txt
 
 #echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
 echo 127.0.0.1$'\t'$HOSTNAME | sudo tee -a /etc/hosts
-
 
 # OS settings
 sudo sysctl -w kern.sysv.shmmax=2147483648
@@ -80,12 +74,3 @@ cat >> ~/.bashrc << EOF
 ulimit -n 65536 65536  # Increases the number of open files
 export PGHOST="$(hostname)"
 EOF
-
-# Step: GOPATH for Golang
-cat >> ~/.bash_profile << EOF
-export GOPATH=\$HOME/go
-export PATH=\$HOME/go/bin:\$PATH
-EOF
-
-# Step: install any optional tools
-brew install gdb
