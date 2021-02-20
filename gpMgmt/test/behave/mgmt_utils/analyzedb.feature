@@ -164,6 +164,17 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -l -d incr_analyze -t '"my schema"."my ao"'"
         Then analyzedb should print "-"my schema"."my ao" to stdout
 
+    Scenario: Table and schema name with a colon, comma and newline
+        Given no state files exist for database "incr_analyze"
+        And schema ""my:schema"" exists in "incr_analyze"
+        And there is a regular "ao" table ""my:ao"" with column name list ""my,col","My:Col",z" and column type list "int,text,real" in schema ""my:schema""
+        And there is a regular "heap" table ""my,heap"" with column name list ""my\\ncol","My:Col",z" and column type list "int,text,real" in schema ""my:schema""
+        When the user runs "analyzedb -l -d incr_analyze -s 'my:schema'"
+        Then analyzedb should print "-"my:schema"."my:ao" to stdout
+	And analyzedb should print "-"my:schema"."my,heap" to stdout
+        When the user runs "analyzedb -l -d incr_analyze -t '"my:schema"."my:ao"'"
+        Then analyzedb should print "-"my:schema"."my:ao" to stdout
+
     Scenario: Incremental analyze, no dirty tables
         Given no state files exist for database "incr_analyze"
         And the user runs "analyzedb -a -d incr_analyze -t public.t1_ao"

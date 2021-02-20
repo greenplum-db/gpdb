@@ -626,10 +626,6 @@ class AnalyzeDb(Operation):
         for can in candidates:
             schema = can[0]
             table = can[1]
-            if '\n' in schema or ',' in schema or ':' in schema:
-                raise Exception('Schema name has an invalid character "\\n", ":", "," : "%s"' % schema)
-            if '\n' in table or ',' in table or ':' in table:
-                raise Exception('Table name has an invalid character "\\n", ":", "," : "%s"' % table)
             if can in mid_level_partitions:
                 logger.warning("Skipping mid-level partition %s.%s" % (schema, table))
             else:
@@ -1260,7 +1256,7 @@ def create_parser():
                           "as having stale stats every time analyzedb is run. This is because we use AO metadata to check for DML or "
                           "DDL events, which is not available to heap tables.  "
                           "2. Views, indices and external tables are automatically skipped.  "
-                          "3. Table names or schema names containing comma or period is not supported yet."
+                          "3. Table names or schema names containing period is not supported yet."
                           )
     parser.set_usage('%prog [options] ')
     parser.remove_option('-h')
