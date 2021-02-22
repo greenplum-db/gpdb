@@ -67,7 +67,7 @@ CDXLWindowFrame::~CDXLWindowFrame()
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLWindowFrame::PstrES(EdxlFrameExclusionStrategy edxles) const
+CDXLWindowFrame::PstrES(EdxlFrameExclusionStrategy edxles)
 {
 	GPOS_ASSERT(EdxlfesSentinel > edxles);
 	ULONG window_frame_boundary_to_frame_boundary_mapping[][2] = {
@@ -103,7 +103,7 @@ CDXLWindowFrame::PstrES(EdxlFrameExclusionStrategy edxles) const
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLWindowFrame::PstrFS(EdxlFrameSpec edxlfs) const
+CDXLWindowFrame::PstrFS(EdxlFrameSpec edxlfs)
 {
 	GPOS_ASSERT(EdxlfsSentinel > edxlfs &&
 				"Unrecognized window frame specification");

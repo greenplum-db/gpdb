@@ -44,7 +44,7 @@ private:
 #ifdef GPOS_DEBUG
 	// sanity check to detect deleted memory
 	void
-	Check()
+	Check() const
 	{
 		// assert that first member of class has not been wiped
 		GPOS_ASSERT(m_refs != GPOS_WIPED_MEM_PATTERN);

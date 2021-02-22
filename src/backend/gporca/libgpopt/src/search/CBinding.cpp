@@ -28,7 +28,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CGroupExpression *
-CBinding::PgexprNext(CGroup *pgroup, CGroupExpression *pgexpr) const
+CBinding::PgexprNext(CGroup *pgroup, CGroupExpression *pgexpr)
 {
 	CGroupProxy gp(pgroup);
 

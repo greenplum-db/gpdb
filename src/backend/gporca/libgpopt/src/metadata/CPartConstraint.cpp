@@ -162,7 +162,7 @@ CPartConstraint::PcnstrBuildCombined(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 BOOL
-CPartConstraint::FAllDefaultPartsIncluded()
+CPartConstraint::FAllDefaultPartsIncluded() const
 {
 	for (ULONG ul = 0; ul < m_num_of_part_levels; ul++)
 	{

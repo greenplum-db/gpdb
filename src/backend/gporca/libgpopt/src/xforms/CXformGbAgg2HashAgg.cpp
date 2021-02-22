@@ -150,7 +150,7 @@ CXformGbAgg2HashAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //
 //---------------------------------------------------------------------------
 BOOL
-CXformGbAgg2HashAgg::FApplicable(CExpression *pexpr) const
+CXformGbAgg2HashAgg::FApplicable(CExpression *pexpr)
 {
 	CExpression *pexprPrjList = (*pexpr)[1];
 	ULONG arity = pexprPrjList->Arity();

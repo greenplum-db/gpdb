@@ -98,14 +98,14 @@ private:
 	// private copy ctor
 	CTranslatorExprToDXL(const CTranslatorExprToDXL &);
 
-	EdxlBoolExprType Edxlbooltype(
-		const CScalarBoolOp::EBoolOperator eboolop) const;
+	static EdxlBoolExprType Edxlbooltype(
+		const CScalarBoolOp::EBoolOperator eboolop);
 
 	// return the EdxlDmlType for a given DML op type
-	EdxlDmlType Edxldmloptype(const CLogicalDML::EDMLOperator edmlop) const;
+	static EdxlDmlType Edxldmloptype(const CLogicalDML::EDMLOperator edmlop);
 
 	// return outer refs in correlated join inner child
-	CColRefSet *PcrsOuterRefsForCorrelatedNLJoin(CExpression *pexpr) const;
+	static CColRefSet *PcrsOuterRefsForCorrelatedNLJoin(CExpression *pexpr);
 
 	// functions translating different optimizer expressions into their
 	// DXL counterparts
@@ -337,10 +337,9 @@ private:
 										   CTableDescriptor *root_table_desc);
 
 	// Construct a dxl index descriptor for a child partition
-	CDXLIndexDescr *PdxlnIndexDescForPart(CMemoryPool *m_mp,
-										  MdidHashSet *child_index_mdids_set,
-										  const IMDRelation *part,
-										  const CWStringConst *index_name);
+	static CDXLIndexDescr *PdxlnIndexDescForPart(
+		CMemoryPool *m_mp, MdidHashSet *child_index_mdids_set,
+		const IMDRelation *part, const CWStringConst *index_name);
 
 	// translate a dynamic bitmap table scan
 	CDXLNode *PdxlnDynamicBitmapTableScan(
@@ -541,7 +540,7 @@ private:
 	CDXLNode *PdxlnScWindowFuncExpr(CExpression *pexprScFunc);
 
 	// get the DXL representation of the window stage
-	EdxlWinStage Ews(CScalarWindowFunc::EWinStage ews) const;
+	static EdxlWinStage Ews(CScalarWindowFunc::EWinStage ews);
 
 	// translate a scalar aggref
 	CDXLNode *PdxlnScAggref(CExpression *pexprScAggFunc);
@@ -577,7 +576,7 @@ private:
 	CDXLNode *PdxlnArrayRefIndexList(CExpression *pexpr);
 
 	// translate the arrayref index list bound
-	CDXLScalarArrayRefIndexList::EIndexListBound Eilb(
+	static CDXLScalarArrayRefIndexList::EIndexListBound Eilb(
 		const CScalarArrayRefIndexList::EIndexListType eilt);
 
 	// translate an array compare
@@ -671,8 +670,8 @@ private:
 	IntPtrArray *GetOutputSegIdsArray(CExpression *pexprMotion);
 
 	// find the position of the given colref in the array
-	ULONG UlPosInArray(const CColRef *colref,
-					   const CColRefArray *colref_array) const;
+	static ULONG UlPosInArray(const CColRef *colref,
+							  const CColRefArray *colref_array);
 
 	// return hash join type
 	static EdxlJoinType EdxljtHashJoin(CPhysicalHashJoin *popHJ);
@@ -699,8 +698,9 @@ private:
 									  CColRefArray *pdrgpcrOrder);
 
 	// combines the ordered columns and required columns into a single list
-	CColRefArray *PdrgpcrMerge(CMemoryPool *mp, CColRefArray *pdrgpcrOrder,
-							   CColRefArray *pdrgpcrRequired);
+	static CColRefArray *PdrgpcrMerge(CMemoryPool *mp,
+									  CColRefArray *pdrgpcrOrder,
+									  CColRefArray *pdrgpcrRequired);
 
 	// helper to add a project of bool constant
 	CDXLNode *PdxlnProjectBoolConst(CDXLNode *dxlnode, BOOL value);

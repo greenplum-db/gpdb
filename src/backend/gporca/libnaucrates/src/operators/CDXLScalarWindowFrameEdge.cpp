@@ -77,8 +77,7 @@ CDXLScalarWindowFrameEdge::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLScalarWindowFrameEdge::GetFrameBoundaryStr(
-	EdxlFrameBoundary frame_boundary) const
+CDXLScalarWindowFrameEdge::GetFrameBoundaryStr(EdxlFrameBoundary frame_boundary)
 {
 	GPOS_ASSERT(EdxlfbSentinel > frame_boundary);
 

@@ -3599,8 +3599,8 @@ CTranslatorDXLToPlStmt::TranslateDXLFilterList(
 	{
 		CDXLNode *child_filter_dxlnode = (*filter_list_dxlnode)[ul];
 
-		if (m_translator_dxl_to_scalar->HasConstTrue(child_filter_dxlnode,
-													 m_md_accessor))
+		if (gpdxl::CTranslatorDXLToScalar::HasConstTrue(child_filter_dxlnode,
+														m_md_accessor))
 		{
 			filters_list = gpdb::LAppend(filters_list, nullptr /*datum*/);
 			continue;

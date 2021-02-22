@@ -102,7 +102,7 @@ private:
 		IOstream &OsPrint(IOstream &os) const;
 
 		// copy part info entry into given memory pool
-		CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp);
+		CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp) const;
 
 	};	// CPartInfoEntry
 

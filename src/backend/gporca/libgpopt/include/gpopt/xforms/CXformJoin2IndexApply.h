@@ -24,43 +24,43 @@ class CXformJoin2IndexApply : public CXformExploration
 private:
 	// helper to add IndexApply expression to given xform results container
 	// for homogeneous b-tree indexes
-	void CreateHomogeneousBtreeIndexApplyAlternatives(
+	static void CreateHomogeneousBtreeIndexApplyAlternatives(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
 		CExpression *pexprInner, CExpression *pexprScalar,
 		CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet,
 		CTableDescriptor *ptabdescInner, CColRefSet *pcrsScalarExpr,
 		CColRefSet *outer_refs, CColRefSet *pcrsReqd, ULONG ulIndices,
-		CXformResult *pxfres) const;
+		CXformResult *pxfres);
 
 	// helper to add IndexApply expression to given xform results container
 	// for homogeneous b-tree indexes
-	void CreateAlternativesForBtreeIndex(
+	static void CreateAlternativesForBtreeIndex(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
 		CExpression *pexprInner, CExpression *origJoinPred,
 		CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet, CMDAccessor *md_accessor,
 		CExpressionArray *pdrgpexprConjuncts, CColRefSet *pcrsScalarExpr,
 		CColRefSet *outer_refs, CColRefSet *pcrsReqd, const IMDRelation *pmdrel,
-		const IMDIndex *pmdindex, CXformResult *pxfres) const;
+		const IMDIndex *pmdindex, CXformResult *pxfres);
 
 	// helper to add IndexApply expression to given xform results container
 	// for homogeneous bitmap indexes
-	void CreateHomogeneousBitmapIndexApplyAlternatives(
+	static void CreateHomogeneousBitmapIndexApplyAlternatives(
 		CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
 		CExpression *pexprInner, CExpression *pexprScalar,
 		CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet,
 		CTableDescriptor *ptabdescInner, CColRefSet *outer_refs,
-		CColRefSet *pcrsReqd, CXformResult *pxfres) const;
+		CColRefSet *pcrsReqd, CXformResult *pxfres);
 
 	// based on the inner and the scalar expression, it computes scalar expression
 	// columns, outer references and required columns
-	void ComputeColumnSets(CMemoryPool *mp, CExpression *pexprInner,
-						   CExpression *pexprScalar,
-						   CColRefSet **ppcrsScalarExpr,
-						   CColRefSet **ppcrsOuterRefs,
-						   CColRefSet **ppcrsReqd) const;
+	static void ComputeColumnSets(CMemoryPool *mp, CExpression *pexprInner,
+								  CExpression *pexprScalar,
+								  CColRefSet **ppcrsScalarExpr,
+								  CColRefSet **ppcrsOuterRefs,
+								  CColRefSet **ppcrsReqd);
 
 protected:
 	// is the logical join that is being transformed an outer join?

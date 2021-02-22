@@ -536,13 +536,8 @@ CPhysicalHashJoin::PdshashedPassThru(CMemoryPool *mp,
 									 CDistributionSpecHashed *pdshashedInput,
 									 ULONG,				// child_index
 									 CDrvdPropArray *,	// pdrgpdpCtxt
-									 ULONG
-#ifdef GPOS_DEBUG
-										 ulOptReq
-#endif	// GPOS_DEBUG
-) const
+									 ULONG ulOptReq GPOS_UNUSED)
 {
-	GPOS_ASSERT(ulOptReq == m_pdrgpdsRedistributeRequests->Size());
 	GPOS_ASSERT(nullptr != pdshashedInput);
 
 	if (!GPOS_FTRACE(EopttraceEnableRedistributeBroadcastHashJoin))

@@ -74,7 +74,7 @@ gpopt_terminate()
 
 	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
 
-	CXformFactory::Pxff()->Shutdown();
+	CXformFactory::Shutdown();
 #endif	// GPOS_DEBUG
 }
 

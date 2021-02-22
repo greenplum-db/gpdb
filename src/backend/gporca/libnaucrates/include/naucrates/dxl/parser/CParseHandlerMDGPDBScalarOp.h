@@ -85,7 +85,7 @@ private:
 		) override;
 
 	// is this a supported child elem of the scalar op
-	BOOL IsSupportedChildElem(const XMLCh *const xml_str);
+	static BOOL IsSupportedChildElem(const XMLCh *const xml_str);
 
 public:
 	CParseHandlerMDGPDBScalarOp(const CParseHandlerMDGPDBScalarOp &) = delete;

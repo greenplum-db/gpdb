@@ -43,7 +43,7 @@ CIdGenerator::next_id()
 //
 //---------------------------------------------------------------------------
 ULONG
-CIdGenerator::current_id()
+CIdGenerator::current_id() const
 {
 	return id;
 }

@@ -33,10 +33,10 @@ class CXformExpandFullOuterJoin : public CXformExploration
 private:
 	// construct a join expression of two CTEs using the given CTE ids
 	// and output columns
-	CExpression *PexprLogicalJoinOverCTEs(
+	static CExpression *PexprLogicalJoinOverCTEs(
 		CMemoryPool *mp, EdxlJoinType edxljointype, ULONG ulLeftCTEId,
 		CColRefArray *pdrgpcrLeft, ULONG ulRightCTEId,
-		CColRefArray *pdrgpcrRight, CExpression *pexprScalar) const;
+		CColRefArray *pdrgpcrRight, CExpression *pexprScalar);
 
 public:
 	CXformExpandFullOuterJoin(const CXformExpandFullOuterJoin &) = delete;

@@ -158,7 +158,7 @@ private:
 					   INT type_modifier, BOOL fStoreMapping, ULONG colid);
 
 	// check if we currently support the casting of such column types
-	BOOL FCastingUnknownType(IMDId *pmdidSource, IMDId *mdid_dest);
+	static BOOL FCastingUnknownType(IMDId *pmdidSource, IMDId *mdid_dest);
 
 	// translate a DXL logical get into an expr logical get
 	CExpression *PexprLogicalGet(const CDXLNode *pdxlnLgGet);
@@ -256,17 +256,17 @@ private:
 	CExpression *PexprWindowFunc(const CDXLNode *pdxlnWindowRef);
 
 	// translate the DXL representation of the window stage
-	CScalarWindowFunc::EWinStage Ews(EdxlWinStage edxlws) const;
+	static CScalarWindowFunc::EWinStage Ews(EdxlWinStage edxlws);
 
 	// translate the DXL representation of window frame into its respective representation in the optimizer
 	CWindowFrame *Pwf(const CDXLWindowFrame *window_frame);
 
 	// translate the DXL representation of window frame boundary into its respective representation in the optimizer
-	CWindowFrame::EFrameBoundary Efb(EdxlFrameBoundary frame_boundary) const;
+	static CWindowFrame::EFrameBoundary Efb(EdxlFrameBoundary frame_boundary);
 
 	// translate the DXL representation of window frame exclusion strategy into its respective representation in the optimizer
-	CWindowFrame::EFrameExclusionStrategy Efes(
-		EdxlFrameExclusionStrategy edxlfeb) const;
+	static CWindowFrame::EFrameExclusionStrategy Efes(
+		EdxlFrameExclusionStrategy edxlfeb);
 
 	// translate a DXL scalar array
 	CExpression *PexprArray(const CDXLNode *dxlnode);
@@ -278,7 +278,7 @@ private:
 	CExpression *PexprArrayRefIndexList(const CDXLNode *dxlnode);
 
 	// translate the arrayref index list type
-	CScalarArrayRefIndexList::EIndexListType Eilt(
+	static CScalarArrayRefIndexList::EIndexListType Eilt(
 		const CDXLScalarArrayRefIndexList::EIndexListBound eilb);
 
 	// translate a DXL scalar array compare
@@ -329,9 +329,9 @@ private:
 	CExpression *Pexpr(const CDXLNode *dxlnode);
 
 	// update table descriptor's distribution columns from the MD cache object
-	void AddDistributionColumns(CTableDescriptor *ptabdesc,
-								const IMDRelation *pmdrel,
-								IntToUlongMap *phmiulAttnoColMapping);
+	static void AddDistributionColumns(CTableDescriptor *ptabdesc,
+									   const IMDRelation *pmdrel,
+									   IntToUlongMap *phmiulAttnoColMapping);
 
 	// main translation routine for DXL tree -> Expr tree
 	CExpression *Pexpr(const CDXLNode *dxlnode,

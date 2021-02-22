@@ -231,7 +231,7 @@ public:
 									 CDistributionSpecHashed *other_spec);
 
 	// check if the equivalent spec (if any) has no matching columns with the main spec
-	BOOL HasCompleteEquivSpec(CMemoryPool *mp);
+	BOOL HasCompleteEquivSpec(CMemoryPool *mp) const;
 
 	// use given predicates to complete an incomplete spec, if possible
 	static CDistributionSpecHashed *TryToCompleteEquivSpec(

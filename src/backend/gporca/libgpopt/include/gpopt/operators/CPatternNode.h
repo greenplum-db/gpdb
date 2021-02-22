@@ -88,7 +88,7 @@ public:
 	}
 
 	BOOL
-	MatchesOperator(enum COperator::EOperatorId opid)
+	MatchesOperator(enum COperator::EOperatorId opid) const
 	{
 		switch (m_match)
 		{

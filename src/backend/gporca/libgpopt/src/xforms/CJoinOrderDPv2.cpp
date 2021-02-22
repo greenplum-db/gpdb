@@ -1922,8 +1922,7 @@ CJoinOrderDPv2::OsPrint(IOstream &os) const
 
 
 IOstream &
-CJoinOrderDPv2::OsPrintProperty(IOstream &os,
-								SExpressionProperties &props) const
+CJoinOrderDPv2::OsPrintProperty(IOstream &os, SExpressionProperties &props)
 {
 	os << "{ ";
 	if (0 == props.m_join_order)

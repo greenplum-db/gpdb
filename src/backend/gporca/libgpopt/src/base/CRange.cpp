@@ -707,7 +707,7 @@ CRange::OsPrint(IOstream &os) const
 //
 //---------------------------------------------------------------------------
 IOstream &
-CRange::OsPrintBound(IOstream &os, IDatum *datum, const CHAR *szInfinity) const
+CRange::OsPrintBound(IOstream &os, IDatum *datum, const CHAR *szInfinity)
 {
 	if (nullptr == datum)
 	{

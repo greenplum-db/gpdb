@@ -137,8 +137,7 @@ CTranslatorScalarToDXL::TranslateStandaloneExprToDXL(
 //		Return the EdxlBoolExprType for a given GPDB BoolExprType
 //---------------------------------------------------------------------------
 EdxlBoolExprType
-CTranslatorScalarToDXL::EdxlbooltypeFromGPDBBoolType(
-	BoolExprType boolexprtype) const
+CTranslatorScalarToDXL::EdxlbooltypeFromGPDBBoolType(BoolExprType boolexprtype)
 {
 	static ULONG mapping[][2] = {
 		{NOT_EXPR, Edxlnot},

@@ -57,18 +57,20 @@ private:
 
 	// adds ranges from a source array to a destination array, starting
 	// at the range with the given index
-	void AddRemainingRanges(CMemoryPool *mp, CRangeArray *pdrgprngSrc,
-							ULONG ulStart, CRangeArray *pdrgprngDest);
+	static void AddRemainingRanges(CMemoryPool *mp, CRangeArray *pdrgprngSrc,
+								   ULONG ulStart, CRangeArray *pdrgprngDest);
 
 	// append the given range to the array or extend the last element
-	void AppendOrExtend(CMemoryPool *mp, CRangeArray *pdrgprng, CRange *prange);
+	static void AppendOrExtend(CMemoryPool *mp, CRangeArray *pdrgprng,
+							   CRange *prange);
 
 	// difference between two ranges on the left side only -
 	// any difference on the right side is reported as residual range
-	CRange *PrangeDiffWithRightResidual(CMemoryPool *mp, CRange *prangeFirst,
-										CRange *prangeSecond,
-										CRange **pprangeResidual,
-										CRangeArray *pdrgprngResidual);
+	static CRange *PrangeDiffWithRightResidual(CMemoryPool *mp,
+											   CRange *prangeFirst,
+											   CRange *prangeSecond,
+											   CRange **pprangeResidual,
+											   CRangeArray *pdrgprngResidual);
 
 	// type of this interval
 	IMDId *MdidType();

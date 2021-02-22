@@ -124,7 +124,7 @@ private:
 	Expr *TranslateDXLScalarSwitchToScalar(const CDXLNode *scalar_switch_node,
 										   CMappingColIdVar *colid_var);
 
-	Expr *TranslateDXLScalarCaseTestToScalar(
+	static Expr *TranslateDXLScalarCaseTestToScalar(
 		const CDXLNode *scalar_case_test_node, CMappingColIdVar *colid_var);
 
 	Expr *TranslateDXLScalarAggrefToScalar(const CDXLNode *aggref_node,
@@ -159,7 +159,7 @@ private:
 
 	CHAR *GetSubplanAlias(ULONG plan_id);
 
-	Param *TranslateParamFromMapping(
+	static Param *TranslateParamFromMapping(
 		const CMappingElementColIdParamId *colid_to_param_id_map);
 
 	// translate a scalar coalesce
@@ -189,8 +189,8 @@ private:
 		CMappingColIdVar *colid_var);
 
 	// translate a DML action expression
-	Expr *TranslateDXLScalarDMLActionToScalar(const CDXLNode *dml_action_node,
-											  CMappingColIdVar *colid_var);
+	static Expr *TranslateDXLScalarDMLActionToScalar(
+		const CDXLNode *dml_action_node, CMappingColIdVar *colid_var);
 
 
 	// translate children of DXL node, and add them to list
@@ -201,11 +201,11 @@ private:
 	OID GetFunctionReturnTypeOid(IMDId *mdid) const;
 
 	// translate dxldatum to GPDB Const
-	Const *ConvertDXLDatumToConstOid(CDXLDatum *datum_dxl);
-	Const *ConvertDXLDatumToConstInt2(CDXLDatum *datum_dxl);
-	Const *ConvertDXLDatumToConstInt4(CDXLDatum *datum_dxl);
-	Const *ConvertDXLDatumToConstInt8(CDXLDatum *datum_dxl);
-	Const *ConvertDXLDatumToConstBool(CDXLDatum *datum_dxl);
+	static Const *ConvertDXLDatumToConstOid(CDXLDatum *datum_dxl);
+	static Const *ConvertDXLDatumToConstInt2(CDXLDatum *datum_dxl);
+	static Const *ConvertDXLDatumToConstInt4(CDXLDatum *datum_dxl);
+	static Const *ConvertDXLDatumToConstInt8(CDXLDatum *datum_dxl);
+	static Const *ConvertDXLDatumToConstBool(CDXLDatum *datum_dxl);
 	Const *TranslateDXLDatumGenericToScalar(CDXLDatum *datum_dxl);
 	Expr *TranslateRelabelTypeOrFuncExprFromDXL(
 		const CDXLScalarCast *scalar_cast, Expr *pexprChild);
@@ -229,8 +229,8 @@ public:
 							   CMappingColIdVar *colid_var);
 
 	// translate a scalar ident into an Expr
-	Expr *TranslateDXLScalarIdentToScalar(const CDXLNode *scalar_id_node,
-										  CMappingColIdVar *colid_var);
+	static Expr *TranslateDXLScalarIdentToScalar(const CDXLNode *scalar_id_node,
+												 CMappingColIdVar *colid_var);
 
 	// translate a scalar comparison into an Expr
 	Expr *TranslateDXLScalarCmpToScalar(const CDXLNode *scalar_cmp_node,

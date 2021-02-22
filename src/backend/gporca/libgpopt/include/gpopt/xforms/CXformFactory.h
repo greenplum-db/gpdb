@@ -113,7 +113,7 @@ public:
 	static GPOS_RESULT Init();
 
 	// destroy global factory instance
-	void Shutdown();
+	static void Shutdown();
 
 };	// class CXformFactory
 

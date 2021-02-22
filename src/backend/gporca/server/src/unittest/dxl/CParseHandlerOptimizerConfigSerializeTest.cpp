@@ -30,7 +30,7 @@ public:
 		return m_amp.Pmp();
 	}
 
-	const CHAR *
+	static const CHAR *
 	SzValidationPath(BOOL fValidate)
 	{
 		if (fValidate)
@@ -97,7 +97,7 @@ CParseHandlerOptimizerConfigSerializeTest::EresUnittest()
 	// This will cause the test to fail, as we do a byte-wise string comparison as opposed to a
 	// comparison of canonicalized XML
 	const CHAR *dxl_string = f.SzDxl(dxl_filename);
-	const CHAR *szValidationPath = f.SzValidationPath(fValidate);
+	const CHAR *szValidationPath = Fixture::SzValidationPath(fValidate);
 
 	CWStringDynamic str(mp);
 	COstreamString oss(&str);

@@ -39,7 +39,7 @@ class CGroupExpression : public CRefCount
 public:
 #ifdef GPOS_DEBUG
 	// debug print; for interactive debugging sessions only
-	void DbgPrintWithProperties();
+	void DbgPrintWithProperties() const;
 #endif	// GPOS_DEBUG
 
 	// states of a group expression
@@ -144,8 +144,8 @@ private:
 	void SetId(ULONG id);
 
 	// print transformation
-	void PrintXform(CMemoryPool *mp, CXform *pxform, CExpression *pexpr,
-					CXformResult *pxfres, ULONG ulNumResults);
+	static void PrintXform(CMemoryPool *mp, CXform *pxform, CExpression *pexpr,
+						   CXformResult *pxfres, ULONG ulNumResults);
 
 	// preprocessing before applying transformation
 	void PreprocessTransform(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
@@ -153,10 +153,10 @@ private:
 
 	// postprocessing after applying transformation
 	void PostprocessTransform(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
-							  CXform *pxform);
+							  CXform *pxform) const;
 
 	// costing scheme
-	CCost CostCompute(CMemoryPool *mp, CCostContext *pcc) const;
+	static CCost CostCompute(CMemoryPool *mp, CCostContext *pcc);
 
 	// set optimization level of group expression
 	void SetOptimizationLevel();

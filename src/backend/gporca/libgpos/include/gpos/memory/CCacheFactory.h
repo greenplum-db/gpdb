@@ -67,7 +67,7 @@ public:
 	static GPOS_RESULT Init();
 
 	// destroy global instance
-	void Shutdown();
+	static void Shutdown();
 
 	// global accessor
 	inline static CCacheFactory *

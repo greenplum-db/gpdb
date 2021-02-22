@@ -763,7 +763,7 @@ CPhysicalJoin::PrsRequiredCorrelatedJoin(CMemoryPool *mp,
 										 ULONG child_index,
 										 CDrvdPropArray *pdrgpdpCtxt,
 										 ULONG	// ulOptReq
-) const
+)
 {
 	GPOS_ASSERT(3 == exprhdl.Arity());
 	GPOS_ASSERT(2 > child_index);

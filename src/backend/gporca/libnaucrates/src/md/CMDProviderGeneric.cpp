@@ -106,7 +106,7 @@ CMDProviderGeneric::MDId(IMDType::ETypeInfo type_info) const
 //
 //---------------------------------------------------------------------------
 CSystemId
-CMDProviderGeneric::SysidDefault() const
+CMDProviderGeneric::SysidDefault()
 {
 	return CSystemId(IMDId::EmdidGPDB, GPMD_GPDB_SYSID);
 }

@@ -50,10 +50,10 @@ private:
 	FindFinished(CTask **task);
 
 	// propagate the error from sub-task to current task
-	void PropagateError(CTask *sub_task);
+	static void PropagateError(CTask *sub_task);
 
 	// check error from sub-task
-	void CheckError(CTask *sub_task);
+	void CheckError(CTask *sub_task) const;
 
 public:
 	CAutoTaskProxy(const CAutoTaskProxy &) = delete;
@@ -86,7 +86,7 @@ public:
 	void Schedule(CTask *task);
 
 	// execute task in thread owning ATP (synchronous execution)
-	void Execute(CTask *task);
+	void Execute(CTask *task) const;
 
 	// cancel task
 	void Cancel(CTask *task);

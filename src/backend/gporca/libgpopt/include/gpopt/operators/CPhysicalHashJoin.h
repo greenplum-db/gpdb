@@ -75,10 +75,10 @@ private:
 
 	// create a child hashed distribution request based on input hashed distribution,
 	// return NULL if no such request can be created
-	CDistributionSpecHashed *PdshashedPassThru(
+	static CDistributionSpecHashed *PdshashedPassThru(
 		CMemoryPool *mp, CExpressionHandle &exprhdl,
 		CDistributionSpecHashed *pdshashedInput, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const;
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
 
 	// check whether a hash key is nullable
 	BOOL FNullableHashKey(ULONG ulKey, CColRefSet *pcrsNotNullInner,

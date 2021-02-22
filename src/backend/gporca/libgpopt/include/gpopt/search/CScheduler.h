@@ -137,7 +137,7 @@ private:
 	void PreExecute(CJob *pj);
 
 	// execute job
-	BOOL FExecute(CJob *pj, CSchedulerContext *psc);
+	static BOOL FExecute(CJob *pj, CSchedulerContext *psc);
 
 	// process job execution outcome
 	EJobResult EjrPostExecute(CJob *pj, BOOL fCompleted);

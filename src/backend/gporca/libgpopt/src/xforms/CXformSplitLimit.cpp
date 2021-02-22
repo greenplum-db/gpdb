@@ -136,7 +136,7 @@ CXformSplitLimit::PexprLimit(CMemoryPool *mp, CExpression *pexprRelational,
 							 CExpression *pexprScalarStart,
 							 CExpression *pexprScalarRows, COrderSpec *pos,
 							 BOOL fGlobal, BOOL fHasCount,
-							 BOOL fTopLimitUnderDML) const
+							 BOOL fTopLimitUnderDML)
 {
 	pexprScalarStart->AddRef();
 	pexprScalarRows->AddRef();

@@ -250,15 +250,15 @@ public:
 	}
 
 	// is enumeration enabled?
-	BOOL
-	FEnumerate() const
+	static BOOL
+	FEnumerate()
 	{
 		return GPOS_FTRACE(EopttraceEnumeratePlans);
 	}
 
 	// is sampling enabled?
-	BOOL
-	FSample() const
+	static BOOL
+	FSample()
 	{
 		return GPOS_FTRACE(EopttraceSamplePlans);
 	}

@@ -616,7 +616,7 @@ CExpressionHandle::DeriveCostContextStats()
 void
 CExpressionHandle::DeriveStats(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 							   CReqdPropRelational *prprel,
-							   IStatisticsArray *stats_ctxt)
+							   IStatisticsArray *stats_ctxt) const
 {
 	CReqdPropRelational *prprelNew = prprel;
 	if (nullptr == prprelNew)
@@ -1298,7 +1298,8 @@ CExpressionHandle::PopGrandchild(ULONG child_index, ULONG grandchild_index,
 //
 //---------------------------------------------------------------------------
 void
-CExpressionHandle::DeriveProducerStats(ULONG child_index, CColRefSet *pcrsStats)
+CExpressionHandle::DeriveProducerStats(ULONG child_index,
+									   CColRefSet *pcrsStats) const
 {
 	// check to see if there are any CTE consumers in the group whose properties have
 	// to be pushed to its corresponding CTE producer
@@ -1455,7 +1456,7 @@ CExpressionHandle::PexprScalarExact() const
 //
 //---------------------------------------------------------------------------
 CFunctionProp *
-CExpressionHandle::PfpChild(ULONG child_index)
+CExpressionHandle::PfpChild(ULONG child_index) const
 {
 	if (FScalarChild(child_index))
 	{
@@ -1474,7 +1475,7 @@ CExpressionHandle::PfpChild(ULONG child_index)
 //
 //---------------------------------------------------------------------------
 BOOL
-CExpressionHandle::FChildrenHaveVolatileFuncScan()
+CExpressionHandle::FChildrenHaveVolatileFuncScan() const
 {
 	const ULONG arity = Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
@@ -1653,7 +1654,7 @@ CExpressionHandle::FNextChildIndex(ULONG *pulChildIndex) const
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CExpressionHandle::PcrsUsedColumns(CMemoryPool *mp)
+CExpressionHandle::PcrsUsedColumns(CMemoryPool *mp) const
 {
 	COperator *pop = Pop();
 	GPOS_ASSERT(pop->FLogical());
@@ -1705,7 +1706,7 @@ CExpressionHandle::Pstats()
 // If there is only a group expression or a cost context assoicated with the handle,
 // all properties must have already been derived as we can't derive anything.
 CColRefSet *
-CExpressionHandle::DeriveOuterReferences(ULONG child_index)
+CExpressionHandle::DeriveOuterReferences(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1716,7 +1717,7 @@ CExpressionHandle::DeriveOuterReferences(ULONG child_index)
 }
 
 CColRefSet *
-CExpressionHandle::DeriveOuterReferences()
+CExpressionHandle::DeriveOuterReferences() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1727,7 +1728,7 @@ CExpressionHandle::DeriveOuterReferences()
 }
 
 CColRefSet *
-CExpressionHandle::DeriveOutputColumns(ULONG child_index)
+CExpressionHandle::DeriveOutputColumns(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1738,7 +1739,7 @@ CExpressionHandle::DeriveOutputColumns(ULONG child_index)
 }
 
 CColRefSet *
-CExpressionHandle::DeriveOutputColumns()
+CExpressionHandle::DeriveOutputColumns() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1749,7 +1750,7 @@ CExpressionHandle::DeriveOutputColumns()
 }
 
 CColRefSet *
-CExpressionHandle::DeriveNotNullColumns(ULONG child_index)
+CExpressionHandle::DeriveNotNullColumns(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1760,7 +1761,7 @@ CExpressionHandle::DeriveNotNullColumns(ULONG child_index)
 }
 
 CColRefSet *
-CExpressionHandle::DeriveNotNullColumns()
+CExpressionHandle::DeriveNotNullColumns() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1771,7 +1772,7 @@ CExpressionHandle::DeriveNotNullColumns()
 }
 
 CMaxCard
-CExpressionHandle::DeriveMaxCard(ULONG child_index)
+CExpressionHandle::DeriveMaxCard(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1782,7 +1783,7 @@ CExpressionHandle::DeriveMaxCard(ULONG child_index)
 }
 
 CMaxCard
-CExpressionHandle::DeriveMaxCard()
+CExpressionHandle::DeriveMaxCard() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1793,7 +1794,7 @@ CExpressionHandle::DeriveMaxCard()
 }
 
 CColRefSet *
-CExpressionHandle::DeriveCorrelatedApplyColumns(ULONG child_index)
+CExpressionHandle::DeriveCorrelatedApplyColumns(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1804,7 +1805,7 @@ CExpressionHandle::DeriveCorrelatedApplyColumns(ULONG child_index)
 }
 
 CColRefSet *
-CExpressionHandle::DeriveCorrelatedApplyColumns()
+CExpressionHandle::DeriveCorrelatedApplyColumns() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1815,7 +1816,7 @@ CExpressionHandle::DeriveCorrelatedApplyColumns()
 }
 
 CKeyCollection *
-CExpressionHandle::DeriveKeyCollection(ULONG child_index)
+CExpressionHandle::DeriveKeyCollection(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1826,7 +1827,7 @@ CExpressionHandle::DeriveKeyCollection(ULONG child_index)
 }
 
 CKeyCollection *
-CExpressionHandle::DeriveKeyCollection()
+CExpressionHandle::DeriveKeyCollection() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1837,7 +1838,7 @@ CExpressionHandle::DeriveKeyCollection()
 }
 
 CPropConstraint *
-CExpressionHandle::DerivePropertyConstraint(ULONG child_index)
+CExpressionHandle::DerivePropertyConstraint(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1848,7 +1849,7 @@ CExpressionHandle::DerivePropertyConstraint(ULONG child_index)
 }
 
 CPropConstraint *
-CExpressionHandle::DerivePropertyConstraint()
+CExpressionHandle::DerivePropertyConstraint() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1859,7 +1860,7 @@ CExpressionHandle::DerivePropertyConstraint()
 }
 
 ULONG
-CExpressionHandle::DeriveJoinDepth(ULONG child_index)
+CExpressionHandle::DeriveJoinDepth(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1870,7 +1871,7 @@ CExpressionHandle::DeriveJoinDepth(ULONG child_index)
 }
 
 ULONG
-CExpressionHandle::DeriveJoinDepth()
+CExpressionHandle::DeriveJoinDepth() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1881,7 +1882,7 @@ CExpressionHandle::DeriveJoinDepth()
 }
 
 CFunctionProp *
-CExpressionHandle::DeriveFunctionProperties(ULONG child_index)
+CExpressionHandle::DeriveFunctionProperties(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1892,7 +1893,7 @@ CExpressionHandle::DeriveFunctionProperties(ULONG child_index)
 }
 
 CFunctionProp *
-CExpressionHandle::DeriveFunctionProperties()
+CExpressionHandle::DeriveFunctionProperties() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1903,7 +1904,7 @@ CExpressionHandle::DeriveFunctionProperties()
 }
 
 CFunctionalDependencyArray *
-CExpressionHandle::Pdrgpfd(ULONG child_index)
+CExpressionHandle::Pdrgpfd(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1914,7 +1915,7 @@ CExpressionHandle::Pdrgpfd(ULONG child_index)
 }
 
 CFunctionalDependencyArray *
-CExpressionHandle::Pdrgpfd()
+CExpressionHandle::Pdrgpfd() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1925,7 +1926,7 @@ CExpressionHandle::Pdrgpfd()
 }
 
 CPartInfo *
-CExpressionHandle::DerivePartitionInfo(ULONG child_index)
+CExpressionHandle::DerivePartitionInfo(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1936,7 +1937,7 @@ CExpressionHandle::DerivePartitionInfo(ULONG child_index)
 }
 
 CPartInfo *
-CExpressionHandle::DerivePartitionInfo()
+CExpressionHandle::DerivePartitionInfo() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1947,7 +1948,7 @@ CExpressionHandle::DerivePartitionInfo()
 }
 
 CTableDescriptor *
-CExpressionHandle::DeriveTableDescriptor()
+CExpressionHandle::DeriveTableDescriptor() const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1958,7 +1959,7 @@ CExpressionHandle::DeriveTableDescriptor()
 }
 
 CTableDescriptor *
-CExpressionHandle::DeriveTableDescriptor(ULONG child_index)
+CExpressionHandle::DeriveTableDescriptor(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1970,7 +1971,7 @@ CExpressionHandle::DeriveTableDescriptor(ULONG child_index)
 // Scalar property accessors
 
 CColRefSet *
-CExpressionHandle::DeriveDefinedColumns(ULONG child_index)
+CExpressionHandle::DeriveDefinedColumns(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1981,7 +1982,7 @@ CExpressionHandle::DeriveDefinedColumns(ULONG child_index)
 }
 
 CColRefSet *
-CExpressionHandle::DeriveUsedColumns(ULONG child_index)
+CExpressionHandle::DeriveUsedColumns(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -1992,7 +1993,7 @@ CExpressionHandle::DeriveUsedColumns(ULONG child_index)
 }
 
 CColRefSet *
-CExpressionHandle::DeriveSetReturningFunctionColumns(ULONG child_index)
+CExpressionHandle::DeriveSetReturningFunctionColumns(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2003,7 +2004,7 @@ CExpressionHandle::DeriveSetReturningFunctionColumns(ULONG child_index)
 }
 
 BOOL
-CExpressionHandle::DeriveHasSubquery(ULONG child_index)
+CExpressionHandle::DeriveHasSubquery(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2014,7 +2015,7 @@ CExpressionHandle::DeriveHasSubquery(ULONG child_index)
 }
 
 CPartInfo *
-CExpressionHandle::DeriveScalarPartitionInfo(ULONG child_index)
+CExpressionHandle::DeriveScalarPartitionInfo(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2025,7 +2026,7 @@ CExpressionHandle::DeriveScalarPartitionInfo(ULONG child_index)
 }
 
 CFunctionProp *
-CExpressionHandle::DeriveScalarFunctionProperties(ULONG child_index)
+CExpressionHandle::DeriveScalarFunctionProperties(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2036,7 +2037,7 @@ CExpressionHandle::DeriveScalarFunctionProperties(ULONG child_index)
 }
 
 BOOL
-CExpressionHandle::DeriveHasNonScalarFunction(ULONG child_index)
+CExpressionHandle::DeriveHasNonScalarFunction(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2047,7 +2048,7 @@ CExpressionHandle::DeriveHasNonScalarFunction(ULONG child_index)
 }
 
 ULONG
-CExpressionHandle::DeriveTotalDistinctAggs(ULONG child_index)
+CExpressionHandle::DeriveTotalDistinctAggs(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2058,7 +2059,7 @@ CExpressionHandle::DeriveTotalDistinctAggs(ULONG child_index)
 }
 
 BOOL
-CExpressionHandle::DeriveHasMultipleDistinctAggs(ULONG child_index)
+CExpressionHandle::DeriveHasMultipleDistinctAggs(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{
@@ -2069,7 +2070,7 @@ CExpressionHandle::DeriveHasMultipleDistinctAggs(ULONG child_index)
 }
 
 BOOL
-CExpressionHandle::DeriveHasScalarArrayCmp(ULONG child_index)
+CExpressionHandle::DeriveHasScalarArrayCmp(ULONG child_index) const
 {
 	if (nullptr != Pexpr())
 	{

@@ -114,7 +114,7 @@ CPartInfo::CPartInfoEntry::OsPrint(IOstream &os) const
 //
 //---------------------------------------------------------------------------
 CPartInfo::CPartInfoEntry *
-CPartInfo::CPartInfoEntry::PpartinfoentryCopy(CMemoryPool *mp)
+CPartInfo::CPartInfoEntry::PpartinfoentryCopy(CMemoryPool *mp) const
 {
 	IMDId *mdid = MDId();
 	mdid->AddRef();

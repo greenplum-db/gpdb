@@ -31,7 +31,7 @@ class CXformSplitLimit : public CXformExploration
 {
 private:
 	// helper function for creating a limit expression
-	CExpression *PexprLimit(
+	static CExpression *PexprLimit(
 		CMemoryPool *mp,				// memory pool
 		CExpression *pexprRelational,	// relational child
 		CExpression *pexprScalarStart,	// limit offset
@@ -39,7 +39,7 @@ private:
 		COrderSpec *pos,				// ordering specification
 		BOOL fGlobal,					// is it a local or global limit
 		BOOL fHasCount,					// does limit specify a number of rows
-		BOOL fTopLimitUnderDML) const;
+		BOOL fTopLimitUnderDML);
 
 public:
 	CXformSplitLimit(const CXformSplitLimit &) = delete;

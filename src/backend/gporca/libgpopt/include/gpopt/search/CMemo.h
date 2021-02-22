@@ -127,7 +127,7 @@ public:
 	ULONG UlDuplicateGroups();
 
 	// mark groups as duplicates
-	void MarkDuplicates(CGroup *pgroupFst, CGroup *pgroupSnd);
+	static void MarkDuplicates(CGroup *pgroupFst, CGroup *pgroupSnd);
 
 	// return tree map
 	MemoTreeMap *

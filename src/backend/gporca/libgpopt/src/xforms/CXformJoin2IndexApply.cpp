@@ -67,7 +67,7 @@ CXformJoin2IndexApply::ComputeColumnSets(CMemoryPool *mp,
 										 CExpression *pexprScalar,
 										 CColRefSet **ppcrsScalarExpr,
 										 CColRefSet **ppcrsOuterRefs,
-										 CColRefSet **ppcrsReqd) const
+										 CColRefSet **ppcrsReqd)
 {
 	CColRefSet *pcrsInnerOutput = pexprInner->DeriveOutputColumns();
 	*ppcrsScalarExpr = pexprScalar->DeriveUsedColumns();
@@ -156,7 +156,7 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives(
 	CExpression *endOfNodesToInsertAboveIndexGet,
 	CTableDescriptor *ptabdescInner, CColRefSet *pcrsScalarExpr,
 	CColRefSet *outer_refs, CColRefSet *pcrsReqd, ULONG ulIndices,
-	CXformResult *pxfres) const
+	CXformResult *pxfres)
 {
 	// array of expressions in the scalar expression
 	CExpressionArray *pdrgpexpr =
@@ -200,7 +200,7 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex(
 	CExpression *endOfNodesToInsertAboveIndexGet, CMDAccessor *md_accessor,
 	CExpressionArray *pdrgpexprConjuncts, CColRefSet *pcrsScalarExpr,
 	CColRefSet *outer_refs, CColRefSet *pcrsReqd, const IMDRelation *pmdrel,
-	const IMDIndex *pmdindex, CXformResult *pxfres) const
+	const IMDIndex *pmdindex, CXformResult *pxfres)
 {
 	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet(
 		mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexprConjuncts,
@@ -268,7 +268,7 @@ CXformJoin2IndexApply::CreateHomogeneousBitmapIndexApplyAlternatives(
 	CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 	CExpression *endOfNodesToInsertAboveIndexGet,
 	CTableDescriptor *ptabdescInner, CColRefSet *outer_refs,
-	CColRefSet *pcrsReqd, CXformResult *pxfres) const
+	CColRefSet *pcrsReqd, CXformResult *pxfres)
 {
 	CLogical *popGet = CLogical::PopConvert(pexprInner->Pop());
 	CExpression *pexprLogicalIndexGet = CXformUtils::PexprBitmapTableGet(

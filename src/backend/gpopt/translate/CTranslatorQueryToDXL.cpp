@@ -2723,7 +2723,7 @@ CTranslatorQueryToDXL::CreateDXLSetOpFromColumns(
 //---------------------------------------------------------------------------
 BOOL
 CTranslatorQueryToDXL::SetOpNeedsCast(List *target_list,
-									  IMdIdArray *input_col_mdids) const
+									  IMdIdArray *input_col_mdids)
 {
 	GPOS_ASSERT(nullptr != input_col_mdids);
 	GPOS_ASSERT(nullptr != target_list);
@@ -3059,7 +3059,7 @@ CTranslatorQueryToDXL::TranslateFromClauseToDXL(Node *node)
 //		Raise exception for unsupported RangeTblEntries of a particular kind
 //---------------------------------------------------------------------------
 void
-CTranslatorQueryToDXL::UnsupportedRTEKind(RTEKind rtekind) const
+CTranslatorQueryToDXL::UnsupportedRTEKind(RTEKind rtekind)
 {
 	GPOS_ASSERT(!(RTE_RELATION == rtekind || RTE_CTE == rtekind ||
 				  RTE_FUNCTION == rtekind || RTE_SUBQUERY == rtekind ||
@@ -4638,7 +4638,7 @@ IntToUlongMap *
 CTranslatorQueryToDXL::RemapColIds(CMemoryPool *mp,
 								   IntToUlongMap *attno_to_colid_mapping,
 								   ULongPtrArray *from_list_colids,
-								   ULongPtrArray *to_list_colids) const
+								   ULongPtrArray *to_list_colids)
 {
 	GPOS_ASSERT(nullptr != attno_to_colid_mapping);
 	GPOS_ASSERT(nullptr != from_list_colids && nullptr != to_list_colids);

@@ -32,7 +32,7 @@ class CXformGbAgg2HashAgg : public CXformImplementation
 private:
 protected:
 	// check if the transformation is applicable
-	BOOL FApplicable(CExpression *pexpr) const;
+	static BOOL FApplicable(CExpression *pexpr);
 
 public:
 	CXformGbAgg2HashAgg(const CXformGbAgg2HashAgg &) = delete;

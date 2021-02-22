@@ -3661,7 +3661,7 @@ CTranslatorExprToDXL::BuildScalarSubplans(
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CTranslatorExprToDXL::PcrsOuterRefsForCorrelatedNLJoin(CExpression *pexpr) const
+CTranslatorExprToDXL::PcrsOuterRefsForCorrelatedNLJoin(CExpression *pexpr)
 {
 	GPOS_ASSERT(CUtils::FCorrelatedNLJoin(pexpr->Pop()));
 
@@ -5903,7 +5903,8 @@ CTranslatorExprToDXL::GetDXLDirectDispatchInfo(CExpression *pexprDML)
 
 	GPOS_ASSERT(1 == pdrgpcoldescDist->Size());
 	CColumnDescriptor *pcoldesc = (*pdrgpcoldescDist)[0];
-	ULONG ulPos = ptabdesc->UlPos(pcoldesc, ptabdesc->Pdrgpcoldesc());
+	ULONG ulPos =
+		gpopt::CTableDescriptor::UlPos(pcoldesc, ptabdesc->Pdrgpcoldesc());
 	GPOS_ASSERT(ulPos < ptabdesc->Pdrgpcoldesc()->Size() && "Column not found");
 
 	CColRef *pcrDistrCol = (*popDML->PdrgpcrSource())[ulPos];
@@ -6130,8 +6131,7 @@ CTranslatorExprToDXL::PdxlnRowTrigger(CExpression *pexpr,
 //
 //---------------------------------------------------------------------------
 EdxlDmlType
-CTranslatorExprToDXL::Edxldmloptype(
-	const CLogicalDML::EDMLOperator edmlop) const
+CTranslatorExprToDXL::Edxldmloptype(const CLogicalDML::EDMLOperator edmlop)
 {
 	switch (edmlop)
 	{
@@ -6336,8 +6336,7 @@ CTranslatorExprToDXL::PdxlnScBoolExpr(CExpression *pexprScBoolOp)
 //
 //---------------------------------------------------------------------------
 EdxlBoolExprType
-CTranslatorExprToDXL::Edxlbooltype(
-	const CScalarBoolOp::EBoolOperator eboolop) const
+CTranslatorExprToDXL::Edxlbooltype(const CScalarBoolOp::EBoolOperator eboolop)
 {
 	switch (eboolop)
 	{
@@ -6457,7 +6456,7 @@ CTranslatorExprToDXL::PdxlnScWindowFuncExpr(CExpression *pexprWindowFunc)
 //
 //---------------------------------------------------------------------------
 EdxlWinStage
-CTranslatorExprToDXL::Ews(CScalarWindowFunc::EWinStage ews) const
+CTranslatorExprToDXL::Ews(CScalarWindowFunc::EWinStage ews)
 {
 	ULONG window_frame_boundary_to_frame_boundary_mapping[][2] = {
 		{EdxlwinstageImmediate, CScalarWindowFunc::EwsImmediate},
@@ -8338,7 +8337,7 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 //---------------------------------------------------------------------------
 ULONG
 CTranslatorExprToDXL::UlPosInArray(const CColRef *colref,
-								   const CColRefArray *colref_array) const
+								   const CColRefArray *colref_array)
 {
 	GPOS_ASSERT(nullptr != colref_array);
 	GPOS_ASSERT(nullptr != colref);

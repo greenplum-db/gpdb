@@ -144,7 +144,7 @@ private:
 	// parse the value for the given mdid variable name from the attributes
 	void ParseMdid(const XMLCh *element_local_name, const Attributes &attrs);
 
-	BOOL IsBuiltInType(const IMDId *mdid) const;
+	static BOOL IsBuiltInType(const IMDId *mdid);
 
 public:
 	CParseHandlerMDType(const CParseHandlerMDType &) = delete;

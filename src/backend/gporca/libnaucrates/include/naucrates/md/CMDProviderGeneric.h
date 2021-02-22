@@ -64,7 +64,7 @@ public:
 	IMDId *MDId(IMDType::ETypeInfo type_info) const;
 
 	// default system id
-	CSystemId SysidDefault() const;
+	static CSystemId SysidDefault();
 };
 }  // namespace gpmd
 

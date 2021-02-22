@@ -27,10 +27,11 @@ private:
 	BOOL m_generateBitmapPlans;
 
 	// Can we transform left outer join to left outer index apply?
-	BOOL FCanLeftOuterIndexApply(CMemoryPool *mp, CExpression *pexprInner,
-								 CExpression *pexprScalar,
-								 CTableDescriptor *ptabDesc,
-								 const CColRefSet *pcrsDist) const;
+	static BOOL FCanLeftOuterIndexApply(CMemoryPool *mp,
+										CExpression *pexprInner,
+										CExpression *pexprScalar,
+										CTableDescriptor *ptabDesc,
+										const CColRefSet *pcrsDist);
 
 public:
 	CXformJoin2IndexApplyGeneric(const CXformJoin2IndexApplyGeneric &) = delete;

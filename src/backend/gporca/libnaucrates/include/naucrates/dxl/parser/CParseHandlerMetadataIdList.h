@@ -55,10 +55,10 @@ private:
 		) override;
 
 	// is this a supported element of a metadata list
-	BOOL FSupportedElem(const XMLCh *const xml_str);
+	static BOOL FSupportedElem(const XMLCh *const xml_str);
 
 	// is this a supported metadata list type
-	BOOL FSupportedListType(const XMLCh *const xml_str);
+	static BOOL FSupportedListType(const XMLCh *const xml_str);
 
 public:
 	CParseHandlerMetadataIdList(const CParseHandlerMetadataIdList &) = delete;

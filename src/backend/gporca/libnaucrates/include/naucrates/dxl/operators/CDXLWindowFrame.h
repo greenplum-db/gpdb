@@ -101,10 +101,10 @@ public:
 	}
 
 	// return the string representation of the exclusion strategy
-	const CWStringConst *PstrES(EdxlFrameExclusionStrategy edxles) const;
+	static const CWStringConst *PstrES(EdxlFrameExclusionStrategy edxles);
 
 	// return the string representation of the frame specification (row or range)
-	const CWStringConst *PstrFS(EdxlFrameSpec edxlfs) const;
+	static const CWStringConst *PstrFS(EdxlFrameSpec edxlfs);
 
 	// serialize operator in DXL format
 	virtual void SerializeToDXL(CXMLSerializer *xml_serializer) const;

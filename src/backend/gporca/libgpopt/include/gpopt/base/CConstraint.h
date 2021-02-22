@@ -143,8 +143,8 @@ protected:
 												   EConstraintType ect);
 
 	// mapping between columns and arrays of constraints
-	ColRefToConstraintArrayMap *Phmcolconstr(
-		CMemoryPool *mp, CColRefSet *pcrs, CConstraintArray *pdrgpcnstr) const;
+	static ColRefToConstraintArrayMap *Phmcolconstr(
+		CMemoryPool *mp, CColRefSet *pcrs, CConstraintArray *pdrgpcnstr);
 
 	// return a copy of the conjunction/disjunction constraint for a different column
 	static CConstraint *PcnstrConjDisjRemapForColumn(
