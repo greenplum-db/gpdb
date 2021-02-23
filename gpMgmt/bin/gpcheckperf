@@ -343,7 +343,7 @@ def runSetup():
         # check python reachable
         if GV.opt['-v']:
             print('[Info] verify python interpreter exists')
-        (ok, out) = gpssh('python -c print')
+        (ok, out) = gpssh('python3 -c print')
         if not ok:
             if not GV.opt['-v']:
                 print(out)

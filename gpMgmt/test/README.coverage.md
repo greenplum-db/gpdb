@@ -40,7 +40,7 @@ for the files you are modifying.
 5.  Now run whatever tests you want. For example, test the configuration by running an existing unit test:
 
         $ cd gpMgmt/bin
-        $ python -m unittest gppylib.test.unit.test_unit_gpstop
+        $ python3 -m unittest gppylib.test.unit.test_unit_gpstop
 
 6.  After you have run all the tests you want, [combine the data files](https://coverage.readthedocs.io/en/latest/cmd.html#combining-data-files)
     that were generated into a single `.coverage` file.  Note that you still have to `combine` the files if you only have a
