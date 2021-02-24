@@ -12,7 +12,7 @@ import errno
 from pg import DatabaseError
 
 from .gp_unittest import *
-from mock import *
+from unittest.mock import *
 from io import StringIO
 
 db_singleton_side_effect_list = []
@@ -185,7 +185,7 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.pool.addCommand.assert_called_once()
+        self.assertEqual(self.pool.addCommand.call_count, 5)
         self.pool.join.assert_called_once_with()
         self.pool.check_results.assert_called_once_with()
         self.pool.haltWork.assert_called_once_with()
