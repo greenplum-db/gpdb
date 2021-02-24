@@ -321,6 +321,9 @@
             <p><xref href="guc-list.xml#optimizer_cte_inlining_bound" type="section"
                 >optimizer_cte_inlining_bound</xref>
             </p>
+            <p><xref href="guc-list.xml#optimizer_dpe_stats" type="section"
+                >optimizer_dpe_stats</xref>
+            </p>
             <p><xref href="guc-list.xml#optimizer_enable_associativity" type="section"
                 >optimizer_enable_associativity</xref></p>
             <p><xref href="guc-list.xml#optimizer_enable_dml" type="section"
