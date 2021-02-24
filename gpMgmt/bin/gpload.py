@@ -2769,8 +2769,8 @@ class gpload:
             try:
                 self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
+                strE = unicode(str(e), errors = 'ignore')
+                strF = unicode(str(sql), errors = 'ignore')
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
 
         # insert new rows to the target table
