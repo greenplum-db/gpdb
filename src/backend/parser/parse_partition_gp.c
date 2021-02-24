@@ -1556,6 +1556,11 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 								parser_errposition(pstate, subPartSpec->location)));
 				}
 			}
+			else if (elem->subSpec)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							errmsg("subpartition specification provided but table doesn't have SUBPARTITION BY clause"),
+							parser_errposition(pstate, ((GpPartitionDefinition*)elem->subSpec)->location)));
 
 			/*
 			 * This was not allowed pre-GPDB7, so keeping the same

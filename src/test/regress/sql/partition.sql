@@ -3575,6 +3575,11 @@ distributed by (pkid) partition by range (option3)
 	partition cc start(201) end (300)
 );
 
+-- should error out since no subpartition in sales.
+alter table sales add partition dd start(301) end(300)
+	( subpartition opt1_1 VALUES (1),
+	  subpartition opt1_2 VALUES (2) );
+
 -- root partition (and only root) should have relfrozenxid as 0
 select relname, relkind from pg_class where relkind in ('r', 'p') and relname like 'sales%' and relfrozenxid=0;
 select gp_segment_id, relname, relkind from gp_dist_random('pg_class') where relkind in ('r', 'p') and relname like 'sales%' and relfrozenxid=0;
