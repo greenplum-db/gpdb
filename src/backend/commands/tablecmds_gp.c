@@ -143,7 +143,20 @@ GpFindTargetPartition(Relation parent, GpAlterPartitionId *partid,
 			break;
 		case AT_AP_IDName:
 		{
-			/* Find partition by name */
+			/*
+			 * Find partition by name.
+			 * After PG12 merge, users may use pg syntax to do the partition maintenance,
+			 * like ALTER TABLE ... DETACH/ATTACH PARTITION.
+			 * This may cause the partition table's name different from GPDB's partition
+			 * table name pattern <parentname>_<level>_prt_<partition_name>.
+			 * When this happens, it's not possible to find the target partition table based
+			 * on the name specified by the user.
+			 *
+			 * And if user do use the GPDB's syntax, we still have cases that the partition
+			 * table's namespace different from it's parent namespace. See issue:
+			 * https://github.com/greenplum-db/gpdb/issues/9903.
+			 * Users could always use PARTITION FOR or pg syntax instead.
+			 */
 			RangeVar	*partrv;
 			char		*schemaname;
 			char		*partname;
@@ -160,22 +173,45 @@ GpFindTargetPartition(Relation parent, GpAlterPartitionId *partid,
 			partname = makeObjectName(RelationGetRelationName(parent),
 									  levelStr, partsubstring);
 
-			/*
-			 * GPDB_12_MERGE_FIXME: Child can be in different namespace from
-			 * parent. So, using parent's namespace to find the relation seems
-			 * incorrect. Need to find better way to find the relation. One
-			 * option is to use the OIDs of child partitions from parent
-			 * relation objects partDesc and then lookup which table matches
-			 * the given name. Though that might be expensive lookup.
-			 */
 			schemaname   = get_namespace_name(parent->rd_rel->relnamespace);
 			partrv       = makeRangeVar(schemaname, partname, -1);
 			partRel      = table_openrv_extended(partrv, AccessShareLock, missing_ok);
 			if (partRel)
 			{
-				target_relid = RelationGetRelid(partRel);
-				table_close(partRel, AccessShareLock);
+				if (partRel->rd_rel->relispartition)
+				{
+					bool		    found = false;
+					PartitionDesc   partdesc = RelationGetPartitionDesc(parent);
+					target_relid = RelationGetRelid(partRel);
+					table_close(partRel, AccessShareLock);
+					/*
+					 * Make sure the result partition table is the right one.
+					 * Here check whether the target_relid belong to the parent
+					 * through the partdesc->oids instead of call get_partition_parent
+					 * is because the get_partition_parent scan from the disk.
+					 * In-memory check should be faster.
+					 */
+					for(int i = 0; i < partdesc->nparts; i++)
+					{
+						if (target_relid == partdesc->oids[i])
+						{
+							found = true;
+							break;
+						}
+					}
+					if (!found)
+						target_relid = InvalidOid;
+				}
+				else
+					table_close(partRel, AccessShareLock);
 			}
+
+			if (!OidIsValid(target_relid) && !missing_ok)
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("partition \"%s\" of \"%s\" does not exist",
+								strVal(partid->partiddef), RelationGetRelationName(parent))));
+
 			break;
 		}
 
