@@ -602,6 +602,7 @@ bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel)
 		CdbPathLocus  target_locus;
 
 		if (CdbPathLocus_IsGeneral(origpath->locus) ||
+			CdbPathLocus_IsEntry(origpath->locus) ||
 			CdbPathLocus_IsSingleQE(origpath->locus) ||
 			CdbPathLocus_IsOuterQuery(origpath->locus))
 			path = origpath;
