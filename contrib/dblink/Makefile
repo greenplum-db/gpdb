@@ -8,12 +8,12 @@ endif
 top_builddir = ../..
 
 MODULE_big = dblink
-OBJS	= dblink.o dblink_no_auth.o fe-connect_backend.o
+OBJS = dblink.o dblink_no_auth.o fe-connect_backend.o
 PG_CPPFLAGS = -I$(libpq_srcdir) -I$(top_srcdir)/src/port
 SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
 
 fe-connect_backend.o: fe-connect.o
-	objcopy   --redefine-sym PQconnectdb=backend_PQconnectdb --keep-global-symbol=backend_PQconnectdb $< fe-connect_backend.o
+	objcopy --redefine-sym PQconnectdb=backend_PQconnectdb --keep-global-symbol=backend_PQconnectdb $< fe-connect_backend.o
 
 fe-connect.o: fe-connect.c $(top_builddir)/src/port/pg_config_paths.h
 fe-connect.c: % : $(top_builddir)/src/interfaces/libpq/%

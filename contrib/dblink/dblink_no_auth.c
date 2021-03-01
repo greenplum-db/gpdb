@@ -70,6 +70,23 @@ backend_PQconnectdb(const char *conninfo);
 
 /*
  * Create a persistent connection to another database
+ *
+ * dblink_connect_no_auth() is identical to dblink_connect_u(),
+ * except that it skips authentication when gpdb uses it to connect
+ * to itself, so impersonation and subsequent escalation of privileges
+ * can occur when using it.
+ *
+ * We make dblink_connect_no_auth linked to backend_fe-connect.o,
+ * and undef the FRONTEND in dblink_no_auth.c. So dblink can use
+ * internal gpdb connection to connect to local master and then the
+ * authentication will be skipped. More details are in the function
+ * ClientAuthentication
+ *
+ * This function is really hack and has some serious security issues, why
+ * do we add it? Because before the commit 1dc23be2, dblink is wrongly
+ * linked to backend libpq, and when using it to connect to master itself,
+ * authentication is skipped. However, after link issue fixed, customers
+ * still want this feature, so we have to add it back.
  */
 PG_FUNCTION_INFO_V1(dblink_connect_no_auth);
 Datum
