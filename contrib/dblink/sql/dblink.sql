@@ -1,7 +1,3 @@
--- start_matchsubs
--- m/^DETAIL\:  FATAL\:  no pg_hba.conf entry for host "(.*)", user "dblink_regression_test", database "contrib_regression"(.*)$/
--- s/^DETAIL\:  FATAL\:  no pg_hba.conf entry for host "(.*)", user "dblink_regression_test", database "contrib_regression"(.*)$/^DETAIL\:  FATAL\:  no pg_hba.conf entry for host "(.*)", user "dblink_regression_test", database "contrib_regression"/
--- end_matchsubs
 CREATE EXTENSION dblink;
 CREATE TABLE foo(f1 int, f2 text, f3 text[], primary key (f1,f2));
 INSERT INTO foo VALUES (0,'a','{"a0","b0","c0"}');
@@ -529,25 +525,3 @@ SELECT dblink_disconnect('myconn');
 RESET datestyle;
 RESET intervalstyle;
 RESET timezone;
-
--- Test dblink_connect_no_auth
-ALTER ROLE dblink_regression_test PASSWORD 'test';
-GRANT ALL ON TABLE foo TO dblink_regression_test;
-GRANT EXECUTE ON FUNCTION dblink_connect_no_auth(text, text) TO dblink_regression_test;
-GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO dblink_regression_test;
-SET SESSION AUTHORIZATION dblink_regression_test;
--- should fail
-SELECT dblink_connect('myconn', 'dbname=contrib_regression user=dblink_regression_test host=127.0.0.1');
-SELECT dblink_connect_u('myconn', 'dbname=contrib_regression user=dblink_regression_test');
--- gp_reject_internal_tcp_connection default is on
-SELECT dblink_connect_no_auth('myconn', 'dbname=contrib_regression user=dblink_regression_test host=127.0.0.1');
--- should succeed
-SELECT dblink_connect_no_auth('myconn', 'dbname=contrib_regression user=dblink_regression_test');
-SELECT * FROM dblink('myconn','SELECT * FROM foo') AS t(a int, b text, c text[]);
-SELECT dblink_disconnect('myconn');
-
-\c - -
-ALTER ROLE dblink_regression_test PASSWORD NULL;
-REVOKE ALL ON TABLE foo FROM dblink_regression_test;
-REVOKE EXECUTE ON FUNCTION dblink_connect_no_auth(text, text) FROM dblink_regression_test;
-REVOKE EXECUTE ON FUNCTION dblink_connect_u(text, text) FROM dblink_regression_test;

@@ -1,7 +1,3 @@
--- start_matchsubs
--- m/^DETAIL\:  FATAL\:  no pg_hba.conf entry for host "(.*)", user "dblink_regression_test", database "contrib_regression"(.*)$/
--- s/^DETAIL\:  FATAL\:  no pg_hba.conf entry for host "(.*)", user "dblink_regression_test", database "contrib_regression"(.*)$/^DETAIL\:  FATAL\:  no pg_hba.conf entry for host "(.*)", user "dblink_regression_test", database "contrib_regression"/
--- end_matchsubs
 CREATE EXTENSION dblink;
 CREATE TABLE foo(f1 int, f2 text, f3 text[], primary key (f1,f2));
 INSERT INTO foo VALUES (0,'a','{"a0","b0","c0"}');
@@ -1050,54 +1046,3 @@ SELECT dblink_disconnect('myconn');
 RESET datestyle;
 RESET intervalstyle;
 RESET timezone;
--- Test dblink_connect_no_auth
-ALTER ROLE dblink_regression_test PASSWORD 'test';
-GRANT ALL ON TABLE foo TO dblink_regression_test;
-GRANT EXECUTE ON FUNCTION dblink_connect_no_auth(text, text) TO dblink_regression_test;
-GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO dblink_regression_test;
-SET SESSION AUTHORIZATION dblink_regression_test;
--- should fail
-SELECT dblink_connect('myconn', 'dbname=contrib_regression user=dblink_regression_test host=127.0.0.1');
-ERROR:  password is required
-DETAIL:  Non-superusers must provide a password in the connection string.
-SELECT dblink_connect_u('myconn', 'dbname=contrib_regression user=dblink_regression_test');
-ERROR:  could not establish connection
-DETAIL:  FATAL:  no pg_hba.conf entry for host "[local]", user "dblink_regression_test", database "contrib_regression", SSL off
--- gp_reject_internal_tcp_connection default is on
-SELECT dblink_connect_no_auth('myconn', 'dbname=contrib_regression user=dblink_regression_test host=127.0.0.1');
-ERROR:  could not establish connection
-DETAIL:  FATAL:  no pg_hba.conf entry for host "127.0.0.1", user "dblink_regression_test", database "contrib_regression", SSL off
--- should succeed
-SELECT dblink_connect_no_auth('myconn', 'dbname=contrib_regression user=dblink_regression_test');
- dblink_connect_no_auth 
-------------------------
- OK
-(1 row)
-
-SELECT * FROM dblink('myconn','SELECT * FROM foo') AS t(a int, b text, c text[]);
- a  | b |       c       
-----+---+---------------
-  0 | a | {a0,b0,c0}
-  2 | c | {a2,b2,c2}
-  5 | f | {a5,b5,c5}
-  6 | g | {a6,b6,c6}
- 10 | k | {a10,b10,c10}
-  9 | j | {a9,b9,c9}
-  1 | b | {a1,b1,c1}
-  3 | d | {a3,b3,c3}
-  4 | e | {a4,b4,c4}
-  7 | h | {a7,b7,c7}
-  8 | i | {a8,b8,c8}
-(11 rows)
-
-SELECT dblink_disconnect('myconn');
- dblink_disconnect 
--------------------
- OK
-(1 row)
-
-\c - -
-ALTER ROLE dblink_regression_test PASSWORD NULL;
-REVOKE ALL ON TABLE foo FROM dblink_regression_test;
-REVOKE EXECUTE ON FUNCTION dblink_connect_no_auth(text, text) FROM dblink_regression_test;
-REVOKE EXECUTE ON FUNCTION dblink_connect_u(text, text) FROM dblink_regression_test;

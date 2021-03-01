@@ -60,35 +60,4 @@ extern Datum dblink_current_query(PG_FUNCTION_ARGS);
 extern Datum dblink_get_notify(PG_FUNCTION_ARGS);
 extern Datum dblink_fdw_validator(PG_FUNCTION_ARGS);
 
-typedef struct remoteConn
-{
-	PGconn	   *conn;			/* Hold the remote connection */
-	int			openCursorCount;	/* The number of open cursors */
-	bool		newXactForCursor;		/* Opened a transaction for a cursor */
-} remoteConn;
-
-typedef struct storeInfo
-{
-	FunctionCallInfo fcinfo;
-	Tuplestorestate *tuplestore;
-	AttInMetadata *attinmeta;
-	MemoryContext tmpcontext;
-	char	  **cstrs;
-	/* temp storage for results to avoid leaks on exception */
-	PGresult   *last_res;
-	PGresult   *cur_res;
-} storeInfo;
-
-/* DBLINK_INIT is used by dblink.c and dblink_no_auth.c */
-#define DBLINK_INIT \
-	do { \
-			if (!pconn) \
-			{ \
-				pconn = (remoteConn *) MemoryContextAlloc(TopMemoryContext, sizeof(remoteConn)); \
-				pconn->conn = NULL; \
-				pconn->openCursorCount = 0; \
-				pconn->newXactForCursor = FALSE; \
-			} \
-	} while (0)
-
 #endif   /* DBLINK_H */

@@ -1,5 +1,5 @@
 /*
- * dblink.c
+ * dblink_no_auth.c
  *
  * Functions returning results from a remote database
  *
@@ -30,41 +30,6 @@
  * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
  *
  */
-#include "postgres.h"
-
-#include <limits.h>
-
-/* We undef FRONTEND here to include backend libpq header files.*/
-
-#ifdef LIBPQ_FE_H
-#error "libpq-fe.h" should not be included before "dblink_no_auth.c"
-#endif /* LIBPQ_FE_H */
-
-#ifdef FRONTEND
-#undef FRONTEND
-#include "libpq-fe.h"
-#define FRONTEND
-#else
-#include "libpq-fe.h"
-#endif /* FRONTEND */
-#include "funcapi.h"
-#include "mb/pg_wchar.h"
-#include "utils/builtins.h"
-
-#include "dblink.h"
-
-/*
- * Internal declarations
- */
-extern void createNewConnection(const char *name, remoteConn *rconn);
-extern char *dblink_connstr_check(const char *connstr);
-extern void dblink_security_check(PGconn *conn, remoteConn *rconn);
-extern char *get_connect_string(const char *servername);
-
-/* Global */
-extern remoteConn *pconn ;
-
-/* from backend_fe-connect.o */
 extern PGconn *
 backend_PQconnectdb(const char *conninfo);
 

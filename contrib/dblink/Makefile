@@ -8,7 +8,7 @@ endif
 top_builddir = ../..
 
 MODULE_big = dblink
-OBJS = dblink.o dblink_no_auth.o fe-connect_backend.o
+OBJS = dblink.o fe-connect_backend.o
 PG_CPPFLAGS = -I$(libpq_srcdir) -I$(top_srcdir)/src/port
 SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
 
@@ -25,7 +25,7 @@ $(top_builddir)/src/port/pg_config_paths.h:
 EXTENSION = dblink
 DATA = dblink--1.1.sql dblink--1.0--1.1.sql dblink--unpackaged--1.0.sql
 
-REGRESS = paths dblink
+REGRESS = paths dblink dblink_no_auth
 REGRESS_OPTS = --dlpath=$(top_builddir)/src/test/regress \
 	--create-role=dblink_regression_test
 EXTRA_CLEAN = sql/paths.sql expected/paths.out fe-connect.c fe-connect.o

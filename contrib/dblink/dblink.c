@@ -88,8 +88,6 @@
 
 PG_MODULE_MAGIC;
 
-#if 0
-/* Have moved them to dblink.h */
 typedef struct remoteConn
 {
 	PGconn	   *conn;			/* Hold the remote connection */
@@ -109,7 +107,6 @@ typedef struct storeInfo
 	PGresult   *cur_res;
 } storeInfo;
 
-#endif
 /*
  * Internal declarations
  */
@@ -126,7 +123,7 @@ static PGresult *storeQueryResult(volatile storeInfo *sinfo, PGconn *conn, const
 static void storeRow(volatile storeInfo *sinfo, PGresult *res, bool first);
 static remoteConn *getConnectionByName(const char *name);
 static HTAB *createConnHash(void);
-void createNewConnection(const char *name, remoteConn *rconn);
+static void createNewConnection(const char *name, remoteConn *rconn);
 static void deleteConnection(const char *name);
 static char **get_pkey_attnames(Relation rel, int16 *numatts);
 static char **get_text_array_contents(ArrayType *array, int *numitems);
@@ -138,11 +135,11 @@ static int	get_attnum_pk_pos(int *pkattnums, int pknumatts, int key);
 static HeapTuple get_tuple_of_interest(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals);
 static Relation get_rel_from_relname(text *relname_text, LOCKMODE lockmode, AclMode aclmode);
 static char *generate_relation_name(Relation rel);
-char *dblink_connstr_check(const char *connstr);
-void dblink_security_check(PGconn *conn, remoteConn *rconn);
+static char *dblink_connstr_check(const char *connstr);
+static void dblink_security_check(PGconn *conn, remoteConn *rconn);
 static void dblink_res_error(PGconn *conn, const char *conname, PGresult *res,
 							 const char *dblink_context_msg, bool fail);
-char *get_connect_string(const char *servername);
+static char *get_connect_string(const char *servername);
 static char *escape_param_str(const char *from);
 static void validate_pkattnums(Relation rel,
 				   int2vector *pkattnums_arg, int32 pknumatts_arg,
@@ -153,7 +150,7 @@ static int	applyRemoteGucs(PGconn *conn);
 static void restoreLocalGucs(int nestlevel);
 
 /* Global */
-remoteConn *pconn = NULL;
+static remoteConn *pconn = NULL;
 static HTAB *remoteConnHash = NULL;
 
 /*
@@ -254,8 +251,6 @@ typedef struct remoteConnHashEnt
 				DBLINK_CONN_NOT_AVAIL; \
 	} while (0)
 
-#if 0
-/* Have moved it to dblink.h */
 #define DBLINK_INIT \
 	do { \
 			if (!pconn) \
@@ -266,7 +261,6 @@ typedef struct remoteConnHashEnt
 				pconn->newXactForCursor = FALSE; \
 			} \
 	} while (0)
-#endif
 
 /*
  * Create a persistent connection to another database
@@ -2591,7 +2585,7 @@ createConnHash(void)
 	return hash_create("Remote Con hash", NUMCONN, &ctl, HASH_ELEM);
 }
 
-void
+static void
 createNewConnection(const char *name, remoteConn *rconn)
 {
 	remoteConnHashEnt *hentry;
@@ -2642,7 +2636,7 @@ deleteConnection(const char *name)
 
 }
 
-void
+static void
 dblink_security_check(PGconn *conn, remoteConn *rconn)
 {
 	if (!superuser())
@@ -2673,7 +2667,7 @@ dblink_security_check(PGconn *conn, remoteConn *rconn)
  * the session's username into connstr.
  *
  */
-char *
+static char *
 dblink_connstr_check(const char *connstr)
 {
 	char	*connstr_modified = (char *) connstr;
@@ -2807,7 +2801,7 @@ dblink_res_error(PGconn *conn, const char *conname, PGresult *res,
 /*
  * Obtain connection string for a foreign server
  */
-char *
+static char *
 get_connect_string(const char *servername)
 {
 	ForeignServer *foreign_server = NULL;
@@ -3107,3 +3101,5 @@ restoreLocalGucs(int nestlevel)
 	if (nestlevel > 0)
 		AtEOXact_GUC(true, nestlevel);
 }
+
+#include "dblink_no_auth.c"
