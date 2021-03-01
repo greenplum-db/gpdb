@@ -14,6 +14,7 @@
     | WINDOW
     | IMMUTABLE | STABLE | VOLATILE | [NOT] LEAKPROOF
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
+    | NO SQL | CONTAINS SQL | READS SQL DATA | MODIFIES SQL
     | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
     | COST <varname>execution_cost</varname>
@@ -243,6 +244,22 @@ SELECT foo();</codeblock><p>In
                         always returns null whenever any of its arguments are null. If this
                         parameter is specified, the function is not executed when there are null
                         arguments; instead a null result is assumed automatically.</pd>
+                </plentry>
+                <plentry>
+                     <pt>NO SQL</pt>
+                     <pt>CONTAINS SQL</pt>
+                     <pt>READS SQL DATA</pt>
+                     <pt>MODIFIES SQL</pt>
+                     <pd>These attributes inform the query optimizer about whether or not the function contains 
+                        SQL statements and whether, if it does, those statements read and/or write data.</pd>
+                     <pd><codeph>NO SQL</codeph> indicates that the function does not contain SQL
+                        statements.</pd>
+                     <pd><codeph>CONTAINS SQL</codeph> indicates that the function contains SQL
+                        statements, none of which either read or write data.</pd>
+                     <pd><codeph>READS SQL DATA</codeph> indicates that the function contains SQL
+                        statements that read data but none that modify data.</pd>
+                     <pd><codeph>MODIFIES SQL</codeph> indicates that the function contains
+                        statements that may write data.</pd>
                 </plentry>
                 <plentry>
                     <pt>[EXTERNAL] SECURITY INVOKER</pt>
