@@ -15,17 +15,17 @@ from gppylib.commands.unix import Scp
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.operations import Operation
 from gppylib.operations.unix import CheckFile, CheckRemoteFile, RemoveRemoteFile
-from gppylib.operations.package import dereference_symlink, GpScp
+from gppylib.operations.package import dereference_symlink, GpScp, linux_distribution_id, linux_distribution_version
 from gppylib.commands.base import Command, REMOTE
 
 def get_os():
-    dist, release, _ = platform.dist()
+    dist, release = linux_distribution_id(), linux_distribution_version()
     major_release = release.partition('.')[0]
 
     os_string = ''
-    if dist.lower() == 'redhat':
+    if dist.lower().startswith('redhat'):
         os_string += 'rhel'
-    elif dist.lower() == 'suse':
+    elif dist.lower().startswith('suse'):
         os_string += 'suse'
 
     os_string += major_release

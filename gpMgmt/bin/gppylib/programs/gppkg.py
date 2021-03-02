@@ -15,11 +15,10 @@ try:
     from gppylib.gpversion import GpVersion
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.mainUtils import addCoordinatorDirectoryOptionForSingleClusterProgram, addStandardLoggingAndHelpOptions, ExceptionNoStackTraceNeeded
-    from gppylib.operations.package import MigratePackages, InstallPackage, UninstallPackage, QueryPackage, BuildGppkg, UpdatePackage, CleanGppkg, Gppkg, GPPKG_EXTENSION, GPPKG_ARCHIVE_PATH
+    from gppylib.operations.package import MigratePackages, InstallPackage, UninstallPackage, QueryPackage, BuildGppkg, UpdatePackage, CleanGppkg, Gppkg, GPPKG_EXTENSION, GPPKG_ARCHIVE_PATH, linux_distribution_id
     from gppylib.userinput import ask_yesno
     from gppylib.operations.unix import ListFilesByPattern
 
-    import platform
 except ImportError as ex:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(ex))
 
@@ -188,7 +187,7 @@ class GpPkgProgram:
                 BuildGppkg(self.build, None).run()
             return
 
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             try:
                 cmd = Command(name='Check for dpkg', cmdStr='dpkg --version')
                 cmd.run(validateAfter=True)

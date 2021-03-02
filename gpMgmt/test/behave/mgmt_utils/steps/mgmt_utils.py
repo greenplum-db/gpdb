@@ -5,7 +5,6 @@ import json
 import os
 import re
 import pipes
-import platform
 import shutil
 import socket
 import tempfile
@@ -33,6 +32,7 @@ from test.behave_utils.cluster_expand import Gpexpand
 from test.behave_utils.gpexpand_dml import TestDML
 from gppylib.commands.base import Command, REMOTE
 from gppylib import pgconf
+from gppylib.operations.package import linux_distribution_id, linux_distribution_version
 
 
 coordinator_data_dir = gp.get_coordinatordatadir()
@@ -40,7 +40,7 @@ if coordinator_data_dir is None:
     raise Exception('Please set COORDINATOR_DATA_DIRECTORY in environment')
 
 def show_all_installed(gphome):
-    x = platform.linux_distribution()
+    x = linux_distribution_id(), linux_distribution_version()
     name = x[0].lower()
     if 'ubuntu' in name:
         return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print $1}'" % gphome
@@ -50,7 +50,7 @@ def show_all_installed(gphome):
         raise Exception('UNKNOWN platform: %s' % str(x))
 
 def remove_native_package_command(gphome, full_gppkg_name):
-    x = platform.linux_distribution()
+    x = linux_distribution_id(), linux_distribution_version()
     name = x[0].lower()
     if 'ubuntu' in name:
         return 'fakeroot dpkg --force-not-root --log=/dev/null --instdir=%s --admindir=%s/share/packages/database/deb -r %s' % (gphome, gphome, full_gppkg_name)

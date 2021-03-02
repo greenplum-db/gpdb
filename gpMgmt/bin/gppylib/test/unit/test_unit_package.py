@@ -1,12 +1,12 @@
 from mock import *
 from .gp_unittest import *
 from gppylib.operations.package import IsVersionCompatible, ListPackages, MigratePackages, AlreadyInstalledError, \
-    ARCHIVE_PATH, SyncPackages, CleanGppkg
+    ARCHIVE_PATH, SyncPackages, CleanGppkg, linux_distribution_id, linux_distribution_version
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 import os
 import pickle
-import platform
+import tempfile
 
 
 class IsVersionCompatibleTestCase(GpTestCase):
@@ -100,7 +100,7 @@ class MigratePackagesTestCase(GpTestCase):
             patch('gppylib.operations.package.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
         ])
 
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             self.mock_install_package_locally = self.get_mock_from_apply_patch('InstallDebPackageLocally')
         else:
             self.mock_install_package_locally = self.get_mock_from_apply_patch('InstallPackageLocally')
@@ -270,6 +270,53 @@ class CleanGppkgTestCase(GpTestCase):
 
         with self.assertRaisesRegex(Exception, "SyncPackages failed:\nfirst failure\nsecond failure"):
             subject.execute()
+
+class PlatformLinuxDistributionTestCase(GpTestCase):
+
+    def test_linux_distribution_is_ubuntu_18_04(self):
+        with tempfile.NamedTemporaryFile(mode='w+t') as f:
+            #taken from /etc/os-release on an Ubuntu system.
+            f.writelines(['NAME="Ubuntu"\n', 'VERSION="18.04.5 LTS (Bionic Beaver)"\n', 'ID=ubuntu\n',
+                          'ID_LIKE=debian\n', 'PRETTY_NAME="Ubuntu 18.04.5 LTS"\n', 'VERSION_ID="18.04"\n',
+                          'HOME_URL="https://www.ubuntu.com/"\n', 'SUPPORT_URL="https://help.ubuntu.com/"\n',
+                          'BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"\n',
+                          'PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"\n',
+                          'VERSION_CODENAME=bionic\n', 'UBUNTU_CODENAME=bionic\n'])
+            f.seek(0)
+
+            self.assertEqual(linux_distribution_id(f.name), 'ubuntu')
+            self.assertEqual(linux_distribution_version(f.name), '18.04')
+
+    def test_linux_distribution_is_ubuntu_20_04(self):
+        with tempfile.NamedTemporaryFile(mode='w+t') as f:
+            #taken from /etc/os-release on an Ubuntu system.
+            f.writelines(['NAME="Ubuntu"\n', 'VERSION="20.04.1 LTS (Focal Fossa)"\n', 'ID=ubuntu\n', 'ID_LIKE=debian\n',
+                          'PRETTY_NAME="Ubuntu 20.04.1 LTS"\n', 'VERSION_ID="20.04"\n',
+                          'HOME_URL="https://www.ubuntu.com/"\n', 'SUPPORT_URL="https://help.ubuntu.com/"\n',
+                          'BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"\n',
+                          'PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"\n',
+                          'VERSION_CODENAME=focal\n', 'UBUNTU_CODENAME=focal\n'])
+            f.seek(0)
+
+            self.assertEqual(linux_distribution_id(f.name), 'ubuntu')
+            self.assertEqual(linux_distribution_version(f.name), '20.04')
+
+    def test_linux_distribution_is_centos_8(self):
+        with tempfile.NamedTemporaryFile(mode='w+t') as f:
+            #taken from /etc/os-release on an centos system.
+            f.writelines(['NAME="CentOS Linux"\n', 'VERSION="8"\n', 'ID="centos"\n', 'ID_LIKE="rhel fedora"\n',
+                          'VERSION_ID="8"\n', 'PLATFORM_ID="platform:el8"\n', 'PRETTY_NAME="CentOS Linux 8"\n',
+                          'ANSI_COLOR="0;31"\n', 'CPE_NAME="cpe:/o:centos:centos:8"\n',
+                          'HOME_URL="https://centos.org/"\n', 'BUG_REPORT_URL="https://bugs.centos.org/"\n',
+                          'CENTOS_MANTISBT_PROJECT="CentOS-8"\n', 'CENTOS_MANTISBT_PROJECT_VERSION="8"\n'])
+            f.seek(0)
+
+            self.assertEqual(linux_distribution_id(f.name), 'centos')
+            self.assertEqual(linux_distribution_version(f.name), '8')
+
+    def test_linux_distribuion_unknown_if_os_release_file_empty(self):
+        self.assertEqual(linux_distribution_id('non_existent_file'), 'unknown')
+        self.assertEqual(linux_distribution_version('non_existent_file'), 'unknown')
 
 
 if __name__ == '__main__':

@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 
 import behave
@@ -11,6 +10,7 @@ from steps.mirrors_mgmt_utils import MirrorMgmtContext
 from steps.gpconfig_mgmt_utils import GpConfigContext
 from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
 from gppylib.db import dbconn
+from gppylib.operations.package import linux_distribution_id, linux_distribution_version
 
 def before_all(context):
     if list(map(int, behave.__version__.split('.'))) < [1,2,6]:
@@ -90,7 +90,7 @@ def after_feature(context, feature):
 
 def before_scenario(context, scenario):
     if "skip_fixme_ubuntu18.04" in scenario.effective_tags:
-        if platform.linux_distribution()[0].lower() == "ubuntu" and platform.linux_distribution()[1] == "18.04":
+        if linux_distribution_id() == "ubuntu" and linux_distribution_version() == "18.04":
             scenario.skip("skipping scenario tagged with @skip_fixme_ubuntu18.04")
             return
 

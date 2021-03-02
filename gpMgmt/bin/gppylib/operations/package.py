@@ -261,7 +261,7 @@ class Gppkg:
         pkg['abspath'] = pkg_path
 
         # store all the dependencies of the gppkg
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             for cur_file in archive_list:
                 if cur_file.find('deps/') != -1 and cur_file.endswith('.deb'):
                     pkg['dependencies'].append(cur_file[cur_file.rfind('/') + 1:])
@@ -1043,7 +1043,7 @@ class SyncPackages(Operation):
                     srcFile=os.path.join(GPPKG_ARCHIVE_PATH, package),
                     dstFile=dstFile,
                     dstHost=self.host).run(validateAfter=True)
-                if platform.linux_distribution()[0] == 'Ubuntu':
+                if linux_distribution_id() == 'ubuntu':
                     RemoteOperation(InstallDebPackageLocally(dstFile), self.host).run()
                 else:
                     RemoteOperation(InstallPackageLocally(dstFile), self.host).run()
@@ -1053,7 +1053,7 @@ class SyncPackages(Operation):
             logger.info(
                 'The following packages will be uninstalled on %s: %s' % (self.host, ', '.join(sorted(uninstall_package_set))))
             for package in uninstall_package_set:
-                if platform.linux_distribution()[0] == 'Ubuntu':
+                if linux_distribution_id() == 'ubuntu':
                     RemoteOperation(UninstallDebPackageLocally(package), self.host).run()
                 else:
                     RemoteOperation(UninstallPackageLocally(package), self.host).run()
@@ -1074,7 +1074,7 @@ class InstallPackage(Operation):
 
         # TODO: AK: MPP-15736 - precheck package state on coordinator
         ExtractPackage(self.gppkg).run()
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             ValidateInstallDebPackage(self.gppkg).run()
         else:
             ValidateInstallPackage(self.gppkg).run()
@@ -1089,7 +1089,7 @@ class InstallPackage(Operation):
         srcFile = self.gppkg.abspath
         dstFile = os.path.join(GPHOME, self.gppkg.pkg)
 
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             # install package on segments
             if self.segment_host_list:
                 GpScp(srcFile, dstFile, self.segment_host_list).run()
@@ -1193,7 +1193,7 @@ class UninstallPackage(Operation):
         # TODO: AK: MPP-15736 - precheck package state on coordinator
         ExtractPackage(self.gppkg).run()
 
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             ValidateUninstallDebPackage(self.gppkg).run()
         else:
             ValidateUninstallPackage(self.gppkg).run()
@@ -1205,7 +1205,7 @@ class UninstallPackage(Operation):
                      segment_host_list=self.segment_host_list).run()
 
         # uninstall on segments
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             HostOperation(UninstallDebPackageLocally(self.gppkg.pkg), self.segment_host_list).run()
 
             if self.standby_host:
@@ -1420,7 +1420,7 @@ class UpdatePackage(Operation):
         logger.info('Updating package %s' % self.gppkg.pkg)
 
         ExtractPackage(self.gppkg).run()
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             ValidateInstallDebPackage(self.gppkg, is_update=True).run()
         else:
             ValidateInstallPackage(self.gppkg, is_update=True).run()
@@ -1467,7 +1467,7 @@ class UpdatePackageLocally(Operation):
         self.package_path = package_path
 
     def execute(self):
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             InstallDebPackageLocally(self.package_path, is_update=True).run()
         else:
             InstallPackageLocally(self.package_path, is_update=True).run()
@@ -1558,7 +1558,7 @@ class MigratePackages(Operation):
         for package in packages:
             package_path = os.path.join(old_archive_path, package)
             try:
-                if platform.linux_distribution()[0] == 'Ubuntu':
+                if linux_distribution_id() == 'ubuntu':
                     InstallDebPackageLocally(package_path).run()
                 else:
                     InstallPackageLocally(package_path).run()
@@ -1637,3 +1637,29 @@ class HostOperation(Operation):
         ParallelOperation(operations).run()
         for operation in operations:
             operation.get_ret()
+
+
+# As of py3.8, platform library doesn't have linux_distribution.
+# But all the production systems we support use systemd and hence have this info in /etc/os-release.
+# https://www.freedesktop.org/software/systemd/man/os-release.html
+def _platform_linux_distribution(search_key, osid_filename):
+    try:
+        with open(osid_filename) as f:
+            full_key = '%s=' % search_key
+
+            for line in f.readlines():
+                line = line.strip().replace('"', '')
+                if line.startswith(full_key):
+                    return line[len(full_key):]
+    except:
+        pass
+
+    return 'unknown'
+
+
+def linux_distribution_id(osid_filename='/etc/os-release'):
+    return _platform_linux_distribution('ID', osid_filename)
+
+
+def linux_distribution_version(osid_filename='/etc/os-release'):
+    return _platform_linux_distribution('VERSION_ID', osid_filename)
