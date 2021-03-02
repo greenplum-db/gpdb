@@ -125,7 +125,6 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
-    @skip_fixme_ubuntu18.04
     Scenario: gpinitsystem creates a cluster in default timezone
         Given the database is not running
         And "TZ" environment variable is not set

@@ -61,7 +61,6 @@ Feature: gpactivatestandby
         And verify gpstate with options "-m" output is correct
         And clean up and revert back to original coordinator
 
-    @skip_fixme_ubuntu18.04
     Scenario: tablespaces work
         Given the database is running
           And the standby is not initialized

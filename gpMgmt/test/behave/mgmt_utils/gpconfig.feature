@@ -85,11 +85,6 @@ Feature: gpconfig integration tests
         | utf-8 works                                 | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου                 | 'Ομήρου'                    | Ομήρου            | 'Ομήρου'               | Ομήρου                 |
         | client min messages works                   | client_min_messages          | string     | log        | notice    | notice     | notice     | notice                 | notice                      | notice            | notice                 | notice                 |
 
-    @skip_fixme_ubuntu18.04
-    Examples:
-        | test_case                              | guc                          | type       | seed_value | value     | file_value | live_value | value_coordinator_only | file_value_coordinator_only | value_coordinator | file_value_coordinator | live_value_coordinator |
-        | utf-8 works                            | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
-
     @concourse_cluster
     @demo_cluster
     Scenario Outline: write directly to postgresql.conf file: <type>
