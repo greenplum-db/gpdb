@@ -30,7 +30,7 @@ class MainUtilsTestCase(GpTestCase):
 
     def test_exceptionPIDLockHeld_if_same_pid(self):
         with self.lock:
-            with self.assertRaises(PIDLockHeld, message="PIDLock already held at %s" % (self.lockfile)):
+            with self.assertRaisesRegex(PIDLockHeld, "PIDLock already held at %s" % (self.lockfile)):
                 self.lock.acquire()
 
     def test_child_can_read_lock_owner(self):
@@ -47,7 +47,7 @@ class MainUtilsTestCase(GpTestCase):
         pid = os.fork()
         # if child, os.fork() == 0
         if pid == 0:
-            with self.assertRaises(PIDLockHeld, message="PIDLock already held at %s" % (self.lockfile)):
+            with self.assertRaisesRegex(PIDLockHeld, "PIDLock already held at %s" % (self.lockfile)):
                 self.lock.acquire()
             os._exit(0)
         else:
