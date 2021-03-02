@@ -3,7 +3,6 @@
 
 from contextlib import closing
 import os
-import platform
 import shutil
 import sys
 import tarfile
@@ -122,16 +121,6 @@ class OSCompatibilityError(Exception):
 
     def __init__(self, requiredos, foundos):
         Exception.__init__(self, '%s OS required. %s OS found' % (requiredos, foundos))
-
-
-class ArchCompatibilityError(Exception):
-    """
-        Exception to notify that architecture does not meet
-        the requirement
-    """
-
-    def __init__(self, requiredarch, foundarch):
-        Exception.__init__(self, '%s Arch required. %s Arch found' % (requiredarch, foundarch))
 
 
 class RequiredDependencyError(Exception):
@@ -569,15 +558,6 @@ class ValidateInstallPackage(Operation):
         # Check the GPDB requirements
         if not IsVersionCompatible(self.gppkg).run():
             raise GpdbVersionError
-
-        # TODO: AK: I've changed our use of the OS tag from 'Linux' to 'rhel5' or 'suse10'.
-        # So, the two lines below will not work properly.
-        # if self.gppkg.os.lower() != platform.system().lower():
-        #    raise OSCompatibilityError(self.gppkg.os, platform.system().lower())
-
-        # architecture compatibility
-        if self.gppkg.architecture.lower() != platform.machine().lower():
-            raise ArchCompatibilityError(self.gppkg.architecture, platform.machine().lower())
 
         rpm_set = set([self.gppkg.main_rpm] + self.gppkg.dependencies)
         rpm_install_string = ' '.join([os.path.join(TEMP_EXTRACTION_PATH, rpm) for rpm in rpm_set])

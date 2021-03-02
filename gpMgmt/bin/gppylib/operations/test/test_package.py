@@ -437,15 +437,6 @@ class SimpleNegativeTestCases(GppkgTestCase):
         with self.assertRaisesRegex(ExecutionError, "%s os required. %s os found" % (os, OS)):
             self.install(gppkg_file)
 
-    def test01_wrong_arch(self):
-        arch = "abcde"
-        rpm_spec = self.rpm_spec
-        gppkg_spec = GppkgSpec("test", "1.0", GPDB_VERSION, OS, arch)
-        gppkg_file = self.build(gppkg_spec, rpm_spec)
-
-        with self.assertRaisesRegex(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
-            self.install(gppkg_file)
-
     def test02_wrong_gpdbversion(self):
         gpdb_version = "4.6"
         rpm_spec = self.rpm_spec

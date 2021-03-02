@@ -2,7 +2,6 @@ import os
 import shutil
 import unittest
 import tempfile
-import platform
 import getpass
 import tarfile
 
@@ -33,7 +32,6 @@ def get_os():
     return os_string
 
 OS = get_os()
-ARCH = platform.machine()
 
 # AK: use dereference_symlink when mucking with RPM database for the same reason
 # it's used in the gppylib.operations.package. For more info, see the function definition.
@@ -134,7 +132,7 @@ def run_remote_command(cmd_str, host):
 
 class GppkgSpec:
     """Represents the gppkg spec file"""
-    def __init__(self, name, version, gpdbversion = GPDB_VERSION, os = OS, arch = ARCH):
+    def __init__(self, name, version, gpdbversion = GPDB_VERSION, os = OS):
         """
         All the parameters require arguments of type string.
         """
@@ -142,7 +140,6 @@ class GppkgSpec:
         self.version = version
         self.gpdbversion = gpdbversion
         self.os = os
-        self.arch = arch
 
     def get_package_name(self):
         """Returns the package name of the form <name>-<version>"""
@@ -150,7 +147,7 @@ class GppkgSpec:
 
     def get_filename(self):
         """Returns the complete filename of the gppkg"""
-        return self.get_package_name() + '-' + self.os + '-' + self.arch + GPPKG_EXTENSION
+        return self.get_package_name() + '-' + self.os + '-x86_64' + GPPKG_EXTENSION
 
     def __str__(self):
         """Returns the GppkgSpec in the form of a string"""
@@ -160,7 +157,7 @@ Version: ''' + self.version + '''
 GPDBVersion: ''' + self.gpdbversion + '''
 Description: Temporary Test Package
 OS: ''' + self.os + '''
-Architecture: ''' + self.arch
+Architecture: x86_64'''
 
         return gppkg_spec_file
 
@@ -231,7 +228,7 @@ class RPMSpec:
 
     def get_filename(self):
         """Returns the complete filename of the rpm"""
-        return self.get_package_name() + '.' + ARCH + ".rpm"
+        return self.get_package_name() + '.x86_64.rpm'
 
     def __str__(self):
         """Returns the rpm spec file as a string"""
@@ -249,7 +246,7 @@ Group:          Development/Tools
 Prefix:         /temp
 AutoReq:        no
 AutoProv:       no
-BuildArch:      ''' + ARCH + '''
+BuildArch:      x86_64
 Provides:       ''' + self.name + ''' = '''+ self.version +''', /bin/sh
 BuildRoot:      %{_topdir}/BUILD '''
 
@@ -296,7 +293,7 @@ class BuildRPM(Operation):
 
                 os.system("cd " + SCRATCH_SPACE + "; rpmbuild --quiet -bb " + f.name)
 
-            shutil.copy(os.path.join(SCRATCH_SPACE, "RPMS", ARCH, self.spec.get_filename()), os.getcwd())
+            shutil.copy(os.path.join(SCRATCH_SPACE, "RPMS", "x86_64", self.spec.get_filename()), os.getcwd())
         finally:
             shutil.rmtree(build_dir)
             shutil.rmtree(rpms_dir)
