@@ -31,7 +31,7 @@ function gen_env(){
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
 		cd "\${1}/gpdb_src"
 		source gpAux/gpdemo/gpdemo-env.sh
-		make -s ${MAKE_TEST_COMMAND}
+		PG_TEST_EXTRA="kerberos ssl" make -s ${MAKE_TEST_COMMAND}
 	EOF
 
 	chmod a+x /opt/run_test.sh
