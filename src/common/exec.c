@@ -54,9 +54,7 @@ extern int _CRT_glob = 0; /* 0 turns off globbing; 1 turns it on */
 #define getcwd(cwd,len)  GetCurrentDirectory(len, cwd)
 #endif
 
-static int	validate_exec(const char *path);
 static int	resolve_symlinks(char *path);
-static char *pipe_read_line(char *cmd, char *line, int maxsize);
 
 #ifdef WIN32
 static BOOL GetTokenUser(HANDLE hToken, PTOKEN_USER *ppTokenUser);
@@ -69,7 +67,7 @@ static BOOL GetTokenUser(HANDLE hToken, PTOKEN_USER *ppTokenUser);
  *		  -1 if the regular file "path" does not exist or cannot be executed.
  *		  -2 if the file is otherwise valid but cannot be read.
  */
-static int
+int
 validate_exec(const char *path)
 {
 	struct stat buf;
@@ -366,7 +364,7 @@ find_other_exec(const char *argv0, const char *target,
  * Executing a command in a pipe and reading the first line from it
  * is all we need.
  */
-static char *
+char *
 pipe_read_line(char *cmd, char *line, int maxsize)
 {
 #ifndef WIN32
