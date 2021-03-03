@@ -10,13 +10,12 @@
 //		a col stats object
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/CDXLColStats.h"
-
 #include "naucrates/dxl/parser/CParseHandlerColStatsBucket.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/md/CDXLColStats.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -38,11 +37,11 @@ CParseHandlerColStatsBucket::CParseHandlerColStatsBucket(
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_base),
 	  m_frequency(0.0),
 	  m_distinct(0.0),
-	  m_lower_bound_dxl_datum(NULL),
-	  m_upper_bound_dxl_datum(NULL),
+	  m_lower_bound_dxl_datum(nullptr),
+	  m_upper_bound_dxl_datum(nullptr),
 	  m_is_lower_closed(false),
 	  m_is_upper_closed(false),
-	  m_dxl_bucket(NULL)
+	  m_dxl_bucket(nullptr)
 {
 }
 

@@ -10,6 +10,7 @@
 #define GPOPT_CXformJoin2BitmapIndexGetApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternNode.h"
@@ -22,11 +23,10 @@ using namespace gpos;
 class CXformJoin2BitmapIndexGetApply : public CXformJoin2IndexApplyGeneric
 {
 private:
-	// no copy ctor
+public:
 	CXformJoin2BitmapIndexGetApply(const CXformJoin2BitmapIndexGetApply &) =
 		delete;
 
-public:
 	// ctor
 	explicit CXformJoin2BitmapIndexGetApply(CMemoryPool *mp)
 		: CXformJoin2IndexApplyGeneric(mp, true)
@@ -34,19 +34,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformJoin2BitmapIndexGetApply()
-	{
-	}
+	~CXformJoin2BitmapIndexGetApply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfJoin2BitmapIndexGetApply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformJoin2BitmapIndexGetApply";
 	}

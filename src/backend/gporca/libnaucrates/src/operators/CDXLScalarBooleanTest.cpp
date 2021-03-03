@@ -12,8 +12,8 @@
 #include "naucrates/dxl/operators/CDXLScalarBooleanTest.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -90,7 +90,7 @@ CDXLScalarBooleanTest::GetOpNameStr() const
 			return CDXLTokens::GetDXLTokenStr(
 				EdxltokenScalarBoolTestIsNotUnknown);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -108,7 +108,7 @@ CDXLScalarBooleanTest::SerializeToDXL(CXMLSerializer *xml_serializer,
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	GPOS_ASSERT(NULL != element_name);
+	GPOS_ASSERT(nullptr != element_name);
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 

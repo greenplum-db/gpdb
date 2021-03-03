@@ -12,8 +12,9 @@
 #define GPOPT_CPhysicalDynamicIndexScan_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPhysicalDynamicScan.h"
+
 #include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/operators/CPhysicalDynamicScan.h"
 
 namespace gpopt
 {
@@ -40,35 +41,32 @@ private:
 	// order
 	COrderSpec *m_pos;
 
-	// private copy ctor
-	CPhysicalDynamicIndexScan(const CPhysicalDynamicIndexScan &);
-
 public:
+	CPhysicalDynamicIndexScan(const CPhysicalDynamicIndexScan &) = delete;
+
 	// ctors
-	CPhysicalDynamicIndexScan(CMemoryPool *mp, BOOL is_partial,
-							  CIndexDescriptor *pindexdesc,
+	CPhysicalDynamicIndexScan(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 							  CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
 							  const CName *pnameAlias,
 							  CColRefArray *pdrgpcrOutput, ULONG scan_id,
-							  CColRef2dArray *pdrgpdrgpcrPart,
-							  ULONG ulSecondaryScanId,
-							  CPartConstraint *ppartcnstr,
-							  CPartConstraint *ppartcnstrRel, COrderSpec *pos);
+							  CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
+							  IMdIdArray *partition_mdids,
+							  ColRefToUlongMapArray *root_col_mapping_per_part);
 
 	// dtor
-	virtual ~CPhysicalDynamicIndexScan();
+	~CPhysicalDynamicIndexScan() override;
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalDynamicIndexScan;
 	}
 
 	// operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalDynamicIndexScan";
 	}
@@ -81,20 +79,20 @@ public:
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	//-------------------------------------------------------------------------------------
 	// Derived Plan Properties
 	//-------------------------------------------------------------------------------------
 
 	// derive sort order
-	virtual COrderSpec *
+	COrderSpec *
 	PosDerive(CMemoryPool *,	   //mp
 			  CExpressionHandle &  //exprhdl
-	) const
+	) const override
 	{
 		m_pos->AddRef();
 		return m_pos;
@@ -105,27 +103,26 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// return order property enforcing type for this operator
-	virtual CEnfdProp::EPropEnforcingType EpetOrder(
-		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
+	CEnfdProp::EPropEnforcingType EpetOrder(
+		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const override;
 
 	// conversion function
 	static CPhysicalDynamicIndexScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalDynamicIndexScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicIndexScan *>(pop);
 	}
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 	// statistics derivation during costing
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  CReqdPropPlan *prpplan,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  CReqdPropPlan *prpplan,
+							  IStatisticsArray *stats_ctxt) const override;
 
 };	// class CPhysicalDynamicIndexScan
 

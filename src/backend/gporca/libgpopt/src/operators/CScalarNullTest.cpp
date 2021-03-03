@@ -9,14 +9,13 @@
 //		Implementation of scalar null test operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarNullTest.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
-#include "gpopt/operators/CScalarNullTest.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;
@@ -66,7 +65,7 @@ CScalarNullTest::MdidType() const
 CScalar::EBoolEvalResult
 CScalarNullTest::Eber(ULongPtrArray *pdrgpulChildren) const
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 	GPOS_ASSERT(1 == pdrgpulChildren->Size());
 
 	EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[0]);

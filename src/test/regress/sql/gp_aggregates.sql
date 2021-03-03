@@ -158,7 +158,11 @@ DROP FUNCTION distinct_test();
 -- Test multi-phase aggregate with subquery scan
 create table multiagg_with_subquery (i int, j int, k int, m int) distributed by (i);
 insert into multiagg_with_subquery select i, i+1, i+2, i+3 from generate_series(1, 10)i;
+analyze multiagg_with_subquery;
 explain (costs off)
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
 drop table multiagg_with_subquery;
+
+-- Unique node numGroups > 0 assertion
+SELECT DISTINCT avg(c1) FROM generate_series(1,2) c1;

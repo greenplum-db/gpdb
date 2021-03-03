@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CDistributionSpecStrictHashed_H
 #define GPOPT_CDistributionSpecStrictHashed_H
@@ -17,10 +17,10 @@ public:
 	CDistributionSpecStrictHashed(CExpressionArray *pdrgpexpr,
 								  BOOL fNullsColocated);
 
-	virtual EDistributionType Edt() const;
+	EDistributionType Edt() const override;
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "STRICT HASHED";
 	}

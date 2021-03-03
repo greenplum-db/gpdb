@@ -98,6 +98,7 @@ reset enable_hashagg;
 --
 create table foo_ctas(a int, b int) distributed randomly;
 insert into foo_ctas select g%5, g%2 from generate_series(1, 100) g;
+analyze foo_ctas;
 
 explain create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
 create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);

@@ -48,19 +48,18 @@ private:
 	ULLONG m_plan_space_size;
 
 
-	// private copy ctor
-	CSerializablePlan(const CSerializablePlan &);
-
 public:
+	CSerializablePlan(const CSerializablePlan &) = delete;
+
 	// ctor
 	CSerializablePlan(CMemoryPool *mp, const CDXLNode *pdxlnPlan,
 					  ULLONG plan_id, ULLONG plan_space_size);
 
 	// dtor
-	virtual ~CSerializablePlan();
+	~CSerializablePlan() override;
 
 	// serialize object to passed buffer
-	virtual void Serialize(COstream &oos);
+	void Serialize(COstream &oos) override;
 
 };	// class CSerializablePlan
 }  // namespace gpopt

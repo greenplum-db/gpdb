@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarFuncExpr_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/IMDId.h"
 
@@ -43,23 +44,22 @@ private:
 	// does the func return a set
 	BOOL m_returns_set;
 
-	// private copy ctor
-	CDXLScalarFuncExpr(const CDXLScalarFuncExpr &);
-
 public:
+	CDXLScalarFuncExpr(const CDXLScalarFuncExpr &) = delete;
+
 	// ctor
 	CDXLScalarFuncExpr(CMemoryPool *mp, IMDId *mdid_func,
 					   IMDId *mdid_return_type, INT return_type_modifier,
 					   BOOL returns_set);
 
 	//dtor
-	virtual ~CDXLScalarFuncExpr();
+	~CDXLScalarFuncExpr() override;
 
 	// ident accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// name of the DXL operator
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// function id
 	IMDId *FuncMdId() const;
@@ -73,26 +73,27 @@ public:
 	BOOL ReturnsSet() const;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLScalarFuncExpr *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarFuncExpr == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarFuncExpr *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

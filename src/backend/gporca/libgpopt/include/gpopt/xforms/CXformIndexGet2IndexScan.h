@@ -12,6 +12,7 @@
 #define GPOPT_CXformIndexGet2IndexScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,39 +30,36 @@ using namespace gpos;
 class CXformIndexGet2IndexScan : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformIndexGet2IndexScan(const CXformIndexGet2IndexScan &);
-
 public:
+	CXformIndexGet2IndexScan(const CXformIndexGet2IndexScan &) = delete;
+
 	// ctor
 	explicit CXformIndexGet2IndexScan(CMemoryPool *);
 
 	// dtor
-	virtual ~CXformIndexGet2IndexScan()
-	{
-	}
+	~CXformIndexGet2IndexScan() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfIndexGet2IndexScan;
 	}
 
 	// xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformIndexGet2IndexScan";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &	//exprhdl
-	) const;
+	EXformPromise Exfp(CExpressionHandle &	//exprhdl
+	) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformIndexGet2IndexScan
 

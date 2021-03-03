@@ -9,12 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformDynamicGet2DynamicTableScan.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CPartConstraint.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CPhysicalDynamicTableScan.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;
 
@@ -49,7 +51,7 @@ CXformDynamicGet2DynamicTableScan::Transform(CXformContext *pxfctxt,
 											 CXformResult *pxfres,
 											 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -63,23 +65,22 @@ CXformDynamicGet2DynamicTableScan::Transform(CXformContext *pxfctxt,
 	ptabdesc->AddRef();
 
 	CColRefArray *pdrgpcrOutput = popGet->PdrgpcrOutput();
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 
 	pdrgpcrOutput->AddRef();
 
 	CColRef2dArray *pdrgpdrgpcrPart = popGet->PdrgpdrgpcrPart();
 	pdrgpdrgpcrPart->AddRef();
 
-	popGet->Ppartcnstr()->AddRef();
-	popGet->PpartcnstrRel()->AddRef();
+	popGet->GetPartitionMdids()->AddRef();
+	popGet->GetRootColMappingPerPart()->AddRef();
 
 	// create alternative expression
-	CExpression *pexprAlt = GPOS_NEW(mp)
-		CExpression(mp, GPOS_NEW(mp) CPhysicalDynamicTableScan(
-							mp, popGet->IsPartial(), pname, ptabdesc,
-							popGet->UlOpId(), popGet->ScanId(), pdrgpcrOutput,
-							pdrgpdrgpcrPart, popGet->UlSecondaryScanId(),
-							popGet->Ppartcnstr(), popGet->PpartcnstrRel()));
+	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
+		mp, GPOS_NEW(mp) CPhysicalDynamicTableScan(
+				mp, pname, ptabdesc, popGet->UlOpId(), popGet->ScanId(),
+				pdrgpcrOutput, pdrgpdrgpcrPart, popGet->GetPartitionMdids(),
+				popGet->GetRootColMappingPerPart()));
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);
 }

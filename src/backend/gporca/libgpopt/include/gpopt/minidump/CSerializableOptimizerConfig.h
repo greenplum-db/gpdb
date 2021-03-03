@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CSerializableOptimizerConfig.h
@@ -41,19 +41,18 @@ private:
 	// optimizer configurations
 	const COptimizerConfig *m_optimizer_config;
 
-	// private copy ctor
-	CSerializableOptimizerConfig(const CSerializableOptimizerConfig &);
-
 public:
+	CSerializableOptimizerConfig(const CSerializableOptimizerConfig &) = delete;
+
 	// ctor
 	CSerializableOptimizerConfig(CMemoryPool *mp,
 								 const COptimizerConfig *optimizer_config);
 
 	// dtor
-	virtual ~CSerializableOptimizerConfig();
+	~CSerializableOptimizerConfig() override;
 
 	// serialize object to passed stream
-	virtual void Serialize(COstream &oos);
+	void Serialize(COstream &oos) override;
 
 };	// class CSerializableOptimizerConfig
 }  // namespace gpopt

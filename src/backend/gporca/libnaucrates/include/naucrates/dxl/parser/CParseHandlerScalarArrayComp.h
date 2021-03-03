@@ -14,9 +14,9 @@
 #define GPDXL_CParseHandlerScalarArrayComp_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarArrayComp.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl
@@ -36,25 +36,24 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerScalarArrayComp : public CParseHandlerScalarOp
 {
 private:
-	// private copy ctor
-	CParseHandlerScalarArrayComp(const CParseHandlerScalarArrayComp &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerScalarArrayComp(const CParseHandlerScalarArrayComp &) = delete;
+
 	// ctor
 	CParseHandlerScalarArrayComp(CMemoryPool *mp,
 								 CParseHandlerManager *parse_handler_mgr,

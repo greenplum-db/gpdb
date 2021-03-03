@@ -9,13 +9,13 @@
 //		Implementation of DifferenceAll operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDifferenceAll.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalDifferenceAll.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;
@@ -57,9 +57,7 @@ CLogicalDifferenceAll::CLogicalDifferenceAll(CMemoryPool *mp,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CLogicalDifferenceAll::~CLogicalDifferenceAll()
-{
-}
+CLogicalDifferenceAll::~CLogicalDifferenceAll() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -117,7 +115,7 @@ CLogicalDifferenceAll::DeriveKeyCollection(CMemoryPool *,		// mp,
 ) const
 {
 	// TODO: Add keys on columns contributing to the setop from the outer child
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 
 
 #include "naucrates/md/CMDIdCast.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -122,7 +123,7 @@ CMDIdCast::MdidDest() const
 BOOL
 CMDIdCast::Equals(const IMDId *mdid) const
 {
-	if (NULL == mdid || EmdidCastFunc != mdid->MdidType())
+	if (nullptr == mdid || EmdidCastFunc != mdid->MdidType())
 	{
 		return false;
 	}

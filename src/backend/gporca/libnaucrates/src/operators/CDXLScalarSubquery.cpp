@@ -9,11 +9,11 @@
 //		Implementation of subqueries computing scalar values
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarSubquery.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLScalarSubquery.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -40,9 +40,7 @@ CDXLScalarSubquery::CDXLScalarSubquery(CMemoryPool *mp, ULONG colid)
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CDXLScalarSubquery::~CDXLScalarSubquery()
-{
-}
+CDXLScalarSubquery::~CDXLScalarSubquery() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

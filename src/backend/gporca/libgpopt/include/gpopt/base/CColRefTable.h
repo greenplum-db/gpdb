@@ -12,14 +12,12 @@
 #define GPOS_CColRefTable_H
 
 #include "gpos/base.h"
-
-#include "gpos/common/CList.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CList.h"
 
 #include "gpopt/base/CColRef.h"
-
-#include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
+#include "gpopt/metadata/CName.h"
 
 
 namespace gpopt
@@ -37,9 +35,6 @@ using namespace gpos;
 class CColRefTable : public CColRef
 {
 private:
-	// private copy ctor
-	CColRefTable(const CColRefTable &);
-
 	// attno from catalog
 	INT m_iAttno;
 
@@ -57,6 +52,8 @@ private:
 	ULONG m_width;
 
 public:
+	CColRefTable(const CColRefTable &) = delete;
+
 	// ctors
 	CColRefTable(const CColumnDescriptor *pcd, ULONG id, const CName *pname,
 				 ULONG ulOpSource);
@@ -67,11 +64,11 @@ public:
 				 ULONG ulWidth = gpos::ulong_max);
 
 	// dtor
-	virtual ~CColRefTable();
+	~CColRefTable() override;
 
 	// accessor of column reference type
-	virtual CColRef::Ecolreftype
-	Ecrt() const
+	CColRef::Ecolreftype
+	Ecrt() const override
 	{
 		return CColRef::EcrtTable;
 	}
@@ -92,7 +89,7 @@ public:
 
 	// is column a system column?
 	BOOL
-	IsSystemCol() const
+	IsSystemCol() const override
 	{
 		// TODO-  04/13/2012, make this check system independent
 		// using MDAccessor
@@ -101,7 +98,7 @@ public:
 
 	// is column a distribution column?
 	BOOL
-	IsDistCol() const
+	IsDistCol() const override
 	{
 		return m_is_dist_col;
 	}

@@ -1,7 +1,3 @@
--- start_matchsubs
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
--- end_matchsubs
 -- Check if retry logic handles errors correctly.  The retry logic had
 -- a bug where error state wasn't cleaned up correctly during retries,
 -- leading to PANIC due to ERRORDATA_STACK_SIZE exeeded.

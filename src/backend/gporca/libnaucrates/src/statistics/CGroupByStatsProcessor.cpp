@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2018 Pivotal, Inc.
+//	Copyright 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CGroupByStatsProcessor.cpp
@@ -9,11 +9,11 @@
 //		Statistics helper routines for processing group by operations
 //---------------------------------------------------------------------------
 
+#include "naucrates/statistics/CGroupByStatsProcessor.h"
+
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
 #include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CGroupByStatsProcessor.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
@@ -34,7 +34,7 @@ CGroupByStatsProcessor::CalcGroupByStats(CMemoryPool *mp,
 
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
-	CStatistics *agg_stats = NULL;
+	CStatistics *agg_stats = nullptr;
 	CDouble agg_rows = CStatistics::MinRows;
 	if (input_stats->IsEmpty())
 	{

@@ -11,6 +11,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLLogicalProject.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -26,7 +27,7 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLLogicalProject::CDXLLogicalProject(CMemoryPool *mp)
-	: CDXLLogical(mp), m_mdname_alias(NULL)
+	: CDXLLogical(mp), m_mdname_alias(nullptr)
 {
 }
 
@@ -69,8 +70,8 @@ CDXLLogicalProject::MdName() const
 void
 CDXLLogicalProject::SetAliasName(CMDName *mdname)
 {
-	GPOS_ASSERT(NULL == m_mdname_alias);
-	GPOS_ASSERT(NULL != mdname);
+	GPOS_ASSERT(nullptr == m_mdname_alias);
+	GPOS_ASSERT(nullptr != mdname);
 
 	m_mdname_alias = mdname;
 }
@@ -107,7 +108,7 @@ CDXLLogicalProject::SerializeToDXL(CXMLSerializer *xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
 	// serialize alias
-	if (NULL != m_mdname_alias)
+	if (nullptr != m_mdname_alias)
 	{
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenDerivedTableName),

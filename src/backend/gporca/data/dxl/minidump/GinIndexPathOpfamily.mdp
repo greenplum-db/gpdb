@@ -30,7 +30,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
-      <dxl:TraceFlags Value="102004,102074,102120,102146,103001,103014,103015,103022,103027,103029,104002,104003,104004,104005,105000,106000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102004,102074,102120,102144,103001,103014,103015,103022,103027,103029,103033,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -246,7 +246,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="68.127103" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="391.295510" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
@@ -259,7 +259,7 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="68.127102" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="391.295509" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -270,7 +270,7 @@
           <dxl:SortingColumnList/>
           <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="68.127072" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="391.295479" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns/>
             <dxl:ProjList>
@@ -281,7 +281,7 @@
             <dxl:Filter/>
             <dxl:BitmapTableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="68.127071" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="391.295478" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

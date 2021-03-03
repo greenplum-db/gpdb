@@ -12,6 +12,7 @@
 #define GPDXL_CParseHandlerPhysicalCTEProducer_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl
@@ -31,25 +32,25 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerPhysicalCTEProducer : public CParseHandlerPhysicalOp
 {
 private:
-	// private copy ctor
-	CParseHandlerPhysicalCTEProducer(const CParseHandlerPhysicalCTEProducer &);
-
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerPhysicalCTEProducer(const CParseHandlerPhysicalCTEProducer &) =
+		delete;
+
 	// ctor
 	CParseHandlerPhysicalCTEProducer(CMemoryPool *mp,
 									 CParseHandlerManager *parse_handler_mgr,

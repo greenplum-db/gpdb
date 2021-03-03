@@ -16,9 +16,10 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpos/common/CRandom.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
-#include "gpos/common/CRandom.h"
 
 #define DEFAULT_SEED 102
 
@@ -48,8 +49,6 @@ CRandom::Next()
 	return clib::Rand(&m_seed);
 }
 
-CRandom::~CRandom()
-{
-}
+CRandom::~CRandom() = default;
 
 // EOF

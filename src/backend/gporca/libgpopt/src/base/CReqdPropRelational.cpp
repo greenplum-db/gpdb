@@ -9,15 +9,17 @@
 //		Required relational properties;
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CReqdPropRelational.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/base/CReqdPropRelational.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CEngine.h"
-#include "gpopt/operators/CLogical.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogical.h"
 
 using namespace gpopt;
 
@@ -30,9 +32,8 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CReqdPropRelational::CReqdPropRelational()
-	: m_pcrsStat(NULL), m_pexprPartPred(NULL)
-{
-}
+
+	= default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -42,10 +43,9 @@ CReqdPropRelational::CReqdPropRelational()
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational::CReqdPropRelational(CColRefSet *pcrs)
-	: m_pcrsStat(pcrs), m_pexprPartPred(NULL)
+CReqdPropRelational::CReqdPropRelational(CColRefSet *pcrs) : m_pcrsStat(pcrs)
 {
-	GPOS_ASSERT(NULL != pcrs);
+	GPOS_ASSERT(nullptr != pcrs);
 }
 
 //---------------------------------------------------------------------------
@@ -60,8 +60,8 @@ CReqdPropRelational::CReqdPropRelational(CColRefSet *pcrs,
 										 CExpression *pexprPartPred)
 	: m_pcrsStat(pcrs), m_pexprPartPred(pexprPartPred)
 {
-	GPOS_ASSERT(NULL != pcrs);
-	GPOS_ASSERT_IMP(NULL != pexprPartPred, pexprPartPred->Pop()->FScalar());
+	GPOS_ASSERT(nullptr != pcrs);
+	GPOS_ASSERT_IMP(nullptr != pexprPartPred, pexprPartPred->Pop()->FScalar());
 }
 
 //---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ CReqdPropRelational *
 CReqdPropRelational::PrprelDifference(CMemoryPool *mp,
 									  CReqdPropRelational *prprel)
 {
-	GPOS_ASSERT(NULL != prprel);
+	GPOS_ASSERT(nullptr != prprel);
 
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 	pcrs->Union(m_pcrsStat);
@@ -170,7 +170,7 @@ IOstream &
 CReqdPropRelational::OsPrint(IOstream &os) const
 {
 	os << "req stat columns: [" << *m_pcrsStat << "]";
-	if (NULL != m_pexprPartPred)
+	if (nullptr != m_pexprPartPred)
 	{
 		os << ", partition predicate: " << *m_pexprPartPred;
 	}

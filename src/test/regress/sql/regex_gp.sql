@@ -43,6 +43,7 @@ phone_num
 from phone_book
 order by lname
 ;
+analyze phone_book_substr;
 
 
 select count(*)

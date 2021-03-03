@@ -47,10 +47,9 @@ private:
 	// create the inlined version of this consumer as well as the column mapping
 	void CreateInlinedExpr(CMemoryPool *mp);
 
-	// private copy ctor
-	CLogicalCTEConsumer(const CLogicalCTEConsumer &);
-
 public:
+	CLogicalCTEConsumer(const CLogicalCTEConsumer &) = delete;
+
 	// ctor
 	explicit CLogicalCTEConsumer(CMemoryPool *mp);
 
@@ -58,17 +57,17 @@ public:
 	CLogicalCTEConsumer(CMemoryPool *mp, ULONG id, CColRefArray *colref_array);
 
 	// dtor
-	virtual ~CLogicalCTEConsumer();
+	~CLogicalCTEConsumer() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalCTEConsumer;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalCTEConsumer";
 	}
@@ -101,84 +100,84 @@ public:
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	//-------------------------------------------------------------------------------------
 	// Derived Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// derive output columns
-	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *mp,
-											CExpressionHandle &exprhdl);
+	CColRefSet *DeriveOutputColumns(CMemoryPool *mp,
+									CExpressionHandle &exprhdl) override;
 
 	// dervive keys
-	virtual CKeyCollection *DeriveKeyCollection(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	CKeyCollection *DeriveKeyCollection(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// derive max card
-	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
-								   CExpressionHandle &exprhdl) const;
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
 
 	// derive join depth
-	virtual ULONG DeriveJoinDepth(CMemoryPool *mp,
-								  CExpressionHandle &exprhdl) const;
+	ULONG DeriveJoinDepth(CMemoryPool *mp,
+						  CExpressionHandle &exprhdl) const override;
 
 	// derive not nullable output columns
-	virtual CColRefSet *DeriveNotNullColumns(CMemoryPool *mp,
-											 CExpressionHandle &exprhdl) const;
+	CColRefSet *DeriveNotNullColumns(CMemoryPool *mp,
+									 CExpressionHandle &exprhdl) const override;
 
 	// derive constraint property
-	virtual CPropConstraint *DerivePropertyConstraint(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	CPropConstraint *DerivePropertyConstraint(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// derive partition consumer info
-	virtual CPartInfo *DerivePartitionInfo(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl) const;
+	CPartInfo *DerivePartitionInfo(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const override;
 
 	// derive table descriptor
-	virtual CTableDescriptor *DeriveTableDescriptor(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	CTableDescriptor *DeriveTableDescriptor(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// compute required stats columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsStat(CMemoryPool *,		   // mp
 			 CExpressionHandle &,  // exprhdl
 			 CColRefSet *,		   //pcrsInput,
 			 ULONG				   // child_index
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"CLogicalCTEConsumer has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// stat promise
-	virtual EStatPromise
-	Esp(CExpressionHandle &) const
+	EStatPromise
+	Esp(CExpressionHandle &) const override
 	{
 		return CLogical::EspHigh;
 	}
 
 	// derive statistics
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	//-------------------------------------------------------------------------------------
 	// Transformations
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 
@@ -186,14 +185,14 @@ public:
 	static CLogicalCTEConsumer *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalCTEConsumer == pop->Eopid());
 
 		return dynamic_cast<CLogicalCTEConsumer *>(pop);
 	}
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 };	// class CLogicalCTEConsumer
 

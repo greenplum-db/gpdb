@@ -15,20 +15,15 @@
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CStack.h"
 
+#include "gpopt/base/CColRef.h"
+#include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/base/CColRefSet.h"
 
 namespace gpopt
 {
 // fwd declarations
 class CLogicalCTEConsumer;
-
-// hash map: CColRef -> ULONG
-typedef CHashMap<CColRef, ULONG, gpos::HashValue<CColRef>,
-				 gpos::Equals<CColRef>, CleanupNULL<CColRef>,
-				 CleanupDelete<ULONG> >
-	ColRefToUlongMap;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -139,7 +134,7 @@ private:
 					  BOOL fUsed);
 
 		// dtor
-		~CCTEInfoEntry();
+		~CCTEInfoEntry() override;
 
 		// CTE expression
 		CExpression *
@@ -207,9 +202,6 @@ private:
 	CExpression *PexprPreprocessCTEProducer(
 		const CExpression *pexprCTEProducer);
 
-	// private copy ctor
-	CCTEInfo(const CCTEInfo &);
-
 	// number of consumers of given CTE inside a given parent
 	ULONG UlConsumersInParent(ULONG ulConsumerId, ULONG ulParentId) const;
 
@@ -218,11 +210,13 @@ private:
 							   CStack<ULONG> *pstack);
 
 public:
+	CCTEInfo(const CCTEInfo &) = delete;
+
 	// ctor
 	explicit CCTEInfo(CMemoryPool *mp);
 
 	//dtor
-	virtual ~CCTEInfo();
+	~CCTEInfo() override;
 
 	// logical cte producer with given id
 	CExpression *PexprCTEProducer(ULONG ulCTEId) const;

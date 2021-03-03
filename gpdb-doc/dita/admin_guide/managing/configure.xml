@@ -75,7 +75,7 @@
           <p>Master parameter settings in the master <codeph>postgresql.conf </codeph>file are the
             system-wide default. To set a master parameter:</p>
           <ol>
-            <li id="kh160766">Edit the <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph>
+            <li id="kh160766">Edit the <codeph>$COORDINATOR_DATA_DIRECTORY/postgresql.conf</codeph>
               file.</li>
             <li id="kh160741">Find the parameter to set, uncomment it (remove the preceding
                 <codeph>#</codeph> character), and type the desired value.</li>
@@ -364,7 +364,7 @@
       <topic id="topic19" xml:lang="en">
         <title>Cost-Based Vacuum Delay Parameters</title>
         <body>
-          <note type="warning">Pivotal does not recommend cost-based vacuum delay because it runs
+          <note type="warning">VMware does not recommend cost-based vacuum delay because it runs
             asynchronously among the segment instances. The vacuum cost limit and delay is invoked
             at the segment level without taking into account the state of the entire Greenplum
             array.</note>
@@ -1099,6 +1099,9 @@
                   <codeph>gp_interconnect_setup_timeout</codeph>
                 </p>
                 <p>
+                  <codeph>gp_interconnect_transmit_timeout</codeph>
+                </p>
+                <p>
                   <codeph>gp_interconnect_type</codeph>
                 </p>
                 <p>
@@ -1143,13 +1146,10 @@
                 <p>
                   <codeph>gp_set_read_only</codeph>
                 </p>
-                <p>
-                  <codeph>gp_fts_probe_interval</codeph>
-                </p>
               </stentry>
               <stentry>
                 <p>
-                  <codeph>gp_fts_probe_threadcount</codeph>
+                  <codeph>gp_fts_probe_interval</codeph>
                 </p>
               </stentry>
             </strow>

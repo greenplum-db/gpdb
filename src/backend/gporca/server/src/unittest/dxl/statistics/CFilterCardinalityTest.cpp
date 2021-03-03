@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CFilterCardinalityTest.cpp
@@ -13,20 +13,20 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CFilterCardinalityTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CFilterStatsProcessor.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/statistics/CFilterStatsProcessor.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
 #include "unittest/dxl/statistics/CStatisticsTest.h"
-#include "unittest/dxl/statistics/CFilterCardinalityTest.h"
-
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;
@@ -106,7 +106,7 @@ CFilterCardinalityTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgutSharedOptCtxt,
@@ -141,18 +141,18 @@ CFilterCardinalityTest::EresUnittest_CStatistics(
 
 		// parse the statistics objects
 		CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, nullptr);
 		CStatisticsArray *pdrgpstatBefore =
 			CDXLUtils::ParseDXLToOptimizerStatisticObjArray(
 				mp, md_accessor, dxl_derived_rel_stats_array);
 		dxl_derived_rel_stats_array->Release();
-		GPOS_ASSERT(NULL != pdrgpstatBefore);
+		GPOS_ASSERT(nullptr != pdrgpstatBefore);
 
 		GPOS_CHECK_ABORT;
 
 		// generate the disjunctive predicate
 		FnPstatspredDisj *pf = elem.m_pf;
-		GPOS_ASSERT(NULL != pf);
+		GPOS_ASSERT(nullptr != pf);
 		CStatsPred *disjunctive_pred_stats = pf(mp);
 
 		GPOS_RESULT eres = EresUnittest_CStatisticsCompare(
@@ -943,13 +943,13 @@ CFilterCardinalityTest::EresUnittest_CStatisticsBasicsFromDXLNumeric()
 		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 		// parse the statistics objects
 		CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, nullptr);
 		CStatisticsArray *pdrgpstatBefore =
 			CDXLUtils::ParseDXLToOptimizerStatisticObjArray(
 				mp, md_accessor, dxl_derived_rel_stats_array);
 		dxl_derived_rel_stats_array->Release();
 
-		GPOS_ASSERT(NULL != pdrgpstatBefore);
+		GPOS_ASSERT(nullptr != pdrgpstatBefore);
 
 		GPOS_CHECK_ABORT;
 
@@ -1041,12 +1041,12 @@ CFilterCardinalityTest::EresUnittest_CStatisticsBasicsFromDXL()
 
 	// parse the statistics objects
 	CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array =
-		CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, NULL);
+		CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInput, nullptr);
 	CStatisticsArray *pdrgpstatsBefore =
 		CDXLUtils::ParseDXLToOptimizerStatisticObjArray(
 			mp, md_accessor, dxl_derived_rel_stats_array);
 	dxl_derived_rel_stats_array->Release();
-	GPOS_ASSERT(NULL != pdrgpstatsBefore);
+	GPOS_ASSERT(nullptr != pdrgpstatsBefore);
 
 	GPOS_CHECK_ABORT;
 

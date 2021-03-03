@@ -9,18 +9,18 @@
 //		Implementation of ComputeScalar operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalComputeScalar.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/base/CDistributionSpecStrictSingleton.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecRouted.h"
-
-#include "gpopt/operators/CPhysicalComputeScalar.h"
+#include "gpopt/base/CDistributionSpecStrictSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 
 using namespace gpopt;
 
@@ -60,9 +60,7 @@ CPhysicalComputeScalar::CPhysicalComputeScalar(CMemoryPool *mp) : CPhysical(mp)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CPhysicalComputeScalar::~CPhysicalComputeScalar()
-{
-}
+CPhysicalComputeScalar::~CPhysicalComputeScalar() = default;
 
 
 //---------------------------------------------------------------------------
@@ -175,7 +173,7 @@ CPhysicalComputeScalar::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		// check if singleton/replicated distribution needs to be requested
 		CDistributionSpec *pds = PdsRequireSingletonOrReplicated(
 			mp, exprhdl, pdsRequired, child_index, ulOptReq);
-		if (NULL != pds)
+		if (nullptr != pds)
 		{
 			return pds;
 		}
@@ -269,30 +267,6 @@ CPhysicalComputeScalar::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalComputeScalar::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalComputeScalar::PppsRequired(CMemoryPool *mp,
-									 CExpressionHandle &exprhdl,
-									 CPartitionPropagationSpec *pppsRequired,
-									 ULONG child_index,
-									 CDrvdPropArray *,	//pdrgpdpCtxt,
-									 ULONG				//ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
-										   child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalComputeScalar::PcteRequired
 //
 //	@doc:
@@ -330,7 +304,7 @@ CPhysicalComputeScalar::FProvidesReqdCols(CExpressionHandle &exprhdl,
 										  ULONG	 // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(2 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -376,6 +350,14 @@ CPhysicalComputeScalar::PdsDerive(CMemoryPool *mp,
 								  CExpressionHandle &exprhdl) const
 {
 	CDistributionSpec *pds = exprhdl.Pdpplan(0 /*child_index*/)->Pds();
+
+	if (CDistributionSpec::EdtStrictReplicated == pds->Edt() &&
+		IMDFunction::EfsVolatile ==
+			exprhdl.DeriveScalarFunctionProperties(1)->Efs())
+	{
+		return GPOS_NEW(mp) CDistributionSpecReplicated(
+			CDistributionSpec::EdtTaintedReplicated);
+	}
 
 	if (CDistributionSpec::EdtUniversal == pds->Edt() &&
 		IMDFunction::EfsVolatile ==
@@ -437,7 +419,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalComputeScalar::EpetOrder(CExpressionHandle &exprhdl,
 								  const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();

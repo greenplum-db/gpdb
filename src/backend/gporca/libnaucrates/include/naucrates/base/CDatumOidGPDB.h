@@ -37,43 +37,42 @@ private:
 	// is null
 	BOOL m_is_null;
 
-	// private copy ctor
-	CDatumOidGPDB(const CDatumOidGPDB &);
-
 public:
+	CDatumOidGPDB(const CDatumOidGPDB &) = delete;
+
 	// ctors
 	CDatumOidGPDB(CSystemId sysid, OID oid_val, BOOL is_null = false);
 	CDatumOidGPDB(IMDId *mdid, OID oid_val, BOOL is_null = false);
 
 	// dtor
-	virtual ~CDatumOidGPDB();
+	~CDatumOidGPDB() override;
 
 	// accessor of metadata type id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// accessor of size
-	virtual ULONG Size() const;
+	ULONG Size() const override;
 
 	// accessor of oid value
-	virtual OID OidValue() const;
+	OID OidValue() const override;
 
 	// accessor of is null
-	virtual BOOL IsNull() const;
+	BOOL IsNull() const override;
 
 	// return string representation
-	virtual const CWStringConst *GetStrRepr(CMemoryPool *mp) const;
+	const CWStringConst *GetStrRepr(CMemoryPool *mp) const override;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function for datums
-	virtual BOOL Matches(const IDatum *) const;
+	BOOL Matches(const IDatum *) const override;
 
 	// copy datum
-	virtual IDatum *MakeCopy(CMemoryPool *mp) const;
+	IDatum *MakeCopy(CMemoryPool *mp) const override;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CDatumOidGPDB
 }  // namespace gpnaucrates

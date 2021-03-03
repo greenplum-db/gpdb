@@ -12,9 +12,9 @@
 #define GPNAUCRATES_IDatum_H
 
 #include "gpos/base.h"
-#include "gpos/string/CWStringConst.h"
 #include "gpos/common/CDouble.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/string/CWStringConst.h"
 
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
@@ -42,16 +42,14 @@ typedef CHashMap<ULONG, IDatum, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 class IDatum : public CRefCount
 {
 private:
-	// private copy ctor
-	IDatum(const IDatum &);
-
-
 public:
+	IDatum(const IDatum &) = delete;
+
 	// ctor
-	IDatum(){};
+	IDatum() = default;
 
 	// dtor
-	virtual ~IDatum(){};
+	~IDatum() override = default;
 
 	// accessor for datum type
 	virtual IMDType::ETypeInfo GetDatumType() = 0;
@@ -142,6 +140,7 @@ public:
 	// check if the given pair of datums are stats comparable
 	virtual BOOL StatsAreComparable(const IDatum *datum) const;
 
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 };	// class IDatum
 
 // array of idatums

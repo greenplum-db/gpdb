@@ -746,23 +746,33 @@ gistgettuple(IndexScanDesc scan, ScanDirection dir)
 /*
  * gistgetbitmap() -- Get a bitmap of all heap tuple locations
  */
-Node *
-gistgetbitmap(IndexScanDesc scan, Node *n)
+int64
+gistgetbitmap(IndexScanDesc scan, Node **bmNodeP)
 {
 	TIDBitmap  *tbm;
 	GISTScanOpaque so = (GISTScanOpaque) scan->opaque;
 	int64		ntids = 0;
 	GISTSearchItem fakeItem;
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
+	{
+		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L, NULL);
-	else if (!IsA(n, TIDBitmap))
-		elog(ERROR, "non hash bitmap");
+		*bmNodeP = (Node *) tbm;
+	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
+		elog(ERROR, "non gist bitmap");
 	else
-		tbm = (TIDBitmap *) n;
+		tbm = (TIDBitmap *) *bmNodeP;
 
 	if (!so->qual_ok)
-		return (Node *) tbm;
+		return 0;
 
 	pgstat_count_index_scan(scan->indexRelation);
 
@@ -797,7 +807,7 @@ gistgetbitmap(IndexScanDesc scan, Node *n)
 		pfree(item);
 	}
 
-	return (Node *) tbm;
+	return ntids;
 }
 
 /*

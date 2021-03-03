@@ -8,22 +8,22 @@
 //	@doc:
 //		Test for search strategy
 //---------------------------------------------------------------------------
-#include "gpopt/exception.h"
+#include "unittest/gpopt/search/CSearchStrategyTest.h"
+
+#include "gpos/error/CAutoTrace.h"
+#include "gpos/task/CAutoTraceFlag.h"
 
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/exception.h"
 #include "gpopt/search/CSearchStage.h"
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/task/CAutoTraceFlag.h"
 #include "gpopt/xforms/CXformFactory.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/parser/CParseHandlerDXL.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/engine/CEngineTest.h"
-#include "unittest/gpopt/search/CSearchStrategyTest.h"
-
-#include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/parser/CParseHandlerDXL.h"
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -75,7 +75,7 @@ CSearchStrategyTest::Optimize(CMemoryPool *mp, Pfpexpr pfnGenerator,
 
 	// install opt context in TLS
 	{
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 		CExpression *pexpr = pfnGenerator(mp);
 		pfnOptimize(mp, pexpr, search_stage_array);
@@ -140,7 +140,7 @@ CSearchStrategyTest::EresUnittest_Parsing()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 	CParseHandlerDXL *pphDXL = CDXLUtils::GetParseHandlerForDXLFile(
-		mp, "../data/dxl/search/strategy0.xml", NULL);
+		mp, "../data/dxl/search/strategy0.xml", nullptr);
 	CSearchStageArray *search_stage_array = pphDXL->GetSearchStageArray();
 	const ULONG size = search_stage_array->Size();
 	for (ULONG ul = 0; ul < size; ul++)
@@ -174,7 +174,7 @@ CSearchStrategyTest::EresUnittest_Timeout()
 	CMemoryPool *mp = amp.Pmp();
 	CAutoTraceFlag atf(EopttracePrintOptimizationStatistics, true);
 	CParseHandlerDXL *pphDXL = CDXLUtils::GetParseHandlerForDXLFile(
-		mp, "../data/dxl/search/timeout-strategy.xml", NULL);
+		mp, "../data/dxl/search/timeout-strategy.xml", nullptr);
 	CSearchStageArray *search_stage_array = pphDXL->GetSearchStageArray();
 	search_stage_array->AddRef();
 	Optimize(mp, CTestUtils::PexprLogicalNAryJoin, search_stage_array,
@@ -200,7 +200,7 @@ CSearchStrategyTest::EresUnittest_ParsingWithException()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 	CParseHandlerDXL *pphDXL = CDXLUtils::GetParseHandlerForDXLFile(
-		mp, "../data/dxl/search/wrong-strategy.xml", NULL);
+		mp, "../data/dxl/search/wrong-strategy.xml", nullptr);
 	GPOS_DELETE(pphDXL);
 
 	return GPOS_OK;

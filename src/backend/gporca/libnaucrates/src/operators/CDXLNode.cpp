@@ -10,8 +10,8 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 
+#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLOperator.h"
 
 using namespace gpos;
@@ -27,10 +27,9 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLNode::CDXLNode(CMemoryPool *mp)
-	: m_mp(mp),
-	  m_dxl_op(NULL),
-	  m_dxl_properties(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(nullptr),
+	  m_dxl_properties(nullptr),
+	  m_direct_dispatch_info(nullptr)
 {
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
 }
@@ -44,12 +43,11 @@ CDXLNode::CDXLNode(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
-	  m_dxl_properties(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(dxl_op),
+	  m_dxl_properties(nullptr),
+	  m_direct_dispatch_info(nullptr)
 {
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
 }
 
@@ -63,14 +61,13 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op)
 //---------------------------------------------------------------------------
 CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 				   CDXLNode *child_dxlnode)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
-	  m_dxl_properties(NULL),
-	  m_dxl_array(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(dxl_op),
+	  m_dxl_properties(nullptr),
+	  m_dxl_array(nullptr),
+	  m_direct_dispatch_info(nullptr)
 {
-	GPOS_ASSERT(NULL != dxl_op);
-	GPOS_ASSERT(NULL != child_dxlnode);
+	GPOS_ASSERT(nullptr != dxl_op);
+	GPOS_ASSERT(nullptr != child_dxlnode);
 
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
 	m_dxl_array->Append(child_dxlnode);
@@ -87,15 +84,14 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 				   CDXLNode *first_child_dxlnode,
 				   CDXLNode *second_child_dxlnode)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
-	  m_dxl_properties(NULL),
-	  m_dxl_array(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(dxl_op),
+	  m_dxl_properties(nullptr),
+	  m_dxl_array(nullptr),
+	  m_direct_dispatch_info(nullptr)
 {
-	GPOS_ASSERT(NULL != dxl_op);
-	GPOS_ASSERT(NULL != first_child_dxlnode);
-	GPOS_ASSERT(NULL != second_child_dxlnode);
+	GPOS_ASSERT(nullptr != dxl_op);
+	GPOS_ASSERT(nullptr != first_child_dxlnode);
+	GPOS_ASSERT(nullptr != second_child_dxlnode);
 
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
 	m_dxl_array->Append(first_child_dxlnode);
@@ -114,16 +110,15 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 				   CDXLNode *first_child_dxlnode,
 				   CDXLNode *second_child_dxlnode,
 				   CDXLNode *third_child_dxlnode)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
-	  m_dxl_properties(NULL),
-	  m_dxl_array(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(dxl_op),
+	  m_dxl_properties(nullptr),
+	  m_dxl_array(nullptr),
+	  m_direct_dispatch_info(nullptr)
 {
-	GPOS_ASSERT(NULL != dxl_op);
-	GPOS_ASSERT(NULL != first_child_dxlnode);
-	GPOS_ASSERT(NULL != second_child_dxlnode);
-	GPOS_ASSERT(NULL != third_child_dxlnode);
+	GPOS_ASSERT(nullptr != dxl_op);
+	GPOS_ASSERT(nullptr != first_child_dxlnode);
+	GPOS_ASSERT(nullptr != second_child_dxlnode);
+	GPOS_ASSERT(nullptr != third_child_dxlnode);
 
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
 	m_dxl_array->Append(first_child_dxlnode);
@@ -139,16 +134,14 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
-				   CDXLNodeArray *dxl_array)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
-	  m_dxl_properties(NULL),
+CDXLNode::CDXLNode(CDXLOperator *dxl_op, CDXLNodeArray *dxl_array)
+	: m_dxl_op(dxl_op),
+	  m_dxl_properties(nullptr),
 	  m_dxl_array(dxl_array),
-	  m_direct_dispatch_info(NULL)
+	  m_direct_dispatch_info(nullptr)
 {
-	GPOS_ASSERT(NULL != dxl_op);
-	GPOS_ASSERT(NULL != dxl_array);
+	GPOS_ASSERT(nullptr != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_array);
 }
 
 //---------------------------------------------------------------------------
@@ -178,8 +171,8 @@ CDXLNode::~CDXLNode()
 void
 CDXLNode::AddChild(CDXLNode *child_dxlnode)
 {
-	GPOS_ASSERT(NULL != m_dxl_array);
-	GPOS_ASSERT(NULL != child_dxlnode);
+	GPOS_ASSERT(nullptr != m_dxl_array);
+	GPOS_ASSERT(nullptr != child_dxlnode);
 
 	m_dxl_array->Append(child_dxlnode);
 }
@@ -195,8 +188,8 @@ CDXLNode::AddChild(CDXLNode *child_dxlnode)
 void
 CDXLNode::ReplaceChild(ULONG pos, CDXLNode *child_dxlnode)
 {
-	GPOS_ASSERT(NULL != m_dxl_array);
-	GPOS_ASSERT(NULL != child_dxlnode);
+	GPOS_ASSERT(nullptr != m_dxl_array);
+	GPOS_ASSERT(nullptr != child_dxlnode);
 
 	m_dxl_array->Replace(pos, child_dxlnode);
 }
@@ -212,7 +205,7 @@ CDXLNode::ReplaceChild(ULONG pos, CDXLNode *child_dxlnode)
 void
 CDXLNode::SetOperator(CDXLOperator *dxl_op)
 {
-	GPOS_ASSERT(NULL == m_dxl_op);
+	GPOS_ASSERT(nullptr == m_dxl_op);
 	m_dxl_op = dxl_op;
 }
 
@@ -227,12 +220,12 @@ CDXLNode::SetOperator(CDXLOperator *dxl_op)
 void
 CDXLNode::SerializeToDXL(CXMLSerializer *xml_serializer) const
 {
-	if (NULL != m_dxl_op)
+	if (nullptr != m_dxl_op)
 	{
 		m_dxl_op->SerializeToDXL(xml_serializer, this);
 	}
 
-	if (NULL != m_direct_dispatch_info &&
+	if (nullptr != m_direct_dispatch_info &&
 		0 < m_direct_dispatch_info->GetDispatchIdentifierDatumArray()->Size())
 	{
 		m_direct_dispatch_info->Serialize(xml_serializer);
@@ -275,7 +268,7 @@ void
 CDXLNode::SetProperties(CDXLProperties *dxl_properties)
 {
 	// allow setting properties only once
-	GPOS_ASSERT(NULL == m_dxl_properties);
+	GPOS_ASSERT(nullptr == m_dxl_properties);
 	m_dxl_properties = dxl_properties;
 }
 
@@ -292,8 +285,8 @@ CDXLNode::SetDirectDispatchInfo(
 	CDXLDirectDispatchInfo *dxl_direct_dispatch_info)
 {
 	// allow setting direct dispatch info only once
-	GPOS_ASSERT(NULL == m_direct_dispatch_info);
-	GPOS_ASSERT(NULL != dxl_direct_dispatch_info);
+	GPOS_ASSERT(nullptr == m_direct_dispatch_info);
+	GPOS_ASSERT(nullptr != dxl_direct_dispatch_info);
 	m_direct_dispatch_info = dxl_direct_dispatch_info;
 }
 

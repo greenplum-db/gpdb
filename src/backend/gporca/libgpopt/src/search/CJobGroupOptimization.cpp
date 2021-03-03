@@ -9,18 +9,18 @@
 //		Implementation of group optimization job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroupOptimization.h"
+
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobGroupImplementation.h"
-#include "gpopt/search/CJobGroupOptimization.h"
 #include "gpopt/search/CJobGroupExpressionOptimization.h"
+#include "gpopt/search/CJobGroupImplementation.h"
 #include "gpopt/search/CJobQueue.h"
-#include "gpopt/search/CSchedulerContext.h"
 #include "gpopt/search/CScheduler.h"
-
+#include "gpopt/search/CSchedulerContext.h"
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
@@ -111,9 +111,7 @@ const WCHAR rgwszEvents[CJobGroupOptimization::eevSentinel]
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobGroupOptimization::CJobGroupOptimization()
-{
-}
+CJobGroupOptimization::CJobGroupOptimization() = default;
 
 
 //---------------------------------------------------------------------------
@@ -124,9 +122,7 @@ CJobGroupOptimization::CJobGroupOptimization()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobGroupOptimization::~CJobGroupOptimization()
-{
-}
+CJobGroupOptimization::~CJobGroupOptimization() = default;
 
 
 //---------------------------------------------------------------------------
@@ -145,7 +141,7 @@ CJobGroupOptimization::Init(
 						// NULL if this is the Root group
 	COptimizationContext *poc)
 {
-	GPOS_ASSERT(NULL != poc);
+	GPOS_ASSERT(nullptr != poc);
 	GPOS_ASSERT(pgroup == poc->Pgroup());
 
 	CJobGroup::Init(pgroup);
@@ -194,7 +190,7 @@ CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext *psc)
 
 	// iterate on expressions and schedule them as needed
 	CGroupExpression *pgexpr = PgexprFirstUnsched();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		// we consider only group expressions matching current optimization level,
 		// other group expressions will be optimized when damping current
@@ -318,7 +314,7 @@ CJobGroupOptimization::EevtCompleteOptimization(CSchedulerContext *,  // psc
 	if (EolSentinel != pjgo->EolCurrent())
 	{
 		// we need to optimize group expressions matching current level
-		pjgo->m_pgexprLastScheduled = NULL;
+		pjgo->m_pgexprLastScheduled = nullptr;
 
 		return eevOptimizing;
 	}
@@ -379,7 +375,7 @@ CJobGroupOptimization::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupOptimization::OsPrint(IOstream &os)
+CJobGroupOptimization::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

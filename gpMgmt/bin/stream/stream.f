@@ -147,10 +147,10 @@ C     ..
       WRITE (*,FMT=9030) '*EXCLUDING* the first and last iterations'
 
 !$OMP PARALLEL
-!$OMP MASTER
+!$OMP COORDINATOR
       PRINT *,'----------------------------------------------'
 !$    PRINT *,'Number of Threads = ',OMP_GET_NUM_THREADS()
-!$OMP END MASTER
+!$OMP END COORDINATOR
 !$OMP END PARALLEL
 
       PRINT *,'----------------------------------------------'

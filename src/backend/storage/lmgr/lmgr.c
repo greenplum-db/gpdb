@@ -4,7 +4,7 @@
  *	  POSTGRES lock manager code
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -1262,6 +1262,11 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 tag->locktag_field3,
 							 tag->locktag_field4);
 			break;
+		case LOCKTAG_RESOURCE_QUEUE:
+			appendStringInfo(buf,
+							 _("resource queue %u"),
+							 tag->locktag_field1);
+			break;
 		default:
 			appendStringInfo(buf,
 							 _("unrecognized locktag type %d"),
@@ -1356,6 +1361,33 @@ CondUpgradeRelLock(Oid relid)
 	table_close(rel, RowExclusiveLock);
 
 	return upgrade;
+}
+
+int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded)
+{
+	/*
+	 * Since we have introduced GDD(global deadlock detector), for heap table
+	 * we do not need to upgrade the requested lock. For ao table, because of
+	 * the design of ao table's visibilitymap, we have to upgrade the lock
+	 * (More details please refer https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/iDj8WkLus4g)
+	 *
+	 * And we select for update statement's lock is upgraded at addRangeTableEntry.
+	 *
+	 * Note: This code could be improved substantially after we redesign ao table
+	 * and select for update.
+	 */
+	if (lockmode == RowExclusiveLock)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH &&
+			CondUpgradeRelLock(relid))
+		{
+			lockmode = ExclusiveLock;
+			if (lockUpgraded != NULL)
+			*lockUpgraded = true;
+		}
+	}
+
+	return lockmode;
 }
 
 /*

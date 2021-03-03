@@ -670,7 +670,7 @@ print_copyright(void)
 	puts(
 		 "Greenplum Database version of PostgreSQL Database Management System\n"
 		 "Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group\n\n"
-		 "Portions Copyright (c) 2014-Present Pivotal Software, Inc.\n\n"
+		 "Portions Copyright (c) 2014-Present VMware, Inc. or its affiliates.\n\n"
 		 "Portions Copyright (c) 2011-2014 EMC\n\n"
 		 "This software is based on Postgres95, formerly known as Postgres, which\n"
 		 "contains the following notice:\n\n"

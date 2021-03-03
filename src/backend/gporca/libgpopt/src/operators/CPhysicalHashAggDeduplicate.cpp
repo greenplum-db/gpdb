@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalHashAggDeduplicate.cpp
@@ -9,12 +9,13 @@
 //		Implementation of Hash Aggregate operator for deduplicating join outputs
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalHashAggDeduplicate.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalHashAggDeduplicate.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 
 using namespace gpopt;
@@ -34,12 +35,12 @@ CPhysicalHashAggDeduplicate::CPhysicalHashAggDeduplicate(
 	BOOL fGeneratesDuplicates, BOOL fMultiStage, BOOL isAggFromSplitDQA,
 	CLogicalGbAgg::EAggStage aggStage, BOOL should_enforce_distribution)
 	: CPhysicalHashAgg(mp, colref_array, pdrgpcrMinimal, egbaggtype,
-					   fGeneratesDuplicates, NULL /*pdrgpcrGbMinusDistinct*/,
+					   fGeneratesDuplicates, nullptr /*pdrgpcrGbMinusDistinct*/,
 					   fMultiStage, isAggFromSplitDQA, aggStage,
 					   should_enforce_distribution),
 	  m_pdrgpcrKeys(pdrgpcrKeys)
 {
-	GPOS_ASSERT(NULL != pdrgpcrKeys);
+	GPOS_ASSERT(nullptr != pdrgpcrKeys);
 }
 
 //---------------------------------------------------------------------------

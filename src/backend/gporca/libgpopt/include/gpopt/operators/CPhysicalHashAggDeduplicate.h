@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalHashAggDeduplicate.h
@@ -12,6 +12,7 @@
 #define GPOS_CPhysicalHashAggDeduplicate_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalHashAgg.h"
 
 namespace gpopt
@@ -30,10 +31,9 @@ private:
 	// array of keys from the join's child
 	CColRefArray *m_pdrgpcrKeys;
 
-	// private copy ctor
-	CPhysicalHashAggDeduplicate(const CPhysicalHashAggDeduplicate &);
-
 public:
+	CPhysicalHashAggDeduplicate(const CPhysicalHashAggDeduplicate &) = delete;
+
 	// ctor
 	CPhysicalHashAggDeduplicate(CMemoryPool *mp, CColRefArray *colref_array,
 								CColRefArray *pdrgpcrMinimal,
@@ -45,19 +45,19 @@ public:
 								BOOL should_enforce_distribution);
 
 	// dtor
-	virtual ~CPhysicalHashAggDeduplicate();
+	~CPhysicalHashAggDeduplicate() override;
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalHashAggDeduplicate;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalHashAggDeduplicate";
 	}
@@ -74,23 +74,23 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// compute required output columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				 CColRefSet *pcrsRequired, ULONG child_index,
 				 CDrvdPropArray *,	//pdrgpdpCtxt,
 				 ULONG				//ulOptReq
-	)
+				 ) override
 	{
 		return PcrsRequiredAgg(mp, exprhdl, pcrsRequired, child_index,
 							   m_pdrgpcrKeys);
 	}
 
 	// compute required distribution of the n-th child
-	virtual CDistributionSpec *
+	CDistributionSpec *
 	PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				CDistributionSpec *pdsRequired, ULONG child_index,
 				CDrvdPropArray *,  //pdrgpdpCtxt,
-				ULONG ulOptReq) const
+				ULONG ulOptReq) const override
 	{
 		return PdsRequiredAgg(mp, exprhdl, pdsRequired, child_index, ulOptReq,
 							  m_pdrgpcrKeys, m_pdrgpcrKeys);
@@ -101,16 +101,16 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CPhysicalHashAggDeduplicate *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalHashAggDeduplicate == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalHashAggDeduplicate *>(pop);
+		return dynamic_cast<CPhysicalHashAggDeduplicate *>(pop);
 	}
 
 };	// class CPhysicalHashAggDeduplicate

@@ -10,16 +10,14 @@
 //		MD cache
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
-
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 
-#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
-#include "naucrates/dxl/operators/CDXLDatumBool.h"
-#include "naucrates/dxl/CDXLUtils.h"
+#include "gpos/string/CWStringDynamic.h"
 
 #include "naucrates/base/CDatumBoolGPDB.h"
-
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
 #include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpdxl;
@@ -49,8 +47,8 @@ CMDTypeBoolGPDB::CMDTypeBoolGPDB(CMemoryPool *mp) : m_mp(mp)
 	}
 	else
 	{
-		m_distr_opfamily = NULL;
-		m_legacy_distr_opfamily = NULL;
+		m_distr_opfamily = nullptr;
+		m_legacy_distr_opfamily = nullptr;
 	}
 	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(GPDB_BOOL_EQ_OP);
 	m_mdid_op_neq = GPOS_NEW(mp) CMDIdGPDB(GPDB_BOOL_NEQ_OP);
@@ -135,7 +133,7 @@ CMDTypeBoolGPDB::GetMdidForCmpType(ECmpType cmp_type) const
 			return m_mdid_op_geq;
 		default:
 			GPOS_ASSERT(!"Invalid operator type");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -164,7 +162,7 @@ CMDTypeBoolGPDB::GetMdidForAggType(EAggType agg_type) const
 			return m_mdid_count;
 		default:
 			GPOS_ASSERT(!"Invalid aggregate type");
-			return NULL;
+			return nullptr;
 	}
 }
 

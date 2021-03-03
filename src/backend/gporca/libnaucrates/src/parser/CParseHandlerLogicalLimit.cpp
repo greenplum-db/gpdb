@@ -11,11 +11,12 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalLimit.h"
-#include "naucrates/dxl/parser/CParseHandlerSortColList.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLLogicalLimit.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+#include "naucrates/dxl/parser/CParseHandlerSortColList.h"
 
 using namespace gpdxl;
 
@@ -136,7 +137,7 @@ CParseHandlerLogicalLimit::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 	GPOS_ASSERT(4 == this->Length());
 
 	CParseHandlerSortColList *sort_col_list_parse_handler =
@@ -148,7 +149,7 @@ CParseHandlerLogicalLimit::EndElement(const XMLCh *const,  // element_uri,
 	CParseHandlerLogicalOp *child_parse_handler =
 		dynamic_cast<CParseHandlerLogicalOp *>((*this)[3]);
 
-	GPOS_ASSERT(NULL != child_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != child_parse_handler->CreateDXLNode());
 
 	AddChildFromParseHandler(sort_col_list_parse_handler);
 	AddChildFromParseHandler(count_parse_handler);

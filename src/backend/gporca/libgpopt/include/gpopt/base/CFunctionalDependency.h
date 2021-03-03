@@ -12,8 +12,9 @@
 #define GPOPT_CFunctionalDependency_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
+
 #include "gpopt/base/CColRefSet.h"
 
 
@@ -45,15 +46,14 @@ private:
 	// the right hand side of the FD
 	CColRefSet *m_pcrsDetermined;
 
-	// private copy ctor
-	CFunctionalDependency(const CFunctionalDependency &);
-
 public:
+	CFunctionalDependency(const CFunctionalDependency &) = delete;
+
 	// ctor
 	CFunctionalDependency(CColRefSet *pcrsKey, CColRefSet *pcrsDetermined);
 
 	// dtor
-	virtual ~CFunctionalDependency();
+	~CFunctionalDependency() override;
 
 	// key set accessor
 	CColRefSet *
@@ -82,14 +82,14 @@ public:
 	BOOL
 	FFunctionallyDependent(CColRefSet *pcrsKey, CColRef *colref)
 	{
-		GPOS_ASSERT(NULL != pcrsKey);
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != pcrsKey);
+		GPOS_ASSERT(nullptr != colref);
 
 		return m_pcrsKey->Equals(pcrsKey) && m_pcrsDetermined->FMember(colref);
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// hash function
 	static ULONG HashValue(const CFunctionalDependencyArray *pdrgpfd);

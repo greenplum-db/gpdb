@@ -1,12 +1,13 @@
 //---------------------------------------------------------------------------
-//	Pivotal Software, Inc
-//	Copyright (C) 2017 Pivotal Software, Inc
+//	VMware, Inc. or its affiliates
+//	Copyright (C) 2017 VMware, Inc. or its affiliates
 //---------------------------------------------------------------------------
 
 #ifndef GPOPT_CEquivalenceClassesTest_H
 #define GPOPT_CEquivalenceClassesTest_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRefSet.h"
 
 namespace gpopt

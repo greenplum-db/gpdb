@@ -10,10 +10,11 @@
 //		Implementation of the SAX parse handler class for a case test
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarCaseTest.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarCaseTest.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
 
@@ -31,7 +32,7 @@ CParseHandlerScalarCaseTest::CParseHandlerScalarCaseTest(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_type(NULL)
+	  m_mdid_type(nullptr)
 {
 }
 

@@ -9,10 +9,12 @@
 //		Implementation of the class for representing dxl derived column statistics
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
 #include "naucrates/md/CDXLStatsDerivedColumn.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
+
+#include "gpos/string/CWStringDynamic.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpdxl;
@@ -40,7 +42,7 @@ CDXLStatsDerivedColumn::CDXLStatsDerivedColumn(
 	GPOS_ASSERT(0 <= m_null_freq);
 	GPOS_ASSERT(0 <= m_distinct_remaining);
 	GPOS_ASSERT(0 <= m_freq_remaining);
-	GPOS_ASSERT(NULL != m_dxl_stats_bucket_array);
+	GPOS_ASSERT(nullptr != m_dxl_stats_bucket_array);
 }
 
 //---------------------------------------------------------------------------

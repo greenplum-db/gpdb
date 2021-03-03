@@ -107,7 +107,6 @@
             <topicref href="guc-list.xml#gp_external_enable_filter_pushdown"/>
             <topicref href="guc-list.xml#gp_fts_probe_interval"/>
             <topicref href="guc-list.xml#gp_fts_probe_retries"/>
-            <topicref href="guc-list.xml#gp_fts_probe_threadcount"/>
             <topicref href="guc-list.xml#gp_fts_probe_timeout"/>
             <topicref href="guc-list.xml#gp_fts_replication_attempt_count"/>
             <topicref href="guc-list.xml#gp_global_deadlock_detector_period"/>
@@ -121,6 +120,7 @@
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
             <topicref href="guc-list.xml#gp_interconnect_setup_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_snd_queue_depth"/>
+            <topicref href="guc-list.xml#gp_interconnect_transmit_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_type"/>
             <topicref href="guc-list.xml#gp_log_format"/>
             <topicref href="guc-list.xml#gp_log_fts"/>
@@ -216,9 +216,11 @@
             <topicref href="guc-list.xml#optimizer_array_expansion_threshold"/>
             <topicref href="guc-list.xml#optimizer_analyze_root_partition"/>
             <topicref href="guc-list.xml#optimizer_control"/>
+            <topicref href="guc-list.xml#optimizer_cost_model"/>
             <topicref href="guc-list.xml#optimizer_cte_inlining_bound"/>
             <topicref href="guc-list.xml#optimizer_enable_associativity"/>
             <topicref href="guc-list.xml#optimizer_enable_dml"/>
+            <topicref href="guc-list.xml#optimizer_enable_indexonlyscan"/>
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_force_agg_skew_avoidance"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>
@@ -296,7 +298,7 @@
             <topicref href="guc-list.xml#wal_keep_segments"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>
-            <topicref href="guc-list.xml#write_to_gpfdist_timeout"/>
+            <topicref href="guc-list.xml#gpfdist_retry_timeout"/>
             <topicref href="guc-list.xml#xid_stop_limit"/>
             <topicref href="guc-list.xml#xid_warn_limit"/>
         </topicref>

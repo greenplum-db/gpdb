@@ -117,9 +117,6 @@ test__internal_flush_failedSendEPIPE(void **state)
 
 	/* In that case, we expect ereport(COMERROR, ...) to be called */
 	expect_value(errstart, elevel, COMMERROR);
-	expect_any(errstart, filename);
-	expect_any(errstart, lineno);
-	expect_any(errstart, funcname);
 	expect_any(errstart, domain);
 	will_return(errstart, false);
 

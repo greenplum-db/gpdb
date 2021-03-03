@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformSelect2BitmapBoolOp.cpp
@@ -15,9 +15,10 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSelect2BitmapBoolOp.h"
+
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/xforms/CXformSelect2BitmapBoolOp.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpmd;
@@ -70,14 +71,14 @@ CXformSelect2BitmapBoolOp::Transform(CXformContext *pxfctxt,
 									 CXformResult *pxfres,
 									 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CExpression *pexprResult =
 		CXformUtils::PexprSelect2BitmapBoolOp(pxfctxt->Pmp(), pexpr);
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		pxfres->Add(pexprResult);
 	}

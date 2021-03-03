@@ -7,7 +7,7 @@
  * standard_planner function when the optimizer GUC is set to on. Additionally,
  * some supporting routines for planning with ORCA are contained herein.
  *
- * Portions Copyright (c) 2010-Present, Pivotal Inc
+ * Portions Copyright (c) 2010-Present, VMware, Inc. or its affiliates
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -507,7 +507,8 @@ transformGroupedWindows(Node *node, void *context)
 		/*
 		 * we are done if this query doesn't have both window functions and group by/aggregates
 		 */
-		if (!qry->hasWindowFuncs || !(qry->groupClause || qry->hasAggs))
+		if (!qry->hasWindowFuncs ||
+			!(qry->groupClause || qry->groupingSets || qry->hasAggs))
 			return (Node *) qry;
 
 		Query	   *subq;

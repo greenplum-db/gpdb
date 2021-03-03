@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLeftAntiSemiNLJoinNotIn_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalLeftAntiSemiNLJoin.h"
 
 namespace gpopt
@@ -27,10 +28,10 @@ namespace gpopt
 class CPhysicalLeftAntiSemiNLJoinNotIn : public CPhysicalLeftAntiSemiNLJoin
 {
 private:
-	// private copy ctor
-	CPhysicalLeftAntiSemiNLJoinNotIn(const CPhysicalLeftAntiSemiNLJoinNotIn &);
-
 public:
+	CPhysicalLeftAntiSemiNLJoinNotIn(const CPhysicalLeftAntiSemiNLJoinNotIn &) =
+		delete;
+
 	// ctor
 	explicit CPhysicalLeftAntiSemiNLJoinNotIn(CMemoryPool *mp)
 		: CPhysicalLeftAntiSemiNLJoin(mp)
@@ -38,15 +39,15 @@ public:
 	}
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalLeftAntiSemiNLJoinNotIn;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalLeftAntiSemiNLJoinNotIn";
 	}

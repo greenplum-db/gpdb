@@ -9,18 +9,17 @@
 //		Implementation of GPDB Int8
 //---------------------------------------------------------------------------
 
+#include "naucrates/base/CDatumInt8GPDB.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/base/CDatumInt8GPDB.h"
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/mdcache/CMDAccessor.h"
-
+#include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeInt8.h"
-#include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -34,7 +33,7 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CDatumInt8GPDB::CDatumInt8GPDB(CSystemId sysid, LINT val, BOOL is_null)
-	: m_mdid(NULL), m_val(val), m_is_null(is_null)
+	: m_mdid(nullptr), m_val(val), m_is_null(is_null)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	IMDId *mdid = dynamic_cast<const CMDTypeInt8GPDB *>(
@@ -61,7 +60,7 @@ CDatumInt8GPDB::CDatumInt8GPDB(CSystemId sysid, LINT val, BOOL is_null)
 CDatumInt8GPDB::CDatumInt8GPDB(IMDId *mdid, LINT val, BOOL is_null)
 	: m_mdid(mdid), m_val(val), m_is_null(is_null)
 {
-	GPOS_ASSERT(NULL != m_mdid);
+	GPOS_ASSERT(nullptr != m_mdid);
 	GPOS_ASSERT(GPDB_INT8_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 
 	if (IsNull())

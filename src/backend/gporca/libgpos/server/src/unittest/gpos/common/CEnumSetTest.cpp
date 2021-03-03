@@ -9,15 +9,14 @@
 //      Test for CEnumSet/CEnumSetIter
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpos/types.h"
+#include "unittest/gpos/common/CEnumSetTest.h"
 
+#include "gpos/base.h"
 #include "gpos/common/CEnumSet.h"
 #include "gpos/common/CEnumSetIter.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CEnumSetTest.h"
+#include "gpos/types.h"
 
 using namespace gpos;
 

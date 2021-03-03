@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDIdGPDBCtas.cpp
@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/md/CMDIdGPDBCtas.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -63,7 +64,7 @@ CMDIdGPDBCtas::CMDIdGPDBCtas(const CMDIdGPDBCtas &mdid_source)
 BOOL
 CMDIdGPDBCtas::Equals(const IMDId *mdid) const
 {
-	if (NULL == mdid || EmdidGPDBCtas != mdid->MdidType())
+	if (nullptr == mdid || EmdidGPDBCtas != mdid->MdidType())
 	{
 		return false;
 	}

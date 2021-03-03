@@ -3,7 +3,7 @@
  * ic_proxy_pkt_cache.h
  *
  *
- * Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------
@@ -13,6 +13,8 @@
 #define IC_PROXY_PKT_CACHE_H
 
 #include <uv.h>
+
+#define IC_PROXY_PKT_CACHE_MAX_SIZE 20000
 
 extern void ic_proxy_pkt_cache_init(uint32 pkt_size);
 extern void ic_proxy_pkt_cache_uninit(void);

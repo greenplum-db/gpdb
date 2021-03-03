@@ -11,8 +11,8 @@
 #ifndef GPOS_IErrorContext_H
 #define GPOS_IErrorContext_H
 
-#include "gpos/types.h"
 #include "gpos/error/CException.h"
+#include "gpos/types.h"
 
 namespace gpos
 {
@@ -27,19 +27,14 @@ namespace gpos
 class IErrorContext
 {
 private:
-	// private copy ctor
-	IErrorContext(const IErrorContext &);
-
 public:
+	IErrorContext(const IErrorContext &) = delete;
+
 	// ctor
-	IErrorContext()
-	{
-	}
+	IErrorContext() = default;
 
 	// dtor
-	virtual ~IErrorContext()
-	{
-	}
+	virtual ~IErrorContext() = default;
 
 	// reset context, clear out handled error
 	virtual void Reset() = 0;

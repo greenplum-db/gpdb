@@ -50,31 +50,30 @@ private:
 	void Execute(CTask *task);
 
 	// check for abort request
-	void CheckForAbort(const CHAR *file, ULONG line_num);
-
-	// no copy ctor
-	CWorker(const CWorker &);
+	void CheckForAbort(const CHAR *file, ULONG line_num) override;
 
 public:
+	CWorker(const CWorker &) = delete;
+
 	// ctor
 	CWorker(ULONG stack_size, ULONG_PTR stack_start);
 
 	// dtor
-	virtual ~CWorker();
+	~CWorker() override;
 
 	// stack start accessor
 	inline ULONG_PTR
-	GetStackStart() const
+	GetStackStart() const override
 	{
 		return m_stack_start;
 	}
 
 	// stack check
-	BOOL CheckStackSize(ULONG request = 0) const;
+	BOOL CheckStackSize(ULONG request = 0) const override;
 
 	// accessor
 	inline CTask *
-	GetTask()
+	GetTask() override
 	{
 		return m_task;
 	}

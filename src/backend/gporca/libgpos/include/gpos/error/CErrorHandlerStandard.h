@@ -26,22 +26,17 @@ namespace gpos
 class CErrorHandlerStandard : public CErrorHandler
 {
 private:
-	// private copy ctor
-	CErrorHandlerStandard(const CErrorHandlerStandard &);
-
 public:
+	CErrorHandlerStandard(const CErrorHandlerStandard &) = delete;
+
 	// ctor
-	CErrorHandlerStandard()
-	{
-	}
+	CErrorHandlerStandard() = default;
 
 	// dtor
-	virtual ~CErrorHandlerStandard()
-	{
-	}
+	~CErrorHandlerStandard() override = default;
 
 	// process error
-	virtual void Process(CException exception);
+	void Process(CException exception) override;
 
 };	// class CErrorHandlerStandard
 }  // namespace gpos

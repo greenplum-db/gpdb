@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalInnerHashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalHashJoin.h"
 
 namespace gpopt
@@ -47,30 +48,29 @@ private:
 		CMemoryPool *mp, CDistributionSpec *pdsOuter,
 		CDistributionSpec *pdsInner) const;
 
-	// private copy ctor
-	CPhysicalInnerHashJoin(const CPhysicalInnerHashJoin &);
-
 public:
+	CPhysicalInnerHashJoin(const CPhysicalInnerHashJoin &) = delete;
+
 	// ctor
 	CPhysicalInnerHashJoin(CMemoryPool *mp,
 						   CExpressionArray *pdrgpexprOuterKeys,
 						   CExpressionArray *pdrgpexprInnerKeys,
-						   IMdIdArray *hash_opfamilies = NULL);
+						   IMdIdArray *hash_opfamilies = nullptr);
 
 	// dtor
-	virtual ~CPhysicalInnerHashJoin();
+	~CPhysicalInnerHashJoin() override;
 
 	// ident accessors
 
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalInnerHashJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalInnerHashJoin";
 	}
@@ -85,14 +85,8 @@ public:
 	}
 
 	// derive distribution
-	virtual CDistributionSpec *PdsDerive(CMemoryPool *mp,
-										 CExpressionHandle &exprhdl) const;
-
-	// compute required partition propagation of the n-th child
-	virtual CPartitionPropagationSpec *PppsRequired(
-		CMemoryPool *mp, CExpressionHandle &exprhdl,
-		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+	CDistributionSpec *PdsDerive(CMemoryPool *mp,
+								 CExpressionHandle &exprhdl) const override;
 
 };	// class CPhysicalInnerHashJoin
 

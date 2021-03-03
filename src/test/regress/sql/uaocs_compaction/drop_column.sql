@@ -2,6 +2,7 @@
 CREATE TABLE uaocs_drop (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (a);
 CREATE INDEX uaocs_drop_index ON uaocs_drop(b);
 INSERT INTO uaocs_drop SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 10) AS i;
+ANALYZE uaocs_drop;
 
 DELETE FROM uaocs_drop WHERE a < 4;
 SELECT COUNT(*) FROM uaocs_drop;

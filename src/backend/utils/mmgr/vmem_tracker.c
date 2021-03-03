@@ -7,7 +7,7 @@
  *	 sessions that consume excessive vmem and cleans up such sessions by forcing
  *	 them to release their memory.
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

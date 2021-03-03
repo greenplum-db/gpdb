@@ -13,8 +13,9 @@
 #define GPOPT_CRewindabilitySpec_H
 
 #include "gpos/base.h"
-#include "gpopt/base/CPropSpec.h"
 #include "gpos/common/CRefCount.h"
+
+#include "gpopt/base/CPropSpec.h"
 
 
 namespace gpopt
@@ -120,7 +121,7 @@ public:
 								EMotionHazardType motion_hazard);
 
 	// dtor
-	virtual ~CRewindabilitySpec();
+	~CRewindabilitySpec() override;
 
 	// check if rewindability specs match
 	BOOL Matches(const CRewindabilitySpec *prs) const;
@@ -129,31 +130,30 @@ public:
 	BOOL FSatisfies(const CRewindabilitySpec *prs) const;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// extract columns used by the rewindability spec
-	virtual CColRefSet *
-	PcrsUsed(CMemoryPool *mp) const
+	CColRefSet *
+	PcrsUsed(CMemoryPool *mp) const override
 	{
 		// return an empty set
 		return GPOS_NEW(mp) CColRefSet(mp);
 	}
 
 	// property type
-	virtual EPropSpecType
-	Epst() const
+	EPropSpecType
+	Epst() const override
 	{
 		return EpstRewindability;
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	ERewindabilityType
 	Ert() const

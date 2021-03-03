@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarCoerceViaIO.h
@@ -21,6 +21,7 @@
 #define GPOPT_CScalarCoerceViaIO_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CScalarCoerceBase.h"
 
 namespace gpopt
@@ -38,38 +39,35 @@ using namespace gpos;
 class CScalarCoerceViaIO : public CScalarCoerceBase
 {
 private:
-	// private copy ctor
-	CScalarCoerceViaIO(const CScalarCoerceViaIO &);
-
 public:
+	CScalarCoerceViaIO(const CScalarCoerceViaIO &) = delete;
+
 	// ctor
 	CScalarCoerceViaIO(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
 					   ECoercionForm dxl_coerce_format, INT location);
 
 	// dtor
-	virtual ~CScalarCoerceViaIO()
-	{
-	}
+	~CScalarCoerceViaIO() override = default;
 
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarCoerceViaIO;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarCoerceViaIO";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
@@ -78,7 +76,7 @@ public:
 	static CScalarCoerceViaIO *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCoerceViaIO == pop->Eopid());
 
 		return dynamic_cast<CScalarCoerceViaIO *>(pop);

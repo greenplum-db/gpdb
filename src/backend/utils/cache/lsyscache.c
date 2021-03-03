@@ -4,7 +4,7 @@
  *	  Convenience routines for common queries in the system catalog cache.
  *
  * Portions Copyright (c) 2007-2009, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -1658,7 +1658,27 @@ trigger_enabled(Oid triggerid)
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for trigger %u", triggerid);
 
-	result = ((Form_pg_trigger) GETSTRUCT(tp))->tgenabled;
+	char tgenabled = ((Form_pg_trigger) GETSTRUCT(tp))->tgenabled;
+	switch (tgenabled)
+	{
+		case TRIGGER_FIRES_ON_ORIGIN:
+			/* fallthrough */
+			/*
+			 * FIXME: we should probably return false when
+			 * SessionReplicationRole isn't SESSION_REPLICATION_ROLE_ORIGIN,
+			 * but does that means we'll also have to flush ORCA's metadata
+			 * cache on every assignment of session_replication_role?
+			 */
+		case TRIGGER_FIRES_ALWAYS:
+			result = true;
+			break;
+		case TRIGGER_FIRES_ON_REPLICA:
+		case TRIGGER_DISABLED:
+			result = false;
+			break;
+		default:
+			elog(ERROR, "Unknown trigger type: %c", tgenabled);
+	}
 
 	systable_endscan(sscan);
 	table_close(rel, AccessShareLock);
@@ -4495,6 +4515,18 @@ relation_is_partitioned(Oid relid)
 		return false;
 }
 
+bool
+index_is_partitioned(Oid relid)
+{
+	HeapTuple   tuple;
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "cache lookup failed for relation %u", relid);
+	Form_pg_class pg_class_tuple = (Form_pg_class) GETSTRUCT(tuple);
+	ReleaseSysCache(tuple);
+	return pg_class_tuple->relkind == RELKIND_PARTITIONED_INDEX;
+}
+
 List *
 relation_get_leaf_partitions(Oid oid)
 {
@@ -4504,7 +4536,8 @@ relation_get_leaf_partitions(Oid oid)
 	foreach(lc, descendants)
 	{
 		const Oid descendant = lfirst_oid(lc);
-		if (get_rel_relkind(descendant) != RELKIND_PARTITIONED_TABLE)
+		if (get_rel_relkind(descendant) != RELKIND_PARTITIONED_TABLE &&
+			get_rel_relkind(descendant) != RELKIND_PARTITIONED_INDEX)
 			leaves = lappend_oid(leaves, descendant);
 	}
 	return leaves;

@@ -2,6 +2,9 @@
 -- Test extensions to functions (MPP-16060)
 -- 	1. data access indicators
 -- -----------------------------------------------------------------
+-- start_ignore
+CREATE LANGUAGE plpython3u;
+-- end_ignore
 
 -- test prodataaccess
 create function func1(int, int) returns int as
@@ -134,14 +137,37 @@ drop function func5(int);
 drop function func1_mod_int_stb(int);
 
 
--- Test EXECUTE ON [ANY | MASTER | ALL SEGMENTS ]
+-- Test EXECUTE ON [ANY | COORDINATOR | ALL SEGMENTS ]
 
 CREATE TABLE srf_testtab (t text) DISTRIBUTED BY (t);
 INSERT INTO srf_testtab VALUES ('foo 0');
 INSERT INTO srf_testtab VALUES ('foo 1');
 INSERT INTO srf_testtab VALUES ('foo -1');
+ANALYZE srf_testtab;
 
-create function srf_on_master () returns setof text as $$
+create function srf_on_coordinator () returns setof text as $$
+begin
+  return next 'foo ' || current_setting('gp_contentid');
+  return next 'bar ' || current_setting('gp_contentid');
+end;
+$$ language plpgsql EXECUTE ON COORDINATOR;
+
+-- A function with ON COORDINATOR or ON ALL SEGMENTS is only allowed in the target list
+-- in the simple case with no FROM.
+select srf_on_coordinator();
+select srf_on_coordinator() FROM srf_testtab;
+
+-- In both these cases, the function should run on coordinator and hence return
+-- ('foo -1'), ('bar -1')
+select * from srf_on_coordinator();
+select * from srf_testtab, srf_on_coordinator();
+
+-- Should run on coordinator, even when used in a join. (With EXECUTE ON ANY,
+-- it would be pushed to segments.)
+select * from srf_testtab, srf_on_coordinator() where srf_on_coordinator = srf_testtab.t;
+
+-- Repeat, with ON MASTER (this will be removed starting GPDB8 and forward)
+create function srf_on_master() returns setof text as $$
 begin
   return next 'foo ' || current_setting('gp_contentid');
   return next 'bar ' || current_setting('gp_contentid');
@@ -209,7 +235,7 @@ explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
 
 \df+ test_srf
 
-alter function test_srf() EXECUTE ON MASTER;
+alter function test_srf() EXECUTE ON COORDINATOR;
 \df+ test_srf
 
 alter function test_srf() EXECUTE ON ALL SEGMENTS;

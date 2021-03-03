@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarAssertConstraintList.cpp
@@ -10,10 +10,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarAssertConstraintList.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
 using namespace gpdxl;

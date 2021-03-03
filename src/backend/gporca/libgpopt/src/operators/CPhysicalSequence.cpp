@@ -9,16 +9,16 @@
 //		Implementation of physical sequence operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSequence.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CCTEReq.h"
-
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalSequence.h"
 
 using namespace gpopt;
 
@@ -31,7 +31,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalSequence::CPhysicalSequence(CMemoryPool *mp)
-	: CPhysical(mp), m_pcrsEmpty(NULL)
+	: CPhysical(mp), m_pcrsEmpty(nullptr)
 {
 	// Sequence generates two distribution requests for its children:
 	// (1) If incoming distribution from above is Singleton, pass it through
@@ -110,28 +110,6 @@ CPhysicalSequence::PcrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalSequence::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalSequence::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								CPartitionPropagationSpec *pppsRequired,
-								ULONG child_index,
-								CDrvdPropArray *,  //pdrgpdpCtxt,
-								ULONG			   //ulOptReq
-)
-{
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThruNAry(mp, exprhdl, pppsRequired,
-											   child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalSequence::PcteRequired
 //
 //	@doc:
@@ -145,7 +123,7 @@ CPhysicalSequence::PcteRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 								ULONG  //ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcter);
+	GPOS_ASSERT(nullptr != pcter);
 	if (child_index < exprhdl.Arity() - 1)
 	{
 		return pcter->PcterAllOptional(mp);
@@ -176,7 +154,7 @@ CPhysicalSequence::FProvidesReqdCols(CExpressionHandle &exprhdl,
 									 ULONG	// ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 
 	// last child must provide required columns
 	ULONG arity = exprhdl.Arity();
@@ -395,7 +373,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalSequence::EpetOrder(CExpressionHandle &exprhdl,
 							 const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 
 	// get order delivered by the sequence node
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();

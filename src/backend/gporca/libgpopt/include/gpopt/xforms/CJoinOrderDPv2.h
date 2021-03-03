@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 // Greenplum Database
-// Copyright (C) 2019 Pivotal Inc.
+// Copyright (C) 2019 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CJoinOrderDPv2.h
@@ -12,13 +12,15 @@
 #define GPOPT_CJoinOrderDPv2_H
 
 #include "gpos/base.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CBitSet.h"
+#include "gpos/common/CHashMap.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/io/IOstream.h"
-#include "gpopt/base/CUtils.h"
+
 #include "gpopt/base/CKHeap.h"
-#include "gpopt/xforms/CJoinOrder.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/xforms/CJoinOrder.h"
 
 
 namespace gpopt
@@ -43,7 +45,8 @@ using namespace gpos;
 //				a result expression, each of these sets will be associated
 //				with a CGroup in MEMO.
 //---------------------------------------------------------------------------
-class CJoinOrderDPv2 : public CJoinOrder
+class CJoinOrderDPv2 : public CJoinOrder,
+					   public gpos::DbgPrintMixin<CJoinOrderDPv2>
 {
 private:
 	// Data structures for DPv2 join enumeration:
@@ -173,13 +176,10 @@ private:
 	// this identifies a group and one expression belonging to that group
 	struct SGroupAndExpression
 	{
-		SGroupInfo *m_group_info;
-		ULONG m_expr_index;
+		SGroupInfo *m_group_info{nullptr};
+		ULONG m_expr_index{gpos::ulong_max};
 
-		SGroupAndExpression()
-			: m_group_info(NULL), m_expr_index(gpos::ulong_max)
-		{
-		}
+		SGroupAndExpression() = default;
 		SGroupAndExpression(SGroupInfo *g, ULONG ix)
 			: m_group_info(g), m_expr_index(ix)
 		{
@@ -189,13 +189,13 @@ private:
 		GetExprInfo() const
 		{
 			return m_expr_index == gpos::ulong_max
-					   ? NULL
+					   ? nullptr
 					   : (*m_group_info->m_best_expr_info_array)[m_expr_index];
 		}
 		BOOL
 		IsValid()
 		{
-			return NULL != m_group_info && gpos::ulong_max != m_expr_index;
+			return nullptr != m_group_info && gpos::ulong_max != m_expr_index;
 		}
 		BOOL
 		operator==(const SGroupAndExpression &other) const
@@ -246,11 +246,11 @@ private:
 			  m_left_child_expr(left_child_expr_info),
 			  m_right_child_expr(right_child_expr_info),
 			  m_properties(properties),
-			  m_atom_part_keys_array(NULL),
+			  m_atom_part_keys_array(nullptr),
 			  m_cost(0.0),
 			  m_cost_adj_PS(0.0),
 			  m_atom_base_table_rows(-1.0),
-			  m_contain_PS(NULL)
+			  m_contain_PS(nullptr)
 
 		{
 			m_contain_PS = GPOS_NEW(mp) CBitSet(mp);
@@ -262,16 +262,16 @@ private:
 						SExpressionProperties &properties)
 			: m_expr(expr),
 			  m_properties(properties),
-			  m_atom_part_keys_array(NULL),
+			  m_atom_part_keys_array(nullptr),
 			  m_cost(0.0),
 			  m_cost_adj_PS(0.0),
 			  m_atom_base_table_rows(-1.0),
-			  m_contain_PS(NULL)
+			  m_contain_PS(nullptr)
 		{
 			m_contain_PS = GPOS_NEW(mp) CBitSet(mp);
 		}
 
-		~SExpressionInfo()
+		~SExpressionInfo() override
 		{
 			m_expr->Release();
 			CRefCount::SafeRelease(m_contain_PS);
@@ -330,7 +330,7 @@ private:
 			m_best_expr_info_array = GPOS_NEW(mp) SExpressionInfoArray(mp);
 		}
 
-		~SGroupInfo()
+		~SGroupInfo() override
 		{
 			m_atoms->Release();
 			m_best_expr_info_array->Release();
@@ -360,11 +360,11 @@ private:
 		CKHeap<SGroupInfoArray, SGroupInfo> *m_top_k_groups;
 
 		SLevelInfo(ULONG level, SGroupInfoArray *groups)
-			: m_level(level), m_groups(groups), m_top_k_groups(NULL)
+			: m_level(level), m_groups(groups), m_top_k_groups(nullptr)
 		{
 		}
 
-		~SLevelInfo()
+		~SLevelInfo() override
 		{
 			m_groups->Release();
 			CRefCount::SafeRelease(m_top_k_groups);
@@ -375,7 +375,7 @@ private:
 	static ULONG
 	UlHashBitSet(const CBitSet *pbs)
 	{
-		GPOS_ASSERT(NULL != pbs);
+		GPOS_ASSERT(nullptr != pbs);
 
 		return pbs->HashValue();
 	}
@@ -384,8 +384,8 @@ private:
 	static BOOL
 	FEqualBitSet(const CBitSet *pbsFst, const CBitSet *pbsSnd)
 	{
-		GPOS_ASSERT(NULL != pbsFst);
-		GPOS_ASSERT(NULL != pbsSnd);
+		GPOS_ASSERT(nullptr != pbsFst);
+		GPOS_ASSERT(nullptr != pbsSnd);
 
 		return pbsFst->Equals(pbsSnd);
 	}
@@ -474,7 +474,7 @@ private:
 
 	void GreedySearchJoinOrders(ULONG left_level, JoinOrderPropType algo);
 
-	virtual void DeriveStats(CExpression *pexpr);
+	void DeriveStats(CExpression *pexpr) override;
 
 	// create a CLogicalJoin and a CExpression to join two groups, for a required property
 	SExpressionInfo *GetJoinExprForProperties(
@@ -542,7 +542,7 @@ public:
 				   ULongPtrArray *childPredIndexes, CColRefSet *outerRefs);
 
 	// dtor
-	virtual ~CJoinOrderDPv2();
+	~CJoinOrderDPv2() override;
 
 	// main handler
 	virtual void PexprExpand();
@@ -551,17 +551,13 @@ public:
 
 	// check for NIJs
 	BOOL IsRightChildOfNIJ(SGroupInfo *groupInfo,
-						   CExpression **onPredToUse = NULL,
-						   CBitSet **requiredBitsOnLeft = NULL);
+						   CExpression **onPredToUse = nullptr,
+						   CBitSet **requiredBitsOnLeft = nullptr);
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	IOstream &OsPrintProperty(IOstream &, SExpressionProperties &) const;
-
-#ifdef GPOS_DEBUG
-	void DbgPrint();
-#endif
 
 };	// class CJoinOrderDPv2
 

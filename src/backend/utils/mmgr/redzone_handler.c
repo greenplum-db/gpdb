@@ -6,7 +6,7 @@
  *	 handler identifies the session that consumes most vmem and asks it
  *	 to gracefully release its memory.
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

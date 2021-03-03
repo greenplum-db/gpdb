@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformImplementDynamicBitmapTableGet.cpp
@@ -17,6 +17,7 @@
 
 #include "gpopt/xforms/CXformImplementDynamicBitmapTableGet.h"
 
+#include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
@@ -55,11 +56,11 @@ CXformImplementDynamicBitmapTableGet::CXformImplementDynamicBitmapTableGet(
 //
 //---------------------------------------------------------------------------
 void
-CXformImplementDynamicBitmapTableGet::Transform(CXformContext *pxfctxt,
-												CXformResult *pxfres,
-												CExpression *pexpr) const
+CXformImplementDynamicBitmapTableGet::Transform(
+	CXformContext *pxfctxt GPOS_ASSERTS_ONLY, CXformResult *pxfres GPOS_UNUSED,
+	CExpression *pexpr GPOS_ASSERTS_ONLY) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -74,23 +75,20 @@ CXformImplementDynamicBitmapTableGet::Transform(CXformContext *pxfctxt,
 
 	CColRefArray *pdrgpcrOutput = popLogical->PdrgpcrOutput();
 
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
 	CColRef2dArray *pdrgpdrgpcrPart = popLogical->PdrgpdrgpcrPart();
 	pdrgpdrgpcrPart->AddRef();
 
-	CPartConstraint *ppartcnstr = popLogical->Ppartcnstr();
-	ppartcnstr->AddRef();
-
-	CPartConstraint *ppartcnstrRel = popLogical->PpartcnstrRel();
-	ppartcnstrRel->AddRef();
+	popLogical->GetPartitionMdids()->AddRef();
+	popLogical->GetRootColMappingPerPart()->AddRef();
 
 	CPhysicalDynamicBitmapTableScan *popPhysical =
 		GPOS_NEW(mp) CPhysicalDynamicBitmapTableScan(
-			mp, popLogical->IsPartial(), ptabdesc, pexpr->Pop()->UlOpId(),
-			pname, popLogical->ScanId(), pdrgpcrOutput, pdrgpdrgpcrPart,
-			popLogical->UlSecondaryScanId(), ppartcnstr, ppartcnstrRel);
+			mp, ptabdesc, pexpr->Pop()->UlOpId(), pname, popLogical->ScanId(),
+			pdrgpcrOutput, pdrgpdrgpcrPart, popLogical->GetPartitionMdids(),
+			popLogical->GetRootColMappingPerPart());
 
 	CExpression *pexprCondition = (*pexpr)[0];
 	CExpression *pexprIndexPath = (*pexpr)[1];

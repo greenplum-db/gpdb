@@ -9,9 +9,9 @@
 //		Implementation of left semi nested-loops join operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CPhysicalLeftSemiNLJoin.h"
+
+#include "gpos/base.h"
 
 
 using namespace gpopt;
@@ -39,9 +39,7 @@ CPhysicalLeftSemiNLJoin::CPhysicalLeftSemiNLJoin(CMemoryPool *mp)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CPhysicalLeftSemiNLJoin::~CPhysicalLeftSemiNLJoin()
-{
-}
+CPhysicalLeftSemiNLJoin::~CPhysicalLeftSemiNLJoin() = default;
 
 
 //---------------------------------------------------------------------------

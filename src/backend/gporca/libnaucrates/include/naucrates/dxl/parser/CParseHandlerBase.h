@@ -12,13 +12,13 @@
 #ifndef GPDXL_CParseHandlerBase_H
 #define GPDXL_CParseHandlerBase_H
 
-#include "gpos/base.h"
-#include "naucrates/exception.h"
-
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/CDXLUtils.h"
-
 #include <xercesc/sax2/DefaultHandler.hpp>
+
+#include "gpos/base.h"
+
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/exception.h"
 
 namespace gpdxl
 {
@@ -68,9 +68,6 @@ enum EDxlParseHandlerType
 class CParseHandlerBase : public DefaultHandler
 {
 private:
-	// private copy ctor
-	CParseHandlerBase(const CParseHandlerBase &);
-
 	// array of parse handlers for child elements
 	CParseHandlerBaseArray *m_parse_handler_base_array;
 
@@ -85,7 +82,7 @@ protected:
 	inline void
 	Append(CParseHandlerBase *parse_handler_base)
 	{
-		GPOS_ASSERT(NULL != parse_handler_base);
+		GPOS_ASSERT(nullptr != parse_handler_base);
 		m_parse_handler_base_array->Append(parse_handler_base);
 	};
 
@@ -122,12 +119,14 @@ protected:
 		) = 0;
 
 public:
+	CParseHandlerBase(const CParseHandlerBase &) = delete;
+
 	// ctor
 	CParseHandlerBase(CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 					  CParseHandlerBase *parse_handler_root);
 
 	//dtor
-	virtual ~CParseHandlerBase();
+	~CParseHandlerBase() override;
 
 	virtual EDxlParseHandlerType GetParseHandlerType() const;
 
@@ -141,17 +140,17 @@ public:
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// Xerces parse handler interface method to eceive notification of the end of an element.
 	void endElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 	// process a parsing ProcessError
-	void error(const SAXParseException &);
+	void error(const SAXParseException &) override;
 };
 }  // namespace gpdxl
 

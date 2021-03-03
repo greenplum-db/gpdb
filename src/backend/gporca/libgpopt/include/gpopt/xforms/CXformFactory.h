@@ -12,6 +12,7 @@
 #define GPOPT_CXformFactory_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXform.h"
 
 namespace gpopt
@@ -58,9 +59,6 @@ private:
 	// private ctor
 	explicit CXformFactory(CMemoryPool *mp);
 
-	// private copy ctor
-	CXformFactory(const CXformFactory &);
-
 	// actual adding of xform
 	void Add(CXform *pxform);
 
@@ -73,6 +71,8 @@ private:
 	}
 
 public:
+	CXformFactory(const CXformFactory &) = delete;
+
 	// dtor
 	~CXformFactory();
 

@@ -643,11 +643,17 @@ index_getnext_slot(IndexScanDesc scan, ScanDirection direction, TupleTableSlot *
  *		returned; a TIDBitmap otherwise. Note that an index am's getmulti
  *		function can assume that the bitmap that it's given as argument is of
  *		the same type as what the function constructs itself.
+ *
+ *  	GPDB: Since GPDB also support StreamBitmap node in bitmap index.
+ *  	So normally we need to create specific bitmap node in the amgetbitmap AM.
+ *  	This makes the function different from upstream.
  * ----------------
  */
-Node *
-index_getbitmap(IndexScanDesc scan, Node *bitmap)
+int64
+index_getbitmap(IndexScanDesc scan, Node **bitmapP)
 {
+	int64		ntids;
+
 	SCAN_CHECKS;
 	CHECK_SCAN_PROCEDURE(amgetbitmap);
 
@@ -657,10 +663,11 @@ index_getbitmap(IndexScanDesc scan, Node *bitmap)
 	/*
 	 * have the am's getbitmap proc do all the work.
 	 */
-	return scan->indexRelation->rd_indam->amgetbitmap(scan, bitmap);
+	ntids = scan->indexRelation->rd_indam->amgetbitmap(scan, bitmapP);
 
-	// GPDB_12_MERGE_FIXME
-	//pgstat_count_index_tuples(scan->indexRelation, ntids);
+	pgstat_count_index_tuples(scan->indexRelation, ntids);
+
+	return ntids;
 }
 
 /* ----------------

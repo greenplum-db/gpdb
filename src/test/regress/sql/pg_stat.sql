@@ -17,7 +17,10 @@ select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
 from pg_stat_user_indexes where relname = 'pg_stat_test';
 
+begin; -- make analyze same transcation with insert to avoid double the pgstat causes by unorder message read.
 insert into pg_stat_test select * from generate_series(1, 100);
+analyze pg_stat_test;
+commit;
 
 create index pg_stat_user_table_index on pg_stat_test(a);
 

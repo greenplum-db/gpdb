@@ -1,5 +1,3 @@
-include: helpers/server_helpers.sql;
-
 -- table to just store the master's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
@@ -23,6 +21,7 @@ show gp_enable_global_deadlock_detector;
 -- 1.1 test for heap tables
 create table t_lockmods (c int) distributed randomly;
 insert into t_lockmods select * from generate_series(1, 5);
+analyze t_lockmods;
 
 create table t_lockmods1 (c int) distributed randomly;
 
@@ -161,6 +160,7 @@ analyze t_lockmods_upsert;
 -- 1.2 test for AO table
 create table t_lockmods_ao (c int) with (appendonly=true) distributed randomly;
 insert into t_lockmods_ao select * from generate_series(1, 8);
+analyze t_lockmods_ao;
 create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 
 -- 1.2.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables

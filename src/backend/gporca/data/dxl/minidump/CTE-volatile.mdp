@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Thread Id="0">
-    <dxl:TraceFlags Value="103027,103001,101000,101001"/>
+    <dxl:TraceFlags Value="102001,102002,102003,102144,103001,103027,103033"/>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
         <dxl:EqualityOp Mdid="0.91.1.0"/>
@@ -413,7 +413,7 @@
     <dxl:Plan Id="0" SpaceSize="52">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="19.769531" Rows="100.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.050688" Rows="100.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="a">
@@ -433,7 +433,7 @@
         <dxl:SortingColumnList/>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="17.597656" Rows="100.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.039912" Rows="100.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="10" Alias="a">
@@ -451,7 +451,7 @@
           </dxl:ProjList>
           <dxl:CTEProducer CTEId="0" Columns="9,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="5.050781" Rows="100.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.003945" Rows="100.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">
@@ -463,7 +463,7 @@
             </dxl:ProjList>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3.953125" Rows="100.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.003895" Rows="100.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="a">
@@ -482,7 +482,7 @@
               </dxl:HashExprList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2.367188" Rows="100.000000" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.002017" Rows="100.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="a">
@@ -496,7 +496,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.195312" Rows="100.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.001045" Rows="100.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1" Alias="b">
@@ -523,7 +523,7 @@
           </dxl:CTEProducer>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="9.203125" Rows="100.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.034767" Rows="100.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">
@@ -549,7 +549,7 @@
             </dxl:HashCondList>
             <dxl:CTEConsumer CTEId="0" Columns="10,11">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.585938" Rows="100.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.001446" Rows="100.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="a">
@@ -562,7 +562,7 @@
             </dxl:CTEConsumer>
             <dxl:CTEConsumer CTEId="0" Columns="20,21">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.585938" Rows="100.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.001446" Rows="100.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="20" Alias="a">

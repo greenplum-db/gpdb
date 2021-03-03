@@ -11,10 +11,9 @@
 #ifndef GPOS_ITask_H
 #define GPOS_ITask_H
 
-#include "gpos/types.h"
 #include "gpos/task/IWorker.h"
-
 #include "gpos/task/traceflags.h"
+#include "gpos/types.h"
 
 // trace flag macro definitions
 #define GPOS_FTRACE(x) ITask::Self()->IsTraceSet(x)
@@ -34,10 +33,9 @@ class IErrorContext;
 class ITask
 {
 private:
-	// private copy ctor
-	ITask(const ITask &);
-
 public:
+	ITask(const ITask &) = delete;
+
 	// task status
 	enum ETaskStatus
 	{
@@ -50,14 +48,10 @@ public:
 	};
 
 	// ctor
-	ITask()
-	{
-	}
+	ITask() = default;
 
 	// dtor
-	virtual ~ITask()
-	{
-	}
+	virtual ~ITask() = default;
 
 	// accessor for memory pool, e.g. used for allocating task parameters in
 	virtual CMemoryPool *Pmp() const = 0;

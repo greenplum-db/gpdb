@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerWindowOids.cpp
@@ -9,12 +9,11 @@
 //		Implementation of the SAX parse handler class for parsing window oids
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerWindowOids.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpdxl;
@@ -26,7 +25,7 @@ CParseHandlerWindowOids::CParseHandlerWindowOids(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_window_oids(NULL)
+	  m_window_oids(nullptr)
 {
 }
 
@@ -79,7 +78,7 @@ CParseHandlerWindowOids::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_window_oids);
+	GPOS_ASSERT(nullptr != m_window_oids);
 	GPOS_ASSERT(0 == this->Length());
 
 	// deactivate handler

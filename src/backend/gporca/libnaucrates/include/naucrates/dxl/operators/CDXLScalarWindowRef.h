@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarWindowRef_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/IMDId.h"
 
@@ -62,10 +63,9 @@ private:
 	// position the window specification in a parent window operator
 	ULONG m_win_spec_pos;
 
-	// private copy ctor
-	CDXLScalarWindowRef(const CDXLScalarWindowRef &);
-
 public:
+	CDXLScalarWindowRef(const CDXLScalarWindowRef &) = delete;
+
 	// ctor
 	CDXLScalarWindowRef(CMemoryPool *mp, IMDId *pmdidWinfunc,
 						IMDId *mdid_return_type, BOOL is_distinct,
@@ -73,13 +73,13 @@ public:
 						EdxlWinStage dxl_win_stage, ULONG ulWinspecPosition);
 
 	//dtor
-	virtual ~CDXLScalarWindowRef();
+	~CDXLScalarWindowRef() override;
 
 	// ident accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// name of the DXL operator
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// catalog id of the function
 	IMDId *
@@ -139,26 +139,27 @@ public:
 	const CWStringConst *GetWindStageStr() const;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLScalarWindowRef *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarWindowRef == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarWindowRef *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

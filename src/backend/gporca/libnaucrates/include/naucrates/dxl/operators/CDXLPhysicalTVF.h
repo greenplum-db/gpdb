@@ -13,9 +13,10 @@
 #define GPDXL_CDXLPhysicalTVF_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
-#include "naucrates/dxl/operators/CDXLPhysical.h"
+
 #include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/operators/CDXLPhysical.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpdxl
 {
@@ -39,22 +40,21 @@ private:
 	// function name
 	CWStringConst *func_name;
 
-	// private copy ctor
-	CDXLPhysicalTVF(const CDXLPhysicalTVF &);
-
 public:
+	CDXLPhysicalTVF(const CDXLPhysicalTVF &) = delete;
+
 	// ctor
 	CDXLPhysicalTVF(CMemoryPool *mp, IMDId *mdid_func, IMDId *mdid_return_type,
 					CWStringConst *str);
 
 	// dtor
-	virtual ~CDXLPhysicalTVF();
+	~CDXLPhysicalTVF() override;
 
 	// get operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// get operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// get function name
 	CWStringConst *
@@ -78,14 +78,14 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLPhysicalTVF *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalTVF == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalTVF *>(dxl_op);
@@ -94,7 +94,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

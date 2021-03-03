@@ -9,10 +9,11 @@
 //		Partial implementation of interface for minidump handler
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CMiniDumper.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/error/CErrorContext.h"
-#include "gpos/error/CMiniDumper.h"
 #include "gpos/string/CWStringConst.h"
 #include "gpos/task/CTask.h"
 
@@ -26,11 +27,7 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMiniDumper::CMiniDumper(CMemoryPool *mp)
-	: m_mp(mp), m_initialized(false), m_finalized(false), m_oos(NULL)
-{
-	GPOS_ASSERT(NULL != mp);
-}
+CMiniDumper::CMiniDumper() = default;
 
 
 //---------------------------------------------------------------------------
@@ -47,7 +44,7 @@ CMiniDumper::~CMiniDumper()
 	{
 		CTask *task = CTask::Self();
 
-		GPOS_ASSERT(NULL != task);
+		GPOS_ASSERT(nullptr != task);
 
 		task->ConvertErrCtxt()->Unregister(
 #ifdef GPOS_DEBUG
@@ -74,7 +71,7 @@ CMiniDumper::Init(COstream *oos)
 
 	CTask *task = CTask::Self();
 
-	GPOS_ASSERT(NULL != task);
+	GPOS_ASSERT(nullptr != task);
 
 	m_oos = oos;
 

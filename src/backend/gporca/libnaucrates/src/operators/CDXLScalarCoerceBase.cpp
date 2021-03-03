@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarCoerceBase.cpp
@@ -16,11 +16,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarCoerceBase.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpopt;
 using namespace gpos;
@@ -44,7 +44,7 @@ CDXLScalarCoerceBase::CDXLScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type,
 	  m_dxl_coerce_format(dxl_coerce_format),
 	  m_location(location)
 {
-	GPOS_ASSERT(NULL != mdid_type);
+	GPOS_ASSERT(nullptr != mdid_type);
 	GPOS_ASSERT(mdid_type->IsValid());
 }
 

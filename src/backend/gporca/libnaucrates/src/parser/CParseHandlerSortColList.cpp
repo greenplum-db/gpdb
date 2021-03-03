@@ -10,12 +10,12 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerSortColList.h"
-#include "naucrates/dxl/parser/CParseHandlerSortCol.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarSortColList.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+#include "naucrates/dxl/parser/CParseHandlerSortCol.h"
 
 
 using namespace gpdxl;
@@ -66,7 +66,7 @@ CParseHandlerSortColList::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a sorting col list already and initialized the sort col list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		// start new sort column
 		CParseHandlerBase *sort_col_parse_handler =

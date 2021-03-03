@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerScalarCaseTest_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+
 #include "naucrates/dxl/operators/CDXLScalarCaseTest.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl
@@ -37,20 +38,20 @@ private:
 	// return type
 	IMDId *m_mdid_type;
 
-	// private copy ctor
-	CParseHandlerScalarCaseTest(const CParseHandlerScalarCaseTest &);
-
 	// process the start of an element
 	void StartElement(const XMLCh *const element_uri,
 					  const XMLCh *const element_local_name,
-					  const XMLCh *const element_qname, const Attributes &attr);
+					  const XMLCh *const element_qname,
+					  const Attributes &attr) override;
 
 	// process the end of an element
 	void EndElement(const XMLCh *const element_uri,
 					const XMLCh *const element_local_name,
-					const XMLCh *const element_qname);
+					const XMLCh *const element_qname) override;
 
 public:
+	CParseHandlerScalarCaseTest(const CParseHandlerScalarCaseTest &) = delete;
+
 	// ctor
 	CParseHandlerScalarCaseTest(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,

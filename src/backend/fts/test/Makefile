@@ -27,6 +27,5 @@ ftsprobe.t: \
     $(MOCK_DIR)/backend/libpq/fe-connect_mock.o \
     $(MOCK_DIR)/backend/access/transam/xact_mock.o \
     $(MOCK_DIR)/backend/utils/time/snapmgr_mock.o \
-    $(MOCK_DIR)/backend/utils/error/elog_mock.o \
     $(MOCK_DIR)/backend/access/hash/hash_mock.o \
     $(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o

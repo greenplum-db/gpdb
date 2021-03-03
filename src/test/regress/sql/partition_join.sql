@@ -3,6 +3,9 @@
 -- Test partitionwise join between partitioned tables
 --
 
+-- Disable ORCA since it does support partition-wise joins
+set optimizer to off;
+
 -- Enable partitionwise join, which by default is disabled.
 SET enable_partitionwise_join to true;
 

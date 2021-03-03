@@ -75,7 +75,7 @@
  * great, but will do for now...
  *
  * Portions Copyright (c) 2011-2013, EMC Corporation
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

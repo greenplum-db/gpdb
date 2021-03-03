@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalExternalScan.cpp
@@ -9,13 +9,14 @@
 //		Implementation of external scan operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/base/CDistributionSpecExternal.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalExternalScan.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/base/CDistributionSpecExternal.h"
 #include "gpopt/metadata/CName.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CExpressionHandle.h"
 
 using namespace gpopt;
 

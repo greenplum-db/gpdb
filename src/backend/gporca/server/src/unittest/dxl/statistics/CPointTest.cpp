@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPointTest.cpp
@@ -13,6 +13,8 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CPointTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
@@ -21,7 +23,6 @@
 #include "naucrates/statistics/CPoint.h"
 
 #include "unittest/base.h"
-#include "unittest/dxl/statistics/CPointTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;
@@ -45,7 +46,7 @@ CPointTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgutSharedOptCtxt,

@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarHashExprList_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 
@@ -29,39 +30,38 @@ namespace gpdxl
 class CDXLScalarHashExprList : public CDXLScalar
 {
 private:
-	// private copy ctor
-	CDXLScalarHashExprList(CDXLScalarHashExprList &);
-
 public:
+	CDXLScalarHashExprList(CDXLScalarHashExprList &) = delete;
+
 	// ctor/dtor
 	explicit CDXLScalarHashExprList(CMemoryPool *mp);
 
-	virtual ~CDXLScalarHashExprList(){};
+	~CDXLScalarHashExprList() override = default;
 
 	// ident accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// name of the operator
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLScalarHashExprList *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarHashExprList == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarHashExprList *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"Invalid function call on a container operator");
 		return false;
@@ -69,7 +69,8 @@ public:
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure
-	void AssertValid(const CDXLNode *node, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *node,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

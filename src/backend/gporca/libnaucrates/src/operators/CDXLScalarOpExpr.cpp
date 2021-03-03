@@ -9,13 +9,12 @@
 //		Implementation of DXL Scalar OpExpr
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/IMDScalarOp.h"
-
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/IMDScalarOp.h"
 
 using namespace gpos;
 using namespace gpopt;
@@ -168,7 +167,7 @@ CDXLScalarOpExpr::SerializeToDXL(CXMLSerializer *xml_serializer,
 	m_mdid->Serialize(xml_serializer,
 					  CDXLTokens::GetDXLTokenStr(EdxltokenOpNo));
 
-	if (NULL != m_return_type_mdid)
+	if (nullptr != m_return_type_mdid)
 	{
 		m_return_type_mdid->Serialize(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenOpType));

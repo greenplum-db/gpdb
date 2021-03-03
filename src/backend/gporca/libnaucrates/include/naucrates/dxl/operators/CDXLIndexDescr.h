@@ -13,6 +13,7 @@
 #define GPDXL_CDXLIndexDescriptor_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/CMDName.h"
 #include "naucrates/md/IMDId.h"
 
@@ -31,24 +32,20 @@ using namespace gpmd;
 class CDXLIndexDescr : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// id and version information for the table
 	IMDId *m_mdid;
 
 	// index name
 	CMDName *m_mdname;
 
-	// private copy ctor
-	CDXLIndexDescr(const CDXLIndexDescr &);
-
 public:
+	CDXLIndexDescr(const CDXLIndexDescr &) = delete;
+
 	// ctor
-	CDXLIndexDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname);
+	CDXLIndexDescr(IMDId *mdid, CMDName *mdname);
 
 	// dtor
-	virtual ~CDXLIndexDescr();
+	~CDXLIndexDescr() override;
 
 	// accessors
 	const CMDName *MdName() const;

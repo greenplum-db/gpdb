@@ -12,8 +12,9 @@
 #define GPOPT_CLogicalLeftAntiSemiApplyNotIn_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CLogicalLeftAntiSemiApply.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiApply.h"
 
 namespace gpopt
 {
@@ -28,10 +29,10 @@ namespace gpopt
 class CLogicalLeftAntiSemiApplyNotIn : public CLogicalLeftAntiSemiApply
 {
 private:
-	// private copy ctor
-	CLogicalLeftAntiSemiApplyNotIn(const CLogicalLeftAntiSemiApplyNotIn &);
-
 public:
+	CLogicalLeftAntiSemiApplyNotIn(const CLogicalLeftAntiSemiApplyNotIn &) =
+		delete;
+
 	// ctor
 	explicit CLogicalLeftAntiSemiApplyNotIn(CMemoryPool *mp)
 		: CLogicalLeftAntiSemiApply(mp)
@@ -46,20 +47,18 @@ public:
 	}
 
 	// dtor
-	virtual ~CLogicalLeftAntiSemiApplyNotIn()
-	{
-	}
+	~CLogicalLeftAntiSemiApplyNotIn() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalLeftAntiSemiApplyNotIn;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalLeftAntiSemiApplyNotIn";
 	}
@@ -69,21 +68,22 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	// conversion function
 	static CLogicalLeftAntiSemiApplyNotIn *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalLeftAntiSemiApplyNotIn == pop->Eopid());
 
 		return dynamic_cast<CLogicalLeftAntiSemiApplyNotIn *>(pop);

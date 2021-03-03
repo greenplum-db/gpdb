@@ -12,14 +12,14 @@
 #define GPOS_CColRef_H
 
 #include "gpos/base.h"
-#include "gpos/common/CList.h"
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/common/CList.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 #include "gpopt/metadata/CName.h"
-#include "naucrates/traceflags/traceflags.h"
-
 #include "naucrates/md/IMDType.h"
+#include "naucrates/traceflags/traceflags.h"
 
 namespace gpopt
 {
@@ -52,7 +52,7 @@ typedef CHashMapIter<ULONG, CColRef, gpos::HashValue<ULONG>,
 //		factory object
 //
 //---------------------------------------------------------------------------
-class CColRef
+class CColRef : public gpos::DbgPrintMixin<CColRef>
 {
 public:
 	enum EUsedStatus
@@ -73,9 +73,6 @@ private:
 	// name: SQL alias or artificial name
 	const CName *m_pname;
 
-	// private copy ctor
-	CColRef(const CColRef &);
-
 	// track the usage of colref (used/unused/unknown)
 	EUsedStatus m_used;
 
@@ -83,6 +80,8 @@ private:
 	IMDId *m_mdid_table;
 
 public:
+	CColRef(const CColRef &) = delete;
+
 	enum Ecolreftype
 	{
 		EcrtTable,
@@ -204,10 +203,12 @@ public:
 	}
 
 	EUsedStatus
-	GetUsage(BOOL check_system_col = false) const
+	GetUsage(BOOL check_system_col = false,
+			 BOOL check_distribution_col = false) const
 	{
 		if (GPOS_FTRACE(EopttraceTranslateUnusedColrefs) ||
-			(!check_system_col && IsSystemCol()))
+			(!check_system_col && IsSystemCol()) ||
+			(!check_distribution_col && IsDistCol()))
 		{
 			return EUsed;
 		}
@@ -227,10 +228,6 @@ public:
 		m_mdid_table = mdid_table;
 	}
 
-#ifdef GPOS_DEBUG
-	void DbgPrint() const;
-#endif	// GPOS_DEBUG
-
 };	// class CColRef
 
 // shorthand for printing
@@ -239,6 +236,14 @@ operator<<(IOstream &os, CColRef &cr)
 {
 	return cr.OsPrint(os);
 }
+
+// hash map: CColRef -> ULONG
+typedef CHashMap<CColRef, ULONG, CColRef::HashValue, gpos::Equals<CColRef>,
+				 CleanupNULL<CColRef>, CleanupDelete<ULONG> >
+	ColRefToUlongMap;
+
+typedef CDynamicPtrArray<ColRefToUlongMap, CleanupRelease>
+	ColRefToUlongMapArray;
 
 }  // namespace gpopt
 

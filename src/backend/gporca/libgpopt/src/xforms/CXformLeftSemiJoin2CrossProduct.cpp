@@ -9,16 +9,16 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftSemiJoin2CrossProduct.h"
+
 #include "gpos/base.h"
 
-
 #include "gpopt/operators/CLogicalInnerJoin.h"
-#include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/operators/CLogicalLimit.h"
+#include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
-#include "gpopt/operators/CNormalizer.h"
-#include "gpopt/xforms/CXformLeftSemiJoin2CrossProduct.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 
@@ -84,7 +84,7 @@ CXformLeftSemiJoin2CrossProduct::Transform(CXformContext *pxfctxt,
 										   CXformResult *pxfres,
 										   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

@@ -9,13 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformGet2TableScan.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CPhysicalTableScan.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;
 
@@ -70,7 +71,7 @@ void
 CXformGet2TableScan::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -84,7 +85,7 @@ CXformGet2TableScan::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	ptabdesc->AddRef();
 
 	CColRefArray *pdrgpcrOutput = popGet->PdrgpcrOutput();
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 
 	pdrgpcrOutput->AddRef();
 

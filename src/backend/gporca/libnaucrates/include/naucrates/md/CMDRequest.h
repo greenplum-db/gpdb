@@ -15,12 +15,12 @@
 #define GPMD_CMDRequest_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 #include "naucrates/md/CSystemId.h"
-#include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDType.h"
 
 namespace gpmd
 {
@@ -81,10 +81,9 @@ private:
 	// serialize system id
 	CWStringDynamic *GetStrRepr(CSystemId sysid);
 
-	// private copy ctor
-	CMDRequest(const CMDRequest &);
-
 public:
+	CMDRequest(const CMDRequest &) = delete;
+
 	// ctor
 	CMDRequest(CMemoryPool *mp, IMdIdArray *mdid_array,
 			   SMDTypeRequestArray *mdtype_request_array);
@@ -93,7 +92,7 @@ public:
 	CMDRequest(CMemoryPool *mp, SMDTypeRequest *md_type_request);
 
 	// dtor
-	virtual ~CMDRequest();
+	~CMDRequest() override;
 
 	// accessors
 

@@ -27,7 +27,7 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLPhysicalTableScan::CDXLPhysicalTableScan(CMemoryPool *mp)
-	: CDXLPhysical(mp), m_dxl_table_descr(NULL)
+	: CDXLPhysical(mp), m_dxl_table_descr(nullptr)
 {
 }
 
@@ -73,7 +73,7 @@ void
 CDXLPhysicalTableScan::SetTableDescriptor(CDXLTableDescr *table_descr)
 {
 	// allow setting table descriptor only once
-	GPOS_ASSERT(NULL == m_dxl_table_descr);
+	GPOS_ASSERT(nullptr == m_dxl_table_descr);
 
 	m_dxl_table_descr = table_descr;
 }
@@ -172,8 +172,8 @@ CDXLPhysicalTableScan::AssertValid(const CDXLNode *dxlnode,
 	GPOS_ASSERT(2 == dxlnode->Arity());
 
 	// assert validity of table descriptor
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

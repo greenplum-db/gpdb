@@ -3,7 +3,7 @@
 // funcs.h
 //    API for invoking optimizer using GPDB udfs
 //
-// Copyright (c) 2019-Present Pivotal Software, Inc.
+// Copyright (c) 2019-Present VMware, Inc. or its affiliates.
 //
 //---------------------------------------------------------------------------
 
@@ -14,6 +14,7 @@
 extern "C" {
 
 #include "postgres.h"
+
 #include "fmgr.h"
 #include "utils/builtins.h"
 

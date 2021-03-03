@@ -8,18 +8,18 @@
 //	@doc:
 //		Tests for CKeyCollectionTest
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/base/CKeyCollectionTest.h"
+
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/metadata/CName.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
+#include "gpopt/metadata/CName.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDTypeInt4.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/base/CKeyCollectionTest.h"
-
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDProviderMemory.h"
 
 
 using namespace gpopt;
@@ -66,7 +66,7 @@ CKeyCollectionTest::EresUnittest_Basics()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object
@@ -125,7 +125,7 @@ CKeyCollectionTest::EresUnittest_Subsumes()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object

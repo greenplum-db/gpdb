@@ -2,11 +2,12 @@ from gppylib.utils import escapeDoubleQuoteInSQLString
 
 class LeakedSchemaDropper:
 
-    # This query does a union of all the leaked temp schemas on the master as well as all the segments.
+    # This query does a union of all the leaked temp schemas on the coordinator as well as all the segments.
     # The first part of the query uses gp_dist_random which gets the leaked schemas from only the segments
-    # The second part of the query gets the leaked temp schemas from just the master
+    # The second part of the query gets the leaked temp schemas from just the coordinator
     # The simpler form of this query that pushed the union into the
     # inner select does not run correctly on 3.2.x
+    # Also note autovacuum lancher and worker will not generate temp namespace
     leaked_schema_query = """
         SELECT distinct nspname as schema
         FROM (
@@ -18,7 +19,7 @@ class LeakedSchemaDropper:
           FROM   gp_dist_random('pg_namespace')
           WHERE  nspname ~ '^pg_toast_temp_[0-9]+'
         ) n LEFT OUTER JOIN pg_stat_activity x using (sess_id)
-        WHERE x.sess_id is null
+        WHERE x.sess_id is null OR x.backend_type like 'autovacuum%'
         UNION
         SELECT nspname as schema
         FROM (
@@ -30,7 +31,7 @@ class LeakedSchemaDropper:
           FROM   pg_namespace
           WHERE  nspname ~ '^pg_toast_temp_[0-9]+'
         ) n LEFT OUTER JOIN pg_stat_activity x using (sess_id)
-        WHERE x.sess_id is null
+        WHERE x.sess_id is null OR x.backend_type like 'autovacuum%'
     """
 
     def __get_leaked_schemas(self, db_connection):

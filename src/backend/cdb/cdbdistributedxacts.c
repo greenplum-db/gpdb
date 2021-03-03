@@ -43,16 +43,14 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 
 		/* build tupdesc for result tuples */
 		/* this had better match gp_distributed_xacts view in system_views.sql */
-		tupdesc = CreateTemplateTupleDesc(5);
+		tupdesc = CreateTemplateTupleDesc(4);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "distributed_xid",
 						   XIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "distributed_id",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "state",
 						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "state",
-						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "gp_session_id",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "gp_session_id",
 						   INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "xmin_distributed_snapshot",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "xmin_distributed_snapshot",
 						   XIDOID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
@@ -90,11 +88,10 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 		MemSet(nulls, false, sizeof(nulls));
 
 		values[0] = TransactionIdGetDatum(distributedXactStatus->gxid);
-		values[1] = CStringGetTextDatum(distributedXactStatus->gid);
-		values[2] = CStringGetTextDatum(DtxStateToString(distributedXactStatus->state));
+		values[1] = CStringGetTextDatum(DtxStateToString(distributedXactStatus->state));
 
-		values[3] = UInt32GetDatum(distributedXactStatus->sessionId);
-		values[4] = TransactionIdGetDatum(distributedXactStatus->xminDistributedSnapshot);
+		values[2] = UInt32GetDatum(distributedXactStatus->sessionId);
+		values[3] = TransactionIdGetDatum(distributedXactStatus->xminDistributedSnapshot);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);

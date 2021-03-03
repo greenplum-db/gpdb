@@ -4,7 +4,7 @@
  *	  Parallelize a PostgreSQL sequential plan tree.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  * This file contains functions to process plan tree, at various stages in
  * planning, to produce a parallelize MPP plan. Outline of the stages,
@@ -1549,9 +1549,7 @@ motion_sanity_check(PlannerInfo *root, Plan *plan)
 	elog(DEBUG5, "Motion Deadlock Sanity Check");
 
 	if (motion_sanity_walker((Node *) plan, &sanity_result))
-	{
-		Insist(0);
-	}
+		elog(ERROR, "motion sanity walker returned true");
 
 	if (sanity_result.flags & SANITY_DEADLOCK)
 		elog(ERROR, "Post-planning sanity check detected motion deadlock.");

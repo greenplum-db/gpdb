@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	Class for representing DXL Part List Values expressions
 //	These expressions indicate the constant values for the list partition
@@ -10,6 +10,7 @@
 #define GPDXL_CDXLScalarPartListValues_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl
@@ -26,22 +27,21 @@ private:
 	// element type
 	IMDId *m_elem_type_mdid;
 
-	// private copy ctor
-	CDXLScalarPartListValues(const CDXLScalarPartListValues &);
-
 public:
+	CDXLScalarPartListValues(const CDXLScalarPartListValues &) = delete;
+
 	// ctor
 	CDXLScalarPartListValues(CMemoryPool *mp, ULONG partitioning_level,
 							 IMDId *result_type_mdid, IMDId *elem_type_mdid);
 
 	// dtor
-	virtual ~CDXLScalarPartListValues();
+	~CDXLScalarPartListValues() override;
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// partitioning level
 	ULONG GetPartitioningLevel() const;
@@ -53,17 +53,17 @@ public:
 	IMDId *GetElemTypeMdId() const;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	virtual void AssertValid(const CDXLNode *dxlnode,
-							 BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// conversion function

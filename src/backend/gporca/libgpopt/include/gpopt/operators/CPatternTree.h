@@ -12,6 +12,7 @@
 #define GPOPT_CPatternTree_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPattern.h"
 
 namespace gpopt
@@ -29,37 +30,34 @@ using namespace gpos;
 class CPatternTree : public CPattern
 {
 private:
-	// private copy ctor
-	CPatternTree(const CPatternTree &);
-
 public:
+	CPatternTree(const CPatternTree &) = delete;
+
 	// ctor
 	explicit CPatternTree(CMemoryPool *mp) : CPattern(mp)
 	{
 	}
 
 	// dtor
-	virtual ~CPatternTree()
-	{
-	}
+	~CPatternTree() override = default;
 
 	// check if operator is a pattern leaf
-	virtual BOOL
-	FLeaf() const
+	BOOL
+	FLeaf() const override
 	{
 		return false;
 	}
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPatternTree;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPatternTree";
 	}

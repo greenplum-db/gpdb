@@ -13,6 +13,7 @@
 #define GPNAUCRATES_IBucket_H
 
 #include "gpos/base.h"
+
 #include "naucrates/statistics/CPoint.h"
 
 namespace gpnaucrates
@@ -32,17 +33,13 @@ using namespace gpmd;
 class IBucket
 {
 private:
-	// private copy constructor
-	IBucket(const IBucket &);
-
-	// private assignment operator
-	IBucket &operator=(const IBucket &);
-
 public:
+	IBucket &operator=(const IBucket &) = delete;
+
+	IBucket(const IBucket &) = delete;
+
 	// c'tor
-	IBucket()
-	{
-	}
+	IBucket() = default;
 
 	// lower point
 	virtual CPoint *GetLowerBound() const = 0;
@@ -58,9 +55,7 @@ public:
 	}
 
 	// d'tor
-	virtual ~IBucket()
-	{
-	}
+	virtual ~IBucket() = default;
 };
 }  // namespace gpnaucrates
 

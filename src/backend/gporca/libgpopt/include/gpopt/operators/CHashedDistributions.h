@@ -1,13 +1,14 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CHashedDistributions_H
 #define GPOPT_CHashedDistributions_H
 
+#include "gpos/memory/CMemoryPool.h"
+
+#include "gpopt/base/CColRef.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpos/memory/CMemoryPool.h"
-#include "gpopt/base/CColRef.h"
 
 namespace gpopt
 {

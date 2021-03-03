@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CBucketTest.h
@@ -99,6 +99,13 @@ public:
 
 	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityUnionAll();
 
+	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityDoubleDatum();
+
+	static GPOS_RESULT
+	EresUnittest_CBucketMergeCommutativityDoubleDatumSameLowerBounds();
+
+	static GPOS_RESULT
+	EresUnittest_CBucketMergeCommutativityDoubleDatumSameUpperBounds();
 };	// class CBucketTest
 }  // namespace gpnaucrates
 

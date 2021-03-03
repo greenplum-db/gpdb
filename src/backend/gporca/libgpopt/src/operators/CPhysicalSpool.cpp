@@ -9,10 +9,11 @@
 //		Implementation of spool operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSpool.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalSpool.h"
 
 
 using namespace gpopt;
@@ -40,9 +41,7 @@ CPhysicalSpool::CPhysicalSpool(CMemoryPool *mp, BOOL eager)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CPhysicalSpool::~CPhysicalSpool()
-{
-}
+CPhysicalSpool::~CPhysicalSpool() = default;
 
 
 //---------------------------------------------------------------------------
@@ -106,29 +105,6 @@ CPhysicalSpool::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == child_index);
 
 	return PdsPassThru(mp, exprhdl, pdsRequired, child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalSpool::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalSpool::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-							 CPartitionPropagationSpec *pppsRequired,
-							 ULONG child_index,
-							 CDrvdPropArray *,	//pdrgpdpCtxt,
-							 ULONG				//ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
-										   child_index);
 }
 
 //---------------------------------------------------------------------------
@@ -319,7 +295,7 @@ CPhysicalSpool::EpetOrder(CExpressionHandle &,	// exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// spool is order-preserving, sort enforcers have already been added
@@ -343,7 +319,7 @@ CPhysicalSpool::EpetDistribution(CExpressionHandle & /*exprhdl*/,
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// spool is distribution-preserving,
 	// distribution enforcers have already been added
@@ -373,12 +349,16 @@ BOOL
 CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 							  COptimizationContextArray *pdrgpocChild) const
 {
-	GPOS_ASSERT(NULL != pdrgpocChild);
+	GPOS_ASSERT(nullptr != pdrgpocChild);
 	GPOS_ASSERT(1 == pdrgpocChild->Size());
 
 	COptimizationContext *pocChild = (*pdrgpocChild)[0];
 	CCostContext *pccBest = pocChild->PccBest();
-	GPOS_ASSERT(NULL != pccBest);
+	GPOS_ASSERT(nullptr != pccBest);
+	CDrvdPropPlan *pdpplanChild = pccBest->Pdpplan();
+
+	// GPDB_12_MERGE_FIXME: Check part propagation spec
+#if 0
 
 	// partition selections that happen outside of a physical spool does not do
 	// any good on rescan: a physical spool blocks the rescan from the entire
@@ -407,12 +387,11 @@ CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	//       +--CScalarCmp (<)
 	//          |--CScalarIdent "a" (0)
 	//          +--CScalarIdent "partkey" (10)
-
-	CDrvdPropPlan *pdpplanChild = pccBest->Pdpplan();
 	if (pdpplanChild->Ppim()->FContainsUnresolved())
 	{
 		return false;
 	}
+#endif
 
 	// Discard any context that is requesting for rewindability with motion hazard handling and
 	// the physical spool is streaming with a motion underneath it.

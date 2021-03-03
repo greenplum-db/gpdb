@@ -12,8 +12,8 @@
 #define GPOPT_CSearchStage_H
 
 #include "gpos/base.h"
-#include "gpos/common/CTimerUser.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CTimerUser.h"
 
 #include "gpopt/xforms/CXform.h"
 
@@ -97,7 +97,7 @@ public:
 	BOOL
 	FAchievedReqdCost() const
 	{
-		return (NULL != m_pexprBest && m_costBest <= m_cost_threshold);
+		return (nullptr != m_pexprBest && m_costBest <= m_cost_threshold);
 	}
 
 	// xforms set accessor
@@ -139,7 +139,7 @@ public:
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	// generate default search strategy
 	static CSearchStageArray *PdrgpssDefault(CMemoryPool *mp);

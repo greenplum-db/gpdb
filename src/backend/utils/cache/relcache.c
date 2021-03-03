@@ -4,7 +4,7 @@
  *	  POSTGRES relation descriptor cache code
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -100,7 +100,6 @@
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"        /* Gp_role */
 #include "cdb/cdbsreh.h"
-#include "utils/visibility_summary.h"
 
 
 #define RELCACHE_INIT_FILEMAGIC		0x773266	/* version ID value */
@@ -1261,8 +1260,15 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 		relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE ||
 		relation->rd_rel->relkind == RELKIND_MATVIEW)
 	{
+		/*
+		 * There are many memory allocations in GpPolicyFetch(), especially 
+		 * when targetRelId is a foreign table. These allocations are not bound to RelationData, 
+		 * so they cannot be freed during RelationDestroyRelation(),
+		 * that is, these allocations will never be freed.
+		 */
+		GpPolicy *policy = GpPolicyFetch(targetRelId);
 		MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
-		relation->rd_cdbpolicy = GpPolicyFetch(targetRelId);
+		relation->rd_cdbpolicy = GpPolicyCopy(policy);
 		MemoryContextSwitchTo(oldcontext);
 	}
 
@@ -1812,6 +1818,12 @@ RelationInitTableAccessMethod(Relation relation)
 		aform = (Form_pg_am) GETSTRUCT(tuple);
 		relation->rd_amhandler = aform->amhandler;
 		ReleaseSysCache(tuple);
+		/*
+		 * Greenplum: append-optimized relations should not have a valid
+		 * relfrozenxid.
+		 */
+		Assert (!RelationIsAppendOptimized(relation) ||
+				!TransactionIdIsValid(relation->rd_rel->relfrozenxid));
 	}
 
 	/*

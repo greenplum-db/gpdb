@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerOptimizerConfig_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 // fwd decl
@@ -44,34 +45,33 @@ private:
 	// optimizer configuration
 	COptimizerConfig *m_optimizer_config;
 
-	// private copy ctor
-	CParseHandlerOptimizerConfig(const CParseHandlerOptimizerConfig &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerOptimizerConfig(const CParseHandlerOptimizerConfig &) = delete;
+
 	// ctor/dtor
 	CParseHandlerOptimizerConfig(CMemoryPool *mp,
 								 CParseHandlerManager *parse_handler_mgr,
 								 CParseHandlerBase *parse_handler_root);
 
-	virtual ~CParseHandlerOptimizerConfig();
+	~CParseHandlerOptimizerConfig() override;
 
 	// type of the parse handler
-	EDxlParseHandlerType GetParseHandlerType() const;
+	EDxlParseHandlerType GetParseHandlerType() const override;
 
 	// trace flags
 	CBitSet *Pbs() const;

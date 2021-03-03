@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		COptimizerConfig.h
@@ -16,11 +16,11 @@
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CRefCount.h"
 
-#include "gpopt/engine/CStatisticsConfig.h"
-#include "gpopt/engine/CEnumeratorConfig.h"
-#include "gpopt/engine/CCTEConfig.h"
-#include "gpopt/engine/CHint.h"
 #include "gpopt/base/CWindowOids.h"
+#include "gpopt/engine/CCTEConfig.h"
+#include "gpopt/engine/CEnumeratorConfig.h"
+#include "gpopt/engine/CHint.h"
+#include "gpopt/engine/CStatisticsConfig.h"
 
 namespace gpopt
 {
@@ -72,7 +72,7 @@ public:
 					 CWindowOids *pdefoidsGPDB);
 
 	// dtor
-	virtual ~COptimizerConfig();
+	~COptimizerConfig() override;
 
 
 	// plan enumeration configuration

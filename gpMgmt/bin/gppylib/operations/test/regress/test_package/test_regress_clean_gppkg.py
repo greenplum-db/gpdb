@@ -33,10 +33,10 @@ class CleanGppkgTestCase(GppkgTestCase):
                 self.check_remote_rpm_uninstall(self.A_spec.get_package_name(), host)
                 self.assertFalse(CheckRemoteFile(os.path.join(ARCHIVE_PATH, self.alpha_spec.get_filename()), host).run())
 
-    def test03_no_package_on_master(self):
+    def test03_no_package_on_coordinator(self):
         """
         This test covers the case when there is no
-        package installed on the master, but some
+        package installed on the coordinator, but some
         package is installed on the rest of the cluster
         """
         self.install(self.alpha_spec.get_filename())
@@ -59,7 +59,7 @@ class CleanGppkgTestCase(GppkgTestCase):
         """
         This test covers the case when there is no
         package installed on one of the segment, but
-        it is installed on the master and everywhere else 
+        it is installed on the coordinator and everywhere else 
         """
         self.install(self.alpha_spec.get_filename())
        
@@ -77,10 +77,10 @@ class CleanGppkgTestCase(GppkgTestCase):
         self.assertTrue(CheckRemoteFile(os.path.join(ARCHIVE_PATH, self.alpha_spec.get_filename()), host).run())
 
     @unittest.expectedFailure
-    def test05_no_rpm_on_master(self):
+    def test05_no_rpm_on_coordinator(self):
         """
         This test covers the case when the rpm has been 
-        uninstalled on the master and the gppkg is in the archive, 
+        uninstalled on the coordinator and the gppkg is in the archive, 
         and the rpms/gppkgs are intstalled on the segments.   
         JIRA - MPP-15968
         """

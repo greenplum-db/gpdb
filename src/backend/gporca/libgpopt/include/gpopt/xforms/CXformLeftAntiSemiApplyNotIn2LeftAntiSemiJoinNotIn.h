@@ -34,11 +34,10 @@ class CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn
 							  CLogicalLeftAntiSemiJoinNotIn>
 {
 private:
-	// private copy ctor
-	CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn(
-		const CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn &);
-
 public:
+	CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn(
+		const CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn &) = delete;
+
 	// ctor
 	explicit CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn(CMemoryPool *mp)
 		: CXformApply2Join<CLogicalLeftAntiSemiApplyNotIn,
@@ -48,30 +47,28 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn()
-	{
-	}
+	~CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn;
 	}
 
 	// xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotIn
 

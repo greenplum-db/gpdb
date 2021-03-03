@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerTableScan_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalTableScan.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
 
@@ -39,23 +39,20 @@ private:
 	// the table scan operator
 	CDXLPhysicalTableScan *m_dxl_op;
 
-	// private copy ctor
-	CParseHandlerTableScan(const CParseHandlerTableScan &);
-
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 protected:
 	// start element helper function
@@ -67,6 +64,8 @@ protected:
 					Edxltoken token_type);
 
 public:
+	CParseHandlerTableScan(const CParseHandlerTableScan &) = delete;
+
 	// ctor
 	CParseHandlerTableScan(CMemoryPool *mp,
 						   CParseHandlerManager *parse_handler_mgr,

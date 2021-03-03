@@ -10,15 +10,15 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerTableScan.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
 
 using namespace gpdxl;
 
@@ -37,7 +37,7 @@ CParseHandlerTableScan::CParseHandlerTableScan(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -176,7 +176,7 @@ CParseHandlerTableScan::EndElement(const XMLCh *const element_local_name,
 	CParseHandlerTableDescr *table_descr_parse_handler =
 		dynamic_cast<CParseHandlerTableDescr *>((*this)[3]);
 
-	GPOS_ASSERT(NULL != table_descr_parse_handler->GetDXLTableDescr());
+	GPOS_ASSERT(nullptr != table_descr_parse_handler->GetDXLTableDescr());
 
 	// set table descriptor
 	CDXLTableDescr *table_descr = table_descr_parse_handler->GetDXLTableDescr();

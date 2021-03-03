@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_master(testname text, numfiles int)
 RETURNS setof bool
-LANGUAGE C VOLATILE EXECUTE ON MASTER AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
 
 CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_segments(testname text, numfiles int)
 RETURNS setof bool

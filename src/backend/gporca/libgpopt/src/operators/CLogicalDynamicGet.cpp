@@ -9,20 +9,20 @@
 //		Implementation of dynamic table access
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDynamicGet.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CConstraintInterval.h"
+
 #include "gpopt/base/CColRefSet.h"
-#include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
+#include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
-
+#include "gpopt/metadata/CPartConstraint.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;
@@ -50,15 +50,14 @@ CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp)
 //		ctor
 //
 //---------------------------------------------------------------------------
-CLogicalDynamicGet::CLogicalDynamicGet(
-	CMemoryPool *mp, const CName *pnameAlias, CTableDescriptor *ptabdesc,
-	ULONG ulPartIndex, CColRefArray *pdrgpcrOutput,
-	CColRef2dArray *pdrgpdrgpcrPart, ULONG ulSecondaryPartIndexId,
-	BOOL is_partial, CPartConstraint *ppartcnstr,
-	CPartConstraint *ppartcnstrRel)
-	: CLogicalDynamicGetBase(
-		  mp, pnameAlias, ptabdesc, ulPartIndex, pdrgpcrOutput, pdrgpdrgpcrPart,
-		  ulSecondaryPartIndexId, is_partial, ppartcnstr, ppartcnstrRel)
+CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
+									   CTableDescriptor *ptabdesc,
+									   ULONG ulPartIndex,
+									   CColRefArray *pdrgpcrOutput,
+									   CColRef2dArray *pdrgpdrgpcrPart,
+									   IMdIdArray *partition_mdids)
+	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
+							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids)
 {
 }
 
@@ -73,8 +72,10 @@ CLogicalDynamicGet::CLogicalDynamicGet(
 //---------------------------------------------------------------------------
 CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 									   CTableDescriptor *ptabdesc,
-									   ULONG ulPartIndex)
-	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex)
+									   ULONG ulPartIndex,
+									   IMdIdArray *partition_mdids)
+	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
+							 partition_mdids)
 {
 }
 
@@ -86,10 +87,7 @@ CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 //		dtor
 //
 //---------------------------------------------------------------------------
-CLogicalDynamicGet::~CLogicalDynamicGet()
-{
-}
-
+CLogicalDynamicGet::~CLogicalDynamicGet() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -138,7 +136,7 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,
 											   BOOL must_exist)
 {
-	CColRefArray *pdrgpcrOutput = NULL;
+	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
 	{
 		pdrgpcrOutput =
@@ -153,17 +151,11 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 		PdrgpdrgpcrCreatePartCols(mp, pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 	m_ptabdesc->AddRef();
+	m_partition_mdids->AddRef();
 
-	CPartConstraint *ppartcnstr =
-		m_part_constraint->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
-															 must_exist);
-	CPartConstraint *ppartcnstrRel =
-		m_ppartcnstrRel->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
-														   must_exist);
-
-	return GPOS_NEW(mp) CLogicalDynamicGet(
-		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
-		m_ulSecondaryScanId, m_is_partial, ppartcnstr, ppartcnstrRel);
+	return GPOS_NEW(mp)
+		CLogicalDynamicGet(mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput,
+						   pdrgpdrgpcrPart, m_partition_mdids);
 }
 
 //---------------------------------------------------------------------------
@@ -179,6 +171,18 @@ CLogicalDynamicGet::FInputOrderSensitive() const
 {
 	GPOS_ASSERT(!"Unexpected function call of FInputOrderSensitive");
 	return false;
+}
+
+CMaxCard
+CLogicalDynamicGet::DeriveMaxCard(CMemoryPool *mp,
+								  CExpressionHandle &exprhdl) const
+{
+	if (nullptr == GetPartitionMdids() || GetPartitionMdids()->Size() == 0)
+	{
+		return CMaxCard(0);
+	}
+
+	return CLogical::DeriveMaxCard(mp, exprhdl);
 }
 
 //---------------------------------------------------------------------------
@@ -224,16 +228,9 @@ CLogicalDynamicGet::OsPrint(IOstream &os) const
 		os << " (";
 		m_ptabdesc->Name().OsPrint(os);
 		os << "), ";
-		m_part_constraint->OsPrint(os);
-		os << "), Columns: [";
+		os << "Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
-		os << "] Scan Id: " << m_scan_id << "." << m_ulSecondaryScanId;
-
-		if (!m_part_constraint->IsConstraintUnbounded())
-		{
-			os << ", ";
-			m_part_constraint->OsPrint(os);
-		}
+		os << "] Scan Id: " << m_scan_id;
 	}
 
 	return os;

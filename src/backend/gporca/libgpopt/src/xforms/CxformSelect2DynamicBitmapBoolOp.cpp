@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformSelect2DynamicBitmapBoolOp.cpp
@@ -16,9 +16,10 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSelect2DynamicBitmapBoolOp.h"
+
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/xforms/CXformSelect2DynamicBitmapBoolOp.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpmd;
@@ -72,14 +73,14 @@ CXformSelect2DynamicBitmapBoolOp::Transform(CXformContext *pxfctxt,
 											CXformResult *pxfres,
 											CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 	CExpression *pexprResult = CXformUtils::PexprSelect2BitmapBoolOp(mp, pexpr);
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		// create a redundant SELECT on top of DynamicIndexGet to be able to use predicate in partition elimination
 		CExpression *pexprRedundantSelect =

@@ -12,6 +12,7 @@
 #define GPOPT_CXformGbAgg2Apply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformSubqueryUnnest.h"
 
 namespace gpopt
@@ -31,34 +32,31 @@ using namespace gpos;
 class CXformGbAgg2Apply : public CXformSubqueryUnnest
 {
 private:
-	// private copy ctor
-	CXformGbAgg2Apply(const CXformGbAgg2Apply &);
-
 public:
+	CXformGbAgg2Apply(const CXformGbAgg2Apply &) = delete;
+
 	// ctor
 	explicit CXformGbAgg2Apply(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformGbAgg2Apply()
-	{
-	}
+	~CXformGbAgg2Apply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfGbAgg2Apply;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformGbAgg2Apply";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 };	// class CXformGbAgg2Apply
 

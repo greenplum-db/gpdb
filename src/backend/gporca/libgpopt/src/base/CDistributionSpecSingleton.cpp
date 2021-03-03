@@ -9,10 +9,11 @@
 //		Specification of singleton distribution
 //---------------------------------------------------------------------------
 
-#include "naucrates/traceflags/traceflags.h"
-#include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+
+#include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
+#include "naucrates/traceflags/traceflags.h"
 
 
 using namespace gpopt;
@@ -103,10 +104,10 @@ CDistributionSpecSingleton::AppendEnforcers(CMemoryPool *mp,
 											CExpressionArray *pdrgpexpr,
 											CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != pdrgpexpr);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != pdrgpexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(!GPOS_FTRACE(EopttraceDisableMotions));
 	GPOS_ASSERT(
 		this == prpp->Ped()->PdsRequired() &&

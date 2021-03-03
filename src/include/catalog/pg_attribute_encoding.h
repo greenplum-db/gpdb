@@ -7,7 +7,7 @@
  * get rid of this table, and start using pg_attribute.attoptions instead.
  *
  * Portions Copyright (c) EMC, 2011
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

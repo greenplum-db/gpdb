@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CExpressionUtils.cpp
@@ -15,18 +15,17 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionUtils.h"
+
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
-
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CScalarSubqueryExists.h"
 #include "gpopt/operators/CScalarSubqueryNotExists.h"
-
-#include "gpopt/mdcache/CMDAccessor.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/CStatistics.h"
@@ -53,10 +52,10 @@ CExpressionUtils::UnnestChild(
 	CExpressionArray *pdrgpexpr	 // array to append results to
 )
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(child_index < pexpr->Arity());
-	GPOS_ASSERT(NULL != pdrgpexpr);
+	GPOS_ASSERT(nullptr != pdrgpexpr);
 
 	CExpression *pexprChild = (*pexpr)[child_index];
 
@@ -93,13 +92,12 @@ void
 CExpressionUtils::AppendChildren(CMemoryPool *mp, CExpression *pexpr,
 								 CExpressionArray *pdrgpexpr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
-	GPOS_ASSERT(NULL != pdrgpexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
+	GPOS_ASSERT(nullptr != pdrgpexpr);
 
 	CExpressionArray *pdrgpexprChildren = PdrgpexprUnnestChildren(mp, pexpr);
-	CUtils::AddRefAppend<CExpression, CleanupRelease>(pdrgpexpr,
-													  pdrgpexprChildren);
+	CUtils::AddRefAppend(pdrgpexpr, pdrgpexprChildren);
 	pdrgpexprChildren->Release();
 }
 
@@ -117,8 +115,8 @@ CExpressionUtils::PdrgpexprUnnestChildren(CMemoryPool *mp, CExpression *pexpr)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	// compute flags for cases where we may have nested predicates
 	BOOL fAnd = CPredicateUtils::FAnd(pexpr);
@@ -148,8 +146,8 @@ CExpressionUtils::PexprUnnest(CMemoryPool *mp, CExpression *pexpr)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	if (CPredicateUtils::FNot(pexpr))
 	{
@@ -189,14 +187,14 @@ CExpressionUtils::PexprUnnest(CMemoryPool *mp, CExpression *pexpr)
 CExpression *
 CExpressionUtils::PexprPushNotOneLevel(CMemoryPool *mp, CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	BOOL fAnd = CPredicateUtils::FAnd(pexpr);
 	BOOL fOr = CPredicateUtils::FOr(pexpr);
 
 	if (fAnd || fOr)
 	{
-		COperator *popNew = NULL;
+		COperator *popNew = nullptr;
 
 		if (fOr)
 		{
@@ -254,8 +252,8 @@ CExpressionUtils::PexprDedupChildren(CMemoryPool *mp, CExpression *pexpr)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	// recursively process children
 	const ULONG arity = pexpr->Arity();

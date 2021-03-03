@@ -10,16 +10,15 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpos/common/syslibwrapper.h"
+
+#include <sys/stat.h>
+#include <sys/time.h>
 #include <syslog.h>
 
-#include <sys/time.h>
-#include <sys/stat.h>
-
 #include "gpos/assert.h"
-#include "gpos/utils.h"
-
-#include "gpos/common/syslibwrapper.h"
 #include "gpos/error/CException.h"
+#include "gpos/utils.h"
 
 
 using namespace gpos;
@@ -36,7 +35,7 @@ using namespace gpos;
 void
 gpos::syslib::GetTimeOfDay(TIMEVAL *tv, TIMEZONE *tz)
 {
-	GPOS_ASSERT(NULL != tv);
+	GPOS_ASSERT(nullptr != tv);
 
 	INT res GPOS_ASSERTS_ONLY = gettimeofday(tv, tz);
 
@@ -55,7 +54,7 @@ gpos::syslib::GetTimeOfDay(TIMEVAL *tv, TIMEZONE *tz)
 void
 gpos::syslib::GetRusage(RUSAGE *usage)
 {
-	GPOS_ASSERT(NULL != usage);
+	GPOS_ASSERT(nullptr != usage);
 
 	INT res GPOS_ASSERTS_ONLY = getrusage(RUSAGE_SELF, usage);
 

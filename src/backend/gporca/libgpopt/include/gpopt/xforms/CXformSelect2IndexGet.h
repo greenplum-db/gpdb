@@ -12,6 +12,7 @@
 #define GPOPT_CXformSelect2IndexGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/xforms/CXformExploration.h"
 
@@ -43,30 +44,28 @@ public:
 	explicit CXformSelect2IndexGet(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformSelect2IndexGet()
-	{
-	}
+	~CXformSelect2IndexGet() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSelect2IndexGet;
 	}
 
 	// xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSelect2IndexGet";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 
 };	// class CXformSelect2IndexGet

@@ -35,7 +35,7 @@ typedef struct PxfOptions
 	char	   *server;			/* the name of the external server */
 
 	/* Defined at options, but it is not visible to FDWs */
-	char		exec_location;	/* execute on MASTER, ANY or ALL SEGMENTS,
+	char		exec_location;	/* execute on COORDINATOR, ANY or ALL SEGMENTS,
 								 * Greenplum MPP specific */
 
 	/* Single Row Error Handling */

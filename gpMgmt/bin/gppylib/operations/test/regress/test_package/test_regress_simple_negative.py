@@ -16,15 +16,6 @@ class SimpleNegativeTestCase(GppkgTestCase):
 
         with self.assertRaisesRegex(ExecutionError , "%s OS required. %s OS found" % (os, OS)):
             self.install(gppkg_file)
-       
-    def test01_wrong_arch(self):
-        arch = "abcde"
-        A_spec = self.A_spec 
-        alpha_spec = GppkgSpec("alpha", "1.0", GPDB_VERSION, OS, arch)
-        gppkg_file = self.build(alpha_spec, A_spec) 
-
-        with self.assertRaisesRegex(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
-            self.install(gppkg_file)
 
     def test02_wrong_gpdbversion(self):
         gpdb_version = "4.6"
@@ -107,16 +98,6 @@ class SimpleNegativeTestCase(GppkgTestCase):
         
         with self.assertRaisesRegex(ExecutionError, "%s os required. %s os found" % (os, OS)):
             self.update(gppkg_file)
-
-    def test09_wrong_arch_update(self):
-        arch = "abcde"
-        self.install(self.alpha_spec.get_filename())
-
-        invalid_os_gppkg = GppkgSpec("alpha", "1.1", GPDB_VERSION, OS, arch)
-        gppkg_file = self.build(invalid_os_gppkg, self.A_spec)
-
-        with self.assertRaisesRegex(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
-            self.update(gppkg_file) 
 
 if __name__ == "__main__":
     unittest.main()

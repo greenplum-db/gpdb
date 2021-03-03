@@ -15,8 +15,8 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDPartConstraint.h"
 #include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDPartConstraint.h"
 
 // fwd decl
 namespace gpdxl
@@ -65,21 +65,21 @@ public:
 						  BOOL is_unbounded, CDXLNode *dxlnode);
 
 	// dtor
-	virtual ~CMDPartConstraintGPDB();
+	~CMDPartConstraintGPDB() override;
 
 	// serialize constraint in DXL format
-	virtual void Serialize(CXMLSerializer *xml_serializer) const;
+	void Serialize(CXMLSerializer *xml_serializer) const override;
 
 	// the scalar expression of the part constraint
-	virtual CExpression *GetPartConstraintExpr(
+	CExpression *GetPartConstraintExpr(
 		CMemoryPool *mp, CMDAccessor *md_accessor,
-		CColRefArray *colref_array) const;
+		CColRefArray *colref_array) const override;
 
 	// included default partitions
-	virtual ULongPtrArray *GetDefaultPartsArray() const;
+	ULongPtrArray *GetDefaultPartsArray() const override;
 
 	// is constraint unbounded
-	virtual BOOL IsConstraintUnbounded() const;
+	BOOL IsConstraintUnbounded() const override;
 };
 }  // namespace gpmd
 

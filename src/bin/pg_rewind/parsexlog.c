@@ -394,7 +394,7 @@ extractPageInfo(XLogReaderState *record)
 		if (rminfo == XLOG_APPENDONLY_INSERT)
 		{
 			xl_ao_insert *insert_record = (xl_ao_insert *) XLogRecGetData(record);
-			process_aofile_change(insert_record->target.node,
+			process_target_wal_aofile_change(insert_record->target.node,
 								  insert_record->target.segment_filenum,
 								  insert_record->target.offset);
 		}
@@ -433,6 +433,6 @@ extractPageInfo(XLogReaderState *record)
 		if (forknum != MAIN_FORKNUM)
 			continue;
 
-		process_block_change(forknum, rnode, blkno);
+		process_target_wal_block_change(forknum, rnode, blkno);
 	}
 }

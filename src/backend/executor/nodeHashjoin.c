@@ -4,7 +4,7 @@
  *	  Routines to handle hash join nodes
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -781,7 +781,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	if (node->hashqualclauses != NIL)
 	{
 		/* CDB: This must be an IS NOT DISTINCT join!  */
-		Insist(isNotDistinctJoin(node->hashqualclauses));
+		Assert(isNotDistinctJoin(node->hashqualclauses));
 		hjstate->hj_nonequijoin = true;
 	}
 	else

@@ -10,10 +10,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/md/IMDAggregate.h"
 
 using namespace gpopt;
@@ -107,7 +107,7 @@ CDXLScalarWindowRef::GetWindStageStr() const
 	}
 
 	GPOS_ASSERT(!"Unrecognized window stage");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

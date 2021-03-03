@@ -4,9 +4,9 @@
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
-      <dxl:CTEConfig CTEInliningCutoff="0"/> 
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="103027,102146,101013,103001"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -959,108 +959,108 @@
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.93299.1.1.12" Name="l_receiptdate" Width="4.000000">
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ovT//w==" DoubleValue="-251424000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="QvX//w==" DoubleValue="-237600000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ovT//w==" LintValue="-2910"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="QvX//w==" LintValue="-2750"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="QvX//w==" DoubleValue="-237600000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ofX//w==" DoubleValue="-229392000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="QvX//w==" LintValue="-2750"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ofX//w==" LintValue="-2655"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ofX//w==" DoubleValue="-229392000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="A/b//w==" DoubleValue="-220924800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ofX//w==" LintValue="-2655"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="A/b//w==" LintValue="-2557"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="A/b//w==" DoubleValue="-220924800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZPb//w==" DoubleValue="-212544000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="A/b//w==" LintValue="-2557"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZPb//w==" LintValue="-2460"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZPb//w==" DoubleValue="-212544000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="xPb//w==" DoubleValue="-204249600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZPb//w==" LintValue="-2460"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="xPb//w==" LintValue="-2364"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="xPb//w==" DoubleValue="-204249600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="I/f//w==" DoubleValue="-196041600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="xPb//w==" LintValue="-2364"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="I/f//w==" LintValue="-2269"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="I/f//w==" DoubleValue="-196041600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="g/f//w==" DoubleValue="-187747200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="I/f//w==" LintValue="-2269"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="g/f//w==" LintValue="-2173"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="g/f//w==" DoubleValue="-187747200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="5ff//w==" DoubleValue="-179280000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="g/f//w==" LintValue="-2173"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="5ff//w==" LintValue="-2075"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="5ff//w==" DoubleValue="-179280000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Qvj//w==" DoubleValue="-171244800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="5ff//w==" LintValue="-2075"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Qvj//w==" LintValue="-1982"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Qvj//w==" DoubleValue="-171244800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ovj//w==" DoubleValue="-162950400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Qvj//w==" LintValue="-1982"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ovj//w==" LintValue="-1886"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ovj//w==" DoubleValue="-162950400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="A/n//w==" DoubleValue="-154569600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ovj//w==" LintValue="-1886"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="A/n//w==" LintValue="-1789"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="A/n//w==" DoubleValue="-154569600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Yvn//w==" DoubleValue="-146361600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="A/n//w==" LintValue="-1789"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Yvn//w==" LintValue="-1694"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Yvn//w==" DoubleValue="-146361600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="w/n//w==" DoubleValue="-137980800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Yvn//w==" LintValue="-1694"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="w/n//w==" LintValue="-1597"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="w/n//w==" DoubleValue="-137980800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Ifr//w==" DoubleValue="-129859200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="w/n//w==" LintValue="-1597"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Ifr//w==" LintValue="-1503"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Ifr//w==" DoubleValue="-129859200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="gvr//w==" DoubleValue="-121478400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Ifr//w==" LintValue="-1503"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="gvr//w==" LintValue="-1406"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="gvr//w==" DoubleValue="-121478400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="4Pr//w==" DoubleValue="-113356800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="gvr//w==" LintValue="-1406"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="4Pr//w==" LintValue="-1312"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="4Pr//w==" DoubleValue="-113356800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="PPv//w==" DoubleValue="-105408000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="4Pr//w==" LintValue="-1312"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="PPv//w==" LintValue="-1220"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="PPv//w==" DoubleValue="-105408000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ovv//w==" DoubleValue="-96595200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="PPv//w==" LintValue="-1220"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ovv//w==" LintValue="-1118"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ovv//w==" DoubleValue="-96595200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Afz//w==" DoubleValue="-88387200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ovv//w==" LintValue="-1118"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Afz//w==" LintValue="-1023"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Afz//w==" DoubleValue="-88387200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="X/z//w==" DoubleValue="-80265600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Afz//w==" LintValue="-1023"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="X/z//w==" LintValue="-929"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="X/z//w==" DoubleValue="-80265600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="v/z//w==" DoubleValue="-71971200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="X/z//w==" LintValue="-929"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="v/z//w==" LintValue="-833"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="v/z//w==" DoubleValue="-71971200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Hf3//w==" DoubleValue="-63849600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="v/z//w==" LintValue="-833"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Hf3//w==" LintValue="-739"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Hf3//w==" DoubleValue="-63849600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ev3//w==" DoubleValue="-55814400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Hf3//w==" LintValue="-739"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ev3//w==" LintValue="-646"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ev3//w==" DoubleValue="-55814400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="2v3//w==" DoubleValue="-47520000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ev3//w==" LintValue="-646"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="2v3//w==" LintValue="-550"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2v3//w==" DoubleValue="-47520000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="df7//w==" DoubleValue="-34128000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2v3//w==" LintValue="-550"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="df7//w==" LintValue="-395"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.961538">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="df7//w==" DoubleValue="-34128000000000"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="hv7//w==" DoubleValue="-32659200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="df7//w==" LintValue="-395"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="hv7//w==" LintValue="-378"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.93299.1.1.5" Name="l_extendedprice" Width="10.000000">
@@ -1866,214 +1866,214 @@
       <dxl:ColumnStatistics Mdid="1.93299.1.1.18" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.93299.1.1.11" Name="l_commitdate" Width="4.000000">
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tfT//w==" DoubleValue="-249782400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="MvX//w==" DoubleValue="-238982400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tfT//w==" LintValue="-2891"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="MvX//w==" LintValue="-2766"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="MvX//w==" DoubleValue="-238982400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kvX//w==" DoubleValue="-230688000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="MvX//w==" LintValue="-2766"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kvX//w==" LintValue="-2670"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kvX//w==" DoubleValue="-230688000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="9PX//w==" DoubleValue="-222220800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kvX//w==" LintValue="-2670"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="9PX//w==" LintValue="-2572"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="9PX//w==" DoubleValue="-222220800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="U/b//w==" DoubleValue="-214012800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="9PX//w==" LintValue="-2572"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="U/b//w==" LintValue="-2477"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="U/b//w==" DoubleValue="-214012800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="tPb//w==" DoubleValue="-205632000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="U/b//w==" LintValue="-2477"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="tPb//w==" LintValue="-2380"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tPb//w==" DoubleValue="-205632000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="FPf//w==" DoubleValue="-197337600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tPb//w==" LintValue="-2380"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="FPf//w==" LintValue="-2284"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="FPf//w==" DoubleValue="-197337600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="cff//w==" DoubleValue="-189302400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="FPf//w==" LintValue="-2284"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="cff//w==" LintValue="-2191"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="cff//w==" DoubleValue="-189302400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="0/f//w==" DoubleValue="-180835200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="cff//w==" LintValue="-2191"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="0/f//w==" LintValue="-2093"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="0/f//w==" DoubleValue="-180835200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Mvj//w==" DoubleValue="-172627200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="0/f//w==" LintValue="-2093"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Mvj//w==" LintValue="-1998"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Mvj//w==" DoubleValue="-172627200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kfj//w==" DoubleValue="-164419200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Mvj//w==" LintValue="-1998"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kfj//w==" LintValue="-1903"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kfj//w==" DoubleValue="-164419200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8/j//w==" DoubleValue="-155952000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kfj//w==" LintValue="-1903"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8/j//w==" LintValue="-1805"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8/j//w==" DoubleValue="-155952000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="VPn//w==" DoubleValue="-147571200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8/j//w==" LintValue="-1805"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="VPn//w==" LintValue="-1708"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="VPn//w==" DoubleValue="-147571200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="sfn//w==" DoubleValue="-139536000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="VPn//w==" LintValue="-1708"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="sfn//w==" LintValue="-1615"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="sfn//w==" DoubleValue="-139536000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Dvr//w==" DoubleValue="-131500800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="sfn//w==" LintValue="-1615"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Dvr//w==" LintValue="-1522"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Dvr//w==" DoubleValue="-131500800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="cfr//w==" DoubleValue="-122947200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Dvr//w==" LintValue="-1522"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="cfr//w==" LintValue="-1423"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="cfr//w==" DoubleValue="-122947200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="zvr//w==" DoubleValue="-114912000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="cfr//w==" LintValue="-1423"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="zvr//w==" LintValue="-1330"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="zvr//w==" DoubleValue="-114912000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Lvv//w==" DoubleValue="-106617600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="zvr//w==" LintValue="-1330"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Lvv//w==" LintValue="-1234"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Lvv//w==" DoubleValue="-106617600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="jvv//w==" DoubleValue="-98323200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Lvv//w==" LintValue="-1234"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="jvv//w==" LintValue="-1138"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="jvv//w==" DoubleValue="-98323200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8fv//w==" DoubleValue="-89769600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="jvv//w==" LintValue="-1138"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8fv//w==" LintValue="-1039"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8fv//w==" DoubleValue="-89769600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="UPz//w==" DoubleValue="-81561600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8fv//w==" LintValue="-1039"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="UPz//w==" LintValue="-944"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="UPz//w==" DoubleValue="-81561600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="r/z//w==" DoubleValue="-73353600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="UPz//w==" LintValue="-944"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="r/z//w==" LintValue="-849"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="r/z//w==" DoubleValue="-73353600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Df3//w==" DoubleValue="-65232000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="r/z//w==" LintValue="-849"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Df3//w==" LintValue="-755"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Df3//w==" DoubleValue="-65232000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="a/3//w==" DoubleValue="-57110400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Df3//w==" LintValue="-755"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="a/3//w==" LintValue="-661"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="a/3//w==" DoubleValue="-57110400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="yv3//w==" DoubleValue="-48902400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="a/3//w==" LintValue="-661"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="yv3//w==" LintValue="-566"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="yv3//w==" DoubleValue="-48902400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="SP7//w==" DoubleValue="-38016000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="yv3//w==" LintValue="-566"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="SP7//w==" LintValue="-440"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="94.538462">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="SP7//w==" DoubleValue="-38016000000000"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="Uf7//w==" DoubleValue="-37238400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="SP7//w==" LintValue="-440"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="Uf7//w==" LintValue="-431"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.93299.1.1.10" Name="l_shipdate" Width="4.000000">
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="nPT//w==" DoubleValue="-251942400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="M/X//w==" DoubleValue="-238896000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="nPT//w==" LintValue="-2916"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="M/X//w==" LintValue="-2765"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="M/X//w==" DoubleValue="-238896000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kfX//w==" DoubleValue="-230774400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="M/X//w==" LintValue="-2765"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kfX//w==" LintValue="-2671"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kfX//w==" DoubleValue="-230774400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8/X//w==" DoubleValue="-222307200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kfX//w==" LintValue="-2671"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8/X//w==" LintValue="-2573"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8/X//w==" DoubleValue="-222307200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Vfb//w==" DoubleValue="-213840000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8/X//w==" LintValue="-2573"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Vfb//w==" LintValue="-2475"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Vfb//w==" DoubleValue="-213840000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="tPb//w==" DoubleValue="-205632000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Vfb//w==" LintValue="-2475"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="tPb//w==" LintValue="-2380"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tPb//w==" DoubleValue="-205632000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="E/f//w==" DoubleValue="-197424000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tPb//w==" LintValue="-2380"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="E/f//w==" LintValue="-2285"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="E/f//w==" DoubleValue="-197424000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="c/f//w==" DoubleValue="-189129600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="E/f//w==" LintValue="-2285"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="c/f//w==" LintValue="-2189"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="c/f//w==" DoubleValue="-189129600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="1vf//w==" DoubleValue="-180576000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="c/f//w==" LintValue="-2189"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="1vf//w==" LintValue="-2090"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="1vf//w==" DoubleValue="-180576000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="M/j//w==" DoubleValue="-172540800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="1vf//w==" LintValue="-2090"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="M/j//w==" LintValue="-1997"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="M/j//w==" DoubleValue="-172540800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kvj//w==" DoubleValue="-164332800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="M/j//w==" LintValue="-1997"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kvj//w==" LintValue="-1902"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kvj//w==" DoubleValue="-164332800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="9Pj//w==" DoubleValue="-155865600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kvj//w==" LintValue="-1902"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="9Pj//w==" LintValue="-1804"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="9Pj//w==" DoubleValue="-155865600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Uvn//w==" DoubleValue="-147744000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="9Pj//w==" LintValue="-1804"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Uvn//w==" LintValue="-1710"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Uvn//w==" DoubleValue="-147744000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="tPn//w==" DoubleValue="-139276800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Uvn//w==" LintValue="-1710"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="tPn//w==" LintValue="-1612"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tPn//w==" DoubleValue="-139276800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Efr//w==" DoubleValue="-131241600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tPn//w==" LintValue="-1612"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Efr//w==" LintValue="-1519"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Efr//w==" DoubleValue="-131241600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="cvr//w==" DoubleValue="-122860800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Efr//w==" LintValue="-1519"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="cvr//w==" LintValue="-1422"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="cvr//w==" DoubleValue="-122860800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="0fr//w==" DoubleValue="-114652800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="cvr//w==" LintValue="-1422"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="0fr//w==" LintValue="-1327"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="0fr//w==" DoubleValue="-114652800000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="L/v//w==" DoubleValue="-106531200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="0fr//w==" LintValue="-1327"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="L/v//w==" LintValue="-1233"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="L/v//w==" DoubleValue="-106531200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kfv//w==" DoubleValue="-98064000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="L/v//w==" LintValue="-1233"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="kfv//w==" LintValue="-1135"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kfv//w==" DoubleValue="-98064000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8fv//w==" DoubleValue="-89769600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="kfv//w==" LintValue="-1135"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="8fv//w==" LintValue="-1039"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8fv//w==" DoubleValue="-89769600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="UPz//w==" DoubleValue="-81561600000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="8fv//w==" LintValue="-1039"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="UPz//w==" LintValue="-944"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="UPz//w==" DoubleValue="-81561600000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="sPz//w==" DoubleValue="-73267200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="UPz//w==" LintValue="-944"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="sPz//w==" LintValue="-848"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="sPz//w==" DoubleValue="-73267200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="D/3//w==" DoubleValue="-65059200000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="sPz//w==" LintValue="-848"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="D/3//w==" LintValue="-753"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="D/3//w==" DoubleValue="-65059200000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="a/3//w==" DoubleValue="-57110400000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="D/3//w==" LintValue="-753"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="a/3//w==" LintValue="-661"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="a/3//w==" DoubleValue="-57110400000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="y/3//w==" DoubleValue="-48816000000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="a/3//w==" LintValue="-661"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="y/3//w==" LintValue="-565"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="y/3//w==" DoubleValue="-48816000000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZP7//w==" DoubleValue="-35596800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="y/3//w==" LintValue="-565"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZP7//w==" LintValue="-412"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="96.653846">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZP7//w==" DoubleValue="-35596800000000"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="bv7//w==" DoubleValue="-34732800000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZP7//w==" LintValue="-412"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="bv7//w==" LintValue="-402"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.93299.1.1.3" Name="l_linenumber" Width="4.000000">
@@ -2447,6 +2447,376 @@
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.93299001.1.1"/>
+          <dxl:Partition Mdid="0.93299002.1.1"/>
+          <dxl:Partition Mdid="0.93299003.1.1"/>
+          <dxl:Partition Mdid="0.93299004.1.1"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.93299001.1.1" Name="lineitem_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_partkey" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_suppkey" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linenumber" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_quantity" Attno="5" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_extendedprice" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_discount" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_tax" Attno="8" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_returnflag" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linestatus" Attno="10" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipdate" Attno="11" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_commitdate" Attno="12" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_receiptdate" Attno="13" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipinstruct" Attno="14" Mdid="0.1042.1.0" Nullable="true" ColWidth="25">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipmode" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_comment" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="44">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="vPH//w==" LintValue="-3652"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" LintValue="0"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.93299002.1.1" Name="lineitem_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_partkey" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_suppkey" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linenumber" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_quantity" Attno="5" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_extendedprice" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_discount" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_tax" Attno="8" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_returnflag" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linestatus" Attno="10" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipdate" Attno="11" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_commitdate" Attno="12" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_receiptdate" Attno="13" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipinstruct" Attno="14" Mdid="0.1042.1.0" Nullable="true" ColWidth="25">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipmode" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_comment" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="44">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" LintValue="0"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.93299003.1.1" Name="lineitem_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_partkey" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_suppkey" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linenumber" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_quantity" Attno="5" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_extendedprice" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_discount" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_tax" Attno="8" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_returnflag" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linestatus" Attno="10" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipdate" Attno="11" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_commitdate" Attno="12" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_receiptdate" Attno="13" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipinstruct" Attno="14" Mdid="0.1042.1.0" Nullable="true" ColWidth="25">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipmode" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_comment" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="44">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.93299004.1.1" Name="lineitem_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_partkey" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_suppkey" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linenumber" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_quantity" Attno="5" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_extendedprice" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_discount" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_tax" Attno="8" Mdid="0.1700.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_returnflag" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_linestatus" Attno="10" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipdate" Attno="11" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_commitdate" Attno="12" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_receiptdate" Attno="13" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipinstruct" Attno="14" Mdid="0.1042.1.0" Nullable="true" ColWidth="25">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_shipmode" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="l_comment" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="44">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
+              <dxl:Ident ColId="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="zioAAA==" LintValue="10958"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.99297.1.1.5" Name="ctid" Width="6.000000"/>
       <dxl:ColumnStatistics Mdid="1.99297.1.1.4" Name="ps_comment" Width="125.000000">
@@ -3673,10 +4043,10 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1154464">
+    <dxl:Plan Id="0" SpaceSize="225448">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="865342008.829724" Rows="10325183.250315" Width="697"/>
+          <dxl:Cost StartupCost="0" TotalCost="2343319.893955" Rows="10325183.250315" Width="697"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="p_partkey">
@@ -3795,7 +4165,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="861828017.241116" Rows="10325183.250315" Width="697"/>
+            <dxl:Cost StartupCost="0" TotalCost="2311006.923218" Rows="10325183.250315" Width="697"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="p_partkey">
@@ -3917,14 +4287,10 @@
               <dxl:Ident ColId="32" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
               <dxl:Ident ColId="16" ColName="s_suppkey" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-              <dxl:Ident ColId="54" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
-              <dxl:Ident ColId="16" ColName="s_suppkey" TypeMdid="0.23.1.0"/>
-            </dxl:Comparison>
           </dxl:HashCondList>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="854074911.201895" Rows="10325183.250323" Width="500"/>
+              <dxl:Cost StartupCost="0" TotalCost="2280383.390993" Rows="10325183.250323" Width="500"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="p_partkey">
@@ -4027,7 +4393,7 @@
             </dxl:HashExprList>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="851554113.509922" Rows="10325183.250323" Width="500"/>
+                <dxl:Cost StartupCost="0" TotalCost="2272303.935100" Rows="10325183.250323" Width="500"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="p_partkey">
@@ -4128,18 +4494,10 @@
                   <dxl:Ident ColId="31" ColName="l_partkey" TypeMdid="0.23.1.0"/>
                   <dxl:Ident ColId="0" ColName="p_partkey" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="32" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="54" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="31" ColName="l_partkey" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="53" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
               </dxl:HashCondList>
-              <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
+              <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="414013491.500000" Rows="1536050048.000000" Width="138"/>
+                  <dxl:Cost StartupCost="0" TotalCost="2199327.729896" Rows="24060859.229183" Width="357"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="30" Alias="l_orderkey">
@@ -4190,17 +4548,37 @@
                   <dxl:ProjElem ColId="45" Alias="l_comment">
                     <dxl:Ident ColId="45" ColName="l_comment" TypeMdid="0.1043.1.0"/>
                   </dxl:ProjElem>
+                  <dxl:ProjElem ColId="53" Alias="ps_partkey">
+                    <dxl:Ident ColId="53" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="54" Alias="ps_suppkey">
+                    <dxl:Ident ColId="54" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="55" Alias="ps_availqty">
+                    <dxl:Ident ColId="55" ColName="ps_availqty" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="56" Alias="ps_supplycost">
+                    <dxl:Ident ColId="56" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="57" Alias="ps_comment">
+                    <dxl:Ident ColId="57" ColName="ps_comment" TypeMdid="0.1043.1.0"/>
+                  </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:HashExprList>
-                  <dxl:HashExpr>
+                <dxl:JoinFilter/>
+                <dxl:HashCondList>
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="32" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="54" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                     <dxl:Ident ColId="31" ColName="l_partkey" TypeMdid="0.23.1.0"/>
-                  </dxl:HashExpr>
-                </dxl:HashExprList>
-                <dxl:Sequence>
+                    <dxl:Ident ColId="53" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
+                </dxl:HashCondList>
+                <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="103503372.375000" Rows="1536050048.000000" Width="138"/>
+                    <dxl:Cost StartupCost="0" TotalCost="600273.904244" Rows="1536050048.000000" Width="138"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="30" Alias="l_orderkey">
@@ -4252,30 +4630,16 @@
                       <dxl:Ident ColId="45" ColName="l_comment" TypeMdid="0.1043.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:PartitionSelector RelationMdid="0.93299.1.1" PartitionLevels="1" ScanId="1">
+                  <dxl:Filter/>
+                  <dxl:SortingColumnList/>
+                  <dxl:HashExprList>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="31" ColName="l_partkey" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                  </dxl:HashExprList>
+                  <dxl:Append IsTarget="false" IsZapped="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-                    </dxl:Properties>
-                    <dxl:ProjList/>
-                    <dxl:PartEqFilters>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:PartEqFilters>
-                    <dxl:PartFilters>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:PartFilters>
-                    <dxl:ResidualFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:ResidualFilter>
-                    <dxl:PropagationExpression>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                    </dxl:PropagationExpression>
-                    <dxl:PrintableFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:PrintableFilter>
-                  </dxl:PartitionSelector>
-                  <dxl:DynamicTableScan PartIndexId="1">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="103503372.375000" Rows="1536050048.000000" Width="138"/>
+                      <dxl:Cost StartupCost="0" TotalCost="71396.512218" Rows="1536050048.000000" Width="138"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="30" Alias="l_orderkey">
@@ -4328,95 +4692,343 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.93299.1.1" TableName="lineitem">
-                      <dxl:Columns>
-                        <dxl:Column ColId="30" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="31" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="32" Attno="3" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="33" Attno="4" ColName="l_linenumber" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="34" Attno="5" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="35" Attno="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="36" Attno="7" ColName="l_discount" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="37" Attno="8" ColName="l_tax" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="38" Attno="9" ColName="l_returnflag" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="39" Attno="10" ColName="l_linestatus" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="40" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
-                        <dxl:Column ColId="41" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
-                        <dxl:Column ColId="42" Attno="13" ColName="l_receiptdate" TypeMdid="0.1082.1.0"/>
-                        <dxl:Column ColId="43" Attno="14" ColName="l_shipinstruct" TypeMdid="0.1042.1.0" ColWidth="25"/>
-                        <dxl:Column ColId="44" Attno="15" ColName="l_shipmode" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                        <dxl:Column ColId="45" Attno="16" ColName="l_comment" TypeMdid="0.1043.1.0" ColWidth="44"/>
-                        <dxl:Column ColId="46" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                        <dxl:Column ColId="47" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="48" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="49" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="50" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="51" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                        <dxl:Column ColId="52" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:DynamicTableScan>
-                </dxl:Sequence>
-              </dxl:RedistributeMotion>
-              <dxl:HashJoin JoinType="Inner">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="86495679.324219" Rows="81489013.073017" Width="362"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="0" Alias="p_partkey">
-                    <dxl:Ident ColId="0" ColName="p_partkey" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="1" Alias="p_name">
-                    <dxl:Ident ColId="1" ColName="p_name" TypeMdid="0.1043.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="2" Alias="p_mfgr">
-                    <dxl:Ident ColId="2" ColName="p_mfgr" TypeMdid="0.1042.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="3" Alias="p_brand">
-                    <dxl:Ident ColId="3" ColName="p_brand" TypeMdid="0.1042.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="4" Alias="p_type">
-                    <dxl:Ident ColId="4" ColName="p_type" TypeMdid="0.1043.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="5" Alias="p_size">
-                    <dxl:Ident ColId="5" ColName="p_size" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="6" Alias="p_container">
-                    <dxl:Ident ColId="6" ColName="p_container" TypeMdid="0.1042.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="7" Alias="p_retailprice">
-                    <dxl:Ident ColId="7" ColName="p_retailprice" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="8" Alias="p_comment">
-                    <dxl:Ident ColId="8" ColName="p_comment" TypeMdid="0.1043.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="53" Alias="ps_partkey">
-                    <dxl:Ident ColId="53" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="54" Alias="ps_suppkey">
-                    <dxl:Ident ColId="54" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="55" Alias="ps_availqty">
-                    <dxl:Ident ColId="55" ColName="ps_availqty" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="56" Alias="ps_supplycost">
-                    <dxl:Ident ColId="56" ColName="ps_supplycost" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="57" Alias="ps_comment">
-                    <dxl:Ident ColId="57" ColName="ps_comment" TypeMdid="0.1043.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:JoinFilter/>
-                <dxl:HashCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                    <dxl:Ident ColId="53" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
-                    <dxl:Ident ColId="0" ColName="p_partkey" TypeMdid="0.23.1.0"/>
-                  </dxl:Comparison>
-                </dxl:HashCondList>
+                    <dxl:TableScan>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="71396.512218" Rows="1536050048.000000" Width="138"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="65" Alias="l_orderkey">
+                          <dxl:Ident ColId="65" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="66" Alias="l_partkey">
+                          <dxl:Ident ColId="66" ColName="l_partkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="67" Alias="l_suppkey">
+                          <dxl:Ident ColId="67" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="68" Alias="l_linenumber">
+                          <dxl:Ident ColId="68" ColName="l_linenumber" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="69" Alias="l_quantity">
+                          <dxl:Ident ColId="69" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="70" Alias="l_extendedprice">
+                          <dxl:Ident ColId="70" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="71" Alias="l_discount">
+                          <dxl:Ident ColId="71" ColName="l_discount" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="72" Alias="l_tax">
+                          <dxl:Ident ColId="72" ColName="l_tax" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="73" Alias="l_returnflag">
+                          <dxl:Ident ColId="73" ColName="l_returnflag" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="74" Alias="l_linestatus">
+                          <dxl:Ident ColId="74" ColName="l_linestatus" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="75" Alias="l_shipdate">
+                          <dxl:Ident ColId="75" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="76" Alias="l_commitdate">
+                          <dxl:Ident ColId="76" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="77" Alias="l_receiptdate">
+                          <dxl:Ident ColId="77" ColName="l_receiptdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="78" Alias="l_shipinstruct">
+                          <dxl:Ident ColId="78" ColName="l_shipinstruct" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="79" Alias="l_shipmode">
+                          <dxl:Ident ColId="79" ColName="l_shipmode" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="80" Alias="l_comment">
+                          <dxl:Ident ColId="80" ColName="l_comment" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:TableDescriptor Mdid="0.93299001.1.1" TableName="lineitem_prt_1">
+                        <dxl:Columns>
+                          <dxl:Column ColId="65" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="66" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="67" Attno="3" ColName="l_suppkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="68" Attno="4" ColName="l_linenumber" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="69" Attno="5" ColName="l_quantity" TypeMdid="0.1700.1.0" ColWidth="7"/>
+                          <dxl:Column ColId="70" Attno="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="71" Attno="7" ColName="l_discount" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="72" Attno="8" ColName="l_tax" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="73" Attno="9" ColName="l_returnflag" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="74" Attno="10" ColName="l_linestatus" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="75" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="76" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="77" Attno="13" ColName="l_receiptdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="78" Attno="14" ColName="l_shipinstruct" TypeMdid="0.1042.1.0" ColWidth="25"/>
+                          <dxl:Column ColId="79" Attno="15" ColName="l_shipmode" TypeMdid="0.1042.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="80" Attno="16" ColName="l_comment" TypeMdid="0.1043.1.0" ColWidth="44"/>
+                          <dxl:Column ColId="81" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="82" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="83" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="84" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="85" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="86" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="87" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                    <dxl:TableScan>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="71396.512218" Rows="1536050048.000000" Width="138"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="88" Alias="l_orderkey">
+                          <dxl:Ident ColId="88" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="89" Alias="l_partkey">
+                          <dxl:Ident ColId="89" ColName="l_partkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="90" Alias="l_suppkey">
+                          <dxl:Ident ColId="90" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="91" Alias="l_linenumber">
+                          <dxl:Ident ColId="91" ColName="l_linenumber" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="92" Alias="l_quantity">
+                          <dxl:Ident ColId="92" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="93" Alias="l_extendedprice">
+                          <dxl:Ident ColId="93" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="94" Alias="l_discount">
+                          <dxl:Ident ColId="94" ColName="l_discount" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="95" Alias="l_tax">
+                          <dxl:Ident ColId="95" ColName="l_tax" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="96" Alias="l_returnflag">
+                          <dxl:Ident ColId="96" ColName="l_returnflag" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="97" Alias="l_linestatus">
+                          <dxl:Ident ColId="97" ColName="l_linestatus" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="98" Alias="l_shipdate">
+                          <dxl:Ident ColId="98" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="99" Alias="l_commitdate">
+                          <dxl:Ident ColId="99" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="100" Alias="l_receiptdate">
+                          <dxl:Ident ColId="100" ColName="l_receiptdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="101" Alias="l_shipinstruct">
+                          <dxl:Ident ColId="101" ColName="l_shipinstruct" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="102" Alias="l_shipmode">
+                          <dxl:Ident ColId="102" ColName="l_shipmode" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="103" Alias="l_comment">
+                          <dxl:Ident ColId="103" ColName="l_comment" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:TableDescriptor Mdid="0.93299002.1.1" TableName="lineitem_prt_2">
+                        <dxl:Columns>
+                          <dxl:Column ColId="88" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="89" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="90" Attno="3" ColName="l_suppkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="91" Attno="4" ColName="l_linenumber" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="92" Attno="5" ColName="l_quantity" TypeMdid="0.1700.1.0" ColWidth="7"/>
+                          <dxl:Column ColId="93" Attno="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="94" Attno="7" ColName="l_discount" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="95" Attno="8" ColName="l_tax" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="96" Attno="9" ColName="l_returnflag" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="97" Attno="10" ColName="l_linestatus" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="98" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="99" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="100" Attno="13" ColName="l_receiptdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="101" Attno="14" ColName="l_shipinstruct" TypeMdid="0.1042.1.0" ColWidth="25"/>
+                          <dxl:Column ColId="102" Attno="15" ColName="l_shipmode" TypeMdid="0.1042.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="103" Attno="16" ColName="l_comment" TypeMdid="0.1043.1.0" ColWidth="44"/>
+                          <dxl:Column ColId="104" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="105" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="106" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="107" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="108" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="109" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="110" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                    <dxl:TableScan>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="71396.512218" Rows="1536050048.000000" Width="138"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="111" Alias="l_orderkey">
+                          <dxl:Ident ColId="111" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="112" Alias="l_partkey">
+                          <dxl:Ident ColId="112" ColName="l_partkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="113" Alias="l_suppkey">
+                          <dxl:Ident ColId="113" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="114" Alias="l_linenumber">
+                          <dxl:Ident ColId="114" ColName="l_linenumber" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="115" Alias="l_quantity">
+                          <dxl:Ident ColId="115" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="116" Alias="l_extendedprice">
+                          <dxl:Ident ColId="116" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="117" Alias="l_discount">
+                          <dxl:Ident ColId="117" ColName="l_discount" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="118" Alias="l_tax">
+                          <dxl:Ident ColId="118" ColName="l_tax" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="119" Alias="l_returnflag">
+                          <dxl:Ident ColId="119" ColName="l_returnflag" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="120" Alias="l_linestatus">
+                          <dxl:Ident ColId="120" ColName="l_linestatus" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="121" Alias="l_shipdate">
+                          <dxl:Ident ColId="121" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="122" Alias="l_commitdate">
+                          <dxl:Ident ColId="122" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="123" Alias="l_receiptdate">
+                          <dxl:Ident ColId="123" ColName="l_receiptdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="124" Alias="l_shipinstruct">
+                          <dxl:Ident ColId="124" ColName="l_shipinstruct" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="125" Alias="l_shipmode">
+                          <dxl:Ident ColId="125" ColName="l_shipmode" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="126" Alias="l_comment">
+                          <dxl:Ident ColId="126" ColName="l_comment" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:TableDescriptor Mdid="0.93299003.1.1" TableName="lineitem_prt_3">
+                        <dxl:Columns>
+                          <dxl:Column ColId="111" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="112" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="113" Attno="3" ColName="l_suppkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="114" Attno="4" ColName="l_linenumber" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="115" Attno="5" ColName="l_quantity" TypeMdid="0.1700.1.0" ColWidth="7"/>
+                          <dxl:Column ColId="116" Attno="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="117" Attno="7" ColName="l_discount" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="118" Attno="8" ColName="l_tax" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="119" Attno="9" ColName="l_returnflag" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="120" Attno="10" ColName="l_linestatus" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="121" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="122" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="123" Attno="13" ColName="l_receiptdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="124" Attno="14" ColName="l_shipinstruct" TypeMdid="0.1042.1.0" ColWidth="25"/>
+                          <dxl:Column ColId="125" Attno="15" ColName="l_shipmode" TypeMdid="0.1042.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="126" Attno="16" ColName="l_comment" TypeMdid="0.1043.1.0" ColWidth="44"/>
+                          <dxl:Column ColId="127" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="128" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="129" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="130" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="131" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="132" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="133" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                    <dxl:TableScan>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="71396.512218" Rows="1536050048.000000" Width="138"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="134" Alias="l_orderkey">
+                          <dxl:Ident ColId="134" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="135" Alias="l_partkey">
+                          <dxl:Ident ColId="135" ColName="l_partkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="136" Alias="l_suppkey">
+                          <dxl:Ident ColId="136" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="137" Alias="l_linenumber">
+                          <dxl:Ident ColId="137" ColName="l_linenumber" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="138" Alias="l_quantity">
+                          <dxl:Ident ColId="138" ColName="l_quantity" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="139" Alias="l_extendedprice">
+                          <dxl:Ident ColId="139" ColName="l_extendedprice" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="140" Alias="l_discount">
+                          <dxl:Ident ColId="140" ColName="l_discount" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="141" Alias="l_tax">
+                          <dxl:Ident ColId="141" ColName="l_tax" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="142" Alias="l_returnflag">
+                          <dxl:Ident ColId="142" ColName="l_returnflag" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="143" Alias="l_linestatus">
+                          <dxl:Ident ColId="143" ColName="l_linestatus" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="144" Alias="l_shipdate">
+                          <dxl:Ident ColId="144" ColName="l_shipdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="145" Alias="l_commitdate">
+                          <dxl:Ident ColId="145" ColName="l_commitdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="146" Alias="l_receiptdate">
+                          <dxl:Ident ColId="146" ColName="l_receiptdate" TypeMdid="0.1082.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="147" Alias="l_shipinstruct">
+                          <dxl:Ident ColId="147" ColName="l_shipinstruct" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="148" Alias="l_shipmode">
+                          <dxl:Ident ColId="148" ColName="l_shipmode" TypeMdid="0.1042.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="149" Alias="l_comment">
+                          <dxl:Ident ColId="149" ColName="l_comment" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:TableDescriptor Mdid="0.93299004.1.1" TableName="lineitem_prt_4">
+                        <dxl:Columns>
+                          <dxl:Column ColId="134" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="135" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="136" Attno="3" ColName="l_suppkey" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="137" Attno="4" ColName="l_linenumber" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="138" Attno="5" ColName="l_quantity" TypeMdid="0.1700.1.0" ColWidth="7"/>
+                          <dxl:Column ColId="139" Attno="6" ColName="l_extendedprice" TypeMdid="0.1700.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="140" Attno="7" ColName="l_discount" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="141" Attno="8" ColName="l_tax" TypeMdid="0.1700.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="142" Attno="9" ColName="l_returnflag" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="143" Attno="10" ColName="l_linestatus" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                          <dxl:Column ColId="144" Attno="11" ColName="l_shipdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="145" Attno="12" ColName="l_commitdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="146" Attno="13" ColName="l_receiptdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="147" Attno="14" ColName="l_shipinstruct" TypeMdid="0.1042.1.0" ColWidth="25"/>
+                          <dxl:Column ColId="148" Attno="15" ColName="l_shipmode" TypeMdid="0.1042.1.0" ColWidth="10"/>
+                          <dxl:Column ColId="149" Attno="16" ColName="l_comment" TypeMdid="0.1043.1.0" ColWidth="44"/>
+                          <dxl:Column ColId="150" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="151" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="152" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="153" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="154" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="155" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="156" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                  </dxl:Append>
+                </dxl:RedistributeMotion>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="21921386.718750" Rows="205000000.000000" Width="219"/>
+                    <dxl:Cost StartupCost="0" TotalCost="14468.375000" Rows="205000000.000000" Width="219"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="53" Alias="ps_partkey">
@@ -4453,74 +5065,74 @@
                     </dxl:Columns>
                   </dxl:TableDescriptor>
                 </dxl:TableScan>
-                <dxl:TableScan>
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6433920.121094" Rows="20476560.000000" Width="143"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="0" Alias="p_partkey">
-                      <dxl:Ident ColId="0" ColName="p_partkey" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="1" Alias="p_name">
-                      <dxl:Ident ColId="1" ColName="p_name" TypeMdid="0.1043.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="2" Alias="p_mfgr">
-                      <dxl:Ident ColId="2" ColName="p_mfgr" TypeMdid="0.1042.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="3" Alias="p_brand">
-                      <dxl:Ident ColId="3" ColName="p_brand" TypeMdid="0.1042.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="4" Alias="p_type">
-                      <dxl:Ident ColId="4" ColName="p_type" TypeMdid="0.1043.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="5" Alias="p_size">
-                      <dxl:Ident ColId="5" ColName="p_size" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="6" Alias="p_container">
-                      <dxl:Ident ColId="6" ColName="p_container" TypeMdid="0.1042.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="7" Alias="p_retailprice">
-                      <dxl:Ident ColId="7" ColName="p_retailprice" TypeMdid="0.1700.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="8" Alias="p_comment">
-                      <dxl:Ident ColId="8" ColName="p_comment" TypeMdid="0.1043.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter>
-                    <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">
-                      <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                        <dxl:Ident ColId="1" ColName="p_name" TypeMdid="0.1043.1.0"/>
-                      </dxl:Cast>
-                      <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAADSUlZ3JlZW4lJQ==" LintValue="295215918"/>
-                    </dxl:Comparison>
-                  </dxl:Filter>
-                  <dxl:TableDescriptor Mdid="0.99274.1.1" TableName="part">
-                    <dxl:Columns>
-                      <dxl:Column ColId="0" Attno="1" ColName="p_partkey" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="1" Attno="2" ColName="p_name" TypeMdid="0.1043.1.0" ColWidth="55"/>
-                      <dxl:Column ColId="2" Attno="3" ColName="p_mfgr" TypeMdid="0.1042.1.0" ColWidth="25"/>
-                      <dxl:Column ColId="3" Attno="4" ColName="p_brand" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                      <dxl:Column ColId="4" Attno="5" ColName="p_type" TypeMdid="0.1043.1.0" ColWidth="25"/>
-                      <dxl:Column ColId="5" Attno="6" ColName="p_size" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="6" Attno="7" ColName="p_container" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                      <dxl:Column ColId="7" Attno="8" ColName="p_retailprice" TypeMdid="0.1700.1.0"/>
-                      <dxl:Column ColId="8" Attno="9" ColName="p_comment" TypeMdid="0.1043.1.0" ColWidth="23"/>
-                      <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                      <dxl:Column ColId="10" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="11" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="12" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="13" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="14" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                      <dxl:Column ColId="15" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                    </dxl:Columns>
-                  </dxl:TableDescriptor>
-                </dxl:TableScan>
               </dxl:HashJoin>
+              <dxl:TableScan>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="6727.337434" Rows="20476560.000000" Width="143"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="0" Alias="p_partkey">
+                    <dxl:Ident ColId="0" ColName="p_partkey" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="1" Alias="p_name">
+                    <dxl:Ident ColId="1" ColName="p_name" TypeMdid="0.1043.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="2" Alias="p_mfgr">
+                    <dxl:Ident ColId="2" ColName="p_mfgr" TypeMdid="0.1042.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="3" Alias="p_brand">
+                    <dxl:Ident ColId="3" ColName="p_brand" TypeMdid="0.1042.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="4" Alias="p_type">
+                    <dxl:Ident ColId="4" ColName="p_type" TypeMdid="0.1043.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="5" Alias="p_size">
+                    <dxl:Ident ColId="5" ColName="p_size" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="6" Alias="p_container">
+                    <dxl:Ident ColId="6" ColName="p_container" TypeMdid="0.1042.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="7" Alias="p_retailprice">
+                    <dxl:Ident ColId="7" ColName="p_retailprice" TypeMdid="0.1700.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="8" Alias="p_comment">
+                    <dxl:Ident ColId="8" ColName="p_comment" TypeMdid="0.1043.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter>
+                  <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">
+                    <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                      <dxl:Ident ColId="1" ColName="p_name" TypeMdid="0.1043.1.0"/>
+                    </dxl:Cast>
+                    <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAADSUlZ3JlZW4lJQ==" LintValue="295215918"/>
+                  </dxl:Comparison>
+                </dxl:Filter>
+                <dxl:TableDescriptor Mdid="0.99274.1.1" TableName="part">
+                  <dxl:Columns>
+                    <dxl:Column ColId="0" Attno="1" ColName="p_partkey" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="1" Attno="2" ColName="p_name" TypeMdid="0.1043.1.0" ColWidth="55"/>
+                    <dxl:Column ColId="2" Attno="3" ColName="p_mfgr" TypeMdid="0.1042.1.0" ColWidth="25"/>
+                    <dxl:Column ColId="3" Attno="4" ColName="p_brand" TypeMdid="0.1042.1.0" ColWidth="10"/>
+                    <dxl:Column ColId="4" Attno="5" ColName="p_type" TypeMdid="0.1043.1.0" ColWidth="25"/>
+                    <dxl:Column ColId="5" Attno="6" ColName="p_size" TypeMdid="0.23.1.0"/>
+                    <dxl:Column ColId="6" Attno="7" ColName="p_container" TypeMdid="0.1042.1.0" ColWidth="10"/>
+                    <dxl:Column ColId="7" Attno="8" ColName="p_retailprice" TypeMdid="0.1700.1.0"/>
+                    <dxl:Column ColId="8" Attno="9" ColName="p_comment" TypeMdid="0.1043.1.0" ColWidth="23"/>
+                    <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                    <dxl:Column ColId="10" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="11" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="12" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                    <dxl:Column ColId="13" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                    <dxl:Column ColId="14" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                    <dxl:Column ColId="15" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:TableScan>
             </dxl:HashJoin>
           </dxl:RedistributeMotion>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="246501.059570" Rows="2562610.000000" Width="197"/>
+              <dxl:Cost StartupCost="0" TotalCost="590.970929" Rows="2562610.000000" Width="197"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="16" Alias="s_suppkey">

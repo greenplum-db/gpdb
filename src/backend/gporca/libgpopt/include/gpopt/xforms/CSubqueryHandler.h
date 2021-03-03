@@ -13,6 +13,7 @@
 #define GPOPT_CSubqueryHandler_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt
@@ -50,49 +51,37 @@ private:
 	struct SSubqueryDesc
 	{
 		// subquery can return more than one row
-		BOOL m_returns_set;
+		BOOL m_returns_set{false};
 
 		// subquery has volatile functions
-		BOOL m_fHasVolatileFunctions;
+		BOOL m_fHasVolatileFunctions{false};
 
 		// subquery has outer references
-		BOOL m_fHasOuterRefs;
+		BOOL m_fHasOuterRefs{false};
 
 		// the returned column is an outer reference
-		BOOL m_fReturnedPcrIsOuterRef;
+		BOOL m_fReturnedPcrIsOuterRef{false};
 
 		// subquery has skip level correlations -- when inner expression refers to columns defined above the immediate outer expression
-		BOOL m_fHasSkipLevelCorrelations;
+		BOOL m_fHasSkipLevelCorrelations{false};
 
 		// subquery has a single count(*)/count(Any) agg
-		BOOL m_fHasCountAgg;
+		BOOL m_fHasCountAgg{false};
 
 		// column defining count(*)/count(Any) agg, if any
-		CColRef *m_pcrCountAgg;
+		CColRef *m_pcrCountAgg{nullptr};
 
 		//  does subquery project a count expression
-		BOOL m_fProjectCount;
+		BOOL m_fProjectCount{false};
 
 		// subquery is used in a value context
-		BOOL m_fValueSubquery;
+		BOOL m_fValueSubquery{false};
 
 		// subquery requires correlated execution
-		BOOL m_fCorrelatedExecution;
+		BOOL m_fCorrelatedExecution{false};
 
 		// ctor
-		SSubqueryDesc()
-			: m_returns_set(false),
-			  m_fHasVolatileFunctions(false),
-			  m_fHasOuterRefs(false),
-			  m_fReturnedPcrIsOuterRef(false),
-			  m_fHasSkipLevelCorrelations(false),
-			  m_fHasCountAgg(false),
-			  m_pcrCountAgg(NULL),
-			  m_fProjectCount(false),
-			  m_fValueSubquery(false),
-			  m_fCorrelatedExecution(false)
-		{
-		}
+		SSubqueryDesc() = default;
 
 		// set correlated execution flag
 		void SetCorrelatedExecution();
@@ -104,9 +93,6 @@ private:
 
 	// enforce using correlated apply for unnesting subqueries
 	BOOL m_fEnforceCorrelatedApply;
-
-	// private copy ctor
-	CSubqueryHandler(const CSubqueryHandler &);
 
 	// helper for adding nullness check, only if needed, to the given scalar expression
 	static CExpression *PexprIsNotNull(CMemoryPool *mp, CExpression *pexprOuter,
@@ -275,6 +261,8 @@ private:
 #endif	// GPOS_DEBUG
 
 public:
+	CSubqueryHandler(const CSubqueryHandler &) = delete;
+
 	// ctor
 	CSubqueryHandler(CMemoryPool *mp, BOOL fEnforceCorrelatedApply)
 		: m_mp(mp), m_fEnforceCorrelatedApply(fEnforceCorrelatedApply)

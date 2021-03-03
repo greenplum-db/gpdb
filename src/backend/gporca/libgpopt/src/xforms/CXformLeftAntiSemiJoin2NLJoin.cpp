@@ -9,12 +9,13 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftAntiSemiJoin2NLJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiNLJoin.h"
-#include "gpopt/xforms/CXformLeftAntiSemiJoin2NLJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 
@@ -72,7 +73,7 @@ CXformLeftAntiSemiJoin2NLJoin::Transform(CXformContext *pxfctxt,
 										 CXformResult *pxfres,
 										 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

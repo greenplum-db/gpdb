@@ -46,8 +46,8 @@ public:
 		return EtiInt4;
 	}
 
-	virtual ETypeInfo
-	GetDatumType() const
+	ETypeInfo
+	GetDatumType() const override
 	{
 		return IMDTypeInt4::GetTypeInfo();
 	}

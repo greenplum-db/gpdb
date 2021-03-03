@@ -21,7 +21,7 @@ DEFAULT_BATCH_SIZE = 16
 def get_standby_pg_hba_info(standby_host, is_hba_hostnames=False):
     standby_ips = gp.IfAddrs.list_addrs(standby_host)
     current_user = unix.UserId.local('get userid')
-    new_section = ['# standby master host ip addresses\n']
+    new_section = ['# standby coordinator host ip addresses\n']
     for ip in standby_ips:
         if not is_hba_hostnames:
             cidr_suffix = '/128' if ':' in ip else '/32' # MPP-15889
@@ -54,7 +54,7 @@ def cleanup_pg_hba_backup_on_segment(gparr):
 
     host_to_seg_map = defaultdict(list)
     for seg in gparr.getDbList():
-        if not seg.isSegmentMaster() and not seg.isSegmentStandby():
+        if not seg.isSegmentCoordinator() and not seg.isSegmentStandby():
             host_to_seg_map[seg.getSegmentHostName()].append(seg.getSegmentDataDirectory())
 
     pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
@@ -93,7 +93,7 @@ def restore_pg_hba_on_segment(gparr):
 
     host_to_seg_map = defaultdict(list)
     for seg in gparr.getDbList():
-        if not seg.isSegmentMaster() and not seg.isSegmentStandby():
+        if not seg.isSegmentCoordinator() and not seg.isSegmentStandby():
             host_to_seg_map[seg.getSegmentHostName()].append(seg.getSegmentDataDirectory())
 
     pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
@@ -158,7 +158,7 @@ def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
 
     host_to_seg_map = defaultdict(list) 
     for seg in gparr.getDbList():
-        if not seg.isSegmentMaster() and not seg.isSegmentStandby():
+        if not seg.isSegmentCoordinator() and not seg.isSegmentStandby():
             host_to_seg_map[seg.getSegmentHostName()].append(seg.getSegmentDataDirectory())
 
     pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)

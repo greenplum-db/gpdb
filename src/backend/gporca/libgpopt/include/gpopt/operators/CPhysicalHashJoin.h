@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalHashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysicalJoin.h"
 
@@ -45,21 +46,15 @@ private:
 	// array redistribute request sent to the first hash join child
 	CDistributionSpecArray *m_pdrgpdsRedistributeRequests;
 
-	// private copy ctor
-	CPhysicalHashJoin(const CPhysicalHashJoin &);
-
-	// create the set of redistribute requests to send to first hash join child
-	void CreateHashRedistributeRequests(CMemoryPool *mp);
-
 	// compute a distribution matching the distribution delivered by given child
 	CDistributionSpec *PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 								ULONG ulSourceChildIndex) const;
 
+protected:
 	// compute required hashed distribution from the n-th child
 	CDistributionSpecHashed *PdshashedRequired(CMemoryPool *mp,
 											   ULONG child_index,
 											   ULONG ulReqIndex) const;
-
 	// create (redistribute, redistribute) optimization request
 	CDistributionSpec *PdsRequiredRedistribute(CMemoryPool *mp,
 											   CExpressionHandle &exprhdl,
@@ -68,20 +63,15 @@ private:
 											   CDrvdPropArray *pdrgpdpCtxt,
 											   ULONG ulOptReq) const;
 
-	// create (non-singleton, replicate) optimization request
-	CDistributionSpec *PdsRequiredReplicate(CMemoryPool *mp,
-											CExpressionHandle &exprhdl,
-											CDistributionSpec *pdsInput,
-											ULONG child_index,
-											CDrvdPropArray *pdrgpdpCtxt,
-											ULONG ulOptReq) const;
+	// create the set of redistribute requests to send to first hash join child
+	void CreateHashRedistributeRequests(CMemoryPool *mp);
 
-	// create (singleton, singleton) optimization request
-	CDistributionSpec *PdsRequiredSingleton(CMemoryPool *mp,
-											CExpressionHandle &exprhdl,
-											CDistributionSpec *pdsInput,
-											ULONG child_index,
-											CDrvdPropArray *pdrgpdpCtxt) const;
+private:
+	// create (non-singleton, replicate) optimization request
+	CDistributionSpec *PdsRequiredReplicate(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CDistributionSpec *pdsInput, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq, CReqdPropPlan *prppInput);
 
 	// create a child hashed distribution request based on input hashed distribution,
 	// return NULL if no such request can be created
@@ -100,17 +90,35 @@ protected:
 		CMemoryPool *mp, CDistributionSpecHashed *pdshashed,
 		ULONG ulSourceChild) const;
 
+	// create (singleton, singleton) optimization request
+	CDistributionSpec *PdsRequiredSingleton(CMemoryPool *mp,
+											CExpressionHandle &exprhdl,
+											CDistributionSpec *pdsInput,
+											ULONG child_index,
+											CDrvdPropArray *pdrgpdpCtxt) const;
+
 	// check whether the hash keys from one child are nullable
 	BOOL FNullableHashKeys(CColRefSet *pcrsNotNullInner, BOOL fInner) const;
 
+	ULONG
+	NumDistrReq() const
+	{
+		return m_pdrgpdsRedistributeRequests->Size();
+	}
+
+	// create optimization requests
+	virtual void CreateOptRequests(CMemoryPool *mp);
+
 public:
+	CPhysicalHashJoin(const CPhysicalHashJoin &) = delete;
+
 	// ctor
 	CPhysicalHashJoin(CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 					  CExpressionArray *pdrgpexprInnerKeys,
-					  IMdIdArray *hash_opfamilies = NULL);
+					  IMdIdArray *hash_opfamilies = nullptr);
 
 	// dtor
-	virtual ~CPhysicalHashJoin();
+	~CPhysicalHashJoin() override;
 
 	// inner keys
 	const CExpressionArray *
@@ -131,36 +139,39 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// compute required sort order of the n-th child
-	virtual COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-									COrderSpec *posInput, ULONG child_index,
-									CDrvdPropArray *pdrgpdpCtxt,
-									ULONG ulOptReq) const;
+	COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							COrderSpec *posInput, ULONG child_index,
+							CDrvdPropArray *pdrgpdpCtxt,
+							ULONG ulOptReq) const override;
 
 	// compute required rewindability of the n-th child
-	virtual CRewindabilitySpec *PrsRequired(CMemoryPool *mp,
-											CExpressionHandle &exprhdl,
-											CRewindabilitySpec *prsRequired,
-											ULONG child_index,
-											CDrvdPropArray *pdrgpdpCtxt,
-											ULONG ulOptReq) const;
+	CRewindabilitySpec *PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+									CRewindabilitySpec *prsRequired,
+									ULONG child_index,
+									CDrvdPropArray *pdrgpdpCtxt,
+									ULONG ulOptReq) const override;
 
 	// compute required distribution of the n-th child
-	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CDistributionSpec *pdsRequired,
-										   ULONG child_index,
-										   CDrvdPropArray *pdrgpdpCtxt,
-										   ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
+
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
 
 	//-------------------------------------------------------------------------------------
 	// Derived Plan Properties
 	//-------------------------------------------------------------------------------------
 
 	// derive sort order
-	virtual COrderSpec *
+	COrderSpec *
 	PosDerive(CMemoryPool *mp,
 			  CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		// hash join is not order-preserving
 		return GPOS_NEW(mp) COrderSpec(mp);
@@ -171,8 +182,8 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// return order property enforcing type for this operator
-	virtual CEnfdProp::EPropEnforcingType EpetOrder(
-		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
+	CEnfdProp::EPropEnforcingType EpetOrder(
+		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const override;
 
 
 	//-------------------------------------------------------------------------------------
@@ -180,8 +191,8 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// execution order of children
-	virtual EChildExecOrder
-	Eceo() const
+	EChildExecOrder
+	Eceo() const override
 	{
 		// TODO - ; 01/06/2014
 		// obtain this property by through MD abstraction layer, similar to scalar properties

@@ -21,7 +21,7 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         self.execSqlResult = Mock(spec=['fetchall'])
 
         self.gp_env = Mock()
-        GpMasterEnvironmentMock = Mock(return_value=self.gp_env)
+        GpCoordinatorEnvironmentMock = Mock(return_value=self.gp_env)
 
         self.gparray = Mock(spec=GpArray)
         self.gparray.getDbList.return_value = self._segments_mock()
@@ -48,9 +48,9 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
             patch("gppylib.db.dbconn.execSQL", return_value=self.execSqlResult),
             patch('time.sleep'),
 
-            patch('gppylib.programs.clsRecoverSegment.GpMasterEnvironment', GpMasterEnvironmentMock),
-            # patch('gppylib.system.environment.GpMasterEnvironment.__init__', self.gp_env),
-            # patch('gppylib.system.environment.GpMasterEnvironment.getMasterPort'),
+            patch('gppylib.programs.clsRecoverSegment.GpCoordinatorEnvironment', GpCoordinatorEnvironmentMock),
+            # patch('gppylib.system.environment.GpCoordinatorEnvironment.__init__', self.gp_env),
+            # patch('gppylib.system.environment.GpCoordinatorEnvironment.getCoordinatorPort'),
             patch('gppylib.system.faultProberInterface.getFaultProber'),
             patch('gppylib.system.configurationInterface.getConfigurationProvider', self.getConfigProviderFunctionMock),
 
@@ -95,12 +95,12 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         segment1 = Mock(spec=Segment)
         segment1.getSegmentHostName.return_value = 'foo1'
         segment1.isSegmentUp.return_value = True
-        segment1.isSegmentMaster.return_value = False
+        segment1.isSegmentCoordinator.return_value = False
         segment1.isSegmentStandby.return_value = False
         segment2 = Mock(spec=Segment)
         segment2.getSegmentHostName.return_value = 'foo2'
         segment2.isSegmentUp.return_value = True
-        segment2.isSegmentMaster.return_value = False
+        segment2.isSegmentCoordinator.return_value = False
         segment2.isSegmentStandby.return_value = False
         return [segment1, segment2]
 

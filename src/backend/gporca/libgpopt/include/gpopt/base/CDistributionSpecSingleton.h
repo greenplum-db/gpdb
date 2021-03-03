@@ -48,18 +48,17 @@ protected:
 	static const CHAR *m_szSegmentType[EstSentinel];
 
 private:
-	// private copy ctor
-	CDistributionSpecSingleton(const CDistributionSpecSingleton &);
-
 public:
+	CDistributionSpecSingleton(const CDistributionSpecSingleton &) = delete;
+
 	// ctor
 	explicit CDistributionSpecSingleton(ESegmentType esegtype);
 
 	CDistributionSpecSingleton();
 
 	// distribution type accessor
-	virtual EDistributionType
-	Edt() const
+	EDistributionType
+	Edt() const override
 	{
 		return CDistributionSpec::EdtSingleton;
 	}
@@ -79,18 +78,18 @@ public:
 	}
 
 	// return distribution partitioning type
-	virtual EDistributionPartitioningType
-	Edpt() const
+	EDistributionPartitioningType
+	Edpt() const override
 	{
 		return EdptNonPartitioned;
 	}
 
 	// does this distribution satisfy the given one
-	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
+	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
 	// hash function for singleton distribution spec
-	virtual ULONG
-	HashValue() const
+	ULONG
+	HashValue() const override
 	{
 		ULONG ulEdt = (ULONG) Edt();
 		BOOL fOnMaster = FOnMaster();
@@ -100,8 +99,8 @@ public:
 	}
 
 	// match function for singleton distribution specs
-	virtual BOOL
-	Matches(const CDistributionSpec *pds) const
+	BOOL
+	Matches(const CDistributionSpec *pds) const override
 	{
 		return Edt() == pds->Edt() &&
 			   FOnMaster() ==
@@ -110,23 +109,33 @@ public:
 	}
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CDistributionSpecSingleton *
 	PdssConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtSingleton == pds->Edt() ||
 					EdtStrictSingleton == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecSingleton *>(pds);
+	}
+
+	// conversion function
+	static const CDistributionSpecSingleton *
+	PdssConvert(const CDistributionSpec *pds)
+	{
+		GPOS_ASSERT(nullptr != pds);
+		GPOS_ASSERT(EdtSingleton == pds->Edt() ||
+					EdtStrictSingleton == pds->Edt());
+
+		return dynamic_cast<const CDistributionSpecSingleton *>(pds);
 	}
 
 };	// class CDistributionSpecSingleton

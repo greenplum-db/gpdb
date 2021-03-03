@@ -1,15 +1,15 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	Implementation of DXL Part List Values expression
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarPartListValues.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -117,7 +117,7 @@ CDXLScalarPartListValues::AssertValid(const CDXLNode *dxlnode,
 CDXLScalarPartListValues *
 CDXLScalarPartListValues::Cast(CDXLOperator *dxl_op)
 {
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 	GPOS_ASSERT(EdxlopScalarPartListValues == dxl_op->GetDXLOperator());
 
 	return dynamic_cast<CDXLScalarPartListValues *>(dxl_op);

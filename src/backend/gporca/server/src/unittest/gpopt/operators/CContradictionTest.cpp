@@ -8,17 +8,17 @@
 //	@doc:
 //		Tests for contradiction detection
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/operators/CContradictionTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/ops.h"
+#include "naucrates/md/IMDScalarOp.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/operators/CContradictionTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/IMDScalarOp.h"
 
 
 
@@ -92,7 +92,7 @@ CContradictionTest::EresUnittest_Constraint()
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpf); i++)
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// generate simple expression

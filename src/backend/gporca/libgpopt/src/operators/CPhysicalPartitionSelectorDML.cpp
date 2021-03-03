@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalPartitionSelectorDML.cpp
@@ -9,14 +9,15 @@
 //		Implementation of physical partition selector for DML
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalPartitionSelectorDML.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRouted.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalPartitionSelectorDML.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
@@ -35,7 +36,7 @@ CPhysicalPartitionSelectorDML::CPhysicalPartitionSelectorDML(
 	: CPhysicalPartitionSelector(mp, mdid, phmulexprEqPredicates),
 	  m_pcrOid(pcrOid)
 {
-	GPOS_ASSERT(NULL != pcrOid);
+	GPOS_ASSERT(nullptr != pcrOid);
 }
 
 //---------------------------------------------------------------------------
@@ -79,21 +80,6 @@ CPhysicalPartitionSelectorDML::HashValue() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalPartitionSelectorDML::PpfmDerive
-//
-//	@doc:
-//		Derive partition filter map
-//
-//---------------------------------------------------------------------------
-CPartFilterMap *
-CPhysicalPartitionSelectorDML::PpfmDerive(CMemoryPool *,  //mp,
-										  CExpressionHandle &exprhdl) const
-{
-	return PpfmPassThruOuter(exprhdl);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalPartitionSelectorDML::PdsRequired
 //
 //	@doc:
@@ -113,7 +99,7 @@ CPhysicalPartitionSelectorDML::PdsRequired(CMemoryPool *mp,
 
 	// if required distribution uses any defined column, it has to be enforced on top,
 	// in this case, we request Any distribution from the child
-	CColRefSet *pcrs = NULL;
+	CColRefSet *pcrs = nullptr;
 	CDistributionSpec::EDistributionType edtRequired = pdsInput->Edt();
 	if (CDistributionSpec::EdtHashed == edtRequired)
 	{
@@ -130,7 +116,7 @@ CPhysicalPartitionSelectorDML::PdsRequired(CMemoryPool *mp,
 		pcrs->Include(pdsrouted->Pcr());
 	}
 
-	BOOL fUsesDefinedCols = (NULL != pcrs && pcrs->FMember(m_pcrOid));
+	BOOL fUsesDefinedCols = (nullptr != pcrs && pcrs->FMember(m_pcrOid));
 	CRefCount::SafeRelease(pcrs);
 	if (fUsesDefinedCols)
 	{
@@ -190,7 +176,7 @@ CPhysicalPartitionSelectorDML::FProvidesReqdCols(CExpressionHandle &exprhdl,
 												 ULONG	// ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(1 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -208,46 +194,6 @@ CPhysicalPartitionSelectorDML::FProvidesReqdCols(CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalPartitionSelectorDML::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalPartitionSelectorDML::PppsRequired(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-	CDrvdPropArray *,  //pdrgpdpCtxt,
-	ULONG			   //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThru(mp, exprhdl, pppsRequired,
-										   child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalPartitionSelectorDML::PpimDerive
-//
-//	@doc:
-//		Derive partition index map
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysicalPartitionSelectorDML::PpimDerive(CMemoryPool *,  //mp,
-										  CExpressionHandle &exprhdl,
-										  CDrvdPropCtxt *  //pdpctxt
-) const
-{
-	return PpimPassThruOuter(exprhdl);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalPartitionSelectorDML::EpetOrder
 //
 //	@doc:
@@ -258,7 +204,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalPartitionSelectorDML::EpetOrder(CExpressionHandle &exprhdl,
 										 const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();
@@ -292,7 +238,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalPartitionSelectorDML::EpetDistribution(
 	CExpressionHandle &exprhdl, const CEnfdDistribution *ped) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// get distribution delivered by the filter node
 	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();

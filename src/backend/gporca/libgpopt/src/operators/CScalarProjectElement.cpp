@@ -9,10 +9,11 @@
 //		Implementation of scalar project operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarProjectElement.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
-#include "gpopt/operators/CScalarProjectElement.h"
 
 using namespace gpopt;
 
@@ -84,7 +85,7 @@ CScalarProjectElement::PopCopyWithRemappedColumns(
 {
 	ULONG id = m_pcr->Id();
 	CColRef *colref = colref_mapping->Find(&id);
-	if (NULL == colref)
+	if (nullptr == colref)
 	{
 		if (must_exist)
 		{

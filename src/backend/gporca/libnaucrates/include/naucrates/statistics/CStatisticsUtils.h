@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2018 Pivotal, Inc.
+//	Copyright 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CStatisticsUtils.h
@@ -12,20 +12,18 @@
 #define GPOPT_CStatisticsUtils_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
-#include "gpopt/base/CPartFilterMap.h"
+#include "gpopt/engine/CStatisticsConfig.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/operators/CScalarBoolOp.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/engine/CStatisticsConfig.h"
-
+#include "naucrates/base/IDatum.h"
 #include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CStatsPredUtils.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
-
-#include "naucrates/base/IDatum.h"
+#include "naucrates/statistics/CStatsPredUtils.h"
 
 namespace gpopt
 {
@@ -72,15 +70,6 @@ private:
 
 	// array of SMcvVPairs
 	typedef CDynamicPtrArray<SMcvPair, CleanupDelete> SMcvPairPtrArray;
-
-	// private ctor
-	CStatisticsUtils();
-
-	// private dtor
-	virtual ~CStatisticsUtils();
-
-	// private copy ctor
-	CStatisticsUtils(const CStatisticsUtils &);
 
 	// given MCVs and histogram buckets, merge them into buckets of a single histogram
 	static CBucketArray *MergeMcvHistBucket(
@@ -137,6 +126,14 @@ private:
 						  const ULongPtrArray *grouping_columns);
 
 public:
+	// private dtor
+	virtual ~CStatisticsUtils() = delete;
+
+	// private ctor
+	CStatisticsUtils() = delete;
+
+	CStatisticsUtils(const CStatisticsUtils &) = delete;
+
 	// get the next data point for generating new bucket boundary
 	static CPoint *NextPoint(CMemoryPool *mp, CMDAccessor *md_accessor,
 							 CPoint *point);
@@ -219,8 +216,7 @@ public:
 
 	// derive statistics of dynamic scan based on part-selector stats in the given map
 	static IStatistics *DeriveStatsForDynamicScan(
-		CMemoryPool *mp, CExpressionHandle &expr_handle, ULONG part_idx_id,
-		CPartFilterMap *part_filter_map);
+		CMemoryPool *mp, CExpressionHandle &expr_handle, ULONG part_idx_id);
 
 	// derive statistics of (dynamic) index-get
 	static IStatistics *DeriveStatsForIndexGet(
@@ -315,8 +311,8 @@ public:
 INT
 CStatisticsUtils::GetMcvPairCmpFunc(const void *val1, const void *val2)
 {
-	GPOS_ASSERT(NULL != val1);
-	GPOS_ASSERT(NULL != val2);
+	GPOS_ASSERT(nullptr != val1);
+	GPOS_ASSERT(nullptr != val2);
 	const SMcvPair *mcv_pair1 = *(const SMcvPair **) (val1);
 	const SMcvPair *mcv_pair2 = *(const SMcvPair **) (val2);
 

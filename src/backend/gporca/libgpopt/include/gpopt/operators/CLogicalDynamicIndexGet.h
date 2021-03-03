@@ -12,9 +12,10 @@
 #define GPOPT_CLogicalDynamicIndexGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/COrderSpec.h"
-#include "gpopt/operators/CLogicalDynamicGetBase.h"
 #include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/operators/CLogicalDynamicGetBase.h"
 
 
 namespace gpopt
@@ -44,10 +45,9 @@ private:
 	// order spec
 	COrderSpec *m_pos;
 
-	// private copy ctor
-	CLogicalDynamicIndexGet(const CLogicalDynamicIndexGet &);
-
 public:
+	CLogicalDynamicIndexGet(const CLogicalDynamicIndexGet &) = delete;
+
 	// ctors
 	explicit CLogicalDynamicIndexGet(CMemoryPool *mp);
 
@@ -56,23 +56,21 @@ public:
 							const CName *pnameAlias, ULONG ulPartIndex,
 							CColRefArray *pdrgpcrOutput,
 							CColRef2dArray *pdrgpdrgpcrPart,
-							ULONG ulSecondaryPartIndexId,
-							CPartConstraint *ppartcnstr,
-							CPartConstraint *ppartcnstrRel);
+							IMdIdArray *partition_mdids);
 
 	// dtor
-	virtual ~CLogicalDynamicIndexGet();
+	~CLogicalDynamicIndexGet() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalDynamicIndexGet;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalDynamicIndexGet";
 	}
@@ -86,7 +84,7 @@ public:
 
 	// index name
 	const CName &
-	Name() const
+	Name() const override
 	{
 		return m_pindexdesc->Name();
 	}
@@ -105,10 +103,6 @@ public:
 		return m_pindexdesc;
 	}
 
-	// check if index is partial given the table descriptor and the index mdid
-	static BOOL IsPartialIndex(CTableDescriptor *ptabdesc,
-							   const IMDIndex *pmdindex);
-
 	// order spec
 	COrderSpec *
 	Pos() const
@@ -117,46 +111,46 @@ public:
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// derive outer references
-	virtual CColRefSet *DeriveOuterReferences(CMemoryPool *mp,
-											  CExpressionHandle &exprhdl);
+	CColRefSet *DeriveOuterReferences(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl) override;
 
 	// sensitivity to order of inputs
-	virtual BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// compute required stat columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsStat(CMemoryPool *,		   //mp
 			 CExpressionHandle &,  // exprhdl
 			 CColRefSet *,		   //pcrsInput
 			 ULONG				   // child_index
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"CLogicalDynamicIndexGet has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	// derive statistics
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	// stat promise
-	virtual EStatPromise
-	Esp(CExpressionHandle &) const
+	EStatPromise
+	Esp(CExpressionHandle &) const override
 	{
 		return CLogical::EspHigh;
 	}
@@ -166,7 +160,7 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 	// conversion function
@@ -175,7 +169,7 @@ public:
 	static CLogicalDynamicIndexGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDynamicIndexGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalDynamicIndexGet *>(pop);
@@ -183,7 +177,7 @@ public:
 
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 };	// class CLogicalDynamicIndexGet
 

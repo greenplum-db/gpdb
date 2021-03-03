@@ -9,13 +9,13 @@
 //		Serializable query object
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CSerializableQuery.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/task/CTask.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
-
-#include "gpopt/minidump/CSerializableQuery.h"
 
 using namespace gpos;
 using namespace gpopt;
@@ -39,8 +39,8 @@ CSerializableQuery::CSerializableQuery(
 	  m_query_output(query_output_dxlnode_array),
 	  m_cte_producers(cte_producers)
 {
-	GPOS_ASSERT(NULL != query);
-	GPOS_ASSERT(NULL != query_output_dxlnode_array);
+	GPOS_ASSERT(nullptr != query);
+	GPOS_ASSERT(nullptr != query_output_dxlnode_array);
 }
 
 
@@ -52,9 +52,7 @@ CSerializableQuery::CSerializableQuery(
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CSerializableQuery::~CSerializableQuery()
-{
-}
+CSerializableQuery::~CSerializableQuery() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

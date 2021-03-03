@@ -19,12 +19,12 @@
 #define GPOS_CMemoryPoolTracker_H
 
 #include "gpos/assert.h"
-#include "gpos/types.h"
-#include "gpos/utils.h"
 #include "gpos/common/CList.h"
 #include "gpos/common/CStackDescriptor.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolStatistics.h"
+#include "gpos/types.h"
+#include "gpos/utils.h"
 
 namespace gpos
 {
@@ -67,13 +67,10 @@ private:
 	CMemoryPoolStatistics m_memory_pool_statistics;
 
 	// allocation sequence number
-	ULONG m_alloc_sequence;
+	ULONG m_alloc_sequence{0};
 
 	// list of allocated (live) objects
 	CList<SAllocHeader> m_allocations_list;
-
-	// private copy ctor
-	CMemoryPoolTracker(CMemoryPoolTracker &);
 
 	// record a successful allocation
 	void RecordAllocation(SAllocHeader *header);
@@ -83,18 +80,20 @@ private:
 
 protected:
 	// dtor
-	virtual ~CMemoryPoolTracker();
+	~CMemoryPoolTracker() override;
 
 public:
+	CMemoryPoolTracker(CMemoryPoolTracker &) = delete;
+
 	// ctor
 	CMemoryPoolTracker();
 
 	// prepare the memory pool to be deleted
-	virtual void TearDown();
+	void TearDown() override;
 
 	// allocate memory
 	void *NewImpl(const ULONG bytes, const CHAR *file, const ULONG line,
-				  CMemoryPool::EAllocationType eat);
+				  CMemoryPool::EAllocationType eat) override;
 
 	// free memory allocation
 	static void DeleteImpl(void *ptr, EAllocationType eat);
@@ -103,8 +102,8 @@ public:
 	static ULONG UserSizeOfAlloc(const void *ptr);
 
 	// return total allocated size
-	virtual ULLONG
-	TotalAllocatedSize() const
+	ULLONG
+	TotalAllocatedSize() const override
 	{
 		return m_memory_pool_statistics.TotalAllocatedSize();
 	}
@@ -112,14 +111,14 @@ public:
 #ifdef GPOS_DEBUG
 
 	// check if the memory pool keeps track of live objects
-	virtual BOOL
-	SupportsLiveObjectWalk() const
+	BOOL
+	SupportsLiveObjectWalk() const override
 	{
 		return true;
 	}
 
 	// walk the live objects
-	virtual void WalkLiveObjects(gpos::IMemoryVisitor *visitor);
+	void WalkLiveObjects(gpos::IMemoryVisitor *visitor) override;
 
 #endif	// GPOS_DEBUG
 };

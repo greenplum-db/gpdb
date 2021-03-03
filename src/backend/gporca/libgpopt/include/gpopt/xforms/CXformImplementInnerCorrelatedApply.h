@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementInnerCorrelatedApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalInnerCorrelatedApply.h"
 #include "gpopt/operators/CPhysicalCorrelatedInnerNLJoin.h"
 #include "gpopt/xforms/CXformImplementCorrelatedApply.h"
@@ -33,11 +34,10 @@ class CXformImplementInnerCorrelatedApply
 											CPhysicalCorrelatedInnerNLJoin>
 {
 private:
-	// private copy ctor
-	CXformImplementInnerCorrelatedApply(
-		const CXformImplementInnerCorrelatedApply &);
-
 public:
+	CXformImplementInnerCorrelatedApply(
+		const CXformImplementInnerCorrelatedApply &) = delete;
+
 	// ctor
 	explicit CXformImplementInnerCorrelatedApply(CMemoryPool *mp)
 		: CXformImplementCorrelatedApply<CLogicalInnerCorrelatedApply,
@@ -46,19 +46,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformImplementInnerCorrelatedApply()
-	{
-	}
+	~CXformImplementInnerCorrelatedApply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementInnerCorrelatedApply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementInnerCorrelatedApply";
 	}

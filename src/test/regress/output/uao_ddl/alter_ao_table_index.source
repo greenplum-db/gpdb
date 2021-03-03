@@ -48,6 +48,27 @@ select * from sto_alt_uao3_idx where bigint_col = 11;
 (1 row)
 
 set gp_select_invisible = false;
+-- Append optimized tables should not have a valid relfrozenxid in
+-- pg_class because per-tuple MVCC information (xmin/xmax) is not
+-- present.
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao3_idx'
+       and n.nspname = 'alter_ao_table_index_@amname@';
+ relfrozenxid 
+--------------
+            0
+(1 row)
+
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao3_idx'
+       and n.nspname = 'alter_ao_table_index_@amname@';
+ relfrozenxid 
+--------------
+            0
+            0
+            0
+(3 rows)
+
 -- Verify that alter table cluster on indexname is allowed
 Alter table sto_alt_uao3_idx cluster on sto_alt_uao3_idx_idx;
 select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
@@ -70,6 +91,25 @@ select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::reg
 ----------------
  t
 (1 row)
+
+-- relfrozenxid should remain invalid after table rewrite
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao3_idx'
+       and n.nspname = 'alter_ao_table_index_@amname@';
+ relfrozenxid 
+--------------
+            0
+(1 row)
+
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname = 'sto_alt_uao3_idx'
+       and n.nspname = 'alter_ao_table_index_@amname@';
+ relfrozenxid 
+--------------
+            0
+            0
+            0
+(3 rows)
 
 -- Verify that unique index is not allowed
 CREATE UNIQUE INDEX uni_index ON sto_alt_uao3_idx (text_col);

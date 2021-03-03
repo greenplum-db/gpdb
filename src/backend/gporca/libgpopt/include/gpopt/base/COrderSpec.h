@@ -13,12 +13,11 @@
 #define GPOPT_COrderSpec_H
 
 #include "gpos/base.h"
+#include "gpos/common/DbgPrintMixin.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CPropSpec.h"
-
 #include "naucrates/md/IMDId.h"
-
 
 namespace gpopt
 {
@@ -65,7 +64,7 @@ private:
 	//			3. definition of NULL treatment
 	//
 	//---------------------------------------------------------------------------
-	class COrderExpression
+	class COrderExpression : public gpos::DbgPrintMixin<COrderExpression>
 	{
 	private:
 		// MD id of sort operator
@@ -77,10 +76,9 @@ private:
 		// null treatment
 		ENullTreatment m_ent;
 
-		// private copy ctor
-		COrderExpression(const COrderExpression &);
-
 	public:
+		COrderExpression(const COrderExpression &) = delete;
+
 		// ctor
 		COrderExpression(gpmd::IMDId *mdid, const CColRef *colref,
 						 ENullTreatment ent);
@@ -115,11 +113,6 @@ private:
 		// print
 		IOstream &OsPrint(IOstream &os) const;
 
-#ifdef GPOS_DEBUG
-		// debug print for interactive debugging sessions only
-		void DbgPrint() const;
-#endif	// GPOS_DEBUG
-
 	};	// class COrderExpression
 
 	// array of order expressions
@@ -133,18 +126,17 @@ private:
 	// components of order spec
 	COrderExpressionArray *m_pdrgpoe;
 
-	// private copy ctor
-	COrderSpec(const COrderSpec &);
-
 	// extract columns from order spec into the given column set
 	void ExtractCols(CColRefSet *pcrs) const;
 
 public:
+	COrderSpec(const COrderSpec &) = delete;
+
 	// ctor
 	explicit COrderSpec(CMemoryPool *mp);
 
 	// dtor
-	virtual ~COrderSpec();
+	~COrderSpec() override;
 
 	// number of sort expressions
 	ULONG
@@ -188,11 +180,11 @@ public:
 	void Append(gpmd::IMDId *mdid, const CColRef *colref, ENullTreatment ent);
 
 	// extract colref set of order columns
-	virtual CColRefSet *PcrsUsed(CMemoryPool *mp) const;
+	CColRefSet *PcrsUsed(CMemoryPool *mp) const override;
 
 	// property type
-	virtual EPropSpecType
-	Epst() const
+	EPropSpecType
+	Epst() const override
 	{
 		return EpstOrder;
 	}
@@ -204,13 +196,12 @@ public:
 	BOOL FSatisfies(const COrderSpec *pos) const;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// return a copy of the order spec with remapped columns
 	virtual COrderSpec *PosCopyWithRemappedColumns(
@@ -220,7 +211,7 @@ public:
 	virtual COrderSpec *PosExcludeColumns(CMemoryPool *mp, CColRefSet *pcrs);
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// matching function over order spec arrays
 	static BOOL Equals(const COrderSpecArray *pdrgposFirst,

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerScalarBitmapIndexProbe.h
@@ -33,26 +33,25 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerScalarBitmapIndexProbe : public CParseHandlerScalarOp
 {
 private:
-	// private copy ctor
-	CParseHandlerScalarBitmapIndexProbe(
-		const CParseHandlerScalarBitmapIndexProbe &);
-
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerScalarBitmapIndexProbe(
+		const CParseHandlerScalarBitmapIndexProbe &) = delete;
+
 	// ctor
 	CParseHandlerScalarBitmapIndexProbe(CMemoryPool *mp,
 										CParseHandlerManager *parse_handler_mgr,

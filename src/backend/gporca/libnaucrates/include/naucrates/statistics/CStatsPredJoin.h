@@ -12,10 +12,11 @@
 #define GPNAUCRATES_CStatsPredJoin_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
-#include "naucrates/statistics/CStatsPred.h"
+#include "gpos/common/CRefCount.h"
+
 #include "naucrates/md/IMDType.h"
+#include "naucrates/statistics/CStatsPred.h"
 
 namespace gpnaucrates
 {
@@ -32,12 +33,6 @@ using namespace gpmd;
 class CStatsPredJoin : public CRefCount
 {
 private:
-	// private copy ctor
-	CStatsPredJoin(const CStatsPredJoin &);
-
-	// private assignment operator
-	CStatsPredJoin &operator=(CStatsPredJoin &);
-
 	// column id
 	ULONG m_colidOuter;
 
@@ -48,6 +43,10 @@ private:
 	ULONG m_colidInner;
 
 public:
+	CStatsPredJoin &operator=(CStatsPredJoin &) = delete;
+
+	CStatsPredJoin(const CStatsPredJoin &) = delete;
+
 	// c'tor
 	CStatsPredJoin(ULONG colid1, CStatsPred::EStatsCmpType stats_cmp_type,
 				   ULONG colid2)
@@ -90,9 +89,7 @@ public:
 	}
 
 	// d'tor
-	virtual ~CStatsPredJoin()
-	{
-	}
+	~CStatsPredJoin() override = default;
 
 };	// class CStatsPredJoin
 

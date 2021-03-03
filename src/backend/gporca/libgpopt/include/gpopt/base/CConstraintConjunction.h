@@ -39,19 +39,18 @@ private:
 	// mapping colref -> array of child constraints
 	ColRefToConstraintArrayMap *m_phmcolconstr;
 
-	// hidden copy ctor
-	CConstraintConjunction(const CConstraintConjunction &);
-
 public:
+	CConstraintConjunction(const CConstraintConjunction &) = delete;
+
 	// ctor
 	CConstraintConjunction(CMemoryPool *mp, CConstraintArray *pdrgpcnstr);
 
 	// dtor
-	virtual ~CConstraintConjunction();
+	~CConstraintConjunction() override;
 
 	// constraint type accessor
-	virtual EConstraintType
-	Ect() const
+	EConstraintType
+	Ect() const override
 	{
 		return CConstraint::EctConjunction;
 	}
@@ -64,31 +63,32 @@ public:
 	}
 
 	// is this constraint a contradiction
-	virtual BOOL FContradiction() const;
+	BOOL FContradiction() const override;
 
 	// scalar expression
-	virtual CExpression *PexprScalar(CMemoryPool *mp);
+	CExpression *PexprScalar(CMemoryPool *mp) override;
 
 	// check if there is a constraint on the given column
-	virtual BOOL FConstraint(const CColRef *colref) const;
+	BOOL FConstraint(const CColRef *colref) const override;
 
 	// return a copy of the constraint with remapped columns
-	virtual CConstraint *PcnstrCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	CConstraint *PcnstrCopyWithRemappedColumns(CMemoryPool *mp,
+											   UlongToColRefMap *colref_mapping,
+											   BOOL must_exist) override;
 
 	// return constraint on a given column
-	virtual CConstraint *Pcnstr(CMemoryPool *mp, const CColRef *colref);
+	CConstraint *Pcnstr(CMemoryPool *mp, const CColRef *colref) override;
 
 	// return constraint on a given column set
-	virtual CConstraint *Pcnstr(CMemoryPool *mp, CColRefSet *pcrs);
+	CConstraint *Pcnstr(CMemoryPool *mp, CColRefSet *pcrs) override;
 
 	// return a clone of the constraint for a different column
-	virtual CConstraint *PcnstrRemapForColumn(CMemoryPool *mp,
-											  CColRef *colref) const;
+	CConstraint *PcnstrRemapForColumn(CMemoryPool *mp,
+									  CColRef *colref) const override;
 
 	// print
-	virtual IOstream &
-	OsPrint(IOstream &os) const
+	IOstream &
+	OsPrint(IOstream &os) const override
 	{
 		return PrintConjunctionDisjunction(os, m_pdrgpcnstr);
 	}

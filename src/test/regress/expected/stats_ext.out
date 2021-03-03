@@ -362,7 +362,7 @@ SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE 
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         3 |      1
+         1 |      1
 (1 row)
 
 -- create statistics
@@ -377,7 +377,7 @@ SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE 
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         3 |      1
+         1 |      1
 (1 row)
 
 -- a => b, a => c, b => c
@@ -389,13 +389,13 @@ ANALYZE functional_dependencies;
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1''');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM functional_dependencies WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 -- create statistics
@@ -451,7 +451,7 @@ SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         3 |      1
+         1 |      1
 (1 row)
 
 -- create statistics
@@ -466,7 +466,7 @@ SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         3 |      1
+         1 |      1
 (1 row)
 
 -- 100 distinct combinations, all in the MCV list
@@ -478,37 +478,37 @@ ANALYZE mcv_lists;
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = ''1''');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a < 1 AND b < ''1''');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a <= 0 AND b <= ''0''');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = ''1'' AND c = 1');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a < 5 AND b < ''1'' AND c < 5');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a <= 4 AND b <= ''0'' AND c <= 4');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 -- create statistics
@@ -566,7 +566,7 @@ ALTER TABLE mcv_lists ALTER COLUMN c TYPE numeric;
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a = 1 AND b = ''1''');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 ANALYZE mcv_lists;
@@ -590,13 +590,13 @@ ANALYZE mcv_lists;
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a IS NULL AND b IS NULL');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists WHERE a IS NULL AND b IS NULL AND c IS NULL');
  estimated | actual 
 -----------+--------
-         3 |     50
+         1 |     50
 (1 row)
 
 -- create statistics
@@ -690,19 +690,19 @@ SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_bool WHERE a AND b A
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_bool WHERE NOT a AND b AND c');
  estimated | actual 
 -----------+--------
-         3 |      0
+         1 |      0
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_bool WHERE NOT a AND NOT b AND c');
  estimated | actual 
 -----------+--------
-         3 |      0
+         1 |      0
 (1 row)
 
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_bool WHERE NOT a AND b AND NOT c');
  estimated | actual 
 -----------+--------
-         3 |      0
+         1 |      0
 (1 row)
 
 -- Permission tests. Users should not be able to see specific data values in

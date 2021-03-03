@@ -9,7 +9,7 @@ begin	/* in func */
   return next 'foo ' || current_setting('gp_contentid');	/* in func */
   return next 'bar ' || current_setting('gp_contentid');	/* in func */
 end;	/* in func */
-$$ language plpgsql EXECUTE ON MASTER;
+$$ language plpgsql EXECUTE ON COORDINATOR;
 
 create function srf_on_all_segments () returns setof text as $$
 begin	/* in func */

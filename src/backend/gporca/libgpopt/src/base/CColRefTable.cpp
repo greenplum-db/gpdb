@@ -9,8 +9,9 @@
 //		Implementation of column reference class
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CColRefTable.h"
+
+#include "gpos/base.h"
 
 #include "naucrates/md/CMDIdGPDB.h"
 
@@ -33,7 +34,7 @@ CColRefTable::CColRefTable(const CColumnDescriptor *pcoldesc, ULONG id,
 	  m_ulSourceOpId(ulOpSource),
 	  m_width(pcoldesc->Width())
 {
-	GPOS_ASSERT(NULL != pname);
+	GPOS_ASSERT(nullptr != pname);
 
 	m_iAttno = pcoldesc->AttrNum();
 	m_is_nullable = pcoldesc->IsNullable();
@@ -59,7 +60,7 @@ CColRefTable::CColRefTable(const IMDType *pmdtype, INT type_modifier, INT attno,
 	  m_is_dist_col(is_dist_col),
 	  m_width(ulWidth)
 {
-	GPOS_ASSERT(NULL != pname);
+	GPOS_ASSERT(nullptr != pname);
 }
 
 //---------------------------------------------------------------------------
@@ -70,9 +71,7 @@ CColRefTable::CColRefTable(const IMDType *pmdtype, INT type_modifier, INT attno,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CColRefTable::~CColRefTable()
-{
-}
+CColRefTable::~CColRefTable() = default;
 
 
 // EOF

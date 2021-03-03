@@ -1,55 +1,55 @@
 @gpinitstandby
 Feature: Tests for gpinitstandby feature
 
-    Scenario: gpinitstandby with -n option (manually start standby master)
+    Scenario: gpinitstandby with -n option (manually start standby coordinator)
         Given the database is running
         And the standby is not initialized
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
-        And verify the standby master entries in catalog
+        And verify the standby coordinator entries in catalog
         And the user runs gpinitstandby with options "-n"
-        And gpinitstandby should print "Standy master is already up and running" to stdout
-        When the standby master goes down
+        And gpinitstandby should print "Standy coordinator is already up and running" to stdout
+        When the standby coordinator goes down
         And the user runs gpinitstandby with options "-n"
         Then gpinitstandby should return a return code of 0
-        And verify the standby master entries in catalog
-        And gpinitstandby should print "Successfully started standby master" to stdout
+        And verify the standby coordinator entries in catalog
+        And gpinitstandby should print "Successfully started standby coordinator" to stdout
 
-    Scenario: gpinitstandby fails if given same host and port as master segment
+    Scenario: gpinitstandby fails if given same host and port as coordinator segment
         Given the database is running
         And the standby is not initialized
-        When the user initializes a standby on the same host as master with same port
+        When the user initializes a standby on the same host as coordinator with same port
         Then gpinitstandby should return a return code of 2
         And gpinitstandby should print "cannot create standby on the same host and port" to stdout
 
-    Scenario: gpinitstandby fails if given same host and datadir as master segment
+    Scenario: gpinitstandby fails if given same host and datadir as coordinator segment
         Given the database is running
           And the standby is not initialized
-         When the user initializes a standby on the same host as master and the same data directory
+         When the user initializes a standby on the same host as coordinator and the same data directory
          Then gpinitstandby should return a return code of 2
-          And gpinitstandby should print "master data directory exists" to stdout
+          And gpinitstandby should print "coordinator data directory exists" to stdout
           And gpinitstandby should print "use -S and -P to specify a new data directory and port" to stdout
 
     Scenario: gpinitstandby exclude dirs
         Given the database is running
         And the standby is not initialized
-        And the file "log/testfile" exists under master data directory
-        And the file "db_dumps/testfile" exists under master data directory
-        And the file "promote/testfile" exists under master data directory
+        And the file "log/testfile" exists under coordinator data directory
+        And the file "db_dumps/testfile" exists under coordinator data directory
+        And the file "promote/testfile" exists under coordinator data directory
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
-        And verify the standby master entries in catalog
-        And the file "log/testfile" does not exist under standby master data directory
-        And the file "db_dumps/testfile" does not exist under standby master data directory
-        And the file "promote/testfile" does not exist under standby master data directory
-        ## maybe clean up the directories created in the master data directory
+        And verify the standby coordinator entries in catalog
+        And the file "log/testfile" does not exist under standby coordinator data directory
+        And the file "db_dumps/testfile" does not exist under standby coordinator data directory
+        And the file "promote/testfile" does not exist under standby coordinator data directory
+        ## maybe clean up the directories created in the coordinator data directory
 
-    Scenario: gpstate -f shows standby master information after running gpinitstandby
+    Scenario: gpstate -f shows standby coordinator information after running gpinitstandby
         Given the database is running
         And the standby is not initialized
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
-        And verify the standby master entries in catalog
+        And verify the standby coordinator entries in catalog
         Then the user runs command "gpstate -f"
         And verify gpstate with options "-f" output is correct
 
@@ -68,8 +68,8 @@ Feature: Tests for gpinitstandby feature
         When the user runs "gpconfig -s data_checksums"
         Then gpconfig should return a return code of 0
         Then gpconfig should print "Values on all segments are consistent" to stdout
-        Then gpconfig should print "Master  value: on" to stdout
-        Then gpconfig should print "Segment value: on" to stdout
+        Then gpconfig should print "Coordinator value: on" to stdout
+        Then gpconfig should print "Segment     value: on" to stdout
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
         And gpinitstandby should not print "Traceback" to stdout
@@ -82,8 +82,8 @@ Feature: Tests for gpinitstandby feature
         When the user runs "gpconfig -s data_checksums"
         Then gpconfig should return a return code of 0
         And gpconfig should print "Values on all segments are consistent" to stdout
-        And gpconfig should print "Master  value: off" to stdout
-        And gpconfig should print "Segment value: off" to stdout
+        And gpconfig should print "Coordinator value: off" to stdout
+        And gpconfig should print "Segment     value: off" to stdout
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
         And gpinitstandby should not print "Traceback" to stdout
@@ -95,4 +95,4 @@ Feature: Tests for gpinitstandby feature
         And the standby is not initialized
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
-        And verify that the file "pg_hba.conf" in the master data directory has "no" line starting with "host.*replication.*(127.0.0.1|::1).*trust"
+        And verify that the file "pg_hba.conf" in the coordinator data directory has "no" line starting with "host.*replication.*(127.0.0.1|::1).*trust"

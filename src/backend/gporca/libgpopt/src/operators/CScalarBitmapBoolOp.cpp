@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarBitmapBoolOp.cpp
@@ -15,14 +15,14 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarBitmapBoolOp.h"
+
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/metadata/CIndexDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CScalarBitmapBoolOp.h"
 #include "gpopt/xforms/CXform.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
@@ -46,9 +46,9 @@ CScalarBitmapBoolOp::CScalarBitmapBoolOp(CMemoryPool *mp,
 	  m_ebitmapboolop(ebitmapboolop),
 	  m_pmdidBitmapType(pmdidBitmapType)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(EbitmapboolSentinel > ebitmapboolop);
-	GPOS_ASSERT(NULL != pmdidBitmapType);
+	GPOS_ASSERT(nullptr != pmdidBitmapType);
 }
 
 //---------------------------------------------------------------------------

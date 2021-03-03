@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLDatumInt2.h
@@ -19,6 +19,7 @@
 #define GPDXL_CDXLDatumInt2_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
@@ -42,25 +43,24 @@ private:
 	// int2 value
 	SINT m_val;
 
-	// private copy ctor
-	CDXLDatumInt2(const CDXLDatumInt2 &);
-
 public:
+	CDXLDatumInt2(const CDXLDatumInt2 &) = delete;
+
 	// ctor
 	CDXLDatumInt2(CMemoryPool *mp, IMDId *mdid_type, BOOL is_null, SINT val);
 
 	// dtor
-	virtual ~CDXLDatumInt2(){};
+	~CDXLDatumInt2() override = default;
 
 	// accessor of int value
 	SINT Value() const;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumInt2;
 	}
@@ -69,7 +69,7 @@ public:
 	static CDXLDatumInt2 *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumInt2 == dxl_datum->GetDatumType());
 
 		return dynamic_cast<CDXLDatumInt2 *>(dxl_datum);

@@ -3,7 +3,7 @@
  * AppendOnlyVisimap UDFs
  *   User-defined functions (UDF) for support of append-only visimap
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -19,7 +19,7 @@
 #include "access/table.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"

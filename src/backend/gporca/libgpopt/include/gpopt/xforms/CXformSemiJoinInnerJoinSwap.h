@@ -33,10 +33,9 @@ class CXformSemiJoinInnerJoinSwap
 	: public CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalInnerJoin>
 {
 private:
-	// private copy ctor
-	CXformSemiJoinInnerJoinSwap(const CXformSemiJoinInnerJoinSwap &);
-
 public:
+	CXformSemiJoinInnerJoinSwap(const CXformSemiJoinInnerJoinSwap &) = delete;
+
 	// ctor
 	explicit CXformSemiJoinInnerJoinSwap(CMemoryPool *mp)
 		: CXformJoinSwap<CLogicalLeftSemiJoin, CLogicalInnerJoin>(mp)
@@ -44,19 +43,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformSemiJoinInnerJoinSwap()
-	{
-	}
+	~CXformSemiJoinInnerJoinSwap() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSemiJoinInnerJoinSwap;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSemiJoinInnerJoinSwap";
 	}

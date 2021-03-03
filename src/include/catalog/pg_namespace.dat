@@ -25,7 +25,12 @@
 # GPDB-specific built-in namespaces.
 # NOTE: pg_dump has BM_BITMAPINDEX_NAMESPACE's value hard-coded in the
 # getTables() query.
-{ oid => '7014', oid_symbol => 'PG_AOSEGMENT_NAMESPACE',
+# OIDs for these built-in namespaces can't be changed. pg_upgrade
+# fails if OID for these schemas mismatch between old and new
+# cluster. Mainly preassigned lookup uses these oids in key hence
+# object lookup fails if it differs between source and destination
+# cluster
+{ oid => '6104', oid_symbol => 'PG_AOSEGMENT_NAMESPACE',
   descr => 'Reserved schema for Append Only segment list and eof tables',
   nspname => 'pg_aoseg', nspowner => 'PGUID', nspacl => '_null_' },
 { oid => '7012', oid_symbol => 'PG_BITMAPINDEX_NAMESPACE',

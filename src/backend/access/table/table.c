@@ -186,33 +186,13 @@ CdbTryOpenTable(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 	if (lockUpgraded != NULL)
 		*lockUpgraded = false;
 
-    /*
-	 * Since we have introduced GDD(global deadlock detector), for heap table
-	 * we do not need to upgrade the requested lock. For ao table, because of
-	 * the design of ao table's visibilitymap, we have to upgrade the lock
-	 * (More details please refer https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/iDj8WkLus4g)
-	 *
-	 * And we select for update statement's lock is upgraded at addRangeTableEntry.
-	 *
-	 * Note: This code could be improved substantially after we redesign ao table
-	 * and select for update.
-	 */
-	if (lockmode == RowExclusiveLock)
-	{
-		if (Gp_role == GP_ROLE_DISPATCH &&
-			CondUpgradeRelLock(relid))
-		{
-			lockmode = ExclusiveLock;
-			if (lockUpgraded != NULL)
-				*lockUpgraded = true;
-		}
-    }
+	lockmode = UpgradeRelLockIfNecessary(relid, lockmode, lockUpgraded);
 
 	rel = try_table_open(relid, lockmode, false);
 	if (!RelationIsValid(rel))
 		return NULL;
 
-	/* 
+	/*
 	 * There is a slim chance that ALTER TABLE SET DISTRIBUTED BY may
 	 * have altered the distribution policy between the time that we
 	 * decided to upgrade the lock and the time we opened the table

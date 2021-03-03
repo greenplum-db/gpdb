@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CLogicalExternalGet.h
@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalExternalGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalGet.h"
 
 namespace gpopt
@@ -32,10 +33,9 @@ class CColRefSet;
 class CLogicalExternalGet : public CLogicalGet
 {
 private:
-	// private copy ctor
-	CLogicalExternalGet(const CLogicalExternalGet &);
-
 public:
+	CLogicalExternalGet(const CLogicalExternalGet &) = delete;
+
 	// ctors
 	explicit CLogicalExternalGet(CMemoryPool *mp);
 
@@ -47,40 +47,41 @@ public:
 						CColRefArray *pdrgpcrOutput);
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalExternalGet;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalExternalGet";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// compute required stat columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsStat(CMemoryPool *,		   // mp,
 			 CExpressionHandle &,  // exprhdl
 			 CColRefSet *,		   // pcrsInput
 			 ULONG				   // child_index
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"CLogicalExternalGet has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -88,7 +89,7 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
@@ -98,7 +99,7 @@ public:
 	static CLogicalExternalGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalExternalGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalExternalGet *>(pop);

@@ -12,6 +12,7 @@
 #define GPNAUCRATES_CStatsPredDisj_H
 
 #include "gpos/base.h"
+
 #include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatsPred.h"
 
@@ -43,13 +44,13 @@ public:
 	explicit CStatsPredDisj(CStatsPredPtrArry *disj_pred_stats_array);
 
 	// dtor
-	virtual ~CStatsPredDisj()
+	~CStatsPredDisj() override
 	{
 		m_disj_pred_stats_array->Release();
 	}
 
 	// the column identifier on which the predicates are on
-	virtual ULONG GetColId() const;
+	ULONG GetColId() const override;
 
 	// total number of predicates in the disjunction
 	ULONG
@@ -72,8 +73,8 @@ public:
 	CStatsPred *GetPredStats(ULONG pos) const;
 
 	// filter type id
-	virtual EStatsPredType
-	GetPredStatsType() const
+	EStatsPredType
+	GetPredStatsType() const override
 	{
 		return CStatsPred::EsptDisj;
 	}
@@ -85,7 +86,7 @@ public:
 	static CStatsPredDisj *
 	ConvertPredStats(CStatsPred *pred_stats)
 	{
-		GPOS_ASSERT(NULL != pred_stats);
+		GPOS_ASSERT(nullptr != pred_stats);
 		GPOS_ASSERT(CStatsPred::EsptDisj == pred_stats->GetPredStatsType());
 
 		return dynamic_cast<CStatsPredDisj *>(pred_stats);

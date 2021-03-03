@@ -12,9 +12,10 @@
 #define GPOPT_CXformSimplifyProjectWithSubquery_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPatternLeaf.h"
+
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CLogicalProject.h"
+#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/xforms/CXformSimplifySubquery.h"
 
 namespace gpopt
@@ -32,11 +33,10 @@ using namespace gpos;
 class CXformSimplifyProjectWithSubquery : public CXformSimplifySubquery
 {
 private:
-	// private copy ctor
-	CXformSimplifyProjectWithSubquery(
-		const CXformSimplifyProjectWithSubquery &);
-
 public:
+	CXformSimplifyProjectWithSubquery(
+		const CXformSimplifyProjectWithSubquery &) = delete;
+
 	// ctor
 	explicit CXformSimplifyProjectWithSubquery(CMemoryPool *mp)
 		:  // pattern
@@ -51,34 +51,32 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformSimplifyProjectWithSubquery()
-	{
-	}
+	~CXformSimplifyProjectWithSubquery() override = default;
 
 	// Compatibility function for simplifying aggregates
-	virtual BOOL
-	FCompatible(CXform::EXformId exfid)
+	BOOL
+	FCompatible(CXform::EXformId exfid) override
 	{
 		return (CXform::ExfSimplifyProjectWithSubquery != exfid);
 	}
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSimplifyProjectWithSubquery;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSimplifyProjectWithSubquery";
 	}
 
 	// is transformation a subquery unnesting (Subquery To Apply) xform?
-	virtual BOOL
-	FSubqueryUnnesting() const
+	BOOL
+	FSubqueryUnnesting() const override
 	{
 		return true;
 	}

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerCostModel.cpp
@@ -10,20 +10,17 @@
 //		config params
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/parser/CParseHandlerCostModel.h"
+
 #include "gpos/common/CBitSet.h"
 
-#include "naucrates/dxl/parser/CParseHandlerCostModel.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerCostParams.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/traceflags/traceflags.h"
-
-#include "naucrates/dxl/xml/dxltokens.h"
-
 #include "gpdbcost/CCostModelGPDB.h"
-#include "gpdbcost/CCostModelGPDBLegacy.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerCostParams.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpdxl;
 using namespace gpdbcost;
@@ -43,8 +40,8 @@ CParseHandlerCostModel::CParseHandlerCostModel(
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_num_of_segments(0),
-	  m_cost_model(NULL),
-	  m_parse_handler_cost_params(NULL)
+	  m_cost_model(nullptr),
+	  m_parse_handler_cost_params(nullptr)
 {
 }
 
@@ -139,23 +136,22 @@ CParseHandlerCostModel::EndElement(const XMLCh *const,	// element_uri,
 
 	switch (m_cost_model_type)
 	{
+		// FIXME: Remove ICostModel::ECostModelType
+		// Right now, we use the same class for all cost models
 		case ICostModel::EcmtGPDBLegacy:
-			m_cost_model =
-				GPOS_NEW(m_mp) CCostModelGPDBLegacy(m_mp, m_num_of_segments);
-			break;
+		case ICostModel::EcmtGPDBExperimental:
 		case ICostModel::EcmtGPDBCalibrated:
 			CCostModelParamsGPDB *pcp;
 
-			if (NULL == m_parse_handler_cost_params)
+			if (nullptr == m_parse_handler_cost_params)
 			{
-				pcp = NULL;
-				GPOS_ASSERT(false && "CostModelParam handler not set");
+				pcp = nullptr;
 			}
 			else
 			{
 				pcp = dynamic_cast<CCostModelParamsGPDB *>(
 					m_parse_handler_cost_params->GetCostModelParams());
-				GPOS_ASSERT(NULL != pcp);
+				GPOS_ASSERT(nullptr != pcp);
 				pcp->AddRef();
 			}
 			m_cost_model =

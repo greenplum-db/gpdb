@@ -43,15 +43,6 @@ private:
 		CTestObject() : CTaskLocalStorageObject(CTaskLocalStorage::EtlsidxTest)
 		{
 		}
-
-#ifdef GPOS_DEBUG
-		// overwrite abstract member
-		IOstream &
-		OsPrint(IOstream &os) const
-		{
-			return os;
-		}
-#endif	// GPOS_DEBUG
 	};
 
 public:

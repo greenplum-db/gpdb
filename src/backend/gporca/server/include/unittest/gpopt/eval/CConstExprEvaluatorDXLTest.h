@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorDXLTest.h
@@ -58,10 +58,10 @@ private:
 		// dummy value to return
 		INT m_val;
 
-		// private copy ctor
-		CDummyConstDXLNodeEvaluator(const CDummyConstDXLNodeEvaluator &);
-
 	public:
+		CDummyConstDXLNodeEvaluator(const CDummyConstDXLNodeEvaluator &) =
+			delete;
+
 		// ctor
 		CDummyConstDXLNodeEvaluator(CMemoryPool *mp, CMDAccessor *md_accessor,
 									INT val)
@@ -70,16 +70,15 @@ private:
 		}
 
 		// dtor
-		virtual ~CDummyConstDXLNodeEvaluator()
-		{
-		}
+		~CDummyConstDXLNodeEvaluator() override = default;
 
 		// evaluate the given DXL node representing an expression and returns a dummy value as DXL
-		virtual gpdxl::CDXLNode *EvaluateExpr(const gpdxl::CDXLNode *pdxlnExpr);
+		gpdxl::CDXLNode *EvaluateExpr(
+			const gpdxl::CDXLNode *pdxlnExpr) override;
 
 		// can evaluate expressions
-		virtual BOOL
-		FCanEvalExpressions()
+		BOOL
+		FCanEvalExpressions() override
 		{
 			return true;
 		}

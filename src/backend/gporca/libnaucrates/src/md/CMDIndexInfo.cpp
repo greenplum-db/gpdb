@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDIndexInfo.cpp
@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/md/CMDIndexInfo.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;

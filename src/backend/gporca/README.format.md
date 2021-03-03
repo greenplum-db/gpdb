@@ -2,11 +2,12 @@
 
 ### Tools
 
-1. We are using [clang-format](https://clang.llvm.org/docs/ClangFormat.html).
-
 [clang-format-style-options]: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
 [clang-format-style-options.10]: https://releases.llvm.org/10.0.0/tools/clang/docs/ClangFormatStyleOptions.html
 [clang-format.10]: https://releases.llvm.org/10.0.0/tools/clang/docs/ClangFormat.html
+
+1. We are using [clang-format](https://clang.llvm.org/docs/ClangFormat.html).
+
 1. We use the current stable release, with an eye to good new options coming from [the next release][clang-format-style-options].
    As of writing we're using [release 10][clang-format.10],
    the configuration options are [documented here][clang-format-style-options.10].
@@ -80,26 +81,70 @@ there will inevitably be a number of patches that were started well before the f
 and these patches will now need to conform to the new format.
 The following steps are used to convert in-flight branches to the new format.
 
-1. Get the format script
+1. Fetch the inflight PR. Let's say its greenplum-db/gpdb#20042
 
    ```sh
-   git restore --source master -- src/tools/fmt
+   git fetch origin refs/pull/20042/head
+   git checkout -b 20042-backup FETCH_HEAD
    ```
 
-1. Get the format configuration files
+1. Duplicate the PR to a working branch. We'll reformat this branch:
+   ```sh
+   git checkout -b 20042-fmt
+   ```
+
+1. Rebase the working branch to just before the big bang.
+   Normally, you'd do it like (but don't do this yet):
 
    ```sh
-   git restore --source master -- src/include/gpopt/.clang-format src/backend/gpopt/.clang-format src/backend/gporca/.clang-format
+   git rebase 'origin/master^{/Format ORCA and GPOPT}~'
    ```
+
+   Here `'origin/master^{/Format ORCA and GPOPT}'` is a Git notation that denotes
+   the most recent commit from branch `origin/master' that contains the phrase
+   "Format ORCA and GPOPT". The trailing tilde character is Git shorthand for "first parent".
+
+1. But! We want to insert a precursor commit that will eventually disappear:
+
+   ```sh
+   git rebase --interactive 'origin/master^{/Format ORCA and GPOPT}~2'
+   ```
+
+   When we edit the "rebase todo" in an editor, make sure to insert the
+   following action between the first two "pick" action items:
+
+   ```diff
+   --- /tmp/todo	2020-11-12 16:48:07.251333950 -0800
+   +++ /tmp/todo2	2020-11-12 16:48:07.291333698 -0800
+   @@ -1,7 +1,8 @@
+    pick 87fd0149caf8f052 Penultimate commit on master
+   +exec git checkout origin/master -- src/tools/fmt src/include/gpopt/.clang-format src/backend/gpopt/.clang-format src/backend/gporca/.clang-format; git commit -m 'this commit will disappear'
+    pick 93235faf306f4ecb 1st commit from PR
+    pick 2b7ad8b9fd1f222c 2nd commit from PR
+    pick 5bc7ac02c1c78b8b Last commit from PR
+
+    # Rebase f96bb1e290ef188e..5bc7ac02c1c78b8b onto c6ab7beee96e8bc7 (2 commands)
+    #
+   ```
+
+   What happens here is that we inserted a placeholder commit that gets us the
+   format script and format configuration while rebasing.
+
+   This commit will disappear in the final history (read on)
 
 1. Use `git filter-branch` to rewrite the branch history
 
    ```sh
-   git filter-branch --tree-filter 'src/tools/fmt fmt' master..
+   git filter-branch --force --tree-filter 'CLANG_FORMAT=clang-format-10 src/tools/fmt fmt; CLANG_FORMAT=clang-format-10 src/tools/fmt fmt' origin/master..
    ```
+
+   Now we have reformatted every commit in this branch that's not in master (modulo the big bang commit).
+   As a bonus, our placeholder commit should now be identical to the tip of master (the big bang formatting commit).
 
 1. Now that we have reformatted the history, rebase on top of master
 
    ```sh
-   git rebase master
+   git rebase origin/master
    ```
+
+   Git should be smart enough to drop our placeholder commit, and now the history is all properly formatted.

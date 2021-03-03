@@ -16,6 +16,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -36,7 +37,7 @@ CDXLDatumGeneric::CDXLDatumGeneric(CMemoryPool *mp, IMDId *mdid_type,
 	: CDXLDatum(mp, mdid_type, type_modifier, is_null, length),
 	  m_byte_array(byte_array)
 {
-	GPOS_ASSERT_IMP(m_is_null, (m_byte_array == NULL) && (m_length == 0));
+	GPOS_ASSERT_IMP(m_is_null, (m_byte_array == nullptr) && (m_length == 0));
 }
 
 //---------------------------------------------------------------------------

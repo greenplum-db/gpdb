@@ -72,7 +72,6 @@ public:
 	static GPOS_RESULT EresUnittest_Negative();
 	static GPOS_RESULT EresUnittest_Indexes();
 	static GPOS_RESULT EresUnittest_CheckConstraint();
-	static GPOS_RESULT EresUnittest_IndexPartConstraint();
 	static GPOS_RESULT EresUnittest_Cast();
 	static GPOS_RESULT EresUnittest_ScCmp();
 	static GPOS_RESULT EresUnittest_PrematureMDIdRelease();

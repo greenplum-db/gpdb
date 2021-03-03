@@ -74,7 +74,7 @@ public:
 		CTestMachine();
 
 		// dtor
-		~CTestMachine(){};
+		~CTestMachine() = default;
 
 		// state machine accessor
 		SM *

@@ -16,7 +16,7 @@ include $(top_builddir)/src/Makefile.global
 # removed "subscription" test from below list.
 SUBDIRS = perl regress isolation modules authentication recovery
 
-SUBDIRS += fsync walrep heap_checksum isolation2
+SUBDIRS += fsync walrep heap_checksum isolation2 fdw
 
 # Test suites that are not safe by default but can be run if selected
 # by the user via the whitespace-separated list in variable

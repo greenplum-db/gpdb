@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (c) 2004-2015 Pivotal Software, Inc.
+//	Copyright (c) 2004-2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		main.cpp
@@ -10,10 +10,9 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/_api.h"
-#include "gpos/types.h"
-
 #include "gpos/common/CMainArgs.h"
 #include "gpos/test/CUnittest.h"
+#include "gpos/types.h"
 
 
 // test headers
@@ -24,40 +23,33 @@
 #include "unittest/gpos/common/CBitSetIterTest.h"
 #include "unittest/gpos/common/CBitSetTest.h"
 #include "unittest/gpos/common/CBitVectorTest.h"
+#include "unittest/gpos/common/CDoubleTest.h"
 #include "unittest/gpos/common/CDynamicPtrArrayTest.h"
 #include "unittest/gpos/common/CEnumSetTest.h"
-#include "unittest/gpos/common/CDoubleTest.h"
-#include "unittest/gpos/common/CHashMapTest.h"
 #include "unittest/gpos/common/CHashMapIterTest.h"
-#include "unittest/gpos/common/CHashSetTest.h"
+#include "unittest/gpos/common/CHashMapTest.h"
 #include "unittest/gpos/common/CHashSetIterTest.h"
+#include "unittest/gpos/common/CHashSetTest.h"
 #include "unittest/gpos/common/CListTest.h"
 #include "unittest/gpos/common/CRefCountTest.h"
 #include "unittest/gpos/common/CStackTest.h"
 #include "unittest/gpos/common/CSyncHashtableTest.h"
 #include "unittest/gpos/common/CSyncListTest.h"
-
 #include "unittest/gpos/error/CErrorHandlerTest.h"
 #include "unittest/gpos/error/CExceptionTest.h"
 #include "unittest/gpos/error/CLoggerTest.h"
-#include "unittest/gpos/error/CMessageTest.h"
-#include "unittest/gpos/error/CMessageTableTest.h"
 #include "unittest/gpos/error/CMessageRepositoryTest.h"
+#include "unittest/gpos/error/CMessageTableTest.h"
+#include "unittest/gpos/error/CMessageTest.h"
 #include "unittest/gpos/error/CMiniDumperTest.h"
-
-#include "unittest/gpos/io/COstreamBasicTest.h"
-#include "unittest/gpos/io/COstreamFileTest.h"
-#include "unittest/gpos/io/COstreamStringTest.h"
 #include "unittest/gpos/io/CFileTest.h"
-
-#include "unittest/gpos/memory/CMemoryPoolBasicTest.h"
+#include "unittest/gpos/io/COstreamBasicTest.h"
+#include "unittest/gpos/io/COstreamStringTest.h"
 #include "unittest/gpos/memory/CCacheTest.h"
-
+#include "unittest/gpos/memory/CMemoryPoolBasicTest.h"
 #include "unittest/gpos/string/CStringTest.h"
 #include "unittest/gpos/string/CWStringTest.h"
-
 #include "unittest/gpos/task/CTaskLocalStorageTest.h"
-
 #include "unittest/gpos/test/CUnittestTest.h"
 
 
@@ -97,7 +89,6 @@ static gpos::CUnittest rgut[] = {
 	// io
 	GPOS_UNITTEST_STD(COstreamBasicTest),
 	GPOS_UNITTEST_STD(COstreamStringTest),
-	GPOS_UNITTEST_STD(COstreamFileTest),
 	GPOS_UNITTEST_STD(CFileTest),
 
 	// memory
@@ -135,7 +126,7 @@ PvExec(void *pv)
 	CMainArgs *pma = (CMainArgs *) pv;
 	tests_failed = CUnittest::Driver(pma);
 
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -153,22 +144,22 @@ main(INT iArgs, const CHAR **rgszArgs)
 	// setup args for unittest params
 	CMainArgs ma(iArgs, rgszArgs, "cuU:xT:");
 
-	struct gpos_init_params init_params = {NULL};
+	struct gpos_init_params init_params = {nullptr};
 	gpos_init(&init_params);
 
 	GPOS_ASSERT(iArgs >= 0);
 
 	// initialize unittest framework
-	CUnittest::Init(rgut, GPOS_ARRAY_SIZE(rgut), NULL, NULL);
+	CUnittest::Init(rgut, GPOS_ARRAY_SIZE(rgut), nullptr, nullptr);
 
 	gpos_exec_params params;
 	params.func = PvExec;
 	params.arg = &ma;
-	params.result = NULL;
+	params.result = nullptr;
 	params.stack_start = &params;
-	params.error_buffer = NULL;
+	params.error_buffer = nullptr;
 	params.error_buffer_size = -1;
-	params.abort_requested = NULL;
+	params.abort_requested = nullptr;
 
 	if (gpos_exec(&params) || (tests_failed != 0))
 	{

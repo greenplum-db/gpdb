@@ -12,6 +12,8 @@
 #define GPOPT_CXformImplementSequenceProject_H
 
 #include "gpos/base.h"
+
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,34 +31,32 @@ using namespace gpos;
 class CXformImplementSequenceProject : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementSequenceProject(const CXformImplementSequenceProject &);
-
 public:
+	CXformImplementSequenceProject(const CXformImplementSequenceProject &) =
+		delete;
+
 	// ctor
 	explicit CXformImplementSequenceProject(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementSequenceProject()
-	{
-	}
+	~CXformImplementSequenceProject() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementSequenceProject;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementSequenceProject";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
-	Exfp(CExpressionHandle &exprhdl) const
+	EXformPromise
+	Exfp(CExpressionHandle &exprhdl) const override
 	{
 		if (exprhdl.DeriveHasSubquery(1))
 		{
@@ -67,8 +67,8 @@ public:
 	}
 
 	// actual transform
-	virtual void Transform(CXformContext *, CXformResult *,
-						   CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformImplementSequenceProject
 

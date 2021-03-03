@@ -15,6 +15,7 @@
 #define GPDXL_CDXLScalarProjElem_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/CMDName.h"
 
@@ -40,20 +41,19 @@ private:
 	// alias
 	const CMDName *m_mdname;
 
-	// private copy ctor
-	CDXLScalarProjElem(CDXLScalarProjElem &);
-
 public:
+	CDXLScalarProjElem(CDXLScalarProjElem &) = delete;
+
 	// ctor/dtor
 	CDXLScalarProjElem(CMemoryPool *mp, ULONG id, const CMDName *mdname);
 
-	virtual ~CDXLScalarProjElem();
+	~CDXLScalarProjElem() override;
 
 	// ident accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// name of the operator
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// id of the proj element
 	ULONG Id() const;
@@ -62,11 +62,11 @@ public:
 	const CMDName *GetMdNameAlias() const;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const;
+	void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const override;
 
 	// check if given column is defined by operator
-	virtual BOOL
-	IsColDefined(ULONG colid) const
+	BOOL
+	IsColDefined(ULONG colid) const override
 	{
 		return (Id() == colid);
 	}
@@ -75,16 +75,16 @@ public:
 	static CDXLScalarProjElem *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarProjectElem == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarProjElem *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"Invalid function call on a container operator");
 		return false;
@@ -92,7 +92,8 @@ public:
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

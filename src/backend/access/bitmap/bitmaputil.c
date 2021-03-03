@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2010 Greenplum Inc
  * Portions Copyright (c) 2010-2012 EMC Corporation
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
  * 
  *
@@ -101,7 +101,7 @@ _bitmap_get_metapage_data(Relation rel, Buffer metabuf)
 	if (metapage->bm_version != BITMAP_VERSION)
 	{
 		ereport(ERROR,
-				(ERRCODE_INTERNAL_ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("the disk format for \"%s\" is not valid for this version of Greenplum Database",
 						RelationGetRelationName(rel)),
 				 errhint("Use REINDEX to update this index.")));

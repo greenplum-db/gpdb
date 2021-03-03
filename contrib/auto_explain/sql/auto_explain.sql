@@ -6,8 +6,10 @@
 CREATE SCHEMA auto_explain_test;
 CREATE TABLE auto_explain_test.t1(a int);
 INSERT INTO auto_explain_test.t1 VALUES(generate_series(0, 1000));
+ANALYZE auto_explain_test.t1;
 CREATE TABLE auto_explain_test.t2(b int);
 INSERT INTO auto_explain_test.t2 VALUES(generate_series(0, 1000));
+ANALYZE auto_explain_test.t2;
 
 SET enable_nestloop = ON;
 SET CLIENT_MIN_MESSAGES = LOG;

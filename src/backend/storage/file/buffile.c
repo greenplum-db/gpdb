@@ -41,7 +41,7 @@
 
 #include "postgres.h"
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 #include <zstd.h>
 #endif
 
@@ -63,7 +63,7 @@
  * The reason is that we'd like large BufFiles to be spread across multiple
  * tablespaces when available.
  */
-#define MAX_PHYSICAL_FILESIZE	0x40000000
+#define MAX_PHYSICAL_FILESIZE	0x40000000 
 #define BUFFILE_SEG_SIZE		(MAX_PHYSICAL_FILESIZE / BLCKSZ)
 
 /* To align upstream's structure, minimize the code differences */
@@ -139,7 +139,7 @@ struct BufFile
 	} state;
 
 	/* ZStandard compression support */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	zstd_context *zstd_context;	/* ZStandard library handles. */
 
 	/*
@@ -355,7 +355,7 @@ MakeNewSharedSegment(BufFile *buffile, int segment)
  * unrelated SharedFileSet objects.
  */
 BufFile *
-BufFileCreateShared(SharedFileSet *fileset, const char *name)
+BufFileCreateShared(SharedFileSet *fileset, const char *name, workfile_set *work_set)
 {
 	BufFile    *file;
 
@@ -365,6 +365,14 @@ BufFileCreateShared(SharedFileSet *fileset, const char *name)
 	file->files = (File *) palloc(sizeof(File));
 	file->files[0] = MakeNewSharedSegment(file, 0);
 	file->readOnly = false;
+	/*
+	 * Register the file as a "work file", so that the Greenplum workfile
+	 * limits apply to it.
+	 */
+	file->work_set = work_set;
+
+	FileSetIsWorkfile(file->files[0]);
+	RegisterFileWithSet(file->files[0], work_set);
 
 	return file;
 }
@@ -505,7 +513,7 @@ BufFileClose(BufFile *file)
 		pfree(file->buffer.data);
 
 	/* release zstd handles */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	if (file->zstd_context)
 		zstd_free_context(file->zstd_context);
 #endif
@@ -900,11 +908,22 @@ BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
 			newFile = file->curFile;
 			newOffset = (file->curOffset + file->pos) + offset;
 			break;
-#ifdef NOT_USED
 		case SEEK_END:
-			/* could be implemented, not needed currently */
-			break;
-#endif
+			/*
+			 * The file size of the last file gives us the end offset of that
+			 * file.
+			 */
+			if (file->curFile == file->numFiles - 1 && file->dirty)
+				BufFileFlush(file);
+			newFile = file->numFiles - 1;
+			newOffset = FileSize(file->files[file->numFiles - 1]);
+			if (newOffset < 0)
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						 errmsg("could not determine size of temporary file \"%s\" from BufFile \"%s\": %m",
+							 FilePathName(file->files[file->numFiles - 1]),
+							 file->name)));
+			break;	
 		default:
 			elog(ERROR, "invalid whence: %d", whence);
 			return EOF;
@@ -1140,7 +1159,10 @@ BufFileResume(BufFile *buffile)
 	Assert(buffile->buffer.data == NULL);
 	buffile->buffer.data = palloc(BLCKSZ);
 
-	BufFileSeek(buffile, 0, 0, SEEK_SET);
+	if (BufFileSeek(buffile, 0, 0, SEEK_SET) != 0)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not seek to the first block of temporary file: %m")));
 }
 
 /*
@@ -1186,7 +1208,7 @@ BufFilePledgeSequential(BufFile *buffile)
 /*
  * The rest of the code is only needed when compression support is compiled in.
  */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 
 #define BUFFILE_ZSTD_COMPRESSION_LEVEL 1
 
@@ -1203,6 +1225,7 @@ static void
 BufFileStartCompression(BufFile *file)
 {
 	ResourceOwner oldowner;
+	size_t ret;
 
 	/*
 	 * When working with compressed files, we rely on libzstd's buffer,
@@ -1232,7 +1255,9 @@ BufFileStartCompression(BufFile *file)
 	file->zstd_context->cctx = ZSTD_createCStream();
 	if (!file->zstd_context->cctx)
 		elog(ERROR, "out of memory");
-	ZSTD_initCStream(file->zstd_context->cctx, BUFFILE_ZSTD_COMPRESSION_LEVEL);
+	ret = ZSTD_initCStream(file->zstd_context->cctx, BUFFILE_ZSTD_COMPRESSION_LEVEL);
+	if (ZSTD_isError(ret))
+		elog(ERROR, "failed to initialize zstd stream: %s", ZSTD_getErrorName(ret));
 
 	CurrentResourceOwner = oldowner;
 
@@ -1317,7 +1342,9 @@ BufFileEndCompression(BufFile *file)
 	file->zstd_context->dctx = ZSTD_createDStream();
 	if (!file->zstd_context->dctx)
 		elog(ERROR, "out of memory");
-	ZSTD_initDStream(file->zstd_context->dctx);
+	ret = ZSTD_initDStream(file->zstd_context->dctx);
+	if (ZSTD_isError(ret))
+		elog(ERROR, "failed to initialize zstd dstream: %s", ZSTD_getErrorName(ret));
 
 	file->compressed_buffer.src = palloc(BLCKSZ);
 	file->compressed_buffer.size = 0;

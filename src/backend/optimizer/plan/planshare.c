@@ -4,7 +4,7 @@
  *	  Plan shared plan
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -49,9 +49,6 @@ make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 	sisc->scan.plan.total_cost = sipath.total_cost; 
 	sisc->scan.plan.plan_rows = inputplan->plan_rows;
 	sisc->scan.plan.plan_width = inputplan->plan_width;
-
-	sisc->scan.plan.extParam = bms_copy(inputplan->extParam);
-	sisc->scan.plan.allParam = bms_copy(inputplan->allParam);
 
 	return sisc;
 }

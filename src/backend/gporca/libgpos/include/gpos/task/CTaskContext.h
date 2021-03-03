@@ -63,14 +63,14 @@ public:
 	void
 	SetLogOut(ILogger *log_out)
 	{
-		GPOS_ASSERT(NULL != log_out);
+		GPOS_ASSERT(nullptr != log_out);
 		m_log_out = log_out;
 	}
 
 	void
 	SetLogErr(ILogger *log_err)
 	{
-		GPOS_ASSERT(NULL != log_err);
+		GPOS_ASSERT(nullptr != log_err);
 		m_log_err = log_err;
 	}
 

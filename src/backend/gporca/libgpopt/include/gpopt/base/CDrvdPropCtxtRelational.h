@@ -34,48 +34,39 @@ using namespace gpos;
 class CDrvdPropCtxtRelational : public CDrvdPropCtxt
 {
 private:
-	// private copy ctor
-	CDrvdPropCtxtRelational(const CDrvdPropCtxtRelational &);
-
 protected:
 	// copy function
-	virtual CDrvdPropCtxt *
-	PdpctxtCopy(CMemoryPool *mp) const
+	CDrvdPropCtxt *
+	PdpctxtCopy(CMemoryPool *mp) const override
 	{
 		return GPOS_NEW(mp) CDrvdPropCtxtRelational(mp);
 	}
 
 	// add props to context
-	virtual void
+	void
 	AddProps(CDrvdProp *  // pdp
-	)
+			 ) override
 	{
 		// derived relational context is currently empty
 	}
 
 public:
+	CDrvdPropCtxtRelational(const CDrvdPropCtxtRelational &) = delete;
+
 	// ctor
 	CDrvdPropCtxtRelational(CMemoryPool *mp) : CDrvdPropCtxt(mp)
 	{
 	}
 
 	// dtor
-	virtual ~CDrvdPropCtxtRelational()
-	{
-	}
+	~CDrvdPropCtxtRelational() override = default;
 
-	// print
-	virtual IOstream &
-	OsPrint(IOstream &os) const
-	{
-		return os;
-	}
 
 #ifdef GPOS_DEBUG
 
 	// is it a relational property context?
-	virtual BOOL
-	FRelational() const
+	BOOL
+	FRelational() const override
 	{
 		return true;
 	}
@@ -86,9 +77,9 @@ public:
 	static CDrvdPropCtxtRelational *
 	PdpctxtrelConvert(CDrvdPropCtxt *pdpctxt)
 	{
-		GPOS_ASSERT(NULL != pdpctxt);
+		GPOS_ASSERT(nullptr != pdpctxt);
 
-		return reinterpret_cast<CDrvdPropCtxtRelational *>(pdpctxt);
+		return dynamic_cast<CDrvdPropCtxtRelational *>(pdpctxt);
 	}
 
 };	// class CDrvdPropCtxtRelational

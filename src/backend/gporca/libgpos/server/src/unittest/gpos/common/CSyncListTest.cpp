@@ -9,14 +9,14 @@
 //		Tests for CSyncList
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CSyncListTest.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/task/CWorkerPoolManager.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CSyncListTest.h"
 
 #define GPOS_SLIST_SIZE 10
 
@@ -84,7 +84,7 @@ CSyncListTest::EresUnittest_Basics()
 
 		GPOS_ASSERT(pe == &rgelem[GPOS_ARRAY_SIZE(rgelem) - i - 1]);
 	}
-	GPOS_ASSERT(NULL == list.Pop());
+	GPOS_ASSERT(nullptr == list.Pop());
 
 	// insert all elements in reverse order
 	for (ULONG i = GPOS_ARRAY_SIZE(rgelem); i > 0; i--)
@@ -101,7 +101,7 @@ CSyncListTest::EresUnittest_Basics()
 
 		GPOS_ASSERT(pe == &rgelem[i]);
 	}
-	GPOS_ASSERT(NULL == list.Pop());
+	GPOS_ASSERT(nullptr == list.Pop());
 
 	return GPOS_OK;
 }

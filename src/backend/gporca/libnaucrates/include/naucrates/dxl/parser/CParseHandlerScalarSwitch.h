@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerScalarSwitch_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl
@@ -43,20 +44,20 @@ private:
 	// was the default value seen
 	BOOL m_default_val_processed;
 
-	// private copy ctor
-	CParseHandlerScalarSwitch(const CParseHandlerScalarSwitch &);
-
 	// process the start of an element
 	void StartElement(const XMLCh *const element_uri,
 					  const XMLCh *const element_local_name,
-					  const XMLCh *const element_qname, const Attributes &attr);
+					  const XMLCh *const element_qname,
+					  const Attributes &attr) override;
 
 	// process the end of an element
 	void EndElement(const XMLCh *const element_uri,
 					const XMLCh *const element_local_name,
-					const XMLCh *const element_qname);
+					const XMLCh *const element_qname) override;
 
 public:
+	CParseHandlerScalarSwitch(const CParseHandlerScalarSwitch &) = delete;
+
 	// ctor
 	CParseHandlerScalarSwitch(CMemoryPool *mp,
 							  CParseHandlerManager *parse_handler_mgr,

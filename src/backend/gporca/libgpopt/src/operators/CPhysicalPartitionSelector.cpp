@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalPartitionSelector.cpp
@@ -9,16 +9,17 @@
 //		Implementation of physical partition selector
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalPartitionSelector.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CColRef.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/base/CColRef.h"
 
 using namespace gpopt;
 
@@ -47,12 +48,12 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 {
 	GPOS_ASSERT(0 < scan_id);
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != pdrgpdrgpcr);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcr);
 	GPOS_ASSERT(0 < pdrgpdrgpcr->Size());
-	GPOS_ASSERT(NULL != ppartcnstrmap);
-	GPOS_ASSERT(NULL != ppartcnstr);
-	GPOS_ASSERT(NULL != phmulexprEqPredicates);
-	GPOS_ASSERT(NULL != phmulexprPredicates);
+	GPOS_ASSERT(nullptr != ppartcnstrmap);
+	GPOS_ASSERT(nullptr != ppartcnstr);
+	GPOS_ASSERT(nullptr != phmulexprEqPredicates);
+	GPOS_ASSERT(nullptr != phmulexprPredicates);
 
 	m_pexprCombinedPredicate = PexprCombinedPartPred(mp);
 }
@@ -70,16 +71,16 @@ CPhysicalPartitionSelector::CPhysicalPartitionSelector(
 	: CPhysical(mp),
 	  m_scan_id(0),
 	  m_mdid(mdid),
-	  m_pdrgpdrgpcr(NULL),
-	  m_ppartcnstrmap(NULL),
-	  m_part_constraint(NULL),
+	  m_pdrgpdrgpcr(nullptr),
+	  m_ppartcnstrmap(nullptr),
+	  m_part_constraint(nullptr),
 	  m_phmulexprEqPredicates(phmulexprEqPredicates),
-	  m_phmulexprPredicates(NULL),
-	  m_pexprResidual(NULL),
-	  m_pexprCombinedPredicate(NULL)
+	  m_phmulexprPredicates(nullptr),
+	  m_pexprResidual(nullptr),
+	  m_pexprCombinedPredicate(nullptr)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != phmulexprEqPredicates);
+	GPOS_ASSERT(nullptr != phmulexprEqPredicates);
 
 	m_phmulexprPredicates = GPOS_NEW(mp) UlongToExprMap(mp);
 	m_pexprCombinedPredicate = PexprCombinedPartPred(mp);
@@ -117,8 +118,8 @@ BOOL
 CPhysicalPartitionSelector::FMatchExprMaps(UlongToExprMap *phmulexprFst,
 										   UlongToExprMap *phmulexprSnd)
 {
-	GPOS_ASSERT(NULL != phmulexprFst);
-	GPOS_ASSERT(NULL != phmulexprSnd);
+	GPOS_ASSERT(nullptr != phmulexprFst);
+	GPOS_ASSERT(nullptr != phmulexprSnd);
 
 	const ULONG ulEntries = phmulexprFst->Size();
 	if (ulEntries != phmulexprSnd->Size())
@@ -154,9 +155,9 @@ BOOL
 CPhysicalPartitionSelector::FMatchPartCnstr(
 	UlongToPartConstraintMap *ppartcnstrmap) const
 {
-	if (NULL == m_ppartcnstrmap || NULL == ppartcnstrmap)
+	if (nullptr == m_ppartcnstrmap || nullptr == ppartcnstrmap)
 	{
-		return NULL == m_ppartcnstrmap && NULL == ppartcnstrmap;
+		return nullptr == m_ppartcnstrmap && nullptr == ppartcnstrmap;
 	}
 
 	return m_ppartcnstrmap->Size() == ppartcnstrmap->Size() &&
@@ -176,8 +177,8 @@ CPhysicalPartitionSelector::FSubsetPartCnstr(
 	UlongToPartConstraintMap *ppartcnstrmapFst,
 	UlongToPartConstraintMap *ppartcnstrmapSnd)
 {
-	GPOS_ASSERT(NULL != ppartcnstrmapFst);
-	GPOS_ASSERT(NULL != ppartcnstrmapSnd);
+	GPOS_ASSERT(nullptr != ppartcnstrmapFst);
+	GPOS_ASSERT(nullptr != ppartcnstrmapSnd);
 	if (ppartcnstrmapFst->Size() > ppartcnstrmapSnd->Size())
 	{
 		return false;
@@ -190,7 +191,7 @@ CPhysicalPartitionSelector::FSubsetPartCnstr(
 		ULONG ulKey = *(partcnstriter.Key());
 		CPartConstraint *ppartcnstr = ppartcnstrmapSnd->Find(&ulKey);
 
-		if (NULL == ppartcnstr ||
+		if (nullptr == ppartcnstr ||
 			!partcnstriter.Value()->FEquivalent(ppartcnstr))
 		{
 			return false;
@@ -211,7 +212,7 @@ CPhysicalPartitionSelector::FSubsetPartCnstr(
 BOOL
 CPhysicalPartitionSelector::FHasFilter() const
 {
-	return (NULL != m_pexprResidual || 0 < m_phmulexprEqPredicates->Size() ||
+	return (nullptr != m_pexprResidual || 0 < m_phmulexprEqPredicates->Size() ||
 			0 < m_phmulexprPredicates->Size());
 }
 
@@ -310,13 +311,13 @@ CPhysicalPartitionSelector::PexprPartPred(CMemoryPool *mp,
 	GPOS_ASSERT(ulPartLevel < UlPartLevels());
 
 	CExpression *pexpr = PexprEqFilter(ulPartLevel);
-	if (NULL != pexpr)
+	if (nullptr != pexpr)
 	{
 		// we have one side of an equality predicate - need to construct the
 		// whole predicate
-		GPOS_ASSERT(NULL == m_phmulexprPredicates->Find(&ulPartLevel));
+		GPOS_ASSERT(nullptr == m_phmulexprPredicates->Find(&ulPartLevel));
 		pexpr->AddRef();
-		if (NULL != m_pdrgpdrgpcr)
+		if (nullptr != m_pdrgpdrgpcr)
 		{
 			CColRef *pcrPartKey = (*(*m_pdrgpdrgpcr)[ulPartLevel])[0];
 			return CUtils::PexprScalarEqCmp(mp, pcrPartKey, pexpr);
@@ -328,7 +329,7 @@ CPhysicalPartitionSelector::PexprPartPred(CMemoryPool *mp,
 	}
 
 	pexpr = m_phmulexprPredicates->Find(&ulPartLevel);
-	if (NULL != pexpr)
+	if (nullptr != pexpr)
 	{
 		pexpr->AddRef();
 	}
@@ -353,13 +354,13 @@ CPhysicalPartitionSelector::PexprCombinedPartPred(CMemoryPool *mp) const
 	for (ULONG ul = 0; ul < ulLevels; ul++)
 	{
 		CExpression *pexpr = PexprPartPred(mp, ul);
-		if (NULL != pexpr)
+		if (nullptr != pexpr)
 		{
 			pdrgpexpr->Append(pexpr);
 		}
 	}
 
-	if (NULL != m_pexprResidual)
+	if (nullptr != m_pexprResidual)
 	{
 		m_pexprResidual->AddRef();
 		pdrgpexpr->Append(m_pexprResidual);
@@ -379,38 +380,12 @@ CPhysicalPartitionSelector::PexprCombinedPartPred(CMemoryPool *mp) const
 ULONG
 CPhysicalPartitionSelector::UlPartLevels() const
 {
-	if (NULL != m_pdrgpdrgpcr)
+	if (nullptr != m_pdrgpdrgpcr)
 	{
 		return m_pdrgpdrgpcr->Size();
 	}
 
 	return m_phmulexprEqPredicates->Size();
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalPartitionSelector::PpfmDerive
-//
-//	@doc:
-//		Derive partition filter map
-//
-//---------------------------------------------------------------------------
-CPartFilterMap *
-CPhysicalPartitionSelector::PpfmDerive(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl) const
-{
-	if (!FHasFilter())
-	{
-		return PpfmPassThruOuter(exprhdl);
-	}
-
-	CPartFilterMap *ppfm = PpfmDeriveCombineRelational(mp, exprhdl);
-	IStatistics *stats = exprhdl.Pstats();
-	GPOS_ASSERT(NULL != stats);
-	m_pexprCombinedPredicate->AddRef();
-	stats->AddRef();
-	ppfm->AddPartFilter(mp, m_scan_id, m_pexprCombinedPredicate, stats);
-	return ppfm;
 }
 
 //---------------------------------------------------------------------------
@@ -521,82 +496,6 @@ CPhysicalPartitionSelector::PrsRequired(CMemoryPool *mp,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalPartitionSelector::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalPartitionSelector::PppsRequired(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CPartitionPropagationSpec *pppsRequired,
-	ULONG
-#ifdef GPOS_DEBUG
-		child_index
-#endif	// GPOS_DEBUG
-	,
-	CDrvdPropArray *,  //pdrgpdpCtxt,
-	ULONG			   //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	CPartIndexMap *ppimInput = pppsRequired->Ppim();
-	CPartFilterMap *ppfmInput = pppsRequired->Ppfm();
-
-	ULongPtrArray *pdrgpulInputScanIds = ppimInput->PdrgpulScanIds(mp);
-
-	CPartIndexMap *ppim = GPOS_NEW(mp) CPartIndexMap(mp);
-	CPartFilterMap *ppfm = GPOS_NEW(mp) CPartFilterMap(mp);
-
-	CPartInfo *ppartinfo = exprhdl.DerivePartitionInfo(0);
-
-	const ULONG ulScanIds = pdrgpulInputScanIds->Size();
-
-	for (ULONG ul = 0; ul < ulScanIds; ul++)
-	{
-		ULONG scan_id = *((*pdrgpulInputScanIds)[ul]);
-		ULONG ulExpectedPropagators = ppimInput->UlExpectedPropagators(scan_id);
-
-		if (scan_id == m_scan_id)
-		{
-			// partition propagation resolved - do not need to require from children
-			continue;
-		}
-
-		if (!ppartinfo->FContainsScanId(scan_id) &&
-			ppartinfo->FContainsScanId(m_scan_id))
-		{
-			// dynamic scan for the required id not defined below, but the current one is: do not push request down
-			continue;
-		}
-
-		IMDId *mdid = ppimInput->GetRelMdId(scan_id);
-		CPartKeysArray *pdrgppartkeys = ppimInput->Pdrgppartkeys(scan_id);
-		UlongToPartConstraintMap *ppartcnstrmap =
-			ppimInput->Ppartcnstrmap(scan_id);
-		CPartConstraint *ppartcnstr = ppimInput->PpartcnstrRel(scan_id);
-		CPartIndexMap::EPartIndexManipulator epim = ppimInput->Epim(scan_id);
-		mdid->AddRef();
-		pdrgppartkeys->AddRef();
-		ppartcnstrmap->AddRef();
-		ppartcnstr->AddRef();
-
-		ppim->Insert(scan_id, ppartcnstrmap, epim, ulExpectedPropagators, mdid,
-					 pdrgppartkeys, ppartcnstr);
-		(void) ppfm->FCopyPartFilter(m_mp, scan_id, ppfmInput, NULL);
-	}
-
-	// cleanup
-	pdrgpulInputScanIds->Release();
-
-	return GPOS_NEW(mp) CPartitionPropagationSpec(ppim, ppfm);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalPartitionSelector::PcteRequired
 //
 //	@doc:
@@ -669,51 +568,6 @@ CPhysicalPartitionSelector::PdsDerive(CMemoryPool *,  // mp
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalPartitionSelector::PpimDerive
-//
-//	@doc:
-//		Derive partition index map
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysicalPartitionSelector::PpimDerive(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl,
-									   CDrvdPropCtxt *pdpctxt) const
-{
-	GPOS_ASSERT(NULL != pdpctxt);
-
-	CDrvdPropPlan *pdpplan = exprhdl.Pdpplan(0 /*child_index*/);
-	CPartIndexMap *ppimInput = pdpplan->Ppim();
-	GPOS_ASSERT(NULL != ppimInput);
-
-	ULONG ulExpectedPartitionSelectors =
-		CDrvdPropCtxtPlan::PdpctxtplanConvert(pdpctxt)
-			->UlExpectedPartitionSelectors();
-
-	CPartIndexMap *ppim = ppimInput->PpimPartitionSelector(
-		mp, m_scan_id, ulExpectedPartitionSelectors);
-	if (!ppim->Contains(m_scan_id))
-	{
-		// the consumer of this scan id does not come from the child, i.e. it
-		// is on the other side of a join
-		MDId()->AddRef();
-		m_pdrgpdrgpcr->AddRef();
-		m_ppartcnstrmap->AddRef();
-		m_part_constraint->AddRef();
-
-		CPartKeysArray *pdrgppartkeys = GPOS_NEW(mp) CPartKeysArray(mp);
-		pdrgppartkeys->Append(GPOS_NEW(mp) CPartKeys(m_pdrgpdrgpcr));
-
-		ppim->Insert(m_scan_id, m_ppartcnstrmap, CPartIndexMap::EpimPropagator,
-					 0 /*ulExpectedPropagators*/, MDId(), pdrgppartkeys,
-					 m_part_constraint);
-	}
-
-	return ppim;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalPartitionSelector::PrsDerive
 //
 //	@doc:
@@ -747,6 +601,8 @@ CPhysicalPartitionSelector::EpetDistribution(CExpressionHandle &exprhdl,
 		return CEnfdProp::EpetUnnecessary;
 	}
 
+	// GPDB_12_MERGE_FIXME: Check part propagation spec
+#if 0
 	CPartIndexMap *ppimDrvd = pdpplan->Ppim();
 	if (!ppimDrvd->Contains(m_scan_id))
 	{
@@ -754,8 +610,7 @@ CPhysicalPartitionSelector::EpetDistribution(CExpressionHandle &exprhdl,
 		// part resolver as this will create two slices
 		return CEnfdProp::EpetProhibited;
 	}
-
-	GPOS_ASSERT(CPartIndexMap::EpimConsumer == ppimDrvd->Epim(m_scan_id));
+#endif
 
 	// part consumer found below: enforce distribution on top of part resolver
 	return CEnfdProp::EpetRequired;

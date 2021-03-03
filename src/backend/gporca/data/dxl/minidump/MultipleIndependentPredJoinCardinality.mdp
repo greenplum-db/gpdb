@@ -5756,7 +5756,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
     <dxl:Plan Id="0" SpaceSize="29">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.534444" Rows="3.933771" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.651422" Rows="1000.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -5782,7 +5782,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.534092" Rows="3.933771" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.561982" Rows="1000.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

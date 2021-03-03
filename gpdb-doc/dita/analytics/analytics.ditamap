@@ -17,8 +17,6 @@
     </topicref>
     <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal"
         linking="none"/>
-    <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal"
-        linking="none"/>
     <topicref href="intro.xml" navtitle="Procedural Languages" linking="none">
         <topicref href="pl_container.xml" navtitle="PL/Container" linking="none">
             <topicref href="pl_container.xml#about_pl_container" linking="none"/>

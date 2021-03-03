@@ -9,16 +9,18 @@
 //		Implementation of basic aggregate operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalAgg.h"
 #include "gpopt/base/CDistributionSpecStrictSingleton.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -43,18 +45,18 @@ CPhysicalAgg::CPhysicalAgg(
 	  m_egbaggtype(egbaggtype),
 	  m_isAggFromSplitDQA(isAggFromSplitDQA),
 	  m_aggStage(aggStage),
-	  m_pdrgpcrMinimal(NULL),
+	  m_pdrgpcrMinimal(nullptr),
 	  m_fGeneratesDuplicates(fGeneratesDuplicates),
 	  m_pdrgpcrArgDQA(pdrgpcrArgDQA),
 	  m_fMultiStage(fMultiStage),
 	  m_should_enforce_distribution(should_enforce_distribution)
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 	GPOS_ASSERT(COperator::EgbaggtypeSentinel > egbaggtype);
 	GPOS_ASSERT_IMP(EgbaggtypeGlobal != egbaggtype, fMultiStage);
 
 	ULONG ulDistrReqs = 1;
-	if (pdrgpcrMinimal == NULL || 0 == pdrgpcrMinimal->Size())
+	if (pdrgpcrMinimal == nullptr || 0 == pdrgpcrMinimal->Size())
 	{
 		colref_array->AddRef();
 		m_pdrgpcrMinimal = colref_array;
@@ -75,7 +77,7 @@ CPhysicalAgg::CPhysicalAgg(
 		//		possible data skew
 
 		ulDistrReqs = 2;
-		if (pdrgpcrArgDQA != NULL && 0 != pdrgpcrArgDQA->Size())
+		if (pdrgpcrArgDQA != nullptr && 0 != pdrgpcrArgDQA->Size())
 		{
 			// If the local aggregate has distinct columns we generate
 			// two optimization requests for its children:
@@ -90,7 +92,7 @@ CPhysicalAgg::CPhysicalAgg(
 	}
 	else if (COperator::EgbaggtypeIntermediate == egbaggtype)
 	{
-		GPOS_ASSERT(NULL != pdrgpcrArgDQA);
+		GPOS_ASSERT(nullptr != pdrgpcrArgDQA);
 		GPOS_ASSERT(pdrgpcrArgDQA->Size() <= colref_array->Size());
 		// Intermediate Agg generates two optimization requests for its children:
 		// (1) Hash distribution on the group by columns + distinct column
@@ -167,7 +169,7 @@ CPhysicalAgg::PcrsRequiredAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 							  CColRefSet *pcrsRequired, ULONG child_index,
 							  CColRefArray *pdrgpcrGrp)
 {
-	GPOS_ASSERT(NULL != pdrgpcrGrp);
+	GPOS_ASSERT(nullptr != pdrgpcrGrp);
 	GPOS_ASSERT(
 		0 == child_index &&
 		"Required properties can only be computed on the relational child");
@@ -218,8 +220,8 @@ CPhysicalAgg::PdsRequiredAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		return PdsRequireSingleton(mp, exprhdl, pdsInput, child_index);
 	}
 
-	if (COperator::EgbaggtypeLocal == m_egbaggtype && m_pdrgpcrArgDQA != NULL &&
-		0 != m_pdrgpcrArgDQA->Size())
+	if (COperator::EgbaggtypeLocal == m_egbaggtype &&
+		m_pdrgpcrArgDQA != nullptr && 0 != m_pdrgpcrArgDQA->Size())
 	{
 		if (ulOptReq == 0)
 		{
@@ -262,13 +264,13 @@ CPhysicalAgg::PdsRequiredAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 CDistributionSpec *
 CPhysicalAgg::PdsMaximalHashed(CMemoryPool *mp, CColRefArray *colref_array)
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 
 	CDistributionSpecHashed *pdshashedMaximal =
 		CDistributionSpecHashed::PdshashedMaximal(
 			mp, colref_array, true /*fNullsColocated*/
 		);
-	if (NULL != pdshashedMaximal)
+	if (nullptr != pdshashedMaximal)
 	{
 		return pdshashedMaximal;
 	}
@@ -383,33 +385,6 @@ CPhysicalAgg::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalAgg::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalAgg::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-						   CPartitionPropagationSpec *pppsRequired,
-						   ULONG
-#ifdef GPOS_DEBUG
-							   child_index
-#endif
-						   ,
-						   CDrvdPropArray *,  //pdrgpdpCtxt,
-						   ULONG			  //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	return CPhysical::PppsRequiredPushThruUnresolvedUnary(
-		mp, exprhdl, pppsRequired, CPhysical::EppcAllowed, NULL);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalAgg::PcteRequired
 //
 //	@doc:
@@ -447,7 +422,7 @@ CPhysicalAgg::FProvidesReqdCols(CExpressionHandle &exprhdl,
 								ULONG  // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(2 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -483,6 +458,15 @@ CPhysicalAgg::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	{
 		return GPOS_NEW(mp) CDistributionSpecStrictSingleton(
 			CDistributionSpecSingleton::EstMaster);
+	}
+	else if (CDistributionSpec::EdtStrictReplicated == pds->Edt())
+	{
+		// Aggregate functions which are not trivial and which are sensitive to
+		// the order of their input cannot guarantee replicated data. If the child
+		// was replicated, we can no longer guarantee that property. Therefore
+		// we must now dervive tainted replicated.
+		return GPOS_NEW(mp) CDistributionSpecReplicated(
+			CDistributionSpec::EdtTaintedReplicated);
 	}
 
 	pds->AddRef();
@@ -546,7 +530,7 @@ CPhysicalAgg::Matches(COperator *pop) const
 		return false;
 	}
 
-	CPhysicalAgg *popAgg = reinterpret_cast<CPhysicalAgg *>(pop);
+	CPhysicalAgg *popAgg = dynamic_cast<CPhysicalAgg *>(pop);
 
 	if (FGeneratesDuplicates() != popAgg->FGeneratesDuplicates())
 	{
@@ -558,7 +542,8 @@ CPhysicalAgg::Matches(COperator *pop) const
 	{
 		if (CColRef::Equals(m_pdrgpcrMinimal, popAgg->m_pdrgpcrMinimal))
 		{
-			return (m_pdrgpcrArgDQA == NULL || 0 == m_pdrgpcrArgDQA->Size()) ||
+			return (m_pdrgpcrArgDQA == nullptr ||
+					0 == m_pdrgpcrArgDQA->Size()) ||
 				   CColRef::Equals(m_pdrgpcrArgDQA, popAgg->PdrgpcrArgDQA());
 		}
 	}
@@ -579,7 +564,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalAgg::EpetDistribution(CExpressionHandle &exprhdl,
 							   const CEnfdDistribution *ped) const
 {
-	GPOS_ASSERT(NULL != ped);
+	GPOS_ASSERT(nullptr != ped);
 
 	// get distribution delivered by the aggregate node
 	CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();

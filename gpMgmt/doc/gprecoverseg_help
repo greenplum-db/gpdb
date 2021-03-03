@@ -9,7 +9,7 @@ Synopsis
 
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
-             [-d <master_data_directory>] [-B <parallel_processes>] 
+             [-d <coordinator_data_directory>] [-B <parallel_processes>] 
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
 
@@ -91,10 +91,7 @@ The recovery process marks the segment as up again in the Greenplum
 Database system catalog, and then initiates the resyncronization 
 process to bring the transactional state of the segment 
 up-to-date with the latest changes. The system is online 
-and available during resyncronization. To check the status 
-of the resyncronization process run:
-
-gpstate -m
+and available during resyncronization.
 
 If you do not have mirroring enabled or if you have both a 
 primary and its mirror down, you must take manual steps to 
@@ -119,10 +116,10 @@ the utility will start up to 16 parallel processes depending
 on how many segment instances it needs to recover.
 
 
--d master_data_directory
+-d coordinator_data_directory
 
-Optional. The master host data directory. If not specified, 
-the value set for $MASTER_DATA_DIRECTORY will be used.
+Optional. The coordinator host data directory. If not specified, 
+the value set for $COORDINATOR_DATA_DIRECTORY will be used.
 
 
 -F
@@ -221,15 +218,20 @@ be cancelled and rolled back.
 
 -s
 
-Show pg_basebackup progress sequentially instead of inplace. Useful when
-writing to a file, or if a tty does not support escape sequences. Defaults to
-showing the progress inplace.
+Show pg_rewind/pg_basebackup progress sequentially instead of inplace. Useful
+when writing to a file, or if a tty does not support escape sequences. Defaults
+to showing the progress inplace.
 
 
 --no-progress
 
-Do not show pg_basebackup progress. Useful when writing to a
+Do not show pg_rewind/pg_basebackup progress. Useful when writing to a
 file. Defaults to showing the progress.
+
+
+--hba-hostnames
+
+Optional. use hostnames instead of CIDR in pg_hba.conf
 
 
 -v

@@ -24,7 +24,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,102024,102025,102115,102116,102117,102119,102121,103001,103014,103015"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102115,102116,102117,102119,102121,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:CheckConstraint Mdid="0.30252099.1.0" Name="tbl_cds_buysell_orders_new_b_check" RelationMdid="0.30252084.1.0">

@@ -37,25 +37,24 @@ private:
 	// physical assert operator
 	CDXLPhysicalAssert *m_dxl_op;
 
-	// private copy ctor
-	CParseHandlerAssert(const CParseHandlerAssert &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerAssert(const CParseHandlerAssert &) = delete;
+
 	// ctor
 	CParseHandlerAssert(CMemoryPool *mp,
 						CParseHandlerManager *parse_handler_mgr,

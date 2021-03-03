@@ -85,20 +85,19 @@ private:
 		// derived plan properties if entry corresponds to CTE producer
 		CDrvdPropPlan *m_pdpplan;
 
-		// private copy ctor
-		CCTEMapEntry(const CCTEMapEntry &);
-
 	public:
+		CCTEMapEntry(const CCTEMapEntry &) = delete;
+
 		// ctor
 		CCTEMapEntry(ULONG id, CCTEMap::ECteType ect, CDrvdPropPlan *pdpplan)
 			: m_id(id), m_ect(ect), m_pdpplan(pdpplan)
 		{
 			GPOS_ASSERT(EctSentinel > ect);
-			GPOS_ASSERT_IMP(EctProducer == ect, NULL != pdpplan);
+			GPOS_ASSERT_IMP(EctProducer == ect, nullptr != pdpplan);
 		}
 
 		// dtor
-		virtual ~CCTEMapEntry()
+		~CCTEMapEntry() override
 		{
 			CRefCount::SafeRelease(m_pdpplan);
 		}
@@ -134,11 +133,11 @@ private:
 		}
 
 		// print function
-		virtual IOstream &
+		IOstream &
 		OsPrint(IOstream &os) const
 		{
 			os << m_id << (EctProducer == m_ect ? "p" : "c");
-			if (NULL != m_pdpplan)
+			if (nullptr != m_pdpplan)
 			{
 				os << "(" << *m_pdpplan << ")";
 			}
@@ -166,9 +165,6 @@ private:
 	// cte map
 	UlongToCTEMapEntryMap *m_phmcm;
 
-	// private copy ctor
-	CCTEMap(const CCTEMap &);
-
 	// lookup info for given cte id
 	CCTEMapEntry *PcmeLookup(ULONG ulCteId) const;
 
@@ -177,11 +173,13 @@ private:
 							  CCTEMap *pcmResult);
 
 public:
+	CCTEMap(const CCTEMap &) = delete;
+
 	// ctor
 	explicit CCTEMap(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CCTEMap();
+	~CCTEMap() override;
 
 	// return the CTE type associated with the given ID in the map
 	ECteType Ect(const ULONG id) const;
@@ -213,7 +211,7 @@ public:
 											  const CCTEReq *pcter) const;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// combine the two given maps and return the resulting map
 	static CCTEMap *PcmCombine(CMemoryPool *mp, const CCTEMap &cmFirst,

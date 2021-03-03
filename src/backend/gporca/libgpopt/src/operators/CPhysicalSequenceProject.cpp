@@ -9,17 +9,18 @@
 //		Implementation of physical sequence project operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSequenceProject.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/cost/ICostModel.h"
-#include "gpopt/operators/CPhysicalSequenceProject.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarIdent.h"
 
@@ -41,18 +42,18 @@ CPhysicalSequenceProject::CPhysicalSequenceProject(CMemoryPool *mp,
 	  m_pds(pds),
 	  m_pdrgpos(pdrgpos),
 	  m_pdrgpwf(pdrgpwf),
-	  m_pos(NULL),
-	  m_pcrsRequiredLocal(NULL)
+	  m_pos(nullptr),
+	  m_pcrsRequiredLocal(nullptr)
 {
-	GPOS_ASSERT(NULL != pds);
-	GPOS_ASSERT(NULL != pdrgpos);
-	GPOS_ASSERT(NULL != pdrgpwf);
+	GPOS_ASSERT(nullptr != pds);
+	GPOS_ASSERT(nullptr != pdrgpos);
+	GPOS_ASSERT(nullptr != pdrgpwf);
 	GPOS_ASSERT(CDistributionSpec::EdtHashed == pds->Edt() ||
 				CDistributionSpec::EdtSingleton == pds->Edt());
 	// we don't create LogicalSequenceProject with equivalent hashed distribution specs at this time
 	if (CDistributionSpec::EdtHashed == pds->Edt())
 	{
-		GPOS_ASSERT(NULL ==
+		GPOS_ASSERT(nullptr ==
 					CDistributionSpecHashed::PdsConvert(pds)->PdshashedEquiv());
 	}
 	CreateOrderSpec(mp);
@@ -71,9 +72,9 @@ CPhysicalSequenceProject::CPhysicalSequenceProject(CMemoryPool *mp,
 void
 CPhysicalSequenceProject::CreateOrderSpec(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL == m_pos);
-	GPOS_ASSERT(NULL != m_pds);
-	GPOS_ASSERT(NULL != m_pdrgpos);
+	GPOS_ASSERT(nullptr == m_pos);
+	GPOS_ASSERT(nullptr != m_pds);
+	GPOS_ASSERT(nullptr != m_pdrgpos);
 
 	m_pos = GPOS_NEW(mp) COrderSpec(mp);
 
@@ -142,11 +143,11 @@ CPhysicalSequenceProject::CreateOrderSpec(CMemoryPool *mp)
 void
 CPhysicalSequenceProject::ComputeRequiredLocalColumns(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != m_pos);
-	GPOS_ASSERT(NULL != m_pds);
-	GPOS_ASSERT(NULL != m_pdrgpos);
-	GPOS_ASSERT(NULL != m_pdrgpwf);
-	GPOS_ASSERT(NULL == m_pcrsRequiredLocal);
+	GPOS_ASSERT(nullptr != m_pos);
+	GPOS_ASSERT(nullptr != m_pds);
+	GPOS_ASSERT(nullptr != m_pdrgpos);
+	GPOS_ASSERT(nullptr != m_pdrgpwf);
+	GPOS_ASSERT(nullptr == m_pcrsRequiredLocal);
 
 	m_pcrsRequiredLocal = m_pos->PcrsUsed(mp);
 	if (CDistributionSpec::EdtHashed == m_pds->Edt())
@@ -162,12 +163,12 @@ CPhysicalSequenceProject::ComputeRequiredLocalColumns(CMemoryPool *mp)
 	for (ULONG ul = 0; ul < size; ul++)
 	{
 		CWindowFrame *pwf = (*m_pdrgpwf)[ul];
-		if (NULL != pwf->PexprLeading())
+		if (nullptr != pwf->PexprLeading())
 		{
 			m_pcrsRequiredLocal->Union(
 				pwf->PexprLeading()->DeriveUsedColumns());
 		}
-		if (NULL != pwf->PexprTrailing())
+		if (nullptr != pwf->PexprTrailing())
 		{
 			m_pcrsRequiredLocal->Union(
 				pwf->PexprTrailing()->DeriveUsedColumns());
@@ -203,7 +204,7 @@ CPhysicalSequenceProject::~CPhysicalSequenceProject()
 BOOL
 CPhysicalSequenceProject::Matches(COperator *pop) const
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	if (Eopid() == pop->Eopid())
 	{
 		CPhysicalSequenceProject *popPhysicalSequenceProject =
@@ -331,12 +332,13 @@ CPhysicalSequenceProject::PdsRequired(CMemoryPool *mp,
 	if (exprhdl.HasOuterRefs())
 	{
 		if (CDistributionSpec::EdtSingleton == pdsRequired->Edt() ||
-			CDistributionSpec::EdtReplicated == pdsRequired->Edt())
+			CDistributionSpec::EdtStrictReplicated == pdsRequired->Edt())
 		{
 			return PdsPassThru(mp, exprhdl, pdsRequired, child_index);
 		}
 
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
 	}
 
 	// if the window operator has a partition by clause, then always
@@ -371,54 +373,6 @@ CPhysicalSequenceProject::PrsRequired(CMemoryPool *mp,
 	GPOS_ASSERT(0 == child_index);
 
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalSequenceProject::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalSequenceProject::PppsRequired(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl,
-									   CPartitionPropagationSpec *pppsRequired,
-									   ULONG
-#ifdef GPOS_DEBUG
-										   child_index
-#endif
-									   ,
-									   CDrvdPropArray *,  //pdrgpdpCtxt,
-									   ULONG			  //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-	GPOS_ASSERT(NULL != pppsRequired);
-
-	// The logic here is similar to CNormalizer::FPushableThruSeqPrjChild(). We only consider the keys
-	// used in the starting hash distribution spec as we do not have the equivalent distribution spec
-	CColRefSet *pcrsPartCols;
-	if (CDistributionSpec::EdtHashed == Pds()->Edt())
-	{
-		GPOS_ASSERT(
-			NULL ==
-			CDistributionSpecHashed::PdsConvert(Pds())->PdshashedEquiv());
-		pcrsPartCols = CUtils::PcrsExtractColumns(
-			mp, CDistributionSpecHashed::PdsConvert(Pds())->Pdrgpexpr());
-	}
-	else
-	{
-		pcrsPartCols = GPOS_NEW(mp) CColRefSet(mp);
-	}
-
-	CPartitionPropagationSpec *spec =
-		CPhysical::PppsRequiredPushThruUnresolvedUnary(
-			mp, exprhdl, pppsRequired, CPhysical::EppcAllowed, pcrsPartCols);
-
-	pcrsPartCols->Release();
-	return spec;
 }
 
 //---------------------------------------------------------------------------
@@ -460,7 +414,7 @@ CPhysicalSequenceProject::FProvidesReqdCols(CExpressionHandle &exprhdl,
 											ULONG  // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 	GPOS_ASSERT(2 == exprhdl.Arity());
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
@@ -502,10 +456,24 @@ CPhysicalSequenceProject::PosDerive(CMemoryPool *,	// mp
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalSequenceProject::PdsDerive(CMemoryPool *,	// mp
+CPhysicalSequenceProject::PdsDerive(CMemoryPool *mp,
 									CExpressionHandle &exprhdl) const
 {
-	return PdsDerivePassThruOuter(exprhdl);
+	CDistributionSpec *pds = exprhdl.Pdpplan(0 /*child_index*/)->Pds();
+	if (CDistributionSpec::EdtStrictReplicated == pds->Edt())
+	{
+		// Sequence project (i.e. window functions) cannot guarantee replicated
+		// data if their windowing clause combined with the function's input column
+		// is under specified.
+		// If the child was replicated, we can no longer guarantee that
+		// property. Therefore we must now dervive tainted replicated.
+		return GPOS_NEW(mp) CDistributionSpecReplicated(
+			CDistributionSpec::EdtTaintedReplicated);
+	}
+	else
+	{
+		return PdsDerivePassThruOuter(exprhdl);
+	}
 }
 
 
@@ -537,7 +505,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalSequenceProject::EpetOrder(CExpressionHandle &exprhdl,
 									const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();

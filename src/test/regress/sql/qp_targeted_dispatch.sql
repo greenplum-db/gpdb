@@ -335,6 +335,7 @@ reset test_print_direct_dispatch_info;
 CREATE SEQUENCE s;
 CREATE TABLE table_a (a0 int, a1 int, a2 int, a3 int);
 INSERT INTO table_a (a3, a2, a0, a1) VALUES (nextval('s'), nextval('s'), nextval('s'), nextval('s'));
+ANALYZE table_a;
 insert into table_a (a3,a2,a0,a1) values (1,2,3,4);
 set test_print_direct_dispatch_info=on;
 

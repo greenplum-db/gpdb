@@ -15,10 +15,10 @@
 #ifndef GPOS_CList_H
 #define GPOS_CList_H
 
+#include "gpos/common/CLink.h"
+#include "gpos/task/ITask.h"
 #include "gpos/types.h"
 #include "gpos/utils.h"
-#include "gpos/task/ITask.h"
-#include "gpos/common/CLink.h"
 
 namespace gpos
 {
@@ -47,19 +47,16 @@ class CList
 
 private:
 	// offest of link element
-	ULONG m_offset;
+	ULONG m_offset{gpos::ulong_max};
 
 	// size
-	ULONG m_size;
+	ULONG m_size{0};
 
 	// head element
 	T *m_head;
 
 	// tail element
 	T *m_tail;
-
-	// no copy ctor
-	CList(const CList &);
 
 	// extract link from element
 	SLink &
@@ -75,8 +72,10 @@ private:
 	}
 
 public:
+	CList(const CList &) = delete;
+
 	// ctor
-	CList() : m_offset(gpos::ulong_max), m_size(0), m_head(NULL), m_tail(NULL)
+	CList() : m_head(nullptr), m_tail(nullptr)
 	{
 	}
 
@@ -92,17 +91,17 @@ public:
 	void
 	Prepend(T *elem)
 	{
-		GPOS_ASSERT(NULL != elem);
+		GPOS_ASSERT(nullptr != elem);
 
 		// inserting first element?
-		if (NULL == m_head)
+		if (nullptr == m_head)
 		{
-			GPOS_ASSERT(NULL == m_tail);
+			GPOS_ASSERT(nullptr == m_tail);
 			GPOS_ASSERT(0 == m_size);
 			SLink &link = Link(elem);
 
-			link.m_next = NULL;
-			link.m_prev = NULL;
+			link.m_next = nullptr;
+			link.m_prev = nullptr;
 
 			m_head = elem;
 			m_tail = elem;
@@ -120,9 +119,9 @@ public:
 	void
 	Append(T *elem)
 	{
-		GPOS_ASSERT(NULL != elem);
+		GPOS_ASSERT(nullptr != elem);
 
-		if (NULL == m_tail)
+		if (nullptr == m_tail)
 		{
 			Prepend(elem);
 		}
@@ -138,8 +137,8 @@ public:
 	void
 	Prepend(T *elem, T *next_elem)
 	{
-		GPOS_ASSERT(NULL != elem);
-		GPOS_ASSERT(NULL != next_elem);
+		GPOS_ASSERT(nullptr != elem);
+		GPOS_ASSERT(nullptr != next_elem);
 		T *prev = static_cast<T *>(Link(next_elem).m_prev);
 
 		SLink &link = Link(elem);
@@ -147,7 +146,7 @@ public:
 		link.m_prev = prev;
 
 		Link(next_elem).m_prev = elem;
-		if (NULL != prev)
+		if (nullptr != prev)
 		{
 			// inserted not at head, ie valid prev element
 			Link(prev).m_next = elem;
@@ -164,8 +163,8 @@ public:
 	void
 	Append(T *elem, T *prev_elem)
 	{
-		GPOS_ASSERT(NULL != elem);
-		GPOS_ASSERT(NULL != prev_elem);
+		GPOS_ASSERT(nullptr != elem);
+		GPOS_ASSERT(nullptr != prev_elem);
 		T *next = static_cast<T *>(Link(prev_elem).m_next);
 
 		SLink &sl = Link(elem);
@@ -173,7 +172,7 @@ public:
 		sl.m_next = next;
 
 		Link(prev_elem).m_next = elem;
-		if (NULL != next)
+		if (nullptr != next)
 		{
 			// inserted not at tail, ie valid next element
 			Link(next).m_prev = elem;
@@ -191,9 +190,9 @@ public:
 	void
 	Remove(T *elem)
 	{
-		GPOS_ASSERT(NULL != elem);
-		GPOS_ASSERT(NULL != m_head);
-		GPOS_ASSERT(NULL != m_tail);
+		GPOS_ASSERT(nullptr != elem);
+		GPOS_ASSERT(nullptr != m_head);
+		GPOS_ASSERT(nullptr != m_tail);
 		GPOS_ASSERT(0 != m_size);
 
 		SLink &link = Link(elem);
@@ -221,8 +220,8 @@ public:
 		}
 
 		// unlink element
-		link.m_prev = NULL;
-		link.m_next = NULL;
+		link.m_prev = nullptr;
+		link.m_next = nullptr;
 
 		m_size--;
 	}
@@ -264,9 +263,9 @@ public:
 	T *
 	Next(const T *pt) const
 	{
-		GPOS_ASSERT(NULL != pt);
-		GPOS_ASSERT(NULL != m_head);
-		GPOS_ASSERT(NULL != m_tail);
+		GPOS_ASSERT(nullptr != pt);
+		GPOS_ASSERT(nullptr != m_head);
+		GPOS_ASSERT(nullptr != m_tail);
 
 		SLink &sl = Link(pt);
 		return static_cast<T *>(sl.m_next);
@@ -276,9 +275,9 @@ public:
 	T *
 	Prev(const T *pt) const
 	{
-		GPOS_ASSERT(NULL != pt);
-		GPOS_ASSERT(NULL != m_head);
-		GPOS_ASSERT(NULL != m_tail);
+		GPOS_ASSERT(nullptr != pt);
+		GPOS_ASSERT(nullptr != m_head);
+		GPOS_ASSERT(nullptr != m_tail);
 
 		SLink &sl = Link(pt);
 		return static_cast<T *>(sl.m_prev);
@@ -295,7 +294,7 @@ public:
 	BOOL
 	IsEmpty() const
 	{
-		return NULL == First();
+		return nullptr == First();
 	}
 
 #ifdef GPOS_DEBUG
@@ -303,7 +302,7 @@ public:
 	GPOS_RESULT
 	Find(T *elem) const
 	{
-		GPOS_ASSERT(NULL != elem);
+		GPOS_ASSERT(nullptr != elem);
 
 		// iterate until found
 		T *t = First();
@@ -328,7 +327,8 @@ public:
 
 		do
 		{
-			os << "[" << c++ << "]" << (void *) t << (NULL == t ? "" : " -> ");
+			os << "[" << c++ << "]" << (void *) t
+			   << (nullptr == t ? "" : " -> ");
 		} while (t && (t = Next(t)));
 		os << std::endl;
 

@@ -4,7 +4,7 @@
  *	  Output functions for Postgres tree nodes.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -326,8 +326,6 @@ outDatum(StringInfo str, Datum value, int typlen, bool typbyval)
 	}
 }
 #endif /* COMPILING_BINARY_FUNCS */
-
-static void outLogicalIndexInfo(StringInfo str, const LogicalIndexInfo *node);
 
 /*
  *	Stuff from plannodes.h
@@ -708,15 +706,6 @@ _outSeqScan(StringInfo str, const SeqScan *node)
 }
 
 static void
-_outDynamicSeqScan(StringInfo str, const DynamicSeqScan *node)
-{
-	WRITE_NODE_TYPE("DYNAMICSEQSCAN");
-
-	_outScanInfo(str, (Scan *)node);
-	WRITE_NODE_FIELD(partOids);
-}
-
-static void
 _outSampleScan(StringInfo str, const SampleScan *node)
 {
 	WRITE_NODE_TYPE("SAMPLESCAN");
@@ -757,20 +746,6 @@ outIndexScanFields(StringInfo str, const IndexScan *node)
 }
 
 static void
-outLogicalIndexInfo(StringInfo str, const LogicalIndexInfo *node)
-{
-	WRITE_OID_FIELD(logicalIndexOid);
-	WRITE_INT_FIELD(nColumns);
-	WRITE_ATTRNUMBER_ARRAY(indexKeys, node->nColumns);
-	WRITE_NODE_FIELD(indPred);
-	WRITE_NODE_FIELD(indExprs);
-	WRITE_BOOL_FIELD(indIsUnique);
-	WRITE_ENUM_FIELD(indType, LogicalIndexType);
-	WRITE_NODE_FIELD(partCons);
-	WRITE_NODE_FIELD(defaultLevels);
-}
-
-static void
 _outIndexScan(StringInfo str, const IndexScan *node)
 {
 	WRITE_NODE_TYPE("INDEXSCAN");
@@ -793,16 +768,6 @@ _outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
 }
 
 static void
-_outDynamicIndexScan(StringInfo str, const DynamicIndexScan *node)
-{
-	WRITE_NODE_TYPE("DYNAMICINDEXSCAN");
-
-	outIndexScanFields(str, &node->indexscan);
-	WRITE_NODE_FIELD(partOids);
-	outLogicalIndexInfo(str, node->logicalIndexInfo);
-}
-
-static void
 _outBitmapIndexScanFields(StringInfo str, const BitmapIndexScan *node)
 {
 	_outScanInfo(str, (Scan *) node);
@@ -822,16 +787,6 @@ _outBitmapIndexScan(StringInfo str, const BitmapIndexScan *node)
 }
 
 static void
-_outDynamicBitmapIndexScan(StringInfo str, const DynamicBitmapIndexScan *node)
-{
-	WRITE_NODE_TYPE("DYNAMICBITMAPINDEXSCAN");
-
-	_outBitmapIndexScanFields(str, &node->biscan);
-	WRITE_NODE_FIELD(partOids);
-	outLogicalIndexInfo(str, node->logicalIndexInfo);
-}
-
-static void
 outBitmapHeapScanFields(StringInfo str, const BitmapHeapScan *node)
 {
 	_outScanInfo(str, (const Scan *) node);
@@ -845,15 +800,6 @@ _outBitmapHeapScan(StringInfo str, const BitmapHeapScan *node)
 	WRITE_NODE_TYPE("BITMAPHEAPSCAN");
 
 	outBitmapHeapScanFields(str, node);
-}
-
-static void
-_outDynamicBitmapHeapScan(StringInfo str, const DynamicBitmapHeapScan *node)
-{
-	WRITE_NODE_TYPE("DYNAMICBITMAPHEAPSCAN");
-
-	outBitmapHeapScanFields(str, &node->bitmapheapscan);
-	WRITE_NODE_FIELD(partOids);
 }
 
 static void
@@ -5528,9 +5474,6 @@ outNode(StringInfo str, const void *obj)
 			case T_SeqScan:
 				_outSeqScan(str, obj);
 				break;
-			case T_DynamicSeqScan:
-				_outDynamicSeqScan(str, obj);
-				break;
 			case T_ExternalScanInfo:
 				_outExternalScanInfo(str, obj);
 				break;
@@ -5540,23 +5483,14 @@ outNode(StringInfo str, const void *obj)
 			case T_IndexScan:
 				_outIndexScan(str, obj);
 				break;
-			case T_DynamicIndexScan:
-				_outDynamicIndexScan(str,obj);
-				break;
 			case T_IndexOnlyScan:
 				_outIndexOnlyScan(str, obj);
 				break;
 			case T_BitmapIndexScan:
 				_outBitmapIndexScan(str, obj);
 				break;
-			case T_DynamicBitmapIndexScan:
-				_outDynamicBitmapIndexScan(str, obj);
-				break;
 			case T_BitmapHeapScan:
 				_outBitmapHeapScan(str, obj);
-				break;
-			case T_DynamicBitmapHeapScan:
-				_outDynamicBitmapHeapScan(str, obj);
 				break;
 			case T_TidScan:
 				_outTidScan(str, obj);

@@ -14,6 +14,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/md/CDXLStatsDerivedColumn.h"
 
 namespace gpdxl
@@ -47,17 +48,16 @@ private:
 	// array of derived column statistics
 	CDXLStatsDerivedColumnArray *m_dxl_stats_derived_col_array;
 
-	// private copy ctor
-	CDXLStatsDerivedRelation(const CDXLStatsDerivedRelation &);
-
 public:
+	CDXLStatsDerivedRelation(const CDXLStatsDerivedRelation &) = delete;
+
 	// ctor
 	CDXLStatsDerivedRelation(
 		CDouble rows, BOOL is_empty,
 		CDXLStatsDerivedColumnArray *dxl_stats_derived_col_array);
 
 	// dtor
-	virtual ~CDXLStatsDerivedRelation();
+	~CDXLStatsDerivedRelation() override;
 
 	// number of rows
 	CDouble

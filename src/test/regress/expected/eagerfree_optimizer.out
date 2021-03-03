@@ -3,12 +3,15 @@ set search_path=eagerfree;
 create table smallt (i int, t text, d date) distributed by (i);
 insert into smallt select i%10, 'text ' || (i%15), '2011-01-01'::date + ((i%20) || ' days')::interval
 from generate_series(0, 99) i;
+analyze smallt;
 create table bigt (i int, t text, d date) distributed by (i);
 insert into bigt select i/10, 'text ' || (i/15), '2011-01-01'::date + ((i/20) || ' days')::interval
 from generate_series(0, 999999) i;
+analyze bigt;
 create table smallt2 (i int, t text, d date) distributed by (i);
 insert into smallt2 select i%5, 'text ' || (i%10), '2011-01-01'::date + ((i%15) || ' days')::interval
 from generate_series(0, 49) i;
+analyze smallt2;
 set optimizer_segments = 3;
 set gp_motion_cost_per_row = 0.1;
 -- HashAgg, Agg

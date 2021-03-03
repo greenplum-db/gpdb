@@ -4,7 +4,7 @@
  *	  Functions supporting the Greenplum extensions to EXPLAIN ANALYZE
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -278,7 +278,6 @@ static void cdbexplain_depositStatsToNode(PlanState *planstate,
 										  CdbExplain_RecvStatCtx *ctx);
 static int cdbexplain_collectExtraText(PlanState *planstate,
 									   StringInfo notebuf);
-static int cdbexplain_countLeafPartTables(PlanState *planstate);
 
 static void show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys,
 							 AttrNumber *keycols, const char *qlabel,
@@ -308,7 +307,7 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
-	Insist(planstate && planstate->instrument && showstatctx);
+	Assert(planstate && planstate->instrument && showstatctx);
 
 	memset(&ctx, 0, sizeof(ctx));
 
@@ -610,7 +609,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 										"the correct %s software version.",
 										PACKAGE_NAME)));
 
-			Insist(ctx.nStatInst == hdr->nInst);
+			Assert(ctx.nStatInst == hdr->nInst);
 		}
 
 		/* Save lowest and highest segment id for which we have stats. */
@@ -630,7 +629,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	planstate_walk_node(planstate, cdbexplain_recvStatWalker, &ctx);
 
 	/* Make sure we visited the right number of PlanState nodes. */
-	Insist(ctx.iStatInst == ctx.nStatInst);
+	Assert(ctx.iStatInst == ctx.nStatInst);
 
 	/* Transfer per-slice stats from message headers to the SliceSummary. */
 	for (imsgptr = 0; imsgptr < ctx.nmsgptr; imsgptr++)
@@ -735,7 +734,7 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	CdbExplain_SliceWorker *ssw;
 	int			iworker;
 
-	Insist(sliceIndex >= 0 &&
+	Assert(sliceIndex >= 0 &&
 		   sliceIndex < showstatctx->nslice);
 
 	/* Kludge:	QD can have more than one 'Slice 0' if plan is non-parallel. */
@@ -767,8 +766,8 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	/* Save a copy of this SliceWorker instance in the worker array. */
 	iworker = hdr->segindex - ss->segindex0;
 	ssw = &ss->workers[iworker];
-	Insist(iworker >= 0 && iworker < ss->nworker);
-	Insist(ssw->peakmemused == 0);	/* each worker should be seen just once */
+	Assert(iworker >= 0 && iworker < ss->nworker);
+	Assert(ssw->peakmemused == 0);	/* each worker should be seen just once */
 	*ssw = hdr->worker;
 
 	/* Rollup of per-worker stats into SliceSummary */
@@ -799,7 +798,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	CdbExplain_StatInst *si = &ctx->hdr.inst[0];
 	Instrumentation *instr = planstate->instrument;
 
-	Insist(instr);
+	Assert(instr);
 
 	/* We have to finalize statistics, since ExecutorEnd hasn't been called. */
 	InstrEndLoop(instr);
@@ -921,7 +920,7 @@ cdbexplain_depStatAcc_saveText(CdbExplain_DepStatAcc *acc,
 		int			notelen = rsi->enotes - rsi->bnotes;
 		const char *notes = (const char *) rsh + rsh->bnotes + rsi->bnotes;
 
-		Insist(rsh->bnotes + rsi->enotes < rsh->enotes &&
+		Assert(rsh->bnotes + rsi->enotes < rsh->enotes &&
 			   notes[notelen] == '\0');
 
 		/* Append to extratextbuf. */
@@ -977,7 +976,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	int			imsgptr;
 	int			nInst;
 
-	Insist(instr &&
+	Assert(instr &&
 		   ctx->iStatInst < ctx->nStatInst);
 
 	/* Allocate NodeSummary block. */
@@ -1017,7 +1016,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		rsh = ctx->msgptrs[imsgptr];
 		rsi = &rsh->inst[ctx->iStatInst];
 
-		Insist(rsi->pstype == planstate->type &&
+		Assert(rsi->pstype == planstate->type &&
 			   ns->segindex0 <= rsh->segindex &&
 			   rsh->segindex < ns->segindex0 + ns->ninst);
 
@@ -1563,98 +1562,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		}
 	}
 
-	/*
-	 * Print number of partitioned tables scanned for dynamic scans.
-	 */
-	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
-												|| T_DynamicIndexScanState == planstate->type))
-	{
-		/*
-		 * FIXME: Only displayed in TEXT format
-		 * [#159443692]
-		 */
-		if (es->format == EXPLAIN_FORMAT_TEXT)
-		{
-			double		nPartTableScanned_avg = cdbexplain_agg_avg(&ns->totalPartTableScanned);
-
-			if (0 == nPartTableScanned_avg)
-			{
-				if (T_DynamicBitmapHeapScanState == planstate->type)
-				{
-					int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
-
-					appendStringInfoSpaces(es->str, es->indent * 2);
-					appendStringInfo(es->str,
-									 "Partitions scanned:  0 (out of %d).\n",
-									 numTotalLeafParts);
-				}
-			}
-			else
-			{
-				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
-				int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
-
-				appendStringInfoSpaces(es->str, es->indent * 2);
-
-				/* only 1 segment scans partitions */
-				if (1 == ns->totalPartTableScanned.vcnt)
-				{
-					/* rescan */
-					if (1 < instr->nloops)
-					{
-						double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
-
-						appendStringInfo(es->str,
-										 "Partitions scanned:  %.0f (out of %d) %s of %ld scans.\n",
-										 totalPartTableScannedPerRescan,
-										 numTotalLeafParts,
-										 segbuf,
-										 instr->nloops);
-					}
-					else
-					{
-						appendStringInfo(es->str,
-										 "Partitions scanned:  %.0f (out of %d) %s.\n",
-										 ns->totalPartTableScanned.vmax,
-										 numTotalLeafParts,
-										 segbuf);
-					}
-				}
-				else
-				{
-					/* rescan */
-					if (1 < instr->nloops)
-					{
-						double		totalPartTableScannedPerRescan = nPartTableScanned_avg / instr->nloops;
-						double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
-
-						appendStringInfo(es->str,
-										 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %ld scans."
-										 "  Max %.0f parts%s.\n",
-										 totalPartTableScannedPerRescan,
-										 numTotalLeafParts,
-										 ns->totalPartTableScanned.vcnt,
-										 instr->nloops,
-										 maxPartTableScannedPerRescan,
-										 segbuf
-							);
-					}
-					else
-					{
-						appendStringInfo(es->str,
-										 "Partitions scanned:  Avg %.1f (out of %d) x %d workers."
-										 "  Max %.0f parts%s.\n",
-										 nPartTableScanned_avg,
-										 numTotalLeafParts,
-										 ns->totalPartTableScanned.vcnt,
-										 ns->totalPartTableScanned.vmax,
-										 segbuf);
-					}
-				}
-			}
-		}
-	}
-
 	bool 			haveExtraText = false;
 	StringInfoData	extraData;
 
@@ -2130,23 +2037,6 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             ExplainPropertyInteger("Total memory used across slices", "bytes", total_memory_across_slices, es);
         }
     }
-}
-
-static int
-cdbexplain_countLeafPartTables(PlanState *planstate)
-{
-	Assert(IsA(planstate, DynamicSeqScanState) ||
-		   IsA(planstate, DynamicIndexScanState));
-
-	return -1;
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	Scan	   *scan = (Scan *) planstate->plan;
-
-	Oid			root_oid = getrelid(scan->scanrelid, planstate->state->es_range_table);
-
-	return countLeafPartTables(root_oid);
-#endif
 }
 
 /*

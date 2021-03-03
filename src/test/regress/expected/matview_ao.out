@@ -127,3 +127,6 @@ SELECT * FROM m_aocs;
  public | m_aocs | materialized view | matview_ao_role
 (1 row)
 
+RESET ROLE;
+DROP OWNED BY matview_ao_role CASCADE;
+DROP ROLE matview_ao_role;

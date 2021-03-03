@@ -14,12 +14,12 @@
 #ifndef GPDXL_dxltokens_H
 #define GPDXL_dxltokens_H
 
-#include "gpos/base.h"
-#include "gpos/string/CWStringConst.h"
-#include "gpos/common/CHashMap.h"
-
-#include <xercesc/util/XMLUniDefs.hpp>
 #include <xercesc/sax2/DefaultHandler.hpp>
+#include <xercesc/util/XMLUniDefs.hpp>
+
+#include "gpos/base.h"
+#include "gpos/common/CHashMap.h"
+#include "gpos/string/CWStringConst.h"
 
 namespace gpdxl
 {
@@ -85,7 +85,6 @@ enum Edxltoken
 
 	EdxltokenPhysicalTableScan,
 	EdxltokenPhysicalBitmapTableScan,
-	EdxltokenPhysicalDynamicBitmapTableScan,
 	EdxltokenPhysicalExternalScan,
 	EdxltokenPhysicalIndexScan,
 	EdxltokenPhysicalIndexOnlyScan,
@@ -106,8 +105,6 @@ enum Edxltoken
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,
 	EdxltokenPhysicalSequence,
-	EdxltokenPhysicalDynamicTableScan,
-	EdxltokenPhysicalDynamicIndexScan,
 	EdxltokenPhysicalTVF,
 	EdxltokenPhysicalWindow,
 	EdxltokenPhysicalPartitionSelector,
@@ -318,6 +315,8 @@ enum Edxltoken
 	EdxltokenTotalCost,
 	EdxltokenRows,
 	EdxltokenWidth,
+	EdxltokenRelPages,
+	EdxltokenRelAllVisible,
 	EdxltokenCTASOptions,
 	EdxltokenCTASOption,
 
@@ -440,6 +439,7 @@ enum Edxltoken
 	EdxltokenOid,
 	EdxltokenVersion,
 	EdxltokenMdid,
+	EdxltokenLockMode,
 	EdxltokenMDTypeRequest,
 	EdxltokenTypeInfo,
 	EdxltokenFuncInfo,
@@ -751,13 +751,11 @@ private:
 	// element for mapping Edxltoken to CWStringConst
 	struct SStrMapElem
 	{
-		Edxltoken m_edxlt;
-		CWStringConst *m_pstr;
+		Edxltoken m_edxlt{EdxltokenSentinel};
+		CWStringConst *m_pstr{nullptr};
 
 		// ctor
-		SStrMapElem() : m_edxlt(EdxltokenSentinel), m_pstr(NULL)
-		{
-		}
+		SStrMapElem() = default;
 
 		// ctor
 		SStrMapElem(Edxltoken edxlt, CWStringConst *str)
@@ -777,20 +775,18 @@ private:
 	// element for mapping Edxltoken to XML string
 	struct SXMLStrMapElem
 	{
-		Edxltoken m_edxlt;
-		XMLCh *m_xmlsz;
+		Edxltoken m_edxlt{EdxltokenSentinel};
+		XMLCh *m_xmlsz{nullptr};
 
 		// ctor
-		SXMLStrMapElem() : m_edxlt(EdxltokenSentinel), m_xmlsz(NULL)
-		{
-		}
+		SXMLStrMapElem() = default;
 
 		// ctor
 		SXMLStrMapElem(Edxltoken edxlt, XMLCh *xml_val)
 			: m_edxlt(edxlt), m_xmlsz(xml_val)
 		{
 			GPOS_ASSERT(edxlt < EdxltokenSentinel);
-			GPOS_ASSERT(NULL != xml_val);
+			GPOS_ASSERT(nullptr != xml_val);
 		}
 
 		//dtor

@@ -815,3 +815,40 @@ analyze verbose rootpartition foo;
 -- ensure relpages is correctly set after analyzing
 analyze foo_1_prt_2;
 select reltuples, relpages from pg_class where relname ='foo_1_prt_2';
+-- Test application of column-wise statistics setting to the number of MCVs and histogram bounds on partitioned table
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int) PARTITION BY RANGE (a) (START (0) END (10) EVERY (5));
+-- fill foo with even numbers twice as large than odd ones to avoid fully even distribution of 'a' attribute and hence empty MCV/MCF
+INSERT INTO foo SELECT i%10 FROM generate_series(0, 100) i;
+INSERT INTO foo SELECT i%10 FROM generate_series(0, 100) i WHERE i%2 = 0;
+-- default_statistics_target is 4
+ALTER TABLE foo ALTER COLUMN a SET STATISTICS 5;
+ANALYZE foo;
+SELECT array_length(most_common_vals, 1), array_length(most_common_freqs, 1), array_length(histogram_bounds, 1) FROM pg_stats WHERE tablename = 'foo' AND attname = 'a';
+
+-- Make sure a simple heap table does not store HLL values
+CREATE TABLE simple_table_no_hll (a int);
+INSERT INTO simple_table_no_hll SELECT generate_series(1,10);
+ANALYZE simple_table_no_hll;
+SELECT staattnum, stakind1, stakind2, stakind3, stakind4, stakind5,
+       stavalues1, stavalues2, stavalues3, stavalues4, stavalues5
+FROM pg_statistic WHERE starelid = 'simple_table_no_hll'::regclass;
+
+-- Make sure analyze rootpartition option works in an option list
+set optimizer_analyze_root_partition to off;
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo(a int) PARTITION BY RANGE(a) (start (0) INCLUSIVE END (20) EVERY (10));
+INSERT INTO foo values (5),(15);
+ANALYZE (verbose, rootpartition off) foo;
+
+-- root should not have stats
+SELECT count(*) from pg_statistic where starelid='foo'::regclass;
+
+-- root should have stats
+ANALYZE (verbose, rootpartition on) foo;
+SELECT count(*) from pg_statistic where starelid='foo'::regclass;
+
+-- Make sure analyze hll fullscan option works in an option list
+ANALYZE (verbose, fullscan on) foo;
+ANALYZE (verbose, fullscan off) foo;
+reset optimizer_analyze_root_partition;

@@ -4,7 +4,7 @@
  *      AOCS segment files
  *
  * Portions Copyright (c) 2009, Greenplum INC.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -73,8 +73,6 @@ create_aocs_vpinfo(int nvp)
  */
 typedef struct AOCSFileSegInfo
 {
-	TupleVisibilitySummary tupleVisibilitySummary;
-
 	int32		segno;
 
 	/*

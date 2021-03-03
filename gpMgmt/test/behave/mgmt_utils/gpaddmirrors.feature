@@ -113,7 +113,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
 
-    Scenario: gpaddmirrors with a default master data directory
+    Scenario: gpaddmirrors with a default coordinator data directory
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
@@ -122,7 +122,7 @@ Feature: Tests for gpaddmirrors
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
-    Scenario: gpaddmirrors with a given master data directory [-d <master datadir>]
+    Scenario: gpaddmirrors with a given coordinator data directory [-d <coordinator datadir>]
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"

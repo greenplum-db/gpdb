@@ -9,9 +9,10 @@
 //		Partial implementation of interface class for logging
 //---------------------------------------------------------------------------
 
-#include "gpos/common/syslibwrapper.h"
-#include "gpos/common/clibwrapper.h"
 #include "gpos/error/CLogger.h"
+
+#include "gpos/common/clibwrapper.h"
+#include "gpos/common/syslibwrapper.h"
 #include "gpos/error/CLoggerStream.h"
 #include "gpos/error/CLoggerSyslog.h"
 #include "gpos/error/CMessageRepository.h"
@@ -46,9 +47,7 @@ CLogger::CLogger(ErrorInfoLevel info_level)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CLogger::~CLogger()
-{
-}
+CLogger::~CLogger() = default;
 
 
 //---------------------------------------------------------------------------
@@ -166,10 +165,10 @@ CLogger::AppendDate()
 	TIME tm;
 
 	// get local time
-	syslib::GetTimeOfDay(&tv, NULL /*timezone*/);
+	syslib::GetTimeOfDay(&tv, nullptr /*timezone*/);
 	TIME *t GPOS_ASSERTS_ONLY = clib::Localtime_r(&tv.tv_sec, &tm);
 
-	GPOS_ASSERT(NULL != t && "Failed to get local time");
+	GPOS_ASSERT(nullptr != t && "Failed to get local time");
 
 	// format: YYYY-MM-DD HH-MM-SS-UUUUUU TZ
 	m_entry_wrapper.AppendFormat(

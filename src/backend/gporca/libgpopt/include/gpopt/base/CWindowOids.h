@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CWindowOids.h
@@ -12,6 +12,7 @@
 #define GPOPT_CWindowOids_H
 
 #include "gpos/common/CRefCount.h"
+
 #include "naucrates/dxl/gpdb_types.h"
 
 #define DUMMY_ROW_NUMBER_OID OID(7000)

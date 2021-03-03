@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc
+//	Copyright (C) 2014 VMware, Inc. or its affiliates
 //
 //	@filename:
 //		CParseHandlerPhysicalCTAS.cpp
@@ -12,17 +12,15 @@
 
 #include "naucrates/dxl/parser/CParseHandlerPhysicalCTAS.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalCTAS.h"
 #include "naucrates/dxl/parser/CParseHandlerColDescr.h"
 #include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
-
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-
-#include "naucrates/dxl/operators/CDXLPhysicalCTAS.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -41,10 +39,10 @@ CParseHandlerPhysicalCTAS::CParseHandlerPhysicalCTAS(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdname_schema(NULL),
-	  m_mdname(NULL),
-	  m_distr_column_pos_array(NULL),
-	  m_src_colids_array(NULL),
+	  m_mdname_schema(nullptr),
+	  m_mdname(nullptr),
+	  m_distr_column_pos_array(nullptr),
+	  m_src_colids_array(nullptr),
 	  m_is_temp_table(false),
 	  m_has_oids(false)
 {
@@ -82,7 +80,7 @@ CParseHandlerPhysicalCTAS::StartElement(const XMLCh *const,	 // element_uri,
 
 	const XMLCh *schema_xml =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenSchema));
-	if (NULL != schema_xml)
+	if (nullptr != schema_xml)
 	{
 		m_mdname_schema = CDXLUtils::CreateMDNameFromXMLChar(
 			m_parse_handler_mgr->GetDXLMemoryManager(), schema_xml);
@@ -218,16 +216,17 @@ CParseHandlerPhysicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 		dynamic_cast<CParseHandlerCtasStorageOptions *>((*this)[3]);
 	CParseHandlerProjList *proj_list_parse_handler =
 		dynamic_cast<CParseHandlerProjList *>((*this)[4]);
-	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != proj_list_parse_handler->CreateDXLNode());
 	CParseHandlerPhysicalOp *child_parse_handler =
 		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[5]);
 
-	GPOS_ASSERT(NULL != prop_parse_handler->GetProperties());
-	GPOS_ASSERT(NULL != opclasses_parse_handler->GetMdIdArray());
-	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
-	GPOS_ASSERT(NULL != ctas_options_parse_handler->GetDxlCtasStorageOption());
-	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
-	GPOS_ASSERT(NULL != child_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != prop_parse_handler->GetProperties());
+	GPOS_ASSERT(nullptr != opclasses_parse_handler->GetMdIdArray());
+	GPOS_ASSERT(nullptr != col_descr_parse_handler->GetDXLColumnDescrArray());
+	GPOS_ASSERT(nullptr !=
+				ctas_options_parse_handler->GetDxlCtasStorageOption());
+	GPOS_ASSERT(nullptr != proj_list_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != child_parse_handler->CreateDXLNode());
 
 	CDXLColDescrArray *dxl_col_descr_array =
 		col_descr_parse_handler->GetDXLColumnDescrArray();

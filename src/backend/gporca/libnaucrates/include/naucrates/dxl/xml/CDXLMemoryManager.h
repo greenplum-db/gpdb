@@ -13,11 +13,11 @@
 #ifndef GPDXL_CDXLMemoryManager_H
 #define GPDXL_CDXLMemoryManager_H
 
-#include "gpos/base.h"
-
-#include <xercesc/util/XercesDefs.hpp>
-#include <xercesc/framework/MemoryManager.hpp>
 #include <iostream>
+#include <xercesc/framework/MemoryManager.hpp>
+#include <xercesc/util/XercesDefs.hpp>
+
+#include "gpos/base.h"
 
 namespace gpdxl
 {
@@ -40,10 +40,9 @@ private:
 	// memory pool
 	CMemoryPool *m_mp;
 
-	// private copy ctor
-	CDXLMemoryManager(const CDXLMemoryManager &);
-
 public:
+	CDXLMemoryManager(const CDXLMemoryManager &) = delete;
+
 	// ctor
 	CDXLMemoryManager(CMemoryPool *mp);
 
@@ -51,10 +50,10 @@ public:
 
 	// allocates memory
 	void *allocate(XMLSize_t  // size
-	);
+				   ) override;
 
 	// deallocates memory
-	void deallocate(void *pv);
+	void deallocate(void *pv) override;
 
 	// accessor to the underlying memory pool
 	CMemoryPool *
@@ -66,7 +65,7 @@ public:
 	// returns the memory manager responsible for memory allocation
 	// during exceptions
 	MemoryManager *
-	getExceptionMemoryManager()
+	getExceptionMemoryManager() override
 	{
 		return (MemoryManager *) this;
 	}

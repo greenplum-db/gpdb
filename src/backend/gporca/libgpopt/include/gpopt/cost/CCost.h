@@ -86,9 +86,7 @@ public:
 	}
 
 	// d'tor
-	virtual ~CCost()
-	{
-	}
+	virtual ~CCost() = default;
 
 };	// class CCost
 

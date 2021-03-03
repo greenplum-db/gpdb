@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //---------------------------------------------------------------------------
 #ifndef GPOPT_${test_name}_H
 #define GPOPT_${test_name}_H

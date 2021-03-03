@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CPhysicalParallelUnionAll_H
 #define GPOPT_CPhysicalParallelUnionAll_H
@@ -19,28 +19,26 @@ private:
 
 public:
 	CPhysicalParallelUnionAll(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
-							  CColRef2dArray *pdrgpdrgpcrInput,
-							  ULONG ulScanIdPartialIndex);
+							  CColRef2dArray *pdrgpdrgpcrInput);
 
-	virtual EOperatorId Eopid() const;
+	EOperatorId Eopid() const override;
 
-	virtual const CHAR *SzId() const;
+	const CHAR *SzId() const override;
 
-	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CDistributionSpec *pdsRequired,
-										   ULONG child_index,
-										   CDrvdPropArray *pdrgpdpCtxt,
-										   ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
 
-	virtual CEnfdDistribution::EDistributionMatching Edm(
+	CEnfdDistribution::EDistributionMatching Edm(
 		CReqdPropPlan *,   // prppInput
 		ULONG,			   // child_index
 		CDrvdPropArray *,  //pdrgpdpCtxt
 		ULONG			   // ulOptReq
-	);
+		) override;
 
-	virtual ~CPhysicalParallelUnionAll();
+	~CPhysicalParallelUnionAll() override;
 };
 }  // namespace gpopt
 

@@ -11,12 +11,11 @@
 
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerProjElem.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/operators/CDXLScalarProjList.h"
 
 
 using namespace gpdxl;
@@ -66,7 +65,7 @@ CParseHandlerProjList::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a proj list already and initialized the proj list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		// start new project element
 		CParseHandlerBase *parse_handler_proj_element =

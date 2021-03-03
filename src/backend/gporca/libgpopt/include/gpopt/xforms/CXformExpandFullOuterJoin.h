@@ -12,6 +12,7 @@
 #define GPOPT_CXformExpandFullOuterJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -30,9 +31,6 @@ using namespace gpos;
 class CXformExpandFullOuterJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformExpandFullOuterJoin(const CXformExpandFullOuterJoin &);
-
 	// construct a join expression of two CTEs using the given CTE ids
 	// and output columns
 	CExpression *PexprLogicalJoinOverCTEs(
@@ -41,34 +39,34 @@ private:
 		CColRefArray *pdrgpcrRight, CExpression *pexprScalar) const;
 
 public:
+	CXformExpandFullOuterJoin(const CXformExpandFullOuterJoin &) = delete;
+
 	// ctor
 	explicit CXformExpandFullOuterJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformExpandFullOuterJoin()
-	{
-	}
+	~CXformExpandFullOuterJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfExpandFullOuterJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformExpandFullOuterJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 };	// class CXformExpandFullOuterJoin
 }  // namespace gpopt

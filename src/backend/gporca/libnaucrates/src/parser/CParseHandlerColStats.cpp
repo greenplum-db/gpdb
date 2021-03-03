@@ -10,14 +10,13 @@
 //		statistics.
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/CDXLColStats.h"
-
 #include "naucrates/dxl/parser/CParseHandlerColStats.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerColStatsBucket.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/md/CDXLColStats.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -37,8 +36,8 @@ CParseHandlerColStats::CParseHandlerColStats(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_base)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_base),
-	  m_mdid(NULL),
-	  m_md_name(NULL),
+	  m_mdid(nullptr),
+	  m_md_name(nullptr),
 	  m_width(0.0),
 	  m_null_freq(0.0),
 	  m_distinct_remaining(0.0),
@@ -66,7 +65,7 @@ CParseHandlerColStats::StartElement(const XMLCh *const element_uri,
 								 element_local_name))
 	{
 		// new column stats object
-		GPOS_ASSERT(NULL == m_mdid);
+		GPOS_ASSERT(nullptr == m_mdid);
 
 		// parse mdid and name
 		IMDId *mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -92,7 +91,7 @@ CParseHandlerColStats::StartElement(const XMLCh *const element_uri,
 
 		const XMLCh *parsed_null_freq =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNullFreq));
-		if (NULL != parsed_null_freq)
+		if (nullptr != parsed_null_freq)
 		{
 			m_null_freq = CDXLOperatorFactory::ConvertAttrValueToDouble(
 				m_parse_handler_mgr->GetDXLMemoryManager(), parsed_null_freq,
@@ -101,7 +100,7 @@ CParseHandlerColStats::StartElement(const XMLCh *const element_uri,
 
 		const XMLCh *parsed_distinct_remaining =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColNdvRemain));
-		if (NULL != parsed_distinct_remaining)
+		if (nullptr != parsed_distinct_remaining)
 		{
 			m_distinct_remaining =
 				CDXLOperatorFactory::ConvertAttrValueToDouble(
@@ -112,7 +111,7 @@ CParseHandlerColStats::StartElement(const XMLCh *const element_uri,
 
 		const XMLCh *parsed_freq_remaining =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColFreqRemain));
-		if (NULL != parsed_freq_remaining)
+		if (nullptr != parsed_freq_remaining)
 		{
 			m_freq_remaining = CDXLOperatorFactory::ConvertAttrValueToDouble(
 				m_parse_handler_mgr->GetDXLMemoryManager(),
@@ -122,7 +121,7 @@ CParseHandlerColStats::StartElement(const XMLCh *const element_uri,
 
 		const XMLCh *parsed_is_column_stats_missing =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenColStatsMissing));
-		if (NULL != parsed_is_column_stats_missing)
+		if (nullptr != parsed_is_column_stats_missing)
 		{
 			m_is_column_stats_missing =
 				CDXLOperatorFactory::ConvertAttrValueToBool(

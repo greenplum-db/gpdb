@@ -1,4 +1,9 @@
-
+-- start_matchsubs
+-- m/NOTICE:  One or more columns in the following table\(s\) do not have statistics: /
+-- s/.//gs
+-- m/HINT:  For non-partitioned tables, run analyze .+\. For partitioned tables, run analyze rootpartition .+\. See log for columns missing statistics\./
+-- s/.//gs
+-- end_matchsubs
 -- partition_list_index.sql
 
 -- Test partition with CREATE INDEX

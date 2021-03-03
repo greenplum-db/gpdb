@@ -10,11 +10,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarCast.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpopt;
 using namespace gpos;
@@ -32,7 +32,7 @@ CDXLScalarCast::CDXLScalarCast(CMemoryPool *mp, IMDId *mdid_type,
 							   IMDId *func_mdid)
 	: CDXLScalar(mp), m_mdid_type(mdid_type), m_func_mdid(func_mdid)
 {
-	GPOS_ASSERT(NULL != m_func_mdid);
+	GPOS_ASSERT(nullptr != m_func_mdid);
 	GPOS_ASSERT(m_mdid_type->IsValid());
 }
 

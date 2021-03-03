@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformImplementPartitionSelector.cpp
@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementPartitionSelector.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalPartitionSelector.h"
 #include "gpopt/operators/CPatternLeaf.h"
@@ -51,7 +52,7 @@ CXformImplementPartitionSelector::Transform(CXformContext *pxfctxt,
 											CXformResult *pxfres,
 											CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -74,7 +75,7 @@ CXformImplementPartitionSelector::Transform(CXformContext *pxfctxt,
 	for (ULONG ul = 0; ul < ulLevels; ul++)
 	{
 		CExpression *pexprFilter = popSelector->PexprPartFilter(ul);
-		GPOS_ASSERT(NULL != pexprFilter);
+		GPOS_ASSERT(nullptr != pexprFilter);
 		pexprFilter->AddRef();
 		BOOL fInserted GPOS_ASSERTS_ONLY =
 			phmulexprFilter->Insert(GPOS_NEW(mp) ULONG(ul), pexprFilter);

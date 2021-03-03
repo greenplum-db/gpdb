@@ -1934,7 +1934,7 @@ SELECT * FROM information_schema.tables;
     <dxl:Plan Id="0" SpaceSize="36">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="36.095703" Rows="2.800000" Width="96"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.080500" Rows="2.800000" Width="96"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="66" Alias="table_catalog">
@@ -2019,7 +2019,7 @@ SELECT * FROM information_schema.tables;
                     <dxl:And>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                         <dxl:Ident ColId="55" ColName="nspname" TypeMdid="0.19.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.19.1.0" Value="cGdfY2F0YWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                        <dxl:ConstValue TypeMdid="0.19.1.0" Value="cGdfY2F0YWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                       </dxl:Comparison>
                       <dxl:Or>
                         <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1207.1.0">
@@ -2028,7 +2028,7 @@ SELECT * FROM information_schema.tables;
                         </dxl:Comparison>
                         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                           <dxl:Ident ColId="0" ColName="relname" TypeMdid="0.19.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z3BfZ2xvYmFsX3NlcXVlbmNlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z3BfZ2xvYmFsX3NlcXVlbmNlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:Or>
                     </dxl:And>
@@ -2058,7 +2058,7 @@ SELECT * FROM information_schema.tables;
                       </dxl:Comparison>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                         <dxl:Ident ColId="0" ColName="relname" TypeMdid="0.19.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z3BfZ2xvYmFsX3NlcXVlbmNlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                        <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z3BfZ2xvYmFsX3NlcXVlbmNlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                       </dxl:Comparison>
                     </dxl:Or>
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.92.1.0">
@@ -2098,7 +2098,7 @@ SELECT * FROM information_schema.tables;
         <dxl:OneTimeFilter/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="34.570703" Rows="2.800000" Width="146"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.080231" Rows="2.800000" Width="146"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="relname">
@@ -2130,7 +2130,7 @@ SELECT * FROM information_schema.tables;
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1.885938" Rows="2.800000" Width="72"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001171" Rows="2.800000" Width="72"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="55" Alias="nspname">
@@ -2163,7 +2163,7 @@ SELECT * FROM information_schema.tables;
           </dxl:TableScan>
           <dxl:HashJoin JoinType="Left">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="29.767578" Rows="2.000000" Width="78"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.073278" Rows="2.000000" Width="78"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="relname">
@@ -2192,7 +2192,7 @@ SELECT * FROM information_schema.tables;
             </dxl:HashCondList>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="28.291016" Rows="2.000000" Width="78"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.071749" Rows="2.000000" Width="78"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="relname">
@@ -2272,7 +2272,7 @@ SELECT * FROM information_schema.tables;
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.015625" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000048" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="38" Alias="reloid">

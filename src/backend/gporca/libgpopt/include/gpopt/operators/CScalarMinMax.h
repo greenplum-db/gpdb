@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarMinMax.h
@@ -16,8 +16,9 @@
 #define GPOPT_CScalarMinMax_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CScalar.h"
+
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/operators/CScalar.h"
 
 namespace gpopt
 {
@@ -52,33 +53,32 @@ private:
 	// is operator return type BOOL?
 	BOOL m_fBoolReturnType;
 
-	// private copy ctor
-	CScalarMinMax(const CScalarMinMax &);
-
 public:
+	CScalarMinMax(const CScalarMinMax &) = delete;
+
 	// ctor
 	CScalarMinMax(CMemoryPool *mp, IMDId *mdid_type, EScalarMinMaxType esmmt);
 
 	// dtor
-	virtual ~CScalarMinMax();
+	~CScalarMinMax() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarMinMax;
 	}
 
 	// operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarMinMax";
 	}
 
 	// return type
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		return m_mdid_type;
 	}
@@ -91,44 +91,44 @@ public:
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult
-	Eber(ULongPtrArray *pdrgpulChildren) const
+	EBoolEvalResult
+	Eber(ULongPtrArray *pdrgpulChildren) const override
 	{
 		// MinMax returns Null only if all children are Null
 		return EberNullOnAllNullChildren(pdrgpulChildren);
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CScalarMinMax *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarMinMax == pop->Eopid());
 
 		return dynamic_cast<CScalarMinMax *>(pop);

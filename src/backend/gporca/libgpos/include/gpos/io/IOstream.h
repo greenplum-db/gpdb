@@ -31,9 +31,9 @@ class IOstream
 {
 protected:
 	// ctor
-	IOstream()
-	{
-	}
+	IOstream() = default;
+
+	BOOL m_fullPrecision{false};
 
 public:
 	enum EStreamManipulator
@@ -44,9 +44,7 @@ public:
 	};
 
 	// virtual dtor
-	virtual ~IOstream()
-	{
-	}
+	virtual ~IOstream() = default;
 
 	// operator interface
 	virtual IOstream &operator<<(const CHAR *) = 0;
@@ -63,6 +61,12 @@ public:
 
 	// needs to be implemented by subclass
 	virtual IOstream &operator<<(const WCHAR *) = 0;
+
+	void
+	SetFullPrecision(BOOL fullPrecision)
+	{
+		m_fullPrecision = fullPrecision;
+	}
 };
 
 }  // namespace gpos

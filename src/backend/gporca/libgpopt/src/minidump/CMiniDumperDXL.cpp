@@ -9,14 +9,14 @@
 //		Implementation of DXL-specific minidump handler
 //---------------------------------------------------------------------------
 
+#include "gpopt/minidump/CMiniDumperDXL.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringBase.h"
 #include "gpos/task/CTask.h"
 #include "gpos/task/CWorker.h"
 
 #include "naucrates/dxl/xml/CDXLSections.h"
-
-#include "gpopt/minidump/CMiniDumperDXL.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -33,7 +33,7 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMiniDumperDXL::CMiniDumperDXL(CMemoryPool *mp) : CMiniDumper(mp)
+CMiniDumperDXL::CMiniDumperDXL() : CMiniDumper()
 {
 }
 
@@ -46,9 +46,7 @@ CMiniDumperDXL::CMiniDumperDXL(CMemoryPool *mp) : CMiniDumper(mp)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CMiniDumperDXL::~CMiniDumperDXL()
-{
-}
+CMiniDumperDXL::~CMiniDumperDXL() = default;
 
 
 //---------------------------------------------------------------------------

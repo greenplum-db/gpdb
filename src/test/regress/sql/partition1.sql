@@ -400,6 +400,34 @@ select * from ggg_1_prt_4 order by 1, 2;
 
 drop table ggg cascade;
 
+-- EVERY works by invoking the + operator. We haven't explictly documented
+-- that user can create his own, but better still test it.
+create domain funnytext as text;
+create function funnytext_plus (funnytext, integer) returns funnytext
+as $$ select (chr(ascii($1) + $2))::funnytext $$ language sql;
+
+create operator pg_catalog.+ (function=funnytext_plus, leftarg=funnytext, rightarg=integer);
+
+create table ggg (a char(1), t funnytext)
+distributed by (a)
+partition by range (t)
+(
+  start ('aaa') end ('foobar') every (1)
+);
+\d+ ggg
+
+drop table ggg cascade;
+
+-- What if the + operator returns NULL?
+create or replace function funnytext_plus (funnytext, integer) returns funnytext
+as $$ select NULL::funnytext $$ language sql;
+create table ggg (a char(1), t funnytext)
+distributed by (a)
+partition by range (t)
+(
+  start ('aaa') end ('foobar') every (1)
+);
+
 create table fff (a char(1), b char(2), d char(3)) distributed by (a)
 partition by list (b) (partition aa values ('2'));
 
@@ -1658,6 +1686,24 @@ CREATE TABLE end_inclusive_numeric (a int, b numeric)
         PARTITION p1 START (1) END (3) INCLUSIVE
         );
 
+-- Also check START EXCLUSIVE
+CREATE TABLE start_exclusive_smallint (a int, b smallint)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (0) EXCLUSIVE END (3) INCLUSIVE,
+        PARTITION pmax START (4) EXCLUSIVE
+        );
+\d+ start_exclusive_smallint
+
+-- If the START EXCLUSIVE value + 1 would overflow, you get an error
+CREATE TABLE start_exclusive_smallint_overflow (a int, b smallint)
+    DISTRIBUTED BY (a)
+    PARTITION BY RANGE (b)
+        (
+        PARTITION p1 START (0) EXCLUSIVE END (3) INCLUSIVE,
+        PARTITION pmax START (32767) EXCLUSIVE
+        );
 
 -- Test for ALTER TABLE WITH/WITHOUT VALIDATION.
 -- It doesn't do anything anymore, but check that the syntax is accepted.

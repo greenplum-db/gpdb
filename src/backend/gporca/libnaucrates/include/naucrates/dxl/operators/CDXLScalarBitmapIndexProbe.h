@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarBitmapIndexProbe.h
@@ -38,26 +38,25 @@ private:
 	// index descriptor associated with the scanned table
 	CDXLIndexDescr *m_dxl_index_descr;
 
-	// disable copy ctor
-	CDXLScalarBitmapIndexProbe(CDXLScalarBitmapIndexProbe &);
-
 public:
+	CDXLScalarBitmapIndexProbe(CDXLScalarBitmapIndexProbe &) = delete;
+
 	// ctor
 	CDXLScalarBitmapIndexProbe(CMemoryPool *mp,
 							   CDXLIndexDescr *dxl_index_descr);
 
 	//dtor
-	virtual ~CDXLScalarBitmapIndexProbe();
+	~CDXLScalarBitmapIndexProbe() override;
 
 	// operator type
-	virtual Edxlopid
-	GetDXLOperator() const
+	Edxlopid
+	GetDXLOperator() const override
 	{
 		return EdxlopScalarBitmapIndexProbe;
 	}
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// index descriptor
 	virtual const CDXLIndexDescr *
@@ -67,13 +66,13 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		return false;
 	}
@@ -81,15 +80,15 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	virtual void AssertValid(const CDXLNode *dxlnode,
-							 BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// conversion function
 	static CDXLScalarBitmapIndexProbe *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarBitmapIndexProbe == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarBitmapIndexProbe *>(dxl_op);

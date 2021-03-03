@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalDynamicBitmapTableScan.h
@@ -40,48 +40,44 @@ class CPartConstraint;
 class CPhysicalDynamicBitmapTableScan : public CPhysicalDynamicScan
 {
 private:
-	// disable copy ctor
-	CPhysicalDynamicBitmapTableScan(const CPhysicalDynamicBitmapTableScan &);
-
 public:
+	CPhysicalDynamicBitmapTableScan(const CPhysicalDynamicBitmapTableScan &) =
+		delete;
+
 	// ctor
-	CPhysicalDynamicBitmapTableScan(CMemoryPool *mp, BOOL is_partial,
-									CTableDescriptor *ptabdesc,
-									ULONG ulOriginOpId, const CName *pnameAlias,
-									ULONG scan_id, CColRefArray *pdrgpcrOutput,
-									CColRef2dArray *pdrgpdrgpcrParts,
-									ULONG ulSecondaryScanId,
-									CPartConstraint *ppartcnstr,
-									CPartConstraint *ppartcnstrRel);
+	CPhysicalDynamicBitmapTableScan(
+		CMemoryPool *mp, CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
+		const CName *pnameAlias, ULONG scan_id, CColRefArray *pdrgpcrOutput,
+		CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
+		ColRefToUlongMapArray *root_col_mapping_per_part);
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalDynamicBitmapTableScan;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalDynamicBitmapTableScan";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// statistics derivation during costing
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  CReqdPropPlan *prpplan,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  CReqdPropPlan *prpplan,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	// conversion function
 	static CPhysicalDynamicBitmapTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalDynamicBitmapTableScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicBitmapTableScan *>(pop);

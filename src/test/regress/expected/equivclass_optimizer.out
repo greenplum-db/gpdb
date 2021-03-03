@@ -95,6 +95,7 @@ create table ec0 (ff int8 primary key, f1 int8, f2 int8);
 create table ec1 (ff int8 primary key, f1 int8alias1, f2 int8alias2);
 create table ec2 (xf int8 primary key, x1 int8alias1, x2 int8alias2);
 -- for the moment we only want to look at nestloop plans
+set enable_nestloop = on;
 set enable_hashjoin = off;
 set enable_mergejoin = off;
 --
@@ -151,13 +152,12 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: '42'::bigint
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
                ->  Seq Scan on ec2
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: ((ff = ec2.x1) AND (ff = '42'::bigint))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
-(9 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 explain (costs off)
   select * from ec1, ec2 where ff = x1 and ff = '42'::int8alias1;
@@ -168,11 +168,10 @@ explain (costs off)
          ->  Broadcast Motion 3:3  (slice2; segments: 3)
                ->  Index Scan using ec1_pkey on ec1
                      Index Cond: (ff = '42'::int8alias1)
-         ->  Materialize
-               ->  Seq Scan on ec2
-                     Filter: (x1 = '42'::int8alias1)
+         ->  Seq Scan on ec2
+               Filter: (x1 = '42'::int8alias1)
  Optimizer: Postgres query optimizer
-(9 rows)
+(8 rows)
 
 explain (costs off)
   select * from ec1, ec2 where ff = x1 and '42'::int8 = x1;

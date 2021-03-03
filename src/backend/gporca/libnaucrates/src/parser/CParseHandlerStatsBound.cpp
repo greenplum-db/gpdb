@@ -12,9 +12,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerStatsBound.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -33,7 +34,7 @@ CParseHandlerStatsBound::CParseHandlerStatsBound(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_datum(NULL),
+	  m_dxl_datum(nullptr),
 	  m_is_stats_bound_closed(false)
 {
 }
@@ -72,7 +73,7 @@ CParseHandlerStatsBound::StartElement(const XMLCh *const,  // element_uri,
 				 CDXLTokens::XmlstrToken(EdxltokenStatsBucketUpperBound),
 				 element_local_name))
 	{
-		GPOS_ASSERT(NULL == m_dxl_datum);
+		GPOS_ASSERT(nullptr == m_dxl_datum);
 
 		// translate the datum and add it to the datum array
 		CDXLDatum *dxl_datum = CDXLOperatorFactory::GetDatumVal(
@@ -132,7 +133,7 @@ CParseHandlerStatsBound::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_datum);
+	GPOS_ASSERT(nullptr != m_dxl_datum);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

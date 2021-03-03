@@ -22,6 +22,7 @@ try:
     from gppylib.gpparseopts import *
     from gppylib.datetimeutils import str_to_datetime, str_to_duration, DatetimeValueError
     from gppylib.logfilter import *
+    from gppylib.commands.gp import get_coordinatordatadir
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -67,7 +68,7 @@ file(s) or standard output.
 """)
 
 _help = ["""
-If no input file is specified, the value of the MASTER_DATA_DIRECTORY
+If no input file is specified, the value of the COORDINATOR_DATA_DIRECTORY
 environment variable is used, if defined.  If an input file is a
 directory, the suffix ".log" is appended to obtain the input file name.
 To read from standard input, specify input file "-".
@@ -233,7 +234,7 @@ def openInputFile(ifn, options):
         fileIn = sys.stdin
     else:
         ifn = os.path.abspath(ifn)
-        # In case a master or segment instance's data directory name
+        # In case a coordinator or segment instance's data directory name
         # was given, append '.log' to get the instance's log file name
         # (gpdb convention).
         if (os.path.isdir(ifn)):
@@ -361,9 +362,9 @@ if (options.zip is None and
     options.zip = '9'
 
 try:
-    # If no inputfile arg, try MASTER_DATA_DIRECTORY environment variable
+    # If no inputfile arg, try COORDINATOR_DATA_DIRECTORY environment variable
     if len(args) == 0:
-        s = os.getenv('MASTER_DATA_DIRECTORY')
+        s = get_coordinatordatadir()
         if s:
             # we only support log rotation in log dir.
             if os.path.exists(s + "/log"):

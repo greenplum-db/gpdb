@@ -17,14 +17,14 @@
 #include "gpos/common/CSyncPool.h"
 
 #include "gpopt/search/CJob.h"
-#include "gpopt/search/CJobGroupOptimization.h"
-#include "gpopt/search/CJobGroupExpressionOptimization.h"
 #include "gpopt/search/CJobGroupExploration.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
-#include "gpopt/search/CJobGroupImplementation.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
-#include "gpopt/search/CJobTransformation.h"
+#include "gpopt/search/CJobGroupExpressionOptimization.h"
+#include "gpopt/search/CJobGroupImplementation.h"
+#include "gpopt/search/CJobGroupOptimization.h"
 #include "gpopt/search/CJobTest.h"
+#include "gpopt/search/CJobTransformation.h"
 
 namespace gpopt
 {
@@ -90,7 +90,7 @@ private:
 	T *
 	PtRetrieve(CSyncPool<T> *&pspt)
 	{
-		if (NULL == pspt)
+		if (nullptr == pspt)
 		{
 			pspt = GPOS_NEW(m_mp) CSyncPool<T>(m_mp, m_ulJobs);
 			pspt->Init(GPOS_OFFSET(T, m_id));
@@ -104,8 +104,8 @@ private:
 	void
 	Release(T *pt, CSyncPool<T> *pspt)
 	{
-		GPOS_ASSERT(NULL != pt);
-		GPOS_ASSERT(NULL != pspt);
+		GPOS_ASSERT(nullptr != pt);
+		GPOS_ASSERT(nullptr != pspt);
 
 		pspt->Recycle(pt);
 	}
@@ -116,13 +116,12 @@ private:
 	TruncatePool(CSyncPool<T> *&pspt)
 	{
 		GPOS_DELETE(pspt);
-		pspt = NULL;
+		pspt = nullptr;
 	}
 
-	// no copy ctor
-	CJobFactory(const CJobFactory &);
-
 public:
+	CJobFactory(const CJobFactory &) = delete;
+
 	// ctor
 	CJobFactory(CMemoryPool *mp, ULONG ulJobs);
 

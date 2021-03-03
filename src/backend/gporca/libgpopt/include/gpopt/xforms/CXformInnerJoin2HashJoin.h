@@ -12,6 +12,7 @@
 #define GPOPT_CXformInnerJoin2HashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,39 +30,35 @@ using namespace gpos;
 class CXformInnerJoin2HashJoin : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformInnerJoin2HashJoin(const CXformInnerJoin2HashJoin &);
-
-
 public:
+	CXformInnerJoin2HashJoin(const CXformInnerJoin2HashJoin &) = delete;
+
 	// ctor
 	explicit CXformInnerJoin2HashJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformInnerJoin2HashJoin()
-	{
-	}
+	~CXformInnerJoin2HashJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfInnerJoin2HashJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformInnerJoin2HashJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformInnerJoin2HashJoin
 

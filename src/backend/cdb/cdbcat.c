@@ -4,7 +4,7 @@
  *	  Routines for dealing with GpPolicy
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -319,7 +319,7 @@ GpPolicyFetch(Oid tbloid)
 
 	/*
 	 * EXECUTE-type external tables have an "ON ..." specification.
-	 * See if it's "MASTER_ONLY". Other types of external tables have a
+	 * See if it's "COORDINATOR_ONLY". Other types of external tables have a
 	 * gp_distribution_policy row, like normal tables.
 	 */
 	if (rel_is_external_table(tbloid))
@@ -342,7 +342,7 @@ GpPolicyFetch(Oid tbloid)
 		{
 			char	   *on_clause = (char *) strVal(linitial(e->execlocations));
 
-			if (strcmp(on_clause, "MASTER_ONLY") == 0)
+			if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
 			{
 				return makeGpPolicy(POLICYTYPE_ENTRY, 0, -1);
 			}

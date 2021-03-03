@@ -4,7 +4,7 @@
  *	  routines to manage per-process shared memory data structure
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -579,7 +579,7 @@ InitProcess(void)
 
 	/* Init gxact */
 	MyTmGxact->gxid = InvalidDistributedTransactionId;
-	resetGxact();
+	resetTmGxact();
 
 	/*
 	 * Arrange to clean up at backend exit.

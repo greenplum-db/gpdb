@@ -5,7 +5,7 @@
  * backend/utils/misc/guc-file.l
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
@@ -270,7 +270,6 @@ extern bool Debug_print_parse;
 extern bool Debug_print_rewritten;
 extern bool Debug_pretty_print;
 
-extern bool dev_opt_unsafe_truncate_in_subtransaction;
 extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool Debug_disable_distributed_snapshot;
@@ -335,8 +334,6 @@ extern bool gp_maintenance_mode;
 extern bool gp_maintenance_conn;
 extern bool allow_segment_DML;
 extern bool gp_allow_rename_relation_without_lock;
-
-extern bool gp_ignore_window_exclude;
 
 extern bool gp_ignore_error_table;
 
@@ -570,7 +567,6 @@ extern bool optimizer_enable_range_predicate_dpe;
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;
 extern bool optimizer_analyze_midlevel_partition;
-extern bool optimizer_analyze_enable_merge_of_leaf_stats;
 
 extern bool optimizer_use_gpdb_allocators;
 

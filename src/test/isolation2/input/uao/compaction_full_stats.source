@@ -16,4 +16,5 @@ DELETE FROM foo WHERE a < 16;
 VACUUM FULL foo;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
-SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('foo');
+-- in case there's autovacuum worker running in the backend, the aoseg will not be dropped which has state = 2
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('foo') where state = 1 and tupcount > 0;

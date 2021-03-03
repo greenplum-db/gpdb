@@ -36,14 +36,13 @@ private:
 	// buffer capacity
 	ULONG m_capacity;
 
-	// private copy ctor
-	CWStringStatic(const CWStringStatic &);
-
 protected:
 	// appends the contents of a buffer to the current string
-	void AppendBuffer(const WCHAR *w_str_buffer);
+	void AppendBuffer(const WCHAR *w_str_buffer) override;
 
 public:
+	CWStringStatic(const CWStringStatic &) = delete;
+
 	// ctor
 	CWStringStatic(WCHAR w_str_buffer[], ULONG capacity);
 
@@ -53,27 +52,25 @@ public:
 
 	// appends a string and replaces character with string
 	void AppendEscape(const CWStringBase *str, WCHAR wc,
-					  const WCHAR *w_str_replace);
+					  const WCHAR *w_str_replace) override;
 
 	// appends a formatted string
-	void AppendFormat(const WCHAR *format, ...);
+	void AppendFormat(const WCHAR *format, ...) override;
 
 	// appends a formatted string based on passed va list
 	void AppendFormatVA(const WCHAR *format, VA_LIST va_args);
 
 	// appends a null terminated character array
-	virtual void AppendCharArray(const CHAR *sz);
+	void AppendCharArray(const CHAR *sz) override;
 
 	// appends a null terminated  wide character array
-	virtual void AppendWideCharArray(const WCHAR *w_str);
+	void AppendWideCharArray(const WCHAR *w_str) override;
 
 	// dtor - owner is responsible for releasing the buffer
-	virtual ~CWStringStatic()
-	{
-	}
+	~CWStringStatic() override = default;
 
 	// resets string
-	void Reset();
+	void Reset() override;
 };
 }  // namespace gpos
 

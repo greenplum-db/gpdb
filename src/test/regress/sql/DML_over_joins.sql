@@ -23,6 +23,8 @@ create table r (a int4, b int4) distributed by (a);
 create table s (a int4, b int4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+analyze r;
+analyze s;
 update r set b = r.b + 1 from s where r.a = s.a;
 
 update r set b = r.b + 1 from s where r.a in (select a from s);
@@ -1266,6 +1268,7 @@ create table tab3 (a int, b int) distributed by (b);
 insert into tab1 values (1, 1);
 insert into tab2 values (1, 1);
 insert into tab3 values (1, 1);
+analyze tab3;
 
 -- we must not write the WHERE condition as `relname='tab2'`, it matches tables
 -- in all the schemas, which will cause problems in other tests; we should use

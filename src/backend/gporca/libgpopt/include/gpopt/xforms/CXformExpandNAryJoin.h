@@ -12,6 +12,7 @@
 #define GPOPT_CXformExpandNAryJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -29,38 +30,35 @@ using namespace gpos;
 class CXformExpandNAryJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformExpandNAryJoin(const CXformExpandNAryJoin &);
-
 public:
+	CXformExpandNAryJoin(const CXformExpandNAryJoin &) = delete;
+
 	// ctor
 	explicit CXformExpandNAryJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformExpandNAryJoin()
-	{
-	}
+	~CXformExpandNAryJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfExpandNAryJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformExpandNAryJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformExpandNAryJoin
 

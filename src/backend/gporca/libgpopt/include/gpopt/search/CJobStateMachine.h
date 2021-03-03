@@ -14,8 +14,8 @@
 
 
 #include "gpos/base.h"
-#include "gpos/types.h"
 #include "gpos/common/CEnumSet.h"
+#include "gpos/types.h"
 
 #include "gpopt/base/CStateMachine.h"
 #include "gpopt/engine/CEngine.h"
@@ -91,15 +91,15 @@ private:
 	// job state machine
 	SM m_sm;
 
-	// hidden copy ctor
-	CJobStateMachine(const CJobStateMachine &);
-
 public:
+	CJobStateMachine(const CJobStateMachine &) = delete;
+
 	// ctor
-	CJobStateMachine<TEnumState, estSentinel, TEnumEvent, eevSentinel>(){};
+	CJobStateMachine<TEnumState, estSentinel, TEnumEvent, eevSentinel>() =
+		default;
 
 	// dtor
-	~CJobStateMachine(){};
+	~CJobStateMachine() = default;
 
 	// initialize state machine
 	void
@@ -125,8 +125,8 @@ public:
 	void
 	SetAction(TEnumState est, PFuncAction pfAction)
 	{
-		GPOS_ASSERT(NULL != pfAction);
-		GPOS_ASSERT(NULL == m_rgPfuncAction[est] &&
+		GPOS_ASSERT(nullptr != pfAction);
+		GPOS_ASSERT(nullptr == m_rgPfuncAction[est] &&
 					"Action has been already set");
 
 		m_rgPfuncAction[est] = pfAction;
@@ -136,8 +136,8 @@ public:
 	BOOL
 	FRun(CSchedulerContext *psc, CJob *pjOwner)
 	{
-		GPOS_ASSERT(NULL != psc);
-		GPOS_ASSERT(NULL != pjOwner);
+		GPOS_ASSERT(nullptr != psc);
+		GPOS_ASSERT(nullptr != pjOwner);
 
 		TEnumState estCurrent = estSentinel;
 		TEnumState estNext = estSentinel;
@@ -156,7 +156,7 @@ public:
 
 			// get the function associated with current state
 			PFuncAction pfunc = m_rgPfuncAction[estCurrent];
-			GPOS_ASSERT(NULL != pfunc);
+			GPOS_ASSERT(nullptr != pfunc);
 
 			// execute the function to get an event
 			TEnumEvent eev = pfunc(psc, pjOwner);
@@ -180,7 +180,7 @@ public:
 		// initialize actions array
 		for (ULONG i = 0; i < estSentinel; i++)
 		{
-			m_rgPfuncAction[i] = NULL;
+			m_rgPfuncAction[i] = nullptr;
 		}
 	}
 

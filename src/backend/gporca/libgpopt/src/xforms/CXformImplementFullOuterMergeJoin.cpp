@@ -1,14 +1,15 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Software, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
+
+#include "gpopt/xforms/CXformImplementFullOuterMergeJoin.h"
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformImplementFullOuterMergeJoin.h"
-#include "gpopt/operators/CPhysicalFullMergeJoin.h"
-#include "gpopt/xforms/CXformUtils.h"
 
 #include "gpopt/operators/CLogicalFullOuterJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalFullMergeJoin.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -42,7 +43,7 @@ CXformImplementFullOuterMergeJoin::Transform(CXformContext *pxfctxt,
 											 CXformResult *pxfres,
 											 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/md/CMDIdScCmp.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -142,7 +143,7 @@ CMDIdScCmp::HashValue() const
 BOOL
 CMDIdScCmp::Equals(const IMDId *mdid) const
 {
-	if (NULL == mdid || EmdidScCmp != mdid->MdidType())
+	if (nullptr == mdid || EmdidScCmp != mdid->MdidType())
 	{
 		return false;
 	}

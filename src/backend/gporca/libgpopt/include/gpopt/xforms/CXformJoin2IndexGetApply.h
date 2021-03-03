@@ -10,6 +10,7 @@
 #define GPOPT_CXformJoin2IndexGetApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternNode.h"
@@ -22,10 +23,9 @@ using namespace gpos;
 class CXformJoin2IndexGetApply : public CXformJoin2IndexApplyGeneric
 {
 private:
-	// no copy ctor
+public:
 	CXformJoin2IndexGetApply(const CXformJoin2IndexGetApply &) = delete;
 
-public:
 	// ctor
 	explicit CXformJoin2IndexGetApply(CMemoryPool *mp)
 		: CXformJoin2IndexApplyGeneric(mp, false)
@@ -33,19 +33,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformJoin2IndexGetApply()
-	{
-	}
+	~CXformJoin2IndexGetApply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfJoin2IndexGetApply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformJoin2IndexGetApply";
 	}

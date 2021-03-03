@@ -1,0 +1,42 @@
+create or replace function test_consume_xids(int4) returns void
+as '@abs_srcdir@/regress.so', 'test_consume_xids'
+language C;
+
+set debug_burn_xids=on;
+
+-- Speed up test.
+ALTER SYSTEM SET autovacuum_naptime = 5;
+select * from pg_reload_conf();
+
+-- Autovacuum should take care of anti-XID wraparounds of catalog tables.
+-- Because of that, the age of pg_class should not go much above
+-- autovacuum_freeze_max_age (we assume the default of 200 million here).
+SELECT age(relfrozenxid) < 200 * 1000000 FROM pg_class WHERE relname='pg_class';
+
+-- Suspend the autovacuum worker from vacuuming before
+-- ShmemVariableCache->latestCompletedXid is expected to be updated
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'suspend', '', 'regression', '', 1, -1, 0, 1);
+
+-- track that we've updated the row in pg_database for oldest database
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'skip', '', 'regression', '', 1, -1, 0, 1);
+
+select test_consume_xids(100 * 1000000);
+select test_consume_xids(100 * 1000000);
+select test_consume_xids(10 * 1000000);
+
+SELECT age(relfrozenxid) < 200 * 1000000 FROM pg_class WHERE relname='pg_class';
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_before_do_autovacuum', 1, 1);
+SELECT gp_inject_fault('auto_vac_worker_before_do_autovacuum', 'reset', 1);
+
+-- wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('vacuum_update_dat_frozen_xid', 1, 1);
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', 1);
+
+-- catalog table should be young
+SELECT age(relfrozenxid) < 200 * 1000000 FROM pg_class WHERE relname='pg_class';
+
+-- Reset GUCs.
+ALTER SYSTEM RESET autovacuum_naptime;
+select * from pg_reload_conf();

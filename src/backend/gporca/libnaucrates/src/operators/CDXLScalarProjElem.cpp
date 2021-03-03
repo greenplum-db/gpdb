@@ -11,7 +11,6 @@
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -29,7 +28,7 @@ CDXLScalarProjElem::CDXLScalarProjElem(CMemoryPool *mp, ULONG id,
 									   const CMDName *mdname)
 	: CDXLScalar(mp), m_id(id), m_mdname(mdname)
 {
-	GPOS_ASSERT(NULL != mdname);
+	GPOS_ASSERT(nullptr != mdname);
 }
 
 //---------------------------------------------------------------------------

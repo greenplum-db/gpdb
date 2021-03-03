@@ -4,9 +4,9 @@
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
-      <dxl:CTEConfig CTEInliningCutoff="0"/> 
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="103027,101001,101013,103001"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -236,9 +236,307 @@
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.100193001.1.1"/>
+          <dxl:Partition Mdid="0.100193002.1.1"/>
+          <dxl:Partition Mdid="0.100193003.1.1"/>
+          <dxl:Partition Mdid="0.100193004.1.1"/>
+          <dxl:Partition Mdid="0.100193005.1.1"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.100193001.1.1" Name="decodenum_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="distcol" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ptcol" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="decodetxt" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.100193002.1.1" Name="decodenum_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="distcol" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ptcol" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="decodetxt" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.100193003.1.1" Name="decodenum_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="distcol" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ptcol" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="decodetxt" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.100193004.1.1" Name="decodenum_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="distcol" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ptcol" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="decodetxt" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1000"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.100193005.1.1" Name="decodenum_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="distcol" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ptcol" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="decodetxt" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1000"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10000"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.100193.1.1.5" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.100193.1.1.4" Name="ctid" Width="6.000000"/>
+      <dxl:GPDBScalarOp Mdid="0.525.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.150.1.0"/>
+        <dxl:Commutator Mdid="0.523.1.0"/>
+        <dxl:InverseOp Mdid="0.97.1.0"/>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.66.1.0"/>
+        <dxl:Commutator Mdid="0.521.1.0"/>
+        <dxl:InverseOp Mdid="0.525.1.0"/>
+      </dxl:GPDBScalarOp>
     </dxl:Metadata>
     <dxl:Query>
       <dxl:OutputColumns>
@@ -316,7 +614,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="233.123047" Rows="1.000000" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000675" Rows="1.000000" Width="28"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="numcol">
@@ -336,7 +634,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="232.109375" Rows="1.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000549" Rows="1.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="numcol">
@@ -363,7 +661,7 @@
                 </dxl:ParamList>
                 <dxl:Limit>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6.068359" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000321" Rows="2.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="22" Alias="?column?">
@@ -372,7 +670,7 @@
                   </dxl:ProjList>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="5.052734" Rows="2.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000313" Rows="2.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="22" Alias="?column?">
@@ -386,7 +684,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="4.037109" Rows="2.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000305" Rows="2.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList/>
                       <dxl:Filter>
@@ -398,7 +696,7 @@
                       <dxl:OneTimeFilter/>
                       <dxl:Materialize Eager="true">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="3.035156" Rows="2.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000240" Rows="2.000000" Width="8"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="11" Alias="numcol">
@@ -408,7 +706,7 @@
                         <dxl:Filter/>
                         <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="2.019531" Rows="2.000000" Width="8"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000232" Rows="2.000000" Width="8"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="11" Alias="numcol">
@@ -417,62 +715,147 @@
                           </dxl:ProjList>
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
-                          <dxl:Sequence>
+                          <dxl:Append IsTarget="false" IsZapped="false">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="0.003906" Rows="1.000000" Width="8"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="11" Alias="numcol">
                                 <dxl:Ident ColId="11" ColName="numcol" TypeMdid="0.1700.1.0"/>
                               </dxl:ProjElem>
                             </dxl:ProjList>
-                            <dxl:PartitionSelector RelationMdid="0.100193.1.1" PartitionLevels="1" ScanId="2">
+                            <dxl:Filter/>
+                            <dxl:TableScan>
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-                              </dxl:Properties>
-                              <dxl:ProjList/>
-                              <dxl:PartEqFilters>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                              </dxl:PartEqFilters>
-                              <dxl:PartFilters>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                              </dxl:PartFilters>
-                              <dxl:ResidualFilter>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                              </dxl:ResidualFilter>
-                              <dxl:PropagationExpression>
-                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                              </dxl:PropagationExpression>
-                              <dxl:PrintableFilter>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                              </dxl:PrintableFilter>
-                            </dxl:PartitionSelector>
-                            <dxl:DynamicTableScan PartIndexId="2">
-                              <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="0.003906" Rows="1.000000" Width="8"/>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
                               </dxl:Properties>
                               <dxl:ProjList>
-                                <dxl:ProjElem ColId="11" Alias="numcol">
-                                  <dxl:Ident ColId="11" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                                <dxl:ProjElem ColId="23" Alias="numcol">
+                                  <dxl:Ident ColId="23" ColName="numcol" TypeMdid="0.1700.1.0"/>
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.100193.1.1" TableName="decodenum">
+                              <dxl:TableDescriptor Mdid="0.100193001.1.1" TableName="decodenum_prt_1">
                                 <dxl:Columns>
-                                  <dxl:Column ColId="11" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
-                                  <dxl:Column ColId="12" Attno="2" ColName="distcol" TypeMdid="0.23.1.0"/>
-                                  <dxl:Column ColId="13" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
-                                  <dxl:Column ColId="15" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                  <dxl:Column ColId="16" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                  <dxl:Column ColId="17" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                  <dxl:Column ColId="18" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                  <dxl:Column ColId="19" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                  <dxl:Column ColId="20" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                  <dxl:Column ColId="21" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                  <dxl:Column ColId="23" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="24" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="25" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="26" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="27" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                  <dxl:Column ColId="28" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="29" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="30" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="31" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="32" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="33" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                                 </dxl:Columns>
                               </dxl:TableDescriptor>
-                            </dxl:DynamicTableScan>
-                          </dxl:Sequence>
+                            </dxl:TableScan>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="34" Alias="numcol">
+                                  <dxl:Ident ColId="34" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:TableDescriptor Mdid="0.100193002.1.1" TableName="decodenum_prt_2">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="34" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="35" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="36" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="37" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="38" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                  <dxl:Column ColId="39" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="40" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="41" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="42" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="43" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="44" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="45" Alias="numcol">
+                                  <dxl:Ident ColId="45" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:TableDescriptor Mdid="0.100193003.1.1" TableName="decodenum_prt_3">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="45" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="46" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="47" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="48" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="49" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                  <dxl:Column ColId="50" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="51" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="52" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="53" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="54" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="55" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="56" Alias="numcol">
+                                  <dxl:Ident ColId="56" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:TableDescriptor Mdid="0.100193004.1.1" TableName="decodenum_prt_4">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="56" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="57" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="58" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="59" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="60" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                  <dxl:Column ColId="61" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="62" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="63" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="64" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="65" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="66" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="67" Alias="numcol">
+                                  <dxl:Ident ColId="67" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:TableDescriptor Mdid="0.100193005.1.1" TableName="decodenum_prt_5">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="67" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="68" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="69" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="70" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                                  <dxl:Column ColId="71" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                  <dxl:Column ColId="72" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="73" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="74" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="75" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="76" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="77" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                          </dxl:Append>
                         </dxl:BroadcastMotion>
                       </dxl:Materialize>
                     </dxl:Result>
@@ -488,9 +871,9 @@
             </dxl:Comparison>
           </dxl:Filter>
           <dxl:OneTimeFilter/>
-          <dxl:Sequence>
+          <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.013672" Rows="1.000000" Width="28"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="numcol">
@@ -506,63 +889,183 @@
                 <dxl:Ident ColId="3" ColName="decodetxt" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.100193.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:Filter/>
+            <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-              </dxl:Properties>
-              <dxl:ProjList/>
-              <dxl:PartEqFilters>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:PartEqFilters>
-              <dxl:PartFilters>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:PartFilters>
-              <dxl:ResidualFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:ResidualFilter>
-              <dxl:PropagationExpression>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-              </dxl:PropagationExpression>
-              <dxl:PrintableFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:PrintableFilter>
-            </dxl:PartitionSelector>
-            <dxl:DynamicTableScan PartIndexId="1">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.013672" Rows="1.000000" Width="28"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
               </dxl:Properties>
               <dxl:ProjList>
-                <dxl:ProjElem ColId="0" Alias="numcol">
-                  <dxl:Ident ColId="0" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                <dxl:ProjElem ColId="78" Alias="numcol">
+                  <dxl:Ident ColId="78" ColName="numcol" TypeMdid="0.1700.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="1" Alias="distcol">
-                  <dxl:Ident ColId="1" ColName="distcol" TypeMdid="0.23.1.0"/>
+                <dxl:ProjElem ColId="79" Alias="distcol">
+                  <dxl:Ident ColId="79" ColName="distcol" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="2" Alias="ptcol">
-                  <dxl:Ident ColId="2" ColName="ptcol" TypeMdid="0.23.1.0"/>
+                <dxl:ProjElem ColId="80" Alias="ptcol">
+                  <dxl:Ident ColId="80" ColName="ptcol" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="3" Alias="decodetxt">
-                  <dxl:Ident ColId="3" ColName="decodetxt" TypeMdid="0.25.1.0"/>
+                <dxl:ProjElem ColId="81" Alias="decodetxt">
+                  <dxl:Ident ColId="81" ColName="decodetxt" TypeMdid="0.25.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.100193.1.1" TableName="decodenum">
+              <dxl:TableDescriptor Mdid="0.100193001.1.1" TableName="decodenum_prt_1">
                 <dxl:Columns>
-                  <dxl:Column ColId="0" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0"/>
-                  <dxl:Column ColId="1" Attno="2" ColName="distcol" TypeMdid="0.23.1.0"/>
-                  <dxl:Column ColId="2" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0"/>
-                  <dxl:Column ColId="3" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0"/>
-                  <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                  <dxl:Column ColId="5" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                  <dxl:Column ColId="6" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                  <dxl:Column ColId="7" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                  <dxl:Column ColId="8" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                  <dxl:Column ColId="9" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                  <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                  <dxl:Column ColId="78" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="79" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="80" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="81" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="82" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="83" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="84" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="85" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="86" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="87" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="88" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-            </dxl:DynamicTableScan>
-          </dxl:Sequence>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="89" Alias="numcol">
+                  <dxl:Ident ColId="89" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="90" Alias="distcol">
+                  <dxl:Ident ColId="90" ColName="distcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="91" Alias="ptcol">
+                  <dxl:Ident ColId="91" ColName="ptcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="92" Alias="decodetxt">
+                  <dxl:Ident ColId="92" ColName="decodetxt" TypeMdid="0.25.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.100193002.1.1" TableName="decodenum_prt_2">
+                <dxl:Columns>
+                  <dxl:Column ColId="89" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="90" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="91" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="92" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="93" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="94" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="95" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="96" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="97" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="98" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="99" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="100" Alias="numcol">
+                  <dxl:Ident ColId="100" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="101" Alias="distcol">
+                  <dxl:Ident ColId="101" ColName="distcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="102" Alias="ptcol">
+                  <dxl:Ident ColId="102" ColName="ptcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="103" Alias="decodetxt">
+                  <dxl:Ident ColId="103" ColName="decodetxt" TypeMdid="0.25.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.100193003.1.1" TableName="decodenum_prt_3">
+                <dxl:Columns>
+                  <dxl:Column ColId="100" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="101" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="102" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="103" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="104" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="105" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="106" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="107" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="108" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="109" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="110" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="111" Alias="numcol">
+                  <dxl:Ident ColId="111" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="112" Alias="distcol">
+                  <dxl:Ident ColId="112" ColName="distcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="113" Alias="ptcol">
+                  <dxl:Ident ColId="113" ColName="ptcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="114" Alias="decodetxt">
+                  <dxl:Ident ColId="114" ColName="decodetxt" TypeMdid="0.25.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.100193004.1.1" TableName="decodenum_prt_4">
+                <dxl:Columns>
+                  <dxl:Column ColId="111" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="112" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="113" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="114" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="115" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="116" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="117" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="118" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="119" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="120" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="121" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="28"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="122" Alias="numcol">
+                  <dxl:Ident ColId="122" ColName="numcol" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="123" Alias="distcol">
+                  <dxl:Ident ColId="123" ColName="distcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="124" Alias="ptcol">
+                  <dxl:Ident ColId="124" ColName="ptcol" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="125" Alias="decodetxt">
+                  <dxl:Ident ColId="125" ColName="decodetxt" TypeMdid="0.25.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.100193005.1.1" TableName="decodenum_prt_5">
+                <dxl:Columns>
+                  <dxl:Column ColId="122" Attno="1" ColName="numcol" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="123" Attno="2" ColName="distcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="124" Attno="3" ColName="ptcol" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="125" Attno="4" ColName="decodetxt" TypeMdid="0.25.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="126" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="127" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="128" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="129" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="130" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="131" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="132" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+          </dxl:Append>
         </dxl:Result>
       </dxl:GatherMotion>
     </dxl:Plan>

@@ -15,68 +15,83 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpec.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 
 namespace gpopt
 {
 using namespace gpos;
 
-//---------------------------------------------------------------------------
-//	@class:
-//		CDistributionSpecReplicated
-//
-//	@doc:
-//		Class for representing replicated distribution specification.
-//
-//---------------------------------------------------------------------------
 class CDistributionSpecReplicated : public CDistributionSpec
 {
 private:
-	// private copy ctor
-	CDistributionSpecReplicated(const CDistributionSpecReplicated &);
+	// replicated support
+	CDistributionSpec::EDistributionType m_replicated;
 
 public:
+	CDistributionSpecReplicated(const CDistributionSpecReplicated &) = delete;
+
 	// ctor
-	CDistributionSpecReplicated()
+	CDistributionSpecReplicated(
+		CDistributionSpec::EDistributionType replicated_type)
+		: m_replicated(replicated_type)
 	{
+		GPOS_ASSERT(replicated_type == CDistributionSpec::EdtReplicated ||
+					replicated_type ==
+						CDistributionSpec::EdtTaintedReplicated ||
+					replicated_type == CDistributionSpec::EdtStrictReplicated);
 	}
 
 	// accessor
-	virtual EDistributionType
-	Edt() const
+	EDistributionType
+	Edt() const override
 	{
-		return CDistributionSpec::EdtReplicated;
+		return m_replicated;
 	}
 
 	// does this distribution satisfy the given one
-	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
+	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// return distribution partitioning type
-	virtual EDistributionPartitioningType
-	Edpt() const
+	EDistributionPartitioningType
+	Edpt() const override
 	{
 		return EdptNonPartitioned;
 	}
 
 	// print
-	virtual IOstream &
-	OsPrint(IOstream &os) const
+	IOstream &
+	OsPrint(IOstream &os) const override
 	{
-		return os << "REPLICATED ";
+		switch (Edt())
+		{
+			case CDistributionSpec::EdtReplicated:
+				os << "REPLICATED";
+				break;
+			case CDistributionSpec::EdtTaintedReplicated:
+				os << "TAINTED REPLICATED";
+				break;
+			case CDistributionSpec::EdtStrictReplicated:
+				os << "STRICT REPLICATED";
+				break;
+			default:
+				GPOS_ASSERT(
+					!"Replicated type must be General, Tainted, or Strict");
+		}
+		return os;
 	}
 
 	// conversion function
 	static CDistributionSpecReplicated *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
-		GPOS_ASSERT(EdtReplicated == pds->Edt());
+		GPOS_ASSERT(nullptr != pds);
+		GPOS_ASSERT(EdtStrictReplicated == pds->Edt() ||
+					EdtReplicated == pds->Edt() ||
+					EdtTaintedReplicated == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecReplicated *>(pds);
 	}

@@ -17,19 +17,17 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "access/attnum.h"
-#include "utils/faultinjector.h"
 #include "parser/parse_coerce.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 }
 
 #include "gpos/types.h"
 
-#include "gpos/types.h"
-
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
-typedef int LOCKMODE;
 struct TypeCacheEntry;
 typedef struct NumericData *Numeric;
 typedef struct HeapTupleData *HeapTuple;
@@ -50,7 +48,6 @@ struct CdbComponentDatabases;
 struct StringInfoData;
 typedef StringInfoData *StringInfo;
 struct LogicalIndexes;
-struct LogicalIndexInfo;
 struct ParseState;
 struct DefElem;
 struct GpPolicy;
@@ -262,10 +259,8 @@ Node *PnodeCheckConstraint(Oid check_constraint_oid);
 // get the list of check constraints for a given relation
 List *GetCheckConstraintOids(Oid rel_oid);
 
-#if 0
-	// part constraint expression tree
-	Node *GetRelationPartContraints(Oid rel_oid, List **default_levels);
-#endif
+// part constraint expression tree
+Node *GetRelationPartConstraints(Relation rel);
 
 // get the cast function for the specified source and destination types
 bool GetCastFunc(Oid src_oid, Oid dest_oid, bool *is_binary_coercible,
@@ -549,6 +544,8 @@ Node *MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(), void *context,
 
 bool RelIsPartitioned(Oid relid);
 
+bool IndexIsPartitioned(Oid relid);
+
 // check whether table with the given oid is a regular table and not part of a partitioned table
 bool RelPartIsNone(Oid relid);
 
@@ -583,14 +580,6 @@ double CdbEstimatePartitionedNumTuples(Relation rel);
 
 // close the given relation
 void CloseRelation(Relation rel);
-
-#if 0
-	// return the logical indexes for a partitioned table
-	LogicalIndexes *GetLogicalPartIndexes(Oid oid);
-	
-	// return the logical info structure for a given logical index oid
-	LogicalIndexInfo *GetLogicalIndexInfo(Oid root_oid, Oid index_oid);
-#endif
 
 // return a list of index oids for a given relation
 List *GetRelationIndexes(Relation relation);
@@ -752,6 +741,10 @@ void *GPDBMemoryContextAlloc(MemoryContext context, Size size);
 MemoryContext GPDBAllocSetContextCreate();
 
 void GPDBMemoryContextDelete(MemoryContext context);
+
+List *GetRelChildIndexes(Oid reloid);
+
+void GPDBLockRelationOid(Oid reloid, int lockmode);
 
 }  //namespace gpdb
 

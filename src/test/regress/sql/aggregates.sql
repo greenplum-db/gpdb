@@ -372,6 +372,10 @@ insert into minmaxtest values(11), (12);
 insert into minmaxtest1 values(13), (14);
 insert into minmaxtest2 values(15), (16);
 insert into minmaxtest3 values(17), (18);
+analyze minmaxtest;
+analyze minmaxtest1;
+analyze minmaxtest2;
+analyze minmaxtest3;
 
 set enable_seqscan=off;
 explain (costs off)

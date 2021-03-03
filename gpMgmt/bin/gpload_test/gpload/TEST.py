@@ -12,6 +12,8 @@ import platform
 import re
 import subprocess
 
+from gppylib.commands.gp import get_coordinatordatadir
+
 """
 Global Values
 """
@@ -344,7 +346,7 @@ def windows_path(command):
         return command
 
 def get_port():
-    file = os.environ.get('MASTER_DATA_DIRECTORY')+'/postgresql.conf'
+    file = get_coordinatordatadir()+'/postgresql.conf'
     if os.path.isfile(file):
         f = open(file)
         for line in f:

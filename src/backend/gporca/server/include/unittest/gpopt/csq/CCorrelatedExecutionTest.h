@@ -12,16 +12,15 @@
 #define GPOPT_CCorrelatedExecutionTest_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/base/CDrvdProp.h"
-#include "gpopt/operators/COperator.h"
 #include "gpopt/base/CColRef.h"
-
+#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/CPrintPrefix.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/COperator.h"
 
 // forward declarations
 namespace gpdxl

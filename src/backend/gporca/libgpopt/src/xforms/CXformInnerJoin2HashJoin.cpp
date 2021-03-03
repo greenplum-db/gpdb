@@ -9,13 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformInnerJoin2HashJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalInnerHashJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformInnerJoin2HashJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -72,7 +73,7 @@ CXformInnerJoin2HashJoin::Transform(CXformContext *pxfctxt,
 									CXformResult *pxfres,
 									CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

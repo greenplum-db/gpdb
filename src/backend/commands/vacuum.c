@@ -12,7 +12,7 @@
  * Append-Optimized tables.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -60,7 +60,7 @@
 #include "catalog/catalog.h"
 #include "catalog/heap.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/oid_dispatch.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbdisp_query.h"
@@ -145,9 +145,9 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel)
 		else if (strcmp(opt->defname, "skip_locked") == 0)
 			skip_locked = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "rootpartition") == 0)
-			rootonly = get_vacopt_ternary_value(opt);
+			rootonly = defGetBoolean(opt);
 		else if (strcmp(opt->defname, "fullscan") == 0)
-			fullscan = get_vacopt_ternary_value(opt);
+			fullscan = defGetBoolean(opt);
 		else if (!vacstmt->is_vacuumcmd)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -278,18 +278,13 @@ vacuum(List *relations, VacuumParams *params,
 	volatile bool in_outer_xact,
 				use_own_xacts;
 
-	/* GPDB_12_MERGE_FIXME: what to do about this? Do we still need ROOTPARTITION option
-	 * at all?
-	 */
-#if 0
-	if ((options & VACOPT_VACUUM) &&
-		(options & VACOPT_ROOTONLY))
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("ROOTPARTITION option cannot be used together with VACUUM, try ANALYZE ROOTPARTITION")));
-#endif
-
 	Assert(params != NULL);
+
+	/*
+	 * VACUUM does not support ROOTPARTITION option. Normally it's not possible
+	 * that VACOPT_VACUUM and VACOPT_ROOTONLY set at same time.
+	 */
+	Assert(!((params->options & VACOPT_VACUUM) && (params->options & VACOPT_ROOTONLY)));
 
 	stmttype = (params->options & VACOPT_VACUUM) ? "VACUUM" : "ANALYZE";
 
@@ -481,15 +476,6 @@ vacuum(List *relations, VacuumParams *params,
 				analyze_rel(vrel->oid, vrel->relation, params,
 							vrel->va_cols, in_outer_xact, vac_strategy, NULL);
 
-#ifdef FAULT_INJECTOR
-				if (IsAutoVacuumWorkerProcess())
-				{
-					FaultInjector_InjectFaultIfSet(
-						"analyze_finished_one_relation", DDLNotSpecified,
-						"", vrel->relation->relname);
-				}
-#endif
-
 				if (use_own_xacts)
 				{
 					PopActiveSnapshot();
@@ -504,6 +490,15 @@ vacuum(List *relations, VacuumParams *params,
 					 */
 					CommandCounterIncrement();
 				}
+
+#ifdef FAULT_INJECTOR
+				if (IsAutoVacuumWorkerProcess())
+				{
+					FaultInjector_InjectFaultIfSet(
+						"analyze_finished_one_relation", DDLNotSpecified,
+						"", vrel->relation->relname);
+				}
+#endif
 			}
 		}
 	}
@@ -839,8 +834,6 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * root level with optimizer_analyze_midlevel_partition GUC set to ON.
 		 * Planner uses the stats on leaf partitions, so it's unnecessary to collect stats on
 		 * midlevel partitions.
-		 *
-		 * GPDB_12_MERGE_FIXME: Does this still make sense?
 		 */
 		else if (classForm->relkind == RELKIND_PARTITIONED_TABLE &&
 				 classForm->relispartition &&
@@ -857,13 +850,12 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		else
 		{
 			/*
-			 * If optimizer_analyze_root_partition is 'off' and ROOTPARTITION
-			 * option was not explicitly specified, analyze all the children,
-			 * but skip the partitioned table itself.
+			 * If current table is root partition table, optimizer_analyze_root_partition
+			 * is set to 'off' and ROOTPARTITION option was not explicitly specified,
+			 * analyze all the children, but skip the partitioned table itself.
 			 *
 			 * Analyzing the children will update the root table's statistics
-			 * too, by merging the stats of the children. (GPDB_12_MERGE_FIXME:
-			 * I think that's the idea here?)
+			 * too, by merging the stats of the children.
 			 */
 			if (classForm->relkind == RELKIND_PARTITIONED_TABLE &&
 				!optimizer_analyze_root_partition)
@@ -964,8 +956,14 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * GPDB: If you explicitly ANALYZE a partition, also update the
 		 * parent's stats after the partition has been ANALYZEd. (Thanks to
 		 * the code to merge leaf statistics, it should be fast.)
+		 *
+		 * If ROOTPARTITION is specified, that means we only analyze on root
+		 * partition table. The root table's ispartition is false. And the root
+		 * table doesn't have parent to merge stats.
+		 * If current table is skipped, no need to merge stats for it's parent
+		 * since current table's stats is not get updated.
 		 */
-		if (optimizer_analyze_root_partition || (options & VACOPT_ROOTONLY))
+		if (optimizer_analyze_root_partition && !skip_this)
 		{
 			Oid			child_relid = relid;
 
@@ -1551,6 +1549,35 @@ vac_update_relstats(Relation relation,
 	table_close(rd, RowExclusiveLock);
 }
 
+/*
+ * fetch_database_tuple - Fetch a copy of database tuple from pg_database.
+ *
+ * This using disk heap table instead of system cache.
+ * relation: opened pg_database relation in vac_update_datfrozenxid().
+ */
+static HeapTuple
+fetch_database_tuple(Relation relation, Oid dbOid)
+{
+	ScanKeyData skey[1];
+	SysScanDesc sscan;
+	HeapTuple	tuple = NULL;
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_database_oid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(dbOid));
+
+	sscan = systable_beginscan(relation, DatabaseOidIndexId, true,
+							   NULL, 1, skey);
+
+	tuple = systable_getnext(sscan);
+	if (HeapTupleIsValid(tuple))
+		tuple = heap_copytuple(tuple);
+
+	systable_endscan(sscan);
+
+	return tuple;
+}
 
 /*
  *	vac_update_datfrozenxid() -- update pg_database.datfrozenxid for our DB
@@ -1573,8 +1600,8 @@ vac_update_relstats(Relation relation,
 void
 vac_update_datfrozenxid(void)
 {
-	HeapTuple	tuple;
-	Form_pg_database dbform;
+	HeapTuple	cached_tuple;
+	Form_pg_database	cached_dbform;
 	Relation	relation;
 	SysScanDesc scan;
 	HeapTuple	classTup;
@@ -1637,15 +1664,6 @@ vac_update_datfrozenxid(void)
 			classForm->relkind != RELKIND_AOVISIMAP &&
 			classForm->relkind != RELKIND_AOBLOCKDIR)
 		{
-			/* GPDB_12_MERGE_FIXME: this was crashing in regression test.
-			 * Add a runtime check to avoid the crash, until we've fixed the list of
-			 * relkinds above. */
-			if (TransactionIdIsValid(classForm->relfrozenxid))
-				elog(ERROR, "relation \"%s\" of kind \"%c\" has non-zero relfrozenxid",
-					 NameStr(classForm->relname), classForm->relkind);
-			if (MultiXactIdIsValid(classForm->relminmxid))
-				elog(ERROR, "relation \"%s\" of kind \"%c\" has non-zero relminmxid",
-					 NameStr(classForm->relname), classForm->relkind);
 			Assert(!TransactionIdIsValid(classForm->relfrozenxid));
 			Assert(!MultiXactIdIsValid(classForm->relminmxid));
 			continue;
@@ -1711,45 +1729,57 @@ vac_update_datfrozenxid(void)
 	/* Now fetch the pg_database tuple we need to update. */
 	relation = table_open(DatabaseRelationId, RowExclusiveLock);
 
-	/* Fetch a copy of the tuple to scribble on */
-	tuple = SearchSysCacheCopy1(DATABASEOID, ObjectIdGetDatum(MyDatabaseId));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "could not find tuple for database %u", MyDatabaseId);
-	dbform = (Form_pg_database) GETSTRUCT(tuple);
+	cached_tuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(MyDatabaseId));
+	cached_dbform = (Form_pg_database) GETSTRUCT(cached_tuple);
 
 	/*
 	 * As in vac_update_relstats(), we ordinarily don't want to let
 	 * datfrozenxid go backward; but if it's "in the future" then it must be
 	 * corrupt and it seems best to overwrite it.
 	 */
-	if (dbform->datfrozenxid != newFrozenXid &&
-		(TransactionIdPrecedes(dbform->datfrozenxid, newFrozenXid) ||
-		 TransactionIdPrecedes(lastSaneFrozenXid, dbform->datfrozenxid)))
-	{
-		dbform->datfrozenxid = newFrozenXid;
+	if (cached_dbform->datfrozenxid != newFrozenXid &&
+		(TransactionIdPrecedes(cached_dbform->datfrozenxid, newFrozenXid) ||
+		 TransactionIdPrecedes(lastSaneFrozenXid, cached_dbform->datfrozenxid)))
 		dirty = true;
-	}
 	else
-		newFrozenXid = dbform->datfrozenxid;
+		newFrozenXid = cached_dbform->datfrozenxid;
 
 	/* Ditto for datminmxid */
-	if (dbform->datminmxid != newMinMulti &&
-		(MultiXactIdPrecedes(dbform->datminmxid, newMinMulti) ||
-		 MultiXactIdPrecedes(lastSaneMinMulti, dbform->datminmxid)))
-	{
-		dbform->datminmxid = newMinMulti;
+	if (cached_dbform->datminmxid != newMinMulti &&
+		(MultiXactIdPrecedes(cached_dbform->datminmxid, newMinMulti) ||
+		 MultiXactIdPrecedes(lastSaneMinMulti, cached_dbform->datminmxid)))
 		dirty = true;
-	}
 	else
-		newMinMulti = dbform->datminmxid;
+		newMinMulti = cached_dbform->datminmxid;
 
 	if (dirty)
 	{
+		HeapTuple			tuple;
+		Form_pg_database	tmp_dbform;
+		/*
+		 * Fetch a copy of the tuple to scribble on from pg_database disk
+		 * heap table instead of system cache
+		 * "SearchSysCacheCopy1(DATABASEOID, ObjectIdGetDatum(MyDatabaseId))".
+		 * Since the cache already flatten toast tuple, so the
+		 * heap_inplace_update will fail with "wrong tuple length".
+		 */
+		tuple = fetch_database_tuple(relation, MyDatabaseId);
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "could not find tuple for database %u", MyDatabaseId);
+		tmp_dbform = (Form_pg_database) GETSTRUCT(tuple);
+		tmp_dbform->datfrozenxid = newFrozenXid;
+		tmp_dbform->datminmxid = newMinMulti;
+
 		heap_inplace_update(relation, tuple);
-		SIMPLE_FAULT_INJECTOR("vacuum_update_dat_frozen_xid");
+		heap_freetuple(tuple);
+#ifdef FAULT_INJECTOR
+		FaultInjector_InjectFaultIfSet(
+			"vacuum_update_dat_frozen_xid", DDLNotSpecified,
+			NameStr(cached_dbform->datname), "");
+#endif
 	}
 
-	heap_freetuple(tuple);
+	ReleaseSysCache(cached_tuple);
 	table_close(relation, RowExclusiveLock);
 
 	/*
@@ -1986,7 +2016,6 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		 * which is probably Not Good.
 		 */
 		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-		/* GPDB_12_MERGE_FIXME: is the comment bellow still valid? */
 #if 0 /* Upstream code not applicable to GPDB */
 		MyPgXact->vacuumFlags |= PROC_IN_VACUUM;
 #endif
@@ -2417,7 +2446,12 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		vacuum_rel(aovisimap_relid, NULL, params, true);
 	params->options = orig_option;
 
+	/*
+	 * Don't dispatch auto-vacuum. Each segment performs auto-vacuum as per
+	 * its own need.
+	 */
 	if (Gp_role == GP_ROLE_DISPATCH && !recursing &&
+		!IsAutoVacuumWorkerProcess() &&
 		(!is_appendoptimized || ao_vacuum_phase))
 	{
 		VacuumStatsContext stats_context;
@@ -2692,6 +2726,22 @@ vacuum_params_to_options_list(VacuumParams *params)
 	if (optmask != 0)
 		elog(ERROR, "unrecognized vacuum option %x", optmask);
 
+	/*
+	 * GPDB_12_MERGE_FIXME:
+	 * User-invoked vacuum will never have special values for VacuumParams's
+	 * freeze_min_age, freeze_table_age, multixact_freeze_min_age,
+	 * multixact_freeze_table_age, is_wraparound and log_min_duration. So no need
+	 * to convert them back and dispatch to QEs for now.
+	 * For autovacuum, it may set these values per table. Right now, only
+	 * auto-ANALYZE is enabled which will dispatch analyze from QD, but these vaules
+	 * are not needed for analyze.
+	 * Vacuum through autovacuum is not enabled yet, and if each segment's autovacuum
+	 * launcher take care it's own vacuum process, we don't need to dispatch these
+	 * values as well.
+	 *
+	 * We should consider dispatch these values only if we do vacuum
+	 * as how we do analyze through autovacuum on coordinator.
+	 */
 	if (params->truncate == VACOPT_TERNARY_DISABLED)
 		options = lappend(options, makeDefElem("truncate", (Node *) makeInteger(0), -1));
 	else if (params->truncate == VACOPT_TERNARY_ENABLED)
@@ -2704,10 +2754,7 @@ vacuum_params_to_options_list(VacuumParams *params)
 	else if (params->index_cleanup == VACOPT_TERNARY_ENABLED)
 		options = lappend(options, makeDefElem("index_cleanup", (Node *) makeInteger(1), -1));
 	else
-		elog(ERROR, "unexpected VACUUM 'index_cleanup' option '%d'", (int) params->truncate);
-
-	/* GPDB_12_MERGE_FIXME: Should we do something about 'is_wraparound',
-	 * multixact_freeze ages and other options? */
+		elog(ERROR, "unexpected VACUUM 'index_cleanup' option '%d'", (int) params->index_cleanup);
 
 	return options;
 }
@@ -2747,7 +2794,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 		ListCell *lc = NULL;
 		struct pg_result *pgresult = cdb_pgresults->pg_results[result_no];
 
-		if (pgresult->extras == NULL)
+		if (pgresult->extras == NULL || pgresult->extraType != PGExtraTypeVacuumStats)
 			continue;
 
 		Assert(pgresult->extraslen > sizeof(int));
@@ -2852,6 +2899,8 @@ vac_send_relstats_to_qd(Relation relation,
 	stats.rel_pages = num_pages;
 	stats.rel_tuples = num_tuples;
 	stats.relallvisible = num_all_visible_pages;
+	pq_sendbyte(&buf, true); /* Mark the result ready when receive this message */
+	pq_sendint(&buf, PGExtraTypeVacuumStats, sizeof(PGExtraType));
 	pq_sendint(&buf, sizeof(VPgClassStats), sizeof(int));
 	pq_sendbytes(&buf, (char *) &stats, sizeof(VPgClassStats));
 	pq_endmessage(&buf);

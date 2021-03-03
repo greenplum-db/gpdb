@@ -12,9 +12,10 @@
 #define GPOPT_CScalarSwitch_H
 
 #include "gpos/base.h"
+
+#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdProp.h"
 
 namespace gpopt
 {
@@ -49,63 +50,62 @@ private:
 	// is operator return type BOOL?
 	BOOL m_fBoolReturnType;
 
-	// private copy ctor
-	CScalarSwitch(const CScalarSwitch &);
-
 public:
+	CScalarSwitch(const CScalarSwitch &) = delete;
+
 	// ctor
 	CScalarSwitch(CMemoryPool *mp, IMDId *mdid_type);
 
 	// dtor
-	virtual ~CScalarSwitch();
+	~CScalarSwitch() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarSwitch;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarSwitch";
 	}
 
 	// the type of the scalar expression
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		return m_mdid_type;
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return true;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult
-	Eber(ULongPtrArray *pdrgpulChildren) const
+	EBoolEvalResult
+	Eber(ULongPtrArray *pdrgpulChildren) const override
 	{
 		return EberNullOnAllNullChildren(pdrgpulChildren);
 	}
@@ -114,7 +114,7 @@ public:
 	static CScalarSwitch *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarSwitch == pop->Eopid());
 
 		return dynamic_cast<CScalarSwitch *>(pop);

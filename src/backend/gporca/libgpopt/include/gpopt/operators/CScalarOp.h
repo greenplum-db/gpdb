@@ -13,10 +13,10 @@
 #define GPOPT_CScalarOp_H
 
 #include "gpos/base.h"
+
+#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdProp.h"
-
 #include "naucrates/md/IMDId.h"
 
 namespace gpopt
@@ -62,7 +62,7 @@ public:
 			  const CWStringConst *pstrOp);
 
 	// dtor
-	virtual ~CScalarOp()
+	~CScalarOp() override
 	{
 		m_mdid_op->Release();
 		CRefCount::SafeRelease(m_return_type_mdid);
@@ -71,15 +71,15 @@ public:
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarOp;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarOp";
 	}
@@ -88,23 +88,23 @@ public:
 	IMDId *GetReturnTypeMdId() const;
 
 	// the type of the scalar expression
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// operator specific hash function
-	ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -113,17 +113,17 @@ public:
 	static CScalarOp *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarOp == pop->Eopid());
 
-		return reinterpret_cast<CScalarOp *>(pop);
+		return dynamic_cast<CScalarOp *>(pop);
 	}
 
 	// helper function
 	static BOOL FCommutative(const IMDId *pcmdidOtherOp);
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+	EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const override;
 
 	// name of the scalar operator
 	const CWStringConst *Pstr() const;
@@ -132,7 +132,7 @@ public:
 	IMDId *MdIdOp() const;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CScalarOp
 

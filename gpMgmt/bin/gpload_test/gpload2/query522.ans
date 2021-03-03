@@ -1,0 +1,23 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS mapping_test;
+DROP TABLE
+CREATE TABLE mapping_test(s1 text, s2 text, s3 text, s4 int) DISTRIBUTED BY (s1);
+CREATE TABLE
+2021-01-07 16:25:52|INFO|gpload session started 2021-01-07 16:25:52
+2021-01-07 16:25:52|INFO|setting schema 'public' for table 'mapping_test'
+2021-01-07 16:25:52|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_mapping_01.txt" -t 30
+2021-01-07 16:25:52|INFO|did not find an external table to reuse. creating ext_gpload_reusable_f42535ca_50c1_11eb_a32e_7085c2381836
+2021-01-07 16:25:52|ERROR|ERROR:  column "n3" does not exist
+LINE 1: ...blic."mapping_test" ("s1","s2","s3") SELECT c1,c2,n3 FROM ex...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "ext_gpload_reusable_f42535ca_50c1_11eb_a32e_7085c2381836.c3" or the column "mapping_test.s3".
+ encountered while running INSERT INTO public."mapping_test" ("s1","s2","s3") SELECT c1,c2,n3 FROM ext_gpload_reusable_f42535ca_50c1_11eb_a32e_7085c2381836
+2021-01-07 16:25:52|INFO|rows Inserted          = 0
+2021-01-07 16:25:52|INFO|rows Updated           = 0
+2021-01-07 16:25:52|INFO|data formatting errors = 0
+2021-01-07 16:25:52|INFO|gpload failed
+SELECT * FROM mapping_test;
+ s1 | s2 | s3 | s4 
+----+----+----+----
+(0 rows)
+

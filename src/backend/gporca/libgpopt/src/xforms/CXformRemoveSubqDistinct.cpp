@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformRemoveSubqDistinct.cpp
@@ -9,6 +9,8 @@
 //		Implementation of the transform that removes distinct clause from subquery
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformRemoveSubqDistinct.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalSelect.h"
@@ -16,7 +18,6 @@
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/xforms/CXformRemoveSubqDistinct.h"
 
 using namespace gpopt;
 
@@ -89,8 +90,8 @@ CXformRemoveSubqDistinct::Transform(CXformContext *pxfctxt,
 									CXformResult *pxfres,
 									CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
@@ -103,7 +104,7 @@ CXformRemoveSubqDistinct::Transform(CXformContext *pxfctxt,
 		// only consider removing distinct when there is no aggregation functions
 		if (0 == pexprGbAggProjectList->Arity())
 		{
-			CExpression *pexprNewScalar = NULL;
+			CExpression *pexprNewScalar = nullptr;
 			CExpression *pexprRelChild = (*pexprGbAgg)[0];
 			pexprRelChild->AddRef();
 

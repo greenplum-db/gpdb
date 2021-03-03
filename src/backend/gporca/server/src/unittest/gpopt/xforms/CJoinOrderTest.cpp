@@ -8,21 +8,21 @@
 //	@doc:
 //		Test for join ordering
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CJoinOrderTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/test/CUnittest.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/ops.h"
-
 #include "gpopt/xforms/CJoinOrder.h"
 #include "gpopt/xforms/CJoinOrderMinCard.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CJoinOrderTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 ULONG CJoinOrderTest::m_ulTestCounter = 0;	// start from first test
@@ -93,7 +93,7 @@ CJoinOrderTest::EresUnittest_ExpandMinCard()
 
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		CExpression *pexprNAryJoin = CTestUtils::PexprLogicalNAryJoin(
@@ -102,7 +102,7 @@ CJoinOrderTest::EresUnittest_ExpandMinCard()
 		// derive stats on input expression
 		CExpressionHandle exprhdl(mp);
 		exprhdl.Attach(pexprNAryJoin);
-		exprhdl.DeriveStats(mp, mp, NULL /*prprel*/, NULL /*stats_ctxt*/);
+		exprhdl.DeriveStats(mp, mp, nullptr /*prprel*/, nullptr /*stats_ctxt*/);
 
 		CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 		for (ULONG ul = 0; ul < ulRels; ul++)

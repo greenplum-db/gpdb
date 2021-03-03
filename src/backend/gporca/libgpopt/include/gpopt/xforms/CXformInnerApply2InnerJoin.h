@@ -33,10 +33,9 @@ class CXformInnerApply2InnerJoin
 	: public CXformApply2Join<CLogicalInnerApply, CLogicalInnerJoin>
 {
 private:
-	// private copy ctor
-	CXformInnerApply2InnerJoin(const CXformInnerApply2InnerJoin &);
-
 public:
+	CXformInnerApply2InnerJoin(const CXformInnerApply2InnerJoin &) = delete;
+
 	// ctor
 	explicit CXformInnerApply2InnerJoin(CMemoryPool *mp)
 		: CXformApply2Join<CLogicalInnerApply, CLogicalInnerJoin>(
@@ -45,29 +44,27 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformInnerApply2InnerJoin()
-	{
-	}
+	~CXformInnerApply2InnerJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfInnerApply2InnerJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformInnerApply2InnerJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformInnerApply2InnerJoin
 

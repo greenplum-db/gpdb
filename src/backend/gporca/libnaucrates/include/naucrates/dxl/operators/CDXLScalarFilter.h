@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarFilter_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 
@@ -29,35 +30,34 @@ namespace gpdxl
 class CDXLScalarFilter : public CDXLScalar
 {
 private:
-	// private copy ctor
-	CDXLScalarFilter(CDXLScalarFilter &);
-
 public:
+	CDXLScalarFilter(CDXLScalarFilter &) = delete;
+
 	// ctor/dtor
 	explicit CDXLScalarFilter(CMemoryPool *mp);
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
-	const CWStringConst *GetOpNameStr() const;
+	Edxlopid GetDXLOperator() const override;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLScalarFilter *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarFilter == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarFilter *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"Invalid function call for a container operator");
 		return false;
@@ -65,8 +65,8 @@ public:
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure
-	virtual void AssertValid(const CDXLNode *node,
-							 BOOL validate_children) const;
+	void AssertValid(const CDXLNode *node,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

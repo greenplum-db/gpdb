@@ -6,7 +6,7 @@
  * and merge with upstream.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
@@ -111,7 +111,6 @@ bool        gp_guc_need_restore = false;
 
 char	   *Debug_dtm_action_sql_command_tag;
 
-bool		dev_opt_unsafe_truncate_in_subtransaction = false;
 bool		Debug_print_full_dtm = false;
 bool		Debug_print_snapshot_dtm = false;
 bool		Debug_disable_distributed_snapshot = false;
@@ -173,8 +172,6 @@ bool		debug_basebackup = false;
 
 int rep_lag_avoidance_threshold = 0;
 
-bool		gp_keep_all_xlog = false;
-
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
 bool		Debug_dtm_action_primary = DEBUG_DTM_ACTION_PRIMARY_DEFAULT;
 
@@ -233,9 +230,6 @@ bool		gp_maintenance_conn;
 bool		allow_segment_DML;
 bool		gp_allow_rename_relation_without_lock = false;
 
-/* ignore EXCLUDE clauses in window spec for backwards compatibility */
-bool		gp_ignore_window_exclude = false;
-
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
 
@@ -264,6 +258,7 @@ bool		gp_log_dynamic_partition_pruning = false;
 bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
 bool		gp_recursive_cte = true;
+bool		gp_eager_two_phase_agg = false;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -387,7 +382,6 @@ bool		optimizer_enable_range_predicate_dpe;
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
-bool		optimizer_analyze_enable_merge_of_leaf_stats;
 
 /* GUCs for replicated table */
 bool		optimizer_replicated_table_insert;
@@ -1056,21 +1050,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"dev_opt_unsafe_truncate_in_subtransaction", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Pick unsafe truncate instead of safe truncate inside sub-transaction."),
-		 gettext_noop("Usage of this GUC is strongly discouraged and only "
-					  "should be used after understanding the impact of using "
-					  "the same. Setting the GUC comes with cost of losing "
-					  "table data on truncate command despite sub-transaction "
-					  "rollback for table created within transaction."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_DISALLOW_IN_AUTO_FILE
-		},
-		&dev_opt_unsafe_truncate_in_subtransaction,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"debug_print_full_dtm", PGC_SUSET, LOGGING_WHAT,
 			gettext_noop("Prints full DTM information to server log."),
 			NULL,
@@ -1491,7 +1470,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&log_autostats,
-		true,
+		false,
 		NULL, NULL, NULL
 	},
 	{
@@ -1611,17 +1590,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_keep_all_xlog", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Do not remove old xlog files."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_keep_all_xlog,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_log_stack_trace_lines", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Control if file/line information is included in stack traces"),
 			NULL,
@@ -1735,17 +1703,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_ignore_window_exclude", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Ignore EXCLUDE in window frame specifications."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_ignore_window_exclude,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_create_table_random_default_distribution", PGC_USERSET, COMPAT_OPTIONS,
 			gettext_noop("Set the default distribution of a table to RANDOM."),
 			NULL,
@@ -1785,6 +1742,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_recursive_cte,
 		true, NULL, NULL
+	},
+
+	{
+		{"gp_eager_two_phase_agg", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Eager two stage agg."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_eager_two_phase_agg,
+		false, NULL, NULL
 	},
 
 	{
@@ -2208,7 +2175,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_indexonlyscan,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -2479,17 +2446,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_analyze_enable_merge_of_leaf_stats", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("Enable merging of leaf stats into the root stats during ANALYZE when analyzing partitions"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_analyze_enable_merge_of_leaf_stats,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"optimizer_enable_constant_expression_evaluation", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable constant expression evaluation in the optimizer"),
 			NULL,
@@ -2651,7 +2607,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_constraints,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -2848,12 +2804,12 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"write_to_gpfdist_timeout", PGC_USERSET, EXTERNAL_TABLES,
+		{"gpfdist_retry_timeout", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Timeout (in seconds) for writing data to gpfdist server."),
 			gettext_noop("Default value is 300."),
 			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
 		},
-		&write_to_gpfdist_timeout,
+		&gpfdist_retry_timeout,
 		300, 1, 7200,
 		NULL, NULL, NULL
 	},
@@ -3082,6 +3038,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&xid_warn_limit,
 		500000000, 10000000, INT_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"gp_gxid_prefetch_num", PGC_POSTMASTER, WAL,
+			gettext_noop("how many gxid is prefetched in each bumping batch."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_gxid_prefetch_num,
+		8192, 512, INT_MAX,
 		NULL, NULL, NULL
 	},
 	{
@@ -4080,12 +4046,12 @@ struct config_real ConfigureNamesReal_gp[] =
 
 	{
 		{"optimizer_damping_factor_join", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("join predicate damping factor in optimizer, 1.0 means no damping"),
+			gettext_noop("join predicate damping factor in optimizer, 1.0 means no damping, 0.0 means square root method"),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_damping_factor_join,
-		0.01, 0.0, 1.0,
+		0.0, 0.0, 1.0,
 		NULL, NULL, NULL
 	},
 	{
@@ -4532,7 +4498,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_join_order,
-		JOIN_ORDER_EXHAUSTIVE_SEARCH, optimizer_join_order_options,
+		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
 		NULL, NULL, NULL
 	},
 
@@ -4873,7 +4839,7 @@ lookup_autostats_mode_by_value(GpAutoStatsModeValue val)
 static bool
 check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 {
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 	if (*newval)
 	{
 		GUC_check_errmsg("workfile compresssion is not supported by this build");
@@ -4981,9 +4947,6 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 			}
 			break;
 		}
-		default:
-			Insist(false);
-
 	}
 
 	CdbDispatchSetCommand(buffer.data, false);

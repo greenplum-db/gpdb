@@ -9,10 +9,11 @@
 //		Implementation of random motion operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalMotionRandom.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalMotionRandom.h"
 
 using namespace gpopt;
 
@@ -29,7 +30,7 @@ CPhysicalMotionRandom::CPhysicalMotionRandom(CMemoryPool *mp,
 											 CDistributionSpecRandom *pdsRandom)
 	: CPhysicalMotion(mp), m_pdsRandom(pdsRandom)
 {
-	GPOS_ASSERT(NULL != pdsRandom);
+	GPOS_ASSERT(nullptr != pdsRandom);
 }
 
 //---------------------------------------------------------------------------
@@ -114,7 +115,7 @@ CPhysicalMotionRandom::EpetOrder(CExpressionHandle &,  // exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	return CEnfdProp::EpetRequired;
@@ -192,7 +193,7 @@ CPhysicalMotionRandom::OsPrint(IOstream &os) const
 CPhysicalMotionRandom *
 CPhysicalMotionRandom::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopPhysicalMotionRandom == pop->Eopid());
 
 	return dynamic_cast<CPhysicalMotionRandom *>(pop);

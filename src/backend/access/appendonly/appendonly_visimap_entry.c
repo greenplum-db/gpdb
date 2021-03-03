@@ -3,7 +3,7 @@
  * appendonly_visimap
  *   maintain a visibility bitmap entry
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

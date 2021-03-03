@@ -1,0 +1,6 @@
+2021-01-05 17:06:16|INFO|gpload session started 2021-01-05 17:06:16
+2021-01-05 17:06:16|ERROR|A gpload control file processing error occurred. The configuration must contain gpload:output:table
+2021-01-05 17:06:16|INFO|rows Inserted          = 0
+2021-01-05 17:06:16|INFO|rows Updated           = 0
+2021-01-05 17:06:16|INFO|data formatting errors = 0
+2021-01-05 17:06:16|INFO|gpload failed

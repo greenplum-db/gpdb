@@ -17,9 +17,9 @@
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDColStats.h"
-#include "naucrates/md/CMDIdColStats.h"
 #include "naucrates/md/CDXLBucket.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/IMDColStats.h"
 
 namespace gpdxl
 {
@@ -72,10 +72,9 @@ private:
 	// DXL string for object
 	CWStringDynamic *m_dxl_str;
 
-	// private copy ctor
-	CDXLColStats(const CDXLColStats &);
-
 public:
+	CDXLColStats(const CDXLColStats &) = delete;
+
 	// ctor
 	CDXLColStats(CMemoryPool *mp, CMDIdColStats *mdid_col_stats,
 				 CMDName *mdname, CDouble width, CDouble null_freq,
@@ -84,64 +83,64 @@ public:
 				 BOOL is_col_stats_missing);
 
 	// dtor
-	virtual ~CDXLColStats();
+	~CDXLColStats() override;
 
 	// the metadata id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// relation name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// DXL string representation of cache object
-	virtual const CWStringDynamic *GetStrRepr() const;
+	const CWStringDynamic *GetStrRepr() const override;
 
 	// number of buckets
-	virtual ULONG Buckets() const;
+	ULONG Buckets() const override;
 
 	// width
-	virtual CDouble
-	Width() const
+	CDouble
+	Width() const override
 	{
 		return m_width;
 	}
 
 	// null fraction
-	virtual CDouble
-	GetNullFreq() const
+	CDouble
+	GetNullFreq() const override
 	{
 		return m_null_freq;
 	}
 
 	// ndistinct of remaining tuples
 	CDouble
-	GetDistinctRemain() const
+	GetDistinctRemain() const override
 	{
 		return m_distinct_remaining;
 	}
 
 	// frequency of remaining tuples
 	CDouble
-	GetFreqRemain() const
+	GetFreqRemain() const override
 	{
 		return m_freq_remaining;
 	}
 
 	// is the column statistics missing in the database
 	BOOL
-	IsColStatsMissing() const
+	IsColStatsMissing() const override
 	{
 		return m_is_col_stats_missing;
 	}
 
 	// get the bucket at the given position
-	virtual const CDXLBucket *GetDXLBucketAt(ULONG ul) const;
+	const CDXLBucket *GetDXLBucketAt(ULONG ul) const override;
 
 	// serialize column stats in DXL format
-	virtual void Serialize(gpdxl::CXMLSerializer *) const;
+	void Serialize(gpdxl::CXMLSerializer *) const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the column stats
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 
 	// dummy colstats

@@ -12,9 +12,8 @@
 #define GPNAUCRATES_IDatumGeneric_H
 
 #include "gpos/base.h"
-
-#include "naucrates/base/IDatum.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/base/IDatum.h"
 
 namespace gpnaucrates
@@ -30,19 +29,18 @@ namespace gpnaucrates
 class IDatumGeneric : public IDatum
 {
 private:
-	// private copy ctor
-	IDatumGeneric(const IDatumGeneric &);
-
 public:
+	IDatumGeneric(const IDatumGeneric &) = delete;
+
 	// ctor
-	IDatumGeneric(){};
+	IDatumGeneric() = default;
 
 	// dtor
-	virtual ~IDatumGeneric(){};
+	~IDatumGeneric() override = default;
 
 	// accessor for datum type
-	virtual IMDType::ETypeInfo
-	GetDatumType()
+	IMDType::ETypeInfo
+	GetDatumType() override
 	{
 		return IMDType::EtiGeneric;
 	}

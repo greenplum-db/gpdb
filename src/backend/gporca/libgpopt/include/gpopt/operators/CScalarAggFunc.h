@@ -12,10 +12,10 @@
 #define GPOPT_CScalarAggFunc_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
 
-#include "gpopt/operators/CScalar.h"
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/operators/CScalar.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {
@@ -66,17 +66,16 @@ private:
 	// is result of splitting aggregates
 	BOOL m_fSplit;
 
-	// private copy ctor
-	CScalarAggFunc(const CScalarAggFunc &);
-
 public:
+	CScalarAggFunc(const CScalarAggFunc &) = delete;
+
 	// ctor
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
 				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit);
 
 	// dtor
-	virtual ~CScalarAggFunc()
+	~CScalarAggFunc() override
 	{
 		m_pmdidAggFunc->Release();
 		CRefCount::SafeRelease(m_pmdidResolvedRetType);
@@ -86,39 +85,39 @@ public:
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarAggFunc;
 	}
 
 	// return a string for aggregate function
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarAggFunc";
 	}
 
 
 	// operator specific hash function
-	ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
 	BOOL
-	FInputOrderSensitive() const
+	FInputOrderSensitive() const override
 	{
 		return true;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -127,10 +126,10 @@ public:
 	static CScalarAggFunc *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarAggFunc == pop->Eopid());
 
-		return reinterpret_cast<CScalarAggFunc *>(pop);
+		return dynamic_cast<CScalarAggFunc *>(pop);
 	}
 
 
@@ -175,10 +174,10 @@ public:
 	}
 
 	// type of expression's result
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
-		if (NULL == m_pmdidResolvedRetType)
+		if (nullptr == m_pmdidResolvedRetType)
 		{
 			return m_return_type_mdid;
 		}
@@ -190,7 +189,7 @@ public:
 	BOOL
 	FHasAmbiguousReturnType() const
 	{
-		return (NULL != m_pmdidResolvedRetType);
+		return (nullptr != m_pmdidResolvedRetType);
 	}
 
 	// is function count(*)?
@@ -203,11 +202,11 @@ public:
 	BOOL IsMinMax(const IMDType *mdtype) const;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// lookup mdid of return type for given Agg function
 	static IMDId *PmdidLookupReturnType(IMDId *pmdidAggFunc, BOOL fGlobal,
-										CMDAccessor *pmdaInput = NULL);
+										CMDAccessor *pmdaInput = nullptr);
 
 };	// class CScalarAggFunc
 

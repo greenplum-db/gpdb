@@ -9,16 +9,17 @@
 //		Implementation of Inner Join to Apply transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSubqJoin2Apply.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
-#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CNormalizer.h"
+#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CSubqueryHandler.h"
-#include "gpopt/xforms/CXformSubqJoin2Apply.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 
@@ -86,9 +87,9 @@ CXformSubqJoin2Apply::CollectSubqueries(
 )
 {
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != pexpr);
-	GPOS_ASSERT(NULL != pdrgpcrs);
-	GPOS_ASSERT(NULL != pdrgpdrgpexprSubqs);
+	GPOS_ASSERT(nullptr != pexpr);
+	GPOS_ASSERT(nullptr != pdrgpcrs);
+	GPOS_ASSERT(nullptr != pdrgpdrgpexprSubqs);
 
 	COperator *pop = pexpr->Pop();
 	if (CUtils::FSubquery(pop))
@@ -147,11 +148,11 @@ CXformSubqJoin2Apply::PexprReplaceSubqueries(CMemoryPool *mp,
 											 ExprToColRefMap *phmexprcr)
 {
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != pexprScalar);
-	GPOS_ASSERT(NULL != phmexprcr);
+	GPOS_ASSERT(nullptr != pexprScalar);
+	GPOS_ASSERT(nullptr != phmexprcr);
 
 	CColRef *colref = phmexprcr->Find(pexprScalar);
-	if (NULL != colref)
+	if (nullptr != colref)
 	{
 		// look-up succeeded on root operator, we return here
 		return CUtils::PexprScalarIdent(mp, colref);
@@ -186,7 +187,7 @@ CExpression *
 CXformSubqJoin2Apply::PexprSubqueryPushDown(CMemoryPool *mp, CExpression *pexpr,
 											BOOL fEnforceCorrelatedApply)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(COperator::EopLogicalSelect == pexpr->Pop()->Eopid());
 
 	CExpression *pexprJoin = (*pexpr)[0];
@@ -202,9 +203,9 @@ CXformSubqJoin2Apply::PexprSubqueryPushDown(CMemoryPool *mp, CExpression *pexpr,
 	for (ULONG ul = 0; ul < arity - 1; ul++)
 	{
 		CExpression *pexprChild = (*pexprJoin)[ul];
-		CColRefSet *pcrsOutput = NULL;
+		CColRefSet *pcrsOutput = nullptr;
 
-		if ((NULL == naryLOJOp || naryLOJOp->IsInnerJoinChild(ul)))
+		if ((nullptr == naryLOJOp || naryLOJOp->IsInnerJoinChild(ul)))
 		{
 			// inner join child
 			pcrsOutput = pexprChild->DeriveOutputColumns();
@@ -263,7 +264,7 @@ CXformSubqJoin2Apply::PexprSubqueryPushDown(CMemoryPool *mp, CExpression *pexpr,
 			// unnest subqueries in newly created child
 			CExpression *pexprUnnested =
 				PexprSubqueryUnnest(mp, pexprNewChild, fEnforceCorrelatedApply);
-			if (NULL != pexprUnnested)
+			if (nullptr != pexprUnnested)
 			{
 				pexprNewChild->Release();
 				pexprNewChild = pexprUnnested;
@@ -311,7 +312,7 @@ CXformSubqJoin2Apply::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								CExpression *pexpr,
 								BOOL fEnforceCorrelatedApply) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -319,7 +320,7 @@ CXformSubqJoin2Apply::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpression *pexprSelect =
 		CXformUtils::PexprSeparateSubqueryPreds(mp, pexpr);
 
-	if (NULL == pexprSelect)
+	if (nullptr == pexprSelect)
 	{
 		// separating predicates failed, probably because the subquery was in the LOJ parts
 		return;
@@ -346,7 +347,7 @@ CXformSubqJoin2Apply::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	pexprSelect->Release();
 
-	CExpression *pexprResult = NULL;
+	CExpression *pexprResult = nullptr;
 	BOOL fHasSubquery = (*pexprSubqsPushedDown)[1]->DeriveHasSubquery();
 	if (fHasSubquery)
 	{
@@ -360,7 +361,7 @@ CXformSubqJoin2Apply::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pexprResult = pexprSubqsPushedDown;
 	}
 
-	if (NULL == pexprResult)
+	if (nullptr == pexprResult)
 	{
 		// unnesting failed, return here
 		return;

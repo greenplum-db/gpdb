@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerBroadcastMotion_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLPhysicalBroadcastMotion.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 namespace gpdxl
 {
@@ -37,25 +37,24 @@ private:
 	// the broadcast motion operator
 	CDXLPhysicalBroadcastMotion *m_dxl_op;
 
-	// private copy ctor
-	CParseHandlerBroadcastMotion(const CParseHandlerBroadcastMotion &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerBroadcastMotion(const CParseHandlerBroadcastMotion &) = delete;
+
 	// ctor
 	CParseHandlerBroadcastMotion(CMemoryPool *mp,
 								 CParseHandlerManager *parse_handler_mgr,

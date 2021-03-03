@@ -4,8 +4,8 @@
     <dxl:DerivedRelationStats Rows="2636.091016" EmptyRelation="false">
       <dxl:DerivedColumnStats ColId="1" Width="7.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="1.000000" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1700.1.0" Value="AAAACgAAAgABAA==" DoubleValue="1.000000"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1700.1.0" Value="AAAACgAAAgABAA==" DoubleValue="1.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1700.1.0" Value="AAAACgAAAgABAA==" DoubleValue="1.00000000000000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1700.1.0" Value="AAAACgAAAgABAA==" DoubleValue="1.00000000000000000"/>
         </dxl:StatsBucket>
       </dxl:DerivedColumnStats>
     </dxl:DerivedRelationStats>

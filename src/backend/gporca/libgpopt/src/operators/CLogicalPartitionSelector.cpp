@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CLogicalPartitionSelector.cpp
@@ -9,13 +9,14 @@
 //		Implementation of Logical partition selector
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalPartitionSelector.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalPartitionSelector.h"
 
 using namespace gpopt;
 
@@ -28,7 +29,10 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalPartitionSelector::CLogicalPartitionSelector(CMemoryPool *mp)
-	: CLogical(mp), m_mdid(NULL), m_pdrgpexprFilters(NULL), m_pcrOid(NULL)
+	: CLogical(mp),
+	  m_mdid(nullptr),
+	  m_pdrgpexprFilters(nullptr),
+	  m_pcrOid(nullptr)
 {
 	m_fPattern = true;
 }
@@ -50,9 +54,9 @@ CLogicalPartitionSelector::CLogicalPartitionSelector(
 	  m_pcrOid(pcrOid)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	GPOS_ASSERT(NULL != pdrgpexprFilters);
+	GPOS_ASSERT(nullptr != pdrgpexprFilters);
 	GPOS_ASSERT(0 < pdrgpexprFilters->Size());
-	GPOS_ASSERT(NULL != pcrOid);
+	GPOS_ASSERT(nullptr != pcrOid);
 }
 
 //---------------------------------------------------------------------------

@@ -43,7 +43,7 @@
           initializing your Greenplum Database system.</li>
         <li id="jf148595"><xref href="init_gpdb.xml#topic1" type="topic" format="dita"/> —
           Instructions for initializing a Greenplum Database system. Each database instance (the
-          master and all segments) must be initialized across all of the hosts in the system in such
+          coordinator and all segments) must be initialized across all of the hosts in the system in such
           a way that they can all work together as a unified DBMS. </li>
         <li id="jf159937"><xref href="apx_mgmt_utils.xml#topic1" type="topic" format="dita"/> —
           Reference information about the command-line management utilities you use to install and
@@ -159,7 +159,7 @@
                 </entry>
                 <entry colname="col2">New terms where they are defined<p>Database objects, such as
                     schema, table, or columns names</p></entry>
-                <entry colname="col3">The <i>master instance</i> is the <codeph>postgres</codeph>
+                <entry colname="col3">The <i>coordinator instance</i> is the <codeph>postgres</codeph>
                   process that accepts client connections.<p>Catalog information for Greenplum
                     Database resides in the <i>pg_catalog</i> schema.</p></entry>
               </row>
@@ -311,8 +311,8 @@
       <title id="jf165600">Getting Support</title>
           <body>
               <p>For technical support, documentation, release notes, software updates, or for
-                  information about Pivotal products, licensing, and services, go to <xref
-                      href="http://www.pivotal.io" scope="external" format="html"
+                  information about VMware products, licensing, and services, go to <xref
+                      href="https://tanzu.vmware.com/support" scope="external" format="html"
                       >www.pivotal.io</xref>.</p>
 
           </body>

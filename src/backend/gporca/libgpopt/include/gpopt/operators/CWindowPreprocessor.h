@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CWindowPreprocessor.h
@@ -13,6 +13,8 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/COrderSpec.h"
+#include "gpopt/base/CWindowFrame.h"
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt
@@ -28,15 +30,13 @@ namespace gpopt
 class CWindowPreprocessor
 {
 private:
-	// private copy ctor
-	CWindowPreprocessor(const CWindowPreprocessor &);
-
-	// iterate over project elements and split them elements between Distinct Aggs list, and Others list
+	// iterate over project elements and split them elements between Distinct Aggs
+	// list, and Others list
 	static void SplitPrjList(CMemoryPool *mp, CExpression *pexprSeqPrj,
 							 CExpressionArray **ppdrgpexprDistinctAggsPrjElems,
 							 CExpressionArray **ppdrgpexprOtherPrjElems,
-							 COrderSpecArray **ppdrgposOther,
-							 CWindowFrameArray **ppdrgpwfOther);
+							 gpopt::COrderSpecArray **ppdrgposOther,
+							 gpopt::CWindowFrameArray **ppdrgpwfOther);
 
 	// split given SeqPrj expression into:
 	//	- A GbAgg expression containing distinct Aggs, and
@@ -45,7 +45,8 @@ private:
 							CExpression **ppexprGbAgg,
 							CExpression **ppexprOutputSeqPrj);
 
-	// create a CTE with two consumers using the child expression of Sequence Project
+	// create a CTE with two consumers using the child expression of Sequence
+	// Project
 	static void CreateCTE(CMemoryPool *mp, CExpression *pexprSeqPrj,
 						  CExpression **ppexprFirstConsumer,
 						  CExpression **ppexprSecondConsumer);
@@ -58,6 +59,8 @@ private:
 										 CExpression *pexprSeqPrj);
 
 public:
+	CWindowPreprocessor(const CWindowPreprocessor &) = delete;
+
 	// main driver
 	static CExpression *PexprPreprocess(CMemoryPool *mp, CExpression *pexpr);
 

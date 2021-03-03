@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software
+//	Copyright (C) 2016 VMware, Inc. or its affiliates
 //
 //	@filename:
 //		CJoinOrderDPTest.cpp
@@ -9,6 +9,7 @@
 //		Testing guc for disabling dynamic join order algorithm
 //---------------------------------------------------------------------------
 #include "unittest/gpopt/minidump/CJoinOrderDPTest.h"
+
 #include "unittest/gpopt/CTestUtils.h"
 
 

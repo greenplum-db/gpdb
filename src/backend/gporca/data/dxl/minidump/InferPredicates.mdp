@@ -6,10 +6,10 @@ create table foo (a int, b int, c int) partition by range(a) (start(1) end (2) e
 create table bar (d int, e int, f int) partition by range(d)  (start(1) end (2) every(1));
 
 Objective:
-Predicate Filter: a = 10 must be pushed down below Dynamic Table Scan on foo. Also, a Hash Join Alternative
+Predicate Filter: a = 1 must be pushed down below Dynamic Table Scan on foo. Also, a Hash Join Alternative
 with DPE must be created. 
 
-explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a = bar.d and bar.d = 10;
+explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a = bar.d and bar.d = 1;
                                                                  QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
@@ -23,16 +23,15 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                            ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
                                  Hash Cond: foo.a = bar.d
                                  ->  Dynamic Table Scan on foo (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
-                                       Filter: a = 10
+                                       Filter: a = 1
                                  ->  Hash  (cost=100.00..100.00 rows=34 width=4)
                                        ->  Partition Selector for foo (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                                              ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
                                                    ->  Partition Selector for bar (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
-                                                         Partitions selected: 0 (out of 1)
+                                                         Partitions selected: 1 (out of 1)
                                                    ->  Dynamic Table Scan on bar (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=4)
-                                                         Filter: d = 10
-  ]]>
-  </dxl:Comment>
+                                                         Filter: d = 1
+  ]]></dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
@@ -45,7 +44,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102074,102146,102120,103001,103014,103015,103022,104003,104004,104005,105000,106000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:ColumnStatistics Mdid="1.25698.1.0.0" Name="d" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -201,6 +200,61 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.25679001.1.0"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.25679001.1.0" Name="foo_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
@@ -265,8 +319,71 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.25698001.1.0"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.25698001.1.0" Name="bar_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="e" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="f" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="d" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="d" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="d" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.25679.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
+      <dxl:GPDBScalarOp Mdid="0.525.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.150.1.0"/>
+        <dxl:Commutator Mdid="0.523.1.0"/>
+        <dxl:InverseOp Mdid="0.97.1.0"/>
+      </dxl:GPDBScalarOp>
     </dxl:Metadata>
     <dxl:Query>
       <dxl:OutputColumns>
@@ -336,17 +453,17 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
               </dxl:Comparison>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                 <dxl:Ident ColId="11" ColName="d" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               </dxl:Comparison>
             </dxl:And>
           </dxl:LogicalJoin>
         </dxl:LogicalWindow>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="32">
+    <dxl:Plan Id="0" SpaceSize="36">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000549" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000545" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="21" Alias="?column?">
@@ -357,7 +474,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000519" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000515" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="21" Alias="?column?">
@@ -371,7 +488,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
           <dxl:OneTimeFilter/>
           <dxl:Window PartitionColumns="2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000517" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000513" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="row_number">
@@ -384,7 +501,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.000517" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000513" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="2" Alias="c">
@@ -399,7 +516,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
               <dxl:LimitOffset/>
               <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.000517" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.000513" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="2" Alias="c">
@@ -415,7 +532,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                 </dxl:HashExprList>
                 <dxl:HashJoin JoinType="Inner">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="862.000512" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="862.000508" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="2" Alias="c">
@@ -430,7 +547,7 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                       <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:HashCondList>
-                  <dxl:DynamicTableScan PartIndexId="1">
+                  <dxl:Append IsTarget="false" IsZapped="false">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
@@ -442,116 +559,82 @@ explain select 1+row_number() over(partition by foo.c) from foo, bar where foo.a
                         <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:Filter>
-                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                        <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                      </dxl:Comparison>
-                    </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.25679.1.0" TableName="foo">
-                      <dxl:Columns>
-                        <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="2" Attno="3" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                        <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:DynamicTableScan>
-                  <dxl:PartitionSelector RelationMdid="0.25679.1.0" PartitionLevels="1" ScanId="1">
+                    <dxl:Filter/>
+                    <dxl:TableScan>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="8"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="22" Alias="a">
+                          <dxl:Ident ColId="22" ColName="a" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="24" Alias="c">
+                          <dxl:Ident ColId="24" ColName="c" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter>
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                          <dxl:Ident ColId="22" ColName="a" TypeMdid="0.23.1.0"/>
+                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                        </dxl:Comparison>
+                      </dxl:Filter>
+                      <dxl:TableDescriptor Mdid="0.25679001.1.0" TableName="foo_prt_1">
+                        <dxl:Columns>
+                          <dxl:Column ColId="22" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="23" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="24" Attno="3" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="26" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="27" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="28" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="29" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="30" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="31" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                  </dxl:Append>
+                  <dxl:Append IsTarget="false" IsZapped="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="10" Alias="d">
                         <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:PartEqFilters>
-                      <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
-                    </dxl:PartEqFilters>
-                    <dxl:PartFilters>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:PartFilters>
-                    <dxl:ResidualFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:ResidualFilter>
-                    <dxl:PropagationExpression>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                    </dxl:PropagationExpression>
-                    <dxl:PrintableFilter>
-                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                        <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                        <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
-                      </dxl:Comparison>
-                    </dxl:PrintableFilter>
-                    <dxl:Sequence>
+                    <dxl:Filter/>
+                    <dxl:TableScan>
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="1.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
-                        <dxl:ProjElem ColId="10" Alias="d">
-                          <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
+                        <dxl:ProjElem ColId="32" Alias="d">
+                          <dxl:Ident ColId="32" ColName="d" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:PartitionSelector RelationMdid="0.25698.1.0" PartitionLevels="1" ScanId="2">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-                        </dxl:Properties>
-                        <dxl:ProjList/>
-                        <dxl:PartEqFilters>
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                        </dxl:PartEqFilters>
-                        <dxl:PartFilters>
-                          <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                        </dxl:PartFilters>
-                        <dxl:ResidualFilter>
-                          <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                        </dxl:ResidualFilter>
-                        <dxl:PropagationExpression>
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                        </dxl:PropagationExpression>
-                        <dxl:PrintableFilter>
-                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                            <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                          </dxl:Comparison>
-                        </dxl:PrintableFilter>
-                      </dxl:PartitionSelector>
-                      <dxl:DynamicTableScan PartIndexId="2">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="1.000000" Width="4"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="10" Alias="d">
-                            <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter>
-                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                            <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                          </dxl:Comparison>
-                        </dxl:Filter>
-                        <dxl:TableDescriptor Mdid="0.25698.1.0" TableName="bar">
-                          <dxl:Columns>
-                            <dxl:Column ColId="10" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="14" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="15" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="16" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="17" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="18" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="19" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:DynamicTableScan>
-                    </dxl:Sequence>
-                  </dxl:PartitionSelector>
+                      <dxl:Filter>
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                          <dxl:Ident ColId="32" ColName="d" TypeMdid="0.23.1.0"/>
+                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                        </dxl:Comparison>
+                      </dxl:Filter>
+                      <dxl:TableDescriptor Mdid="0.25698001.1.0" TableName="bar_prt_1">
+                        <dxl:Columns>
+                          <dxl:Column ColId="32" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="33" Attno="2" ColName="e" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="34" Attno="3" ColName="f" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="35" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="36" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="37" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="38" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="39" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="40" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="41" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
+                  </dxl:Append>
                 </dxl:HashJoin>
               </dxl:RedistributeMotion>
             </dxl:Sort>

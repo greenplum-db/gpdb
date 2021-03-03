@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CHistogramTest.cpp
@@ -13,21 +13,21 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CMCVTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CPoint.h"
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
-#include "naucrates/dxl/CDXLUtils.h"
-
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CMCVTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;
@@ -56,7 +56,7 @@ CMCVTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgutSharedOptCtxt,
@@ -186,9 +186,11 @@ CMCVTest::EresUnittest_MergeHistMCV()
 
 		// parse the stats objects
 		CDXLStatsDerivedRelationArray *pdrgpdxlstatsderrelMCV =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputMCV, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputMCV,
+													  nullptr);
 		CDXLStatsDerivedRelationArray *pdrgpdxlstatsderrelHist =
-			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputHist, NULL);
+			CDXLUtils::ParseDXLToStatsDerivedRelArray(mp, szDXLInputHist,
+													  nullptr);
 
 		GPOS_CHECK_ABORT;
 

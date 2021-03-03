@@ -12,6 +12,7 @@
 #define GPNAUCRATES_CStatsPredConj_H
 
 #include "gpos/base.h"
+
 #include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatsPred.h"
 
@@ -29,27 +30,25 @@ using namespace gpos;
 class CStatsPredConj : public CStatsPred
 {
 private:
-	// private copy ctor
-	CStatsPredConj(const CStatsPredConj &);
-
-	// private assignment operator
-	CStatsPredConj &operator=(CStatsPredConj &);
-
 	// array of filters
 	CStatsPredPtrArry *m_conj_pred_stats_array;
 
 public:
+	CStatsPredConj &operator=(CStatsPredConj &) = delete;
+
+	CStatsPredConj(const CStatsPredConj &) = delete;
+
 	// ctor
 	explicit CStatsPredConj(CStatsPredPtrArry *pdrgpstatspred);
 
 	// dtor
-	virtual ~CStatsPredConj()
+	~CStatsPredConj() override
 	{
 		m_conj_pred_stats_array->Release();
 	}
 
 	// the column identifier on which the predicates are on
-	virtual ULONG GetColId() const;
+	ULONG GetColId() const override;
 
 	// total number of predicates in the conjunction
 	ULONG
@@ -71,8 +70,8 @@ public:
 	CStatsPred *GetPredStats(ULONG pos) const;
 
 	// filter type id
-	virtual EStatsPredType
-	GetPredStatsType() const
+	EStatsPredType
+	GetPredStatsType() const override
 	{
 		return CStatsPred::EsptConj;
 	}
@@ -81,7 +80,7 @@ public:
 	static CStatsPredConj *
 	ConvertPredStats(CStatsPred *pred_stats)
 	{
-		GPOS_ASSERT(NULL != pred_stats);
+		GPOS_ASSERT(nullptr != pred_stats);
 		GPOS_ASSERT(CStatsPred::EsptConj == pred_stats->GetPredStatsType());
 
 		return dynamic_cast<CStatsPredConj *>(pred_stats);

@@ -15,6 +15,7 @@
 #define GPMD_CMDIndexGPDB_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/IMDIndex.h"
 
 namespace gpmd
@@ -48,6 +49,9 @@ private:
 	// is the index clustered
 	BOOL m_clustered;
 
+	// is the index partitioned
+	BOOL m_partitioned;
+
 	// index type
 	EmdindexType m_index_type;
 
@@ -64,80 +68,92 @@ private:
 	IMdIdArray *m_mdid_opfamilies_array;
 
 	// partition constraint
+	// GPDB_12_MERGE_FIXME: This field is no longer needed,
+	// we should get rid of it.
 	IMDPartConstraint *m_mdpart_constraint;
 
 	// DXL for object
 	const CWStringDynamic *m_dxl_str;
 
-	// private copy ctor
-	CMDIndexGPDB(const CMDIndexGPDB &);
+	// Child index oids
+	IMdIdArray *m_child_index_oids;
 
 public:
+	CMDIndexGPDB(const CMDIndexGPDB &) = delete;
+
 	// ctor
 	CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-				 BOOL is_clustered, EmdindexType index_type,
-				 IMDId *mdid_item_type, ULongPtrArray *index_key_cols_array,
+				 BOOL is_clustered, BOOL is_partitioned,
+				 EmdindexType index_type, IMDId *mdid_item_type,
+				 ULongPtrArray *index_key_cols_array,
 				 ULongPtrArray *included_cols_array,
 				 IMdIdArray *mdid_opfamilies_array,
-				 IMDPartConstraint *mdpart_constraint);
+				 IMDPartConstraint *mdpart_constraint,
+				 IMdIdArray *child_index_oids);
 
 	// dtor
-	virtual ~CMDIndexGPDB();
+	~CMDIndexGPDB() override;
 
 	// index mdid
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// index name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// is the index clustered
-	virtual BOOL IsClustered() const;
+	BOOL IsClustered() const override;
+
+	// is the index partitioned
+	BOOL IsPartitioned() const override;
 
 	// index type
-	virtual EmdindexType IndexType() const;
+	EmdindexType IndexType() const override;
 
 	// number of keys
-	virtual ULONG Keys() const;
+	ULONG Keys() const override;
 
 	// return the n-th key column
-	virtual ULONG KeyAt(ULONG pos) const;
+	ULONG KeyAt(ULONG pos) const override;
 
 	// return the position of the key column
-	virtual ULONG GetKeyPos(ULONG column) const;
+	ULONG GetKeyPos(ULONG column) const override;
 
 	// number of included columns
-	virtual ULONG IncludedCols() const;
+	ULONG IncludedCols() const override;
 
 	// return the n-th included column
-	virtual ULONG IncludedColAt(ULONG pos) const;
+	ULONG IncludedColAt(ULONG pos) const override;
 
 	// return the position of the included column
-	virtual ULONG GetIncludedColPos(ULONG column) const;
+	ULONG GetIncludedColPos(ULONG column) const override;
 
 	// part constraint
-	virtual IMDPartConstraint *MDPartConstraint() const;
+	IMDPartConstraint *MDPartConstraint() const override;
 
 	// DXL string for index
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// serialize MD index in DXL format given a serializer object
-	virtual void Serialize(gpdxl::CXMLSerializer *) const;
+	void Serialize(gpdxl::CXMLSerializer *) const override;
 
 	// type id of items returned by the index
-	virtual IMDId *GetIndexRetItemTypeMdid() const;
+	IMDId *GetIndexRetItemTypeMdid() const override;
 
 	// check if given scalar comparison can be used with the index key
 	// at the specified position
-	virtual BOOL IsCompatible(const IMDScalarOp *md_scalar_op,
-							  ULONG key_pos) const;
+	BOOL IsCompatible(const IMDScalarOp *md_scalar_op,
+					  ULONG key_pos) const override;
+
+	// child index oids
+	IMdIdArray *ChildIndexMdids() const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the MD index
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

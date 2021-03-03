@@ -11,11 +11,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerScalarLimitCount.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarLimitCount.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -64,7 +64,7 @@ CParseHandlerScalarLimitCount::StartElement(
 	else
 	{
 		// we must have seen a LIMITCOUNT already and initialized its corresponding node
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

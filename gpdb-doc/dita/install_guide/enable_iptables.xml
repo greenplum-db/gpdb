@@ -17,7 +17,7 @@
       <title>How to Enable iptables</title>
       <ol id="ol_akk_knz_thb">
         <li id="ji163128">As <codeph>gpadmin</codeph>, run this command on the Greenplum Database
-          master host to stop Greenplum Database:<codeblock>$ gpstop -a</codeblock></li>
+          coordinator host to stop Greenplum Database:<codeblock>$ gpstop -a</codeblock></li>
         <li id="ji163139">On the Greenplum Database hosts:<ol id="ol_bkk_knz_thb">
             <li id="ji163142">Update the file <codeph>/etc/sysconfig/iptables</codeph> based on the
                 <xref href="#topic16" type="topic" format="dita"/>. </li>
@@ -25,7 +25,7 @@
               <codeph>iptables</codeph>:<codeblock># chkconfig iptables on
 # service iptables start</codeblock></li>
           </ol></li>
-        <li id="ji163149">As gpadmin, run this command on the Greenplum Database master host to
+        <li id="ji163149">As gpadmin, run this command on the Greenplum Database coordinator host to
           start Greenplum Database:<codeblock>$ gpstart -a</codeblock></li>
       </ol>
       <note type="warning">After enabling <codeph>iptables</codeph>, this error in the
@@ -48,8 +48,8 @@
     <body>
       <p>When <codeph>iptables</codeph> is enabled, <codeph>iptables</codeph> manages the IP
         communication on the host system based on configuration settings (rules). The example rules
-        are used to configure <codeph>iptables</codeph> for Greenplum Database master host, standby
-        master host, and segment hosts. </p>
+        are used to configure <codeph>iptables</codeph> for Greenplum Database coordinator host, standby
+        coordinator host, and segment hosts. </p>
       <ul id="ul_ckk_knz_thb">
         <li id="ji163179">
           <xref href="#topic17" type="topic" format="dita"/>
@@ -59,12 +59,12 @@
         </li>
       </ul>
       <p>The two sets of rules account for the different types of communication Greenplum Database
-        expects on the master (primary and standby) and segment hosts. The rules should be added to
+        expects on the coordinator (primary and standby) and segment hosts. The rules should be added to
         the <codeph>/etc/sysconfig/iptables</codeph> file of the Greenplum Database hosts. For
         Greenplum Database, <codeph>iptables</codeph> rules should allow the following
         communication: </p>
       <ul id="ul_dkk_knz_thb">
-        <li id="ji163197">For customer facing communication with the Greenplum Database master,
+        <li id="ji163197">For customer facing communication with the Greenplum Database coordinator,
           allow at least <codeph>postgres</codeph> and <codeph>28080</codeph> (<codeph>eth1</codeph>
           interface in the example). </li>
         <li id="ji163201">For Greenplum Database system interconnect, allow communication using
@@ -92,11 +92,11 @@
       </ul>
     </body>
     <topic id="topic17" xml:lang="en">
-      <title id="ji163218">Example Master and Standby Master iptables Rules</title>
+      <title id="ji163218">Example Coordinator and Standby Coordinator iptables Rules</title>
       <body>
         <p>Example <codeph>iptables</codeph> rules with comments for the
-            <codeph>/etc/sysconfig/iptables</codeph> file on the Greenplum Database master host and
-          standby master host.</p>
+            <codeph>/etc/sysconfig/iptables</codeph> file on the Greenplum Database coordinator host and
+          standby coordinator host.</p>
         <codeblock>*filter
 # Following 3 are default rules. If the packet passes through
 # the rule set it gets these rule.
@@ -144,7 +144,7 @@ COMMIT</codeblock>
       <body>
         <p>Example <codeph>iptables</codeph> rules for the <codeph>/etc/sysconfig/iptables</codeph>
           file on the Greenplum Database segment hosts. The rules for segment hosts are similar to
-          the master rules with fewer interfaces and fewer <codeph>udp</codeph> and
+          the coordinator rules with fewer interfaces and fewer <codeph>udp</codeph> and
             <codeph>tcp</codeph> services. </p>
         <codeblock>*filter
 :INPUT DROP

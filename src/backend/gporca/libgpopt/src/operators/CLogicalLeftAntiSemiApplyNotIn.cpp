@@ -9,9 +9,9 @@
 //		Implementation of left anti-semi-apply operator with NotIn semantics
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftAntiSemiApplyNotIn.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

@@ -27,7 +27,7 @@
  *	which should also omit ExecutorRun.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -4067,10 +4067,10 @@ AdjustReplicatedTableCounts(EState *estate)
 		else if (containReplicatedTable)
 		{
 			/*
-			 * If one is replicated table, assert that other
-			 * tables are also replicated table.
+			 * If one is replicated table, error if other tables are not
+			 * replicated table.
  			 */
-			Insist(0);
+			elog(ERROR, "mix of replicated and non-replicated tables in result_relation is not supported");
 		}
 	}
 

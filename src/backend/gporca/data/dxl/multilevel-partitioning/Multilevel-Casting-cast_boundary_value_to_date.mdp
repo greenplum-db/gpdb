@@ -295,7 +295,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a';
       <dxl:LogicalSelect>
         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
           <dxl:Ident ColId="3" ColName="p2" TypeMdid="0.1082.1.0"/>
-          <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+          <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
           <dxl:TableDescriptor Mdid="0.651256.1.1" TableName="testpartitionfiltercasting">
@@ -362,7 +362,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a';
             <dxl:ProjList/>
             <dxl:PartEqFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
@@ -379,7 +379,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a';
             <dxl:PrintableFilter>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                 <dxl:Ident ColId="2" ColName="p2" TypeMdid="0.1082.1.0"/>
-                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
               </dxl:Comparison>
             </dxl:PrintableFilter>
           </dxl:PartitionSelector>
@@ -404,7 +404,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a';
             <dxl:Filter>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                 <dxl:Ident ColId="2" ColName="p2" TypeMdid="0.1082.1.0"/>
-                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
               </dxl:Comparison>
             </dxl:Filter>
             <dxl:TableDescriptor Mdid="0.651256.1.1" TableName="testpartitionfiltercasting">

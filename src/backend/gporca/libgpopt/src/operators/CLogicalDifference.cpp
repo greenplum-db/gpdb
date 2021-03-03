@@ -9,14 +9,14 @@
 //		Implementation of Difference operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalDifference.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalDifference.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
-
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;
@@ -58,9 +58,7 @@ CLogicalDifference::CLogicalDifference(CMemoryPool *mp,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CLogicalDifference::~CLogicalDifference()
-{
-}
+CLogicalDifference::~CLogicalDifference() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -176,7 +174,7 @@ CLogicalDifference::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		mp, LASJ_stats,
 		(*m_pdrgpdrgpcrInput)[0],  // we group by the columns of the first child
 		pdrgpulComputedCols,	   // no computed columns for set ops
-		NULL					   // no keys, use all grouping cols
+		nullptr					   // no keys, use all grouping cols
 	);
 
 	// clean up

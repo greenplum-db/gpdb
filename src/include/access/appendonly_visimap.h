@@ -11,7 +11,7 @@
  * The visibility map store is responsible for storing and finding
  * visibility map entries.
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

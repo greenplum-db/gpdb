@@ -39,6 +39,11 @@ matrix:
     fast_finish: true
     include:
         # OS and Compiler variations
+        # 
+        # NOTE: Some of the docker containers set LC_ALL and LC_CTYPE to 
+        # values that are not specified on the system's locale as found 
+        # via "locale -a". This causes gpinitsystem and possibly initdb 
+        # to fail. Set these environment variables to the system's locale.
         # ----------------------------------------------------------------
         #
         # Ubuntu Bionic, gcc 8
@@ -48,6 +53,7 @@ matrix:
           env:
               - T=debug C=""
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources:
@@ -61,6 +67,7 @@ matrix:
           env:
               - T=debug C=""
               - OVERRIDE_CC="CC=clang-7" OVERRIDE_CXX="CXX=clang++-7"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources:
@@ -90,6 +97,7 @@ matrix:
           env:
               - T=debug C="--without-zlib --without-libbz2 --without-zstd --without-quicklz"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources: *common_sources
@@ -103,6 +111,7 @@ matrix:
           env:
               - tests=unit T=debug C="--disable-orca"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources: *common_sources
@@ -115,20 +124,42 @@ matrix:
           env:
               - tests=installcheck T=debug C="--disable-orca"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources: *common_sources
                   packages: *common_packages
 
-        - stage: check-format
+        - name: clang-tidy
           os: linux
-          dist: bionic
+          dist: focal
           addons:
             apt:
               sources:
-                - *common_sources
-                - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
+                - sourceline: 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main'
                   key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+              packages:
+                - ninja-build
+                - clang-11
+                - clang-tidy-11
+                - parallel
+                - libxerces-c-dev
+          before_install: ~
+          install: ~
+          before_script: ~
+          after_script: ~
+          script:
+            - CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=Debug -Hsrc/backend/gporca -Bbuild.debug
+            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk build.debug
+            - CXX=clang++-11 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -Hsrc/backend/gporca -Bbuild.relwithdebinfo
+            - CLANG_TIDY=clang-tidy-11 src/tools/tidy chk build.relwithdebinfo
+
+        - name: check-format
+          stage: lint
+          os: linux
+          dist: focal
+          addons:
+            apt:
               packages:
                 - clang-format-10
                 - parallel
@@ -142,7 +173,7 @@ matrix:
             - env CLANG_FORMAT=clang-format-10 src/tools/fmt chk
 
 stages:
-  - check-format
+  - lint
   - test
 
 ## ----------------------------------------------------------------------

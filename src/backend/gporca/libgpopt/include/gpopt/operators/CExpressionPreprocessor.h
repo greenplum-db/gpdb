@@ -14,11 +14,11 @@
 #define GPOPT_CExpressionPreprocessor_H
 
 #include "gpos/base.h"
-#include "gpopt/base/CColumnFactory.h"
 
+#include "gpopt/base/CColumnFactory.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
-#include "gpopt/mdcache/CMDAccessor.h"
 
 namespace gpopt
 {
@@ -63,11 +63,10 @@ private:
 
 	// generate predicates for the given set of columns based on the given
 	// constraint property
-	static CExpression *PexprScalarPredicates(CMemoryPool *mp,
-											  CPropConstraint *ppc,
-											  CColRefSet *pcrsNotNull,
-											  CColRefSet *pcrs,
-											  CColRefSet *pcrsProcessed);
+	static CExpression *PexprScalarPredicates(
+		CMemoryPool *mp, CPropConstraint *ppc,
+		CPropConstraint *constraintsForOuterRefs, CColRefSet *pcrsNotNull,
+		CColRefSet *pcrs, CColRefSet *pcrsProcessed);
 
 	// eliminate self comparisons
 	static CExpression *PexprEliminateSelfComparison(CMemoryPool *mp,
@@ -106,13 +105,14 @@ private:
 														CExpression *pexpr);
 
 	// generate predicates based on derived constraint properties
-	static CExpression *PexprFromConstraints(CMemoryPool *mp,
-											 CExpression *pexpr,
-											 CColRefSet *pcrsProcessed);
+	static CExpression *PexprFromConstraints(
+		CMemoryPool *mp, CExpression *pexpr, CColRefSet *pcrsProcessed,
+		CPropConstraint *constraintsForOuterRefs);
 
 	// generate predicates based on derived constraint properties under scalar expressions
-	static CExpression *PexprFromConstraintsScalar(CMemoryPool *mp,
-												   CExpression *pexpr);
+	static CExpression *PexprFromConstraintsScalar(
+		CMemoryPool *mp, CExpression *pexpr,
+		CPropConstraint *constraintsForOuterRefs);
 
 	// eliminate subtrees that have zero output cardinality
 	static CExpression *PexprPruneEmptySubtrees(CMemoryPool *mp,
@@ -199,6 +199,12 @@ private:
 	static CExpression *PexprReorderScalarCmpChildren(CMemoryPool *mp,
 													  CExpression *pexpr);
 
+	static CExpression *PrunePartitions(CMemoryPool *mp, CExpression *expr);
+
+	static CConstraint *PcnstrFromChildPartition(const IMDRelation *partrel,
+												 CColRefArray *pdrgpcrOutput,
+												 ColRefToUlongMap *col_mapping);
+
 	// private ctor
 	CExpressionPreprocessor();
 
@@ -212,7 +218,7 @@ public:
 	// main driver
 	static CExpression *PexprPreprocess(
 		CMemoryPool *mp, CExpression *pexpr,
-		CColRefSet *pcrsOutputAndOrderCols = NULL);
+		CColRefSet *pcrsOutputAndOrderCols = nullptr);
 
 	// add predicates collected from CTE consumers to producer expressions
 	static void AddPredsToCTEProducers(CMemoryPool *mp, CExpression *pexpr);

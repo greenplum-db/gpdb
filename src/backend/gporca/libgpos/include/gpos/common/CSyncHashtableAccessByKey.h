@@ -39,9 +39,6 @@ private:
 	// target key
 	const K &m_key;
 
-	// no copy ctor
-	CSyncHashtableAccessByKey<T, K>(const CSyncHashtableAccessByKey<T, K> &);
-
 	// finds the first element matching target key starting from
 	// the given element
 	T *
@@ -49,8 +46,8 @@ private:
 	{
 		T *curr = value;
 
-		while (NULL != curr && !Base::GetHashTable().m_eqfn(
-								   Base::GetHashTable().Key(curr), m_key))
+		while (nullptr != curr && !Base::GetHashTable().m_eqfn(
+									  Base::GetHashTable().Key(curr), m_key))
 		{
 			curr = Base::Next(curr);
 		}
@@ -71,6 +68,9 @@ private:
 #endif	// GPOS_DEBUG
 
 public:
+	CSyncHashtableAccessByKey<T, K>(const CSyncHashtableAccessByKey<T, K> &) =
+		delete;
+
 	// ctor
 	CSyncHashtableAccessByKey<T, K>(CSyncHashtable<T, K> &ht, const K &key)
 		: Base(ht, ht.GetBucketIndex(key)), m_key(key)
@@ -78,9 +78,7 @@ public:
 	}
 
 	// dtor
-	virtual ~CSyncHashtableAccessByKey()
-	{
-	}
+	~CSyncHashtableAccessByKey() override = default;
 
 	// finds the first bucket's element with a matching key
 	T *
@@ -93,7 +91,7 @@ public:
 	T *
 	Next(T *value) const
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 
 		return NextMatch(Base::Next(value));
 	}
@@ -102,7 +100,7 @@ public:
 	void
 	Insert(T *value)
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 
 #ifdef GPOS_DEBUG
 		K &key = Base::GetHashTable().Key(value);

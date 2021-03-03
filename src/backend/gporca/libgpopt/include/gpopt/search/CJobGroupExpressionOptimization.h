@@ -126,9 +126,6 @@ private:
 	// compute required plan properties for current child
 	void ComputeCurrentChildRequirements(CSchedulerContext *psc);
 
-	// private copy ctor
-	CJobGroupExpressionOptimization(const CJobGroupExpressionOptimization &);
-
 	// initialize action
 	static EEvent EevtInitialize(CSchedulerContext *psc, CJob *pj);
 
@@ -152,29 +149,32 @@ private:
 
 protected:
 	// schedule transformation jobs for applicable xforms
-	virtual void
+	void
 	ScheduleApplicableTransformations(CSchedulerContext *  // psc
-	)
+									  ) override
 	{
 		// no transformations are applicable to this job
 	}
 
 	// schedule optimization jobs for all child groups
-	virtual void ScheduleChildGroupsJobs(CSchedulerContext *psc);
+	void ScheduleChildGroupsJobs(CSchedulerContext *psc) override;
 
 public:
+	CJobGroupExpressionOptimization(const CJobGroupExpressionOptimization &) =
+		delete;
+
 	// ctor
 	CJobGroupExpressionOptimization();
 
 	// dtor
-	virtual ~CJobGroupExpressionOptimization();
+	~CJobGroupExpressionOptimization() override;
 
 	// initialize job
 	void Init(CGroupExpression *pgexpr, COptimizationContext *poc,
-			  ULONG ulOptReq, CReqdPropPlan *prppCTEProducer = NULL);
+			  ULONG ulOptReq, CReqdPropPlan *prppCTEProducer = nullptr);
 
 	// cleanup internal state
-	virtual void Cleanup();
+	void Cleanup() override;
 
 	// schedule a new group expression optimization job
 	static void ScheduleJob(CSchedulerContext *psc, CGroupExpression *pgexpr,
@@ -182,12 +182,12 @@ public:
 							CJob *pjParent);
 
 	// job's function
-	BOOL FExecute(CSchedulerContext *psc);
+	BOOL FExecute(CSchedulerContext *psc) override;
 
 #ifdef GPOS_DEBUG
 
 	// print function
-	IOstream &OsPrint(IOstream &os);
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// dump state machine diagram in graphviz format
 	virtual IOstream &
@@ -213,7 +213,7 @@ public:
 	static CJobGroupExpressionOptimization *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupExpressionOptimization == pj->Ejt());
 
 		return dynamic_cast<CJobGroupExpressionOptimization *>(pj);

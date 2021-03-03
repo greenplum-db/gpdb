@@ -4,7 +4,7 @@
  *	  Reader functions for Postgres tree nodes.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -2719,7 +2719,6 @@ _readSampleScan(void)
  * _readIndexScan
  */
 static void readIndexScanFields(IndexScan *local_node);
-static LogicalIndexInfo *readLogicalIndexInfo(void);
 
 static IndexScan *
 _readIndexScan(void)
@@ -2727,19 +2726,6 @@ _readIndexScan(void)
 	READ_LOCALS_NO_FIELDS(IndexScan);
 
 	readIndexScanFields(local_node);
-
-	READ_DONE();
-}
-
-static DynamicIndexScan *
-_readDynamicIndexScan(void)
-{
-	READ_LOCALS(DynamicIndexScan);
-
-	/* DynamicIndexScan has some content from IndexScan. */
-	readIndexScanFields(&local_node->indexscan);
-	READ_NODE_FIELD(partOids);
-	local_node->logicalIndexInfo = readLogicalIndexInfo();
 
 	READ_DONE();
 }
@@ -2758,27 +2744,6 @@ readIndexScanFields(IndexScan *local_node)
 	READ_NODE_FIELD(indexorderbyorig);
 	READ_NODE_FIELD(indexorderbyops);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
-}
-
-static LogicalIndexInfo *
-readLogicalIndexInfo(void)
-{
-	READ_TEMP_LOCALS();
-	LogicalIndexInfo *local_node = palloc(sizeof(LogicalIndexInfo));
-
-	READ_OID_FIELD(logicalIndexOid);
-	READ_INT_FIELD(nColumns);
-	READ_ATTRNUMBER_ARRAY(indexKeys, local_node->nColumns);
-	READ_NODE_FIELD(indPred);
-	READ_NODE_FIELD(indExprs);
-	READ_BOOL_FIELD(indIsUnique);
-	READ_ENUM_FIELD(indType, LogicalIndexType);
-	READ_NODE_FIELD(partCons);
-	READ_NODE_FIELD(defaultLevels);
-
-	/* No READ_DONE, this is "embedded" in other structs */
-
-	return local_node;
 }
 
 /*
@@ -2826,19 +2791,6 @@ _readBitmapIndexScan(void)
 	READ_DONE();
 }
 
-static DynamicBitmapIndexScan *
-_readDynamicBitmapIndexScan(void)
-{
-	READ_LOCALS(DynamicBitmapIndexScan);
-
-	/* DynamicBitmapIndexScan has some content from BitmapIndexScan. */
-	readBitmapIndexScanFields(&local_node->biscan);
-	READ_NODE_FIELD(partOids);
-	local_node->logicalIndexInfo = readLogicalIndexInfo();
-
-	READ_DONE();
-}
-
 static void
 readBitmapHeapScanFields(BitmapHeapScan *local_node)
 {
@@ -2858,19 +2810,6 @@ _readBitmapHeapScan(void)
 	READ_LOCALS_NO_FIELDS(BitmapHeapScan);
 
 	readBitmapHeapScanFields(local_node);
-
-	READ_DONE();
-}
-
-static DynamicBitmapHeapScan *
-_readDynamicBitmapHeapScan(void)
-{
-	READ_LOCALS(DynamicBitmapHeapScan);
-
-	/* DynamicBitmapHeapScan has some content from BitmapHeapScan. */
-	readBitmapHeapScanFields(&local_node->bitmapheapscan);
-
-	READ_NODE_FIELD(partOids);
 
 	READ_DONE();
 }
@@ -4593,18 +4532,12 @@ parseNodeString(void)
 		return_value = _readSampleScan();
 	else if (MATCH("INDEXSCAN", 9))
 		return_value = _readIndexScan();
-	else if (MATCH("DYNAMICINDEXSCAN", 16))
-		return_value = _readDynamicIndexScan();
 	else if (MATCH("INDEXONLYSCAN", 13))
 		return_value = _readIndexOnlyScan();
 	else if (MATCH("BITMAPINDEXSCAN", 15))
 		return_value = _readBitmapIndexScan();
-	else if (MATCH("DYNAMICBITMAPINDEXSCAN", 23))
-		return_value = _readDynamicBitmapIndexScan();
 	else if (MATCH("BITMAPHEAPSCAN", 14))
 		return_value = _readBitmapHeapScan();
-	else if (MATCH("DYNAMICBITMAPHEAPSCAN", 21))
-		return_value = _readDynamicBitmapHeapScan();
 	else if (MATCH("TIDSCAN", 7))
 		return_value = _readTidScan();
 	else if (MATCH("SUBQUERYSCAN", 12))

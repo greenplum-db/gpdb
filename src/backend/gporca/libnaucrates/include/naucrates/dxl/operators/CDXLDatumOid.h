@@ -19,6 +19,7 @@
 #define GPDXL_CDXLDatumOid_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
@@ -42,25 +43,24 @@ private:
 	// oid value
 	OID m_oid_val;
 
-	// private copy ctor
-	CDXLDatumOid(const CDXLDatumOid &);
-
 public:
+	CDXLDatumOid(const CDXLDatumOid &) = delete;
+
 	// ctor
 	CDXLDatumOid(CMemoryPool *mp, IMDId *mdid_type, BOOL is_null, OID oid_val);
 
 	// dtor
-	virtual ~CDXLDatumOid(){};
+	~CDXLDatumOid() override = default;
 
 	// accessor of oid value
 	OID OidValue() const;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumOid;
 	}
@@ -69,7 +69,7 @@ public:
 	static CDXLDatumOid *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumOid == dxl_datum->GetDatumType());
 
 		return dynamic_cast<CDXLDatumOid *>(dxl_datum);

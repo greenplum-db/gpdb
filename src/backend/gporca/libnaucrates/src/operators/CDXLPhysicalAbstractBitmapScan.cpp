@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLPhysicalAbstractBitmapScan.cpp
@@ -12,8 +12,8 @@
 
 #include "naucrates/dxl/operators/CDXLPhysicalAbstractBitmapScan.h"
 
-#include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
@@ -62,8 +62,8 @@ CDXLPhysicalAbstractBitmapScan::AssertValid(const CDXLNode *node,
 					bitmap_dxlnode->GetOperator()->GetDXLOperator());
 
 	// assert validity of table descriptor
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 
 	if (validate_children)

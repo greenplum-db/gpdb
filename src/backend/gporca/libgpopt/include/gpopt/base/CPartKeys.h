@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPartKeys.h
@@ -12,6 +12,7 @@
 #define GPOPT_CPartKeys_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 
 namespace gpopt
@@ -42,15 +43,14 @@ private:
 	// number of levels
 	ULONG m_num_of_part_levels;
 
-	// private copy ctor
-	CPartKeys(const CPartKeys &);
-
 public:
+	CPartKeys(const CPartKeys &) = delete;
+
 	// ctor
 	explicit CPartKeys(CColRef2dArray *pdrgpdrgpcr);
 
 	// dtor
-	~CPartKeys();
+	~CPartKeys() override;
 
 	// return key at a given level
 	CColRef *PcrKey(ULONG ulLevel) const;
@@ -81,7 +81,7 @@ public:
 							  UlongToColRefMap *colref_mapping) const;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// copy array of part keys into given memory pool
 	static CPartKeysArray *PdrgppartkeysCopy(

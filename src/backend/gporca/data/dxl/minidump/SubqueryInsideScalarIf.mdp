@@ -45,7 +45,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102074,102146,102120,103001,103014,103015,103022,103027,104003,104004,104005,105000,106000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.57350.1.0" Name="t1" Rows="10002.000000" EmptyRelation="false"/>
@@ -2524,12 +2524,12 @@
                               <dxl:Ident ColId="38" ColName="ColRef_0038" TypeMdid="0.20.1.0"/>
                               <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                             </dxl:Comparison>
-                            <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                            <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                             <dxl:If TypeMdid="0.16.1.0">
                               <dxl:IsNull>
                                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
                               </dxl:IsNull>
-                              <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                              <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                               <dxl:If TypeMdid="0.16.1.0">
                                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                   <dxl:Ident ColId="37" ColName="ColRef_0037" TypeMdid="0.20.1.0"/>

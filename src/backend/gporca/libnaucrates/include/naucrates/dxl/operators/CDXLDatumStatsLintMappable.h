@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLDatumStatsLintMappable.h
@@ -20,6 +20,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 
 namespace gpdxl
@@ -43,24 +44,23 @@ private:
 	// for statistics computation, map to LINT
 	LINT m_val;
 
-	// private copy ctor
-	CDXLDatumStatsLintMappable(const CDXLDatumStatsLintMappable &);
-
 public:
+	CDXLDatumStatsLintMappable(const CDXLDatumStatsLintMappable &) = delete;
+
 	// ctor
 	CDXLDatumStatsLintMappable(CMemoryPool *mp, IMDId *mdid_type,
 							   INT type_modifier, BOOL is_null,
 							   BYTE *byte_array, ULONG length, LINT value);
 
 	// dtor
-	virtual ~CDXLDatumStatsLintMappable(){};
+	~CDXLDatumStatsLintMappable() override = default;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumStatsLintMappable;
 	}
@@ -69,7 +69,7 @@ public:
 	static CDXLDatumStatsLintMappable *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumStatsLintMappable ==
 					dxl_datum->GetDatumType());
 
@@ -79,15 +79,15 @@ public:
 	// statistics related APIs
 
 	// can datum be mapped to LINT
-	virtual BOOL
-	IsDatumMappableToLINT() const
+	BOOL
+	IsDatumMappableToLINT() const override
 	{
 		return true;
 	}
 
 	// return the LINT mapping needed for statistics computation
-	virtual LINT
-	GetLINTMapping() const
+	LINT
+	GetLINTMapping() const override
 	{
 		return m_val;
 	}

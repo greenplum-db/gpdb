@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalDynamicScan.cpp
@@ -17,8 +17,8 @@
 
 #include "gpopt/operators/CPhysicalDynamicScan.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
@@ -36,24 +36,20 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 CPhysicalDynamicScan::CPhysicalDynamicScan(
-	CMemoryPool *mp, BOOL is_partial, CTableDescriptor *ptabdesc,
-	ULONG ulOriginOpId, const CName *pnameAlias, ULONG scan_id,
-	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrParts,
-	ULONG ulSecondaryScanId, CPartConstraint *ppartcnstr,
-	CPartConstraint *ppartcnstrRel)
+	CMemoryPool *mp, CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
+	const CName *pnameAlias, ULONG scan_id, CColRefArray *pdrgpcrOutput,
+	CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
+	ColRefToUlongMapArray *root_col_mapping_per_part)
 	: CPhysicalScan(mp, pnameAlias, ptabdesc, pdrgpcrOutput),
 	  m_ulOriginOpId(ulOriginOpId),
-	  m_is_partial(is_partial),
 	  m_scan_id(scan_id),
 	  m_pdrgpdrgpcrPart(pdrgpdrgpcrParts),
-	  m_ulSecondaryScanId(ulSecondaryScanId),
-	  m_part_constraint(ppartcnstr),
-	  m_ppartcnstrRel(ppartcnstrRel)
+	  m_partition_mdids(partition_mdids),
+	  m_root_col_mapping_per_part(root_col_mapping_per_part)
+
 {
-	GPOS_ASSERT(NULL != pdrgpdrgpcrParts);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcrParts);
 	GPOS_ASSERT(0 < pdrgpdrgpcrParts->Size());
-	GPOS_ASSERT(NULL != ppartcnstr);
-	GPOS_ASSERT(NULL != ppartcnstrRel);
 }
 
 //---------------------------------------------------------------------------
@@ -67,8 +63,8 @@ CPhysicalDynamicScan::CPhysicalDynamicScan(
 CPhysicalDynamicScan::~CPhysicalDynamicScan()
 {
 	m_pdrgpdrgpcrPart->Release();
-	m_part_constraint->Release();
-	m_ppartcnstrRel->Release();
+	m_partition_mdids->Release();
+	m_root_col_mapping_per_part->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -94,34 +90,6 @@ CPhysicalDynamicScan::HashValue() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalDynamicScan::PpimDerive
-//
-//	@doc:
-//		Derive partition index map
-//
-//---------------------------------------------------------------------------
-CPartIndexMap *
-CPhysicalDynamicScan::PpimDerive(CMemoryPool *mp,
-								 CExpressionHandle &,  //exprhdl
-								 CDrvdPropCtxt *pdpctxt) const
-{
-	GPOS_ASSERT(NULL != pdpctxt);
-	IMDId *mdid = m_ptabdesc->MDId();
-	mdid->AddRef();
-	m_pdrgpdrgpcrPart->AddRef();
-	m_part_constraint->AddRef();
-	m_ppartcnstrRel->AddRef();
-	ULONG ulExpectedPartitionSelectors =
-		CDrvdPropCtxtPlan::PdpctxtplanConvert(pdpctxt)
-			->UlExpectedPartitionSelectors();
-
-	return PpimDeriveFromDynamicScan(
-		mp, m_scan_id, mdid, m_pdrgpdrgpcrPart, m_ulSecondaryScanId,
-		m_part_constraint, m_ppartcnstrRel, ulExpectedPartitionSelectors);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysicalDynamicScan::OsPrint
 //
 //	@doc:
@@ -141,13 +109,8 @@ CPhysicalDynamicScan::OsPrint(IOstream &os) const
 	m_ptabdesc->Name().OsPrint(os);
 	os << "), Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
-	os << "] Scan Id: " << m_scan_id << "." << m_ulSecondaryScanId;
+	os << "] Scan Id: " << m_scan_id;
 
-	if (!m_part_constraint->IsConstraintUnbounded())
-	{
-		os << ", ";
-		m_part_constraint->OsPrint(os);
-	}
 
 	return os;
 }
@@ -164,7 +127,7 @@ CPhysicalDynamicScan::OsPrint(IOstream &os) const
 CPhysicalDynamicScan *
 CPhysicalDynamicScan::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(CUtils::FPhysicalScan(pop) &&
 				CPhysicalScan::PopConvert(pop)->FDynamicScan());
 

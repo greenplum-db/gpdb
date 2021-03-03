@@ -148,8 +148,8 @@ pylint:
 
 $(MOCK_BIN):
 	@echo "--- mock for platform $(UBUNTU_PLATFORM)"
-	@if [ $(UBUNTU_PLATFORM) = "Ubuntu" ]; then\
-       pip install mock;\
+	@if [ "$(UBUNTU_PLATFORM)" = "Ubuntu" ]; then\
+       pip3 install mock;\
      else\
        mkdir -p $(PYTHONSRC_INSTALL_SITE) && \
 	   cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(MOCK_DIR).tar.gz && \

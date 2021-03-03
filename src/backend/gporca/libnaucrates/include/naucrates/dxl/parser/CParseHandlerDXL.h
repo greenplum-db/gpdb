@@ -17,9 +17,7 @@
 
 #include "gpopt/cost/ICostModelParams.h"
 #include "gpopt/search/CSearchStage.h"
-
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
-
 #include "naucrates/md/CDXLStatsDerivedRelation.h"
 
 namespace gpdxl
@@ -28,11 +26,6 @@ using namespace gpos;
 using namespace gpmd;
 
 XERCES_CPP_NAMESPACE_USE
-
-// shorthand for functions for translating GPDB expressions into DXL nodes
-typedef void (CParseHandlerDXL::*ParseHandler)(
-	CParseHandlerBase *parse_handler_base);
-
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -46,13 +39,6 @@ typedef void (CParseHandlerDXL::*ParseHandler)(
 class CParseHandlerDXL : public CParseHandlerBase
 {
 private:
-	// pair of parse handler type and parse handler function
-	struct SParseElem
-	{
-		EDxlParseHandlerType parse_handler_type;  // parse handler type
-		ParseHandler parse_handler_func;  // pointer to corresponding function
-	};
-
 	// traceflags
 	CBitSet *m_trace_flags_bitset;
 
@@ -101,26 +87,20 @@ private:
 	// cost model params
 	ICostModelParams *m_cost_model_params;
 
-	// private copy ctor
-	CParseHandlerDXL(const CParseHandlerDXL &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
-
-	// find the parse handler function for the given type
-	ParseHandler FindParseHandler(EDxlParseHandlerType parse_handler_type);
+		) override;
 
 	// extract traceflags
 	void ExtractTraceFlags(CParseHandlerBase *parse_handler_base);
@@ -156,11 +136,13 @@ private:
 	static BOOL IsValidStartElement(const XMLCh *const element_name);
 
 public:
+	CParseHandlerDXL(const CParseHandlerDXL &) = delete;
+
 	// ctor
 	CParseHandlerDXL(CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr);
 
 	//dtor
-	virtual ~CParseHandlerDXL();
+	~CParseHandlerDXL() override;
 
 	// traceflag bitset
 	CBitSet *Pbs() const;
@@ -211,7 +193,7 @@ public:
 	ICostModelParams *GetCostModelParams() const;
 
 	// process the end of the document
-	void endDocument();
+	void endDocument() override;
 };
 }  // namespace gpdxl
 

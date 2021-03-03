@@ -52,18 +52,16 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 
 		/* build tupdesc for result tuples */
 		/* this had better match gp_distributed_log view in system_views.sql */
-		tupdesc = CreateTemplateTupleDesc(6);
+		tupdesc = CreateTemplateTupleDesc(5);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segment_id",
 						   INT2OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "dbid",
 						   INT2OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "distributed_xid",
 						   XIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "distributed_id",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "status",
 						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "status",
-						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "local_transaction",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "local_transaction",
 						   XIDOID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
@@ -93,9 +91,7 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 		 */
 		while (true)
 		{
-			DistributedTransactionTimeStamp distribTimeStamp;
 			DistributedTransactionId 		distribXid;
-			char							distribId[TMGIDSIZE];
 			Datum		values[6];
 			bool		nulls[6];
 			HeapTuple	tuple;
@@ -106,7 +102,6 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 
 			if (!DistributedLog_ScanForPrevCommitted(
 					&context->indexXid,
-					&distribTimeStamp,
 					&distribXid))
 				break;
 
@@ -120,15 +115,12 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 			values[1] = Int16GetDatum((int16)GpIdentity.dbid);
 			values[2] = TransactionIdGetDatum(distribXid);
 
-			dtxFormGID(distribId, distribTimeStamp, distribXid);
-			values[3] = CStringGetTextDatum(distribId);
-
 			/*
 			 * For now, we only log committed distributed transactions.
 			 */
-			values[4] = CStringGetTextDatum("Committed");
+			values[3] = CStringGetTextDatum("Committed");
 
-			values[5] = TransactionIdGetDatum(context->indexXid);
+			values[4] = TransactionIdGetDatum(context->indexXid);
 
 			tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 			result = HeapTupleGetDatum(tuple);

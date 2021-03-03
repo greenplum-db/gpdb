@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] [ONLY] <varname>name</varname> [ * ] [, ...] 
+<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p>
+    <note type="note">Greenplum Database does not enforce referential integrity syntax (foreign key
+      constraints). As of version 6.12 <codeph>TRUNCATE</codeph> truncates a table that is
+      referenced in a foreign key constraint even if the <codeph>CASCADE</codeph> option is
+      omitted.</note><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] [ONLY] <varname>name</varname> [ * ] [, ...] 
     [ RESTART IDENTITY | CONTINUE IDENTITY ] [CASCADE | RESTRICT]</codeblock></section>
     <section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes
         all rows from a table or set of tables. It has the same effect as an unqualified

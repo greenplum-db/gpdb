@@ -36,14 +36,18 @@ class IMDRelStats : public IMDCacheObject
 {
 public:
 	// object type
-	virtual Emdtype
-	MDType() const
+	Emdtype
+	MDType() const override
 	{
 		return EmdtRelStats;
 	}
 
 	// number of rows
 	virtual CDouble Rows() const = 0;
+
+	virtual ULONG RelPages() const = 0;
+
+	virtual ULONG RelAllVisible() const = 0;
 
 	// is statistics on an empty input
 	virtual BOOL IsEmpty() const = 0;

@@ -12,6 +12,7 @@
 #define GPOPT_CXformLeftSemiJoin2CrossProduct_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -29,38 +30,36 @@ using namespace gpos;
 class CXformLeftSemiJoin2CrossProduct : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformLeftSemiJoin2CrossProduct(const CXformLeftSemiJoin2CrossProduct &);
-
 public:
+	CXformLeftSemiJoin2CrossProduct(const CXformLeftSemiJoin2CrossProduct &) =
+		delete;
+
 	// ctor
 	explicit CXformLeftSemiJoin2CrossProduct(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformLeftSemiJoin2CrossProduct()
-	{
-	}
+	~CXformLeftSemiJoin2CrossProduct() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiJoin2CrossProduct;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiJoin2CrossProduct";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftSemiJoin2CrossProduct
 

@@ -37,6 +37,13 @@ INSERT 1
 insert into tab3 values (1, 1);
 INSERT 1
 
+analyze tab1;
+ANALYZE
+analyze tab2;
+ANALYZE
+analyze tab3;
+ANALYZE
+
 set allow_system_table_mods=true;
 SET
 update pg_class set relpages = 10000 where relname='tab2';

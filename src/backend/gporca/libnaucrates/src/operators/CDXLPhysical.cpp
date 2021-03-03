@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLPhysical.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -35,9 +36,7 @@ CDXLPhysical::CDXLPhysical(CMemoryPool *mp) : CDXLOperator(mp)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CDXLPhysical::~CDXLPhysical()
-{
-}
+CDXLPhysical::~CDXLPhysical() = default;
 
 //---------------------------------------------------------------------------
 //      @function:
@@ -66,7 +65,7 @@ CDXLPhysical::GetDXLOperatorType() const
 void
 CDXLPhysical::AssertValid(const CDXLNode *node, BOOL validate_children) const
 {
-	GPOS_ASSERT(NULL != node);
+	GPOS_ASSERT(nullptr != node);
 
 	GPOS_ASSERT(2 <= node->Arity());
 

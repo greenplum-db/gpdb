@@ -15,6 +15,7 @@
 #define GPDXL_CParseHandlerScalarLimitOffset_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
@@ -35,20 +36,21 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerScalarLimitOffset : public CParseHandlerScalarOp
 {
 private:
-	// private copy ctor
-	CParseHandlerScalarLimitOffset(const CParseHandlerScalarLimitOffset &);
-
 	// process the start of an element
 	void StartElement(const XMLCh *const element_uri,
 					  const XMLCh *const element_local_name,
-					  const XMLCh *const element_qname, const Attributes &attr);
+					  const XMLCh *const element_qname,
+					  const Attributes &attr) override;
 
 	// process the end of an element
 	void EndElement(const XMLCh *const element_uri,
 					const XMLCh *const element_local_name,
-					const XMLCh *const element_qname);
+					const XMLCh *const element_qname) override;
 
 public:
+	CParseHandlerScalarLimitOffset(const CParseHandlerScalarLimitOffset &) =
+		delete;
+
 	// ctor
 	CParseHandlerScalarLimitOffset(CMemoryPool *mp,
 								   CParseHandlerManager *parse_handler_mgr,

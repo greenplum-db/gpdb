@@ -12,9 +12,9 @@
 #define GPOPT_CCTEConfig_H
 
 #include "gpos/base.h"
-#include "gpos/memory/CMemoryPool.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDouble.h"
+#include "gpos/common/CRefCount.h"
+#include "gpos/memory/CMemoryPool.h"
 
 namespace gpopt
 {
@@ -34,10 +34,9 @@ private:
 	// CTE inlining cut-off
 	ULONG m_ulCTEInliningCutoff;
 
-	// private copy ctor
-	CCTEConfig(const CCTEConfig &);
-
 public:
+	CCTEConfig(const CCTEConfig &) = delete;
+
 	// ctor
 	CCTEConfig(ULONG cte_inlining_cut_off)
 		: m_ulCTEInliningCutoff(cte_inlining_cut_off)

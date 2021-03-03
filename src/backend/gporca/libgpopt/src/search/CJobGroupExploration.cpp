@@ -9,12 +9,13 @@
 //		Implementation of group exploration job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroupExploration.h"
+
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobGroupExploration.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
 #include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CScheduler.h"
@@ -85,9 +86,7 @@ const WCHAR
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::CJobGroupExploration()
-{
-}
+CJobGroupExploration::CJobGroupExploration() = default;
 
 
 //---------------------------------------------------------------------------
@@ -98,9 +97,7 @@ CJobGroupExploration::CJobGroupExploration()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::~CJobGroupExploration()
-{
-}
+CJobGroupExploration::~CJobGroupExploration() = default;
 
 
 //---------------------------------------------------------------------------
@@ -150,7 +147,7 @@ CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc)
 
 	// iterate on expressions and schedule them as needed
 	CGroupExpression *pgexpr = PgexprFirstUnsched();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		if (!pgexpr->FTransitioned(CGroupExpression::estExplored))
 		{
@@ -285,7 +282,7 @@ CJobGroupExploration::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupExploration::OsPrint(IOstream &os)
+CJobGroupExploration::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

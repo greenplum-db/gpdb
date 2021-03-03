@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarWindowFrameEdge.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -104,7 +105,7 @@ CDXLScalarWindowFrameEdge::GetFrameBoundaryStr(
 	}
 
 	GPOS_ASSERT(!"Unrecognized window frame boundary");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

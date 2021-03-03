@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2017, Pivotal Software Inc.
+# Copyright (c) 2017, VMware, Inc. or its affiliates.
 #
 
 import unittest

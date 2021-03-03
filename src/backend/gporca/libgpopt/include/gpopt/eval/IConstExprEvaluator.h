@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		IConstExprEvaluator.h
@@ -41,15 +41,14 @@ class IConstExprEvaluator : public CRefCount
 {
 public:
 	// dtor
-	virtual ~IConstExprEvaluator()
-	{
-	}
+	~IConstExprEvaluator() override = default;
 
 	// evaluate the given expression and return the result as a new expression
 	// caller takes ownership of returned expression
 	virtual CExpression *PexprEval(CExpression *pexpr) = 0;
 
-	// returns true iff the evaluator can evaluate constant expressions without subqueries
+	// returns true iff the evaluator can evaluate constant expressions without
+	// subqueries
 	virtual BOOL FCanEvalExpressions() = 0;
 };
 }  // namespace gpopt

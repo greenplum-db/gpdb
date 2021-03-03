@@ -243,6 +243,7 @@ drop table bmscantest;
 drop function explain_parallel_sort_stats();
 
 -- test parallel merge join path.
+analyze tenk2;
 set enable_hashjoin to off;
 set enable_nestloop to off;
 

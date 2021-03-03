@@ -12,6 +12,7 @@
 #define GPOPT_CXformGbAgg2HashAgg_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,14 +30,13 @@ using namespace gpos;
 class CXformGbAgg2HashAgg : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformGbAgg2HashAgg(const CXformGbAgg2HashAgg &);
-
 protected:
 	// check if the transformation is applicable
 	BOOL FApplicable(CExpression *pexpr) const;
 
 public:
+	CXformGbAgg2HashAgg(const CXformGbAgg2HashAgg &) = delete;
+
 	// ctor
 	CXformGbAgg2HashAgg(CMemoryPool *mp);
 
@@ -44,30 +44,28 @@ public:
 	explicit CXformGbAgg2HashAgg(CExpression *pexprPattern);
 
 	// dtor
-	virtual ~CXformGbAgg2HashAgg()
-	{
-	}
+	~CXformGbAgg2HashAgg() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfGbAgg2HashAgg;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformGbAgg2HashAgg";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformGbAgg2HashAgg
 

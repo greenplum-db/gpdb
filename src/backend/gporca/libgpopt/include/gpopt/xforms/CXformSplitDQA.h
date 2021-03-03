@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformSplitDQA.h
@@ -12,9 +12,10 @@
 #define GPOPT_CXformSplitDQA_H
 
 #include "gpos/base.h"
+
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/xforms/CXformExploration.h"
-#include "gpopt/base/CUtils.h"
 
 namespace gpopt
 {
@@ -36,9 +37,6 @@ private:
 					 CUtils::Equals, CleanupRelease<CExpression>,
 					 CleanupNULL<CColRef> >
 		ExprToColRefMap;
-
-	// private copy ctor
-	CXformSplitDQA(const CXformSplitDQA &);
 
 	// generate an expression with multi-level aggregation
 	static CExpression *PexprMultiLevelAggregation(
@@ -93,41 +91,42 @@ private:
 									   CExpressionArray *pdrgpexprChildPrEl);
 
 public:
+	CXformSplitDQA(const CXformSplitDQA &) = delete;
+
 	// ctor
 	explicit CXformSplitDQA(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformSplitDQA()
-	{
-	}
+	~CXformSplitDQA() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSplitDQA;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSplitDQA";
 	}
 
 	// Compatibility function for splitting aggregates
-	virtual BOOL
-	FCompatible(CXform::EXformId exfid)
+	BOOL
+	FCompatible(CXform::EXformId exfid) override
 	{
 		return (CXform::ExfSplitDQA != exfid) &&
 			   (CXform::ExfSplitGbAgg != exfid);
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	void Transform(CXformContext *, CXformResult *, CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformSplitDQA
 

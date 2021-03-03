@@ -12,7 +12,7 @@
  * the compacted segment files are dropped and the eof/tupcount/varblock
  * information in pg_aoseg_<oid> are reset to 0.
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -36,7 +36,7 @@
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
 #include "commands/vacuum.h"
@@ -766,6 +766,7 @@ AppendOnlyCompact(Relation aorel,
 												fsinfo,
 												appendOnlyMetaDataSnapshot);
 
+			insertDesc->skipModCountIncrement = true;
 			appendonly_insert_finish(insertDesc);
 		}
 		else

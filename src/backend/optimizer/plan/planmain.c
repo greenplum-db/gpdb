@@ -10,7 +10,7 @@
  * and so on.  (Those are the things planner.c deals with.)
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -160,7 +160,7 @@ query_planner(PlannerInfo *root,
 
 					exec_location = check_execute_on_functions((Node *) parse->targetList);
 
-					if (exec_location == PROEXECLOCATION_MASTER || exec_location == PROEXECLOCATION_INITPLAN)
+					if (exec_location == PROEXECLOCATION_COORDINATOR || exec_location == PROEXECLOCATION_INITPLAN)
 						CdbPathLocus_MakeEntry(&result_path->locus);
 					else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 						CdbPathLocus_MakeStrewn(&result_path->locus,
@@ -306,7 +306,7 @@ query_planner(PlannerInfo *root,
 	if (!final_rel || !final_rel->cheapest_total_path ||
 		final_rel->cheapest_total_path->param_info != NULL)
 		elog(ERROR, "failed to construct the join relation");
-	Insist(final_rel->cheapest_startup_path);
+	Assert(final_rel->cheapest_startup_path);
 
 	return final_rel;
 }

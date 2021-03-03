@@ -17,6 +17,7 @@
 #define GPDXL_CGPDBAttOptCol_H
 
 #include "gpos/common/CRefCount.h"
+
 #include "gpopt/translate/CGPDBAttInfo.h"
 #include "gpopt/translate/COptColInfo.h"
 
@@ -41,20 +42,19 @@ private:
 	// optimizer col info
 	COptColInfo *m_opt_col_info;
 
-	// copy c'tor
-	CGPDBAttOptCol(const CGPDBAttOptCol &);
-
 public:
+	CGPDBAttOptCol(const CGPDBAttOptCol &) = delete;
+
 	// ctor
 	CGPDBAttOptCol(CGPDBAttInfo *gpdb_att_info, COptColInfo *opt_col_info)
 		: m_gpdb_att_info(gpdb_att_info), m_opt_col_info(opt_col_info)
 	{
-		GPOS_ASSERT(NULL != m_gpdb_att_info);
-		GPOS_ASSERT(NULL != m_opt_col_info);
+		GPOS_ASSERT(nullptr != m_gpdb_att_info);
+		GPOS_ASSERT(nullptr != m_opt_col_info);
 	}
 
 	// d'tor
-	virtual ~CGPDBAttOptCol()
+	~CGPDBAttOptCol() override
 	{
 		m_gpdb_att_info->Release();
 		m_opt_col_info->Release();

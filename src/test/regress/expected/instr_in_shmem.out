@@ -43,7 +43,7 @@ CREATE EXTERNAL WEB TABLE __gp_masterid
 (
     masterid    int
 )
-EXECUTE E'echo $GP_SEGMENT_ID' ON MASTER FORMAT 'TEXT';
+EXECUTE E'echo $GP_SEGMENT_ID' ON COORDINATOR FORMAT 'TEXT';
 GRANT SELECT ON TABLE __gp_masterid TO public;
 CREATE FUNCTION gp_instrument_shmem_summary_f()
 RETURNS SETOF RECORD

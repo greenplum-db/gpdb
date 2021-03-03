@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarBitmapIndexProbe.cpp
@@ -15,14 +15,14 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarBitmapIndexProbe.h"
+
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/metadata/CIndexDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CScalarBitmapIndexProbe.h"
 #include "gpopt/xforms/CXform.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
@@ -41,9 +41,9 @@ CScalarBitmapIndexProbe::CScalarBitmapIndexProbe(CMemoryPool *mp,
 												 IMDId *pmdidBitmapType)
 	: CScalar(mp), m_pindexdesc(pindexdesc), m_pmdidBitmapType(pmdidBitmapType)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pindexdesc);
-	GPOS_ASSERT(NULL != pmdidBitmapType);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pindexdesc);
+	GPOS_ASSERT(nullptr != pmdidBitmapType);
 }
 
 //---------------------------------------------------------------------------

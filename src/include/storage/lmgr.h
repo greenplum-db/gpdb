@@ -5,7 +5,7 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -116,6 +116,7 @@ extern const char *GetLockNameFromTagType(uint16 locktag_type);
 extern bool LockTagIsTemp(const LOCKTAG *tag);
 
 extern bool CondUpgradeRelLock(Oid relid);
+extern int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded);
 
 extern void GxactLockTableInsert(DistributedTransactionId xid);
 extern void GxactLockTableWait(DistributedTransactionId xid);

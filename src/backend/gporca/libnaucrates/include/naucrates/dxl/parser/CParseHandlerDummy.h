@@ -12,9 +12,9 @@
 #ifndef GPDXL_CParseHandlerDummy_H
 #define GPDXL_CParseHandlerDummy_H
 
-#include "gpos/base.h"
-
 #include <xercesc/sax2/DefaultHandler.hpp>
+
+#include "gpos/base.h"
 
 namespace gpdxl
 {
@@ -43,7 +43,7 @@ public:
 	explicit CParseHandlerDummy(CDXLMemoryManager *dxl_memory_manager);
 
 	// process a parsing error
-	void error(const SAXParseException &sax_parse_ex);
+	void error(const SAXParseException &sax_parse_ex) override;
 };
 }  // namespace gpdxl
 

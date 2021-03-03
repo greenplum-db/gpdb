@@ -166,7 +166,7 @@
               output format because this is the only output format where multiple processes
               can write their data at the same time.</pd>
             <pd><note>Parallel dumps using <codeph>pg_dump</codeph> are parallelized only
-              on the query dispatcher (master) node, not across the query executor
+              on the query dispatcher (coordinator) node, not across the query executor
               (segment) nodes as is the case when you use <codeph>gpbackup</codeph>.
               </note></pd>
             <pd><codeph>pg_dump</codeph> will open <varname>njobs</varname> + 1 connections to
@@ -175,11 +175,11 @@
               accommodate all connections.</pd>
             <pd>Requesting exclusive locks on database objects while running a parallel dump
               could cause the dump to fail. The reason is that the <codeph>pg_dump</codeph>
-              master process requests shared locks on the objects that the worker processes are
+              coordinator process requests shared locks on the objects that the worker processes are
               going to dump later in order to make sure that nobody deletes them and makes them
               go away while the dump is running. If another client then requests an exclusive
               lock on a table, that lock will not be granted but will be queued waiting for the
-              shared lock of the master process to be released. Consequently, any other access
+              shared lock of the coordinator process to be released. Consequently, any other access
               to the table will not be granted either and will queue after the exclusive lock
               request. This includes the worker process trying to dump the table. Without any
               precautions this would be a classic deadlock situation. To detect this conflict,
@@ -192,12 +192,12 @@
               snapshots, a feature that was introduced in Greenplum Database 6.0. With this
               feature, database clients can ensure they see the same data set even though they
               use different connections. <codeph>pg_dump -j</codeph> uses multiple database
-              connections; it connects to the database once with the master process and once
+              connections; it connects to the database once with the coordinator process and once
               again for each worker job. Without the synchronized snapshot feature, the
               different worker jobs wouldn't be guaranteed to see the same data in each
               connection, which could lead to an inconsistent backup.</pd>
             <pd>If you want to run a parallel dump of a pre-6.0 server, you need to make sure
-              that the database content doesn't change from between the time the master connects
+              that the database content doesn't change from between the time the coordinator connects
               to the database until the last worker job has connected to the database. The
               easiest way to do this is to halt any data modifying processes (DDL and DML)
               accessing the database before starting the backup. You also need to specify the
@@ -518,13 +518,13 @@
           </plentry>
           <plentry>
             <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
-            <pd>The host name of the machine on which the Greenplum Database master database server
+            <pd>The host name of the machine on which the Greenplum Database coordinator database server
               is running. If not specified, reads from the environment variable
                 <codeph>PGHOST</codeph> or defaults to localhost.</pd>
           </plentry>
           <plentry>
             <pt>-p <varname>port</varname> | --port=<varname>port</varname></pt>
-            <pd>The TCP port on which the Greenplum Database master database server is listening for
+            <pd>The TCP port on which the Greenplum Database coordinator database server is listening for
               connections. If not specified, reads from the environment variable
                 <codeph>PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>

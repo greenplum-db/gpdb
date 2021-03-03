@@ -10,9 +10,9 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
 
@@ -31,7 +31,7 @@ CParseHandlerMetadataObject::CParseHandlerMetadataObject(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_imd_obj(NULL)
+	  m_imd_obj(nullptr)
 {
 }
 

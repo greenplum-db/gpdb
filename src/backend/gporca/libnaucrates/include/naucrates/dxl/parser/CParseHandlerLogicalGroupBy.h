@@ -13,9 +13,10 @@
 #define GPDXL_CParseHandlerLogicalGroupBy_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
+
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 
 namespace gpdxl
@@ -35,25 +36,24 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerLogicalGroupBy : public CParseHandlerLogicalOp
 {
 private:
-	// private copy ctor
-	CParseHandlerLogicalGroupBy(const CParseHandlerLogicalGroupBy &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerLogicalGroupBy(const CParseHandlerLogicalGroupBy &) = delete;
+
 	// ctor/dtor
 	CParseHandlerLogicalGroupBy(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,

@@ -724,6 +724,8 @@ CREATE INDEX t1_ab_idx on t1 ((a || b));
 CREATE TEMP TABLE t2 (ab text primary key);
 INSERT INTO t1 VALUES ('a', 'b'), ('x', 'y');
 INSERT INTO t2 VALUES ('ab'), ('xy');
+ANALYZE t1;
+ANALYZE t2;
 set enable_seqscan = off;
 set enable_indexscan = on;
 set enable_bitmapscan = off;

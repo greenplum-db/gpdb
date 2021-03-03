@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
+
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
@@ -53,7 +54,7 @@ CParseHandlerLogicalOp::StartElement(const XMLCh *const element_uri,
 		CParseHandlerFactory::GetParseHandler(m_mp, element_local_name,
 											  m_parse_handler_mgr, this);
 
-	GPOS_ASSERT(NULL != logical_op_parse_handler);
+	GPOS_ASSERT(nullptr != logical_op_parse_handler);
 
 	// activate the parse handler
 	m_parse_handler_mgr->ReplaceHandler(logical_op_parse_handler,

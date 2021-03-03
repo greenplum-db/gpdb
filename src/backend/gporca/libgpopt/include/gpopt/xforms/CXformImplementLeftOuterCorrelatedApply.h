@@ -13,6 +13,7 @@
 #define GPOPT_CXformImplementLeftOuterCorrelatedApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
 #include "gpopt/operators/CPhysicalCorrelatedLeftOuterNLJoin.h"
 #include "gpopt/xforms/CXformImplementCorrelatedApply.h"
@@ -35,11 +36,10 @@ class CXformImplementLeftOuterCorrelatedApply
 											CPhysicalCorrelatedLeftOuterNLJoin>
 {
 private:
-	// private copy ctor
-	CXformImplementLeftOuterCorrelatedApply(
-		const CXformImplementLeftOuterCorrelatedApply &);
-
 public:
+	CXformImplementLeftOuterCorrelatedApply(
+		const CXformImplementLeftOuterCorrelatedApply &) = delete;
+
 	// ctor
 	explicit CXformImplementLeftOuterCorrelatedApply(CMemoryPool *mp)
 		: CXformImplementCorrelatedApply<CLogicalLeftOuterCorrelatedApply,
@@ -48,19 +48,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformImplementLeftOuterCorrelatedApply()
-	{
-	}
+	~CXformImplementLeftOuterCorrelatedApply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementLeftOuterCorrelatedApply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementLeftOuterCorrelatedApply";
 	}

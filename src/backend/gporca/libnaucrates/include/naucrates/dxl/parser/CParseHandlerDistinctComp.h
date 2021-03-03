@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerDistinctComp_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl
@@ -38,25 +38,24 @@ private:
 	// the distinct comparison operator
 	CDXLScalarDistinctComp *m_dxl_op;
 
-	// private copy ctor
-	CParseHandlerDistinctComp(const CParseHandlerDistinctComp &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerDistinctComp(const CParseHandlerDistinctComp &) = delete;
+
 	// ctor/dtor
 	CParseHandlerDistinctComp(CMemoryPool *mp,
 							  CParseHandlerManager *parse_handler_mgr,

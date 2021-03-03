@@ -1,8 +1,9 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
+
+#include "gpopt/operators/CHashedDistributions.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CHashedDistributions.h"
 
 using namespace gpopt;
 CHashedDistributions::CHashedDistributions(CMemoryPool *mp,

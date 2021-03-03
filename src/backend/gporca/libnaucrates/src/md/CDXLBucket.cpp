@@ -10,11 +10,12 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/CDXLBucket.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/CDXLBucket.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -37,8 +38,8 @@ CDXLBucket::CDXLBucket(CDXLDatum *dxl_datum_lower, CDXLDatum *dxl_datum_upper,
 	  m_frequency(frequency),
 	  m_distinct(distinct)
 {
-	GPOS_ASSERT(NULL != dxl_datum_lower);
-	GPOS_ASSERT(NULL != dxl_datum_upper);
+	GPOS_ASSERT(nullptr != dxl_datum_lower);
+	GPOS_ASSERT(nullptr != dxl_datum_upper);
 	GPOS_ASSERT(m_frequency >= 0.0 && m_frequency <= 1.0);
 	GPOS_ASSERT(m_distinct >= 0);
 }
@@ -134,6 +135,7 @@ CDXLBucket::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatsDistinct), m_distinct);
 
+	xml_serializer->SetFullPrecision(true);
 	SerializeBoundaryValue(
 		xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketLowerBound),
@@ -142,6 +144,7 @@ CDXLBucket::Serialize(CXMLSerializer *xml_serializer) const
 		xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketUpperBound),
 		m_upper_bound_dxl_datum, m_is_upper_closed);
+	xml_serializer->SetFullPrecision(false);
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

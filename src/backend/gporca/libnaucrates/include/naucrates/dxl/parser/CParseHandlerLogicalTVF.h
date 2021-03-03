@@ -14,6 +14,7 @@
 #define GPDXL_CParseHandlerLogicalTVF_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 namespace gpdxl
@@ -42,25 +43,24 @@ private:
 	// function name
 	CMDName *m_mdname;
 
-	// private copy ctor
-	CParseHandlerLogicalTVF(const CParseHandlerLogicalTVF &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerLogicalTVF(const CParseHandlerLogicalTVF &) = delete;
+
 	// ctor
 	CParseHandlerLogicalTVF(CMemoryPool *mp,
 							CParseHandlerManager *parse_handler_mgr,

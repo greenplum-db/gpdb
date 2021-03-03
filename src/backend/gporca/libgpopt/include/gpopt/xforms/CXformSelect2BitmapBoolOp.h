@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformSelect2BitmapBoolOp.h
@@ -28,38 +28,35 @@ namespace gpopt
 class CXformSelect2BitmapBoolOp : public CXformExploration
 {
 private:
-	// disable copy ctor
-	CXformSelect2BitmapBoolOp(const CXformSelect2BitmapBoolOp &);
-
 public:
+	CXformSelect2BitmapBoolOp(const CXformSelect2BitmapBoolOp &) = delete;
+
 	// ctor
 	explicit CXformSelect2BitmapBoolOp(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformSelect2BitmapBoolOp()
-	{
-	}
+	~CXformSelect2BitmapBoolOp() override = default;
 
 	// identifier
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSelect2BitmapBoolOp;
 	}
 
 	// xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSelect2BitmapBoolOp";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 };	// class CXformSelect2BitmapBoolOp
 }  // namespace gpopt

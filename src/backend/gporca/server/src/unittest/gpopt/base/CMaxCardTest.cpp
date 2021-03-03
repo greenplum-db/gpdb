@@ -9,11 +9,13 @@
 //		Tests for max card computation
 //---------------------------------------------------------------------------
 
+#include "unittest/gpopt/base/CMaxCardTest.h"
+
 #include "gpos/base.h"
 #include "gpos/test/CUnittest.h"
 
 #include "gpopt/base/CMaxCard.h"
-#include "unittest/gpopt/base/CMaxCardTest.h"
+
 #include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpopt;

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CJoinOrderGreedy.h
@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpos/io/IOstream.h"
+
 #include "gpopt/xforms/CJoinOrder.h"
 
 namespace gpopt
@@ -42,7 +43,7 @@ public:
 					 CExpressionArray *pdrgpexprConjuncts);
 
 	// dtor
-	virtual ~CJoinOrderGreedy();
+	~CJoinOrderGreedy() override;
 
 	// main handler
 	virtual CExpression *PexprExpand();

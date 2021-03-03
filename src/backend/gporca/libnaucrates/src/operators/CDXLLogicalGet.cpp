@@ -11,10 +11,9 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-
 #include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpos;
@@ -153,8 +152,8 @@ CDXLLogicalGet::AssertValid(const CDXLNode *,  //dxlnode
 ) const
 {
 	// assert validity of table descriptor
-	GPOS_ASSERT(NULL != m_dxl_table_descr);
-	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_table_descr);
+	GPOS_ASSERT(nullptr != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

@@ -497,31 +497,31 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 explain select count(*) from mpp7638 where a =1;
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=8903.58..8903.59 rows=1 width=8)
-   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=8903.55..8903.58 rows=1 width=8)
-         ->  Partial Aggregate  (cost=8903.55..8903.56 rows=1 width=8)
-               ->  Append  (cost=0.00..8901.95 rows=640 width=0)
-                     ->  Seq Scan on mpp7638_1_prt_1  (cost=0.00..988.75 rows=72 width=0)
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Result  (cost=0.00..431.00 rows=1 width=1)
+               ->  Append  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on mpp7638_1_prt_1  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_2  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_2  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_3  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_3  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_4  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_4  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_5  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_5  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_6  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_6  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_7  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_7  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_8  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_8  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..988.75 rows=72 width=0)
+                     ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (23 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
@@ -721,6 +721,7 @@ CREATE TABLE table_a (a0 int, a1 int, a2 int, a3 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a0' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO table_a (a3, a2, a0, a1) VALUES (nextval('s'), nextval('s'), nextval('s'), nextval('s'));
+ANALYZE table_a;
 insert into table_a (a3,a2,a0,a1) values (1,2,3,4);
 set test_print_direct_dispatch_info=on;
 --Check to see distributed vs distributed randomly

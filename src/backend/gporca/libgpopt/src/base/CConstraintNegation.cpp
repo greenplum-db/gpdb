@@ -9,10 +9,11 @@
 //		Implementation of negation constraints
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CConstraintNegation.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CConstraintInterval.h"
-#include "gpopt/base/CConstraintNegation.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 using namespace gpopt;
@@ -26,11 +27,10 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CConstraintNegation::CConstraintNegation(CMemoryPool *mp, CConstraint *pcnstr)
-	: CConstraint(mp), m_pcnstr(pcnstr)
+	: CConstraint(mp, pcnstr->PcrsUsed()), m_pcnstr(pcnstr)
 {
-	GPOS_ASSERT(NULL != pcnstr);
+	GPOS_ASSERT(nullptr != pcnstr);
 
-	m_pcrsUsed = pcnstr->PcrsUsed();
 	m_pcrsUsed->AddRef();
 }
 
@@ -45,7 +45,6 @@ CConstraintNegation::CConstraintNegation(CMemoryPool *mp, CConstraint *pcnstr)
 CConstraintNegation::~CConstraintNegation()
 {
 	m_pcnstr->Release();
-	m_pcrsUsed->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -86,7 +85,7 @@ CConstraintNegation::Pcnstr(CMemoryPool *mp, const CColRef *colref)
 		// recursing down the constraint will give NOT ({"a" (0), ranges: (-inf, inf) })
 		// but that is equivalent to (NOT a) which is not the case.
 
-		return NULL;
+		return nullptr;
 	}
 
 	return GPOS_NEW(mp) CConstraintNegation(mp, m_pcnstr->Pcnstr(mp, colref));
@@ -105,7 +104,7 @@ CConstraintNegation::Pcnstr(CMemoryPool *mp, CColRefSet *pcrs)
 {
 	if (!m_pcrsUsed->Equals(pcrs))
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return GPOS_NEW(mp) CConstraintNegation(mp, m_pcnstr->Pcnstr(mp, pcrs));
@@ -140,7 +139,7 @@ CConstraintNegation::PcnstrRemapForColumn(CMemoryPool *mp,
 CExpression *
 CConstraintNegation::PexprScalar(CMemoryPool *mp)
 {
-	if (NULL == m_pexprScalar)
+	if (nullptr == m_pexprScalar)
 	{
 		EConstraintType ect = m_pcnstr->Ect();
 		if (EctNegation == ect)

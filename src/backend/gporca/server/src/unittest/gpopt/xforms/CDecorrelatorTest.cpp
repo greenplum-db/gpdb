@@ -8,18 +8,19 @@
 //	@doc:
 //		Test for decorrelation
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/ops.h"
 #include "gpopt/xforms/CDecorrelator.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 
@@ -71,7 +72,7 @@ CDecorrelatorTest::EresUnittest_Decorrelate()
 	for (ULONG ulCase = 0; ulCase < GPOS_ARRAY_SIZE(rgpf); ulCase++)
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// generate expression
@@ -83,7 +84,7 @@ CDecorrelatorTest::EresUnittest_Decorrelate()
 		GPOS_TRACE(str.GetBuffer());
 		str.Reset();
 
-		CExpression *pexprResult = NULL;
+		CExpression *pexprResult = nullptr;
 		CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 		CColRefSet *outerRefs = pexpr->DeriveOuterReferences();
 #ifdef GPOS_DEBUG

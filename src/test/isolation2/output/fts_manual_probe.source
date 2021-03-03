@@ -20,9 +20,6 @@
 -- NOTE: you must add '--load-extension=gp_inject_fault' to the commandline
 --   for a manual test.
 
-include: helpers/server_helpers.sql;
-CREATE
-
 select gp_inject_fault('all', 'reset', 1) from master();
  gp_inject_fault 
 -----------------
@@ -32,8 +29,8 @@ select gp_inject_fault('all', 'reset', 1) from master();
 create temp table fts_probe_results(seq serial, seq_name varchar(20), current_started int, expected_start_delta int, current_done int, expected_done_delta int);
 CREATE
 
--- create extension only on master since the fts process is only on master
-create or replace function fts_probe_stats() returns table ( start_count int, done_count int, status_version int2 ) as '/@abs_builddir@/../regress/regress.so', 'gp_fts_probe_stats' language c execute on master reads sql data;
+-- create extension only on coordinator since the fts process is only on master
+create or replace function fts_probe_stats() returns table ( start_count int, done_count int, status_version int2 ) as '/@abs_builddir@/../regress/regress.so', 'gp_fts_probe_stats' language c execute on coordinator reads sql data;
 CREATE
 
 create or replace view get_raw_stats as select seq, seq_name, current_started, expected_start_delta, current_started - min(current_started) over () as actual_start_delta, -- actual_start_delta = current_started - initial_started current_done, expected_done_delta, current_done - min(current_done) over () as actual_done_delta -- actual_done_delta = current_done - initial_done from fts_probe_results order by seq;

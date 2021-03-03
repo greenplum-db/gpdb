@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2015 Pivotal Inc.
+//	Copyright 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CWindowPreprocessor.cpp
@@ -8,6 +8,8 @@
 //	@doc:
 //		Preprocessing routines of window functions
 //---------------------------------------------------------------------------
+
+#include "gpopt/operators/CWindowPreprocessor.h"
 
 #include "gpos/base.h"
 
@@ -21,7 +23,6 @@
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
-#include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -49,11 +50,11 @@ CWindowPreprocessor::SplitPrjList(
 		ppdrgpwfOther  // output: array of frame specs of window functions used in Others list
 )
 {
-	GPOS_ASSERT(NULL != pexprSeqPrj);
-	GPOS_ASSERT(NULL != ppdrgpexprDistinctAggsPrEl);
-	GPOS_ASSERT(NULL != ppdrgpexprOtherPrEl);
-	GPOS_ASSERT(NULL != ppdrgposOther);
-	GPOS_ASSERT(NULL != ppdrgpwfOther);
+	GPOS_ASSERT(nullptr != pexprSeqPrj);
+	GPOS_ASSERT(nullptr != ppdrgpexprDistinctAggsPrEl);
+	GPOS_ASSERT(nullptr != ppdrgpexprOtherPrEl);
+	GPOS_ASSERT(nullptr != ppdrgposOther);
+	GPOS_ASSERT(nullptr != ppdrgpwfOther);
 
 	CLogicalSequenceProject *popSeqPrj =
 		CLogicalSequenceProject::PopConvert(pexprSeqPrj->Pop());
@@ -140,15 +141,15 @@ CWindowPreprocessor::SplitSeqPrj(
 		ppexprOutputSeqPrj	// output: SeqPrj expression containing all remaining window functions
 )
 {
-	GPOS_ASSERT(NULL != pexprSeqPrj);
-	GPOS_ASSERT(NULL != ppexprGbAgg);
-	GPOS_ASSERT(NULL != ppexprOutputSeqPrj);
+	GPOS_ASSERT(nullptr != pexprSeqPrj);
+	GPOS_ASSERT(nullptr != ppexprGbAgg);
+	GPOS_ASSERT(nullptr != ppexprOutputSeqPrj);
 
 	// split project elements between Distinct Aggs list, and Others list
-	CExpressionArray *pdrgpexprDistinctAggsPrEl = NULL;
-	CExpressionArray *pdrgpexprOtherPrEl = NULL;
-	COrderSpecArray *pdrgposOther = NULL;
-	CWindowFrameArray *pdrgpwfOther = NULL;
+	CExpressionArray *pdrgpexprDistinctAggsPrEl = nullptr;
+	CExpressionArray *pdrgpexprOtherPrEl = nullptr;
+	COrderSpecArray *pdrgposOther = nullptr;
+	CWindowFrameArray *pdrgpwfOther = nullptr;
 	SplitPrjList(mp, pexprSeqPrj, &pdrgpexprDistinctAggsPrEl,
 				 &pdrgpexprOtherPrEl, &pdrgposOther, &pdrgpwfOther);
 
@@ -157,7 +158,7 @@ CWindowPreprocessor::SplitSeqPrj(
 	CLogicalSequenceProject *popSeqPrj =
 		CLogicalSequenceProject::PopConvert(pexprSeqPrj->Pop());
 	CDistributionSpec *pds = popSeqPrj->Pds();
-	CColRefArray *pdrgpcrGrpCols = NULL;
+	CColRefArray *pdrgpcrGrpCols = nullptr;
 	if (CDistributionSpec::EdtHashed == pds->Edt())
 	{
 		CColRefSet *pcrs = CUtils::PcrsExtractColumns(
@@ -220,11 +221,11 @@ CWindowPreprocessor::CreateCTE(CMemoryPool *mp, CExpression *pexprSeqPrj,
 							   CExpression **ppexprFirstConsumer,
 							   CExpression **ppexprSecondConsumer)
 {
-	GPOS_ASSERT(NULL != pexprSeqPrj);
+	GPOS_ASSERT(nullptr != pexprSeqPrj);
 	GPOS_ASSERT(COperator::EopLogicalSequenceProject ==
 				pexprSeqPrj->Pop()->Eopid());
-	GPOS_ASSERT(NULL != ppexprFirstConsumer);
-	GPOS_ASSERT(NULL != ppexprSecondConsumer);
+	GPOS_ASSERT(nullptr != ppexprFirstConsumer);
+	GPOS_ASSERT(nullptr != ppexprSecondConsumer);
 
 	CExpression *pexprChild = (*pexprSeqPrj)[0];
 	CColRefSet *pcrsChildOutput = pexprChild->DeriveOutputColumns();
@@ -265,7 +266,7 @@ CWindowPreprocessor::CreateCTE(CMemoryPool *mp, CExpression *pexprSeqPrj,
 CColRefArray *
 CWindowPreprocessor::PdrgpcrGrpCols(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	COperator *pop = pexpr->Pop();
 
@@ -285,7 +286,7 @@ CWindowPreprocessor::PdrgpcrGrpCols(CExpression *pexpr)
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -309,20 +310,20 @@ CWindowPreprocessor::PdrgpcrGrpCols(CExpression *pexpr)
 CExpression *
 CWindowPreprocessor::PexprSeqPrj2Join(CMemoryPool *mp, CExpression *pexprSeqPrj)
 {
-	GPOS_ASSERT(NULL != pexprSeqPrj);
+	GPOS_ASSERT(nullptr != pexprSeqPrj);
 	GPOS_ASSERT(COperator::EopLogicalSequenceProject ==
 				pexprSeqPrj->Pop()->Eopid());
 	GPOS_ASSERT(0 < (*pexprSeqPrj)[1]->DeriveTotalDistinctAggs());
 
 	// split SeqPrj expression into a GbAgg expression (for distinct Aggs), and
 	// another SeqPrj expression (for remaining window functions)
-	CExpression *pexprGbAgg = NULL;
-	CExpression *pexprWindow = NULL;
+	CExpression *pexprGbAgg = nullptr;
+	CExpression *pexprWindow = nullptr;
 	SplitSeqPrj(mp, pexprSeqPrj, &pexprGbAgg, &pexprWindow);
 
 	// create CTE using SeqPrj child expression
-	CExpression *pexprGbAggConsumer = NULL;
-	CExpression *pexprWindowConsumer = NULL;
+	CExpression *pexprGbAggConsumer = nullptr;
+	CExpression *pexprWindowConsumer = nullptr;
 	CreateCTE(mp, pexprSeqPrj, &pexprGbAggConsumer, &pexprWindowConsumer);
 
 	// extract output columns of SeqPrj child expression
@@ -357,7 +358,7 @@ CWindowPreprocessor::PexprSeqPrj2Join(CMemoryPool *mp, CExpression *pexprSeqPrj)
 		CXformUtils::PexprGbAggOnCTEConsumer2Join(mp, pexprGbAggWithConsumer);
 	pexprGbAggWithConsumer->Release();
 
-	CExpression *pexprWindowFinal = NULL;
+	CExpression *pexprWindowFinal = nullptr;
 	if (COperator::EopLogicalSequenceProject == pexprWindow->Pop()->Eopid())
 	{
 		// create a new SeqPrj expression for remaining window functions,
@@ -378,9 +379,9 @@ CWindowPreprocessor::PexprSeqPrj2Join(CMemoryPool *mp, CExpression *pexprSeqPrj)
 	CColRefArray *pdrgpcrGrpCols = PdrgpcrGrpCols(pexprJoinDQAs);
 
 	// create final join condition
-	CExpression *pexprJoinCondition = NULL;
+	CExpression *pexprJoinCondition = nullptr;
 
-	if (NULL != pdrgpcrGrpCols && 0 < pdrgpcrGrpCols->Size())
+	if (nullptr != pdrgpcrGrpCols && 0 < pdrgpcrGrpCols->Size())
 	{
 		// extract PARTITION BY columns from original SeqPrj expression
 		CLogicalSequenceProject *popSeqPrj =
@@ -429,8 +430,8 @@ CWindowPreprocessor::PexprPreprocess(CMemoryPool *mp, CExpression *pexpr)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	COperator *pop = pexpr->Pop();
 	if (COperator::EopLogicalSequenceProject == pop->Eopid() &&

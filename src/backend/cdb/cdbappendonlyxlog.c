@@ -3,7 +3,7 @@
  * cdbappendonlyxlog.c
  *
  * Portions Copyright (c) 2009-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -140,6 +140,8 @@ ao_truncate_replay(XLogReaderState *record)
 		snprintf(path, MAXPGPATH, "%s/%u", dbPath, xlrec->target.node.relNode);
 	else
 		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, xlrec->target.node.relNode, xlrec->target.segment_filenum);
+	pfree(dbPath);
+	dbPath = NULL;
 
 	file = PathNameOpenFile(path, O_RDWR | PG_BINARY);
 	if (file < 0)

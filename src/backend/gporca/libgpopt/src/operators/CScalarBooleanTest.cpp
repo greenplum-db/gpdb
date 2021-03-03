@@ -9,15 +9,14 @@
 //		Implementation of scalar boolean test operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarBooleanTest.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/operators/CScalarBooleanTest.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;
@@ -123,7 +122,7 @@ CScalarBooleanTest::MdidType() const
 CScalar::EBoolEvalResult
 CScalarBooleanTest::Eber(ULongPtrArray *pdrgpulChildren) const
 {
-	GPOS_ASSERT(NULL != pdrgpulChildren);
+	GPOS_ASSERT(nullptr != pdrgpulChildren);
 	GPOS_ASSERT(1 == pdrgpulChildren->Size());
 
 	EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[0]);

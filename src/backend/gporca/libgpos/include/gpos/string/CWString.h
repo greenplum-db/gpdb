@@ -44,12 +44,10 @@ public:
 	CWString(ULONG length);
 
 	// dtor
-	virtual ~CWString()
-	{
-	}
+	~CWString() override = default;
 
 	// returns the wide character buffer storing the string
-	const WCHAR *GetBuffer() const;
+	const WCHAR *GetBuffer() const override;
 
 	// appends a string
 	void Append(const CWStringBase *str);

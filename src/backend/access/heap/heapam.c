@@ -73,7 +73,6 @@
 #include "catalog/oid_dispatch.h"
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
-#include "utils/visibility_summary.h"
 #include "utils/faultinjector.h"
 
 
@@ -2490,27 +2489,6 @@ frozen_heap_insert(Relation relation, HeapTuple tup)
 }
 
 /*
- * heap_trace_current_tuple
- *
- * Log a line showing the current tuple MVCC information.
- */
-static void
-heap_trace_current_tuple(char *caller, HeapTuple tuple)
-{
-	TupleVisibilitySummary tupleVisibilitySummary;
-	char	   *summary;
-
-	GetTupleVisibilitySummary(tuple,
-							  &tupleVisibilitySummary);
-	summary = GetTupleVisibilitySummaryString(&tupleVisibilitySummary);
-
-	elog(LOG, "Current tuple for %s: %s",
-		 caller, summary);
-
-	pfree(summary);
-}
-
-/*
  * Given infomask/infomask2, compute the bits that must be saved in the
  * "infobits" field of xl_heap_delete, xl_heap_update, xl_heap_lock,
  * xl_heap_lock_updated WAL records.
@@ -3200,9 +3178,6 @@ l2:
 
 	if (result == TM_Invisible)
 	{
-		/* Trace current tuple information before we unlock the buffer */
-		heap_trace_current_tuple("heap_update", &oldtup);
-		
 		UnlockReleaseBuffer(buffer);
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -3411,11 +3386,6 @@ l2:
 		else
 			tmfd->cmax = InvalidCommandId;
 
-		if (simple)
-		{
-			/* GPDB: Trace current tuple information before we unlock the buffer */
-			heap_trace_current_tuple("heap_update", &oldtup);
-		}
 		UnlockReleaseBuffer(buffer);
 		if (have_tuple_lock)
 			UnlockTupleTuplock(relation, &(oldtup.t_self), *lockmode);

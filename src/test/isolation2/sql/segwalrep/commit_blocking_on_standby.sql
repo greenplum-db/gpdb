@@ -8,7 +8,6 @@
 
 -- Check that are starting with a clean slate, standby must be in sync
 -- with master.
-include: helpers/server_helpers.sql;
 
 select application_name, state from pg_stat_replication;
 

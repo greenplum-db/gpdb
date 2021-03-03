@@ -93,7 +93,7 @@ public:
 				  CDXLNodeArray *dxlnodes);
 
 	// dtor
-	virtual ~CCTEListEntry()
+	~CCTEListEntry() override
 	{
 		m_cte_info->Release();
 	};

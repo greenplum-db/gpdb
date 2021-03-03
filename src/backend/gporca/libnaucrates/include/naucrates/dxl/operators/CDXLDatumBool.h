@@ -19,6 +19,7 @@
 #define GPDXL_CDXLDatumBool_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
@@ -42,24 +43,21 @@ private:
 	// boolean value
 	BOOL m_value;
 
-	// private copy ctor
-	CDXLDatumBool(const CDXLDatumBool &);
-
 public:
+	CDXLDatumBool(const CDXLDatumBool &) = delete;
+
 	// ctor
 	CDXLDatumBool(CMemoryPool *mp, IMDId *mdid_type, BOOL is_null, BOOL value);
 
 	// dtor
-	virtual ~CDXLDatumBool()
-	{
-	}
+	~CDXLDatumBool() override = default;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumBool;
 	}
@@ -75,7 +73,7 @@ public:
 	static CDXLDatumBool *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::CDXLDatum::EdxldatumBool ==
 					dxl_datum->GetDatumType());
 

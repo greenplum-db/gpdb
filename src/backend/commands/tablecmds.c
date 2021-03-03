@@ -4,7 +4,7 @@
  *	  Commands for creating and altering table structures and settings
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -38,7 +38,7 @@
 #include "catalog/objectaccess.h"
 #include "catalog/partition.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_compression.h"
@@ -2159,8 +2159,6 @@ ExecuteTruncateGuts(List *explicit_rels, List *relids, List *relids_logged,
 	foreach(cell, rels)
 	{
 		Relation	rel = (Relation) lfirst(cell);
-		bool inSubTransaction = mySubid != TopSubTransactionId;
-		bool createdInThisTransactionScope = rel->rd_createSubid != InvalidSubTransactionId;
 
 		/* Skip partitioned tables as there is nothing to do */
 		if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
@@ -2172,20 +2170,9 @@ ExecuteTruncateGuts(List *explicit_rels, List *relids, List *relids_logged,
 		 * a new relfilenode in the current (sub)transaction, then we can just
 		 * truncate it in-place, because a rollback would cause the whole
 		 * table or the current physical file to be thrown away anyway.
-		 *
-		 * GPDB_11_MERGE_FIXME: Remove this guc and related code once we get
-		 * plpy.commit().
-		 *
-		 * GPDB: Using GUC dev_opt_unsafe_truncate_in_subtransaction can force
-		 * unsafe truncation only if
-
-		 *   - inside sub-transaction and not in top transaction
-		 *   - table was created somewhere within this transaction scope
 		 */
 		if (rel->rd_createSubid == mySubid ||
-			rel->rd_newRelfilenodeSubid == mySubid ||
-			(dev_opt_unsafe_truncate_in_subtransaction &&
-			 inSubTransaction && createdInThisTransactionScope))
+			rel->rd_newRelfilenodeSubid == mySubid)
 		{
 			/* Immediate, non-rollbackable truncation is OK */
 			heap_truncate_one_rel(rel);
@@ -4855,7 +4842,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			pass = AT_PASS_MISC;
 			break;
 		case AT_ExpandTable:
-			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
+			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
 
 			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
 			if (!recursing)
@@ -16378,7 +16365,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 
-		collect_tabstat(cmdType, relationOid, queryDesc->es_processed, false);
+		auto_stats(cmdType, relationOid, queryDesc->es_processed, false);
 
 		FreeQueryDesc(queryDesc);
 
@@ -16908,7 +16895,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ExecutorEnd(queryDesc);
 
 			if (Gp_role == GP_ROLE_DISPATCH)
-				collect_tabstat(cmdType, relationOid, queryDesc->es_processed,
+				auto_stats(cmdType, relationOid, queryDesc->es_processed,
 								false);
 
 			FreeQueryDesc(queryDesc);
@@ -17039,7 +17026,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			relationRelation = table_open(RelationRelationId, RowExclusiveLock);
 			tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(tarrelid));
 
-			Insist(HeapTupleIsValid(tuple));
+			Assert(HeapTupleIsValid(tuple));
 			newOptsTuple = heap_modify_tuple(tuple, RelationGetDescr(relationRelation),
 											 repl_val, repl_null, repl_repl);
 

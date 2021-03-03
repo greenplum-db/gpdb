@@ -15,6 +15,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
+
 #include "naucrates/md/CDXLStatsDerivedRelation.h"
 
 namespace gpdxl
@@ -129,7 +130,6 @@ enum Edxlopid
 	EdxlopPhysicalProjection,
 	EdxlopPhysicalTableScan,
 	EdxlopPhysicalBitmapTableScan,
-	EdxlopPhysicalDynamicBitmapTableScan,
 	EdxlopPhysicalExternalScan,
 	EdxlopPhysicalIndexScan,
 	EdxlopPhysicalIndexOnlyScan,
@@ -150,8 +150,6 @@ enum Edxlopid
 	EdxlopPhysicalAppend,
 	EdxlopPhysicalMaterialize,
 	EdxlopPhysicalSequence,
-	EdxlopPhysicalDynamicTableScan,
-	EdxlopPhysicalDynamicIndexScan,
 	EdxlopPhysicalPartitionSelector,
 	EdxlopPhysicalTVF,
 	EdxlopPhysicalWindow,
@@ -218,18 +216,17 @@ enum EdxlCoercionForm
 class CDXLOperator : public CRefCount
 {
 private:
-	// private copy constructor
-	CDXLOperator(const CDXLOperator &);
-
 protected:
 	// memory pool
 	CMemoryPool *m_mp;
 
 public:
+	CDXLOperator(const CDXLOperator &) = delete;
+
 	// ctor/dtor
 	explicit CDXLOperator(CMemoryPool *);
 
-	virtual ~CDXLOperator();
+	~CDXLOperator() override;
 
 	// ident accessors
 	virtual Edxlopid GetDXLOperator() const = 0;

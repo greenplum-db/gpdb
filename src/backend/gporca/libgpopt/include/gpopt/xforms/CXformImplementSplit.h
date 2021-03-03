@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementSplit_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,38 +30,35 @@ using namespace gpos;
 class CXformImplementSplit : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementSplit(const CXformImplementSplit &);
-
 public:
+	CXformImplementSplit(const CXformImplementSplit &) = delete;
+
 	// ctor
 	explicit CXformImplementSplit(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementSplit()
-	{
-	}
+	~CXformImplementSplit() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementSplit;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementSplit";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformImplementSplit
 }  // namespace gpopt

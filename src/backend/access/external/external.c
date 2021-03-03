@@ -3,7 +3,7 @@
  * external.c
  *	  routines for getting external info from external table fdw.
  *
- * Portions Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  * IDENTIFICATION
  *	    src/backend/access/external/external.c
@@ -279,22 +279,27 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("locationuris and command options conflict with each other")));
 
-	Insist(fmttype_is_custom(extentry->fmtcode) ||
-		   fmttype_is_csv(extentry->fmtcode) ||
-		   fmttype_is_text(extentry->fmtcode));
+	if (!fmttype_is_custom(extentry->fmtcode) &&
+		!fmttype_is_csv(extentry->fmtcode) &&
+		!fmttype_is_text(extentry->fmtcode))
+		elog(ERROR, "unsupported format type %d for external table", extentry->fmtcode);
 
 	if (!rejectlimit_found) {
 		/* mark that no SREH requested */
 		extentry->rejectlimit = -1;
 	}
 
-	if (rejectlimittype_found) {
-		Insist(extentry->rejectlimittype == 'r' || extentry->rejectlimittype == 'p');
-	} else {
-		extentry->rejectlimittype = -1;
+	if (rejectlimittype_found)
+	{
+		if (extentry->rejectlimittype != 'r' && extentry->rejectlimittype != 'p')
+			elog(ERROR, "unsupported reject limit type %c for external table",
+				 extentry->rejectlimittype);
 	}
+	else
+		extentry->rejectlimittype = -1;
 
-	Insist(PG_VALID_ENCODING(extentry->encoding));
+	if (!PG_VALID_ENCODING(extentry->encoding))
+		elog(ERROR, "invalid encoding found for external table");
 
 	extentry->options = entryOptions;
 
@@ -485,13 +490,13 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	else
 		uri = NULL;
 
-	/* get the ON clause information, and restrict 'ON MASTER' to custom
+	/* get the ON clause information, and restrict 'ON COORDINATOR' to custom
 	 * protocols only */
 	on_clause = (char *) strVal(linitial(ext->execlocations));
-	if ((strcmp(on_clause, "MASTER_ONLY") == 0)
+	if ((strcmp(on_clause, "COORDINATOR_ONLY") == 0)
 		&& using_location && (uri->protocol != URI_CUSTOM)) {
 		ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				errmsg("\'ON MASTER\' is not supported by this protocol yet")));
+				errmsg("\'ON COORDINATOR\' is not supported by this protocol yet")));
 	}
 
 	/* get the total valid primary segdb count */
@@ -656,7 +661,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 							   uri->protocol == URI_GPFDISTS ||
 							   uri->protocol == URI_CUSTOM))
 	{
-		if ((strcmp(on_clause, "MASTER_ONLY") == 0) && (uri->protocol == URI_CUSTOM))
+		if ((strcmp(on_clause, "COORDINATOR_ONLY") == 0) && (uri->protocol == URI_CUSTOM))
 		{
 			const char *uri_str = strVal(linitial(ext->urilocations));
 			segdb_file_map[0] = pstrdup(uri_str);
@@ -1001,7 +1006,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 				}
 			}
 		}
-		else if (strcmp(on_clause, "MASTER_ONLY") == 0)
+		else if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
 		{
 			/*
 			 * store the command in first array entry and indicate that it is

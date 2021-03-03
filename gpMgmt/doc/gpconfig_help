@@ -7,8 +7,9 @@ a Greenplum Database system.
 SYNOPSIS
 *****************************************************
 
-gpconfig -c <param_name> -v <value> [-m <master_value> | --masteronly]
-       | -r <param_name> [--masteronly]
+gpconfig -c <param_name> -v <value>
+       [-m <coordinator_value> | --masteronly | --coordinatoronly]
+       | -r <param_name> [--masteronly | --coordinatoronly]
        | -l 
    [--skipvalidation] [--verbose] [--debug]
 
@@ -22,13 +23,13 @@ DESCRIPTION
 *****************************************************
 
 The gpconfig utility allows you to set, unset, or view configuration 
-parameters from the postgresql.conf files of all instances (master, 
+parameters from the postgresql.conf files of all instances (coordinator, 
 segments, and mirrors) in your Greenplum Database system. When setting 
-a parameter, you can also specify a different value for the master if 
+a parameter, you can also specify a different value for the coordinator if 
 necessary. For example, parameters such as max_connections require 
-a different setting on the master than what is used for the segments. 
-If you want to set or unset a global or master only parameter, use 
-the --masteronly option.
+a different setting on the coordinator than what is used for the segments. 
+If you want to set or unset a global or coordinator only parameter, use 
+the --masteronly or --coordinatoronly option.
 
 gpconfig can only be used to manage certain parameters. For example, 
 you cannot use it to set parameters such as port, which is required 
@@ -55,7 +56,7 @@ To show the currently set values for a parameter across the system,
 use the -s option.
 
 gpconfig uses the following environment variables to connect to 
-the Greenplum Database master instance and obtain system 
+the Greenplum Database coordinator instance and obtain system 
 configuration information: 
   * PGHOST
   * PGPORT
@@ -78,20 +79,20 @@ setting to the bottom of the postgresql.conf files.
 
 The value to use for the configuration parameter you specified 
 with the -c option. By default, this value is applied to all 
-segments, their mirrors, the master, and the standby master.
+segments, their mirrors, the coordinator, and the standby coordinator.
 
 
--m | --mastervalue master_value
+-m | --mastervalue | --coordinatorvalue coordinator_value
 
-The master value to use for the configuration parameter you 
+The coordinator value to use for the configuration parameter you 
 specified with the -c option. If specified, this value only 
-applies to the master and standby master. The option can only 
+applies to the coordinator and standby coordinator. The option can only 
 be used with -v. 
 
 
---masteronly
+--masteronly | --coordinatoronly
 
-When specified, gpconfig only edits the master postgresql.conf file.
+When specified, gpconfig only edits the coordinator postgresql.conf file.
 
 
 -r | --remove <param_name>
@@ -108,7 +109,7 @@ Lists all configuration parameters supported by the gpconfig utility.
 -s | --show <param_name>
 
 Shows the value for a configuration parameter used on all instances 
-(master and segments) in the Greenplum Database system. If there 
+(coordinator and segments) in the Greenplum Database system. If there 
 is a discrepancy in a parameter value between segment instances, 
 the gpconfig utility displays an error message.
 
@@ -124,7 +125,7 @@ to take effect.
 --file
 
 For a configuration parameter, shows the value from the postgresql.conf
-file on all instances (master and segments) in the Greenplum Database
+file on all instances (coordinator and segments) in the Greenplum Database
 system. If there is a discrepancy in a parameter value between segment
 instances, the gpconfig utility displays a warning message. Must be
 specified with the -s option.
@@ -138,7 +139,7 @@ gpconfig -s statement_mem run by the user displays 64MB.
 --file-compare
 
 Like the --file option, the --file-compare option will read the
-postgresql.conf files on all instances (master and segments). It
+postgresql.conf files on all instances (coordinator and segments). It
 then compares these file values with the corresponding database values,
 where the database values represent current running settings, and
 the file values represent what will be used upon the next restart
@@ -176,13 +177,13 @@ Displays the online help.
 EXAMPLES
 *****************************************************
 
-Set the statement_mem setting to 120MB on the master only:
+Set the statement_mem setting to 120MB on the coordinator only:
 
-gpconfig -c statement_mem -v 120MB --masteronly
+gpconfig -c statement_mem -v 120MB --coordinatoronly
 
 
 Set the max_connections setting to 100 on all segments 
-and 10 on the master:
+and 10 on the coordinator:
 
 gpconfig -c max_connections -v 100 -m 10
 

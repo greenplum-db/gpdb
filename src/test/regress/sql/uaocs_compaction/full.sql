@@ -4,6 +4,7 @@ CREATE INDEX uaocs_full_index ON uaocs_full(b);
 
 INSERT INTO uaocs_full SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1,10) AS i;
 INSERT INTO uaocs_full SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1,10) AS i;
+ANALYZE uaocs_full;
 
 DELETE FROM uaocs_full WHERE a < 4;
 SELECT COUNT(*) FROM uaocs_full;

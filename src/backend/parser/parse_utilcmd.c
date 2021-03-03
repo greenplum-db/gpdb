@@ -80,7 +80,7 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 
 /* State shared by transformCreateStmt and its subroutines */
 typedef struct
@@ -2105,7 +2105,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 	}
 
 	/*
-	 * Forbid LOG ERRORS and ON MASTER combination.
+	 * Forbid LOG ERRORS and ON COORDINATOR combination.
 	 */
 	if (stmt->exttypedesc->exttabletype == EXTTBL_TYPE_EXECUTE)
 	{
@@ -2115,14 +2115,14 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 		{
 			DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
 
-			if (strcmp(defel->defname, "master") == 0)
+			if (strcmp(defel->defname, "coordinator") == 0)
 			{
 				SingleRowErrorDesc *srehDesc = (SingleRowErrorDesc *)stmt->sreh;
 
 				if(srehDesc && srehDesc->log_error_type != LOG_ERRORS_DISABLE)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("external web table with ON MASTER clause cannot use LOG ERRORS feature")));
+							 errmsg("external web table with ON COORDINATOR clause cannot use LOG ERRORS feature")));
 			}
 		}
 	}
@@ -4867,7 +4867,9 @@ TypeNameGetStorageDirective(TypeName *typname)
 							   RelationGetDescr(rel),
 							   &isnull);
 
-		Insist(!isnull);
+		if (isnull)
+			elog(ERROR, "null typoptions attribute encountered for pg_type_encoding for typid %d",
+				 typid);
 
 		out = untransformRelOptions(options);
 	}

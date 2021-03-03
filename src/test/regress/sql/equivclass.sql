@@ -103,6 +103,7 @@ create table ec1 (ff int8 primary key, f1 int8alias1, f2 int8alias2);
 create table ec2 (xf int8 primary key, x1 int8alias1, x2 int8alias2);
 
 -- for the moment we only want to look at nestloop plans
+set enable_nestloop = on;
 set enable_hashjoin = off;
 set enable_mergejoin = off;
 

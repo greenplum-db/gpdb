@@ -14,11 +14,11 @@
 
 #include "gpos/base.h"
 
+#include "naucrates/md/CMDIndexInfo.h"
 #include "naucrates/md/IMDCacheObject.h"
 #include "naucrates/md/IMDColumn.h"
 #include "naucrates/md/IMDPartConstraint.h"
 #include "naucrates/statistics/IStatistics.h"
-#include "naucrates/md/CMDIndexInfo.h"
 
 namespace gpdxl
 {
@@ -83,8 +83,8 @@ protected:
 
 public:
 	// object type
-	virtual Emdtype
-	MDType() const
+	Emdtype
+	MDType() const override
 	{
 		return EmdtRel;
 	}
@@ -172,9 +172,6 @@ public:
 	// retrieve the id of the metadata cache index at the given position
 	virtual IMDId *IndexMDidAt(ULONG pos) const = 0;
 
-	// check if index is partial given its mdid
-	virtual BOOL IsPartialIndex(IMDId *mdid) const;
-
 	// retrieve the id of the metadata cache trigger at the given position
 	virtual IMDId *TriggerMDidAt(ULONG pos) const = 0;
 
@@ -185,7 +182,14 @@ public:
 	virtual IMDId *CheckConstraintMDidAt(ULONG pos) const = 0;
 
 	// part constraint
-	virtual IMDPartConstraint *MDPartConstraint() const = 0;
+	virtual CDXLNode *MDPartConstraint() const = 0;
+
+	// child partition oids
+	virtual IMdIdArray *
+	ChildPartitionMdids() const
+	{
+		return nullptr;
+	}
 
 	// relation distribution policy as a string value
 	static const CWStringConst *GetDistrPolicyStr(

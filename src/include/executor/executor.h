@@ -5,7 +5,7 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -591,7 +591,7 @@ exec_rt_fetch(Index rti, EState *estate)
 
 extern Relation ExecGetRangeTableRelation(EState *estate, Index rti);
 
-extern int	executor_errposition(EState *estate, int location);
+extern void executor_errposition(EState *estate, int location);
 
 extern void RegisterExprContextCallback(ExprContext *econtext,
 										ExprContextCallbackFunction function,

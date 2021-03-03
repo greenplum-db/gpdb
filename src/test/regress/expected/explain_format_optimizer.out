@@ -35,22 +35,22 @@ WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in G
 --- Check Explain Text format output
 -- explain_processing_off
 EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=28)
-   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=28)
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=36)
+   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=36)
          Join Filter: true
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=16)
-               Hash Key: boxes.location_id
-               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=16)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=24)
+               Hash Key: boxes.apple_id
+               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=24)
                      Join Filter: true
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-                           Hash Key: boxes.apple_id
+                           Hash Key: boxes.location_id
                            ->  Seq Scan on boxes  (cost=0.00..431.00 rows=1 width=12)
-                     ->  Index Scan using apples_pkey on apples  (cost=0.00..6.00 rows=1 width=4)
-                           Index Cond: (id = boxes.apple_id)
-         ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..12.00 rows=1 width=12)
-               Index Cond: (id = boxes.location_id)
+                     ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..6.00 rows=1 width=12)
+                           Index Cond: (id = boxes.location_id)
+         ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12)
+               Index Cond: (id = boxes.apple_id)
  Optimizer: Pivotal Optimizer (GPORCA)
 (15 rows)
 
@@ -58,31 +58,31 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
 --- Check Explain Analyze Text output that include the slices information
 -- explain_processing_off
 EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
-                                                          QUERY PLAN                                                          
-------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=28) (actual time=2.297..2.297 rows=0 loops=1)
-   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=28) (never executed)
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=36) (actual time=2.753..2.753 rows=0 loops=1)
+   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=36) (never executed)
          Join Filter: true
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=16) (never executed)
-               Hash Key: boxes.location_id
-               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=16) (never executed)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=24) (never executed)
+               Hash Key: boxes.apple_id
+               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=24) (never executed)
                      Join Filter: true
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (never executed)
-                           Hash Key: boxes.apple_id
+                           Hash Key: boxes.location_id
                            ->  Seq Scan on boxes  (cost=0.00..431.00 rows=1 width=12) (never executed)
-                     ->  Index Scan using apples_pkey on apples  (cost=0.00..6.00 rows=1 width=4) (never executed)
-                           Index Cond: (id = boxes.apple_id)
-         ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..12.00 rows=1 width=12) (never executed)
-               Index Cond: (id = boxes.location_id)
- Planning Time: 14.784 ms
-   (slice0)    Executor memory: 192K bytes.
-   (slice1)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
-   (slice2)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
-   (slice3)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
- Memory used:  128000kB
+                     ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..6.00 rows=1 width=12) (never executed)
+                           Index Cond: (id = boxes.location_id)
+         ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12) (never executed)
+               Index Cond: (id = boxes.apple_id)
+ Planning Time: 40.380 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 43K bytes avg x 3 workers, 43K bytes max (seg0).
+   (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+   (slice3)    Executor memory: 39K bytes avg x 3 workers, 39K bytes max (seg0).
+ Memory used:  256000kB
  Optimizer: Pivotal Optimizer (GPORCA)
- Execution Time: 23.433 ms
-(24 rows)
+ Execution Time: 19.964 ms
+(22 rows)
 
 -- explain_processing_on
 -- Unaligned output format is better for the YAML / XML / JSON outputs.
@@ -135,7 +135,7 @@ QUERY PLAN
     Startup Cost: 0.00
     Total Cost: 449.00
     Plan Rows: 3
-    Plan Width: 28
+    Plan Width: 36
     Plans: 
       - Node Type: "Nested Loop"
         Parent Relationship: "Outer"
@@ -146,8 +146,8 @@ QUERY PLAN
         Join Type: "Left"
         Startup Cost: 0.00
         Total Cost: 449.00
-        Plan Rows: 3
-        Plan Width: 28
+        Plan Rows: 1
+        Plan Width: 36
         Inner Unique: false
         Join Filter: "true"
         Plans: 
@@ -161,9 +161,9 @@ QUERY PLAN
             Parallel Aware: false
             Startup Cost: 0.00
             Total Cost: 437.00
-            Plan Rows: 2
-            Plan Width: 16
-            Hash Key: "boxes.location_id"
+            Plan Rows: 1
+            Plan Width: 24
+            Hash Key: "boxes.apple_id"
             Plans: 
               - Node Type: "Nested Loop"
                 Parent Relationship: "Outer"
@@ -174,8 +174,8 @@ QUERY PLAN
                 Join Type: "Left"
                 Startup Cost: 0.00
                 Total Cost: 437.00
-                Plan Rows: 2
-                Plan Width: 16
+                Plan Rows: 1
+                Plan Width: 24
                 Inner Unique: false
                 Join Filter: "true"
                 Plans: 
@@ -191,7 +191,7 @@ QUERY PLAN
                     Total Cost: 431.00
                     Plan Rows: 1
                     Plan Width: 12
-                    Hash Key: "boxes.apple_id"
+                    Hash Key: "boxes.location_id"
                     Plans: 
                       - Node Type: "Seq Scan"
                         Parent Relationship: "Outer"
@@ -212,14 +212,14 @@ QUERY PLAN
                     Gang Type: "primary reader"
                     Parallel Aware: false
                     Scan Direction: "Forward"
-                    Index Name: "apples_pkey"
-                    Relation Name: "apples"
-                    Alias: "apples"
+                    Index Name: "box_locations_pkey"
+                    Relation Name: "box_locations"
+                    Alias: "box_locations"
                     Startup Cost: 0.00
                     Total Cost: 6.00
                     Plan Rows: 1
-                    Plan Width: 4
-                    Index Cond: "(id = boxes.apple_id)"
+                    Plan Width: 12
+                    Index Cond: "(id = boxes.location_id)"
           - Node Type: "Index Scan"
             Parent Relationship: "Inner"
             Slice: 1
@@ -227,14 +227,14 @@ QUERY PLAN
             Gang Type: "primary reader"
             Parallel Aware: false
             Scan Direction: "Forward"
-            Index Name: "box_locations_pkey"
-            Relation Name: "box_locations"
-            Alias: "box_locations"
+            Index Name: "apples_pkey"
+            Relation Name: "apples"
+            Alias: "apples"
             Startup Cost: 0.00
             Total Cost: 12.00
-            Plan Rows: 0
+            Plan Rows: 1
             Plan Width: 12
-            Index Cond: "(id = boxes.location_id)"
+            Index Cond: "(id = boxes.apple_id)"
   Settings: 
     Optimizer: "Pivotal Optimizer (GPORCA)"
 (1 row)
@@ -253,9 +253,9 @@ QUERY PLAN
     Startup Cost: 0.00
     Total Cost: 449.00
     Plan Rows: 3
-    Plan Width: 28
-    Actual Startup Time: 2.753
-    Actual Total Time: 2.753
+    Plan Width: 36
+    Actual Startup Time: 15.617
+    Actual Total Time: 15.617
     Actual Rows: 0
     Actual Loops: 1
     Plans: 
@@ -268,8 +268,8 @@ QUERY PLAN
         Join Type: "Left"
         Startup Cost: 0.00
         Total Cost: 449.00
-        Plan Rows: 3
-        Plan Width: 28
+        Plan Rows: 1
+        Plan Width: 36
         Actual Startup Time: 0.000
         Actual Total Time: 0.000
         Actual Rows: 0
@@ -288,13 +288,13 @@ QUERY PLAN
             Parallel Aware: false
             Startup Cost: 0.00
             Total Cost: 437.00
-            Plan Rows: 2
-            Plan Width: 16
+            Plan Rows: 1
+            Plan Width: 24
             Actual Startup Time: 0.000
             Actual Total Time: 0.000
             Actual Rows: 0
             Actual Loops: 0
-            Hash Key: "boxes.location_id"
+            Hash Key: "boxes.apple_id"
             Plans: 
               - Node Type: "Nested Loop"
                 Parent Relationship: "Outer"
@@ -305,8 +305,8 @@ QUERY PLAN
                 Join Type: "Left"
                 Startup Cost: 0.00
                 Total Cost: 437.00
-                Plan Rows: 2
-                Plan Width: 16
+                Plan Rows: 1
+                Plan Width: 24
                 Actual Startup Time: 0.000
                 Actual Total Time: 0.000
                 Actual Rows: 0
@@ -331,7 +331,7 @@ QUERY PLAN
                     Actual Total Time: 0.000
                     Actual Rows: 0
                     Actual Loops: 0
-                    Hash Key: "boxes.apple_id"
+                    Hash Key: "boxes.location_id"
                     Plans: 
                       - Node Type: "Seq Scan"
                         Parent Relationship: "Outer"
@@ -356,18 +356,18 @@ QUERY PLAN
                     Gang Type: "primary reader"
                     Parallel Aware: false
                     Scan Direction: "Forward"
-                    Index Name: "apples_pkey"
-                    Relation Name: "apples"
-                    Alias: "apples"
+                    Index Name: "box_locations_pkey"
+                    Relation Name: "box_locations"
+                    Alias: "box_locations"
                     Startup Cost: 0.00
                     Total Cost: 6.00
                     Plan Rows: 1
-                    Plan Width: 4
+                    Plan Width: 12
                     Actual Startup Time: 0.000
                     Actual Total Time: 0.000
                     Actual Rows: 0
                     Actual Loops: 0
-                    Index Cond: "(id = boxes.apple_id)"
+                    Index Cond: "(id = boxes.location_id)"
                     Rows Removed by Index Recheck: 0
           - Node Type: "Index Scan"
             Parent Relationship: "Inner"
@@ -376,18 +376,18 @@ QUERY PLAN
             Gang Type: "primary reader"
             Parallel Aware: false
             Scan Direction: "Forward"
-            Index Name: "box_locations_pkey"
-            Relation Name: "box_locations"
-            Alias: "box_locations"
+            Index Name: "apples_pkey"
+            Relation Name: "apples"
+            Alias: "apples"
             Startup Cost: 0.00
             Total Cost: 12.00
-            Plan Rows: 0
+            Plan Rows: 1
             Plan Width: 12
             Actual Startup Time: 0.000
             Actual Total Time: 0.000
             Actual Rows: 0
             Actual Loops: 0
-            Index Cond: "(id = boxes.location_id)"
+            Index Cond: "(id = boxes.apple_id)"
             Rows Removed by Index Recheck: 0
   Planning Time: 14.827
   Triggers: 
@@ -485,7 +485,7 @@ QUERY PLAN
       "Parallel Aware": false,
       "Plans": [
         {
-          "Node Type": "Sequence",
+          "Node Type": "Append",
           "Parent Relationship": "Outer",
           "Slice": 1,
           "Segments": 1,
@@ -493,23 +493,14 @@ QUERY PLAN
           "Parallel Aware": false,
           "Plans": [
             {
-              "Node Type": "Result",
-              "Parent Relationship": "Member",
-              "Slice": 1,
-              "Segments": 1,
-              "Gang Type": "primary reader",
-              "Parallel Aware": false
-            },
-            {
-              "Node Type": "Dynamic Seq Scan",
+              "Node Type": "Seq Scan",
               "Parent Relationship": "Member",
               "Slice": 1,
               "Segments": 1,
               "Gang Type": "primary reader",
               "Parallel Aware": false,
-              "Relation Name": "jsonexplaintest",
-              "Alias": "jsonexplaintest",
-              "Number of partitions to scan": 1,
+              "Relation Name": "jsonexplaintest_1_prt_2",
+              "Alias": "jsonexplaintest_1_prt_2",
               "Filter": "(i = 2)"
             }
           ]

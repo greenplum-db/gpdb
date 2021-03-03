@@ -1,0 +1,25 @@
+2021-01-04 16:14:06|INFO|gpload session started 2021-01-04 16:14:06
+2021-01-04 16:14:06|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:14:06|INFO|started gpfdist -p 8081 -P 8082 -f "/tmp/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-04 16:14:06|INFO|reusing staging table staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2021-01-04 16:14:06|INFO|reusing external table ext_gpload_reusable_24fe34ea_4e5a_11eb_8eb8_938287275a8c
+2021-01-04 16:14:06|INFO|running time: 0.12 seconds
+2021-01-04 16:14:06|INFO|rows Inserted          = 16
+2021-01-04 16:14:06|INFO|rows Updated           = 0
+2021-01-04 16:14:06|INFO|data formatting errors = 0
+2021-01-04 16:14:06|INFO|gpload succeeded
+2021-01-04 16:14:06|INFO|gpload session started 2021-01-04 16:14:06
+2021-01-04 16:14:06|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:14:06|INFO|started gpfdist -p 8081 -P 8082 -f "/tmp/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-04 16:14:06|INFO|reusing staging table staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2021-01-04 16:14:06|INFO|reusing external table ext_gpload_reusable_24fe34ea_4e5a_11eb_8eb8_938287275a8c
+2021-01-04 16:14:07|INFO|running time: 0.11 seconds
+2021-01-04 16:14:07|INFO|rows Inserted          = 0
+2021-01-04 16:14:07|INFO|rows Updated           = 16
+2021-01-04 16:14:07|INFO|data formatting errors = 0
+2021-01-04 16:14:07|INFO|gpload succeeded
+ count 
+-------
+    16
+(1 row)
+

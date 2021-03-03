@@ -9,8 +9,9 @@
 //		Implementation of basic wide character output stream
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpos/io/COstreamString.h"
+
+#include "gpos/base.h"
 #include "gpos/string/CWStringConst.h"
 
 using namespace gpos;

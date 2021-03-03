@@ -61,16 +61,15 @@ private:
 		// plan properties of corresponding producer
 		CDrvdPropPlan *m_pdpplan;
 
-		// private copy ctor
-		CCTEReqEntry(const CCTEReqEntry &);
-
 	public:
+		CCTEReqEntry(const CCTEReqEntry &) = delete;
+
 		// ctor
 		CCTEReqEntry(ULONG id, CCTEMap::ECteType ect, BOOL fRequired,
 					 CDrvdPropPlan *pdpplan);
 
 		// dtor
-		virtual ~CCTEReqEntry();
+		~CCTEReqEntry() override;
 
 		// cte id
 		ULONG
@@ -107,7 +106,7 @@ private:
 		BOOL Equals(CCTEReqEntry *pcre) const;
 
 		// print function
-		virtual IOstream &OsPrint(IOstream &os) const;
+		IOstream &OsPrint(IOstream &os) const;
 
 	};	// class CCTEReqEntry
 
@@ -132,18 +131,17 @@ private:
 	// required cte ids (not optional)
 	ULongPtrArray *m_pdrgpulRequired;
 
-	// private copy ctor
-	CCTEReq(const CCTEReq &);
-
 	// lookup info for given cte id
 	CCTEReqEntry *PcreLookup(ULONG ulCteId) const;
 
 public:
+	CCTEReq(const CCTEReq &) = delete;
+
 	// ctor
 	explicit CCTEReq(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CCTEReq();
+	~CCTEReq() override;
 
 	// required cte ids
 	ULongPtrArray *
@@ -167,7 +165,7 @@ public:
 	BOOL
 	Equals(const CCTEReq *pcter) const
 	{
-		GPOS_ASSERT(NULL != pcter);
+		GPOS_ASSERT(nullptr != pcter);
 		return (m_phmcter->Size() == pcter->m_phmcter->Size()) &&
 			   this->FSubset(pcter);
 	}
@@ -197,7 +195,7 @@ public:
 	CDrvdPropPlan *Pdpplan(ULONG ulCteId) const;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CCTEMap
 

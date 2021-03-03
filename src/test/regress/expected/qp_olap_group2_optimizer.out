@@ -7,8 +7,6 @@
 set optimizer_trace_fallback='on';
 -- Query 1
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -30,8 +28,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 2
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -61,8 +57,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 3
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -85,8 +79,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 4
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -102,8 +94,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 5
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -119,8 +109,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 6
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -152,8 +140,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 7
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -175,8 +161,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 8
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -206,8 +190,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 9
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -230,8 +212,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 10
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -247,8 +227,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 11
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -264,8 +242,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 12
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -297,8 +273,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 13
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -320,8 +294,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 14
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -351,8 +323,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 15
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -375,8 +345,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 16
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -392,8 +360,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 17
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -409,8 +375,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 18
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -442,8 +406,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 19
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -465,8 +427,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 20
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -496,8 +456,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 21
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -520,8 +478,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 22
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -537,8 +493,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 23
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -554,8 +508,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 24
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -587,8 +539,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 25
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -610,8 +560,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 26
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -641,8 +589,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 27
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -665,8 +611,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 28
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -682,8 +626,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 29
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -699,8 +641,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 30
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -732,8 +672,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 31
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -755,8 +693,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 32
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -786,8 +722,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 33
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -810,8 +744,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 34
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -827,8 +759,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 35
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -844,8 +774,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 36
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   0
@@ -877,8 +805,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 37
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -900,8 +826,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 38
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -931,8 +855,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 39
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -955,8 +877,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 40
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -972,8 +892,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 41
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -989,8 +907,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 42
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 
 ----
   1
@@ -1022,8 +938,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 43
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -1045,8 +959,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 44
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -1076,8 +988,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 45
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -1100,8 +1010,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 46
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -1117,8 +1025,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 47
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -1134,8 +1040,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 48
 SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY sale.pn, product.pname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  
 ------
   200
@@ -1167,8 +1071,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 49
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1190,8 +1092,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 50
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1221,8 +1121,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 51
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1245,8 +1143,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 52
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1262,8 +1158,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 53
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1279,8 +1173,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 54
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1312,8 +1204,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 55
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  2
@@ -1335,8 +1225,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 56
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  2
@@ -1366,8 +1254,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 57
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1390,8 +1276,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 58
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1407,8 +1291,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 59
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1424,8 +1306,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 60
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1457,8 +1337,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 61
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1480,8 +1358,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 62
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1511,8 +1387,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 63
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1535,8 +1409,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 64
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1552,8 +1424,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 65
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1569,8 +1439,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 66
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1602,8 +1470,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 67
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1625,8 +1491,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 68
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1656,8 +1520,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 69
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1680,8 +1542,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 70
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1697,8 +1557,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 71
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1714,8 +1572,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 72
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  0
@@ -1747,8 +1603,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 73
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1770,8 +1624,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 74
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1801,8 +1653,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 75
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1825,8 +1675,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 76
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1842,8 +1690,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 77
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1859,8 +1705,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 78
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   0 |  1
@@ -1892,8 +1736,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 79
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1915,8 +1757,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 80
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1946,8 +1786,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 81
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1970,8 +1808,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 82
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -1987,8 +1823,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 83
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -2004,8 +1838,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 84
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   0 |  200
@@ -2037,8 +1869,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 85
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   1 |  1
@@ -2060,8 +1890,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 86
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   1 |  1
@@ -2091,8 +1919,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 87
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   1 |  0
@@ -2115,8 +1941,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 88
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   1 |  0
@@ -2132,8 +1956,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 89
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   1 |  0
@@ -2149,8 +1971,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 90
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 | g2 
 ----+----
   1 |  0
@@ -2182,8 +2002,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 91
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   1 |  200
@@ -2205,8 +2023,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 92
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   1 |  200
@@ -2236,8 +2052,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 93
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   1 |  200
@@ -2260,8 +2074,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 94
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   1 |  200
@@ -2277,8 +2089,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 95
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   1 |  200
@@ -2294,8 +2104,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 96
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  g1 |  g2  
 ----+------
   1 |  200
@@ -2327,8 +2135,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 97
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2350,8 +2156,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 98
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2381,8 +2185,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 99
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2405,8 +2207,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 100
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2422,8 +2222,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 101
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2439,8 +2237,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 102
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2472,8 +2268,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 103
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2495,8 +2289,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 104
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2526,8 +2318,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 105
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2550,8 +2340,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 106
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2567,8 +2355,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 107
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2584,8 +2370,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 108
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  0
@@ -2617,8 +2401,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 109
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  1
@@ -2640,8 +2422,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 110
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  1
@@ -2671,8 +2451,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 111
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  1
@@ -2695,8 +2473,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 112
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  1
@@ -2712,8 +2488,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 113
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  1
@@ -2729,8 +2503,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 114
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
   g1  | g2 
 ------+----
   200 |  1
@@ -2762,8 +2534,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 115
 SELECT GROUPING(product.pname) as g1, sale.pn as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname,sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2  
 ----+-----
   0 | 100
@@ -2778,8 +2548,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 116
 SELECT GROUPING(sale.pn) as g1, sale.pn as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname,sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2  
 ----+-----
   0 | 100
@@ -2794,8 +2562,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 117
 SELECT GROUPING(sale.pn) + 1 as g1, sale.pn as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname,sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2  
 ----+-----
   1 | 100
@@ -2824,8 +2590,6 @@ SELECT SUM(sale.pn) as g1, sale.pn as g2 FROM product, sale WHERE product.pn=sal
 
 -- Query 119
 SELECT GROUPING(product.pname) as g1, 'CONST' as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname,sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2   
 ----+-------
   0 | CONST
@@ -2840,8 +2604,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 120
 SELECT GROUPING(sale.pn) as g1, 'CONST' as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname,sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2   
 ----+-------
   0 | CONST
@@ -2856,8 +2618,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 121
 SELECT GROUPING(sale.pn) + 1 as g1, 'CONST' as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname,sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2   
 ----+-------
   1 | CONST
@@ -2886,8 +2646,6 @@ SELECT SUM(sale.pn) as g1, 'CONST' as g2 FROM product, sale WHERE product.pn=sal
 
 -- Query 123
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.cn,product.pname,sale.pn ORDER BY sale.cn;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 
 ----
   0
@@ -2906,8 +2664,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 124
 SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.cn,product.pname,sale.pn ORDER BY sale.cn;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 
 ----
   0
@@ -2926,8 +2682,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 125
 SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.cn,product.pname,sale.pn ORDER BY sale.cn;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 
 ----
   1
@@ -2965,8 +2719,6 @@ select 'a',* from (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn
 
 -- Query 127
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  0
@@ -2981,8 +2733,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 128
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  1
@@ -2997,8 +2747,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 129
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2  
 ----+------
   0 |  200
@@ -3013,8 +2761,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 130
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  0
@@ -3029,8 +2775,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 131
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  1
@@ -3045,8 +2789,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 132
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2  
 ----+------
   0 |  200
@@ -3061,8 +2803,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 133
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   1 |  0
@@ -3077,8 +2817,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 134
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2  
 ----+------
   1 |  200
@@ -3093,8 +2831,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 135
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
   g1  | g2 
 ------+----
   200 |  0
@@ -3109,8 +2845,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 136
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
   g1  | g2 
 ------+----
   200 |  0
@@ -3125,8 +2859,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 137
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY product.pname, sale.pn ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
   g1  | g2 
 ------+----
   200 |  1
@@ -3141,8 +2873,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 138
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  0
@@ -3157,8 +2887,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 139
 SELECT GROUPING(product.pname) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  1
@@ -3173,8 +2901,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 140
 SELECT GROUPING(product.pname) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2  
 ----+------
   0 |  200
@@ -3189,8 +2915,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 141
 SELECT GROUPING(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  0
@@ -3205,8 +2929,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 142
 SELECT GROUPING(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   0 |  1
@@ -3221,8 +2943,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 143
 SELECT GROUPING(sale.pn) as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2  
 ----+------
   0 |  200
@@ -3237,8 +2957,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 144
 SELECT GROUPING(sale.pn) + 1 as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 | g2 
 ----+----
   1 |  0
@@ -3253,8 +2971,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 145
 SELECT GROUPING(sale.pn) + 1 as g1, SUM(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  g1 |  g2  
 ----+------
   1 |  200
@@ -3269,8 +2985,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 146
 SELECT SUM(sale.pn) as g1, GROUPING(product.pname) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
   g1  | g2 
 ------+----
   200 |  0
@@ -3285,8 +2999,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 147
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
   g1  | g2 
 ------+----
   200 |  0
@@ -3301,8 +3013,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 148
 SELECT SUM(sale.pn) as g1, GROUPING(sale.pn) + 1 as g2 FROM product, sale WHERE product.pn=sale.pn GROUP BY sale.pn, product.pname ORDER BY g1,g2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
   g1  | g2 
 ------+----
   200 |  1
@@ -3317,8 +3027,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 
 -- Query 149
 SELECT sale.pn, GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3340,8 +3048,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 150
 SELECT sale.pn, GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3371,8 +3077,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 151
 SELECT sale.pn, GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3395,8 +3099,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 152
 SELECT sale.pn, GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3412,8 +3114,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 153
 SELECT sale.pn, GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3429,8 +3129,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 154
 SELECT sale.pn, GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3462,8 +3160,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 155
 SELECT sale.pn, GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3485,8 +3181,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 156
 SELECT sale.pn, GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3516,8 +3210,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 157
 SELECT sale.pn, GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3540,8 +3232,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 158
 SELECT sale.pn, GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3557,8 +3247,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 159
 SELECT sale.pn, GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3574,8 +3262,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 160
 SELECT sale.pn, GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  0
@@ -3607,8 +3293,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 161
 SELECT sale.pn, GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3630,8 +3314,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 162
 SELECT sale.pn, GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3661,8 +3343,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 163
 SELECT sale.pn, GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3685,8 +3365,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 164
 SELECT sale.pn, GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3702,8 +3380,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 165
 SELECT sale.pn, GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3719,8 +3395,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 166
 SELECT sale.pn, GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  | g1 
 -----+----
  100 |  1
@@ -3752,8 +3426,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 167
 SELECT sale.pn, SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  |  g1  
 -----+------
  100 |  200
@@ -3775,8 +3447,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 168
 SELECT sale.pn, SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  |  g1  
 -----+------
  100 |  200
@@ -3806,8 +3476,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 169
 SELECT sale.pn, SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  |  g1  
 -----+------
  100 |  200
@@ -3830,8 +3498,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 170
 SELECT sale.pn, SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  |  g1  
 -----+------
  100 |  200
@@ -3847,8 +3513,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 171
 SELECT sale.pn, SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  |  g1  
 -----+------
  100 |  200
@@ -3864,8 +3528,6 @@ DETAIL:  Feature not supported: Grouping Sets
 
 -- Query 172
 SELECT sale.pn, SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  pn  |  g1  
 -----+------
  100 |  200
@@ -3898,8 +3560,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 173
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale)) as a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3917,8 +3577,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 174
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3936,8 +3594,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 175
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3955,8 +3611,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 176
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3974,8 +3628,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 177
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 800
@@ -3993,8 +3645,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 178
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4012,8 +3662,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 179
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4031,8 +3679,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 180
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4050,8 +3696,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 181
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4068,8 +3712,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 182
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 800
@@ -4087,8 +3729,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 183
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4106,8 +3746,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 184
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4125,8 +3763,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 185
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 400
@@ -4144,8 +3780,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 186
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 400
@@ -4163,8 +3797,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 187
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 400
@@ -4181,8 +3813,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 188
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4200,8 +3830,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 189
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4219,8 +3847,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 190
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4238,8 +3864,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 191
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4257,8 +3881,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 192
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4276,8 +3898,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 193
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4294,8 +3914,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 194
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  800
@@ -4313,8 +3931,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 195
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4332,8 +3948,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 196
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4351,8 +3965,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 197
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4362,8 +3974,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 198
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4373,8 +3983,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 199
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4384,8 +3992,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 200
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4395,8 +4001,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 201
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4406,8 +4010,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 202
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4417,8 +4019,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 203
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4428,8 +4028,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 204
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4439,8 +4037,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 205
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4449,8 +4045,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 206
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4460,8 +4054,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 207
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4471,8 +4063,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 208
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4482,8 +4072,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 209
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  2
@@ -4493,8 +4081,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 210
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  2
@@ -4504,8 +4090,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 211
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4514,8 +4098,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 212
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4525,8 +4107,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 213
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  2
@@ -4536,8 +4116,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 214
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: GROUPINGFUNC
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4547,8 +4125,6 @@ DETAIL:  Feature not supported: GROUPINGFUNC
 -- Query 215
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4564,8 +4140,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 216
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4581,8 +4155,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 217
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4597,8 +4169,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 218
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4614,8 +4184,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 219
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1)) a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4631,8 +4199,6 @@ DETAIL:  Feature not supported: Grouping Sets
 -- Query 220
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping Sets
  ?column? |  g1  
 ----------+------
  a        |  200

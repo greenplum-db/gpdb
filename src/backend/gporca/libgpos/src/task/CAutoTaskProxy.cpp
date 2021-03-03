@@ -9,12 +9,13 @@
 //		Implementation of interface class for task management and execution.
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CAutoTaskProxy.h"
+
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CWallClock.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoSuspendAbort.h"
-#include "gpos/task/CAutoTaskProxy.h"
 
 using namespace gpos;
 
@@ -132,7 +133,7 @@ CAutoTaskProxy::Create(void *(*pfunc)(void *), void *arg, BOOL *cancel)
 
 	// check if caller is a task
 	ITask *task_parent = CWorker::Self()->GetTask();
-	if (NULL == task_parent)
+	if (nullptr == task_parent)
 	{
 		// create new task context
 		task_ctxt = GPOS_NEW(mp) CTaskContext(mp);
@@ -147,7 +148,7 @@ CAutoTaskProxy::Create(void *(*pfunc)(void *), void *arg, BOOL *cancel)
 	CAutoP<CErrorContext> err_ctxt;
 	err_ctxt = GPOS_NEW(mp) CErrorContext();
 	CTask *task = CTask::Self();
-	if (NULL != task)
+	if (nullptr != task)
 	{
 		err_ctxt.Value()->Register(task->ConvertErrCtxt()->GetMiniDumper());
 	}
@@ -211,7 +212,7 @@ CAutoTaskProxy::Schedule(CTask *task)
 GPOS_RESULT
 CAutoTaskProxy::FindFinished(CTask **task)
 {
-	*task = NULL;
+	*task = nullptr;
 
 #ifdef GPOS_DEBUG
 	// check if there is any task scheduled
@@ -222,7 +223,7 @@ CAutoTaskProxy::FindFinished(CTask **task)
 #endif	// GPOS_DEBUG
 
 	// iterate task list
-	for (CTask *cur_task = m_list.First(); NULL != cur_task;
+	for (CTask *cur_task = m_list.First(); nullptr != cur_task;
 		 cur_task = m_list.Next(cur_task))
 	{
 #ifdef GPOS_DEBUG
@@ -279,7 +280,7 @@ CAutoTaskProxy::Execute(CTask *task)
 	{
 		// get worker of current thread
 		CWorker *worker = CWorker::Self();
-		GPOS_ASSERT(NULL != worker);
+		GPOS_ASSERT(nullptr != worker);
 
 		// execute task
 		worker->Execute(task);
@@ -392,7 +393,8 @@ CAutoTaskProxy::PropagateError(CTask *sub_task)
 	CTask *current_task = CTask::Self();
 
 	// current task must have no pending error
-	GPOS_ASSERT(NULL != current_task && !current_task->HasPendingExceptions());
+	GPOS_ASSERT(nullptr != current_task &&
+				!current_task->HasPendingExceptions());
 
 	IErrorContext *current_err_ctxt = current_task->GetErrCtxt();
 

@@ -4,7 +4,7 @@
  *	  Commands for creating and altering external tables
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -521,10 +521,10 @@ transformExecOnClause(List *on_clause)
 				/* result: "PER_HOST" */
 				exec_location_str = "PER_HOST";
 			}
-			else if (strcmp(defel->defname, "master") == 0)
+			else if (strcmp(defel->defname, "coordinator") == 0)
 			{
-				/* result: "MASTER_ONLY" */
-				exec_location_str = "MASTER_ONLY";
+				/* result: "COORDINATOR_ONLY" */
+				exec_location_str = "COORDINATOR_ONLY";
 			}
 			else if (strcmp(defel->defname, "segment") == 0)
 			{
@@ -669,9 +669,35 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		ProcessCopyOptions(pstate,
 						   cstate,
 						   !iswritable, /* is_from */
-						   formatOpts,
-						   numcols,
-						   false /* is_copy */);
+						   formatOpts);
+
+		if (cstate->delim_off)
+		{
+			if (numcols != 1)
+				ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("using no delimiter is only possible for a single column table")));
+		}
+
+		if (cstate->header_line)
+		{
+			if (Gp_role == GP_ROLE_DISPATCH)
+			{
+				if (!iswritable)
+				{
+					/* RET */
+					ereport(NOTICE,
+							(errmsg("HEADER means that each one of the data files has a header row")));
+				}
+				else
+				{
+					/* WET */
+					ereport(ERROR,
+							(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+							errmsg("HEADER is not yet supported for writable external tables")));
+				}
+			}
+		}
 
 		/* keep the same order with the original pg_exttable catalog's fmtopt field */
 		cslist = lappend(cslist, makeDefElem("delimiter", (Node *) makeString(cstate->delim), -1));

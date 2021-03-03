@@ -41,17 +41,14 @@ private:
 	// target iterator
 	CSyncHashtableIter<T, K> &m_iter;
 
-	// no copy ctor
-	CSyncHashtableAccessByIter<T, K>(const CSyncHashtableAccessByIter<T, K> &);
-
 	// returns the first valid element starting from the given element
 	T *
 	FirstValid(T *value) const
 	{
-		GPOS_ASSERT(NULL != value);
+		GPOS_ASSERT(nullptr != value);
 
 		T *curr = value;
-		while (NULL != curr &&
+		while (nullptr != curr &&
 			   !Base::GetHashTable().IsValid(Base::GetHashTable().Key(curr)))
 		{
 			curr = Base::Next(curr);
@@ -61,6 +58,9 @@ private:
 	}
 
 public:
+	CSyncHashtableAccessByIter<T, K>(const CSyncHashtableAccessByIter<T, K> &) =
+		delete;
+
 	// ctor
 	explicit CSyncHashtableAccessByIter<T, K>(CSyncHashtableIter<T, K> &iter)
 		: Base(iter.m_ht, iter.m_bucket_idx), m_iter(iter)

@@ -13,6 +13,7 @@
 #define GPDXL_CDXLLogicalDelete_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
 
 namespace gpdxl
@@ -45,23 +46,22 @@ private:
 	// list of deletion column ids
 	ULongPtrArray *m_deletion_colid_array;
 
-	// private copy ctor
-	CDXLLogicalDelete(const CDXLLogicalDelete &);
-
 public:
+	CDXLLogicalDelete(const CDXLLogicalDelete &) = delete;
+
 	// ctor
 	CDXLLogicalDelete(CMemoryPool *mp, CDXLTableDescr *table_descr,
 					  ULONG ctid_colid, ULONG segid_colid,
 					  ULongPtrArray *delete_colid_array);
 
 	// dtor
-	virtual ~CDXLLogicalDelete();
+	~CDXLLogicalDelete() override;
 
 	// operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// target table descriptor
 	CDXLTableDescr *
@@ -94,18 +94,19 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *node, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *node,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLLogicalDelete *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalDelete == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalDelete *>(dxl_op);

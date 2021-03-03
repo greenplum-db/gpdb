@@ -13,8 +13,10 @@
 #define GPNAUCRATES_CBucket_H
 
 #include "gpos/base.h"
-#include "gpos/task/CTask.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/error/CAutoTrace.h"
+#include "gpos/task/CTask.h"
+
 #include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/IBucket.h"
 
@@ -41,7 +43,7 @@ typedef CDynamicPtrArray<CBucket, CleanupDelete> CBucketArray;
 //
 //---------------------------------------------------------------------------
 
-class CBucket : public IBucket
+class CBucket : public IBucket, public gpos::DbgPrintMixin<CBucket>
 {
 private:
 	// lower bound of bucket
@@ -62,20 +64,18 @@ private:
 	// number of distinct elements in bucket
 	CDouble m_distinct;
 
-	// private copy constructor
-	CBucket(const CBucket &);
-
-	// private assignment operator
-	CBucket &operator=(const CBucket &);
-
 public:
+	CBucket &operator=(const CBucket &) = delete;
+
+	CBucket(const CBucket &) = delete;
+
 	// ctor
 	CBucket(CPoint *bucket_lower_bound, CPoint *bucket_upper_bound,
 			BOOL is_lower_closed, BOOL is_upper_closed, CDouble frequency,
 			CDouble distinct);
 
 	// dtor
-	virtual ~CBucket();
+	~CBucket() override;
 
 	// does bucket contain point
 	BOOL Contains(const CPoint *point) const;
@@ -126,14 +126,14 @@ public:
 
 	// lower point
 	CPoint *
-	GetLowerBound() const
+	GetLowerBound() const override
 	{
 		return m_bucket_lower_bound;
 	}
 
 	// upper point
 	CPoint *
-	GetUpperBound() const
+	GetUpperBound() const override
 	{
 		return m_bucket_upper_bound;
 	}
@@ -165,11 +165,7 @@ public:
 	BOOL IsAfter(const CBucket *bucket) const;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
-
-#ifdef GPOS_DEBUG
-	void DbgPrint() const;
-#endif
+	IOstream &OsPrint(IOstream &os) const;
 
 	// construct new bucket with lower bound greater than given point
 	CBucket *MakeBucketGreaterThan(CMemoryPool *mp, CPoint *point) const;

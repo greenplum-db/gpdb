@@ -30,31 +30,28 @@ private:
 	// underlying string
 	CWString *m_string;
 
-	// private copy ctor
-	COstreamString(const COstreamString &);
-
 public:
+	COstreamString(const COstreamString &) = delete;
+
 	// please see comments in COstream.h for an explanation
 	using COstream::operator<<;
 
 	// ctor
 	explicit COstreamString(CWString *);
 
-	virtual ~COstreamString()
-	{
-	}
+	~COstreamString() override = default;
 
 	// implement << operator on wide char array
-	virtual IOstream &operator<<(const WCHAR *wc_array);
+	IOstream &operator<<(const WCHAR *wc_array) override;
 
 	// implement << operator on char array
-	virtual IOstream &operator<<(const CHAR *c_array);
+	IOstream &operator<<(const CHAR *c_array) override;
 
 	// implement << operator on wide char
-	virtual IOstream &operator<<(const WCHAR wc);
+	IOstream &operator<<(const WCHAR wc) override;
 
 	// implement << operator on char
-	virtual IOstream &operator<<(const CHAR c);
+	IOstream &operator<<(const CHAR c) override;
 };
 
 }  // namespace gpos

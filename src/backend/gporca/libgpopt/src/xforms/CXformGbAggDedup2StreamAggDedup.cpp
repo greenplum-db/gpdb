@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformGbAggDedup2StreamAggDedup.cpp
@@ -9,15 +9,15 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformGbAggDedup2StreamAggDedup.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalStreamAggDeduplicate.h"
-
-#include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/xforms/CXformGbAggDedup2StreamAggDedup.h"
 #include "gpopt/xforms/CXformGbAgg2HashAgg.h"
+#include "gpopt/xforms/CXformUtils.h"
 using namespace gpopt;
 
 
@@ -53,7 +53,7 @@ CXformGbAggDedup2StreamAggDedup::Transform(CXformContext *pxfctxt,
 										   CXformResult *pxfres,
 										   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 	CMemoryPool *mp = pxfctxt->Pmp();

@@ -1,10 +1,11 @@
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Software, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CPhysicalFullMergeJoin_H
 #define GPOPT_CPhysicalFullMergeJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalJoin.h"
 
 namespace gpopt
@@ -12,33 +13,32 @@ namespace gpopt
 class CPhysicalFullMergeJoin : public CPhysicalJoin
 {
 private:
-	// private copy ctor
-	CPhysicalFullMergeJoin(const CPhysicalFullMergeJoin &);
-
 	CExpressionArray *m_outer_merge_clauses;
 
 	CExpressionArray *m_inner_merge_clauses;
 
 public:
+	CPhysicalFullMergeJoin(const CPhysicalFullMergeJoin &) = delete;
+
 	// ctor
 	explicit CPhysicalFullMergeJoin(CMemoryPool *mp,
 									CExpressionArray *outer_merge_clauses,
 									CExpressionArray *inner_merge_clauses,
-									IMdIdArray *hash_opfamilies = NULL);
+									IMdIdArray *hash_opfamilies = nullptr);
 
 	// dtor
-	virtual ~CPhysicalFullMergeJoin();
+	~CPhysicalFullMergeJoin() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalFullMergeJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalFullMergeJoin";
 	}
@@ -52,39 +52,42 @@ public:
 		return dynamic_cast<CPhysicalFullMergeJoin *>(pop);
 	}
 
-	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CDistributionSpec *pdsRequired,
-										   ULONG child_index,
-										   CDrvdPropArray *pdrgpdpCtxt,
-										   ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
 
-	virtual COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-									COrderSpec *posInput, ULONG child_index,
-									CDrvdPropArray *pdrgpdpCtxt,
-									ULONG ulOptReq) const;
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
+
+	COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							COrderSpec *posInput, ULONG child_index,
+							CDrvdPropArray *pdrgpdpCtxt,
+							ULONG ulOptReq) const override;
 
 	// compute required rewindability of the n-th child
-	virtual CRewindabilitySpec *PrsRequired(CMemoryPool *mp,
-											CExpressionHandle &exprhdl,
-											CRewindabilitySpec *prsRequired,
-											ULONG child_index,
-											CDrvdPropArray *pdrgpdpCtxt,
-											ULONG ulOptReq) const;
+	CRewindabilitySpec *PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+									CRewindabilitySpec *prsRequired,
+									ULONG child_index,
+									CDrvdPropArray *pdrgpdpCtxt,
+									ULONG ulOptReq) const override;
 
 	// return order property enforcing type for this operator
-	virtual CEnfdProp::EPropEnforcingType EpetOrder(
-		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
+	CEnfdProp::EPropEnforcingType EpetOrder(
+		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const override;
 
-	virtual CEnfdDistribution::EDistributionMatching Edm(
+	CEnfdDistribution::EDistributionMatching Edm(
 		CReqdPropPlan *,   // prppInput
 		ULONG,			   //child_index,
 		CDrvdPropArray *,  // pdrgpdpCtxt,
 		ULONG			   // ulOptReq
-	);
+		) override;
 
-	virtual CDistributionSpec *PdsDerive(CMemoryPool *mp,
-										 CExpressionHandle &exprhdl) const;
+	CDistributionSpec *PdsDerive(CMemoryPool *mp,
+								 CExpressionHandle &exprhdl) const override;
 
 };	// class CPhysicalFullMergeJoin
 

@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementSequence_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,43 +30,40 @@ using namespace gpos;
 class CXformImplementSequence : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementSequence(const CXformImplementSequence &);
-
 public:
+	CXformImplementSequence(const CXformImplementSequence &) = delete;
+
 	// ctor
 	explicit CXformImplementSequence(CMemoryPool *);
 
 	// dtor
-	virtual ~CXformImplementSequence()
-	{
-	}
+	~CXformImplementSequence() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementSequence;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementSequence";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return CXform::ExfpHigh;
 	}
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformImplementSequence
 

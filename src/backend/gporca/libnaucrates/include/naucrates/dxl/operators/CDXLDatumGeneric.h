@@ -20,6 +20,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
@@ -40,30 +41,29 @@ class CXMLSerializer;
 class CDXLDatumGeneric : public CDXLDatum
 {
 private:
-	// private copy ctor
-	CDXLDatumGeneric(const CDXLDatumGeneric &);
-
 protected:
 	// datum byte array
 	BYTE *m_byte_array;
 
 public:
+	CDXLDatumGeneric(const CDXLDatumGeneric &) = delete;
+
 	// ctor
 	CDXLDatumGeneric(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
 					 BOOL is_null, BYTE *data, ULONG length);
 
 	// dtor
-	virtual ~CDXLDatumGeneric();
+	~CDXLDatumGeneric() override;
 
 	// byte array
 	const BYTE *GetByteArray() const;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumGeneric;
 	}
@@ -72,7 +72,7 @@ public:
 	static CDXLDatumGeneric *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumGeneric == dxl_datum->GetDatumType() ||
 					CDXLDatum::EdxldatumStatsDoubleMappable ==
 						dxl_datum->GetDatumType() ||

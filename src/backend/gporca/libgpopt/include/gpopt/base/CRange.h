@@ -12,12 +12,11 @@
 #define GPOPT_CRange_H
 
 #include "gpos/base.h"
-#include "gpos/types.h"
 #include "gpos/common/CRefCount.h"
+#include "gpos/types.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/operators/CExpression.h"
-
 #include "naucrates/md/IMDType.h"
 
 namespace gpnaucrates
@@ -74,9 +73,6 @@ private:
 	// inclusion option for right end
 	ERangeInclusion m_eriRight;
 
-	// hidden copy ctor
-	CRange(const CRange &);
-
 	// construct an equality predicate if possible
 	CExpression *PexprEquality(CMemoryPool *mp, const CColRef *colref);
 
@@ -103,6 +99,8 @@ private:
 						   const CHAR *szInfinity) const;
 
 public:
+	CRange(const CRange &) = delete;
+
 	// ctor
 	CRange(IMDId *mdid, const IComparator *pcomp, IDatum *pdatumLeft,
 		   ERangeInclusion eriLeft, IDatum *pdatumRight,
@@ -112,7 +110,7 @@ public:
 	CRange(const IComparator *pcomp, IMDType::ECmpType cmp_type, IDatum *datum);
 
 	// dtor
-	virtual ~CRange();
+	~CRange() override;
 
 	// range type
 	IMDId *
@@ -199,11 +197,11 @@ public:
 	BOOL
 	IsConstraintUnbounded() const
 	{
-		return (NULL == m_pdatumLeft && NULL == m_pdatumRight);
+		return (nullptr == m_pdatumLeft && nullptr == m_pdatumRight);
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CRange
 

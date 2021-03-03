@@ -9,13 +9,14 @@
 //		Implementation of the splitting of limit
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSplitLimit.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/xforms/CXformSplitLimit.h"
 
 using namespace gpmd;
 using namespace gpopt;
@@ -83,8 +84,8 @@ void
 CXformSplitLimit::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

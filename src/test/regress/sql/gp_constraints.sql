@@ -7,6 +7,10 @@
 -- error becomes time-sensitive and less predictable.
 -- To preserve coverage, we test those error details here (with greater care).
 --
+-- start_matchsubs
+-- m/^LOCATION:.*:\d+/
+-- s/:\d+/:/
+-- end_matchsubs
 
 CREATE SCHEMA gpdb_insert;
 SET search_path TO gpdb_insert;
@@ -39,6 +43,10 @@ INSERT INTO PRIMARY_TBL VALUES (2, 'two');
 
 INSERT INTO tmp VALUES (1, 'three');
 INSERT INTO PRIMARY_TBL SELECT * FROM tmp;
+-- database object names as separate fields in error messages can be shown when VERBOSITY set to verbose
+\set VERBOSITY verbose
+INSERT INTO PRIMARY_TBL SELECT * FROM tmp;
+\set VERBOSITY default
 
 SELECT '' AS four, * FROM PRIMARY_TBL;
 

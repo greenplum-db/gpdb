@@ -51,10 +51,9 @@ private:
 	// mdid of oid
 	IMDId *m_mdid_oid;
 
-	// private copy ctor
-	CMDProviderGeneric(const CMDProviderGeneric &);
-
 public:
+	CMDProviderGeneric(const CMDProviderGeneric &) = delete;
+
 	// ctor/dtor
 	CMDProviderGeneric(CMemoryPool *mp);
 

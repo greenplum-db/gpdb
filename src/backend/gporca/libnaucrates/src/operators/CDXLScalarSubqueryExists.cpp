@@ -9,11 +9,11 @@
 //		Implementation of EXISTS subqueries
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarSubqueryExists.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLScalarSubqueryExists.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -40,9 +40,7 @@ CDXLScalarSubqueryExists::CDXLScalarSubqueryExists(CMemoryPool *mp)
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CDXLScalarSubqueryExists::~CDXLScalarSubqueryExists()
-{
-}
+CDXLScalarSubqueryExists::~CDXLScalarSubqueryExists() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

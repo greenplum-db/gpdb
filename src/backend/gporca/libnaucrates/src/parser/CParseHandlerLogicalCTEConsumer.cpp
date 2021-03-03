@@ -10,10 +10,11 @@
 //		operators
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/operators/CDXLLogicalCTEConsumer.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalCTEConsumer.h"
+
+#include "naucrates/dxl/operators/CDXLLogicalCTEConsumer.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
 
@@ -99,7 +100,7 @@ CParseHandlerLogicalCTEConsumer::EndElement(
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 #ifdef GPOS_DEBUG
 	m_dxl_node->GetOperator()->AssertValid(m_dxl_node,
 										   false /* validate_children */);

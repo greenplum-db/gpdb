@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLLogicalCTAS.h
@@ -13,10 +13,10 @@
 #define GPDXL_CDXLLogicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
 
+#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/dxl/operators/CDXLLogical.h"
+#include "naucrates/md/IMDRelation.h"
 
 namespace gpdxl
 {
@@ -80,10 +80,9 @@ private:
 	// typemod records type-specific, e.g. the maximum length of a character column
 	IntPtrArray *m_vartypemod_array;
 
-	// private copy ctor
-	CDXLLogicalCTAS(const CDXLLogicalCTAS &);
-
 public:
+	CDXLLogicalCTAS(const CDXLLogicalCTAS &) = delete;
+
 	// ctor
 	CDXLLogicalCTAS(CMemoryPool *mp, IMDId *mdid, CMDName *mdname_schema,
 					CMDName *mdname_rel, CDXLColDescrArray *dxl_col_descr_array,
@@ -97,13 +96,13 @@ public:
 					IntPtrArray *vartypemod_array);
 
 	// dtor
-	virtual ~CDXLLogicalCTAS();
+	~CDXLLogicalCTAS() override;
 
 	// operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// mdid of table to create
 	IMDId *
@@ -206,21 +205,22 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// check if given column is defined by operator
-	virtual BOOL IsColDefined(ULONG colid) const;
+	BOOL IsColDefined(ULONG colid) const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLLogicalCTAS *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalCTAS == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalCTAS *>(dxl_op);

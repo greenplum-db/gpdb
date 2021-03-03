@@ -4,7 +4,7 @@
  *	  Query Executor Factory for gangs of QEs
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -230,7 +230,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
 {
 	Gang *newGangDefinition = NULL;
 	ListCell *lc;
-	int	i = 0;
+	volatile int i = 0;
 	int	size;
 	int contentId;
 
@@ -260,6 +260,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
 	}
 	PG_CATCH();
 	{
+		newGangDefinition->size = i;
 		RecycleGang(newGangDefinition, true /* destroy */);
 		PG_RE_THROW();
 	}
@@ -343,8 +344,6 @@ addOneOption(StringInfo string, struct config_generic *guc)
 				}
 				break;
 			}
-		default:
-			Insist(false);
 	}
 }
 

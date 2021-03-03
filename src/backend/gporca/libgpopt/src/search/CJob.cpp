@@ -9,9 +9,10 @@
 //		Implementation of optimizer job base class
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJob.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/search/CJob.h"
 #include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CScheduler.h"
 
@@ -30,8 +31,8 @@ using namespace gpos;
 void
 CJob::Reset()
 {
-	m_pjParent = NULL;
-	m_pjq = NULL;
+	m_pjParent = nullptr;
+	m_pjq = nullptr;
 	m_ulpRefs = 0;
 	m_fInit = false;
 #ifdef GPOS_DEBUG
@@ -52,7 +53,7 @@ BOOL
 CJob::FResumeParent() const
 {
 	GPOS_ASSERT(0 == UlpRefs());
-	GPOS_ASSERT(NULL != m_pjParent);
+	GPOS_ASSERT(nullptr != m_pjParent);
 	GPOS_ASSERT(0 < m_pjParent->UlpRefs());
 
 	// decrement parent's ref counter
@@ -74,11 +75,11 @@ CJob::FResumeParent() const
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJob::OsPrint(IOstream &os)
+CJob::OsPrint(IOstream &os) const
 {
 	os << "ID=" << Id();
 
-	if (NULL != PjParent())
+	if (nullptr != PjParent())
 	{
 		os << " parent=" << PjParent()->Id() << std::endl;
 	}

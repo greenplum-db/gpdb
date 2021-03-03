@@ -1,0 +1,11 @@
+NOTICE:  HEADER means that each one of the data files has a header row
+NOTICE:  HEADER means that each one of the data files has a header row
+2020-12-17 15:14:24|INFO|gpload session started 2020-12-17 15:14:24
+2020-12-17 15:14:24|INFO|setting schema 'public' for table 'texttable'
+2020-12-17 15:14:24|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-17 15:14:24|INFO|did not find an external table to reuse. creating ext_gpload_reusable_7dde623c_4037_11eb_9067_000c299afcc5
+2020-12-17 15:14:24|INFO|running time: 0.06 seconds
+2020-12-17 15:14:24|INFO|rows Inserted          = 2
+2020-12-17 15:14:24|INFO|rows Updated           = 0
+2020-12-17 15:14:24|INFO|data formatting errors = 0
+2020-12-17 15:14:24|INFO|gpload succeeded

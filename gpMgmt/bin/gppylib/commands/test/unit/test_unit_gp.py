@@ -82,7 +82,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_pid_exists_remote(self, mock1, mock2):
         pid = 1234
         datadir = '/data/primary/gpseg0'
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertTrue(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run') 
@@ -92,7 +92,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_pid_doesnt_exists_remote(self, mock1, mock2):
         pid = 1234
         datadir = '/data/primary/gpseg0'
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertFalse(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run') 
@@ -102,7 +102,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_pid_as_string_remote(self, mock1, mock2):
         pid = '1234'
         datadir = '/data/primary/gpseg0'
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertTrue(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run') 
@@ -112,7 +112,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_no_result_remote(self, mock1, mock2):
         pid = '1234'
         datadir = None
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertFalse(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run') 
@@ -122,7 +122,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_no_pgrep_remote(self, mock1, mock2):
         pid = '1234'
         datadir = '/data/primary/gpseg0' 
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertTrue(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run') 
@@ -132,7 +132,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_no_pwdx_remote(self, mock1, mock2):
         pid = '1234'
         datadir = '/data/primary/gpseg0' 
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertTrue(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run', side_effect=[None, None, Exception('Error')]) 
@@ -142,7 +142,7 @@ class GpCommandTestCase(GpTestCase):
     def test_is_pid_postmaster_pgrep_failed_remote(self, mock1, mock2):
         pid = '1234'
         datadir = '/data/primary/gpseg0' 
-        remoteHost = 'smdw'
+        remoteHost = 'scdw'
         self.assertTrue(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run')

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarBitmapIndexProbe.h
@@ -58,7 +58,7 @@ public:
 	explicit CScalarBitmapIndexProbe(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CScalarBitmapIndexProbe();
+	~CScalarBitmapIndexProbe() override;
 
 	// index descriptor
 	CIndexDescriptor *
@@ -68,57 +68,57 @@ public:
 	}
 
 	// bitmap type id
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		return m_pmdidBitmapType;
 	}
 
 	// identifier
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarBitmapIndexProbe;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarBitmapIndexProbe";
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 	// conversion
 	static CScalarBitmapIndexProbe *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBitmapIndexProbe == pop->Eopid());
 
 		return dynamic_cast<CScalarBitmapIndexProbe *>(pop);

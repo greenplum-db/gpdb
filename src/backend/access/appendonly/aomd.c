@@ -11,7 +11,7 @@
  *	  may need to change if inconsistencies arise.
  *
  * Portions Copyright (c) 2008, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -31,7 +31,7 @@
 #include "access/appendonlytid.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "common/relpath.h"
@@ -243,7 +243,7 @@ mdunlink_ao(RelFileNodeBackend rnode, ForkNumber forkNumber, bool isRedo)
 		int pathSize = strlen(path);
 		char *segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
 		char *segPathSuffixPosition = segPath + pathSize;
-		struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
+		struct mdunlink_ao_callback_ctx unlinkFiles;
 		unlinkFiles.isRedo = isRedo;
 		unlinkFiles.rnode = rnode.node;
 

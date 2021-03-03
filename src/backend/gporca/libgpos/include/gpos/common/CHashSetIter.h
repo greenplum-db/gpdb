@@ -1,5 +1,5 @@
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software, Inc
+//	Copyright (C) 2017 VMware, Inc. or its affiliates
 //
 //	Hash set iterator
 
@@ -7,9 +7,9 @@
 #define GPOS_CHashSetIter_H
 
 #include "gpos/base.h"
-#include "gpos/common/CStackObject.h"
-#include "gpos/common/CHashSet.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashSet.h"
+#include "gpos/common/CStackObject.h"
 
 namespace gpos
 {
@@ -34,21 +34,18 @@ private:
 	// is initialized?
 	BOOL m_is_initialized;
 
-	// private copy ctor
-	CHashSetIter(const CHashSetIter<T, HashFn, EqFn, CleanupFn> &);
-
 public:
+	CHashSetIter(const CHashSetIter<T, HashFn, EqFn, CleanupFn> &) = delete;
+
 	// ctor
 	CHashSetIter<T, HashFn, EqFn, CleanupFn>(TSet *set)
 		: m_set(set), m_chain_idx(0), m_elem_idx(0)
 	{
-		GPOS_ASSERT(NULL != set);
+		GPOS_ASSERT(nullptr != set);
 	}
 
 	// dtor
-	virtual ~CHashSetIter<T, HashFn, EqFn, CleanupFn>()
-	{
-	}
+	virtual ~CHashSetIter<T, HashFn, EqFn, CleanupFn>() = default;
 
 	// advance iterator to next element
 	BOOL
@@ -67,14 +64,14 @@ public:
 	const T *
 	Get() const
 	{
-		const typename TSet::CHashSetElem *elem = NULL;
+		const typename TSet::CHashSetElem *elem = nullptr;
 		T *t = (*(m_set->m_elements))[m_elem_idx - 1];
 		elem = m_set->Lookup(t);
-		if (NULL != elem)
+		if (nullptr != elem)
 		{
 			return elem->Value();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 };	// class CHashSetIter

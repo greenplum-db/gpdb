@@ -3,6 +3,10 @@
 -- start_matchsubs
 -- m/DETAIL:  Failing row contains \(.*\)/
 -- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- m/NOTICE:  One or more columns in the following table\(s\) do not have statistics: /
+-- s/.//gs
+-- m/HINT:  For non-partitioned tables, run analyze .+\. For partitioned tables, run analyze rootpartition .+\. See log for columns missing statistics\./
+-- s/.//gs
 -- end_matchsubs
 SET statement_mem='300 MB';
 

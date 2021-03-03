@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarAssertConstraint.cpp
@@ -9,10 +9,11 @@
 //		Implementation of scalar assert constraint
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarAssertConstraint.h"
+
 #include "gpos/base.h"
 
 #include "naucrates/md/IMDTypeBool.h"
-#include "gpopt/operators/CScalarAssertConstraint.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -29,7 +30,7 @@ CScalarAssertConstraint::CScalarAssertConstraint(CMemoryPool *mp,
 												 CWStringBase *pstrErrorMsg)
 	: CScalar(mp), m_pstrErrorMsg(pstrErrorMsg)
 {
-	GPOS_ASSERT(NULL != pstrErrorMsg);
+	GPOS_ASSERT(nullptr != pstrErrorMsg);
 }
 
 //---------------------------------------------------------------------------

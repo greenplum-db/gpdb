@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementCTEProducer_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,38 +30,35 @@ using namespace gpos;
 class CXformImplementCTEProducer : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementCTEProducer(const CXformImplementCTEProducer &);
-
 public:
+	CXformImplementCTEProducer(const CXformImplementCTEProducer &) = delete;
+
 	// ctor
 	explicit CXformImplementCTEProducer(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementCTEProducer()
-	{
-	}
+	~CXformImplementCTEProducer() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementCTEProducer;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementCTEProducer";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformImplementCTEProducer
 }  // namespace gpopt

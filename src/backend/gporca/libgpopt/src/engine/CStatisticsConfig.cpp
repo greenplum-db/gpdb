@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CStatisticsConfig.cpp
@@ -9,14 +9,15 @@
 //		Implementation of statistics context
 //---------------------------------------------------------------------------
 
+#include "gpopt/engine/CStatisticsConfig.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
 
-#include "naucrates/traceflags/traceflags.h"
 #include "gpopt/base/CColRefSet.h"
-#include "gpopt/engine/CStatisticsConfig.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
 
@@ -38,7 +39,7 @@ CStatisticsConfig::CStatisticsConfig(CMemoryPool *mp,
 	  m_damping_factor_join(damping_factor_join),
 	  m_damping_factor_groupby(damping_factor_groupby),
 	  m_max_stats_buckets(max_stats_buckets),
-	  m_phsmdidcolinfo(NULL)
+	  m_phsmdidcolinfo(nullptr)
 {
 	GPOS_ASSERT(CDouble(0.0) < damping_factor_filter);
 	GPOS_ASSERT(CDouble(0.0) <= damping_factor_join);
@@ -75,7 +76,7 @@ CStatisticsConfig::~CStatisticsConfig()
 void
 CStatisticsConfig::AddMissingStatsColumn(CMDIdColStats *pmdidCol)
 {
-	GPOS_ASSERT(NULL != pmdidCol);
+	GPOS_ASSERT(nullptr != pmdidCol);
 
 	// add the new column information to the hash set
 	if (m_phsmdidcolinfo->Insert(pmdidCol))
@@ -96,7 +97,7 @@ CStatisticsConfig::AddMissingStatsColumn(CMDIdColStats *pmdidCol)
 void
 CStatisticsConfig::CollectMissingStatsColumns(IMdIdArray *pdrgmdid)
 {
-	GPOS_ASSERT(NULL != pdrgmdid);
+	GPOS_ASSERT(nullptr != pdrgmdid);
 
 	MdidHashSetIter hsiter(m_phsmdidcolinfo);
 	while (hsiter.Advance())

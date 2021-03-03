@@ -8,7 +8,7 @@ select x.c1 * x.c2, x.c3 from (select a, b, a+b from foo) x(c1,c2,c3);
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -16,7 +16,7 @@ select x.c1 * x.c2, x.c3 from (select a, b, a+b from foo) x(c1,c2,c3);
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,101001,102120,103001,103014,103015,103022,103023"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103023,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:GPDBScalarOp Mdid="0.514.1.0" Name="*" ComparisonType="Other" ReturnsNullOnNullInput="true">

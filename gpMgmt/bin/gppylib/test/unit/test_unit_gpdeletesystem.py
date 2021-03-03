@@ -16,7 +16,7 @@ class GpDeleteSystemTestCase(GpTestCase):
         self.tmpDir = tempfile.mkdtemp()
         os.chmod(self.tmpDir, 0o777)
         self.options = Values()
-        setattr(self.options, 'master_data_dir', self.tmpDir)
+        setattr(self.options, 'coordinator_data_dir', self.tmpDir)
 
     def tearDown(self):
         shutil.rmtree(self.tmpDir)

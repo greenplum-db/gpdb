@@ -9,13 +9,14 @@
 //		Implementation of DXL logical update operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLLogicalUpdate.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLLogicalUpdate.h"
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/CDXLUtils.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -43,9 +44,9 @@ CDXLLogicalUpdate::CDXLLogicalUpdate(CMemoryPool *mp,
 	  m_preserve_oids(preserve_oids),
 	  m_tuple_oid(tuple_oid)
 {
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != delete_colid_array);
-	GPOS_ASSERT(NULL != insert_colid_array);
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != delete_colid_array);
+	GPOS_ASSERT(nullptr != insert_colid_array);
 }
 
 //---------------------------------------------------------------------------

@@ -13,9 +13,10 @@
 #define GPDXL_CDXLLogicalTVF_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
-#include "naucrates/dxl/operators/CDXLLogical.h"
+
 #include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/operators/CDXLLogical.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpdxl
 {
@@ -44,21 +45,20 @@ private:
 	// list of column descriptors
 	CDXLColDescrArray *m_dxl_col_descr_array;
 
-	// private copy ctor
-	CDXLLogicalTVF(const CDXLLogicalTVF &);
-
 public:
+	CDXLLogicalTVF(const CDXLLogicalTVF &) = delete;
+
 	// ctor/dtor
 	CDXLLogicalTVF(CMemoryPool *mp, IMDId *mdid_func, IMDId *mdid_return_type,
 				   CMDName *mdname, CDXLColDescrArray *pdrgdxlcd);
 
-	virtual ~CDXLLogicalTVF();
+	~CDXLLogicalTVF() override;
 
 	// get operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// get operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// get function name
 	CMDName *
@@ -95,17 +95,17 @@ public:
 	const CDXLColDescr *GetColumnDescrAt(ULONG ul) const;
 
 	// check if given column is defined by operator
-	virtual BOOL IsColDefined(ULONG colid) const;
+	BOOL IsColDefined(ULONG colid) const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLLogicalTVF *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalTVF == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalTVF *>(dxl_op);
@@ -114,7 +114,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

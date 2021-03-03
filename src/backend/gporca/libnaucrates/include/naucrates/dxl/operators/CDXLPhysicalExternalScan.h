@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLPhysicalExternalScan.h
@@ -13,6 +13,7 @@
 #define GPDXL_CDXLPhysicalExternalScan_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalTableScan.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 
@@ -29,26 +30,25 @@ namespace gpdxl
 class CDXLPhysicalExternalScan : public CDXLPhysicalTableScan
 {
 private:
-	// private copy ctor
-	CDXLPhysicalExternalScan(CDXLPhysicalExternalScan &);
-
 public:
+	CDXLPhysicalExternalScan(CDXLPhysicalExternalScan &) = delete;
+
 	// ctors
 	explicit CDXLPhysicalExternalScan(CMemoryPool *mp);
 
 	CDXLPhysicalExternalScan(CMemoryPool *mp, CDXLTableDescr *table_descr);
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// conversion function
 	static CDXLPhysicalExternalScan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalExternalScan == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalExternalScan *>(dxl_op);

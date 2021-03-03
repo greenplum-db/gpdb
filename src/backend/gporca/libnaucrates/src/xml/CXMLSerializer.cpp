@@ -9,10 +9,12 @@
 //		Implementation of the class for creating XML documents.
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/xml/dxltokens.h"
+
+#include "gpos/string/CWStringDynamic.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpdxl;
 
@@ -62,7 +64,7 @@ void
 CXMLSerializer::OpenElement(const CWStringBase *pstrNamespace,
 							const CWStringBase *elem_str)
 {
-	GPOS_ASSERT(NULL != elem_str);
+	GPOS_ASSERT(nullptr != elem_str);
 
 	m_iteration_since_last_abortcheck++;
 
@@ -92,7 +94,7 @@ CXMLSerializer::OpenElement(const CWStringBase *pstrNamespace,
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenBracketOpenTag)
 				->GetBuffer();	// <
 
-	if (NULL != pstrNamespace)
+	if (nullptr != pstrNamespace)
 	{
 		m_os << pstrNamespace->GetBuffer()
 			 << CDXLTokens::GetDXLTokenStr(EdxltokenColon)
@@ -116,7 +118,7 @@ void
 CXMLSerializer::CloseElement(const CWStringBase *pstrNamespace,
 							 const CWStringBase *elem_str)
 {
-	GPOS_ASSERT(NULL != elem_str);
+	GPOS_ASSERT(nullptr != elem_str);
 	GPOS_ASSERT(0 < m_ulLevel);
 
 	m_ulLevel--;
@@ -148,7 +150,7 @@ CXMLSerializer::CloseElement(const CWStringBase *pstrNamespace,
 		// write closing tag for element to stream
 		m_os << CDXLTokens::GetDXLTokenStr(EdxltokenBracketOpenEndTag)
 					->GetBuffer();	// </
-		if (NULL != pstrNamespace)
+		if (nullptr != pstrNamespace)
 		{
 			m_os << pstrNamespace->GetBuffer()
 				 << CDXLTokens::GetDXLTokenStr(EdxltokenColon)
@@ -179,8 +181,8 @@ void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr,
 							 const CWStringBase *str_value)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
-	GPOS_ASSERT(NULL != str_value);
+	GPOS_ASSERT(nullptr != pstrAttr);
+	GPOS_ASSERT(nullptr != str_value);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -202,8 +204,8 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr,
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, const CHAR *szValue)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
-	GPOS_ASSERT(NULL != szValue);
+	GPOS_ASSERT(nullptr != pstrAttr);
+	GPOS_ASSERT(nullptr != szValue);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -226,7 +228,7 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, const CHAR *szValue)
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, ULONG ulValue)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
+	GPOS_ASSERT(nullptr != pstrAttr);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -249,7 +251,7 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, ULONG ulValue)
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, ULLONG ullValue)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
+	GPOS_ASSERT(nullptr != pstrAttr);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -272,7 +274,7 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, ULLONG ullValue)
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, INT iValue)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
+	GPOS_ASSERT(nullptr != pstrAttr);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -295,7 +297,7 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, INT iValue)
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, LINT value)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
+	GPOS_ASSERT(nullptr != pstrAttr);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -318,7 +320,7 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, LINT value)
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, CDouble value)
 {
-	GPOS_ASSERT(NULL != pstrAttr);
+	GPOS_ASSERT(nullptr != pstrAttr);
 
 	GPOS_ASSERT(m_fOpenTag);
 	m_os << CDXLTokens::GetDXLTokenStr(EdxltokenSpace)->GetBuffer()
@@ -341,7 +343,7 @@ CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, CDouble value)
 void
 CXMLSerializer::AddAttribute(const CWStringBase *pstrAttr, BOOL fValue)
 {
-	const CWStringConst *str_value = NULL;
+	const CWStringConst *str_value = nullptr;
 
 	if (fValue)
 	{
@@ -389,7 +391,7 @@ CXMLSerializer::Indent()
 void
 CXMLSerializer::WriteEscaped(IOstream &os, const CWStringBase *str)
 {
-	GPOS_ASSERT(NULL != str);
+	GPOS_ASSERT(nullptr != str);
 
 	const ULONG length = str->Length();
 	const WCHAR *wsz = str->GetBuffer();

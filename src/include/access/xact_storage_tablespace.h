@@ -5,7 +5,7 @@
  *	  Hooks to be implemented for transactions for tablespace storage:
  *
  *
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  * src/include/access/xact_storage_tablespace.h
  *

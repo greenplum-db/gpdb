@@ -70,6 +70,14 @@ insert into g1 values
 
 insert into l1 values (generate_series (1,10), generate_series (1,10), generate_series (1,10), generate_series (1,10));
 
+analyze t1;
+analyze t2;
+analyze t3;
+analyze t4;
+analyze t1n;
+analyze g1;
+analyze l1;
+
 --
 -- queries
 --
@@ -388,6 +396,34 @@ explain select c1 from t1 where c1::absint not in
 	(select c1n::absint from t1n);
 select c1 from t1 where c1::absint not in
 	(select c1n::absint from t1n);
+
+
+-- Test the null not in an empty set
+-- null not in an unempty set, always returns false
+-- null not in an empty set, always returns true
+--
+-- q46
+--
+create table table_source (c1 varchar(100),c2 varchar(100),c3 varchar(100),c4 varchar(100));
+insert into table_source (c1 ,c2 ,c3 ,c4 ) values ('000181202006010000003158',null,'INC','0000000001') ;
+create table table_source2 as select * from table_source distributed by (c2);
+create table table_source3 as select * from table_source distributed replicated;
+create table table_source4 (c1 varchar(100),c2 varchar(100) not null,c3 varchar(100),c4 varchar(100));
+insert into table_source4 (c1 ,c2 ,c3 ,c4 ) values ('000181202006010000003158','a','INC','0000000001') ;
+create table table_config (c1 varchar(10) ,c2 varchar(10) ,PRIMARY KEY (c1));
+insert into table_config select i, 'test' from generate_series(1, 1000)i;
+analyze table_config;
+delete from table_config where gp_segment_id = 0;
+
+explain select * from table_source where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+select * from table_source where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+explain select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+select * from table_source2 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+explain select * from table_source3 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+select * from table_source3 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+explain select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in (SELECT c1 from table_config where c2='test');
+
 
 reset search_path;
 drop schema notin cascade;

@@ -386,7 +386,7 @@ partition by range (f1)
 );
 drop table TIME_TBL_HOUR_2;
 -- Check for every parameters that just don't make sense
-create table hhh_r1 (a char(1), b date, d char(3)) 
+create table hhh_r2 (a char(1), b date, d char(3))
 distributed by (a) partition by range (b)
 (                                                              
 partition aa start (date '2007-01-01') end (date '2008-01-01') 
@@ -3574,6 +3574,11 @@ distributed by (pkid) partition by range (option3)
 	partition bb start(101) end(200),
 	partition cc start(201) end (300)
 );
+
+-- should error out since no subpartition in sales.
+alter table sales add partition dd start(301) end(300)
+	( subpartition opt1_1 VALUES (1),
+	  subpartition opt1_2 VALUES (2) );
 
 -- root partition (and only root) should have relfrozenxid as 0
 select relname, relkind from pg_class where relkind in ('r', 'p') and relname like 'sales%' and relfrozenxid=0;

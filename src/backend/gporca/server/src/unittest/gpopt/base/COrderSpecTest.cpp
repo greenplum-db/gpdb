@@ -8,19 +8,19 @@
 //	@doc:
 //		Tests for order specification
 //---------------------------------------------------------------------------
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDProviderMemory.h"
+#include "unittest/gpopt/base/COrderSpecTest.h"
 
+#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CQueryContext.h"
-#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDTypeInt4.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/base/COrderSpecTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 #include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -59,7 +59,7 @@ COrderSpecTest::EresUnittest_Basics()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object
@@ -118,7 +118,7 @@ COrderSpecTest::EresUnittest_Basics()
 	{
 		const CColRef *colref GPOS_ASSERTS_ONLY = pos1->Pcr(ul);
 
-		GPOS_ASSERT(NULL != colref);
+		GPOS_ASSERT(nullptr != colref);
 
 		const IMDId *mdid GPOS_ASSERTS_ONLY = pos1->GetMdIdSortOp(ul);
 

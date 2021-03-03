@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformPushGbDedupBelowJoin.h
@@ -12,6 +12,7 @@
 #define GPOPT_CXformPushGbDedupBelowJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformPushGbBelowJoin.h"
 
 namespace gpopt
@@ -29,27 +30,24 @@ using namespace gpos;
 class CXformPushGbDedupBelowJoin : public CXformPushGbBelowJoin
 {
 private:
-	// private copy ctor
-	CXformPushGbDedupBelowJoin(const CXformPushGbDedupBelowJoin &);
-
 public:
+	CXformPushGbDedupBelowJoin(const CXformPushGbDedupBelowJoin &) = delete;
+
 	// ctor
 	explicit CXformPushGbDedupBelowJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformPushGbDedupBelowJoin()
-	{
-	}
+	~CXformPushGbDedupBelowJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfPushGbDedupBelowJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformPushGbDedupBelowJoin";
 	}

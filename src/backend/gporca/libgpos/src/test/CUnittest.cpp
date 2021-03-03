@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (c) 2004-2015 Pivotal Software, Inc.
+//	Copyright (c) 2004-2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CUnittest.cpp
@@ -9,8 +9,9 @@
 //		Driver for unittests
 //---------------------------------------------------------------------------
 
-#include <stddef.h>
+#include "gpos/test/CUnittest.h"
 
+#include <stddef.h>
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
@@ -19,7 +20,6 @@
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CTask.h"
 #include "gpos/task/CWorker.h"
-#include "gpos/test/CUnittest.h"
 
 using namespace gpos;
 
@@ -28,11 +28,11 @@ using namespace gpos;
 #define GPOS_OVERSIZED_POOL_SIZE 500 * 1024 * 1024
 
 // initialize static members
-CUnittest *CUnittest::m_rgut = NULL;
+CUnittest *CUnittest::m_rgut = nullptr;
 ULONG CUnittest::m_ulTests = 0;
 ULONG CUnittest::m_ulNested = 0;
-void (*CUnittest::m_pfConfig)() = NULL;
-void (*CUnittest::m_pfCleanup)() = NULL;
+void (*CUnittest::m_pfConfig)() = nullptr;
+void (*CUnittest::m_pfCleanup)() = nullptr;
 
 
 //---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ CUnittest::CUnittest(const CHAR *szTitle, ETestType ett,
 	: m_szTitle(szTitle),
 	  m_ett(ett),
 	  m_pfunc(pfunc),
-	  m_pfuncSubtest(NULL),
+	  m_pfuncSubtest(nullptr),
 	  m_ulSubtest(0),
 	  m_fExcep(false),
 	  m_ulMajor(CException::ExmaInvalid),
@@ -70,7 +70,7 @@ CUnittest::CUnittest(const CHAR *szTitle, ETestType ett,
 	: m_szTitle(szTitle),
 	  m_ett(ett),
 	  m_pfunc(pfunc),
-	  m_pfuncSubtest(NULL),
+	  m_pfuncSubtest(nullptr),
 	  m_ulSubtest(0),
 	  m_fExcep(true),
 	  m_ulMajor(major),
@@ -90,7 +90,7 @@ CUnittest::CUnittest(const CHAR *szTitle, ETestType ett,
 					 GPOS_RESULT (*pfuncSubtest)(ULONG), ULONG ulSubtest)
 	: m_szTitle(szTitle),
 	  m_ett(ett),
-	  m_pfunc(NULL),
+	  m_pfunc(nullptr),
 	  m_pfuncSubtest(pfuncSubtest),
 	  m_ulSubtest(ulSubtest),
 	  m_fExcep(false),
@@ -109,16 +109,9 @@ CUnittest::CUnittest(const CHAR *szTitle, ETestType ett,
 //
 //---------------------------------------------------------------------------
 CUnittest::CUnittest(const CUnittest &ut)
-	: m_szTitle(ut.m_szTitle),
-	  m_ett(ut.m_ett),
-	  m_pfunc(ut.m_pfunc),
-	  m_pfuncSubtest(ut.m_pfuncSubtest),
-	  m_ulSubtest(ut.m_ulSubtest),
-	  m_fExcep(ut.m_fExcep),
-	  m_ulMajor(ut.m_ulMajor),
-	  m_ulMinor(ut.m_ulMinor)
-{
-}
+
+
+	= default;
 
 
 
@@ -186,8 +179,8 @@ CUnittest::EresExecTest(const CUnittest &ut)
 		// reset cancellation flag
 		CTask::Self()->ResetCancel();
 
-		eres = ut.m_pfunc != NULL ? ut.m_pfunc()
-								  : ut.m_pfuncSubtest(ut.m_ulSubtest);
+		eres = ut.m_pfunc != nullptr ? ut.m_pfunc()
+									 : ut.m_pfuncSubtest(ut.m_ulSubtest);
 
 		// check if this was expected to throw
 		if (ut.FThrows())
@@ -287,8 +280,8 @@ CUnittest::FindTest(CBitVector &bv, ETestType ett, CHAR *szTestName)
 		CUnittest &ut = CUnittest::m_rgut[i];
 
 		if ((ut.Ett() == ett &&
-			 (NULL == szTestName || ut.Equals(szTestName))) ||
-			(NULL != szTestName && ut.Equals(szTestName)))
+			 (nullptr == szTestName || ut.Equals(szTestName))) ||
+			(nullptr != szTestName && ut.Equals(szTestName)))
 		{
 			(void) bv.ExchangeSet(i);
 		}
@@ -312,7 +305,7 @@ CUnittest::FindTest(CBitVector &bv, ETestType ett, CHAR *szTestName)
 void
 CUnittest::SetTraceFlag(const CHAR *szTrace)
 {
-	CHAR *pcEnd = NULL;
+	CHAR *pcEnd = nullptr;
 	LINT lTrace = clib::Strtol(szTrace, &pcEnd, 0 /*iBase*/);
 
 	GPOS_SET_TRACE((ULONG) lTrace);
@@ -322,7 +315,7 @@ CUnittest::SetTraceFlag(const CHAR *szTrace)
 ULLONG
 CUnittest::UllParsePlanId(const CHAR *szPlanId)
 {
-	CHAR *pcEnd = NULL;
+	CHAR *pcEnd = nullptr;
 	LINT ullPlanId = clib::Strtol(szPlanId, &pcEnd, 0 /*iBase*/);
 	return ullPlanId;
 }
@@ -393,7 +386,7 @@ CUnittest::Driver(CMainArgs *pma)
 	CHAR ch = '\0';
 	while (pma->Getopt(&ch))
 	{
-		CHAR *szTestName = NULL;
+		CHAR *szTestName = nullptr;
 
 		switch (ch)
 		{
@@ -405,7 +398,7 @@ CUnittest::Driver(CMainArgs *pma)
 				break;
 
 			case 'x':
-				FindTest(bv, EttExtended, NULL /*szTestName*/);
+				FindTest(bv, EttExtended, nullptr /*szTestName*/);
 				break;
 
 			case 'T':

@@ -12,10 +12,11 @@
 #define GPOPT_CXformSubqNAryJoin2Apply_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPatternMultiLeaf.h"
-#include "gpopt/operators/CPatternTree.h"
+
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CPatternMultiLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/xforms/CXformSubqJoin2Apply.h"
 
 namespace gpopt
@@ -33,10 +34,9 @@ using namespace gpos;
 class CXformSubqNAryJoin2Apply : public CXformSubqJoin2Apply
 {
 private:
-	// private copy ctor
-	CXformSubqNAryJoin2Apply(const CXformSubqNAryJoin2Apply &);
-
 public:
+	CXformSubqNAryJoin2Apply(const CXformSubqNAryJoin2Apply &) = delete;
+
 	// ctor
 	explicit CXformSubqNAryJoin2Apply(CMemoryPool *mp)
 		: CXformSubqJoin2Apply(
@@ -50,19 +50,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformSubqNAryJoin2Apply()
-	{
-	}
+	~CXformSubqNAryJoin2Apply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSubqNAryJoin2Apply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSubqNAryJoin2Apply";
 	}

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarArrayCoerceExpr.cpp
@@ -15,8 +15,9 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarArrayCoerceExpr.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -37,7 +38,7 @@ CScalarArrayCoerceExpr::CScalarArrayCoerceExpr(
 	  m_pmdidElementFunc(element_func),
 	  m_is_explicit(is_explicit)
 {
-	GPOS_ASSERT(NULL != element_func);
+	GPOS_ASSERT(nullptr != element_func);
 }
 
 //---------------------------------------------------------------------------
@@ -166,7 +167,7 @@ CScalarArrayCoerceExpr::FInputOrderSensitive() const
 CScalarArrayCoerceExpr *
 CScalarArrayCoerceExpr::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopScalarArrayCoerceExpr == pop->Eopid());
 
 	return dynamic_cast<CScalarArrayCoerceExpr *>(pop);

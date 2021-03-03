@@ -1,8 +1,0 @@
-include: helpers/example.sql;
-CREATE
-
-select example();
- example        
-----------------
- WITHIN TESTING 
-(1 row)

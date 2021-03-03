@@ -3,7 +3,8 @@ query*.sql
 gpload/config
 gpload2/config
 gpload2/setup.out
-gpload2/data_file.txt
+gpload2/data/large_file.csv
+gpload2/data_file*
 GPTest.pm
 gpstringsubs.pl
 gpdiff.pl

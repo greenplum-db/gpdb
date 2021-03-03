@@ -54,7 +54,7 @@ LOG_STATEMENT_TXT="#log_statement ="
 LISTEN_ADR_TXT="listen_addresses"
 CONTENT_ID_TXT="gp_contentid"
 DBID_TXT="gp_dbid"
-TMP_PG_HBA=/tmp/pg_hba_conf_master.$$
+TMP_PG_HBA=/tmp/pg_hba_conf_coordinator.$$
 
 #******************************************************************************
 # Functions
@@ -164,21 +164,21 @@ CREATE_QES_PRIMARY () {
     # Configuring PG_HBA
     LOG_MSG "[INFO][$INST_COUNT]:-Configuring segment $PG_HBA"
     if [ $HBA_HOSTNAMES -eq 0 ]; then
-        for MASTER_IP in "${MASTER_IP_ADDRESS[@]}"
+        for COORDINATOR_IP in "${COORDINATOR_IP_ADDRESS[@]}"
         do
             # MPP-15889
-            CIDR_MASTER_IP=$(GET_CIDRADDR $MASTER_IP)
-            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_MASTER_IP}	trust >> ${GP_DIR}/$PG_HBA"
-            PARA_EXIT $? "Update $PG_HBA for master IP address ${CIDR_MASTER_IP}"
+            CIDR_COORDINATOR_IP=$(GET_CIDRADDR $COORDINATOR_IP)
+            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_COORDINATOR_IP}	trust >> ${GP_DIR}/$PG_HBA"
+            PARA_EXIT $? "Update $PG_HBA for coordinator IP address ${CIDR_COORDINATOR_IP}"
           done
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
-          LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby master IP address for segment instances"
+          LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby coordinator IP address for segment instances"
           for STANDBY_IP in "${STANDBY_IP_ADDRESS[@]}"
           do
           # MPP-15889
               CIDR_STANDBY_IP=$(GET_CIDRADDR $STANDBY_IP)
               $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${CIDR_STANDBY_IP}	trust >> ${GP_DIR}/$PG_HBA"
-              PARA_EXIT $? "Update $PG_HBA for master standby address ${CIDR_STANDBY_IP}"
+              PARA_EXIT $? "Update $PG_HBA for coordinator standby address ${CIDR_STANDBY_IP}"
           done
         fi
     
@@ -204,15 +204,15 @@ CREATE_QES_PRIMARY () {
     else # use hostnames in pg_hba.conf
         # add localhost
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${MASTER_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${COORDINATOR_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
           $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $MIRROR_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
         fi
-        PARA_EXIT $? "Update $PG_HBA for master IP address ${MASTER_HOSTNAME}"
+        PARA_EXIT $? "Update $PG_HBA for coordinator IP address ${COORDINATOR_HOSTNAME}"
         if [ x"" != x"$STANDBY_HOSTNAME" ];then
-            LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby master IP address for segment instances"
+            LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby coordinator IP address for segment instances"
             $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${STANDBY_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
-            PARA_EXIT $? "Update $PG_HBA for master standby address ${STANDBY_HOSTNAME}"
+            PARA_EXIT $? "Update $PG_HBA for coordinator standby address ${STANDBY_HOSTNAME}"
         fi
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $GP_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
     fi
@@ -283,7 +283,7 @@ done
 
 # gpcreateseg.sh is called for creating primary and mirror segments.
 # Below is an example for invocation to create a primary
-# MASTER_HOSTNAME=bhuvi.local HBA_HOSTNAMES=0 /usr/local/gpdb/bin/lib/gpcreateseg.sh -p clusterConfigPostgresAddonsFile 65324 1
+# COORDINATOR_HOSTNAME=bhuvi.local HBA_HOSTNAMES=0 /usr/local/gpdb/bin/lib/gpcreateseg.sh -p clusterConfigPostgresAddonsFile 65324 1
 # IS_PRIMARY host1.local~45432~/tmp/demoDataDir0~2~0 host2.local~45433~/tmp/demoDataDir0~3~0 0
 # /tmp/gpAdminLogs/gpinitsystem_20190903.log on  10.64.249.254~192.168.1.72~::1~fe80::1%lo0 10.64.249.252~192.168.1.73~::1~fe81::1%lo1 &
 # PARALLEL_COUNT 1 4
@@ -330,9 +330,9 @@ LOG_FILE=$1;shift		#Central logging file
 LOG_MSG "[INFO][$INST_COUNT]:-Start Main"
 LOG_MSG "[INFO][$INST_COUNT]:-Command line options passed to utility = $*"
 HEAP_CHECKSUM=$1;shift
-TMP_MASTER_IP_ADDRESS=$1;shift	#List of IP addresses for the master instance
-MASTER_IP_ADDRESS=(`$ECHO $TMP_MASTER_IP_ADDRESS|$TR '~' ' '`)
-TMP_STANDBY_IP_ADDRESS=$1;shift #List of IP addresses for standby master
+TMP_COORDINATOR_IP_ADDRESS=$1;shift	#List of IP addresses for the coordinator instance
+COORDINATOR_IP_ADDRESS=(`$ECHO $TMP_COORDINATOR_IP_ADDRESS|$TR '~' ' '`)
+TMP_STANDBY_IP_ADDRESS=$1;shift #List of IP addresses for standby coordinator
 STANDBY_IP_ADDRESS=(`$ECHO $TMP_STANDBY_IP_ADDRESS|$TR '~' ' '`)
 if [ x"IS_PRIMARY" == x"$PRIMARY_OR_MIRROR_IDENTIFIER" ]; then
     CREATE_QES_PRIMARY

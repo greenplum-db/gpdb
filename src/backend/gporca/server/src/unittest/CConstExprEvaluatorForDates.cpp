@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorForDates.cpp
@@ -15,14 +15,13 @@
 //
 //---------------------------------------------------------------------------
 
-#include "naucrates/base/IDatum.h"
-#include "naucrates/md/CMDIdGPDB.h"
-#include "naucrates/md/IMDType.h"
+#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/ops.h"
-
-#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
+#include "naucrates/base/IDatum.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDType.h"
 
 using namespace gpnaucrates;
 using namespace gpopt;
@@ -33,7 +32,7 @@ using namespace gpopt;
 //
 //	@doc:
 //		It expects that the given expression is a scalar comparison between
-//		two date constants. It compares the two constants using their double
+//		two date constants. It compares the two constants using their lint
 //		stats mapping, which in the case of the date type gives a correct result.
 //		If it gets an illegal expression, an assertion failure is raised in
 //		debug mode.
@@ -58,8 +57,8 @@ CConstExprEvaluatorForDates::PexprEval(CExpression *pexpr)
 		CMDIdGPDB::m_mdid_date.Equals(popScalarRight->GetDatum()->MDId()));
 
 	CScalarCmp *popScCmp = dynamic_cast<CScalarCmp *>(pexpr->Pop());
-	CDouble dLeft = popScalarLeft->GetDatum()->GetDoubleMapping();
-	CDouble dRight = popScalarRight->GetDatum()->GetDoubleMapping();
+	LINT dLeft = popScalarLeft->GetDatum()->GetLINTMapping();
+	LINT dRight = popScalarRight->GetDatum()->GetLINTMapping();
 	BOOL result = false;
 	switch (popScCmp->ParseCmpType())
 	{
@@ -83,7 +82,7 @@ CConstExprEvaluatorForDates::PexprEval(CExpression *pexpr)
 			break;
 		default:
 			GPOS_ASSERT(false && "Unsupported comparison");
-			return NULL;
+			return nullptr;
 	}
 	CExpression *pexprResult = CUtils::PexprScalarConstBool(m_mp, result);
 

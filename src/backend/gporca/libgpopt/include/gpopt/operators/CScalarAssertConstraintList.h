@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarAssertConstraintList.h
@@ -27,10 +27,10 @@
 #define GPOPT_CScalarAssertConstraintList_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
 
-#include "gpopt/operators/CScalar.h"
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/operators/CScalar.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {
@@ -48,55 +48,54 @@ using namespace gpmd;
 class CScalarAssertConstraintList : public CScalar
 {
 private:
-	// private copy ctor
-	CScalarAssertConstraintList(const CScalarAssertConstraintList &);
-
 public:
+	CScalarAssertConstraintList(const CScalarAssertConstraintList &) = delete;
+
 	// ctor
 	CScalarAssertConstraintList(CMemoryPool *mp);
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarAssertConstraintList;
 	}
 
 	// operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarAssertConstraintList";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// type of expression's result
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// conversion function
 	static CScalarAssertConstraintList *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarAssertConstraintList == pop->Eopid());
 
 		return dynamic_cast<CScalarAssertConstraintList *>(pop);

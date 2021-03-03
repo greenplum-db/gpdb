@@ -9,9 +9,9 @@
 //		Implementation of left outer correlated apply operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

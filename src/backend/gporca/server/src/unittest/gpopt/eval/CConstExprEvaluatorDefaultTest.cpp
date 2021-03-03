@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorDefaultTest.cpp
@@ -15,17 +15,17 @@
 //
 //---------------------------------------------------------------------------
 
-#include "unittest/base.h"
-#include "unittest/gpopt/CTestUtils.h"
 #include "unittest/gpopt/eval/CConstExprEvaluatorDefaultTest.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CAutoOptCtxt.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/ops.h"
-
 #include "naucrates/md/CMDProviderMemory.h"
+
+#include "unittest/base.h"
+#include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpos;
 using namespace gpopt;
@@ -54,7 +54,7 @@ CConstExprEvaluatorDefaultTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// Test evaluation of an integer constant

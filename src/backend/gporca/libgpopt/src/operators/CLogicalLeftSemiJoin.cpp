@@ -9,13 +9,13 @@
 //		Implementation of left semi join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalLeftSemiJoin.h"
-
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;
@@ -31,7 +31,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalLeftSemiJoin::CLogicalLeftSemiJoin(CMemoryPool *mp) : CLogicalJoin(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 

@@ -53,9 +53,7 @@ public:
 	// ctor/dtor
 	explicit CMappingColIdVar(CMemoryPool *);
 
-	virtual ~CMappingColIdVar()
-	{
-	}
+	virtual ~CMappingColIdVar() = default;
 
 	// translate DXL ScalarIdent node into GPDB Var node
 	virtual Var *VarFromDXLNodeScId(const CDXLScalarIdent *) = 0;

@@ -4,7 +4,7 @@
  *	  Routines to determine which relations should be joined
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -680,7 +680,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	/* This is a convenient place to check for query cancel. */
 	CHECK_FOR_INTERRUPTS();
 
-    Insist(rel1 &&
+    Assert(rel1 &&
            rel2 &&
            rel1->cheapest_total_path &&
            rel2->cheapest_total_path);

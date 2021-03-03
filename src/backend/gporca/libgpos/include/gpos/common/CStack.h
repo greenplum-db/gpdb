@@ -19,8 +19,8 @@
 #define GPOPT_CStack_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 namespace gpos
 {
@@ -34,10 +34,9 @@ private:
 	// top of stack index
 	ULONG m_size;
 
-	// copy c'tor - not defined
-	CStack(CStack &);
-
 public:
+	CStack(CStack &) = delete;
+
 	// c'tor
 	CStack<T>(CMemoryPool *mp, ULONG min_size = 4) : m_size(0)
 	{
@@ -55,7 +54,7 @@ public:
 	void
 	Push(T *obj)
 	{
-		GPOS_ASSERT(m_dynamic_ptr_array != NULL && "Dynamic array missing");
+		GPOS_ASSERT(m_dynamic_ptr_array != nullptr && "Dynamic array missing");
 		GPOS_ASSERT(m_size <= m_dynamic_ptr_array->Size() &&
 					"The top of stack cannot be beyond the underlying array");
 

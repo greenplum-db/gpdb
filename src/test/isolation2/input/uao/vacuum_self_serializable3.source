@@ -11,5 +11,6 @@ SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT COUNT(*) FROM ao;
 SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
 VACUUM ao;
-SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
+-- in case there's autovacuum worker running in the backend, the aoseg will not be dropped which has state = 2
+SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao') where state = 1 and tupcount > 0;
 SELECT COUNT(*) FROM ao;

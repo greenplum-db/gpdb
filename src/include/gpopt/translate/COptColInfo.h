@@ -41,10 +41,9 @@ private:
 	// column name
 	CWStringBase *m_str;
 
-	// private copy c'tor
-	COptColInfo(const COptColInfo &);
-
 public:
+	COptColInfo(const COptColInfo &) = delete;
+
 	// ctor
 	COptColInfo(ULONG colid, CWStringBase *str) : m_colid(colid), m_str(str)
 	{
@@ -52,7 +51,7 @@ public:
 	}
 
 	// dtor
-	virtual ~COptColInfo()
+	~COptColInfo() override
 	{
 		GPOS_DELETE(m_str);
 	}
@@ -90,7 +89,7 @@ public:
 inline ULONG
 UlHashOptColInfo(const COptColInfo *opt_col_info)
 {
-	GPOS_ASSERT(NULL != opt_col_info);
+	GPOS_ASSERT(nullptr != opt_col_info);
 	return opt_col_info->HashValue();
 }
 
@@ -99,7 +98,7 @@ inline BOOL
 FEqualOptColInfo(const COptColInfo *opt_col_infoA,
 				 const COptColInfo *opt_col_infoB)
 {
-	GPOS_ASSERT(NULL != opt_col_infoA && NULL != opt_col_infoB);
+	GPOS_ASSERT(nullptr != opt_col_infoA && nullptr != opt_col_infoB);
 	return opt_col_infoA->Equals(*opt_col_infoB);
 }
 

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2018 Pivotal, Inc.
+//	Copyright 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CJoinStatsProcessor.cpp
@@ -9,17 +9,17 @@
 //		Statistics helper routines for processing all join types
 //---------------------------------------------------------------------------
 
+#include "naucrates/statistics/CJoinStatsProcessor.h"
+
 #include "gpopt/operators/CLogicalIndexApply.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-
-#include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/statistics/CJoinStatsProcessor.h"
-#include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
+#include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"
 #include "naucrates/statistics/CScaleFactorUtils.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpopt;
 
@@ -36,12 +36,12 @@ CJoinStatsProcessor::JoinHistograms(
 	BOOL is_input_empty, IStatistics::EStatsJoinType join_type,
 	BOOL DoIgnoreLASJHistComputation)
 {
-	GPOS_ASSERT(NULL != histogram1);
-	GPOS_ASSERT(NULL != histogram2);
-	GPOS_ASSERT(NULL != join_pred_stats);
-	GPOS_ASSERT(NULL != result_hist1);
-	GPOS_ASSERT(NULL != result_hist2);
-	GPOS_ASSERT(NULL != scale_factor);
+	GPOS_ASSERT(nullptr != histogram1);
+	GPOS_ASSERT(nullptr != histogram2);
+	GPOS_ASSERT(nullptr != join_pred_stats);
+	GPOS_ASSERT(nullptr != result_hist1);
+	GPOS_ASSERT(nullptr != result_hist2);
+	GPOS_ASSERT(nullptr != scale_factor);
 
 	if (IStatistics::EsjtLeftAntiSemiJoin == join_type)
 	{
@@ -121,8 +121,8 @@ CJoinStatsProcessor::CalcAllJoinStats(CMemoryPool *mp,
 									  IStatisticsArray *statistics_array,
 									  CExpression *expr, COperator *pop)
 {
-	GPOS_ASSERT(NULL != expr);
-	GPOS_ASSERT(NULL != statistics_array);
+	GPOS_ASSERT(nullptr != expr);
+	GPOS_ASSERT(nullptr != statistics_array);
 	GPOS_ASSERT(0 < statistics_array->Size());
 	// Is the operator passed in a 2-way LOJ? We will later refine this to find whether
 	// an individual predicate is for an LOJ or not.
@@ -136,7 +136,7 @@ CJoinStatsProcessor::CalcAllJoinStats(CMemoryPool *mp,
 	IStatistics *stats = (*statistics_array)[0]->CopyStats(mp);
 	CDouble num_rows_outer = stats->Rows();
 	// predicate indexes, if we have a mix of inner and LOJs
-	ULongPtrArray *predIndexes = NULL;
+	ULongPtrArray *predIndexes = nullptr;
 	CExpression *inner_or_simple_2_way_loj_preds = expr;
 
 	switch (pop->Eopid())
@@ -153,7 +153,7 @@ CJoinStatsProcessor::CalcAllJoinStats(CMemoryPool *mp,
 		case COperator::EopLogicalNAryJoin:
 			predIndexes =
 				CLogicalNAryJoin::PopConvert(pop)->GetLojChildPredIndexes();
-			if (NULL != predIndexes)
+			if (nullptr != predIndexes)
 			{
 				GPOS_ASSERT(COperator::EopScalarNAryJoinPredList ==
 							expr->Pop()->Eopid());
@@ -174,11 +174,11 @@ CJoinStatsProcessor::CalcAllJoinStats(CMemoryPool *mp,
 		output_colrefsets->Append(stats->GetColRefSet(mp));
 		output_colrefsets->Append(current_stats->GetColRefSet(mp));
 
-		CStatsPred *unsupported_pred_stats = NULL;
+		CStatsPred *unsupported_pred_stats = nullptr;
 		BOOL is_a_left_join = left_outer_2_way_join;
-		CExpression *join_preds_available = NULL;
+		CExpression *join_preds_available = nullptr;
 
-		if (NULL == predIndexes ||
+		if (nullptr == predIndexes ||
 			GPOPT_ZERO_INNER_JOIN_PRED_INDEX == *(*predIndexes)[i])
 		{
 			join_preds_available = inner_or_simple_2_way_loj_preds;
@@ -196,7 +196,7 @@ CJoinStatsProcessor::CalcAllJoinStats(CMemoryPool *mp,
 				is_a_left_join,	 // left joins use an anti-semijoin internally
 				&unsupported_pred_stats);
 
-		IStatistics *new_stats = NULL;
+		IStatistics *new_stats = nullptr;
 
 		if (is_a_left_join)
 		{
@@ -211,7 +211,7 @@ CJoinStatsProcessor::CalcAllJoinStats(CMemoryPool *mp,
 		stats->Release();
 		stats = new_stats;
 
-		if (NULL != unsupported_pred_stats)
+		if (nullptr != unsupported_pred_stats)
 		{
 			// apply the unsupported join filters as a filter on top of the join results.
 			// TODO,  June 13 2014 we currently only cap NDVs for filters
@@ -259,11 +259,11 @@ CJoinStatsProcessor::SetResultingJoinStats(
 	CStatsPredJoinArray *join_pred_stats_info,
 	IStatistics::EStatsJoinType join_type, BOOL DoIgnoreLASJHistComputation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != inner_stats_input);
-	GPOS_ASSERT(NULL != outer_stats_input);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != inner_stats_input);
+	GPOS_ASSERT(nullptr != outer_stats_input);
 
-	GPOS_ASSERT(NULL != join_pred_stats_info);
+	GPOS_ASSERT(nullptr != join_pred_stats_info);
 
 	BOOL IsLASJ = (IStatistics::EsjtLeftAntiSemiJoin == join_type);
 	BOOL semi_join = IStatistics::IsSemiJoin(join_type);
@@ -321,13 +321,13 @@ CJoinStatsProcessor::SetResultingJoinStats(
 		ULONG colid1 = pred_info->ColIdOuter();
 		ULONG colid2 = pred_info->ColIdInner();
 		GPOS_ASSERT(colid1 != colid2);
-		const CHistogram *outer_histogram = NULL;
-		const CHistogram *inner_histogram = NULL;
+		const CHistogram *outer_histogram = nullptr;
+		const CHistogram *inner_histogram = nullptr;
 		BOOL is_input_empty =
 			CStatistics::IsEmptyJoin(outer_stats, inner_side_stats, IsLASJ);
 		CDouble local_scale_factor(1.0);
-		CHistogram *outer_histogram_after = NULL;
-		CHistogram *inner_histogram_after = NULL;
+		CHistogram *outer_histogram_after = nullptr;
+		CHistogram *inner_histogram_after = nullptr;
 
 
 		// find the histograms corresponding to the two columns
@@ -335,23 +335,23 @@ CJoinStatsProcessor::SetResultingJoinStats(
 		if (pred_info->HasValidColIdOuter())
 		{
 			outer_histogram = outer_stats->GetHistogram(colid1);
-			GPOS_ASSERT(NULL != outer_histogram);
+			GPOS_ASSERT(nullptr != outer_histogram);
 		}
 		if (pred_info->HasValidColIdInner())
 		{
 			inner_histogram = inner_side_stats->GetHistogram(colid2);
-			GPOS_ASSERT(NULL != inner_histogram);
+			GPOS_ASSERT(nullptr != inner_histogram);
 		}
 
 		// When we have any form of equi join with join condition of type f(a)=b,
 		// we calculate the NDV of such a join as NDV(b) ( from Selinger et al.)
-		if (NULL == outer_histogram)
+		if (nullptr == outer_histogram)
 		{
 			GPOS_ASSERT(CStatsPred::EstatscmptEqNDV == pred_info->GetCmpType());
 			outer_histogram = inner_histogram;
 			colid1 = colid2;
 		}
-		else if (NULL == inner_histogram)
+		else if (nullptr == inner_histogram)
 		{
 			GPOS_ASSERT(CStatsPred::EstatscmptEqNDV == pred_info->GetCmpType());
 			inner_histogram = outer_histogram;
@@ -386,14 +386,14 @@ CJoinStatsProcessor::SetResultingJoinStats(
 		CColRef *colref_outer = col_factory->LookupColRef(colid1);
 		CColRef *colref_inner = col_factory->LookupColRef(colid2);
 
-		GPOS_ASSERT(colref_outer != NULL);
-		GPOS_ASSERT(colref_inner != NULL);
+		GPOS_ASSERT(colref_outer != nullptr);
+		GPOS_ASSERT(colref_inner != nullptr);
 
 		IMDId *mdid_outer = colref_outer->GetMdidTable();
 		IMDId *mdid_inner = colref_inner->GetMdidTable();
-		IMdIdArray *mdid_pair = NULL;
+		IMdIdArray *mdid_pair = nullptr;
 		BOOL both_dist_keys = false;
-		if ((mdid_outer != NULL) && (mdid_inner != NULL))
+		if ((mdid_outer != nullptr) && (mdid_inner != nullptr))
 		{
 			// there should only be two tables involved in a join condition
 			// if the predicate is more complex (i.e. more than 2 tables involved in the predicate such as t1.a=t2.a+t3.a),
@@ -471,11 +471,14 @@ CJoinStatsProcessor::CalcJoinCardinality(
 	CScaleFactorUtils::SJoinConditionArray *join_conds_scale_factors,
 	IStatistics::EStatsJoinType join_type)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != join_conds_scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != join_conds_scale_factors);
+	CDouble limit_for_result_scale_factor(
+		std::max(left_num_rows.Get(), right_num_rows.Get()));
 
 	CDouble scale_factor = CScaleFactorUtils::CumulativeJoinScaleFactor(
-		mp, stats_config, join_conds_scale_factors);
+		mp, stats_config, join_conds_scale_factors,
+		limit_for_result_scale_factor);
 	CDouble cartesian_product_num_rows = left_num_rows * right_num_rows;
 
 	if (IStatistics::EsjtLeftAntiSemiJoin == join_type ||
@@ -515,9 +518,9 @@ CJoinStatsProcessor::JoinStatsAreEmpty(BOOL outer_is_empty,
 									   CHistogram *join_histogram,
 									   IStatistics::EStatsJoinType join_type)
 {
-	GPOS_ASSERT(NULL != outer_histogram);
-	GPOS_ASSERT(NULL != inner_histogram);
-	GPOS_ASSERT(NULL != join_histogram);
+	GPOS_ASSERT(nullptr != outer_histogram);
+	GPOS_ASSERT(nullptr != inner_histogram);
+	GPOS_ASSERT(nullptr != join_histogram);
 	BOOL IsLASJ = IStatistics::EsjtLeftAntiSemiJoin == join_type;
 	return output_is_empty || (!IsLASJ && outer_is_empty) ||
 		   (!outer_histogram->IsEmpty() && !inner_histogram->IsEmpty() &&
@@ -548,8 +551,8 @@ CJoinStatsProcessor::DeriveJoinStats(CMemoryPool *mp,
 		mp, join_pred_expr, exprhdl);
 
 	// split join predicate into local predicate and predicate involving outer references
-	CExpression *local_expr = NULL;
-	CExpression *expr_with_outer_refs = NULL;
+	CExpression *local_expr = nullptr;
+	CExpression *expr_with_outer_refs = nullptr;
 
 	// get outer references from expression handle
 	CColRefSet *outer_refs = exprhdl.DeriveOuterReferences();
@@ -563,7 +566,8 @@ CJoinStatsProcessor::DeriveJoinStats(CMemoryPool *mp,
 	GPOS_ASSERT(COperator::EopLogicalLeftOuterJoin == op_id ||
 				COperator::EopLogicalInnerJoin == op_id ||
 				COperator::EopLogicalNAryJoin == op_id ||
-				COperator::EopLogicalFullOuterJoin == op_id);
+				COperator::EopLogicalFullOuterJoin == op_id ||
+				COperator::EopLogicalRightOuterJoin == op_id);
 #endif
 
 	// derive stats based on local join condition
@@ -653,9 +657,9 @@ CJoinStatsProcessor::DeriveStatsWithOuterRefs(
 {
 	GPOS_ASSERT(exprhdl.HasOuterRefs() &&
 				"attached expression does not have outer references");
-	GPOS_ASSERT(NULL != expr);
-	GPOS_ASSERT(NULL != stats);
-	GPOS_ASSERT(NULL != all_outer_stats);
+	GPOS_ASSERT(nullptr != expr);
+	GPOS_ASSERT(nullptr != stats);
+	GPOS_ASSERT(nullptr != all_outer_stats);
 	GPOS_ASSERT(0 < all_outer_stats->Size());
 
 	// join outer stats object based on given scalar expression,

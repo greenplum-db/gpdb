@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalAppend_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 
 namespace gpdxl
@@ -45,29 +46,28 @@ private:
 	// TODO:  - Apr 12, 2011; find a better name (and comments) for this variable
 	BOOL m_is_zapped;
 
-	// private copy ctor
-	CDXLPhysicalAppend(const CDXLPhysicalAppend &);
-
 public:
+	CDXLPhysicalAppend(const CDXLPhysicalAppend &) = delete;
+
 	// ctor/dtor
 	CDXLPhysicalAppend(CMemoryPool *mp, BOOL fIsTarget, BOOL fIsZapped);
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
-	const CWStringConst *GetOpNameStr() const;
+	Edxlopid GetDXLOperator() const override;
+	const CWStringConst *GetOpNameStr() const override;
 
 	BOOL IsUsedInUpdDel() const;
 	BOOL IsZapped() const;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLPhysicalAppend *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalAppend == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalAppend *>(dxl_op);
@@ -76,7 +76,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

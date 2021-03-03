@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformGbAggDedup2HashAggDedup.cpp
@@ -9,14 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformGbAggDedup2HashAggDedup.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalHashAggDeduplicate.h"
-
 #include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/xforms/CXformGbAggDedup2HashAggDedup.h"
 
 using namespace gpopt;
 
@@ -52,7 +52,7 @@ CXformGbAggDedup2HashAggDedup::Transform(CXformContext *pxfctxt,
 										 CXformResult *pxfres,
 										 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

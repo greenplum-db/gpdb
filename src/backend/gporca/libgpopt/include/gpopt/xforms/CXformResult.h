@@ -12,6 +12,7 @@
 #define GPOPT_CXformResult_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt
@@ -35,15 +36,14 @@ private:
 	// cursor for retrieval
 	ULONG m_ulExpr;
 
-	// private copy ctor
-	CXformResult(const CXformResult &);
-
 public:
+	CXformResult(const CXformResult &) = delete;
+
 	// ctor
 	explicit CXformResult(CMemoryPool *);
 
 	// dtor
-	~CXformResult();
+	~CXformResult() override;
 
 	// accessor
 	inline CExpressionArray *
@@ -59,7 +59,7 @@ public:
 	CExpression *PexprNext();
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CXformResult
 

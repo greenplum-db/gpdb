@@ -1,0 +1,34 @@
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '列1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-08 16:28:22|INFO|gpload session started 2021-01-08 16:28:22
+2021-01-08 16:28:22|INFO|setting schema 'public' for table 'chinese表'
+2021-01-08 16:28:22|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-01-08 16:28:22|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_574412e30ee9763b91661726a67363d6
+2021-01-08 16:28:22|INFO|reusing external table ext_gpload_reusable_77b87a04_518b_11eb_afbf_00505698707d
+2021-01-08 16:28:22|INFO|running time: 0.11 seconds
+2021-01-08 16:28:22|INFO|rows Inserted          = 1
+2021-01-08 16:28:22|INFO|rows Updated           = 7
+2021-01-08 16:28:22|INFO|data formatting errors = 0
+2021-01-08 16:28:22|INFO|gpload succeeded
+2021-01-08 16:28:22|INFO|gpload session started 2021-01-08 16:28:22
+2021-01-08 16:28:22|INFO|setting schema 'public' for table 'chinese表'
+2021-01-08 16:28:22|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2021-01-08 16:28:22|INFO|reusing staging table staging_gpload_reusable_574412e30ee9763b91661726a67363d6
+2021-01-08 16:28:22|INFO|reusing external table ext_gpload_reusable_77b87a04_518b_11eb_afbf_00505698707d
+2021-01-08 16:28:22|INFO|running time: 0.11 seconds
+2021-01-08 16:28:22|INFO|rows Inserted          = 0
+2021-01-08 16:28:22|INFO|rows Updated           = 8
+2021-01-08 16:28:22|INFO|data formatting errors = 0
+2021-01-08 16:28:22|INFO|gpload succeeded
+    列1    | 列#2 |        lie3         | 列four 
+-----------+------+---------------------+--------
+ Line 1    |    1 | 2012-06-01 15:30:30 |    1.2
+ 2nd line  |    2 | 2012-06-01 15:30:40 |    2.3
+ test      |    3 | 2012-06-01 15:30:50 |      3
+ Vide      |    4 | 2012-06-01 15:30:10 |    4.5
+ Field 234 |    5 | 2012-06-01 15:10:30 |      5
+ new line  |    6 | 2012-06-01 17:30:30 |    5.6
+ Line 10   |    7 | 2012-06-02 15:30:30 |    6.8
+ 第11列    |    8 | 2012-06-01 15:30:30 |    6.6
+(8 rows)
+

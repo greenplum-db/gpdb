@@ -7,6 +7,10 @@
 -- error becomes time-sensitive and less predictable.
 -- To preserve coverage, we test those error details here (with greater care).
 --
+-- start_matchsubs
+-- m/^LOCATION:.*:\d+/
+-- s/:\d+/:/
+-- end_matchsubs
 CREATE SCHEMA gpdb_insert;
 SET search_path TO gpdb_insert;
 --
@@ -47,6 +51,16 @@ INSERT INTO tmp VALUES (1, 'three');
 INSERT INTO PRIMARY_TBL SELECT * FROM tmp;
 ERROR:  duplicate key value violates unique constraint "primary_tbl_pkey"
 DETAIL:  Key (i)=(1) already exists.
+-- database object names as separate fields in error messages can be shown when VERBOSITY set to verbose
+\set VERBOSITY verbose
+INSERT INTO PRIMARY_TBL SELECT * FROM tmp;
+ERROR:  23505: duplicate key value violates unique constraint "primary_tbl_pkey"
+DETAIL:  Key (i)=(1) already exists.
+SCHEMA NAME:  gpdb_insert
+TABLE NAME:  primary_tbl
+CONSTRAINT NAME:  primary_tbl_pkey
+LOCATION:  _bt_check_unique, nbtinsert.c:500
+\set VERBOSITY default
 SELECT '' AS four, * FROM PRIMARY_TBL;
  four | i |  t  
 ------+---+-----

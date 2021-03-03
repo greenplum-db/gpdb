@@ -6,10 +6,9 @@ This document illustrates the mechanism of a GPDB component called
 Fault Tolerance Service (FTS):
 
  - This sections explains how FTS probe process is started. The FTS
-   probe process is running on the Gp_entry_postmaster (master node)
-   only. It starts as a background worker process managed by the
-   BackgroundWorker structure. (see
-   src/include/postmaster/bgworker.h).  Greenplum sets up a group of
+   probe process is running on the coordinator node only. It starts as a
+   background worker process managed by the BackgroundWorker structure
+   (see src/include/postmaster/bgworker.h).  Greenplum sets up a group of
    GP background processes through an array structure PMAuxProcList. A
    entry in that struct represents a GP background process.
 
@@ -22,11 +21,13 @@ Fault Tolerance Service (FTS):
 
       static BackgroundWorker PMAuxProcList[MaxPMAuxProc]
 
-   In Postmaster, we will check the following condition:
+   FtsProbeStartRule() function specifies the following condition under
+   which the FTS probe process should be started by postmaster:
 
-      Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH
+      Gp_role == GP_ROLE_DISPATCH
 
-   The FTS probe process is started when the condition is true.
+   That is, the FTS probe process should only be started on the coordinator
+   node in normal cluster mode.
 
    In the initialization phase, we register one BackgroundWorker entry
    for each GP background process into postmaster's private structure
@@ -56,13 +57,13 @@ Fault Tolerance Service (FTS):
    the polling. One is timeout on the latch it is waiting for, and the
    other one is that someone sets the latch.
 
-   Certain components running on master node may interrupt FTS from
+   Certain components running on coordinator node may interrupt FTS from
    its wait to trigger a probe immediately. This is referred to as
    notifying FTS. Dispatcher is one such component. As an example, it
    can notify FTS if it encounters an error while creating a gang. The
    reader may check FtsNotifyProber() to find more cases.
 
-3. On the master node, the FTS probe process gets the configuration
+3. On the coordinator node, the FTS probe process gets the configuration
    from catalog table gp_segment_configuration, which describes the
    status of each segment and also reflects if any of them has a
    mirror. For each unique content(or segindex) value, will see a
@@ -83,7 +84,7 @@ Fault Tolerance Service (FTS):
 
    So FTS both read and write the catalog table.
 
-4. On the master node: each round of the polling is done in a chain of
+4. On the coordinator node: each round of the polling is done in a chain of
    calls :
 
 	ftsConnect()
@@ -101,7 +102,7 @@ Fault Tolerance Service (FTS):
    accordingly.
 
 5. On the segment node: in the main loop of PostgresMain(), the
-   requests from the master FTS probe process
+   requests from the coordinator FTS probe process
    received. ProcessStartupPacket() is called first to make sure this
    dialog is for FTS requests and thus the Postgres process spawn for
    it would be a FTS handler(am_ftshandler = true).  Then it accepts

@@ -13,8 +13,8 @@
 #define GPOPT_CDrvdPropCtxt_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 
 namespace gpopt
@@ -40,9 +40,6 @@ typedef CDynamicPtrArray<CDrvdPropCtxt, CleanupRelease> CDrvdPropCtxtArray;
 class CDrvdPropCtxt : public CRefCount
 {
 private:
-	// private copy ctor
-	CDrvdPropCtxt(const CDrvdPropCtxt &);
-
 protected:
 	// memory pool
 	CMemoryPool *m_mp;
@@ -54,15 +51,15 @@ protected:
 	virtual void AddProps(CDrvdProp *pdp) = 0;
 
 public:
+	CDrvdPropCtxt(const CDrvdPropCtxt &) = delete;
+
 	// ctor
 	CDrvdPropCtxt(CMemoryPool *mp) : m_mp(mp)
 	{
 	}
 
 	// dtor
-	virtual ~CDrvdPropCtxt()
-	{
-	}
+	~CDrvdPropCtxt() override = default;
 
 #ifdef GPOS_DEBUG
 
@@ -93,9 +90,9 @@ public:
 	static CDrvdPropCtxt *
 	PdpctxtCopy(CMemoryPool *mp, CDrvdPropCtxt *pdpctxt)
 	{
-		if (NULL == pdpctxt)
+		if (nullptr == pdpctxt)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		return pdpctxt->PdpctxtCopy(mp);
@@ -105,16 +102,13 @@ public:
 	static void
 	AddDerivedProps(CDrvdProp *pdp, CDrvdPropCtxt *pdpctxt)
 	{
-		if (NULL != pdpctxt)
+		if (nullptr != pdpctxt)
 		{
 			pdpctxt->AddProps(pdp);
 		}
 	}
 
 };	// class CDrvdPropCtxt
-
-// shorthand for printing
-IOstream &operator<<(IOstream &os, CDrvdPropCtxt &drvdpropctxt);
 
 }  // namespace gpopt
 

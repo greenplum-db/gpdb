@@ -9,11 +9,13 @@
 //		Implementation of broadcast motion operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalMotionBroadcast.h"
+
 #include "gpos/base.h"
 
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalMotionBroadcast.h"
 
 using namespace gpopt;
 
@@ -27,9 +29,10 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalMotionBroadcast::CPhysicalMotionBroadcast(CMemoryPool *mp)
-	: CPhysicalMotion(mp), m_pdsReplicated(NULL)
+	: CPhysicalMotion(mp), m_pdsReplicated(nullptr)
 {
-	m_pdsReplicated = GPOS_NEW(mp) CDistributionSpecReplicated();
+	m_pdsReplicated = GPOS_NEW(mp)
+		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
 }
 
 
@@ -196,7 +199,7 @@ CPhysicalMotionBroadcast::OsPrint(IOstream &os) const
 CPhysicalMotionBroadcast *
 CPhysicalMotionBroadcast::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopPhysicalMotionBroadcast == pop->Eopid());
 
 	return dynamic_cast<CPhysicalMotionBroadcast *>(pop);

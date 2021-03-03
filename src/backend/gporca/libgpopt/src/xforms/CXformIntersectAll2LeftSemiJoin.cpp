@@ -9,17 +9,18 @@
 //		Implement the transformation of CLogicalIntersectAll into a left semi join
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformIntersectAll2LeftSemiJoin.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/exception.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefComputed.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CLogicalIntersectAll.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/xforms/CXformIntersectAll2LeftSemiJoin.h"
-#include "gpopt/xforms/CXformUtils.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpmd;
 using namespace gpopt;
@@ -61,8 +62,8 @@ CXformIntersectAll2LeftSemiJoin::Transform(CXformContext *pxfctxt,
 										   CXformResult *pxfres,
 										   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

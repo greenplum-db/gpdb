@@ -35,8 +35,8 @@ class IMDAggregate : public IMDCacheObject
 {
 public:
 	// object type
-	virtual Emdtype
-	MDType() const
+	Emdtype
+	MDType() const override
 	{
 		return EmdtAgg;
 	}

@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerStacktrace_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
@@ -32,25 +33,24 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerStacktrace : public CParseHandlerBase
 {
 private:
-	// private copy ctor
-	CParseHandlerStacktrace(const CParseHandlerStacktrace &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerStacktrace(const CParseHandlerStacktrace &) = delete;
+
 	// ctor/dtor
 	CParseHandlerStacktrace(CMemoryPool *mp,
 							CParseHandlerManager *parse_handler_mgr,

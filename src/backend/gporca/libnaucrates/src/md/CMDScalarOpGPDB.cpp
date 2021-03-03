@@ -11,11 +11,12 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/CMDScalarOpGPDB.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/CMDScalarOpGPDB.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -51,7 +52,7 @@ CMDScalarOpGPDB::CMDScalarOpGPDB(
 	  m_mdid_legacy_hash_opfamily(mdid_legacy_hash_opfamily),
 	  m_is_ndv_preserving(is_ndv_preserving)
 {
-	GPOS_ASSERT(NULL != mdid_opfamilies_array);
+	GPOS_ASSERT(nullptr != mdid_opfamilies_array);
 	m_dxl_str = CDXLUtils::SerializeMDObj(
 		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerCtasStorageOptions.h
@@ -13,8 +13,8 @@
 #define GPDXL_CParseHandlerCTASStorageOptions_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 
+#include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
@@ -46,32 +46,32 @@ private:
 	// parsed array of key-value pairs of options
 	CDXLCtasStorageOptions::CDXLCtasOptionArray *m_ctas_storage_option_array;
 
-	// private copy ctor
-	CParseHandlerCtasStorageOptions(const CParseHandlerCtasStorageOptions &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerCtasStorageOptions(const CParseHandlerCtasStorageOptions &) =
+		delete;
+
 	// ctor
 	CParseHandlerCtasStorageOptions(CMemoryPool *mp,
 									CParseHandlerManager *parse_handler_mgr,
 									CParseHandlerBase *parse_handler_root);
 
 	// dtor
-	virtual ~CParseHandlerCtasStorageOptions();
+	~CParseHandlerCtasStorageOptions() override;
 
 	// parsed storage options
 	CDXLCtasStorageOptions *GetDxlCtasStorageOption() const;

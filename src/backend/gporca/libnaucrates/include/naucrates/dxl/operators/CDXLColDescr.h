@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 
-#include "naucrates/md/CMDName.h"
 #include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/CMDName.h"
 
 namespace gpdxl
 {
@@ -41,9 +41,6 @@ typedef CDynamicPtrArray<CDXLColDescr, CleanupRelease> CDXLColDescrArray;
 class CDXLColDescr : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// name
 	CMDName *m_md_name;
 
@@ -64,17 +61,16 @@ private:
 	// width of the column, for instance  char(10) column has width 10
 	ULONG m_column_width;
 
-	// private copy ctor
-	CDXLColDescr(const CDXLColDescr &);
-
 public:
+	CDXLColDescr(const CDXLColDescr &) = delete;
+
 	// ctor
-	CDXLColDescr(CMemoryPool *, CMDName *, ULONG column_id, INT attr_no,
+	CDXLColDescr(CMDName *, ULONG column_id, INT attr_no,
 				 IMDId *column_mdid_type, INT type_modifier, BOOL is_dropped,
 				 ULONG width = gpos::ulong_max);
 
 	//dtor
-	~CDXLColDescr();
+	~CDXLColDescr() override;
 
 	// column name
 	const CMDName *MdName() const;

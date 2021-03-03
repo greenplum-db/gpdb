@@ -3,7 +3,7 @@
  *
  *	functions for restoring Append-Only auxiliary tables
  *
- *	Copyright (c) 2016-Present, Pivotal Software Inc
+ *	Copyright (c) 2016-Present, VMware, Inc. or its affiliates
  */
 #include "postgres_fe.h"
 

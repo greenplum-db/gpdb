@@ -13,6 +13,7 @@
 #define GPOS_CFileReader_H
 
 #include <fcntl.h>
+
 #include "gpos/io/CFileDescriptor.h"
 
 namespace gpos
@@ -30,20 +31,19 @@ class CFileReader : public CFileDescriptor
 {
 private:
 	// file size
-	ULLONG m_file_size;
+	ULLONG m_file_size{0};
 
 	// read size
-	ULLONG m_file_read_size;
-
-	// no copy ctor
-	CFileReader(const CFileReader &);
+	ULLONG m_file_read_size{0};
 
 public:
+	CFileReader(const CFileReader &) = delete;
+
 	// ctor
 	CFileReader();
 
 	// dtor
-	virtual ~CFileReader();
+	~CFileReader() override;
 
 	// get file size
 	ULLONG FileSize() const;

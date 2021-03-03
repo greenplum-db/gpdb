@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformExpandNAryJoinGreedy.cpp
@@ -11,6 +11,8 @@
 //		the end
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformExpandNAryJoinGreedy.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
@@ -18,7 +20,6 @@
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPatternMultiTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformExpandNAryJoinGreedy.h"
 #include "gpopt/xforms/CJoinOrderGreedy.h"
 #include "gpopt/xforms/CXformUtils.h"
 
@@ -74,8 +75,8 @@ CXformExpandNAryJoinGreedy::Transform(CXformContext *pxfctxt,
 									  CXformResult *pxfres,
 									  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -100,7 +101,7 @@ CXformExpandNAryJoinGreedy::Transform(CXformContext *pxfctxt,
 	CJoinOrderGreedy jomc(pmp, pdrgpexpr, pdrgpexprPreds);
 	CExpression *pexprResult = jomc.PexprExpand();
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		// normalize resulting expression
 		CExpression *pexprNormalized =

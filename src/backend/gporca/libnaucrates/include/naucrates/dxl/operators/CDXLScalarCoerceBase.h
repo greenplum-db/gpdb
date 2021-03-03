@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarCoerceBase.h
@@ -18,6 +18,7 @@
 #define GPDXL_CDXLScalarCoerceBase_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/IMDId.h"
 
@@ -49,15 +50,14 @@ private:
 	// location of token to be coerced
 	INT m_location;
 
-	// private copy ctor
-	CDXLScalarCoerceBase(const CDXLScalarCoerceBase &);
-
 public:
+	CDXLScalarCoerceBase(const CDXLScalarCoerceBase &) = delete;
+
 	// ctor/dtor
 	CDXLScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
 						 EdxlCoercionForm dxl_coerce_format, INT location);
 
-	virtual ~CDXLScalarCoerceBase();
+	~CDXLScalarCoerceBase() override;
 
 	// return result type
 	IMDId *
@@ -88,18 +88,18 @@ public:
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	virtual void AssertValid(const CDXLNode *node,
-							 BOOL validate_children) const;
+	void AssertValid(const CDXLNode *node,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 };
 }  // namespace gpdxl
 

@@ -1,5 +1,3 @@
-include: helpers/server_helpers.sql;
-
 -- Test this scenario:
 -- mirror has latency replaying the WAL from the primary, the master is reset
 -- from PANIC, master will start the DTX recovery process to recover the

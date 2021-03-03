@@ -4,7 +4,7 @@
  *	  Provides fault tolerance service routines for mpp.
  *
  * Portions Copyright (c) 2003-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -42,7 +42,6 @@
 #define MASTER_SEGMENT_ID -1
 
 volatile FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
-static LWLockId ftsControlLock;
 
 extern volatile pid_t *shmFtsProbePID;
 
@@ -52,8 +51,6 @@ extern volatile pid_t *shmFtsProbePID;
 int
 FtsShmemSize(void)
 {
-	RequestNamedLWLockTranche("ftsControlLock", 1);
-
 	return MAXALIGN(sizeof(FtsControlBlock));
 }
 
@@ -67,31 +64,13 @@ FtsShmemInit(void)
 	if (!shared)
 		elog(FATAL, "FTS: could not initialize fault tolerance manager share memory");
 
-	/* Initialize locks and shared memory area */
-	ftsControlLock = shared->ControlLock;
+	/* Initialize shared memory area */
 	ftsProbeInfo = &shared->fts_probe_info;
 	shmFtsProbePID = &shared->fts_probe_pid;
 	*shmFtsProbePID = 0;
 
 	if (!IsUnderPostmaster)
-	{
-		shared->ControlLock = &(GetNamedLWLockTranche("ftsControlLock"))->lock;
-		ftsControlLock = shared->ControlLock;
-
 		shared->fts_probe_info.status_version = 0;
-	}
-}
-
-void
-ftsLock(void)
-{
-	LWLockAcquire(ftsControlLock, LW_EXCLUSIVE);
-}
-
-void
-ftsUnlock(void)
-{
-	LWLockRelease(ftsControlLock);
 }
 
 /* see src/backend/fts/README */
@@ -102,6 +81,9 @@ FtsNotifyProber(void)
 	int32			initial_started;
 	int32			started;
 	int32			done;
+
+	if (am_ftsprobe)
+		return;
 
 	SpinLockAcquire(&ftsProbeInfo->lock);
 	initial_started = ftsProbeInfo->start_count;

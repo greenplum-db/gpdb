@@ -13,6 +13,7 @@
 #define GPDXL_CDXLPhysicalSequence_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 #include "naucrates/dxl/operators/CDXLSpoolInfo.h"
 
@@ -30,29 +31,28 @@ namespace gpdxl
 class CDXLPhysicalSequence : public CDXLPhysical
 {
 private:
-	// private copy ctor
-	CDXLPhysicalSequence(CDXLPhysicalSequence &);
-
 public:
+	CDXLPhysicalSequence(CDXLPhysicalSequence &) = delete;
+
 	// ctor
 	CDXLPhysicalSequence(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CDXLPhysicalSequence();
+	~CDXLPhysicalSequence() override;
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
-	const CWStringConst *GetOpNameStr() const;
+	Edxlopid GetDXLOperator() const override;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLPhysicalSequence *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalSequence == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalSequence *>(dxl_op);
@@ -61,7 +61,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

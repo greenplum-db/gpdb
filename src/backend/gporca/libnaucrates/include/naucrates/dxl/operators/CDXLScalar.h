@@ -13,8 +13,9 @@
 #define GPDXL_CDXLScalar_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLOperator.h"
+
 #include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/dxl/operators/CDXLOperator.h"
 
 // fwd declarations
 namespace gpopt
@@ -37,23 +38,22 @@ using namespace gpopt;
 class CDXLScalar : public CDXLOperator
 {
 private:
-	// private copy ctor
-	CDXLScalar(CDXLScalar &);
-
 public:
+	CDXLScalar(CDXLScalar &) = delete;
+
 	// ctor/dtor
 	explicit CDXLScalar(CMemoryPool *mp);
 
-	virtual ~CDXLScalar(){};
+	~CDXLScalar() override = default;
 
-	Edxloptype GetDXLOperatorType() const;
+	Edxloptype GetDXLOperatorType() const override;
 
 	// does the operator return a boolean result
 	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const = 0;
 
 #ifdef GPOS_DEBUG
-	virtual void AssertValid(const CDXLNode *dxlnode,
-							 BOOL validate_children) const = 0;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override = 0;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

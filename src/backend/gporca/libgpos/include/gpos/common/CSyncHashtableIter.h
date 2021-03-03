@@ -26,10 +26,9 @@
 
 
 #include "gpos/base.h"
-
-#include "gpos/common/clibwrapper.h"
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncHashtableAccessByIter.h"
+#include "gpos/common/clibwrapper.h"
 
 
 namespace gpos
@@ -63,9 +62,6 @@ private:
 	// a pointer to memory slab to interpret it as invalid element
 	T *m_invalid_elem;
 
-	// no copy ctor
-	CSyncHashtableIter<T, K>(const CSyncHashtableIter<T, K> &);
-
 	// inserts invalid element at the head of current bucket
 	void
 	InsertInvalidElement()
@@ -76,10 +72,10 @@ private:
 			CSyncHashtableAccessByIter<T, K> acc(*this);
 
 			T *first = acc.First();
-			T *first_valid = NULL;
+			T *first_valid = nullptr;
 
-			if (NULL != first &&
-				(NULL != (first_valid = acc.FirstValid(first))))
+			if (nullptr != first &&
+				(nullptr != (first_valid = acc.FirstValid(first))))
 			{
 				// insert invalid element before the found element
 				acc.Prepend(m_invalid_elem, first_valid);
@@ -105,7 +101,7 @@ private:
 		m_invalid_elem_inserted = false;
 
 		// check that we did not find the last element in bucket
-		if (NULL != value && NULL != acc.Next(value))
+		if (nullptr != value && nullptr != acc.Next(value))
 		{
 			// insert invalid element after the found element
 			acc.Append(m_invalid_elem, value);
@@ -117,11 +113,13 @@ private:
 	BOOL m_invalid_elem_inserted;
 
 public:
+	CSyncHashtableIter<T, K>(const CSyncHashtableIter<T, K> &) = delete;
+
 	// ctor
 	explicit CSyncHashtableIter<T, K>(CSyncHashtable<T, K> &ht)
 		: m_ht(ht),
 		  m_bucket_idx(0),
-		  m_invalid_elem(NULL),
+		  m_invalid_elem(nullptr),
 		  m_invalid_elem_inserted(false)
 	{
 		m_invalid_elem = (T *) m_invalid_elem_data;

@@ -15,8 +15,8 @@
 #ifndef GPOS_IWorker_H
 #define GPOS_IWorker_H
 
-#include "gpos/types.h"
 #include "gpos/common/CStackObject.h"
+#include "gpos/types.h"
 
 #define GPOS_CHECK_ABORT (IWorker::CheckAbort(__FILE__, __LINE__))
 
@@ -49,22 +49,17 @@ class CWorkerId;
 class IWorker : public CStackObject
 {
 private:
-	// hidden copy ctor
-	IWorker(const IWorker &);
-
 	// check for abort request
 	virtual void CheckForAbort(const CHAR *, ULONG) = 0;
 
 public:
+	IWorker(const IWorker &) = delete;
+
 	// dummy ctor
-	IWorker()
-	{
-	}
+	IWorker() = default;
 
 	// dummy dtor
-	virtual ~IWorker()
-	{
-	}
+	virtual ~IWorker() = default;
 
 	// accessors
 	virtual ULONG_PTR GetStackStart() const = 0;

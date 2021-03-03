@@ -12,8 +12,9 @@
 #define GPNAUCRATES_CPoint_H
 
 #include "gpos/base.h"
-#include "naucrates/base/IDatum.h"
 #include "gpos/common/CDouble.h"
+
+#include "naucrates/base/IDatum.h"
 
 namespace gpopt
 {
@@ -36,16 +37,14 @@ using namespace gpopt;
 class CPoint : public CRefCount
 {
 private:
-	// private copy ctor
-	CPoint(const CPoint &);
-
-	// private assignment operator
-	CPoint &operator=(CPoint &);
-
 	// datum corresponding to the point
 	IDatum *m_datum;
 
 public:
+	CPoint &operator=(CPoint &) = delete;
+
+	CPoint(const CPoint &) = delete;
+
 	// c'tor
 	explicit CPoint(IDatum *);
 
@@ -81,10 +80,10 @@ public:
 	CDouble Width(const CPoint *, BOOL include_lower, BOOL include_upper) const;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// d'tor
-	virtual ~CPoint()
+	~CPoint() override
 	{
 		m_datum->Release();
 	}

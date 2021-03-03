@@ -12,8 +12,9 @@
 #define GPOPT_CScalarBoolOp_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CScalar.h"
+
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/operators/CScalar.h"
 
 namespace gpopt
 {
@@ -46,10 +47,9 @@ private:
 	// boolean operator
 	EBoolOperator m_eboolop;
 
-	// private copy ctor
-	CScalarBoolOp(const CScalarBoolOp &);
-
 public:
+	CScalarBoolOp(const CScalarBoolOp &) = delete;
+
 	// ctor
 	CScalarBoolOp(CMemoryPool *mp, EBoolOperator eboolop)
 		: CScalar(mp), m_eboolop(eboolop)
@@ -58,21 +58,19 @@ public:
 	}
 
 	// dtor
-	virtual ~CScalarBoolOp()
-	{
-	}
+	~CScalarBoolOp() override = default;
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarBoolOp;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarBoolOp";
 	}
@@ -85,24 +83,24 @@ public:
 	}
 
 	// operator specific hash function
-	ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// sensitivity to order of inputs
 	BOOL
-	FInputOrderSensitive() const
+	FInputOrderSensitive() const override
 	{
 		return !FCommutative(Eboolop());
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -111,23 +109,23 @@ public:
 	static CScalarBoolOp *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBoolOp == pop->Eopid());
 
-		return reinterpret_cast<CScalarBoolOp *>(pop);
+		return dynamic_cast<CScalarBoolOp *>(pop);
 	}
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+	EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const override;
 
 	// decide boolean operator commutativity
 	static BOOL FCommutative(EBoolOperator eboolop);
 
 	// the type of the scalar expression
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 
 };	// class CScalarBoolOp

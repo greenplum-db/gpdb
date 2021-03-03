@@ -413,6 +413,8 @@ create table t2_github_issue_10143(
 insert into t1_github_issue_10143 values ('a', 'acode', 'aname');
 insert into t2_github_issue_10143 values ('a', 'adong', 'acode', 1000);
 insert into t2_github_issue_10143 values ('b', 'bdong', 'bcode', 1100);
+analyze t1_github_issue_10143;
+analyze t2_github_issue_10143;
 
 set optimizer_trace_fallback = on;
 

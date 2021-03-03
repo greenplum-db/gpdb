@@ -11,6 +11,7 @@
 
 
 #include "naucrates/md/CMDIdRelStats.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -100,7 +101,7 @@ CMDIdRelStats::GetRelMdId() const
 BOOL
 CMDIdRelStats::Equals(const IMDId *mdid) const
 {
-	if (NULL == mdid || EmdidRelStats != mdid->MdidType())
+	if (nullptr == mdid || EmdidRelStats != mdid->MdidType())
 	{
 		return false;
 	}

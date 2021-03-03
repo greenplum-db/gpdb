@@ -13,9 +13,10 @@
 #define GPDXL_CDXLScalarConstValue_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLScalar.h"
-#include "naucrates/dxl/operators/CDXLDatum.h"
+
 #include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl
 {
@@ -35,17 +36,16 @@ class CDXLScalarConstValue : public CDXLScalar
 private:
 	CDXLDatum *m_dxl_datum;
 
-	// private copy ctor
-	CDXLScalarConstValue(const CDXLScalarConstValue &);
-
 public:
+	CDXLScalarConstValue(const CDXLScalarConstValue &) = delete;
+
 	// ctor/dtor
 	CDXLScalarConstValue(CMemoryPool *mp, CDXLDatum *dxl_datum);
 
-	virtual ~CDXLScalarConstValue();
+	~CDXLScalarConstValue() override;
 
 	// name of the operator
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// return the datum value
 	const CDXLDatum *
@@ -55,28 +55,29 @@ public:
 	}
 
 	// DXL Operator ID
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLScalarConstValue *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarConstValue == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarConstValue *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

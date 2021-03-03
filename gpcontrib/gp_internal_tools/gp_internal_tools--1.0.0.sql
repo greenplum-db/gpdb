@@ -38,7 +38,7 @@ SET search_path = session_state;
 CREATE FUNCTION session_state_memory_entries_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_session_state_memory_stats', 'gp_session_state_memory_entries'
-LANGUAGE C VOLATILE EXECUTE ON MASTER;
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
 
 GRANT EXECUTE ON FUNCTION session_state_memory_entries_f_on_master() TO public;
 

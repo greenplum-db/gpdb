@@ -37,7 +37,7 @@ public:
 	CAutoRg<T>(const CAutoRg &) = delete;
 
 	// ctor
-	explicit CAutoRg<T>() : m_object_array(NULL)
+	explicit CAutoRg<T>() : m_object_array(nullptr)
 	{
 	}
 
@@ -77,7 +77,7 @@ public:
 	RgtReset()
 	{
 		T *object_array = m_object_array;
-		m_object_array = NULL;
+		m_object_array = nullptr;
 		return object_array;
 	}
 

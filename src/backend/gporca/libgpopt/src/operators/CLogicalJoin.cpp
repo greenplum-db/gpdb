@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CLogicalJoin.cpp
@@ -9,14 +9,14 @@
 //		Implementation of logical join class
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/COptCtxt.h"
-
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 
@@ -33,7 +33,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalJoin::CLogicalJoin(CMemoryPool *mp) : CLogical(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 

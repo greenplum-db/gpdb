@@ -6,18 +6,21 @@ import datetime
 import subprocess
 import os
 import platform
+import pwd
 import sys
 import re
 from contextlib import closing
 from distutils.version import LooseVersion
 from optparse import OptionParser
 import pgdb
+from gppylib.utils import formatInsertValuesList, Escape
 
 gpsd_version = '%prog 1.0'
 
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema')"
+# turn off optimizer to fall back to planner and speed up statistic queries
 # unset search path due to CVE-2018-1058
-pgoptions = '-c gp_role=utility -c search_path='
+pgoptions = '-c optimizer=off -c gp_role=utility -c search_path='
 
 
 def ResultIter(cursor, arraysize=1000):
@@ -33,16 +36,16 @@ def ResultIter(cursor, arraysize=1000):
 def getVersion(envOpts):
     cmd = subprocess.Popen('psql --pset footer -Atqc "select version()" template1', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=envOpts)
     if cmd.wait() is not 0:
-        sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + cmd.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + cmd.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
-    return cmd.communicate()[0]
+    return cmd.communicate()[0].decode('ascii')
 
 
 def dumpSchema(connectionInfo, envOpts):
     dump_cmd = 'pg_dump -h {host} -p {port} -U {user} -s -x -O {database}'.format(**connectionInfo)
     p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
-        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
 
 
@@ -50,12 +53,12 @@ def dumpGlobals(connectionInfo, envOpts):
     dump_cmd = 'pg_dumpall -h {host} -p {port} -U {user} -l {database} -g'.format(**connectionInfo)
     p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
-        sys.stderr.write('\nError while dumping globals.\n\n' + p.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while dumping globals.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
         sys.exit(1)
 
 
 def dumpTupleCount(cur):
-    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples FROM pg_class pgc, pg_namespace pgn WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN " + \
+    stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples, pgc.relallvisible FROM pg_class pgc, pg_namespace pgn WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN " + \
         sysnslist
     setStmt = '-- Table: {1}\n' \
         'UPDATE pg_class\nSET\n' \
@@ -64,11 +67,11 @@ def dumpTupleCount(cur):
         '(SELECT oid FROM pg_namespace WHERE nspname = \'{2}\');\n\n'
 
     cur.execute(stmt)
-    columns = map(lambda x: x[0], cur.description)
-    types = ['int', 'real']
+    columns = [x[0] for x in cur.description]
+    types = ['int', 'real', 'int']
     for vals in ResultIter(cur):
-        print setStmt.format(',\n'.join(map(lambda t: '\t%s = %s::%s' %
-                                            t, zip(columns[2:], vals[2:], types))), vals[0], vals[1])
+        print(setStmt.format(',\n'.join(['\t%s = %s::%s' %
+                                            t for t in zip(columns[2:], vals[2:], types)]), vals[0], vals[1]))
 
 
 def dumpStats(cur, inclHLL):
@@ -86,68 +89,13 @@ def dumpStats(cur, inclHLL):
         '--\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
         '{2});\n\n'
-    types = ['smallint',  # staattnum
-             'boolean',
-             'real',
-             'integer',
-             'real',
-             'smallint',
-             'smallint',
-             'smallint',
-             'smallint',
-             'smallint',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'oid',
-             'real[]',
-             'real[]',
-             'real[]',
-             'real[]',
-             'real[]'
-             ]
 
     cur.execute(query)
 
     for vals in ResultIter(cur):
-        rowVals = ["\t'%s.%s'::regclass" % tuple(vals[1::-1])]
-
-        i = 0
-        hll = False
-        if vals[3][0] == '_':
-            rowTypes = types + [vals[3]] * 5
-        else:
-            rowTypes = types + [vals[3] + '[]'] * 5
-        for val, typ in zip(vals[5:], rowTypes):
-            i = i + 1
-            str_val = "'%s'" % val
-            if i == 10 and (val == 98 or val == 99):
-                if inclHLL == False:
-                    val = 0
-                hll = True
-
-            if val is None:
-                val = 'NULL'
-            elif isinstance(val, (str, unicode)) and val[0] == '{':
-                val = val.replace("'", "''")
-                val = "E'" + val + "'"
-
-            if i == 25 and hll == True:
-                if inclHLL == True:
-                    rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
-                else:
-                    rowVals.append('\t{0}'.format('NULL::int4[]'))
-            elif i == 30 and str_val != "'None'":
-                rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
-            else:
-                rowVals.append('\t{0}::{1}'.format(val, typ))
-        print pstring.format(vals[0], vals[2], ',\n'.join(rowVals))
+        starelid = "'%s.%s'::regclass" % (Escape(vals[1]), Escape(vals[0]))
+        rowVals = formatInsertValuesList(vals, starelid, inclHLL)
+        print(pstring.format(vals[0], vals[2], ',\n'.join(rowVals)))
 
 
 def parseCmdLine():
@@ -173,14 +121,14 @@ def main():
         exit(1)
 
     # OK - now let's setup all the arguments & options
+    envOpts = os.environ
     db = args[0]
     host = options.host or platform.node()
-    user = options.user or os.getlogin()
-    port = options.port or '5432'
+    user = options.user or ('PGUSER' in envOpts and envOpts['PGUSER']) or pwd.getpwuid(os.geteuid())[0]
+    port = options.port or ('PGPORT' in envOpts and envOpts['PGPORT']) or '5432'
     inclSchema = options.dumpSchema
     inclHLL = options.dumpHLL
 
-    envOpts = os.environ
     envOpts['PGOPTIONS'] = pgoptions
 
     version = getVersion(envOpts)
@@ -207,11 +155,11 @@ def main():
         dumpGlobals(connectionInfo, envOpts)
         # Now be sure that when we load the rest we are doing it in the right
         # database
-        print '\\connect ' + db + '\n'
+        print('\\connect ' + db + '\n')
         sys.stdout.flush()
         dumpSchema(connectionInfo, envOpts)
     else:
-        print '\\connect ' + db + '\n'
+        print('\\connect ' + db + '\n')
         sys.stdout.flush()
 
     # Now we have to explicitly allow editing of these pg_class &
@@ -223,7 +171,6 @@ def main():
     sys.stdout.flush()
 
     try:
-        pgdb.set_typecast('anyarray', lambda v, c=str: v)
         with closing(pgdb.connect(**connectionInfo)) as connection:
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)
@@ -233,7 +180,7 @@ def main():
                                'which requires some data elements to be included in the output file.\n',
                                'Please review output file to ensure it is within corporate policy to transport the output file.\n'])
 
-    except pgdb.DatabaseError, err:  # catch *all* exceptions
+    except pgdb.DatabaseError as err:  # catch *all* exceptions
         sys.stderr.write('Error while dumping statistics:\n')
         sys.stderr.write(err.message)
         sys.exit(1)

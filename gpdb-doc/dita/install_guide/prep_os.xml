@@ -24,9 +24,9 @@
       </li>
     </ol>
     <p>Unless noted, these tasks should be performed for <i>all</i> hosts in your Greenplum Database
-      array (master, standby master, and segment hosts). </p>
-    <p>The Greenplum Database host naming convention for the master host is <codeph>mdw</codeph> and
-      for the standby master host is <codeph>smdw</codeph>.</p>
+      array (coordinator, standby coordinator, and segment hosts). </p>
+    <p>The Greenplum Database host naming convention for the coordinator host is <codeph>mdw</codeph> and
+      for the standby coordinator host is <codeph>smdw</codeph>.</p>
     <p>The segment host naming convention is <varname>sdwN</varname> where <varname>sdw</varname> is
       a prefix and <varname>N</varname> is an integer. For example, segment host names would be
         <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on. NIC bonding is recommended for hosts
@@ -37,9 +37,9 @@
     <p otherprops="pivotal">For information about running Greenplum Database in the cloud see
         <cite>Cloud Services</cite> in the <xref
         href="https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace" format="html"
-        scope="external">Pivotal Greenplum Partner Marketplace</xref>.</p>
+        scope="external">Tanzu Greenplum Partner Marketplace</xref>.</p>
     <note type="important">When data loss is not acceptable for a Greenplum Database cluster,
-      Greenplum master and segment mirroring is recommended. If mirroring is not enabled then
+      Greenplum coordinator and segment mirroring is recommended. If mirroring is not enabled then
       Greenplum stores only one copy of the data, so the underlying storage media provides the only
       guarantee for data availability and correctness in the event of a hardware failure.<p
         otherprops="pivotal">Kubernetes enables quick recovery from both pod and host failures, and
@@ -47,11 +47,11 @@
         Furthermore, virtualized environments make it difficult to ensure the anti-affinity
         guarantees required for Greenplum mirroring solutions. For these reasons, mirrorless
         deployments are fully supported with Greenplum for Kubernetes. Other deployment environments
-        are generally not supported for production use unless both Greenplum master and segment
+        are generally not supported for production use unless both Greenplum coordinator and segment
         mirroring are enabled.</p></note>
     <!--Pivotal-->
-    <note type="note" otherprops="pivotal">For information about upgrading Pivotal Greenplum
-      Database from a previous version, see the <cite>Greenplum Database Release Notes</cite> for
+    <note type="note" otherprops="pivotal">For information about upgrading Tanzu Greenplum
+     from a previous version, see the <cite>Greenplum Database Release Notes</cite> for
       the release that you are installing.</note>
     <note type="note">Automating the configuration steps described in this topic and <xref
         href="install_gpdb.xml#topic1"/> with a system provisioning tool, such as Ansible, Chef, or
@@ -217,9 +217,9 @@ $ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
             <codeph>kernel.shmmax</codeph> values:</p>
         <codeblock>kernel.shmall = 197951838
 kernel.shmmax = 810810728448</codeblock>
-        <p>If the Greeplum Database master the has a different shared memory configuration than the
+        <p>If the Greeplum Database coordinator the has a different shared memory configuration than the
           segment hosts, the _PHYS_PAGES and PAGE_SIZE values might differ, and the
-            <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values on the master
+            <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values on the coordinator
           host will differ from those on the segment hosts.</p>
         <p id="segment_host_memory"><b>Segment Host Memory</b></p>
         <p>The <codeph>vm.overcommit_memory</codeph> Linux kernel parameter is used by the OS to
@@ -409,7 +409,7 @@ always [never]</codeblock></p>
           <codeph>gpinitsystem</codeph> to fail with semaphore errors. Perform one of the following
         to avoid this issue.</p>
       <ul id="ul_l21_t2v_q5">
-        <li>When you add the <codeph>gpadmin</codeph> operating system user account to the master
+        <li>When you add the <codeph>gpadmin</codeph> operating system user account to the coordinator
           node in <xref href="#topic23" type="topic" format="dita"/>, create the user as a system
           account. </li>
         <li> Disable <codeph>RemoveIPC</codeph>. Set this parameter in
@@ -485,29 +485,29 @@ GRUB_DISABLE_RECOVERY="true"</codeblock></li>
       <p>You should use NTP (Network Time Protocol) to synchronize the system clocks on all hosts
         that comprise your Greenplum Database system. See <xref href="http://www.ntp.org"
           scope="external" format="html">www.ntp.org</xref> for more information about NTP. </p>
-      <p>NTP on the segment hosts should be configured to use the master host as the primary time
-        source, and the standby master as the secondary time source. On the master and standby
-        master hosts, configure NTP to point to your preferred time server.</p>
+      <p>NTP on the segment hosts should be configured to use the coordinator host as the primary time
+        source, and the standby coordinator as the secondary time source. On the coordinator and standby
+        coordinator hosts, configure NTP to point to your preferred time server.</p>
       <section id="ji162603">
         <title>To configure NTP</title>
         <ol id="ol_zjk_knz_thb">
-          <li id="ji162604">On the master host, log in as root and edit the
+          <li id="ji162604">On the coordinator host, log in as root and edit the
               <codeph>/etc/ntp.conf</codeph> file. Set the <codeph>server</codeph> parameter to
             point to your data center's NTP time server. For example (if
               <codeph>10.6.220.20</codeph> was the IP address of your data center's NTP
             server):<codeblock>server 10.6.220.20</codeblock></li>
           <li id="ji162606">On each segment host, log in as root and edit the
               <codeph>/etc/ntp.conf</codeph> file. Set the first <codeph>server</codeph> parameter
-            to point to the master host, and the second server parameter to point to the standby
-            master host. For example:<codeblock>server mdw prefer
+            to point to the coordinator host, and the second server parameter to point to the standby
+            coordinator host. For example:<codeblock>server mdw prefer
 server smdw</codeblock></li>
-          <li id="ji162609">On the standby master host, log in as root and edit the
+          <li id="ji162609">On the standby coordinator host, log in as root and edit the
               <codeph>/etc/ntp.conf</codeph> file. Set the first <codeph>server</codeph> parameter
-            to point to the primary master host, and the second server parameter to point to your
+            to point to the primary coordinator host, and the second server parameter to point to your
             data center's NTP time server. For
             example:<codeblock>server mdw prefer
 server 10.6.220.20</codeblock></li>
-          <li id="ji162612">On the master host, use the NTP daemon synchronize the system clocks on
+          <li id="ji162612">On the coordinator host, use the NTP daemon synchronize the system clocks on
             all Greenplum hosts. For example, using <codeph><xref
                 href="../utility_guide/ref/gpssh.xml" format="dita" scope="peer"
                 type="topic"
@@ -528,7 +528,7 @@ server 10.6.220.20</codeblock></li>
       <p>The <codeph>gpadmin</codeph> user on each Greenplum host must have an SSH key pair
         installed and be able to SSH from any host in the cluster to any other host in the cluster
         without entering a password or passphrase (called "passwordless SSH"). If you enable
-        passwordless SSH from the master host to every other host in the cluster ("1-<i>n</i>
+        passwordless SSH from the coordinator host to every other host in the cluster ("1-<i>n</i>
         passwordless SSH"), you can use the Greenplum Database <codeph>gpssh-exkeys</codeph>
         command-line utility later to enable passwordless SSH from every host to every other host
           ("<i>n</i>-<i>n</i> passwordless SSH"). </p>

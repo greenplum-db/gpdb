@@ -14,10 +14,11 @@
 #define GPOPT_CXformLeftSemiApplyWithExternalCorrs2InnerJoin_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformApply2Join.h"
-#include "gpopt/xforms/CXformUtils.h"
+
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLeftSemiApply.h"
+#include "gpopt/xforms/CXformApply2Join.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 
 namespace gpopt
@@ -36,10 +37,6 @@ class CXformLeftSemiApplyWithExternalCorrs2InnerJoin
 	: public CXformApply2Join<CLogicalLeftSemiApply, CLogicalInnerJoin>
 {
 private:
-	// private copy ctor
-	CXformLeftSemiApplyWithExternalCorrs2InnerJoin(
-		const CXformLeftSemiApplyWithExternalCorrs2InnerJoin &);
-
 	// helper for splitting correlations into external and residual
 	static BOOL FSplitCorrelations(CMemoryPool *mp, CExpression *pexprOuter,
 								   CExpression *pexprInner,
@@ -57,6 +54,9 @@ private:
 	static CExpression *PexprDecorrelate(CMemoryPool *mp, CExpression *pexpr);
 
 public:
+	CXformLeftSemiApplyWithExternalCorrs2InnerJoin(
+		const CXformLeftSemiApplyWithExternalCorrs2InnerJoin &) = delete;
+
 	// ctor
 	explicit CXformLeftSemiApplyWithExternalCorrs2InnerJoin(CMemoryPool *mp)
 		: CXformApply2Join<CLogicalLeftSemiApply, CLogicalInnerJoin>(
@@ -73,29 +73,27 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftSemiApplyWithExternalCorrs2InnerJoin()
-	{
-	}
+	~CXformLeftSemiApplyWithExternalCorrs2InnerJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiApplyWithExternalCorrs2InnerJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiApplyWithExternalCorrs2InnerJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftSemiApplyWithExternalCorrs2InnerJoin
 

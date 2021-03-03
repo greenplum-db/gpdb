@@ -9,6 +9,8 @@
 //		Implementation of n-ary join expansion
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformExpandNAryJoin.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
@@ -18,7 +20,6 @@
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPatternMultiLeaf.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformExpandNAryJoin.h"
 #include "gpopt/xforms/CJoinOrder.h"
 #include "gpopt/xforms/CXformUtils.h"
 
@@ -98,8 +99,8 @@ void
 CXformExpandNAryJoin::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -121,13 +122,13 @@ CXformExpandNAryJoin::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	(*pexpr)[1]->AddRef();
 	CExpression *pexprJoin = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
 		mp, (*pexpr)[0], (*pexpr)[1],
-		CPredicateUtils::PexprConjunction(mp, NULL));
+		CPredicateUtils::PexprConjunction(mp, nullptr));
 	for (ULONG ul = 2; ul < arity - 1; ul++)
 	{
 		(*pexpr)[ul]->AddRef();
 		pexprJoin = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
 			mp, pexprJoin, (*pexpr)[ul],
-			CPredicateUtils::PexprConjunction(mp, NULL));
+			CPredicateUtils::PexprConjunction(mp, nullptr));
 	}
 
 	CExpression *pexprScalar = (*pexpr)[arity - 1];

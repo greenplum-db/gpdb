@@ -1,13 +1,15 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 
 #include "gpopt/operators/CPhysicalUnionAllFactory.h"
-#include "gpopt/operators/CPhysicalSerialUnionAll.h"
-#include "gpopt/operators/CPhysicalParallelUnionAll.h"
-#include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/exception.h"
+
 #include "gpos/base.h"
+
+#include "gpopt/exception.h"
+#include "gpopt/operators/CPhysicalParallelUnionAll.h"
+#include "gpopt/operators/CPhysicalSerialUnionAll.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 namespace gpopt
 {
@@ -35,15 +37,13 @@ CPhysicalUnionAllFactory::PopPhysicalUnionAll(CMemoryPool *mp, BOOL fParallel)
 
 	if (fParallel)
 	{
-		return GPOS_NEW(mp) CPhysicalParallelUnionAll(
-			mp, pdrgpcrOutput, pdrgpdrgpcrInput,
-			m_popLogicalUnionAll->UlScanIdPartialIndex());
+		return GPOS_NEW(mp)
+			CPhysicalParallelUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput);
 	}
 	else
 	{
-		return GPOS_NEW(mp) CPhysicalSerialUnionAll(
-			mp, pdrgpcrOutput, pdrgpdrgpcrInput,
-			m_popLogicalUnionAll->UlScanIdPartialIndex());
+		return GPOS_NEW(mp)
+			CPhysicalSerialUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput);
 	}
 }
 

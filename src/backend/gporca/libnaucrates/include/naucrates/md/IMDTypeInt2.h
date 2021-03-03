@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		IMDTypeInt2.h
@@ -46,8 +46,8 @@ public:
 		return EtiInt2;
 	}
 
-	virtual ETypeInfo
-	GetDatumType() const
+	ETypeInfo
+	GetDatumType() const override
 	{
 		return IMDTypeInt2::GetTypeInfo();
 	}

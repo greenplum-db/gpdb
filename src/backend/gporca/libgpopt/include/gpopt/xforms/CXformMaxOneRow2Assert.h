@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformMaxOneRow2Assert.h
@@ -12,6 +12,7 @@
 #define GPOPT_CXformMaxOneRow2Assert_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -29,38 +30,35 @@ using namespace gpos;
 class CXformMaxOneRow2Assert : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformMaxOneRow2Assert(const CXformMaxOneRow2Assert &);
-
 public:
+	CXformMaxOneRow2Assert(const CXformMaxOneRow2Assert &) = delete;
+
 	// ctor
 	explicit CXformMaxOneRow2Assert(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformMaxOneRow2Assert()
-	{
-	}
+	~CXformMaxOneRow2Assert() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfMaxOneRow2Assert;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformMaxOneRow2Assert";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 };	// class CXformMaxOneRow2Assert
 }  // namespace gpopt

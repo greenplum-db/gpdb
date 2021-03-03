@@ -79,7 +79,7 @@ private:
 		CAutoConfig(void (*pfConfig)(), void (*pfCleanup)(), ULONG &ulNested)
 			: m_pfCleanup(pfCleanup), m_ulNested(ulNested)
 		{
-			if (NULL != pfConfig && 0 == m_ulNested++)
+			if (nullptr != pfConfig && 0 == m_ulNested++)
 			{
 				pfConfig();
 			}
@@ -88,7 +88,7 @@ private:
 		// dtor
 		~CAutoConfig()
 		{
-			if (NULL != m_pfCleanup && 0 == --m_ulNested)
+			if (nullptr != m_pfCleanup && 0 == --m_ulNested)
 			{
 				m_pfCleanup();
 			}

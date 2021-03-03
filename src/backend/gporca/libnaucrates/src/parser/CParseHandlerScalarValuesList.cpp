@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerScalarValuesList.cpp
@@ -11,11 +11,10 @@
 
 #include "naucrates/dxl/parser/CParseHandlerScalarValuesList.h"
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLScalarValuesList.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 using namespace gpdxl;

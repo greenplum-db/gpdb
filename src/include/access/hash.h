@@ -350,7 +350,7 @@ extern bool hashinsert(Relation rel, Datum *values, bool *isnull,
 					   IndexUniqueCheck checkUnique,
 					   struct IndexInfo *indexInfo);
 extern bool hashgettuple(IndexScanDesc scan, ScanDirection dir);
-extern Node *hashgetbitmap(IndexScanDesc scan, Node *tbm);
+extern int64 hashgetbitmap(IndexScanDesc scan, Node **bmNodeP);
 extern IndexScanDesc hashbeginscan(Relation rel, int nkeys, int norderbys);
 extern void hashrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys,
 					   ScanKey orderbys, int norderbys);

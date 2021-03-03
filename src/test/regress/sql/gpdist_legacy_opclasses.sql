@@ -132,6 +132,7 @@ insert into legacy_int values (1), (2), (3);
 
 create table modern_int (id int4) distributed by (id);
 insert into modern_int values (2), (3), (4);
+analyze modern_int;
 
 create table modern_text (t text) distributed by (t);
 insert into modern_text values ('foo'), ('1');
@@ -161,6 +162,7 @@ select * from legacy_int a inner join modern_text b on a.id::text = b.t;
 create domain intdom as integer;
 create table legacy_domain_over_int(id intdom) distributed by(id cdbhash_int4_ops);
 insert into legacy_domain_over_int values (1), (2), (3);
+analyze legacy_domain_over_int;
 
 explain (costs off) select * from legacy_domain_over_int a inner join legacy_domain_over_int b on a.id = b.id;
 explain (costs off) select * from legacy_int a inner join legacy_domain_over_int b on a.id = b.id;
@@ -234,6 +236,7 @@ select dp.localoid::regclass::name as name, oc.opcname
 set gp_use_legacy_hashops=on;
 create table try_distinct_array (test_char varchar,test_array integer[]);
 insert into try_distinct_array select 'y',string_to_array('1~1','~')::int[];
+analyze try_distinct_array;
 insert into try_distinct_array select 'n',string_to_array('1~1','~')::int[];
 -- Aggregate with grouping column that does not have legacy hashop
 explain (costs off) select distinct test_array from try_distinct_array;

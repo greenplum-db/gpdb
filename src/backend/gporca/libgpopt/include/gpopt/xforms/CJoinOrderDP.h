@@ -12,12 +12,14 @@
 #define GPOPT_CJoinOrderDP_H
 
 #include "gpos/base.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CBitSet.h"
+#include "gpos/common/CHashMap.h"
+#include "gpos/common/DbgPrintMixin.h"
 #include "gpos/io/IOstream.h"
+
 #include "gpopt/base/CUtils.h"
-#include "gpopt/xforms/CJoinOrder.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/xforms/CJoinOrder.h"
 
 
 namespace gpopt
@@ -32,7 +34,7 @@ using namespace gpos;
 //		Helper class for creating join orders using dynamic programming
 //
 //---------------------------------------------------------------------------
-class CJoinOrderDP : public CJoinOrder
+class CJoinOrderDP : public CJoinOrder, public gpos::DbgPrintMixin<CJoinOrderDP>
 {
 private:
 	//---------------------------------------------------------------------------
@@ -55,7 +57,7 @@ private:
 		SComponentPair(CBitSet *pbsFst, CBitSet *pbsSnd);
 
 		// dtor
-		~SComponentPair();
+		~SComponentPair() override;
 
 		// hashing function
 		static ULONG HashValue(const SComponentPair *pcomppair);
@@ -69,7 +71,7 @@ private:
 	static ULONG
 	UlHashBitSet(const CBitSet *pbs)
 	{
-		GPOS_ASSERT(NULL != pbs);
+		GPOS_ASSERT(nullptr != pbs);
 
 		return pbs->HashValue();
 	}
@@ -78,8 +80,8 @@ private:
 	static BOOL
 	FEqualBitSet(const CBitSet *pbsFst, const CBitSet *pbsSnd)
 	{
-		GPOS_ASSERT(NULL != pbsFst);
-		GPOS_ASSERT(NULL != pbsSnd);
+		GPOS_ASSERT(nullptr != pbsFst);
+		GPOS_ASSERT(nullptr != pbsSnd);
 
 		return pbsFst->Equals(pbsSnd);
 	}
@@ -154,7 +156,7 @@ private:
 	CDouble DCost(CExpression *pexpr);
 
 	// derive stats on given expression
-	virtual void DeriveStats(CExpression *pexpr);
+	void DeriveStats(CExpression *pexpr) override;
 
 	// add expression to cost map
 	void InsertExpressionCost(CExpression *pexpr, CDouble dCost,
@@ -174,7 +176,7 @@ public:
 				 CExpressionArray *pdrgpexprConjuncts);
 
 	// dtor
-	virtual ~CJoinOrderDP();
+	~CJoinOrderDP() override;
 
 	// main handler
 	virtual CExpression *PexprExpand();
@@ -187,11 +189,8 @@ public:
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
-#ifdef GPOS_DEBUG
-	void DbgPrint();
-#endif
 
 };	// class CJoinOrderDP
 

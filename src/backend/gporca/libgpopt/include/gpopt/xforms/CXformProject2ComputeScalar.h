@@ -12,6 +12,8 @@
 #define GPOPT_CXformProject2ComputeScalar_H
 
 #include "gpos/base.h"
+
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,34 +31,31 @@ using namespace gpos;
 class CXformProject2ComputeScalar : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformProject2ComputeScalar(const CXformProject2ComputeScalar &);
-
 public:
+	CXformProject2ComputeScalar(const CXformProject2ComputeScalar &) = delete;
+
 	// ctor
 	explicit CXformProject2ComputeScalar(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformProject2ComputeScalar()
-	{
-	}
+	~CXformProject2ComputeScalar() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfProject2ComputeScalar;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformProject2ComputeScalar";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
-	Exfp(CExpressionHandle &exprhdl) const
+	EXformPromise
+	Exfp(CExpressionHandle &exprhdl) const override
 	{
 		if (exprhdl.DeriveHasSubquery(1))
 		{
@@ -67,8 +66,8 @@ public:
 	}
 
 	// actual transform
-	virtual void Transform(CXformContext *, CXformResult *,
-						   CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformProject2ComputeScalar
 

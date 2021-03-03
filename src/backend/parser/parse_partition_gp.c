@@ -87,8 +87,8 @@ static int32
 qsort_stmt_cmp(const void *a, const void *b, void *arg)
 {
 	int32		cmpval = 0;
-	CreateStmt	   *b1cstmt = (CreateStmt *) lfirst(*(ListCell **) a);
-	CreateStmt	   *b2cstmt = (CreateStmt *) lfirst(*(ListCell **) b);
+	CreateStmt	   *b1cstmt = *(CreateStmt **) a;
+	CreateStmt	   *b2cstmt = *(CreateStmt **) b;
 	PartitionKey partKey = (PartitionKey) arg;
 	PartitionBoundSpec *b1 = b1cstmt->partbound;
 	PartitionBoundSpec *b2 = b2cstmt->partbound;
@@ -100,6 +100,9 @@ qsort_stmt_cmp(const void *a, const void *b, void *arg)
 	List	   *b2lowerdatums = b2->lowerdatums;
 	List	   *b1upperdatums = b1->upperdatums;
 	List	   *b2upperdatums = b2->upperdatums;
+
+	Assert(IsA(b1cstmt, CreateStmt));
+	Assert(IsA(b2cstmt, CreateStmt));
 
 	/* Sort DEFAULT partitions last */
 	if (b1->is_default != b2->is_default)
@@ -314,18 +317,47 @@ consts_to_datums(PartitionKey partkey, List *consts)
 }
 
 /*
+ * Sort a list of CreateStmts in-place.
+ */
+static void
+list_qsort_arg(List *list, qsort_arg_comparator cmp, void *arg)
+{
+	int			len = list_length(list);
+	ListCell   *cell;
+	CreateStmt **create_stmts;
+	int			i;
+
+	/* Empty list is easy */
+	if (len == 0)
+		return;
+
+	/* Flatten list into an array, so we can use qsort */
+	create_stmts = (CreateStmt **) palloc(sizeof(CreateStmt *) * len);
+	i = 0;
+	foreach(cell, list)
+		create_stmts[i++] = (CreateStmt *) lfirst(cell);
+
+	qsort_arg(create_stmts, len, sizeof(CreateStmt *), cmp, arg);
+
+	i = 0;
+	foreach(cell, list)
+		cell->data.ptr_value = create_stmts[i++];
+
+	pfree(create_stmts);
+}
+
+/*
  * Sort the list of GpPartitionBoundSpecs based first on START, if START does
  * not exist, use END. After sort, if any stmt contains an implicit START or
  * END, deduce the value and update the corresponding list of CreateStmts.
  */
-static List *
-deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *origstmts)
+static void
+deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
 {
 	PartitionKey key = RelationGetPartitionKey(parentrel);
 	PartitionDesc desc = RelationGetPartitionDesc(parentrel);
-	List	   *stmts;
 
-	stmts = list_qsort(origstmts, qsort_stmt_cmp, key);
+	list_qsort_arg(stmts, qsort_stmt_cmp, key);
 
 	/*
 	 * This works slightly differenly, depending on whether this is a
@@ -499,7 +531,6 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *origstmt
 			}
 		}
 	}
-	return stmts;
 }
 
 /*
@@ -551,7 +582,10 @@ initPartEveryIterator(ParseState *pstate, PartitionKeyData *partkey, const char 
 												  part_col_typid, part_col_typmod,
 												  true);
 		if (startConst->constisnull)
-			elog(ERROR, "START EXCLUSIVE is out of range"); /* GPDB_12_MERGE_FIXME: better message */
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("START EXCLUSIVE is out of range"),
+					 parser_errposition(pstate, exprLocation(start))));
 
 		startVal = startConst->constvalue;
 	}
@@ -723,8 +757,15 @@ nextPartBound(PartEveryIterator *iter)
 		next = ExecEvalExprSwitchContext(iter->plusexprstate,
 										 GetPerTupleExprContext(iter->estate),
 										 &isnull);
+		/*
+		 * None of the built-in + operators can return NULL, but a user-defined
+		 * operator could.
+		 */
 		if (isnull)
-			elog(ERROR, "plus-operator returned NULL"); // GPDB_12_MERGE_FIXME: better message
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("could not compute next partition boundary with EVERY, plus-operator returned NULL"),
+					 parser_errposition(iter->pstate, iter->every_location)));
 
 		iter->currStart = iter->currEnd;
 
@@ -1133,7 +1174,7 @@ split_encoding_clauses(List *encs, List **non_def,
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		if (c->deflt)
 		{
@@ -1546,6 +1587,11 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 								parser_errposition(pstate, subPartSpec->location)));
 				}
 			}
+			else if (elem->subSpec)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							errmsg("subpartition specification provided but table doesn't have SUBPARTITION BY clause"),
+							parser_errposition(pstate, ((GpPartitionDefinition*)elem->subSpec)->location)));
 
 			/*
 			 * This was not allowed pre-GPDB7, so keeping the same
@@ -1611,7 +1657,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	 * while setting template.
 	 */
 	if (hasImplicitRangeBounds && !forvalidationonly)
-		result = deduceImplicitRangeBounds(pstate, parentrel, result);
+		deduceImplicitRangeBounds(pstate, parentrel, result);
 
 	free_parsestate(pstate);
 	table_close(parentrel, NoLock);

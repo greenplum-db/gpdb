@@ -12,9 +12,10 @@
 #define GPOPT_CXformLeftAntiSemiJoinNotIn2CrossProduct_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CPatternTree.h"
-#include "gpopt/operators/CPatternLeaf.h"
+
 #include "gpopt/operators/CLogicalLeftAntiSemiJoinNotIn.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/xforms/CXformLeftAntiSemiJoin2CrossProduct.h"
 
 namespace gpopt
@@ -33,11 +34,10 @@ class CXformLeftAntiSemiJoinNotIn2CrossProduct
 	: public CXformLeftAntiSemiJoin2CrossProduct
 {
 private:
-	// private copy ctor
-	CXformLeftAntiSemiJoinNotIn2CrossProduct(
-		const CXformLeftAntiSemiJoinNotIn2CrossProduct &);
-
 public:
+	CXformLeftAntiSemiJoinNotIn2CrossProduct(
+		const CXformLeftAntiSemiJoinNotIn2CrossProduct &) = delete;
+
 	// ctor
 	explicit CXformLeftAntiSemiJoinNotIn2CrossProduct(CMemoryPool *mp)
 		:  // pattern
@@ -58,15 +58,15 @@ public:
 	}
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftAntiSemiJoinNotIn2CrossProduct;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftAntiSemiJoinNotIn2CrossProduct";
 	}

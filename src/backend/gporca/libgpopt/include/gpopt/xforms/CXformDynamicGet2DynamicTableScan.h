@@ -12,6 +12,7 @@
 #define GPOPT_CXformDynamicGet2DynamicTableScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,44 +30,41 @@ using namespace gpos;
 class CXformDynamicGet2DynamicTableScan : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformDynamicGet2DynamicTableScan(
-		const CXformDynamicGet2DynamicTableScan &);
-
 public:
+	CXformDynamicGet2DynamicTableScan(
+		const CXformDynamicGet2DynamicTableScan &) = delete;
+
 	// ctor
 	explicit CXformDynamicGet2DynamicTableScan(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformDynamicGet2DynamicTableScan()
-	{
-	}
+	~CXformDynamicGet2DynamicTableScan() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfDynamicGet2DynamicTableScan;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformDynamicGet2DynamicTableScan";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return CXform::ExfpHigh;
 	}
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformDynamicGet2DynamicTableScan
 

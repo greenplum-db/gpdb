@@ -15,7 +15,6 @@
 #include "gpos/common/CRefCount.h"
 
 #include "gpopt/metadata/CName.h"
-
 #include "naucrates/md/IMDType.h"
 
 namespace gpopt
@@ -63,7 +62,7 @@ public:
 					  BOOL is_nullable, ULONG ulWidth = gpos::ulong_max);
 
 	// dtor
-	virtual ~CColumnDescriptor();
+	~CColumnDescriptor() override;
 
 	// return column name
 	const CName &
@@ -128,7 +127,7 @@ public:
 		m_is_dist_col = true;
 	}
 
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CColumnDescriptor
 }  // namespace gpopt

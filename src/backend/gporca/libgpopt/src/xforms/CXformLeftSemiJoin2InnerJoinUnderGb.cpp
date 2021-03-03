@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformLeftSemiJoin2InnerJoinUnderGb.cpp
@@ -8,6 +8,8 @@
 //	@doc:
 //		Implementation of transform
 //---------------------------------------------------------------------------
+
+#include "gpopt/xforms/CXformLeftSemiJoin2InnerJoinUnderGb.h"
 
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
@@ -21,7 +23,6 @@
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarProjectList.h"
-#include "gpopt/xforms/CXformLeftSemiJoin2InnerJoinUnderGb.h"
 
 using namespace gpopt;
 
@@ -62,8 +63,8 @@ CXformLeftSemiJoin2InnerJoinUnderGb::Exfp(CExpressionHandle &exprhdl) const
 	CColRefSet *pcrsInnerOutput = exprhdl.DeriveOutputColumns(1);
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(2);
 	CAutoMemoryPool amp;
-	if (exprhdl.HasOuterRefs() || NULL == exprhdl.DeriveKeyCollection(0) ||
-		NULL == pexprScalar ||
+	if (exprhdl.HasOuterRefs() || nullptr == exprhdl.DeriveKeyCollection(0) ||
+		nullptr == pexprScalar ||
 		CPredicateUtils::FSimpleEqualityUsingCols(amp.Pmp(), pexprScalar,
 												  pcrsInnerOutput))
 	{
@@ -86,7 +87,7 @@ CXformLeftSemiJoin2InnerJoinUnderGb::Transform(CXformContext *pxfctxt,
 											   CXformResult *pxfres,
 											   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -101,10 +102,10 @@ CXformLeftSemiJoin2InnerJoinUnderGb::Transform(CXformContext *pxfctxt,
 	pexprInner->AddRef();
 	pexprScalar->AddRef();
 
-	CColRefArray *pdrgpcrKeys = NULL;
+	CColRefArray *pdrgpcrKeys = nullptr;
 	CColRefArray *pdrgpcrGrouping =
 		CUtils::PdrgpcrGroupingKey(mp, pexprOuter, &pdrgpcrKeys);
-	GPOS_ASSERT(NULL != pdrgpcrKeys);
+	GPOS_ASSERT(nullptr != pdrgpcrKeys);
 
 	CExpression *pexprInnerJoin = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
 		mp, pexprOuter, pexprInner, pexprScalar);

@@ -177,8 +177,8 @@ like: ![Postgres processes](/vagrant/pictures/gpdb_processes.png)
 
 (You may have to click on the image to see it at a higher resolution.)
 Here the key processes are the ones that were started as
-`/usr/local/gpdb/bin/postgres`. The master is the process (pid 25486
-in the picture above) that has the word "master" in the `-D`parameter setting,
+`/usr/local/gpdb/bin/postgres`. The coordinator is the process (pid 25486
+in the picture above) that has the word "coordinator" in the `-D`parameter setting,
 whereas the segment hosts have the word "gpseg" in the `-D` parameter setting.
 
 Next, start ``gdb`` from a guest terminal. Once you get a prompt in gdb, type
@@ -190,7 +190,7 @@ b ExecutorMain
 attach 25486
 ```
 Of course, you can change which function you want to break into, and change
-whether you want to debug the master or the segment processes. Happy hacking!
+whether you want to debug the coordinator or the segment processes. Happy hacking!
 
 ##4: GPDB without GPORCA
 If you want to run GPDB without the GPORCA query optimizer, run `vagrant up gpdb-without-gporca`.

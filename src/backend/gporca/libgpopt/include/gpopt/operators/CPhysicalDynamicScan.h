@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalDynamicScan.h
@@ -43,52 +43,38 @@ private:
 	// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
 	ULONG m_ulOriginOpId;
 
-	// true iff it is a partial scan
-	BOOL m_is_partial;
-
 	// id of the dynamic scan
 	ULONG m_scan_id;
 
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcrPart;
 
-	// secondary scan id in case of partial scan
-	ULONG m_ulSecondaryScanId;
+	// child partitions
+	IMdIdArray *m_partition_mdids;
 
-	// dynamic index part constraint
-	CPartConstraint *m_part_constraint;
-
-	// relation part constraint
-	CPartConstraint *m_ppartcnstrRel;
-
-	// disable copy ctor
-	CPhysicalDynamicScan(const CPhysicalDynamicScan &);
+	// Map of Root colref -> col index in child tabledesc
+	// per child partition in m_partition_mdid
+	ColRefToUlongMapArray *m_root_col_mapping_per_part = nullptr;
 
 public:
+	CPhysicalDynamicScan(const CPhysicalDynamicScan &) = delete;
+
 	// ctor
-	CPhysicalDynamicScan(CMemoryPool *mp, BOOL is_partial,
-						 CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
-						 const CName *pnameAlias, ULONG scan_id,
-						 CColRefArray *pdrgpcrOutput,
+	CPhysicalDynamicScan(CMemoryPool *mp, CTableDescriptor *ptabdesc,
+						 ULONG ulOriginOpId, const CName *pnameAlias,
+						 ULONG scan_id, CColRefArray *pdrgpcrOutput,
 						 CColRef2dArray *pdrgpdrgpcrParts,
-						 ULONG ulSecondaryScanId, CPartConstraint *ppartcnstr,
-						 CPartConstraint *ppartcnstrRel);
+						 IMdIdArray *partition_mdids,
+						 ColRefToUlongMapArray *root_col_mapping_per_part);
 
 	// dtor
-	virtual ~CPhysicalDynamicScan();
+	~CPhysicalDynamicScan() override;
 
 	// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
 	ULONG
 	UlOriginOpId() const
 	{
 		return m_ulOriginOpId;
-	}
-
-	// true iff the scan is partial
-	BOOL
-	IsPartial() const
-	{
-		return m_is_partial;
 	}
 
 	// return scan id
@@ -105,51 +91,37 @@ public:
 		return m_pdrgpdrgpcrPart;
 	}
 
-	// secondary scan id
-	ULONG
-	UlSecondaryScanId() const
-	{
-		return m_ulSecondaryScanId;
-	}
-
-	// dynamic index part constraint
-	CPartConstraint *
-	Ppartcnstr() const
-	{
-		return m_part_constraint;
-	}
-
-	// relation part constraint
-	CPartConstraint *
-	PpartcnstrRel() const
-	{
-		return m_ppartcnstrRel;
-	}
-
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return true;
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
-
-	// derive partition index map
-	virtual CPartIndexMap *PpimDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  CDrvdPropCtxt *pdpctxt) const;
+	ULONG HashValue() const override;
 
 	// return true if operator is dynamic scan
-	virtual BOOL
-	FDynamicScan() const
+	BOOL
+	FDynamicScan() const override
 	{
 		return true;
 	}
 
+	IMdIdArray *
+	GetPartitionMdids() const
+	{
+		return m_partition_mdids;
+	}
+
+	ColRefToUlongMapArray *
+	GetRootColMappingPerPart() const
+	{
+		return m_root_col_mapping_per_part;
+	}
+
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 	// conversion function
 	static CPhysicalDynamicScan *PopConvert(COperator *pop);

@@ -10,10 +10,11 @@
 //		Implementation of the SAX parse handler class for parsing scalar WindowRef
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarWindowRef.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 using namespace gpdxl;
 
@@ -63,7 +64,7 @@ CParseHandlerScalarWindowRef::StartElement(
 	else
 	{
 		// we must have seen an window ref already and initialized the window ref node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		CParseHandlerBase *op_parse_handler =
 			CParseHandlerFactory::GetParseHandler(

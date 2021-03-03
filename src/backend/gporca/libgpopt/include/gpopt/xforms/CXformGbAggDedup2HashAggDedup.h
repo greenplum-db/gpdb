@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformGbAggDedup2HashAggDedup.h
@@ -12,6 +12,7 @@
 #define GPOPT_CXformGbAggDedup2HashAggDedup_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformGbAgg2HashAgg.h"
 
 namespace gpopt
@@ -29,35 +30,33 @@ using namespace gpos;
 class CXformGbAggDedup2HashAggDedup : public CXformGbAgg2HashAgg
 {
 private:
-	// private copy ctor
-	CXformGbAggDedup2HashAggDedup(const CXformGbAggDedup2HashAggDedup &);
-
 public:
+	CXformGbAggDedup2HashAggDedup(const CXformGbAggDedup2HashAggDedup &) =
+		delete;
+
 	// ctor
 	CXformGbAggDedup2HashAggDedup(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformGbAggDedup2HashAggDedup()
-	{
-	}
+	~CXformGbAggDedup2HashAggDedup() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfGbAggDedup2HashAggDedup;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformGbAggDedup2HashAggDedup";
 	}
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 };	// class CXformGbAggDedup2HashAggDedup
 

@@ -13,10 +13,9 @@
 #define GPOPT_CAutoOptCtxt_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColumnFactory.h"
-
 #include "gpopt/base/COptCtxt.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
 
 namespace gpopt
@@ -41,10 +40,9 @@ class IConstExprEvaluator;
 class CAutoOptCtxt
 {
 private:
-	// private copy ctor
-	CAutoOptCtxt(CAutoOptCtxt &);
-
 public:
+	CAutoOptCtxt(CAutoOptCtxt &) = delete;
+
 	// ctor
 	CAutoOptCtxt(CMemoryPool *mp, CMDAccessor *md_accessor,
 				 IConstExprEvaluator *pceeval,

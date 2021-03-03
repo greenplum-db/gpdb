@@ -1,0 +1,8 @@
+2021-01-04 16:17:09|INFO|gpload session started 2021-01-04 16:17:09
+2021-01-04 16:17:09|INFO|setting schema 'public' for table 'texttable'
+2021-01-04 16:17:09|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2021-01-04 16:17:09|ERROR|A gpload control file processing error occurred. update_columns cannot reference column(s) in distribution key ("n1")
+2021-01-04 16:17:09|INFO|rows Inserted          = 0
+2021-01-04 16:17:09|INFO|rows Updated           = 0
+2021-01-04 16:17:09|INFO|data formatting errors = 0
+2021-01-04 16:17:09|INFO|gpload failed

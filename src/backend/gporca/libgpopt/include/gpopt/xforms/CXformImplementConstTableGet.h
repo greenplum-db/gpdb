@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementConstTableGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,43 +30,40 @@ using namespace gpos;
 class CXformImplementConstTableGet : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementConstTableGet(const CXformImplementConstTableGet &);
-
 public:
+	CXformImplementConstTableGet(const CXformImplementConstTableGet &) = delete;
+
 	// ctor
 	explicit CXformImplementConstTableGet(CMemoryPool *);
 
 	// dtor
-	virtual ~CXformImplementConstTableGet()
-	{
-	}
+	~CXformImplementConstTableGet() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementConstTableGet;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementConstTableGet";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return CXform::ExfpHigh;
 	}
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformImplementConstTableGet
 

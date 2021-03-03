@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMemoryPoolPallocManager.h
@@ -15,7 +15,6 @@
 #define GPDXL_CMemoryPoolPallocManager_H
 
 #include "gpos/base.h"
-
 #include "gpos/memory/CMemoryPoolManager.h"
 
 namespace gpos
@@ -24,22 +23,21 @@ namespace gpos
 class CMemoryPoolPallocManager : public CMemoryPoolManager
 {
 private:
-	// private no copy ctor
-	CMemoryPoolPallocManager(const CMemoryPoolPallocManager &);
-
 public:
+	CMemoryPoolPallocManager(const CMemoryPoolPallocManager &) = delete;
+
 	// ctor
 	CMemoryPoolPallocManager(CMemoryPool *internal,
 							 EMemoryPoolType memory_pool_type);
 
 	// allocate new memorypool
-	virtual CMemoryPool *NewMemoryPool();
+	CMemoryPool *NewMemoryPool() override;
 
 	// free allocation
-	void DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat);
+	void DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat) override;
 
 	// get user requested size of allocation
-	ULONG UserSizeOfAlloc(const void *ptr);
+	ULONG UserSizeOfAlloc(const void *ptr) override;
 
 
 	static GPOS_RESULT Init();

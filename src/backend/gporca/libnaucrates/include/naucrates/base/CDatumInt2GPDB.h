@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDatumInt2GPDB.h
@@ -38,43 +38,42 @@ private:
 	// is null
 	BOOL m_is_null;
 
-	// private copy ctor
-	CDatumInt2GPDB(const CDatumInt2GPDB &);
-
 public:
+	CDatumInt2GPDB(const CDatumInt2GPDB &) = delete;
+
 	// ctors
 	CDatumInt2GPDB(CSystemId sysid, SINT val, BOOL is_null = false);
 	CDatumInt2GPDB(IMDId *mdid, SINT val, BOOL is_null = false);
 
 	// dtor
-	virtual ~CDatumInt2GPDB();
+	~CDatumInt2GPDB() override;
 
 	// accessor of metadata type id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// accessor of size
-	virtual ULONG Size() const;
+	ULONG Size() const override;
 
 	// accessor of integer value
-	virtual SINT Value() const;
+	SINT Value() const override;
 
 	// accessor of is null
-	virtual BOOL IsNull() const;
+	BOOL IsNull() const override;
 
 	// return string representation
-	virtual const CWStringConst *GetStrRepr(CMemoryPool *mp) const;
+	const CWStringConst *GetStrRepr(CMemoryPool *mp) const override;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function for datums
-	virtual BOOL Matches(const IDatum *) const;
+	BOOL Matches(const IDatum *) const override;
 
 	// copy datum
-	virtual IDatum *MakeCopy(CMemoryPool *mp) const;
+	IDatum *MakeCopy(CMemoryPool *mp) const override;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CDatumInt2GPDB
 

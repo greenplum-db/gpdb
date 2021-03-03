@@ -3340,16 +3340,6 @@ expression_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_PartitionSelector:
-			{
-				PartitionSelector *pselector = (PartitionSelector *) node;
-				PartitionSelector *newnode;
-
-				FLATCOPY(newnode, pselector, PartitionSelector);
-				return (Node *) newnode;
-			}
-			break;
-
 		case T_TableFunc:
 			{
 				TableFunc  *tf = (TableFunc *) node;

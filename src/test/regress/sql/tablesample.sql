@@ -76,6 +76,8 @@ CREATE TABLE ttr1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE ttr2 (a int, b int) DISTRIBUTED BY (a);
 INSERT INTO ttr1 VALUES (1, 1), (12, 1), (31, 1), (NULL, NULL);
 INSERT INTO ttr2 VALUES (1, 2), (12, 2), (31, 2), (NULL, 6);
+ANALYZE ttr1;
+ANALYZE ttr2;
 SET enable_hashjoin TO OFF;
 SET enable_mergejoin TO OFF;
 SET enable_nestloop TO ON;

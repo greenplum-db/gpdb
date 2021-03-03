@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLOperator.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
@@ -35,9 +36,7 @@ CDXLOperator::CDXLOperator(CMemoryPool *mp) : m_mp(mp)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CDXLOperator::~CDXLOperator()
-{
-}
+CDXLOperator::~CDXLOperator() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

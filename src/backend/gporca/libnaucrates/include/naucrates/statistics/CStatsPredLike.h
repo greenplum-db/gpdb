@@ -12,6 +12,7 @@
 #define GPNAUCRATES_CStatsPredLike_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/CStatsPred.h"
 
@@ -36,12 +37,6 @@ using namespace gpmd;
 class CStatsPredLike : public CStatsPred
 {
 private:
-	// private copy ctor
-	CStatsPredLike(const CStatsPredLike &);
-
-	// private assignment operator
-	CStatsPredLike &operator=(CStatsPredLike &);
-
 	// left hand side of the LIKE expression
 	CExpression *m_expr_left;
 
@@ -52,19 +47,23 @@ private:
 	CDouble m_default_scale_factor;
 
 public:
+	CStatsPredLike &operator=(CStatsPredLike &) = delete;
+
+	CStatsPredLike(const CStatsPredLike &) = delete;
+
 	// ctor
 	CStatsPredLike(ULONG colid, CExpression *expr_left, CExpression *expr_right,
 				   CDouble default_scale_factor);
 
 	// dtor
-	virtual ~CStatsPredLike();
+	~CStatsPredLike() override;
 
 	// the column identifier on which the predicates are on
-	virtual ULONG GetColId() const;
+	ULONG GetColId() const override;
 
 	// filter type id
-	virtual EStatsPredType
-	GetPredStatsType() const
+	EStatsPredType
+	GetPredStatsType() const override
 	{
 		return CStatsPred::EsptLike;
 	}
@@ -90,7 +89,7 @@ public:
 	static CStatsPredLike *
 	ConvertPredStats(CStatsPred *pred_stats)
 	{
-		GPOS_ASSERT(NULL != pred_stats);
+		GPOS_ASSERT(nullptr != pred_stats);
 		GPOS_ASSERT(CStatsPred::EsptLike == pred_stats->GetPredStatsType());
 
 		return dynamic_cast<CStatsPredLike *>(pred_stats);

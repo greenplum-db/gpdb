@@ -8,6 +8,7 @@
 #define GPOS_CLink_H
 
 
+#include <cstddef>
 namespace gpos
 {
 // Generic link to be embedded in all classes before they can use
@@ -15,17 +16,15 @@ namespace gpos
 struct SLink
 {
 private:
+public:
 	SLink(const SLink &) = delete;
 
-public:
 	// link forward/backward
-	void *m_next;
-	void *m_prev;
+	void *m_next{nullptr};
+	void *m_prev{nullptr};
 
 	// ctor
-	SLink() : m_next(NULL), m_prev(NULL)
-	{
-	}
+	SLink() = default;
 };
 
 }  // namespace gpos

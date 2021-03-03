@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //      Greenplum Database
-//      Copyright (C) 2014 Pivotal Inc.
+//      Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //      @filename:
 //              CUpperBoundNDVs.h
@@ -13,6 +13,7 @@
 #define GPNAUCRATES_CUpperBoundNDVs_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRefSet.h"
 
 namespace gpnaucrates
@@ -44,15 +45,14 @@ private:
 	// upper bound of ndvs
 	CDouble m_upper_bound_ndv;
 
-	// private copy constructor
-	CUpperBoundNDVs(const CUpperBoundNDVs &);
-
 public:
+	CUpperBoundNDVs(const CUpperBoundNDVs &) = delete;
+
 	// ctor
 	CUpperBoundNDVs(CColRefSet *column_refset, CDouble upper_bound_ndv)
 		: m_column_refset(column_refset), m_upper_bound_ndv(upper_bound_ndv)
 	{
-		GPOS_ASSERT(NULL != m_column_refset);
+		GPOS_ASSERT(nullptr != m_column_refset);
 	}
 
 	// dtor

@@ -11,7 +11,7 @@
       For example, when you add a new segment and mirror segment to the system, records for these
       events are logged to <codeph>gp_configuration_history</codeph>.</p>
     <p otherprops="pivotal">The event descriptions stored in this table may be helpful for troubleshooting serious system
-      issues in collaboration with Pivotal Support technicians.</p>
+      issues in collaboration with VMware Support technicians.</p>
     <p>This table is populated only on the master. This table is defined in the
         <codeph>pg_global</codeph> tablespace, meaning it is globally shared across all databases in
       the system.</p>
@@ -44,7 +44,7 @@
               <codeph id="ev138567">dbid</codeph>
             </entry>
             <entry colname="col2">smallint</entry>
-            <entry colname="col3">gp_segment _configuration.dbid</entry>
+            <entry colname="col3">gp_segment_configuration.dbid</entry>
             <entry colname="col4">System-assigned ID. The unique identifier of a segment (or master)
               instance.</entry>
           </row>

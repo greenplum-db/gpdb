@@ -9,10 +9,10 @@
 //		Implementation of TVF unnesting xform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformUnnestTVF.h"
+
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
-#include "gpopt/xforms/CXformUnnestTVF.h"
-#include "gpopt/xforms/CXformUtils.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
@@ -21,6 +21,7 @@
 #include "gpopt/operators/CLogicalTVF.h"
 #include "gpopt/operators/CPatternMultiTree.h"
 #include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -104,7 +105,7 @@ CXformUnnestTVF::PdrgpcrSubqueries(CMemoryPool *mp, CExpression *pexprCTEProd,
 				CScalarProjectElement::PopConvert(pexprPrjElem->Pop())->Pcr();
 			CColRef *pcrConsumer = CUtils::PcrMap(
 				pcrProducer, pdrgpcrProdOutput, pdrgpcrConsOutput);
-			GPOS_ASSERT(NULL != pcrConsumer);
+			GPOS_ASSERT(nullptr != pcrConsumer);
 
 			colref_array->Append(pcrConsumer);
 		}
@@ -180,7 +181,7 @@ void
 CXformUnnestTVF::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 						   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -255,7 +256,7 @@ CXformUnnestTVF::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 			mp, GPOS_NEW(mp) CExpression(mp, popTVF, pdrgpexprNewArgs),
 			pexprCTECons, pdrgpcrSubqueries, COperator::EopScalarSubquery,
 			CPredicateUtils::PexprConjunction(
-				mp, NULL /*pdrgpexpr*/)	 // scalar expression is const True
+				mp, nullptr /*pdrgpexpr*/)	// scalar expression is const True
 		);
 
 	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(

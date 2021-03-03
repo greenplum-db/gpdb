@@ -32,11 +32,10 @@ class CXformAntiSemiJoinAntiSemiJoinSwap
 	: public CXformJoinSwap<CLogicalLeftAntiSemiJoin, CLogicalLeftAntiSemiJoin>
 {
 private:
-	// private copy ctor
-	CXformAntiSemiJoinAntiSemiJoinSwap(
-		const CXformAntiSemiJoinAntiSemiJoinSwap &);
-
 public:
+	CXformAntiSemiJoinAntiSemiJoinSwap(
+		const CXformAntiSemiJoinAntiSemiJoinSwap &) = delete;
+
 	// ctor
 	explicit CXformAntiSemiJoinAntiSemiJoinSwap(CMemoryPool *mp)
 		: CXformJoinSwap<CLogicalLeftAntiSemiJoin, CLogicalLeftAntiSemiJoin>(mp)
@@ -44,26 +43,24 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformAntiSemiJoinAntiSemiJoinSwap()
-	{
-	}
+	~CXformAntiSemiJoinAntiSemiJoinSwap() override = default;
 
 	// Compatibility function
-	virtual BOOL
-	FCompatible(CXform::EXformId exfid)
+	BOOL
+	FCompatible(CXform::EXformId exfid) override
 	{
 		return ExfAntiSemiJoinAntiSemiJoinSwap != exfid;
 	}
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfAntiSemiJoinAntiSemiJoinSwap;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformAntiSemiJoinAntiSemiJoinSwap";
 	}

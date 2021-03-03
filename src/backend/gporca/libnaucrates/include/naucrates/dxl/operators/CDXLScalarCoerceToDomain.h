@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarCoerceToDomain.h
@@ -25,6 +25,7 @@
 #define GPDXL_CDXLScalarCoerceToDomain_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalarCoerceBase.h"
 #include "naucrates/md/IMDId.h"
 
@@ -44,34 +45,31 @@ using namespace gpmd;
 class CDXLScalarCoerceToDomain : public CDXLScalarCoerceBase
 {
 private:
-	// private copy ctor
-	CDXLScalarCoerceToDomain(const CDXLScalarCoerceToDomain &);
-
 public:
+	CDXLScalarCoerceToDomain(const CDXLScalarCoerceToDomain &) = delete;
+
 	// ctor/dtor
 	CDXLScalarCoerceToDomain(CMemoryPool *mp, IMDId *mdid_type,
 							 INT type_modifier,
 							 EdxlCoercionForm dxl_coerce_format, INT location);
 
-	virtual ~CDXLScalarCoerceToDomain()
-	{
-	}
+	~CDXLScalarCoerceToDomain() override = default;
 
 	// ident accessor
-	virtual Edxlopid
-	GetDXLOperator() const
+	Edxlopid
+	GetDXLOperator() const override
 	{
 		return EdxlopScalarCoerceToDomain;
 	}
 
 	// name of the DXL operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// conversion function
 	static CDXLScalarCoerceToDomain *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarCoerceToDomain == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarCoerceToDomain *>(dxl_op);

@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLeftAntiSemiHashJoinNotIn_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoin.h"
 
 namespace gpopt
@@ -27,27 +28,26 @@ namespace gpopt
 class CPhysicalLeftAntiSemiHashJoinNotIn : public CPhysicalLeftAntiSemiHashJoin
 {
 private:
-	// private copy ctor
-	CPhysicalLeftAntiSemiHashJoinNotIn(
-		const CPhysicalLeftAntiSemiHashJoinNotIn &);
-
 public:
+	CPhysicalLeftAntiSemiHashJoinNotIn(
+		const CPhysicalLeftAntiSemiHashJoinNotIn &) = delete;
+
 	// ctor
 	CPhysicalLeftAntiSemiHashJoinNotIn(CMemoryPool *mp,
 									   CExpressionArray *pdrgpexprOuterKeys,
 									   CExpressionArray *pdrgpexprInnerKeys,
-									   IMdIdArray *hash_opfamilies = NULL);
+									   IMdIdArray *hash_opfamilies = nullptr);
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalLeftAntiSemiHashJoinNotIn;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalLeftAntiSemiHashJoinNotIn";
 	}
@@ -57,12 +57,16 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// compute required distribution of the n-th child
-	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CDistributionSpec *pdsRequired,
-										   ULONG child_index,
-										   CDrvdPropArray *pdrgpdpCtxt,
-										   ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
+
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------

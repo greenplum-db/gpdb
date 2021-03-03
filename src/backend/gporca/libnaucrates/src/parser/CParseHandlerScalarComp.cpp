@@ -11,12 +11,11 @@
 //---------------------------------------------------------------------------
 
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarComp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarComp.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 using namespace gpdxl;
 
 
@@ -34,7 +33,7 @@ CParseHandlerScalarComp::CParseHandlerScalarComp(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -46,9 +45,7 @@ CParseHandlerScalarComp::CParseHandlerScalarComp(
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CParseHandlerScalarComp::~CParseHandlerScalarComp()
-{
-}
+CParseHandlerScalarComp::~CParseHandlerScalarComp() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

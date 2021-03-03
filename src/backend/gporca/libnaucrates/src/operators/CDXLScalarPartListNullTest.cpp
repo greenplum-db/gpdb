@@ -1,14 +1,14 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //  Implementation of DXL Part list null test expression
 
 #include "naucrates/dxl/operators/CDXLScalarPartListNullTest.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -94,7 +94,7 @@ CDXLScalarPartListNullTest::AssertValid(const CDXLNode *dxlnode,
 CDXLScalarPartListNullTest *
 CDXLScalarPartListNullTest::Cast(CDXLOperator *dxl_op)
 {
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 	GPOS_ASSERT(EdxlopScalarPartListNullTest == dxl_op->GetDXLOperator());
 
 	return dynamic_cast<CDXLScalarPartListNullTest *>(dxl_op);

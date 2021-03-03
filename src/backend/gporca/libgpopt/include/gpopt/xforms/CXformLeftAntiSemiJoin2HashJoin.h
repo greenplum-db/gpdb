@@ -12,6 +12,7 @@
 #define GPOPT_CXformLeftAntiSemiJoin2HashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,38 +30,36 @@ using namespace gpos;
 class CXformLeftAntiSemiJoin2HashJoin : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformLeftAntiSemiJoin2HashJoin(const CXformLeftAntiSemiJoin2HashJoin &);
-
 public:
+	CXformLeftAntiSemiJoin2HashJoin(const CXformLeftAntiSemiJoin2HashJoin &) =
+		delete;
+
 	// ctor
 	explicit CXformLeftAntiSemiJoin2HashJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformLeftAntiSemiJoin2HashJoin()
-	{
-	}
+	~CXformLeftAntiSemiJoin2HashJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftAntiSemiJoin2HashJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftAntiSemiJoin2HashJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftAntiSemiJoin2HashJoin
 

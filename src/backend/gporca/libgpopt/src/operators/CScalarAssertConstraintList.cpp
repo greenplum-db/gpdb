@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarAssertConstraintList.cpp
@@ -10,10 +10,11 @@
 //		of assert operators
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarAssertConstraintList.h"
+
 #include "gpos/base.h"
 
 #include "naucrates/md/IMDTypeBool.h"
-#include "gpopt/operators/CScalarAssertConstraintList.h"
 
 using namespace gpopt;
 using namespace gpmd;

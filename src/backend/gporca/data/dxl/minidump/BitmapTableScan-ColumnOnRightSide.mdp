@@ -30,7 +30,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,102013,102024,102025,102119,102128,102129,103014,103015"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102013,102024,102025,102119,102128,102129,102144,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.31763855.1.1" Name="my_tq_agg_small" Rows="1.000000" EmptyRelation="false"/>
@@ -333,7 +333,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="68.129420" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="391.295838" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ets">
@@ -356,7 +356,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="68.129281" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="391.295699" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ets">

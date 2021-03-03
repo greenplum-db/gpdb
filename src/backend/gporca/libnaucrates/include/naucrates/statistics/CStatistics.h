@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CStatistics.h
@@ -12,18 +12,17 @@
 #define GPNAUCRATES_CStatistics_H
 
 #include "gpos/base.h"
+#include "gpos/common/CBitSet.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/IStatistics.h"
-#include "naucrates/statistics/CStatsPredDisj.h"
-#include "naucrates/statistics/CStatsPredConj.h"
-#include "naucrates/statistics/CStatsPredLike.h"
+#include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatsPredArrayCmp.h"
+#include "naucrates/statistics/CStatsPredConj.h"
+#include "naucrates/statistics/CStatsPredDisj.h"
+#include "naucrates/statistics/CStatsPredLike.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
 #include "naucrates/statistics/CUpperBoundNDVs.h"
-
-#include "naucrates/statistics/CHistogram.h"
-#include "gpos/common/CBitSet.h"
+#include "naucrates/statistics/IStatistics.h"
 
 namespace gpopt
 {
@@ -78,12 +77,6 @@ public:
 		UlongToHistogramMap *col_histogram_mapping) const;
 
 private:
-	// private copy ctor
-	CStatistics(const CStatistics &);
-
-	// private assignment operator
-	CStatistics &operator=(CStatistics &);
-
 	// hashmap from column ids to histograms
 	UlongToHistogramMap *m_colid_histogram_mapping;
 
@@ -93,17 +86,22 @@ private:
 	// number of rows
 	CDouble m_rows;
 
-	// the risk to have errors in cardinality estimation; it goes from 1 to infinity,
-	// where 1 is no risk
-	// when going from the leaves to the root of the plan, operators that generate joins,
-	// selections and groups increment the risk
+	// the risk to have errors in cardinality estimation; it goes from 1 to
+	// infinity, where 1 is no risk when going from the leaves to the root of the
+	// plan, operators that generate joins, selections and groups increment the risk
 	ULONG m_stats_estimation_risk;
 
 	// flag to indicate if input relation is empty
 	BOOL m_empty;
 
-	// statistics could be computed using predicates with external parameters (outer references),
-	// this is the total number of external parameters' values
+	// number of blocks in the relation (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks in the relation (not always up-to-date)
+	ULONG m_relallvisible;
+
+	// statistics could be computed using predicates with external parameters (outer
+	// references), this is the total number of external parameters' values
 	CDouble m_num_rebinds;
 
 	// number of predicates applied
@@ -126,7 +124,8 @@ private:
 									   UlongToColRefMap *colref_mapping,
 									   BOOL must_exist);
 
-	// helper method to add width information where the column ids have been remapped
+	// helper method to add width information where the column ids have been
+	// remapped
 	static void AddWidthInfoWithRemap(CMemoryPool *mp,
 									  UlongToDoubleMap *src_width,
 									  UlongToDoubleMap *dest_width,
@@ -134,13 +133,22 @@ private:
 									  BOOL must_exist);
 
 public:
+	CStatistics &operator=(CStatistics &) = delete;
+
+	CStatistics(const CStatistics &) = delete;
+
 	// ctor
 	CStatistics(CMemoryPool *mp, UlongToHistogramMap *col_histogram_mapping,
 				UlongToDoubleMap *colid_width_mapping, CDouble rows,
 				BOOL is_empty, ULONG num_predicates = 0);
 
+	CStatistics(CMemoryPool *mp, UlongToHistogramMap *col_histogram_mapping,
+				UlongToDoubleMap *colid_width_mapping, CDouble rows,
+				BOOL is_empty, ULONG relpages, ULONG relallvisible);
+
+
 	// dtor
-	virtual ~CStatistics();
+	~CStatistics() override;
 
 	virtual UlongToDoubleMap *CopyWidths(CMemoryPool *mp) const;
 
@@ -150,30 +158,42 @@ public:
 	virtual UlongToHistogramMap *CopyHistograms(CMemoryPool *mp) const;
 
 	// actual number of rows
-	virtual CDouble Rows() const;
+	CDouble Rows() const override;
+
+	ULONG
+	RelPages() const override
+	{
+		return m_relpages;
+	}
+
+	ULONG
+	RelAllVisible() const override
+	{
+		return m_relallvisible;
+	}
 
 	// number of rebinds
-	virtual CDouble
-	NumRebinds() const
+	CDouble
+	NumRebinds() const override
 	{
 		return m_num_rebinds;
 	}
 
 	// skew estimate for given column
-	virtual CDouble GetSkew(ULONG colid) const;
+	CDouble GetSkew(ULONG colid) const override;
 
 	// what is the width in bytes of set of column id's
-	virtual CDouble Width(ULongPtrArray *colids) const;
+	CDouble Width(ULongPtrArray *colids) const override;
 
 	// what is the width in bytes of set of column references
-	virtual CDouble Width(CMemoryPool *mp, CColRefSet *colrefs) const;
+	CDouble Width(CMemoryPool *mp, CColRefSet *colrefs) const override;
 
 	// what is the width in bytes
-	virtual CDouble Width() const;
+	CDouble Width() const override;
 
 	// is statistics on an empty input
-	virtual BOOL
-	IsEmpty() const
+	BOOL
+	IsEmpty() const override
 	{
 		return m_empty;
 	}
@@ -186,58 +206,58 @@ public:
 	}
 
 	// look up the number of distinct values of a particular column
-	virtual CDouble GetNDVs(const CColRef *colref);
+	CDouble GetNDVs(const CColRef *colref) override;
 
 	// look up the width of a particular column
 	virtual const CDouble *GetWidth(ULONG colid) const;
 
 	// the risk of errors in cardinality estimation
-	virtual ULONG
-	StatsEstimationRisk() const
+	ULONG
+	StatsEstimationRisk() const override
 	{
 		return m_stats_estimation_risk;
 	}
 
 	// update the risk of errors in cardinality estimation
-	virtual void
-	SetStatsEstimationRisk(ULONG risk)
+	void
+	SetStatsEstimationRisk(ULONG risk) override
 	{
 		m_stats_estimation_risk = risk;
 	}
 
 	// inner join with another stats structure
-	virtual CStatistics *CalcInnerJoinStats(
+	CStatistics *CalcInnerJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
-		CStatsPredJoinArray *join_preds_stats) const;
+		CStatsPredJoinArray *join_preds_stats) const override;
 
 	// LOJ with another stats structure
-	virtual CStatistics *CalcLOJoinStats(
+	CStatistics *CalcLOJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
-		CStatsPredJoinArray *join_preds_stats) const;
+		CStatsPredJoinArray *join_preds_stats) const override;
 
 	// left anti semi join with another stats structure
-	virtual CStatistics *CalcLASJoinStats(
+	CStatistics *CalcLASJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
 		CStatsPredJoinArray *join_preds_stats,
 		BOOL
 			DoIgnoreLASJHistComputation	 // except for the case of LOJ cardinality estimation this flag is always
 		// "true" since LASJ stats computation is very aggressive
-	) const;
+	) const override;
 
 	// semi join stats computation
-	virtual CStatistics *CalcLSJoinStats(
+	CStatistics *CalcLSJoinStats(
 		CMemoryPool *mp, const IStatistics *inner_side_stats,
-		CStatsPredJoinArray *join_preds_stats) const;
+		CStatsPredJoinArray *join_preds_stats) const override;
 
 	// return required props associated with stats object
-	virtual CReqdPropRelational *GetReqdRelationalProps(CMemoryPool *mp) const;
+	CReqdPropRelational *GetReqdRelationalProps(CMemoryPool *mp) const override;
 
 	// append given stats to current object
-	virtual void AppendStats(CMemoryPool *mp, IStatistics *stats);
+	void AppendStats(CMemoryPool *mp, IStatistics *stats) override;
 
 	// set number of rebinds
-	virtual void
-	SetRebinds(CDouble num_rebinds)
+	void
+	SetRebinds(CDouble num_rebinds) override
 	{
 		GPOS_ASSERT(0.0 < num_rebinds);
 
@@ -245,25 +265,25 @@ public:
 	}
 
 	// copy stats
-	virtual IStatistics *CopyStats(CMemoryPool *mp) const;
+	IStatistics *CopyStats(CMemoryPool *mp) const override;
 
 	// return a copy of this stats object scaled by a given factor
-	virtual IStatistics *ScaleStats(CMemoryPool *mp, CDouble factor) const;
+	IStatistics *ScaleStats(CMemoryPool *mp, CDouble factor) const override;
 
 	// copy stats with remapped column id
-	virtual IStatistics *CopyStatsWithRemap(CMemoryPool *mp,
-											UlongToColRefMap *colref_mapping,
-											BOOL must_exist) const;
+	IStatistics *CopyStatsWithRemap(CMemoryPool *mp,
+									UlongToColRefMap *colref_mapping,
+									BOOL must_exist) const override;
 
 	// return the set of column references we have stats for
-	virtual CColRefSet *GetColRefSet(CMemoryPool *mp) const;
+	CColRefSet *GetColRefSet(CMemoryPool *mp) const override;
 
 	// generate the DXL representation of the statistics object
-	virtual CDXLStatsDerivedRelation *GetDxlStatsDrvdRelation(
-		CMemoryPool *mp, CMDAccessor *md_accessor) const;
+	CDXLStatsDerivedRelation *GetDxlStatsDrvdRelation(
+		CMemoryPool *mp, CMDAccessor *md_accessor) const override;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// add upper bound of source cardinality
 	virtual void AddCardUpperBound(CUpperBoundNDVs *upper_bound_NDVs);
@@ -277,8 +297,8 @@ public:
 	// return the column identifiers of all columns statistics maintained
 	virtual ULongPtrArray *GetColIdsWithStats(CMemoryPool *mp) const;
 
-	virtual ULONG
-	GetNumberOfPredicates() const
+	ULONG
+	GetNumberOfPredicates() const override
 	{
 		return m_num_predicates;
 	}
@@ -311,7 +331,7 @@ public:
 	static CStatistics *
 	CastStats(IStatistics *pstats)
 	{
-		GPOS_ASSERT(NULL != pstats);
+		GPOS_ASSERT(nullptr != pstats);
 		return dynamic_cast<CStatistics *>(pstats);
 	}
 

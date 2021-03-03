@@ -41,15 +41,14 @@ class CTreeMapTest
 		// children
 		CNodeArray *m_pdrgpnd;
 
-		// private copy ctor
-		CNode(const CNode &);
-
 	public:
+		CNode(const CNode &) = delete;
+
 		// ctor
-		CNode(CMemoryPool *mp, ULONG *pulData, CNodeArray *pdrgpnd);
+		CNode(CMemoryPool *mp, const ULONG *pulData, CNodeArray *pdrgpnd);
 
 		// dtor
-		~CNode();
+		~CNode() override;
 
 		// debug print
 		IOstream &OsPrintWithIndent(IOstream &os, ULONG ulIndent = 0) const;

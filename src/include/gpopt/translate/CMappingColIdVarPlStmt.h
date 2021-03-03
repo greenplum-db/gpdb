@@ -17,12 +17,11 @@
 #define GPDXL_CMappingColIdVarPlStmt_H
 
 #include "gpos/base.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashMap.h"
 
-
-#include "gpopt/translate/CMappingColIdVar.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
+#include "gpopt/translate/CMappingColIdVar.h"
 
 //fwd decl
 struct Var;
@@ -66,7 +65,7 @@ public:
 		CContextDXLToPlStmt *dxl_to_plstmt_context);
 
 	// translate DXL ScalarIdent node into GPDB Var node
-	virtual Var *VarFromDXLNodeScId(const CDXLScalarIdent *dxlop);
+	Var *VarFromDXLNodeScId(const CDXLScalarIdent *dxlop) override;
 
 	// translate DXL ScalarIdent node into GPDB Param node
 	Param *ParamFromDXLNodeScId(const CDXLScalarIdent *dxlop);

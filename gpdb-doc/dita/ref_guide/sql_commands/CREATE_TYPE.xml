@@ -425,7 +425,7 @@ existing table in the same schema.</p>
                             <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to
                         specify the type of compression used in columns of this type.<note
                             type="note"><sup>1</sup>QuickLZ compression is available only in the
-                            commercial release of Pivotal Greenplum Database.</note>
+                            commercial release of Tanzu Greenplum.</note>
                     </pd>
                 </plentry>
                 <plentry>

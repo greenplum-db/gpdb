@@ -19,6 +19,7 @@
 #define GPDXL_CDXLDatumInt8_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
@@ -42,25 +43,24 @@ private:
 	// long int value
 	LINT m_val;
 
-	// private copy ctor
-	CDXLDatumInt8(const CDXLDatumInt8 &);
-
 public:
+	CDXLDatumInt8(const CDXLDatumInt8 &) = delete;
+
 	// ctor
 	CDXLDatumInt8(CMemoryPool *mp, IMDId *mdid_type, BOOL is_null, LINT val);
 
 	// dtor
-	virtual ~CDXLDatumInt8(){};
+	~CDXLDatumInt8() override = default;
 
 	// accessor of value
 	LINT Value() const;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumInt8;
 	}
@@ -69,7 +69,7 @@ public:
 	static CDXLDatumInt8 *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumInt8 == dxl_datum->GetDatumType());
 
 		return dynamic_cast<CDXLDatumInt8 *>(dxl_datum);

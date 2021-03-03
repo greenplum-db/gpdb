@@ -12,6 +12,7 @@
 #define GPOPT_CScalarIsDistinctFrom_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CScalarCmp.h"
 
 
@@ -30,10 +31,9 @@ using namespace gpos;
 class CScalarIsDistinctFrom : public CScalarCmp
 {
 private:
-	// private copy ctor
-	CScalarIsDistinctFrom(const CScalarIsDistinctFrom &);
-
 public:
+	CScalarIsDistinctFrom(const CScalarIsDistinctFrom &) = delete;
+
 	// ctor
 	CScalarIsDistinctFrom(CMemoryPool *mp, IMDId *mdid_op,
 						  const CWStringConst *pstrOp)
@@ -43,35 +43,33 @@ public:
 	}
 
 	// dtor
-	virtual ~CScalarIsDistinctFrom()
-	{
-	}
+	~CScalarIsDistinctFrom() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarIsDistinctFrom;
 	}
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+	EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const override;
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarIsDistinctFrom";
 	}
 
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// conversion function
 	static CScalarIsDistinctFrom *PopConvert(COperator *pop);
 
 	// get commuted scalar IDF operator
-	virtual CScalarIsDistinctFrom *PopCommutedOp(CMemoryPool *mp,
-												 COperator *pop);
+	CScalarIsDistinctFrom *PopCommutedOp(CMemoryPool *mp,
+										 COperator *pop) override;
 
 };	// class CScalarIsDistinctFrom
 

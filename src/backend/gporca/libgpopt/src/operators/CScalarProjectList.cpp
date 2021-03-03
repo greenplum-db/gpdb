@@ -9,15 +9,15 @@
 //		Implementation of scalar projection list operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarProjectList.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
-#include "gpopt/operators/CScalarProjectList.h"
-#include "gpopt/operators/CScalarWindowFunc.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CScalarWindowFunc.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 
@@ -83,7 +83,7 @@ CScalarProjectList::UlDistinctAggs(CExpressionHandle &exprhdl)
 	// exact are subqueries. This is better than just returning 0 for project lists with subqueries.
 	CExpression *pexprPrjList = exprhdl.PexprScalarRep();
 
-	GPOS_ASSERT(NULL != pexprPrjList);
+	GPOS_ASSERT(nullptr != pexprPrjList);
 	GPOS_ASSERT(COperator::EopScalarProjectList ==
 				pexprPrjList->Pop()->Eopid());
 
@@ -146,7 +146,7 @@ CScalarProjectList::FHasMultipleDistinctAggs(CExpressionHandle &exprhdl)
 	}
 
 	CAutoMemoryPool amp;
-	ExprToExprArrayMap *phmexprdrgpexpr = NULL;
+	ExprToExprArrayMap *phmexprdrgpexpr = nullptr;
 	ULONG ulDifferentDQAs = 0;
 	CXformUtils::MapPrjElemsWithDistinctAggs(
 		amp.Pmp(), pexprPrjList, &phmexprdrgpexpr, &ulDifferentDQAs);

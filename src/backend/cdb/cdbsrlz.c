@@ -4,7 +4,7 @@
  *	  Serialize a PostgreSQL sequential plan tree.
  *
  * Portions Copyright (c) 2004-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -19,7 +19,7 @@
 #include "nodes/nodes.h"
 #include "utils/memutils.h"
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 /* Zstandard library is provided */
 
 #include <zstd.h>
@@ -30,7 +30,7 @@ static char *uncompress_string(const char *src, int size, int *uncompressed_size
 /* zstandard compression level to use. */
 #define COMPRESS_LEVEL 3
 
-#endif			/* HAVE_LIBZSTD */
+#endif			/* USE_ZSTD */
 
 /*
  * This is used by dispatcher to serialize Plan and Query Trees for
@@ -51,7 +51,7 @@ serializeNode(Node *node, int *size, int *uncompressed_size_out)
 	Assert(pszNode != NULL);
 
 	/* If we have been compiled with libzstd, use it to compress it */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	sNode = compress_string(pszNode, uncompressed_size, size);
 	pfree(pszNode);
 #else
@@ -73,27 +73,27 @@ Node *
 deserializeNode(const char *strNode, int size)
 {
 	Node	   *node;
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	char	   *sNode;
 	int			uncompressed_len;
-#endif			/* HAVE_LIBZSTD */
+#endif
 
 	Assert(strNode != NULL);
 
 	/* If we have been compiled with libzstd, decompress */
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 	sNode = uncompress_string(strNode, size, &uncompressed_len);
 	Assert(sNode != NULL);
 	node = readNodeFromBinaryString(sNode, uncompressed_len);
 	pfree(sNode);
 #else
 	node = readNodeFromBinaryString(strNode, size);
-#endif			/* HAVE_LIBZSTD */
+#endif
 
 	return node;
 }
 
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 /*
  * Compress a (binary) string using libzstd
  *
@@ -177,4 +177,4 @@ uncompress_string(const char *src, int size, int *uncompressed_size_p)
 
 	return (char *) result;
 }
-#endif			/* HAVE_LIBZSTD */
+#endif			/* USE_ZSTD */

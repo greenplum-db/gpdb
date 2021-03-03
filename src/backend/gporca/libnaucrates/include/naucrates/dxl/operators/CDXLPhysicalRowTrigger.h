@@ -45,23 +45,22 @@ private:
 	// new column ids
 	ULongPtrArray *m_colids_new;
 
-	// private copy ctor
-	CDXLPhysicalRowTrigger(const CDXLPhysicalRowTrigger &);
-
 public:
+	CDXLPhysicalRowTrigger(const CDXLPhysicalRowTrigger &) = delete;
+
 	// ctor
 	CDXLPhysicalRowTrigger(CMemoryPool *mp, IMDId *rel_mdid, INT type,
 						   ULongPtrArray *colids_old,
 						   ULongPtrArray *colids_new);
 
 	// dtor
-	virtual ~CDXLPhysicalRowTrigger();
+	~CDXLPhysicalRowTrigger() override;
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// relation id
 	IMDId *
@@ -94,18 +93,19 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLPhysicalRowTrigger *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalRowTrigger == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalRowTrigger *>(dxl_op);

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2010 Greenplum Inc
  * Portions Copyright (c) 2010-2012 EMC Corporation
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
  *
  *
@@ -243,10 +243,9 @@ stream_begin_iterate(StreamNode *self, StreamBMIterator *iterator)
 /*
  * bmgetbitmap() -- return a stream bitmap.
  */
-Node *
-bmgetbitmap(IndexScanDesc scan, Node *bm)
+int64
+bmgetbitmap(IndexScanDesc scan, Node **bmNodeP)
 {
-	/* We ignore the second argument as we're returning a hash bitmap */
 	IndexStream	 *is;
 	BMScanPosition	scanPos;
 	bool res;
@@ -283,22 +282,28 @@ bmgetbitmap(IndexScanDesc scan, Node *bm)
 		}
 	}
 
-	if (!bm)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
 	{
 		StreamBitmap *sb = makeNode(StreamBitmap);
 		sb->streamNode = is;
-		bm = (Node *)sb;
+		*bmNodeP = (Node *) sb;
 	}
-	else if (IsA(bm, StreamBitmap))
-	{
-		stream_add_node((StreamBitmap *)bm, is, BMS_OR);
-	}
+	else if (IsA(*bmNodeP, StreamBitmap))
+		stream_add_node((StreamBitmap *)*bmNodeP, is, BMS_OR);
 	else
-	{
 		elog(ERROR, "non stream bitmap");
-	}
 
-	return bm;
+	/*
+	 * XXX We don't have a precise idea of the number of heap tuples
+	 * involved.
+	 */
+	return 1;
 }
 
 /*

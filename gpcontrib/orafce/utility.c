@@ -44,7 +44,7 @@ dbms_utility_format_call_stack(char mode)
 	StringInfo   sinfo;
 
 
-#if PG_VERSION_NUM >= 130000
+#if PG_VERSION_NUM >= 120000
 
 	errstart(ERROR, TEXTDOMAIN);
 

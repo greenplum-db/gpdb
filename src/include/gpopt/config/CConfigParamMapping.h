@@ -63,10 +63,10 @@ private:
 	// array of mapping elements
 	static SConfigMappingElem m_elements[];
 
-	// private ctor
-	CConfigParamMapping(const CConfigParamMapping &);
-
 public:
+	// private ctor
+	CConfigParamMapping(const CConfigParamMapping &) = delete;
+
 	// pack enabled optimizer config params in a traceflag bitset
 	static CBitSet *PackConfigParamInBitset(CMemoryPool *mp, ULONG xform_id);
 };

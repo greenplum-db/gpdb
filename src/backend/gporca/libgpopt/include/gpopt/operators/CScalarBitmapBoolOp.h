@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarBitmapBoolOp.h
@@ -50,19 +50,18 @@ private:
 	// bitmap type id
 	IMDId *m_pmdidBitmapType;
 
-	// private copy ctor
-	CScalarBitmapBoolOp(const CScalarBitmapBoolOp &);
-
 	static const WCHAR m_rgwszBitmapOpType[EbitmapboolSentinel][30];
 
 public:
+	CScalarBitmapBoolOp(const CScalarBitmapBoolOp &) = delete;
+
 	// ctor
 	CScalarBitmapBoolOp(CMemoryPool *mp, EBitmapBoolOp ebitmapboolop,
 						IMDId *pmdidBitmapType);
 
 
 	// dtor
-	virtual ~CScalarBitmapBoolOp();
+	~CScalarBitmapBoolOp() override;
 
 	// bitmap bool op type
 	EBitmapBoolOp
@@ -72,57 +71,57 @@ public:
 	}
 
 	// bitmap type id
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		return m_pmdidBitmapType;
 	}
 
 	// identifier
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarBitmapBoolOp;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarBitmapBoolOp";
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 	// conversion
 	static CScalarBitmapBoolOp *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBitmapBoolOp == pop->Eopid());
 
 		return dynamic_cast<CScalarBitmapBoolOp *>(pop);

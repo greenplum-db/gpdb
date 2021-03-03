@@ -275,9 +275,9 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 		if (sequence_script_file_name)
 		{
 			prep_status("Adjusting sequences");
-			exec_prog(UTILITY_LOG_FILE, NULL, true,
-					  PG_OPTIONS_UTILITY_MODE
-					  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
+			exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+					  "%s \"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
+					  PG_OPTIONS_UTILITY_MODE_VERSION(new_cluster.major_version),
 					  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 					  sequence_script_file_name);
 			unlink(sequence_script_file_name);

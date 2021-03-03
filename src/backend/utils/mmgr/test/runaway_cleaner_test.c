@@ -5,27 +5,8 @@
 
 #include "../runaway_cleaner.c"
 
-#define EXPECT_ELOG(LOG_LEVEL)     \
-    will_be_called(elog_start); \
-	expect_any(elog_start, filename); \
-	expect_any(elog_start, lineno); \
-	expect_any(elog_start, funcname); \
-	if (LOG_LEVEL < ERROR) \
-	{ \
-    	will_be_called(elog_finish); \
-	} \
-    else \
-    { \
-    	will_be_called_with_sideeffect(elog_finish, &_ExceptionalCondition, NULL);\
-    } \
-	expect_value(elog_finish, elevel, LOG_LEVEL); \
-	expect_any(elog_finish, fmt); \
-
 #define EXPECT_EREPORT(LOG_LEVEL)     \
 	expect_any(errstart, elevel); \
-	expect_any(errstart, filename); \
-	expect_any(errstart, lineno); \
-	expect_any(errstart, funcname); \
 	expect_any(errstart, domain); \
 	if (LOG_LEVEL < ERROR) \
 	{ \
@@ -33,8 +14,8 @@
 	} \
     else \
     { \
-    	will_return_with_sideeffect(errstart, false, &_ExceptionalCondition, NULL);\
-    } \
+    	will_return_with_sideeffect(errstart, false, &_ExceptionalCondition, NULL); \
+    }
 
 #define CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING() \
 	will_be_called(write_stderr); \

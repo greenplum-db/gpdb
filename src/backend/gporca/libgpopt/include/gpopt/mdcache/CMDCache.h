@@ -16,6 +16,7 @@
 #include "gpos/base.h"
 #include "gpos/memory/CCache.h"
 #include "gpos/memory/CCacheFactory.h"
+
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDKey.h"
 
@@ -44,15 +45,14 @@ private:
 	static ULLONG m_ullCacheQuota;
 
 	// private ctor
-	CMDCache(){};
-
-	// no copy ctor
-	CMDCache(const CMDCache &);
+	CMDCache() = default;
 
 	// private dtor
-	~CMDCache(){};
+	~CMDCache() = default;
 
 public:
+	CMDCache(const CMDCache &) = delete;
+
 	// initialize underlying cache
 	static void Init();
 
@@ -60,7 +60,7 @@ public:
 	static BOOL
 	FInitialized()
 	{
-		return (NULL != m_pcache);
+		return (nullptr != m_pcache);
 	}
 
 	// destroy global instance

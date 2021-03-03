@@ -3,7 +3,6 @@
 
 from contextlib import closing
 import os
-import platform
 import shutil
 import sys
 import tarfile
@@ -122,16 +121,6 @@ class OSCompatibilityError(Exception):
 
     def __init__(self, requiredos, foundos):
         Exception.__init__(self, '%s OS required. %s OS found' % (requiredos, foundos))
-
-
-class ArchCompatibilityError(Exception):
-    """
-        Exception to notify that architecture does not meet
-        the requirement
-    """
-
-    def __init__(self, requiredarch, foundarch):
-        Exception.__init__(self, '%s Arch required. %s Arch found' % (requiredarch, foundarch))
 
 
 class RequiredDependencyError(Exception):
@@ -261,7 +250,7 @@ class Gppkg:
         pkg['abspath'] = pkg_path
 
         # store all the dependencies of the gppkg
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             for cur_file in archive_list:
                 if cur_file.find('deps/') != -1 and cur_file.endswith('.deb'):
                     pkg['dependencies'].append(cur_file[cur_file.rfind('/') + 1:])
@@ -569,15 +558,6 @@ class ValidateInstallPackage(Operation):
         # Check the GPDB requirements
         if not IsVersionCompatible(self.gppkg).run():
             raise GpdbVersionError
-
-        # TODO: AK: I've changed our use of the OS tag from 'Linux' to 'rhel5' or 'suse10'.
-        # So, the two lines below will not work properly.
-        # if self.gppkg.os.lower() != platform.system().lower():
-        #    raise OSCompatibilityError(self.gppkg.os, platform.system().lower())
-
-        # architecture compatibility
-        if self.gppkg.architecture.lower() != platform.machine().lower():
-            raise ArchCompatibilityError(self.gppkg.architecture, platform.machine().lower())
 
         rpm_set = set([self.gppkg.main_rpm] + self.gppkg.dependencies)
         rpm_install_string = ' '.join([os.path.join(TEMP_EXTRACTION_PATH, rpm) for rpm in rpm_set])
@@ -1006,7 +986,7 @@ class UninstallPackageLocally(Operation):
 
 class SyncPackages(Operation):
     """
-    Synchronizes packages from master to a remote host
+    Synchronizes packages from coordinator to a remote host
 
     TODO: AK: MPP-15568
     """
@@ -1020,14 +1000,14 @@ class SyncPackages(Operation):
         if not CheckRemoteDir(GPPKG_ARCHIVE_PATH, self.host).run():
             MakeRemoteDir(GPPKG_ARCHIVE_PATH, self.host).run()
 
-        # set of packages on the master
-        master_package_set = set(ListFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION).run())
+        # set of packages on the coordinator
+        coordinator_package_set = set(ListFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION).run())
         # set of packages on the remote host
         remote_package_set = set(ListRemoteFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION, self.host).run())
         # packages to be uninstalled on the remote host
-        uninstall_package_set = remote_package_set - master_package_set
+        uninstall_package_set = remote_package_set - coordinator_package_set
         # packages to be installed on the remote host
-        install_package_set = master_package_set - remote_package_set
+        install_package_set = coordinator_package_set - remote_package_set
 
         if not install_package_set and not uninstall_package_set:
             logger.info('The packages on %s are consistent.' % self.host)
@@ -1043,7 +1023,7 @@ class SyncPackages(Operation):
                     srcFile=os.path.join(GPPKG_ARCHIVE_PATH, package),
                     dstFile=dstFile,
                     dstHost=self.host).run(validateAfter=True)
-                if platform.linux_distribution()[0] == 'Ubuntu':
+                if linux_distribution_id() == 'ubuntu':
                     RemoteOperation(InstallDebPackageLocally(dstFile), self.host).run()
                 else:
                     RemoteOperation(InstallPackageLocally(dstFile), self.host).run()
@@ -1053,17 +1033,17 @@ class SyncPackages(Operation):
             logger.info(
                 'The following packages will be uninstalled on %s: %s' % (self.host, ', '.join(sorted(uninstall_package_set))))
             for package in uninstall_package_set:
-                if platform.linux_distribution()[0] == 'Ubuntu':
+                if linux_distribution_id() == 'ubuntu':
                     RemoteOperation(UninstallDebPackageLocally(package), self.host).run()
                 else:
                     RemoteOperation(UninstallPackageLocally(package), self.host).run()
 
 
 class InstallPackage(Operation):
-    def __init__(self, gppkg, master_host, standby_host, segment_host_list):
+    def __init__(self, gppkg, coordinator_host, standby_host, segment_host_list):
         self.gppkg = gppkg
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = None
@@ -1072,16 +1052,16 @@ class InstallPackage(Operation):
     def execute(self):
         logger.info('Installing package %s' % self.gppkg.pkg)
 
-        # TODO: AK: MPP-15736 - precheck package state on master
+        # TODO: AK: MPP-15736 - precheck package state on coordinator
         ExtractPackage(self.gppkg).run()
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             ValidateInstallDebPackage(self.gppkg).run()
         else:
             ValidateInstallPackage(self.gppkg).run()
 
         # perform any pre-installation steps
         PerformHooks(hooks=self.gppkg.preinstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1089,7 +1069,7 @@ class InstallPackage(Operation):
         srcFile = self.gppkg.abspath
         dstFile = os.path.join(GPHOME, self.gppkg.pkg)
 
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             # install package on segments
             if self.segment_host_list:
                 GpScp(srcFile, dstFile, self.segment_host_list).run()
@@ -1103,7 +1083,7 @@ class InstallPackage(Operation):
                     dstHost=self.standby_host).run(validateAfter=True)
                 RemoteOperation(InstallDebPackageLocally(dstFile), self.standby_host).run()
 
-            # install package on master
+            # install package on coordinator
             InstallDebPackageLocally(srcFile).run()
         else:
             # install package on segments
@@ -1119,12 +1099,12 @@ class InstallPackage(Operation):
                     dstHost=self.standby_host).run(validateAfter=True)
                 RemoteOperation(InstallPackageLocally(dstFile), self.standby_host).run()
 
-            # install package on master
+            # install package on coordinator
             InstallPackageLocally(srcFile).run()
 
         # perform any post-installation steps
         PerformHooks(hooks=self.gppkg.postinstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1132,7 +1112,7 @@ class InstallPackage(Operation):
 
 
 class PerformHooks(Operation):
-    def __init__(self, hooks, master_host, standby_host, segment_host_list):
+    def __init__(self, hooks, coordinator_host, standby_host, segment_host_list):
         """
         Performs steps that have been specified in the yaml file for a particular
         stage of gppkg execution
@@ -1142,12 +1122,12 @@ class PerformHooks(Operation):
         the spec file, rpms, and other artifacts (external scripts, perhaps.) To support
         this, these commands should be prefixed with a "cd".
 
-        TODO: AK: I'm adding master_host for consistency.
-        But, why would we ever need master_host?  We're on the master host!
+        TODO: AK: I'm adding coordinator_host for consistency.
+        But, why would we ever need coordinator_host?  We're on the coordinator host!
         """
         self.hooks = hooks
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = []
@@ -1161,7 +1141,7 @@ class PerformHooks(Operation):
             if key is None:
                 return
             key_str = key[0]
-            if key_str.lower() == 'master':
+            if key_str.lower() == 'coordinator':
                 if self.standby_host:
                     RemoteCommand(hook[key_str], [self.standby_host]).run()
                 LocalCommand(hook[key_str], True).run()
@@ -1170,7 +1150,7 @@ class PerformHooks(Operation):
             elif key_str.lower() == 'all':
                 if self.standby_host:
                     RemoteCommand(hook[key_str], [self.standby_host]).run()
-                # Change on Master
+                # Change on Coordinator
                 LocalCommand(hook[key_str], True).run()
                 # Change on Segment hosts
                 RemoteCommand(hook[key_str], self.segment_host_list).run()
@@ -1178,10 +1158,10 @@ class PerformHooks(Operation):
 
 
 class UninstallPackage(Operation):
-    def __init__(self, gppkg, master_host, standby_host, segment_host_list):
+    def __init__(self, gppkg, coordinator_host, standby_host, segment_host_list):
         self.gppkg = gppkg
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = []
@@ -1190,22 +1170,22 @@ class UninstallPackage(Operation):
     def execute(self):
         logger.info('Uninstalling package %s' % self.gppkg.pkg)
 
-        # TODO: AK: MPP-15736 - precheck package state on master
+        # TODO: AK: MPP-15736 - precheck package state on coordinator
         ExtractPackage(self.gppkg).run()
 
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             ValidateUninstallDebPackage(self.gppkg).run()
         else:
             ValidateUninstallPackage(self.gppkg).run()
 
         # perform any pre-uninstallation steps
         PerformHooks(hooks=self.gppkg.preuninstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
         # uninstall on segments
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             HostOperation(UninstallDebPackageLocally(self.gppkg.pkg), self.segment_host_list).run()
 
             if self.standby_host:
@@ -1223,7 +1203,7 @@ class UninstallPackage(Operation):
 
         # perform any post-installation steps
         PerformHooks(hooks=self.gppkg.postuninstall,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1407,10 +1387,10 @@ class BuildGppkg(Operation):
 class UpdatePackage(Operation):
     """ TODO: AK: Enforce gppkg version is higher than currently installed version """
 
-    def __init__(self, gppkg, master_host, standby_host, segment_host_list):
+    def __init__(self, gppkg, coordinator_host, standby_host, segment_host_list):
         self.gppkg = gppkg
-        self.master_host = master_host
-        if master_host != standby_host:
+        self.coordinator_host = coordinator_host
+        if coordinator_host != standby_host:
             self.standby_host = standby_host
         else:
             self.standby_host = []
@@ -1420,7 +1400,7 @@ class UpdatePackage(Operation):
         logger.info('Updating package %s' % self.gppkg.pkg)
 
         ExtractPackage(self.gppkg).run()
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             ValidateInstallDebPackage(self.gppkg, is_update=True).run()
         else:
             ValidateInstallPackage(self.gppkg, is_update=True).run()
@@ -1441,12 +1421,12 @@ class UpdatePackage(Operation):
                 dstHost=self.standby_host).run(validateAfter=True)
             RemoteOperation(UpdatePackageLocally(dstFile), self.standby_host).run()
 
-        # update package on master
+        # update package on coordinator
         UpdatePackageLocally(srcFile).run()
 
         # perform any post-update steps
         PerformHooks(hooks=self.gppkg.postupdate,
-                     master_host=self.master_host,
+                     coordinator_host=self.coordinator_host,
                      standby_host=self.standby_host,
                      segment_host_list=self.segment_host_list).run()
 
@@ -1467,7 +1447,7 @@ class UpdatePackageLocally(Operation):
         self.package_path = package_path
 
     def execute(self):
-        if platform.linux_distribution()[0] == 'Ubuntu':
+        if linux_distribution_id() == 'ubuntu':
             InstallDebPackageLocally(self.package_path, is_update=True).run()
         else:
             InstallPackageLocally(self.package_path, is_update=True).run()
@@ -1558,7 +1538,7 @@ class MigratePackages(Operation):
         for package in packages:
             package_path = os.path.join(old_archive_path, package)
             try:
-                if platform.linux_distribution()[0] == 'Ubuntu':
+                if linux_distribution_id() == 'ubuntu':
                     InstallDebPackageLocally(package_path).run()
                 else:
                     InstallPackageLocally(package_path).run()
@@ -1637,3 +1617,29 @@ class HostOperation(Operation):
         ParallelOperation(operations).run()
         for operation in operations:
             operation.get_ret()
+
+
+# As of py3.8, platform library doesn't have linux_distribution.
+# But all the production systems we support use systemd and hence have this info in /etc/os-release.
+# https://www.freedesktop.org/software/systemd/man/os-release.html
+def _platform_linux_distribution(search_key, osid_filename):
+    try:
+        with open(osid_filename) as f:
+            full_key = '%s=' % search_key
+
+            for line in f.readlines():
+                line = line.strip().replace('"', '')
+                if line.startswith(full_key):
+                    return line[len(full_key):]
+    except:
+        pass
+
+    return 'unknown'
+
+
+def linux_distribution_id(osid_filename='/etc/os-release'):
+    return _platform_linux_distribution('ID', osid_filename)
+
+
+def linux_distribution_version(osid_filename='/etc/os-release'):
+    return _platform_linux_distribution('VERSION_ID', osid_filename)

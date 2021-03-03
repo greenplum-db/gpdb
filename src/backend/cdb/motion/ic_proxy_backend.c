@@ -22,7 +22,7 @@
  * Note that the backend setup part of ic-proxy has been implemented by libuv
  * loop. Data flow send/recv and connection tear down is still based on ic-tcp.
  *
- * Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------

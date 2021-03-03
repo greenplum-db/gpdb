@@ -1,12 +1,15 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 
 #include "unittest/gpopt/minidump/CPhysicalParallelUnionAllTest.h"
-#include "unittest/gpopt/CTestUtils.h"
-#include "gpos/test/CUnittest.h"
+
 #include "gpos/task/CAutoTraceFlag.h"
+#include "gpos/test/CUnittest.h"
+
 #include "naucrates/traceflags/traceflags.h"
+
+#include "unittest/gpopt/CTestUtils.h"
 
 using namespace gpos;
 

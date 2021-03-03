@@ -59,7 +59,6 @@ Feature: gppkg tests
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --install should report success because the package is not yet installed
         Given the database is running
@@ -69,7 +68,6 @@ Feature: gppkg tests
         And gppkg should print "Completed local installation of sample" to stdout
         And "sample" gppkg files exist on all hosts
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --install should report failure because the package is already installed
         Given the database is running
@@ -77,7 +75,6 @@ Feature: gppkg tests
         Then gppkg should return a return code of 2
         And gppkg should print "sample.gppkg is already installed." to stdout
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --remove should report success when the package is already installed
         Given the database is running
@@ -88,7 +85,6 @@ Feature: gppkg tests
         And gppkg should print "sample.gppkg successfully uninstalled" to stdout
         And "sample" gppkg files do not exist on any hosts
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --query should report installed packages
         Given the database is running
@@ -100,7 +96,6 @@ Feature: gppkg tests
         And gppkg should print "Starting gppkg with args: --query --all" to stdout
         And gppkg should print "sample" to stdout
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --clean (which should be named "sync") should install to the segment host that lacks a gppkg found elsewhere
         Given the database is running
@@ -111,26 +106,24 @@ Feature: gppkg tests
         And gppkg should print "The following packages will be installed on .*: sample.gppkg" to stdout
         And "sample" gppkg files exist on all hosts
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
-    Scenario: gppkg --clean (which should be named "sync") should remove on all segment hosts when gppkg does not exist in master
+    Scenario: gppkg --clean (which should be named "sync") should remove on all segment hosts when gppkg does not exist in coordinator
         Given the database is running
         When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
-        And gppkg "sample" is removed from master host
+        And gppkg "sample" is removed from coordinator host
         And the user runs "gppkg --clean"
         Then gppkg should return a return code of 0
         And gppkg should print "The following packages will be uninstalled on .*: sample.gppkg" to stdout
         And "sample" gppkg files do not exist on any hosts
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
-    Scenario: gppkg --migrate copies all packages from master to all segment hosts
+    Scenario: gppkg --migrate copies all packages from coordinator to all segment hosts
         Given the database is running
         And the user runs "gppkg -r sample"
         And a gphome copy is created at /tmp/gppkg_migrate on all hosts
-        When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg -r sample" with gphome "/tmp/gppkg_migrate"
+        When a user runs "COORDINATOR_DATA_DIRECTORY=$COORDINATOR_DATA_DIRECTORY gppkg -r sample" with gphome "/tmp/gppkg_migrate"
         And "sample" gppkg files do not exist on any hosts
-        When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg --install $(pwd)/test/behave/mgmt_utils/steps/data/sample.gppkg" with gphome "/tmp/gppkg_migrate"
+        When a user runs "COORDINATOR_DATA_DIRECTORY=$COORDINATOR_DATA_DIRECTORY gppkg --install $(pwd)/test/behave/mgmt_utils/steps/data/sample.gppkg" with gphome "/tmp/gppkg_migrate"
         Then gppkg should return a return code of 0
         And "sample" gppkg files do not exist on any hosts
         And the user runs "gpstop -a && gpstart -a -m"

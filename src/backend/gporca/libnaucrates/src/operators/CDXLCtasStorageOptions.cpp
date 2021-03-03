@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLCtasStorageOptions.cpp
@@ -11,6 +11,7 @@
 
 
 #include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
+
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -104,7 +105,7 @@ CDXLCtasStorageOptions::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenCTASOptions));
-	if (NULL != m_mdname_tablespace)
+	if (nullptr != m_mdname_tablespace)
 	{
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenTablespace),
@@ -115,7 +116,7 @@ CDXLCtasStorageOptions::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenOnCommitAction),
 		GetOnCommitActionStr(m_ctas_on_commit_action));
 
-	const ULONG ulOptions = (m_ctas_storage_option_array == NULL)
+	const ULONG ulOptions = (m_ctas_storage_option_array == nullptr)
 								? 0
 								: m_ctas_storage_option_array->Size();
 	for (ULONG ul = 0; ul < ulOptions; ul++)
@@ -172,7 +173,7 @@ CDXLCtasStorageOptions::GetOnCommitActionStr(
 
 		default:
 			GPOS_ASSERT("Invalid on commit option");
-			return NULL;
+			return nullptr;
 	}
 }
 

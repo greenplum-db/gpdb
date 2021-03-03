@@ -18,14 +18,13 @@
 #define GPDXL_CTranslatorDXLToScalar_H
 
 
-#include "gpopt/translate/CMappingColIdVar.h"
-#include "gpopt/translate/CContextDXLToPlStmt.h"
-#include "gpopt/translate/CMappingElementColIdParamId.h"
-
 #include "gpos/base.h"
 
-#include "naucrates/dxl/operators/CDXLNode.h"
+#include "gpopt/translate/CContextDXLToPlStmt.h"
+#include "gpopt/translate/CMappingColIdVar.h"
+#include "gpopt/translate/CMappingElementColIdParamId.h"
 #include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
 #include "naucrates/dxl/operators/CDXLScalarCast.h"
 
@@ -73,35 +72,11 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 class CTranslatorDXLToScalar
 {
-	// shorthand for functions for translating DXL nodes to GPDB expressions
-	typedef Expr *(CTranslatorDXLToScalar::*expr_func_ptr)(
-		const CDXLNode *dxlnode, CMappingColIdVar *colid_var);
-
 private:
-	// pair of DXL op id and translator function
-	struct STranslatorElem
-	{
-		Edxlopid eopid;
-		expr_func_ptr translate_func;
-	};
-
-	// shorthand for functions for translating DXL nodes to GPDB expressions
-	typedef Const *(CTranslatorDXLToScalar::*const_func_ptr)(CDXLDatum *);
-
-	// pair of DXL datum type and translator function
-	struct SDatumTranslatorElem
-	{
-		CDXLDatum::EdxldatumType edxldt;
-		const_func_ptr translate_func;
-	};
-
 	CMemoryPool *m_mp;
 
 	// meta data accessor
 	CMDAccessor *m_md_accessor;
-
-	// The parent plan needed when translating an initplan
-	Plan *m_plan;
 
 	// indicates whether a sublink was encountered during translation of the scalar subtree
 	BOOL m_has_subqueries;
@@ -235,10 +210,9 @@ private:
 	Expr *TranslateRelabelTypeOrFuncExprFromDXL(
 		const CDXLScalarCast *scalar_cast, Expr *pexprChild);
 
-	// private copy ctor
-	CTranslatorDXLToScalar(const CTranslatorDXLToScalar &);
-
 public:
+	CTranslatorDXLToScalar(const CTranslatorDXLToScalar &) = delete;
+
 	struct STypeOidAndTypeModifier
 	{
 		OID oid_type;

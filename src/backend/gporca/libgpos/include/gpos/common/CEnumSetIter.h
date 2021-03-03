@@ -12,8 +12,8 @@
 #define GPOS_CEnumSetIter_H
 
 #include "gpos/base.h"
-#include "gpos/common/CEnumSet.h"
 #include "gpos/common/CBitSetIter.h"
+#include "gpos/common/CEnumSet.h"
 
 namespace gpos
 {
@@ -29,10 +29,10 @@ template <class T, ULONG sentinel_index>
 class CEnumSetIter : public CBitSetIter
 {
 private:
-	// private copy ctor
-	CEnumSetIter<T, sentinel_index>(const CEnumSetIter<T, sentinel_index> &);
-
 public:
+	CEnumSetIter<T, sentinel_index>(const CEnumSetIter<T, sentinel_index> &) =
+		delete;
+
 	// ctor
 	explicit CEnumSetIter<T, sentinel_index>(
 		const CEnumSet<T, sentinel_index> &enum_set)
@@ -41,9 +41,7 @@ public:
 	}
 
 	// dtor
-	~CEnumSetIter<T, sentinel_index>()
-	{
-	}
+	~CEnumSetIter<T, sentinel_index>() = default;
 
 	// current enum
 	T

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2014 Pivotal Inc.
+//	Copyright 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CStatsPredUtils.h
@@ -12,9 +12,9 @@
 #define GPOPT_CStatsPredUtils_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 #include "gpopt/operators/CExpression.h"
-
 #include "naucrates/statistics/CStatsPred.h"
 
 namespace gpopt

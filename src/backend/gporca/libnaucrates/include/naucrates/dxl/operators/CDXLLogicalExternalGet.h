@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLLogicalExternalGet.h
@@ -14,6 +14,7 @@
 #define GPDXL_CDXLLogicalExternalGet_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
 
 namespace gpdxl
@@ -29,24 +30,23 @@ namespace gpdxl
 class CDXLLogicalExternalGet : public CDXLLogicalGet
 {
 private:
-	// private copy ctor
-	CDXLLogicalExternalGet(CDXLLogicalExternalGet &);
-
 public:
+	CDXLLogicalExternalGet(CDXLLogicalExternalGet &) = delete;
+
 	// ctor
 	CDXLLogicalExternalGet(CMemoryPool *mp, CDXLTableDescr *table_descr);
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// conversion function
 	static CDXLLogicalExternalGet *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalExternalGet *>(dxl_op);

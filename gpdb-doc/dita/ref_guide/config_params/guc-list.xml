@@ -253,9 +253,6 @@
               <xref href="#gp_fts_probe_retries"/>
             </li>
             <li>
-              <xref href="#gp_fts_probe_threadcount"/>
-            </li>
-            <li>
               <xref href="#gp_fts_probe_timeout"/>
             </li>
             <li>
@@ -397,6 +394,9 @@
               <xref href="#optimizer_control" type="section">optimizer_control</xref>
             </li>
             <li>
+              <xref href="#optimizer_cost_model" type="section">optimizer_cost_model</xref>
+            </li>
+            <li>
               <xref href="#optimizer_cte_inlining_bound" type="section"
                 >optimizer_cte_inlining_bound</xref>
             </li>
@@ -404,6 +404,8 @@
                 >optimizer_enable_associativity</xref>
             </li>
             <li><xref href="#optimizer_enable_dml" type="section">optimizer_enable_dml</xref>
+            </li>
+            <li><xref href="#optimizer_enable_indexonlyscan" type="section">optimizer_enable_indexonlyscan</xref>
             </li>
             <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
@@ -637,8 +639,8 @@
             <li><xref href="#writable_external_table_bufsize" type="section"
                 >writable_external_table_bufsize</xref>
             </li>
-            <li><xref href="#write_to_gpfdist_timeout" type="section"
-                >write_to_gpfdist_timeout</xref>
+            <li><xref href="#gpfdist_retry_timeout" type="section"
+                >gpfdist_retry_timeout</xref>
             </li>
             <li>
               <xref href="#xid_stop_limit"/>
@@ -2440,7 +2442,7 @@
   <topic id="gp_dbid">
     <title>gp_dbid</title>
     <body>
-      <p>The local content dbid if a segment.</p>
+      <p>The local content dbid of a segment.</p>
       <table id="gp_dbid_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -2593,8 +2595,8 @@
         <sup>1</sup>The set classification when the parameter is set at the system level with the
           <codeph>gpconfig</codeph> utility.</note>
       <note>
-        <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal
-        Greenplum Database.</note>
+        <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu
+        Greenplum.</note>
     </body>
   </topic>
   <topic id="gp_dynamic_partition_pruning">
@@ -2978,10 +2980,10 @@
       <p>After changing this configuration parameter, Greenplum Database must be restarted for the
         change to take effect.</p>
       <p>The Greenplum Database metrics collection extension, when enabled, sends the collected
-        metrics over UDP to a Pivotal Greenplum Command Center agent<sup>1</sup>. </p>
-      <note><sup>1</sup> The metrics collection extension is included in Pivotal's commercial
-        version of Greenplum Database. Pivotal Greenplum Command Center is supported only with
-        Pivotal Greenplum Database.</note>
+        metrics over UDP to a Tanzu Greenplum Command Center agent<sup>1</sup>. </p>
+      <note><sup>1</sup> The metrics collection extension is included in VMware's commercial
+        version of Greenplum Database. Tanzu Greenplum Command Center is supported only with
+        Tanzu Greenplum.</note>
       <table id="gp_enable_query_metrics">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3271,34 +3273,6 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">5</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_fts_probe_threadcount">
-    <title>gp_fts_probe_threadcount</title>
-    <body>
-      <p>Specifies the number of <codeph>ftsprobe</codeph> threads to create. This parameter should
-        be set to a value equal to or greater than the number of segments per host. </p>
-      <table id="gp_fts_probe_threadcount_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">1 - 128</entry>
-              <entry colname="col2">16</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -3706,10 +3680,10 @@
       <p>When the <codeph>gp_interconnect_type</codeph> parameter is set to <codeph>proxy</codeph>,
         You must specify a proxy port for the master, standby master, and all primary and mirror
         segment instances in this format:</p>
-      <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_ip>:&lt;port>[,&lt;dbid>:&lt;segid>:&lt;ip>:&lt;port> ... ]</codeblock>
+      <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_address>:&lt;port>[, ... ]</codeblock>
       <p>For the master, standby master, and segment instance, the first three fields,
-          <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_ip</varname> can be
-        found in the <codeph><xref href="../system_catalogs/gp_segment_configuration.xml"
+          <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_address</varname>
+        can be found in the <codeph><xref href="../system_catalogs/gp_segment_configuration.xml"
             >gp_segment_configuration</xref></codeph> catalog table. The fourth field,
           <varname>port</varname>, is the proxy port for the Greenplum master or a segment
           instance.<ul id="ul_zly_vpm_4mb">
@@ -3717,15 +3691,14 @@
             table.</li>
           <li><varname>cont_id</varname> is the <codeph>content</codeph> column in the catalog
             table.</li>
-          <li><varname>seg_ip</varname> is the IP address corresponding to <codeph>address</codeph>
-            column in the catalog table. If the <codeph>address</codeph> is a hostname, use the IP
-            address of the hostname.</li>
+          <li><varname>seg_address</varname> is the IP address or hostname corresponding to tge
+              <codeph>address</codeph> column in the catalog table.</li>
           <li><varname>port</varname> is the TCP/IP port for the segment instance proxy that you
             specify.</li>
         </ul></p>
-      <note type="important">The <varname>seg_ip</varname> must be an IP address, not a hostname.
-        Also, If the mapping of a segment instance hostname to the IP address changes, you must
-        update the IP address in the parameter value.</note>
+      <note type="important">If a segment instance hostname is bound to a different IP address at
+        runtime, you must execute <codeph>gpstop -U</codeph> to re-load the
+          <codeph>gp_interconnect_proxy_addresses</codeph> value.</note>
       <p>You must specify the value as a single-quoted string. This <codeph>gpconfig</codeph>
         command sets the value for <codeph>gp_interconnect_proxy_addresses</codeph> as a
         single-quoted string. The Greenplum system consists of a master and a single segment
@@ -3791,8 +3764,8 @@
   <topic id="gp_interconnect_setup_timeout">
     <title>gp_interconnect_setup_timeout</title>
     <body>
-      <p>Specifies the amount of time to wait for the Greenplum Database interconnect to complete
-        setup before it times out.</p>
+      <p>Specifies the amount of time, in seconds, that Greenplum Database waits
+        for the interconnect to complete setup before it times out.</p>
       <table id="gp_interconnect_setup_timeout_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3807,8 +3780,8 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">Any valid time expression (number and unit)</entry>
-              <entry colname="col2">2 hours</entry>
+              <entry colname="col1">0 - 7200 seconds</entry>
+              <entry colname="col2">7200 seconds (2 hours)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -3840,6 +3813,35 @@
             <row>
               <entry colname="col1">1 - 4096</entry>
               <entry colname="col2">2 </entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_interconnect_transmit_timeout">
+    <title>gp_interconnect_transmit_timeout</title>
+    <body>
+      <p>Specifies the amount of time, in seconds, that Greenplum Database waits
+        for network transmission of interconnect traffic to complete before it
+        times out.</p>
+      <table id="gp_interconnect_transmit_timeout_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">1 - 7200 seconds</entry>
+              <entry colname="col2">3600 seconds (1 hour)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -6803,6 +6805,44 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_cost_model">
+    <title>optimizer_cost_model</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls the cost
+        model that GPORCA chooses for bitmap scans used with bitmap indexes or
+        with btree indexes on AO tables.</p>
+      <ul>
+        <li><codeph>legacy</codeph> - preserves the calibrated cost model used by GPORCA
+          in Greenplum Database releases 6.13 and earlier</li>
+        <li><codeph>calibrated</codeph> - improves cost estimates for indexes</li>
+        <li><codeph>experimental</codeph> - reserved for future experimental cost models;
+           currently equivalent to the <codeph>calibrated</codeph> model</li>
+      </ul>
+      <p>The default cost model, <codeph>calibrated</codeph>, is more likely to choose
+        a faster bitmap index with nested loop joins instead of hash joins.</p>
+      <table id="optimizer_cost_model_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">legacy<p>calibrated</p><p>experimental</p></entry>
+              <entry colname="col2">calibrated</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_cte_inlining_bound">
     <title>optimizer_cte_inlining_bound</title>
     <body>
@@ -6883,6 +6923,46 @@
         Planner when performing DML commands.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_igw_npf_fjb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_enable_indexonlyscan">
+    <title>optimizer_enable_indexonlyscan</title>
+    <body>
+      <p>When GPORCA is enabled (the default) and this parameter is
+        <codeph>true</codeph> (the default), GPORCA can generate index-only scan
+        plan types for B-tree indexes. GPORCA accesses the index values only,
+        not the data blocks of the relation. This provides a query execution
+        performance improvement, particularly when the table has been vacuumed,
+        has wide columns, and GPORCA does not need to fetch any data blocks
+        (for example, they are visible).</p>
+      <p>When disabled (<codeph>false</codeph>), GPORCA does not generate
+        index-only scan plan types.</p>
+      <p>The parameter can be set for a database system, an individual database,
+        or a session or query.</p>
       <p>For information about GPORCA, see <xref
           href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
@@ -9286,7 +9366,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       <p>If Greenplum Database detects a corruption in the free TID list, the free TID list is
         rebuilt, a warning is logged, and a warning is returned by queries for which the check
         failed. Greenplum Database attempts to execute the queries. </p>
-      <note otherprops="pivotal">If a warning is returned, please contact Pivotal Support.</note>
+      <note otherprops="pivotal">If a warning is returned, please contact VMware Support.</note>
       <table id="table_fkc_4pb_1w">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9516,11 +9596,11 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       </table>
     </body>
   </topic>
-  <topic id="write_to_gpfdist_timeout">
-    <title>write_to_gpfdist_timeout</title>
+  <topic id="gpfdist_retry_timeout">
+    <title>gpfdist_retry_timeout</title>
     <body>
       <p>Controls the time (in seconds) that Greenplum Database waits before returning an error when
-        Greenplum Database is attempting to write to a <codeph><xref
+        Greenplum Database is attempting to connect or write to a <codeph><xref
             href="../../utility_guide/ref/gpfdist.xml"/></codeph> server and
           <codeph>gpfdist</codeph> does not respond. The default value is 300 (5 minutes). A value
         of 0 disables the timeout.</p>

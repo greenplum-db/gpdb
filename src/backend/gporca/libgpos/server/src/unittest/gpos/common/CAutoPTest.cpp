@@ -9,13 +9,12 @@
 //		Tests for CAutoP
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
+#include "unittest/gpos/common/CAutoPTest.h"
 
+#include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CAutoPTest.h"
 
 using namespace gpos;
 
@@ -77,7 +76,7 @@ CAutoPTest::EresUnittest_Basics()
 	GPOS_ASSERT(*sz2 == *asz3);
 
 	// wipe out asz2 to prevent double free
-	asz2 = NULL;
+	asz2 = nullptr;
 
 	// unhooking of object
 	GPOS_DELETE(asz3.Reset());

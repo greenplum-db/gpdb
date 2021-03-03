@@ -4,9 +4,9 @@
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
-      <dxl:CTEConfig CTEInliningCutoff="0"/> 
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="103027,101001,101013,102024,102025,102115,102117,103001"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102024,102025,102115,102117,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:GPDBScalarOp Mdid="0.523.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true">
@@ -2717,108 +2717,108 @@
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1962503.1.1.2" Name="d_date" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="VnH//w==" DoubleValue="-3155500800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="yXz//w==" DoubleValue="-2902262400000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="VnH//w==" LintValue="-36522"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="yXz//w==" LintValue="-33591"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="yXz//w==" DoubleValue="-2902262400000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="LIj//w==" DoubleValue="-2650406400000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="yXz//w==" LintValue="-33591"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="LIj//w==" LintValue="-30676"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="LIj//w==" DoubleValue="-2650406400000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="spP//w==" DoubleValue="-2395526400000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="LIj//w==" LintValue="-30676"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="spP//w==" LintValue="-27726"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="spP//w==" DoubleValue="-2395526400000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="1p7//w==" DoubleValue="-2149113600000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="spP//w==" LintValue="-27726"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="1p7//w==" LintValue="-24874"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="1p7//w==" DoubleValue="-2149113600000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="EKr//w==" DoubleValue="-1900800000000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="1p7//w==" LintValue="-24874"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="EKr//w==" LintValue="-22000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="EKr//w==" DoubleValue="-1900800000000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="U7X//w==" DoubleValue="-1651708800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="EKr//w==" LintValue="-22000"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="U7X//w==" LintValue="-19117"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="U7X//w==" DoubleValue="-1651708800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="08D//w==" DoubleValue="-1397347200000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="U7X//w==" LintValue="-19117"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="08D//w==" LintValue="-16173"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="08D//w==" DoubleValue="-1397347200000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZMz//w==" DoubleValue="-1141516800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="08D//w==" LintValue="-16173"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZMz//w==" LintValue="-13212"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZMz//w==" DoubleValue="-1141516800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Ytf//w==" DoubleValue="-898387200000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZMz//w==" LintValue="-13212"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Ytf//w==" LintValue="-10398"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Ytf//w==" DoubleValue="-898387200000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="auP//w==" DoubleValue="-632275200000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Ytf//w==" LintValue="-10398"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="auP//w==" LintValue="-7318"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="auP//w==" DoubleValue="-632275200000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="JO///w==" DoubleValue="-372902400000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="auP//w==" LintValue="-7318"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="JO///w==" LintValue="-4316"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="JO///w==" DoubleValue="-372902400000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="nfr//w==" DoubleValue="-119145600000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="JO///w==" LintValue="-4316"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="nfr//w==" LintValue="-1379"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="nfr//w==" DoubleValue="-119145600000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="BwYAAA==" DoubleValue="133315200000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="nfr//w==" LintValue="-1379"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="BwYAAA==" LintValue="1543"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="BwYAAA==" DoubleValue="133315200000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="IxEAAA==" DoubleValue="379036800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="BwYAAA==" LintValue="1543"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="IxEAAA==" LintValue="4387"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="IxEAAA==" DoubleValue="379036800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Lh0AAA==" DoubleValue="645408000000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="IxEAAA==" LintValue="4387"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="Lh0AAA==" LintValue="7470"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Lh0AAA==" DoubleValue="645408000000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="TCgAAA==" DoubleValue="891302400000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="Lh0AAA==" LintValue="7470"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="TCgAAA==" LintValue="10316"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="TCgAAA==" DoubleValue="891302400000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="IzQAAA==" DoubleValue="1153180800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="TCgAAA==" LintValue="10316"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="IzQAAA==" LintValue="13347"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="IzQAAA==" DoubleValue="1153180800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="4T4AAA==" DoubleValue="1390780800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="IzQAAA==" LintValue="13347"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="4T4AAA==" LintValue="16097"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="4T4AAA==" DoubleValue="1390780800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="KEoAAA==" DoubleValue="1640217600000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="4T4AAA==" LintValue="16097"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="KEoAAA==" LintValue="18984"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="KEoAAA==" DoubleValue="1640217600000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="clUAAA==" DoubleValue="1889913600000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="KEoAAA==" LintValue="18984"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="clUAAA==" LintValue="21874"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="clUAAA==" DoubleValue="1889913600000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZGAAAA==" DoubleValue="2132006400000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="clUAAA==" LintValue="21874"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="ZGAAAA==" LintValue="24676"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZGAAAA==" DoubleValue="2132006400000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="f2sAAA==" DoubleValue="2377641600000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZGAAAA==" LintValue="24676"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="f2sAAA==" LintValue="27519"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="f2sAAA==" DoubleValue="2377641600000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="mnYAAA==" DoubleValue="2623276800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="f2sAAA==" LintValue="27519"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="mnYAAA==" LintValue="30362"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="mnYAAA==" DoubleValue="2623276800000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="g4EAAA==" DoubleValue="2864592000000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="mnYAAA==" LintValue="30362"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="g4EAAA==" LintValue="33155"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="g4EAAA==" DoubleValue="2864592000000000.000000"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="N44AAA==" DoubleValue="3145564800000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="g4EAAA==" LintValue="33155"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.1082.1.0" Value="N44AAA==" LintValue="36407"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="2809.576923">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="N44AAA==" DoubleValue="3145564800000000.000000"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="rI4AAA==" DoubleValue="3155673600000000.000000"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="N44AAA==" LintValue="36407"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="rI4AAA==" LintValue="36524"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:Type Mdid="0.1082.1.0" Name="date" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -3890,6 +3890,264 @@
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.1962503001.1.0"/>
+          <dxl:Partition Mdid="0.1962503002.1.0"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1962503001.1.0" Name="date_dim_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2000"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1962503002.1.0" Name="date_dim_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:Relation Mdid="0.1962503.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
@@ -4002,6 +4260,264 @@
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.1962503001.1.1"/>
+          <dxl:Partition Mdid="0.1962503002.1.1"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1962503001.1.1" Name="date_dim_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2000"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1962503002.1.1" Name="date_dim_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
@@ -5895,6 +6411,528 @@
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.1974810001.1.1"/>
+          <dxl:Partition Mdid="0.1974810002.1.1"/>
+          <dxl:Partition Mdid="0.1974810003.1.1"/>
+          <dxl:Partition Mdid="0.1974810004.1.1"/>
+          <dxl:Partition Mdid="0.1974810005.1.1"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1974810001.1.1" Name="store_returns_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reason_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_ticket_number" Attno="10" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_tax" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt_inc_tax" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_fee" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_ship_cost" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_refunded_cash" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reversed_charge" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_credit" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_net_loss" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1974810002.1.1" Name="store_returns_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reason_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_ticket_number" Attno="10" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_tax" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt_inc_tax" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_fee" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_ship_cost" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_refunded_cash" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reversed_charge" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_credit" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_net_loss" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1974810003.1.1" Name="store_returns_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reason_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_ticket_number" Attno="10" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_tax" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt_inc_tax" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_fee" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_ship_cost" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_refunded_cash" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reversed_charge" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_credit" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_net_loss" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1974810004.1.1" Name="store_returns_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reason_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_ticket_number" Attno="10" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_tax" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt_inc_tax" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_fee" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_ship_cost" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_refunded_cash" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reversed_charge" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_credit" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_net_loss" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1000"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.1974810005.1.1" Name="store_returns_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;25,26,20" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reason_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_ticket_number" Attno="10" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_tax" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_amt_inc_tax" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_fee" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_return_ship_cost" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_refunded_cash" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_reversed_charge" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_store_credit" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="sr_net_loss" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList/>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1000"/>
+            </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10000"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1974810.1.1.25" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1974810.1.1.24" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -7547,7 +8585,7 @@
         <dxl:InverseOp Mdid="0.518.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:GPDBFunc Mdid="0.65.1.0" Name="int4eq" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
-	    <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.2278.1.0" Name="void" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
         <dxl:EqualityOp Mdid="0.0.0.0"/>
@@ -10167,6 +11205,14 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="17999"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
+      <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.66.1.0"/>
+        <dxl:Commutator Mdid="0.521.1.0"/>
+        <dxl:InverseOp Mdid="0.525.1.0"/>
+      </dxl:GPDBScalarOp>
     </dxl:Metadata>
     <dxl:Query>
       <dxl:OutputColumns>
@@ -10284,10 +11330,10 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="41">
+    <dxl:Plan Id="0" SpaceSize="48">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="888.989563" Rows="3866.533707" Width="116"/>
+          <dxl:Cost StartupCost="0" TotalCost="942.505463" Rows="3866.533707" Width="116"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="sr_returned_date_sk">
@@ -10355,7 +11401,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="In">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="668.986677" Rows="3866.533707" Width="116"/>
+            <dxl:Cost StartupCost="0" TotalCost="940.491617" Rows="3866.533707" Width="116"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="sr_returned_date_sk">
@@ -10427,9 +11473,9 @@
               <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:DynamicTableScan PartIndexId="1">
+          <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="219.002886" Rows="3866.533707" Width="116"/>
+              <dxl:Cost StartupCost="0" TotalCost="442.539993" Rows="287422.000000" Width="116"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="sr_returned_date_sk">
@@ -10494,68 +11540,516 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.1974810.1.1" TableName="store_returns">
-              <dxl:Columns>
-                <dxl:Column ColId="0" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="1" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="2" Attno="3" ColName="sr_item_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="3" Attno="4" ColName="sr_customer_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="4" Attno="5" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="5" Attno="6" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="6" Attno="7" ColName="sr_addr_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="7" Attno="8" ColName="sr_store_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="8" Attno="9" ColName="sr_reason_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="9" Attno="10" ColName="sr_ticket_number" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="10" Attno="11" ColName="sr_return_quantity" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="11" Attno="12" ColName="sr_return_amt" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="12" Attno="13" ColName="sr_return_tax" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="13" Attno="14" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="14" Attno="15" ColName="sr_fee" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="15" Attno="16" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="16" Attno="17" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="17" Attno="18" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="18" Attno="19" ColName="sr_store_credit" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="19" Attno="20" ColName="sr_net_loss" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="20" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                <dxl:Column ColId="21" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                <dxl:Column ColId="22" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                <dxl:Column ColId="23" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                <dxl:Column ColId="24" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                <dxl:Column ColId="25" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                <dxl:Column ColId="26" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-              </dxl:Columns>
-            </dxl:TableDescriptor>
-          </dxl:DynamicTableScan>
-          <dxl:PartitionSelector RelationMdid="0.1974810.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="442.539993" Rows="287422.000000" Width="116"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="66" Alias="sr_returned_date_sk">
+                  <dxl:Ident ColId="66" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="67" Alias="sr_return_time_sk">
+                  <dxl:Ident ColId="67" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="68" Alias="sr_item_sk">
+                  <dxl:Ident ColId="68" ColName="sr_item_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="69" Alias="sr_customer_sk">
+                  <dxl:Ident ColId="69" ColName="sr_customer_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="70" Alias="sr_cdemo_sk">
+                  <dxl:Ident ColId="70" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="71" Alias="sr_hdemo_sk">
+                  <dxl:Ident ColId="71" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="72" Alias="sr_addr_sk">
+                  <dxl:Ident ColId="72" ColName="sr_addr_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="73" Alias="sr_store_sk">
+                  <dxl:Ident ColId="73" ColName="sr_store_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="74" Alias="sr_reason_sk">
+                  <dxl:Ident ColId="74" ColName="sr_reason_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="75" Alias="sr_ticket_number">
+                  <dxl:Ident ColId="75" ColName="sr_ticket_number" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="76" Alias="sr_return_quantity">
+                  <dxl:Ident ColId="76" ColName="sr_return_quantity" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="77" Alias="sr_return_amt">
+                  <dxl:Ident ColId="77" ColName="sr_return_amt" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="78" Alias="sr_return_tax">
+                  <dxl:Ident ColId="78" ColName="sr_return_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="79" Alias="sr_return_amt_inc_tax">
+                  <dxl:Ident ColId="79" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="80" Alias="sr_fee">
+                  <dxl:Ident ColId="80" ColName="sr_fee" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="81" Alias="sr_return_ship_cost">
+                  <dxl:Ident ColId="81" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="82" Alias="sr_refunded_cash">
+                  <dxl:Ident ColId="82" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="83" Alias="sr_reversed_charge">
+                  <dxl:Ident ColId="83" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="84" Alias="sr_store_credit">
+                  <dxl:Ident ColId="84" ColName="sr_store_credit" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="85" Alias="sr_net_loss">
+                  <dxl:Ident ColId="85" ColName="sr_net_loss" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.1974810001.1.1" TableName="store_returns_prt_1">
+                <dxl:Columns>
+                  <dxl:Column ColId="66" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="67" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="68" Attno="3" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="69" Attno="4" ColName="sr_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="70" Attno="5" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="71" Attno="6" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="72" Attno="7" ColName="sr_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="73" Attno="8" ColName="sr_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="74" Attno="9" ColName="sr_reason_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="75" Attno="10" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="76" Attno="11" ColName="sr_return_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="77" Attno="12" ColName="sr_return_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="78" Attno="13" ColName="sr_return_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="79" Attno="14" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="80" Attno="15" ColName="sr_fee" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="81" Attno="16" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="82" Attno="17" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="83" Attno="18" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="84" Attno="19" ColName="sr_store_credit" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="85" Attno="20" ColName="sr_net_loss" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="86" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="87" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="88" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="89" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="90" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="91" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="92" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="442.539993" Rows="287422.000000" Width="116"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="93" Alias="sr_returned_date_sk">
+                  <dxl:Ident ColId="93" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="94" Alias="sr_return_time_sk">
+                  <dxl:Ident ColId="94" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="95" Alias="sr_item_sk">
+                  <dxl:Ident ColId="95" ColName="sr_item_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="96" Alias="sr_customer_sk">
+                  <dxl:Ident ColId="96" ColName="sr_customer_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="97" Alias="sr_cdemo_sk">
+                  <dxl:Ident ColId="97" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="98" Alias="sr_hdemo_sk">
+                  <dxl:Ident ColId="98" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="99" Alias="sr_addr_sk">
+                  <dxl:Ident ColId="99" ColName="sr_addr_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="100" Alias="sr_store_sk">
+                  <dxl:Ident ColId="100" ColName="sr_store_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="101" Alias="sr_reason_sk">
+                  <dxl:Ident ColId="101" ColName="sr_reason_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="102" Alias="sr_ticket_number">
+                  <dxl:Ident ColId="102" ColName="sr_ticket_number" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="103" Alias="sr_return_quantity">
+                  <dxl:Ident ColId="103" ColName="sr_return_quantity" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="104" Alias="sr_return_amt">
+                  <dxl:Ident ColId="104" ColName="sr_return_amt" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="105" Alias="sr_return_tax">
+                  <dxl:Ident ColId="105" ColName="sr_return_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="106" Alias="sr_return_amt_inc_tax">
+                  <dxl:Ident ColId="106" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="107" Alias="sr_fee">
+                  <dxl:Ident ColId="107" ColName="sr_fee" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="108" Alias="sr_return_ship_cost">
+                  <dxl:Ident ColId="108" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="109" Alias="sr_refunded_cash">
+                  <dxl:Ident ColId="109" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="110" Alias="sr_reversed_charge">
+                  <dxl:Ident ColId="110" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="111" Alias="sr_store_credit">
+                  <dxl:Ident ColId="111" ColName="sr_store_credit" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="112" Alias="sr_net_loss">
+                  <dxl:Ident ColId="112" ColName="sr_net_loss" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.1974810002.1.1" TableName="store_returns_prt_2">
+                <dxl:Columns>
+                  <dxl:Column ColId="93" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="94" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="95" Attno="3" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="96" Attno="4" ColName="sr_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="97" Attno="5" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="98" Attno="6" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="99" Attno="7" ColName="sr_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="100" Attno="8" ColName="sr_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="101" Attno="9" ColName="sr_reason_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="102" Attno="10" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="103" Attno="11" ColName="sr_return_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="104" Attno="12" ColName="sr_return_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="105" Attno="13" ColName="sr_return_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="106" Attno="14" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="107" Attno="15" ColName="sr_fee" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="108" Attno="16" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="109" Attno="17" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="110" Attno="18" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="111" Attno="19" ColName="sr_store_credit" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="112" Attno="20" ColName="sr_net_loss" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="113" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="114" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="115" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="116" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="117" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="118" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="119" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="442.539993" Rows="287422.000000" Width="116"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="120" Alias="sr_returned_date_sk">
+                  <dxl:Ident ColId="120" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="121" Alias="sr_return_time_sk">
+                  <dxl:Ident ColId="121" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="122" Alias="sr_item_sk">
+                  <dxl:Ident ColId="122" ColName="sr_item_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="123" Alias="sr_customer_sk">
+                  <dxl:Ident ColId="123" ColName="sr_customer_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="124" Alias="sr_cdemo_sk">
+                  <dxl:Ident ColId="124" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="125" Alias="sr_hdemo_sk">
+                  <dxl:Ident ColId="125" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="126" Alias="sr_addr_sk">
+                  <dxl:Ident ColId="126" ColName="sr_addr_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="127" Alias="sr_store_sk">
+                  <dxl:Ident ColId="127" ColName="sr_store_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="128" Alias="sr_reason_sk">
+                  <dxl:Ident ColId="128" ColName="sr_reason_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="129" Alias="sr_ticket_number">
+                  <dxl:Ident ColId="129" ColName="sr_ticket_number" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="130" Alias="sr_return_quantity">
+                  <dxl:Ident ColId="130" ColName="sr_return_quantity" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="131" Alias="sr_return_amt">
+                  <dxl:Ident ColId="131" ColName="sr_return_amt" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="132" Alias="sr_return_tax">
+                  <dxl:Ident ColId="132" ColName="sr_return_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="133" Alias="sr_return_amt_inc_tax">
+                  <dxl:Ident ColId="133" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="134" Alias="sr_fee">
+                  <dxl:Ident ColId="134" ColName="sr_fee" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="135" Alias="sr_return_ship_cost">
+                  <dxl:Ident ColId="135" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="136" Alias="sr_refunded_cash">
+                  <dxl:Ident ColId="136" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="137" Alias="sr_reversed_charge">
+                  <dxl:Ident ColId="137" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="138" Alias="sr_store_credit">
+                  <dxl:Ident ColId="138" ColName="sr_store_credit" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="139" Alias="sr_net_loss">
+                  <dxl:Ident ColId="139" ColName="sr_net_loss" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.1974810003.1.1" TableName="store_returns_prt_3">
+                <dxl:Columns>
+                  <dxl:Column ColId="120" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="121" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="122" Attno="3" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="123" Attno="4" ColName="sr_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="124" Attno="5" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="125" Attno="6" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="126" Attno="7" ColName="sr_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="127" Attno="8" ColName="sr_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="128" Attno="9" ColName="sr_reason_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="129" Attno="10" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="130" Attno="11" ColName="sr_return_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="131" Attno="12" ColName="sr_return_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="132" Attno="13" ColName="sr_return_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="133" Attno="14" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="134" Attno="15" ColName="sr_fee" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="135" Attno="16" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="136" Attno="17" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="137" Attno="18" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="138" Attno="19" ColName="sr_store_credit" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="139" Attno="20" ColName="sr_net_loss" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="140" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="141" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="142" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="143" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="144" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="145" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="146" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="442.539993" Rows="287422.000000" Width="116"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="147" Alias="sr_returned_date_sk">
+                  <dxl:Ident ColId="147" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="148" Alias="sr_return_time_sk">
+                  <dxl:Ident ColId="148" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="149" Alias="sr_item_sk">
+                  <dxl:Ident ColId="149" ColName="sr_item_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="150" Alias="sr_customer_sk">
+                  <dxl:Ident ColId="150" ColName="sr_customer_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="151" Alias="sr_cdemo_sk">
+                  <dxl:Ident ColId="151" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="152" Alias="sr_hdemo_sk">
+                  <dxl:Ident ColId="152" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="153" Alias="sr_addr_sk">
+                  <dxl:Ident ColId="153" ColName="sr_addr_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="154" Alias="sr_store_sk">
+                  <dxl:Ident ColId="154" ColName="sr_store_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="155" Alias="sr_reason_sk">
+                  <dxl:Ident ColId="155" ColName="sr_reason_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="156" Alias="sr_ticket_number">
+                  <dxl:Ident ColId="156" ColName="sr_ticket_number" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="157" Alias="sr_return_quantity">
+                  <dxl:Ident ColId="157" ColName="sr_return_quantity" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="158" Alias="sr_return_amt">
+                  <dxl:Ident ColId="158" ColName="sr_return_amt" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="159" Alias="sr_return_tax">
+                  <dxl:Ident ColId="159" ColName="sr_return_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="160" Alias="sr_return_amt_inc_tax">
+                  <dxl:Ident ColId="160" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="161" Alias="sr_fee">
+                  <dxl:Ident ColId="161" ColName="sr_fee" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="162" Alias="sr_return_ship_cost">
+                  <dxl:Ident ColId="162" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="163" Alias="sr_refunded_cash">
+                  <dxl:Ident ColId="163" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="164" Alias="sr_reversed_charge">
+                  <dxl:Ident ColId="164" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="165" Alias="sr_store_credit">
+                  <dxl:Ident ColId="165" ColName="sr_store_credit" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="166" Alias="sr_net_loss">
+                  <dxl:Ident ColId="166" ColName="sr_net_loss" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.1974810004.1.1" TableName="store_returns_prt_4">
+                <dxl:Columns>
+                  <dxl:Column ColId="147" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="148" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="149" Attno="3" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="150" Attno="4" ColName="sr_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="151" Attno="5" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="152" Attno="6" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="153" Attno="7" ColName="sr_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="154" Attno="8" ColName="sr_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="155" Attno="9" ColName="sr_reason_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="156" Attno="10" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="157" Attno="11" ColName="sr_return_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="158" Attno="12" ColName="sr_return_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="159" Attno="13" ColName="sr_return_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="160" Attno="14" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="161" Attno="15" ColName="sr_fee" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="162" Attno="16" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="163" Attno="17" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="164" Attno="18" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="165" Attno="19" ColName="sr_store_credit" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="166" Attno="20" ColName="sr_net_loss" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="167" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="168" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="169" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="170" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="171" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="172" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="173" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+            <dxl:TableScan>
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="442.539993" Rows="287422.000000" Width="116"/>
+              </dxl:Properties>
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="174" Alias="sr_returned_date_sk">
+                  <dxl:Ident ColId="174" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="175" Alias="sr_return_time_sk">
+                  <dxl:Ident ColId="175" ColName="sr_return_time_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="176" Alias="sr_item_sk">
+                  <dxl:Ident ColId="176" ColName="sr_item_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="177" Alias="sr_customer_sk">
+                  <dxl:Ident ColId="177" ColName="sr_customer_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="178" Alias="sr_cdemo_sk">
+                  <dxl:Ident ColId="178" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="179" Alias="sr_hdemo_sk">
+                  <dxl:Ident ColId="179" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="180" Alias="sr_addr_sk">
+                  <dxl:Ident ColId="180" ColName="sr_addr_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="181" Alias="sr_store_sk">
+                  <dxl:Ident ColId="181" ColName="sr_store_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="182" Alias="sr_reason_sk">
+                  <dxl:Ident ColId="182" ColName="sr_reason_sk" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="183" Alias="sr_ticket_number">
+                  <dxl:Ident ColId="183" ColName="sr_ticket_number" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="184" Alias="sr_return_quantity">
+                  <dxl:Ident ColId="184" ColName="sr_return_quantity" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="185" Alias="sr_return_amt">
+                  <dxl:Ident ColId="185" ColName="sr_return_amt" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="186" Alias="sr_return_tax">
+                  <dxl:Ident ColId="186" ColName="sr_return_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="187" Alias="sr_return_amt_inc_tax">
+                  <dxl:Ident ColId="187" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="188" Alias="sr_fee">
+                  <dxl:Ident ColId="188" ColName="sr_fee" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="189" Alias="sr_return_ship_cost">
+                  <dxl:Ident ColId="189" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="190" Alias="sr_refunded_cash">
+                  <dxl:Ident ColId="190" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="191" Alias="sr_reversed_charge">
+                  <dxl:Ident ColId="191" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="192" Alias="sr_store_credit">
+                  <dxl:Ident ColId="192" ColName="sr_store_credit" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="193" Alias="sr_net_loss">
+                  <dxl:Ident ColId="193" ColName="sr_net_loss" TypeMdid="0.1700.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:TableDescriptor Mdid="0.1974810005.1.1" TableName="store_returns_prt_5">
+                <dxl:Columns>
+                  <dxl:Column ColId="174" Attno="1" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="175" Attno="2" ColName="sr_return_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="176" Attno="3" ColName="sr_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="177" Attno="4" ColName="sr_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="178" Attno="5" ColName="sr_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="179" Attno="6" ColName="sr_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="180" Attno="7" ColName="sr_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="181" Attno="8" ColName="sr_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="182" Attno="9" ColName="sr_reason_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="183" Attno="10" ColName="sr_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="184" Attno="11" ColName="sr_return_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="185" Attno="12" ColName="sr_return_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="186" Attno="13" ColName="sr_return_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="187" Attno="14" ColName="sr_return_amt_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="188" Attno="15" ColName="sr_fee" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="189" Attno="16" ColName="sr_return_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="190" Attno="17" ColName="sr_refunded_cash" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="191" Attno="18" ColName="sr_reversed_charge" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="192" Attno="19" ColName="sr_store_credit" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="193" Attno="20" ColName="sr_net_loss" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                  <dxl:Column ColId="194" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="195" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="196" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="197" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="198" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="199" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="200" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+          </dxl:Append>
+          <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.025248" Rows="53.379371" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="27" Alias="d_date_sk">
                 <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartEqFilters>
-              <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-            </dxl:PartEqFilters>
-            <dxl:PartFilters>
-              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-            </dxl:PartFilters>
-            <dxl:ResidualFilter>
-              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-            </dxl:ResidualFilter>
-            <dxl:PropagationExpression>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:PropagationExpression>
-            <dxl:PrintableFilter>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                <dxl:Ident ColId="0" ColName="sr_returned_date_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-              </dxl:Comparison>
-            </dxl:PrintableFilter>
-            <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+            <dxl:Filter/>
+            <dxl:SortingColumnList/>
+            <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="8.726941" Rows="53.379371" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.022454" Rows="26.689686" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="27" Alias="d_date_sk">
@@ -10563,103 +12057,93 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:SortingColumnList/>
-              <dxl:Result>
+              <dxl:OneTimeFilter/>
+              <dxl:Append IsTarget="false" IsZapped="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="7.622684" Rows="26.689686" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.022454" Rows="26.689686" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="27" Alias="d_date_sk">
                     <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
+                  <dxl:ProjElem ColId="33" Alias="d_year">
+                    <dxl:Ident ColId="33" ColName="d_year" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="35" Alias="d_moy">
+                    <dxl:Ident ColId="35" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:OneTimeFilter/>
-                <dxl:Sequence>
+                <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="7.622684" Rows="26.689686" Width="12"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.022454" Rows="26.689686" Width="12"/>
                   </dxl:Properties>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="27" Alias="d_date_sk">
-                      <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                    <dxl:ProjElem ColId="201" Alias="d_date_sk">
+                      <dxl:Ident ColId="201" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
-                    <dxl:ProjElem ColId="33" Alias="d_year">
-                      <dxl:Ident ColId="33" ColName="d_year" TypeMdid="0.23.1.0"/>
+                    <dxl:ProjElem ColId="207" Alias="d_year">
+                      <dxl:Ident ColId="207" ColName="d_year" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
-                    <dxl:ProjElem ColId="35" Alias="d_moy">
-                      <dxl:Ident ColId="35" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                    <dxl:ProjElem ColId="209" Alias="d_moy">
+                      <dxl:Ident ColId="209" ColName="d_moy" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:PartitionSelector RelationMdid="0.1962503.1.1" PartitionLevels="1" ScanId="2">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-                    </dxl:Properties>
-                    <dxl:ProjList/>
-                    <dxl:PartEqFilters>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                    </dxl:PartEqFilters>
-                    <dxl:PartFilters>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:PartFilters>
-                    <dxl:ResidualFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:ResidualFilter>
-                    <dxl:PropagationExpression>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                    </dxl:PropagationExpression>
-                    <dxl:PrintableFilter>
+                  <dxl:Filter>
+                    <dxl:And>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                        <dxl:Ident ColId="33" ColName="d_year" TypeMdid="0.23.1.0"/>
+                        <dxl:Ident ColId="207" ColName="d_year" TypeMdid="0.23.1.0"/>
                         <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
                       </dxl:Comparison>
-                    </dxl:PrintableFilter>
-                  </dxl:PartitionSelector>
-                  <dxl:DynamicTableScan PartIndexId="2">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="7.622684" Rows="26.689686" Width="12"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="27" Alias="d_date_sk">
-                        <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="33" Alias="d_year">
-                        <dxl:Ident ColId="33" ColName="d_year" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="35" Alias="d_moy">
-                        <dxl:Ident ColId="35" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter>
-                      <dxl:And>
-                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                          <dxl:Ident ColId="33" ColName="d_year" TypeMdid="0.23.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                        </dxl:Comparison>
-                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                          <dxl:Ident ColId="35" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="8"/>
-                        </dxl:Comparison>
-                      </dxl:And>
-                    </dxl:Filter>
-                    <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
-                      <dxl:Columns>
-                        <dxl:Column ColId="27" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="33" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="35" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="55" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                        <dxl:Column ColId="56" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="57" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="58" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="59" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="60" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                        <dxl:Column ColId="61" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:DynamicTableScan>
-                </dxl:Sequence>
-              </dxl:Result>
-            </dxl:BroadcastMotion>
-          </dxl:PartitionSelector>
+                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                        <dxl:Ident ColId="209" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="8"/>
+                      </dxl:Comparison>
+                    </dxl:And>
+                  </dxl:Filter>
+                  <dxl:TableDescriptor Mdid="0.1962503002.1.1" TableName="date_dim_prt_2">
+                    <dxl:Columns>
+                      <dxl:Column ColId="201" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="202" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
+                      <dxl:Column ColId="203" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="204" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="205" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="206" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="207" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="208" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="209" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="210" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="211" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="212" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="213" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="214" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="215" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
+                      <dxl:Column ColId="216" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
+                      <dxl:Column ColId="217" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="218" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="219" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="220" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="221" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="222" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="223" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="224" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="225" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="226" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="227" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="228" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="229" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                      <dxl:Column ColId="230" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="231" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="232" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="233" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="234" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                      <dxl:Column ColId="235" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                    </dxl:Columns>
+                  </dxl:TableDescriptor>
+                </dxl:TableScan>
+              </dxl:Append>
+            </dxl:Result>
+          </dxl:BroadcastMotion>
         </dxl:HashJoin>
       </dxl:GatherMotion>
     </dxl:Plan>

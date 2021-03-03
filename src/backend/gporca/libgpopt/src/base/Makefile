@@ -51,7 +51,6 @@ OBJS        = CAutoOptCtxt.o \
               CDrvdPropScalar.o \
               CEnfdDistribution.o \
               CEnfdOrder.o \
-              CEnfdPartitionPropagation.o \
               CEnfdProp.o \
               CEnfdRewindability.o \
               CFunctionProp.o \
@@ -61,11 +60,8 @@ OBJS        = CAutoOptCtxt.o \
               COptCtxt.o \
               COptimizationContext.o \
               COrderSpec.o \
-              CPartFilterMap.o \
-              CPartIndexMap.o \
               CPartInfo.o \
               CPartKeys.o \
-              CPartitionPropagationSpec.o \
               CPrintPrefix.o \
               CPropConstraint.o \
               CQueryContext.o \

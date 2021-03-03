@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformCollapseProject.cpp
@@ -9,12 +9,13 @@
 //		Implementation of the transform that collapses two cascaded project nodes
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformCollapseProject.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalProject.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
-#include "gpopt/xforms/CXformCollapseProject.h"
 
 using namespace gpopt;
 
@@ -75,15 +76,15 @@ void
 CXformCollapseProject::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	CExpression *pexprCollapsed = CUtils::PexprCollapseProjects(mp, pexpr);
 
-	if (NULL != pexprCollapsed)
+	if (nullptr != pexprCollapsed)
 	{
 		pxfres->Add(pexprCollapsed);
 	}

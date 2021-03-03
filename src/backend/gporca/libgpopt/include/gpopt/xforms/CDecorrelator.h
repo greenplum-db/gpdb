@@ -12,6 +12,7 @@
 #define GPOPT_CDecorrelator_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt
@@ -50,15 +51,6 @@ private:
 		FnProcessor *m_pfnp;
 
 	};	// struct SOperatorHandler
-
-	// private ctor
-	CDecorrelator();
-
-	// private dtor
-	virtual ~CDecorrelator();
-
-	// private copy ctor
-	CDecorrelator(const CDecorrelator &);
 
 	// helper to check if correlations below join are valid to be pulled-up
 	static BOOL FPullableCorrelations(CMemoryPool *mp, CExpression *pexpr,
@@ -138,6 +130,14 @@ private:
 							  CColRefSet *outerRefsToRemove);
 
 public:
+	// private dtor
+	virtual ~CDecorrelator() = delete;
+
+	// private ctor
+	CDecorrelator() = delete;
+
+	CDecorrelator(const CDecorrelator &) = delete;
+
 	// main handler
 	static BOOL FProcess(CMemoryPool *mp, CExpression *pexprOrig,
 						 BOOL fEqualityOnly, CExpression **ppexprDecorrelated,

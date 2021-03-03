@@ -12,7 +12,7 @@
  *
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -248,30 +248,6 @@ CopyPlanFields(const Plan *from, Plan *newnode)
 	COPY_NODE_FIELD(flow);
 
 	COPY_SCALAR_FIELD(operatorMemKB);
-}
-
-/*
- * CopyLogicalIndexInfo
- *
- *		This function copies the LogicalIndexInfo, which is part of
- *		DynamicIndexScan node.
- */
-static LogicalIndexInfo *
-CopyLogicalIndexInfo(const LogicalIndexInfo *from)
-{
-	LogicalIndexInfo *newnode = palloc(sizeof(LogicalIndexInfo));
-
-	COPY_SCALAR_FIELD(logicalIndexOid);
-	COPY_SCALAR_FIELD(nColumns);
-	COPY_POINTER_FIELD(indexKeys, from->nColumns * sizeof(AttrNumber));
-	COPY_NODE_FIELD(indPred);
-	COPY_NODE_FIELD(indExprs);
-	COPY_SCALAR_FIELD(indIsUnique);
-	COPY_SCALAR_FIELD(indType);
-	COPY_NODE_FIELD(partCons);
-	COPY_NODE_FIELD(defaultLevels);
-
-	return newnode;
 }
 
 /*
@@ -610,17 +586,6 @@ _copySeqScan(const SeqScan *from)
 	return newnode;
 }
 
-static DynamicSeqScan *
-_copyDynamicSeqScan(const DynamicSeqScan *from)
-{
-	DynamicSeqScan *newnode = makeNode(DynamicSeqScan);
-
-	CopyScanFields((Scan *) from, (Scan *) newnode);
-	COPY_NODE_FIELD(partOids);
-
-	return newnode;
-}
-
 /*
  * _copyExternalScanInfo
  */
@@ -694,22 +659,6 @@ _copyIndexScan(const IndexScan *from)
 }
 
 /*
- * _copyDynamicIndexScan
- */
-static DynamicIndexScan *
-_copyDynamicIndexScan(const DynamicIndexScan *from)
-{
-	DynamicIndexScan  *newnode = makeNode(DynamicIndexScan);
-
-	/* DynamicIndexScan has some content from IndexScan */
-	CopyIndexScanFields(&from->indexscan, &newnode->indexscan);
-	COPY_NODE_FIELD(partOids);
-	newnode->logicalIndexInfo = CopyLogicalIndexInfo(from->logicalIndexInfo);
-
-	return newnode;
-}
-
-/*
  * _copyIndexOnlyScan
  */
 static IndexOnlyScan *
@@ -759,21 +708,6 @@ _copyBitmapIndexScan(const BitmapIndexScan *from)
 	return newnode;
 }
 
-/*
- * _copyDynamicBitmapIndexScan
- */
-static DynamicBitmapIndexScan *
-_copyDynamicBitmapIndexScan(const DynamicBitmapIndexScan *from)
-{
-	DynamicBitmapIndexScan *newnode = makeNode(DynamicBitmapIndexScan);
-
-	CopyBitmapIndexScanFields(&from->biscan, &newnode->biscan);
-	COPY_NODE_FIELD(partOids);
-	newnode->logicalIndexInfo = CopyLogicalIndexInfo(from->logicalIndexInfo);
-
-	return newnode;
-}
-
 static void
 CopyBitmapHeapScanFields(const BitmapHeapScan *from, BitmapHeapScan *newnode)
 {
@@ -797,20 +731,6 @@ _copyBitmapHeapScan(const BitmapHeapScan *from)
 	BitmapHeapScan *newnode = makeNode(BitmapHeapScan);
 
 	CopyBitmapHeapScanFields(from, newnode);
-
-	return newnode;
-}
-
-/*
- * _copyDynamicBitmapHeapScan
- */
-static DynamicBitmapHeapScan *
-_copyDynamicBitmapHeapScan(const DynamicBitmapHeapScan *from)
-{
-	DynamicBitmapHeapScan *newnode = makeNode(DynamicBitmapHeapScan);
-
-	CopyBitmapHeapScanFields(&from->bitmapheapscan, &newnode->bitmapheapscan);
-	COPY_NODE_FIELD(partOids);
 
 	return newnode;
 }
@@ -5862,9 +5782,6 @@ copyObjectImpl(const void *from)
 		case T_SeqScan:
 			retval = _copySeqScan(from);
 			break;
-		case T_DynamicSeqScan:
-			retval = _copyDynamicSeqScan(from);
-			break;
 		case T_ExternalScanInfo:
 			retval = _copyExternalScanInfo(from);
 			break;
@@ -5874,23 +5791,14 @@ copyObjectImpl(const void *from)
 		case T_IndexScan:
 			retval = _copyIndexScan(from);
 			break;
-		case T_DynamicIndexScan:
-			retval = _copyDynamicIndexScan(from);
-			break;
 		case T_IndexOnlyScan:
 			retval = _copyIndexOnlyScan(from);
 			break;
 		case T_BitmapIndexScan:
 			retval = _copyBitmapIndexScan(from);
 			break;
-		case T_DynamicBitmapIndexScan:
-			retval = _copyDynamicBitmapIndexScan(from);
-			break;
 		case T_BitmapHeapScan:
 			retval = _copyBitmapHeapScan(from);
-			break;
-		case T_DynamicBitmapHeapScan:
-			retval = _copyDynamicBitmapHeapScan(from);
 			break;
 		case T_TidScan:
 			retval = _copyTidScan(from);

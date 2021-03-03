@@ -26,13 +26,12 @@ namespace gpos
 class CRandom
 {
 private:
-	// no copy c'tor
-	CRandom(const CRandom &);
-
 	// seed
-	ULONG m_seed;
+	ULONG m_seed;  // NOLINT(modernize-use-default-member-init)
 
 public:
+	CRandom(const CRandom &) = delete;
+
 	// no seed
 	CRandom();
 

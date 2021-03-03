@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2014 Pivotal Inc.
+//	Copyright 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScaleFactorUtils.h
@@ -12,8 +12,8 @@
 #define GPOPT_CScaleFactorUtils_H
 
 #include "gpos/base.h"
-#include "gpopt/engine/CStatisticsConfig.h"
 
+#include "gpopt/engine/CStatisticsConfig.h"
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
@@ -100,7 +100,8 @@ public:
 	// calculate the cumulative join scaling factor
 	static CDouble CumulativeJoinScaleFactor(
 		CMemoryPool *mp, const CStatisticsConfig *stats_config,
-		SJoinConditionArray *join_conds_scale_factors);
+		SJoinConditionArray *join_conds_scale_factors,
+		CDouble limit_for_result_scale_factor);
 
 	// return scaling factor of the join predicate after apply damping
 	static CDouble DampedJoinScaleFactor(const CStatisticsConfig *stats_config,

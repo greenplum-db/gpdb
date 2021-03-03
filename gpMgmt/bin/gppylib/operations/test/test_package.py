@@ -30,7 +30,7 @@ RPM_DATABASE = os.path.join(GPHOME, 'share/packages/database')
 GPPKG_EXTENSION = ".gppkg"
 SCRATCH_SPACE = os.path.join(tempfile.gettempdir(), getpass.getuser())
 GPDB_VERSION = "4.2"
-MASTER_PORT = os.getenv("PGPORT", 15432)
+COORDINATOR_PORT = os.getenv("PGPORT", 15432)
 
 
 def skipIfNoStandby():
@@ -45,7 +45,7 @@ def get_host_list():
         Returns a tuple which consists of the standby
         and segment hosts
     """
-    gparr = GpArray.initFromCatalog(dbconn.DbURL(port=MASTER_PORT), utility=True)
+    gparr = GpArray.initFromCatalog(dbconn.DbURL(port=COORDINATOR_PORT), utility=True)
     segs = gparr.getDbList()
 
     standby_host = None
@@ -54,7 +54,7 @@ def get_host_list():
     for seg in segs:
         if seg.isSegmentStandby(current_role=True):
             standby_host = seg.getSegmentHostName()
-        elif not seg.isSegmentMaster(current_role=True):
+        elif not seg.isSegmentCoordinator(current_role=True):
             segment_host_list.append(seg.getSegmentHostName())
 
     # Deduplicate the hosts so that we
@@ -435,15 +435,6 @@ class SimpleNegativeTestCases(GppkgTestCase):
         gppkg_file = self.build(gppkg_spec, rpm_spec)
 
         with self.assertRaisesRegex(ExecutionError, "%s os required. %s os found" % (os, OS)):
-            self.install(gppkg_file)
-
-    def test01_wrong_arch(self):
-        arch = "abcde"
-        rpm_spec = self.rpm_spec
-        gppkg_spec = GppkgSpec("test", "1.0", GPDB_VERSION, OS, arch)
-        gppkg_file = self.build(gppkg_spec, rpm_spec)
-
-        with self.assertRaisesRegex(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
             self.install(gppkg_file)
 
     def test02_wrong_gpdbversion(self):

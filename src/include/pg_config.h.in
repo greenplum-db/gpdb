@@ -61,6 +61,9 @@
    (--enable-thread-safety) */
 #undef ENABLE_THREAD_SAFETY
 
+/* Define to 1 to build with fault injector. (--enable-debug-extensions) */
+#undef FAULT_INJECTOR
+
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like `struct s { int n; double
    d[FLEXIBLE_ARRAY_MEMBER]; };', the struct hack can be used with pre-C99
@@ -434,9 +437,6 @@
 
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
-
-/* Define to 1 if you have the `zstd' library (-lzstd). */
-#undef HAVE_LIBZSTD
 
 /* Define to 1 if the system has the type `locale_t'. */
 #undef HAVE_LOCALE_T
@@ -1058,6 +1058,9 @@
 
 /* Define to select Win32-style shared memory. */
 #undef USE_WIN32_SHARED_MEMORY
+
+/* Define to build with zstd support. (--with-zstd) */
+#undef USE_ZSTD
 
 /* Define to 1 if `wcstombs_l' requires <xlocale.h>. */
 #undef WCSTOMBS_L_IN_XLOCALE

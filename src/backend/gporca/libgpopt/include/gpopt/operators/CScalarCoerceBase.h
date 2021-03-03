@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarCoerceBase.h
@@ -18,6 +18,7 @@
 #define GPOPT_CScalarCoerceBase_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CScalar.h"
 
 namespace gpopt
@@ -47,22 +48,21 @@ private:
 	// location of token to be coerced
 	INT m_location;
 
-	// private copy ctor
-	CScalarCoerceBase(const CScalarCoerceBase &);
-
 public:
+	CScalarCoerceBase(const CScalarCoerceBase &) = delete;
+
 	// ctor
 	CScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
 					  ECoercionForm dxl_coerce_format, INT location);
 
 	// dtor
-	virtual ~CScalarCoerceBase();
+	~CScalarCoerceBase() override;
 
 	// the type of the scalar expression
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// return type modifier
-	INT TypeModifier() const;
+	INT TypeModifier() const override;
 
 	// return coercion form
 	ECoercionForm Ecf() const;
@@ -71,8 +71,9 @@ public:
 	INT Location() const;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 };	// class CScalarCoerceBase
 

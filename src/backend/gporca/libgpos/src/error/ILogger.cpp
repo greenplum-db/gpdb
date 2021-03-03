@@ -9,9 +9,10 @@
 //		Worker abstraction, e.g. thread
 //---------------------------------------------------------------------------
 
+#include "gpos/error/ILogger.h"
+
 #include "gpos/common/clibwrapper.h"
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/error/ILogger.h"
 #include "gpos/error/CLoggerStream.h"
 #include "gpos/error/CLoggerSyslog.h"
 #include "gpos/error/CMessageRepository.h"
@@ -28,9 +29,7 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-ILogger::ILogger()
-{
-}
+ILogger::ILogger() = default;
 
 
 //---------------------------------------------------------------------------
@@ -41,9 +40,7 @@ ILogger::ILogger()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-ILogger::~ILogger()
-{
-}
+ILogger::~ILogger() = default;
 
 
 //---------------------------------------------------------------------------
@@ -66,7 +63,7 @@ ILogger::Warning(const CHAR *filename, ULONG line, ULONG major, ULONG minor...)
 
 	// get current task's locale
 	ELocale locale = ElocEnUS_Utf8;
-	if (NULL != task)
+	if (nullptr != task)
 	{
 		locale = task->Locale();
 	}
@@ -157,7 +154,7 @@ void
 ILogger::LogTask(const WCHAR *msg, ULONG severity, BOOL is_err,
 				 const CHAR *filename, ULONG line)
 {
-	CLogger *log = NULL;
+	CLogger *log = nullptr;
 
 	if (is_err)
 	{
@@ -169,7 +166,7 @@ ILogger::LogTask(const WCHAR *msg, ULONG severity, BOOL is_err,
 	}
 
 	ITask *task = ITask::Self();
-	if (NULL != task)
+	if (nullptr != task)
 	{
 		if (is_err)
 		{
@@ -181,7 +178,7 @@ ILogger::LogTask(const WCHAR *msg, ULONG severity, BOOL is_err,
 		}
 	}
 
-	GPOS_ASSERT(NULL != log);
+	GPOS_ASSERT(nullptr != log);
 
 	log->Log(msg, severity, filename, line);
 }

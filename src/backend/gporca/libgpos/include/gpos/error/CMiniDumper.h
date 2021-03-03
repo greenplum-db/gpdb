@@ -28,25 +28,21 @@ namespace gpos
 class CMiniDumper : CStackObject
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// flag indicating if handler is initialized
-	BOOL m_initialized;
+	BOOL m_initialized{false};
 
 	// flag indicating if handler is finalized
-	BOOL m_finalized;
-
-	// private copy ctor
-	CMiniDumper(const CMiniDumper &);
+	BOOL m_finalized{false};
 
 protected:
 	// stream to serialize objects to
-	COstream *m_oos;
+	COstream *m_oos{nullptr};
 
 public:
+	CMiniDumper(const CMiniDumper &) = delete;
+
 	// ctor
-	CMiniDumper(CMemoryPool *mp);
+	CMiniDumper();
 
 	// dtor
 	virtual ~CMiniDumper();

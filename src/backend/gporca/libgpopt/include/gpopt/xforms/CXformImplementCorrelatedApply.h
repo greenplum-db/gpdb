@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementCorrelatedApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/xforms/CXformImplementation.h"
 #include "gpopt/xforms/CXformUtils.h"
@@ -32,11 +33,10 @@ template <class TLogicalApply, class TPhysicalJoin>
 class CXformImplementCorrelatedApply : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementCorrelatedApply(const CXformImplementCorrelatedApply &);
-
-
 public:
+	CXformImplementCorrelatedApply(const CXformImplementCorrelatedApply &) =
+		delete;
+
 	// ctor
 	explicit CXformImplementCorrelatedApply(CMemoryPool *mp)
 		:  // pattern
@@ -53,13 +53,11 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformImplementCorrelatedApply()
-	{
-	}
+	~CXformImplementCorrelatedApply() override = default;
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
-	Exfp(CExpressionHandle &) const
+	EXformPromise
+	Exfp(CExpressionHandle &) const override
 	{
 		return CXform::ExfpHigh;
 	}
@@ -67,9 +65,9 @@ public:
 	// actual transform
 	void
 	Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-			  CExpression *pexpr) const
+			  CExpression *pexpr) const override
 	{
-		GPOS_ASSERT(NULL != pxfctxt);
+		GPOS_ASSERT(nullptr != pxfctxt);
 		GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 		GPOS_ASSERT(FCheckPattern(pexpr));
 

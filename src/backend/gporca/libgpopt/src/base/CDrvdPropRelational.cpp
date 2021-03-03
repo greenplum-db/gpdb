@@ -9,19 +9,20 @@
 //		Relational derived properties;
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDrvdPropRelational.h"
+
 #include "gpos/base.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CWorker.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/operators/CLogical.h"
-#include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/base/CDrvdPropRelational.h"
-#include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/CPartInfo.h"
+#include "gpopt/base/CReqdPropPlan.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
 
 using namespace gpopt;
 
@@ -35,17 +36,17 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CDrvdPropRelational::CDrvdPropRelational(CMemoryPool *mp)
 	: m_mp(mp),
-	  m_is_prop_derived(NULL),
-	  m_pcrsOutput(NULL),
-	  m_pcrsOuter(NULL),
-	  m_pcrsNotNull(NULL),
-	  m_pcrsCorrelatedApply(NULL),
-	  m_pkc(NULL),
-	  m_pdrgpfd(NULL),
+	  m_is_prop_derived(nullptr),
+	  m_pcrsOutput(nullptr),
+	  m_pcrsOuter(nullptr),
+	  m_pcrsNotNull(nullptr),
+	  m_pcrsCorrelatedApply(nullptr),
+	  m_pkc(nullptr),
+	  m_pdrgpfd(nullptr),
 	  m_ulJoinDepth(0),
-	  m_ppartinfo(NULL),
-	  m_ppc(NULL),
-	  m_pfp(NULL),
+	  m_ppartinfo(nullptr),
+	  m_ppc(nullptr),
+	  m_pfp(nullptr),
 	  m_is_complete(false)
 {
 	m_is_prop_derived = GPOS_NEW(mp) CBitSet(mp, EdptSentinel);
@@ -127,9 +128,7 @@ CDrvdPropRelational::Derive(CMemoryPool *,	//mp,
 
 	// derive partition consumers
 	DerivePartitionInfo(exprhdl);
-	GPOS_ASSERT(NULL != m_ppartinfo);
-
-	DeriveHasPartialIndexes(exprhdl);
+	GPOS_ASSERT(nullptr != m_ppartinfo);
 
 	DeriveTableDescriptor(exprhdl);
 
@@ -147,8 +146,8 @@ CDrvdPropRelational::Derive(CMemoryPool *,	//mp,
 BOOL
 CDrvdPropRelational::FSatisfies(const CReqdPropPlan *prpp) const
 {
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != prpp->PcrsRequired());
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != prpp->PcrsRequired());
 
 	BOOL fSatisfies = GetOutputColumns()->ContainsAll(prpp->PcrsRequired());
 
@@ -167,7 +166,7 @@ CDrvdPropRelational::FSatisfies(const CReqdPropPlan *prpp) const
 CDrvdPropRelational *
 CDrvdPropRelational::GetRelationalProperties(CDrvdProp *pdp)
 {
-	GPOS_ASSERT(NULL != pdp);
+	GPOS_ASSERT(nullptr != pdp);
 	GPOS_ASSERT(EptRelational == pdp->Ept() &&
 				"This is not a relational properties container");
 	return dynamic_cast<CDrvdPropRelational *>(pdp);
@@ -245,7 +244,7 @@ CDrvdPropRelational::DeriveLocalFunctionalDependencies(
 	// get local key
 	CKeyCollection *pkc = exprhdl.DeriveKeyCollection();
 
-	if (NULL == pkc)
+	if (nullptr == pkc)
 	{
 		return pdrgpfd;
 	}
@@ -298,7 +297,7 @@ CDrvdPropRelational::OsPrint(IOstream &os) const
 	   << ", Not Null Cols: [" << *GetNotNullColumns() << "]"
 	   << ", Corr. Apply Cols: [" << *GetCorrelatedApplyColumns() << "]";
 
-	if (NULL == GetKeyCollection())
+	if (nullptr == GetKeyCollection())
 	{
 		os << ", Keys: []";
 	}
@@ -327,10 +326,6 @@ CDrvdPropRelational::OsPrint(IOstream &os) const
 
 	os << ", Part Info: [" << *GetPartitionInfo() << "]";
 
-	if (HasPartialIndexes())
-	{
-		os << ", Has Partial Indexes";
-	}
 	return os;
 }
 
@@ -433,7 +428,7 @@ CDrvdPropRelational::DeriveKeyCollection(CExpressionHandle &exprhdl)
 		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
 		m_pkc = popLogical->DeriveKeyCollection(m_mp, exprhdl);
 
-		if (NULL == m_pkc && 1 == DeriveMaxCard(exprhdl))
+		if (nullptr == m_pkc && 1 == DeriveMaxCard(exprhdl))
 		{
 			m_pcrsOutput = DeriveOutputColumns(exprhdl);
 
@@ -472,16 +467,14 @@ CDrvdPropRelational::DeriveFunctionalDependencies(CExpressionHandle &exprhdl)
 			{
 				CFunctionalDependencyArray *pdrgpfdChild =
 					DeriveChildFunctionalDependencies(m_mp, ul, exprhdl);
-				CUtils::AddRefAppend<CFunctionalDependency, CleanupRelease>(
-					pdrgpfd, pdrgpfdChild);
+				CUtils::AddRefAppend(pdrgpfd, pdrgpfdChild);
 				pdrgpfdChild->Release();
 			}
 		}
 		// add local FD's
 		CFunctionalDependencyArray *pdrgpfdLocal =
 			DeriveLocalFunctionalDependencies(m_mp, exprhdl);
-		CUtils::AddRefAppend<CFunctionalDependency, CleanupRelease>(
-			pdrgpfd, pdrgpfdLocal);
+		CUtils::AddRefAppend(pdrgpfd, pdrgpfdLocal);
 		pdrgpfdLocal->Release();
 
 		m_pdrgpfd = pdrgpfd;
@@ -546,7 +539,7 @@ CDrvdPropRelational::DerivePartitionInfo(CExpressionHandle &exprhdl)
 		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
 		m_ppartinfo = popLogical->DerivePartitionInfo(m_mp, exprhdl);
 
-		GPOS_ASSERT(NULL != m_ppartinfo);
+		GPOS_ASSERT(nullptr != m_ppartinfo);
 	}
 
 	return m_ppartinfo;
@@ -590,39 +583,6 @@ CDrvdPropRelational::DeriveFunctionProperties(CExpressionHandle &exprhdl)
 	}
 
 	return m_pfp;
-}
-
-// has partial indexes
-BOOL
-CDrvdPropRelational::HasPartialIndexes() const
-{
-	GPOS_RTL_ASSERT(IsComplete());
-	return m_fHasPartialIndexes;
-}
-
-BOOL
-CDrvdPropRelational::DeriveHasPartialIndexes(CExpressionHandle &exprhdl)
-{
-	if (!m_is_prop_derived->ExchangeSet(EdptFHasPartialIndexes))
-	{
-		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
-		COperator::EOperatorId op_id = popLogical->Eopid();
-
-
-		// determine if it is a dynamic get (with or without a select above it) with partial indexes
-		if (COperator::EopLogicalDynamicGet == op_id)
-		{
-			m_fHasPartialIndexes = CLogicalDynamicGet::PopConvert(popLogical)
-									   ->Ptabdesc()
-									   ->HasPartialIndexes();
-		}
-		else if (COperator::EopLogicalSelect == op_id)
-		{
-			m_fHasPartialIndexes = exprhdl.DeriveHasPartialIndexes(0);
-		}
-	}
-
-	return m_fHasPartialIndexes;
 }
 
 // table descriptor

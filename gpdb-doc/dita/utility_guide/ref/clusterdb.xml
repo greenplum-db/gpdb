@@ -33,9 +33,9 @@ If that is not set, the user name specified for the connection is used.</pd></pl
         <plentry>
           <pt>-? | --help</pt>
           <pd>Show help about <codeph>clusterdb</codeph> command line arguments, and exit.</pd>
-        </plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
+        </plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum coordinator database
 server is running. If not specified, reads from the environment variable
-<codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port=<varname>port</varname></pt><pd>The TCP port on which the Greenplum master database server is listening
+<codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port=<varname>port</varname></pt><pd>The TCP port on which the Greenplum coordinator database server is listening
 for connections. If not specified, reads from the environment variable
 <codeph>PGPORT</codeph> or defaults to 5432.</pd></plentry><plentry><pt>-U <varname>username</varname> | --username=<varname>username</varname></pt><pd>The database role name to connect as. If not specified, reads from
 the environment variable <codeph>PGUSER</codeph> or defaults to the current

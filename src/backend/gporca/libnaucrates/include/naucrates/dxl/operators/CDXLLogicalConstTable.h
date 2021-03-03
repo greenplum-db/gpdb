@@ -14,9 +14,10 @@
 #define GPDXL_CDXLLogicalConstTable_H
 
 #include "gpos/base.h"
+
+#include "naucrates/dxl/operators/CDXLDatum.h"
 #include "naucrates/dxl/operators/CDXLLogical.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
-#include "naucrates/dxl/operators/CDXLDatum.h"
 
 namespace gpdxl
 {
@@ -37,25 +38,24 @@ private:
 	// array of datum arrays (const tuples)
 	CDXLDatum2dArray *m_const_tuples_datum_array;
 
-	// private copy ctor
-	CDXLLogicalConstTable(CDXLLogicalConstTable &);
-
 public:
+	CDXLLogicalConstTable(CDXLLogicalConstTable &) = delete;
+
 	// ctor
 	CDXLLogicalConstTable(CMemoryPool *mp,
 						  CDXLColDescrArray *dxl_col_descr_array,
 						  CDXLDatum2dArray *pdrgpdrgpdxldatum);
 
 	//dtor
-	virtual ~CDXLLogicalConstTable();
+	~CDXLLogicalConstTable() override;
 
 	// accessors
 
 	// operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// column descriptors
 	const CDXLColDescrArray *
@@ -85,17 +85,17 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// check if given column is defined by operator
-	virtual BOOL IsColDefined(ULONG colid) const;
+	BOOL IsColDefined(ULONG colid) const override;
 
 	// conversion function
 	static CDXLLogicalConstTable *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalConstTable == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalConstTable *>(dxl_op);
@@ -104,7 +104,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

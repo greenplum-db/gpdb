@@ -8,10 +8,10 @@
     <p>Greenplum Database stores and processes large amounts of data by distributing the load across
       several servers or <i>hosts</i>. A logical database in Greenplum is an <i>array</i> of
       individual PostgreSQL databases working together to present a single database image. The
-        <i>master</i> is the entry point to the Greenplum Database system. It is the database
-      instance to which users connect and submit SQL statements. The master coordinates the workload
+        <i>coordinator</i> is the entry point to the Greenplum Database system. It is the database
+      instance to which users connect and submit SQL statements. The coordinator coordinates the workload
       across the other database instances in the system, called <i>segments</i>, which handle data
-      processing and storage. The segments communicate with each other and the master over the
+      processing and storage. The segments communicate with each other and the coordinator over the
         <i>interconnect</i>, the networking layer of Greenplum Database.</p>
     <image href="graphics/highlevel_arch.jpg" placement="break" width="389px" height="309px"/>
     <p>Greenplum Database is a software-only solution; the hardware and database software are not
@@ -28,43 +28,43 @@
       /> for monitoring query workload and performance.</p>
   </body>
   <topic id="topic2" xml:lang="en">
-    <title id="jg160172">The Greenplum Master</title>
+    <title id="jg160172">The Greenplum Coordinator</title>
     <body>
-      <p>The <i>master</i> is the entry point to the Greenplum Database system. It is the database
+      <p>The <i>coordinator</i> is the entry point to the Greenplum Database system. It is the database
         server process that accepts client connections and processes the SQL commands that system
-        users issue. Users connect to Greenplum Database through the master using a
+        users issue. Users connect to Greenplum Database through the coordinator using a
         PostgreSQL-compatible client program such as <codeph>psql</codeph> or ODBC.</p>
-      <p>The master maintains the <i>system catalog</i> (a set of system tables that contain
-        metadata about the Greenplum Database system itself), however the master does not contain
-        any user data. Data resides only on the <i>segments</i>. The master authenticates client
+      <p>The coordinator maintains the <i>system catalog</i> (a set of system tables that contain
+        metadata about the Greenplum Database system itself), however the coordinator does not contain
+        any user data. Data resides only on the <i>segments</i>. The coordinator authenticates client
         connections, processes incoming SQL commands, distributes the work load between segments,
         coordinates the results returned by each segment, and presents the final results to the
         client program.</p>
-      <p>Because the master does not contain any user data, it has very little disk load. The master
+      <p>Because the coordinator does not contain any user data, it has very little disk load. The coordinator
         needs a fast, dedicated CPU for data loading, connection handling, and query planning
         because extra space is often necessary for landing load files and backup files, especially
         in production environments. Customers may decide to also run ETL and reporting tools on the
-        master, which requires more disk space and processing power.</p>
+        coordinator, which requires more disk space and processing power.</p>
     </body>
     <topic id="topic3" xml:lang="en">
-      <title>Master Redundancy</title>
+      <title>Coordinator Redundancy</title>
       <body>
-        <p>You may optionally deploy a <i>backup</i> or <i>mirror</i> of the master instance. A
-          backup master host serves as a <i>warm standby</i> if the primary master host becomes
-          nonoperational. You can deploy the standby master on a designated redundant master host or
+        <p>You may optionally deploy a <i>backup</i> or <i>mirror</i> of the coordinator instance. A
+          backup coordinator host serves as a <i>warm standby</i> if the primary coordinator host becomes
+          nonoperational. You can deploy the standby coordinator on a designated redundant coordinator host or
           on one of the segment hosts. </p>
-        <p>The standby master is kept up to date by a transaction log replication process, which
-          runs on the standby master host and synchronizes the data between the primary and standby
-          master hosts. If the primary master fails, the log replication process shuts down, and an
-          administrator can activate the standby master in its place. When an the standby master is
-          active, the replicated logs are used to reconstruct the state of the master host at the
+        <p>The standby coordinator is kept up to date by a transaction log replication process, which
+          runs on the standby coordinator host and synchronizes the data between the primary and standby
+          coordinator hosts. If the primary coordinator fails, the log replication process shuts down, and an
+          administrator can activate the standby coordinator in its place. When an the standby coordinator is
+          active, the replicated logs are used to reconstruct the state of the coordinator host at the
           time of the last successfully committed transaction.</p>
-        <p>Since the master does not contain any user data, only the system catalog tables need to
+        <p>Since the coordinator does not contain any user data, only the system catalog tables need to
           be synchronized between the primary and backup copies. When these tables are updated,
-          changes automatically copy over to the standby master so it is always synchronized with
+          changes automatically copy over to the standby coordinator so it is always synchronized with
           the primary.</p>
         <fig id="jg163382">
-          <title>Master Mirroring in Greenplum Database</title>
+          <title>Coordinator Mirroring in Greenplum Database</title>
           <image href="graphics/standby_master.jpg" placement="break" width="271px" height="165px"/>
         </fig>
       </body>
@@ -78,7 +78,7 @@
         available segments in the Greenplum Database system; each segment contains a distinct
         portion of the data. Segment instances are the database server processes that serve
         segments. Users do not interact directly with the segments in a Greenplum Database system,
-        but do so through the master. </p>
+        but do so through the coordinator. </p>
       <p>In the reference Greenplum Database hardware configurations, the number of segment
         instances per segment host is determined by the number of effective CPUs or CPU core. For
         example, if your segment hosts have two dual-core processors, you may have two or four
@@ -92,7 +92,7 @@
         <p>When you deploy your Greenplum Database system, you have the option to configure
             <i>mirror</i> segments. Mirror segments allow database queries to fail over to a backup
           segment if the primary segment becomes unavailable.<ph otherprops="pivotal"> Mirroring is
-            a requirement for Pivotal-supported production Greenplum Database systems. </ph></p>
+            a requirement for VMware-supported production Greenplum systems. </ph></p>
         <p>A mirror segment must always reside on a different host than its primary segment. Mirror
           segments can be arranged across the hosts in the system in one of two standard
           configurations, or in a custom configuration you design. The default configuration, called
@@ -116,7 +116,7 @@
             fails over to the mirror copy if a primary copy becomes unavailable. A Greenplum
             Database system can remain operational if a segment instance or host goes down only if
             all portions of data are available on the remaining active segments. </p>
-          <p>If the master cannot connect to a segment instance, it marks that segment instance as
+          <p>If the coordinator cannot connect to a segment instance, it marks that segment instance as
               <i>invalid</i> in the Greenplum Database system catalog. The segment instance remains
             invalid and out of operation until an administrator brings that segment back online. An
             administrator can recover a failed segment while the system is up and running. The
@@ -195,14 +195,14 @@
       <body>
         <p>A highly available interconnect can be achieved by deploying dual 10 Gigabit Ethernet
           switches on your network, and redundant 10 Gigabit connections to the Greenplum Database
-          master and segment host servers.</p>
+          coordinator and segment host servers.</p>
       </body>
     </topic>
     <topic id="topic11" xml:lang="en">
       <title id="jg161518">Network Interface Configuration</title>
       <body>
         <p>A segment host typically has multiple network interfaces designated to Greenplum
-          interconnect traffic. The master host typically has additional external network interfaces
+          interconnect traffic. The coordinator host typically has additional external network interfaces
           in addition to the interfaces used for interconnect traffic. </p>
         <p>Depending on the number of interfaces available, you will want to distribute interconnect
           network traffic across the number of available interfaces. This is done by assigning
@@ -213,7 +213,7 @@
           addresses, each of which maps to one or more primary segment instances. The
             <codeph>/etc/hosts</codeph> file should be configured to contain not only the host name
           of each machine, but also all interface host addresses for all of the Greenplum Database
-          hosts (master, standby master, segments, and ETL hosts). </p>
+          hosts (coordinator, standby coordinator, segments, and ETL hosts). </p>
         <p>With this configuration, the operating system automatically selects the best path to the
           destination. Greenplum Database automatically balances the network destinations to
           maximize parallelism. </p>
@@ -229,10 +229,10 @@
         <p>When using multiple 10 Gigabit Ethernet switches within your Greenplum Database array,
           evenly divide the number of subnets between each switch. In this example configuration, if
           we had two switches, NICs 1 and 2 on each host would use switch 1 and NICs 3 and 4 on each
-          host would use switch 2. For the master host, the host name bound to NIC 1 (and therefore
-          using switch 1) is the effective master host name for the array. Therefore, if deploying a
-          warm standby master for redundancy purposes, the standby master should map to a NIC that
-          uses a different switch than the primary master. </p>
+          host would use switch 2. For the coordinator host, the host name bound to NIC 1 (and therefore
+          using switch 1) is the effective coordinator host name for the array. Therefore, if deploying a
+          warm standby coordinator for redundancy purposes, the standby coordinator should map to a NIC that
+          uses a different switch than the primary coordinator. </p>
         <fig id="jg161465">
           <title>Example Switch Configuration</title>
           <image href="graphics/multi_switch_arch.jpg" placement="break" width="417px"

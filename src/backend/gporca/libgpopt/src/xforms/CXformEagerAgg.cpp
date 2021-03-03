@@ -1,7 +1,7 @@
 
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformEagerAgg.cpp
@@ -13,19 +13,20 @@
 //			(since the inner child alternative will be explored through
 //			 commutativity)
 //---------------------------------------------------------------------------
+#include "gpopt/xforms/CXformEagerAgg.h"
+
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDAggregate.h"
-#include "naucrates/md/CMDScalarOpGPDB.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/xforms/CXformExploration.h"
-#include "gpopt/xforms/CXformEagerAgg.h"
 #include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/base/CColRefSetIter.h"
+#include "naucrates/md/CMDScalarOpGPDB.h"
+#include "naucrates/md/IMDAggregate.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -76,7 +77,7 @@ void
 CXformEagerAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 						  CExpression *agg_expr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, agg_expr));
 	GPOS_ASSERT(FCheckPattern(agg_expr));
 
@@ -117,8 +118,8 @@ CXformEagerAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	push_down_gb_cols->Intersection(outer_child_cols);
 
 	/* create new project lists for the two new Gb aggregates */
-	CExpression *lower_expr_proj_list = NULL;
-	CExpression *upper_expr_proj_list = NULL;
+	CExpression *lower_expr_proj_list = nullptr;
+	CExpression *upper_expr_proj_list = nullptr;
 	(void) PopulateLowerUpperProjectList(
 		mp, agg_proj_list_expr, &lower_expr_proj_list, &upper_expr_proj_list);
 
@@ -271,7 +272,7 @@ CXformEagerAgg::PopulateLowerUpperProjectList(
 			CScalarAggFunc::PopConvert(orig_agg_expr->Pop());
 		IMDId *orig_agg_mdid = orig_agg_func->MDId();
 		// min and max
-		CExpression *lower_proj_elem_expr = NULL;
+		CExpression *lower_proj_elem_expr = nullptr;
 		PopulateLowerProjectElement(
 			mp, orig_agg_mdid,
 			GPOS_NEW(mp)
@@ -280,7 +281,7 @@ CXformEagerAgg::PopulateLowerUpperProjectList(
 			&lower_proj_elem_expr);
 		lower_proj_elem_array->Append(lower_proj_elem_expr);
 
-		CExpression *upper_proj_elem_expr = NULL;
+		CExpression *upper_proj_elem_expr = nullptr;
 		PopulateUpperProjectElement(
 			mp, orig_agg_mdid,
 			GPOS_NEW(mp)

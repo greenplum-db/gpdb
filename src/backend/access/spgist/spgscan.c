@@ -859,20 +859,29 @@ storeBitmap(SpGistScanOpaque so, ItemPointer heapPtr,
 	so->ntids++;
 }
 
-Node *
-spggetbitmap(IndexScanDesc scan, Node *n)
+int64
+spggetbitmap(IndexScanDesc scan, Node **bmNodeP)
 {
 	TIDBitmap *tbm;
 
 	SpGistScanOpaque so = (SpGistScanOpaque) scan->opaque;
 
-	if (n == NULL)
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
+	{
 		/* XXX should we use less than work_mem for this? */
 		tbm = tbm_create(work_mem * 1024L, NULL);
-	else if (!IsA(n, TIDBitmap))
-		elog(ERROR, "non hash bitmap");
+		*bmNodeP = (Node *) tbm;
+	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
+		elog(ERROR, "non spgist bitmap");
 	else
-		tbm = (TIDBitmap *) n;
+		tbm = (TIDBitmap *)*bmNodeP;
 
 	/* Copy want_itup to *so so we don't need to pass it around separately */
 	so->want_itup = false;
@@ -882,7 +891,7 @@ spggetbitmap(IndexScanDesc scan, Node *n)
 
 	spgWalk(scan->indexRelation, so, true, storeBitmap, scan->xs_snapshot);
 
-	return (Node *) tbm;
+	return so->ntids;
 }
 
 /* storeRes subroutine for gettuple case */

@@ -23,7 +23,7 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="3100" Rank="3101"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -32,7 +32,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102074,102120,103001,103014,103015,103022,103027,103029,104003,104004,104005,105000,106000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103029,103033,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -350,7 +350,7 @@
           <dxl:And>
             <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
               <dxl:Ident ColId="14" ColName="date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
               <dxl:Ident ColId="16" ColName="region" TypeMdid="0.25.1.0"/>
@@ -491,7 +491,7 @@
                     <dxl:Or>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
                         <dxl:PartBound Level="0" Type="0.1082.1.0" LowerBound="false"/>
-                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
+                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
                       </dxl:Comparison>
                       <dxl:Or>
                         <dxl:DefaultPart Level="0"/>
@@ -516,7 +516,7 @@
                     <dxl:And>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
                         <dxl:Ident ColId="13" ColName="date" TypeMdid="0.1082.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
+                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
                       </dxl:Comparison>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
                         <dxl:Ident ColId="15" ColName="region" TypeMdid="0.25.1.0"/>
@@ -547,7 +547,7 @@
                     <dxl:And>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
                         <dxl:Ident ColId="13" ColName="date" TypeMdid="0.1082.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
+                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
                       </dxl:Comparison>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
                         <dxl:Ident ColId="15" ColName="region" TypeMdid="0.25.1.0"/>

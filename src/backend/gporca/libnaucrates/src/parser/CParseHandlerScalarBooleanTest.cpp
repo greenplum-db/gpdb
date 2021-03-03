@@ -10,11 +10,12 @@
 //		Implementation of the SAX parse handler class for parsing scalar BooleanTest.
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarBooleanTest.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarBooleanTest.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -57,7 +58,7 @@ CParseHandlerScalarBooleanTest::StartElement(
 
 	if (EdxlbooleantestSentinel == dxl_boolean_test_type)
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 					   CDXLUtils::CreateDynamicStringFromXMLChArray(

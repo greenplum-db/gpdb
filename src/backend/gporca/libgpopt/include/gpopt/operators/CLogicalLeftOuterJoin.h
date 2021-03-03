@@ -12,6 +12,7 @@
 #define GPOS_CLogicalLeftOuterJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalJoin.h"
 
 namespace gpopt
@@ -27,35 +28,32 @@ namespace gpopt
 class CLogicalLeftOuterJoin : public CLogicalJoin
 {
 private:
-	// private copy ctor
-	CLogicalLeftOuterJoin(const CLogicalLeftOuterJoin &);
-
 public:
+	CLogicalLeftOuterJoin(const CLogicalLeftOuterJoin &) = delete;
+
 	// ctor
 	explicit CLogicalLeftOuterJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CLogicalLeftOuterJoin()
-	{
-	}
+	~CLogicalLeftOuterJoin() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalLeftOuterJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalLeftOuterJoin";
 	}
 
 	// return true if we can pull projections up past this operator from its given child
-	virtual BOOL
-	FCanPullProjectionsUp(ULONG child_index) const
+	BOOL
+	FCanPullProjectionsUp(ULONG child_index) const override
 	{
 		return (0 == child_index);
 	}
@@ -65,22 +63,22 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// derive not nullable output columns
-	virtual CColRefSet *
+	CColRefSet *
 	DeriveNotNullColumns(CMemoryPool *,	 // mp
-						 CExpressionHandle &exprhdl) const
+						 CExpressionHandle &exprhdl) const override
 	{
 		// left outer join passes through not null columns from outer child only
 		return PcrsDeriveNotNullPassThruOuter(exprhdl);
 	}
 
 	// derive max card
-	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
-								   CExpressionHandle &exprhdl) const;
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
 
 	// derive constraint property
-	virtual CPropConstraint *
+	CPropConstraint *
 	DerivePropertyConstraint(CMemoryPool *,	 //mp,
-							 CExpressionHandle &exprhdl) const
+							 CExpressionHandle &exprhdl) const override
 	{
 		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
 	}
@@ -90,7 +88,7 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
@@ -100,7 +98,7 @@ public:
 	static CLogicalLeftOuterJoin *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalLeftOuterJoin == pop->Eopid());
 
 		return dynamic_cast<CLogicalLeftOuterJoin *>(pop);

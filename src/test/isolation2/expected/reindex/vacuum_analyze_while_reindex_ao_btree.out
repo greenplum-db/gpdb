@@ -5,6 +5,8 @@ CREATE TABLE reindex_ao (a INT) WITH (appendonly=true);
 CREATE
 insert into reindex_ao select generate_series(1,1000);
 INSERT 1000
+analyze reindex_ao;
+ANALYZE
 select 1 as reltuples_same_as_count from pg_class where relname = 'reindex_ao'  and reltuples = (select count(*) from reindex_ao);
  reltuples_same_as_count 
 -------------------------

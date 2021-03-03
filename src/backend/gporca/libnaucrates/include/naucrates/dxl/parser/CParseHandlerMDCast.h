@@ -13,9 +13,8 @@
 #define GPDXL_CParseHandlerMDCast_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-
-
 #include "naucrates/md/CMDFunctionGPDB.h"
 
 
@@ -37,25 +36,24 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerMDCast : public CParseHandlerMetadataObject
 {
 private:
-	// private copy ctor
-	CParseHandlerMDCast(const CParseHandlerMDCast &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerMDCast(const CParseHandlerMDCast &) = delete;
+
 	// ctor
 	CParseHandlerMDCast(CMemoryPool *mp,
 						CParseHandlerManager *parse_handler_mgr,

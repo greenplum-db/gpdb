@@ -11,8 +11,8 @@
 #ifndef GPOS_CStringStatic_H
 #define GPOS_CStringStatic_H
 
-#include "gpos/base.h"
 #include "gpos/attributes.h"
+#include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 
 #define GPOS_SZ_LENGTH(x) gpos::clib::Strlen(x)
@@ -57,10 +57,9 @@ private:
 	bool IsValid() const;
 #endif	// GPOS_DEBUG
 
-	// private copy ctor
-	CStringStatic(const CStringStatic &);
-
 public:
+	CStringStatic(const CStringStatic &) = delete;
+
 	// ctor
 	CStringStatic(CHAR buffer[], ULONG capacity);
 
@@ -68,9 +67,7 @@ public:
 	CStringStatic(CHAR buffer[], ULONG capacity, const CHAR init_str[]);
 
 	// dtor - owner is responsible for releasing the buffer
-	~CStringStatic()
-	{
-	}
+	~CStringStatic() = default;
 
 	// returns the wide character buffer storing the string
 	const CHAR *

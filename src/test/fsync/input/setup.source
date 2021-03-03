@@ -1,3 +1,7 @@
-create or replace function dirty_buffers() returns setof record as
+create or replace function dirty_buffers_on_qd() returns setof record as
  '@abs_builddir@/fsync_helper@DLSUFFIX@', 'dirty_buffers'
-  LANGUAGE C VOLATILE STRICT NO SQL;
+  LANGUAGE C VOLATILE STRICT NO SQL EXECUTE ON MASTER;
+
+create or replace function dirty_buffers_on_qes() returns setof record as
+ '@abs_builddir@/fsync_helper@DLSUFFIX@', 'dirty_buffers'
+  LANGUAGE C VOLATILE STRICT NO SQL EXECUTE ON ALL SEGMENTS;

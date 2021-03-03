@@ -1,0 +1,6 @@
+2021-01-05 17:07:40|INFO|gpload session started 2021-01-05 17:07:40
+2021-01-05 17:07:40|ERROR|table "non_exist_table" not found in any database schema
+2021-01-05 17:07:40|INFO|rows Inserted          = 0
+2021-01-05 17:07:40|INFO|rows Updated           = 0
+2021-01-05 17:07:40|INFO|data formatting errors = 0
+2021-01-05 17:07:40|INFO|gpload failed

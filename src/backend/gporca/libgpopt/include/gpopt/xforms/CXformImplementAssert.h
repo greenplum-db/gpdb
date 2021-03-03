@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementAssert_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,38 +30,35 @@ using namespace gpos;
 class CXformImplementAssert : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementAssert(const CXformImplementAssert &);
-
 public:
+	CXformImplementAssert(const CXformImplementAssert &) = delete;
+
 	// ctor
 	explicit CXformImplementAssert(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementAssert()
-	{
-	}
+	~CXformImplementAssert() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementAssert;
 	}
 
 	// xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementAssert";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *, CXformResult *,
-						   CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformImplementAssert
 

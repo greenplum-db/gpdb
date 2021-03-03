@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLeftAntiSemiHashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalHashJoin.h"
 
 namespace gpopt
@@ -27,43 +28,36 @@ namespace gpopt
 class CPhysicalLeftAntiSemiHashJoin : public CPhysicalHashJoin
 {
 private:
-	// private copy ctor
-	CPhysicalLeftAntiSemiHashJoin(const CPhysicalLeftAntiSemiHashJoin &);
-
 public:
+	CPhysicalLeftAntiSemiHashJoin(const CPhysicalLeftAntiSemiHashJoin &) =
+		delete;
+
 	// ctor
 	CPhysicalLeftAntiSemiHashJoin(CMemoryPool *mp,
 								  CExpressionArray *pdrgpexprOuterKeys,
 								  CExpressionArray *pdrgpexprInnerKeys,
-								  IMdIdArray *hash_opfamilies = NULL);
+								  IMdIdArray *hash_opfamilies = nullptr);
 
 	// dtor
-	virtual ~CPhysicalLeftAntiSemiHashJoin();
+	~CPhysicalLeftAntiSemiHashJoin() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalLeftAntiSemiHashJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalLeftAntiSemiHashJoin";
 	}
 
 	// check if required columns are included in output columns
-	virtual BOOL FProvidesReqdCols(CExpressionHandle &exprhdl,
-								   CColRefSet *pcrsRequired,
-								   ULONG ulOptReq) const;
-
-	// compute required partition propagation spec
-	virtual CPartitionPropagationSpec *PppsRequired(
-		CMemoryPool *mp, CExpressionHandle &exprhdl,
-		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+	BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired,
+						   ULONG ulOptReq) const override;
 
 	// conversion function
 	static CPhysicalLeftAntiSemiHashJoin *

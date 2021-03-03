@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CLogicalLeftSemiApplyIn.cpp
@@ -9,9 +9,9 @@
 //		Implementation of left-semi-apply operator with In semantics
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftSemiApplyIn.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

@@ -71,8 +71,8 @@
         also encrypt passwords to store in a DD Boost plugin configuration file.</p>
       <p>Greenplum Database must be running to use the <codeph>gpbackup_manager</codeph>
         utility.</p>
-      <p>Backup history is saved on the Greenplum Database master host in the file
-          <codeph>$MASTER_DATA_DIRECTORY/gpbackup_history.yaml</codeph>. If no backups have been
+      <p>Backup history is saved on the Greenplum Database coordinator host in the file
+          <codeph>$COORDINATOR_DATA_DIRECTORY/gpbackup_history.yaml</codeph>. If no backups have been
         created yet, or if the backup history has been deleted, <codeph>gpbackup_manager</codeph>
         commands that depend on the file will display an error message and exit. If the backup
         history contains invalid YAML syntax, a yaml error message is displayed.</p>
@@ -82,7 +82,7 @@
       <p>The <codeph>encrypt-password</codeph> command is used to encrypt Data Domain user passwords
         that are saved in a DD Boost plug-In configuration file. To use this option, the
           <codeph>pgcrypto</codeph> extension must be enabled in the Greenplum Database
-          <codeph>postgres</codeph> database. See the Pivotal Greenplum Backup and Restore
+          <codeph>postgres</codeph> database. See the Tanzu Greenplum Backup and Restore
         installation instructions for help installing <codeph>pgcrypto</codeph>.</p>
       <p>The <codeph>encrypt-password</codeph> command prompts you to enter and then re-enter the
         password to be encrypted. To maintain password secrecy, characters entered are echoed as
@@ -173,7 +173,7 @@
       <title>Examples</title>
       <ol>
         <li>Display a list of the existing backups.
-          <codeblock>gpadmin@mdw:$ <b>gpbackup_manager list-backups</b>
+          <codeblock>gpadmin@cdw:$ <b>gpbackup_manager list-backups</b>
   timestamp        date                       database   type            object filtering   plugin   duration   date deleted
   20190719092809   Fri Jul 19 2019 09:28:09   sales      full            include-schema              01:49:38   Fri Jul 19 2019 09:30:34
   20190719092716   Fri Jul 19 2019 09:27:16   sales      full            exclude-schema              01:38:45

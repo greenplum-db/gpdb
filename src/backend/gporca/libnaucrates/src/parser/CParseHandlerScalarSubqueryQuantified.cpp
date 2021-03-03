@@ -11,11 +11,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerScalarSubqueryQuantified.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryAll.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 using namespace gpdxl;
 
@@ -34,7 +34,7 @@ CParseHandlerScalarSubqueryQuantified::CParseHandlerScalarSubqueryQuantified(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -54,7 +54,7 @@ CParseHandlerScalarSubqueryQuantified::StartElement(
 	const XMLCh *const,	 // element_qname
 	const Attributes &attrs)
 {
-	GPOS_ASSERT(NULL == m_dxl_op);
+	GPOS_ASSERT(nullptr == m_dxl_op);
 
 	// is this a subquery any or subquery all operator
 	Edxltoken dxl_token = EdxltokenScalarSubqueryAll;
@@ -151,7 +151,7 @@ CParseHandlerScalarSubqueryQuantified::EndElement(
 	}
 
 	// construct node from parsed components
-	GPOS_ASSERT(NULL != m_dxl_op);
+	GPOS_ASSERT(nullptr != m_dxl_op);
 	GPOS_ASSERT(2 == this->Length());
 
 	CParseHandlerScalarOp *parse_handler_scalar_child =

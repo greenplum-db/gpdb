@@ -49,25 +49,26 @@ private:
 	// memory pool
 	CMemoryPool *m_mp;
 
-	// private copy ctor
-	CMDProviderRelcache(const CMDProviderRelcache &);
-
 public:
+	CMDProviderRelcache(const CMDProviderRelcache &) = delete;
+
 	// ctor/dtor
 	explicit CMDProviderRelcache(CMemoryPool *mp);
 
-	~CMDProviderRelcache()
-	{
-	}
+	~CMDProviderRelcache() override = default;
 
 	// returns the DXL string of the requested metadata object
-	virtual CWStringBase *GetMDObjDXLStr(CMemoryPool *mp,
-										 CMDAccessor *md_accessor,
-										 IMDId *md_id) const;
+	CWStringBase *GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
+								 IMDId *md_id) const override;
+
+	// return the requested metadata object
+	IMDCacheObject *GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
+							 IMDId *mdid) const override;
 
 	// return the mdid for the requested type
-	virtual IMDId *
-	MDId(CMemoryPool *mp, CSystemId sysid, IMDType::ETypeInfo type_info) const
+	IMDId *
+	MDId(CMemoryPool *mp, CSystemId sysid,
+		 IMDType::ETypeInfo type_info) const override
 	{
 		return GetGPDBTypeMdid(mp, sysid, type_info);
 	}

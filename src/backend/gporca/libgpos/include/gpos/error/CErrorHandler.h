@@ -11,9 +11,9 @@
 #ifndef GPOS_CErrorHandler_H
 #define GPOS_CErrorHandler_H
 
-#include "gpos/types.h"
 #include "gpos/assert.h"
 #include "gpos/error/CException.h"
+#include "gpos/types.h"
 
 namespace gpos
 {
@@ -31,19 +31,14 @@ class CMemoryPool;
 class CErrorHandler
 {
 private:
-	// private copy ctor
-	CErrorHandler(const CErrorHandler &);
-
 public:
+	CErrorHandler(const CErrorHandler &) = delete;
+
 	// ctor
-	CErrorHandler()
-	{
-	}
+	CErrorHandler() = default;
 
 	// dtor
-	virtual ~CErrorHandler()
-	{
-	}
+	virtual ~CErrorHandler() = default;
 
 	// process error
 	virtual void Process(CException exception) = 0;

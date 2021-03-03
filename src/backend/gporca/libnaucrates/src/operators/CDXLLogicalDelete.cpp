@@ -9,13 +9,14 @@
 //		Implementation of DXL logical delete operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLLogicalDelete.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLLogicalDelete.h"
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/CDXLUtils.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -38,8 +39,8 @@ CDXLLogicalDelete::CDXLLogicalDelete(CMemoryPool *mp,
 	  m_segid_colid(segid_colid),
 	  m_deletion_colid_array(delete_colid_array)
 {
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != delete_colid_array);
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != delete_colid_array);
 }
 
 //---------------------------------------------------------------------------

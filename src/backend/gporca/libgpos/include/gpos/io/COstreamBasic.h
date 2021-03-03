@@ -30,25 +30,22 @@ private:
 	// underlying stream
 	WOSTREAM *m_ostream;
 
-	// private copy ctor
-	COstreamBasic(const COstreamBasic &);
-
 public:
+	COstreamBasic(const COstreamBasic &) = delete;
+
 	// please see comments in COstream.h for an explanation
 	using COstream::operator<<;
 
 	// ctor
 	explicit COstreamBasic(WOSTREAM *ostream);
 
-	virtual ~COstreamBasic()
-	{
-	}
+	~COstreamBasic() override = default;
 
 	// implement << operator
-	virtual IOstream &operator<<(const WCHAR *);
+	IOstream &operator<<(const WCHAR *) override;
 
 	// implement << operator
-	virtual IOstream &operator<<(const WCHAR);
+	IOstream &operator<<(const WCHAR) override;
 };
 
 }  // namespace gpos

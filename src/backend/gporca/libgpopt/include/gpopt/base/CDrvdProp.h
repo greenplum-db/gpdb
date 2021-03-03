@@ -12,8 +12,8 @@
 #define GPOPT_CDrvdProp_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 
 namespace gpopt
@@ -77,17 +77,14 @@ public:
 	};
 
 private:
-	// private copy ctor
-	CDrvdProp(const CDrvdProp &);
-
 public:
+	CDrvdProp(const CDrvdProp &) = delete;
+
 	// ctor
 	CDrvdProp();
 
 	// dtor
-	virtual ~CDrvdProp()
-	{
-	}
+	~CDrvdProp() override = default;
 
 	// type of properties
 	virtual EPropType Ept() = 0;
@@ -105,6 +102,7 @@ public:
 		return true;
 	}
 
+	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
 };	// class CDrvdProp
 
 // shorthand for printing

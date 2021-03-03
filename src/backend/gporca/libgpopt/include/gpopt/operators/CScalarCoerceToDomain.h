@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarCoerceToDomain.h
@@ -19,6 +19,7 @@
 #define GPOPT_CScalarCoerceToDomain_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CScalarCoerceBase.h"
 
 namespace gpopt
@@ -39,50 +40,47 @@ private:
 	// does operator return NULL on NULL input?
 	BOOL m_returns_null_on_null_input;
 
-	// private copy ctor
-	CScalarCoerceToDomain(const CScalarCoerceToDomain &);
-
 public:
+	CScalarCoerceToDomain(const CScalarCoerceToDomain &) = delete;
+
 	// ctor
 	CScalarCoerceToDomain(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
 						  ECoercionForm dxl_coerce_format, INT location);
 
 	// dtor
-	virtual ~CScalarCoerceToDomain()
-	{
-	}
+	~CScalarCoerceToDomain() override = default;
 
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarCoerceToDomain;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarCoerceToDomain";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+	EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const override;
 
 	// conversion function
 	static CScalarCoerceToDomain *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCoerceToDomain == pop->Eopid());
 
 		return dynamic_cast<CScalarCoerceToDomain *>(pop);

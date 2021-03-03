@@ -569,7 +569,7 @@ pg_file_write(PG_FUNCTION_ARGS)
 
 		if (stat(filename, &fst) >= 0)
 			ereport(ERROR,
-					(ERRCODE_DUPLICATE_FILE,
+					(errcode(ERRCODE_DUPLICATE_FILE),
 					 errmsg("file \"%s\" exists", filename)));
 
 		f = fopen(filename, "wb");
@@ -640,7 +640,7 @@ pg_file_rename(PG_FUNCTION_ARGS)
 	if (rc >= 0 || errno != ENOENT)
 	{
 		ereport(ERROR,
-				(ERRCODE_DUPLICATE_FILE,
+				(errcode(ERRCODE_DUPLICATE_FILE),
 				 errmsg("cannot rename to target file \"%s\"",
 						fn3 ? fn3 : fn2)));
 	}
@@ -671,7 +671,7 @@ pg_file_rename(PG_FUNCTION_ARGS)
 			else
 			{
 				ereport(ERROR,
-						(ERRCODE_UNDEFINED_FILE,
+						(errcode(ERRCODE_UNDEFINED_FILE),
 						 errmsg("renaming \"%s\" to \"%s\" was reverted",
 								fn2, fn3)));
 			}
@@ -740,8 +740,9 @@ pg_file_length(PG_FUNCTION_ARGS)
 
 
 /*
- * GPDB_12_MERGE_FIXME: Perhaps this function can call into generic function
- * pg_ls_dir_files() rather than re-implmenting much of the same pattern.
+ * This function returns the name and creation time of the log files, the creation
+ * time is parsed from the file name. It's different from 'pg_ls_dir_files' because
+ * it returns the modification time of the log files.
  */
 Datum
 pg_logdir_ls(PG_FUNCTION_ARGS)

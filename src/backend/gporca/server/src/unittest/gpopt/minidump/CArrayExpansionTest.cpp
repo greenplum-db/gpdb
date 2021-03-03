@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software
+//	Copyright (C) 2016 VMware, Inc. or its affiliates
 //
 //	@filename:
 //		CArrayExpansionTest.cpp
@@ -9,6 +9,7 @@
 //		Test for array expansion in WHERE clause
 //---------------------------------------------------------------------------
 #include "unittest/gpopt/minidump/CArrayExpansionTest.h"
+
 #include "unittest/gpopt/CTestUtils.h"
 
 

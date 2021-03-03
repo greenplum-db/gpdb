@@ -32,22 +32,22 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
     """
 
     def __init__(self):
-        self.__masterDbUrl = None
+        self.__coordinatorDbUrl = None
 
 
-    def initializeProvider( self, masterPort ) :
+    def initializeProvider( self, coordinatorPort ) :
         """
-        Initialize the provider to get information from the given master db, if
+        Initialize the provider to get information from the given coordinator db, if
         it chooses to get its data from the database
 
         returns self
         """
 
-        checkNotNone("masterPort", masterPort)
+        checkNotNone("coordinatorPort", coordinatorPort)
 
-        dbUrl = dbconn.DbURL(port=masterPort, dbname='template1')
+        dbUrl = dbconn.DbURL(port=coordinatorPort, dbname='template1')
 
-        self.__masterDbUrl = dbUrl
+        self.__coordinatorDbUrl = dbUrl
         return self
 
 
@@ -59,14 +59,14 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         """
 
         # ensure initializeProvider() was called
-        checkNotNone("masterDbUrl", self.__masterDbUrl)
+        checkNotNone("coordinatorDbUrl", self.__coordinatorDbUrl)
 
         if verbose :
-            logger.info("Obtaining Segment details from master...")
+            logger.info("Obtaining Segment details from coordinator...")
 
-        array = GpArray.initFromCatalog(self.__masterDbUrl, useUtilityMode)
+        array = GpArray.initFromCatalog(self.__coordinatorDbUrl, useUtilityMode)
 
-        if get_local_db_mode(array.master.getSegmentDataDirectory()) != 'UTILITY':
+        if get_local_db_mode(array.coordinator.getSegmentDataDirectory()) != 'UTILITY':
             logger.debug("Validating configuration...")
             if not array.is_array_valid():
                 raise InvalidSegmentConfiguration(array)
@@ -88,7 +88,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         """
 
         # ensure initializeProvider() was called
-        checkNotNone("masterDbUrl", self.__masterDbUrl)
+        checkNotNone("coordinatorDbUrl", self.__coordinatorDbUrl)
 
         logger.debug("Validating configuration changes...")
 
@@ -96,7 +96,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
             logger.critical("Configuration is invalid")
             raise InvalidSegmentConfiguration(gpArray)
 
-        conn = dbconn.connect(self.__masterDbUrl, useUtilityMode, allowSystemTableMods=True)
+        conn = dbconn.connect(self.__coordinatorDbUrl, useUtilityMode, allowSystemTableMods=True)
         dbconn.execSQL(conn, "BEGIN")
 
         # compute what needs to be updated

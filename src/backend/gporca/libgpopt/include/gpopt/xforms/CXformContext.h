@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
+
 #include "gpopt/operators/CPatternTree.h"
 
 namespace gpopt
@@ -33,19 +34,16 @@ private:
 	// Memory pool
 	CMemoryPool *m_mp;
 
-	// private copy ctor
-	CXformContext(const CXformContext &);
-
 public:
+	CXformContext(const CXformContext &) = delete;
+
 	// ctor
 	explicit CXformContext(CMemoryPool *mp) : m_mp(mp)
 	{
 	}
 
 	// dtor
-	~CXformContext()
-	{
-	}
+	~CXformContext() override = default;
 
 
 	// accessor

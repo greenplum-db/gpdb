@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalRandomMotion_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
 
 namespace gpdxl
@@ -43,16 +44,15 @@ private:
 	// is distribution duplicate sensitive
 	BOOL m_is_duplicate_sensitive;
 
-	// private copy ctor
-	CDXLPhysicalRandomMotion(const CDXLPhysicalRandomMotion &);
-
 public:
+	CDXLPhysicalRandomMotion(const CDXLPhysicalRandomMotion &) = delete;
+
 	// ctor
 	CDXLPhysicalRandomMotion(CMemoryPool *mp, BOOL is_duplicate_sensitive);
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
-	const CWStringConst *GetOpNameStr() const;
+	Edxlopid GetDXLOperator() const override;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// is operator duplicate sensitive
 	BOOL
@@ -62,21 +62,21 @@ public:
 	}
 
 	// index of relational child node in the children array
-	virtual ULONG
-	GetRelationChildIdx() const
+	ULONG
+	GetRelationChildIdx() const override
 	{
 		return EdxlrandommIndexChild;
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLPhysicalRandomMotion *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalMotionRandom == dxl_op->GetDXLOperator());
 		return dynamic_cast<CDXLPhysicalRandomMotion *>(dxl_op);
 	}
@@ -84,7 +84,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

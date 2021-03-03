@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerDirectDispatchInfo.h
@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerDirectDispatchInfo_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
@@ -48,32 +49,32 @@ private:
 	// gp_segment_id values rather than hashable datums
 	BOOL m_dispatch_is_raw;
 
-	// private copy ctor
-	CParseHandlerDirectDispatchInfo(const CParseHandlerDirectDispatchInfo &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerDirectDispatchInfo(const CParseHandlerDirectDispatchInfo &) =
+		delete;
+
 	// ctor
 	CParseHandlerDirectDispatchInfo(CMemoryPool *mp,
 									CParseHandlerManager *parse_handler_mgr,
 									CParseHandlerBase *parse_handler_root);
 
 	// dtor
-	~CParseHandlerDirectDispatchInfo();
+	~CParseHandlerDirectDispatchInfo() override;
 
 	// accessor to the parsed direct dispatch spec
 	CDXLDirectDispatchInfo *GetDXLDirectDispatchInfo() const;

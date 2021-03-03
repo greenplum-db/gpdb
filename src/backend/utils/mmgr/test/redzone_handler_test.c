@@ -7,9 +7,6 @@
 
 #define EXPECT_EREPORT(LOG_LEVEL)     \
 	expect_any(errstart, elevel); \
-	expect_any(errstart, filename); \
-	expect_any(errstart, lineno); \
-	expect_any(errstart, funcname); \
 	expect_any(errstart, domain); \
 	if (LOG_LEVEL < ERROR) \
 	{ \

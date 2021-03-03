@@ -3,7 +3,7 @@
  * cdbappendonlystorageformat.h
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -162,32 +162,32 @@ extern char *AppendOnlyStorageFormat_BlockHeaderStr(
 	bool			usingChecksums,
 	int				version);
 
-extern int errdetail_appendonly_storage_content_header(
+extern void errdetail_appendonly_storage_content_header(
 	uint8	*headerPtr,
 	bool	usingChecksums,
 	int		version);
 
-extern int errdetail_appendonly_storage_smallcontent_header(
+extern void errdetail_appendonly_storage_smallcontent_header(
 	uint8	*headerPtr,
 	bool	usingChecksums,
 	int		version);
 
-extern int errdetail_appendonly_storage_largecontent_header(
+extern void errdetail_appendonly_storage_largecontent_header(
 	uint8	*headerPtr,
 	bool	usingChecksums,
 	int		version);
 
-extern int errdetail_appendonly_storage_densecontent_header(
+extern void errdetail_appendonly_storage_densecontent_header(
 	uint8	*headerPtr,
 	bool	usingChecksums,
 	int		version);
 
-extern int errdetail_appendonly_storage_nonbulkdensecontent_header(
+extern void errdetail_appendonly_storage_nonbulkdensecontent_header(
 	uint8	*headerPtr,
 	bool	usingChecksums,
 	int		version);
 
-extern int errdetail_appendonly_storage_bulkdensecontent_header(
+extern void errdetail_appendonly_storage_bulkdensecontent_header(
 	uint8	*headerPtr,
 	bool	usingChecksums,
 	int		version);

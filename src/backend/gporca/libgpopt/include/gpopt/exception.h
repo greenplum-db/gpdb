@@ -11,8 +11,8 @@
 #ifndef GPOPT_exception_H
 #define GPOPT_exception_H
 
-#include "gpos/types.h"
 #include "gpos/memory/CMemoryPool.h"
+#include "gpos/types.h"
 
 namespace gpopt
 {

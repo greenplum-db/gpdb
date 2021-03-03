@@ -11,12 +11,12 @@
 //		of a scalar SubPlan
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParamList.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSubPlanParam.h"
 
 using namespace gpdxl;
@@ -123,7 +123,7 @@ CParseHandlerScalarSubPlanParamList::EndElement(
 	if (0 != XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarSubPlanParamList),
 				 element_local_name) &&
-		NULL != m_dxl_node)
+		nullptr != m_dxl_node)
 	{
 		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

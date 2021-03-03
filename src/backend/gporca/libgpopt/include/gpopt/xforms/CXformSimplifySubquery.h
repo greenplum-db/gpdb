@@ -13,6 +13,7 @@
 #define GPOPT_CXformSimplifySubquery_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -37,27 +38,6 @@ private:
 	// definition of matching function
 	typedef BOOL(FnMatch)(COperator *);
 
-	//---------------------------------------------------------------------------
-	//	@struct:
-	//		SSimplifySubqueryMapping
-	//
-	//	@doc:
-	//		Mapping of a simplify function to matching function
-	//
-	//---------------------------------------------------------------------------
-	struct SSimplifySubqueryMapping
-	{
-		// simplification function
-		FnSimplify *m_pfnsimplify;
-
-		// matching function
-		FnMatch *m_pfnmatch;
-
-	};	// struct SSimplifySubqueryMapping
-
-	// array of mappings
-	static const SSimplifySubqueryMapping m_rgssm[];
-
 	// transform existential subqueries to count(*) subqueries
 	static BOOL FSimplifyExistential(CMemoryPool *mp, CExpression *pexprScalar,
 									 CExpression **ppexprNewScalar);
@@ -67,28 +47,32 @@ private:
 									CExpression **ppexprNewScalar);
 
 	// main driver, transform existential/quantified subqueries to count(*) subqueries
-	static BOOL FSimplify(CMemoryPool *mp, CExpression *pexprScalar,
-						  CExpression **ppexprNewScalar,
-						  FnSimplify *pfnsimplify, FnMatch *pfnmatch);
+	static BOOL FSimplifySubqueryRecursive(CMemoryPool *mp,
+										   CExpression *pexprScalar,
+										   CExpression **ppexprNewScalar,
+										   FnSimplify *pfnsimplify,
+										   FnMatch *pfnmatch);
 
-	// private copy ctor
-	CXformSimplifySubquery(const CXformSimplifySubquery &);
+	static CExpression *FSimplifySubquery(CMemoryPool *mp,
+										  CExpression *pexprInput,
+										  FnSimplify *pfnsimplify,
+										  FnMatch *pfnmatch);
 
 public:
+	CXformSimplifySubquery(const CXformSimplifySubquery &) = delete;
+
 	// ctor
 	explicit CXformSimplifySubquery(CExpression *pexprPattern);
 
 	// dtor
-	virtual ~CXformSimplifySubquery()
-	{
-	}
+	~CXformSimplifySubquery() override = default;
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 
 };	// class CXformSimplifySubquery

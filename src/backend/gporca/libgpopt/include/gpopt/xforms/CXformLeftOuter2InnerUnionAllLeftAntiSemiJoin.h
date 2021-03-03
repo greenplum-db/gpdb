@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin.h
@@ -38,6 +38,7 @@
 #define GPOPT_CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -49,10 +50,6 @@ class CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin : public CXformExploration
 private:
 	// if ratio of the cardinalities outer/inner is below this value, we apply the xform
 	static const DOUBLE m_dOuterInnerRatioThreshold;
-
-	// disable copy ctor
-	CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin(
-		const CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin &);
 
 	// check the stats ratio to decide whether to apply the xform or not
 	BOOL FApplyXformUsingStatsInfo(const IStatistics *outer_stats,
@@ -78,44 +75,45 @@ private:
 		CColRefArray **ppdrgpcrProjectOutput);
 
 public:
+	CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin(
+		const CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin &) = delete;
+
 	// ctor
 	explicit CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin()
-	{
-	}
+	~CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin() override = default;
 
 	// identifier
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftOuter2InnerUnionAllLeftAntiSemiJoin;
 	}
 
 	// return a string for the xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// do stats need to be computed before applying xform?
-	virtual BOOL
-	FNeedsStats() const
+	BOOL
+	FNeedsStats() const override
 	{
 		return true;
 	}
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 	// return true if xform should be applied only once
-	virtual BOOL IsApplyOnce();
+	BOOL IsApplyOnce() override;
 };
 }  // namespace gpopt
 

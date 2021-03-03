@@ -44,7 +44,7 @@ class ForeignKeyCheck:
         if len(cat.getPrimaryKey()) <= 0:
             return
 
-        if catname in MASTER_ONLY_TABLES:
+        if catname in COORDINATOR_ONLY_TABLES:
             return
 
         # GPDB_12_MERGE_FIXME: Left outer join query generated below

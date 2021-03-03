@@ -1399,8 +1399,18 @@ Feature: Incrementally analyze the database
         And output should not contain "-public.sales_1_prt_3"
         And output should not contain "-public.sales_1_prt_4"
         And analyzedb should print "-public.sales_1_prt_2" to stdout
+        And analyzedb should print "rootpartition" to stdout
         And "public.sales_1_prt_2" should appear in the latest state files
         And "public.sales_1_prt_4" should appear in the latest state files
+
+    Scenario: Partition tables, (entries for all parts, dml on all parts, root), skip root stats
+        Given no state files exist for database "incr_analyze"
+        And the user runs "analyzedb -a -d incr_analyze -t public.sales"
+        And the row "1,'2008-01-01'" is inserted into "public.sales" in "incr_analyze"
+        And the row "2,'2008-01-02'" is inserted into "public.sales" in "incr_analyze"
+        When the user runs "analyzedb -a -d incr_analyze -t public.sales --skip_orca_root_stats"
+        Then analyzedb should return a return code of 0
+        And output should not contain "rootpartition"
 
     # entries exist for some parts in state files for partition tables
 

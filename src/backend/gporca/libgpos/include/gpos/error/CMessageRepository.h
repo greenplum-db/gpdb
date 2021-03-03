@@ -55,7 +55,7 @@ public:
 	CMessageRepository(CMemoryPool *mp);
 
 	// dtor
-	~CMessageRepository();
+	~CMessageRepository() = default;
 
 	// lookup message by error/local
 	CMessage *LookupMessage(CException exc, ELocale locale);

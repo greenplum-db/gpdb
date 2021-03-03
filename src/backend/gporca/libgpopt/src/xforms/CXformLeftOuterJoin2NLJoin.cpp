@@ -9,12 +9,13 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftOuterJoin2NLJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalLeftOuterNLJoin.h"
-#include "gpopt/xforms/CXformLeftOuterJoin2NLJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -71,7 +72,7 @@ CXformLeftOuterJoin2NLJoin::Transform(CXformContext *pxfctxt,
 									  CXformResult *pxfres,
 									  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

@@ -364,10 +364,7 @@ CConfigParamMapping::PackConfigParamInBitset(
 
 	if (!optimizer_enable_partial_index)
 	{
-		CBitSet *heterogeneous_index_bitset =
-			CXform::PbsHeterogeneousIndexXforms(mp);
-		traceflag_bitset->Union(heterogeneous_index_bitset);
-		heterogeneous_index_bitset->Release();
+		// GPDB_12_MERGE_FIXME: Remove this GUC
 	}
 
 	if (!optimizer_enable_hashjoin)
@@ -428,7 +425,7 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfImplementFullOuterMergeJoin));
 	}
 
-	CBitSet *join_heuristic_bitset = NULL;
+	CBitSet *join_heuristic_bitset = nullptr;
 	switch (optimizer_join_order)
 	{
 		case JOIN_ORDER_IN_QUERY:
@@ -460,9 +457,13 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
 	}
 
-	if (OPTIMIZER_GPDB_EXPERIMENTAL == optimizer_cost_model)
+	if (OPTIMIZER_GPDB_LEGACY == optimizer_cost_model)
 	{
-		traceflag_bitset->ExchangeSet(EopttraceCalibratedBitmapIndexCostModel);
+		traceflag_bitset->ExchangeSet(EopttraceLegacyCostModel);
+	}
+	else if (OPTIMIZER_GPDB_EXPERIMENTAL == optimizer_cost_model)
+	{
+		traceflag_bitset->ExchangeSet(EopttraceExperimentalCostModel);
 	}
 
 	// enable nested loop index plans using nest params

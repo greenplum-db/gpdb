@@ -9,30 +9,28 @@
 //		Implementation of cost context
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CCostContext.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "gpopt/base/CCostContext.h"
+
 #include "gpopt/base/CDistributionSpecHashed.h"
-
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
-#include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CDrvdPropCtxtRelational.h"
+#include "gpopt/base/CDrvdPropPlan.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/cost/ICostModel.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalDynamicTableScan.h"
-#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
-#include "gpopt/operators/CPhysicalSpool.h"
 #include "gpopt/operators/CPhysicalAgg.h"
-
+#include "gpopt/operators/CPhysicalDynamicIndexScan.h"
+#include "gpopt/operators/CPhysicalDynamicTableScan.h"
+#include "gpopt/operators/CPhysicalSpool.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/search/CGroupExpression.h"
-
 #include "naucrates/statistics/CStatisticsUtils.h"
-
-#include "gpopt/exception.h"
 
 using namespace gpopt;
 using namespace gpnaucrates;
@@ -51,16 +49,16 @@ CCostContext::CCostContext(CMemoryPool *mp, COptimizationContext *poc,
 	  m_cost(GPOPT_INVALID_COST),
 	  m_estate(estUncosted),
 	  m_pgexpr(pgexpr),
-	  m_pgexprForStats(NULL),
-	  m_pdrgpoc(NULL),
-	  m_pdpplan(NULL),
+	  m_pgexprForStats(nullptr),
+	  m_pdrgpoc(nullptr),
+	  m_pdpplan(nullptr),
 	  m_ulOptReq(ulOptReq),
 	  m_fPruned(false),
-	  m_pstats(NULL),
+	  m_pstats(nullptr),
 	  m_poc(poc)
 {
-	GPOS_ASSERT(NULL != poc);
-	GPOS_ASSERT(NULL != pgexpr);
+	GPOS_ASSERT(nullptr != poc);
+	GPOS_ASSERT(nullptr != pgexpr);
 	GPOS_ASSERT_IMP(
 		pgexpr->Pop()->FPhysical(),
 		ulOptReq < CPhysical::PopConvert(pgexpr->Pop())->UlOptRequests());
@@ -70,7 +68,7 @@ CCostContext::CCostContext(CMemoryPool *mp, COptimizationContext *poc,
 	{
 		CGroupExpression *pgexprForStats =
 			m_pgexpr->Pgroup()->PgexprBestPromise(m_mp, m_pgexpr);
-		if (NULL != pgexprForStats)
+		if (nullptr != pgexprForStats)
 		{
 			pgexprForStats->AddRef();
 			m_pgexprForStats = pgexprForStats;
@@ -109,7 +107,7 @@ CCostContext::~CCostContext()
 BOOL
 CCostContext::FOwnsStats() const
 {
-	GPOS_ASSERT(NULL != m_pstats);
+	GPOS_ASSERT(nullptr != m_pstats);
 
 	// new stats are owned if context holds stats different from group stats
 	return (m_pstats != m_pgexpr->Pgroup()->Pstats());
@@ -138,6 +136,7 @@ CCostContext::FNeedsNewStats() const
 		return false;
 	}
 
+#if 0
 	if (!m_pdpplan->Ppim()->FContainsUnresolved())
 	{
 		// All partition selectors have been resolved at this level.
@@ -145,12 +144,10 @@ CCostContext::FNeedsNewStats() const
 		// nodes above it, that aren't affected by the partition selector.
 		return false;
 	}
-
-	CEnfdPartitionPropagation *pepp = Poc()->Prpp()->Pepp();
-
+#endif
+	// GPDB_12_MERGE_FIXME: Re-enable this when DPE is re-implemented
 	if (GPOS_FTRACE(EopttraceDeriveStatsForDPE) && CUtils::FPhysicalScan(pop) &&
-		CPhysicalScan::PopConvert(pop)->FDynamicScan() &&
-		!pepp->PpfmDerived()->IsEmpty())
+		CPhysicalScan::PopConvert(pop)->FDynamicScan() && false)
 	{
 		// context is attached to a dynamic scan that went through
 		// partition elimination in another part of the plan
@@ -164,7 +161,7 @@ CCostContext::FNeedsNewStats() const
 	{
 		COptimizationContext *pocChild = (*Pdrgpoc())[ul];
 		CCostContext *pccChild = pocChild->PccBest();
-		GPOS_ASSERT(NULL != pccChild);
+		GPOS_ASSERT(nullptr != pccChild);
 
 		fDeriveStats = pccChild->FOwnsStats();
 	}
@@ -184,10 +181,10 @@ CCostContext::FNeedsNewStats() const
 void
 CCostContext::DeriveStats()
 {
-	GPOS_ASSERT(NULL != m_pgexpr);
-	GPOS_ASSERT(NULL != m_poc);
+	GPOS_ASSERT(nullptr != m_pgexpr);
+	GPOS_ASSERT(nullptr != m_poc);
 
-	if (NULL != m_pstats)
+	if (nullptr != m_pstats)
 	{
 		// stats are already derived
 		return;
@@ -202,7 +199,7 @@ CCostContext::DeriveStats()
 	CExpressionHandle exprhdl(m_mp);
 	exprhdl.Attach(this);
 	exprhdl.DeriveCostContextStats();
-	if (NULL == exprhdl.Pstats())
+	if (nullptr == exprhdl.Pstats())
 	{
 		GPOS_RAISE(
 			gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound,
@@ -226,21 +223,21 @@ CCostContext::DeriveStats()
 void
 CCostContext::DerivePlanProps(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != m_pdrgpoc);
+	GPOS_ASSERT(nullptr != m_pdrgpoc);
 
-	if (NULL == m_pdpplan)
+	if (nullptr == m_pdpplan)
 	{
 		// derive properties of the plan carried by cost context
 		CExpressionHandle exprhdl(mp);
 		exprhdl.Attach(this);
 		exprhdl.DerivePlanPropsForCostContext();
 		CDrvdPropPlan *pdpplan = CDrvdPropPlan::Pdpplan(exprhdl.Pdp());
-		GPOS_ASSERT(NULL != pdpplan);
+		GPOS_ASSERT(nullptr != pdpplan);
 
 		// set derived plan properties
 		pdpplan->AddRef();
 		m_pdpplan = pdpplan;
-		GPOS_ASSERT(NULL != m_pdpplan);
+		GPOS_ASSERT(nullptr != m_pdpplan);
 	}
 }
 
@@ -271,13 +268,13 @@ CCostContext::operator==(const CCostContext &cc) const
 BOOL
 CCostContext::IsValid(CMemoryPool *mp)
 {
-	GPOS_ASSERT(NULL != m_poc);
-	GPOS_ASSERT(NULL != m_pdrgpoc);
+	GPOS_ASSERT(nullptr != m_poc);
+	GPOS_ASSERT(nullptr != m_pdrgpoc);
 
 	// obtain relational properties from group
 	CDrvdPropRelational *pdprel =
 		CDrvdPropRelational::GetRelationalProperties(Pgexpr()->Pgroup()->Pdp());
-	GPOS_ASSERT(NULL != pdprel);
+	GPOS_ASSERT(nullptr != pdprel);
 
 	// derive plan properties
 	DerivePlanProps(mp);
@@ -329,10 +326,10 @@ CCostContext::BreakCostTiesForJoinPlans(
 	BOOL *pfTiesResolved  // output: if true, tie resolution has succeeded
 )
 {
-	GPOS_ASSERT(NULL != pccFst);
-	GPOS_ASSERT(NULL != pccSnd);
-	GPOS_ASSERT(NULL != ppccPrefered);
-	GPOS_ASSERT(NULL != pfTiesResolved);
+	GPOS_ASSERT(nullptr != pccFst);
+	GPOS_ASSERT(nullptr != pccSnd);
+	GPOS_ASSERT(nullptr != ppccPrefered);
+	GPOS_ASSERT(nullptr != pfTiesResolved);
 	GPOS_ASSERT(*(pccFst->Poc()) == *(pccSnd->Poc()));
 	GPOS_ASSERT(estCosted == pccFst->Est());
 	GPOS_ASSERT(estCosted == pccSnd->Est());
@@ -348,7 +345,7 @@ CCostContext::BreakCostTiesForJoinPlans(
 	// to have more reliable statistics on this side
 
 	*pfTiesResolved = false;
-	*ppccPrefered = NULL;
+	*ppccPrefered = nullptr;
 	CDouble dRowsOuterFst =
 		(*pccFst->Pdrgpoc())[0]->PccBest()->Pstats()->Rows();
 	CDouble dRowsInnerFst =
@@ -406,7 +403,7 @@ CCostContext::BreakCostTiesForJoinPlans(
 BOOL
 CCostContext::FBetterThan(const CCostContext *pcc) const
 {
-	GPOS_ASSERT(NULL != pcc);
+	GPOS_ASSERT(nullptr != pcc);
 	GPOS_ASSERT(*m_poc == *(pcc->Poc()));
 	GPOS_ASSERT(estCosted == m_estate);
 	GPOS_ASSERT(estCosted == pcc->Est());
@@ -479,7 +476,7 @@ CCostContext::FBetterThan(const CCostContext *pcc) const
 	if (CUtils::FPhysicalJoin(Pgexpr()->Pop()) &&
 		CUtils::FPhysicalJoin(pcc->Pgexpr()->Pop()))
 	{
-		CONST_COSTCTXT_PTR pccPrefered = NULL;
+		CONST_COSTCTXT_PTR pccPrefered = nullptr;
 		BOOL fSuccess = false;
 		BreakCostTiesForJoinPlans(this, pcc, &pccPrefered, &fSuccess);
 		if (fSuccess)
@@ -576,7 +573,7 @@ CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 	DeriveStats();
 
 	ULONG arity = 0;
-	if (NULL != m_pdrgpoc)
+	if (nullptr != m_pdrgpoc)
 	{
 		arity = Pdrgpoc()->Size();
 	}
@@ -614,7 +611,7 @@ CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 	{
 		COptimizationContext *pocChild = (*m_pdrgpoc)[ul];
 		CCostContext *pccChild = pocChild->PccBest();
-		GPOS_ASSERT(NULL != pccChild);
+		GPOS_ASSERT(nullptr != pccChild);
 
 		IStatistics *child_stats = pccChild->Pstats();
 
@@ -692,7 +689,7 @@ CCostContext::DRowsPerHost() const
 		CStatisticsConfig *stats_config =
 			poptctxt->GetOptimizerConfig()->GetStatsConf();
 		CDouble dNDVs = CStatisticsUtils::Groups(m_mp, Pstats(), stats_config,
-												 pdrgpul, NULL /*keys*/);
+												 pdrgpul, nullptr /*keys*/);
 		pdrgpul->Release();
 
 		if (dNDVs < ulHosts)
@@ -723,7 +720,7 @@ CCostContext::OsPrint(IOstream &os) const
 	os << "main ctxt (stage " << m_poc->UlSearchStageIndex() << ")"
 	   << m_poc->Id() << "." << m_ulOptReq;
 
-	if (NULL != m_pdrgpoc)
+	if (nullptr != m_pdrgpoc)
 	{
 		os << ", child ctxts:[";
 		ULONG arity = m_pdrgpoc->Size();
@@ -739,7 +736,7 @@ CCostContext::OsPrint(IOstream &os) const
 		os << "]";
 	}
 
-	if (NULL != m_pstats)
+	if (nullptr != m_pstats)
 	{
 		os << ", rows:" << m_pstats->Rows();
 		if (FOwnsStats())

@@ -5,7 +5,7 @@
  *	  Oids based on a given set of predicates. It works for both constant
  *	  partition elimination and join partition elimination
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

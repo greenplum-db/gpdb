@@ -12,13 +12,11 @@
 #define GPOPT_CScalar_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/CPartInfo.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/COperator.h"
-
-
 #include "naucrates/md/IMDId.h"
 
 namespace gpopt
@@ -53,9 +51,6 @@ public:
 	};
 
 private:
-	// private copy ctor
-	CScalar(const CScalar &);
-
 	// helper for combining partition consumer arrays of scalar children
 	static CPartInfo *PpartinfoDeriveCombineScalar(CMemoryPool *mp,
 												   CExpressionHandle &exprhdl);
@@ -76,29 +71,29 @@ protected:
 		ULongPtrArray *pdrgpulChildren);
 
 public:
+	CScalar(const CScalar &) = delete;
+
 	// ctor
 	explicit CScalar(CMemoryPool *mp) : COperator(mp)
 	{
 	}
 
 	// dtor
-	virtual ~CScalar()
-	{
-	}
+	~CScalar() override = default;
 
 	// type of operator
-	virtual BOOL
-	FScalar() const
+	BOOL
+	FScalar() const override
 	{
 		GPOS_ASSERT(!FPhysical() && !FLogical() && !FPattern());
 		return true;
 	}
 
 	// create derived properties container
-	virtual CDrvdProp *PdpCreate(CMemoryPool *mp) const;
+	CDrvdProp *PdpCreate(CMemoryPool *mp) const override;
 
 	// create required properties container
-	virtual CReqdProp *PrpCreate(CMemoryPool *mp) const;
+	CReqdProp *PrpCreate(CMemoryPool *mp) const override;
 
 	// return locally defined columns
 	virtual CColRefSet *
@@ -174,10 +169,10 @@ public:
 	static CScalar *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(pop->FScalar());
 
-		return reinterpret_cast<CScalar *>(pop);
+		return dynamic_cast<CScalar *>(pop);
 	}
 
 	// the type of the scalar expression

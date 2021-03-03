@@ -12,9 +12,6 @@
 -- start_matchsubs
 -- m/WARNING:.*Any temporary tables for this session have been dropped because the gang was disconnected/
 -- s/session id \=\s*\d+/session id \= DUMMY/gm
---
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
 -- end_matchsubs
 
 CREATE TABLE foo(a int, b int);

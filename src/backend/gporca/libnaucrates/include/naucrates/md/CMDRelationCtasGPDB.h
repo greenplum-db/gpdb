@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDRelationCtasGPDB.h
@@ -15,10 +15,10 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelationCtas.h"
-#include "naucrates/md/IMDColumn.h"
 #include "naucrates/md/CMDColumn.h"
 #include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDRelationCtas.h"
 
 namespace gpdxl
 {
@@ -105,10 +105,9 @@ private:
 	// array of column widths
 	CDoubleArray *m_col_width_array;
 
-	// private copy ctor
-	CMDRelationCtasGPDB(const CMDRelationCtasGPDB &);
-
 public:
+	CMDRelationCtasGPDB(const CMDRelationCtasGPDB &) = delete;
+
 	// ctor
 	CMDRelationCtasGPDB(
 		CMemoryPool *mp, IMDId *mdid, CMDName *mdname_schema, CMDName *mdname,
@@ -120,119 +119,119 @@ public:
 		IntPtrArray *vartypemod_array);
 
 	// dtor
-	virtual ~CMDRelationCtasGPDB();
+	~CMDRelationCtasGPDB() override;
 
 	// accessors
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// the metadata id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// schema name
-	virtual CMDName *GetMdNameSchema() const;
+	CMDName *GetMdNameSchema() const override;
 
 	// relation name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// distribution policy (none, hash, random)
-	virtual Ereldistrpolicy GetRelDistribution() const;
+	Ereldistrpolicy GetRelDistribution() const override;
 
 	// does this table have oids
-	virtual BOOL
-	HasOids() const
+	BOOL
+	HasOids() const override
 	{
 		return m_has_oids;
 	}
 
 	// is this a temp relation
-	virtual BOOL
-	IsTemporary() const
+	BOOL
+	IsTemporary() const override
 	{
 		return m_is_temp_table;
 	}
 
 	// storage type
-	virtual Erelstoragetype
-	RetrieveRelStorageType() const
+	Erelstoragetype
+	RetrieveRelStorageType() const override
 	{
 		return m_rel_storage_type;
 	}
 
 	// CTAS storage options
-	virtual CDXLCtasStorageOptions *
-	GetDxlCtasStorageOption() const
+	CDXLCtasStorageOptions *
+	GetDxlCtasStorageOption() const override
 	{
 		return m_dxl_ctas_storage_option;
 	}
 
 	// number of columns
-	virtual ULONG ColumnCount() const;
+	ULONG ColumnCount() const override;
 
 	// width of a column with regards to the position
-	virtual DOUBLE ColWidth(ULONG pos) const;
+	DOUBLE ColWidth(ULONG pos) const override;
 
 	// does relation have dropped columns
-	virtual BOOL
-	HasDroppedColumns() const
+	BOOL
+	HasDroppedColumns() const override
 	{
 		return false;
 	}
 
 	// number of non-dropped columns
-	virtual ULONG
-	NonDroppedColsCount() const
+	ULONG
+	NonDroppedColsCount() const override
 	{
 		return ColumnCount();
 	}
 
 	// return the original positions of all the non-dropped columns
-	virtual ULongPtrArray *
-	NonDroppedColsArray() const
+	ULongPtrArray *
+	NonDroppedColsArray() const override
 	{
 		return m_nondrop_col_pos_array;
 	}
 
 	// number of system columns
-	virtual ULONG SystemColumnsCount() const;
+	ULONG SystemColumnsCount() const override;
 
 	// retrieve the column at the given position
-	virtual const IMDColumn *GetMdCol(ULONG pos) const;
+	const IMDColumn *GetMdCol(ULONG pos) const override;
 
 	// number of distribution columns
-	virtual ULONG DistrColumnCount() const;
+	ULONG DistrColumnCount() const override;
 
 	// retrieve the column at the given position in the distribution columns list for the relation
-	virtual const IMDColumn *GetDistrColAt(ULONG pos) const;
+	const IMDColumn *GetDistrColAt(ULONG pos) const override;
 
-	virtual IMDId *GetDistrOpfamilyAt(ULONG pos) const;
+	IMDId *GetDistrOpfamilyAt(ULONG pos) const override;
 
 	// number of indices
-	virtual ULONG
-	IndexCount() const
+	ULONG
+	IndexCount() const override
 	{
 		return 0;
 	}
 
 	// number of triggers
-	virtual ULONG
-	TriggerCount() const
+	ULONG
+	TriggerCount() const override
 	{
 		return 0;
 	}
 
 	// return the absolute position of the given attribute position excluding dropped columns
-	virtual ULONG
-	NonDroppedColAt(ULONG pos) const
+	ULONG
+	NonDroppedColAt(ULONG pos) const override
 	{
 		return pos;
 	}
 
 	// return the position of a column in the metadata object given the attribute number in the system catalog
-	virtual ULONG GetPosFromAttno(INT attno) const;
+	ULONG GetPosFromAttno(INT attno) const override;
 
 	virtual IMdIdArray *
 	GetDistrOpClasses() const
@@ -241,37 +240,37 @@ public:
 	}
 
 	// retrieve the id of the metadata cache index at the given position
-	virtual IMDId *IndexMDidAt(ULONG  // pos
-	) const
+	IMDId *IndexMDidAt(ULONG  // pos
+	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no indexes");
-		return 0;
+		return nullptr;
 	}
 
 	// retrieve the id of the metadata cache trigger at the given position
-	virtual IMDId *TriggerMDidAt(ULONG	// pos
-	) const
+	IMDId *TriggerMDidAt(ULONG	// pos
+	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no triggers");
-		return 0;
+		return nullptr;
 	}
 
 	// serialize metadata relation in DXL format given a serializer object
-	virtual void Serialize(gpdxl::CXMLSerializer *) const;
+	void Serialize(gpdxl::CXMLSerializer *) const override;
 
 	// number of check constraints
-	virtual ULONG
-	CheckConstraintCount() const
+	ULONG
+	CheckConstraintCount() const override
 	{
 		return 0;
 	}
 
 	// retrieve the id of the check constraint cache at the given position
-	virtual IMDId *CheckConstraintMDidAt(ULONG	// pos
-	) const
+	IMDId *CheckConstraintMDidAt(ULONG	// pos
+	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no constraints");
-		return 0;
+		return nullptr;
 	}
 
 	// list of vartypmod for target expressions
@@ -283,7 +282,7 @@ public:
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

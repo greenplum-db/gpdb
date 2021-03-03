@@ -4,7 +4,7 @@
  *   responsibly for the internal handling and the usage
  *   of a single tuple in the visimap relation.
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

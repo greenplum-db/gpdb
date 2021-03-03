@@ -4,7 +4,7 @@
  *    a segment configuration table
  *
  * Portions Copyright (c) 2006-2011, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -23,9 +23,7 @@
  */
 #define GpSegmentConfigRelationName		"gp_segment_configuration"
 
-#define MASTER_DBID 1
 #define MASTER_CONTENT_ID (-1)
-#define InvalidDbid 0
 
 #define GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY 'p'
 #define GP_SEGMENT_CONFIGURATION_ROLE_MIRROR 'm'

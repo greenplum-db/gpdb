@@ -9,13 +9,14 @@
 //		Implementation of DXL physical CTE producer operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -32,7 +33,7 @@ CDXLPhysicalCTEProducer::CDXLPhysicalCTEProducer(
 	CMemoryPool *mp, ULONG id, ULongPtrArray *output_colids_array)
 	: CDXLPhysical(mp), m_id(id), m_output_colids_array(output_colids_array)
 {
-	GPOS_ASSERT(NULL != output_colids_array);
+	GPOS_ASSERT(nullptr != output_colids_array);
 }
 
 //---------------------------------------------------------------------------

@@ -9,11 +9,12 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformInlineCTEConsumer.h"
-#include "gpopt/xforms/CXformUtils.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -73,7 +74,7 @@ CXformInlineCTEConsumer::Transform(CXformContext *
 								   CXformResult *pxfres,
 								   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

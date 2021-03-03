@@ -3,7 +3,7 @@
  * cdbpathtoplan.c
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -81,7 +81,7 @@ cdbpathtoplan_create_flow(PlannerInfo *root,
 		flow = makeFlow(FLOW_SINGLETON, 1);
 	}
 	else
-		Insist(0);
+		elog(ERROR, "incorrect locus type %d to create flow", locus.locustype);
 
 	flow->locustype = locus.locustype;
 	return flow;

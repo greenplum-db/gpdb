@@ -9,13 +9,13 @@
 //		Implementation of left anti semi join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalLeftAntiSemiJoinNotIn.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
-#include "gpopt/operators/CLogicalLeftAntiSemiJoinNotIn.h"
 
 using namespace gpopt;
 
@@ -31,7 +31,7 @@ using namespace gpopt;
 CLogicalLeftAntiSemiJoinNotIn::CLogicalLeftAntiSemiJoinNotIn(CMemoryPool *mp)
 	: CLogicalLeftAntiSemiJoin(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 //---------------------------------------------------------------------------

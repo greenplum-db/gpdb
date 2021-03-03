@@ -41,6 +41,7 @@ create table testhagg (i1 int, i2 int, i3 int, i4 int);
 insert into testhagg select i,i,i,i from
 	(select generate_series(1, nsegments * 30000) as i from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+analyze testhagg;
 
 set statement_mem="1800";
 set gp_resqueue_print_operator_memory_limits=on;
@@ -83,6 +84,7 @@ set search_path to hashagg_spill;
 -- Test agg spilling scenarios
 create table aggspill (i int, j int, t text) distributed by (i);
 insert into aggspill select i, i*2, i::text from generate_series(1, 10000) i;
+analyze aggspill;
 insert into aggspill select i, i*2, i::text from generate_series(1, 100000) i;
 insert into aggspill select i, i*2, i::text from generate_series(1, 1000000) i;
 

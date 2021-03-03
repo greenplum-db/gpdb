@@ -9,6 +9,7 @@ create index spgist_point_idx on spgist_point_tbl using spgist(p) with (fillfact
 -- i.e. the index is very small.
 insert into spgist_point_tbl (id, p)
 select g, point(g*10, g*10) from generate_series(1, 10) g;
+analyze spgist_point_tbl;
 delete from spgist_point_tbl where id < 5;
 vacuum spgist_point_tbl;
 -- Insert more data, to make the index a few levels deep.

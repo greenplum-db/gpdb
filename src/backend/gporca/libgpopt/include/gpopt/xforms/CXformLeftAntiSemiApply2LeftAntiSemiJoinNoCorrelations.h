@@ -12,9 +12,10 @@
 #define GPOPT_CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformApply2Join.h"
+
 #include "gpopt/operators/CLogicalLeftAntiSemiApply.h"
 #include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
+#include "gpopt/xforms/CXformApply2Join.h"
 
 
 namespace gpopt
@@ -34,11 +35,11 @@ class CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations
 							  CLogicalLeftAntiSemiJoin>
 {
 private:
-	// private copy ctor
-	CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations(
-		const CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations &);
-
 public:
+	CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations(
+		const CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations &) =
+		delete;
+
 	// ctor
 	explicit CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations(
 		CMemoryPool *mp)
@@ -48,29 +49,28 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations()
-	{
-	}
+	~CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations() override =
+		default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 
 };	// class CXformLeftAntiSemiApply2LeftAntiSemiJoinNoCorrelations

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarCoerceBase.cpp
@@ -15,8 +15,9 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarCoerceBase.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -39,7 +40,7 @@ CScalarCoerceBase::CScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type,
 	  m_ecf(ecf),
 	  m_location(location)
 {
-	GPOS_ASSERT(NULL != mdid_type);
+	GPOS_ASSERT(nullptr != mdid_type);
 	GPOS_ASSERT(mdid_type->IsValid());
 }
 

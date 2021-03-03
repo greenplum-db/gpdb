@@ -39,23 +39,20 @@ private:
 	IMdIdArray *m_mdid_array;
 
 
-	// private copy ctor
-	CParseHandlerMetadataIdList(const CParseHandlerMetadataIdList &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 	// is this a supported element of a metadata list
 	BOOL FSupportedElem(const XMLCh *const xml_str);
@@ -64,12 +61,14 @@ private:
 	BOOL FSupportedListType(const XMLCh *const xml_str);
 
 public:
+	CParseHandlerMetadataIdList(const CParseHandlerMetadataIdList &) = delete;
+
 	// ctor/dtor
 	CParseHandlerMetadataIdList(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,
 								CParseHandlerBase *parse_handler_root);
 
-	virtual ~CParseHandlerMetadataIdList();
+	~CParseHandlerMetadataIdList() override;
 
 	// return the constructed list of metadata identifiers
 	IMdIdArray *GetMdIdArray();

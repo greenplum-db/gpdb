@@ -9,12 +9,13 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformProject2ComputeScalar.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalProject.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalComputeScalar.h"
-#include "gpopt/xforms/CXformProject2ComputeScalar.h"
 
 
 using namespace gpopt;
@@ -54,7 +55,7 @@ CXformProject2ComputeScalar::Transform(CXformContext *pxfctxt,
 									   CXformResult *pxfres,
 									   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

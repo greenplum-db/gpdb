@@ -3,7 +3,7 @@
  *	   Interconnect code specific to UDP transport.
  *
  * Portions Copyright (c) 2005-2011, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 2011-2012, EMC Corporation
  *
  *
@@ -1370,16 +1370,7 @@ ic_set_pthread_sigmasks(sigset_t *old_sigs)
 	sigset_t sigs;
 	int		 err;
 
-	sigemptyset(&sigs);
-
-	/* make our thread ignore these signals (which should allow that
-	 * they be delivered to the main thread) */
-	sigaddset(&sigs, SIGHUP);
-	sigaddset(&sigs, SIGINT);
-	sigaddset(&sigs, SIGTERM);
-	sigaddset(&sigs, SIGALRM);
-	sigaddset(&sigs, SIGUSR1);
-	sigaddset(&sigs, SIGUSR2);
+	sigfillset(&sigs);
 
 	err = pthread_sigmask(SIG_BLOCK, &sigs, old_sigs);
 	if (err != 0)

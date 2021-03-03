@@ -41,13 +41,11 @@ SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
 -----------+-----------
  foo_index | 85        
 (1 row)
-SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('foo');
+-- in case there's autovacuum worker running in the backend, the aoseg will not be dropped which has state = 2
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('foo') where state = 1 and tupcount > 0;
  segno | tupcount | state 
 -------+----------+-------
- 1     | 0        | 1     
  2     | 33       | 1     
- 1     | 0        | 1     
  2     | 34       | 1     
- 1     | 0        | 1     
  2     | 18       | 1     
-(6 rows)
+(3 rows)

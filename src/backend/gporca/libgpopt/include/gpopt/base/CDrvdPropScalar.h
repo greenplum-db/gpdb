@@ -17,8 +17,8 @@
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/CPartInfo.h"
 #include "gpopt/base/CFunctionProp.h"
+#include "gpopt/base/CPartInfo.h"
 
 namespace gpopt
 {
@@ -93,9 +93,6 @@ private:
 	// does expression contain ScalarArrayCmp generated for "scalar op ANY/ALL (array)" construct
 	BOOL m_fHasScalarArrayCmp;
 
-	// private copy ctor
-	CDrvdPropScalar(const CDrvdPropScalar &);
-
 	// Have all the properties been derived?
 	//
 	// NOTE1: This is set ONLY when Derive() is called. If all the properties
@@ -131,31 +128,33 @@ protected:
 	BOOL DeriveHasScalarArrayCmp(CExpressionHandle &);
 
 public:
+	CDrvdPropScalar(const CDrvdPropScalar &) = delete;
+
 	// ctor
 	CDrvdPropScalar(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CDrvdPropScalar();
+	~CDrvdPropScalar() override;
 
 	// type of properties
-	virtual EPropType
-	Ept()
+	EPropType
+	Ept() override
 	{
 		return EptScalar;
 	}
 
-	virtual BOOL
-	IsComplete() const
+	BOOL
+	IsComplete() const override
 	{
 		return m_is_complete;
 	}
 
 	// derivation function
 	void Derive(CMemoryPool *mp, CExpressionHandle &exprhdl,
-				CDrvdPropCtxt *pdpctxt);
+				CDrvdPropCtxt *pdpctxt) override;
 
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CReqdPropPlan *prpp) const;
+	BOOL FSatisfies(const CReqdPropPlan *prpp) const override;
 
 	// defined columns
 	CColRefSet *GetDefinedColumns() const;
@@ -190,7 +189,7 @@ public:
 	static CDrvdPropScalar *GetDrvdScalarProps(CDrvdProp *pdp);
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CDrvdPropScalar
 

@@ -12,9 +12,10 @@
 #define GPOPT_CScalarIf_H
 
 #include "gpos/base.h"
+
+#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdProp.h"
 
 namespace gpopt
 {
@@ -47,68 +48,67 @@ private:
 	// is operator return type BOOL?
 	BOOL m_fBoolReturnType;
 
-	// private copy ctor
-	CScalarIf(const CScalarIf &);
-
 public:
+	CScalarIf(const CScalarIf &) = delete;
+
 	// ctor
 	CScalarIf(CMemoryPool *mp, IMDId *mdid);
 
 	// dtor
-	virtual ~CScalarIf()
+	~CScalarIf() override
 	{
 		m_mdid_type->Release();
 	}
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarIf;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarIf";
 	}
 
 	// the type of the scalar expression
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		return m_mdid_type;
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return true;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult
-	Eber(ULongPtrArray *pdrgpulChildren) const
+	EBoolEvalResult
+	Eber(ULongPtrArray *pdrgpulChildren) const override
 	{
 		return EberNullOnAllNullChildren(pdrgpulChildren);
 	}
@@ -117,7 +117,7 @@ public:
 	static CScalarIf *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarIf == pop->Eopid());
 
 		return dynamic_cast<CScalarIf *>(pop);

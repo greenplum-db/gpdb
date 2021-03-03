@@ -1,13 +1,14 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CDatumSortedSet_H
 #define GPOPT_CDatumSortedSet_H
 
-#include "naucrates/base/IDatum.h"
 #include "gpos/memory/CMemoryPool.h"
-#include "gpopt/operators/CExpression.h"
+
 #include "gpopt/base/IComparator.h"
+#include "gpopt/operators/CExpression.h"
+#include "naucrates/base/IDatum.h"
 
 namespace gpopt
 {

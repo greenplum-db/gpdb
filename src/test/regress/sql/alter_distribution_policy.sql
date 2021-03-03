@@ -5,6 +5,7 @@
 set optimizer_print_missing_stats = off;
 create table atsdb (i int, j text) distributed by (i);
 insert into atsdb :DATA;
+analyze atsdb;
 
 -- should fail
 alter table atsdb set distributed by ();

@@ -15,7 +15,6 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
-
 #include "naucrates/md/CMDRequest.h"
 
 namespace gpdxl
@@ -42,35 +41,34 @@ private:
 	// array of type requests
 	CMDRequest::SMDTypeRequestArray *m_mdtype_request_array;
 
-	// private copy ctor
-	CParseHandlerMDRequest(const CParseHandlerMDRequest &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerMDRequest(const CParseHandlerMDRequest &) = delete;
+
 	// ctor
 	CParseHandlerMDRequest(CMemoryPool *mp,
 						   CParseHandlerManager *parse_handler_mgr,
 						   CParseHandlerBase *pph);
 
 	// dtor
-	virtual ~CParseHandlerMDRequest();
+	~CParseHandlerMDRequest() override;
 
 	// parse handler type
-	virtual EDxlParseHandlerType GetParseHandlerType() const;
+	EDxlParseHandlerType GetParseHandlerType() const override;
 
 	// parsed mdids
 	IMdIdArray *GetMdIdArray() const;

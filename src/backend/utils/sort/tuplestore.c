@@ -65,7 +65,7 @@
  * destroying the tuplestore in the right order!
  *
  * Portions Copyright (c) 2007-2010, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -1694,7 +1694,6 @@ tuplestore_make_shared(Tuplestorestate *state, SharedFileSet *fileset, const cha
 {
 	ResourceOwner oldowner;
 
-	// GPDB_12_MERGE_FIXME: how should SharedFileSets and workfile sets interact?
 	state->work_set = workfile_mgr_create_set("SharedTupleStore", filename, true /* hold pin */);
 
 	Assert(state->status == TSS_INMEM);
@@ -1716,7 +1715,7 @@ tuplestore_make_shared(Tuplestorestate *state, SharedFileSet *fileset, const cha
 	oldowner = CurrentResourceOwner;
 	CurrentResourceOwner = state->resowner;
 
-	state->myfile = BufFileCreateShared(fileset, filename);
+	state->myfile = BufFileCreateShared(fileset, filename, state->work_set);
 	CurrentResourceOwner = oldowner;
 
 	/*

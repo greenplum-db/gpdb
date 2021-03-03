@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 
@@ -41,9 +42,7 @@ CParseHandlerPhysicalOp::CParseHandlerPhysicalOp(
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerPhysicalOp::~CParseHandlerPhysicalOp()
-{
-}
+CParseHandlerPhysicalOp::~CParseHandlerPhysicalOp() = default;
 
 
 //---------------------------------------------------------------------------
@@ -67,7 +66,7 @@ CParseHandlerPhysicalOp::StartElement(const XMLCh *const element_uri,
 		CParseHandlerFactory::GetParseHandler(m_mp, element_local_name,
 											  m_parse_handler_mgr, this);
 
-	GPOS_ASSERT(NULL != parse_handler_base);
+	GPOS_ASSERT(nullptr != parse_handler_base);
 
 	// activate the parse handler
 	m_parse_handler_mgr->ReplaceHandler(parse_handler_base,

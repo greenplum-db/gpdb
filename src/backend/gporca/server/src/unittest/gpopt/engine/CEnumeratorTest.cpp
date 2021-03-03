@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for CEngine
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/engine/CEnumeratorTest.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
@@ -17,7 +19,6 @@
 #include "gpopt/exception.h"
 
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/engine/CEnumeratorTest.h"
 
 using namespace gpopt;
 
@@ -456,9 +457,9 @@ CEnumeratorTest::EresUnittest_CheckPlans(EOptTraceFlag eopttrace,
 										 const CHAR *rgszCheckPlans[],
 										 ULONG ulTests)
 {
-	GPOS_ASSERT(NULL != pfpc);
-	GPOS_ASSERT(NULL != pulTestCounter);
-	GPOS_ASSERT(NULL != rgszCheckPlans);
+	GPOS_ASSERT(nullptr != pfpc);
+	GPOS_ASSERT(nullptr != pulTestCounter);
+	GPOS_ASSERT(nullptr != rgszCheckPlans);
 
 	GPOS_RESULT eres = GPOS_OK;
 	GPOS_TRY

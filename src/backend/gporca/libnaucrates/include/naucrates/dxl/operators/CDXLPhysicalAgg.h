@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalAgg_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLPhysical.h"
 
@@ -68,13 +69,13 @@ public:
 					BOOL stream_safe);
 
 	// dtor
-	virtual ~CDXLPhysicalAgg();
+	~CDXLPhysicalAgg() override;
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 	EdxlAggStrategy GetAggStrategy() const;
 
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 	const CWStringConst *GetAggStrategyNameStr() const;
 	const CWStringConst *PstrAggLevel() const;
 	const ULongPtrArray *GetGroupingColidArray() const;
@@ -90,14 +91,14 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLPhysicalAgg *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalAgg == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalAgg *>(dxl_op);
@@ -106,7 +107,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

@@ -161,9 +161,9 @@ static void parseFormatOpts(FunctionCallInfo fcinfo) {
                 eolString[0] = '\n';
                 eolString[1] = '\0';
             } else {  // should never come here
-                ereport(ERROR, (0, errmsg("invalid value for NEWLINE (%s), "
-                                          "valid options are: 'LF', 'CRLF', 'CR'",
-                                          newline_str)));
+	      ereport(ERROR, errmsg("invalid value for NEWLINE (%s), "
+				    "valid options are: 'LF', 'CRLF', 'CR'",
+				    newline_str));
             }
         }
     }
@@ -296,10 +296,10 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
         resHandle->gpreader = reader_init(url_with_options);
         if (!resHandle->gpreader) {
-            ereport(ERROR, (0, errmsg("Failed to init gpcloud extension (segid = %d, "
-                                      "segnum = %d), please check your "
-                                      "configurations and network connection: %s",
-                                      s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str())));
+            ereport(ERROR, errmsg("Failed to init gpcloud extension (segid = %d, "
+				  "segnum = %d), please check your "
+				  "configurations and network connection: %s",
+				  s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str()));
         }
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, resHandle);
@@ -310,7 +310,7 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
     if (!reader_transfer_data(resHandle->gpreader, data_buf, data_len)) {
         ereport(ERROR,
-                (0, errmsg("s3_import: could not read data: %s", s3extErrorMessage.c_str())));
+                errmsg("s3_import: could not read data: %s", s3extErrorMessage.c_str()));
     }
     PG_RETURN_INT32(data_len);
 }
@@ -351,10 +351,10 @@ Datum s3_export(PG_FUNCTION_ARGS) {
 
         resHandle->gpwriter = writer_init(url_with_options, format);
         if (!resHandle->gpwriter) {
-            ereport(ERROR, (0, errmsg("Failed to init gpcloud extension (segid = %d, "
-                                      "segnum = %d), please check your "
-                                      "configurations and network connection: %s",
-                                      s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str())));
+	  ereport(ERROR, errmsg("Failed to init gpcloud extension (segid = %d, "
+				"segnum = %d), please check your "
+				"configurations and network connection: %s",
+				s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str()));
         }
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, resHandle);
@@ -365,7 +365,7 @@ Datum s3_export(PG_FUNCTION_ARGS) {
 
     if (!writer_transfer_data(resHandle->gpwriter, data_buf, data_len)) {
         ereport(ERROR,
-                (0, errmsg("s3_export: could not write data: %s", s3extErrorMessage.c_str())));
+                errmsg("s3_export: could not write data: %s", s3extErrorMessage.c_str()));
     }
 
     PG_RETURN_INT32(data_len);

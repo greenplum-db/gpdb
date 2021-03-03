@@ -10,12 +10,12 @@
 //		Implementation of the SAX parse handler class for parsing scalar NullTest.
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarNullTest.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarNullTest.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -61,7 +61,7 @@ CParseHandlerScalarNullTest::StartElement(const XMLCh *const,  // element_uri,
 				  CDXLTokens::XmlstrToken(EdxltokenScalarIsNotNull),
 				  element_local_name)))
 	{
-		if (NULL != m_dxl_node)
+		if (nullptr != m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

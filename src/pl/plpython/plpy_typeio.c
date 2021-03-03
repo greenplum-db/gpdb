@@ -1180,18 +1180,25 @@ PLySequence_ToArray(PLyObToDatum *arg, PyObject *plrv,
 			break;
 
 		if (ndim == MAXDIM)
-			PLy_elog(ERROR, "number of array dimensions exceeds the maximum allowed (%d)", MAXDIM);
+			ereport(ERROR,
+					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+					 errmsg("number of array dimensions exceeds the maximum allowed (%d)",
+							MAXDIM)));
 
 		dims[ndim] = PySequence_Length(pyptr);
 		if (dims[ndim] < 0)
 			PLy_elog(ERROR, "could not determine sequence length for function return value");
 
 		if (dims[ndim] > MaxAllocSize)
-			PLy_elog(ERROR, "array size exceeds the maximum allowed");
+			ereport(ERROR,
+					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+					 errmsg("array size exceeds the maximum allowed")));
 
 		len *= dims[ndim];
 		if (len > MaxAllocSize)
-			PLy_elog(ERROR, "array size exceeds the maximum allowed");
+			ereport(ERROR,
+					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+					 errmsg("array size exceeds the maximum allowed")));
 
 		if (dims[ndim] == 0)
 		{
@@ -1217,7 +1224,9 @@ PLySequence_ToArray(PLyObToDatum *arg, PyObject *plrv,
 	if (ndim == 0)
 	{
 		if (!PySequence_Check(plrv))
-			PLy_elog(ERROR, "return value of function with array return type is not a Python sequence");
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+					 errmsg("return value of function with array return type is not a Python sequence")));
 
 		ndim = 1;
 		len = dims[0] = PySequence_Length(plrv);
@@ -1261,10 +1270,9 @@ PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
 {
 	int			i;
 
-	/* GPDB_12_MERGE_FIXME: This has no errcode in upstream. Submit that to upstream? */
 	if (PySequence_Length(list) != dims[dim])
 		ereport(ERROR,
-				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
 				 errmsg("wrong length of inner sequence: has length %d, but %d was expected",
 						(int) PySequence_Length(list), dims[dim]),
 				 (errdetail("To construct a multidimensional array, the inner sequences must all have the same length."))));

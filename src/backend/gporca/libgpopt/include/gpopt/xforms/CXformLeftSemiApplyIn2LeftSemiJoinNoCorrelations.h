@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations.h
@@ -13,6 +13,7 @@
 #define GPOPT_CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformLeftSemiApply2LeftSemiJoinNoCorrelations.h"
 
 
@@ -32,11 +33,10 @@ class CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations
 	: public CXformLeftSemiApply2LeftSemiJoinNoCorrelations
 {
 private:
-	// private copy ctor
-	CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations(
-		const CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations &);
-
 public:
+	CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations(
+		const CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations &) = delete;
+
 	// ctor
 	explicit CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations(CMemoryPool *mp)
 		: CXformLeftSemiApply2LeftSemiJoinNoCorrelations(
@@ -53,19 +53,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations()
-	{
-	}
+	~CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiApplyIn2LeftSemiJoinNoCorrelations;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations";
 	}

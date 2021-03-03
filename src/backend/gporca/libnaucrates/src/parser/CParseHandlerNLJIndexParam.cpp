@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerNLJIndexParam.cpp
@@ -10,13 +10,13 @@
 //		Implementation of the SAX parse handler class for parsing a NLJ index Param
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerNLJIndexParam.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerNLJIndexParam.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 using namespace gpdxl;
 
@@ -29,7 +29,7 @@ CParseHandlerNLJIndexParam::CParseHandlerNLJIndexParam(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_manager,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_manager, parse_handler_root),
-	  m_nest_param_colref_dxl(NULL)
+	  m_nest_param_colref_dxl(nullptr)
 {
 }
 

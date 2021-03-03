@@ -609,7 +609,7 @@ set allow_system_table_mods=off;
 -- the heap.
 vacuum full pg_stat_last_operation;
 select classid::regclass, objid::regclass, staactionname, stasubtype from pg_stat_last_operation
-  where classid='pg_class'::regclass and objid::regclass::text like 'pg_stat%last%';
+  where classid='pg_class'::regclass and objid::regclass::text like 'pg_stat%last%' and stasubtype != 'AUTO';
  classid  |                      objid                      | staactionname | stasubtype 
 ----------+-------------------------------------------------+---------------+------------
  pg_class | pg_stat_last_operation                          | VACUUM        | FULL

@@ -14,9 +14,9 @@
 #define GPDXL_CParseHandlerColumnDescriptor_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 #include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {
@@ -42,31 +42,30 @@ private:
 	// current column descriptor being parsed
 	CDXLColDescr *m_current_column_descr;
 
-	// private copy ctor
-	CParseHandlerColDescr(const CParseHandlerColDescr &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerColDescr(const CParseHandlerColDescr &) = delete;
+
 	// ctor/dtor
 	CParseHandlerColDescr(CMemoryPool *m_mp,
 						  CParseHandlerManager *parse_handler_mgr,
 						  CParseHandlerBase *parse_handler_base);
 
-	virtual ~CParseHandlerColDescr();
+	~CParseHandlerColDescr() override;
 
 	CDXLColDescrArray *GetDXLColumnDescrArray();
 };

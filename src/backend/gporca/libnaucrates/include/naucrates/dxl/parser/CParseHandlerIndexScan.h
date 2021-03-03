@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerIndexScan_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
 namespace gpdxl
@@ -37,23 +38,20 @@ private:
 	// index scan direction
 	EdxlIndexScanDirection m_index_scan_dir;
 
-	// private copy ctor
-	CParseHandlerIndexScan(const CParseHandlerIndexScan &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 protected:
 	// common StartElement functionality for IndexScan and IndexOnlyScan
@@ -62,10 +60,11 @@ protected:
 
 	// common EndElement functionality for IndexScan and IndexOnlyScan
 	void EndElementHelper(const XMLCh *const element_local_name,
-						  Edxltoken token_type, ULONG part_idx_id = 0,
-						  ULONG part_idx_id_printable = 0);
+						  Edxltoken token_type);
 
 public:
+	CParseHandlerIndexScan(const CParseHandlerIndexScan &) = delete;
+
 	// ctor
 	CParseHandlerIndexScan(CMemoryPool *mp,
 						   CParseHandlerManager *parse_handler_mgr,

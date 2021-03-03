@@ -10,14 +10,15 @@
 //		into a single group-by
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformCollapseGbAgg.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/COperator.h"
-#include "gpopt/xforms/CXformCollapseGbAgg.h"
 
 using namespace gpmd;
 using namespace gpopt;
@@ -88,8 +89,8 @@ void
 CXformCollapseGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -136,7 +137,7 @@ CXformCollapseGbAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pexprChild->AddRef();
 	CExpression *pexprSelect = CUtils::PexprLogicalSelect(
 		mp, pexprChild,
-		CPredicateUtils::PexprConjunction(mp, NULL /*pdrgpexpr*/));
+		CPredicateUtils::PexprConjunction(mp, nullptr /*pdrgpexpr*/));
 
 	popTopGbAgg->AddRef();
 	pexprTopProjectList->AddRef();

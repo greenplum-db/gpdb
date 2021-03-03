@@ -13,10 +13,10 @@
 #include "naucrates/dxl/parser/CParseHandlerAssert.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarAssertConstraintList.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarAssertConstraintList.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 using namespace gpdxl;
@@ -67,7 +67,8 @@ CParseHandlerAssert::StartElement(const XMLCh *const,  // element_uri,
 	CHAR *error_code = CDXLOperatorFactory::ExtractConvertAttrValueToSz(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenErrorCode,
 		EdxltokenPhysicalAssert);
-	if (NULL == error_code || GPOS_SQLSTATE_LENGTH != clib::Strlen(error_code))
+	if (nullptr == error_code ||
+		GPOS_SQLSTATE_LENGTH != clib::Strlen(error_code))
 	{
 		GPOS_RAISE(
 			gpdxl::ExmaDXL, gpdxl::ExmiDXLInvalidAttributeValue,

@@ -13,9 +13,10 @@
 #define GPDXL_CParseHandlerMDIndex_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-#include "naucrates/md/IMDIndex.h"
 #include "naucrates/md/CMDPartConstraintGPDB.h"
+#include "naucrates/md/IMDIndex.h"
 
 namespace gpdxl
 {
@@ -42,9 +43,6 @@ private:
 	// name of the index
 	CMDName *m_mdname;
 
-	// mdid of the indexed relation
-	IMDId *m_rel_mdid;
-
 	// is the index clustered
 	BOOL m_clustered;
 
@@ -70,8 +68,8 @@ private:
 	// is constraint unbounded
 	BOOL m_part_constraint_unbounded;
 
-	// private copy ctor
-	CParseHandlerMDIndex(const CParseHandlerMDIndex &);
+	// child index oids parse handler
+	CParseHandlerBase *m_child_indexes_parse_handler;
 
 	// process the start of an element
 	void StartElement(
@@ -79,16 +77,18 @@ private:
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerMDIndex(const CParseHandlerMDIndex &) = delete;
+
 	// ctor
 	CParseHandlerMDIndex(CMemoryPool *mp,
 						 CParseHandlerManager *parse_handler_mgr,

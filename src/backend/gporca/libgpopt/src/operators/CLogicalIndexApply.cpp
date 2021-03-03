@@ -1,36 +1,52 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	Implementation of inner / left outer index apply operator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CLogicalIndexApply.h"
+
+#include "gpos/base.h"
+
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 
 using namespace gpopt;
 
 CLogicalIndexApply::CLogicalIndexApply(CMemoryPool *mp)
-	: CLogicalApply(mp), m_pdrgpcrOuterRefs(NULL), m_fOuterJoin(false)
+	: CLogicalApply(mp),
+	  m_pdrgpcrOuterRefs(nullptr),
+	  m_fOuterJoin(false),
+	  m_origJoinPred(nullptr)
 {
 	m_fPattern = true;
 }
 
 CLogicalIndexApply::CLogicalIndexApply(CMemoryPool *mp,
 									   CColRefArray *pdrgpcrOuterRefs,
-									   BOOL fOuterJoin)
+									   BOOL fOuterJoin,
+									   CExpression *origJoinPred)
 	: CLogicalApply(mp),
 	  m_pdrgpcrOuterRefs(pdrgpcrOuterRefs),
-	  m_fOuterJoin(fOuterJoin)
+	  m_fOuterJoin(fOuterJoin),
+	  m_origJoinPred(origJoinPred)
 {
-	GPOS_ASSERT(NULL != pdrgpcrOuterRefs);
+	GPOS_ASSERT(nullptr != pdrgpcrOuterRefs);
+	if (nullptr != origJoinPred)
+	{
+		// We don't allow subqueries in the expression that we
+		// store in the logical operator, since such expressions
+		// would be unsuitable for generating a plan.
+		GPOS_RTL_ASSERT(!origJoinPred->DeriveHasSubquery());
+		origJoinPred->AddRef();
+	}
 }
 
 
 CLogicalIndexApply::~CLogicalIndexApply()
 {
 	CRefCount::SafeRelease(m_pdrgpcrOuterRefs);
+	CRefCount::SafeRelease(m_origJoinPred);
 }
 
 
@@ -53,7 +69,7 @@ CLogicalIndexApply::PxfsCandidates(CMemoryPool *mp) const
 BOOL
 CLogicalIndexApply::Matches(COperator *pop) const
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 
 	if (pop->Eopid() == Eopid())
 	{
@@ -96,10 +112,22 @@ CLogicalIndexApply::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,
 											   BOOL must_exist)
 {
+	COperator *result = nullptr;
 	CColRefArray *colref_array = CUtils::PdrgpcrRemap(
 		mp, m_pdrgpcrOuterRefs, colref_mapping, must_exist);
+	CExpression *remapped_orig_join_pred = nullptr;
 
-	return GPOS_NEW(mp) CLogicalIndexApply(mp, colref_array, m_fOuterJoin);
+	if (nullptr != m_origJoinPred)
+	{
+		remapped_orig_join_pred = m_origJoinPred->PexprCopyWithRemappedColumns(
+			mp, colref_mapping, must_exist);
+	}
+
+	result = GPOS_NEW(mp) CLogicalIndexApply(mp, colref_array, m_fOuterJoin,
+											 remapped_orig_join_pred);
+	CRefCount::SafeRelease(remapped_orig_join_pred);
+
+	return result;
 }
 
 // EOF

@@ -1,0 +1,137 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP SCHEMA IF EXISTS "s_\_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_\_c".ext_gpload_reusable_32a36fbe_4f2e_11eb_9bd5_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_\_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_\_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:43|INFO|gpload session started 2021-01-05 16:15:43
+2021-01-05 16:15:43|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:43|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 16:15:43|INFO|running time: 0.14 seconds
+2021-01-05 16:15:43|INFO|rows Inserted          = 1
+2021-01-05 16:15:43|INFO|rows Updated           = 0
+2021-01-05 16:15:43|INFO|data formatting errors = 0
+2021-01-05 16:15:43|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_$_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_$_c".ext_gpload_reusable_32c99b80_4f2e_11eb_a301_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_$_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_$_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:43|INFO|gpload session started 2021-01-05 16:15:43
+2021-01-05 16:15:44|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:44|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 16:15:44|INFO|running time: 0.14 seconds
+2021-01-05 16:15:44|INFO|rows Inserted          = 1
+2021-01-05 16:15:44|INFO|rows Updated           = 0
+2021-01-05 16:15:44|INFO|data formatting errors = 0
+2021-01-05 16:15:44|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_#_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_#_c".ext_gpload_reusable_32ee1898_4f2e_11eb_bd4f_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_#_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_#_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:44|INFO|gpload session started 2021-01-05 16:15:44
+2021-01-05 16:15:44|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:44|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 16:15:44|INFO|running time: 0.12 seconds
+2021-01-05 16:15:44|INFO|rows Inserted          = 1
+2021-01-05 16:15:44|INFO|rows Updated           = 0
+2021-01-05 16:15:44|INFO|data formatting errors = 0
+2021-01-05 16:15:44|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_,_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_,_c".ext_gpload_reusable_330fb692_4f2e_11eb_9ca2_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_,_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_,_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:44|INFO|gpload session started 2021-01-05 16:15:44
+2021-01-05 16:15:44|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:44|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 16:15:44|INFO|running time: 0.11 seconds
+2021-01-05 16:15:44|INFO|rows Inserted          = 1
+2021-01-05 16:15:44|INFO|rows Updated           = 0
+2021-01-05 16:15:44|INFO|data formatting errors = 0
+2021-01-05 16:15:44|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_(_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_(_c".ext_gpload_reusable_3333aa66_4f2e_11eb_b80c_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_(_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_(_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:44|INFO|gpload session started 2021-01-05 16:15:44
+2021-01-05 16:15:44|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:44|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 16:15:44|INFO|running time: 0.11 seconds
+2021-01-05 16:15:44|INFO|rows Inserted          = 1
+2021-01-05 16:15:44|INFO|rows Updated           = 0
+2021-01-05 16:15:44|INFO|data formatting errors = 0
+2021-01-05 16:15:44|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_""_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_""_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_""_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:44|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 16
+DROP SCHEMA IF EXISTS "s_._c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_._c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_._c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:45|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 16
+DROP SCHEMA IF EXISTS "s_/_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_/_c".ext_gpload_reusable_3378a184_4f2e_11eb_9102_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_/_c";
+CREATE SCHEMA
+;
+CREATE TABLE "s_/_c"."test_table"
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+CREATE TABLE
+;
+2021-01-05 16:15:45|INFO|gpload session started 2021-01-05 16:15:45
+2021-01-05 16:15:45|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:45|INFO|reusing external table ext_gpload_reusable_b5e80b7e_4f23_11eb_930d_7085c2381836
+2021-01-05 16:15:45|INFO|running time: 0.14 seconds
+2021-01-05 16:15:45|INFO|rows Inserted          = 1
+2021-01-05 16:15:45|INFO|rows Updated           = 0
+2021-01-05 16:15:45|INFO|data formatting errors = 0
+2021-01-05 16:15:45|INFO|gpload succeeded

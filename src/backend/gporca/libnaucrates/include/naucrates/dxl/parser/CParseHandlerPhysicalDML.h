@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerPhysicalDML_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalDML.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
 
 
 namespace gpdxl
@@ -61,28 +62,27 @@ private:
 	// needs data to be sorted
 	BOOL m_input_sort_req;
 
-	// private copy ctor
-	CParseHandlerPhysicalDML(const CParseHandlerPhysicalDML &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 	// parse the dml type from the attribute value
 	static EdxlDmlType GetDmlOpType(const XMLCh *xmlszDmlType);
 
 public:
+	CParseHandlerPhysicalDML(const CParseHandlerPhysicalDML &) = delete;
+
 	// ctor
 	CParseHandlerPhysicalDML(CMemoryPool *mp,
 							 CParseHandlerManager *parse_handler_mgr,

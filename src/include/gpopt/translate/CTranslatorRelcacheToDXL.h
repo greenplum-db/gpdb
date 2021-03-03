@@ -22,33 +22,32 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "access/tupdesc.h"
 #include "catalog/gp_distribution_policy.h"
 }
 
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDRelationGPDB.h"
-#include "naucrates/md/CMDRelationExternalGPDB.h"
-#include "naucrates/md/CMDAggregateGPDB.h"
-#include "naucrates/md/CMDFunctionGPDB.h"
-#include "naucrates/md/CMDCheckConstraintGPDB.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
-#include "naucrates/md/CMDScalarOpGPDB.h"
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/CDXLColStats.h"
+#include "naucrates/md/CMDAggregateGPDB.h"
+#include "naucrates/md/CMDCheckConstraintGPDB.h"
+#include "naucrates/md/CMDFunctionGPDB.h"
+#include "naucrates/md/CMDPartConstraintGPDB.h"
+#include "naucrates/md/CMDRelationExternalGPDB.h"
+#include "naucrates/md/CMDRelationGPDB.h"
+#include "naucrates/md/CMDScalarOpGPDB.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDType.h"
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
-#include "naucrates/md/IMDIndex.h"
 
 // fwd decl
 struct RelationData;
 typedef struct RelationData *Relation;
 struct LogicalIndexes;
-struct LogicalIndexInfo;
 
 namespace gpdxl
 {
@@ -110,7 +109,7 @@ private:
 		}
 
 		// dtor
-		virtual ~SFuncProps(){};
+		virtual ~SFuncProps() = default;
 
 		// return function identifier
 		OID
@@ -261,9 +260,6 @@ private:
 	// check if index is supported
 	static BOOL IsIndexSupported(Relation index_rel);
 
-	// retrieve index info list of partitioned table
-	static List *RetrievePartTableIndexInfo(Relation rel);
-
 	// compute the array of included columns
 	static ULongPtrArray *ComputeIncludedCols(CMemoryPool *mp,
 											  const IMDRelation *md_rel);
@@ -277,11 +273,11 @@ private:
 		Node *part_constraint, ULongPtrArray *level_with_default_part_array,
 		BOOL is_unbounded);
 
-#if 0
-			// retrieve part constraint for relation
-			static
-			CMDPartConstraintGPDB *RetrievePartConstraintForRel(CMemoryPool *mp, CMDAccessor *md_accessor, OID rel_oid, CMDColumnArray *mdcol_array, BOOL has_index);
-#endif
+	// retrieve part constraint for relation
+	static CDXLNode *RetrievePartConstraintForRel(CMemoryPool *mp,
+												  CMDAccessor *md_accessor,
+												  Relation rel,
+												  CMDColumnArray *mdcol_array);
 
 	// retrieve part constraint from a GPDB node
 	static CMDPartConstraintGPDB *RetrievePartConstraintFromNode(
@@ -295,32 +291,6 @@ private:
 	// return the index info list defined on the given relation
 	static CMDIndexInfoArray *RetrieveRelIndexInfo(CMemoryPool *mp,
 												   Relation rel);
-
-	// return index info list of indexes defined on a partitoned table
-	static CMDIndexInfoArray *RetrieveRelIndexInfoForPartTable(
-		CMemoryPool *mp, Relation root_rel);
-
-	// return index info list of indexes defined on regular, external tables or leaf partitions
-	static CMDIndexInfoArray *RetrieveRelIndexInfoForNonPartTable(
-		CMemoryPool *mp, Relation rel);
-
-	// retrieve an index over a partitioned table from the relcache
-	static IMDIndex *RetrievePartTableIndex(CMemoryPool *mp,
-											CMDAccessor *md_accessor,
-											IMDId *mdid_index,
-											const IMDRelation *md_rel,
-											LogicalIndexes *logical_indexes);
-
-	// lookup an index given its id from the logical indexes structure
-	static LogicalIndexInfo *LookupLogicalIndexById(
-		LogicalIndexes *logical_indexes, OID oid);
-
-	// construct an MD cache index object given its logical index representation
-	static IMDIndex *RetrievePartTableIndex(CMemoryPool *mp,
-											CMDAccessor *md_accessor,
-											LogicalIndexInfo *index_info,
-											IMDId *mdid_index,
-											const IMDRelation *md_rel);
 
 	// return the check constraints defined on the relation with the given oid
 	static IMdIdArray *RetrieveRelCheckConstraints(CMemoryPool *mp, OID oid);
@@ -355,6 +325,8 @@ private:
 		CMDName *md_colname, OID att_type, AttrNumber attrnum,
 		CDXLBucketArray *dxl_stats_bucket_array, CDouble rows);
 
+	static IMdIdArray *RetrieveIndexPartitions(CMemoryPool *mp, OID rel_oid);
+
 public:
 	// retrieve a metadata object from the relcache
 	static IMDCacheObject *RetrieveObject(CMemoryPool *mp,
@@ -383,7 +355,7 @@ public:
 										   ULONG size);
 
 	// return the position of a given attribute number
-	static ULONG GetAttributePosition(INT attno, ULONG *attno_mapping);
+	static ULONG GetAttributePosition(INT attno, const ULONG *attno_mapping);
 
 	// retrieve a type from the relcache
 	static IMDType *RetrieveType(CMemoryPool *mp, IMDId *mdid);

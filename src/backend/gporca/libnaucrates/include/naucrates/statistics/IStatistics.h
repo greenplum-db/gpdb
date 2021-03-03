@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		IStatistics.h
@@ -15,13 +15,12 @@
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CHashMapIter.h"
 
-#include "naucrates/statistics/CStatsPred.h"
-#include "naucrates/statistics/CStatsPredPoint.h"
-#include "naucrates/statistics/CStatsPredJoin.h"
-#include "naucrates/statistics/CHistogram.h"
-#include "naucrates/md/CDXLStatsDerivedRelation.h"
-
 #include "gpopt/base/CColRef.h"
+#include "naucrates/md/CDXLStatsDerivedRelation.h"
+#include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CStatsPred.h"
+#include "naucrates/statistics/CStatsPredJoin.h"
+#include "naucrates/statistics/CStatsPredPoint.h"
 
 namespace gpopt
 {
@@ -81,13 +80,11 @@ typedef CHashMap<INT, ULONG, gpos::HashValue<INT>, gpos::Equals<INT>,
 class IStatistics : public CRefCount
 {
 private:
-	// private copy ctor
-	IStatistics(const IStatistics &);
-
-	// private assignment operator
-	IStatistics &operator=(IStatistics &);
-
 public:
+	IStatistics &operator=(IStatistics &) = delete;
+
+	IStatistics(const IStatistics &) = delete;
+
 	enum EStatsJoinType
 	{
 		EsjtInnerJoin,
@@ -98,17 +95,19 @@ public:
 	};
 
 	// ctor
-	IStatistics()
-	{
-	}
+	IStatistics() = default;
 
 	// dtor
-	virtual ~IStatistics()
-	{
-	}
+	~IStatistics() override = default;
 
 	// how many rows
 	virtual CDouble Rows() const = 0;
+
+	// number of blocks in the relation (not always up to-to-date)
+	virtual ULONG RelPages() const = 0;
+
+	// number of all-visible blocks in the relation (not always up-to-date)
+	virtual ULONG RelAllVisible() const = 0;
 
 	// is statistics on an empty input
 	virtual BOOL IsEmpty() const = 0;
@@ -207,18 +206,9 @@ operator<<(IOstream &os, IStatistics &stats)
 {
 	return stats.OsPrint(os);
 }
-// release istats
-inline void
-CleanupStats(IStatistics *stats)
-{
-	if (NULL != stats)
-	{
-		(dynamic_cast<CRefCount *>(stats))->Release();
-	}
-}
 
 // dynamic array for derived stats
-typedef CDynamicPtrArray<IStatistics, CleanupStats> IStatisticsArray;
+typedef CDynamicPtrArray<IStatistics, CleanupRelease> IStatisticsArray;
 }  // namespace gpnaucrates
 
 #endif	// !GPNAUCRATES_IStatistics_H

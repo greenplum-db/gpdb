@@ -1,0 +1,146 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP SCHEMA IF EXISTS "s_\_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_\_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:10|INFO|gpload session started 2021-01-05 16:15:10
+2021-01-05 16:15:10|INFO|setting schema 'public' for table 'ext_schema_spec_char_test'
+2021-01-05 16:15:10|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:10|INFO|did not find an external table to reuse. creating "s_\_c".ext_gpload_reusable_20c91bfe_4f2e_11eb_89e4_7085c2381836
+2021-01-05 16:15:10|INFO|running time: 0.11 seconds
+2021-01-05 16:15:10|INFO|rows Inserted          = 1
+2021-01-05 16:15:10|INFO|rows Updated           = 0
+2021-01-05 16:15:10|INFO|data formatting errors = 0
+2021-01-05 16:15:10|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_$_c" CASCADE;
+NOTICE:  drop cascades to foreign table "s_$_c".ext_gpload_reusable_0b27711a_4f2e_11eb_8181_7085c2381836
+DROP SCHEMA
+;
+CREATE SCHEMA "s_$_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:10|INFO|gpload session started 2021-01-05 16:15:10
+2021-01-05 16:15:10|INFO|setting schema 'public' for table 'ext_schema_spec_char_test'
+2021-01-05 16:15:10|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:10|INFO|did not find an external table to reuse. creating "s_$_c".ext_gpload_reusable_20eac72c_4f2e_11eb_9365_7085c2381836
+2021-01-05 16:15:10|INFO|running time: 0.13 seconds
+2021-01-05 16:15:10|INFO|rows Inserted          = 1
+2021-01-05 16:15:10|INFO|rows Updated           = 0
+2021-01-05 16:15:10|INFO|data formatting errors = 0
+2021-01-05 16:15:10|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_#_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_#_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:10|INFO|gpload session started 2021-01-05 16:15:10
+2021-01-05 16:15:10|INFO|setting schema 'public' for table 'ext_schema_spec_char_test'
+2021-01-05 16:15:10|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:10|INFO|did not find an external table to reuse. creating "s_#_c".ext_gpload_reusable_2110361a_4f2e_11eb_8ecf_7085c2381836
+2021-01-05 16:15:10|INFO|running time: 0.12 seconds
+2021-01-05 16:15:10|INFO|rows Inserted          = 1
+2021-01-05 16:15:10|INFO|rows Updated           = 0
+2021-01-05 16:15:10|INFO|data formatting errors = 0
+2021-01-05 16:15:10|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_,_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_,_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:10|INFO|gpload session started 2021-01-05 16:15:10
+2021-01-05 16:15:10|INFO|setting schema 'public' for table 'ext_schema_spec_char_test'
+2021-01-05 16:15:10|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:10|INFO|did not find an external table to reuse. creating "s_,_c".ext_gpload_reusable_2133c9a4_4f2e_11eb_a3d8_7085c2381836
+2021-01-05 16:15:11|INFO|running time: 0.12 seconds
+2021-01-05 16:15:11|INFO|rows Inserted          = 1
+2021-01-05 16:15:11|INFO|rows Updated           = 0
+2021-01-05 16:15:11|INFO|data formatting errors = 0
+2021-01-05 16:15:11|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_(_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_(_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:11|INFO|gpload session started 2021-01-05 16:15:11
+2021-01-05 16:15:11|INFO|setting schema 'public' for table 'ext_schema_spec_char_test'
+2021-01-05 16:15:11|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:11|INFO|did not find an external table to reuse. creating "s_(_c".ext_gpload_reusable_2157426c_4f2e_11eb_8395_7085c2381836
+2021-01-05 16:15:11|INFO|running time: 0.11 seconds
+2021-01-05 16:15:11|INFO|rows Inserted          = 1
+2021-01-05 16:15:11|INFO|rows Updated           = 0
+2021-01-05 16:15:11|INFO|data formatting errors = 0
+2021-01-05 16:15:11|INFO|gpload succeeded
+DROP SCHEMA IF EXISTS "s_""_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_""_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:11|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 16
+DROP SCHEMA IF EXISTS "s_._c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_._c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:11|ERROR|configuration file error: expected <block end>, but found '<scalar>', line 16
+DROP SCHEMA IF EXISTS "s_/_c" CASCADE;
+DROP SCHEMA
+;
+CREATE SCHEMA "s_/_c";
+CREATE SCHEMA
+;
+CREATE TABLE IF NOT EXISTS ext_schema_spec_char_test
+                (c1 text, c2 int) DISTRIBUTED BY (c1);
+NOTICE:  relation "ext_schema_spec_char_test" already exists, skipping
+CREATE TABLE
+;
+2021-01-05 16:15:11|INFO|gpload session started 2021-01-05 16:15:11
+2021-01-05 16:15:11|INFO|setting schema 'public' for table 'ext_schema_spec_char_test'
+2021-01-05 16:15:11|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 16:15:11|INFO|did not find an external table to reuse. creating "s_/_c".ext_gpload_reusable_219fb286_4f2e_11eb_af16_7085c2381836
+2021-01-05 16:15:11|INFO|running time: 0.12 seconds
+2021-01-05 16:15:11|INFO|rows Inserted          = 1
+2021-01-05 16:15:11|INFO|rows Updated           = 0
+2021-01-05 16:15:11|INFO|data formatting errors = 0
+2021-01-05 16:15:11|INFO|gpload succeeded

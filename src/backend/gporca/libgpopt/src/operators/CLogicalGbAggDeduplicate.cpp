@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CLogicalGbAggDeduplicate.cpp
@@ -9,12 +9,13 @@
 //		Implementation of aggregate operator for deduplicating semijoin outputs
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalGbAggDeduplicate.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 
 using namespace gpopt;
 
@@ -28,7 +29,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalGbAggDeduplicate::CLogicalGbAggDeduplicate(CMemoryPool *mp)
-	: CLogicalGbAgg(mp), m_pdrgpcrKeys(NULL)
+	: CLogicalGbAgg(mp), m_pdrgpcrKeys(nullptr)
 {
 	m_fPattern = true;
 }
@@ -46,7 +47,7 @@ CLogicalGbAggDeduplicate::CLogicalGbAggDeduplicate(
 	COperator::EGbAggType egbaggtype, CColRefArray *pdrgpcrKeys)
 	: CLogicalGbAgg(mp, colref_array, egbaggtype), m_pdrgpcrKeys(pdrgpcrKeys)
 {
-	GPOS_ASSERT(NULL != pdrgpcrKeys);
+	GPOS_ASSERT(nullptr != pdrgpcrKeys);
 }
 
 //---------------------------------------------------------------------------
@@ -63,7 +64,7 @@ CLogicalGbAggDeduplicate::CLogicalGbAggDeduplicate(
 	: CLogicalGbAgg(mp, colref_array, pdrgpcrMinimal, egbaggtype),
 	  m_pdrgpcrKeys(pdrgpcrKeys)
 {
-	GPOS_ASSERT(NULL != pdrgpcrKeys);
+	GPOS_ASSERT(nullptr != pdrgpcrKeys);
 }
 
 //---------------------------------------------------------------------------
@@ -96,7 +97,7 @@ CLogicalGbAggDeduplicate::PopCopyWithRemappedColumns(
 		CUtils::PdrgpcrRemap(mp, Pdrgpcr(), colref_mapping, must_exist);
 
 	CColRefArray *pdrgpcrMinimal = PdrgpcrMinimal();
-	if (NULL != pdrgpcrMinimal)
+	if (nullptr != pdrgpcrMinimal)
 	{
 		pdrgpcrMinimal = CUtils::PdrgpcrRemap(mp, pdrgpcrMinimal,
 											  colref_mapping, must_exist);
@@ -161,7 +162,7 @@ CLogicalGbAggDeduplicate::DeriveKeyCollection(CMemoryPool *mp,
 											  CExpressionHandle &  //exprhdl
 ) const
 {
-	CKeyCollection *pkc = NULL;
+	CKeyCollection *pkc = nullptr;
 
 	// Gb produces a key only if it's global
 	if (FGlobal())
@@ -284,7 +285,7 @@ CLogicalGbAggDeduplicate::OsPrint(IOstream &os) const
 	os << " Grp Cols: [";
 	CUtils::OsPrintDrgPcr(os, Pdrgpcr());
 	os << "], Minimal Grp Cols: [";
-	if (NULL != PdrgpcrMinimal())
+	if (nullptr != PdrgpcrMinimal())
 	{
 		CUtils::OsPrintDrgPcr(os, PdrgpcrMinimal());
 	}

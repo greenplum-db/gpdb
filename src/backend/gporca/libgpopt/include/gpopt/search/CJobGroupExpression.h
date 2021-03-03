@@ -42,22 +42,15 @@ private:
 	// true if job has scheduled transformation jobs
 	BOOL m_fXformsScheduled;
 
-	// private copy ctor
-	CJobGroupExpression(const CJobGroupExpression &);
-
 protected:
 	// target group expression
-	CGroupExpression *m_pgexpr;
+	CGroupExpression *m_pgexpr{nullptr};
 
 	// ctor
-	CJobGroupExpression() : m_pgexpr(NULL)
-	{
-	}
+	CJobGroupExpression() = default;
 
 	// dtor
-	virtual ~CJobGroupExpression()
-	{
-	}
+	~CJobGroupExpression() override = default;
 
 	// has job scheduled child groups ?
 	BOOL
@@ -100,14 +93,16 @@ protected:
 	void ScheduleTransformations(CSchedulerContext *psc, CXformSet *xform_set);
 
 	// job's function
-	virtual BOOL FExecute(CSchedulerContext *psc) = 0;
+	BOOL FExecute(CSchedulerContext *psc) override = 0;
 
 #ifdef GPOS_DEBUG
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) = 0;
+	IOstream &OsPrint(IOstream &os) const override = 0;
 
 #endif	// GPOS_DEBUG
+public:
+	CJobGroupExpression(const CJobGroupExpression &) = delete;
 
 };	// class CJobGroupExpression
 

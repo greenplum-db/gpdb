@@ -9,14 +9,13 @@
 //		Implementation of scalar DML action operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarDMLAction.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
-#include "gpopt/operators/CScalarDMLAction.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/IMDTypeInt4.h"
 
 using namespace gpopt;

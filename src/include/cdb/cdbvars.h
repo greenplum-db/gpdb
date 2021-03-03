@@ -4,7 +4,7 @@
  *	  definitions for Greenplum-specific global variables
  *
  * Portions Copyright (c) 2003-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -621,6 +621,9 @@ extern bool 	gp_statistics_pullup_from_child_partition;
 
 /* Extract numdistinct from foreign key relationship */
 extern bool		gp_statistics_use_fkeys;
+
+/* Allow user to force tow stage agg */
+extern bool     gp_eager_two_phase_agg;
 
 /* Analyze tools */
 extern int gp_motion_slice_noop;

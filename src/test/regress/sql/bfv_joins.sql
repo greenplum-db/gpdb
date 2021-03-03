@@ -174,6 +174,8 @@ create table nlj2 (a int, b int);
 
 insert into nlj1 values (1, 1), (NULL, NULL);
 insert into nlj2 values (1, 5), (NULL, 6);
+analyze nlj1;
+analyze nlj2;
 
 set optimizer_enable_hashjoin=off;
 set enable_hashjoin=off; set enable_mergejoin=off; set enable_nestloop=on;
@@ -208,6 +210,9 @@ create table c (i int4, j int4);
 insert into a select g from generate_series(1,1) g;
 insert into b select g from generate_series(1,1) g;
 insert into c select g, g from generate_series(1, 100) g;
+analyze a;
+analyze b;
+analyze c;
 
 create index on c (j, i);
 

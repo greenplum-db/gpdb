@@ -11,9 +11,9 @@
 #ifndef GPOPT_CBinding_H
 #define GPOPT_CBinding_H
 
-#include "gpopt/operators/CExpression.h"
-
 #include "gpos/base.h"
+
+#include "gpopt/operators/CExpression.h"
 
 namespace gpopt
 {
@@ -78,14 +78,10 @@ private:
 
 public:
 	// ctor
-	CBinding()
-	{
-	}
+	CBinding() = default;
 
 	// dtor
-	~CBinding()
-	{
-	}
+	~CBinding() = default;
 
 	// extract binding from group expression
 	CExpression *PexprExtract(CMemoryPool *mp, CGroupExpression *pgexpr,

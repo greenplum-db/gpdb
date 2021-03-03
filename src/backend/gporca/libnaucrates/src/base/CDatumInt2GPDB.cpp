@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDatumInt2GPDB.cpp
@@ -9,18 +9,17 @@
 //		Implementation of GPDB int2
 //---------------------------------------------------------------------------
 
+#include "naucrates/base/CDatumInt2GPDB.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/base/CDatumInt2GPDB.h"
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/mdcache/CMDAccessor.h"
-
+#include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeInt2.h"
-#include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpnaucrates;
 using namespace gpmd;
@@ -35,7 +34,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDatumInt2GPDB::CDatumInt2GPDB(CSystemId sysid, SINT val, BOOL is_null)
-	: m_mdid(NULL), m_val(val), m_is_null(is_null)
+	: m_mdid(nullptr), m_val(val), m_is_null(is_null)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	IMDId *mdid = dynamic_cast<const CMDTypeInt2GPDB *>(
@@ -63,7 +62,7 @@ CDatumInt2GPDB::CDatumInt2GPDB(CSystemId sysid, SINT val, BOOL is_null)
 CDatumInt2GPDB::CDatumInt2GPDB(IMDId *mdid, SINT val, BOOL is_null)
 	: m_mdid(mdid), m_val(val), m_is_null(is_null)
 {
-	GPOS_ASSERT(NULL != m_mdid);
+	GPOS_ASSERT(nullptr != m_mdid);
 	GPOS_ASSERT(GPDB_INT2_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 
 	if (IsNull())

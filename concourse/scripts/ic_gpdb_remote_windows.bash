@@ -13,12 +13,12 @@ function setup_gpadmin_user() {
 }
 
 function configure_gpdb_ssl_kerberos() {
-    cp ./gpdb_src/src/test/ssl/ssl/server.crt "${MASTER_DATA_DIRECTORY}"
-    cp ./gpdb_src/src/test/ssl/ssl/server.key "${MASTER_DATA_DIRECTORY}"
-    cp ./gpdb_src/src/test/ssl/ssl/root+server_ca.crt "${MASTER_DATA_DIRECTORY}"
-    chmod 600 "${MASTER_DATA_DIRECTORY}/server.key"
+    cp ./gpdb_src/src/test/ssl/ssl/server.crt "${COORDINATOR_DATA_DIRECTORY}"
+    cp ./gpdb_src/src/test/ssl/ssl/server.key "${COORDINATOR_DATA_DIRECTORY}"
+    cp ./gpdb_src/src/test/ssl/ssl/root+server_ca.crt "${COORDINATOR_DATA_DIRECTORY}"
+    chmod 600 "${COORDINATOR_DATA_DIRECTORY}/server.key"
 
-    PG_CONF="${MASTER_DATA_DIRECTORY}/postgresql.conf"
+    PG_CONF="${COORDINATOR_DATA_DIRECTORY}/postgresql.conf"
     echo "ssl=on" >> "${PG_CONF}"
     echo "ssl_ca_file='root+server_ca.crt'">> "${PG_CONF}"
     echo "ssl_cert_file='server.crt'">> "${PG_CONF}"
@@ -26,7 +26,7 @@ function configure_gpdb_ssl_kerberos() {
 
     gpconfig -c krb_server_keyfile -v  '/home/gpadmin/gpdb-server-krb5.keytab'
 
-    PG_HBA="${MASTER_DATA_DIRECTORY}/pg_hba.conf"
+    PG_HBA="${COORDINATOR_DATA_DIRECTORY}/pg_hba.conf"
     echo "hostssl   all gpadmin 0.0.0.0/0   trust">> "${PG_HBA}"
     echo "host all all 0.0.0.0/0 gss include_realm=0 krb_realm=${DEFAULT_REALM}" >> "${PG_HBA}"
     gpstop -ar

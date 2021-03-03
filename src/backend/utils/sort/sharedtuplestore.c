@@ -314,10 +314,12 @@ sts_puttuple(SharedTuplestoreAccessor *accessor, void *meta_data,
 	{
 		SharedTuplestoreParticipant *participant;
 		char		name[MAXPGPATH];
+		workfile_set	*work_set;
 
 		/* Create one.  Only this backend will write into it. */
 		sts_filename(name, accessor, accessor->participant);
-		accessor->write_file = BufFileCreateShared(accessor->fileset, name);
+		work_set = workfile_mgr_create_set("SharedTupleStore", name, false /* hold pin */);
+		accessor->write_file = BufFileCreateShared(accessor->fileset, name, work_set);
 
 		/* Set up the shared state for this backend's file. */
 		participant = &accessor->sts->participants[accessor->participant];

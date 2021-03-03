@@ -9,9 +9,10 @@
 //		Implementation of group job superclass
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroup.h"
+
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobGroup.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
 
@@ -30,10 +31,10 @@ void
 CJobGroup::Init(CGroup *pgroup)
 {
 	GPOS_ASSERT(!FInit());
-	GPOS_ASSERT(NULL != pgroup);
+	GPOS_ASSERT(nullptr != pgroup);
 
 	m_pgroup = pgroup;
-	m_pgexprLastScheduled = NULL;
+	m_pgexprLastScheduled = nullptr;
 }
 
 
@@ -48,13 +49,13 @@ CJobGroup::Init(CGroup *pgroup)
 CGroupExpression *
 CJobGroup::PgexprFirstUnschedNonLogical()
 {
-	CGroupExpression *pgexpr = NULL;
+	CGroupExpression *pgexpr = nullptr;
 	{
 		CGroupProxy gp(m_pgroup);
-		if (NULL == m_pgexprLastScheduled)
+		if (nullptr == m_pgexprLastScheduled)
 		{
 			// get first group expression
-			pgexpr = gp.PgexprSkipLogical(NULL /*pgexpr*/);
+			pgexpr = gp.PgexprSkipLogical(nullptr /*pgexpr*/);
 		}
 		else
 		{
@@ -78,10 +79,10 @@ CJobGroup::PgexprFirstUnschedNonLogical()
 CGroupExpression *
 CJobGroup::PgexprFirstUnschedLogical()
 {
-	CGroupExpression *pgexpr = NULL;
+	CGroupExpression *pgexpr = nullptr;
 	{
 		CGroupProxy gp(m_pgroup);
-		if (NULL == m_pgexprLastScheduled)
+		if (nullptr == m_pgexprLastScheduled)
 		{
 			// get first group expression
 			pgexpr = gp.PgexprFirst();

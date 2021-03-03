@@ -80,12 +80,14 @@ const char *basic_diff_opts = "-w";
 const char *pretty_diff_opts = "-w -U3";
 #endif
 
+_stringlist *setup_tests = NULL;
 /* options settable from command line */
 _stringlist *dblist = NULL;
 bool		debug = false;
 char	   *inputdir = ".";
 char	   *outputdir = ".";
 char	   *tablespacedir = ".";
+char	   *exclude_tests_file = "";
 char	   *prehook = "";
 char	   *bindir = PGBINDIR;
 char	   *launcher = NULL;
@@ -135,6 +137,8 @@ static int	success_count = 0;
 static int	fail_count = 0;
 static int	fail_ignore_count = 0;
 
+static bool halt_work = false;
+
 static bool directory_exists(const char *dir);
 static void make_directory(const char *dir);
 
@@ -148,6 +152,7 @@ static int run_diff(const char *cmd, const char *filename);
 
 static char *content_zero_hostname = NULL;
 static char *get_host_name(int16 contentid, char role);
+static bool cluster_healthy(void);
 
 /*
  * allow core files if possible.
@@ -226,6 +231,40 @@ split_to_stringlist(const char *s, const char *delim, _stringlist **listhead)
 		token = strtok(NULL, delim);
 	}
 	free(sc);
+}
+
+static void
+load_exclude_tests_file(_stringlist **listhead, const char *exclude_tests_file)
+{
+	char buf[1024];
+	FILE *excludefile;
+	int i;
+	excludefile = fopen(exclude_tests_file, "r");
+	if (!excludefile)
+	{
+		fprintf(stderr, _("\ncould not open file %s: %s\n"),
+				exclude_tests_file, strerror(errno));
+		_exit(2);
+	}
+	while (fgets(buf, sizeof(buf), excludefile))
+	{
+		i = strlen(buf);
+		if (buf[i-1] == '\n')
+			buf[i-1] = '\0';
+		add_stringlist_item(&exclude_tests, buf);
+	}
+	if (ferror(excludefile))
+	{
+		fprintf(stderr, _("\ncould not read file %s: %s\n"),
+				exclude_tests_file, strerror(errno));
+		_exit(2);
+	}
+	if (fclose(excludefile))
+	{
+		fprintf(stderr, _("\ncould not close file %s: %s\n"),
+				exclude_tests_file, strerror(errno));
+		_exit(2);
+	}
 }
 
 /*
@@ -2077,6 +2116,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		char	   *test = NULL;
 		char	   *c;
 		int			num_tests;
+		int			excluded_tests;
 		bool		inword;
 		int			i;
 		struct timeval start_time;
@@ -2114,6 +2154,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		}
 
 		num_tests = 0;
+		excluded_tests = 0;
 		inword = false;
 		for (c = test;; c++)
 		{
@@ -2142,7 +2183,10 @@ run_schedule(const char *schedule, test_function tfunc)
 					 * array, after all.
 					 */
 					if (should_exclude_test(tests[num_tests - 1]))
+					{
+						excluded_tests++;
 						num_tests--;
+					}
 				}
 				if (*c == '\0')
 					break;		/* loop exit is here */
@@ -2159,18 +2203,22 @@ run_schedule(const char *schedule, test_function tfunc)
 		if (num_tests - 1 >= 0 && should_exclude_test(tests[num_tests - 1]))
 		{
 			num_tests--;
-
-			/* All tests in this line are to be excluded, so go to the next line */
-			if (num_tests == 0)
-				continue;
+			excluded_tests++;
 		}
 
-		if (num_tests == 0)
+		if (num_tests == 0 && excluded_tests == 0)
 		{
 			fprintf(stderr, _("syntax error in schedule file \"%s\" line %d: %s\n"),
 					schedule, line_num, scbuf);
 			exit(2);
 		}
+
+		/* All tests in this line are to be excluded, so go to the next line */
+		if (num_tests == 0)
+			continue;
+
+		if (!cluster_healthy())
+			break;
 
 		gettimeofday(&start_time, NULL);
 		if (num_tests == 1)
@@ -2334,6 +2382,12 @@ run_single_test(const char *test, test_function tfunc)
 			   *el,
 			   *tl;
 	bool		differ = false;
+
+	if (!cluster_healthy())
+		return;
+
+	if (should_exclude_test((char *) test))
+		return;
 
 	status(_("test %-28s ... "), test);
 	pid = (tfunc) (test, &resultfiles, &expectfiles, &tags);
@@ -2510,6 +2564,7 @@ create_database(const char *dbname)
 		header(_("installing %s"), sl->str);
 		psql_command(dbname, "CREATE EXTENSION IF NOT EXISTS \"%s\"", sl->str);
 	}
+
 }
 
 static void
@@ -2564,7 +2619,7 @@ should_exclude_test(char *test)
 	_stringlist *sl;
 	for (sl = exclude_tests; sl != NULL; sl = sl->next)
 	{
-		if (strcmp(test, sl->str) == 0)
+		if (strncmp(test, sl->str, strlen(sl->str)) == 0)
 			return true;
 	}
 
@@ -2671,6 +2726,7 @@ help(void)
 	/* Please put GPDB specific options here, at the end */
 	printf(_("      --prehook=NAME            pre-hook name (default \"\")\n"));
 	printf(_("      --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
+	printf(_("      --exclude-file=FILE       file with tests to exclude from running, one test name per line\n"));
     printf(_("      --init-file=GPD_INIT_FILE  init file to be used for gpdiff (could be used multiple times)\n"));
 	printf(_("      --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("      --print-failure-diffs     Print the diff file to standard out after a failure\n"));
@@ -2728,6 +2784,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"prehook", required_argument, NULL, 83},
 		{"print-failure-diffs", no_argument, NULL, 84},
 		{"tablespace-dir", required_argument, NULL, 85},
+		{"exclude-file", required_argument, NULL, 87}, /* 86 conflicts with 'V' */
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2866,6 +2923,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
 			case 85:
 				tablespacedir = strdup(optarg);
+				break;
+			case 87:
+				exclude_tests_file = strdup(optarg);
+				load_exclude_tests_file(&exclude_tests, exclude_tests_file);
 				break;
 			default:
 				/* getopt_long already emitted a complaint */
@@ -3181,6 +3242,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		}
 	}
 
+#ifdef FAULT_INJECTOR
+	header(_("faultinjector enabled"));
+#else
+	header(_("faultinjector not enabled"));
+#endif
+
 	/*
 	 * Create the test database(s) and role(s)
 	 */
@@ -3211,12 +3278,17 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	 */
 	header(_("running regression test queries"));
 
-	for (sl = schedulelist; sl != NULL; sl = sl->next)
+	for (sl = setup_tests; sl != NULL && !halt_work; sl = sl->next)
+	{
+		run_single_test(sl->str, tfunc);
+	}
+
+	for (sl = schedulelist; sl != NULL && !halt_work; sl = sl->next)
 	{
 		run_schedule(sl->str, tfunc);
 	}
 
-	for (sl = extra_tests; sl != NULL; sl = sl->next)
+	for (sl = extra_tests; sl != NULL && !halt_work; sl = sl->next)
 	{
 		run_single_test(sl->str, tfunc);
 	}
@@ -3302,21 +3374,44 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	return 0;
 }
 
-static char *
-get_host_name(int16 contentid, char role)
+/*
+ * Issue a command via psql, connecting to the specified database
+ *
+ */
+static void
+psql_command_output(const char *database, char *buffer, int buf_len, const char *query,...)
 {
-	char psql_cmd[MAXPGPATH];
-	FILE       *fp;
-	char line[1024];
+	char		query_formatted[1024];
+	char		query_escaped[2048];
+	char		psql_cmd[MAXPGPATH + 2048];
+	va_list		args;
+	char	   *s;
+	char	   *d;
+	FILE *fp;
 	int len;
-	char *hostname = NULL;
 
+	/* Generate the query with insertion of sprintf arguments */
+	va_start(args, query);
+	vsnprintf(query_formatted, sizeof(query_formatted), query, args);
+	va_end(args);
+
+	/* Now escape any shell double-quote metacharacters */
+	d = query_escaped;
+	for (s = query_formatted; *s; s++)
+	{
+		if (strchr("\\\"$`", *s))
+			*d++ = '\\';
+		*d++ = *s;
+	}
+	*d = '\0';
+
+	/* And now we can build and execute the shell command */
 	len = snprintf(psql_cmd, sizeof(psql_cmd),
-			"\"%s%spsql\" -X -t -c \"select hostname from gp_segment_configuration where role=\'%c\' and content = %d;\" -d \"postgres\"",
+				   "\"%s%spsql\" -X -t -c \"%s\" \"%s\"",
 				   bindir ? bindir : "",
 				   bindir ? "/" : "",
-				   role,
-				   contentid);
+				   query_escaped,
+				   database);
 
 	if (len >= sizeof(psql_cmd))
 		exit(2);
@@ -3328,7 +3423,7 @@ get_host_name(int16 contentid, char role)
 		exit(2);
 	}
 
-	if (fgets(line, sizeof(line), fp) == NULL)
+	if (fgets(buffer, buf_len, fp) == NULL)
 	{
 		fprintf(stderr, "%s: cannot read the result\n", progname);
 		(void) pclose(fp);
@@ -3340,6 +3435,37 @@ get_host_name(int16 contentid, char role)
 		fprintf(stderr, "%s: cannot close shell command\n", progname);
 		exit(2);
 	}
+}
+
+static bool
+cluster_healthy(void)
+{
+	char line[1024];
+	psql_command_output("postgres", line, 1024,
+						"SELECT * FROM gp_segment_configuration WHERE status = 'd' OR preferred_role != role;");
+
+	halt_work = false;
+	if (strcmp(line, "\n") != 0)
+	{
+		fprintf(stderr, _("\n==================================\n"));
+		fprintf(stderr, _(" Cluster validation failed:\n%s"), line);
+		fprintf(stderr, _("==================================\n"));
+		halt_work = true;
+	}
+
+	return !halt_work;
+}
+
+static char *
+get_host_name(int16 contentid, char role)
+{
+	char line[1024];
+	char *hostname = NULL;
+
+	psql_command_output("postgres", line, 1024,
+						"SELECT hostname FROM gp_segment_configuration WHERE role=\'%c\' AND content = %d;",
+						role,
+						contentid);
 
 	hostname = psprintf("%s", trim_white_space(line));
 

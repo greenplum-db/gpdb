@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
+
 #include "naucrates/dxl/parser/CParseHandlerCost.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
@@ -31,8 +32,8 @@ CParseHandlerProperties::CParseHandlerProperties(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_properties(NULL),
-	  m_dxl_stats_derived_relation(NULL)
+	  m_dxl_properties(nullptr),
+	  m_dxl_stats_derived_relation(nullptr)
 {
 }
 
@@ -61,7 +62,7 @@ CParseHandlerProperties::~CParseHandlerProperties()
 CDXLPhysicalProperties *
 CParseHandlerProperties::GetProperties() const
 {
-	GPOS_ASSERT(NULL != m_dxl_properties);
+	GPOS_ASSERT(nullptr != m_dxl_properties);
 	return m_dxl_properties;
 }
 

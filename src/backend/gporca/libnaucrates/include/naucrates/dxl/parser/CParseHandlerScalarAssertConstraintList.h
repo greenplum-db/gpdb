@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerScalarAssertConstraintList.h
@@ -44,26 +44,25 @@ private:
 	// array of assert constraint nodes parsed so far
 	CDXLNodeArray *m_dxlnode_assert_constraints_parsed_array;
 
-	// private copy ctor
-	CParseHandlerScalarAssertConstraintList(
-		const CParseHandlerScalarAssertConstraintList &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerScalarAssertConstraintList(
+		const CParseHandlerScalarAssertConstraintList &) = delete;
+
 	// ctor
 	CParseHandlerScalarAssertConstraintList(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

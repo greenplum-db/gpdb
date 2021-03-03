@@ -7,7 +7,7 @@
  * conflicts when merging with upstream code.
  *
  *
- * Portions Copyright (c) 2017-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2017-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -815,7 +815,7 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "zstd") == 0))
 		{
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("Zstandard library is not supported by this build"),
@@ -979,7 +979,7 @@ validateAppendOnlyRelOptions(int blocksize,
 
 		if (comptype && (pg_strcasecmp(comptype, "zstd") == 0))
 		{
-#ifndef HAVE_LIBZSTD
+#ifndef USE_ZSTD
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("Zstandard library is not supported by this build"),
@@ -1311,7 +1311,7 @@ validateColumnStorageEncodingClauses(List *aocoColumnEncoding,
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		if (c->deflt)
 			continue;
@@ -1532,7 +1532,7 @@ transformAttributeEncoding(List *columns,
 	foreach(lc, stenc)
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		if (c->deflt)
 		{

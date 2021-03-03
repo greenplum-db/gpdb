@@ -13,16 +13,14 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/CRange.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CExpression.h"
+#include "gpopt/translate/CTranslatorExprToDXL.h"
+#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
-
-#include "gpopt/base/CRange.h"
-#include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/operators/CExpression.h"
-
-#include "gpopt/translate/CTranslatorExprToDXL.h"
 
 // fwd decl
 namespace gpmd
@@ -68,84 +66,6 @@ private:
 							  CColumnFactory *col_factory, IMDId *mdid,
 							  INT type_modifier, const WCHAR *wszName);
 
-	// find the partitioning level of the given part key, given the whole
-	// array of part keys
-	static ULONG UlPartKeyLevel(const CColRef *colref,
-								CColRef2dArray *pdrgpdrgpcr);
-
-	// construct a test for a partial scan given a part constraint
-	static CDXLNode *PdxlnPartialScanTest(CMemoryPool *mp,
-										  CMDAccessor *md_accessor,
-										  CColumnFactory *col_factory,
-										  CConstraint *pcnstr,
-										  CColRef2dArray *pdrgpdrgpcrPartKeys,
-										  BOOL fRangePart);
-
-	// construct a test for a conjunction or disjunction-based part constraint
-	static CDXLNode *PdxlnPartialScanTestConjDisj(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		CConstraintArray *pdrgpcnstr, BOOL fConjunction,
-		CColRef2dArray *pdrgpdrgpcrPartKeys, BOOL fRangePart);
-
-	// construct a test for a conjunction-based part constraint
-	static CDXLNode *PdxlnPartialScanTestConjunction(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		CConstraint *pcnstr, CColRef2dArray *pdrgpdrgpcrPartKeys,
-		BOOL fRangePart);
-
-	// construct a test for a disjunction-based part constraint
-	static CDXLNode *PdxlnPartialScanTestDisjunction(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		CConstraint *pcnstr, CColRef2dArray *pdrgpdrgpcrPartKeys,
-		BOOL fRangePart);
-
-	// construct a test for a negation-based part constraint
-	static CDXLNode *PdxlnPartialScanTestNegation(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		CConstraint *pcnstr, CColRef2dArray *pdrgpdrgpcrPartKeys,
-		BOOL fRangePart);
-
-	// construct a test for an interval-based part constraint
-	static CDXLNode *PdxlnPartialScanTestInterval(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CConstraint *pcnstr,
-		CColRef2dArray *pdrgpdrgpcrPartKeys, BOOL fRangePart);
-
-	// construct a test for a range in a part constraint
-	static CDXLNode *PdxlnPartialScanTestRange(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CRange *prng,
-		IMDId *pmdidPartKeyType, ULONG ulPartLevel, BOOL fRangePart);
-
-	// construct a test for testing range containment with respect to the
-	// start of the range
-	static CDXLNode *PdxlnRangeStartPredicate(CMemoryPool *mp,
-											  CMDAccessor *md_accessor,
-											  IDatum *datum,
-											  CRange::ERangeInclusion eri,
-											  IMDId *pmdidPartKeyType,
-											  ULONG ulPartLevel);
-
-
-	// construct a test for testing range containment with respect to the
-	// end of the range
-	static CDXLNode *PdxlnRangeEndPredicate(CMemoryPool *mp,
-											CMDAccessor *md_accessor,
-											IDatum *datum,
-											CRange::ERangeInclusion eri,
-											IMDId *pmdidPartKeyType,
-											ULONG ulPartLevel);
-
-	// construct a test for testing range containment with respect to the
-	// given point in the range using the provided inclusion (<= or >=)
-	// and exclusion comparison operators (< or >)
-	static CDXLNode *PdxlnRangePointPredicate(
-		CMemoryPool *mp, CMDAccessor *md_accessor, IDatum *datum,
-		CRange::ERangeInclusion eri, IMDId *pmdidPartKeyType,
-		IMDId *pmdidCmpExcl, IMDId *pmdidCmpIncl, ULONG ulPartLevel,
-		BOOL is_lower_bound);
-
-	// construct a test for the default partition
-	static CDXLNode *PdxlnDefaultPartitionTest(CMemoryPool *mp,
-											   ULONG ulPartLevel);
 
 	// compute a DXL datum from a point constraint
 	static CDXLDatum *PdxldatumFromPointConstraint(CMemoryPool *mp,
@@ -226,20 +146,6 @@ public:
 		CMemoryPool *mp, ULONG ulPartLevel, BOOL fLTComparison,
 		BOOL fGTComparison, BOOL fEQComparison, BOOL fDefaultPart);
 
-	// construct a test for partial scan in the partial partition propagator
-	static CDXLNode *PdxlnPartialScanTest(CMemoryPool *mp,
-										  CMDAccessor *md_accessor,
-										  CColumnFactory *col_factory,
-										  const CPartConstraint *ppartcnstr,
-										  CColRef2dArray *pdrgpdrgpcrPartKeys,
-										  CharPtrArray *pdrgszPartTypes);
-
-	// construct a nested if statement testing the constraints in the
-	// given part index map and propagating to the right part index id
-	static CDXLNode *PdxlnPropagationExpressionForPartConstraints(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		UlongToPartConstraintMap *ppartcnstrmap,
-		CColRef2dArray *pdrgpdrgpcrPartKeys, CharPtrArray *pdrgszPartTypes);
 
 	// check if the DXL Node is a scalar const TRUE
 	static BOOL FScalarConstTrue(CMDAccessor *md_accessor, CDXLNode *dxlnode);
@@ -265,13 +171,6 @@ public:
 		CDXLNode *pdxlnPrLChild, CColRef *pcrOid, ULONG ulPartLevels,
 		BOOL fGeneratePartOid);
 
-	// construct the propagation expression for a partition selector
-	static CDXLNode *PdxlnPropExprPartitionSelector(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CColumnFactory *col_factory,
-		BOOL fConditional, UlongToPartConstraintMap *ppartcnstrmap,
-		CColRef2dArray *pdrgpdrgpcrKeys, ULONG scan_id,
-		CharPtrArray *pdrgszPartTypes);
-
 	// create a DXL project elem node from as a scalar identifier for the
 	// child project element node
 	static CDXLNode *PdxlnProjElem(CMemoryPool *mp, CColumnFactory *col_factory,
@@ -282,6 +181,7 @@ public:
 	static CDXLNode *PdxlnIdent(CMemoryPool *mp,
 								ColRefToDXLNodeMap *phmcrdxlnSubplans,
 								ColRefToDXLNodeMap *phmcrdxlnIndexLookup,
+								ColRefToUlongMap *phmcrulPartColId,
 								const CColRef *colref);
 
 	// replace subplan entry in the given map with a dxl column reference
@@ -317,7 +217,7 @@ public:
 		CDXLPhysicalProperties *dxl_properties, CDXLNode *pdxlnPrL,
 		CDXLNode *pdxlnEqFilters, CDXLNode *pdxlnFilters,
 		CDXLNode *pdxlnResidual, CDXLNode *pdxlnPropagation,
-		CDXLNode *pdxlnPrintable, CDXLNode *child_dxlnode = NULL);
+		CDXLNode *pdxlnPrintable, CDXLNode *child_dxlnode = nullptr);
 
 	// create a DXL result node
 	static CDXLNode *PdxlnResult(CMemoryPool *mp,

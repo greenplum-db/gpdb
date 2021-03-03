@@ -20,7 +20,10 @@ OBJS = be-fsstubs.o be-secure.o be-secure-common.o auth.o crypt.o hba.o ifaddr.o
 
 ifeq ($(with_openssl),yes)
 OBJS += be-secure-openssl.o
-OBJS += fe-secure-openssl.o
+endif
+
+ifeq ($(with_gssapi),yes)
+OBJS += be-gssapi-common.o be-secure-gssapi.o
 endif
 
 # Greenplum objects follow
@@ -29,9 +32,14 @@ OBJS += fe-protocol3.o fe-connect.o \
 	fe-auth-scram.o \
         $(filter getpeereid.o, $(LIBOBJS))
 
-# Greenplum OPENSSL objects follow
+# Greenplum OpenSSL objects follow
 ifeq ($(with_openssl),yes)
-OBJS += fe-secure-common.o
+OBJS += fe-secure-common.o fe-secure-openssl.o
+endif
+
+# Greenplum GSSAPI objects follow
+ifeq ($(with_gssapi),yes)
+OBJS += fe-gssapi-common.o fe-secure-gssapi.o
 endif
 
 fe-protocol3.c fe-connect.c fe-exec.c pqexpbuffer.c fe-auth.c fe-auth-scram.c fe-misc.c fe-protocol2.c fe-secure.c fe-secure-openssl.c fe-secure-common.c fe-secure-gssapi.c fe-gssapi-common.c: % : $(top_srcdir)/src/interfaces/libpq/%
@@ -48,11 +56,7 @@ $(top_builddir)/src/port/pg_config_paths.h:
 clean distclean: clean-symlinks
 
 clean-symlinks:
-	rm -f fe-protocol3.c fe-connect.c fe-exec.c pqexpbuffer.c fe-auth.c fe-misc.c fe-protocol2.c fe-secure.c getpeereid.c fe-auth-scram.c fe-gssapi-common.c fe-secure-common.c fe-secure-gssapi.c
-
-ifeq ($(with_gssapi),yes)
-OBJS += be-gssapi-common.o be-secure-gssapi.o
-OBJS += fe-gssapi-common.o fe-secure-gssapi.o
-endif
+	rm -f fe-protocol3.c fe-connect.c fe-exec.c pqexpbuffer.c fe-auth.c fe-auth-scram.c fe-misc.c fe-protocol2.c fe-secure.c fe-secure-openssl.c fe-secure-common.c fe-secure-gssapi.c fe-gssapi-common.c
+	rm -f getpeereid.c
 
 include $(top_srcdir)/src/backend/common.mk

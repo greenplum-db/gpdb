@@ -12,6 +12,7 @@
 #define GPDXL_CDXLLogicalCTEConsumer_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
 
 namespace gpdxl
@@ -33,22 +34,21 @@ private:
 	// output column ids
 	ULongPtrArray *m_output_colids_array;
 
-	// private copy ctor
-	CDXLLogicalCTEConsumer(CDXLLogicalCTEConsumer &);
-
 public:
+	CDXLLogicalCTEConsumer(CDXLLogicalCTEConsumer &) = delete;
+
 	// ctor
 	CDXLLogicalCTEConsumer(CMemoryPool *mp, ULONG id,
 						   ULongPtrArray *output_colids_array);
 
 	// dtor
-	virtual ~CDXLLogicalCTEConsumer();
+	~CDXLLogicalCTEConsumer() override;
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// cte identifier
 	ULONG
@@ -64,23 +64,23 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// check if given column is defined by operator
-	virtual BOOL IsColDefined(ULONG colid) const;
+	BOOL IsColDefined(ULONG colid) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// conversion function
 	static CDXLLogicalCTEConsumer *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalCTEConsumer == dxl_op->GetDXLOperator());
 		return dynamic_cast<CDXLLogicalCTEConsumer *>(dxl_op);
 	}

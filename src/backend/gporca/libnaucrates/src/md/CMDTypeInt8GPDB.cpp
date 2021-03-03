@@ -16,16 +16,15 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
-
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 
-#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
-#include "naucrates/dxl/operators/CDXLDatum.h"
-#include "naucrates/dxl/operators/CDXLDatumInt8.h"
-#include "naucrates/dxl/CDXLUtils.h"
+#include "gpos/string/CWStringDynamic.h"
 
 #include "naucrates/base/CDatumInt8GPDB.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -54,8 +53,8 @@ CMDTypeInt8GPDB::CMDTypeInt8GPDB(CMemoryPool *mp) : m_mp(mp)
 	}
 	else
 	{
-		m_distr_opfamily = NULL;
-		m_legacy_distr_opfamily = NULL;
+		m_distr_opfamily = nullptr;
+		m_legacy_distr_opfamily = nullptr;
 	}
 	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_EQ_OP);
 	m_mdid_op_neq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_NEQ_OP);
@@ -196,7 +195,7 @@ CMDTypeInt8GPDB::GetMdidForCmpType(ECmpType cmp_type) const
 			return m_mdid_op_geq;
 		default:
 			GPOS_ASSERT(!"Invalid operator type");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -225,7 +224,7 @@ CMDTypeInt8GPDB::GetMdidForAggType(EAggType agg_type) const
 			return m_mdid_count;
 		default:
 			GPOS_ASSERT(!"Invalid aggregate type");
-			return NULL;
+			return nullptr;
 	}
 }
 

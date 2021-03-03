@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformPushGbDedupBelowJoin.cpp
@@ -9,12 +9,13 @@
 //		Implementation of pushing dedup group by below join transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformPushGbDedupBelowJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/xforms/CXformPushGbDedupBelowJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 

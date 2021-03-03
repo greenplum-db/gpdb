@@ -3,7 +3,7 @@
  *	   Interconnect code specific to TCP transport.
  *
  * Portions Copyright (c) 2005-2008, Greenplum, Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

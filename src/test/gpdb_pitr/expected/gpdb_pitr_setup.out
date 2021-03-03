@@ -146,20 +146,16 @@ SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
  10  
 (10 rows)
 
--- Run pg_switch_wal() so that the WAL segment files with the restore
+-- Run gp_switch_wal() so that the WAL segment files with the restore
 -- points are archived to the WAL Archive directories.
-SELECT true FROM pg_switch_wal();
- bool 
-------
- t    
-(1 row)
-SELECT (SELECT true FROM pg_switch_wal()) FROM gp_dist_random('gp_id');
+SELECT true FROM gp_switch_wal();
  bool 
 ------
  t    
  t    
  t    
-(3 rows)
+ t    
+(4 rows)
 
 -- Call a checkpoint to flush buffers (including the switch xlog record)
 CHECKPOINT;

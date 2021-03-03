@@ -68,15 +68,14 @@ private:
 	// apply transformation action
 	static EEvent EevtTransform(CSchedulerContext *psc, CJob *pj);
 
-	// private copy ctor
-	CJobTransformation(const CJobTransformation &);
-
 public:
+	CJobTransformation(const CJobTransformation &) = delete;
+
 	// ctor
 	CJobTransformation();
 
 	// dtor
-	virtual ~CJobTransformation();
+	~CJobTransformation() override;
 
 	// initialize job
 	void Init(CGroupExpression *pgexpr, CXform *pxform);
@@ -86,12 +85,12 @@ public:
 							CXform *pxform, CJob *pjParent);
 
 	// job's main function
-	virtual BOOL FExecute(CSchedulerContext *psc);
+	BOOL FExecute(CSchedulerContext *psc) override;
 
 #ifdef GPOS_DEBUG
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os);
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// dump state machine diagram in graphviz format
 	virtual IOstream &
@@ -116,7 +115,7 @@ public:
 	static CJobTransformation *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtTransformation == pj->Ejt());
 
 		return dynamic_cast<CJobTransformation *>(pj);

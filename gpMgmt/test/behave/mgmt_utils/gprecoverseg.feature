@@ -48,7 +48,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
-    Scenario: gprecoverseg displays pg_basebackup progress to the user
+    Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -60,6 +60,20 @@ Feature: gprecoverseg tests
         And gpAdminLogs directory has no "pg_basebackup*" files
         And all the segments are running
         And the segments are synchronized
+
+    Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user stops all primary processes
+        And user can start transactions
+        When the user runs "gprecoverseg -a -s"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each primary
+        And gpAdminLogs directory has no "pg_rewind*" files
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
         Given the database is running
@@ -135,6 +149,45 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And pg_isready reports all primaries are accepting connections
 
+    @demo_cluster
+    @concourse_cluster
+    Scenario Outline: <scenario> recovery skips unreachable segments
+      Given the database is running
+      And all the segments are running
+      And the segments are synchronized
+
+      And the primary on content 0 is stopped
+      And user can start transactions
+      And the primary on content 1 is stopped
+      And user can start transactions
+      And the status of the primary on content 0 should be "d"
+      And the status of the primary on content 1 should be "d"
+
+      And the host for the primary on content 1 is made unreachable
+
+      And the user runs psql with "-c 'CREATE TABLE IF NOT EXISTS foo (i int)'" against database "postgres"
+      And the user runs psql with "-c 'INSERT INTO foo SELECT generate_series(1, 10000)'" against database "postgres"
+
+      When the user runs "gprecoverseg <args>"
+      Then gprecoverseg should print "Not recovering segment \d because invalid_host is unreachable" to stdout
+      And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+      And the status of the primary on content 0 should be "u"
+      And the status of the primary on content 1 should be "d"
+
+      # Rebalance all possible segments and skip unreachable segment pairs.
+      When the user runs "gprecoverseg -ar"
+      Then gprecoverseg should return a return code of 0
+      And gprecoverseg should print "Not rebalancing primary segment dbid \d with its mirror dbid \d because one is either down, unreachable, or not synchronized" to stdout
+      And content 0 is balanced
+      And content 1 is unbalanced
+
+      And the user runs psql with "-c 'DROP TABLE foo'" against database "postgres"
+      And the cluster is returned to a good state
+
+      Examples:
+        | scenario    | args |
+        | incremental | -a   |
+        | full        | -aF  |
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
@@ -169,7 +222,6 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg full recovery testing
         Given the database is running
@@ -185,7 +237,6 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg with -i and -o option
         Given the database is running
@@ -204,7 +255,6 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg should not throw exception for empty input file
         Given the database is running
@@ -222,7 +272,6 @@ Feature: gprecoverseg tests
         Then all the segments are running
         And the segments are synchronized
 
-    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
         Given the database is running
@@ -237,10 +286,10 @@ Feature: gprecoverseg tests
         Then the saved "primary" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And gprecoverseg should print "Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
         And the segments are synchronized
         # validate the new segment has the correct setting by getting admin connection to that segment
@@ -281,3 +330,27 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+
+  @concourse_cluster
+  Scenario: moving mirror to a different host must work
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the information of a "mirror" segment on a remote host is saved
+        And the information of the corresponding primary segment on a remote host is saved
+       When user kills a "mirror" process with the saved information
+        And user can start transactions
+       Then the saved "mirror" segment is marked down in config
+       When the user runs "gprecoverseg -a -p mdw"
+       Then gprecoverseg should return a return code of 0
+       When user kills a "primary" process with the saved information
+        And user can start transactions
+       Then the saved "primary" segment is marked down in config
+       When the user runs "gprecoverseg -a"
+       Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+       When the user runs "gprecoverseg -ra"
+       Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized

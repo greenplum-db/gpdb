@@ -17,13 +17,12 @@
 #ifndef GPDXL_CTranslatorQueryToDXL_H
 #define GPDXL_CTranslatorQueryToDXL_H
 
+#include "gpos/base.h"
+
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
-#include "gpos/base.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
 
 // fwd declarations
@@ -64,22 +63,11 @@ class CTranslatorQueryToDXL
 {
 	friend class CTranslatorScalarToDXL;
 
-	// shorthand for functions for translating DXL nodes to GPDB expressions
-	typedef CDXLNode *(CTranslatorQueryToDXL::*DXLNodeToLogicalFunc)(
-		const RangeTblEntry *rte, ULONG rti, ULONG current_query_level);
-
 	// mapping RTEKind to WCHARs
 	struct SRTENameElem
 	{
 		RTEKind m_rtekind;
 		const WCHAR *m_rte_name;
-	};
-
-	// pair of RTEKind and its translators
-	struct SRTETranslator
-	{
-		RTEKind m_rtekind;
-		DXLNodeToLogicalFunc dxlnode_to_logical_funct;
 	};
 
 	// mapping CmdType to WCHARs
@@ -148,9 +136,6 @@ private:
 		HMUlCTEListEntry *
 			query_level_to_cte_map	// hash map between query level -> list of CTEs defined at that level
 	);
-
-	// private copy ctor
-	CTranslatorQueryToDXL(const CTranslatorQueryToDXL &);
 
 	// check for unsupported node types, throws an exception if an unsupported
 	// node is found
@@ -233,7 +218,8 @@ private:
 	// translate a query with grouping sets
 	CDXLNode *TranslateGroupingSets(
 		FromExpr *from_expr, List *target_list, List *group_clause,
-		BOOL has_aggs, IntToUlongMap *phmiulSortGrpColsColId,
+		List *grouping_set, BOOL has_aggs,
+		IntToUlongMap *phmiulSortGrpColsColId,
 		IntToUlongMap *output_attno_to_colid_mapping);
 
 	// expand the grouping sets into a union all operator
@@ -283,7 +269,7 @@ private:
 	);
 
 	// throws an exception when RTE kind not yet supported
-	void UnsupportedRTEKind(RTEKind rtekind) const;
+	[[noreturn]] void UnsupportedRTEKind(RTEKind rtekind) const;
 
 	// translate an entry of the from clause (this can either be FromExpr or JoinExpr)
 	CDXLNode *TranslateFromClauseToDXL(Node *node);
@@ -395,6 +381,11 @@ private:
 	// table of a DML query
 	void GetCtidAndSegmentId(ULONG *ctid, ULONG *segment_id);
 
+	// translate a grouping func expression
+	CDXLNode *TranslateGroupingFuncToDXL(
+		const Expr *expr, CBitSet *bitset,
+		UlongToUlongMap *grpcol_index_to_colid_mapping) const;
+
 	// construct a list of CTE producers from the query's CTE list
 	void ConstructCTEProducerList(List *cte_list, ULONG query_level);
 
@@ -421,6 +412,8 @@ private:
 	BOOL IsDMLQuery();
 
 public:
+	CTranslatorQueryToDXL(const CTranslatorQueryToDXL &) = delete;
+
 	// dtor
 	~CTranslatorQueryToDXL();
 

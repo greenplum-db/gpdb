@@ -15,10 +15,9 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/IMDTypeGeneric.h"
-#include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/CGPDBTypeHelper.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDTypeGeneric.h"
 
 // some metadata ids for types that don't have their specific header files (yet)
 // keep this in sync with Postgres file pg_operator.h
@@ -71,8 +70,11 @@ private:
 	// is this a fixed-length type
 	BOOL m_is_fixed_length;
 
+	// FIXME: we seem to only use m_gpdb_length here, why?
+#ifdef GPOS_DEBUG
 	// type length in number of bytes for fixed-length types, 0 otherwise
 	ULONG m_length;
+#endif
 
 	// is type passed by value or by reference
 	BOOL m_is_passed_by_value;
@@ -141,10 +143,9 @@ private:
 	// a null datum of this type (used for statistics comparison)
 	IDatum *m_datum_null;
 
-	// private copy ctor
-	CMDTypeGenericGPDB(const CMDTypeGenericGPDB &);
-
 public:
+	CMDTypeGenericGPDB(const CMDTypeGenericGPDB &) = delete;
+
 	// ctor
 	CMDTypeGenericGPDB(
 		CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_redistributable,
@@ -158,103 +159,103 @@ public:
 		IMDId *mdid_base_relation, IMDId *mdid_type_array, INT gpdb_length);
 
 	// dtor
-	virtual ~CMDTypeGenericGPDB();
+	~CMDTypeGenericGPDB() override;
 
 	// accessors
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
-	virtual BOOL IsRedistributable() const;
+	BOOL IsRedistributable() const override;
 
-	virtual BOOL
-	IsFixedLength() const
+	BOOL
+	IsFixedLength() const override
 	{
 		return m_is_fixed_length;
 	}
 
 	// is type composite
-	virtual BOOL
-	IsComposite() const
+	BOOL
+	IsComposite() const override
 	{
 		return m_is_composite_type;
 	}
 
-	virtual ULONG
-	Length() const
+	ULONG
+	Length() const override
 	{
 		return m_gpdb_length;
 	}
 
-	virtual BOOL
-	IsPassedByValue() const
+	BOOL
+	IsPassedByValue() const override
 	{
 		return m_is_passed_by_value;
 	}
 
 	// id of specified comparison operator type
-	virtual IMDId *GetMdidForCmpType(ECmpType ecmpt) const;
+	IMDId *GetMdidForCmpType(ECmpType ecmpt) const override;
 
 	// id of specified specified aggregate type
-	virtual IMDId *GetMdidForAggType(EAggType agg_type) const;
+	IMDId *GetMdidForAggType(EAggType agg_type) const override;
 
-	virtual const IMDId *
-	CmpOpMdid() const
+	const IMDId *
+	CmpOpMdid() const override
 	{
 		return m_mdid_op_cmp;
 	}
 
 	// is type hashable
-	virtual BOOL
-	IsHashable() const
+	BOOL
+	IsHashable() const override
 	{
 		return m_is_hashable;
 	}
 
-	virtual BOOL
-	IsTextRelated() const
+	BOOL
+	IsTextRelated() const override
 	{
 		return m_is_text_related;
 	}
 
 	// is type merge joinable on '='
-	virtual BOOL
-	IsMergeJoinable() const
+	BOOL
+	IsMergeJoinable() const override
 	{
 		return m_is_merge_joinable;
 	}
 
 	// id of the relation corresponding to a composite type
-	virtual IMDId *
-	GetBaseRelMdid() const
+	IMDId *
+	GetBaseRelMdid() const override
 	{
 		return m_mdid_base_relation;
 	}
 
-	virtual IMDId *
-	GetArrayTypeMdid() const
+	IMDId *
+	GetArrayTypeMdid() const override
 	{
 		return m_mdid_type_array;
 	}
 
-	virtual IMDId *GetDistrOpfamilyMdid() const;
+	IMDId *GetDistrOpfamilyMdid() const override;
 
 	// serialize object in DXL format
-	virtual void Serialize(gpdxl::CXMLSerializer *xml_serializer) const;
+	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;
 
 	// factory method for generating generic datum from CDXLScalarConstValue
-	virtual IDatum *GetDatumForDXLConstVal(
-		const CDXLScalarConstValue *dxl_op) const;
+	IDatum *GetDatumForDXLConstVal(
+		const CDXLScalarConstValue *dxl_op) const override;
 
 	// create typed datum from DXL datum
-	virtual IDatum *GetDatumForDXLDatum(CMemoryPool *mp,
-										const CDXLDatum *dxl_datum) const;
+	IDatum *GetDatumForDXLDatum(CMemoryPool *mp,
+								const CDXLDatum *dxl_datum) const override;
 
 	// return the GPDB length
 	virtual INT
@@ -264,29 +265,29 @@ public:
 	}
 
 	// return the null constant for this type
-	virtual IDatum *
-	DatumNull() const
+	IDatum *
+	DatumNull() const override
 	{
 		return m_datum_null;
 	}
 
 	// generate the DXL datum from IDatum
-	virtual CDXLDatum *GetDatumVal(CMemoryPool *mp, IDatum *datum) const;
+	CDXLDatum *GetDatumVal(CMemoryPool *mp, IDatum *datum) const override;
 
 	// generate the DXL datum representing null value
-	virtual CDXLDatum *GetDXLDatumNull(CMemoryPool *mp) const;
+	CDXLDatum *GetDXLDatumNull(CMemoryPool *mp) const override;
 
 	// generate the DXL scalar constant from IDatum
-	virtual CDXLScalarConstValue *GetDXLOpScConst(CMemoryPool *mp,
-												  IDatum *datum) const;
+	CDXLScalarConstValue *GetDXLOpScConst(CMemoryPool *mp,
+										  IDatum *datum) const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the type in the provided stream
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 
 	// is type an ambiguous one? e.g., AnyElement in GPDB
-	virtual BOOL IsAmbiguous() const;
+	BOOL IsAmbiguous() const override;
 
 	// create a dxl datum
 	static CDXLDatum *CreateDXLDatumVal(CMemoryPool *mp, IMDId *mdid,
@@ -305,6 +306,10 @@ public:
 		CMemoryPool *mp, IMDId *mdid, INT type_modifier, BOOL is_null,
 		BYTE *byte_array, ULONG length, LINT lint_Value, CDouble double_Value);
 
+	// create a NULL constant for this type
+	IDatum *CreateGenericNullDatum(CMemoryPool *mp,
+								   INT type_modifier) const override;
+
 	// does a datum of this type need bytea to Lint mapping for statistics computation
 	static BOOL HasByte2IntMapping(const IMDType *mdtype);
 
@@ -313,6 +318,21 @@ public:
 
 	// is this a time-related type
 	static BOOL IsTimeRelatedType(const IMDId *mdid);
+
+	// is this a time-related type mappable to DOUBLE
+	static BOOL
+	IsTimeRelatedTypeMappableToDouble(const IMDId *mdid)
+	{
+		return IsTimeRelatedType(mdid) &&
+			   !IsTimeRelatedTypeMappableToLint(mdid);
+	}
+
+	// is this a time-related type mappable to LINT
+	static inline BOOL
+	IsTimeRelatedTypeMappableToLint(const IMDId *mdid)
+	{
+		return mdid->Equals(&CMDIdGPDB::m_mdid_date);
+	}
 
 	// is this a network-related type
 	static BOOL IsNetworkRelatedType(const IMDId *mdid);

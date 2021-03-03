@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDMLTest.cpp
@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for optimizing DML queries
 //---------------------------------------------------------------------------
+
+#include "unittest/gpopt/minidump/CDMLTest.h"
 
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
@@ -18,8 +20,6 @@
 #include "gpopt/minidump/CMinidumperUtils.h"
 
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "unittest/gpopt/minidump/CDMLTest.h"
 
 using namespace gpopt;
 

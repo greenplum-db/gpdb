@@ -11,7 +11,6 @@
 #include "naucrates/dxl/operators/CDXLScalarMergeCondList.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -93,7 +92,7 @@ void
 CDXLScalarMergeCondList::AssertValid(const CDXLNode *node,
 									 BOOL validate_children) const
 {
-	GPOS_ASSERT(NULL != node);
+	GPOS_ASSERT(nullptr != node);
 
 	const ULONG arity = node->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)

@@ -9,13 +9,14 @@
 //		Implementation of scalar constant operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarConst.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-#include "naucrates/base/IDatumBool.h"
-#include "gpopt/operators/CScalarConst.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "naucrates/base/IDatumBool.h"
 
 using namespace gpopt;
 using namespace gpnaucrates;
@@ -32,7 +33,7 @@ using namespace gpmd;
 CScalarConst::CScalarConst(CMemoryPool *mp, IDatum *datum)
 	: CScalar(mp), m_pdatum(datum)
 {
-	GPOS_ASSERT(NULL != datum);
+	GPOS_ASSERT(nullptr != datum);
 }
 
 
@@ -131,7 +132,7 @@ CScalarConst::OsPrint(IOstream &os) const
 BOOL
 CScalarConst::FCastedConst(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	// cast(constant)
 	if (COperator::EopScalarCast == pexpr->Pop()->Eopid())
@@ -158,7 +159,7 @@ CScalarConst::FCastedConst(CExpression *pexpr)
 CScalarConst *
 CScalarConst::PopExtractFromConstOrCastConst(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	BOOL fScConst = COperator::EopScalarConst == pexpr->Pop()->Eopid();
 	BOOL fCastedScConst = CScalarConst::FCastedConst(pexpr);
@@ -166,7 +167,7 @@ CScalarConst::PopExtractFromConstOrCastConst(CExpression *pexpr)
 	// constant or cast(constant)
 	if (!fScConst && !fCastedScConst)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	if (fScConst)

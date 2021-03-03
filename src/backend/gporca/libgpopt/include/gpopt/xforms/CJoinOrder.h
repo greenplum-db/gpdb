@@ -12,8 +12,9 @@
 #define GPOPT_CJoinOrder_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CExpression.h"
 #include "gpos/io/IOstream.h"
+
+#include "gpopt/operators/CExpression.h"
 
 // id for component created for relational nodes which are not
 // the child of LOJ
@@ -72,7 +73,7 @@ public:
 		SEdge(CMemoryPool *mp, CExpression *pexpr, ULONG loj_num);
 
 		// dtor
-		~SEdge();
+		~SEdge() override;
 
 		// print routine
 		IOstream &OsPrint(IOstream &os) const;
@@ -162,7 +163,7 @@ public:
 				   EPosition position = EpSentinel);
 
 		// dtor
-		~SComponent();
+		~SComponent() override;
 
 		// get parent loj id
 		INT
@@ -220,10 +221,9 @@ protected:
 					  EPosition position, INT comp_num);
 
 private:
-	// private copy ctor
-	CJoinOrder(const CJoinOrder &);
-
 public:
+	CJoinOrder(const CJoinOrder &) = delete;
+
 	// ctor used in MinCard, Greedy and DP xforms
 	CJoinOrder(CMemoryPool *mp, CExpressionArray *pdrgpexprComponents,
 			   CExpressionArray *pdrgpexprConjuncts,
@@ -238,7 +238,7 @@ public:
 	virtual ~CJoinOrder();
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	// is this a valid join combination
 	BOOL IsValidJoinCombination(SComponent *comp1, SComponent *comp2) const;

@@ -18,10 +18,10 @@
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/CScalarArrayCmp.h"
-#include "gpopt/operators/CScalarConst.h"
-#include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarAggFunc.h"
+#include "gpopt/operators/CScalarArrayCmp.h"
+#include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarConst.h"
 
 // fwd declarations
 namespace gpmd
@@ -216,7 +216,7 @@ public:
 	static CExpression *PexprScalarOp(CMemoryPool *mp, const CColRef *pcrLeft,
 									  CExpression *pexpr, CWStringConst strOp,
 									  IMDId *mdid_op,
-									  IMDId *return_type_mdid = NULL);
+									  IMDId *return_type_mdid = nullptr);
 
 	// generate a scalar bool op expression
 	static CExpression *PexprScalarBoolOp(CMemoryPool *mp,
@@ -240,7 +240,7 @@ public:
 		CMemoryPool *mp, IMDId *pmdidAggFunc, const CWStringConst *pstrAggFunc,
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
 		IMDId *pmdidResolvedReturnType =
-			NULL  // return type to be used if original return type is ambiguous
+			nullptr	 // return type to be used if original return type is ambiguous
 	);
 
 	// generate an aggregate function
@@ -324,7 +324,7 @@ public:
 	// to the map 'colref_mapping', and add the mappings to the colref_mapping map if not NULL
 	static CExpression *PexprLogicalProjectNulls(
 		CMemoryPool *mp, CColRefArray *colref_array, CExpression *pexpr,
-		UlongToColRefMap *colref_mapping = NULL);
+		UlongToColRefMap *colref_mapping = nullptr);
 
 	// construct a project list using the given columns and datums
 	// store the mapping in the colref_mapping map if not NULL
@@ -395,28 +395,28 @@ public:
 	static CExpression *PexprLogicalApply(CMemoryPool *mp,
 										  CExpression *pexprLeft,
 										  CExpression *pexprRight,
-										  CExpression *pexprPred = NULL);
+										  CExpression *pexprPred = nullptr);
 
 	// generate an apply expression with a known inner column
 	template <class T>
 	static CExpression *PexprLogicalApply(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		const CColRef *pcrInner, COperator::EOperatorId eopidOriginSubq,
-		CExpression *pexprPred = NULL);
+		CExpression *pexprPred = nullptr);
 
 	// generate an apply expression with a known array of inner columns
 	template <class T>
 	static CExpression *PexprLogicalApply(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		CColRefArray *pdrgpcrInner, COperator::EOperatorId eopidOriginSubq,
-		CExpression *pexprPred = NULL);
+		CExpression *pexprPred = nullptr);
 
 	// generate a correlated apply for quantified subquery with a known array of inner columns
 	template <class T>
 	static CExpression *PexprLogicalCorrelatedQuantifiedApply(
 		CMemoryPool *mp, CExpression *pexprLeft, CExpression *pexprRight,
 		CColRefArray *pdrgpcrInner, COperator::EOperatorId eopidOriginSubq,
-		CExpression *pexprPred = NULL);
+		CExpression *pexprPred = nullptr);
 
 	//-------------------------------------------------------------------
 	// Helpers for partitioning
@@ -549,8 +549,8 @@ public:
 	// check if a given operator is a physical join
 	static BOOL FPhysicalJoin(COperator *pop);
 
-	// check if a given operator is a physical outer join
-	static BOOL FPhysicalOuterJoin(COperator *pop);
+	// check if a given operator is a physical left outer join
+	static BOOL FPhysicalLeftOuterJoin(COperator *pop);
 
 	// check if a given operator is a physical scan
 	static BOOL FPhysicalScan(COperator *pop);
@@ -820,10 +820,9 @@ public:
 	// create an array of new column references with the same names and
 	// types as the given column references.
 	// if the passed map is not null, mappings from old to copied variables are added to it
-	static CColRefArray *PdrgpcrCopy(CMemoryPool *mp,
-									 CColRefArray *colref_array,
-									 BOOL fAllComputed = false,
-									 UlongToColRefMap *colref_mapping = NULL);
+	static CColRefArray *PdrgpcrCopy(
+		CMemoryPool *mp, CColRefArray *colref_array, BOOL fAllComputed = false,
+		UlongToColRefMap *colref_mapping = nullptr);
 
 	// equality check between two arrays of column refs. Inputs can be NULL
 	static BOOL Equals(CColRefArray *pdrgpcrFst, CColRefArray *pdrgpcrSnd);
@@ -870,31 +869,12 @@ public:
 	// return a new bitset, setting the bits in the given array
 	static CBitSet *Pbs(CMemoryPool *mp, ULongPtrArray *pdrgpul);
 
-	// create a hashmap of constraints corresponding to a bool const on the given partkeys
-	static UlongToConstraintMap *PhmulcnstrBoolConstOnPartKeys(
-		CMemoryPool *mp, CColRef2dArray *pdrgpdrgpcrPartKey, BOOL value);
-
-	// extract part constraint from metadata
-	// if 'mdpart_constraint' is not NULL and 'fDummyConstraint' is true, then the partition constraint
-	// will be marked as `dummy' and the constraint expression will not be computed
-	static CPartConstraint *PpartcnstrFromMDPartCnstr(
-		CMemoryPool *mp, CMDAccessor *md_accessor,
-		CColRef2dArray *pdrgpdrgpcrPartKey,
-		const IMDPartConstraint *mdpart_constraint, CColRefArray *pdrgpcrOutput,
-		BOOL fDummyConstraint = false);
-
 	// helper to create a dummy constant table expression
 	static CExpression *PexprLogicalCTGDummy(CMemoryPool *mp);
 
 	// map a column from source array to destination array based on position
 	static CColRef *PcrMap(CColRef *pcrSource, CColRefArray *pdrgpcrSource,
 						   CColRefArray *pdrgpcrTarget);
-
-	// check if group expression is a motion and there is an unresolved consumer
-	// not specified in the required properties
-	static BOOL FMotionOverUnresolvedPartConsumers(CMemoryPool *mp,
-												   CExpressionHandle &exprhdl,
-												   CPartIndexMap *ppimReqd);
 
 	//	return index of the set containing given column
 	static ULONG UlPcrIndexContainingSet(CColRefSetArray *pdrgpcrs,
@@ -1010,9 +990,9 @@ CExpression *
 CUtils::PexprLogicalJoin(CMemoryPool *mp, CExpression *pexprLeft,
 						 CExpression *pexprRight, CExpression *pexprPredicate)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pexprPredicate);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pexprPredicate);
 
 	return GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) T(mp), pexprLeft,
 									pexprRight, pexprPredicate);
@@ -1031,11 +1011,11 @@ CExpression *
 CUtils::PexprLogicalApply(CMemoryPool *mp, CExpression *pexprLeft,
 						  CExpression *pexprRight, CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1060,12 +1040,12 @@ CUtils::PexprLogicalApply(CMemoryPool *mp, CExpression *pexprLeft,
 						  COperator::EOperatorId eopidOriginSubq,
 						  CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pcrInner);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pcrInner);
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1092,13 +1072,13 @@ CUtils::PexprLogicalApply(CMemoryPool *mp, CExpression *pexprLeft,
 						  COperator::EOperatorId eopidOriginSubq,
 						  CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pdrgpcrInner);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pdrgpcrInner);
 	GPOS_ASSERT(0 < pdrgpcrInner->Size());
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1123,13 +1103,13 @@ CUtils::PexprLogicalCorrelatedQuantifiedApply(
 	CColRefArray *pdrgpcrInner, COperator::EOperatorId eopidOriginSubq,
 	CExpression *pexprPred)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
-	GPOS_ASSERT(NULL != pdrgpcrInner);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
+	GPOS_ASSERT(nullptr != pdrgpcrInner);
 	GPOS_ASSERT(0 < pdrgpcrInner->Size());
 
 	CExpression *pexprScalar = pexprPred;
-	if (NULL == pexprPred)
+	if (nullptr == pexprPred)
 	{
 		pexprScalar = PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1176,8 +1156,8 @@ void
 CUtils::AddRefAppend(CDynamicPtrArray<T, CleanupFn> *pdrgptOutput,
 					 CDynamicPtrArray<T, CleanupFn> *pdrgptInput, ULONG ulStart)
 {
-	GPOS_ASSERT(NULL != pdrgptOutput);
-	GPOS_ASSERT(NULL != pdrgptInput);
+	GPOS_ASSERT(nullptr != pdrgptOutput);
+	GPOS_ASSERT(nullptr != pdrgptInput);
 
 	const ULONG size = pdrgptInput->Size();
 	GPOS_ASSERT_IMP(0 < size, ulStart < size);
@@ -1204,7 +1184,7 @@ template <class T>
 BOOL
 CUtils::FScalarConstInt(CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 
 	IMDType::ETypeInfo type_info = T::GetTypeInfo();
 	GPOS_ASSERT(IMDType::EtiInt2 == type_info ||
@@ -1277,13 +1257,10 @@ CUtils::FMatchDynamicIndex(T *pop1, COperator *pop2)
 	// indexes.
 	return pop1->UlOriginOpId() == popIndex2->UlOriginOpId() &&
 		   pop1->ScanId() == popIndex2->ScanId() &&
-		   pop1->UlSecondaryScanId() == popIndex2->UlSecondaryScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popIndex2->Ptabdesc()->MDId()) &&
 		   pop1->Pindexdesc()->MDId()->Equals(
 			   popIndex2->Pindexdesc()->MDId()) &&
-		   pop1->PdrgpcrOutput()->Equals(popIndex2->PdrgpcrOutput()) &&
-		   (!pop1->IsPartial() ||
-			(pop1->Ppartcnstr() == popIndex2->Ppartcnstr()));
+		   pop1->PdrgpcrOutput()->Equals(popIndex2->PdrgpcrOutput());
 }
 
 //---------------------------------------------------------------------------
@@ -1311,11 +1288,8 @@ CUtils::FMatchDynamicScan(T *pop1, COperator *pop2)
 	// memory allocation because matching function was used while holding spin locks.
 	// Using a match function would mean improved matches for partial scans.
 	return pop1->ScanId() == popScan2->ScanId() &&
-		   pop1->UlSecondaryScanId() == popScan2->UlSecondaryScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popScan2->Ptabdesc()->MDId()) &&
-		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput()) &&
-		   ((!pop1->IsPartial() && !popScan2->IsPartial()) ||
-			(pop1->Ppartcnstr() == popScan2->Ppartcnstr()));
+		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput());
 }
 
 

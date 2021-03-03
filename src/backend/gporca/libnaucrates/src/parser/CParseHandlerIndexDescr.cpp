@@ -18,10 +18,9 @@
 
 #include "naucrates/dxl/parser/CParseHandlerIndexDescr.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -40,7 +39,7 @@ CParseHandlerIndexDescr::CParseHandlerIndexDescr(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_index_descr(NULL)
+	  m_dxl_index_descr(nullptr)
 {
 }
 

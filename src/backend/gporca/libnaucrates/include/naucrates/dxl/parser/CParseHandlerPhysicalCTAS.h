@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc
+//	Copyright (C) 2014 VMware, Inc. or its affiliates
 //
 //	@filename:
 //		CParseHandlerPhysicalCTAS.h
@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerPhysicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDRelation.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/md/IMDRelation.h"
 
 
 namespace gpdxl
@@ -61,25 +62,24 @@ private:
 	// storage type
 	IMDRelation::Erelstoragetype m_rel_storage_type;
 
-	// private copy ctor
-	CParseHandlerPhysicalCTAS(const CParseHandlerPhysicalCTAS &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerPhysicalCTAS(const CParseHandlerPhysicalCTAS &) = delete;
+
 	// ctor
 	CParseHandlerPhysicalCTAS(CMemoryPool *mp,
 							  CParseHandlerManager *parse_handler_mgr,

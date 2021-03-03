@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CStatsPredUnsupported.cpp
@@ -9,8 +9,9 @@
 //		Implementation of unsupported statistics predicate
 //---------------------------------------------------------------------------
 
-#include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
+
+#include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpnaucrates;

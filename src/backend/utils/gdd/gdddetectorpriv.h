@@ -4,7 +4,7 @@
  *	  Global DeadLock Detector - Detector Algorithm Private Structs
  *
  *
- * Copyright (c) 2019-Present Pivotal Software, Inc.
+ * Copyright (c) 2019-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------

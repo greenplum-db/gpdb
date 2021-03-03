@@ -9,14 +9,14 @@
 //		Implementation of Intersect all operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalIntersectAll.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalIntersectAll.h"
-#include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
 #include "naucrates/statistics/CStatsPredUtils.h"
 
 using namespace gpopt;
@@ -57,9 +57,7 @@ CLogicalIntersectAll::CLogicalIntersectAll(CMemoryPool *mp,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CLogicalIntersectAll::~CLogicalIntersectAll()
-{
-}
+CLogicalIntersectAll::~CLogicalIntersectAll() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -125,7 +123,7 @@ CLogicalIntersectAll::DeriveKeyCollection(CMemoryPool *,	   //mp,
 ) const
 {
 	// TODO: Add the keys from outer and inner child
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

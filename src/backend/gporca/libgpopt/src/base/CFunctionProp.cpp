@@ -9,9 +9,9 @@
 //		Implementation of function properties
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/base/CFunctionProp.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 
@@ -45,9 +45,7 @@ CFunctionProp::CFunctionProp(IMDFunction::EFuncStbl func_stability,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CFunctionProp::~CFunctionProp()
-{
-}
+CFunctionProp::~CFunctionProp() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CTVFTest.cpp
@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for optimizing queries with TVF
 //---------------------------------------------------------------------------
+
+#include "unittest/gpopt/minidump/CTVFTest.h"
 
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
@@ -18,8 +20,6 @@
 #include "gpopt/minidump/CMinidumperUtils.h"
 
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "unittest/gpopt/minidump/CTVFTest.h"
 
 using namespace gpopt;
 

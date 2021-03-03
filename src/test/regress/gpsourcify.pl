@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
 # Portions Copyright (c) 2007-2012 GreenPlum.  All rights reserved.
-# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+# Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
 #
 # Author: Jeffrey I Cohen
 #
@@ -78,7 +78,7 @@ source directory references are less common, and usually followed by
 Jeffrey I Cohen
 
 Portions Copyright (c) 2007-2012 GreenPlum.  All rights reserved.
-Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
 
 Address bug reports and comments to: bugs@greenplum.org
 

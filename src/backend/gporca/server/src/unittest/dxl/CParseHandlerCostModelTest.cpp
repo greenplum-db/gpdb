@@ -1,34 +1,31 @@
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 
 
-
-#include <xercesc/util/XercesDefs.hpp>
-#include <xercesc/sax2/SAX2XMLReader.hpp>
-#include <xercesc/sax2/XMLReaderFactory.hpp>
-#include <xercesc/framework/MemBufInputSource.hpp>
 
 #include "unittest/dxl/CParseHandlerCostModelTest.h"
 
 #include <memory>
-
-#include "gpdbcost/CCostModelGPDB.h"
-#include "gpdbcost/CCostModelParamsGPDB.h"
-#include "gpdbcost/CCostModelParamsGPDBLegacy.h"
-
+#include <xercesc/framework/MemBufInputSource.hpp>
+#include <xercesc/sax2/SAX2XMLReader.hpp>
+#include <xercesc/sax2/XMLReaderFactory.hpp>
+#include <xercesc/util/XercesDefs.hpp>
 
 #include "gpos/base.h"
-#include "gpos/test/CUnittest.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CAutoRg.h"
 #include "gpos/io/COstreamString.h"
+#include "gpos/memory/CAutoMemoryPool.h"
+#include "gpos/test/CUnittest.h"
+
+#include "gpdbcost/CCostModelGPDB.h"
+#include "gpdbcost/CCostModelParamsGPDB.h"
+#include "naucrates/dxl/CCostModelConfigSerializer.h"
 #include "naucrates/dxl/parser/CParseHandlerCostModel.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
-#include "naucrates/dxl/CCostModelConfigSerializer.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
@@ -57,7 +54,7 @@ public:
 		  m_apphm(GPOS_NEW(Pmp()) CParseHandlerManager(GetDXLMemoryManager(),
 													   Pxmlreader())),
 		  m_apphCostModel(GPOS_NEW(Pmp())
-							  CParseHandlerCostModel(Pmp(), Pphm(), NULL))
+							  CParseHandlerCostModel(Pmp(), Pphm(), nullptr))
 	{
 		m_apphm->ActivateParseHandler(PphCostModel());
 	}
@@ -164,41 +161,11 @@ Eres_SerializeCalibratedCostModel()
 	return gpos::GPOS_OK;
 }
 
-static gpos::GPOS_RESULT
-Eres_ParseLegacyCostModel()
-{
-	const CHAR dxl_filename[] =
-		"../data/dxl/parse_tests/CostModelConfigLegacy.xml";
-	Fixture fixture;
-
-	CMemoryPool *mp = fixture.Pmp();
-
-	gpos::CAutoRg<CHAR> a_szDXL(CDXLUtils::Read(mp, dxl_filename));
-
-	CParseHandlerCostModel *pphcm = fixture.PphCostModel();
-
-	fixture.Parse((const XMLByte *) a_szDXL.Rgt(), strlen(a_szDXL.Rgt()));
-
-	ICostModel *pcm = pphcm->GetCostModel();
-
-	GPOS_RTL_ASSERT(ICostModel::EcmtGPDBLegacy == pcm->Ecmt());
-	GPOS_RTL_ASSERT(3 == pcm->UlHosts());
-
-	CAutoRef<CCostModelParamsGPDBLegacy> pcpExpected(
-		GPOS_NEW(mp) CCostModelParamsGPDBLegacy(mp));
-	GPOS_RTL_ASSERT(pcpExpected->Equals(pcm->GetCostModelParams()));
-
-	return gpos::GPOS_OK;
-}
-
 gpos::GPOS_RESULT
 CParseHandlerCostModelTest::EresUnittest()
 {
-	CUnittest rgut[] = {
-		GPOS_UNITTEST_FUNC(Eres_ParseCalibratedCostModel),
-		GPOS_UNITTEST_FUNC(Eres_SerializeCalibratedCostModel),
-		GPOS_UNITTEST_FUNC(Eres_ParseLegacyCostModel),
-	};
+	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(Eres_ParseCalibratedCostModel),
+						GPOS_UNITTEST_FUNC(Eres_SerializeCalibratedCostModel)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }

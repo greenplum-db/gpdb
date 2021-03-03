@@ -8,7 +8,7 @@
       collection of data science-related R libraries that can be used with the Greenplum Database
       PL/R language. You can download these libraries in <codeph>.gppkg</codeph> format from <xref
         href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-        >Pivotal Network</xref>.</p>
+        >VMware Tanzu Network</xref>.</p>
     <p>This chapter contains the following information:</p>
     <ul>
       <li id="py2177">
@@ -173,7 +173,7 @@
         <li>Locate the R Data Science library package that you built or downloaded.<p>The file name
             format of the package is
               <codeph>DataScienceR-&lt;version&gt;-relhel&lt;N&gt;_x86_64.gppkg</codeph>.</p></li>
-        <li>Copy the package to the Greenplum Database master host.</li>
+        <li>Copy the package to the Greenplum Database coordinator host.</li>
         <li>Use the <codeph>gppkg</codeph> command to install the package. For
               example:<codeblock>$ gppkg -i DataScienceR-&lt;version&gt;-relhel&lt;N&gt;_x86_64.gppkg</codeblock><p><codeph>gppkg</codeph>
             installs the R Data Science libraries on all nodes in your Greenplum Database cluster.

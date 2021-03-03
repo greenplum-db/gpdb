@@ -10,14 +10,16 @@
 //		converts it into an aggregate over a left anti-semi join
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpopt/exception.h"
 #include "gpopt/xforms/CXformDifference2LeftAntiSemiJoin.h"
-#include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
+
+#include "gpos/base.h"
+
+#include "gpopt/exception.h"
 #include "gpopt/operators/CLogicalDifference.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
 #include "gpopt/operators/CPatternMultiLeaf.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -51,7 +53,7 @@ CXformDifference2LeftAntiSemiJoin::Transform(CXformContext *pxfctxt,
 											 CXformResult *pxfres,
 											 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

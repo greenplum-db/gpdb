@@ -9,18 +9,19 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformIndexGet2IndexOnlyScan.h"
+
 #include <cwchar>
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformIndexGet2IndexOnlyScan.h"
-#include "gpopt/xforms/CXformUtils.h"
 
+#include "gpopt/metadata/CIndexDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
-#include "gpopt/metadata/CIndexDescriptor.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDIndexGPDB.h"
 
 using namespace gpopt;
@@ -77,7 +78,7 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -86,12 +87,19 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	CIndexDescriptor *pindexdesc = pop->Pindexdesc();
 	CTableDescriptor *ptabdesc = pop->Ptabdesc();
 
+	// extract components
+	CExpression *pexprIndexCond = (*pexpr)[0];
+	if (pexprIndexCond->DeriveHasSubquery())
+	{
+		return;
+	}
+
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
 	const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pindexdesc->MDId());
 
 	CColRefArray *pdrgpcrOutput = pop->PdrgpcrOutput();
-	GPOS_ASSERT(NULL != pdrgpcrOutput);
+	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
 	CColRefSet *matched_cols =
@@ -103,7 +111,16 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	for (ULONG i = 0; i < pdrgpcrOutput->Size(); i++)
 	{
 		CColRef *col = (*pdrgpcrOutput)[i];
-		if (col->GetUsage(true /*check_system_cols*/) == CColRef::EUsed)
+
+		// In most cases we want to treat system columns unconditionally as
+		// used. This is because certain transforms like those for DML or
+		// CXformPushGbBelowJoin use unique keys in the derived properties,
+		// even if they are not referenced in the query. Those keys are system
+		// columns gp_segment_id and ctid. We also treat distribution columns
+		// as used, since they appear in the CDistributionSpecHashed of
+		// physical properties and therefore might be used in the plan.
+		if (col->GetUsage(true /*check_system_cols*/,
+						  true /*check_distribution_col*/) == CColRef::EUsed)
 		{
 			output_cols->Include(col);
 		}
@@ -124,11 +141,10 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	ptabdesc->AddRef();
 
 	COrderSpec *pos = pop->Pos();
-	GPOS_ASSERT(NULL != pos);
+	GPOS_ASSERT(nullptr != pos);
 	pos->AddRef();
 
-	// extract components
-	CExpression *pexprIndexCond = (*pexpr)[0];
+
 
 	// addref all children
 	pexprIndexCond->AddRef();

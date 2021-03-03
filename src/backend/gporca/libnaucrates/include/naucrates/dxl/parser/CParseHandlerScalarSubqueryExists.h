@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerScalarSubqueryExists_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarSubqueryExists.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl
@@ -38,26 +38,25 @@ private:
 	// scalar subquery operator
 	CDXLScalar *m_dxl_op;
 
-	// private copy ctor
-	CParseHandlerScalarSubqueryExists(
-		const CParseHandlerScalarSubqueryExists &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerScalarSubqueryExists(
+		const CParseHandlerScalarSubqueryExists &) = delete;
+
 	// ctor/dtor
 	CParseHandlerScalarSubqueryExists(CMemoryPool *mp,
 									  CParseHandlerManager *parse_handler_mgr,

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarCoerceToDomain.cpp
@@ -9,8 +9,9 @@
 //		Implementation of scalar CoerceToDomain operators
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarCoerceToDomain.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

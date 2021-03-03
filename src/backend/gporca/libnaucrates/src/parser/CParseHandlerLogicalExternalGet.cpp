@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerLogicalExternalGet.cpp
@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalExternalGet.h"
+
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;

@@ -11,6 +11,7 @@
 
 #include "naucrates/dxl/parser/CParseHandlerSort.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
@@ -19,8 +20,6 @@
 #include "naucrates/dxl/parser/CParseHandlerScalarLimitOffset.h"
 #include "naucrates/dxl/parser/CParseHandlerSortColList.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -39,7 +38,7 @@ CParseHandlerSort::CParseHandlerSort(CMemoryPool *mp,
 									 CParseHandlerManager *parse_handler_mgr,
 									 CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 

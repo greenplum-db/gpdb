@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLPhysicalCTAS.h
@@ -12,10 +12,10 @@
 #define GPDXL_CDXLPhysicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDRelation.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
 
+#include "naucrates/dxl/operators/CDXLColDescr.h"
 #include "naucrates/dxl/operators/CDXLPhysical.h"
+#include "naucrates/md/IMDRelation.h"
 
 namespace gpdxl
 {
@@ -71,10 +71,9 @@ private:
 	// list of vartypmod
 	IntPtrArray *m_vartypemod_array;
 
-	// private copy ctor
-	CDXLPhysicalCTAS(CDXLPhysicalCTAS &);
-
 public:
+	CDXLPhysicalCTAS(CDXLPhysicalCTAS &) = delete;
+
 	// ctor
 	CDXLPhysicalCTAS(CMemoryPool *mp, CMDName *mdname_schema,
 					 CMDName *mdname_rel,
@@ -89,13 +88,13 @@ public:
 					 IntPtrArray *vartypemod_array);
 
 	// dtor
-	virtual ~CDXLPhysicalCTAS();
+	~CDXLPhysicalCTAS() override;
 
 	// operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// column descriptors
 	CDXLColDescrArray *
@@ -166,20 +165,21 @@ public:
 		return m_distr_opclasses;
 	}
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// conversion function
 	static CDXLPhysicalCTAS *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalCTAS == dxl_op->GetDXLOperator());
 		return dynamic_cast<CDXLPhysicalCTAS *>(dxl_op);
 	}

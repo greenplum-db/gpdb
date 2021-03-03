@@ -9,9 +9,10 @@
 //		Implementation of DXL physical table-valued function
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLPhysicalTVF.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLPhysicalTVF.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -33,11 +34,11 @@ CDXLPhysicalTVF::CDXLPhysicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 	  m_return_type_mdid(mdid_return_type),
 	  func_name(str)
 {
-	GPOS_ASSERT(NULL != m_func_mdid);
+	GPOS_ASSERT(nullptr != m_func_mdid);
 	GPOS_ASSERT(m_func_mdid->IsValid());
-	GPOS_ASSERT(NULL != m_return_type_mdid);
+	GPOS_ASSERT(nullptr != m_return_type_mdid);
 	GPOS_ASSERT(m_return_type_mdid->IsValid());
-	GPOS_ASSERT(NULL != func_name);
+	GPOS_ASSERT(nullptr != func_name);
 }
 
 //---------------------------------------------------------------------------
@@ -129,8 +130,8 @@ CDXLPhysicalTVF::AssertValid(const CDXLNode *dxlnode,
 							 BOOL validate_children) const
 {
 	// assert validity of function id and return type
-	GPOS_ASSERT(NULL != m_func_mdid);
-	GPOS_ASSERT(NULL != m_return_type_mdid);
+	GPOS_ASSERT(nullptr != m_func_mdid);
+	GPOS_ASSERT(nullptr != m_return_type_mdid);
 
 	const ULONG arity = dxlnode->Arity();
 	for (ULONG idx = 0; idx < arity; ++idx)

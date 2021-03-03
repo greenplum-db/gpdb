@@ -39,9 +39,6 @@ static void
 expect_ereport()
 {
 	expect_any(errstart, elevel);
-	expect_any(errstart, filename);
-	expect_any(errstart, lineno);
-	expect_any(errstart, funcname);
 	expect_any(errstart, domain);
 
 	will_be_called(errstart);

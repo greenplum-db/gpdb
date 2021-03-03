@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformPushGbBelowSetOp.h
@@ -12,11 +12,12 @@
 #define GPOPT_CXformPushGbBelowSetOp_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CPatternMultiLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
-#include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
 {
@@ -34,10 +35,9 @@ template <class TSetOp>
 class CXformPushGbBelowSetOp : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformPushGbBelowSetOp(const CXformPushGbBelowSetOp &);
-
 public:
+	CXformPushGbBelowSetOp(const CXformPushGbBelowSetOp &) = delete;
+
 	// ctor
 	explicit CXformPushGbBelowSetOp(CMemoryPool *mp)
 		: CXformExploration(
@@ -56,13 +56,11 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformPushGbBelowSetOp()
-	{
-	}
+	~CXformPushGbBelowSetOp() override = default;
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
-	Exfp(CExpressionHandle &exprhdl) const
+	EXformPromise
+	Exfp(CExpressionHandle &exprhdl) const override
 	{
 		CLogicalGbAgg *popGbAgg = CLogicalGbAgg::PopConvert(exprhdl.Pop());
 		if (popGbAgg->FGlobal())
@@ -74,11 +72,11 @@ public:
 	}
 
 	// actual transform
-	virtual void
+	void
 	Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-			  CExpression *pexpr) const
+			  CExpression *pexpr) const override
 	{
-		GPOS_ASSERT(NULL != pxfctxt);
+		GPOS_ASSERT(nullptr != pxfctxt);
 		GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 		GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -120,7 +118,7 @@ public:
 			CColRefArray *pdrgpcrChild = (*pdrgpdrgpcrInput)[ulChild];
 			CColRefSet *pcrsChild = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrChild);
 
-			CColRefArray *pdrgpcrChildGb = NULL;
+			CColRefArray *pdrgpcrChildGb = nullptr;
 			if (!pcrsChild->Equals(pcrsOutput))
 			{
 				// use column mapping in SetOp to set child grouping colums

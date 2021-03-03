@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPhysicalInnerIndexNLJoin.h
@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalInnerIndexNLJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalInnerNLJoin.h"
 
 namespace gpopt
@@ -30,32 +31,35 @@ private:
 	// columns from outer child used for index lookup in inner child
 	CColRefArray *m_pdrgpcrOuterRefs;
 
-	// private copy ctor
-	CPhysicalInnerIndexNLJoin(const CPhysicalInnerIndexNLJoin &);
+	// a copy of the original join predicate that has been pushed down to the inner side
+	CExpression *m_origJoinPred;
 
 public:
+	CPhysicalInnerIndexNLJoin(const CPhysicalInnerIndexNLJoin &) = delete;
+
 	// ctor
-	CPhysicalInnerIndexNLJoin(CMemoryPool *mp, CColRefArray *colref_array);
+	CPhysicalInnerIndexNLJoin(CMemoryPool *mp, CColRefArray *colref_array,
+							  CExpression *origJoinPred);
 
 	// dtor
-	virtual ~CPhysicalInnerIndexNLJoin();
+	~CPhysicalInnerIndexNLJoin() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalInnerIndexNLJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalInnerIndexNLJoin";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// outer column references accessor
 	CColRefArray *
@@ -65,16 +69,20 @@ public:
 	}
 
 	// compute required distribution of the n-th child
-	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CDistributionSpec *pdsRequired,
-										   ULONG child_index,
-										   CDrvdPropArray *pdrgpdpCtxt,
-										   ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
+
+	CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						   CReqdPropPlan *prppInput, ULONG child_index,
+						   CDrvdPropArray *pdrgpdpCtxt,
+						   ULONG ulDistrReq) override;
 
 	// execution order of children
-	virtual EChildExecOrder
-	Eceo() const
+	EChildExecOrder
+	Eceo() const override
 	{
 		// we optimize inner (right) child first to be able to match child hashed distributions
 		return EceoRightToLeft;
@@ -87,6 +95,12 @@ public:
 		GPOS_ASSERT(EopPhysicalInnerIndexNLJoin == pop->Eopid());
 
 		return dynamic_cast<CPhysicalInnerIndexNLJoin *>(pop);
+	}
+
+	CExpression *
+	OrigJoinPred()
+	{
+		return m_origJoinPred;
 	}
 
 };	// class CPhysicalInnerIndexNLJoin

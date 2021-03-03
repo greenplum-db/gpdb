@@ -4,7 +4,7 @@
  *	  routines to support manipulation of the pg_appendonly relation
  *
  * Portions Copyright (c) 2008, Greenplum Inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2006, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -18,7 +18,6 @@
 #include "postgres.h"
 
 #include "catalog/pg_appendonly.h"
-#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "catalog/gp_fastsequence.h"

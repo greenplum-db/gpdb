@@ -305,7 +305,7 @@ SELECT * FROM test WHERE a in (1, 47);
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="136.254605" Rows="2.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="387.964368" Rows="2.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -316,7 +316,7 @@ SELECT * FROM test WHERE a in (1, 47);
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="136.254570" Rows="2.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="387.964333" Rows="2.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

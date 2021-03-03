@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementCTEConsumer_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,38 +30,35 @@ using namespace gpos;
 class CXformImplementCTEConsumer : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementCTEConsumer(const CXformImplementCTEConsumer &);
-
 public:
+	CXformImplementCTEConsumer(const CXformImplementCTEConsumer &) = delete;
+
 	// ctor
 	explicit CXformImplementCTEConsumer(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementCTEConsumer()
-	{
-	}
+	~CXformImplementCTEConsumer() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementCTEConsumer;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementCTEConsumer";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformImplementCTEConsumer
 }  // namespace gpopt

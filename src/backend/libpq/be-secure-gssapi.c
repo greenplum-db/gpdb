@@ -174,7 +174,7 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
 		major = gss_wrap(&minor, gss->ctx, 1, GSS_C_QOP_DEFAULT,
 						 &input, &conf, &output);
 		if (major != GSS_S_COMPLETE)
-			pg_GSS_error(FATAL, gettext_noop("GSSAPI wrap error"), major, minor);
+			pg_GSS_error_be(FATAL, gettext_noop("GSSAPI wrap error"), major, minor);
 
 		if (conf == 0)
 			ereport(FATAL,
@@ -340,7 +340,7 @@ be_gssapi_read(Port *port, void *ptr, size_t len)
 
 		major = gss_unwrap(&minor, gss->ctx, &input, &output, &conf, NULL);
 		if (major != GSS_S_COMPLETE)
-			pg_GSS_error(FATAL, gettext_noop("GSSAPI unwrap error"),
+			pg_GSS_error_be(FATAL, gettext_noop("GSSAPI unwrap error"),
 						 major, minor);
 
 		if (conf == 0)
@@ -518,7 +518,7 @@ secure_open_gssapi(Port *port)
 									   NULL, NULL);
 		if (GSS_ERROR(major))
 		{
-			pg_GSS_error(ERROR, gettext_noop("GSSAPI context error"),
+			pg_GSS_error_be(ERROR, gettext_noop("GSSAPI context error"),
 						 major, minor);
 			gss_release_buffer(&minor, &output);
 			return -1;
@@ -590,7 +590,7 @@ secure_open_gssapi(Port *port)
 								PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32), &max_packet_size);
 
 	if (GSS_ERROR(major))
-		pg_GSS_error(FATAL, gettext_noop("GSSAPI size check error"),
+		pg_GSS_error_be(FATAL, gettext_noop("GSSAPI size check error"),
 					 major, minor);
 
 	port->gss->enc = true;

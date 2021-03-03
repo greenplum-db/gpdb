@@ -9,16 +9,17 @@
 //		Implementation of Syslog logging
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CLoggerSyslog.h"
+
 #include <syslog.h>
 
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/error/CLoggerSyslog.h"
 #include "gpos/string/CStringStatic.h"
 
 using namespace gpos;
 
 // initialization of static members
-CLoggerSyslog CLoggerSyslog::m_alert_logger(NULL /*szName*/,
+CLoggerSyslog CLoggerSyslog::m_alert_logger(nullptr /*szName*/,
 											LOG_PERROR | LOG_CONS, LOG_ALERT);
 
 
@@ -47,9 +48,7 @@ CLoggerSyslog::CLoggerSyslog(const CHAR *proc_name, ULONG init_mask,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CLoggerSyslog::~CLoggerSyslog()
-{
-}
+CLoggerSyslog::~CLoggerSyslog() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

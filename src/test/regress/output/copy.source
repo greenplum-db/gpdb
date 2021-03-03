@@ -43,6 +43,18 @@ COPY array_op_test FROM '@abs_srcdir@/data/array.data';
 COPY array_index_op_test FROM '@abs_srcdir@/data/array.data';
 -- analyze all the data we just loaded, to ensure plan consistency
 -- in later tests
+-- Force pgstat_report_stat() to send tabstat before pgstat_report_analyze.
+-- Nomally this is no needed, but ORCA is very sensitive for statistics.
+-- If analyze msg recevied first, n_mod_since_analyze will not be 0.
+-- And since we create index for some tables later, the triggered auto-ANALYZE
+-- will cause table's index statstics change and ORCA may generate different
+-- plans for some queries.
+select pg_sleep(0.77);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 ANALYZE aggtest;
 ANALYZE onek;
 ANALYZE tenk1;
@@ -58,6 +70,7 @@ ANALYZE hash_name_heap;
 ANALYZE hash_txt_heap;
 ANALYZE hash_f8_heap;
 ANALYZE test_tsvector;
+ANALYZE testjsonb;
 ANALYZE bt_i4_heap;
 ANALYZE bt_name_heap;
 ANALYZE bt_txt_heap;

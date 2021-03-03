@@ -4,7 +4,7 @@
  *	  Interfaces to low level compression functionality.
  *
  * Portions Copyright (c) 2011 EMC Corporation All Rights Reserved
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -25,7 +25,7 @@
 #include "access/tupdesc.h"
 #include "access/tupmacs.h"
 #include "catalog/indexing.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_compression.h"
 #include "catalog/dependency.h"
@@ -160,23 +160,23 @@ GetCompressionImplementation(char *comptype)
 
 	ctup = (Form_pg_compression)GETSTRUCT(tuple);
 
-	Insist(OidIsValid(ctup->compconstructor));
+	Assert(OidIsValid(ctup->compconstructor));
 	fmgr_info(ctup->compconstructor, &finfo);
 	funcs[COMPRESSION_CONSTRUCTOR] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compdestructor));
+	Assert(OidIsValid(ctup->compdestructor));
 	fmgr_info(ctup->compdestructor, &finfo);
 	funcs[COMPRESSION_DESTRUCTOR] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compcompressor));
+	Assert(OidIsValid(ctup->compcompressor));
 	fmgr_info(ctup->compcompressor, &finfo);
 	funcs[COMPRESSION_COMPRESS] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compdecompressor));
+	Assert(OidIsValid(ctup->compdecompressor));
 	fmgr_info(ctup->compdecompressor, &finfo);
 	funcs[COMPRESSION_DECOMPRESS] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compvalidator));
+	Assert(OidIsValid(ctup->compvalidator));
 	fmgr_info(ctup->compvalidator, &finfo);
 	funcs[COMPRESSION_VALIDATOR] = finfo.fn_addr;
 
@@ -249,7 +249,7 @@ zlib_constructor(PG_FUNCTION_ARGS)
 	cs->opaque = (void *) state;
 	cs->desired_sz = NULL;
 
-	Insist(PointerIsValid(sa->comptype));
+	Assert(PointerIsValid(sa->comptype));
 
 	if (sa->complevel == 0)
 		sa->complevel = 1;
@@ -317,7 +317,7 @@ zlib_compress(PG_FUNCTION_ARGS)
 
 			default:
 				/* shouldn't get here */
-				Insist(false);
+				elog(ERROR, "zlib compression failed with error %d", last_error);
 				break;
 		}
 	}
@@ -338,7 +338,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 	int				last_error;
 	unsigned long amount_available_used = dst_sz;
 
-	Insist(src_sz > 0 && dst_sz > 0);
+	Assert(src_sz > 0 && dst_sz > 0);
 
 
 	last_error = state->decompress_fn(dst, &amount_available_used,
@@ -376,7 +376,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 
 			default:
 				/* shouldn't get here */
-				Insist(false);
+				elog(ERROR, "zlib decompression failed with error %d", last_error);
 				break;
 		}
 	}
@@ -521,7 +521,7 @@ compresstype_is_valid(char *comptype)
 #ifdef HAVE_LIBZ
 			"zlib",
 #endif
-#ifdef HAVE_LIBZSTD
+#ifdef USE_ZSTD
 			"zstd",
 #endif
 			"rle_type", "none"};

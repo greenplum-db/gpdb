@@ -16,11 +16,10 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
-
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelStats.h"
 #include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/IMDRelStats.h"
 
 namespace gpdxl
 {
@@ -61,40 +60,60 @@ private:
 	// DXL string for object
 	CWStringDynamic *m_dxl_str;
 
-	// private copy ctor
-	CDXLRelStats(const CDXLRelStats &);
+	// number of blocks (not always up to-to-date)
+	ULONG m_relpages;
+
+	// number of all-visible blocks (not always up-to-date)
+	ULONG m_relallvisible;
 
 public:
-	CDXLRelStats(CMemoryPool *mp, CMDIdRelStats *rel_stats_mdid,
-				 CMDName *mdname, CDouble rows, BOOL is_empty);
+	CDXLRelStats(const CDXLRelStats &) = delete;
 
-	virtual ~CDXLRelStats();
+	CDXLRelStats(CMemoryPool *mp, CMDIdRelStats *rel_stats_mdid,
+				 CMDName *mdname, CDouble rows, BOOL is_empty, ULONG relpages,
+				 ULONG relallvisible);
+
+	~CDXLRelStats() override;
 
 	// the metadata id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// relation name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// DXL string representation of cache object
-	virtual const CWStringDynamic *GetStrRepr() const;
+	const CWStringDynamic *GetStrRepr() const override;
 
 	// number of rows
-	virtual CDouble Rows() const;
+	CDouble Rows() const override;
+
+	// number of blocks (not always up to-to-date)
+	ULONG
+	RelPages() const override
+	{
+		return m_relpages;
+	}
+
+	// number of all-visible blocks (not always up-to-date)
+	ULONG
+	RelAllVisible() const override
+	{
+		return m_relallvisible;
+	}
 
 	// is statistics on an empty input
-	virtual BOOL
-	IsEmpty() const
+	BOOL
+	IsEmpty() const override
 	{
 		return m_empty;
 	}
 
 	// serialize relation stats in DXL format given a serializer object
-	virtual void Serialize(gpdxl::CXMLSerializer *) const;
+	void Serialize(gpdxl::CXMLSerializer *) const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 
 	// dummy relstats

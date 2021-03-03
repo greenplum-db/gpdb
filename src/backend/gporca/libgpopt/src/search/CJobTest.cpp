@@ -9,11 +9,12 @@
 //		Implementation of optimizer job test class
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
+#include "gpopt/search/CJobTest.h"
+
 #include "gpos/io/COstreamString.h"
+#include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobTest.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
 
@@ -33,14 +34,7 @@ ULONG_PTR CJobTest::m_ulpCnt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobTest::CJobTest()
-	: CJob(),
-	  m_ett(EttSpawn),
-	  m_ulRounds(gpos::ulong_max),
-	  m_ulFanout(gpos::ulong_max),
-	  m_ulIters(gpos::ulong_max)
-{
-}
+CJobTest::CJobTest() = default;
 
 
 //---------------------------------------------------------------------------
@@ -51,9 +45,7 @@ CJobTest::CJobTest()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobTest::~CJobTest()
-{
-}
+CJobTest::~CJobTest() = default;
 
 
 //---------------------------------------------------------------------------
@@ -273,7 +265,7 @@ CJobTest::Loop()
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobTest::OsPrint(IOstream &os)
+CJobTest::OsPrint(IOstream &os) const
 {
 	os << "Test job, ";
 	return CJob::OsPrint(os);

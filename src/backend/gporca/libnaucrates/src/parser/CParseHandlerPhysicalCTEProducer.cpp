@@ -10,13 +10,14 @@
 //		operators
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/parser/CParseHandlerPhysicalCTEProducer.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalCTEProducer.h"
+#include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
-#include "naucrates/dxl/parser/CParseHandlerProjList.h"
 
 using namespace gpdxl;
 
@@ -128,7 +129,7 @@ CParseHandlerPhysicalCTEProducer::EndElement(
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 
 
 	CParseHandlerProperties *prop_parse_handler =

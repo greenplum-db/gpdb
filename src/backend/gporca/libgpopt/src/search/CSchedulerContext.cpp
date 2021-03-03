@@ -9,12 +9,13 @@
 //		Implementation of optimizer job scheduler
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CSchedulerContext.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/search/CScheduler.h"
-#include "gpopt/search/CSchedulerContext.h"
 
 
 using namespace gpos;
@@ -30,9 +31,8 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CSchedulerContext::CSchedulerContext()
-	: m_pmpGlobal(NULL), m_pmpLocal(NULL), m_psched(NULL), m_fInit(false)
-{
-}
+
+	= default;
 
 
 //---------------------------------------------------------------------------
@@ -45,9 +45,9 @@ CSchedulerContext::CSchedulerContext()
 //---------------------------------------------------------------------------
 CSchedulerContext::~CSchedulerContext()
 {
-	GPOS_ASSERT_IMP(FInit(), NULL != GetGlobalMemoryPool());
-	GPOS_ASSERT_IMP(FInit(), NULL != PmpLocal());
-	GPOS_ASSERT_IMP(FInit(), NULL != Psched());
+	GPOS_ASSERT_IMP(FInit(), nullptr != GetGlobalMemoryPool());
+	GPOS_ASSERT_IMP(FInit(), nullptr != PmpLocal());
+	GPOS_ASSERT_IMP(FInit(), nullptr != Psched());
 
 	// release local memory pool
 	if (FInit())
@@ -69,10 +69,10 @@ void
 CSchedulerContext::Init(CMemoryPool *pmpGlobal, CJobFactory *pjf,
 						CScheduler *psched, CEngine *peng)
 {
-	GPOS_ASSERT(NULL != pmpGlobal);
-	GPOS_ASSERT(NULL != pjf);
-	GPOS_ASSERT(NULL != psched);
-	GPOS_ASSERT(NULL != peng);
+	GPOS_ASSERT(nullptr != pmpGlobal);
+	GPOS_ASSERT(nullptr != pjf);
+	GPOS_ASSERT(nullptr != psched);
+	GPOS_ASSERT(nullptr != peng);
 
 	GPOS_ASSERT(!FInit() && "Scheduling context is already initialized");
 

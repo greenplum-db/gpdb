@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for optimization jobs
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/search/COptimizationJobsTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/engine/CEngine.h"
@@ -15,12 +17,12 @@
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobGroupOptimization.h"
-#include "gpopt/search/CJobGroupExpressionOptimization.h"
 #include "gpopt/search/CJobGroupExploration.h"
 #include "gpopt/search/CJobGroupExpressionExploration.h"
-#include "gpopt/search/CJobGroupImplementation.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
+#include "gpopt/search/CJobGroupExpressionOptimization.h"
+#include "gpopt/search/CJobGroupImplementation.h"
+#include "gpopt/search/CJobGroupOptimization.h"
 #include "gpopt/search/CJobTransformation.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
@@ -28,7 +30,6 @@
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/search/COptimizationJobsTest.h"
 
 
 //---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 
 	// install opt context in TLS
 	{
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 		CEngine eng(mp);
 
@@ -83,7 +84,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 		CQueryContext *pqc = CTestUtils::PqcGenerate(mp, pexpr);
 
 		// Initialize engine
-		eng.Init(pqc, NULL /*search_stage_array*/);
+		eng.Init(pqc, nullptr /*search_stage_array*/);
 
 		CGroup *pgroup = eng.PgroupRoot();
 		pqc->Prpp()->AddRef();
@@ -101,8 +102,8 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 		sc.Init(mp, &jf, &sched, &eng);
 		CJob *pj = jf.PjCreate(CJob::EjtGroupOptimization);
 		CJobGroupOptimization *pjgo = CJobGroupOptimization::PjConvert(pj);
-		pjgo->Init(pgroup, NULL /*pgexprOrigin*/, poc);
-		sched.Add(pjgo, NULL /*pjParent*/);
+		pjgo->Init(pgroup, nullptr /*pgexprOrigin*/, poc);
+		sched.Add(pjgo, nullptr /*pjParent*/);
 		CScheduler::Run(&sc);
 
 #ifdef GPOS_DEBUG
@@ -116,7 +117,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			(void) pjgo->OsDiagramToGraphviz(
 				mp, at.Os(), GPOS_WSZ_LIT("GroupOptimizationJob"));
 
-			CJobGroupOptimization::EState *pestate = NULL;
+			CJobGroupOptimization::EState *pestate = nullptr;
 			ULONG size = 0;
 			pjgo->Unreachable(mp, &pestate, &size);
 			GPOS_ASSERT(size == 1 &&
@@ -125,15 +126,15 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			GPOS_DELETE_ARRAY(pestate);
 		}
 
-		CGroupExpression *pgexprLogical = NULL;
-		CGroupExpression *pgexprPhysical = NULL;
+		CGroupExpression *pgexprLogical = nullptr;
+		CGroupExpression *pgexprPhysical = nullptr;
 		{
 			CGroupProxy gp(pgroup);
-			pgexprLogical = gp.PgexprNextLogical(NULL /*pgexpr*/);
-			GPOS_ASSERT(NULL != pgexprLogical);
+			pgexprLogical = gp.PgexprNextLogical(nullptr /*pgexpr*/);
+			GPOS_ASSERT(nullptr != pgexprLogical);
 
-			pgexprPhysical = gp.PgexprSkipLogical(NULL /*pgexpr*/);
-			GPOS_ASSERT(NULL != pgexprPhysical);
+			pgexprPhysical = gp.PgexprSkipLogical(nullptr /*pgexpr*/);
+			GPOS_ASSERT(nullptr != pgexprPhysical);
 		}
 
 		{
@@ -148,7 +149,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			(void) jgi.OsDiagramToGraphviz(
 				mp, at.Os(), GPOS_WSZ_LIT("GroupImplementationJob"));
 
-			CJobGroupImplementation::EState *pestate = NULL;
+			CJobGroupImplementation::EState *pestate = nullptr;
 			ULONG size = 0;
 			jgi.Unreachable(mp, &pestate, &size);
 			GPOS_ASSERT(size == 1 &&
@@ -169,7 +170,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			(void) jge.OsDiagramToGraphviz(mp, at.Os(),
 										   GPOS_WSZ_LIT("GroupExplorationJob"));
 
-			CJobGroupExploration::EState *pestate = NULL;
+			CJobGroupExploration::EState *pestate = nullptr;
 			ULONG size = 0;
 			jge.Unreachable(mp, &pestate, &size);
 			GPOS_ASSERT(size == 1 &&
@@ -191,7 +192,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			(void) jgeo.OsDiagramToGraphviz(
 				mp, at.Os(), GPOS_WSZ_LIT("GroupExpressionOptimizationJob"));
 
-			CJobGroupExpressionOptimization::EState *pestate = NULL;
+			CJobGroupExpressionOptimization::EState *pestate = nullptr;
 			ULONG size = 0;
 			jgeo.Unreachable(mp, &pestate, &size);
 			GPOS_ASSERT(size == 1 &&
@@ -214,7 +215,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			(void) jgei.OsDiagramToGraphviz(
 				mp, at.Os(), GPOS_WSZ_LIT("GroupExpressionImplementationJob"));
 
-			CJobGroupExpressionImplementation::EState *pestate = NULL;
+			CJobGroupExpressionImplementation::EState *pestate = nullptr;
 			ULONG size = 0;
 			jgei.Unreachable(mp, &pestate, &size);
 			GPOS_ASSERT(size == 1 &&
@@ -237,7 +238,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 			(void) jgee.OsDiagramToGraphviz(
 				mp, at.Os(), GPOS_WSZ_LIT("GroupExpressionExplorationJob"));
 
-			CJobGroupExpressionExploration::EState *pestate = NULL;
+			CJobGroupExpressionExploration::EState *pestate = nullptr;
 			ULONG size = 0;
 			jgee.Unreachable(mp, &pestate, &size);
 			GPOS_ASSERT(size == 1 &&
@@ -267,7 +268,7 @@ COptimizationJobsTest::EresUnittest_StateMachine()
 				(void) jt.OsDiagramToGraphviz(
 					mp, at.Os(), GPOS_WSZ_LIT("TransformationJob"));
 
-				CJobTransformation::EState *pestate = NULL;
+				CJobTransformation::EState *pestate = nullptr;
 				ULONG size = 0;
 				jt.Unreachable(mp, &pestate, &size);
 				GPOS_ASSERT(size == 1 &&

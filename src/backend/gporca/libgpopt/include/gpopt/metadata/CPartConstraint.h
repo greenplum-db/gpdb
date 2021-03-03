@@ -12,7 +12,6 @@
 #define GPOPT_CPartConstraint_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
 
@@ -71,9 +70,6 @@ private:
 	// combined constraint
 	CConstraint *m_pcnstrCombined;
 
-	// private copy ctor
-	CPartConstraint(const CPartConstraint &);
-
 #ifdef GPOS_DEBUG
 	// are all default partitions on all levels included
 	BOOL FAllDefaultPartsIncluded();
@@ -108,6 +104,8 @@ private:
 									 CPartConstraint *ppartcnstrSnd);
 
 public:
+	CPartConstraint(const CPartConstraint &) = delete;
+
 	// ctors
 	CPartConstraint(CMemoryPool *mp, UlongToConstraintMap *phmulcnstr,
 					CBitSet *pbsDefaultParts, BOOL is_unbounded,
@@ -118,7 +116,7 @@ public:
 	CPartConstraint(BOOL fUninterpreted);
 
 	// dtor
-	virtual ~CPartConstraint();
+	~CPartConstraint() override;
 
 	// constraint at given level
 	CConstraint *Pcnstr(ULONG ulLevel) const;
@@ -174,7 +172,7 @@ public:
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// construct a disjunction of the two constraints
 	static CPartConstraint *PpartcnstrDisjunction(

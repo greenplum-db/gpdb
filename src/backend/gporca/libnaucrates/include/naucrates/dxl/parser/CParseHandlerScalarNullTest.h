@@ -14,9 +14,9 @@
 #define GPDXL_CParseHandlerScalarNullTest_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 namespace gpdxl
@@ -36,25 +36,24 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerScalarNullTest : public CParseHandlerScalarOp
 {
 private:
-	// private copy ctor
-	CParseHandlerScalarNullTest(const CParseHandlerScalarNullTest &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerScalarNullTest(const CParseHandlerScalarNullTest &) = delete;
+
 	// ctor
 	CParseHandlerScalarNullTest(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,

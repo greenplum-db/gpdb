@@ -10,6 +10,8 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerAgg.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
 #include "naucrates/dxl/parser/CParseHandlerGroupingColList.h"
@@ -17,8 +19,6 @@
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -37,7 +37,7 @@ CParseHandlerAgg::CParseHandlerAgg(CMemoryPool *mp,
 								   CParseHandlerManager *parse_handler_mgr,
 								   CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_op(NULL)
+	  m_dxl_op(nullptr)
 {
 }
 
@@ -156,7 +156,7 @@ CParseHandlerAgg::EndElement(const XMLCh *const,  // element_uri,
 		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[4]);
 
 	// set grouping cols list
-	GPOS_ASSERT(NULL !=
+	GPOS_ASSERT(nullptr !=
 				grouping_col_list_parse_handler->GetGroupingColidArray());
 
 	ULongPtrArray *grouping_colid_array =

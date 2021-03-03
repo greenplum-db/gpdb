@@ -13,9 +13,8 @@
 #define GPDXL_CParseHandlerMDGPDBAgg_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-
-
 #include "naucrates/md/CMDAggregateGPDB.h"
 
 
@@ -58,25 +57,24 @@ private:
 	// can we use hash aggregation to compute agg function
 	BOOL m_hash_agg_capable;
 
-	// private copy ctor
-	CParseHandlerMDGPDBAgg(const CParseHandlerMDGPDBAgg &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerMDGPDBAgg(const CParseHandlerMDGPDBAgg &) = delete;
+
 	// ctor
 	CParseHandlerMDGPDBAgg(CMemoryPool *mp,
 						   CParseHandlerManager *parse_handler_mgr,

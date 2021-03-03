@@ -8,7 +8,7 @@ Feature: expand the cluster by adding more segments
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And the master pid has been saved
+        And the coordinator pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
@@ -24,12 +24,12 @@ Feature: expand the cluster by adding more segments
         And verify that the cluster has 2 new segments
         When the user runs gpexpand to redistribute
         Then the tables have finished expanding
-        And verify that the master pid has not been changed
+        And verify that the coordinator pid has not been changed
 
     @gpexpand_no_mirrors
     @gpexpand_timing
     @gpexpand_standby
-    Scenario: after a duration interrupted redistribution, state file on standby matches master
+    Scenario: after a duration interrupted redistribution, state file on standby matches coordinator
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -271,7 +271,7 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And the master pid has been saved
+        And the coordinator pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
@@ -284,7 +284,7 @@ Feature: expand the cluster by adding more segments
         And all the segments are running
         And table "test" exists in "gptest" on specified segment sdw1:20502
         And table "test" exists in "gptest" on specified segment sdw1:20503
-        And verify that the master pid has not been changed
+        And verify that the coordinator pid has not been changed
 
     @gpexpand_no_mirrors
     @gpexpand_no_restart
@@ -295,7 +295,7 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And the master pid has been saved
+        And the coordinator pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw"
@@ -306,7 +306,7 @@ Feature: expand the cluster by adding more segments
         And verify that the cluster has 1 new segments
         And all the segments are running
         And check segment conf: postgresql.conf
-        And verify that the master pid has not been changed
+        And verify that the coordinator pid has not been changed
 
     @gpexpand_no_mirrors
     @gpexpand_no_restart
@@ -317,7 +317,7 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And the master pid has been saved
+        And the coordinator pid has been saved
         And database "gptest" exists
         And user has created test table
         And 20 rows are inserted into table "test" in schema "public" with column type list "int"
@@ -330,7 +330,7 @@ Feature: expand the cluster by adding more segments
         Then gpexpand should return a return code of 0
         And verify that the cluster has 1 new segments
         And all the segments are running
-        And verify that the master pid has not been changed
+        And verify that the coordinator pid has not been changed
         And verify that long-run read-only transaction still exists on "test"
 
     @gpexpand_no_mirrors
@@ -342,7 +342,7 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And the master pid has been saved
+        And the coordinator pid has been saved
         And database "gptest" exists
         And a long-run transaction starts
         And there are no gpexpand_inputfiles
@@ -353,7 +353,7 @@ Feature: expand the cluster by adding more segments
         Then gpexpand should return a return code of 0
         And verify that the cluster has 1 new segments
         And all the segments are running
-        And verify that the master pid has not been changed
+        And verify that the coordinator pid has not been changed
         And verify that long-run transaction aborted for changing the catalog by creating table "test"
 
     @gpexpand_no_mirrors
@@ -365,7 +365,7 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And the master pid has been saved
+        And the coordinator pid has been saved
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw"
@@ -376,7 +376,7 @@ Feature: expand the cluster by adding more segments
         Then gpexpand should return a return code of 0
         And verify that the cluster has 1 new segments
         And all the segments are running
-        And verify that the master pid has not been changed
+        And verify that the coordinator pid has not been changed
         And verify the dml results and commit
         And verify the dml results again in a new transaction
         When the user runs gpexpand to redistribute
@@ -421,3 +421,22 @@ Feature: expand the cluster by adding more segments
         Then verify that the cluster has 3 new segments
         When the user runs gpexpand to redistribute
         Then the numsegments of table "ext_test" is 4
+
+    @gpexpand_verify_matview
+    Scenario: Gpexpand should succeed when expand materialized view
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And the cluster is generated with "1" primaries only
+        And database "gptest" exists
+        And the user runs psql with "-c 'CREATE TABLE public.test_matview_base AS SELECT i FROM generate_series(1,10000) i DISTRIBUTED BY (i)'" against database "gptest"
+        And the user runs psql with "-c 'CREATE MATERIALIZED VIEW public.test_matview as select * from public.test_matview_base DISTRIBUTED BY (i)'" against database "gptest"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "localhost"
+        When the user runs gpexpand interview to add 3 new segment and 0 new host "ignored.host"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that the cluster has 3 new segments
+        When the user runs gpexpand to redistribute
+        Then the numsegments of table "public.test_matview" is 4
+        And distribution information from table "public.test_matview" and "public.test_matview_base" in "gptest" are the same

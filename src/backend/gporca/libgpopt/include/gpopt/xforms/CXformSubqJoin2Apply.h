@@ -12,6 +12,7 @@
 #define GPOPT_CXformSubqJoin2Apply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformSubqueryUnnest.h"
 
 namespace gpopt
@@ -35,12 +36,10 @@ private:
 					 CleanupNULL<CColRef> >
 		ExprToColRefMap;
 
-	// private copy ctor
-	CXformSubqJoin2Apply(const CXformSubqJoin2Apply &);
-
 	// helper to transform function
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr, BOOL fEnforceCorrelatedApply) const;
+				   CExpression *pexpr,
+				   BOOL fEnforceCorrelatedApply) const override;
 
 	// collect subqueries that exclusively use outer/inner child
 	static void CollectSubqueries(CMemoryPool *mp, CExpression *pexpr,
@@ -58,33 +57,35 @@ private:
 											  BOOL fEnforceCorrelatedApply);
 
 public:
+	CXformSubqJoin2Apply(const CXformSubqJoin2Apply &) = delete;
+
 	// ctor
 	explicit CXformSubqJoin2Apply(CMemoryPool *mp);
 
 	// ctor
 	explicit CXformSubqJoin2Apply(CExpression *pexprPattern)
-		: CXformSubqueryUnnest(pexprPattern){};
-
-	// dtor
-	virtual ~CXformSubqJoin2Apply()
+		: CXformSubqueryUnnest(pexprPattern)
 	{
 	}
 
+	// dtor
+	~CXformSubqJoin2Apply() override = default;
+
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSubqJoin2Apply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSubqJoin2Apply";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 };	// class CXformSubqJoin2Apply
 

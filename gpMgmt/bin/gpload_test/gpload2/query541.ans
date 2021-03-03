@@ -1,0 +1,161 @@
+You are now connected to database "reuse_gptest" as user "cc".
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_\_c" text, c2 int) DISTRIBUTED BY ("s_\_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_\_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:37|INFO|gpload session started 2021-01-05 17:24:37
+2021-01-05 17:24:37|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:37|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:37|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_2d56a9b901cc8ee89673fe01dbc64883
+2021-01-05 17:24:37|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d4d3a80e_4f37_11eb_980a_7085c2381836
+2021-01-05 17:24:37|INFO|running time: 0.17 seconds
+2021-01-05 17:24:37|INFO|rows Inserted          = 0
+2021-01-05 17:24:37|INFO|rows Updated           = 1
+2021-01-05 17:24:37|INFO|data formatting errors = 0
+2021-01-05 17:24:37|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_$_c" text, c2 int) DISTRIBUTED BY ("s_$_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_$_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:38|INFO|gpload session started 2021-01-05 17:24:38
+2021-01-05 17:24:38|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:38|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:38|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_17e18a8037bbbba7eb4b96e5bf456665
+2021-01-05 17:24:38|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d503437a_4f37_11eb_bed1_7085c2381836
+2021-01-05 17:24:38|INFO|running time: 0.17 seconds
+2021-01-05 17:24:38|INFO|rows Inserted          = 0
+2021-01-05 17:24:38|INFO|rows Updated           = 1
+2021-01-05 17:24:38|INFO|data formatting errors = 0
+2021-01-05 17:24:38|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_#_c" text, c2 int) DISTRIBUTED BY ("s_#_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_#_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:38|INFO|gpload session started 2021-01-05 17:24:38
+2021-01-05 17:24:38|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:38|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:38|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_247c694141ab8196db3faaa633a2738d
+2021-01-05 17:24:38|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d5338922_4f37_11eb_82cd_7085c2381836
+2021-01-05 17:24:38|INFO|running time: 0.17 seconds
+2021-01-05 17:24:38|INFO|rows Inserted          = 0
+2021-01-05 17:24:38|INFO|rows Updated           = 1
+2021-01-05 17:24:38|INFO|data formatting errors = 0
+2021-01-05 17:24:38|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_,_c" text, c2 int) DISTRIBUTED BY ("s_,_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_,_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:38|INFO|gpload session started 2021-01-05 17:24:38
+2021-01-05 17:24:38|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:38|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:38|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_6141ab2264c8e56c155243ebc564d749
+2021-01-05 17:24:38|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d565380a_4f37_11eb_ab9a_7085c2381836
+2021-01-05 17:24:38|INFO|running time: 0.17 seconds
+2021-01-05 17:24:38|INFO|rows Inserted          = 0
+2021-01-05 17:24:38|INFO|rows Updated           = 1
+2021-01-05 17:24:38|INFO|data formatting errors = 0
+2021-01-05 17:24:38|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_(_c" text, c2 int) DISTRIBUTED BY ("s_(_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_(_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:39|INFO|gpload session started 2021-01-05 17:24:39
+2021-01-05 17:24:39|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:39|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:39|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_febc3b50a8916e0fe4e085ee77f49847
+2021-01-05 17:24:39|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d595ca4c_4f37_11eb_aee1_7085c2381836
+2021-01-05 17:24:39|INFO|running time: 0.17 seconds
+2021-01-05 17:24:39|INFO|rows Inserted          = 0
+2021-01-05 17:24:39|INFO|rows Updated           = 1
+2021-01-05 17:24:39|INFO|data formatting errors = 0
+2021-01-05 17:24:39|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_._c" text, c2 int) DISTRIBUTED BY ("s_._c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_._c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:39|INFO|gpload session started 2021-01-05 17:24:39
+2021-01-05 17:24:39|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:39|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:39|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_945bf8951441163779978163f25b1294
+2021-01-05 17:24:39|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d5c72d9e_4f37_11eb_8359_7085c2381836
+2021-01-05 17:24:39|INFO|running time: 0.18 seconds
+2021-01-05 17:24:39|INFO|rows Inserted          = 0
+2021-01-05 17:24:39|INFO|rows Updated           = 1
+2021-01-05 17:24:39|INFO|data formatting errors = 0
+2021-01-05 17:24:39|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_/_c" text, c2 int) DISTRIBUTED BY ("s_/_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_/_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:39|INFO|gpload session started 2021-01-05 17:24:39
+2021-01-05 17:24:39|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:39|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:39|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_f9bba78ffdfa5bb58d16b02e50739804
+2021-01-05 17:24:39|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d5fa6b1e_4f37_11eb_9c7a_7085c2381836
+2021-01-05 17:24:39|INFO|running time: 0.19 seconds
+2021-01-05 17:24:39|INFO|rows Inserted          = 0
+2021-01-05 17:24:39|INFO|rows Updated           = 1
+2021-01-05 17:24:39|INFO|data formatting errors = 0
+2021-01-05 17:24:39|INFO|gpload succeeded
+DROP TABLE IF EXISTS match_column_special_char;
+DROP TABLE
+CREATE TABLE match_column_special_char
+                ("s_'_c" text, c2 int) DISTRIBUTED BY ("s_'_c");
+CREATE TABLE
+;
+INSERT INTO match_column_special_char VALUES('a', 0);
+INSERT 0 1
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's_'_c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+2021-01-05 17:24:40|INFO|gpload session started 2021-01-05 17:24:40
+2021-01-05 17:24:40|INFO|setting schema 'public' for table 'match_column_special_char'
+2021-01-05 17:24:40|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/two_col_one_row.txt" -t 30
+2021-01-05 17:24:40|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_25549dc2a4e7b9a8c821ffee9f4f7f76
+2021-01-05 17:24:40|INFO|did not find an external table to reuse. creating ext_gpload_reusable_d62e7c1a_4f37_11eb_89ed_7085c2381836
+2021-01-05 17:24:40|INFO|running time: 0.17 seconds
+2021-01-05 17:24:40|INFO|rows Inserted          = 0
+2021-01-05 17:24:40|INFO|rows Updated           = 1
+2021-01-05 17:24:40|INFO|data formatting errors = 0
+2021-01-05 17:24:40|INFO|gpload succeeded

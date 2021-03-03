@@ -44,7 +44,7 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -284,46 +284,18 @@ err_gettext(const char *str)
 #endif
 }
 
-
-/*
- * elog_internalerror -- report an internal error
- *
- * GPDB only
- *
- * Does not return; exits via longjmp to PG_CATCH error handler.
- */
-void
-elog_internalerror(const char *filename, int lineno, const char *funcname)
-{
-	/*
-	 * TODO  Why isn't this a FATAL error?
-	 *
-	 * Also, why aren't we allowing for a specific err message to be passed in?
-	 */
-    if (errstart(ERROR, filename, lineno, funcname,TEXTDOMAIN))
-    {
-        errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-                  errmsg("Unexpected internal error"));
-    }
-    /* not reached */
-    abort();
-}                               /* elog_internalerror */
-
-
 /*
  * errstart --- begin an error-reporting cycle
  *
- * Create a stack entry and store the given parameters in it.  Subsequently,
- * errmsg() and perhaps other routines will be called to further populate
- * the stack entry.  Finally, errfinish() will be called to actually process
- * the error report.
+ * Create and initialize error stack entry.  Subsequently, errmsg() and
+ * perhaps other routines will be called to further populate the stack entry.
+ * Finally, errfinish() will be called to actually process the error report.
  *
  * Returns true in normal case.  Returns false to short-circuit the error
  * report (if it's a warning or lower and not to be reported anywhere).
  */
 bool
-errstart(int elevel, const char *filename, int lineno,
-		 const char *funcname, const char *domain)
+errstart(int elevel, const char *domain)
 {
 	ErrorData  *edata;
 	bool		output_to_server = false;
@@ -446,8 +418,7 @@ errstart(int elevel, const char *filename, int lineno,
 	if (ErrorContext == NULL)
 	{
 		/* Oops, hard crash time; very little we can do safely here */
-		write_stderr("error occurred at %s:%d before error message processing is available\n",
-					 filename ? filename : "(unknown file)", lineno);
+		write_stderr("error occurred before error message processing is available\n");
 		exit(2);
 	}
 
@@ -505,18 +476,6 @@ errstart(int elevel, const char *filename, int lineno,
 	edata->elevel = elevel;
 	edata->output_to_server = output_to_server;
 	edata->output_to_client = output_to_client;
-	if (filename)
-	{
-		const char *slash;
-
-		/* keep only base name, useful especially for vpath builds */
-		slash = strrchr(filename, '/');
-		if (slash)
-			filename = slash + 1;
-	}
-	edata->filename = filename;
-	edata->lineno = lineno;
-	edata->funcname = funcname;
 	/* the default text domain is the backend's */
 	edata->domain = domain ? domain : PG_TEXTDOMAIN("postgres");
 	/* initialize context_domain the same way (see set_errcontext_domain()) */
@@ -555,11 +514,11 @@ errstart(int elevel, const char *filename, int lineno,
  *
  * Produce the appropriate error report(s) and pop the error stack.
  *
- * If elevel is ERROR or worse, control does not return to the caller.
- * See elog.h for the error level definitions.
+ * If elevel, as passed to errstart(), is ERROR or worse, control does not
+ * return to the caller.  See elog.h for the error level definitions.
  */
 void
-errfinish(int dummy pg_attribute_unused(),...)
+errfinish(const char *filename, int lineno, const char *funcname)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 	int			elevel;
@@ -570,6 +529,22 @@ errfinish(int dummy pg_attribute_unused(),...)
 	recursion_depth++;
 	CHECK_STACK_DEPTH();
 	saved_errno = edata->saved_errno;   /*CDB*/
+
+	/* Save the last few bits of error state into the stack entry */
+	if (filename)
+	{
+		const char *slash;
+
+		/* keep only base name, useful especially for vpath builds */
+		slash = strrchr(filename, '/');
+		if (slash)
+			filename = slash + 1;
+	}
+
+	edata->filename = filename;
+	edata->lineno = lineno;
+	edata->funcname = funcname;
+
 	elevel = edata->elevel;
 
 	/*
@@ -743,7 +718,7 @@ errfinish(int dummy pg_attribute_unused(),...)
  * return it to the caller as a palloc'd ErrorData object.
  */
 ErrorData *
-errfinish_and_return(int dummy pg_attribute_unused(),...)
+errfinish_and_return(const char *filename, int lineno, const char *funcname)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 	ErrorData  *edata_copy;
@@ -754,6 +729,21 @@ errfinish_and_return(int dummy pg_attribute_unused(),...)
 	recursion_depth++;
 	CHECK_STACK_DEPTH();
 	saved_errno = edata->saved_errno;   /*CDB*/
+
+	/* Save the last few bits of error state into the stack entry */
+	if (filename)
+	{
+		const char *slash;
+
+		/* keep only base name, useful especially for vpath builds */
+		slash = strrchr(filename, '/');
+		if (slash)
+			filename = slash + 1;
+	}
+
+	edata->filename = filename;
+	edata->lineno = lineno;
+	edata->funcname = funcname;
 
 	/*
 	 * Do processing in ErrorContext, which we hope has enough reserved space
@@ -815,7 +805,7 @@ errfinish_and_return(int dummy pg_attribute_unused(),...)
  *
  * The code is expected to be represented as per MAKE_SQLSTATE().
  */
-int
+void
 errcode(int sqlerrcode)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -830,8 +820,6 @@ errcode(int sqlerrcode)
 		edata->omit_location = false;
 	else
 		edata->omit_location = true;
-
-	return 0;					/* return value does not matter */
 }
 
 
@@ -844,7 +832,7 @@ errcode(int sqlerrcode)
  * NOTE: the primary error message string should generally include %m
  * when this is used.
  */
-int
+void
 errcode_for_file_access(void)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -903,8 +891,6 @@ errcode_for_file_access(void)
 			edata->omit_location = false;
 			break;
 	}
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -916,7 +902,7 @@ errcode_for_file_access(void)
  * NOTE: the primary error message string should generally include %m
  * when this is used.
  */
-int
+void
 errcode_for_socket_access(void)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -940,8 +926,6 @@ errcode_for_socket_access(void)
 			edata->omit_location = false;
 			break;
 	}
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1063,7 +1047,7 @@ sqlstate_to_errcode(const char *sqlstate)
  * Note: no newline is needed at the end of the fmt string, since
  * ereport will provide one for the output methods that need it.
  */
-int
+void
 errmsg(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1082,9 +1066,7 @@ errmsg(const char *fmt,...)
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
-
 
 /*
  * errmsg_internal --- add a primary error message text to the current error
@@ -1097,7 +1079,7 @@ errmsg(const char *fmt,...)
  * the message because the translation would fail and result in infinite
  * error recursion.
  */
-int
+void
 errmsg_internal(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1116,7 +1098,6 @@ errmsg_internal(const char *fmt,...)
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 
@@ -1124,7 +1105,7 @@ errmsg_internal(const char *fmt,...)
  * errmsg_plural --- add a primary error message text to the current error,
  * with support for pluralization of the message text
  */
-int
+void
 errmsg_plural(const char *fmt_singular, const char *fmt_plural,
 			  unsigned long n, ...)
 {
@@ -1144,14 +1125,13 @@ errmsg_plural(const char *fmt_singular, const char *fmt_plural,
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 
 /*
  * errdetail --- add a detail error message text to the current error
  */
-int
+void
 errdetail(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1168,7 +1148,6 @@ errdetail(const char *fmt,...)
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 
@@ -1181,7 +1160,7 @@ errdetail(const char *fmt,...)
  * messages that seem not worth translating for one reason or another
  * (typically, that they don't seem to be useful to average users).
  */
-int
+void
 errdetail_internal(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1195,14 +1174,13 @@ errdetail_internal(const char *fmt,...)
 
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
-	return 0;					/* return value does not matter */
 }
 
 
 /*
  * errdetail_log --- add a detail_log error message text to the current error
  */
-int
+void
 errdetail_log(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1217,14 +1195,13 @@ errdetail_log(const char *fmt,...)
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 /*
  * errdetail_log_plural --- add a detail_log error message text to the current error
  * with support for pluralization of the message text
  */
-int
+void
 errdetail_log_plural(const char *fmt_singular, const char *fmt_plural,
 					 unsigned long n,...)
 {
@@ -1239,7 +1216,6 @@ errdetail_log_plural(const char *fmt_singular, const char *fmt_plural,
 
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
-	return 0;					/* return value does not matter */
 }
 
 
@@ -1247,7 +1223,7 @@ errdetail_log_plural(const char *fmt_singular, const char *fmt_plural,
  * errdetail_plural --- add a detail error message text to the current error,
  * with support for pluralization of the message text
  */
-int
+void
 errdetail_plural(const char *fmt_singular, const char *fmt_plural,
 				 unsigned long n, ...)
 {
@@ -1266,14 +1242,13 @@ errdetail_plural(const char *fmt_singular, const char *fmt_plural,
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 
 /*
  * errhint --- add a hint error message text to the current error
  */
-int
+void
 errhint(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1291,7 +1266,6 @@ errhint(const char *fmt,...)
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 
@@ -1302,7 +1276,7 @@ errhint(const char *fmt,...)
  * context information.  We assume earlier calls represent more-closely-nested
  * states.
  */
-int
+void
 errcontext_msg(const char *fmt,...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1320,7 +1294,6 @@ errcontext_msg(const char *fmt,...)
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1331,18 +1304,8 @@ errcontext_msg(const char *fmt,...)
  * translate it.  Instead, each errcontext_msg() call should be preceded by
  * a set_errcontext_domain() call to specify the domain.  This is usually
  * done transparently by the errcontext() macro.
- *
- * Although errcontext is primarily meant for use at call sites distant from
- * the original ereport call, there are a few places that invoke errcontext
- * within ereport.  The expansion of errcontext as a comma expression calling
- * set_errcontext_domain then errcontext_msg is problematic in this case,
- * because the intended comma expression becomes two arguments to errfinish,
- * which the compiler is at liberty to evaluate in either order.  But in
- * such a case, the set_errcontext_domain calls must be selecting the same
- * TEXTDOMAIN value that the errstart call did, so order does not matter
- * so long as errstart initializes context_domain along with domain.
  */
-int
+void
 set_errcontext_domain(const char *domain)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1352,8 +1315,6 @@ set_errcontext_domain(const char *domain)
 
 	/* the default text domain is the backend's */
 	edata->context_domain = domain ? domain : PG_TEXTDOMAIN("postgres");
-
-	return 0;					/* return value does not matter */
 }
 
 
@@ -1362,7 +1323,7 @@ set_errcontext_domain(const char *domain)
  *
  * This should be called if the message text already includes the statement.
  */
-int
+void
 errhidestmt(bool hide_stmt)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1371,8 +1332,6 @@ errhidestmt(bool hide_stmt)
 	CHECK_STACK_DEPTH();
 
 	edata->hide_stmt = hide_stmt;
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1381,7 +1340,7 @@ errhidestmt(bool hide_stmt)
  * This should only be used for verbose debugging messages where the repeated
  * inclusion of context would bloat the log volume too much.
  */
-int
+void
 errhidecontext(bool hide_ctx)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1390,8 +1349,6 @@ errhidecontext(bool hide_ctx)
 	CHECK_STACK_DEPTH();
 
 	edata->hide_ctx = hide_ctx;
-
-	return 0;					/* return value does not matter */
 }
 
 
@@ -1402,7 +1359,7 @@ errhidecontext(bool hide_ctx)
  * name appear in messages sent to old-protocol clients.  Note that the
  * passed string is expected to be a non-freeable constant string.
  */
-int
+void
 errfunction(const char *funcname)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1412,14 +1369,12 @@ errfunction(const char *funcname)
 
 	edata->funcname = funcname;
 	edata->show_funcname = true;
-
-	return 0;					/* return value does not matter */
 }
 
 /*
  * errposition --- add cursor position to the current error
  */
-int
+void
 errposition(int cursorpos)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1428,8 +1383,6 @@ errposition(int cursorpos)
 	CHECK_STACK_DEPTH();
 
 	edata->cursorpos = cursorpos;
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1448,7 +1401,7 @@ errprintstack(bool printstack)
 /*
  * internalerrposition --- add internal cursor position to the current error
  */
-int
+void
 internalerrposition(int cursorpos)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1457,8 +1410,6 @@ internalerrposition(int cursorpos)
 	CHECK_STACK_DEPTH();
 
 	edata->internalpos = cursorpos;
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1468,7 +1419,7 @@ internalerrposition(int cursorpos)
  * is intended for use in error callback subroutines that are editorializing
  * on the layout of the error report.
  */
-int
+void
 internalerrquery(const char *query)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1484,9 +1435,7 @@ internalerrquery(const char *query)
 
 	if (query)
 		edata->internalquery = MemoryContextStrdup(edata->assoc_context, query);
-
 	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1499,7 +1448,7 @@ internalerrquery(const char *query)
  * Most potential callers should not use this directly, but instead prefer
  * higher-level abstractions, such as errtablecol() (see relcache.c).
  */
-int
+void
 err_generic_string(int field, const char *str)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
@@ -1528,8 +1477,6 @@ err_generic_string(int field, const char *str)
 			elog(ERROR, "unsupported ErrorData field id: %d", field);
 			break;
 	}
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -1610,116 +1557,6 @@ errFatalReturn(bool fatalReturn)
 	edata->fatal_return = fatalReturn;
 
 	return 0;					/* return value does not matter */
-}
-
-
-/*
- * elog_start --- startup for old-style API
- *
- * All that we do here is stash the hidden filename/lineno/funcname
- * arguments into a stack entry, along with the current value of errno.
- *
- * We need this to be separate from elog_finish because there's no other
- * C89-compliant way to deal with inserting extra arguments into the elog
- * call.  (When using C99's __VA_ARGS__, we could possibly merge this with
- * elog_finish, but there doesn't seem to be a good way to save errno before
- * evaluating the format arguments if we do that.)
- */
-void
-elog_start(const char *filename, int lineno, const char *funcname)
-{
-	ErrorData  *edata;
-
-	/* Make sure that memory context initialization has finished */
-	if (ErrorContext == NULL)
-	{
-		/* Oops, hard crash time; very little we can do safely here */
-		write_stderr("error occurred at %s:%d before error message processing is available\n",
-					 filename ? filename : "(unknown file)", lineno);
-		exit(2);
-	}
-
-	if (++errordata_stack_depth >= ERRORDATA_STACK_SIZE)
-	{
-		/*
-		 * Wups, stack not big enough.  We treat this as a PANIC condition
-		 * because it suggests an infinite loop of errors during error
-		 * recovery.  Note that the message is intentionally not localized,
-		 * else failure to convert it to client encoding could cause further
-		 * recursion.
-		 */
-		errordata_stack_depth = -1; /* make room on stack */
-		ereport(PANIC, (errmsg_internal("ERRORDATA_STACK_SIZE exceeded")));
-	}
-
-	edata = &errordata[errordata_stack_depth];
-	if (filename)
-	{
-		const char *slash;
-
-		/* keep only base name, useful especially for vpath builds */
-		slash = strrchr(filename, '/');
-		if (slash)
-			filename = slash + 1;
-	}
-	edata->filename = filename;
-	edata->lineno = lineno;
-	edata->funcname = funcname;
-	/* errno is saved now so that error parameter eval can't change it */
-	edata->saved_errno = errno;
-#ifdef USE_ASSERT_CHECKING
-	if (IsUnderPostmaster && mainthread() != 0 && !pthread_equal(main_tid, pthread_self()))
-	{
-#if defined(__darwin__)
-		write_log("elog called from thread (OS-X pthread_sigmask is broken: MPP-4923)\n");
-#else
-		write_log("elog called from thread (%s:%d)\n", filename, lineno);
-#endif
-	}
-#endif
-
-	/* Use ErrorContext for any allocations done at this level. */
-	edata->assoc_context = ErrorContext;
-}
-
-/*
- * elog_finish --- finish up for old-style API
- */
-void
-elog_finish(int elevel, const char *fmt,...)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-	MemoryContext oldcontext;
-
-	CHECK_STACK_DEPTH();
-
-	/*
-	 * Do errstart() to see if we actually want to report the message.
-	 */
-	errordata_stack_depth--;
-	errno = edata->saved_errno;
-	if (!errstart(elevel, edata->filename, edata->lineno, edata->funcname, NULL))
-		return;					/* nothing to do */
-
-	/*
-	 * Format error message just like errmsg_internal().
-	 */
-	recursion_depth++;
-	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
-
-	edata->message_id = fmt;
-	EVALUATE_MESSAGE(edata->domain, message, false, false);
-
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->message), strlen(edata->message));
-
-	MemoryContextSwitchTo(oldcontext);
-	recursion_depth--;
-
-	/*
-	 * And let errfinish() finish up.
-	 */
-	errfinish(0);
 }
 
 
@@ -1967,8 +1804,7 @@ ThrowErrorData(ErrorData *edata)
 	ErrorData  *newedata;
 	MemoryContext oldcontext;
 
-	if (!errstart(edata->elevel, edata->filename, edata->lineno,
-				  edata->funcname, NULL))
+	if (!errstart(edata->elevel, edata->domain))
 		return;					/* error is not to be reported at all */
 
 	newedata = &errordata[errordata_stack_depth];
@@ -2008,7 +1844,7 @@ ThrowErrorData(ErrorData *edata)
 	recursion_depth--;
 
 	/* Process the error. */
-	errfinish(0);
+	errfinish(edata->filename, edata->lineno, edata->funcname);
 }
 
 /*
@@ -2122,7 +1958,7 @@ pg_re_throw(void)
 		 */
 		error_context_stack = NULL;
 
-		errfinish(0);
+		errfinish(edata->filename, edata->lineno, edata->funcname);
 	}
 
 	/* Doesn't return ... */
@@ -2214,7 +2050,7 @@ elog_dismiss(int downgrade_to_elevel)
 	error_context_stack = NULL;
 
 	/* Use errstart to decide where to send the error report. */
-	shouldEmit = errstart(downgrade_to_elevel, NULL, 0, NULL, TEXTDOMAIN);
+	shouldEmit = errstart(downgrade_to_elevel, TEXTDOMAIN);
 
 	/* Send error report to log and/or client. */
 	if (shouldEmit)
@@ -2245,7 +2081,7 @@ elog_dismiss(int downgrade_to_elevel)
 	 * Sneak the caller's error through errfinish again (it has been through
 	 * once already) to emit the error report (if requested) and clean up.
 	 */
-	errfinish(0);
+	errfinish(NULL, 0, NULL);
 
 	/* Restore the context callback stack. */
 	error_context_stack = saveCallbackStack;
@@ -3288,7 +3124,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 					if (localXid != InvalidTransactionId)
 					{
 						if (distribXid >= FirstDistributedTransactionId)
-							appendStringInfo(buf, "dx%u, ", distribXid);
+							appendStringInfo(buf, "dx"UINT64_FORMAT", ", distribXid);
 
 						appendStringInfo(buf, "x%u", localXid);
 
@@ -4234,11 +4070,11 @@ send_message_to_server_log(ErrorData *edata)
 												edata->message,
 												edata->detail_log != NULL ? edata->detail_log : edata->detail,
 												edata->hint,
-												debug_query_string,
+												edata->hide_stmt ? NULL : debug_query_string,
 												edata->cursorpos,
 												edata->internalpos,
 												edata->internalquery,
-												edata->context,
+												edata->hide_ctx ? NULL : edata->context,
 												edata->funcname,
 												edata->show_funcname,
 												edata->filename,
@@ -4816,23 +4652,12 @@ error_severity(int elevel)
 
 	switch (elevel)
 	{
-		/* GPDB_12_MERGE_FIXME: In PostgreSQL, DEBUG1-DEBUG5 are all mashed together into just
-		 * DEBUG here. Why are we doing it differently? Revert to upstream version?
-		 */
 		case DEBUG1:
-			prefix = gettext_noop("DEBUG1");
-			break;
 		case DEBUG2:
-			prefix = gettext_noop("DEBUG2");
-			break;
 		case DEBUG3:
-			prefix = gettext_noop("DEBUG3");
-			break;
 		case DEBUG4:
-			prefix = gettext_noop("DEBUG4");
-			break;
 		case DEBUG5:
-			prefix = gettext_noop("DEBUG5");
+			prefix = gettext_noop("DEBUG");
 			break;
 		case LOG:
 		case LOG_SERVER_ONLY:

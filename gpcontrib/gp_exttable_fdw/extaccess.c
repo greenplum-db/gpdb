@@ -22,7 +22,7 @@
  * query will terminate.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -154,7 +154,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 	 * get the external URI assigned to us.
 	 *
 	 * The URI assigned for this segment is normally in the uriList list at
-	 * the index of this segment id. However, if we are executing on MASTER
+	 * the index of this segment id. However, if we are executing on COORDINATOR
 	 * ONLY the (one and only) entry which is destined for the master will be
 	 * at the first entry of the uriList list.
 	 */
@@ -186,7 +186,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 	}
 	else if (Gp_role == GP_ROLE_DISPATCH && isMasterOnly)
 	{
-		/* this is a ON MASTER table. Only get uri if we are the master */
+		/* this is a ON COORDINATOR table. Only get uri if we are the master */
 		if (segindex == -1)
 		{
 			Value	   *v = list_nth(uriList, 0);
@@ -270,6 +270,12 @@ external_beginscan(Relation relation, uint32 scancounter,
 									NIL,
 									(fmttype_is_custom(fmtType) ? NIL : extOptions));
 
+	if (scan->fs_pstate->header_line && Gp_role == GP_ROLE_DISPATCH)
+	{
+		ereport(NOTICE,
+				(errmsg("HEADER means that each one of the data files has a header row")));
+	}
+
 	/* Initialize all the parsing and state variables */
 	InitParseState(scan->fs_pstate, relation, false, fmtType,
 				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors);
@@ -311,6 +317,11 @@ external_rescan(FileScanDesc scan)
 	external_stopscan(scan);
 
 	/* The first call to external_getnext will re-open the scan */
+
+	if (!scan->fs_pstate)
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("The file parse state of external scan is invalid")));
 
 	/* reset some parse state variables */
 	scan->fs_pstate->reached_eof = false;
@@ -1007,7 +1018,7 @@ externalgettup_custom(FileScanDesc scan)
 		 * EOF. This is an error.
 		 */
 		ereport(WARNING,
-				(ERRCODE_DATA_EXCEPTION,
+				(errcode(ERRCODE_DATA_EXCEPTION),
 				 errmsg("unexpected end of file")));
 	}
 

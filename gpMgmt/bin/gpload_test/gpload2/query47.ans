@@ -1,0 +1,18 @@
+2020-12-01 16:27:09|INFO|gpload session started 2020-12-01 16:27:09
+2020-12-01 16:29:16|ERROR|could not connect to database: could not connect to server: Connection timed out
+	Is the server running on host "1.2.3.4" and accepting
+	TCP/IP connections on port 7000?
+. Is the Greenplum Database running on port 7000?
+2020-12-01 16:29:16|INFO|rows Inserted          = 0
+2020-12-01 16:29:16|INFO|rows Updated           = 0
+2020-12-01 16:29:16|INFO|data formatting errors = 0
+2020-12-01 16:29:16|INFO|gpload failed
+2020-12-01 16:29:17|INFO|gpload session started 2020-12-01 16:29:17
+2020-12-01 16:31:24|ERROR|could not connect to database: could not connect to server: Connection timed out
+	Is the server running on host "1.2.3.4" and accepting
+	TCP/IP connections on port 7000?
+. Is the Greenplum Database running on port 7000?
+2020-12-01 16:31:24|INFO|rows Inserted          = 0
+2020-12-01 16:31:24|INFO|rows Updated           = 0
+2020-12-01 16:31:24|INFO|data formatting errors = 0
+2020-12-01 16:31:24|INFO|gpload failed

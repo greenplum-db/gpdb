@@ -10,13 +10,12 @@
 //		statistics.
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/CDXLRelStats.h"
-
 #include "naucrates/dxl/parser/CParseHandlerRelStats.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/md/CDXLRelStats.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -91,15 +90,36 @@ CParseHandlerRelStats::StartElement(const XMLCh *const,	 // element_uri,
 	BOOL is_empty = false;
 	const XMLCh *xml_str_is_empty =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenEmptyRelation));
-	if (NULL != xml_str_is_empty)
+	if (nullptr != xml_str_is_empty)
 	{
 		is_empty = CDXLOperatorFactory::ConvertAttrValueToBool(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_is_empty,
 			EdxltokenEmptyRelation, EdxltokenStatsDerivedRelation);
 	}
 
-	m_imd_obj = GPOS_NEW(m_mp) CDXLRelStats(m_mp, CMDIdRelStats::CastMdid(mdid),
-											mdname, rows, is_empty);
+	ULONG relpages = 0;
+	const XMLCh *xml_relpages =
+		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelPages));
+	if (nullptr != xml_relpages)
+	{
+		relpages = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenRelPages, EdxltokenRelationStats);
+	}
+
+	ULONG relallvisible = 0;
+	const XMLCh *xml_relallvisible =
+		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelAllVisible));
+	if (nullptr != xml_relallvisible)
+	{
+		relallvisible = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenRelAllVisible, EdxltokenRelationStats);
+	}
+
+	m_imd_obj =
+		GPOS_NEW(m_mp) CDXLRelStats(m_mp, CMDIdRelStats::CastMdid(mdid), mdname,
+									rows, is_empty, relpages, relallvisible);
 }
 
 //---------------------------------------------------------------------------

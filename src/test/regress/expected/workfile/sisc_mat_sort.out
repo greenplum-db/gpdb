@@ -31,6 +31,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into testsiscm select i, i % 1000, i % 100000, i % 75 from
 	(select generate_series(1, nsegments * 150000) as i from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+analyze testsiscm;
 set statement_mem="3MB";
 set gp_resqueue_print_operator_memory_limits=on;
 set gp_cte_sharing=on;

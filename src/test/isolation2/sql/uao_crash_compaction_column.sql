@@ -5,7 +5,6 @@
 -- m/ERROR:.*server closed the connection unexpectedly/
 -- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
 -- end_matchsubs
-include: helpers/server_helpers.sql;
 
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 --

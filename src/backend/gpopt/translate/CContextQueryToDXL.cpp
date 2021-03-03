@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //  Greenplum Database
-//	Copyright (C) 2018-Present Pivotal Software, Inc.
+//	Copyright (C) 2018-Present VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CContextQueryToDXL.cpp
@@ -18,7 +18,6 @@ extern "C" {
 
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-
 #include "naucrates/dxl/CIdGenerator.h"
 
 using namespace gpdxl;

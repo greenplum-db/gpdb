@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalTableScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalScan.h"
 
 namespace gpopt
@@ -37,72 +38,62 @@ public:
 					   CColRefArray *);
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalTableScan;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalTableScan";
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *) const;
-
-	// derive partition index map
-	virtual CPartIndexMap *
-	PpimDerive(CMemoryPool *mp,
-			   CExpressionHandle &,	 // exprhdl
-			   CDrvdPropCtxt *		 //pdpctxt
-	) const
-	{
-		return GPOS_NEW(mp) CPartIndexMap(mp);
-	}
+	BOOL Matches(COperator *) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 
 	// conversion function
 	static CPhysicalTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalTableScan == pop->Eopid() ||
 					EopPhysicalExternalScan == pop->Eopid());
 
-		return reinterpret_cast<CPhysicalTableScan *>(pop);
+		return dynamic_cast<CPhysicalTableScan *>(pop);
 	}
 
 	// statistics derivation during costing
-	virtual IStatistics *
+	IStatistics *
 	PstatsDerive(CMemoryPool *,		   // mp
 				 CExpressionHandle &,  // exprhdl
 				 CReqdPropPlan *,	   // prpplan
 				 IStatisticsArray *	   //stats_ctxt
-	) const
+	) const override
 	{
 		GPOS_ASSERT(
 			!"stats derivation during costing for table scan is invalid");
 
-		return NULL;
+		return nullptr;
 	}
 
-	virtual CRewindabilitySpec *
+	CRewindabilitySpec *
 	PrsDerive(CMemoryPool *mp,
 			  CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		// mark-restorability of output is always true
 		return GPOS_NEW(mp)

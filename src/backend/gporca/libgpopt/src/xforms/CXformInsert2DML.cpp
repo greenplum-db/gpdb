@@ -9,13 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformInsert2DML.h"
-#include "gpopt/xforms/CXformUtils.h"
 
+#include "gpos/base.h"
+
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalInsert.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -64,7 +65,7 @@ void
 CXformInsert2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 							CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -86,8 +87,8 @@ CXformInsert2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// create logical DML
 	CExpression *pexprAlt = CXformUtils::PexprLogicalDMLOverProject(
 		mp, pexprChild, CLogicalDML::EdmlInsert, ptabdesc, pdrgpcrSource,
-		NULL,  //pcrCtid
-		NULL   //pcrSegmentId
+		nullptr,  //pcrCtid
+		nullptr	  //pcrSegmentId
 	);
 
 	// add alternative to transformation result

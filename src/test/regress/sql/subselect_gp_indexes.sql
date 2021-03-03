@@ -36,6 +36,7 @@ explain select t1.id1, (select count(*) from generate_series(1,5) g, choose_seqs
 create table choose_seqscan_t3(id1 int,id2 int);
 create index bidx3 on choose_seqscan_t3(id1);
 insert into choose_seqscan_t3 select i+1,i from generate_series(1,50)i;
+analyze choose_seqscan_t3;
 select t1.id1, (select count(*) from choose_seqscan_t3 t3, choose_seqscan_t2 t2 where t1.id1 = t2.id1 and t3.id1 = t2.id1) from choose_seqscan_t1 t1 where t1.id1 < 10;
 explain select t1.id1, (select count(*) from choose_seqscan_t3 t3, choose_seqscan_t2 t2 where t1.id1 = t2.id1 and t3.id1 = t2.id1) from choose_seqscan_t1 t1 where t1.id1 < 10;
 

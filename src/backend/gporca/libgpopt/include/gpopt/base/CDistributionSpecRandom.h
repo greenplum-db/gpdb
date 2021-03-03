@@ -32,14 +32,14 @@ class CDistributionSpecRandom : public CDistributionSpec
 {
 protected:
 	// is the random distribution sensitive to duplicates
-	BOOL m_is_duplicate_sensitive;
+	BOOL m_is_duplicate_sensitive{false};
 
 	// does Singleton spec satisfy current distribution?
 	// by default, Singleton satisfies hashed/random since all tuples with the same hash value
 	// are moved to the same host/segment,
 	// this flag adds the ability to mark a distribution request as non-satisfiable by Singleton
 	// in case we need to enforce across segments distribution
-	BOOL m_fSatisfiedBySingleton;
+	BOOL m_fSatisfiedBySingleton{true};
 
 	// private copy ctor
 	CDistributionSpecRandom(const CDistributionSpecRandom &);
@@ -49,8 +49,8 @@ public:
 	CDistributionSpecRandom();
 
 	// accessor
-	virtual EDistributionType
-	Edt() const
+	EDistributionType
+	Edt() const override
 	{
 		return CDistributionSpec::EdtRandom;
 	}
@@ -94,32 +94,31 @@ public:
 	}
 
 	// does this distribution match the given one
-	virtual BOOL Matches(const CDistributionSpec *pds) const;
+	BOOL Matches(const CDistributionSpec *pds) const override;
 
 	// does current distribution satisfy the given one
-	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
+	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// return distribution partitioning type
-	virtual EDistributionPartitioningType
-	Edpt() const
+	EDistributionPartitioningType
+	Edpt() const override
 	{
 		return EdptPartitioned;
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CDistributionSpecRandom *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRandom == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecRandom *>(pds);
@@ -129,7 +128,7 @@ public:
 	static const CDistributionSpecRandom *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRandom == pds->Edt());
 
 		return dynamic_cast<const CDistributionSpecRandom *>(pds);

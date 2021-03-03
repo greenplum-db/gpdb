@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //      Greenplum Database
-//      Copyright (C) 2014 Pivotal Inc.
+//      Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //      @filename:
 //              CUpperBoundNDVs.cpp
@@ -11,6 +11,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/statistics/CUpperBoundNDVs.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 
@@ -38,7 +39,7 @@ CUpperBoundNDVs::CopyUpperBoundNDVWithRemap(
 	{
 		ULONG colid = column_refset_iter.Pcr()->Id();
 		CColRef *column_ref = colid_to_colref_map->Find(&colid);
-		if (NULL != column_ref)
+		if (nullptr != column_ref)
 		{
 			column_refset_copy->Include(column_ref);
 		}
@@ -56,7 +57,7 @@ CUpperBoundNDVs::CopyUpperBoundNDVWithRemap(
 
 	column_refset_copy->Release();
 
-	return NULL;
+	return nullptr;
 }
 
 

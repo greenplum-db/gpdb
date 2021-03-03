@@ -3,7 +3,7 @@
  * fe-exec.c
  *	  functions related to sending a query down to the backend
  *
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -180,6 +180,7 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
 
 	result->extras = NULL;
 	result->extraslen = 0;
+	result->extraType = PGExtraTypeNone;
 
 	result->numRejected = 0;
 	result->numCompleted = 0;
@@ -759,6 +760,7 @@ PQclear(PGresult *res)
 		free(res->extras);
 	res->extraslen = 0;
 	res->extras = NULL;
+	res->extraType = PGExtraTypeNone;
 
 	if (res->waitGxids)
 		free(res->waitGxids);

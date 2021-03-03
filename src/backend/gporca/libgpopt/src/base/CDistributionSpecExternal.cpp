@@ -9,8 +9,9 @@
 //		Specification of external distribution, where data stored externally
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDistributionSpecExternal.h"
+
+#include "gpopt/base/CUtils.h"
 
 using namespace gpopt;
 
@@ -23,9 +24,7 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDistributionSpecExternal::CDistributionSpecExternal()
-{
-}
+CDistributionSpecExternal::CDistributionSpecExternal() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

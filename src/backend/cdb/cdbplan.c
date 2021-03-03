@@ -4,7 +4,7 @@
  *	  Provides routines supporting plan tree manipulation.
  *
  * Portions Copyright (c) 2004-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -279,8 +279,6 @@ plan_tree_mutator(Node *node,
 				return (Node *) newAssert;
 			}
 
-/* GPDB_12_MERGE_FIXME: Is PartitionSelector still needed? */
-#if 0
 		case T_PartitionSelector:
 			{
 				PartitionSelector *partsel = (PartitionSelector *) node;
@@ -288,23 +286,9 @@ plan_tree_mutator(Node *node,
 
 				FLATCOPY(newPartsel, partsel, PartitionSelector);
 				PLANMUTATE(newPartsel, partsel);
-				MUTATE(newPartsel->levelEqExpressions, partsel->levelEqExpressions, List *);
-				MUTATE(newPartsel->levelExpressions, partsel->levelExpressions, List *);
-				MUTATE(newPartsel->residualPredicate, partsel->residualPredicate, Node *);
-				MUTATE(newPartsel->propagationExpression, partsel->propagationExpression, Node *);
-				MUTATE(newPartsel->printablePredicate, partsel->printablePredicate, Node *);
-				MUTATE(newPartsel->partTabTargetlist, partsel->partTabTargetlist, List *);
-				MUTATE(newPartsel->staticPartOids, partsel->staticPartOids, List *);
-				MUTATE(newPartsel->staticScanIds, partsel->staticScanIds, List *);
-				newPartsel->nLevels = partsel->nLevels;
-				newPartsel->scanId = partsel->scanId;
-				newPartsel->selectorId = partsel->selectorId;
-				newPartsel->relid = partsel->relid;
-				newPartsel->staticSelection = partsel->staticSelection;
 
 				return (Node *) newPartsel;
 			}
-#endif
 
 		case T_BitmapAnd:
 			{
@@ -368,38 +352,12 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_DynamicSeqScan:
-			{
-				DynamicSeqScan *dynamicSeqScan = (DynamicSeqScan *) node;
-				DynamicSeqScan *newDynamicSeqScan = NULL;
-
-				FLATCOPY(newDynamicSeqScan, dynamicSeqScan, DynamicSeqScan);
-				SCANMUTATE(newDynamicSeqScan, dynamicSeqScan);
-				return (Node *) newDynamicSeqScan;
-			}
-			break;
-
 		case T_IndexScan:
-		case T_DynamicIndexScan:
 			{
 				IndexScan  *idxscan = (IndexScan *) node;
 				IndexScan  *newidxscan;
 
-				if (IsA(node, DynamicIndexScan))
-				{
-					/*
-					 * A DynamicIndexScan is identical to IndexScan, except for
-					 * additional fields. This convoluted coding is to avoid
-					 * copy-pasting this code and risking bugs of omission if
-					 * new fields are added to IndexScan in upstream.
-					 */
-					DynamicIndexScan *newdiscan;
-
-					FLATCOPY(newdiscan, idxscan, DynamicIndexScan);
-					newidxscan = (IndexScan *) newdiscan;
-				}
-				else
-					FLATCOPY(newidxscan, idxscan, IndexScan);
+				FLATCOPY(newidxscan, idxscan, IndexScan);
 				SCANMUTATE(newidxscan, idxscan);
 				newidxscan->indexid = idxscan->indexid;
 				/* MUTATE(newidxscan->indexid, idxscan->indexid, List *); */
@@ -427,21 +385,11 @@ plan_tree_mutator(Node *node,
 			break;
 
 		case T_BitmapIndexScan:
-		case T_DynamicBitmapIndexScan:
 			{
 				BitmapIndexScan *idxscan = (BitmapIndexScan *) node;
 				BitmapIndexScan *newidxscan;
 
-				if (IsA(node, DynamicBitmapIndexScan))
-				{
-					/* see comment above on DynamicIndexScan */
-					DynamicBitmapIndexScan *newdbiscan;
-
-					FLATCOPY(newdbiscan, idxscan, DynamicBitmapIndexScan);
-					newidxscan = (BitmapIndexScan *) newdbiscan;
-				}
-				else
-					FLATCOPY(newidxscan, idxscan, BitmapIndexScan);
+				FLATCOPY(newidxscan, idxscan, BitmapIndexScan);
 				SCANMUTATE(newidxscan, idxscan);
 				newidxscan->indexid = idxscan->indexid;
 
@@ -453,21 +401,11 @@ plan_tree_mutator(Node *node,
 			break;
 
 		case T_BitmapHeapScan:
-		case T_DynamicBitmapHeapScan:
 			{
 				BitmapHeapScan *bmheapscan = (BitmapHeapScan *) node;
 				BitmapHeapScan *newbmheapscan;
 
-				if (IsA(node, DynamicBitmapHeapScan))
-				{
-					/* see comment above on DynamicIndexScan */
-					DynamicBitmapHeapScan *newdbhscan;
-
-					FLATCOPY(newdbhscan, bmheapscan, DynamicBitmapHeapScan);
-					newbmheapscan = (BitmapHeapScan *) newdbhscan;
-				}
-				else
-					FLATCOPY(newbmheapscan, bmheapscan, BitmapHeapScan);
+				FLATCOPY(newbmheapscan, bmheapscan, BitmapHeapScan);
 				SCANMUTATE(newbmheapscan, bmheapscan);
 
 				MUTATE(newbmheapscan->bitmapqualorig, bmheapscan->bitmapqualorig, List *);

@@ -16,8 +16,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDAggregate.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/IMDAggregate.h"
 
 
 namespace gpmd
@@ -63,10 +63,9 @@ class CMDAggregateGPDB : public IMDAggregate
 	// is aggregate hash capable
 	BOOL m_hash_agg_capable;
 
-	// private copy ctor
-	CMDAggregateGPDB(const CMDAggregateGPDB &);
-
 public:
+	CMDAggregateGPDB(const CMDAggregateGPDB &) = delete;
+
 	// ctor
 	CMDAggregateGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 					 IMDId *result_type_mdid,
@@ -74,54 +73,54 @@ public:
 					 BOOL is_splittable, BOOL is_hash_agg_capable);
 
 	//dtor
-	~CMDAggregateGPDB();
+	~CMDAggregateGPDB() override;
 
 	// string representation of object
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// aggregate id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// aggregate name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// result id
-	virtual IMDId *GetResultTypeMdid() const;
+	IMDId *GetResultTypeMdid() const override;
 
 	// intermediate result id
-	virtual IMDId *GetIntermediateResultTypeMdid() const;
+	IMDId *GetIntermediateResultTypeMdid() const override;
 
 	// serialize object in DXL format
-	virtual void Serialize(gpdxl::CXMLSerializer *xml_serializer) const;
+	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;
 
 	// is an ordered aggregate
-	virtual BOOL
-	IsOrdered() const
+	BOOL
+	IsOrdered() const override
 	{
 		return m_is_ordered;
 	}
 
 	// is aggregate splittable
-	virtual BOOL
-	IsSplittable() const
+	BOOL
+	IsSplittable() const override
 	{
 		return m_is_splittable;
 	}
 
 	// is aggregate hash capable
-	virtual BOOL
-	IsHashAggCapable() const
+	BOOL
+	IsHashAggCapable() const override
 	{
 		return m_hash_agg_capable;
 	}
 
 #ifdef GPOS_DEBUG
 	// debug print of the type in the provided stream
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

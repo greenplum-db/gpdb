@@ -12,8 +12,8 @@
 
 
 #include "naucrates/dxl/operators/CDXLLogicalLimit.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
 
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -40,9 +40,7 @@ CDXLLogicalLimit::CDXLLogicalLimit(CMemoryPool *mp, BOOL top_limit_under_dml)
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CDXLLogicalLimit::~CDXLLogicalLimit()
-{
-}
+CDXLLogicalLimit::~CDXLLogicalLimit() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

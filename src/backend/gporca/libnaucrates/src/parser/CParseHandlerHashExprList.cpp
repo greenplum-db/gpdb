@@ -10,13 +10,13 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerHashExprList.h"
-#include "naucrates/dxl/parser/CParseHandlerHashExpr.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarHashExprList.h"
 #include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerHashExpr.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 using namespace gpdxl;
 
@@ -67,7 +67,7 @@ CParseHandlerHashExprList::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a hash expr list already and initialized the hash expr list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 		// start new hash expr element
 		CParseHandlerBase *hash_expr_parse_handler =
 			CParseHandlerFactory::GetParseHandler(

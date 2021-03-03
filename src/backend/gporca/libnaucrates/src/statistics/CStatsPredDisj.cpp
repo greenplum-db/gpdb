@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/statistics/CStatsPredDisj.h"
+
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpnaucrates;
@@ -27,7 +28,7 @@ CStatsPredDisj::CStatsPredDisj(CStatsPredPtrArry *disj_pred_stats_array)
 	: CStatsPred(gpos::ulong_max),
 	  m_disj_pred_stats_array(disj_pred_stats_array)
 {
-	GPOS_ASSERT(NULL != disj_pred_stats_array);
+	GPOS_ASSERT(nullptr != disj_pred_stats_array);
 	m_colid = CStatisticsUtils::GetColId(disj_pred_stats_array);
 }
 

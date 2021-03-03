@@ -11,9 +11,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerScalarConstValue.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -68,7 +69,7 @@ CParseHandlerScalarConstValue::StartElement(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
 
 	// construct scalar Const node
-	GPOS_ASSERT(NULL != dxl_op);
+	GPOS_ASSERT(nullptr != dxl_op);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp);
 	m_dxl_node->SetOperator(dxl_op);
 }

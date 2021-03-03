@@ -5184,6 +5184,7 @@ BootStrapXLOG(void)
 	checkPoint.fullPageWrites = fullPageWrites;
 	checkPoint.nextFullXid =
 		FullTransactionIdFromEpochAndXid(0, FirstNormalTransactionId);
+	checkPoint.nextGxid = FirstDistributedTransactionId;
 	checkPoint.nextOid = FirstBootstrapObjectId;
 	checkPoint.nextRelfilenode = FirstBootstrapObjectId;
 	checkPoint.nextMulti = FirstMultiXactId;
@@ -5198,6 +5199,8 @@ BootStrapXLOG(void)
 	checkPoint.oldestActiveXid = InvalidTransactionId;
 
 	ShmemVariableCache->nextFullXid = checkPoint.nextFullXid;
+	ShmemVariableCache->nextGxid = checkPoint.nextGxid;
+	ShmemVariableCache->GxidCount = 0;
 	ShmemVariableCache->nextOid = checkPoint.nextOid;
 	ShmemVariableCache->oidCount = 0;
 	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
@@ -5637,7 +5640,8 @@ getRecordTimestamp(XLogReaderState *record, TimestampTz *recordXtime)
 		return true;
 	}
 	if (rmid == RM_XACT_ID && (xact_info == XLOG_XACT_COMMIT ||
-							   xact_info == XLOG_XACT_COMMIT_PREPARED))
+							   xact_info == XLOG_XACT_COMMIT_PREPARED ||
+							   xact_info == XLOG_XACT_DISTRIBUTED_COMMIT))
 	{
 		*recordXtime = ((xl_xact_commit *) XLogRecGetData(record))->xact_time;
 		return true;
@@ -5705,7 +5709,8 @@ recoveryStopsBefore(XLogReaderState *record)
 
 	xact_info = XLogRecGetInfo(record) & XLOG_XACT_OPMASK;
 
-	if (xact_info == XLOG_XACT_COMMIT)
+	if (xact_info == XLOG_XACT_COMMIT ||
+		xact_info == XLOG_XACT_DISTRIBUTED_COMMIT)
 	{
 		isCommit = true;
 		recordXid = XLogRecGetXid(record);
@@ -5864,7 +5869,8 @@ recoveryStopsAfter(XLogReaderState *record)
 	if (xact_info == XLOG_XACT_COMMIT ||
 		xact_info == XLOG_XACT_COMMIT_PREPARED ||
 		xact_info == XLOG_XACT_ABORT ||
-		xact_info == XLOG_XACT_ABORT_PREPARED)
+		xact_info == XLOG_XACT_ABORT_PREPARED ||
+		xact_info == XLOG_XACT_DISTRIBUTED_COMMIT)
 	{
 		TransactionId recordXid;
 
@@ -5915,7 +5921,8 @@ recoveryStopsAfter(XLogReaderState *record)
 			recoveryStopName[0] = '\0';
 
 			if (xact_info == XLOG_XACT_COMMIT ||
-				xact_info == XLOG_XACT_COMMIT_PREPARED)
+				xact_info == XLOG_XACT_COMMIT_PREPARED ||
+				xact_info == XLOG_XACT_DISTRIBUTED_COMMIT)
 			{
 				ereport(LOG,
 						(errmsg("recovery stopping after commit of transaction %u, time %s",
@@ -6039,7 +6046,8 @@ recoveryApplyDelay(XLogReaderState *record)
 	xact_info = XLogRecGetInfo(record) & XLOG_XACT_OPMASK;
 
 	if (xact_info != XLOG_XACT_COMMIT &&
-		xact_info != XLOG_XACT_COMMIT_PREPARED)
+		xact_info != XLOG_XACT_COMMIT_PREPARED &&
+		xact_info != XLOG_XACT_DISTRIBUTED_COMMIT)
 		return false;
 
 	if (!getRecordTimestamp(record, &xtime))
@@ -6150,7 +6158,6 @@ XLogProcessCheckpointRecord(XLogReaderState *rec)
 	if (ckptExtended.dtxCheckpoint)
 	{
 		/* Handle the DTX information. */
-		UtilityModeFindOrCreateDtmRedoFile();
 		redoDtxCheckPoint(ckptExtended.dtxCheckpoint);
 		/*
 		 * Avoid closing the file here as possibly the file was already open
@@ -6489,7 +6496,12 @@ StartupXLOG(void)
 		ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
 	{
 		RemoveTempXlogFiles();
+		ereport(LOG,
+				(errmsg("force synchronization of the data directory since the"
+						" database system was uncleanly shut down.")));
 		SyncDataDirectory();
+		ereport(LOG,
+				(errmsg("synchronization of the data directory is finished.")));
 		if (Gp_role == GP_ROLE_DISPATCH)
 			*shmCleanupBackends = true;
 	}
@@ -6826,6 +6838,8 @@ StartupXLOG(void)
 
 	/* initialize shared memory variables from the checkpoint record */
 	ShmemVariableCache->nextFullXid = checkPoint.nextFullXid;
+	ShmemVariableCache->nextGxid = checkPoint.nextGxid;
+	ShmemVariableCache->GxidCount = 0;
 	ShmemVariableCache->nextOid = checkPoint.nextOid;
 	ShmemVariableCache->oidCount = 0;
 	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
@@ -7075,8 +7089,6 @@ StartupXLOG(void)
 		/* Check that the GUCs used to generate the WAL allow recovery */
 		CheckRequiredParameterValues();
 
-		UtilityModeFindOrCreateDtmRedoFile();
-		
 		/*
 		 * We're in recovery, so unlogged relations may be trashed and must be
 		 * reset.  This should be done BEFORE allowing Hot Standby
@@ -7334,22 +7346,6 @@ StartupXLOG(void)
 				 * xid.
 				 */
 				AdvanceNextFullTransactionIdPastXid(record->xl_xid);
-
-				/*
-				 * See if this record is a checkpoint, if yes then uncover it to
-				 * find distributed committed Xacts.
-				 * No need to unpack checkpoint in crash recovery mode
-				 */
-				uint8 xlogRecInfo = record->xl_info & ~XLR_INFO_MASK;
-
-				if (IsStandbyMode() &&
-					record->xl_rmid == RM_XLOG_ID &&
-					(xlogRecInfo == XLOG_CHECKPOINT_SHUTDOWN
-					 || xlogRecInfo == XLOG_CHECKPOINT_ONLINE))
-				{
-					XLogProcessCheckpointRecord(xlogreader);
-					memcpy(&checkPoint, XLogRecGetData(xlogreader), sizeof(CheckPoint));
-				}
 
 				/*
 				 * Before replaying this record, check if this record causes
@@ -7862,8 +7858,6 @@ StartupXLOG(void)
 		else
 			CreateCheckPoint(CHECKPOINT_END_OF_RECOVERY | CHECKPOINT_IMMEDIATE);
 
-		UtilityModeCloseDtmRedoFile();
-
 		/*
 		 * And finally, execute the recovery_end_command, if any.
 		 */
@@ -7980,6 +7974,7 @@ StartupXLOG(void)
 	/* also initialize latestCompletedXid, to nextXid - 1 */
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	ShmemVariableCache->latestCompletedXid = XidFromFullTransactionId(ShmemVariableCache->nextFullXid);
+	ShmemVariableCache->latestCompletedGxid = ShmemVariableCache->nextGxid;
 	TransactionIdRetreat(ShmemVariableCache->latestCompletedXid);
 	if (IsNormalProcessingMode())
 		elog(LOG, "latest completed transaction id is %u and next transaction id is %u",
@@ -9109,6 +9104,29 @@ CreateCheckPoint(int flags)
 	checkPoint.oldestXidDB = ShmemVariableCache->oldestXidDB;
 	LWLockRelease(XidGenLock);
 
+	/*
+	 * GxidBumpLock and XLOG_NEXTGXID are used on content -1 only. So skipping
+	 * locking GxidBumpLock on segments.
+	 *
+	 * We need to hold GxidBumpLock since XLOG_NEXTGXID is created with the
+	 * lock held. nextGxid in online checkpoint is not used during replay but
+	 * during crash recovery, it is used as the initial nextGxid so need to add
+	 * the ShmemVariableCache->GxidCount variable. For the crash recovery case,
+	 * if XLOG_NEXTGXID is created before checkpoint.redo, we get the nextGxid
+	 * same as the XLOG_NEXTGXID value; else we rely on XLOG_NEXTGXID
+	 * replay finally. See bumpGxid() for more details.
+	 *
+	 */
+	if (IS_QUERY_DISPATCHER())
+		LWLockAcquire(GxidBumpLock, LW_SHARED);
+	SpinLockAcquire(shmGxidGenLock);
+	checkPoint.nextGxid = ShmemVariableCache->nextGxid;
+	if (!shutdown)
+		checkPoint.nextGxid += ShmemVariableCache->GxidCount;
+	SpinLockRelease(shmGxidGenLock);
+	if (IS_QUERY_DISPATCHER())
+		LWLockRelease(GxidBumpLock);
+
 	LWLockAcquire(CommitTsLock, LW_SHARED);
 	checkPoint.oldestCommitTsXid = ShmemVariableCache->oldestCommitTsXid;
 	checkPoint.newestCommitTsXid = ShmemVariableCache->newestCommitTsXid;
@@ -9297,7 +9315,7 @@ CreateCheckPoint(int flags)
 	 * Update the average distance between checkpoints if the prior checkpoint
 	 * exists.
 	 */
-	if (gp_keep_all_xlog == false && PriorRedoPtr != InvalidXLogRecPtr)
+	if (PriorRedoPtr != InvalidXLogRecPtr)
 		UpdateCheckPointDistanceEstimate(RedoRecPtr - PriorRedoPtr);
 
 	/*
@@ -9626,7 +9644,7 @@ CreateRestartPoint(int flags)
 	 * Update the average distance between checkpoints/restartpoints if the
 	 * prior checkpoint exists.
 	 */
-	if (!gp_keep_all_xlog && PriorRedoPtr != InvalidXLogRecPtr)
+	if (PriorRedoPtr != InvalidXLogRecPtr)
 		UpdateCheckPointDistanceEstimate(RedoRecPtr - PriorRedoPtr);
 
 	/*
@@ -9811,6 +9829,25 @@ XLogPutNextRelfilenode(Oid nextRelfilenode)
 	XLogBeginInsert();
 	XLogRegisterData((char *) (&nextRelfilenode), sizeof(Oid));
 	(void) XLogInsert(RM_XLOG_ID, XLOG_NEXTRELFILENODE);
+}
+
+void
+XLogPutNextGxid(DistributedTransactionId nextGxid)
+{
+	XLogRecPtr recptr;
+
+	XLogBeginInsert();
+	XLogRegisterData((char *) (&nextGxid), sizeof(nextGxid));
+	recptr = XLogInsert(RM_XLOG_ID, XLOG_NEXTGXID);
+
+	XLogFlush(recptr);
+	/*
+	 * For one phase, there isn't transaction on the coordinator, so without
+	 * the below code, this kind of xlog might not be streamed to the standby
+	 * in time so the standby might fail to track the NextGxid information
+	 * after promote.
+	 */
+	SyncRepWaitForLSN(recptr, true);
 }
 
 /*
@@ -10064,7 +10101,17 @@ xlog_redo(XLogReaderState *record)
 		ShmemVariableCache->oidCount = 0;
 		LWLockRelease(OidGenLock);
 	}
-	if (info == XLOG_NEXTRELFILENODE)
+	else if (info == XLOG_NEXTGXID)
+	{
+		DistributedTransactionId nextGxid;
+
+		nextGxid = *((DistributedTransactionId *)XLogRecGetData(record));
+		SpinLockAcquire(shmGxidGenLock);
+		ShmemVariableCache->nextGxid = nextGxid;
+		ShmemVariableCache->GxidCount = 0;
+		SpinLockRelease(shmGxidGenLock);
+	}
+	else if (info == XLOG_NEXTRELFILENODE)
 	{
 		Oid			nextRelfilenode;
 
@@ -10083,6 +10130,9 @@ xlog_redo(XLogReaderState *record)
 		LWLockAcquire(XidGenLock, LW_EXCLUSIVE);
 		ShmemVariableCache->nextFullXid = checkPoint.nextFullXid;
 		LWLockRelease(XidGenLock);
+		SpinLockAcquire(shmGxidGenLock);
+		ShmemVariableCache->nextGxid = checkPoint.nextGxid;
+		SpinLockRelease(shmGxidGenLock);
 		LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
 		ShmemVariableCache->nextOid = checkPoint.nextOid;
 		ShmemVariableCache->oidCount = 0;
@@ -10193,6 +10243,11 @@ xlog_redo(XLogReaderState *record)
 		 * counter wraps around, that's a risky thing to do.  In any case,
 		 * users of the nextOid counter are required to avoid assignment of
 		 * duplicates, so that a somewhat out-of-date value should be safe.
+		 */
+
+		/*
+		 * We ignore the nextGxid counter in an ONLINE checkpoint. See code
+		 * that creates checkpoint (CreateCheckPoint()) for details.
 		 */
 
 		/* Handle multixact */

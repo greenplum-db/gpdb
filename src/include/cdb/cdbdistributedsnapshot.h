@@ -3,7 +3,7 @@
  * cdbdistributedsnapshot.h
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -17,16 +17,10 @@
 /* This is a shipped header, do not include other files under "cdb" */
 #include "c.h"     /* DistributedTransactionId */
 
-#define DistributedSnapshot_StaticInit {0,0,0,0,0,0,0}
+#define DistributedSnapshot_StaticInit {0,0,0,0,0,0}
 
 typedef struct DistributedSnapshot
 {
-	/*
-	 * The unique timestamp for this start of the DTM.  It applies to all of
-	 * the distributed transactions in this snapshot.
-	 */
-	DistributedTransactionTimeStamp	distribTransactionTimeStamp;
-
 	/*
 	 * The lowest distributed transaction being used for distributed snapshots.
 	 */

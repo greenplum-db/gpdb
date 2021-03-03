@@ -12,6 +12,7 @@
 #define GPOPT_CXformSubqueryUnnest_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -29,9 +30,6 @@ using namespace gpos;
 class CXformSubqueryUnnest : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformSubqueryUnnest(const CXformSubqueryUnnest &);
-
 protected:
 	// helper for subquery unnesting
 	static CExpression *PexprSubqueryUnnest(CMemoryPool *mp, CExpression *pexpr,
@@ -43,25 +41,27 @@ protected:
 						   BOOL fEnforceCorrelatedApply) const;
 
 public:
+	CXformSubqueryUnnest(const CXformSubqueryUnnest &) = delete;
+
 	// ctor
 	explicit CXformSubqueryUnnest(CExpression *pexprPattern)
-		: CXformExploration(pexprPattern){};
-
-	// dtor
-	virtual ~CXformSubqueryUnnest()
+		: CXformExploration(pexprPattern)
 	{
 	}
 
+	// dtor
+	~CXformSubqueryUnnest() override = default;
+
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 	// is transformation a subquery unnesting (Subquery To Apply) xform?
-	virtual BOOL
-	FSubqueryUnnesting() const
+	BOOL
+	FSubqueryUnnesting() const override
 	{
 		return true;
 	}

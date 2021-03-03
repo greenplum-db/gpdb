@@ -3,10 +3,10 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="103027,101013,102007,103001"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102007,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.28.1.0" Name="xid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -1019,7 +1019,7 @@
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:HashJoin JoinType="Left">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="69.021875" Rows="136.148000" Width="132"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.173205" Rows="136.148000" Width="132"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="31" Alias="oid">
@@ -1042,7 +1042,7 @@
         </dxl:HashCondList>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="43.651562" Rows="134.800000" Width="72"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.067322" Rows="134.800000" Width="72"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="relname">
@@ -1078,7 +1078,7 @@
         </dxl:TableScan>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.492188" Rows="7.000000" Width="72"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000566" Rows="7.000000" Width="72"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="38" Alias="nspname">

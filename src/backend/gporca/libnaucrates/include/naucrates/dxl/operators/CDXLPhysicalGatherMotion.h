@@ -15,6 +15,7 @@
 #define GPDXL_CDXLPhysicalGatherMotion_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLPhysicalMotion.h"
 
 namespace gpdxl
@@ -40,36 +41,35 @@ enum Edxlgm
 class CDXLPhysicalGatherMotion : public CDXLPhysicalMotion
 {
 private:
-	// private copy ctor
-	CDXLPhysicalGatherMotion(const CDXLPhysicalGatherMotion &);
-
 public:
+	CDXLPhysicalGatherMotion(const CDXLPhysicalGatherMotion &) = delete;
+
 	// ctor/dtor
 	CDXLPhysicalGatherMotion(CMemoryPool *mp);
 
-	virtual ~CDXLPhysicalGatherMotion(){};
+	~CDXLPhysicalGatherMotion() override = default;
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
-	const CWStringConst *GetOpNameStr() const;
+	Edxlopid GetDXLOperator() const override;
+	const CWStringConst *GetOpNameStr() const override;
 	INT IOutputSegIdx() const;
 
 	// index of relational child node in the children array
-	virtual ULONG
-	GetRelationChildIdx() const
+	ULONG
+	GetRelationChildIdx() const override
 	{
 		return EdxlgmIndexChild;
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLPhysicalGatherMotion *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalMotionGather == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalGatherMotion *>(dxl_op);
@@ -78,7 +78,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

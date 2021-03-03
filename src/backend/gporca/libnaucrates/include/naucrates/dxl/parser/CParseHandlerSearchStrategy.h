@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerSearchStrategy_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 #include "gpopt/search/CSearchStage.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {
@@ -35,31 +35,31 @@ private:
 	// search stages
 	CSearchStageArray *m_search_stage_array;
 
-	// private ctor
-	CParseHandlerSearchStrategy(const CParseHandlerSearchStrategy &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	// private ctor
+	CParseHandlerSearchStrategy(const CParseHandlerSearchStrategy &) = delete;
+
 	// ctor/dtor
 	CParseHandlerSearchStrategy(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,
 								CParseHandlerBase *parse_handler_root);
 
-	virtual ~CParseHandlerSearchStrategy();
+	~CParseHandlerSearchStrategy() override;
 
 	// returns the dxl representation of search stages
 	CSearchStageArray *
@@ -69,7 +69,7 @@ public:
 	}
 
 	EDxlParseHandlerType
-	GetParseHandlerType() const
+	GetParseHandlerType() const override
 	{
 		return EdxlphSearchStrategy;
 	}

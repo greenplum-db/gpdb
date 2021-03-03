@@ -4,7 +4,7 @@
  *	  Routines to find all possible paths for processing a set of joins
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -55,6 +55,7 @@ static void try_partial_mergejoin_path(PlannerInfo *root,
 									   List *outersortkeys,
 									   List *innersortkeys,
 									   JoinType jointype,
+									   JoinType orig_jointype,
 									   JoinPathExtraData *extra);
 static void sort_inner_and_outer(PlannerInfo *root, RelOptInfo *joinrel,
 								 RelOptInfo *outerrel, RelOptInfo *innerrel,
@@ -631,6 +632,7 @@ try_mergejoin_path(PlannerInfo *root,
 								   outersortkeys,
 								   innersortkeys,
 								   jointype,
+								   orig_jointype,
 								   extra);
 		return;
 	}
@@ -711,6 +713,7 @@ try_partial_mergejoin_path(PlannerInfo *root,
 						   List *outersortkeys,
 						   List *innersortkeys,
 						   JoinType jointype,
+						   JoinType orig_jointype,
 						   JoinPathExtraData *extra)
 {
 	JoinCostWorkspace workspace;
@@ -754,7 +757,7 @@ try_partial_mergejoin_path(PlannerInfo *root,
 					 create_mergejoin_path(root,
 										   joinrel,
 										   jointype,
-										   jointype, /* GPDB_12_MERGE_FIXME: Is 'jointype' always same as orig_jointype here? */
+										   orig_jointype,
 										   &workspace,
 										   extra,
 										   outer_path,
@@ -1126,6 +1129,7 @@ sort_inner_and_outer(PlannerInfo *root,
 									   outerkeys,
 									   innerkeys,
 									   jointype,
+									   save_jointype,
 									   extra);
 	}
 }

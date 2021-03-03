@@ -1,7 +1,7 @@
 /*
  * gp_segment_config.c
  *
- * Copyright (c) 2017-Present Pivotal Software, Inc.
+ * Copyright (c) 2017-Present VMware, Inc. or its affiliates.
  *
  */
 

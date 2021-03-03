@@ -21,34 +21,34 @@ Feature: gpconfig integration tests
         And the user runs "gpstop -u"
         And gpstop should return a return code of 0
 
-       # set same value on master and segments
+       # set same value on coordinator and segments
        When the user runs "gpconfig -c <guc> -v <value>"
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value>" escaped
+        And verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<file_value>" escaped
         And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
 
-       # set value on master only, leaving segments the same
-       When the user runs "gpconfig -c <guc> -v <value_master_only> --masteronly "
+       # set value on coordinator only, leaving segments the same
+       When the user runs "gpconfig -c <guc> -v <value_coordinator_only> --masteronly "
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value_master_only>" escaped
+        And verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<file_value_coordinator_only>" escaped
         And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
 
-       # set value on master with a different value from the segments
-       When the user runs "gpconfig -c <guc> -v <value> -m <value_master>"
+       # set value on coordinator with a different value from the segments
+       When the user runs "gpconfig -c <guc> -v <value> -m <value_coordinator>"
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value_master>" escaped
+        And verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<file_value_coordinator>" escaped
         And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s <guc> --file"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <file_value_master>" escaped to stdout
-        And gpconfig should print "Segment value: <file_value>" escaped to stdout
+        And gpconfig should print "Coordinator value: <file_value_coordinator>" escaped to stdout
+        And gpconfig should print "Segment     value: <file_value>" escaped to stdout
 
        When the user runs "gpconfig -s <guc> --file-compare"
        Then gpconfig should return a return code of 0
         And gpconfig should print "GUCS ARE OUT OF SYNC" to stdout
-        And gpconfig should print "value: <seed_value> | file: <file_value_master>" escaped to stdout
+        And gpconfig should print "value: <seed_value> | file: <file_value_coordinator>" escaped to stdout
         And gpconfig should print "value: <seed_value> | file: <file_value>" escaped to stdout
 
        When the user runs "gpstop -u"
@@ -56,38 +56,34 @@ Feature: gpconfig integration tests
 
        When the user runs "gpconfig -s <guc> --file-compare"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <live_value_master> | file: <file_value_master>" escaped to stdout
-        And gpconfig should print "Segment value: <live_value> | file: <file_value>" escaped to stdout
+        And gpconfig should print "Coordinator value: <live_value_coordinator> | file: <file_value_coordinator>" escaped to stdout
+        And gpconfig should print "Segment     value: <live_value> | file: <file_value>" escaped to stdout
 
        When the user runs "gpconfig -s <guc>"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <live_value_master>" escaped to stdout
-        And gpconfig should print "Segment value: <live_value>" escaped to stdout
+        And gpconfig should print "Coordinator value: <live_value_coordinator>" escaped to stdout
+        And gpconfig should print "Segment     value: <live_value>" escaped to stdout
 
     Examples:
-        | test_case                              | guc                          | type       | seed_value | value     | file_value | live_value | value_master_only | file_value_master_only | value_master | file_value_master | live_value_master |
-        | bool                                   | log_connections              | bool       | off        | on        | on         | on         | off               | off                    | off          | off               | off               |
-        | enum                                   | gp_resgroup_memory_policy    | enum       | eager_free | auto      | auto       | auto       | eager_free        | eager_free             | eager_free   | eager_free        | eager_free        |
-        | integer                                | vacuum_cost_limit            | integer    | 300        | 400       | 400        | 400        | 555               | 555                    | 500          | 500               | 500               |
-        | integer with memory unit               | statement_mem                | int w/unit | 123MB      | 500MB     | 500MB      | 500MB      | 500MB             | 500MB                  | 500MB        | 500MB             | 500MB             |
-        | integer with time unit                 | statement_timeout            | int w/unit | 1min       | 5min      | 5min       | 5min       | 5min              | 5min                   | 5min         | 5min              | 5min              |
-        | float                                  | checkpoint_completion_target | float      | 0.4        | 0.5       | 0.5        | 0.5        | 0.33              | 0.33                   | 0.7          | 0.7               | 0.7               |
-        | basic string                           | application_name             | string     | xxxxxx     | bodhi     | 'bodhi'    | bodhi      | lucy              | 'lucy'                 | bengie       | 'bengie'          | bengie            |
-        | string with spaces                     | application_name             | string     | yyyyyy     | 'bod hi'  | 'bod hi'   | bod hi     | 'bod hi'          | 'bod hi'               | 'bod hi'     | 'bod hi'          | bod hi            |
-        | different value on master and segments | application_name             | string     | yyyyyy     | 'bod hi'  | 'bod hi'   | bod hi     | 'lu cy'           | 'lu cy'                | 'ben gie'    | 'ben gie'         | ben gie           |
-        | empty string                           | application_name             | string     | zzzzzz     | ''        | ''         |            | ''                | ''                     | ''           | ''                |                   |
-        | quoted double quotes                   | application_name             | string     | zzzzzz     | '"hi"'    | '"hi"'     | "hi"       | '"hi"'            | '"hi"'                 | '"hi"'       | '"hi"'            | "hi"              |
-        | quoted single quotes                   | application_name             | string     | zzzzzz     | "'hi'"    | '''hi'''   | 'hi'       | "'hi'"            | '''hi'''               | "'hi'"       | '''hi'''          | 'hi'              |
-        | escaped single quote                   | application_name             | string     | boo        | "\'"      | '\\'''     | \'         | "\'"              | '\\'''                 | "\'"         | '\\'''            | \'                |
-        | multiple quoted single quotes          | application_name             | string     | boo        | "''''"    | '''''''''' | ''''       | "''"              | ''''''                 | "'"          | ''''              | '                 |
-#       | integer with time unit with spaces     | statement_timeout            | int w/unit | 2min       | "'7 min'" | '7 min'    | 7min       | "'7 min'"         | '7 min'                | "'7 min'"    | '7 min'           | 7min              |
+        | test_case                                   | guc                          | type       | seed_value | value     | file_value | live_value | value_coordinator_only | file_value_coordinator_only | value_coordinator | file_value_coordinator | live_value_coordinator |
+        | bool                                        | log_connections              | bool       | off        | on        | on         | on         | off                    | off                         | off               | off                    | off                    |
+        | enum                                        | gp_resgroup_memory_policy    | enum       | eager_free | auto      | auto       | auto       | eager_free             | eager_free                  | eager_free        | eager_free             | eager_free             |
+        | integer                                     | vacuum_cost_limit            | integer    | 300        | 400       | 400        | 400        | 555                    | 555                         | 500               | 500                    | 500                    |
+        | integer with memory unit                    | statement_mem                | int w/unit | 123MB      | 500MB     | 500MB      | 500MB      | 500MB                  | 500MB                       | 500MB             | 500MB                  | 500MB                  |
+        | integer with time unit                      | statement_timeout            | int w/unit | 1min       | 5min      | 5min       | 5min       | 5min                   | 5min                        | 5min              | 5min                   | 5min                   |
+        | float                                       | checkpoint_completion_target | float      | 0.4        | 0.5       | 0.5        | 0.5        | 0.33                   | 0.33                        | 0.7               | 0.7                    | 0.7                    |
+        | basic string                                | application_name             | string     | xxxxxx     | bodhi     | 'bodhi'    | bodhi      | lucy                   | 'lucy'                      | bengie            | 'bengie'               | bengie                 |
+        | string with spaces                          | application_name             | string     | yyyyyy     | 'bod hi'  | 'bod hi'   | bod hi     | 'bod hi'               | 'bod hi'                    | 'bod hi'          | 'bod hi'               | bod hi                 |
+        | different value on coordinator and segments | application_name             | string     | yyyyyy     | 'bod hi'  | 'bod hi'   | bod hi     | 'lu cy'                | 'lu cy'                     | 'ben gie'         | 'ben gie'              | ben gie                |
+        | empty string                                | application_name             | string     | zzzzzz     | ''        | ''         |            | ''                     | ''                          | ''                | ''                     |                        |
+        | quoted double quotes                        | application_name             | string     | zzzzzz     | '"hi"'    | '"hi"'     | "hi"       | '"hi"'                 | '"hi"'                      | '"hi"'            | '"hi"'                 | "hi"                   |
+        | quoted single quotes                        | application_name             | string     | zzzzzz     | "'hi'"    | '''hi'''   | 'hi'       | "'hi'"                 | '''hi'''                    | "'hi'"            | '''hi'''               | 'hi'                   |
+        | escaped single quote                        | application_name             | string     | boo        | "\'"      | '\\'''     | \'         | "\'"                   | '\\'''                      | "\'"              | '\\'''                 | \'                     |
+        | multiple quoted single quotes               | application_name             | string     | boo        | "''''"    | '''''''''' | ''''       | "''"                   | ''''''                      | "'"               | ''''                   | '                      |
+#       | integer with time unit with spaces          | statement_timeout            | int w/unit | 2min       | "'7 min'" | '7 min'    | 7min       | "'7 min'"              | '7 min'                     | "'7 min'"         | '7 min'                | 7min                   |
 # 'Integer with time unit with spaces' fails because the live server parses '7 min' as 7min, and our comparison logic does not handle this correctly.
-        | utf-8 works                            | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
-
-    @skip_fixme_ubuntu18.04
-    Examples:
-        | test_case                              | guc                          | type       | seed_value | value     | file_value | live_value | value_master_only | file_value_master_only | value_master | file_value_master | live_value_master |
-        | utf-8 works                            | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
+        | utf-8 works                                 | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου                 | 'Ομήρου'                    | Ομήρου            | 'Ομήρου'               | Ομήρου                 |
+        | client min messages works                   | client_min_messages          | string     | log        | notice    | notice     | notice     | notice                 | notice                      | notice            | notice                 | notice                 |
 
     @concourse_cluster
     @demo_cluster
@@ -101,20 +97,20 @@ Feature: gpconfig integration tests
         And the user runs "gpstop -u"
         And gpstop should return a return code of 0
 
-       When the user writes "<guc>" as "<value>" to the master config file
-       Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<value>" escaped
+       When the user writes "<guc>" as "<value>" to the coordinator config file
+       Then verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "<guc>=<value>" escaped
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s <guc> --file"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <file_value>" escaped to stdout
+        And gpconfig should print "Coordinator value: <file_value>" escaped to stdout
 
        When the user runs "gpstop -u"
        Then gpstop should return a return code of 0
 
        When the user runs "gpconfig -s <guc>"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <live_value>" escaped to stdout
+        And gpconfig should print "Coordinator value: <live_value>" escaped to stdout
 
     # NOTE: <value> is directly entered into postgresql.conf
     Examples:
@@ -141,19 +137,19 @@ Feature: gpconfig integration tests
         And gpstop should return a return code of 0
 
        When the user runs "gpconfig -c default_text_search_config -v $'a\nb'"
-       Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "default_text_search_config='a\nb'" escaped
+       Then verify that the last line of the file "postgresql.conf" in the coordinator data directory contains the string "default_text_search_config='a\nb'" escaped
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s default_text_search_config --file"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: 'a\nb'" escaped to stdout
+        And gpconfig should print "Coordinator value: 'a\nb'" escaped to stdout
 
        When the user runs "gpstop -u"
        Then gpstop should return a return code of 0
 
        When the user runs "gpconfig -s default_text_search_config"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: a\nb" to stdout
+        And gpconfig should print "Coordinator value: a\nb" to stdout
 
     @concourse_cluster
     @demo_cluster
@@ -163,14 +159,14 @@ Feature: gpconfig integration tests
         And the gpconfig context is setup
         And the user runs "gpconfig -c <guc> -v <value>"
         And gpconfig should return a return code of 0
-        And verify that the file "postgresql.conf" in the master data directory has "some" line starting with "<guc>="
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "<guc>="
         And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "<guc>="
 
        When the user runs "gpconfig -r <guc>"
         And gpconfig should return a return code of 0
 
-       Then verify that the file "postgresql.conf" in the master data directory has "no" line starting with "<guc>="
-        And verify that the file "postgresql.conf" in the master data directory has "some" line starting with "#<guc>="
+       Then verify that the file "postgresql.conf" in the coordinator data directory has "no" line starting with "<guc>="
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "#<guc>="
         And verify that the file "postgresql.conf" in each segment data directory has "no" line starting with "<guc>="
         And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "#<guc>="
 

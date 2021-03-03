@@ -12,8 +12,9 @@
 #define GPOPT_CLogicalLeftAntiSemiApply_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CLogicalApply.h"
+
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalApply.h"
 
 namespace gpopt
 {
@@ -28,10 +29,9 @@ namespace gpopt
 class CLogicalLeftAntiSemiApply : public CLogicalApply
 {
 private:
-	// private copy ctor
-	CLogicalLeftAntiSemiApply(const CLogicalLeftAntiSemiApply &);
-
 public:
+	CLogicalLeftAntiSemiApply(const CLogicalLeftAntiSemiApply &) = delete;
+
 	// ctor
 	explicit CLogicalLeftAntiSemiApply(CMemoryPool *mp) : CLogicalApply(mp)
 	{
@@ -45,27 +45,25 @@ public:
 	}
 
 	// dtor
-	virtual ~CLogicalLeftAntiSemiApply()
-	{
-	}
+	~CLogicalLeftAntiSemiApply() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalLeftAntiSemiApply;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalLeftAntiSemiApply";
 	}
 
 	// return true if we can pull projections up past this operator from its given child
-	virtual BOOL
-	FCanPullProjectionsUp(ULONG child_index) const
+	BOOL
+	FCanPullProjectionsUp(ULONG child_index) const override
 	{
 		return (0 == child_index);
 	}
@@ -75,9 +73,9 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// derive output columns
-	virtual CColRefSet *
+	CColRefSet *
 	DeriveOutputColumns(CMemoryPool *,	// mp
-						CExpressionHandle &exprhdl)
+						CExpressionHandle &exprhdl) override
 	{
 		GPOS_ASSERT(3 == exprhdl.Arity());
 
@@ -85,25 +83,25 @@ public:
 	}
 
 	// derive not nullable output columns
-	virtual CColRefSet *
+	CColRefSet *
 	DeriveNotNullColumns(CMemoryPool *,	 // mp
-						 CExpressionHandle &exprhdl) const
+						 CExpressionHandle &exprhdl) const override
 	{
 		return PcrsDeriveNotNullPassThruOuter(exprhdl);
 	}
 
 	// dervive keys
-	virtual CKeyCollection *DeriveKeyCollection(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	CKeyCollection *DeriveKeyCollection(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// derive max card
-	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
-								   CExpressionHandle &exprhdl) const;
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
 
 	// derive constraint property
-	virtual CPropConstraint *
+	CPropConstraint *
 	DerivePropertyConstraint(CMemoryPool *,	 //mp,
-							 CExpressionHandle &exprhdl) const
+							 CExpressionHandle &exprhdl) const override
 	{
 		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
 	}
@@ -113,28 +111,29 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 
 	// return true if operator is a left anti semi apply
-	virtual BOOL
-	FLeftAntiSemiApply() const
+	BOOL
+	FLeftAntiSemiApply() const override
 	{
 		return true;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	// conversion function
 	static CLogicalLeftAntiSemiApply *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(CUtils::FLeftAntiSemiApply(pop));
 
 		return dynamic_cast<CLogicalLeftAntiSemiApply *>(pop);

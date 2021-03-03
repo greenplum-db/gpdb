@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformLeftSemiApplyInWithExternalCorrs2InnerJoin.h
@@ -15,6 +15,7 @@
 #define GPOPT_CXformLeftSemiApplyInWithExternalCorrs2InnerJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformLeftSemiApplyWithExternalCorrs2InnerJoin.h"
 
 
@@ -34,11 +35,10 @@ class CXformLeftSemiApplyInWithExternalCorrs2InnerJoin
 	: public CXformLeftSemiApplyWithExternalCorrs2InnerJoin
 {
 private:
-	// private copy ctor
-	CXformLeftSemiApplyInWithExternalCorrs2InnerJoin(
-		const CXformLeftSemiApplyInWithExternalCorrs2InnerJoin &);
-
 public:
+	CXformLeftSemiApplyInWithExternalCorrs2InnerJoin(
+		const CXformLeftSemiApplyInWithExternalCorrs2InnerJoin &) = delete;
+
 	// ctor
 	explicit CXformLeftSemiApplyInWithExternalCorrs2InnerJoin(CMemoryPool *mp)
 		: CXformLeftSemiApplyWithExternalCorrs2InnerJoin(
@@ -55,19 +55,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftSemiApplyInWithExternalCorrs2InnerJoin()
-	{
-	}
+	~CXformLeftSemiApplyInWithExternalCorrs2InnerJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiApplyInWithExternalCorrs2InnerJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiApplyInWithExternalCorrs2InnerJoin";
 	}

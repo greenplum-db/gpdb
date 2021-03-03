@@ -5,7 +5,7 @@
  *    to the qExec processes.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  * src/include/access/url.h
  *
@@ -61,7 +61,7 @@ typedef struct extvar_t
 	char GP_SEG_PORT[11];
 	char GP_SESSION_ID[11];  /* session id */
 	char GP_SEGMENT_COUNT[11]; /* total number of (primary) segs in the system */
- 	char GP_CSVOPT[13]; /* "m.x...q...h." former -q, -h and -x options for gpfdist.*/
+	char GP_CSVOPT[15]; /* "m.x...q...n.h." CSV escape/quote/eol_type/header option.*/
 
  	/* EOL vars */
  	char* GP_LINE_DELIM_STR;
@@ -76,7 +76,7 @@ typedef struct extvar_t
 extern void external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape,
 								  char *quote, bool header, uint32 scancounter);
 extern void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
-									  char *quote, int eol_type, bool header,
+									  char *quote, EolType eol_type, bool header,
 									  uint32 scancounter, List *params);
 
 /* exported functions */
@@ -89,8 +89,6 @@ extern size_t url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstat
 extern void url_fflush(URL_FILE *file, CopyState pstate);
 
 /* prototypes for functions in url_execute.c */
-extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
-extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
 extern char *make_command(const char *cmd, extvar_t *ev);
 
 /* implementation-specific functions. */
@@ -124,6 +122,6 @@ extern size_t url_custom_fwrite(void *ptr, size_t size, URL_FILE *file, CopyStat
 
 /* GUC */
 extern int readable_external_table_timeout;
-extern int write_to_gpfdist_timeout;
+extern int gpfdist_retry_timeout;
 
 #endif

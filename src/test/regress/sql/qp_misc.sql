@@ -149,7 +149,7 @@ CREATE TABLE tjoin2 (
     c1 integer,
     c2 character(2)
 ) DISTRIBUTED BY (rnum);
-
+ANALYZE tjoin2;
 
 
 --

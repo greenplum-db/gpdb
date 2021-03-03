@@ -9,13 +9,13 @@
 //		Implementation of left outer join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
-#include "gpopt/operators/CLogicalLeftOuterJoin.h"
 
 using namespace gpopt;
 
@@ -30,7 +30,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalLeftOuterJoin::CLogicalLeftOuterJoin(CMemoryPool *mp) : CLogicalJoin(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 
@@ -80,6 +80,7 @@ CLogicalLeftOuterJoin::PxfsCandidates(CMemoryPool *mp) const
 		CXform::ExfLeftOuter2InnerUnionAllLeftAntiSemiJoin);
 	(void) xform_set->ExchangeSet(CXform::ExfJoin2BitmapIndexGetApply);
 	(void) xform_set->ExchangeSet(CXform::ExfJoin2IndexGetApply);
+	(void) xform_set->ExchangeSet(CXform::ExfLeftJoin2RightJoin);
 
 	return xform_set;
 }

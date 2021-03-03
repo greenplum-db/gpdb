@@ -131,6 +131,9 @@ isolation_init(int argc, char **argv)
 {
 	/* set default regression database name */
 	add_stringlist_item(&dblist, "isolation2test");
+
+	/* run setup test as prerequisite for running tests */
+	add_stringlist_item(&setup_tests, "setup");
 }
 
 int

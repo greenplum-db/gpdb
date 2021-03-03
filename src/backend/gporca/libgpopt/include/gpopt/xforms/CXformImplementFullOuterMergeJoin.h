@@ -1,11 +1,12 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Software, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 //
 #ifndef GPOPT_CXformImplementFullOuterMergeJoin_H
 #define GPOPT_CXformImplementFullOuterMergeJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -15,39 +16,36 @@ using namespace gpos;
 class CXformImplementFullOuterMergeJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformImplementFullOuterMergeJoin(
-		const CXformImplementFullOuterMergeJoin &);
-
 public:
+	CXformImplementFullOuterMergeJoin(
+		const CXformImplementFullOuterMergeJoin &) = delete;
+
 	// ctor
 	explicit CXformImplementFullOuterMergeJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementFullOuterMergeJoin()
-	{
-	}
+	~CXformImplementFullOuterMergeJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementFullOuterMergeJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementFullOuterMergeJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 };	// class CXformImplementFullOuterMergeJoin
 }  // namespace gpopt

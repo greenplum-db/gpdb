@@ -3,7 +3,7 @@
  * aovisimap.h
  *   Definitions to support creation of aovisimap tables.
  *
- * Copyright (c) 2013-Present Pivotal Software, Inc.
+ * Copyright (c) 2013-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

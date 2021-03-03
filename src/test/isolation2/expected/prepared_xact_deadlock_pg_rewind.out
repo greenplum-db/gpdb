@@ -1,8 +1,6 @@
 -- Test a recovered (in startup) prepared transaction does not block
 -- pg_rewind due to lock conflict of database template1 when it runs the single
 -- mode instance to ensure clean shutdown on the target postgres instance.
-include: helpers/server_helpers.sql;
-CREATE
 
 -- set GUCs to speed-up the test
 1: alter system set gp_fts_probe_retries to 2;

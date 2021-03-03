@@ -32,9 +32,6 @@ using namespace gpdxl;
 class CMDCastGPDB : public IMDCast
 {
 private:
-	// private copy ctor
-	CMDCastGPDB(const CMDCastGPDB &);
-
 protected:
 	// memory pool
 	CMemoryPool *m_mp;
@@ -64,48 +61,50 @@ protected:
 	EmdCoercepathType m_path_type;
 
 public:
+	CMDCastGPDB(const CMDCastGPDB &) = delete;
+
 	// ctor
 	CMDCastGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname, IMDId *mdid_src,
 				IMDId *mdid_dest, BOOL is_binary_coercible,
 				IMDId *mdid_cast_func, EmdCoercepathType path_type = EmdtNone);
 
 	// dtor
-	virtual ~CMDCastGPDB();
+	~CMDCastGPDB() override;
 
 	// accessors
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// cast object id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// cast object name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// source type
-	virtual IMDId *MdidSrc() const;
+	IMDId *MdidSrc() const override;
 
 	// destination type
-	virtual IMDId *MdidDest() const;
+	IMDId *MdidDest() const override;
 
 	// is this a cast between binary coeercible types, i.e. the types are binary compatible
-	virtual BOOL IsBinaryCoercible() const;
+	BOOL IsBinaryCoercible() const override;
 
 	// return the coercion path type
-	virtual EmdCoercepathType GetMDPathType() const;
+	EmdCoercepathType GetMDPathType() const override;
 
 	// cast function id
-	virtual IMDId *GetCastFuncMdId() const;
+	IMDId *GetCastFuncMdId() const override;
 
 	// serialize object in DXL format
-	virtual void Serialize(gpdxl::CXMLSerializer *xml_serializer) const;
+	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the type in the provided stream
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

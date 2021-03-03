@@ -14,12 +14,11 @@
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
 
+#include "gpopt/base/CColRef.h"
+#include "gpopt/metadata/CColumnDescriptor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDIndex.h"
-
-#include "gpopt/base/CColRef.h"
-#include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/metadata/CColumnDescriptor.h"
 
 namespace gpopt
 {
@@ -55,10 +54,9 @@ private:
 	// index type
 	IMDIndex::EmdindexType m_index_type;
 
-	// private copy ctor
-	CIndexDescriptor(const CIndexDescriptor &);
-
 public:
+	CIndexDescriptor(const CIndexDescriptor &) = delete;
+
 	// ctor
 	CIndexDescriptor(CMemoryPool *mp, IMDId *pmdidIndex, const CName &name,
 					 CColumnDescriptorArray *pdrgcoldescKeyCols,
@@ -66,7 +64,7 @@ public:
 					 BOOL is_clustered, IMDIndex::EmdindexType emdindt);
 
 	// dtor
-	virtual ~CIndexDescriptor();
+	~CIndexDescriptor() override;
 
 	// number of key columns
 	ULONG Keys() const;
@@ -122,7 +120,7 @@ public:
 										const CTableDescriptor *ptabdesc,
 										const IMDIndex *pmdindex);
 
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CIndexDescriptor
 }  // namespace gpopt

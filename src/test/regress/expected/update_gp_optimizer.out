@@ -695,6 +695,7 @@ create table tsplit_entry (c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into tsplit_entry values (1), (2);
+analyze tsplit_entry;
 explain update tsplit_entry set c = s.a from (select count(*) as a from gp_segment_configuration) s;
                                                     QUERY PLAN                                                    
 ------------------------------------------------------------------------------------------------------------------

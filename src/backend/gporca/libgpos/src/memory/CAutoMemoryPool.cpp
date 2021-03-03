@@ -16,15 +16,16 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/assert.h"
-#include "gpos/types.h"
-#include "gpos/utils.h"
 #include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/memory/CMemoryPoolManager.h"
+
+#include "gpos/assert.h"
 #include "gpos/error/CErrorContext.h"
 #include "gpos/error/CErrorHandler.h"
-#include "gpos/task/ITask.h"
+#include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/task/CAutoSuspendAbort.h"
+#include "gpos/task/ITask.h"
+#include "gpos/types.h"
+#include "gpos/utils.h"
 
 using namespace gpos;
 
@@ -38,8 +39,10 @@ using namespace gpos;
 //  	the CMemoryPoolManager global instance
 //
 //---------------------------------------------------------------------------
-CAutoMemoryPool::CAutoMemoryPool(ELeakCheck leak_check_type)
+CAutoMemoryPool::CAutoMemoryPool(ELeakCheck leak_check_type GPOS_ASSERTS_ONLY)
+#ifdef GPOS_DEBUG
 	: m_leak_check_type(leak_check_type)
+#endif
 {
 	m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
 }
@@ -59,7 +62,7 @@ CMemoryPool *
 CAutoMemoryPool::Detach()
 {
 	CMemoryPool *mp = m_mp;
-	m_mp = NULL;
+	m_mp = nullptr;
 
 	return mp;
 }
@@ -77,7 +80,7 @@ CAutoMemoryPool::Detach()
 //---------------------------------------------------------------------------
 CAutoMemoryPool::~CAutoMemoryPool() noexcept(false)
 {
-	if (NULL == m_mp)
+	if (nullptr == m_mp)
 	{
 		return;
 	}
@@ -90,7 +93,7 @@ CAutoMemoryPool::~CAutoMemoryPool() noexcept(false)
 	ITask *task = ITask::Self();
 
 	// ElcExc must be used inside tasks only
-	GPOS_ASSERT_IMP(ElcExc == m_leak_check_type, NULL != task);
+	GPOS_ASSERT_IMP(ElcExc == m_leak_check_type, nullptr != task);
 
 	GPOS_TRY
 	{

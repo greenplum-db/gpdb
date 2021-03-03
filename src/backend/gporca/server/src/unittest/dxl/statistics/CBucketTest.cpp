@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CBucketTest.cpp
@@ -13,28 +13,26 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/dxl/statistics/CBucketTest.h"
+
 #include <stdint.h>
 
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/statistics/CPoint.h"
-#include "naucrates/statistics/CBucket.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
-
+#include "naucrates/base/CDatumBoolGPDB.h"
 #include "naucrates/base/CDatumGenericGPDB.h"
 #include "naucrates/base/CDatumInt4GPDB.h"
-#include "naucrates/base/CDatumBoolGPDB.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/statistics/CBucket.h"
+#include "naucrates/statistics/CPoint.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/dxl/statistics/CCardinalityTestUtils.h"
-#include "unittest/dxl/statistics/CBucketTest.h"
 #include "unittest/gpopt/CTestUtils.h"
-
-#include "naucrates/md/IMDType.h"
-#include "naucrates/md/CMDTypeGenericGPDB.h"
 
 using namespace gpopt;
 
@@ -57,6 +55,14 @@ CBucketTest::EresUnittest()
 			CBucketTest::EresUnittest_CBucketMergeCommutativitySameUpperBounds),
 		GPOS_UNITTEST_FUNC(
 			CBucketTest::EresUnittest_CBucketMergeCommutativityUnionAll),
+		GPOS_UNITTEST_FUNC(
+			CBucketTest::EresUnittest_CBucketMergeCommutativityDoubleDatum),
+		GPOS_UNITTEST_FUNC(
+			CBucketTest::
+				EresUnittest_CBucketMergeCommutativityDoubleDatumSameLowerBounds),
+		GPOS_UNITTEST_FUNC(
+			CBucketTest::
+				EresUnittest_CBucketMergeCommutativityDoubleDatumSameUpperBounds),
 	};
 
 	CAutoMemoryPool amp;
@@ -68,7 +74,7 @@ CBucketTest::EresUnittest()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+	CAutoOptCtxt aoc(mp, &mda, nullptr /* pceeval */,
 					 CTestUtils::GetCostModel(mp));
 
 	return CUnittest::EresExecute(rgutSharedOptCtxt,
@@ -291,19 +297,19 @@ CBucketTest::EresUnittest_CBucketDifference()
 	CBucket *pbucket3 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(
 		mp, 200, 300, CDouble(1.0), CDouble(1.0));
 
-	CBucket *pbucket4 = NULL;
-	CBucket *pbucket5 = NULL;
+	CBucket *pbucket4 = nullptr;
+	CBucket *pbucket5 = nullptr;
 	bucket1->Difference(mp, bucket2, &pbucket4, &pbucket5);
-	GPOS_RTL_ASSERT(NULL != pbucket4);
-	GPOS_RTL_ASSERT(NULL != pbucket5);
+	GPOS_RTL_ASSERT(nullptr != pbucket4);
+	GPOS_RTL_ASSERT(nullptr != pbucket5);
 	CCardinalityTestUtils::PrintBucket(mp, "pbucket4", pbucket4);
 	CCardinalityTestUtils::PrintBucket(mp, "pbucket5", pbucket4);
 
-	CBucket *pbucket6 = NULL;
-	CBucket *pbucket7 = NULL;
+	CBucket *pbucket6 = nullptr;
+	CBucket *pbucket7 = nullptr;
 	bucket1->Difference(mp, pbucket3, &pbucket6, &pbucket7);
-	GPOS_RTL_ASSERT(NULL != pbucket6);
-	GPOS_RTL_ASSERT(NULL == pbucket7);
+	GPOS_RTL_ASSERT(nullptr != pbucket6);
+	GPOS_RTL_ASSERT(nullptr == pbucket7);
 	CCardinalityTestUtils::PrintBucket(mp, "pbucket6", pbucket6);
 
 	GPOS_DELETE(bucket1);
@@ -445,8 +451,8 @@ CBucketTest::EresUnittest_CBucketIntersect()
 BOOL
 CBucketTest::FMatchBucketBoundary(CBucket *bucket1, CBucket *bucket2)
 {
-	GPOS_ASSERT(NULL != bucket1);
-	GPOS_ASSERT(NULL != bucket2);
+	GPOS_ASSERT(nullptr != bucket1);
+	GPOS_ASSERT(nullptr != bucket2);
 
 	if (bucket1->IsLowerClosed() != bucket2->IsLowerClosed())
 	{
@@ -483,8 +489,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativityUnion()
 	CBucket *bucket2 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(
 		mp, 50, 150, CDouble(0.3), CDouble(100.0));
 
-	CBucket *bucket1_new1 = NULL;
-	CBucket *bucket2_new1 = NULL;
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
 	CDouble result_rows1(0.0);
 
 	CBucket *result1 = bucket1->SplitAndMergeBuckets(
@@ -492,8 +498,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativityUnion()
 		false /*is_union_all*/);
 
 
-	CBucket *bucket1_new2 = NULL;
-	CBucket *bucket2_new2 = NULL;
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
 	CDouble result_rows2(0.0);
 	CBucket *result2 = bucket2->SplitAndMergeBuckets(
 		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
@@ -501,11 +507,11 @@ CBucketTest::EresUnittest_CBucketMergeCommutativityUnion()
 
 	GPOS_ASSERT(result1->Equals(result2));
 
-	if (NULL != bucket1_new1)
+	if (nullptr != bucket1_new1)
 	{
 		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
 	}
-	else if (NULL != bucket2_new1)
+	else if (nullptr != bucket2_new1)
 	{
 		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
 	}
@@ -544,8 +550,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativitySameLowerBounds()
 		CBucket(ppLower, ppUpper, false /* is_lower_closed */,
 				false /*is_upper_closed*/, CDouble(0.2), CDouble(50));
 
-	CBucket *bucket1_new1 = NULL;
-	CBucket *bucket2_new1 = NULL;
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
 	CDouble result_rows1(0.0);
 
 	// returns [0,0]
@@ -557,8 +563,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativitySameLowerBounds()
 
 	GPOS_ASSERT(bucket2->Equals(bucket2_new1));
 
-	CBucket *bucket1_new2 = NULL;
-	CBucket *bucket2_new2 = NULL;
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
 	CDouble result_rows2(0.0);
 	CBucket *result2 = bucket2->SplitAndMergeBuckets(
 		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
@@ -568,11 +574,11 @@ CBucketTest::EresUnittest_CBucketMergeCommutativitySameLowerBounds()
 	GPOS_ASSERT(result1->IsSingleton());
 	GPOS_ASSERT(result2->IsSingleton());
 
-	if (NULL != bucket1_new1)
+	if (nullptr != bucket1_new1)
 	{
 		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
 	}
-	else if (NULL != bucket2_new1)
+	else if (nullptr != bucket2_new1)
 	{
 		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
 	}
@@ -611,8 +617,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativitySameUpperBounds()
 		CBucket(ppLower, ppUpper, true /* is_lower_closed */,
 				true /*is_upper_closed*/, CDouble(0.2), CDouble(50));
 
-	CBucket *bucket1_new1 = NULL;
-	CBucket *bucket2_new1 = NULL;
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
 	CDouble result_rows1(0.0);
 
 	// returns [0,100)
@@ -624,8 +630,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativitySameUpperBounds()
 
 	GPOS_ASSERT(bucket2_new1->IsSingleton());
 
-	CBucket *bucket1_new2 = NULL;
-	CBucket *bucket2_new2 = NULL;
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
 	CDouble result_rows2(0.0);
 	CBucket *result2 = bucket2->SplitAndMergeBuckets(
 		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
@@ -635,11 +641,11 @@ CBucketTest::EresUnittest_CBucketMergeCommutativitySameUpperBounds()
 
 	GPOS_ASSERT(result1->Equals(result2));
 
-	if (NULL != bucket1_new1)
+	if (nullptr != bucket1_new1)
 	{
 		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
 	}
-	else if (NULL != bucket2_new1)
+	else if (nullptr != bucket2_new1)
 	{
 		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
 	}
@@ -672,8 +678,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativityUnionAll()
 	CBucket *bucket2 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(
 		mp, 50, 150, CDouble(0.3), CDouble(100.0));
 
-	CBucket *bucket1_new1 = NULL;
-	CBucket *bucket2_new1 = NULL;
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
 	CDouble result_rows1(0.0);
 
 	CBucket *result1 = bucket1->SplitAndMergeBuckets(
@@ -681,8 +687,8 @@ CBucketTest::EresUnittest_CBucketMergeCommutativityUnionAll()
 		true /*is_union_all*/);
 
 
-	CBucket *bucket1_new2 = NULL;
-	CBucket *bucket2_new2 = NULL;
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
 	CDouble result_rows2(0.0);
 	CBucket *result2 = bucket2->SplitAndMergeBuckets(
 		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
@@ -690,11 +696,211 @@ CBucketTest::EresUnittest_CBucketMergeCommutativityUnionAll()
 
 	GPOS_ASSERT(result1->Equals(result2));
 
-	if (NULL != bucket1_new1)
+	if (nullptr != bucket1_new1)
 	{
 		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
 	}
-	else if (NULL != bucket2_new1)
+	else if (nullptr != bucket2_new1)
+	{
+		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
+	}
+
+	GPOS_DELETE(bucket1);
+	GPOS_DELETE(bucket2);
+	GPOS_DELETE(result1);
+	GPOS_DELETE(result2);
+	GPOS_DELETE(bucket1_new1);
+	GPOS_DELETE(bucket2_new1);
+	GPOS_DELETE(bucket1_new2);
+	GPOS_DELETE(bucket2_new2);
+
+	return GPOS_OK;
+}
+
+// basic merge commutativity test for double datum
+GPOS_RESULT
+CBucketTest::EresUnittest_CBucketMergeCommutativityDoubleDatum()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// [0.0, 100.0)
+	CPoint *ppLower1 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(0.0));
+	CPoint *ppUpper1 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(100.0));
+
+	CBucket *bucket1 = GPOS_NEW(mp)
+		CBucket(ppLower1, ppUpper1, true /* is_lower_closed */,
+				false /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	// [50.0, 150.0)
+	CPoint *ppLower2 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(50.0));
+	CPoint *ppUpper2 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(150.0));
+	CBucket *bucket2 = GPOS_NEW(mp)
+		CBucket(ppLower2, ppUpper2, true /* is_lower_closed */,
+				false /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
+	CDouble result_rows1(0.0);
+
+	CBucket *result1 = bucket1->SplitAndMergeBuckets(
+		mp, bucket2, 1000, 600, &bucket1_new1, &bucket2_new1, &result_rows1,
+		false /*is_union_all*/);
+
+
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
+	CDouble result_rows2(0.0);
+	CBucket *result2 = bucket2->SplitAndMergeBuckets(
+		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
+		false /*is_union_all*/);
+
+	GPOS_ASSERT(result1->Equals(result2));
+
+	if (nullptr != bucket1_new1)
+	{
+		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
+	}
+	else if (nullptr != bucket2_new1)
+	{
+		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
+	}
+
+	GPOS_DELETE(bucket1);
+	GPOS_DELETE(bucket2);
+	GPOS_DELETE(result1);
+	GPOS_DELETE(result2);
+	GPOS_DELETE(bucket1_new1);
+	GPOS_DELETE(bucket2_new1);
+	GPOS_DELETE(bucket1_new2);
+	GPOS_DELETE(bucket2_new2);
+
+	return GPOS_OK;
+}
+
+// merge commutativity test for union when lower bounds have same value but
+// one is closed and the other is open for double datum
+GPOS_RESULT
+CBucketTest::EresUnittest_CBucketMergeCommutativityDoubleDatumSameLowerBounds()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// b1 = [0,100)
+	CPoint *ppLower1 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(0.0));
+	CPoint *ppUpper1 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(100.0));
+
+	CBucket *bucket1 = GPOS_NEW(mp)
+		CBucket(ppLower1, ppUpper1, true /* is_lower_closed */,
+				false /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	// b2 = (0,50)
+	CPoint *ppLower2 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(0.0));
+	CPoint *ppUpper2 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(50.0));
+	CBucket *bucket2 = GPOS_NEW(mp)
+		CBucket(ppLower2, ppUpper2, false /* is_lower_closed */,
+				false /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
+	CDouble result_rows1(0.0);
+
+	CBucket *result1 = bucket1->SplitAndMergeBuckets(
+		mp, bucket2, 1000, 600, &bucket1_new1, &bucket2_new1, &result_rows1,
+		false /*is_union_all*/);
+
+
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
+	CDouble result_rows2(0.0);
+	CBucket *result2 = bucket2->SplitAndMergeBuckets(
+		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
+		false /*is_union_all*/);
+
+	GPOS_ASSERT(result1->Equals(result2));
+
+	if (nullptr != bucket1_new1)
+	{
+		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
+	}
+	else if (nullptr != bucket2_new1)
+	{
+		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
+	}
+
+	GPOS_DELETE(bucket1);
+	GPOS_DELETE(bucket2);
+	GPOS_DELETE(result1);
+	GPOS_DELETE(result2);
+	GPOS_DELETE(bucket1_new1);
+	GPOS_DELETE(bucket2_new1);
+	GPOS_DELETE(bucket1_new2);
+	GPOS_DELETE(bucket2_new2);
+
+	return GPOS_OK;
+}
+
+// merge commutativity test for union when upper bounds have same value but
+// one is closed and the other is open for double datum
+GPOS_RESULT
+CBucketTest::EresUnittest_CBucketMergeCommutativityDoubleDatumSameUpperBounds()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// b1 = [0,100)
+	CPoint *ppLower1 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(0.0));
+	CPoint *ppUpper1 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(100.0));
+
+	CBucket *bucket1 = GPOS_NEW(mp)
+		CBucket(ppLower1, ppUpper1, true /* is_lower_closed */,
+				false /*is_upper_closed*/, CDouble(0.4), CDouble(50));
+
+	// b2 = [0,100]
+	CPoint *ppLower2 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(0.0));
+	CPoint *ppUpper2 =
+		CCardinalityTestUtils::PpointDouble(mp, GPDB_FLOAT8, CDouble(100.0));
+	CBucket *bucket2 = GPOS_NEW(mp)
+		CBucket(ppLower2, ppUpper2, true /* is_lower_closed */,
+				true /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	CBucket *bucket1_new1 = nullptr;
+	CBucket *bucket2_new1 = nullptr;
+	CDouble result_rows1(0.0);
+
+	CBucket *result1 = bucket1->SplitAndMergeBuckets(
+		mp, bucket2, 1000, 600, &bucket1_new1, &bucket2_new1, &result_rows1,
+		false /*is_union_all*/);
+
+
+	CBucket *bucket1_new2 = nullptr;
+	CBucket *bucket2_new2 = nullptr;
+	CDouble result_rows2(0.0);
+	CBucket *result2 = bucket2->SplitAndMergeBuckets(
+		mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2,
+		false /*is_union_all*/);
+
+	GPOS_ASSERT(result1->Equals(result2));
+
+	if (nullptr != bucket1_new1)
+	{
+		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
+	}
+	else if (nullptr != bucket2_new1)
 	{
 		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
 	}

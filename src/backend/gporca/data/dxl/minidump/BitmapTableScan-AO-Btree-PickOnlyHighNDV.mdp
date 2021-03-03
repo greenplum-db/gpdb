@@ -44,7 +44,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
-      <dxl:TraceFlags Value="101013,102074,102113,102120,102146,102147,103001,103014,103015,103022,103027,103029,104003,104004,104005,104006,105000"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102074,102113,102120,102144,102147,103001,103014,103015,103022,103027,103029,103033,104003,104004,104005,104006,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49547.1.0" Name="jazz" Rows="10000000.000000" EmptyRelation="false"/>
@@ -610,7 +610,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="76.842297" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="387.962523" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="hi_ndv">
@@ -624,7 +624,7 @@
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="76.842267" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="387.962493" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="hi_ndv">

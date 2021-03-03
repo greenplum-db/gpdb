@@ -12,14 +12,14 @@
 #define GPOPT_COperator_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CHashMap.h"
+#include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/base/CFunctionProp.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CReqdPropRelational.h"
-#include "gpopt/base/CFunctionProp.h"
 
 namespace gpopt
 {
@@ -49,9 +49,6 @@ typedef CHashMap<CColRef, CColRef, CColRef::HashValue, CColRef::Equals,
 class COperator : public CRefCount
 {
 private:
-	// private copy ctor
-	COperator(COperator &);
-
 protected:
 	// operator id that is unique over all instances of all operator types
 	// for the current query
@@ -85,6 +82,8 @@ protected:
 	static ULONG m_aulOpIdCounter;
 
 public:
+	COperator(COperator &) = delete;
+
 	// identification
 	enum EOperatorId
 	{
@@ -124,6 +123,7 @@ public:
 		EopLogicalLeftAntiSemiCorrelatedApply,
 		EopLogicalLeftAntiSemiApplyNotIn,
 		EopLogicalLeftAntiSemiCorrelatedApplyNotIn,
+		EopLogicalRightOuterJoin,
 		EopLogicalConstTableGet,
 		EopLogicalDynamicGet,
 		EopLogicalDynamicIndexGet,
@@ -220,6 +220,7 @@ public:
 		EopPhysicalLeftSemiHashJoin,
 		EopPhysicalLeftAntiSemiHashJoin,
 		EopPhysicalLeftAntiSemiHashJoinNotIn,
+		EopPhysicalRightOuterHashJoin,
 
 		EopPhysicalMotionGather,
 		EopPhysicalMotionBroadcast,
@@ -286,9 +287,7 @@ public:
 	explicit COperator(CMemoryPool *mp);
 
 	// dtor
-	virtual ~COperator()
-	{
-	}
+	~COperator() override = default;
 
 	// the id of the operator
 	ULONG

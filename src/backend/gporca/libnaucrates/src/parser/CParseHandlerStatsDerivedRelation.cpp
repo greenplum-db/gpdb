@@ -11,11 +11,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerStatsDerivedRelation.h"
-#include "naucrates/dxl/parser/CParseHandlerStatsDerivedColumn.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerStatsDerivedColumn.h"
 
 using namespace gpdxl;
 using namespace gpnaucrates;
@@ -36,7 +36,9 @@ CParseHandlerStatsDerivedRelation::CParseHandlerStatsDerivedRelation(
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_rows(CStatistics::DefaultColumnWidth),
 	  m_empty(false),
-	  m_dxl_stats_derived_relation(NULL)
+	  m_relpages(0),
+	  m_relallvisible(0),
+	  m_dxl_stats_derived_relation(nullptr)
 {
 }
 
@@ -98,11 +100,31 @@ CParseHandlerStatsDerivedRelation::StartElement(
 		m_empty = false;
 		const XMLCh *xml_is_empty =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenEmptyRelation));
-		if (NULL != xml_is_empty)
+		if (nullptr != xml_is_empty)
 		{
 			m_empty = CDXLOperatorFactory::ConvertAttrValueToBool(
 				m_parse_handler_mgr->GetDXLMemoryManager(), xml_is_empty,
 				EdxltokenEmptyRelation, EdxltokenStatsDerivedRelation);
+		}
+
+		m_relpages = 0;
+		const XMLCh *xml_relpages =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelPages));
+		if (nullptr != xml_relpages)
+		{
+			m_relpages = CDXLOperatorFactory::ConvertAttrValueToUlong(
+				m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows,
+				EdxltokenRelPages, EdxltokenStatsDerivedRelation);
+		}
+
+		m_relallvisible = 0;
+		const XMLCh *xml_relallvisible =
+			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelAllVisible));
+		if (nullptr != xml_relallvisible)
+		{
+			m_relallvisible = CDXLOperatorFactory::ConvertAttrValueToUlong(
+				m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows,
+				EdxltokenRelAllVisible, EdxltokenStatsDerivedRelation);
 		}
 	}
 }

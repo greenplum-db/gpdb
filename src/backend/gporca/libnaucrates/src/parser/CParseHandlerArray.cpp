@@ -10,9 +10,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerArray.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarArray.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
 
@@ -52,7 +53,7 @@ CParseHandlerArray::StartElement(const XMLCh *const element_uri,
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarArray),
 				 element_local_name) &&
-		NULL == m_dxl_node)
+		nullptr == m_dxl_node)
 	{
 		// parse and create array
 		CDXLScalarArray *dxl_op =
@@ -63,7 +64,7 @@ CParseHandlerArray::StartElement(const XMLCh *const element_uri,
 	else
 	{
 		// parse child of array
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		CParseHandlerBase *child_parse_handler =
 			CParseHandlerFactory::GetParseHandler(
@@ -102,13 +103,11 @@ CParseHandlerArray::EndElement(const XMLCh *const,	// element_uri,
 
 	// construct node from the created child nodes
 
-	GPOS_ASSERT(0 < this->Length());
-
 	for (ULONG ul = 0; ul < this->Length(); ul++)
 	{
 		CParseHandlerScalarOp *child_parse_handler =
 			dynamic_cast<CParseHandlerScalarOp *>((*this)[ul]);
-		GPOS_ASSERT(NULL != child_parse_handler);
+		GPOS_ASSERT(nullptr != child_parse_handler);
 		AddChildFromParseHandler(child_parse_handler);
 	}
 

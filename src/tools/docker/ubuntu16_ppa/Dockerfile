@@ -22,11 +22,11 @@ RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
 RUN mkdir /data \
  && mkdir /data/data1 \
  && mkdir /data/data2 \
- && mkdir /data/master \
+ && mkdir /data/coordinator \
  && . /opt/gpdb/greenplum_path.sh && cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode /data/ \
  && sed -i 's/gpdata1/data\/data1/g' /data/gpinitsystem_singlenode \
  && sed -i 's/gpdata2/data\/data2/g' /data/gpinitsystem_singlenode \
- && sed -i 's/gpmaster/data\/master/g' /data/gpinitsystem_singlenode
+ && sed -i 's/gpmaster/data\/coordinator/g' /data/gpinitsystem_singlenode
 
 # Create gpadmin user and add the user to the sudoers
 RUN useradd -md /home/gpadmin/ gpadmin \

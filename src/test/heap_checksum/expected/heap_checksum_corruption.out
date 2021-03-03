@@ -81,7 +81,7 @@ RETURNS integer as $$
       f.close()
 
   return 0
-$$ LANGUAGE plpython3u;
+$$ LANGUAGE plpython3u EXECUTE ON ALL SEGMENTS;
 CREATE OR REPLACE FUNCTION invalidate_buffers_for_rel(tablename text) RETURNS BOOL AS
 $$
 DECLARE
@@ -136,7 +136,7 @@ select invalidate_buffers_for_rel('corrupt_table') from gp_dist_random('gp_id');
 (3 rows)
 
 -- Verify corruption on heap table
-select SUM(corrupt_file(get_relation_path('corrupt_table'), -50)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_relation_path('corrupt_table'), -50));
 INFO:  corrupting file base/81967/81931 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81931 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81931 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
@@ -164,7 +164,7 @@ select invalidate_buffers_for_rel(get_toast_name('corrupt_toast_table')) from gp
 (3 rows)
 
 -- Verify corruption on toast table
-select SUM(corrupt_file(get_toast_path('corrupt_toast_table'), -50)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_toast_path('corrupt_toast_table'), -50));
 INFO:  corrupting file base/81967/81933 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81933 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81933 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
@@ -193,7 +193,7 @@ select invalidate_buffers_for_rel('btree_index') from gp_dist_random('gp_id');
 (3 rows)
 
 -- Verify corruption on Btree index
-select SUM(corrupt_file(get_index_path('corrupt_btree_index'), -50)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_index_path('corrupt_btree_index'), -50));
 INFO:  corrupting file base/81967/81936 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81936 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81936 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
@@ -222,7 +222,7 @@ select invalidate_buffers_for_rel('bitmap_index') from gp_dist_random('gp_id');
 (3 rows)
 
 -- Verify corruption on Bitmap index 
-select SUM(corrupt_file(get_index_path('corrupt_bitmap_index'), -50)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_index_path('corrupt_bitmap_index'), -50));
 INFO:  corrupting file base/81967/81938 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81938 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81938 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
@@ -264,7 +264,7 @@ select count(*) from mark_buffer_dirty_hint;
 create table flush_xlog_page_to_disk (c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 -- corrupt the page on disk
-select SUM(corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50));
 INFO:  corrupting file base/81967/81939 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81939 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81939 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)

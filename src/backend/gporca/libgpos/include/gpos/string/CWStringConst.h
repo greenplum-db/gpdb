@@ -42,10 +42,10 @@ public:
 	CWStringConst(const CWStringConst &);
 
 	//dtor
-	~CWStringConst();
+	~CWStringConst() override;
 
 	// returns the wide character buffer storing the string
-	const WCHAR *GetBuffer() const;
+	const WCHAR *GetBuffer() const override;
 };
 }  // namespace gpos
 

@@ -20,14 +20,13 @@
 #define GPDXL_CMappingVarColId_H
 
 
-#include "gpopt/translate/CGPDBAttInfo.h"
-#include "gpopt/translate/CGPDBAttOptCol.h"
-
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
 
-#include "naucrates/dxl/operators/dxlops.h"
+#include "gpopt/translate/CGPDBAttInfo.h"
+#include "gpopt/translate/CGPDBAttOptCol.h"
 #include "naucrates/dxl/CIdGenerator.h"
+#include "naucrates/dxl/operators/dxlops.h"
 
 //fwd decl
 struct Var;
@@ -94,15 +93,14 @@ private:
 	// insert mapping entry
 	void Insert(ULONG, ULONG, INT, ULONG, CWStringBase *str);
 
-	// no copy constructor
-	CMappingVarColId(const CMappingVarColId &);
-
 	// helper function to access mapping
 	const CGPDBAttOptCol *GetGPDBAttOptColMapping(
 		ULONG current_query_level, const Var *var,
 		EPlStmtPhysicalOpType plstmt_physical_op_type) const;
 
 public:
+	CMappingVarColId(const CMappingVarColId &) = delete;
+
 	// ctor
 	explicit CMappingVarColId(CMemoryPool *);
 

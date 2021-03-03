@@ -14,9 +14,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDCacheObject.h"
-
 #include "gpopt/base/CColRef.h"
+#include "naucrates/md/IMDCacheObject.h"
 
 // fwd decl
 namespace gpdxl
@@ -47,8 +46,8 @@ class IMDCheckConstraint : public IMDCacheObject
 {
 public:
 	// object type
-	virtual Emdtype
-	MDType() const
+	Emdtype
+	MDType() const override
 	{
 		return EmdtCheckConstraint;
 	}

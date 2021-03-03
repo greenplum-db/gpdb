@@ -20,9 +20,9 @@
 #include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/base/CColRef.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 
 namespace gpopt

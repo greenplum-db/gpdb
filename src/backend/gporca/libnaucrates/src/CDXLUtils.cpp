@@ -9,45 +9,41 @@
 //		Implementation of the utility methods for parsing and searializing DXL.
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-#include "gpos/common/CAutoTimer.h"
-#include "gpos/common/CAutoRef.h"
-#include "gpos/common/CAutoRg.h"
-
-#include "gpos/io/ioutils.h"
-#include "gpos/io/CFileReader.h"
-#include "gpos/io/COstreamString.h"
-#include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/task/CWorker.h"
-#include "gpos/task/CTraceFlagIter.h"
-
-#include "gpopt/engine/CEnumeratorConfig.h"
-#include "gpopt/engine/CStatisticsConfig.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
-
-#include "naucrates/base/CQueryToDXLResult.h"
 #include "naucrates/dxl/CDXLUtils.h"
-#include "naucrates/dxl/parser/CParseHandlerDXL.h"
-#include "naucrates/dxl/parser/CParseHandlerPlan.h"
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerDummy.h"
-#include "naucrates/dxl/xml/CDXLMemoryManager.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/base/COptCtxt.h"
-
-#include "naucrates/md/CMDRequest.h"
-#include "naucrates/md/CDXLStatsDerivedRelation.h"
-
-#include "naucrates/traceflags/traceflags.h"
-
+#include <xercesc/framework/MemBufInputSource.hpp>
 #include <xercesc/sax2/SAX2XMLReader.hpp>
 #include <xercesc/sax2/XMLReaderFactory.hpp>
-#include <xercesc/framework/MemBufInputSource.hpp>
-#include <xercesc/util/XMLString.hpp>
 #include <xercesc/util/Base64.hpp>
+#include <xercesc/util/XMLString.hpp>
+
+#include "gpos/base.h"
+#include "gpos/common/CAutoRef.h"
+#include "gpos/common/CAutoRg.h"
+#include "gpos/common/CAutoTimer.h"
+#include "gpos/io/CFileReader.h"
+#include "gpos/io/COstreamString.h"
+#include "gpos/io/ioutils.h"
+#include "gpos/task/CAutoTraceFlag.h"
+#include "gpos/task/CTraceFlagIter.h"
+#include "gpos/task/CWorker.h"
+
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/engine/CEnumeratorConfig.h"
+#include "gpopt/engine/CStatisticsConfig.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/base/CQueryToDXLResult.h"
+#include "naucrates/dxl/parser/CParseHandlerDXL.h"
+#include "naucrates/dxl/parser/CParseHandlerDummy.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerPlan.h"
+#include "naucrates/dxl/xml/CDXLMemoryManager.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/CDXLStatsDerivedRelation.h"
+#include "naucrates/md/CMDRequest.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -72,16 +68,16 @@ CParseHandlerDXL *
 CDXLUtils::GetParseHandlerForDXLString(CMemoryPool *mp, const CHAR *dxl_string,
 									   const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// setup own memory manager
 	CDXLMemoryManager *memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
 	SAX2XMLReader *sax_2_xml_reader =
 		XMLReaderFactory::createXMLReader(memory_manager);
 
-	XMLCh *xsd_path = NULL;
+	XMLCh *xsd_path = nullptr;
 
-	if (NULL != xsd_file_path)
+	if (nullptr != xsd_file_path)
 	{
 		// setup XSD validation
 		sax_2_xml_reader->setFeature(XMLUni::fgSAX2CoreValidation, true);
@@ -116,17 +112,17 @@ CDXLUtils::GetParseHandlerForDXLString(CMemoryPool *mp, const CHAR *dxl_string,
 	catch (const XMLException &)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLXercesParseError);
-		return NULL;
+		return nullptr;
 	}
 	catch (const SAXParseException &)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLXercesParseError);
-		return NULL;
+		return nullptr;
 	}
 	catch (const SAXException &)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLXercesParseError);
-		return NULL;
+		return nullptr;
 	}
 
 
@@ -158,17 +154,17 @@ CParseHandlerDXL *
 CDXLUtils::GetParseHandlerForDXLFile(CMemoryPool *mp, const CHAR *dxl_filename,
 									 const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// setup own memory manager
 	CDXLMemoryManager mm(mp);
-	SAX2XMLReader *sax_2_xml_reader = NULL;
+	SAX2XMLReader *sax_2_xml_reader = nullptr;
 
 	sax_2_xml_reader = XMLReaderFactory::createXMLReader(&mm);
 
-	XMLCh *xsd_path = NULL;
+	XMLCh *xsd_path = nullptr;
 
-	if (NULL != xsd_file_path)
+	if (nullptr != xsd_file_path)
 	{
 		// setup XSD validation
 		sax_2_xml_reader->setFeature(XMLUni::fgSAX2CoreValidation, true);
@@ -203,7 +199,7 @@ CDXLUtils::GetParseHandlerForDXLFile(CMemoryPool *mp, const CHAR *dxl_filename,
 		delete[] xsd_path;
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLXercesParseError);
 
-		return NULL;
+		return nullptr;
 	}
 	catch (const SAXParseException &ex)
 	{
@@ -213,7 +209,7 @@ CDXLUtils::GetParseHandlerForDXLFile(CMemoryPool *mp, const CHAR *dxl_filename,
 
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLXercesParseError);
 
-		return NULL;
+		return nullptr;
 	}
 	catch (const SAXException &)
 	{
@@ -222,7 +218,7 @@ CDXLUtils::GetParseHandlerForDXLFile(CMemoryPool *mp, const CHAR *dxl_filename,
 		delete[] xsd_path;
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLXercesParseError);
 
-		return NULL;
+		return nullptr;
 	}
 
 	GPOS_CHECK_ABORT;
@@ -276,23 +272,23 @@ CDXLUtils::GetPlanDXLNode(CMemoryPool *mp, const CHAR *dxl_string,
 						  const CHAR *xsd_file_path, ULLONG *plan_id,
 						  ULLONG *plan_space_size)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != plan_id);
-	GPOS_ASSERT(NULL != plan_space_size);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != plan_id);
+	GPOS_ASSERT(nullptr != plan_space_size);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
 		GetParseHandlerForDXLString(mp, dxl_string, xsd_file_path);
 	CAutoP<CParseHandlerDXL> parse_handler_dxl_wrapper(parse_handler_dxl);
 
-	GPOS_ASSERT(NULL != parse_handler_dxl_wrapper.Value());
+	GPOS_ASSERT(nullptr != parse_handler_dxl_wrapper.Value());
 
 	// collect plan info from dxl parse handler
 	CDXLNode *root_dxl_node = parse_handler_dxl_wrapper->PdxlnPlan();
 	*plan_id = parse_handler_dxl_wrapper->GetPlanId();
 	*plan_space_size = parse_handler_dxl_wrapper->GetPlanSpaceSize();
 
-	GPOS_ASSERT(NULL != root_dxl_node);
+	GPOS_ASSERT(nullptr != root_dxl_node);
 
 #ifdef GPOS_DEBUG
 	root_dxl_node->GetOperator()->AssertValid(root_dxl_node,
@@ -320,7 +316,7 @@ CQueryToDXLResult *
 CDXLUtils::ParseQueryToQueryDXLTree(CMemoryPool *mp, const CHAR *dxl_string,
 									const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -329,7 +325,7 @@ CDXLUtils::ParseQueryToQueryDXLTree(CMemoryPool *mp, const CHAR *dxl_string,
 
 	// collect dxl tree of the query from dxl parse handler
 	CDXLNode *root_dxl_node = parse_handler_dxl->GetQueryDXLRoot();
-	GPOS_ASSERT(NULL != root_dxl_node);
+	GPOS_ASSERT(nullptr != root_dxl_node);
 
 #ifdef GPOS_DEBUG
 	root_dxl_node->GetOperator()->AssertValid(root_dxl_node,
@@ -339,14 +335,14 @@ CDXLUtils::ParseQueryToQueryDXLTree(CMemoryPool *mp, const CHAR *dxl_string,
 	root_dxl_node->AddRef();
 
 	// collect the list of query output columns from the dxl parse handler
-	GPOS_ASSERT(NULL != parse_handler_dxl->GetOutputColumnsDXLArray());
+	GPOS_ASSERT(nullptr != parse_handler_dxl->GetOutputColumnsDXLArray());
 	CDXLNodeArray *query_output_cols_dxlnode_array =
 		parse_handler_dxl->GetOutputColumnsDXLArray();
 	query_output_cols_dxlnode_array->AddRef();
 
 	// collect the list of CTEs
 	CDXLNodeArray *cte_producers = parse_handler_dxl->GetCTEProducerDXLArray();
-	GPOS_ASSERT(NULL != cte_producers);
+	GPOS_ASSERT(nullptr != cte_producers);
 	cte_producers->AddRef();
 
 	CQueryToDXLResult *ptrOutput = GPOS_NEW(mp) CQueryToDXLResult(
@@ -366,7 +362,7 @@ CDXLNode *
 CDXLUtils::ParseDXLToScalarExprDXLNode(CMemoryPool *mp, const CHAR *dxl_string,
 									   const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CAutoP<CParseHandlerDXL> parse_handler_dxl_wrapper(
@@ -374,7 +370,7 @@ CDXLUtils::ParseDXLToScalarExprDXLNode(CMemoryPool *mp, const CHAR *dxl_string,
 
 	// collect dxl tree of the query from dxl parse handler
 	CDXLNode *root_dxl_node = parse_handler_dxl_wrapper->GetScalarExprDXLRoot();
-	GPOS_ASSERT(NULL != root_dxl_node);
+	GPOS_ASSERT(nullptr != root_dxl_node);
 	root_dxl_node->AddRef();
 
 	return root_dxl_node;
@@ -395,7 +391,7 @@ IMDCacheObjectArray *
 CDXLUtils::ParseDXLToIMDObjectArray(CMemoryPool *mp, const CHAR *dxl_string,
 									const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -422,7 +418,7 @@ IMDId *
 CDXLUtils::ParseDXLToMDId(CMemoryPool *mp, const CWStringBase *dxl_string,
 						  const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -454,7 +450,7 @@ CMDRequest *
 CDXLUtils::ParseDXLToMDRequest(CMemoryPool *mp, const CHAR *dxl_string,
 							   const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -463,7 +459,7 @@ CDXLUtils::ParseDXLToMDRequest(CMemoryPool *mp, const CHAR *dxl_string,
 
 	// collect metadata ids from dxl parse handler
 	CMDRequest *md_request = parse_handler_dxl->GetMiniDumper();
-	GPOS_ASSERT(NULL != md_request);
+	GPOS_ASSERT(nullptr != md_request);
 	md_request->AddRef();
 
 	return md_request;
@@ -482,7 +478,7 @@ CMDRequest *
 CDXLUtils::ParseDXLToMDRequest(CMemoryPool *mp, const WCHAR *dxl_string,
 							   const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	CAutoRg<CHAR> multi_byte_char_string_wrapper(
 		CDXLUtils::CreateMultiByteCharStringFromWCString(mp, dxl_string));
@@ -499,7 +495,7 @@ COptimizerConfig *
 CDXLUtils::ParseDXLToOptimizerConfig(CMemoryPool *mp, const CHAR *dxl_string,
 									 const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -513,7 +509,7 @@ CDXLUtils::ParseDXLToOptimizerConfig(CMemoryPool *mp, const CHAR *dxl_string,
 	// collect optimizer conf from dxl parse handler
 	COptimizerConfig *optimizer_config =
 		parse_handler_dxl->GetOptimizerConfig();
-	GPOS_ASSERT(NULL != optimizer_config);
+	GPOS_ASSERT(nullptr != optimizer_config);
 	optimizer_config->AddRef();
 
 	return optimizer_config;
@@ -535,7 +531,7 @@ CDXLUtils::ParseDXLToStatsDerivedRelArray(CMemoryPool *mp,
 										  const CWStringBase *dxl_string,
 										  const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -565,7 +561,7 @@ CDXLUtils::ParseDXLToStatsDerivedRelArray(CMemoryPool *mp,
 										  const CHAR *dxl_string,
 										  const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -593,7 +589,7 @@ CDXLUtils::ParseDXLToOptimizerStatisticObjArray(
 	CMemoryPool *mp, CMDAccessor *md_accessor,
 	CDXLStatsDerivedRelationArray *dxl_derived_rel_stats_array)
 {
-	GPOS_ASSERT(NULL != dxl_derived_rel_stats_array);
+	GPOS_ASSERT(nullptr != dxl_derived_rel_stats_array);
 
 	CStatisticsArray *statistics_array = GPOS_NEW(mp) CStatisticsArray(mp);
 	const ULONG ulRelStat = dxl_derived_rel_stats_array->Size();
@@ -724,7 +720,7 @@ CDXLUtils::ParseDXLToIMDObjectArray(CMemoryPool *mp,
 									const CWStringBase *dxl_string,
 									const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CParseHandlerDXL *parse_handler_dxl =
@@ -756,7 +752,7 @@ CDXLUtils::ParseDXLToIMDIdCacheObj(CMemoryPool *mp,
 								   const CWStringBase *dxl_string,
 								   const CHAR *xsd_file_path)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	// create and install a parse handler for the DXL document
 	CAutoP<CParseHandlerDXL> parse_handler_dxl_array(
@@ -769,7 +765,7 @@ CDXLUtils::ParseDXLToIMDIdCacheObj(CMemoryPool *mp,
 	if (0 == imd_obj_array->Size())
 	{
 		// no metadata objects found
-		return NULL;
+		return nullptr;
 	}
 
 	IMDCacheObject *imd_cached_obj = (*imd_obj_array)[0];
@@ -794,8 +790,9 @@ CDXLUtils::SerializeQuery(CMemoryPool *mp, IOstream &os,
 						  const CDXLNodeArray *cte_producers,
 						  BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != dxl_query_node && NULL != query_output_dxlnode_array);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != dxl_query_node &&
+				nullptr != query_output_dxlnode_array);
 
 	CAutoTimer at("\n[OPT]: DXL Query Serialization Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
@@ -863,7 +860,7 @@ CDXLUtils::SerializeQuery(CMemoryPool *mp, IOstream &os,
 CWStringDynamic *
 CDXLUtils::SerializeULLONG(CMemoryPool *mp, ULLONG value)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 
@@ -888,8 +885,8 @@ CDXLUtils::SerializePlan(CMemoryPool *mp, IOstream &os, const CDXLNode *node,
 						 ULLONG plan_id, ULLONG plan_space_size,
 						 BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != node);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != node);
 
 	CAutoTimer at("\n[OPT]: DXL Plan Serialization Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
@@ -939,8 +936,8 @@ CDXLUtils::SerializeMetadata(CMemoryPool *mp,
 							 IOstream &os, BOOL serialize_header_footer,
 							 BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != imd_obj_array);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != imd_obj_array);
 
 	CXMLSerializer xml_serializer(mp, os, indentation);
 
@@ -985,7 +982,7 @@ CWStringDynamic *
 CDXLUtils::SerializeMetadata(CMemoryPool *mp, const IMDId *mdid,
 							 BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(mdid->IsValid());
 
 	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
@@ -1039,7 +1036,7 @@ CDXLUtils::SerializeSamplePlans(CMemoryPool *mp,
 								CEnumeratorConfig *enumerator_cfg,
 								BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
 
@@ -1093,7 +1090,7 @@ CDXLUtils::SerializeCostDistr(CMemoryPool *mp,
 							  CEnumeratorConfig *enumerator_cfg,
 							  BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 
 	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
 
@@ -1145,8 +1142,8 @@ CDXLUtils::SerializeMDRequest(CMemoryPool *mp, CMDRequest *md_request,
 							  IOstream &os, BOOL serialize_header_footer,
 							  BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != md_request);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != md_request);
 
 	CXMLSerializer xml_serializer(mp, os, indentation);
 
@@ -1179,8 +1176,8 @@ CDXLUtils::SerializeStatistics(CMemoryPool *mp, CMDAccessor *md_accessor,
 							   const CStatisticsArray *statistics_array,
 							   BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != statistics_array);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != statistics_array);
 	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
 
 	// create a string stream to hold the result of serialization
@@ -1207,8 +1204,8 @@ CDXLUtils::SerializeStatistics(CMemoryPool *mp, CMDAccessor *md_accessor,
 							   IOstream &os, BOOL serialize_header_footer,
 							   BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != statistics_array);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != statistics_array);
 
 	CXMLSerializer xml_serializer(mp, os, indentation);
 
@@ -1221,7 +1218,7 @@ CDXLUtils::SerializeStatistics(CMemoryPool *mp, CMDAccessor *md_accessor,
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenStatistics));
 
-	GPOS_ASSERT(NULL != statistics_array);
+	GPOS_ASSERT(nullptr != statistics_array);
 
 	for (ULONG ul = 0; ul < statistics_array->Size(); ul++)
 	{
@@ -1257,8 +1254,8 @@ CDXLUtils::SerializeMetadata(CMemoryPool *mp,
 							 const IMDCacheObjectArray *imd_obj_array,
 							 BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != imd_obj_array);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != imd_obj_array);
 	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
 
 	// create a string stream to hold the result of serialization
@@ -1282,8 +1279,8 @@ CWStringDynamic *
 CDXLUtils::SerializeMDObj(CMemoryPool *mp, const IMDCacheObject *imd_cache_obj,
 						  BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != imd_cache_obj);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != imd_cache_obj);
 
 	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 
@@ -1328,8 +1325,8 @@ CWStringDynamic *
 CDXLUtils::SerializeScalarExpr(CMemoryPool *mp, const CDXLNode *node,
 							   BOOL serialize_header_footer, BOOL indentation)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != node);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != node);
 	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
 
 	// create a string stream to hold the result of serialization
@@ -1367,7 +1364,7 @@ CDXLUtils::SerializeScalarExpr(CMemoryPool *mp, const CDXLNode *node,
 void
 CDXLUtils::SerializeHeader(CMemoryPool *mp, CXMLSerializer *xml_serializer)
 {
-	GPOS_ASSERT(NULL != xml_serializer);
+	GPOS_ASSERT(nullptr != xml_serializer);
 
 	xml_serializer->StartDocument();
 
@@ -1399,7 +1396,7 @@ CDXLUtils::SerializeHeader(CMemoryPool *mp, CXMLSerializer *xml_serializer)
 void
 CDXLUtils::SerializeFooter(CXMLSerializer *xml_serializer)
 {
-	GPOS_ASSERT(NULL != xml_serializer);
+	GPOS_ASSERT(nullptr != xml_serializer);
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
@@ -1420,8 +1417,8 @@ CWStringDynamic *
 CDXLUtils::CreateDynamicStringFromXMLChArray(CDXLMemoryManager *memory_manager,
 											 const XMLCh *xml_string)
 {
-	GPOS_ASSERT(NULL != memory_manager);
-	GPOS_ASSERT(NULL != xml_string);
+	GPOS_ASSERT(nullptr != memory_manager);
+	GPOS_ASSERT(nullptr != xml_string);
 
 	CMemoryPool *mp = memory_manager->Pmp();
 
@@ -1453,8 +1450,8 @@ CDXLUtils::CreateStringFrom64XMLStr(
 	ULONG *length  // output: length of constructed byte array
 )
 {
-	GPOS_ASSERT(NULL != memory_manager);
-	GPOS_ASSERT(NULL != xml_string);
+	GPOS_ASSERT(nullptr != memory_manager);
+	GPOS_ASSERT(nullptr != xml_string);
 
 	CMemoryPool *mp = memory_manager->Pmp();
 
@@ -1496,7 +1493,7 @@ CDXLUtils::CreateStringFrom64XMLStr(
 CWStringDynamic *
 CDXLUtils::CreateDynamicStringFromCharArray(CMemoryPool *mp, const CHAR *c)
 {
-	GPOS_ASSERT(NULL != c);
+	GPOS_ASSERT(nullptr != c);
 
 	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 	string_var->AppendFormat(GPOS_WSZ_LIT("%s"), c);
@@ -1516,7 +1513,7 @@ CDXLUtils::CreateDynamicStringFromCharArray(CMemoryPool *mp, const CHAR *c)
 CMDName *
 CDXLUtils::CreateMDNameFromCharArray(CMemoryPool *mp, const CHAR *c)
 {
-	GPOS_ASSERT(NULL != c);
+	GPOS_ASSERT(nullptr != c);
 
 	CWStringDynamic *dxl_string =
 		CDXLUtils::CreateDynamicStringFromCharArray(mp, c);
@@ -1542,7 +1539,7 @@ CMDName *
 CDXLUtils::CreateMDNameFromXMLChar(CDXLMemoryManager *memory_manager,
 								   const XMLCh *xml_string)
 {
-	GPOS_ASSERT(NULL != xml_string);
+	GPOS_ASSERT(nullptr != xml_string);
 
 	CHAR *transcode_string = XMLString::transcode(xml_string, memory_manager);
 	CMDName *md_name =
@@ -1581,7 +1578,7 @@ CDXLUtils::EncodeByteArrayToString(CMemoryPool *mp, const BYTE *byte,
 	xml_byte_buffer =
 		Base64::encode(input, input_length, &output_length, a_pmm.Value());
 
-	GPOS_ASSERT(NULL != xml_byte_buffer.Rgt());
+	GPOS_ASSERT(nullptr != xml_byte_buffer.Rgt());
 
 	// assert that last byte is 0
 	GPOS_ASSERT(0 == xml_byte_buffer[output_length]);
@@ -1643,7 +1640,7 @@ CDXLUtils::DecodeByteArrayFromString(CMemoryPool *mp,
 
 	data_in_byte[input_length] = 0;
 
-	XMLByte *xml_byte = NULL;
+	XMLByte *xml_byte = nullptr;
 
 	xml_byte = Base64::decode(data_in_byte.Rgt(), &xml_size, a_pmm.Value());
 
@@ -1722,7 +1719,7 @@ CHAR *
 CDXLUtils::CreateMultiByteCharStringFromWCString(CMemoryPool *mp,
 												 const WCHAR *wc)
 {
-	GPOS_ASSERT(NULL != wc);
+	GPOS_ASSERT(nullptr != wc);
 
 	ULONG max_length = GPOS_WSZ_LENGTH(wc) * GPOS_SIZEOF(WCHAR) + 1;
 	CHAR *c = GPOS_NEW_ARRAY(mp, CHAR, max_length);

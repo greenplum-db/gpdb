@@ -12,6 +12,7 @@
 #define GPOPT_CXformGbAgg2StreamAgg_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,10 +30,9 @@ using namespace gpos;
 class CXformGbAgg2StreamAgg : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformGbAgg2StreamAgg(const CXformGbAgg2StreamAgg &);
-
 public:
+	CXformGbAgg2StreamAgg(const CXformGbAgg2StreamAgg &) = delete;
+
 	// ctor
 	CXformGbAgg2StreamAgg(CMemoryPool *mp);
 
@@ -40,30 +40,28 @@ public:
 	explicit CXformGbAgg2StreamAgg(CExpression *pexprPattern);
 
 	// dtor
-	virtual ~CXformGbAgg2StreamAgg()
-	{
-	}
+	~CXformGbAgg2StreamAgg() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfGbAgg2StreamAgg;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformGbAgg2StreamAgg";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformGbAgg2StreamAgg
 

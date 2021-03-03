@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementConstTableGet.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CPhysicalConstTableGet.h"
@@ -47,7 +48,7 @@ CXformImplementConstTableGet::Transform(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

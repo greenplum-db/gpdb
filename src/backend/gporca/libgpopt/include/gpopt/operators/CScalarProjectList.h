@@ -12,8 +12,9 @@
 #define GPOPT_CScalarProjectList_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CScalar.h"
+
 #include "gpopt/base/CDrvdProp.h"
+#include "gpopt/operators/CScalar.h"
 
 namespace gpopt
 {
@@ -30,44 +31,41 @@ using namespace gpos;
 class CScalarProjectList : public CScalar
 {
 private:
-	// private copy ctor
-	CScalarProjectList(const CScalarProjectList &);
-
 public:
+	CScalarProjectList(const CScalarProjectList &) = delete;
+
 	// ctor
 	explicit CScalarProjectList(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CScalarProjectList()
-	{
-	}
+	~CScalarProjectList() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarProjectList;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarProjectList";
 	}
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -76,17 +74,17 @@ public:
 	static CScalarProjectList *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarProjectList == pop->Eopid());
 
-		return reinterpret_cast<CScalarProjectList *>(pop);
+		return dynamic_cast<CScalarProjectList *>(pop);
 	}
 
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		GPOS_ASSERT(!"Invalid function call: CScalarProjectList::MdidType()");
-		return NULL;
+		return nullptr;
 	}
 
 	// return number of distinct aggs in project list attached to given handle

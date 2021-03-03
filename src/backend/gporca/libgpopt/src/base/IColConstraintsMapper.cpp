@@ -1,8 +1,6 @@
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 
 #include "gpopt/base/IColConstraintsMapper.h"
 
-gpopt::IColConstraintsMapper::~IColConstraintsMapper()
-{
-}
+gpopt::IColConstraintsMapper::~IColConstraintsMapper() = default;

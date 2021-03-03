@@ -4,6 +4,9 @@ regression.out
 # Local symbolic links
 sql_isolation_testcase.py
 
+expected/setup.out
+sql/setup.sql
+
 # Generated subdirectories
 /results/
 /temp_test/

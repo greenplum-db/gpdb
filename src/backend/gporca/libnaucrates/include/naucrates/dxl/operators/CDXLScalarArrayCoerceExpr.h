@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarArrayCoerceExpr.h
@@ -19,6 +19,7 @@
 #define GPDXL_CDXLScalarArrayCoerceExpr_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalarCoerceBase.h"
 #include "naucrates/md/IMDId.h"
 
@@ -43,23 +44,22 @@ private:
 	// conversion semantics flag to pass to func
 	BOOL m_explicit;
 
-	// private copy ctor
-	CDXLScalarArrayCoerceExpr(const CDXLScalarArrayCoerceExpr &);
-
 public:
+	CDXLScalarArrayCoerceExpr(const CDXLScalarArrayCoerceExpr &) = delete;
+
 	CDXLScalarArrayCoerceExpr(CMemoryPool *mp, IMDId *coerce_func_mdid,
 							  IMDId *result_type_mdid, INT type_modifier,
 							  BOOL is_explicit, EdxlCoercionForm coerce_format,
 							  INT location);
 
-	virtual ~CDXLScalarArrayCoerceExpr()
+	~CDXLScalarArrayCoerceExpr() override
 	{
 		m_coerce_func_mdid->Release();
 	}
 
 	// ident accessor
-	virtual Edxlopid
-	GetDXLOperator() const
+	Edxlopid
+	GetDXLOperator() const override
 	{
 		return EdxlopScalarArrayCoerceExpr;
 	}
@@ -78,17 +78,17 @@ public:
 	}
 
 	// name of the DXL operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLScalarArrayCoerceExpr *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarArrayCoerceExpr == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarArrayCoerceExpr *>(dxl_op);

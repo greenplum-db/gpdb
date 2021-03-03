@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDefaultComparator.h
@@ -21,9 +21,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/IComparator.h"
-
 #include "naucrates/md/IMDType.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 namespace gpmd
@@ -62,49 +60,42 @@ private:
 	// constant expression evaluator
 	IConstExprEvaluator *m_pceeval;
 
-	// disabled copy constructor
-	CDefaultComparator(const CDefaultComparator &);
-
 	// construct a comparison expression from the given components and evaluate it
 	BOOL FEvalComparison(CMemoryPool *mp, const IDatum *datum1,
 						 const IDatum *datum2,
 						 IMDType::ECmpType cmp_type) const;
 
-	// return true iff we use built-in evaluation for integers
-	static BOOL
-	FUseBuiltinIntEvaluators()
-	{
-		return !GPOS_FTRACE(EopttraceEnableConstantExpressionEvaluation) ||
-			   !GPOS_FTRACE(
-				   EopttraceUseExternalConstantExpressionEvaluationForInts);
-	}
+	// return true iff we should use the internal (stats-based) evaluation
+	static BOOL FUseInternalEvaluator(const IDatum *datum1,
+									  const IDatum *datum2,
+									  BOOL *can_use_external_evaluator);
 
 public:
+	CDefaultComparator(const CDefaultComparator &) = delete;
+
 	// ctor
 	CDefaultComparator(IConstExprEvaluator *pceeval);
 
 	// dtor
-	virtual ~CDefaultComparator()
-	{
-	}
+	~CDefaultComparator() override = default;
 
 	// tests if the two arguments are equal
-	virtual BOOL Equals(const IDatum *datum1, const IDatum *datum2) const;
+	BOOL Equals(const IDatum *datum1, const IDatum *datum2) const override;
 
 	// tests if the first argument is less than the second
-	virtual BOOL IsLessThan(const IDatum *datum1, const IDatum *datum2) const;
+	BOOL IsLessThan(const IDatum *datum1, const IDatum *datum2) const override;
 
 	// tests if the first argument is less or equal to the second
-	virtual BOOL IsLessThanOrEqual(const IDatum *datum1,
-								   const IDatum *datum2) const;
+	BOOL IsLessThanOrEqual(const IDatum *datum1,
+						   const IDatum *datum2) const override;
 
 	// tests if the first argument is greater than the second
-	virtual BOOL IsGreaterThan(const IDatum *datum1,
-							   const IDatum *datum2) const;
+	BOOL IsGreaterThan(const IDatum *datum1,
+					   const IDatum *datum2) const override;
 
 	// tests if the first argument is greater or equal to the second
-	virtual BOOL IsGreaterThanOrEqual(const IDatum *datum1,
-									  const IDatum *datum2) const;
+	BOOL IsGreaterThanOrEqual(const IDatum *datum1,
+							  const IDatum *datum2) const override;
 
 };	// CDefaultComparator
 }  // namespace gpopt

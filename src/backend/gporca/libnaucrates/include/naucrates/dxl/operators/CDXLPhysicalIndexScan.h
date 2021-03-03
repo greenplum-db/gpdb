@@ -13,9 +13,10 @@
 #define GPDXL_CDXLPhysicalIndexScan_H
 
 #include "gpos/base.h"
+
+#include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLPhysical.h"
-#include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 
 namespace gpdxl
@@ -49,23 +50,22 @@ private:
 	// scan direction of the index
 	EdxlIndexScanDirection m_index_scan_dir;
 
-	// private copy ctor
-	CDXLPhysicalIndexScan(CDXLPhysicalIndexScan &);
-
 public:
+	CDXLPhysicalIndexScan(CDXLPhysicalIndexScan &) = delete;
+
 	//ctor
 	CDXLPhysicalIndexScan(CMemoryPool *mp, CDXLTableDescr *table_descr,
 						  CDXLIndexDescr *dxl_index_descr,
 						  EdxlIndexScanDirection idx_scan_direction);
 
 	//dtor
-	virtual ~CDXLPhysicalIndexScan();
+	~CDXLPhysicalIndexScan() override;
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// index descriptor
 	virtual const CDXLIndexDescr *GetDXLIndexDescr() const;
@@ -77,14 +77,14 @@ public:
 	virtual EdxlIndexScanDirection GetIndexScanDir() const;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLPhysicalIndexScan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopPhysicalIndexScan == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLPhysicalIndexScan *>(dxl_op);
@@ -93,7 +93,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

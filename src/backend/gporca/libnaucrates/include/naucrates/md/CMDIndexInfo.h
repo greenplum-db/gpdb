@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Software Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDIndexInfo.h
@@ -13,6 +13,7 @@
 #define GPMD_CMDIndexInfo_H
 
 #include "gpos/base.h"
+
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDInterface.h"
 
@@ -36,7 +37,7 @@ public:
 	CMDIndexInfo(IMDId *mdid, BOOL is_partial);
 
 	// dtor
-	virtual ~CMDIndexInfo();
+	~CMDIndexInfo() override;
 
 	// index mdid
 	IMDId *MDId() const;

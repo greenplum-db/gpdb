@@ -19,9 +19,9 @@
 #define GPOS_CMemoryVisitorPrint_H
 
 #include "gpos/assert.h"
+#include "gpos/memory/IMemoryVisitor.h"
 #include "gpos/types.h"
 #include "gpos/utils.h"
-#include "gpos/memory/IMemoryVisitor.h"
 
 namespace gpos
 {
@@ -36,21 +36,20 @@ private:
 	// stream used for writing debug information
 	IOstream &m_os;
 
-	// private copy ctor
-	CMemoryVisitorPrint(CMemoryVisitorPrint &);
-
 public:
+	CMemoryVisitorPrint(CMemoryVisitorPrint &) = delete;
+
 	// ctor
 	CMemoryVisitorPrint(IOstream &os);
 
 	// dtor
-	virtual ~CMemoryVisitorPrint();
+	~CMemoryVisitorPrint() override;
 
 	// output information about a memory allocation
-	virtual void Visit(void *user_addr, SIZE_T user_size, void *total_addr,
-					   SIZE_T total_size, const CHAR *alloc_filename,
-					   const ULONG alloc_line, ULLONG alloc_seq_number,
-					   CStackDescriptor *stack_desc);
+	void Visit(void *user_addr, SIZE_T user_size, void *total_addr,
+			   SIZE_T total_size, const CHAR *alloc_filename,
+			   const ULONG alloc_line, ULLONG alloc_seq_number,
+			   CStackDescriptor *stack_desc) override;
 
 	// visit counter accessor
 	ULLONG

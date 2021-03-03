@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarOneTimeFilter_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalarFilter.h"
 
 
@@ -29,34 +30,33 @@ namespace gpdxl
 class CDXLScalarOneTimeFilter : public CDXLScalarFilter
 {
 private:
-	// private copy ctor
-	CDXLScalarOneTimeFilter(CDXLScalarOneTimeFilter &);
-
 public:
+	CDXLScalarOneTimeFilter(CDXLScalarOneTimeFilter &) = delete;
+
 	// ctor
 	explicit CDXLScalarOneTimeFilter(CMemoryPool *mp);
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
-	const CWStringConst *GetOpNameStr() const;
+	Edxlopid GetDXLOperator() const override;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// conversion function
 	static CDXLScalarOneTimeFilter *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarOneTimeFilter == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarOneTimeFilter *>(dxl_op);
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const;
+	void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const override;
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"Invalid function call for a container operator");
 		return false;

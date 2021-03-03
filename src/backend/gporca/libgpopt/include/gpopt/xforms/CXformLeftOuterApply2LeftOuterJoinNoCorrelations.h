@@ -34,11 +34,10 @@ class CXformLeftOuterApply2LeftOuterJoinNoCorrelations
 	: public CXformApply2Join<CLogicalLeftOuterApply, CLogicalLeftOuterJoin>
 {
 private:
-	// private copy ctor
-	CXformLeftOuterApply2LeftOuterJoinNoCorrelations(
-		const CXformLeftOuterApply2LeftOuterJoinNoCorrelations &);
-
 public:
+	CXformLeftOuterApply2LeftOuterJoinNoCorrelations(
+		const CXformLeftOuterApply2LeftOuterJoinNoCorrelations &) = delete;
+
 	// ctor
 	explicit CXformLeftOuterApply2LeftOuterJoinNoCorrelations(CMemoryPool *mp)
 		: CXformApply2Join<CLogicalLeftOuterApply, CLogicalLeftOuterJoin>(mp)
@@ -46,29 +45,27 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftOuterApply2LeftOuterJoinNoCorrelations()
-	{
-	}
+	~CXformLeftOuterApply2LeftOuterJoinNoCorrelations() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftOuterApply2LeftOuterJoinNoCorrelations;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftOuterApply2LeftOuterJoinNoCorrelations";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftOuterApply2LeftOuterJoinNoCorrelations
 

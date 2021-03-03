@@ -9,10 +9,11 @@
 //		Implementation of routed distribute motion operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalMotionRoutedDistribute.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalMotionRoutedDistribute.h"
 
 using namespace gpopt;
 
@@ -27,9 +28,9 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalMotionRoutedDistribute::CPhysicalMotionRoutedDistribute(
 	CMemoryPool *mp, CDistributionSpecRouted *pdsRouted)
-	: CPhysicalMotion(mp), m_pdsRouted(pdsRouted), m_pcrsRequiredLocal(NULL)
+	: CPhysicalMotion(mp), m_pdsRouted(pdsRouted), m_pcrsRequiredLocal(nullptr)
 {
-	GPOS_ASSERT(NULL != pdsRouted);
+	GPOS_ASSERT(nullptr != pdsRouted);
 
 	m_pcrsRequiredLocal = GPOS_NEW(mp) CColRefSet(mp);
 
@@ -207,7 +208,7 @@ CPhysicalMotionRoutedDistribute::OsPrint(IOstream &os) const
 CPhysicalMotionRoutedDistribute *
 CPhysicalMotionRoutedDistribute::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopPhysicalMotionRoutedDistribute == pop->Eopid());
 
 	return dynamic_cast<CPhysicalMotionRoutedDistribute *>(pop);

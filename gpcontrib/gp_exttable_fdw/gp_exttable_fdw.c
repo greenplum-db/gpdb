@@ -11,7 +11,7 @@
  * external_getnext().
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -36,6 +36,8 @@
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_foreign_table.h"
 #include "commands/defrem.h"
+#include "commands/copy.h"
+#include "cdb/cdbsreh.h"
 #include "foreign/fdwapi.h"
 #include "funcapi.h"
 #include "nodes/execnodes.h"
@@ -833,6 +835,22 @@ exttable_EndForeignScan(ForeignScanState *node)
 
 	if (node->ss.ps.squelched)
 		external_stopscan(fdw_state->ess_ScanDesc);
+
+	/*
+	 * report Sreh results if external web table execute on coordinator with reject limit.
+	 * if external web table execute on segment, these messages are printed
+	 * in cdbdisp_sumRejectedRows()
+	*/
+	if (Gp_role == GP_ROLE_DISPATCH) {
+		CopyState cstate = fdw_state->ess_ScanDesc->fs_pstate;
+		if (cstate && cstate->cdbsreh)
+		{
+			CdbSreh	 *cdbsreh = cstate->cdbsreh;
+			uint64	total_rejected_from_qd = cdbsreh->rejectcount;
+			if (total_rejected_from_qd > 0)
+				ReportSrehResults(cdbsreh, total_rejected_from_qd);
+		}
+	}
 
 	external_endscan(fdw_state->ess_ScanDesc);
 }

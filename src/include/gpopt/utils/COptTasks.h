@@ -15,12 +15,11 @@
 #ifndef COptTasks_H
 #define COptTasks_H
 
-#include "gpopt/translate/CTranslatorUtils.h"
-
 #include "gpos/error/CException.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/search/CSearchStage.h"
+#include "gpopt/translate/CTranslatorUtils.h"
 
 
 
@@ -69,32 +68,32 @@ struct SOptContext
 	};
 
 	// query object serialized to DXL
-	CHAR *m_query_dxl;
+	CHAR *m_query_dxl{nullptr};
 
 	// query object
-	Query *m_query;
+	Query *m_query{nullptr};
 
 	// plan object serialized to DXL
-	CHAR *m_plan_dxl;
+	CHAR *m_plan_dxl{nullptr};
 
 	// plan object
-	PlannedStmt *m_plan_stmt;
+	PlannedStmt *m_plan_stmt{nullptr};
 
 	// is generating a plan object required ?
-	BOOL m_should_generate_plan_stmt;
+	BOOL m_should_generate_plan_stmt{false};
 
 	// is serializing a plan to DXL required ?
-	BOOL m_should_serialize_plan_dxl;
+	BOOL m_should_serialize_plan_dxl{false};
 
 	// did the optimizer fail unexpectedly?
-	BOOL m_is_unexpected_failure;
+	BOOL m_is_unexpected_failure{false};
 
 	// should the error be propagated to user, instead of falling back to the
 	// Postres planner?
-	BOOL m_should_error_out;
+	BOOL m_should_error_out{false};
 
 	// buffer for optimizer error messages
-	CHAR *m_error_msg;
+	CHAR *m_error_msg{nullptr};
 
 	// ctor
 	SOptContext();

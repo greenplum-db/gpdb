@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarPartBoundInclusion.h
@@ -15,6 +15,7 @@
 #define GPDXL_CDXLScalarPartBoundInclusion_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl
@@ -37,19 +38,18 @@ private:
 	// whether this represents a lower or upper bound
 	BOOL m_is_lower_bound;
 
-	// private copy ctor
-	CDXLScalarPartBoundInclusion(const CDXLScalarPartBoundInclusion &);
-
 public:
+	CDXLScalarPartBoundInclusion(const CDXLScalarPartBoundInclusion &) = delete;
+
 	// ctor
 	CDXLScalarPartBoundInclusion(CMemoryPool *mp, ULONG partitioning_level,
 								 BOOL is_lower_bound);
 
 	// operator type
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// partitioning level
 	ULONG
@@ -66,13 +66,13 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		return true;
 	}
@@ -80,15 +80,15 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	virtual void AssertValid(const CDXLNode *dxlnode,
-							 BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// conversion function
 	static CDXLScalarPartBoundInclusion *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarPartBoundInclusion == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarPartBoundInclusion *>(dxl_op);

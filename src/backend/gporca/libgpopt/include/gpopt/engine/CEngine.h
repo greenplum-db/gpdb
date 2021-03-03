@@ -13,9 +13,9 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/xforms/CXform.h"
 #include "gpopt/search/CMemo.h"
 #include "gpopt/search/CSearchStage.h"
+#include "gpopt/xforms/CXform.h"
 
 namespace gpopt
 {
@@ -160,7 +160,7 @@ private:
 	FSearchTerminated() const
 	{
 		// at least one stage has completed and achieved required cost
-		return (NULL != PssPrevious() && PssPrevious()->FAchievedReqdCost());
+		return (nullptr != PssPrevious() && PssPrevious()->FAchievedReqdCost());
 	}
 
 	// generate random plan id
@@ -179,8 +179,7 @@ private:
 	// check if ayn of the given property enforcing types prohibits enforcement
 	static BOOL FProhibited(CEnfdProp::EPropEnforcingType epetOrder,
 							CEnfdProp::EPropEnforcingType epetDistribution,
-							CEnfdProp::EPropEnforcingType epetRewindability,
-							CEnfdProp::EPropEnforcingType epetPropagation);
+							CEnfdProp::EPropEnforcingType epetRewindability);
 
 	// check whether the given memo groups can be marked as duplicates. This is
 	// true only if they have the same logical properties
@@ -189,13 +188,7 @@ private:
 	// check if optimization is possible under the given property enforcing types
 	static BOOL FOptimize(CEnfdProp::EPropEnforcingType epetOrder,
 						  CEnfdProp::EPropEnforcingType epetDistribution,
-						  CEnfdProp::EPropEnforcingType epetRewindability,
-						  CEnfdProp::EPropEnforcingType epetPropagation);
-
-	// check if partition propagation resolver is passed an empty part
-	// propagation spec
-	static BOOL FCheckReqdPartPropagation(CPhysical *pop,
-										  CEnfdPartitionPropagation *pepp);
+						  CEnfdProp::EPropEnforcingType epetRewindability);
 
 	// unrank the plan with the given 'plan_id' from the memo
 	CExpression *PexprUnrank(ULLONG plan_id);
@@ -209,10 +202,9 @@ private:
 	IOstream &OsPrintMemoryConsumption(IOstream &os,
 									   const CHAR *szHeader) const;
 
-	// inaccessible copy ctor
-	CEngine(const CEngine &);
-
 public:
+	CEngine(const CEngine &) = delete;
+
 	// ctor
 	explicit CEngine(CMemoryPool *mp);
 
@@ -226,7 +218,7 @@ public:
 	CGroup *
 	PgroupRoot() const
 	{
-		GPOS_ASSERT(NULL != m_pmemo);
+		GPOS_ASSERT(nullptr != m_pmemo);
 
 		return m_pmemo->PgroupRoot();
 	}
@@ -266,12 +258,6 @@ public:
 	BOOL FCheckEnfdProps(CMemoryPool *mp, CGroupExpression *pgexpr,
 						 COptimizationContext *poc, ULONG ulOptReq,
 						 COptimizationContextArray *pdrgpoc);
-
-	// check if the given expression has valid cte and partition properties
-	// with respect to the given requirements
-	BOOL FValidCTEAndPartitionProperties(CMemoryPool *mp,
-										 CExpressionHandle &exprhdl,
-										 CReqdPropPlan *prpp);
 
 #ifdef GPOS_DEBUG
 	// apply all exploration xforms
@@ -340,7 +326,7 @@ public:
 	{
 		if (0 == m_ulCurrSearchStage)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		return (*m_search_stage_array)[m_ulCurrSearchStage - 1];

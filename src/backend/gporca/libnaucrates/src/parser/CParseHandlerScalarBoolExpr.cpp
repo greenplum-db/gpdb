@@ -10,12 +10,12 @@
 //		Implementation of the SAX parse handler class for parsing scalar BoolExpr.
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarBoolExpr.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarBoolExpr.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -63,7 +63,7 @@ CParseHandlerScalarBoolExpr::StartElement(const XMLCh *const element_uri,
 				  CDXLTokens::XmlstrToken(EdxltokenScalarBoolNot),
 				  element_local_name)))
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			if (0 == XMLString::compareString(
 						 CDXLTokens::XmlstrToken(EdxltokenScalarBoolNot),
@@ -105,7 +105,7 @@ CParseHandlerScalarBoolExpr::StartElement(const XMLCh *const element_uri,
 	}
 	else
 	{
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 					   CDXLUtils::CreateDynamicStringFromXMLChArray(

@@ -9,15 +9,16 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformExpandFullOuterJoin.h"
-#include "gpopt/xforms/CXformUtils.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalFullOuterJoin.h"
 #include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CPatternTree.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -88,7 +89,7 @@ CXformExpandFullOuterJoin::Transform(CXformContext *pxfctxt,
 									 CXformResult *pxfres,
 									 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -183,7 +184,7 @@ CXformExpandFullOuterJoin::PexprLogicalJoinOverCTEs(
 	CColRefArray *pdrgpcrLeft, ULONG ulRightCTEId, CColRefArray *pdrgpcrRight,
 	CExpression *pexprScalar) const
 {
-	GPOS_ASSERT(NULL != pexprScalar);
+	GPOS_ASSERT(nullptr != pexprScalar);
 
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
 	CCTEInfo *pcteinfo = COptCtxt::PoctxtFromTLS()->Pcteinfo();

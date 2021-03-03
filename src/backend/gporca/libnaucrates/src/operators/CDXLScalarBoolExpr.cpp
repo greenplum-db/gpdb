@@ -12,8 +12,8 @@
 #include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -83,7 +83,7 @@ CDXLScalarBoolExpr::GetOpNameStr() const
 		case Edxlnot:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenScalarBoolNot);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -103,7 +103,7 @@ CDXLScalarBoolExpr::SerializeToDXL(CXMLSerializer *xml_serializer,
 
 	const CWStringConst *element_name = GetOpNameStr();
 
-	GPOS_ASSERT(NULL != element_name);
+	GPOS_ASSERT(nullptr != element_name);
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 

@@ -9,10 +9,11 @@
 //		Worker abstraction, e.g. thread
 //---------------------------------------------------------------------------
 
+#include "gpos/task/CWorker.h"
+
 #include "gpos/common/syslibwrapper.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/string/CWStringStatic.h"
-#include "gpos/task/CWorker.h"
 #include "gpos/task/CWorkerPoolManager.h"
 
 using namespace gpos;
@@ -30,13 +31,13 @@ bool (*CWorker::abort_requested_by_system)(void);
 //
 //---------------------------------------------------------------------------
 CWorker::CWorker(ULONG stack_size, ULONG_PTR stack_start)
-	: m_task(NULL), m_stack_size(stack_size), m_stack_start(stack_start)
+	: m_task(nullptr), m_stack_size(stack_size), m_stack_start(stack_start)
 {
 	GPOS_ASSERT(stack_size >= 2 * 1024 &&
 				"Worker has to have at least 2KB stack");
 
 	// register worker
-	GPOS_ASSERT(NULL == Self() && "Found registered worker!");
+	GPOS_ASSERT(nullptr == Self() && "Found registered worker!");
 
 	CWorkerPoolManager::WorkerPoolManager()->RegisterWorker(this);
 	GPOS_ASSERT(this == CWorkerPoolManager::WorkerPoolManager()->Self());
@@ -71,17 +72,17 @@ void
 CWorker::Execute(CTask *task)
 {
 	GPOS_ASSERT(task);
-	GPOS_ASSERT(NULL == m_task && "Another task is assigned to worker");
+	GPOS_ASSERT(nullptr == m_task && "Another task is assigned to worker");
 
 	m_task = task;
 	GPOS_TRY
 	{
 		m_task->Execute();
-		m_task = NULL;
+		m_task = nullptr;
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		m_task = NULL;
+		m_task = nullptr;
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
@@ -101,12 +102,12 @@ CWorker::CheckForAbort(const CHAR *, ULONG)
 {
 	// check if there is a task assigned to worker,
 	// task is still running and CFA is not suspended
-	if (NULL != m_task && m_task->IsRunning() && !m_task->IsAbortSuspended())
+	if (nullptr != m_task && m_task->IsRunning() && !m_task->IsAbortSuspended())
 	{
 		GPOS_ASSERT(!m_task->GetErrCtxt()->IsPending() &&
 					"Check-For-Abort while an exception is pending");
 
-		if ((NULL != abort_requested_by_system &&
+		if ((nullptr != abort_requested_by_system &&
 			 abort_requested_by_system()) ||
 			m_task->IsCanceled())
 		{

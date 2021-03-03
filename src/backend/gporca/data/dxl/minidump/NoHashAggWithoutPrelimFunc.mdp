@@ -31,7 +31,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,101002,101013,102016,102024,102025,102115,102116,102119,102120,102128,103001,103014,103015"/>
+      <dxl:TraceFlags Value="101002,101013,102001,102002,102003,102016,102024,102025,102115,102116,102119,102120,102128,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:GPDBScalarOp Mdid="0.654.1.0" Name="||" ComparisonType="Other" ReturnsNullOnNullInput="true">

@@ -15,8 +15,8 @@
 #include "gpos/base.h"
 #include "gpos/task/CTaskLocalStorageObject.h"
 
-#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CCTEInfo.h"
+#include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/IComparator.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 
@@ -49,9 +49,6 @@ class IConstExprEvaluator;
 class COptCtxt : public CTaskLocalStorageObject
 {
 private:
-	// private copy ctor
-	COptCtxt(COptCtxt &);
-
 	// shared memory pool
 	CMemoryPool *m_mp;
 
@@ -102,13 +99,15 @@ private:
 	CExpressionArray *m_direct_dispatchable_filters;
 
 public:
+	COptCtxt(COptCtxt &) = delete;
+
 	// ctor
 	COptCtxt(CMemoryPool *mp, CColumnFactory *col_factory,
 			 CMDAccessor *md_accessor, IConstExprEvaluator *pceeval,
 			 COptimizerConfig *optimizer_config);
 
 	// dtor
-	virtual ~COptCtxt();
+	~COptCtxt() override;
 
 	// memory pool accessor
 	CMemoryPool *
@@ -262,7 +261,7 @@ public:
 	void
 	SetReqdSystemCols(CColRefArray *pdrgpcrSystemCols)
 	{
-		GPOS_ASSERT(NULL != pdrgpcrSystemCols);
+		GPOS_ASSERT(nullptr != pdrgpcrSystemCols);
 
 		CRefCount::SafeRelease(m_pdrgpcrSystemCols);
 		m_pdrgpcrSystemCols = pdrgpcrSystemCols;
@@ -283,10 +282,6 @@ public:
 
 	// return true if all enforcers are enabled
 	static BOOL FAllEnforcersEnabled();
-
-#ifdef GPOS_DEBUG
-	virtual IOstream &OsPrint(IOstream &) const;
-#endif	// GPOS_DEBUG
 
 };	// class COptCtxt
 }  // namespace gpopt

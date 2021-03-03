@@ -4,7 +4,7 @@
  *    maintain the block directory to blocks in append-only relation files.
  *
  * Portions Copyright (c) 2009, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -16,7 +16,7 @@
 
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "catalog/aoblkdir.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "access/heapam.h"
 #include "access/genam.h"
 #include "parser/parse_oper.h"

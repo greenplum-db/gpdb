@@ -12,6 +12,7 @@
 #define GPNAUCRATES_IDatumInt8_H
 
 #include "gpos/base.h"
+
 #include "naucrates/base/IDatum.h"
 
 namespace gpnaucrates
@@ -27,23 +28,18 @@ namespace gpnaucrates
 class IDatumInt8 : public IDatum
 {
 private:
-	// private copy ctor
-	IDatumInt8(const IDatumInt8 &);
-
 public:
+	IDatumInt8(const IDatumInt8 &) = delete;
+
 	// ctor
-	IDatumInt8()
-	{
-	}
+	IDatumInt8() = default;
 
 	// dtor
-	virtual ~IDatumInt8()
-	{
-	}
+	~IDatumInt8() override = default;
 
 	// accessor for datum type
-	virtual IMDType::ETypeInfo
-	GetDatumType()
+	IMDType::ETypeInfo
+	GetDatumType() override
 	{
 		return IMDType::EtiInt8;
 	}
@@ -53,67 +49,67 @@ public:
 
 	// can datum be mapped to a double
 	BOOL
-	IsDatumMappableToDouble() const
+	IsDatumMappableToDouble() const override
 	{
 		return true;
 	}
 
 	// map to double for stats computation
 	CDouble
-	GetDoubleMapping() const
+	GetDoubleMapping() const override
 	{
 		return CDouble(Value());
 	}
 
 	// can datum be mapped to LINT
 	BOOL
-	IsDatumMappableToLINT() const
+	IsDatumMappableToLINT() const override
 	{
 		return true;
 	}
 
 	// map to LINT for statistics computation
 	LINT
-	GetLINTMapping() const
+	GetLINTMapping() const override
 	{
 		return Value();
 	}
 
 	// byte array representation of datum
-	virtual const BYTE *
-	GetByteArrayValue() const
+	const BYTE *
+	GetByteArrayValue() const override
 	{
 		GPOS_ASSERT(!"Invalid invocation of MakeCopyOfValue");
-		return NULL;
+		return nullptr;
 	}
 
 	// does the datum need to be padded before statistical derivation
-	virtual BOOL
-	NeedsPadding() const
+	BOOL
+	NeedsPadding() const override
 	{
 		return false;
 	}
 
 	// return the padded datum
-	virtual IDatum *
+	IDatum *
 	MakePaddedDatum(CMemoryPool *,	// mp,
 					ULONG			// col_len
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"Invalid invocation of MakePaddedDatum");
-		return NULL;
+		return nullptr;
 	}
 
 	// does datum support like predicate
-	virtual BOOL
-	SupportsLikePredicate() const
+	BOOL
+	SupportsLikePredicate() const override
 	{
 		return false;
 	}
 
 	// return the default scale factor of like predicate
-	virtual CDouble
-	GetLikePredicateScaleFactor() const
+	CDouble
+	GetLikePredicateScaleFactor() const override
 	{
 		GPOS_ASSERT(!"Invalid invocation of DLikeSelectivity");
 		return false;

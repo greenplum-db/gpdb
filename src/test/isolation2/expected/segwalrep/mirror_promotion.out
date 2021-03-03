@@ -11,9 +11,6 @@
 -- between primary and mirror is still alive and hence walreceiver
 -- also exist during promotion.
 
-include: helpers/server_helpers.sql;
-CREATE
-
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
  role | preferred_role | content | mode | status 
 ------+----------------+---------+------+--------

@@ -9,13 +9,14 @@
 //		Implementation of scalar subqueries
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarSubquery.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CScalarSubquery.h"
 
 using namespace gpopt;
 
@@ -35,7 +36,7 @@ CScalarSubquery::CScalarSubquery(CMemoryPool *mp, const CColRef *colref,
 	  m_fGeneratedByExist(fGeneratedByExist),
 	  m_fGeneratedByQuantified(fGeneratedByQuantified)
 {
-	GPOS_ASSERT(NULL != colref);
+	GPOS_ASSERT(nullptr != colref);
 	GPOS_ASSERT(!(fGeneratedByExist && fGeneratedByQuantified));
 }
 
@@ -47,9 +48,7 @@ CScalarSubquery::CScalarSubquery(CMemoryPool *mp, const CColRef *colref,
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CScalarSubquery::~CScalarSubquery()
-{
-}
+CScalarSubquery::~CScalarSubquery() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -167,7 +166,7 @@ CScalarSubquery::PpartinfoDerive(CMemoryPool *,	 // mp,
 								 CExpressionHandle &exprhdl) const
 {
 	CPartInfo *ppartinfoChild = exprhdl.DerivePartitionInfo(0);
-	GPOS_ASSERT(NULL != ppartinfoChild);
+	GPOS_ASSERT(nullptr != ppartinfoChild);
 	ppartinfoChild->AddRef();
 	return ppartinfoChild;
 }

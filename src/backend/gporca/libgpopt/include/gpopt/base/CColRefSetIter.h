@@ -47,9 +47,7 @@ public:
 	explicit CColRefSetIter(const CColRefSet &bs);
 
 	// dtor
-	~CColRefSetIter()
-	{
-	}
+	~CColRefSetIter() = default;
 
 	// current colref
 	CColRef *Pcr() const;

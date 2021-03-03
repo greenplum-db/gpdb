@@ -9,13 +9,12 @@
 //		Tests for CAutoRg
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
+#include "unittest/gpos/common/CAutoRgTest.h"
 
+#include "gpos/base.h"
 #include "gpos/common/CAutoRg.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CAutoRgTest.h"
 
 using namespace gpos;
 
@@ -68,7 +67,7 @@ CAutoRgTest::EresUnittest_Basics()
 	GPOS_ASSERT(ch == sz2[0]);
 #endif	// GPOS_DEBUG
 
-	asz2 = NULL;
+	asz2 = nullptr;
 	GPOS_DELETE_ARRAY(asz3.RgtReset());
 
 	// ctor

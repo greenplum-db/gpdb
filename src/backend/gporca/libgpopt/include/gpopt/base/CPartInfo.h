@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPartInfo.h
@@ -12,6 +12,7 @@
 #define GPOPT_CPartInfo_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CPartKeys.h"
 
@@ -60,33 +61,21 @@ private:
 		// partition keys
 		CPartKeysArray *m_pdrgppartkeys;
 
-		// part constraint of the relation
-		CPartConstraint *m_ppartcnstrRel;
-
-		// private copy ctor
-		CPartInfoEntry(const CPartInfoEntry &);
-
 	public:
+		CPartInfoEntry(const CPartInfoEntry &) = delete;
+
 		// ctor
 		CPartInfoEntry(ULONG scan_id, IMDId *mdid,
-					   CPartKeysArray *pdrgppartkeys,
-					   CPartConstraint *ppartcnstrRel);
+					   CPartKeysArray *pdrgppartkeys);
 
 		// dtor
-		virtual ~CPartInfoEntry();
+		~CPartInfoEntry() override;
 
 		// scan id
 		virtual ULONG
 		ScanId() const
 		{
 			return m_scan_id;
-		}
-
-		// relation part constraint
-		CPartConstraint *
-		PpartcnstrRel() const
-		{
-			return m_ppartcnstrRel;
 		}
 
 		// create a copy of the current object, and add a set of remapped
@@ -110,7 +99,7 @@ private:
 		}
 
 		// print function
-		virtual IOstream &OsPrint(IOstream &os) const;
+		IOstream &OsPrint(IOstream &os) const;
 
 		// copy part info entry into given memory pool
 		CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp);
@@ -126,15 +115,14 @@ private:
 	// private ctor
 	explicit CPartInfo(CPartInfoEntryArray *pdrgppartentries);
 
-	//private copy ctor
-	CPartInfo(const CPartInfo &);
-
 public:
+	CPartInfo(const CPartInfo &) = delete;
+
 	// ctor
 	explicit CPartInfo(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CPartInfo();
+	~CPartInfo() override;
 
 	// number of part table consumers
 	ULONG
@@ -145,8 +133,7 @@ public:
 
 	// add part table consumer
 	void AddPartConsumer(CMemoryPool *mp, ULONG scan_id, IMDId *mdid,
-						 CColRef2dArray *pdrgpdrgpcrPart,
-						 CPartConstraint *ppartcnstrRel);
+						 CColRef2dArray *pdrgpdrgpcrPart);
 
 	// scan id of the entry at the given position
 	ULONG ScanId(ULONG ulPos) const;
@@ -156,9 +143,6 @@ public:
 
 	// part keys of the entry at the given position
 	CPartKeysArray *Pdrgppartkeys(ULONG ulPos) const;
-
-	// part constraint of the entry at the given position
-	CPartConstraint *Ppartcnstr(ULONG ulPos) const;
 
 	// check if part info contains given scan id
 	BOOL FContainsScanId(ULONG scan_id) const;
@@ -172,7 +156,7 @@ public:
 										 CColRefArray *pdrgpcrDest) const;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const;
 
 	// combine two part info objects
 	static CPartInfo *PpartinfoCombine(CMemoryPool *mp, CPartInfo *ppartinfoFst,

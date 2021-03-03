@@ -164,14 +164,6 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
 	else
 		mode = Min(SyncRepWaitMode, SYNC_REP_WAIT_FLUSH);
 
-	/*
-	 * SIGUSR1 is used to wake us up, cannot wait from inside SIGUSR1 handler
-	 * as its non-reentrant, so check for the same and avoid waiting.
-	 */
-	if (AmIInSIGUSR1Handler())
-	{
-		return;
-	}
 	Assert(!am_walsender);
 	elogif(debug_walrepl_syncrep, LOG,
 			"syncrep wait -- This backend's commit LSN for syncrep is %X/%X.",
@@ -209,7 +201,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
 			syncStandbyPresent = (walsnd->pid != 0)
 				&& ((walsnd->state == WALSNDSTATE_STREAMING)
 					|| (walsnd->state == WALSNDSTATE_CATCHUP &&
-						walsnd->caughtup_within_range));
+						walsnd->caughtup_within_range))
+				&& walsnd->is_for_gp_walreceiver;
 			SpinLockRelease(&walsnd->mutex);
 
 			if (syncStandbyPresent)

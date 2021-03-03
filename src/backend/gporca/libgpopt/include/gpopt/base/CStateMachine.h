@@ -19,8 +19,8 @@
 #define GPOPT_CStateMachine_H
 
 #include "gpos/base.h"
-#include "gpos/types.h"
 #include "gpos/common/CEnumSet.h"
+#include "gpos/types.h"
 
 #ifdef GPOS_DEBUG
 #include "gpos/common/CEnumSetIter.h"
@@ -64,7 +64,7 @@ private:
 	TEnumState m_tenumstate;
 
 	// flag indicating if the state machine is initialized
-	BOOL m_fInit;
+	BOOL m_fInit{false};
 
 	// array of transitions
 	TEnumEvent m_rgrgtenumeventTransitions[tenumstateSentinel]
@@ -85,7 +85,7 @@ private:
 	const WCHAR *m_rgwszEvents[tenumeventSentinel];
 
 	// current index into history
-	ULONG m_ulHistory;
+	ULONG m_ulHistory{0};
 
 	// state history
 	TEnumState m_tenumstateHistory[GPOPT_FSM_HISTORY];
@@ -254,22 +254,16 @@ private:
 		return false;
 	}
 
-	// hidden copy ctor
+public:
 	CStateMachine<TEnumState, tenumstateSentinel, TEnumEvent,
 				  tenumeventSentinel>(
 		const CStateMachine<TEnumState, tenumstateSentinel, TEnumEvent,
-							tenumeventSentinel> &);
+							tenumeventSentinel> &) = delete;
 
-public:
 	// ctor
 	CStateMachine<TEnumState, tenumstateSentinel, TEnumEvent,
 				  tenumeventSentinel>()
-		: m_tenumstate(TesInitial()),
-		  m_fInit(false)
-#ifdef GPOS_DEBUG
-		  ,
-		  m_ulHistory(0)
-#endif	// GPOS_DEBUG
+		: m_tenumstate(TesInitial())
 	{
 		GPOS_ASSERT(0 < tenumstateSentinel && 0 < tenumeventSentinel &&
 					(ULONG) tenumeventSentinel + 1 >=
@@ -315,7 +309,7 @@ public:
 	}
 
 	// dtor
-	~CStateMachine(){};
+	~CStateMachine() = default;
 
 	// attempt transition
 	BOOL
@@ -412,7 +406,7 @@ public:
 	BOOL
 	FReachable(CMemoryPool *mp) const
 	{
-		TEnumState *pestate = NULL;
+		TEnumState *pestate = nullptr;
 		ULONG size = 0;
 		Unreachable(mp, &pestate, &size);
 		GPOS_DELETE_ARRAY(pestate);
@@ -424,8 +418,8 @@ public:
 	void
 	Unreachable(CMemoryPool *mp, TEnumState **ppestate, ULONG *pulSize) const
 	{
-		GPOS_ASSERT(NULL != ppestate);
-		GPOS_ASSERT(NULL != pulSize);
+		GPOS_ASSERT(nullptr != ppestate);
+		GPOS_ASSERT(nullptr != pulSize);
 
 		// initialize output array
 		*ppestate = GPOS_NEW_ARRAY(mp, TEnumState, tenumstateSentinel);

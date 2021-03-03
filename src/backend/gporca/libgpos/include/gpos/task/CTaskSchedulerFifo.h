@@ -40,10 +40,9 @@ private:
 	// task queue
 	CList<CTask> m_task_queue;
 
-	// private copy ctor
-	CTaskSchedulerFifo(const CTaskSchedulerFifo &);
-
 public:
+	CTaskSchedulerFifo(const CTaskSchedulerFifo &) = delete;
+
 	// ctor
 	CTaskSchedulerFifo()
 	{
@@ -51,29 +50,27 @@ public:
 	}
 
 	// dtor
-	~CTaskSchedulerFifo()
-	{
-	}
+	~CTaskSchedulerFifo() override = default;
 
 	// add task to waiting queue
-	void Enqueue(CTask *task);
+	void Enqueue(CTask *task) override;
 
 	// get next task to execute
-	CTask *Dequeue();
+	CTask *Dequeue() override;
 
 	// check if task is waiting to be scheduled and remove it
-	GPOS_RESULT Cancel(CTask *task);
+	GPOS_RESULT Cancel(CTask *task) override;
 
 	// get number of waiting tasks
 	ULONG
-	GetQueueSize()
+	GetQueueSize() override
 	{
 		return m_task_queue.Size();
 	}
 
 	// check if task queue is empty
 	BOOL
-	IsEmpty() const
+	IsEmpty() const override
 	{
 		return m_task_queue.IsEmpty();
 	}

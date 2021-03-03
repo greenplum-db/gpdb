@@ -57,10 +57,10 @@
         <p>Set the <codeph>gp_interconnect_proxy_addresses</codeph> parameter to specify the proxy
           ports for the master and segment instances. The syntax for the value has the following
           format and you must specify the parameter value as a single-quoted string.</p>
-        <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_ip>:&lt;port>[,&lt;dbid>:&lt;segid>:&lt;ip>:&lt;port> ... ]</codeblock>
+        <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_address>:&lt;port>[, ... ]</codeblock>
         <p>For the master, standby master, and segment instance, the first three fields,
-            <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_ip</varname> can
-          be found in the <codeph><xref
+            <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_address</varname>
+          can be found in the <codeph><xref
               href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
               >gp_segment_configuration</xref></codeph> catalog table. The fourth field,
             <varname>port</varname>, is the proxy port for the Greenplum master or a segment
@@ -69,12 +69,14 @@
               table.</li>
             <li><varname>cont_id</varname> is the <codeph>content</codeph> column in the catalog
               table.</li>
-            <li><varname>seg_ip</varname> is the IP address corresponding to the
-                <codeph>address</codeph> column in the catalog table. If the
-                <codeph>address</codeph> is a hostname, use the IP address of the hostname.</li>
+            <li><varname>seg_address</varname> is the IP address or hostname corresponding to the
+                <codeph>address</codeph> column in the catalog table.</li>
             <li><varname>port</varname> is the TCP/IP port for the segment instance proxy that you
               specify.</li>
           </ul></p>
+        <note type="important">If a segment instance hostname is bound to a different IP address at
+          runtime, you must execute <codeph>gpstop -U</codeph> to re-load the
+            <codeph>gp_interconnect_proxy_addresses</codeph> value.</note>
         <p>This is an example PL/Python function that displays or sets the segment instance proxy
           port values for the <codeph>gp_interconnect_proxy_addresses</codeph> parameter. To create
           and run the function, you must enable PL/Python in the database with the <codeph>CREATE
@@ -97,7 +99,7 @@
 -- A Greenplum system restart will also work.
 --
 create or replace function my_setup_ic_proxy(delta int, action text)
-returns table(dbid smallint, content smallint, ip text, port int) as $$
+returns table(dbid smallint, content smallint, address text, port int) as $$
     import os
     import socket
 
@@ -113,19 +115,16 @@ returns table(dbid smallint, content smallint, ip text, port int) as $$
         port = seg['port']
         address = seg['address']
 
-        # lookup ip of the address
-        ip = socket.gethostbyname(address)
-
         # decide the proxy port
         port = port + delta
 
         # append to the result list
-        results.append((dbid, content, ip, port))
+        results.append((dbid, content, address, port))
 
         # build the value for the GUC
         if value:
             value += ','
-        value += '{}:{}:{}:{}'.format(dbid, content, ip, port)
+        value += '{}:{}:{}:{}'.format(dbid, content, address, port)
 
     if action.lower() == 'update proxy':
         os.system('''gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"'''.format(value))

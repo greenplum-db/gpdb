@@ -112,11 +112,19 @@
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.1978.1.0"/>
       </dxl:Opfamilies>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.2349.2.1"/>
+        <dxl:Partition Mdid="0.2351.2.1"/>
+      </dxl:Partitions>
     </dxl:Index>
     <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="0,1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.2350.2.1"/>
+        <dxl:Partition Mdid="0.2352.1.1"/>
+      </dxl:Partitions>
     </dxl:Index>
     <dxl:Relation Mdid="0.1607123.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
@@ -982,6 +990,66 @@
       </dxl:IndexInfoList>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.1234001.12.1"/>
+        <dxl:Partition Mdid="0.1234002.12.1"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.1234001.12.1" Name="T12_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList>
+        <dxl:IndexInfo Mdid="0.2349.2.1" IsPartial="false"/>
+        <dxl:IndexInfo Mdid="0.2350.1.1" IsPartial="false"/>
+      </dxl:IndexInfoList>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.1234002.12.1" Name="T12_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList>
+        <dxl:IndexInfo Mdid="0.2351.2.1" IsPartial="false"/>
+        <dxl:IndexInfo Mdid="0.2352.1.1" IsPartial="false"/>
+      </dxl:IndexInfoList>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.25064.1.0" Name="pp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
@@ -1016,6 +1084,108 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.25064001.1.0"/>
+        <dxl:Partition Mdid="0.25064002.1.0"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.25064001.1.0" Name="pp_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.25064002.1.0" Name="pp_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.5678.1.0" Name="P" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
@@ -1032,6 +1202,72 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.5678001.1.0"/>
+        <dxl:Partition Mdid="0.5678002.1.0"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.5678001.1.0" Name="P_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.5678002.1.0" Name="P_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.5678.1.1" Name="P" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
@@ -1048,6 +1284,72 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.5678001.1.1"/>
+        <dxl:Partition Mdid="0.5678002.1.1"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.5678001.1.1" Name="P_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.5678002.1.1" Name="P_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="A" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.1258.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1">
       <dxl:Columns>
@@ -1081,88 +1383,90 @@
       </dxl:IndexInfoList>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
-      <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-        <dxl:Or>
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-            </dxl:Comparison>
-          </dxl:And>
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
-            </dxl:Comparison>
-          </dxl:And>
-        </dxl:Or>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.5369655001.1.0"/>
+        <dxl:Partition Mdid="0.5369655002.1.0"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.5369655001.1.0" Name="p1_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList>
+        <dxl:IndexInfo Mdid="0.13144343.1.0" IsPartial="true"/>
+        <dxl:IndexInfo Mdid="0.13144286.1.0" IsPartial="true"/>
+      </dxl:IndexInfoList>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.5369655002.1.0" Name="p1_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList>
+        <dxl:IndexInfo Mdid="0.13144344.1.0" IsPartial="true"/>
+        <dxl:IndexInfo Mdid="0.13144287.1.0" IsPartial="true"/>
+      </dxl:IndexInfoList>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="0,1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
-      <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-        <dxl:Or>
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-            </dxl:Comparison>
-          </dxl:And>
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
-            </dxl:Comparison>
-          </dxl:And>
-        </dxl:Or>
-      </dxl:PartConstraint>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.13144343.1.0"/>
+        <dxl:Partition Mdid="0.13144344.1.0"/>
+      </dxl:Partitions>
     </dxl:Index>
     <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="0,1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
-      <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-        <dxl:Or>
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-            </dxl:Comparison>
-          </dxl:And>
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
-            </dxl:Comparison>
-          </dxl:And>
-        </dxl:Or>
-      </dxl:PartConstraint>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.13144286.1.0"/>
+        <dxl:Partition Mdid="0.13144287.1.0"/>
+      </dxl:Partitions>
     </dxl:Index>
     <dxl:Relation Mdid="0.17005.1.1" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
@@ -2271,6 +2575,66 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.280643001.1.0"/>
+        <dxl:Partition Mdid="0.280643002.1.0"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.280643001.1.0" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.280643002.1.0" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.280643.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
@@ -2284,6 +2648,66 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.280643001.1.1"/>
+        <dxl:Partition Mdid="0.280643002.1.1"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.280643001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.280643002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.2806435.1.1" Name="pp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
@@ -3028,6 +3452,100 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.17614001.1.1"/>
+        <dxl:Partition Mdid="0.17614002.1.1"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.17614001.1.1" Name="a1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="user_id" Attno="1" Mdid="0.20.1.0" Nullable="true">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="is_new_user" Attno="2" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="is_new_user" TypeMdid="0.16.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.91.1.0">
+            <dxl:Ident ColId="2" ColName="is_new_user" TypeMdid="0.16.1.0"/>
+            <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.17614002.1.1" Name="a1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="user_id" Attno="1" Mdid="0.20.1.0" Nullable="true">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="is_new_user" Attno="2" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="is_new_user" TypeMdid="0.16.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.91.1.0">
+            <dxl:Ident ColId="2" ColName="is_new_user" TypeMdid="0.16.1.0"/>
+            <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.25647.1.0" Name="foo1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
@@ -3065,6 +3583,114 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.25647001.1.0"/>
+        <dxl:Partition Mdid="0.25647002.1.0"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.25647001.1.0" Name="foo1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="j" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="j" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="j" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.25647002.1.0" Name="foo1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="j" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="j" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="j" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Relation Mdid="0.26031.1.0" Name="foo2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
@@ -3563,6 +4189,108 @@
       <dxl:IndexInfoList/>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.74764001.1.1"/>
+        <dxl:Partition Mdid="0.74764002.1.1"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.74764001.1.1" Name="pt_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="pk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="x" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="pk" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="pk" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="pk" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.74764002.1.1" Name="pt_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="pk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="x" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList/>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="1" ColName="pk" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="1" ColName="pk" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="1" ColName="pk" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Type Mdid="0.705.1.0" Name="unknown" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="false" Length="-2" PassByValue="false">
       <dxl:EqualityOp Mdid="0.0.0.0"/>
@@ -3632,23 +4360,121 @@
       </dxl:IndexInfoList>
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.27118001.1.0"/>
+        <dxl:Partition Mdid="0.27118002.1.0"/>
+      </dxl:Partitions>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.27118001.1.0" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList>
+        <dxl:IndexInfo Mdid="0.27325.1.0" IsPartial="true"/>
+      </dxl:IndexInfoList>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
+    </dxl:Relation>
+    <dxl:Relation Mdid="0.27118002.1.0" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Columns>
+        <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+        <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+          <dxl:DefaultValue/>
+        </dxl:Column>
+      </dxl:Columns>
+      <dxl:IndexInfoList>
+        <dxl:IndexInfo Mdid="0.27326.1.0" IsPartial="true"/>
+      </dxl:IndexInfoList>
+      <dxl:Triggers/>
+      <dxl:CheckConstraints/>
+      <dxl:PartConstraint>
+        <dxl:And>
+          <dxl:IsNotNull>
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+          </dxl:IsNotNull>
+          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          </dxl:Comparison>
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+          </dxl:Comparison>
+        </dxl:And>
+      </dxl:PartConstraint>
     </dxl:Relation>
     <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
-      <dxl:PartConstraint Unbounded="false" DefaultPartition="">
-        <dxl:And>
-          <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-          </dxl:Comparison>
-          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-            <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
-          </dxl:Comparison>
-        </dxl:And>
-      </dxl:PartConstraint>
+      <dxl:Partitions>
+        <dxl:Partition Mdid="0.27325.1.0"/>
+        <dxl:Partition Mdid="0.27326.1.0"/>
+      </dxl:Partitions>
     </dxl:Index>
     <dxl:MDCast Mdid="3.23.1.0;20.1.0" Name="int8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.481.1.0"/>
     <dxl:MDCast Mdid="3.23.1.0;26.1.0" Name="oid" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.26.1.0" CastFuncId="0.0.0.0"/>

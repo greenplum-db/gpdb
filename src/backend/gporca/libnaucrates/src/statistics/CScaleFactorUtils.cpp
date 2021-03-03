@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright 2014 Pivotal Inc.
+//	Copyright 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScaleFactorUtils.cpp
@@ -9,13 +9,13 @@
 //		Helper routines to compute scale factors / damping factors
 //---------------------------------------------------------------------------
 
+#include "naucrates/statistics/CScaleFactorUtils.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
-#include "naucrates/statistics/CScaleFactorUtils.h"
 #include "naucrates/statistics/CStatistics.h"
 
 using namespace gpopt;
@@ -49,7 +49,7 @@ CScaleFactorUtils::GenerateScaleFactorMap(
 	CMemoryPool *mp, SJoinConditionArray *join_conds_scale_factors,
 	CDoubleArray *independent_join_preds)
 {
-	GPOS_ASSERT(join_conds_scale_factors != NULL);
+	GPOS_ASSERT(join_conds_scale_factors != nullptr);
 
 	// create a hashmap of size 7 as we don't anticipate many join conditions here. Creating a larger map
 	// would be wasted memory.
@@ -69,7 +69,7 @@ CScaleFactorUtils::GenerateScaleFactorMap(
 		IMdIdArray *oid_pair = (*(*join_conds_scale_factors)[ul]).m_oid_pair;
 		BOOL both_dist_keys = (*(*join_conds_scale_factors)[ul]).m_dist_keys;
 
-		if (oid_pair != NULL && oid_pair->Size() == 2)
+		if (oid_pair != nullptr && oid_pair->Size() == 2)
 		{
 			// the array of scale factors in the order of damping
 			// i.e. the scale_factor_array[0] is not damped, and any subsequent
@@ -200,10 +200,11 @@ CScaleFactorUtils::CalcCumulativeScaleFactorSqrtAlg(
 CDouble
 CScaleFactorUtils::CumulativeJoinScaleFactor(
 	CMemoryPool *mp, const CStatisticsConfig *stats_config,
-	SJoinConditionArray *join_conds_scale_factors)
+	SJoinConditionArray *join_conds_scale_factors,
+	CDouble limit_for_result_scale_factor)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != join_conds_scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != join_conds_scale_factors);
 
 	const ULONG num_join_conds = join_conds_scale_factors->Size();
 	if (1 < num_join_conds)
@@ -240,6 +241,8 @@ CScaleFactorUtils::CumulativeJoinScaleFactor(
 	//    is not correlated with any other predicate. This assumption comes from the idea that distribution
 	//    cols are ideally unique for each record to gain the best possible performance. This is a best
 	//    guess since we do not have a way to support correlated columns at this time.
+	//
+
 	CDouble cumulative_scale_factor(1.0);
 	if (stats_config->DDampingFactorJoin() > 0)
 	{
@@ -267,6 +270,22 @@ CScaleFactorUtils::CumulativeJoinScaleFactor(
 		cumulative_scale_factor =
 			CScaleFactorUtils::CalcCumulativeScaleFactorSqrtAlg(
 				scale_factor_hashmap, independent_join_preds);
+
+		// Limit the scale factor, usually to the cardinality of the larger of the
+		// joined tables. This causes the resulting join cardinality to be at least
+		// the size of the smaller table. The reason for this is that we want to
+		// assume a referential integrity constraint between the two joined tables,
+		// so a row in one table will match with at least one row in the other
+		// table. This makes multi-predicate joins more similar to single
+		// predicates, where we make the same assumption. This assumption is
+		// baked in the formula itself: When we divide the cartesian product
+		// by the max of the NDVs that means that every one of these NDVs will
+		// have a match in the other table. Another way to look at it is that
+		// 'cumulative_scale_factor' represents the NDV of the combined equi-join
+		// columns (ignore non-equi joins for a moment). We know that this NDV
+		// cannot exceed the cardinality of the larger of the tables.
+		cumulative_scale_factor = std::min(cumulative_scale_factor.Get(),
+										   limit_for_result_scale_factor.Get());
 
 		independent_join_preds->Release();
 		scale_factor_hashmap->Release();
@@ -309,7 +328,7 @@ CDouble
 CScaleFactorUtils::DampedFilterScaleFactor(
 	const CStatisticsConfig *stats_config, ULONG num_columns)
 {
-	GPOS_ASSERT(NULL != stats_config);
+	GPOS_ASSERT(nullptr != stats_config);
 
 	if (1 >= num_columns)
 	{
@@ -332,7 +351,7 @@ CDouble
 CScaleFactorUtils::DampedGroupByScaleFactor(
 	const CStatisticsConfig *stats_config, ULONG num_columns)
 {
-	GPOS_ASSERT(NULL != stats_config);
+	GPOS_ASSERT(nullptr != stats_config);
 
 	if (1 > num_columns)
 	{
@@ -355,7 +374,7 @@ void
 CScaleFactorUtils::SortScalingFactor(CDoubleArray *scale_factors,
 									 BOOL is_descending)
 {
-	GPOS_ASSERT(NULL != scale_factors);
+	GPOS_ASSERT(nullptr != scale_factors);
 	const ULONG num_cols = scale_factors->Size();
 	if (1 < num_cols)
 	{
@@ -384,7 +403,7 @@ CScaleFactorUtils::SortScalingFactor(CDoubleArray *scale_factors,
 INT
 CScaleFactorUtils::DescendingOrderCmpFunc(const void *val1, const void *val2)
 {
-	GPOS_ASSERT(NULL != val1 && NULL != val2);
+	GPOS_ASSERT(nullptr != val1 && nullptr != val2);
 	const CDouble *double_val1 = *(const CDouble **) val1;
 	const CDouble *double_val2 = *(const CDouble **) val2;
 
@@ -403,7 +422,7 @@ INT
 CScaleFactorUtils::DescendingOrderCmpJoinFunc(const void *val1,
 											  const void *val2)
 {
-	GPOS_ASSERT(NULL != val1 && NULL != val2);
+	GPOS_ASSERT(nullptr != val1 && nullptr != val2);
 	const CDouble double_val1 =
 		(*(const SJoinCondition **) val1)->m_scale_factor;
 	const CDouble double_val2 =
@@ -424,7 +443,7 @@ CScaleFactorUtils::DescendingOrderCmpJoinFunc(const void *val1,
 INT
 CScaleFactorUtils::AscendingOrderCmpFunc(const void *val1, const void *val2)
 {
-	GPOS_ASSERT(NULL != val1 && NULL != val2);
+	GPOS_ASSERT(nullptr != val1 && nullptr != val2);
 	const CDouble *double_val1 = *(const CDouble **) val1;
 	const CDouble *double_val2 = *(const CDouble **) val2;
 
@@ -444,8 +463,8 @@ INT
 CScaleFactorUtils::DoubleCmpFunc(const CDouble *double_val1,
 								 const CDouble *double_val2, BOOL is_descending)
 {
-	GPOS_ASSERT(NULL != double_val1);
-	GPOS_ASSERT(NULL != double_val2);
+	GPOS_ASSERT(nullptr != double_val1);
+	GPOS_ASSERT(nullptr != double_val2);
 
 	if (double_val1->Get() == double_val2->Get())
 	{
@@ -478,8 +497,8 @@ CDouble
 CScaleFactorUtils::CalcScaleFactorCumulativeConj(
 	const CStatisticsConfig *stats_config, CDoubleArray *scale_factors)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != scale_factors);
 
 	const ULONG num_cols = scale_factors->Size();
 	CDouble scale_factor(1.0);
@@ -519,8 +538,8 @@ CScaleFactorUtils::CalcScaleFactorCumulativeDisj(
 	const CStatisticsConfig *stats_config, CDoubleArray *scale_factors,
 	CDouble total_rows)
 {
-	GPOS_ASSERT(NULL != stats_config);
-	GPOS_ASSERT(NULL != scale_factors);
+	GPOS_ASSERT(nullptr != stats_config);
+	GPOS_ASSERT(nullptr != scale_factors);
 
 	const ULONG num_cols = scale_factors->Size();
 	GPOS_ASSERT(0 < num_cols);

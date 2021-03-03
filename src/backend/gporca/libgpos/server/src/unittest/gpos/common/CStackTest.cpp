@@ -9,14 +9,14 @@
 //		Test for CStack
 //---------------------------------------------------------------------------
 
+#include "unittest/gpos/common/CStackTest.h"
+
 #include "gpos/base.h"
-#include "gpos/common/CStack.h"
 #include "gpos/common/CAutoP.h"
+#include "gpos/common/CStack.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/gpos/common/CStackTest.h"
 
 using namespace gpos;
 

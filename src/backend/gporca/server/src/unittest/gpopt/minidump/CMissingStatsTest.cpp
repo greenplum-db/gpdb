@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMissingStatsTest.cpp
@@ -10,16 +10,17 @@
 //---------------------------------------------------------------------------
 
 #include "unittest/gpopt/minidump/CMissingStatsTest.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/test/CUnittest.h"
 
-#include "gpopt/exception.h"
+#include "gpopt/engine/CCTEConfig.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
-#include "gpopt/engine/CCTEConfig.h"
+#include "gpopt/exception.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
@@ -92,8 +93,8 @@ CMissingStatsTest::EresUnittest_RunTests()
 
 		CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(
 			mp, testCase.m_szInputFile, GPOPT_TEST_SEGMENTS /*ulSegments*/,
-			1 /*ulSessionId*/, 1,  /*ulCmdId*/
-			optimizer_config, NULL /*pceeval*/
+			1 /*ulSessionId*/, 1,	  /*ulCmdId*/
+			optimizer_config, nullptr /*pceeval*/
 		);
 
 		CStatisticsConfig *stats_config = optimizer_config->GetStatsConf();

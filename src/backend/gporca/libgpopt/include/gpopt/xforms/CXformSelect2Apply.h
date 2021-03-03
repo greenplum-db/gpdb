@@ -12,6 +12,7 @@
 #define GPOPT_CXformSelect2Apply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformSubqueryUnnest.h"
 
 namespace gpopt
@@ -30,28 +31,25 @@ using namespace gpos;
 class CXformSelect2Apply : public CXformSubqueryUnnest
 {
 private:
-	// private copy ctor
-	CXformSelect2Apply(const CXformSelect2Apply &);
-
 public:
+	CXformSelect2Apply(const CXformSelect2Apply &) = delete;
+
 	// ctor
 	explicit CXformSelect2Apply(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformSelect2Apply()
-	{
-	}
+	~CXformSelect2Apply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSelect2Apply;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSelect2Apply";
 	}

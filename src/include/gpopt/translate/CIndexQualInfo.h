@@ -69,9 +69,7 @@ public:
 	}
 
 	// dtor
-	~CIndexQualInfo()
-	{
-	}
+	~CIndexQualInfo() = default;
 
 	// comparison function for sorting index qualifiers
 	static INT

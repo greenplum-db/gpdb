@@ -36,7 +36,7 @@ The client machine where gpload is executed must have the following:
   server installation. 
 
 * Network access to and from all hosts in your Greenplum Database array 
- (master and segments). 
+ (coordinator and segments). 
 
 * Network access to and from the hosts where the data to be loaded 
   resides (ETL servers). 
@@ -137,14 +137,14 @@ CONNECTION OPTIONS
 
 -h <hostname>
 
- Specifies the host name of the machine on which the Greenplum master 
+ Specifies the host name of the machine on which the Greenplum coordinator 
  database server is running. If not specified, reads from the load 
  control file, the environment variable $PGHOST or defaults to localhost. 
 
 
 -p <port> 
 
- Specifies the TCP port on which the Greenplum master database server is 
+ Specifies the TCP port on which the Greenplum coordinator database server is 
  listening for connections. If not specified, reads from the load control 
  file, the environment variable $PGPORT or defaults to 5432. 
 
@@ -184,8 +184,8 @@ The basic structure of a load control file is:
 VERSION: 1.0.0.1
 DATABASE: <db_name>
 USER: <db_username>
-HOST: <master_hostname>
-PORT: <master_port>
+HOST: <coordinator_hostname>
+PORT: <coordinator_port>
 GPLOAD:
    INPUT:
     - SOURCE:
@@ -251,12 +251,12 @@ USER - Optional. Specifies which database role to use to connect.
        You can also specify the database role on the command line using 
        the -U option. 
 
-HOST - Optional. Specifies Greenplum master host name. If not specified, 
+HOST - Optional. Specifies Greenplum coordinator host name. If not specified, 
        defaults to localhost or $PGHOST if set. You can also specify the 
-       master host name on the command line using the -h option.
+       coordinator host name on the command line using the -h option.
 
-PORT - Optional. Specifies Greenplum master port. If not specified, defaults
-       to 5432 or $PGPORT if set. You can also specify the master port on 
+PORT - Optional. Specifies Greenplum coordinator port. If not specified, defaults
+       to 5432 or $PGPORT if set. You can also specify the coordinator port on 
        the command line using the -p option.
 
 GPLOAD - Required. Begins the load specification section. A GPLOAD specification
@@ -267,7 +267,7 @@ INPUT - Required. Defines the location and the format of the input data to
         distribution program on the current host and create the required external
         table definition(s) in Greenplum Database that point to the source data. 
         Note that the host from which you run gpload must be accessible over the 
-        network by all Greenplum hosts (master and segments).
+        network by all Greenplum hosts (coordinator and segments).
 
 SOURCE - Required. The SOURCE block of an INPUT specification defines the 
          location of a source file. An INPUT section can have more than one 
@@ -591,7 +591,7 @@ Example load control file:
 VERSION: 1.0.0.1
 DATABASE: ops
 USER: gpadmin
-HOST: mdw-1
+HOST: cdw-1
 PORT: 5432
 GPLOAD:
    INPUT:

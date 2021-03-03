@@ -12,8 +12,9 @@
 #define GPDXL_CDXLNode_H
 
 #include "gpos/base.h"
-#include "gpos/common/CHashMap.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashMap.h"
+
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/dxl/operators/CDXLProperties.h"
 
@@ -48,9 +49,6 @@ typedef CHashMap<ULONG, CDXLNode, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 class CDXLNode : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// dxl tree operator class
 	CDXLOperator *m_dxl_op;
 
@@ -63,10 +61,9 @@ private:
 	// direct dispatch spec
 	CDXLDirectDispatchInfo *m_direct_dispatch_info;
 
-	// private copy ctor
-	CDXLNode(const CDXLNode &);
-
 public:
+	CDXLNode(const CDXLNode &) = delete;
+
 	// ctors
 
 	explicit CDXLNode(CMemoryPool *mp);
@@ -77,18 +74,18 @@ public:
 	CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 			 CDXLNode *first_child_dxlnode, CDXLNode *second_child_dxlnode,
 			 CDXLNode *third_child_dxlnode);
-	CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op, CDXLNodeArray *dxl_array);
+	CDXLNode(CDXLOperator *dxl_op, CDXLNodeArray *dxl_array);
 
 	// dtor
-	virtual ~CDXLNode();
+	~CDXLNode() override;
 
 	// shorthand to access children
 	inline CDXLNode *
 	operator[](ULONG idx) const
 	{
-		GPOS_ASSERT(NULL != m_dxl_array);
+		GPOS_ASSERT(nullptr != m_dxl_array);
 		CDXLNode *dxl_node = (*m_dxl_array)[idx];
-		GPOS_ASSERT(NULL != dxl_node);
+		GPOS_ASSERT(nullptr != dxl_node);
 		return dxl_node;
 	};
 
@@ -96,7 +93,7 @@ public:
 	inline ULONG
 	Arity() const
 	{
-		return (m_dxl_array == NULL) ? 0 : m_dxl_array->Size();
+		return (m_dxl_array == nullptr) ? 0 : m_dxl_array->Size();
 	}
 
 	// accessor for operator

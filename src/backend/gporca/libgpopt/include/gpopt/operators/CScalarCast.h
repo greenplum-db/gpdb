@@ -12,9 +12,10 @@
 #define GPOPT_CScalarCast_H
 
 #include "gpos/base.h"
+
+#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdProp.h"
 
 namespace gpopt
 {
@@ -46,16 +47,15 @@ private:
 	// is operator's return type BOOL?
 	BOOL m_fBoolReturnType;
 
-	// private copy ctor
-	CScalarCast(const CScalarCast &);
-
 public:
+	CScalarCast(const CScalarCast &) = delete;
+
 	// ctor
 	CScalarCast(CMemoryPool *mp, IMDId *return_type_mdid, IMDId *mdid_func,
 				BOOL is_binary_coercible);
 
 	// dtor
-	virtual ~CScalarCast()
+	~CScalarCast() override
 	{
 		m_func_mdid->Release();
 		m_return_type_mdid->Release();
@@ -65,8 +65,8 @@ public:
 	// ident accessors
 
 	// the type of the scalar expression
-	virtual IMDId *
-	MdidType() const
+	IMDId *
+	MdidType() const override
 	{
 		return m_return_type_mdid;
 	}
@@ -78,35 +78,35 @@ public:
 		return m_func_mdid;
 	}
 
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarCast;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarCast";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -119,8 +119,8 @@ public:
 	}
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult
-	Eber(ULongPtrArray *pdrgpulChildren) const
+	EBoolEvalResult
+	Eber(ULongPtrArray *pdrgpulChildren) const override
 	{
 		return EberNullOnAllNullChildren(pdrgpulChildren);
 	}
@@ -129,7 +129,7 @@ public:
 	static CScalarCast *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCast == pop->Eopid());
 
 		return dynamic_cast<CScalarCast *>(pop);

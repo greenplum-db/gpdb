@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CJoinCardinalityTest.h
@@ -11,9 +11,9 @@
 #ifndef GPNAUCRATES_CJoinCardinalityTest_H
 #define GPNAUCRATES_CJoinCardinalityTest_H
 
-#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 

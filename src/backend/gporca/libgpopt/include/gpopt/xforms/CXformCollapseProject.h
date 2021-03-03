@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformCollapseProject.h
@@ -12,6 +12,7 @@
 #define GPOPT_CXformCollapseProject_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformSubqueryUnnest.h"
 
 namespace gpopt
@@ -29,37 +30,35 @@ using namespace gpos;
 class CXformCollapseProject : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformCollapseProject(const CXformCollapseProject &);
-
 public:
+	CXformCollapseProject(const CXformCollapseProject &) = delete;
+
 	// ctor
 	explicit CXformCollapseProject(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformCollapseProject()
-	{
-	}
+	~CXformCollapseProject() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfCollapseProject;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformCollapseProject";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	void Transform(CXformContext *, CXformResult *, CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformCollapseProject
 

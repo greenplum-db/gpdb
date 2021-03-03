@@ -21,22 +21,19 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/CScalarArrayCmp.h"
-#include "gpopt/operators/CScalarConst.h"
 #include "gpopt/operators/CLogicalGet.h"
+#include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarConst.h"
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/operators/CScalarSubquery.h"
 #include "naucrates/md/CMDTypeInt2GPDB.h"
 #include "naucrates/md/CMDTypeInt4GPDB.h"
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 #include "naucrates/md/CSystemId.h"
-
-#include "gpdbcost/CCostModelGPDBLegacy.h"
+#include "naucrates/statistics/CPoint.h"
 
 #include "unittest/base.h"
-
-#include "naucrates/statistics/CPoint.h"
 
 
 #define GPOPT_MDCACHE_TEST_OID 1234
@@ -141,13 +138,13 @@ public:
 		// optimization context
 		CAutoOptCtxt m_aoc;
 
-		// private ctor
-		CTestSetup(const CTestSetup &);
-
 		// set up a file based provider
 		static CMDProviderMemory *PmdpSetupFileBasedProvider();
 
 	public:
+		// private ctor
+		CTestSetup(const CTestSetup &) = delete;
+
 		// ctor
 		CTestSetup();
 
@@ -561,18 +558,21 @@ public:
 							 const CHAR *file_name);
 
 	// run minidumps while loading metadata from passed file
-	static GPOS_RESULT EresRunMinidumps(
-		CMemoryPool *mp, const CHAR *rgszFileNames[], ULONG ulTests,
-		ULONG *pulTestCounter, ULONG ulSessionId, ULONG ulCmdId,
-		BOOL fMatchPlans, BOOL fTestSpacePruning,
-		const CHAR *szMDFilePath = NULL, IConstExprEvaluator *pceeval = NULL);
+	static GPOS_RESULT EresRunMinidumps(CMemoryPool *mp,
+										const CHAR *rgszFileNames[],
+										ULONG ulTests, ULONG *pulTestCounter,
+										ULONG ulSessionId, ULONG ulCmdId,
+										BOOL fMatchPlans,
+										BOOL fTestSpacePruning,
+										const CHAR *szMDFilePath = nullptr,
+										IConstExprEvaluator *pceeval = nullptr);
 
 	// run all minidumps based on one metadata file
 	static GPOS_RESULT EresRunMinidumpsUsingOneMDFile(
 		CMemoryPool *mp, const CHAR *szMDFilePath, const CHAR *rgszFileNames[],
 		ULONG *pulTestCounter, ULONG ulSessionId, ULONG ulCmdId,
 		BOOL fMatchPlans, INT iCmpSpaceSize,
-		IConstExprEvaluator *pceeval = NULL);
+		IConstExprEvaluator *pceeval = nullptr);
 
 	// run one minidump-based test using passed MD Accessor
 	static GPOS_RESULT EresRunMinidump(
@@ -605,7 +605,7 @@ public:
 	static ICostModel *
 	GetCostModel(CMemoryPool *mp)
 	{
-		return GPOS_NEW(mp) CCostModelGPDBLegacy(mp, GPOPT_TEST_SEGMENTS);
+		return GPOS_NEW(mp) CCostModelGPDB(mp, GPOPT_TEST_SEGMENTS);
 	}
 
 	// create a datum with a given type, encoded value and int value
@@ -614,6 +614,9 @@ public:
 									  CWStringDynamic *pstrEncodedValue,
 									  LINT value);
 
+	// Create a datum with a given type and double value
+	static IDatum *CreateDoubleDatum(CMemoryPool *mp, CMDAccessor *md_accessor,
+									 IMDId *mdid_type, CDouble value);
 	// create an interval for generic data types
 	// does not take ownership of mdid_type
 	static CConstraintInterval *PciGenericInterval(
@@ -694,7 +697,7 @@ public:
 	// create Equivalence Class based on the breakpoints
 	static CColRefSetArray *createEquivalenceClasses(CMemoryPool *mp,
 													 CColRefSet *pcrs,
-													 INT setBoundary[]);
+													 const INT setBoundary[]);
 };	// class CTestUtils
 
 
@@ -750,7 +753,7 @@ CTestUtils::PexprJoinPartitioned(CMemoryPool *mp, BOOL fOuterPartitioned)
 	const CColRef2dArray *pdrgpdrgpcr =
 		popGetPartitioned->PdrgpdrgpcrPartColumns();
 
-	GPOS_ASSERT(pdrgpdrgpcr != NULL);
+	GPOS_ASSERT(pdrgpdrgpcr != nullptr);
 	GPOS_ASSERT(0 < pdrgpdrgpcr->Size());
 	CColRefArray *colref_array = (*pdrgpdrgpcr)[0];
 	GPOS_ASSERT(1 == colref_array->Size());
@@ -784,8 +787,8 @@ CExpression *
 CTestUtils::PexprLogicalJoin(CMemoryPool *mp, CExpression *pexprLeft,
 							 CExpression *pexprRight)
 {
-	GPOS_ASSERT(NULL != pexprLeft);
-	GPOS_ASSERT(NULL != pexprRight);
+	GPOS_ASSERT(nullptr != pexprLeft);
+	GPOS_ASSERT(nullptr != pexprRight);
 
 	// get any two columns; one from each side
 	CColRef *pcrLeft = pexprLeft->DeriveOutputColumns()->PcrAny();

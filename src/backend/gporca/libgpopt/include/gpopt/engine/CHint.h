@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CHint.h
@@ -12,8 +12,8 @@
 #define GPOPT_CHint_H
 
 #include "gpos/base.h"
-#include "gpos/memory/CMemoryPool.h"
 #include "gpos/common/CRefCount.h"
+#include "gpos/memory/CMemoryPool.h"
 
 #define JOIN_ORDER_DP_THRESHOLD ULONG(10)
 #define BROADCAST_THRESHOLD ULONG(10000000)
@@ -49,10 +49,9 @@ private:
 
 	ULONG m_ulPushGroupByBelowSetopThreshold;
 
-	// private copy ctor
-	CHint(const CHint &);
-
 public:
+	CHint(const CHint &) = delete;
+
 	// ctor
 	CHint(ULONG min_num_of_parts_to_require_sort_on_insert,
 		  ULONG join_arity_for_associativity_commutativity,

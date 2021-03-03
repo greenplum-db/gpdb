@@ -51,21 +51,20 @@ private:
 	// order matching type
 	EOrderMatching m_eom;
 
-	// private copy ctor
-	CEnfdOrder(const CEnfdOrder &);
-
 	// names of order matching types
 	static const CHAR *m_szOrderMatching[EomSentinel];
 
 public:
+	CEnfdOrder(const CEnfdOrder &) = delete;
+
 	// ctor
 	CEnfdOrder(COrderSpec *pos, EOrderMatching eom);
 
 	// dtor
-	virtual ~CEnfdOrder();
+	~CEnfdOrder() override;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// check if the given order specification is compatible with the
 	// order specification of this object for the specified matching type
@@ -83,8 +82,8 @@ public:
 							BOOL fOrderReqd) const;
 
 	// property spec accessor
-	virtual CPropSpec *
-	Pps() const
+	CPropSpec *
+	Pps() const override
 	{
 		return m_pos;
 	}
@@ -100,13 +99,13 @@ public:
 	BOOL
 	Matches(CEnfdOrder *peo)
 	{
-		GPOS_ASSERT(NULL != peo);
+		GPOS_ASSERT(nullptr != peo);
 
 		return m_eom == peo->Eom() && m_pos->Matches(peo->PosRequired());
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CEnfdOrder
 

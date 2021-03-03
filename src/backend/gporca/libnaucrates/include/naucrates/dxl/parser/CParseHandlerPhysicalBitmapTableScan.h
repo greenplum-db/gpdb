@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerPhysicalBitmapTableScan.h
@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerPhysicalBitmapTableScan_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerPhysicalAbstractBitmapScan.h"
 
 namespace gpdxl
@@ -36,26 +37,25 @@ class CParseHandlerPhysicalBitmapTableScan
 	: public CParseHandlerPhysicalAbstractBitmapScan
 {
 private:
-	// private copy ctor
-	CParseHandlerPhysicalBitmapTableScan(
-		const CParseHandlerPhysicalBitmapTableScan &);
-
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerPhysicalBitmapTableScan(
+		const CParseHandlerPhysicalBitmapTableScan &) = delete;
+
 	// ctor
 	CParseHandlerPhysicalBitmapTableScan(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

@@ -7,7 +7,7 @@
  *	 are used to provide a temporal ordering of runaway events and cleanup events,
  *	 as well as the idle and the activation events of different processes.
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

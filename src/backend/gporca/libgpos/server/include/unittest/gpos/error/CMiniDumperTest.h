@@ -42,22 +42,22 @@ private:
 	{
 	public:
 		// ctor
-		CMiniDumperStream(CMemoryPool *mp);
+		CMiniDumperStream();
 
 		// dtor
-		virtual ~CMiniDumperStream();
+		~CMiniDumperStream() override;
 
 		// serialize minidump header
-		virtual void SerializeHeader();
+		void SerializeHeader() override;
 
 		// serialize minidump footer
-		virtual void SerializeFooter();
+		void SerializeFooter() override;
 
 		// serialize entry header
-		virtual void SerializeEntryHeader();
+		void SerializeEntryHeader() override;
 
 		// serialize entry footer
-		virtual void SerializeEntryFooter();
+		void SerializeEntryFooter() override;
 
 	};	// class CMiniDumperStream
 
@@ -76,10 +76,10 @@ private:
 		CSerializableStack();
 
 		// dtor
-		virtual ~CSerializableStack();
+		~CSerializableStack() override;
 
 		// serialize object to passed stream
-		virtual void Serialize(COstream &oos);
+		void Serialize(COstream &oos) override;
 
 	};	// class CSerializableStack
 

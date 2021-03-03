@@ -12,6 +12,7 @@
 #define GPOPT_CXformLeftSemiApply2LeftSemiJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalLeftSemiApply.h"
 #include "gpopt/operators/CLogicalLeftSemiJoin.h"
 #include "gpopt/xforms/CXformApply2Join.h"
@@ -33,10 +34,10 @@ class CXformLeftSemiApply2LeftSemiJoin
 	: public CXformApply2Join<CLogicalLeftSemiApply, CLogicalLeftSemiJoin>
 {
 private:
-	// private copy ctor
-	CXformLeftSemiApply2LeftSemiJoin(const CXformLeftSemiApply2LeftSemiJoin &);
-
 public:
+	CXformLeftSemiApply2LeftSemiJoin(const CXformLeftSemiApply2LeftSemiJoin &) =
+		delete;
+
 	// ctor
 	explicit CXformLeftSemiApply2LeftSemiJoin(CMemoryPool *mp)
 		: CXformApply2Join<CLogicalLeftSemiApply, CLogicalLeftSemiJoin>(
@@ -52,29 +53,27 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftSemiApply2LeftSemiJoin()
-	{
-	}
+	~CXformLeftSemiApply2LeftSemiJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiApply2LeftSemiJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiApply2LeftSemiJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-						   CExpression *pexpr) const;
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const override;
 
 
 };	// class CXformLeftSemiApply2LeftSemiJoin

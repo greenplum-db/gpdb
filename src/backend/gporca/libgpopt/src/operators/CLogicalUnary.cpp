@@ -9,11 +9,11 @@
 //		Implementation of logical unary operators
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalUnary.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/operators/CLogicalUnary.h"
 #include "gpopt/xforms/CXformUtils.h"
-
 #include "naucrates/statistics/CProjectStatsProcessor.h"
 
 using namespace gpopt;
@@ -46,7 +46,7 @@ CLogicalUnary::Esp(CExpressionHandle &exprhdl) const
 	// low promise for stat derivation if scalar predicate has subqueries, or logical
 	// expression has outer-refs or is part of an Apply expression
 	if (exprhdl.DeriveHasSubquery(1) || exprhdl.HasOuterRefs() ||
-		(NULL != exprhdl.Pgexpr() &&
+		(nullptr != exprhdl.Pgexpr() &&
 		 CXformUtils::FGenerateApply(exprhdl.Pgexpr()->ExfidOrigin())))
 	{
 		return EspLow;

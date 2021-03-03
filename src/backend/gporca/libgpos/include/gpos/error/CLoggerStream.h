@@ -35,20 +35,19 @@ private:
 	void
 	Write(const WCHAR *log_entry,
 		  ULONG	 // severity
-	)
+		  ) override
 	{
 		m_os = m_os << log_entry;
 	}
 
-	// no copy ctor
-	CLoggerStream(const CLoggerStream &);
-
 public:
+	CLoggerStream(const CLoggerStream &) = delete;
+
 	// ctor
 	CLoggerStream(IOstream &os);
 
 	// dtor
-	virtual ~CLoggerStream();
+	~CLoggerStream() override;
 
 	// wrapper for stdout
 	static CLoggerStream m_stdout_stream_logger;

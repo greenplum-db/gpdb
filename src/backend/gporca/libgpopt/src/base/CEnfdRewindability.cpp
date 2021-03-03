@@ -9,9 +9,10 @@
 //		Implementation of rewindability property
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CEnfdRewindability.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CEnfdRewindability.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CPhysicalSpool.h"
 
@@ -36,7 +37,7 @@ CEnfdRewindability::CEnfdRewindability(CRewindabilitySpec *prs,
 									   ERewindabilityMatching erm)
 	: m_prs(prs), m_erm(erm)
 {
-	GPOS_ASSERT(NULL != prs);
+	GPOS_ASSERT(nullptr != prs);
 	GPOS_ASSERT(ErmSentinel > erm);
 }
 
@@ -68,7 +69,7 @@ CEnfdRewindability::~CEnfdRewindability()
 BOOL
 CEnfdRewindability::FCompatible(CRewindabilitySpec *prs) const
 {
-	GPOS_ASSERT(NULL != prs);
+	GPOS_ASSERT(nullptr != prs);
 
 	switch (m_erm)
 	{

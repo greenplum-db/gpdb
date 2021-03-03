@@ -34,6 +34,6 @@ CREATE FUNCTION pg_exttable(OUT reloid oid,
                             OUT writable bool)
 RETURNS SETOF record
 AS 'MODULE_PATHNAME'
-LANGUAGE C VOLATILE EXECUTE ON MASTER;
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
 
 CREATE VIEW pg_exttable AS SELECT * FROM pg_exttable();

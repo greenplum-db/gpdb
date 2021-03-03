@@ -9,13 +9,14 @@
 //		Implementation of group expression exploration job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroupExpressionExploration.h"
+
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupExploration.h"
-#include "gpopt/search/CJobGroupExpressionExploration.h"
 #include "gpopt/search/CJobTransformation.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
@@ -108,9 +109,7 @@ const WCHAR rgwszEvents[CJobGroupExpressionExploration::eevSentinel]
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobGroupExpressionExploration::CJobGroupExpressionExploration()
-{
-}
+CJobGroupExpressionExploration::CJobGroupExpressionExploration() = default;
 
 
 //---------------------------------------------------------------------------
@@ -121,9 +120,7 @@ CJobGroupExpressionExploration::CJobGroupExpressionExploration()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobGroupExpressionExploration::~CJobGroupExpressionExploration()
-{
-}
+CJobGroupExpressionExploration::~CJobGroupExpressionExploration() = default;
 
 
 //---------------------------------------------------------------------------
@@ -333,7 +330,7 @@ CJobGroupExpressionExploration::ScheduleJob(CSchedulerContext *psc,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupExpressionExploration::OsPrint(IOstream &os)
+CJobGroupExpressionExploration::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

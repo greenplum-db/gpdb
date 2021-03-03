@@ -6,7 +6,7 @@
                 <p>The Greenplum Database utility <codeph>plcontainer</codeph> manages the
                     PL/Container configuration files in a Greenplum Database system. The utility
                     ensures that the configuration files are consistent across the Greenplum
-                    Database master and segment instances.</p>
+                    Database coordinator and segment instances.</p>
                 <note type="warning"> Modifying the configuration files on the segment instances
                     without using the utility might create different, incompatible configurations on
                     different Greenplum Database segments that could cause unexpected behavior. </note>
@@ -274,7 +274,7 @@
                         Docker image, and language. You can use the <codeph>plcontainer
                             runtime-replace</codeph> command to update an existing
                             <codeph>runtime</codeph> element. The utility updates the configuration
-                        file on the master and all segment instances.</p>
+                        file on the coordinator and all segment instances.</p>
                     <p>The PL/Container configuration file can contain multiple
                             <codeph>runtime</codeph> elements that reference the same Docker image
                         specified by the XML element <codeph>image</codeph>. In the example
@@ -308,7 +308,7 @@
                         a running session, execute this command in the session.</p>
                     <codeblock>SELECT * FROM plcontainer_refresh_config;</codeblock>
                     <p>Running the command executes a PL/Container function that updates the session
-                        configuration on the master and segment instances.</p>
+                        configuration on the coordinator and segment instances.</p>
                 </section>
         
   

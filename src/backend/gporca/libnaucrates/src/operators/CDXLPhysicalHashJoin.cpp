@@ -11,6 +11,7 @@
 
 
 #include "naucrates/dxl/operators/CDXLPhysicalHashJoin.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 

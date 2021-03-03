@@ -37,7 +37,7 @@
         <li id="kt137052">Enough disk space on your segment hosts to temporarily hold a copy of your
           largest table. </li>
         <li>When redistributing data, Greenplum Database must be running in production mode.
-          Greenplum Database cannot be running in restricted mode or in master mode. The
+          Greenplum Database cannot be running in restricted mode or in coordinator mode. The
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
           specified to start Greenplum Database. </li>
       </ul>
@@ -227,7 +227,7 @@
             >gp_segment_configuration</xref></codeph> catalog table with the new segment instance
         information. Greenplum Database uses the <codeph>address</codeph> value of the
           <codeph>gp_segment_configuration</codeph> catalog table when looking up host systems for
-        Greenplum interconnect (internal) communication between the master and segment instances and
+        Greenplum interconnect (internal) communication between the coordinator and segment instances and
         between segment instances, and for other internal communication.</p>
     </section>
     <section id="multi_nic">

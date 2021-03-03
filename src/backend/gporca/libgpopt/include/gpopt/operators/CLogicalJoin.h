@@ -29,36 +29,33 @@ namespace gpopt
 class CLogicalJoin : public CLogical
 {
 private:
-	// private copy ctor
-	CLogicalJoin(const CLogicalJoin &);
-
 protected:
 	// ctor
 	explicit CLogicalJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CLogicalJoin()
-	{
-	}
+	~CLogicalJoin() override = default;
 
 public:
+	CLogicalJoin(const CLogicalJoin &) = delete;
+
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 
 	// sensitivity to order of inputs
 	BOOL
-	FInputOrderSensitive() const
+	FInputOrderSensitive() const override
 	{
 		return true;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -68,15 +65,16 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// derive output columns
-	virtual CColRefSet *
-	DeriveOutputColumns(CMemoryPool *mp, CExpressionHandle &exprhdl)
+	CColRefSet *
+	DeriveOutputColumns(CMemoryPool *mp, CExpressionHandle &exprhdl) override
 	{
 		return PcrsDeriveOutputCombineLogical(mp, exprhdl);
 	}
 
 	// derive partition consumer info
-	virtual CPartInfo *
-	DerivePartitionInfo(CMemoryPool *mp, CExpressionHandle &exprhdl) const
+	CPartInfo *
+	DerivePartitionInfo(CMemoryPool *mp,
+						CExpressionHandle &exprhdl) const override
 	{
 		return PpartinfoDeriveCombine(mp, exprhdl);
 	}
@@ -84,14 +82,16 @@ public:
 
 	// derive keys
 	CKeyCollection *
-	DeriveKeyCollection(CMemoryPool *mp, CExpressionHandle &exprhdl) const
+	DeriveKeyCollection(CMemoryPool *mp,
+						CExpressionHandle &exprhdl) const override
 	{
 		return PkcCombineKeys(mp, exprhdl);
 	}
 
 	// derive function properties
-	virtual CFunctionProp *
-	DeriveFunctionProperties(CMemoryPool *mp, CExpressionHandle &exprhdl) const
+	CFunctionProp *
+	DeriveFunctionProperties(CMemoryPool *mp,
+							 CExpressionHandle &exprhdl) const override
 	{
 		return PfpDeriveFromScalar(mp, exprhdl, exprhdl.Arity() - 1);
 	}
@@ -101,8 +101,8 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// promise level for stat derivation
-	virtual EStatPromise
-	Esp(CExpressionHandle &exprhdl) const
+	EStatPromise
+	Esp(CExpressionHandle &exprhdl) const override
 	{
 		// no stat derivation on Join trees with subqueries
 		if (exprhdl.DeriveHasSubquery(exprhdl.Arity() - 1))
@@ -110,7 +110,7 @@ public:
 			return EspLow;
 		}
 
-		if (NULL != exprhdl.Pgexpr() &&
+		if (nullptr != exprhdl.Pgexpr() &&
 			exprhdl.Pgexpr()->ExfidOrigin() == CXform::ExfExpandNAryJoin)
 		{
 			return EspMedium;
@@ -120,18 +120,17 @@ public:
 	}
 
 	// derive statistics
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// compute required stat columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsStat(CMemoryPool *mp, CExpressionHandle &exprhdl, CColRefSet *pcrsInput,
-			 ULONG child_index) const
+			 ULONG child_index) const override
 	{
 		const ULONG arity = exprhdl.Arity();
 
@@ -141,8 +140,8 @@ public:
 	}
 
 	// return true if operator can select a subset of input tuples based on some predicate
-	virtual BOOL
-	FSelectionOp() const
+	BOOL
+	FSelectionOp() const override
 	{
 		return true;
 	}

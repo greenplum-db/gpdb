@@ -19,7 +19,7 @@ insert into int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647)
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,101013,102024,102025,102115,102116,102119,102120,102128,102131,102132,102133,102134,102135,102136,103001,103014,103015"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102024,102025,102115,102116,102119,102120,102128,102131,102132,102133,102134,102135,102136,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:ColumnStatistics Mdid="1.38364130.1.1.3" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

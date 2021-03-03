@@ -26,7 +26,6 @@ all:
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
-	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpMgmt all
 	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
@@ -61,7 +60,6 @@ ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
 endif
 	$(MAKE) -C gpMgmt $@
-	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
@@ -89,14 +87,12 @@ clean:
 # leap over gpAux/Makefile into subdirectories to avoid circular dependency.
 # gpAux/Makefile is the entry point for the enterprise build, which ends up
 # calling top-level configure and this Makefile
-	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpMgmt $@
 
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
 distclean maintainer-clean:
 #	$(MAKE) -C doc $@
-	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C contrib $@
 	$(MAKE) -C gpcontrib $@
 	$(MAKE) -C config $@
@@ -117,9 +113,23 @@ create-demo-cluster:
 destroy-demo-cluster:
 	$(MAKE) -C gpAux/gpdemo destroy-demo-cluster
 
-check check-tests installcheck installcheck-parallel installcheck-tests: CHECKPREP_TOP=src/test/regress
-check check-tests installcheck installcheck-parallel installcheck-tests: submake-generated-headers
+check-tests installcheck installcheck-parallel installcheck-tests: CHECKPREP_TOP=src/test/regress
+check-tests installcheck installcheck-parallel installcheck-tests: submake-generated-headers
 	$(MAKE) -C src/test/regress $@
+
+check:
+	if [ ! -f $(prefix)/greenplum_path.sh ]; then \
+		$(MAKE) -C $(top_builddir) install; \
+	fi
+	. $(prefix)/greenplum_path.sh; \
+	if pg_isready 1>/dev/null; then \
+	  $(MAKE) -C $(top_builddir) installcheck; \
+	else \
+	  if [ ! -f $(top_builddir)/gpAux/gpdemo/gpdemo-env.sh ]; then \
+	    . $(prefix)/greenplum_path.sh && $(MAKE) -C $(top_builddir) create-demo-cluster; \
+	  fi; \
+	  . $(prefix)/greenplum_path.sh && . $(top_builddir)/gpAux/gpdemo/gpdemo-env.sh && $(MAKE) -C $(top_builddir) installcheck; \
+	fi
 
 $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin gpcontrib,check)
 $(call recurse,checkprep,  src/test src/pl src/interfaces/ecpg contrib src/bin gpcontrib)

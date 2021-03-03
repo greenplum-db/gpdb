@@ -4,7 +4,7 @@
  *	  routines to support manipulation of the pg_extprotocol relation
  *
  * Portions Copyright (c) 2011, Greenplum/EMC
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *

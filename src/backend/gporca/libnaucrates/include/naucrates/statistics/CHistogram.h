@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CHistogram.h
@@ -12,6 +12,8 @@
 #define GPNAUCRATES_CHistogram_H
 
 #include "gpos/base.h"
+#include "gpos/common/DbgPrintMixin.h"
+
 #include "gpopt/base/CKHeap.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CStatsPred.h"
@@ -36,7 +38,7 @@ typedef CDynamicPtrArray<CDouble, CleanupDelete> CDoubleArray;
 //	@doc:
 //
 //---------------------------------------------------------------------------
-class CHistogram
+class CHistogram : public gpos::DbgPrintMixin<CHistogram>
 {
 	// hash map from column id to a histogram
 	typedef CHashMap<ULONG, CHistogram, gpos::HashValue<ULONG>,
@@ -94,12 +96,6 @@ private:
 
 	// is column statistics missing in the database
 	BOOL m_is_col_stats_missing;
-
-	// private copy ctor
-	CHistogram(const CHistogram &);
-
-	// private assignment operator
-	CHistogram &operator=(const CHistogram &);
 
 	// return an array buckets after applying equality filter on the histogram buckets
 	CBucketArray *MakeBucketsWithEqualityFilter(CPoint *point) const;
@@ -222,6 +218,10 @@ private:
 		SAdjBucketBoundaryArray;
 
 public:
+	CHistogram &operator=(const CHistogram &) = delete;
+
+	CHistogram(const CHistogram &) = delete;
+
 	// ctors
 	explicit CHistogram(CMemoryPool *mp, CBucketArray *histogram_buckets,
 						BOOL is_well_defined = true);
@@ -315,7 +315,7 @@ public:
 	ULONG
 	GetNumBuckets() const
 	{
-		GPOS_ASSERT(m_histogram_buckets != NULL);
+		GPOS_ASSERT(m_histogram_buckets != nullptr);
 		return m_histogram_buckets->Size();
 	}
 
@@ -343,11 +343,7 @@ public:
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
-
-#ifdef GPOS_DEBUG
-	void DbgPrint() const;
-#endif
+	IOstream &OsPrint(IOstream &os) const;
 
 	// total frequency from buckets and null fraction
 	CDouble GetFrequency() const;

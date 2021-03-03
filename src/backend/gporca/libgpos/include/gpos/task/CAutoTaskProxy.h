@@ -49,9 +49,6 @@ private:
 	GPOS_RESULT
 	FindFinished(CTask **task);
 
-	// no copy ctor
-	CAutoTaskProxy(const CAutoTaskProxy &);
-
 	// propagate the error from sub-task to current task
 	void PropagateError(CTask *sub_task);
 
@@ -59,6 +56,8 @@ private:
 	void CheckError(CTask *sub_task);
 
 public:
+	CAutoTaskProxy(const CAutoTaskProxy &) = delete;
+
 	// ctor
 	CAutoTaskProxy(CMemoryPool *mp, CWorkerPoolManager *m_pwpm,
 				   BOOL propagate_error = true);
@@ -81,7 +80,7 @@ public:
 	}
 
 	// create new task
-	CTask *Create(void *(*pfunc)(void *), void *argv, BOOL *cancel = NULL);
+	CTask *Create(void *(*pfunc)(void *), void *argv, BOOL *cancel = nullptr);
 
 	// schedule task for execution
 	void Schedule(CTask *task);

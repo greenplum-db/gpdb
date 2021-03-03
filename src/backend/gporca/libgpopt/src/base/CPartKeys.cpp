@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CPartKeys.cpp
@@ -9,9 +9,11 @@
 //		Implementation of partitioning keys
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CPartKeys.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CAutoTrace.h"
-#include "gpopt/base/CPartKeys.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CUtils.h"
 
@@ -27,7 +29,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPartKeys::CPartKeys(CColRef2dArray *pdrgpdrgpcr) : m_pdrgpdrgpcr(pdrgpdrgpcr)
 {
-	GPOS_ASSERT(NULL != pdrgpdrgpcr);
+	GPOS_ASSERT(nullptr != pdrgpdrgpcr);
 	m_num_of_part_levels = pdrgpdrgpcr->Size();
 }
 
@@ -124,7 +126,7 @@ CPartKeysArray *
 CPartKeys::PdrgppartkeysCopy(CMemoryPool *mp,
 							 const CPartKeysArray *pdrgppartkeys)
 {
-	GPOS_ASSERT(NULL != pdrgppartkeys);
+	GPOS_ASSERT(nullptr != pdrgppartkeys);
 
 	CPartKeysArray *pdrgppartkeysCopy = GPOS_NEW(mp) CPartKeysArray(mp);
 	const ULONG length = pdrgppartkeys->Size();
@@ -149,7 +151,7 @@ CPartKeys *
 CPartKeys::PpartkeysRemap(CMemoryPool *mp,
 						  UlongToColRefMap *colref_mapping) const
 {
-	GPOS_ASSERT(NULL != colref_mapping);
+	GPOS_ASSERT(nullptr != colref_mapping);
 	CColRef2dArray *pdrgpdrgpcr = GPOS_NEW(mp) CColRef2dArray(mp);
 
 	for (ULONG ul = 0; ul < m_num_of_part_levels; ul++)

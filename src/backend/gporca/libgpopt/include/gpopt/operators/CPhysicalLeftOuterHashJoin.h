@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLeftOuterHashJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalHashJoin.h"
 
 namespace gpopt
@@ -27,29 +28,28 @@ namespace gpopt
 class CPhysicalLeftOuterHashJoin : public CPhysicalHashJoin
 {
 private:
-	// private copy ctor
-	CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &);
-
 public:
+	CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &) = delete;
+
 	// ctor
 	CPhysicalLeftOuterHashJoin(CMemoryPool *mp,
 							   CExpressionArray *pdrgpexprOuterKeys,
 							   CExpressionArray *pdrgpexprInnerKeys,
-							   IMdIdArray *hash_opfamilies = NULL);
+							   IMdIdArray *hash_opfamilies = nullptr);
 
 	// dtor
-	virtual ~CPhysicalLeftOuterHashJoin();
+	~CPhysicalLeftOuterHashJoin() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalLeftOuterHashJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalLeftOuterHashJoin";
 	}
@@ -58,7 +58,7 @@ public:
 	static CPhysicalLeftOuterHashJoin *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalLeftOuterHashJoin == pop->Eopid());
 
 		return dynamic_cast<CPhysicalLeftOuterHashJoin *>(pop);

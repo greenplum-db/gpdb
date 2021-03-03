@@ -12,6 +12,7 @@
 #define GPOPT_CScalarBooleanTest_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CScalar.h"
 
 namespace gpopt
@@ -51,10 +52,9 @@ private:
 	// boolean test
 	EBoolTest m_ebt;
 
-	// private copy ctor
-	CScalarBooleanTest(const CScalarBooleanTest &);
-
 public:
+	CScalarBooleanTest(const CScalarBooleanTest &) = delete;
+
 	// ctor
 	CScalarBooleanTest(CMemoryPool *mp, EBoolTest ebt) : CScalar(mp), m_ebt(ebt)
 	{
@@ -62,20 +62,18 @@ public:
 	}
 
 	// dtor
-	virtual ~CScalarBooleanTest()
-	{
-	}
+	~CScalarBooleanTest() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarBooleanTest;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarBooleanTest";
 	}
@@ -88,39 +86,39 @@ public:
 	}
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
 	BOOL
-	FInputOrderSensitive() const
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// the type of the scalar expression
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+	EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const override;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CScalarBooleanTest *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarBooleanTest == pop->Eopid());
 
 		return dynamic_cast<CScalarBooleanTest *>(pop);

@@ -9,18 +9,17 @@
 //		Implementation of GPDB bool
 //---------------------------------------------------------------------------
 
+#include "naucrates/base/CDatumBoolGPDB.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/base/CDatumBoolGPDB.h"
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/mdcache/CMDAccessor.h"
-
+#include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeBool.h"
-#include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpnaucrates;
 using namespace gpopt;
@@ -63,7 +62,7 @@ CDatumBoolGPDB::CDatumBoolGPDB(CSystemId sysid, BOOL value, BOOL is_null)
 CDatumBoolGPDB::CDatumBoolGPDB(IMDId *mdid, BOOL value, BOOL is_null)
 	: m_mdid(mdid), m_value(value), m_is_null(is_null)
 {
-	GPOS_ASSERT(NULL != m_mdid);
+	GPOS_ASSERT(nullptr != m_mdid);
 	GPOS_ASSERT(GPDB_BOOL_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 
 	if (IsNull())

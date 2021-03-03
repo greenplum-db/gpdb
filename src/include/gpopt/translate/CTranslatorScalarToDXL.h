@@ -20,15 +20,14 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "nodes/primnodes.h"
 }
 
+#include "gpopt/translate/CCTEListEntry.h"
 #include "gpopt/translate/CContextQueryToDXL.h"
 #include "gpopt/translate/CMappingVarColId.h"
-#include "gpopt/translate/CCTEListEntry.h"
-
 #include "naucrates/base/IDatum.h"
-
 #include "naucrates/md/IMDType.h"
 
 // fwd declarations
@@ -60,25 +59,9 @@ class CDXLDatum;
 
 class CTranslatorScalarToDXL
 {
-	// shorthand for functions for translating GPDB expressions into DXL nodes
-	typedef CDXLNode *(CTranslatorScalarToDXL::*ExprToDXLFn)(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
-
-	// shorthand for functions for translating DXL nodes to GPDB expressions
-	typedef CDXLDatum *(DxlDatumFromDatum)(CMemoryPool *mp,
-										   const IMDType *md_type, BOOL is_null,
-										   ULONG len, Datum datum);
-
 private:
 	// private constructor for TranslateStandaloneExprToDXL
 	CTranslatorScalarToDXL(CMemoryPool *mp, CMDAccessor *mda);
-
-	// pair of node tag and translator function
-	struct STranslatorElem
-	{
-		NodeTag tag;
-		ExprToDXLFn func_ptr;
-	};
 
 	// context for the whole query being translated, or NULL if this is
 	// standalone expression (e.g. the DEFAULT expression of a column).
@@ -324,13 +307,6 @@ public:
 	// extract the long int value of a datum
 	static LINT ExtractLintValueFromDatum(const IMDType *md_type, BOOL is_null,
 										  BYTE *bytes, ULONG len);
-
-	// pair of DXL datum type and translator function
-	struct SDXLDatumTranslatorElem
-	{
-		IMDType::ETypeInfo type_info;
-		DxlDatumFromDatum *func_ptr;
-	};
 
 	// datum to oid CDXLDatum
 	static CDXLDatum *TranslateOidDatumToDXL(CMemoryPool *mp,

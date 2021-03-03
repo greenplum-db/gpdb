@@ -285,7 +285,7 @@
                 <entry colname="col2">pgodbc</entry>
                 <entry colname="col3">Available in the Greenplum Database Connectivity package,
                   which can be downloaded from <xref href="https://network.pivotal.io/products/pivotal-gpdb"
-                    scope="external" format="html"><ph>Pivotal Network</ph></xref>.</entry>
+                    scope="external" format="html"><ph>VMware Tanzu Network</ph></xref>.</entry>
               </row>
               <row>
                 <entry colname="col1">JDBC</entry>
@@ -293,7 +293,7 @@
                 <entry colname="col3">Available in the <i>Greenplum Database Connectivity</i>
                   package, which can be downloaded from <xref
                     href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-                      ><ph>Pivotal Network</ph></xref>.</entry>
+                      ><ph>VMware Tanzu Network</ph></xref>.</entry>
               </row>
               <row>
                 <entry colname="col1">Perl DBI</entry>
@@ -329,7 +329,7 @@
           supported database drivers for Greenplum Database. Download the client tools package from
             <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
               ><ph>Pivotal Network </ph></xref>and documentation from <xref
-            href="http://gpdb.docs.pivotal.io" scope="external" format="html"><ph>Pivotal
+            href="http://gpdb.docs.pivotal.io" scope="external" format="html"><ph>Tanzu Greenplum
               Documentation</ph></xref>. </p>
       </body>
     </topic>

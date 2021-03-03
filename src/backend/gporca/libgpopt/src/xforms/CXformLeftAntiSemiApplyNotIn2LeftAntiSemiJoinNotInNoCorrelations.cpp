@@ -9,8 +9,9 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotInNoCorrelations.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 
@@ -50,7 +51,7 @@ void
 CXformLeftAntiSemiApplyNotIn2LeftAntiSemiJoinNotInNoCorrelations::Transform(
 	CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

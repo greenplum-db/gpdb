@@ -19,10 +19,10 @@
 #define GPOS_CAutoMemoryPool_H
 
 #include "gpos/assert.h"
-#include "gpos/types.h"
 #include "gpos/common/CStackObject.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
+#include "gpos/types.h"
 
 namespace gpos
 {
@@ -49,16 +49,17 @@ public:
 	};
 
 private:
-	// private copy ctor
-	CAutoMemoryPool(const CAutoMemoryPool &);
-
 	// memory pool to protect
 	CMemoryPool *m_mp;
 
+#ifdef GPOS_DEBUG
 	// type of leak check to perform
 	ELeakCheck m_leak_check_type;
+#endif
 
 public:
+	CAutoMemoryPool(const CAutoMemoryPool &) = delete;
+
 	// ctor
 	CAutoMemoryPool(ELeakCheck leak_check_type = ElcExc);
 

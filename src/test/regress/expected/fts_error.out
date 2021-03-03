@@ -78,6 +78,39 @@ where content = 0 and mode = 's';
  t
 (1 row)
 
+alter system set gp_fts_probe_retries to 0;
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+set optimizer = off;
+-- start_ignore
+\! gpconfig -c client_min_messages -v DEBUG1
+\! gpstop -u
+-- end_ignore
+select gp_request_fts_probe_scan();
+DEBUG:  Message type Q received by from libpq, len = 36
+LOG:  statement: select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t
+(1 row)
+
+select count(*) from gp_segment_configuration where status = 'd';
+DEBUG:  Message type Q received by from libpq, len = 66
+LOG:  statement: select count(*) from gp_segment_configuration where status = 'd';
+ count 
+-------
+     0
+(1 row)
+
+-- start_ignore
+\! gpconfig -r client_min_messages
+\! gpstop -u
+-- end_ignore
+reset optimizer;
 alter system reset gp_fts_probe_interval;
 alter system reset gp_fts_probe_retries;
 select pg_reload_conf();

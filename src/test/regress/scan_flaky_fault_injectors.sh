@@ -12,14 +12,14 @@ parallel_tests=$(mktemp parallel_tests.XXX)
 retcode=0
 
 # list the tests that inject faults
-grep -ERIli '(select|perform)\s+gp_inject_fault' sql input \
+grep -sERIli '(select|perform)\s.*gp_inject_fault' sql input specs \
 | sed 's,^[^/]*/\(.*\)\.[^.]*$,\1,' \
 | sort -u \
 > $fault_injection_tests
 
 echo "scanning for flaky fault-injection tests..."
 
-for schedule in *_schedule; do
+for schedule in $(ls *schedule 2>&1 | grep -v 'No such file'); do
 	# list the tests that are in parallel testing groups
 	grep -E '^test:(\s+\S+){2,}' $schedule \
 	| cut -d' ' -f2- \

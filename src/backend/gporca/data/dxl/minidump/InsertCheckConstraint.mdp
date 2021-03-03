@@ -282,7 +282,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="1,2,3,4" ActionCol="5" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="5.177734" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.039178" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo>
           <dxl:KeyValue>
@@ -320,7 +320,7 @@
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1" DuplicateSensitive="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="4.138672" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000116" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="a">
@@ -348,7 +348,7 @@
           </dxl:HashExprList>
           <dxl:Assert ErrorCode="23514">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="3.119141" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000061" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="a">
@@ -389,7 +389,7 @@
             </dxl:AssertConstraintList>
             <dxl:Assert ErrorCode="23502">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2.080078" Rows="1.000000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000041" Rows="1.000000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="a">
@@ -419,17 +419,17 @@
               </dxl:AssertConstraintList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1.041016" Rows="1.000000" Width="20"/>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000021" Rows="1.000000" Width="20"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="5" Alias="ColRef_0005">
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="3" Alias="c">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="4" Alias="d">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="1" Alias="a">
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
@@ -442,7 +442,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.001953" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="">

@@ -16,10 +16,10 @@
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CDrvdProp.h"
-#include "gpopt/base/CMaxCard.h"
-#include "gpopt/base/CFunctionalDependency.h"
-#include "gpopt/base/CPropConstraint.h"
 #include "gpopt/base/CFunctionProp.h"
+#include "gpopt/base/CFunctionalDependency.h"
+#include "gpopt/base/CMaxCard.h"
+#include "gpopt/base/CPropConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 namespace gpopt
@@ -31,7 +31,6 @@ class CExpressionHandle;
 class CColRefSet;
 class CReqdPropPlan;
 class CKeyCollection;
-class CPartIndexMap;
 class CPropConstraint;
 class CPartInfo;
 
@@ -67,7 +66,6 @@ class CDrvdPropRelational : public CDrvdProp
 		EdptPpc,
 		EdptPfp,
 		EdptJoinDepth,
-		EdptFHasPartialIndexes,
 		EdptTableDescriptor,
 		EdptSentinel
 	};
@@ -111,14 +109,7 @@ private:
 	// function properties
 	CFunctionProp *m_pfp;
 
-	// true if all logical operators in the group are of type CLogicalDynamicGet,
-	// and the dynamic get has partial indexes
-	BOOL m_fHasPartialIndexes;
-
 	CTableDescriptor *m_table_descriptor;
-
-	// private copy ctor
-	CDrvdPropRelational(const CDrvdPropRelational &);
 
 	// helper for getting applicable FDs from child
 	static CFunctionalDependencyArray *DeriveChildFunctionalDependencies(
@@ -176,34 +167,33 @@ protected:
 	// function properties
 	CFunctionProp *DeriveFunctionProperties(CExpressionHandle &);
 
-	// has partial indexes
-	BOOL DeriveHasPartialIndexes(CExpressionHandle &);
-
 	CTableDescriptor *DeriveTableDescriptor(CExpressionHandle &);
 
 public:
+	CDrvdPropRelational(const CDrvdPropRelational &) = delete;
+
 	// ctor
 	CDrvdPropRelational(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CDrvdPropRelational();
+	~CDrvdPropRelational() override;
 
 	// type of properties
-	virtual EPropType
-	Ept()
+	EPropType
+	Ept() override
 	{
 		return EptRelational;
 	}
 
-	virtual BOOL
-	IsComplete() const
+	BOOL
+	IsComplete() const override
 	{
 		return m_is_complete;
 	}
 
 	// derivation function
 	void Derive(CMemoryPool *mp, CExpressionHandle &exprhdl,
-				CDrvdPropCtxt *pdpctxt);
+				CDrvdPropCtxt *pdpctxt) override;
 
 	// output columns
 	CColRefSet *GetOutputColumns() const;
@@ -238,19 +228,16 @@ public:
 	// function properties
 	CFunctionProp *GetFunctionProperties() const;
 
-	// has partial indexes
-	BOOL HasPartialIndexes() const;
-
 	CTableDescriptor *GetTableDescriptor() const;
 
 	// shorthand for conversion
 	static CDrvdPropRelational *GetRelationalProperties(CDrvdProp *pdp);
 
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CReqdPropPlan *prpp) const;
+	BOOL FSatisfies(const CReqdPropPlan *prpp) const override;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CDrvdPropRelational
 

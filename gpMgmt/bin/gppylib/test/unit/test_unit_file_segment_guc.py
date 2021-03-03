@@ -11,11 +11,11 @@ class FileSegmentGucTest(GpTestCase):
 
     def test_when_segment_report_success_format_file(self):
         self.subject.context = '0'
-        self.assertEqual(self.subject.report_success_format(), "Segment value: value_from_file")
+        self.assertEqual(self.subject.report_success_format(), "Segment     value: value_from_file")
 
-    def test_when_master_report_success_format_file(self):
+    def test_when_coordinator_report_success_format_file(self):
         self.subject.context = '-1'
-        self.assertEqual(self.subject.report_success_format(), "Master  value: value_from_file")
+        self.assertEqual(self.subject.report_success_format(), "Coordinator value: value_from_file")
 
     def test_report_fail_format_file(self):
         self.assertEqual(self.subject.report_fail_format(),
@@ -31,11 +31,11 @@ class FileSegmentGucTest(GpTestCase):
         with self.assertRaisesRegex(Exception, "must provide \['context', 'guc name', 'value', 'dbid'\]"):
             FileSegmentGuc(row)
 
-    def test_when_master_when_integer_dbid_report_success_format_file(self):
+    def test_when_coordinator_when_integer_dbid_report_success_format_file(self):
         row = [-1, 'guc_name', 'value', 0]
         self.subject = FileSegmentGuc(row)
 
-        self.assertEqual(self.subject.report_success_format(), "Master  value: value")
+        self.assertEqual(self.subject.report_success_format(), "Coordinator value: value")
         self.assertEqual(self.subject.dbid, '0')
 
     def test_when_value_none_report_success_prints_message(self):

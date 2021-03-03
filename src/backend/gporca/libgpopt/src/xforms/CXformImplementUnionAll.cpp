@@ -9,15 +9,16 @@
 //		Implementation of union all operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformImplementUnionAll.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/exception.h"
-#include "gpopt/xforms/CXformImplementUnionAll.h"
-#include "gpopt/xforms/CXformUtils.h"
 #include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CPatternMultiLeaf.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPhysicalUnionAllFactory.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -50,7 +51,7 @@ void
 CXformImplementUnionAll::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								   CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 

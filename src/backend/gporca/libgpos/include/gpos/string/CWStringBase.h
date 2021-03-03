@@ -11,8 +11,8 @@
 #ifndef GPOS_CWStringBase_H
 #define GPOS_CWStringBase_H
 
-#include "gpos/types.h"
 #include "gpos/common/clibwrapper.h"
+#include "gpos/types.h"
 
 #define GPOS_WSZ_LENGTH(x) gpos::clib::Wcslen(x)
 #define GPOS_WSZ_STR_LENGTH(x) GPOS_WSZ_LIT(x), GPOS_WSZ_LENGTH(GPOS_WSZ_LIT(x))
@@ -43,9 +43,6 @@ class CMemoryPool;
 class CWStringBase
 {
 private:
-	// private copy ctor
-	CWStringBase(const CWStringBase &);
-
 protected:
 	// represents end-of-wide-string character
 	static const WCHAR m_empty_wcstr;
@@ -60,6 +57,8 @@ protected:
 	virtual BOOL Equals(const WCHAR *w_str_buffer) const;
 
 public:
+	CWStringBase(const CWStringBase &) = delete;
+
 	// ctor
 	CWStringBase(ULONG length, BOOL owns_memory)
 		: m_length(length), m_owns_memory(owns_memory)
@@ -67,9 +66,7 @@ public:
 	}
 
 	// dtor
-	virtual ~CWStringBase()
-	{
-	}
+	virtual ~CWStringBase() = default;
 
 	// deep copy of the string
 	virtual CWStringConst *Copy(CMemoryPool *mp) const;

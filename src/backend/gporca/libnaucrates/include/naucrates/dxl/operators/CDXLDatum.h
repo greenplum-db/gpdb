@@ -37,9 +37,6 @@ class CXMLSerializer;
 class CDXLDatum : public CRefCount
 {
 private:
-	// private copy ctor
-	CDXLDatum(const CDXLDatum &);
-
 protected:
 	// memory pool
 	CMemoryPool *m_mp;
@@ -56,6 +53,8 @@ protected:
 	const ULONG m_length;
 
 public:
+	CDXLDatum(const CDXLDatum &) = delete;
+
 	// datum types
 	enum EdxldatumType
 	{
@@ -74,7 +73,7 @@ public:
 			  BOOL is_null, ULONG length);
 
 	// dtor
-	virtual ~CDXLDatum()
+	~CDXLDatum() override
 	{
 		m_mdid_type->Release();
 	}

@@ -11,10 +11,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalWindow.h"
-#include "naucrates/dxl/parser/CParseHandlerWindowSpecList.h"
+
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerWindowSpecList.h"
 
 using namespace gpdxl;
 
@@ -32,8 +33,7 @@ XERCES_CPP_NAMESPACE_USE
 CParseHandlerLogicalWindow::CParseHandlerLogicalWindow(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
-	: CParseHandlerLogicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_window_spec_array(NULL)
+	: CParseHandlerLogicalOp(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 
@@ -126,13 +126,13 @@ CParseHandlerLogicalWindow::EndElement(const XMLCh *const,	// element_uri,
 
 	CDXLWindowSpecArray *window_spec_array =
 		window_speclist_parse_handler->GetDxlWindowSpecArray();
-	GPOS_ASSERT(NULL != window_spec_array);
+	GPOS_ASSERT(nullptr != window_spec_array);
 
 	CDXLLogicalWindow *lg_window =
 		GPOS_NEW(m_mp) CDXLLogicalWindow(m_mp, window_spec_array);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, lg_window);
-	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
-	GPOS_ASSERT(NULL != lg_op_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != proj_list_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != lg_op_parse_handler->CreateDXLNode());
 
 	AddChildFromParseHandler(proj_list_parse_handler);
 	AddChildFromParseHandler(lg_op_parse_handler);

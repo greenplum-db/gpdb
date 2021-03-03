@@ -25,6 +25,16 @@ Insert into sto_altap2 values(generate_series(1,20), 12, 'A');
 
 select count(*) from sto_altap2;
 
+-- Append optimized tables should not have a valid relfrozenxid in
+-- pg_class because per-tuple MVCC information (xmin/xmax) is not
+-- present.
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+
 create table sto_altap3 (col1 bigint, col2 date, col3 text, col4 int)
  distributed randomly
  partition by range(col2) subpartition by list (col3)
@@ -116,6 +126,15 @@ select * from sto_altap2 order by a;
 
 -- Truncate a partitioned table
 Truncate table sto_altap2;
+
+-- relfrozenxid should remain invalid after rewrite
+select relfrozenxid from pg_class c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
+       c.relnamespace = n.oid and relname like 'sto_altap2%'
+       and n.nspname = 'alter_ao_part_tables_@amname@';
+
 select * from sto_altap2;
 Insert into sto_altap2 values(generate_series(1,20), 12, 'A');
 Update sto_altap2 set b = 4 where a = 15 or a = 16;

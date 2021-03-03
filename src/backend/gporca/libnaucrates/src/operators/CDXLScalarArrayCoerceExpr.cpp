@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarArrayCoerceExpr.cpp
@@ -15,9 +15,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarArrayCoerceExpr.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpopt;
 using namespace gpos;
@@ -40,7 +41,7 @@ CDXLScalarArrayCoerceExpr::CDXLScalarArrayCoerceExpr(
 	  m_coerce_func_mdid(coerce_func_mdid),
 	  m_explicit(is_explicit)
 {
-	GPOS_ASSERT(NULL != coerce_func_mdid);
+	GPOS_ASSERT(nullptr != coerce_func_mdid);
 }
 
 //---------------------------------------------------------------------------

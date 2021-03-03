@@ -12,8 +12,9 @@
 #define GPDXL_CDXLPhysicalProperties_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLProperties.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorCost.h"
+#include "naucrates/dxl/operators/CDXLProperties.h"
 
 namespace gpdxl
 {
@@ -34,25 +35,25 @@ private:
 	// cost estimate
 	CDXLOperatorCost *m_operator_cost_dxl;
 
-	// private copy ctor
-	CDXLPhysicalProperties(const CDXLPhysicalProperties &);
-
 public:
+	CDXLPhysicalProperties(const CDXLPhysicalProperties &) = delete;
+
 	// ctor
 	explicit CDXLPhysicalProperties(CDXLOperatorCost *cost);
 
 	// dtor
-	virtual ~CDXLPhysicalProperties();
+	~CDXLPhysicalProperties() override;
 
 	// serialize properties in DXL format
-	void SerializePropertiesToDXL(CXMLSerializer *xml_serializer) const;
+	void SerializePropertiesToDXL(
+		CXMLSerializer *xml_serializer) const override;
 
 	// accessors
 	// the cost estimates for the operator node
 	CDXLOperatorCost *GetDXLOperatorCost() const;
 
-	virtual Edxlproperty
-	GetDXLPropertyType() const
+	Edxlproperty
+	GetDXLPropertyType() const override
 	{
 		return EdxlpropertyPhysical;
 	}
@@ -61,7 +62,7 @@ public:
 	static CDXLPhysicalProperties *
 	PdxlpropConvert(CDXLProperties *dxl_properties)
 	{
-		GPOS_ASSERT(NULL != dxl_properties);
+		GPOS_ASSERT(nullptr != dxl_properties);
 		GPOS_ASSERT(EdxlpropertyPhysical ==
 					dxl_properties->GetDXLPropertyType());
 		return dynamic_cast<CDXLPhysicalProperties *>(dxl_properties);

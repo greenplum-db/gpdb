@@ -44,17 +44,16 @@ private:
 	// is this function used as a scan operator
 	BOOL m_fScan;
 
-	// hidden copy ctor
-	CFunctionProp(const CFunctionProp &);
-
 public:
+	CFunctionProp(const CFunctionProp &) = delete;
+
 	// ctor
 	CFunctionProp(IMDFunction::EFuncStbl func_stability,
 				  IMDFunction::EFuncDataAcc func_data_access,
 				  BOOL fHasVolatileFunctionScan, BOOL fScan);
 
 	// dtor
-	virtual ~CFunctionProp();
+	~CFunctionProp() override;
 
 	// function stability
 	IMDFunction::EFuncStbl

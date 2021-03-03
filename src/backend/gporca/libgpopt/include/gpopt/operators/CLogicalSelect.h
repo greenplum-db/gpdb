@@ -34,15 +34,14 @@ typedef CHashMap<CExpression, CExpression, CExpression::HashValue,
 class CLogicalSelect : public CLogicalUnary
 {
 private:
-	// private copy ctor
-	CLogicalSelect(const CLogicalSelect &);
-
 	ExprPredToExprPredPartMap *m_phmPexprPartPred;
 
 	// table descriptor
 	CTableDescriptor *m_ptabdesc;
 
 public:
+	CLogicalSelect(const CLogicalSelect &) = delete;
+
 	// ctor
 	explicit CLogicalSelect(CMemoryPool *mp);
 
@@ -50,17 +49,17 @@ public:
 	CLogicalSelect(CMemoryPool *mp, CTableDescriptor *ptabdesc);
 
 	// dtor
-	virtual ~CLogicalSelect();
+	~CLogicalSelect() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalSelect;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalSelect";
 	}
@@ -77,51 +76,52 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// derive output columns
-	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *, CExpressionHandle &);
+	CColRefSet *DeriveOutputColumns(CMemoryPool *,
+									CExpressionHandle &) override;
 
 	// dervive keys
-	virtual CKeyCollection *DeriveKeyCollection(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	CKeyCollection *DeriveKeyCollection(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// derive max card
-	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
-								   CExpressionHandle &exprhdl) const;
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
 
 	// derive constraint property
-	virtual CPropConstraint *
-	DerivePropertyConstraint(CMemoryPool *mp, CExpressionHandle &exprhdl) const
+	CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *mp,
+							 CExpressionHandle &exprhdl) const override
 	{
 		return PpcDeriveConstraintFromPredicates(mp, exprhdl);
 	}
 
 	// derive table descriptor
-	virtual CTableDescriptor *
+	CTableDescriptor *
 	DeriveTableDescriptor(CMemoryPool *,  // mp
-						  CExpressionHandle &exprhdl) const
+						  CExpressionHandle &exprhdl) const override
 	{
 		return exprhdl.DeriveTableDescriptor(0);
 	}
 
 	// compute partition predicate to pass down to n-th child
-	virtual CExpression *PexprPartPred(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl,
-									   CExpression *pexprInput,
-									   ULONG child_index) const;
+	CExpression *PexprPartPred(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							   CExpression *pexprInput,
+							   ULONG child_index) const override;
 
 	//-------------------------------------------------------------------------------------
 	// Transformations
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *) const;
+	CXformSet *PxfsCandidates(CMemoryPool *) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 
 	// return true if operator can select a subset of input tuples based on some predicate,
-	virtual BOOL
-	FSelectionOp() const
+	BOOL
+	FSelectionOp() const override
 	{
 		return true;
 	}
@@ -130,16 +130,15 @@ public:
 	static CLogicalSelect *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalSelect == pop->Eopid());
 
-		return reinterpret_cast<CLogicalSelect *>(pop);
+		return dynamic_cast<CLogicalSelect *>(pop);
 	}
 
 	// derive statistics
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  IStatisticsArray *stats_ctxt) const override;
 
 };	// class CLogicalSelect
 

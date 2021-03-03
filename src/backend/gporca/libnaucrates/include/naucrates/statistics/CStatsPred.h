@@ -12,8 +12,8 @@
 #define GPNAUCRATES_CStatsPred_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 namespace gpnaucrates
 {
@@ -60,26 +60,22 @@ public:
 	};
 
 private:
-	// private copy ctor
-	CStatsPred(const CStatsPred &);
-
-	// private assignment operator
-	CStatsPred &operator=(CStatsPred &);
-
 protected:
 	// column id
 	ULONG m_colid;
 
 public:
+	CStatsPred &operator=(CStatsPred &) = delete;
+
+	CStatsPred(const CStatsPred &) = delete;
+
 	// ctor
 	explicit CStatsPred(ULONG colid) : m_colid(colid)
 	{
 	}
 
 	// dtor
-	virtual ~CStatsPred()
-	{
-	}
+	~CStatsPred() override = default;
 
 	// accessors
 	virtual ULONG

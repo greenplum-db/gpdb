@@ -13,6 +13,7 @@
 #define GPDXL_CDXLWindowKey_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLWindowFrame.h"
 
 namespace gpdxl
@@ -30,24 +31,20 @@ using namespace gpos;
 class CDXLWindowKey : public CRefCount
 {
 private:
-	// memory pool;
-	CMemoryPool *m_mp;
-
 	// window frame associated with the window key
-	CDXLWindowFrame *m_window_frame_dxl;
-
-	// private copy ctor
-	CDXLWindowKey(const CDXLWindowKey &);
+	CDXLWindowFrame *m_window_frame_dxl{nullptr};
 
 	// sorting columns
-	CDXLNode *m_sort_col_list_dxlnode;
+	CDXLNode *m_sort_col_list_dxlnode{nullptr};
 
 public:
+	CDXLWindowKey(const CDXLWindowKey &) = delete;
+
 	// ctor
-	explicit CDXLWindowKey(CMemoryPool *mp);
+	CDXLWindowKey();
 
 	// dtor
-	virtual ~CDXLWindowKey();
+	~CDXLWindowKey() override;
 
 	// serialize operator in DXL format
 	virtual void SerializeToDXL(CXMLSerializer *) const;

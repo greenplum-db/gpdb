@@ -175,9 +175,9 @@
             server configuration parameter. Be sure to retain any previous setting of the
             parameter. For example:<codeblock>gpconfig -s shared_preload_libraries
 Values on all segments are consistent
-GUC          : shared_preload_libraries
-Master  value: diskquota
-Segment value: diskquota
+GUC              : shared_preload_libraries
+Coordinator value: diskquota
+Segment     value: diskquota
 gpconfig -c shared_preload_libraries -v 'diskquota,plc_coordinator'</codeblock></li>
           <li>Restart Greenplum Database:<codeblock>gpstop -ra</codeblock></li>
           <li>Login into one of the available databases, for example:

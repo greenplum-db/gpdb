@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalDynamicGet_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalDynamicGetBase.h"
 
 namespace gpopt
@@ -31,54 +32,52 @@ class CColRefSet;
 //---------------------------------------------------------------------------
 class CLogicalDynamicGet : public CLogicalDynamicGetBase
 {
-private:
-	// private copy ctor
-	CLogicalDynamicGet(const CLogicalDynamicGet &);
-
 public:
+	CLogicalDynamicGet(const CLogicalDynamicGet &) = delete;
+
 	// ctors
 	explicit CLogicalDynamicGet(CMemoryPool *mp);
 
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
-					   CColRefArray *colref_array,
+					   CColRefArray *pdrgpcrOutput,
 					   CColRef2dArray *pdrgpdrgpcrPart,
-					   ULONG ulSecondaryPartIndexId, BOOL is_partial,
-					   CPartConstraint *ppartcnstr,
-					   CPartConstraint *ppartcnstrRel);
+					   IMdIdArray *partition_mdids);
 
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
-					   CTableDescriptor *ptabdesc, ULONG ulPartIndex);
+					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
+					   IMdIdArray *partition_mdids);
 
 	// dtor
-	virtual ~CLogicalDynamicGet();
+	~CLogicalDynamicGet() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalDynamicGet;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalDynamicGet";
 	}
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	//-------------------------------------------------------------------------------------
 	// Derived Relational Properties
@@ -86,37 +85,42 @@ public:
 
 
 	// derive join depth
-	virtual ULONG
+	ULONG
 	DeriveJoinDepth(CMemoryPool *,		 // mp
 					CExpressionHandle &	 // exprhdl
-	) const
+	) const override
 	{
 		return 1;
 	}
 
 	// derive table descriptor
-	virtual CTableDescriptor *
+	CTableDescriptor *
 	DeriveTableDescriptor(CMemoryPool *,	   // mp
 						  CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return m_ptabdesc;
 	}
+
+	// derive max card
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
+
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// compute required stat columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsStat(CMemoryPool *,		   // mp,
 			 CExpressionHandle &,  // exprhdl
 			 CColRefSet *,		   //pcrsInput
 			 ULONG				   // child_index
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"CLogicalDynamicGet has no children");
-		return NULL;
+		return nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -124,20 +128,19 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	//-------------------------------------------------------------------------------------
 	// Statistics
 	//-------------------------------------------------------------------------------------
 
 	// derive statistics
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	// stat promise
-	virtual EStatPromise
-	Esp(CExpressionHandle &) const
+	EStatPromise
+	Esp(CExpressionHandle &) const override
 	{
 		return CLogical::EspHigh;
 	}
@@ -150,14 +153,14 @@ public:
 	static CLogicalDynamicGet *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalDynamicGet == pop->Eopid());
 
 		return dynamic_cast<CLogicalDynamicGet *>(pop);
 	}
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 };	// class CLogicalDynamicGet
 

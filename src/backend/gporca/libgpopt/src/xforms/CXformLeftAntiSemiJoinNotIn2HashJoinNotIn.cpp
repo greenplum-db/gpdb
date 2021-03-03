@@ -9,13 +9,14 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformLeftAntiSemiJoinNotIn2HashJoinNotIn.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalLeftAntiSemiJoinNotIn.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoinNotIn.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformLeftAntiSemiJoinNotIn2HashJoinNotIn.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -71,7 +72,7 @@ CXformLeftAntiSemiJoinNotIn2HashJoinNotIn::Transform(CXformContext *pxfctxt,
 													 CXformResult *pxfres,
 													 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -80,7 +81,7 @@ CXformLeftAntiSemiJoinNotIn2HashJoinNotIn::Transform(CXformContext *pxfctxt,
 
 	if (pxfres->Pdrgpexpr()->Size() == 0)
 	{
-		CExpression *pexprProcessed = NULL;
+		CExpression *pexprProcessed = nullptr;
 		if (CXformUtils::FProcessGPDBAntiSemiHashJoin(pxfctxt->Pmp(), pexpr,
 													  &pexprProcessed))
 		{

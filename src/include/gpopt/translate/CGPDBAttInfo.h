@@ -19,6 +19,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 #include "gpos/utils.h"
+
 #include "naucrates/dxl/gpdb_types.h"
 
 namespace gpdxl
@@ -45,10 +46,9 @@ private:
 	// attno
 	INT m_attno;
 
-	// copy c'tor
-	CGPDBAttInfo(const CGPDBAttInfo &);
-
 public:
+	CGPDBAttInfo(const CGPDBAttInfo &) = delete;
+
 	// ctor
 	CGPDBAttInfo(ULONG query_level, ULONG var_no, INT attrnum)
 		: m_query_level(query_level), m_varno(var_no), m_attno(attrnum)
@@ -56,9 +56,7 @@ public:
 	}
 
 	// d'tor
-	virtual ~CGPDBAttInfo()
-	{
-	}
+	~CGPDBAttInfo() override = default;
 
 	// accessor
 	ULONG
@@ -105,7 +103,7 @@ public:
 inline ULONG
 HashGPDBAttInfo(const CGPDBAttInfo *gpdb_att_info)
 {
-	GPOS_ASSERT(NULL != gpdb_att_info);
+	GPOS_ASSERT(nullptr != gpdb_att_info);
 	return gpdb_att_info->HashValue();
 }
 
@@ -114,7 +112,7 @@ inline BOOL
 EqualGPDBAttInfo(const CGPDBAttInfo *gpdb_att_info_a,
 				 const CGPDBAttInfo *gpdb_att_info_b)
 {
-	GPOS_ASSERT(NULL != gpdb_att_info_a && NULL != gpdb_att_info_b);
+	GPOS_ASSERT(nullptr != gpdb_att_info_a && nullptr != gpdb_att_info_b);
 	return gpdb_att_info_a->Equals(*gpdb_att_info_b);
 }
 

@@ -12,13 +12,12 @@
 #define GPOPT_CGroup_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncList.h"
 
-#include "gpopt/search/CJobQueue.h"
 #include "gpopt/operators/CLogical.h"
+#include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CTreeMap.h"
 
 #define GPOPT_INVALID_GROUP_ID gpos::ulong_max
@@ -248,9 +247,6 @@ private:
 	// implementation job queue
 	CJobQueue m_jqImplementation;
 
-	// private copy ctor
-	CGroup(const CGroup &);
-
 	// cleanup optimization contexts on destruction
 	void CleanupContexts();
 
@@ -335,11 +331,13 @@ private:
 										IStatisticsArray *stats_ctxt);
 
 public:
+	CGroup(const CGroup &) = delete;
+
 	// ctor
 	CGroup(CMemoryPool *mp, BOOL fScalar = false);
 
 	// dtor
-	~CGroup();
+	~CGroup() override;
 
 	// id accessor
 	ULONG
@@ -504,7 +502,7 @@ public:
 	BOOL
 	FDuplicateGroup() const
 	{
-		return NULL != m_pgroupDuplicate;
+		return nullptr != m_pgroupDuplicate;
 	}
 
 	// duplicate group accessor
@@ -614,7 +612,7 @@ public:
 	static BOOL FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd);
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// slink for group list in memo
 	SLink m_link;

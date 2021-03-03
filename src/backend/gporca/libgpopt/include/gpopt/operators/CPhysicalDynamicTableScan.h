@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalDynamicTableScan_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalDynamicScan.h"
 
 namespace gpopt
@@ -27,48 +28,44 @@ namespace gpopt
 class CPhysicalDynamicTableScan : public CPhysicalDynamicScan
 {
 private:
-	// private copy ctor
-	CPhysicalDynamicTableScan(const CPhysicalDynamicTableScan &);
-
 public:
+	CPhysicalDynamicTableScan(const CPhysicalDynamicTableScan &) = delete;
+
 	// ctors
-	CPhysicalDynamicTableScan(CMemoryPool *mp, BOOL is_partial,
-							  const CName *pname, CTableDescriptor *ptabdesc,
-							  ULONG ulOriginOpId, ULONG scan_id,
-							  CColRefArray *colref_array,
+	CPhysicalDynamicTableScan(CMemoryPool *mp, const CName *pnameAlias,
+							  CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
+							  ULONG scan_id, CColRefArray *pdrgpcrOutput,
 							  CColRef2dArray *pdrgpdrgpcrParts,
-							  ULONG ulSecondaryScanId,
-							  CPartConstraint *ppartcnstr,
-							  CPartConstraint *ppartcnstrRel);
+							  IMdIdArray *partition_mdids,
+							  ColRefToUlongMapArray *root_col_mapping_per_part);
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalDynamicTableScan;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalDynamicTableScan";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *) const;
+	BOOL Matches(COperator *) const override;
 
 	// statistics derivation during costing
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  CReqdPropPlan *prpplan,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  CReqdPropPlan *prpplan,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	// conversion function
 	static CPhysicalDynamicTableScan *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopPhysicalDynamicTableScan == pop->Eopid());
 
 		return dynamic_cast<CPhysicalDynamicTableScan *>(pop);

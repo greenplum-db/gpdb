@@ -14,6 +14,7 @@
 #define GPDXL_CDXLScalarCaseTest_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/IMDId.h"
 
@@ -36,37 +37,36 @@ private:
 	// expression type
 	IMDId *m_mdid_type;
 
-	// private copy ctor
-	CDXLScalarCaseTest(const CDXLScalarCaseTest &);
-
 public:
+	CDXLScalarCaseTest(const CDXLScalarCaseTest &) = delete;
+
 	// ctor
 	CDXLScalarCaseTest(CMemoryPool *mp, IMDId *mdid_type);
 
 	// dtor
-	virtual ~CDXLScalarCaseTest();
+	~CDXLScalarCaseTest() override;
 
 	// name of the operator
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// expression type
 	virtual IMDId *MdidType() const;
 
 	// DXL Operator ID
-	virtual Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 	// conversion function
 	static CDXLScalarCaseTest *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarCaseTest == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarCaseTest *>(dxl_op);
@@ -75,8 +75,8 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	virtual void AssertValid(const CDXLNode *dxlnode,
-							 BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

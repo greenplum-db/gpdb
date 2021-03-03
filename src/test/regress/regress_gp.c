@@ -5,7 +5,7 @@
  *	 part of the regression tests.
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  * src/test/regress/regress_gp.c
  *
@@ -872,8 +872,6 @@ PG_FUNCTION_INFO_V1(gp_fts_probe_stats);
 Datum
 gp_fts_probe_stats(PG_FUNCTION_ARGS)
 {
-	Assert(GpIdentity.dbid == MASTER_DBID);
-
 	TupleDesc	tupdesc;
 	int32		start_count = 0;
 	int32		done_count = 0;
@@ -1950,7 +1948,7 @@ find_plan(char *ident, EPlan ** eplan, int *nplans)
 /*
  * test_consume_xids(int4), for rapidly consuming XIDs, to test wraparound.
  *
- * Used by the 'autovacuum-template0' test.
+ * Used by the 'autovacuum' test.
  */
 PG_FUNCTION_INFO_V1(test_consume_xids);
 Datum

@@ -13,9 +13,9 @@
 #define GPDXL_CParseHandlerCostParams_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 #include "gpopt/cost/ICostModelParams.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {
@@ -35,31 +35,31 @@ private:
 	// cost params
 	ICostModelParams *m_cost_model_params;
 
-	// private ctor
-	CParseHandlerCostParams(const CParseHandlerCostParams &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	// private ctor
+	CParseHandlerCostParams(const CParseHandlerCostParams &) = delete;
+
 	// ctor/dtor
 	CParseHandlerCostParams(CMemoryPool *mp,
 							CParseHandlerManager *parse_handler_mgr,
 							CParseHandlerBase *parse_handler_root);
 
-	virtual ~CParseHandlerCostParams();
+	~CParseHandlerCostParams() override;
 
 	// returns the dxl representation of cost parameters
 	ICostModelParams *
@@ -69,7 +69,7 @@ public:
 	}
 
 	EDxlParseHandlerType
-	GetParseHandlerType() const
+	GetParseHandlerType() const override
 	{
 		return EdxlphCostParams;
 	}

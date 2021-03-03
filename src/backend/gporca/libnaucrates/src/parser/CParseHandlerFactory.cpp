@@ -24,16 +24,16 @@ using namespace gpdxl;
 XERCES_CPP_NAMESPACE_USE
 
 CParseHandlerFactory::TokenParseHandlerFuncMap
-	*CParseHandlerFactory::m_token_parse_handler_func_map = NULL;
+	*CParseHandlerFactory::m_token_parse_handler_func_map = nullptr;
 
 // adds a new mapping of token to corresponding parse handler
 void
 CParseHandlerFactory::AddMapping(
 	Edxltoken token_type, ParseHandlerOpCreatorFunc *parse_handler_op_func)
 {
-	GPOS_ASSERT(NULL != m_token_parse_handler_func_map);
+	GPOS_ASSERT(nullptr != m_token_parse_handler_func_map);
 	const XMLCh *token_identifier_str = CDXLTokens::XmlstrToken(token_type);
-	GPOS_ASSERT(NULL != token_identifier_str);
+	GPOS_ASSERT(nullptr != token_identifier_str);
 
 	BOOL success GPOS_ASSERTS_ONLY = m_token_parse_handler_func_map->Insert(
 		token_identifier_str, parse_handler_op_func);
@@ -89,8 +89,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalAggregate, &CreateAggParseHandler},
 		{EdxltokenPhysicalTableScan, &CreateTableScanParseHandler},
 		{EdxltokenPhysicalBitmapTableScan, &CreateBitmapTableScanParseHandler},
-		{EdxltokenPhysicalDynamicBitmapTableScan,
-		 &CreateDynBitmapTableScanParseHandler},
 		{EdxltokenPhysicalExternalScan, &CreateExternalScanParseHandler},
 		{EdxltokenPhysicalHashJoin, &CreateHashJoinParseHandler},
 		{EdxltokenPhysicalNLJoin, &CreateNLJoinParseHandler},
@@ -108,8 +106,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalSort, &CreateSortParseHandler},
 		{EdxltokenPhysicalAppend, &CreateAppendParseHandler},
 		{EdxltokenPhysicalMaterialize, &CreateMaterializeParseHandler},
-		{EdxltokenPhysicalDynamicTableScan, &CreateDTSParseHandler},
-		{EdxltokenPhysicalDynamicIndexScan, &CreateDynamicIdxScanParseHandler},
 		{EdxltokenPhysicalPartitionSelector,
 		 &CreatePartitionSelectorParseHandler},
 		{EdxltokenPhysicalSequence, &CreateSequenceParseHandler},
@@ -305,12 +301,12 @@ CParseHandlerFactory::GetParseHandler(CMemoryPool *mp,
 									  CParseHandlerManager *parse_handler_mgr,
 									  CParseHandlerBase *parse_handler_root)
 {
-	GPOS_ASSERT(NULL != m_token_parse_handler_func_map);
+	GPOS_ASSERT(nullptr != m_token_parse_handler_func_map);
 
 	ParseHandlerOpCreatorFunc *create_parse_handler_func =
 		m_token_parse_handler_func_map->Find(token_identifier_str);
 
-	if (create_parse_handler_func != NULL)
+	if (create_parse_handler_func != nullptr)
 	{
 		return (*create_parse_handler_func)(mp, parse_handler_mgr,
 											parse_handler_root);
@@ -326,7 +322,7 @@ CParseHandlerFactory::GetParseHandler(CMemoryPool *mp,
 	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnrecognizedOperator,
 			   str->GetBuffer());
 
-	return NULL;
+	return nullptr;
 }
 
 // creates a parse handler for parsing a DXL document.
@@ -696,16 +692,6 @@ CParseHandlerFactory::CreateBitmapTableScanParseHandler(
 		mp, parse_handler_mgr, parse_handler_root);
 }
 
-// creates a parse handler for parsing a dynamic bitmap table scan
-CParseHandlerBase *
-CParseHandlerFactory::CreateDynBitmapTableScanParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerPhysicalDynamicBitmapTableScan(
-		mp, parse_handler_mgr, parse_handler_root);
-}
-
 // creates a parse handler for parsing an external scan
 CParseHandlerBase *
 CParseHandlerFactory::CreateExternalScanParseHandler(
@@ -794,26 +780,6 @@ CParseHandlerFactory::CreateMaterializeParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerMaterialize(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a dynamic table scan operator
-CParseHandlerBase *
-CParseHandlerFactory::CreateDTSParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerDynamicTableScan(mp, parse_handler_mgr,
-													  parse_handler_root);
-}
-
-// creates a parse handler for parsing a dynamic index scan operator
-CParseHandlerBase *
-CParseHandlerFactory::CreateDynamicIdxScanParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerDynamicIndexScan(mp, parse_handler_mgr,
-													  parse_handler_root);
 }
 
 // creates a parse handler for parsing a partition selector operator
@@ -1969,7 +1935,7 @@ CParseHandlerFactory::CreateFrameTrailingEdgeParseHandler(
 	CParseHandlerBase *parse_handler_root)
 {
 	return GPOS_NEW(mp) CParseHandlerScalarWindowFrameEdge(
-		mp, parse_handler_mgr, parse_handler_root, false /*fLeading*/);
+		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a leading window frame edge parser
@@ -1979,7 +1945,7 @@ CParseHandlerFactory::CreateFrameLeadingEdgeParseHandler(
 	CParseHandlerBase *parse_handler_root)
 {
 	return GPOS_NEW(mp) CParseHandlerScalarWindowFrameEdge(
-		mp, parse_handler_mgr, parse_handler_root, true /*fLeading*/);
+		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing search strategy

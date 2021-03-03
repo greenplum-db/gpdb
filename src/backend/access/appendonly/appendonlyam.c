@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2006, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2008-2009, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -48,7 +48,6 @@
 #include "catalog/gp_fastsequence.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_appendonly.h"
-#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbappendonlystorage.h"
@@ -409,7 +408,7 @@ errcontext_appendonly_insert_block(AppendOnlyInsertDesc aoInsertDesc)
  *
  * Add an errdetail() line showing the Append-Only Storage block header for the block being inserted.
  */
-static int
+static void
 errdetail_appendonly_insert_block_header(AppendOnlyInsertDesc aoInsertDesc)
 {
 	uint8	   *header;
@@ -420,7 +419,7 @@ errdetail_appendonly_insert_block_header(AppendOnlyInsertDesc aoInsertDesc)
 
 	usingChecksum = aoInsertDesc->usingChecksum;
 
-	return errdetail_appendonly_storage_content_header(header, usingChecksum, aoInsertDesc->storageWrite.formatVersion);
+	errdetail_appendonly_storage_content_header(header, usingChecksum, aoInsertDesc->storageWrite.formatVersion);
 }
 
 /*
@@ -535,7 +534,7 @@ CloseWritableFileSeg(AppendOnlyInsertDesc aoInsertDesc)
 					  fileLen_uncompressed,
 					  aoInsertDesc->insertCount,
 					  aoInsertDesc->varblockCount,
-					  1,
+					  (aoInsertDesc->skipModCountIncrement ? 0 : 1),
 					  AOSEG_STATE_USECURRENT);
 
 	pfree(aoInsertDesc->fsInfo);

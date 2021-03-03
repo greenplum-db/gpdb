@@ -13,9 +13,8 @@
 #define GPDXL_CParseHandlerMDGPDBFunc_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-
-
 #include "naucrates/md/CMDFunctionGPDB.h"
 
 
@@ -65,23 +64,20 @@ private:
 
 	BOOL m_is_allowed_for_PS;
 
-	// private copy ctor
-	CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 	// parse function stability property from XML string
 	CMDFunctionGPDB::EFuncStbl ParseFuncStability(const XMLCh *xml_val);
@@ -90,6 +86,8 @@ private:
 	CMDFunctionGPDB::EFuncDataAcc ParseFuncDataAccess(const XMLCh *xml_val);
 
 public:
+	CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &) = delete;
+
 	// ctor
 	CParseHandlerMDGPDBFunc(CMemoryPool *mp,
 							CParseHandlerManager *parse_handler_mgr,

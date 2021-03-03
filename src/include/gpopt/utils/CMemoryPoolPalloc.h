@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal, Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMemoryPoolPalloc.h
@@ -15,7 +15,6 @@
 #define GPDXL_CMemoryPoolPalloc_H
 
 #include "gpos/base.h"
-
 #include "gpos/memory/CMemoryPool.h"
 
 namespace gpos
@@ -24,7 +23,7 @@ namespace gpos
 class CMemoryPoolPalloc : public CMemoryPool
 {
 private:
-	MemoryContext m_cxt;
+	MemoryContext m_cxt{nullptr};
 
 	// When destroying arrays, we need to call the destructor of each element
 	// To do this, we need the size of the allocation, which we then divide by the
@@ -41,16 +40,16 @@ public:
 
 	// allocate memory
 	void *NewImpl(const ULONG bytes, const CHAR *file, const ULONG line,
-				  CMemoryPool::EAllocationType eat);
+				  CMemoryPool::EAllocationType eat) override;
 
 	// free memory
 	static void DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat);
 
 	// prepare the memory pool to be deleted
-	void TearDown();
+	void TearDown() override;
 
 	// return total allocated size include management overhead
-	ULLONG TotalAllocatedSize() const;
+	ULLONG TotalAllocatedSize() const override;
 
 	// get user requested size of allocation
 	static ULONG UserSizeOfAlloc(const void *ptr);

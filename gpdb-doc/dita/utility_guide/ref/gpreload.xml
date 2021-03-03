@@ -45,7 +45,7 @@ public.cust_table: city, state</codeblock><p>For
         </plentry>
         <plentry>
           <pt>-p <varname>port</varname></pt>
-          <pd>The Greenplum Database master port. If not specified, the value of the
+          <pd>The Greenplum Database coordinator port. If not specified, the value of the
               <codeph>PGPORT</codeph> environment variable is used. If the value is not available,
             an error is returned. </pd>
         </plentry>

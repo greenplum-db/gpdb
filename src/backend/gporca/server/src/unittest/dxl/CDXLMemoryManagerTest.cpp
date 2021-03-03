@@ -9,11 +9,11 @@
 //		Tests the memory manager to be plugged in Xerces.
 //---------------------------------------------------------------------------
 
+#include "unittest/dxl/CDXLMemoryManagerTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
-
-#include "unittest/dxl/CDXLMemoryManagerTest.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -53,7 +53,7 @@ CDXLMemoryManagerTest::EresUnittest_Basic()
 	CDXLMemoryManager *dxl_memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
 	void *pvMemory = dxl_memory_manager->allocate(5);
 
-	GPOS_ASSERT(NULL != pvMemory);
+	GPOS_ASSERT(nullptr != pvMemory);
 
 	dxl_memory_manager->deallocate(pvMemory);
 

@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerScalarWindowFrameEdge_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
@@ -33,29 +34,25 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerScalarWindowFrameEdge : public CParseHandlerScalarOp
 {
 private:
-	// identify if the parser is for a leading or trailing edge
-	BOOL m_leading_edge;
-
-	// private copy ctor
-	CParseHandlerScalarWindowFrameEdge(
-		const CParseHandlerScalarWindowFrameEdge &);
-
 	// process the start of an element
 	void StartElement(const XMLCh *const element_uri,
 					  const XMLCh *const element_local_name,
-					  const XMLCh *const element_qname, const Attributes &attr);
+					  const XMLCh *const element_qname,
+					  const Attributes &attr) override;
 
 	// process the end of an element
 	void EndElement(const XMLCh *const element_uri,
 					const XMLCh *const element_local_name,
-					const XMLCh *const element_qname);
+					const XMLCh *const element_qname) override;
 
 public:
+	CParseHandlerScalarWindowFrameEdge(
+		const CParseHandlerScalarWindowFrameEdge &) = delete;
+
 	// ctor
 	CParseHandlerScalarWindowFrameEdge(CMemoryPool *mp,
 									   CParseHandlerManager *parse_handler_mgr,
-									   CParseHandlerBase *parse_handler_root,
-									   BOOL leading_edge);
+									   CParseHandlerBase *parse_handler_root);
 };
 }  // namespace gpdxl
 

@@ -3,7 +3,7 @@
  * cdbpath.c
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -77,18 +77,50 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 	double		sendrows;
 	double		send_segments;
 	double		recv_segments;
-
-	if (CdbPathLocus_IsPartitioned(subpath->locus))
-		send_segments = CdbPathLocus_NumSegments(subpath->locus);
-	else
-		send_segments = 1;
+	double		total_rows;
 
 	if (CdbPathLocus_IsPartitioned(motionpath->path.locus))
 		recv_segments = CdbPathLocus_NumSegments(motionpath->path.locus);
 	else
 		recv_segments = 1;
 
-	motionpath->path.rows = clamp_row_est(subpath->rows * (send_segments / recv_segments));
+	if (CdbPathLocus_IsPartitioned(subpath->locus))
+		send_segments = CdbPathLocus_NumSegments(subpath->locus);
+	else
+		send_segments = 1;
+
+	/*
+	 * Estimate the total number of rows being sent.
+	 *
+	 * The base estimate is computed by multiplying the subpath's rows with
+	 * the number of sending segments. But in some cases, that leads to too
+	 * large estimates, if the subpath's estimate was "clamped" to 1 row. The
+	 * typical example is a single-row select like "SELECT * FROM table WHERE
+	 * key = 123. The Scan on the table returns only one row, on one segment,
+	 * and the estimate on the Scan node is 1 row. If you have e.g. 3
+	 * segments, and we just multiplied the subpath's row estimate by 3, we
+	 * would estimate that the Gather returns 3 rows, even though there is
+	 * only one matching row in the table. Using the 'rows' estimate on the
+	 * RelOptInfo is more accurate in such cases. To correct that, if the
+	 * subpath's estimate is 1 row, but the underlying relation's estimate is
+	 * smaller, use the underlying relation's estimate.
+	 *
+	 * We don't always use the relation's estimate, because there might be
+	 * nodes like ProjectSet or Limit in the subpath, in which case the
+	 * subpath's estimate is more accurate. Also, the relation might not have
+	 * a valid 'rows' estimate; upper rels, for example, do not. So check for
+	 * that too.
+	 */
+	total_rows = subpath->rows * send_segments;
+	if (subpath->rows == 1.0 &&
+		motionpath->path.parent->rows > 0 &&
+		motionpath->path.parent->rows < total_rows)
+	{
+		/* use the RelOptInfo's estimate */
+		total_rows = motionpath->path.parent->rows;
+	}
+
+	motionpath->path.rows = clamp_row_est(total_rows / recv_segments);
 
 	cost_per_row = (gp_motion_cost_per_row > 0.0)
 		? gp_motion_cost_per_row

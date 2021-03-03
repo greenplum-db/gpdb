@@ -9,15 +9,14 @@
 //		Implementation of the SAX parse handler class for parsing an MD index
 //---------------------------------------------------------------------------
 
-#include "naucrates/md/CMDIndexGPDB.h"
-
 #include "naucrates/dxl/parser/CParseHandlerMDIndex.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
 #include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/md/CMDIndexGPDB.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -36,16 +35,17 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid(NULL),
-	  m_mdname(NULL),
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
 	  m_clustered(false),
 	  m_index_type(IMDIndex::EmdindSentinel),
-	  m_mdid_item_type(NULL),
-	  m_index_key_cols_array(NULL),
-	  m_included_cols_array(NULL),
-	  m_part_constraint(NULL),
-	  m_level_with_default_part_array(NULL),
-	  m_part_constraint_unbounded(false)
+	  m_mdid_item_type(nullptr),
+	  m_index_key_cols_array(nullptr),
+	  m_included_cols_array(nullptr),
+	  m_part_constraint(nullptr),
+	  m_level_with_default_part_array(nullptr),
+	  m_part_constraint_unbounded(false),
+	  m_child_indexes_parse_handler(nullptr)
 {
 }
 
@@ -58,20 +58,20 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
+CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 								   const XMLCh *const element_local_name,
-								   const XMLCh *const,	// element_qname,
+								   const XMLCh *const element_qname,
 								   const Attributes &attrs)
 {
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenPartConstraint),
 				 element_local_name))
 	{
-		GPOS_ASSERT(NULL == m_part_constraint);
+		GPOS_ASSERT(nullptr == m_part_constraint);
 
 		const XMLCh *xmlszDefParts =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenDefaultPartition));
-		if (NULL != xmlszDefParts)
+		if (nullptr != xmlszDefParts)
 		{
 			m_level_with_default_part_array =
 				CDXLOperatorFactory::ExtractIntsToUlongArray(
@@ -100,6 +100,23 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 		return;
 	}
 
+	if (0 ==
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenPartitions),
+								 element_local_name))
+	{
+		// parse handler for child indexes of a partitioned index
+		m_child_indexes_parse_handler = CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+		m_parse_handler_mgr->ActivateParseHandler(
+			m_child_indexes_parse_handler);
+		this->Append(m_child_indexes_parse_handler);
+		m_child_indexes_parse_handler->startElement(
+			element_uri, element_local_name, element_qname, attrs);
+
+		return;
+	}
+
 	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenIndex),
 									  element_local_name))
 	{
@@ -110,7 +127,7 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 	}
 
 	// new index object
-	GPOS_ASSERT(NULL == m_mdid);
+	GPOS_ASSERT(nullptr == m_mdid);
 
 	// parse mdid
 	m_mdid = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -135,7 +152,7 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 	m_index_type = CDXLOperatorFactory::ParseIndexType(attrs);
 	const XMLCh *xmlszItemType =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenIndexItemType));
-	if (NULL != xmlszItemType)
+	if (nullptr != xmlszItemType)
 	{
 		m_mdid_item_type = CDXLOperatorFactory::MakeMdIdFromStr(
 			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszItemType,
@@ -159,8 +176,9 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const,	// element_uri,
 		CParseHandlerFactory::GetParseHandler(
 			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
 			m_parse_handler_mgr, this);
-	this->Append(opfamilies_list_parse_handler);
 	m_parse_handler_mgr->ActivateParseHandler(opfamilies_list_parse_handler);
+
+	this->Append(opfamilies_list_parse_handler);
 }
 
 //---------------------------------------------------------------------------
@@ -207,10 +225,21 @@ CParseHandlerMDIndex::EndElement(const XMLCh *const,  // element_uri,
 	IMdIdArray *mdid_opfamilies_array = pphMdidOpfamilies->GetMdIdArray();
 	mdid_opfamilies_array->AddRef();
 
+	BOOL is_partitioned = false;
+	IMdIdArray *child_indexes = nullptr;
+	if (nullptr != m_child_indexes_parse_handler)
+	{
+		is_partitioned = true;
+		child_indexes = dynamic_cast<CParseHandlerMetadataIdList *>(
+							m_child_indexes_parse_handler)
+							->GetMdIdArray();
+		child_indexes->AddRef();
+	}
+
 	m_imd_obj = GPOS_NEW(m_mp) CMDIndexGPDB(
-		m_mp, m_mdid, m_mdname, m_clustered, m_index_type, m_mdid_item_type,
-		m_index_key_cols_array, m_included_cols_array, mdid_opfamilies_array,
-		m_part_constraint);
+		m_mp, m_mdid, m_mdname, m_clustered, is_partitioned, m_index_type,
+		m_mdid_item_type, m_index_key_cols_array, m_included_cols_array,
+		mdid_opfamilies_array, m_part_constraint, child_indexes);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

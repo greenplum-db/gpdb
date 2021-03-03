@@ -2243,7 +2243,7 @@ EXPLAIN SELECT * FROM date_parts WHERE year BETWEEN 2002 AND 2003;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="204.393208" Rows="10.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="397.983325" Rows="10.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="id">
@@ -2266,7 +2266,7 @@ EXPLAIN SELECT * FROM date_parts WHERE year BETWEEN 2002 AND 2003;
         <dxl:SortingColumnList/>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="204.392403" Rows="10.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="397.982520" Rows="10.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id">
@@ -2354,7 +2354,7 @@ EXPLAIN SELECT * FROM date_parts WHERE year BETWEEN 2002 AND 2003;
           </dxl:PartitionSelector>
           <dxl:DynamicBitmapTableScan PartIndexId="1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="204.392403" Rows="10.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="397.982520" Rows="10.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id">

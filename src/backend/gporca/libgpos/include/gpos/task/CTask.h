@@ -13,8 +13,8 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CList.h"
-#include "gpos/error/CException.h"
 #include "gpos/error/CErrorContext.h"
+#include "gpos/error/CException.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/task/CTaskContext.h"
 #include "gpos/task/CTaskId.h"
@@ -89,9 +89,6 @@ private:
 	CTask(CMemoryPool *mp, CTaskContext *task_ctxt, IErrorContext *err_ctxt,
 		  BOOL *cancel);
 
-	// no copy ctor
-	CTask(const CTask &);
-
 	// binding a task structure to a function and its arguments
 	void Bind(void *(*func)(void *), void *arg);
 
@@ -128,19 +125,21 @@ private:
 	}
 
 public:
+	CTask(const CTask &) = delete;
+
 	// dtor
-	virtual ~CTask();
+	~CTask() override;
 
 	// accessor for memory pool, e.g. used for allocating task parameters in
 	CMemoryPool *
-	Pmp() const
+	Pmp() const override
 	{
 		return m_mp;
 	}
 
 	// TLS accessor
 	CTaskLocalStorage &
-	GetTls()
+	GetTls() override
 	{
 		return m_tls;
 	}
@@ -154,32 +153,32 @@ public:
 
 	// task context accessor
 	CTaskContext *
-	GetTaskCtxt() const
+	GetTaskCtxt() const override
 	{
 		return m_task_ctxt;
 	}
 
 	// basic output streams
 	ILogger *
-	GetOutputLogger() const
+	GetOutputLogger() const override
 	{
 		return this->m_task_ctxt->GetOutputLogger();
 	}
 
 	ILogger *
-	GetErrorLogger() const
+	GetErrorLogger() const override
 	{
 		return this->m_task_ctxt->GetErrorLogger();
 	}
 
 	BOOL
-	SetTrace(ULONG trace, BOOL val)
+	SetTrace(ULONG trace, BOOL val) override
 	{
 		return this->m_task_ctxt->SetTrace(trace, val);
 	}
 
 	BOOL
-	IsTraceSet(ULONG trace)
+	IsTraceSet(ULONG trace) override
 	{
 		return this->m_task_ctxt->IsTraceSet(trace);
 	}
@@ -187,7 +186,7 @@ public:
 
 	// locale
 	ELocale
-	Locale() const
+	Locale() const override
 	{
 		return m_task_ctxt->Locale();
 	}
@@ -249,7 +248,7 @@ public:
 
 	// error context
 	IErrorContext *
-	GetErrCtxt() const
+	GetErrCtxt() const override
 	{
 		return m_err_ctxt;
 	}
@@ -263,7 +262,7 @@ public:
 
 	// pending exceptions
 	BOOL
-	HasPendingExceptions() const
+	HasPendingExceptions() const override
 	{
 		return m_err_ctxt->IsPending();
 	}

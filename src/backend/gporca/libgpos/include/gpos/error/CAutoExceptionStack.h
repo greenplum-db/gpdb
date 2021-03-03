@@ -19,7 +19,6 @@
 #define GPOS_CAutoExceptionStack_H
 
 #include "gpos/base.h"
-
 #include "gpos/common/CStackObject.h"
 
 namespace gpos
@@ -47,10 +46,9 @@ private:
 	// value of error context stack when object is created
 	void *m_error_context_stack;
 
-	// private copy ctor
-	CAutoExceptionStack(const CAutoExceptionStack &);
-
 public:
+	CAutoExceptionStack(const CAutoExceptionStack &) = delete;
+
 	// ctor
 	CAutoExceptionStack(void **global_exception_stack,
 						void **global_error_context_stack);

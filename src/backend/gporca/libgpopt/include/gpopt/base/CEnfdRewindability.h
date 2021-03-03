@@ -51,21 +51,20 @@ private:
 	// rewindability matching type
 	ERewindabilityMatching m_erm;
 
-	// private copy ctor
-	CEnfdRewindability(const CEnfdRewindability &);
-
 	// names of rewindability matching types
 	static const CHAR *m_szRewindabilityMatching[ErmSentinel];
 
 public:
+	CEnfdRewindability(const CEnfdRewindability &) = delete;
+
 	// ctor
 	CEnfdRewindability(CRewindabilitySpec *prs, ERewindabilityMatching erm);
 
 	// dtor
-	virtual ~CEnfdRewindability();
+	~CEnfdRewindability() override;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// check if the given rewindability specification is compatible with the
 	// rewindability specification of this object for the specified matching type
@@ -83,8 +82,8 @@ public:
 							BOOL fRewindabilityReqd) const;
 
 	// property spec accessor
-	virtual CPropSpec *
-	Pps() const
+	CPropSpec *
+	Pps() const override
 	{
 		return m_prs;
 	}
@@ -100,14 +99,14 @@ public:
 	BOOL
 	Matches(CEnfdRewindability *per)
 	{
-		GPOS_ASSERT(NULL != per);
+		GPOS_ASSERT(nullptr != per);
 
 		return m_erm == per->Erm() && m_prs->Matches(per->PrsRequired());
 	}
 
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CEnfdRewindability
 

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarRecheckCondFilter.h
@@ -35,29 +35,28 @@ namespace gpdxl
 class CDXLScalarRecheckCondFilter : public CDXLScalarFilter
 {
 private:
-	// private copy ctor
-	CDXLScalarRecheckCondFilter(CDXLScalarRecheckCondFilter &);
-
 public:
+	CDXLScalarRecheckCondFilter(CDXLScalarRecheckCondFilter &) = delete;
+
 	// ctor
 	explicit CDXLScalarRecheckCondFilter(CMemoryPool *mp) : CDXLScalarFilter(mp)
 	{
 	}
 
 	// operator identity
-	virtual Edxlopid
-	GetDXLOperator() const
+	Edxlopid
+	GetDXLOperator() const override
 	{
 		return EdxlopScalarRecheckCondFilter;
 	}
 
 	// operator name
-	virtual const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		GPOS_ASSERT(!"Invalid function call for a container operator");
 		return false;
@@ -67,7 +66,7 @@ public:
 	static CDXLScalarRecheckCondFilter *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarRecheckCondFilter == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarRecheckCondFilter *>(dxl_op);

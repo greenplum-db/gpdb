@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementLimit_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,41 +30,39 @@ using namespace gpos;
 class CXformImplementLimit : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementLimit(const CXformImplementLimit &);
-
 public:
+	CXformImplementLimit(const CXformImplementLimit &) = delete;
+
 	// ctor
 	explicit CXformImplementLimit(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementLimit()
-	{
-	}
+	~CXformImplementLimit() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementLimit;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementLimit";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return CXform::ExfpHigh;
 	}
 
 	// actual transform
-	void Transform(CXformContext *, CXformResult *, CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformImplementLimit
 

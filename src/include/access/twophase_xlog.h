@@ -14,10 +14,6 @@
 #ifndef TWOPHASE_XLOG_H
 #define TWOPHASE_XLOG_H
 
-/* GPDB-specific: GIDSIZE is defined in twophase.c in Postgres */
-
-#define GIDSIZE 200
-
 /* GPDB-specific: TwoPhaseFileHeader is defined in twophase.c in Postgres */
 /*
  * Header for a 2PC state file

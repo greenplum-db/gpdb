@@ -1,4 +1,4 @@
-//	Copyright (C) 2017 Pivotal Software, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 
 #ifndef GPOS_CPrintablePointer_H
 #define GPOS_CPrintablePointer_H

@@ -12,11 +12,10 @@
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalInsert.h"
 
-#include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-
 #include "naucrates/dxl/operators/CDXLLogicalInsert.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
 
 using namespace gpdxl;
 
@@ -35,7 +34,7 @@ CParseHandlerLogicalInsert::CParseHandlerLogicalInsert(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerLogicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_pdrgpul(NULL)
+	  m_pdrgpul(nullptr)
 {
 }
 
@@ -120,8 +119,8 @@ CParseHandlerLogicalInsert::EndElement(const XMLCh *const,	// element_uri,
 	CParseHandlerLogicalOp *child_parse_handler =
 		dynamic_cast<CParseHandlerLogicalOp *>((*this)[1]);
 
-	GPOS_ASSERT(NULL != pphTabDesc->GetDXLTableDescr());
-	GPOS_ASSERT(NULL != child_parse_handler->CreateDXLNode());
+	GPOS_ASSERT(nullptr != pphTabDesc->GetDXLTableDescr());
+	GPOS_ASSERT(nullptr != child_parse_handler->CreateDXLNode());
 
 	CDXLTableDescr *table_descr = pphTabDesc->GetDXLTableDescr();
 	table_descr->AddRef();

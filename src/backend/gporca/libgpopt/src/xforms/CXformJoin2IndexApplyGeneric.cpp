@@ -5,12 +5,14 @@
 // CXformJoin2IndexApplyGeneric.cpp
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformJoin2IndexApplyGeneric.h"
+
 #include "gpos/common/CAutoRef.h"
+
 #include "gpopt/operators/CLogicalApply.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
-#include "gpopt/xforms/CXformJoin2IndexApplyGeneric.h"
+#include "gpopt/operators/CLogicalGet.h"
 
 using namespace gpmd;
 using namespace gpopt;
@@ -99,7 +101,7 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 										CXformResult *pxfres,
 										CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -115,20 +117,20 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 	CExpression *pexprAllPredicates = pexprScalar;
 
 	// a select node that sits right on top of the get node (if it exists, NULL otherwise)
-	CExpression *selectThatIsParentOfGet = NULL;
+	CExpression *selectThatIsParentOfGet = nullptr;
 
 	// the logical get node (dynamic or regular get) at the bottom of the inner tree
-	CExpression *pexprGet = NULL;
+	CExpression *pexprGet = nullptr;
 
 	// the highest node of the right child that gets inserted above the index get
 	// into the alternative, or NULL if there is no such node
 	// (this is a project, GbAgg or a select node above a project or GbAgg)
-	CExpression *nodesToInsertAboveIndexGet = NULL;
+	CExpression *nodesToInsertAboveIndexGet = nullptr;
 
 	// the cut-off point for "nodesAboveIndexGet", this node is below nodesAboveIndexGet
 	// but it doesn't get inserted into the alternative anymore
 	// (or NULL, if nodesAboveIndexGet == NULL)
-	CExpression *endOfNodesToInsertAboveIndexGet = NULL;
+	CExpression *endOfNodesToInsertAboveIndexGet = nullptr;
 
 	// Example:
 	//
@@ -158,20 +160,25 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 	//                                                  index/residual preds
 
 	// info on the get node (a get node or a dynamic get)
-	CTableDescriptor *ptabdescInner = NULL;
-	const CColRefSet *distributionCols = NULL;
-	CLogicalDynamicGet *popDynamicGet = NULL;
+	CTableDescriptor *ptabdescInner = nullptr;
+	const CColRefSet *distributionCols = nullptr;
+	CLogicalDynamicGet *popDynamicGet = nullptr;
 	CAutoRef<CColRefSet> groupingColsToCheck;
 
 	// walk down the right child tree, accepting some unary operators
 	// like project and GbAgg and select, until we find a logical get
-	for (CExpression *pexprCurrInnerChild = pexprInner; NULL == pexprGet;
+	for (CExpression *pexprCurrInnerChild = pexprInner; nullptr == pexprGet;
 		 pexprCurrInnerChild =
-			 (NULL == pexprGet ? (*pexprCurrInnerChild)[0] : NULL))
+			 (nullptr == pexprGet ? (*pexprCurrInnerChild)[0] : nullptr))
 	{
 		switch (pexprCurrInnerChild->Pop()->Eopid())
 		{
 			case COperator::EopLogicalSelect:
+				// if the select pred has a subquery, don't generate alternatives
+				if ((*pexprCurrInnerChild)[1]->DeriveHasSubquery())
+				{
+					return;
+				}
 				// this might be a select on top of a get, unless proven otherwise
 				selectThatIsParentOfGet = pexprCurrInnerChild;
 				break;
@@ -182,6 +189,11 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 				// just copy them into the result of the transform, any selects above this node won't
 				// be used for index predicates.
 				{
+					if ((*pexprCurrInnerChild)[1]->DeriveHasSubquery())
+					{
+						return;
+					}
+
 					CColRefSet *joinPredUsedCols = GPOS_NEW(mp)
 						CColRefSet(mp, *(pexprScalar->DeriveUsedColumns()));
 
@@ -209,8 +221,8 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 						CLogicalGbAgg *grbyAggOp = CLogicalGbAgg::PopConvert(
 							pexprCurrInnerChild->Pop());
 
-						GPOS_ASSERT(NULL != grbyAggOp);
-						if (NULL != grbyAggOp->Pdrgpcr() &&
+						GPOS_ASSERT(nullptr != grbyAggOp);
+						if (nullptr != grbyAggOp->Pdrgpcr() &&
 							0 < grbyAggOp->Pdrgpcr()->Size())
 						{
 							// This has grouping cols. We can only do an index join with a groupby
@@ -240,7 +252,7 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 							return;
 						}
 					}
-					selectThatIsParentOfGet = NULL;
+					selectThatIsParentOfGet = nullptr;
 				}
 				break;
 
@@ -253,7 +265,7 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 				distributionCols = popGet->PcrsDist();
 				pexprGet = pexprCurrInnerChild;
 
-				if (NULL != groupingColsToCheck.Value() &&
+				if (nullptr != groupingColsToCheck.Value() &&
 					!groupingColsToCheck->ContainsAll(distributionCols))
 				{
 					// the grouping columns are not a superset of the distribution columns
@@ -280,7 +292,7 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 	}
 
 	// handle the select node with additional candidates for index preds, if it exists
-	if (NULL != selectThatIsParentOfGet)
+	if (nullptr != selectThatIsParentOfGet)
 	{
 		pexprAllPredicates = CPredicateUtils::PexprConjunction(
 			mp, pexprAllPredicates, (*selectThatIsParentOfGet)[1]);
@@ -299,7 +311,7 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 		// yes, there are additional nodes beyond a get with an optional select
 		nodesToInsertAboveIndexGet = pexprInner;
 
-		if (NULL != selectThatIsParentOfGet)
+		if (nullptr != selectThatIsParentOfGet)
 		{
 			// insert the right child nodes, up to but not including, the
 			// select node above the get
@@ -324,9 +336,9 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 
 	// insert the btree or bitmap alternatives
 	CreateHomogeneousIndexApplyAlternatives(
-		mp, pexpr->Pop(), pexprOuter, pexprGet, pexprAllPredicates,
+		mp, pexpr->Pop(), pexprOuter, pexprGet, pexprAllPredicates, pexprScalar,
 		nodesToInsertAboveIndexGet, endOfNodesToInsertAboveIndexGet,
-		ptabdescInner, popDynamicGet, pxfres,
+		ptabdescInner, pxfres,
 		(m_generateBitmapPlans ? IMDIndex::EmdindBitmap
 							   : IMDIndex::EmdindBtree));
 

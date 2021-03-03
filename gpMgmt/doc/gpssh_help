@@ -147,7 +147,7 @@ The gpssh.conf file contains parameters that let you adjust the timing
 that gpssh uses when validating the initial ssh connection. These
 parameters affect the network connection before the gpssh session
 executes commands with ssh. The location of the file is specified by the
-environment variable MASTER_DATA_DIRECTORY. If the environment variable
+environment variable COORDINATOR_DATA_DIRECTORY. If the environment variable
 is not defined or the gpssh.conf file does not exist in the directory
 gpssh uses the default values or the values set with the -d and -t
 options. For information about the environment variable, see the

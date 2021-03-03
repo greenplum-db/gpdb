@@ -9,19 +9,20 @@
 //		Implementation of n-ary join expansion using dynamic programming
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformExpandNAryJoinDP.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CHint.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPatternMultiLeaf.h"
 #include "gpopt/operators/CPatternMultiTree.h"
-#include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/xforms/CXformExpandNAryJoinDP.h"
-#include "gpopt/xforms/CXformUtils.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CJoinOrderDP.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 
 
@@ -90,8 +91,8 @@ void
 CXformExpandNAryJoinDP::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
-	GPOS_ASSERT(NULL != pxfres);
+	GPOS_ASSERT(nullptr != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfres);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -116,7 +117,7 @@ CXformExpandNAryJoinDP::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CJoinOrderDP jodp(mp, pdrgpexpr, pdrgpexprPreds);
 	CExpression *pexprResult = jodp.PexprExpand();
 
-	if (NULL != pexprResult)
+	if (nullptr != pexprResult)
 	{
 		// normalize resulting expression
 		CExpression *pexprNormalized =

@@ -12,8 +12,8 @@
 #define GPOS_CBitSet_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CBitVector.h"
+#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CList.h"
 
 
@@ -44,9 +44,6 @@ protected:
 	class CBitSetLink
 	{
 	private:
-		// private copy ctor
-		CBitSetLink(const CBitSetLink &);
-
 		// offset
 		ULONG m_offset;
 
@@ -54,6 +51,8 @@ protected:
 		CBitVector *m_vec;
 
 	public:
+		CBitSetLink(const CBitSetLink &) = delete;
+
 		// ctor
 		explicit CBitSetLink(CMemoryPool *, ULONG offset, ULONG vector_size);
 
@@ -97,7 +96,7 @@ protected:
 	CBitSet(const CBitSet &);
 
 	// find link with offset less or equal to given value
-	CBitSetLink *FindLinkByOffset(ULONG, CBitSetLink * = NULL) const;
+	CBitSetLink *FindLinkByOffset(ULONG, CBitSetLink * = nullptr) const;
 
 	// reset set
 	void Clear();
@@ -114,7 +113,7 @@ public:
 	CBitSet(CMemoryPool *mp, const CBitSet &);
 
 	// dtor
-	virtual ~CBitSet();
+	~CBitSet() override;
 
 	// determine if bit is set
 	BOOL Get(ULONG pos) const;
@@ -154,7 +153,7 @@ public:
 	}
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CBitSet
 

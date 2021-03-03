@@ -17,11 +17,11 @@
 #ifndef GPDXL_CDXLTranslateContext_H
 #define GPDXL_CDXLTranslateContext_H
 
-#include "gpopt/translate/CMappingElementColIdParamId.h"
-
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
+
+#include "gpopt/translate/CMappingElementColIdParamId.h"
 
 
 // fwd decl
@@ -62,9 +62,6 @@ class CDXLTranslateContext
 private:
 	CMemoryPool *m_mp;
 
-	// private copy ctor
-	CDXLTranslateContext(const CDXLTranslateContext &);
-
 	// mappings ColId->TargetEntry used for intermediate DXL nodes
 	ULongToTargetEntryMap *m_colid_to_target_entry_map;
 
@@ -82,6 +79,8 @@ private:
 	void CopyParamHashmap(ULongToColParamMap *original);
 
 public:
+	CDXLTranslateContext(const CDXLTranslateContext &) = delete;
+
 	// ctor/dtor
 	CDXLTranslateContext(CMemoryPool *mp, BOOL is_child_agg_node);
 

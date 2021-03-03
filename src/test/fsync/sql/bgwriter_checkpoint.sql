@@ -19,14 +19,20 @@
 -- s/num times hit:\'[4-9]\'/num times hit:\'greater_than_two\'/
 -- end_matchsubs
 begin;
-create function num_dirty(relid oid) returns bigint as
+create function num_dirty_on_qes(relid oid) returns setof bigint as
 $$
-   select count(*) from dirty_buffers()
+declare
+  rfnode oid;
+  result int4;
+begin
+   select relfilenode into rfnode from pg_class where oid=$1;
+
+   select count(*) into result from dirty_buffers_on_qes()
      as (tablespace oid, database oid, relfilenode oid, block int)
-     where relfilenode in
-           (select relfilenode from pg_class
-            where oid=$1);
-$$ language sql;
+     where relfilenode = rfnode;
+   return next result;
+end
+$$ language plpgsql execute on all segments;
 
 -- Wait until number of dirty buffers for the specified relfiles drops
 -- to 0 or timeout occurs.  Returns false if timeout occurred.
@@ -41,7 +47,7 @@ declare
 begin
    i := 0;
    loop
-      select sum(num_dirty($1)) into d from gp_dist_random('gp_id');
+      select sum(nd) into d from num_dirty_on_qes($1) nd;
       if (d = 0) then
          return true;
       end if;
@@ -84,9 +90,9 @@ select gp_inject_fault_infinite('fault_in_background_writer_main', 'suspend', db
 from gp_segment_configuration where role = 'p' and content > -1;
 
 -- Ensure no buffers are dirty before we start.
-select * from dirty_buffers()
+select * from dirty_buffers_on_qd()
  as (tablespace oid, database oid, relfilenode oid, block int);
-select dirty_buffers() from gp_dist_random('gp_id')
+select * from dirty_buffers_on_qes()
  as (tablespace oid, database oid, relfilenode oid, block int);
 
 -- Make buffers dirty.  At least two relfiles must be sync'ed during
@@ -95,10 +101,8 @@ insert into fsync_test1 select i, i from generate_series(1,1000)i;
 delete from fsync_test2;
 
 -- Should return at least one dirty buffer.
-select sum(num_dirty('fsync_test1'::regclass)) > 0 as passed
- from gp_dist_random('gp_id');
-select sum(num_dirty('fsync_test2'::regclass)) > 0 as passed
- from gp_dist_random('gp_id');
+select sum(nd) > 0 as passed from num_dirty_on_qes('fsync_test1'::regclass) nd;
+select sum(nd) > 0 as passed from num_dirty_on_qes('fsync_test2'::regclass) nd;
 
 -- Flush all dirty pages by BgBufferSync()
 select gp_inject_fault_infinite('bg_buffer_sync_default_logic', 'skip', dbid)
@@ -126,7 +130,7 @@ from gp_segment_configuration where role = 'p' and content > -1;
 checkpoint;
 
 -- There should be no dirty buffers after checkpoint.
-select dirty_buffers() from gp_dist_random('gp_id')
+select * from dirty_buffers_on_qes()
  as (tablespace oid, database oid, relfilenode oid, block int);
 
 -- Validate that the number of files fsync'ed by checkpointer is at

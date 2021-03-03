@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2006, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2007, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -80,6 +80,7 @@ typedef struct AppendOnlyInsertDescData
 	bool			shouldCompress;
 	bool			usingChecksum;
 	bool			useNoToast;
+	bool			skipModCountIncrement;
 	int32			completeHeaderLen;
 	uint8			*tempSpace;
 	uint8			*uncompressedBuffer; /* used for compression */

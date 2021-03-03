@@ -9,19 +9,17 @@
 //		Implementation of scalar comparison operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarCmp.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/COptCtxt.h"
-
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-
-#include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
-#include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -197,12 +195,12 @@ CScalarCmp::PopCommutedOp(CMemoryPool *mp, COperator *pop)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	IMDId *mdid = PmdidCommuteOp(md_accessor, pop);
-	if (NULL != mdid && mdid->IsValid())
+	if (nullptr != mdid && mdid->IsValid())
 	{
 		return GPOS_NEW(mp) CScalarCmp(mp, mdid, Pstr(mp, md_accessor, mdid),
 									   CUtils::ParseCmpType(mdid));
 	}
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------

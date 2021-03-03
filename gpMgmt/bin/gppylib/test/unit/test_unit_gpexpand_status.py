@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # pylint: disable=invalid-name, missing-docstring, too-few-public-methods
 #
-# Copyright (c) 2019-Present Pivotal Software, Inc.
+# Copyright (c) 2019-Present VMware, Inc. or its affiliates.
 #
 
 import os
@@ -11,7 +11,7 @@ from gppylib.commands import gp
 from gppylib.db import dbconn
 
 class Context(object):
-    filename = os.path.join(gp.get_masterdatadir(), 'gpexpand.status')
+    filename = os.path.join(gp.get_coordinatordatadir(), 'gpexpand.status')
     dbname = os.getenv('PGDATABASE', 'postgres')
     dburl = dbconn.DbURL(dbname=dbname)
     conn = dbconn.connect(dburl)

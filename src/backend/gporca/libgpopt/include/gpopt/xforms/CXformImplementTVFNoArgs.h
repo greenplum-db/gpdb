@@ -12,6 +12,7 @@
 #define GPOPT_CXformImplementTVFNoArgs_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementTVF.h"
 
 namespace gpopt
@@ -29,28 +30,25 @@ using namespace gpos;
 class CXformImplementTVFNoArgs : public CXformImplementTVF
 {
 private:
-	// private copy ctor
-	CXformImplementTVFNoArgs(const CXformImplementTVFNoArgs &);
-
 public:
+	CXformImplementTVFNoArgs(const CXformImplementTVFNoArgs &) = delete;
+
 	// ctor
 	explicit CXformImplementTVFNoArgs(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformImplementTVFNoArgs()
-	{
-	}
+	~CXformImplementTVFNoArgs() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementTVFNoArgs;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementTVFNoArgs";
 	}

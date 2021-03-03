@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerMDGPDBType_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
@@ -122,9 +123,6 @@ private:
 	// id of array type
 	IMDId *m_mdid_array_type;
 
-	// private copy ctor
-	CParseHandlerMDType(const CParseHandlerMDType &);
-
 	// retrieves the address MDId member variable corresponding to the specified token
 	IMDId **GetTokenMDid(Edxltoken token_type);
 
@@ -134,14 +132,14 @@ private:
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// handles a SAX endelement event
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 	// parse the value for the given mdid variable name from the attributes
 	void ParseMdid(const XMLCh *element_local_name, const Attributes &attrs);
@@ -149,13 +147,15 @@ private:
 	BOOL IsBuiltInType(const IMDId *mdid) const;
 
 public:
+	CParseHandlerMDType(const CParseHandlerMDType &) = delete;
+
 	// ctor
 	CParseHandlerMDType(CMemoryPool *mp,
 						CParseHandlerManager *parse_handler_mgr,
 						CParseHandlerBase *parse_handler_root);
 
 	// dtor
-	virtual ~CParseHandlerMDType();
+	~CParseHandlerMDType() override;
 };
 }  // namespace gpdxl
 

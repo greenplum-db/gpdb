@@ -8,26 +8,26 @@
 //	@doc:
 //		Test for correlated subqueries
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/csq/CCorrelatedExecutionTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/eval/CConstExprEvaluatorDefault.h"
-#include "gpopt/exception.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CPrintPrefix.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CEngine.h"
+#include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/exception.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/ops.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/csq/CCorrelatedExecutionTest.h"
 
 ULONG CCorrelatedExecutionTest::m_ulTestCounter = 0;  // start from first test
 
@@ -83,7 +83,7 @@ CCorrelatedExecutionTest::EresUnittest_RunAllPositiveTests()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// loop over all test files
@@ -92,7 +92,7 @@ CCorrelatedExecutionTest::EresUnittest_RunAllPositiveTests()
 	{
 		// TODO:  06/15/2012; enable plan matching
 		GPOS_RESULT eres = CTestUtils::EresTranslate(mp, rgszPositiveTests[ul],
-													 NULL /* plan file */,
+													 nullptr /* plan file */,
 													 true /*fIgnoreMismatch*/
 		);
 

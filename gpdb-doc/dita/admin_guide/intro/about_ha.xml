@@ -30,7 +30,7 @@
         primary segment becomes unavailable. The mirror segment is kept current by a transaction log
         replication process, which synchronizes the data between the primary and mirror instances.
         Mirroring is strongly recommended for production systems<ph otherprops="pivotal"> and
-          required for Pivotal support</ph>. </p>
+          required for VMware support</ph>. </p>
       <p>As a best practice, the secondary (mirror) segment instance must always reside on a
         different host than its primary segment instance to protect against a single host failure.
         In virtualized environments, the secondary (mirror) segment must always reside on a

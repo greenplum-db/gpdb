@@ -13,14 +13,13 @@
 #define GPOPT_CTableDescriptor_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CBitSet.h"
-
-#include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDRelationGPDB.h"
+#include "gpos/common/CDynamicPtrArray.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
+#include "naucrates/md/CMDRelationGPDB.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {
@@ -82,31 +81,24 @@ private:
 	// key sets
 	CBitSetArray *m_pdrgpbsKeys;
 
-	// number of leaf partitions
-	ULONG m_num_of_partitions;
-
 	// id of user the table needs to be accessed with
 	ULONG m_execute_as_user_id;
 
-	// if true, it means this descriptor has partial indexes
-	BOOL m_fHasPartialIndexes;
-
-	// private copy ctor
-	CTableDescriptor(const CTableDescriptor &);
-
-	// returns true if this table descriptor has partial indexes
-	BOOL FDescriptorWithPartialIndexes();
+	// lockmode from the parser
+	INT m_lockmode;
 
 public:
+	CTableDescriptor(const CTableDescriptor &) = delete;
+
 	// ctor
 	CTableDescriptor(CMemoryPool *, IMDId *mdid, const CName &,
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser);
+					 ULONG ulExecuteAsUser, INT lockmode);
 
 	// dtor
-	virtual ~CTableDescriptor();
+	~CTableDescriptor() override;
 
 	// add a column to the table descriptor
 	void AddColumn(CColumnDescriptor *);
@@ -143,6 +135,12 @@ public:
 	GetExecuteAsUserId() const
 	{
 		return m_execute_as_user_id;
+	}
+
+	INT
+	LockMode() const
+	{
+		return m_lockmode;
 	}
 
 	// return the position of a particular attribute (identified by attno)
@@ -220,17 +218,10 @@ public:
 	ULONG UlPos(const CColumnDescriptor *,
 				const CColumnDescriptorArray *) const;
 
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 	// returns number of indices
 	ULONG IndexCount();
-
-	// true iff this table has partial indexes
-	BOOL
-	HasPartialIndexes() const
-	{
-		return m_fHasPartialIndexes;
-	}
 
 	BOOL
 	IsAORowOrColTable() const

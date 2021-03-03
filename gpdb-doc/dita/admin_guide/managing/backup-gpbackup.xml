@@ -38,7 +38,7 @@
       <ul id="ul_jlm_wnd_hjb">
         <li>Pivotal Greenplum Database 4.3.22 and later</li>
         <li>Pivotal Greenplum Database 5.5.0 and later</li>
-        <li>Pivotal Greenplum Database 6.0.0 and later</li>
+        <li>Tanzu Greenplum 6.0.0 and later</li>
       </ul>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> have the following limitations:<ul
           id="ul_uqh_hhd_tbb">
@@ -213,7 +213,7 @@ Tables backed up:  3 / 3 [======================================================
 20180105:11:27:55 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup completed successfully</codeblock></p>
       <p>The above command creates a file that contains global and database-specific metadata on the
         Greenplum Database master host in the default directory,
-          <codeph>$MASTER_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>. For
+          <codeph>$COORDINATOR_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>. For
         example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20180105/20180105112754</b>
 gpbackup_20180105112754_config.yaml   gpbackup_20180105112754_report
 gpbackup_20180105112754_metadata.sql  gpbackup_20180105112754_toc.yaml</codeblock></p>
@@ -654,7 +654,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         was created.</p>
       <p>By default, metadata and supporting files are stored on the Greenplum Database master host
         in the directory
-          <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you
+          <filepath>$COORDINATOR_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you
         specify a custom backup directory, this same file path is created as a subdirectory of the
         backup directory. The following table describes the names and contents of the metadata and
         supporting files.<table frame="all" rowsep="1" colsep="1" id="table_nrz_4gj_tbb">

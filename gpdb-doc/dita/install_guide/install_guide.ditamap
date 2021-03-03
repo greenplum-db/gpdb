@@ -2,7 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
     <topicref href="../../7-0/homenav.html" scope="external"
-        navtitle="Pivotal Greenplum® 7.0 Beta Documentation" format="html" otherprops="op-help"/>
+        navtitle="Tanzu Greenplum® 7.0 Beta Documentation" format="html" otherprops="op-help"/>
     <topicref href="install_guide.xml" navtitle="Installation Guide">
         <topicref href="platform-requirements.xml"/>
         <topicref href="preinstall_concepts.xml">

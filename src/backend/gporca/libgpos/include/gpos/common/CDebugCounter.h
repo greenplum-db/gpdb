@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------
  *	Greenplum Database
- *	Copyright (c) 2019 Pivotal Software, Inc.
+ *	Copyright (c) 2019 VMware, Inc. or its affiliates.
  *
  *	@filename:
  *		CDebugCounter.h
@@ -83,9 +83,9 @@
 
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
+#include "gpos/common/CRefCount.h"
 #include "gpos/common/CTimerUser.h"
 
 #ifdef GPOS_DEBUG

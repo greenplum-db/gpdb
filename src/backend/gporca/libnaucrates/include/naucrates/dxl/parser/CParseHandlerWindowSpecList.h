@@ -13,8 +13,9 @@
 #define GPDXL_CParseHandlerWindowSpecList_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerBase.h"
+
 #include "naucrates/dxl/operators/CDXLWindowSpec.h"
+#include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
 {
@@ -36,25 +37,24 @@ private:
 	// list of window specifications
 	CDXLWindowSpecArray *m_window_spec_array;
 
-	// private copy ctor
-	CParseHandlerWindowSpecList(const CParseHandlerWindowSpecList &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerWindowSpecList(const CParseHandlerWindowSpecList &) = delete;
+
 	// ctor
 	CParseHandlerWindowSpecList(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,

@@ -62,10 +62,10 @@ private:
 	// maps a colid of a column to the attribute number of that column in the schema of the underlying relation
 	UlongToIntMap *m_colid_to_attno_map;
 
-	// private copy ctor
-	CDXLTranslateContextBaseTable(const CDXLTranslateContextBaseTable &);
-
 public:
+	CDXLTranslateContextBaseTable(const CDXLTranslateContextBaseTable &) =
+		delete;
+
 	// ctor/dtor
 	explicit CDXLTranslateContextBaseTable(CMemoryPool *mp);
 

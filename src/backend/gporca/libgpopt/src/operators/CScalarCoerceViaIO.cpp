@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarCoerceViaIO.cpp
@@ -15,8 +15,9 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

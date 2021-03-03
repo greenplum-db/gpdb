@@ -9,11 +9,15 @@
 //		Tests DXL utility functions
 //---------------------------------------------------------------------------
 
+#include "unittest/dxl/CDXLUtilsTest.h"
+
+#include <xercesc/util/Base64.hpp>
+
 #include "gpos/base.h"
-#include "gpos/io/COstreamString.h"
-#include "gpos/error/CAutoTrace.h"
-#include "gpos/common/CRandom.h"
 #include "gpos/common/CAutoP.h"
+#include "gpos/common/CRandom.h"
+#include "gpos/error/CAutoTrace.h"
+#include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/test/CUnittest.h"
 
@@ -21,10 +25,6 @@
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-
-#include "unittest/dxl/CDXLUtilsTest.h"
-
-#include <xercesc/util/Base64.hpp>
 
 XERCES_CPP_NAMESPACE_USE
 
@@ -74,7 +74,7 @@ CDXLUtilsTest::EresUnittest_SerializeQuery()
 	CHAR *dxl_string = CDXLUtils::Read(mp, szQueryFile);
 
 	CQueryToDXLResult *presult = CDXLUtils::ParseQueryToQueryDXLTree(
-		mp, dxl_string, NULL /*xsd_file_path*/);
+		mp, dxl_string, nullptr /*xsd_file_path*/);
 
 	// serialize with document header
 	BOOL rgfIndentation[] = {true, false};
@@ -131,7 +131,7 @@ CDXLUtilsTest::EresUnittest_SerializePlan()
 	ULLONG plan_id = gpos::ullong_max;
 	ULLONG plan_space_size = gpos::ullong_max;
 	CDXLNode *node = CDXLUtils::GetPlanDXLNode(
-		mp, dxl_string, NULL /*xsd_file_path*/, &plan_id, &plan_space_size);
+		mp, dxl_string, nullptr /*xsd_file_path*/, &plan_id, &plan_space_size);
 
 	// serialize with document header
 	BOOL rgfIndentation[] = {true, false};

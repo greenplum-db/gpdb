@@ -9,18 +9,19 @@
 //		Implementation of group implementation job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobGroupImplementation.h"
+
+#include "gpopt/base/CQueryContext.h"
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CGroupProxy.h"
 #include "gpopt/search/CJobFactory.h"
 #include "gpopt/search/CJobGroupExploration.h"
-#include "gpopt/search/CJobGroupImplementation.h"
 #include "gpopt/search/CJobGroupExpressionImplementation.h"
 #include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
-#include "gpopt/base/CQueryContext.h"
 #include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
@@ -90,9 +91,7 @@ const WCHAR
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::CJobGroupImplementation()
-{
-}
+CJobGroupImplementation::CJobGroupImplementation() = default;
 
 
 //---------------------------------------------------------------------------
@@ -103,9 +102,7 @@ CJobGroupImplementation::CJobGroupImplementation()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::~CJobGroupImplementation()
-{
-}
+CJobGroupImplementation::~CJobGroupImplementation() = default;
 
 
 //---------------------------------------------------------------------------
@@ -154,7 +151,7 @@ CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc)
 
 	// iterate on expression and schedule them as needed
 	CGroupExpression *pgexpr = PgexprFirstUnsched();
-	while (NULL != pgexpr)
+	while (nullptr != pgexpr)
 	{
 		if (!pgexpr->FTransitioned(CGroupExpression::estImplemented) &&
 			!pgexpr->ContainsCircularDependencies())
@@ -308,7 +305,7 @@ CJobGroupImplementation::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobGroupImplementation::OsPrint(IOstream &os)
+CJobGroupImplementation::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

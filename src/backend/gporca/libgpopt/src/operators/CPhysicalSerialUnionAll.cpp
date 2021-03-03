@@ -15,21 +15,20 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalSerialUnionAll.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecAny.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
-#include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
-
-#include "gpopt/operators/CPhysicalSerialUnionAll.h"
+#include "gpopt/exception.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarIdent.h"
-
-#include "gpopt/exception.h"
 
 using namespace gpopt;
 
@@ -43,9 +42,8 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalSerialUnionAll::CPhysicalSerialUnionAll(
 	CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
-	CColRef2dArray *pdrgpdrgpcrInput, ULONG ulScanIdPartialIndex)
-	: CPhysicalUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput,
-						ulScanIdPartialIndex)
+	CColRef2dArray *pdrgpdrgpcrInput)
+	: CPhysicalUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput)
 {
 	// UnionAll creates two distribution requests to enforce distribution of its children:
 	// (1) (Hashed, Hashed): used to pass hashed distribution (requested from above)
@@ -57,9 +55,7 @@ CPhysicalSerialUnionAll::CPhysicalSerialUnionAll(
 	GPOS_ASSERT(0 < UlDistrRequests());
 }
 
-CPhysicalSerialUnionAll::~CPhysicalSerialUnionAll()
-{
-}
+CPhysicalSerialUnionAll::~CPhysicalSerialUnionAll() = default;
 
 
 //---------------------------------------------------------------------------
@@ -75,13 +71,13 @@ CPhysicalSerialUnionAll::PdsRequired(
 	CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *pdsRequired,
 	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const
 {
-	GPOS_ASSERT(NULL != PdrgpdrgpcrInput());
+	GPOS_ASSERT(nullptr != PdrgpdrgpcrInput());
 	GPOS_ASSERT(child_index < PdrgpdrgpcrInput()->Size());
 	GPOS_ASSERT(2 > ulOptReq);
 
 	CDistributionSpec *pds = PdsRequireSingletonOrReplicated(
 		mp, exprhdl, pdsRequired, child_index, ulOptReq);
-	if (NULL != pds)
+	if (nullptr != pds)
 	{
 		return pds;
 	}
@@ -91,7 +87,7 @@ CPhysicalSerialUnionAll::PdsRequired(
 		// attempt passing requested hashed distribution to children
 		CDistributionSpecHashed *pdshashed = PdshashedPassThru(
 			mp, CDistributionSpecHashed::PdsConvert(pdsRequired), child_index);
-		if (NULL != pdshashed)
+		if (nullptr != pdshashed)
 		{
 			return pdshashed;
 		}
@@ -123,10 +119,12 @@ CPhysicalSerialUnionAll::PdsRequired(
 		return GPOS_NEW(mp) CDistributionSpecSingleton();
 	}
 
-	if (CDistributionSpec::EdtReplicated == pdsOuter->Edt())
+	if (CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated == pdsOuter->Edt())
 	{
 		// outer child is replicated, require inner child to be replicated
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 
 	if (CDistributionSpec::EdtExternal == pdsOuter->Edt())

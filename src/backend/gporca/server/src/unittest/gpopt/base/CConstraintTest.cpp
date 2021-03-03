@@ -13,23 +13,22 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "unittest/gpopt/base/CConstraintTest.h"
+
 #include <stdint.h>
 
 #include "gpos/task/CAutoTraceFlag.h"
-
-#include "unittest/base.h"
-#include "unittest/gpopt/base/CConstraintTest.h"
-#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
-
-#include "naucrates/base/CDatumInt8GPDB.h"
 
 #include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
+#include "naucrates/base/CDatumInt8GPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/IMDScalarOp.h"
+
+#include "unittest/base.h"
+#include "unittest/gpopt/CConstExprEvaluatorForDates.h"
 
 // number of microseconds in one day
 const LINT CConstraintTest::lMicrosecondsPerDay =
@@ -133,7 +132,7 @@ CConstraintTest::EresUnittest_CInterval()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	IMDTypeInt8 *pmdtypeint8 =
 		(IMDTypeInt8 *) mda.PtMDType<IMDTypeInt8>(CTestUtils::m_sysidDefault);
@@ -227,7 +226,7 @@ CConstraintTest::EresUnittest_CConjunction()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	IMDTypeInt8 *pmdtypeint8 =
 		(IMDTypeInt8 *) mda.PtMDType<IMDTypeInt8>(CTestUtils::m_sysidDefault);
@@ -354,7 +353,7 @@ CConstraintTest::EresUnittest_CDisjunction()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	IMDTypeInt8 *pmdtypeint8 =
 		(IMDTypeInt8 *) mda.PtMDType<IMDTypeInt8>(CTestUtils::m_sysidDefault);
@@ -432,7 +431,7 @@ CConstraintTest::EresUnittest_CNegation()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	IMDTypeInt8 *pmdtypeint8 =
 		(IMDTypeInt8 *) mda.PtMDType<IMDTypeInt8>(CTestUtils::m_sysidDefault);
@@ -500,7 +499,7 @@ CConstraintTest::EresUnittest_CIntervalFromScalarExpr()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	CExpression *pexprGet = CTestUtils::PexprLogicalGet(mp);
 	CColRefSet *pcrs = pexprGet->DeriveOutputColumns();
@@ -547,7 +546,7 @@ CConstraintTest::EresUnittest_CConstraintFromScalarExpr()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	CExpression *pexprGet1 = CTestUtils::PexprLogicalGet(mp);
 	CColRefSet *pcrs1 = pexprGet1->DeriveOutputColumns();
@@ -557,7 +556,7 @@ CConstraintTest::EresUnittest_CConstraintFromScalarExpr()
 	CColRefSet *pcrs2 = pexprGet2->DeriveOutputColumns();
 	CColRef *pcr2 = pcrs2->PcrAny();
 
-	CColRefSetArray *pdrgpcrs = NULL;
+	CColRefSetArray *pdrgpcrs = nullptr;
 
 	// expression with 1 column
 	CExpression *pexpr = PexprScalarCmp(mp, &mda, pcr1, IMDType::EcmptG, 15);
@@ -566,7 +565,7 @@ CConstraintTest::EresUnittest_CConstraintFromScalarExpr()
 	PrintConstraint(mp, pcnstr);
 	PrintEquivClasses(mp, pdrgpcrs);
 	pdrgpcrs->Release();
-	pdrgpcrs = NULL;
+	pdrgpcrs = nullptr;
 	pcnstr->Release();
 	pexpr->Release();
 
@@ -584,7 +583,7 @@ CConstraintTest::EresUnittest_CConstraintFromScalarExpr()
 	PrintConstraint(mp, pcnstrAnd);
 	PrintEquivClasses(mp, pdrgpcrs);
 	pdrgpcrs->Release();
-	pdrgpcrs = NULL;
+	pdrgpcrs = nullptr;
 
 	pcnstrAnd->Release();
 	pexprAnd->Release();
@@ -634,7 +633,7 @@ CConstraintTest::EresUnittest_CConstraintIntervalConvertsTo()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	// create a range which should convert to an IN array expression
 	const SRangeInfo rgRangeInfoIn[] = {
@@ -703,7 +702,7 @@ CConstraintTest::EresUnittest_CConstraintIntervalPexpr()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_RTL_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_RTL_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	CAutoTraceFlag atf(EopttraceArrayConstraints, true);
 
@@ -723,10 +722,10 @@ CConstraintTest::EresUnittest_CConstraintIntervalPexpr()
 	CColRefSet *pcrs = pexprGet->DeriveOutputColumns();
 	CColRef *colref = pcrs->PcrAny();
 
-	CRangeArray *pdrgprng = NULL;
-	CConstraintInterval *pcnstin = NULL;
-	CExpression *pexpr = NULL;
-	CConstraintInterval *pcnstNotIn = NULL;
+	CRangeArray *pdrgprng = nullptr;
+	CConstraintInterval *pcnstin = nullptr;
+	CExpression *pexpr = nullptr;
+	CConstraintInterval *pcnstNotIn = nullptr;
 
 	// IN CONSTRAINT FOR SIMPLE INTERVAL (WITHOUT NULL)
 
@@ -844,7 +843,7 @@ CConstraintTest::EresUnittest_CConstraintIntervalFromArrayExpr()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	CAutoTraceFlag atf(EopttraceArrayConstraints, true);
 
@@ -954,7 +953,7 @@ EresUnittest_CConstraintIntervalFromArrayExprIncludesNull()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	CAutoTraceFlag atf(EopttraceArrayConstraints, true);
 
@@ -1250,7 +1249,7 @@ CConstraintTest::PrintEquivClasses(CMemoryPool *mp, CColRefSetArray *pdrgpcrs,
 	}
 	at.Os() << "EQUIVALENCE CLASSES: [ ";
 
-	if (NULL == pdrgpcrs)
+	if (nullptr == pdrgpcrs)
 	{
 		at.Os() << "]" << std::endl;
 
@@ -1303,7 +1302,7 @@ CConstraintTest::EresUnittest_NegativeTests()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	const IMDType *pmdtype = mda.RetrieveType(&CMDIdGPDB::m_mdid_text);
 	CWStringConst str(GPOS_WSZ_LIT("text_col"));
@@ -1358,7 +1357,7 @@ CConstraintTest::EresUnittest_ConstraintsOnDates()
 
 	// install opt context in TLS
 	CAutoOptCtxt aoc(mp, &mda, pceeval, CTestUtils::GetCostModel(mp));
-	GPOS_ASSERT(NULL != COptCtxt::PoctxtFromTLS()->Pcomp());
+	GPOS_ASSERT(nullptr != COptCtxt::PoctxtFromTLS()->Pcomp());
 
 	const IMDType *pmdtype = mda.RetrieveType(&CMDIdGPDB::m_mdid_date);
 	CWStringConst str(GPOS_WSZ_LIT("date_col"));

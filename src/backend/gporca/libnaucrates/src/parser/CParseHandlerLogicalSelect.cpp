@@ -11,10 +11,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalSelect.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLLogicalSelect.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 using namespace gpdxl;
 
@@ -44,9 +45,7 @@ CParseHandlerLogicalSelect::CParseHandlerLogicalSelect(
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerLogicalSelect::~CParseHandlerLogicalSelect()
-{
-}
+CParseHandlerLogicalSelect::~CParseHandlerLogicalSelect() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -123,7 +122,7 @@ CParseHandlerLogicalSelect::EndElement(const XMLCh *const,	// element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_dxl_node);
+	GPOS_ASSERT(nullptr != m_dxl_node);
 
 	CParseHandlerScalarOp *scalar_cond_parse_handler =
 		dynamic_cast<CParseHandlerScalarOp *>((*this)[0]);

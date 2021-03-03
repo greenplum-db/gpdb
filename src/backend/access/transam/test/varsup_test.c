@@ -7,11 +7,14 @@
 #include "postgres.h"
 
 #undef ereport
-#define ereport(elevel, rest) ereport_mock(elevel, rest)
+#define ereport(elevel, ...) \
+	do { \
+	__VA_ARGS__, ereport_mock(elevel); \
+	} while(0)
 
 static int expected_elevel;
 
-static void ereport_mock(int elevel, int dummy pg_attribute_unused(),...)
+static void ereport_mock(int elevel)
 {
 	assert_int_equal(elevel, expected_elevel);
 	

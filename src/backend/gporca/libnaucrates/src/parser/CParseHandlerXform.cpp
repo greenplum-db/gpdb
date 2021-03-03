@@ -9,13 +9,13 @@
 //		Implementation of the SAX parse handler class for parsing xform
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerXform.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 #include "gpopt/xforms/CXform.h"
 #include "gpopt/xforms/CXformFactory.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
 
 
 using namespace gpdxl;
@@ -36,7 +36,7 @@ CParseHandlerXform::CParseHandlerXform(CMemoryPool *mp,
 									   CParseHandlerManager *parse_handler_mgr,
 									   CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_xform(NULL)
+	  m_xform(nullptr)
 {
 }
 
@@ -49,9 +49,7 @@ CParseHandlerXform::CParseHandlerXform(CMemoryPool *mp,
 //		Destructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerXform::~CParseHandlerXform()
-{
-}
+CParseHandlerXform::~CParseHandlerXform() = default;
 
 
 //---------------------------------------------------------------------------
@@ -86,7 +84,7 @@ CParseHandlerXform::StartElement(const XMLCh *const,  // element_uri,
 		CDXLUtils::CreateMultiByteCharStringFromWCString(
 			m_mp, str_xform_name->GetBuffer());
 	m_xform = CXformFactory::Pxff()->Pxf(char_str_xform_name);
-	GPOS_ASSERT(NULL != m_xform);
+	GPOS_ASSERT(nullptr != m_xform);
 
 	GPOS_DELETE(str_xform_name);
 	GPOS_DELETE_ARRAY(char_str_xform_name);

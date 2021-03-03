@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerLogicalCTEProducer_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 namespace gpdxl
@@ -32,25 +33,25 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerLogicalCTEProducer : public CParseHandlerLogicalOp
 {
 private:
-	// private copy ctor
-	CParseHandlerLogicalCTEProducer(const CParseHandlerLogicalCTEProducer &);
-
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerLogicalCTEProducer(const CParseHandlerLogicalCTEProducer &) =
+		delete;
+
 	// ctor
 	CParseHandlerLogicalCTEProducer(CMemoryPool *mp,
 									CParseHandlerManager *parse_handler_mgr,

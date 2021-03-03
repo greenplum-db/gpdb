@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerPhysicalAbstractBitmapScan.h
@@ -11,13 +11,10 @@
 
 #include "naucrates/dxl/parser/CParseHandlerPhysicalAbstractBitmapScan.h"
 
-#include "naucrates/dxl/operators/CDXLPhysicalDynamicBitmapTableScan.h"
-#include "naucrates/dxl/operators/CDXLPhysicalBitmapTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalAbstractBitmapScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalBitmapTableScan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalBitmapTableScan.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalDynamicBitmapTableScan.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarBitmapIndexProbe.h"
@@ -110,8 +107,7 @@ CParseHandlerPhysicalAbstractBitmapScan::StartElementHelper(
 //---------------------------------------------------------------------------
 void
 CParseHandlerPhysicalAbstractBitmapScan::EndElementHelper(
-	const XMLCh *const element_local_name, Edxltoken token_type,
-	ULONG part_idx_id, ULONG part_idx_id_printable)
+	const XMLCh *const element_local_name, Edxltoken token_type)
 {
 	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type),
 									  element_local_name))
@@ -136,23 +132,16 @@ CParseHandlerPhysicalAbstractBitmapScan::EndElementHelper(
 	CParseHandlerTableDescr *table_descr_parse_handler =
 		dynamic_cast<CParseHandlerTableDescr *>((*this)[5]);
 
-	GPOS_ASSERT(NULL != table_descr_parse_handler->GetDXLTableDescr());
+	GPOS_ASSERT(nullptr != table_descr_parse_handler->GetDXLTableDescr());
 
 	// set table descriptor
 	CDXLTableDescr *table_descr = table_descr_parse_handler->GetDXLTableDescr();
 	table_descr->AddRef();
-	CDXLPhysical *dxl_op = NULL;
 
-	if (EdxltokenPhysicalBitmapTableScan == token_type)
-	{
-		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalBitmapTableScan(m_mp, table_descr);
-	}
-	else
-	{
-		GPOS_ASSERT(EdxltokenPhysicalDynamicBitmapTableScan == token_type);
-		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalDynamicBitmapTableScan(
-			m_mp, table_descr, part_idx_id, part_idx_id_printable);
-	}
+
+	GPOS_ASSERT(EdxltokenPhysicalBitmapTableScan == token_type);
+	CDXLPhysical *dxl_op =
+		GPOS_NEW(m_mp) CDXLPhysicalBitmapTableScan(m_mp, table_descr);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	// set statictics and physical properties

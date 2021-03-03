@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorProxy.cpp
@@ -20,13 +20,11 @@ extern "C" {
 #include "executor/executor.h"
 }
 
-#include "gpopt/utils/CConstExprEvaluatorProxy.h"
-
 #include "gpopt/gpdbwrappers.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
-
-#include "naucrates/exception.h"
+#include "gpopt/utils/CConstExprEvaluatorProxy.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/exception.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -50,7 +48,7 @@ CConstExprEvaluatorProxy::CEmptyMappingColIdVar::VarFromDXLNodeScId(
 		 "Expression passed to CConstExprEvaluatorProxy contains variables. "
 		 "Evaluation will fail and an exception will be thrown.");
 	GPOS_RAISE(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError);
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -68,7 +66,7 @@ CConstExprEvaluatorProxy::EvaluateExpr(const CDXLNode *dxl_expr)
 	// Translate DXL -> GPDB Expr
 	Expr *expr = m_dxl2scalar_translator.TranslateDXLToScalar(
 		dxl_expr, &m_emptymapcidvar);
-	GPOS_ASSERT(NULL != expr);
+	GPOS_ASSERT(nullptr != expr);
 
 	// Evaluate the expression
 	Expr *result = gpdb::EvaluateExpr(expr, gpdb::ExprType((Node *) expr),

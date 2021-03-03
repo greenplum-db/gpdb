@@ -19,9 +19,10 @@ from gppylib.db import catalog, dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
+from gppylib.operations.update_pg_hba_conf import config_primaries_for_replication
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
-from gppylib.system.environment import GpMasterEnvironment
+from gppylib.system.environment import GpCoordinatorEnvironment
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import writeLinesToFile, readAllLinesFromFile, TableLogger, \
     PathNormalizationException, normalizeAndValidateInputPath
@@ -396,7 +397,7 @@ class GpAddMirrorsProgram:
         else:
             toBuild = calc.getGroupMirrors()
 
-        gpPrefix = gp_utils.get_gp_prefix(gpEnv.getMasterDataDir())
+        gpPrefix = gp_utils.get_gp_prefix(gpEnv.getCoordinatorDataDir())
         if not gpPrefix:
             gpPrefix = 'gp'
 
@@ -422,8 +423,8 @@ class GpAddMirrorsProgram:
     def __displayAddMirrors(self, gpEnv, mirrorBuilder, gpArray):
         logger.info('Greenplum Add Mirrors Parameters')
         logger.info('---------------------------------------------------------')
-        logger.info('Greenplum master data directory          = %s' % gpEnv.getMasterDataDir())
-        logger.info('Greenplum master port                    = %d' % gpEnv.getMasterPort())
+        logger.info('Greenplum coordinator data directory          = %s' % gpEnv.getCoordinatorDataDir())
+        logger.info('Greenplum coordinator port                    = %d' % gpEnv.getCoordinatorPort())
         logger.info('Parallel batch limit                     = %d' % self.__options.parallelDegree)
 
         total = len(mirrorBuilder.getMirrorsToBuild())
@@ -471,18 +472,18 @@ class GpAddMirrorsProgram:
             logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
             return 1
 
-        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+        consistent, inconsistent, coordinator_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
 
         inconsistent_segment_msgs = []
         for segment in inconsistent:
             inconsistent_segment_msgs.append("dbid: %s "
-                                             "checksum set to %s differs from master checksum set to %s" %
+                                             "checksum set to %s differs from coordinator checksum set to %s" %
                                              (segment.getSegmentDbId(), segment.heap_checksum,
-                                              master_heap_checksum))
+                                              coordinator_heap_checksum))
 
         if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
             logger.fatal("Cluster heap checksum setting differences reported")
-            logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+            logger.fatal("Heap checksum settings on %d of %d segment instances do not match coordinator <<<<<<<<"
                               % (len(inconsistent_segment_msgs), len(gpArray.segmentPairs)))
             logger.fatal("Review %s for details" % get_logfile())
             log_to_file_only("Failed checksum consistency validation:", logging.WARN)
@@ -491,58 +492,9 @@ class GpAddMirrorsProgram:
 
             for msg in inconsistent_segment_msgs:
                 log_to_file_only(msg, logging.WARN)
-                raise Exception("Segments have heap_checksum set inconsistently to master")
+                raise Exception("Segments have heap_checksum set inconsistently to coordinator")
         else:
             logger.info("Heap checksum setting consistent across cluster")
-
-    def config_primaries_for_replication(self, gpArray):
-        logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-
-        try:
-            for segmentPair in gpArray.getSegmentList():
-                # Start with an empty string so that the later .join prepends a newline to the first entry
-                entries = ['']
-                # Add the samehost replication entry to support single-host development
-                entries.append('host  replication {username} samehost trust'.format(username=unix.getUserName()))
-                if self.__options.hba_hostnames:
-                    mirror_hostname, _, _ = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
-                    entries.append("host all {username} {hostname} trust".format(username=unix.getUserName(), hostname=mirror_hostname))
-                    entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=mirror_hostname))
-                    primary_hostname, _, _ = socket.gethostbyaddr(segmentPair.primaryDB.getSegmentHostName())
-                    if mirror_hostname != primary_hostname:
-                        entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=primary_hostname))
-                else:
-                    mirror_ips = gp.IfAddrs.list_addrs(segmentPair.mirrorDB.getSegmentHostName())
-                    for ip in mirror_ips:
-                        cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = ip + cidr_suffix
-                        hba_line_entry = "host all {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr)
-                        entries.append(hba_line_entry)
-                    mirror_hostname = segmentPair.mirrorDB.getSegmentHostName()
-                    segment_pair_ips = gp.IfAddrs.list_addrs(mirror_hostname)
-                    primary_hostname = segmentPair.primaryDB.getSegmentHostName()
-                    if mirror_hostname != primary_hostname:
-                        segment_pair_ips.extend(gp.IfAddrs.list_addrs(primary_hostname))
-                    for ip in segment_pair_ips:
-                        cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = ip + cidr_suffix
-                        hba_line_entry = "host replication {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr)
-                        entries.append(hba_line_entry)
-                cmdStr = ". {gphome}/greenplum_path.sh; echo '{entries}' >> {datadir}/pg_hba.conf; pg_ctl -D {datadir} reload".format(
-                    gphome=os.environ["GPHOME"],
-                    entries="\n".join(entries),
-                    datadir=segmentPair.primaryDB.datadir)
-                logger.debug(cmdStr)
-                cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=segmentPair.primaryDB.hostname)
-                cmd.run(validateAfter=True)
-
-        except Exception as e:
-            logger.error("Failed while modifying pg_hba.conf on primary segments to allow replication connections: %s" % str(e))
-            raise
-
-        else:
-            logger.info("Successfully modified pg_hba.conf on primary segments to allow replication connections")
-
 
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
@@ -550,16 +502,17 @@ class GpAddMirrorsProgram:
                 "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
 
         self.__pool = base.WorkerPool(self.__options.parallelDegree)
-        gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True)
+        gpEnv = GpCoordinatorEnvironment(self.__options.coordinatorDataDirectory, True)
 
-        faultProberInterface.getFaultProber().initializeProber(gpEnv.getMasterPort())
-        confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
+        faultProberInterface.getFaultProber().initializeProber(gpEnv.getCoordinatorPort())
+        confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getCoordinatorPort())
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
 
         # check that heap_checksums is consistent across cluster, fail immediately if not
         self.validate_heap_checksums(gpArray)
 
-        self.checkMirrorOffset(gpArray)
+        if self.__options.mirrorConfigFile is None:
+            self.checkMirrorOffset(gpArray)
         
         # check that we actually have mirrors
         if gpArray.hasMirrors:
@@ -580,7 +533,7 @@ class GpAddMirrorsProgram:
                 if not userinput.ask_yesno(None, "\nContinue with add mirrors procedure", 'N'):
                     raise UserAbortedException()
 
-            self.config_primaries_for_replication(gpArray)
+            config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
             if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
                 return 1
 
@@ -613,7 +566,7 @@ class GpAddMirrorsProgram:
 
         addTo = OptionGroup(parser, "Connection Options")
         parser.add_option_group(addTo)
-        addMasterDirectoryOptionForSingleClusterProgram(addTo)
+        addCoordinatorDirectoryOptionForSingleClusterProgram(addTo)
 
         addTo = OptionGroup(parser, "Mirroring Options")
         parser.add_option_group(addTo)

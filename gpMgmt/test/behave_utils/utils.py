@@ -16,7 +16,7 @@ import pg
 from contextlib import closing
 from datetime import datetime
 from gppylib.commands.base import Command, ExecutionError, REMOTE
-from gppylib.commands.gp import chk_local_db_running
+from gppylib.commands.gp import chk_local_db_running, get_coordinatordatadir
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
 
@@ -24,11 +24,13 @@ from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
 
-master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-if master_data_dir is None:
-    raise Exception('MASTER_DATA_DIRECTORY is not set')
+coordinator_data_dir = get_coordinatordatadir()
+if coordinator_data_dir is None:
+    raise Exception('COORDINATOR_DATA_DIRECTORY is not set')
 
 
+# query_sql returns a cursor object, so the caller is responsible for closing
+# the dbconn connection.
 def query_sql(dbname, sql):
     result = None
 
@@ -99,9 +101,9 @@ def run_cmd(command):
     return (result.rc, result.stdout, result.stderr)
 
 
-def run_command_remote(context, command, host, source_file, export_mdd, validateAfter=True):
+def run_command_remote(context, command, host, source_file, export_cdd, validateAfter=True):
     cmd = Command(name='run command %s' % command,
-                  cmdStr='gpssh -h %s -e \'source %s; %s; %s\'' % (host, source_file, export_mdd, command))
+                  cmdStr='gpssh -h %s -e \'source %s; %s; %s\'' % (host, source_file, export_cdd, command))
     cmd.run(validateAfter=validateAfter)
     result = cmd.get_results()
     context.ret_code = result.rc
@@ -181,7 +183,7 @@ def check_database_is_running(context):
 
     pgport = int(os.environ['PGPORT'])
 
-    running_status = chk_local_db_running(os.environ.get('MASTER_DATA_DIRECTORY'), pgport)
+    running_status = chk_local_db_running(get_coordinatordatadir(), pgport)
     gpdb_running = running_status[0] and running_status[1] and running_status[2] and running_status[3]
 
     return gpdb_running
@@ -403,12 +405,12 @@ def create_external_partition(context, tablename, dbname, port, filename):
                         partition s_5  start(date '2014-01-01') end(date '2015-01-01') ) \
                         ;" % (tablename, table_definition)
 
-    master_hostname = get_master_hostname();
+    coordinator_hostname = get_coordinator_hostname();
     create_ext_table_str = "Create readable external table %s_ret (%s) \
                             location ('gpfdist://%s:%s/%s') \
                             format 'csv' encoding 'utf-8' \
                             log errors segment reject limit 1000 \
-                            ;" % (tablename, table_definition, master_hostname[0][0].strip(), port, filename)
+                            ;" % (tablename, table_definition, coordinator_hostname[0][0].strip(), port, filename)
 
     alter_table_str = "Alter table %s exchange partition p_2 \
                        with table %s_ret without validation \
@@ -557,7 +559,7 @@ def are_segments_synchronized():
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segments = gparray.getDbList()
     for seg in segments:
-        if seg.mode != MODE_SYNCHRONIZED and not seg.isSegmentMaster(True):
+        if seg.mode != MODE_SYNCHRONIZED and not seg.isSegmentCoordinator(True):
             return False
     return True
 
@@ -576,9 +578,9 @@ def check_row_count(context, tablename, dbname, nrows):
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
 
 
-def get_master_hostname(dbname='template1'):
-    master_hostname_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE content=-1 AND role='p'"
-    return getRows(dbname, master_hostname_sql)
+def get_coordinator_hostname(dbname='template1'):
+    coordinator_hostname_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE content=-1 AND role='p'"
+    return getRows(dbname, coordinator_hostname_sql)
 
 
 def get_hosts(dbname='template1'):
@@ -602,9 +604,9 @@ def get_all_hostnames_as_list(context, dbname):
     for seg in segs:
         hosts.append(seg[0].strip())
 
-    masters = get_master_hostname(dbname)
-    for master in masters:
-        hosts.append(master[0].strip())
+    coordinators = get_coordinator_hostname(dbname)
+    for coordinator in coordinators:
+        hosts.append(coordinator[0].strip())
 
     return hosts
 

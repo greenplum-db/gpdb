@@ -1,21 +1,21 @@
 //---------------------------------------------------------------------------
-//	Pivotal Software, Inc
-//	Copyright (C) 2017 Pivotal Software, Inc
+//	VMware, Inc. or its affiliates
+//	Copyright (C) 2017 VMware, Inc. or its affiliates
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/base/CEquivalenceClassesTest.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColumnFactory.h"
-#include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
+#include "gpopt/mdcache/CMDCache.h"
+#include "naucrates/md/CMDProviderMemory.h"
+#include "naucrates/md/IMDTypeInt4.h"
 
 #include "unittest/base.h"
 #include "unittest/gpopt/CTestUtils.h"
-#include "unittest/gpopt/base/CEquivalenceClassesTest.h"
 #include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
-
-#include "naucrates/md/IMDTypeInt4.h"
-#include "naucrates/md/CMDProviderMemory.h"
 
 
 // Unittest for bit vectors
@@ -47,7 +47,7 @@ CEquivalenceClassesTest::EresUnittest_NotDisjointEquivalanceClasses()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object
@@ -119,7 +119,7 @@ CEquivalenceClassesTest::EresUnittest_IntersectEquivalanceClasses()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object

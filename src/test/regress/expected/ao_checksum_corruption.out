@@ -63,7 +63,7 @@ RETURNS integer as $$
       f.close()
 
   return 0
-$$ LANGUAGE plpython3u;
+$$ LANGUAGE plpython3u EXECUTE ON ALL SEGMENTS;
 -- Corrupt a file by replacing the last occurrence of 'str' within the file
 -- with 'replacement'
 CREATE FUNCTION corrupt_file(data_file text, target bytea, replacement bytea)
@@ -90,11 +90,11 @@ RETURNS integer as $$
       f.close()
 
   return 0
-$$ LANGUAGE plpython3u;
+$$ LANGUAGE plpython3u EXECUTE ON ALL SEGMENTS;
 -- Large content, corrupt block header
 create table corrupt_header_large_co(comment bytea ) with (appendonly=true, orientation=column, checksum=true) DISTRIBUTED RANDOMLY;
 insert into corrupt_header_large_co select ("decode"(repeat('a',33554432),'escape')) from generate_series(1,8)  ;
-select SUM(corrupt_file(get_aoseg1_path('corrupt_header_large_co'), 8)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('corrupt_header_large_co'), 8));
 INFO:  corrupting file base/107062/107070.1 at 8  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  corrupting file base/107062/107070.1 at 8  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107070.1 at 8  (seg2 slice1 127.0.0.1:40002 pid=28139)
@@ -108,7 +108,7 @@ ERROR:  header checksum does not match, expected 0xBA9CC649 and found 0x0C997AE7
 -- Large content, corrupt content
 create table corrupt_content_large_co(comment bytea ) with (appendonly=true, orientation=column, checksum=true) DISTRIBUTED RANDOMLY;
 insert into corrupt_content_large_co select ("decode"(repeat('a',33554432),'escape')) from generate_series(1,8)  ;
-select SUM(corrupt_file(get_aoseg1_path('corrupt_content_large_co'), -3)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('corrupt_content_large_co'), -3));
 INFO:  corrupting file base/107062/107080.1 at -3  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  corrupting file base/107062/107080.1 at -3  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107080.1 at -3  (seg2 slice1 127.0.0.1:40002 pid=28139)
@@ -123,7 +123,7 @@ ERROR:  block checksum does not match, expected 0x9C02F450 and found 0x0A78638C 
 create table corrupt_header_small_co(a int) with (appendonly=true, orientation=column, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into corrupt_header_small_co values (1),(1),(1),(-1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),(20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7), (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
-select SUM(corrupt_file(get_aoseg1_path('corrupt_header_small_co'), 8)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('corrupt_header_small_co'), 8));
 INFO:  corrupting file base/107062/107090.1 at 8  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  corrupting file base/107062/107090.1 at 8  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107090.1 at 8  (seg2 slice1 127.0.0.1:40002 pid=28139)
@@ -138,7 +138,7 @@ ERROR:  header checksum does not match, expected 0xAA39D941 and found 0xE8FB379B
 create table corrupt_content_small_co(a int) with (appendonly=true, orientation=column, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into corrupt_content_small_co values (1),(1),(1),(-1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),(20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7), (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
-select SUM(corrupt_file(get_aoseg1_path('corrupt_content_small_co'), -3)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('corrupt_content_small_co'), -3));
 INFO:  corrupting file base/107062/107097.1 at -3  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  corrupting file base/107062/107097.1 at -3  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107097.1 at -3  (seg2 slice1 127.0.0.1:40002 pid=28139)
@@ -153,7 +153,7 @@ ERROR:  block checksum does not match, expected 0xA3CAEC7A and found 0x35B07BA6 
 create table corrupt_header_small_ao(a int) with (appendonly=true, orientation=row, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into corrupt_header_small_ao values (1),(1),(1),(-1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),(20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7), (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
-select SUM(corrupt_file(get_aoseg1_path('corrupt_header_small_ao'), 8)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('corrupt_header_small_ao'), 8));
 INFO:  corrupting file base/107062/107104.1 at 8  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  corrupting file base/107062/107104.1 at 8  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107104.1 at 8  (seg2 slice1 127.0.0.1:40002 pid=28139)
@@ -168,7 +168,7 @@ ERROR:  header checksum does not match, expected 0x413AF15D and found 0x805DA822
 create table corrupt_content_small_ao(a int) with (appendonly=true, orientation=row, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 insert into corrupt_content_small_ao values (1),(1),(1),(-1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),(20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7), (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
-select SUM(corrupt_file(get_aoseg1_path('corrupt_content_small_ao'), -3)) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('corrupt_content_small_ao'), -3));
 INFO:  corrupting file base/107062/107111.1 at -3  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  corrupting file base/107062/107111.1 at -3  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107111.1 at -3  (seg2 slice1 127.0.0.1:40002 pid=28139)
@@ -185,7 +185,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 't' as
 insert into appendonly_verify_block_checksums_co
   select 'abcdefghijlmnopqrstuvxyz' from generate_series(1, 5);
 -- Corrupt the table by flip the 'xyz' on the last row with ###
-select SUM(corrupt_file(get_aoseg1_path('appendonly_verify_block_checksums_co'), 'xyz', '###')) from gp_dist_random('gp_id');
+select SUM(corrupt_file(get_aoseg1_path('appendonly_verify_block_checksums_co'), 'xyz', '###'));
 INFO:  skipping non-existent file base/107062/107118.1  (seg0 slice1 127.0.0.1:40000 pid=28137)
 INFO:  skipping non-existent file base/107062/107118.1  (seg1 slice1 127.0.0.1:40001 pid=28138)
 INFO:  corrupting file base/107062/107118.1 by replacing <type 'str'> with ###  (seg2 slice1 127.0.0.1:40002 pid=28139)

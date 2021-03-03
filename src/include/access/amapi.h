@@ -131,8 +131,8 @@ typedef bool (*amgettuple_function) (IndexScanDesc scan,
 									 ScanDirection direction);
 
 /* fetch all valid tuples */
-typedef Node *(*amgetbitmap_function) (IndexScanDesc scan,
-									   Node *tbm);
+typedef int64 (*amgetbitmap_function) (IndexScanDesc scan,
+									   Node **bmNodeP);
 
 /* end index scan */
 typedef void (*amendscan_function) (IndexScanDesc scan);

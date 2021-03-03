@@ -14,8 +14,9 @@
 #define GPDXL_CDXLLogical_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLOperator.h"
+
 #include "naucrates/dxl/operators/CDXLColRef.h"
+#include "naucrates/dxl/operators/CDXLOperator.h"
 
 namespace gpdxl
 {
@@ -35,15 +36,14 @@ class CXMLSerializer;
 class CDXLLogical : public CDXLOperator
 {
 private:
-	// private copy ctor
-	CDXLLogical(const CDXLLogical &);
-
 public:
+	CDXLLogical(const CDXLLogical &) = delete;
+
 	// ctor/dtor
 	explicit CDXLLogical(CMemoryPool *mp);
 
 	// Get operator type
-	Edxloptype GetDXLOperatorType() const;
+	Edxloptype GetDXLOperatorType() const override;
 };
 }  // namespace gpdxl
 

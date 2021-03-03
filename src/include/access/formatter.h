@@ -4,7 +4,7 @@
  *	  Declarations for External Table Formatter functions
  *
  * Portions Copyright (c) 2010, EMC corporation
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

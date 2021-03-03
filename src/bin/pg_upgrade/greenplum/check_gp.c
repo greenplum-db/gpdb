@@ -10,7 +10,7 @@
  *	checks against a PostgreSQL cluster.
  *
  *	Copyright (c) 2010, PostgreSQL Global Development Group
- *	Copyright (c) 2017-Present Pivotal Software, Inc
+ *	Copyright (c) 2017-Present VMware, Inc. or its affiliates
  *	contrib/pg_upgrade/check_gp.c
  */
 

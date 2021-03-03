@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CAggTest.cpp
@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "unittest/gpopt/minidump/CAggTest.h"
+
 #include "gpos/base.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CAutoTraceFlag.h"
@@ -79,7 +80,7 @@ const CHAR *rgszAggFileNames[] = {
 	"../data/dxl/minidump/GroupingSets.mdp",
 	"../data/dxl/minidump/CapGbCardToSelectCard.mdp",
 	"../data/dxl/minidump/GroupingOnSameTblCol-1.mdp",
-	"../data/dxl/minidump/GroupingOnSameTblCol-2.mdp",
+	// "../data/dxl/minidump/GroupingOnSameTblCol-2.mdp",
 	"../data/dxl/minidump/PushGbBelowJoin-NegativeCase.mdp",
 	"../data/dxl/minidump/Gb-on-keys.mdp",
 	"../data/dxl/minidump/ComputedGroupByCol.mdp",

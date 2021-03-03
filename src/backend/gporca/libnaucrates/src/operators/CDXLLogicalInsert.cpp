@@ -9,13 +9,14 @@
 //		Implementation of DXL logical insert operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLLogicalInsert.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLLogicalInsert.h"
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/CDXLUtils.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -35,8 +36,8 @@ CDXLLogicalInsert::CDXLLogicalInsert(CMemoryPool *mp,
 	  m_dxl_table_descr(table_descr),
 	  m_src_colids_array(src_colids_array)
 {
-	GPOS_ASSERT(NULL != table_descr);
-	GPOS_ASSERT(NULL != src_colids_array);
+	GPOS_ASSERT(nullptr != table_descr);
+	GPOS_ASSERT(nullptr != src_colids_array);
 }
 
 //---------------------------------------------------------------------------

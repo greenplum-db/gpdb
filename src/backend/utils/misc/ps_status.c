@@ -8,7 +8,7 @@
  * src/backend/utils/misc/ps_status.c
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  * various details abducted from various places
  *--------------------------------------------------------------------
@@ -369,7 +369,8 @@ set_ps_display(const char *activity, bool force)
 
 	/* Add client session's global id. */
 	if (gp_session_id > 0 && ep - cp > 0 &&
-		strstr(ps_buffer, "bgworker") == NULL) /* ugly hack for fts, dtx recovery */
+		strstr(ps_buffer, "dtx recovery process") == NULL &&
+		strstr(ps_buffer, "ftsprobe process") == NULL)
 	{
 		cp += snprintf(cp, ep - cp, "con%d ", gp_session_id);
 

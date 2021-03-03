@@ -14,13 +14,12 @@
 #ifndef GPOS_CRefCount_H
 #define GPOS_CRefCount_H
 
-#include "gpos/utils.h"
 #include "gpos/assert.h"
-#include "gpos/types.h"
-
-#include "gpos/error/CException.h"
 #include "gpos/common/CHeapObject.h"
+#include "gpos/error/CException.h"
 #include "gpos/task/ITask.h"
+#include "gpos/types.h"
+#include "gpos/utils.h"
 
 // pattern used to mark deallocated memory, this must match
 // GPOS_MEM_FREED_PATTERN_CHAR in CMemoryPool.h
@@ -40,7 +39,7 @@ class CRefCount : public CHeapObject
 {
 private:
 	// reference counter -- first in class to be in sync with Check()
-	ULONG_PTR m_refs;
+	ULONG_PTR m_refs{1};
 
 #ifdef GPOS_DEBUG
 	// sanity check to detect deleted memory
@@ -52,14 +51,11 @@ private:
 	}
 #endif	// GPOS_DEBUG
 
-	// private copy ctor
-	CRefCount(const CRefCount &);
-
 public:
+	CRefCount(const CRefCount &) = delete;
+
 	// ctor
-	CRefCount() : m_refs(1)
-	{
-	}
+	CRefCount() = default;
 
 	// FIXME: should mark this noexcept in non-assert builds
 	// dtor
@@ -67,7 +63,7 @@ public:
 	{
 		// enforce strict ref-counting unless we're in a pending exception,
 		// e.g., a ctor has thrown
-		GPOS_ASSERT(NULL == ITask::Self() ||
+		GPOS_ASSERT(nullptr == ITask::Self() ||
 					ITask::Self()->HasPendingExceptions() || 0 == m_refs);
 	}
 
@@ -124,24 +120,11 @@ public:
 	static void
 	SafeRelease(CRefCount *rc)
 	{
-		if (NULL != rc)
+		if (nullptr != rc)
 		{
 			rc->Release();
 		}
 	}
-
-#ifdef GPOS_DEBUG
-	// debug print for interactive debugging sessions only
-	void DbgPrint() const;
-#endif	// GPOS_DEBUG
-
-	// print function
-	virtual IOstream &
-	OsPrint(IOstream &os) const
-	{
-		return os;
-	}
-
 
 };	// class CRefCount
 }  // namespace gpos

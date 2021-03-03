@@ -11,7 +11,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,102024,102025,102115,102116,102119,102120,102128,102131,102132,102133,102134,102135,102136,103001,103014,103015,103020"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102115,102116,102119,102120,102128,102131,102132,102133,102134,102135,102136,102144,103001,103014,103015,103020,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">

@@ -9,13 +9,14 @@
 //		Implementation of physical const table get operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalConstTableGet.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDistributionSpecUniversal.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCTEMap.h"
+#include "gpopt/base/CDistributionSpecUniversal.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CPhysicalConstTableGet.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
 
@@ -100,7 +101,7 @@ CPhysicalConstTableGet::PcrsRequired(CMemoryPool *,		   // mp,
 )
 {
 	GPOS_ASSERT(!"CPhysicalConstTableGet has no children");
-	return NULL;
+	return nullptr;
 }
 
 
@@ -122,7 +123,7 @@ CPhysicalConstTableGet::PosRequired(CMemoryPool *,		  // mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalConstTableGet has no children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -143,7 +144,7 @@ CPhysicalConstTableGet::PdsRequired(CMemoryPool *,		  // mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalConstTableGet has no children");
-	return NULL;
+	return nullptr;
 }
 
 
@@ -165,7 +166,7 @@ CPhysicalConstTableGet::PrsRequired(CMemoryPool *,		   // mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalConstTableGet has no children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -186,7 +187,7 @@ CPhysicalConstTableGet::PcteRequired(CMemoryPool *,		   //mp,
 ) const
 {
 	GPOS_ASSERT(!"CPhysicalConstTableGet has no children");
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -203,7 +204,7 @@ CPhysicalConstTableGet::FProvidesReqdCols(CExpressionHandle &,	// exprhdl,
 										  ULONG	 // ulOptReq
 ) const
 {
-	GPOS_ASSERT(NULL != pcrsRequired);
+	GPOS_ASSERT(nullptr != pcrsRequired);
 
 	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
 	pcrs->Include(m_pdrgpcrOutput);
@@ -300,7 +301,7 @@ CPhysicalConstTableGet::EpetOrder(CExpressionHandle &,	// exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	return CEnfdProp::EpetRequired;

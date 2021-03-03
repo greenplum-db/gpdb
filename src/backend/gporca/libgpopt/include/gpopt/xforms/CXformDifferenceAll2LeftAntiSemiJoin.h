@@ -18,6 +18,7 @@
 #define GPOPT_CXformDifferenceAll2LeftAntiSemiJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -35,42 +36,40 @@ using namespace gpos;
 class CXformDifferenceAll2LeftAntiSemiJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformDifferenceAll2LeftAntiSemiJoin(
-		const CXformDifferenceAll2LeftAntiSemiJoin &);
-
 public:
+	CXformDifferenceAll2LeftAntiSemiJoin(
+		const CXformDifferenceAll2LeftAntiSemiJoin &) = delete;
+
 	// ctor
 	explicit CXformDifferenceAll2LeftAntiSemiJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformDifferenceAll2LeftAntiSemiJoin()
-	{
-	}
+	~CXformDifferenceAll2LeftAntiSemiJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfDifferenceAll2LeftAntiSemiJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformDifferenceAll2LeftAntiSemiJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return CXform::ExfpHigh;
 	}
 
 	// actual transform
-	void Transform(CXformContext *, CXformResult *, CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformDifferenceAll2LeftAntiSemiJoin
 

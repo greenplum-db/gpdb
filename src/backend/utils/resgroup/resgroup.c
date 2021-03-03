@@ -25,7 +25,7 @@
  *   transaction to run in it.
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -1463,7 +1463,6 @@ groupDecMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 		/* Sub chunks from memSharedUsage in group */
 		int32 oldSharedUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *) &group->memSharedUsage,
 										deltaSharedMemUsage);
-		Assert(oldSharedUsage >= deltaSharedMemUsage);
 
 		/* record the total global share usage of current group */
 		int32 grpTotalGlobalUsage = Max(0, oldSharedUsage - group->memSharedGranted);
@@ -1926,7 +1925,10 @@ groupAcquireSlot(ResGroupInfo *pGroupInfo, bool isMoveQuery)
 		}
 	}
 
-	/* add into group wait queue */
+	/*
+	 * Add into group wait queue (if not waiting yet).
+	 */
+	Assert(!proc_exit_inprogress);
 	groupWaitQueuePush(group, MyProc);
 
 	if (!group->lockedForDrop)
@@ -2548,24 +2550,24 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 
 /*
  * Check whether resource group should be assigned on master.
- *
- * Resource group will not be assigned if we are in SIGUSR1 handler.
- * This is to avoid the deadlock situation cased by the following scenario:
- *
- * Suppose backend A starts a transaction and acquires the LAST slot in resource
- * group G. Then backend A signals other backends who need a catchup interrupt.
- * Suppose backend B receives the signal and wants to respond to catchup event.
- * If backend B is assigned the same resource group G and tries to acquire a slot,
- * it will hang. Backend A will also hang because it is waiting for backend B to
- * catch up and free its space in the global SI message queue.
  */
 bool
 ShouldAssignResGroupOnMaster(void)
 {
+	/*
+	 * Bypass resource group when it's waiting for a resource group slot. e.g.
+	 * MyProc was interrupted by SIGTERM while waiting for resource group slot.
+	 * Some callbacks - RemoveTempRelationsCallback for example - open new
+	 * transactions on proc exit. It can cause a double add of MyProc to the
+	 * waiting queue (and its corruption).
+	 *
+	 * Also bypass resource group when it's exiting.
+	 */
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
 		Gp_role == GP_ROLE_DISPATCH &&
-		!AmIInSIGUSR1Handler();
+		!proc_exit_inprogress &&
+		!procIsWaiting(MyProc);
 }
 
 /*
@@ -2577,8 +2579,7 @@ ShouldUnassignResGroup(void)
 {
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
-		(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
-		!AmIInSIGUSR1Handler();
+		(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE);
 }
 
 /*
@@ -3438,6 +3439,9 @@ slotGetId(const ResGroupSlotData *slot)
 static void
 lockResGroupForDrop(ResGroupData *group)
 {
+	if (group->lockedForDrop)
+		return;
+
 	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(group->nRunning == 0);
@@ -3448,6 +3452,9 @@ lockResGroupForDrop(ResGroupData *group)
 static void
 unlockResGroupForDrop(ResGroupData *group)
 {
+	if (!group->lockedForDrop)
+		return;
+
 	Assert(LWLockHeldByMeInMode(ResGroupLock, LW_EXCLUSIVE));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(group->nRunning == 0);

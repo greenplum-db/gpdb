@@ -10,10 +10,11 @@
 //		with dynamic buffer allocation.
 //---------------------------------------------------------------------------
 
+#include "gpos/string/CWStringDynamic.h"
+
+#include "gpos/common/CAutoRg.h"
 #include "gpos/common/clibwrapper.h"
 #include "gpos/string/CStringStatic.h"
-#include "gpos/string/CWStringDynamic.h"
-#include "gpos/common/CAutoRg.h"
 using namespace gpos;
 
 
@@ -45,7 +46,7 @@ CWStringDynamic::CWStringDynamic(CMemoryPool *mp)
 CWStringDynamic::CWStringDynamic(CMemoryPool *mp, const WCHAR *w_str_buffer)
 	: CWString(GPOS_WSZ_LENGTH(w_str_buffer)), m_mp(mp), m_capacity(0)
 {
-	GPOS_ASSERT(NULL != w_str_buffer);
+	GPOS_ASSERT(nullptr != w_str_buffer);
 
 	Reset();
 	AppendBuffer(w_str_buffer);
@@ -77,7 +78,7 @@ CWStringDynamic::~CWStringDynamic()
 void
 CWStringDynamic::Reset()
 {
-	if (NULL != m_w_str_buffer && &m_empty_wcstr != m_w_str_buffer)
+	if (nullptr != m_w_str_buffer && &m_empty_wcstr != m_w_str_buffer)
 	{
 		GPOS_DELETE_ARRAY(m_w_str_buffer);
 	}
@@ -99,7 +100,7 @@ CWStringDynamic::Reset()
 void
 CWStringDynamic::AppendBuffer(const WCHAR *w_str)
 {
-	GPOS_ASSERT(NULL != w_str);
+	GPOS_ASSERT(nullptr != w_str);
 	ULONG length = GPOS_WSZ_LENGTH(w_str);
 	if (0 == length)
 	{
@@ -146,7 +147,7 @@ CWStringDynamic::AppendWideCharArray(const WCHAR *w_str)
 void
 CWStringDynamic::AppendCharArray(const CHAR *sz)
 {
-	GPOS_ASSERT(NULL != sz);
+	GPOS_ASSERT(nullptr != sz);
 
 	// expand buffer if needed
 	const ULONG length = GPOS_SZ_LENGTH(sz);
@@ -184,7 +185,7 @@ CWStringDynamic::AppendCharArray(const CHAR *sz)
 void
 CWStringDynamic::AppendFormat(const WCHAR *format, ...)
 {
-	GPOS_ASSERT(NULL != format);
+	GPOS_ASSERT(nullptr != format);
 	using clib::Vswprintf;
 
 	VA_LIST va_args;
@@ -266,7 +267,7 @@ void
 CWStringDynamic::AppendEscape(const CWStringBase *str, WCHAR wc,
 							  const WCHAR *w_str_replace)
 {
-	GPOS_ASSERT(NULL != str);
+	GPOS_ASSERT(nullptr != str);
 
 	if (str->IsEmpty())
 	{

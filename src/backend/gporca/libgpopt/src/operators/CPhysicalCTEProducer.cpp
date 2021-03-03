@@ -9,15 +9,15 @@
 //		Implementation of CTE producer operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalCTEProducer.h"
+
 #include "gpos/base.h"
 
+#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalCTEProducer.h"
 #include "gpopt/operators/CPhysicalSpool.h"
-
-#include "gpopt/base/CCTEMap.h"
 
 using namespace gpopt;
 
@@ -31,9 +31,9 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalCTEProducer::CPhysicalCTEProducer(CMemoryPool *mp, ULONG id,
 										   CColRefArray *colref_array)
-	: CPhysical(mp), m_id(id), m_pdrgpcr(colref_array), m_pcrs(NULL)
+	: CPhysical(mp), m_id(id), m_pdrgpcr(colref_array), m_pcrs(nullptr)
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
 	m_pcrs = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcr);
 }
 
@@ -140,27 +140,6 @@ CPhysicalCTEProducer::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == child_index);
 
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalCTEProducer::PppsRequired
-//
-//	@doc:
-//		Compute required partition propagation of the n-th child
-//
-//---------------------------------------------------------------------------
-CPartitionPropagationSpec *
-CPhysicalCTEProducer::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								   CPartitionPropagationSpec *pppsRequired,
-								   ULONG child_index,
-								   CDrvdPropArray *,  //pdrgpdpCtxt,
-								   ULONG			  //ulOptReq
-)
-{
-	GPOS_ASSERT(0 == child_index);
-
-	return PppsRequiredPushThru(mp, exprhdl, pppsRequired, child_index);
 }
 
 //---------------------------------------------------------------------------
@@ -289,7 +268,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalCTEProducer::EpetOrder(CExpressionHandle &exprhdl,
 								const CEnfdOrder *peo) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	COrderSpec *pos = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pos();
@@ -314,7 +293,7 @@ CEnfdProp::EPropEnforcingType
 CPhysicalCTEProducer::EpetRewindability(CExpressionHandle &exprhdl,
 										const CEnfdRewindability *per) const
 {
-	GPOS_ASSERT(NULL != per);
+	GPOS_ASSERT(nullptr != per);
 
 	CRewindabilitySpec *prs = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Prs();
 	if (per->FCompatible(prs))

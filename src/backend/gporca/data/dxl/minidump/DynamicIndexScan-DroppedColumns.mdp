@@ -3,10 +3,10 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="1" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="103027,101013,103001"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -135,29 +135,349 @@
         </dxl:IndexInfoList>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:Or>
-            <dxl:Or>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                  <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-                </dxl:Cast>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUI=" LintValue="160711212"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                  <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-                </dxl:Cast>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWI=" LintValue="160449068"/>
-              </dxl:Comparison>
-            </dxl:Or>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.566955001.1.0"/>
+          <dxl:Partition Mdid="0.566955002.1.0"/>
+          <dxl:Partition Mdid="0.566955003.1.0"/>
+          <dxl:Partition Mdid="0.566955004.1.0"/>
+          <dxl:Partition Mdid="0.566955005.1.0"/>
+          <dxl:Partition Mdid="0.566955006.1.0"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955001.1.0" Name="testbug_char5_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110001.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-              </dxl:Cast>
-              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABXg=" LintValue="160629292"/>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAATA=" LintValue="241005160526187"/>
             </dxl:Comparison>
-          </dxl:Or>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955002.1.0" Name="testbug_char5_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110002.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAUE=" LintValue="274455593287695"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955003.1.0" Name="testbug_char5_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110003.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAU0=" LintValue="97725982049131"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955004.1.0" Name="testbug_char5_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110004.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAWE=" LintValue="197535818991206"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955005.1.0" Name="testbug_char5_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110005.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAW0=" LintValue="195213581083665"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955006.1.0" Name="testbug_char5_prt_6" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110006.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAXo=" LintValue="60034194879664"/>
+            </dxl:Comparison>
+          </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:Type Mdid="0.1700.1.0" Name="numeric" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -272,30 +592,22 @@
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:Or>
-            <dxl:Or>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                  <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-                </dxl:Cast>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUI=" LintValue="160711212"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                  <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-                </dxl:Cast>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWI=" LintValue="160449068"/>
-              </dxl:Comparison>
-            </dxl:Or>
-            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-              </dxl:Cast>
-              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABXg=" LintValue="160629292"/>
-            </dxl:Comparison>
-          </dxl:Or>
-        </dxl:PartConstraint>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.567110001.1.0"/>
+          <dxl:Partition Mdid="0.567110002.1.0"/>
+          <dxl:Partition Mdid="0.567110003.1.0"/>
+          <dxl:Partition Mdid="0.567110004.1.0"/>
+          <dxl:Partition Mdid="0.567110005.1.0"/>
+          <dxl:Partition Mdid="0.567110006.1.0"/>
+        </dxl:Partitions>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.567110001.1.0"/>
+          <dxl:Partition Mdid="0.567110002.1.0"/>
+          <dxl:Partition Mdid="0.567110003.1.0"/>
+          <dxl:Partition Mdid="0.567110004.1.0"/>
+          <dxl:Partition Mdid="0.567110005.1.0"/>
+          <dxl:Partition Mdid="0.567110006.1.0"/>
+        </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.9" Name="cmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.8" Name="xmax" Width="4.000000"/>
@@ -352,29 +664,349 @@
         </dxl:IndexInfoList>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:Or>
-            <dxl:Or>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                  <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-                </dxl:Cast>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUI=" LintValue="160711212"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                  <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-                </dxl:Cast>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWI=" LintValue="160449068"/>
-              </dxl:Comparison>
-            </dxl:Or>
+        <dxl:Partitions>
+          <dxl:Partition Mdid="0.566955001.1.1"/>
+          <dxl:Partition Mdid="0.566955002.1.1"/>
+          <dxl:Partition Mdid="0.566955003.1.1"/>
+          <dxl:Partition Mdid="0.566955004.1.1"/>
+          <dxl:Partition Mdid="0.566955005.1.1"/>
+          <dxl:Partition Mdid="0.566955006.1.1"/>
+        </dxl:Partitions>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955001.1.1" Name="testbug_char5_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110001.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
-              </dxl:Cast>
-              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABXg=" LintValue="160629292"/>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAATA=" LintValue="241005160526187"/>
             </dxl:Comparison>
-          </dxl:Or>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955002.1.1" Name="testbug_char5_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110002.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAUE=" LintValue="274455593287695"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955003.1.1" Name="testbug_char5_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110003.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAU0=" LintValue="97725982049131"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955004.1.1" Name="testbug_char5_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110004.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAWE=" LintValue="197535818991206"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955005.1.1" Name="testbug_char5_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110005.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAW0=" LintValue="195213581083665"/>
+            </dxl:Comparison>
+          </dxl:And>
+        </dxl:PartConstraint>
+      </dxl:Relation>
+      <dxl:Relation Mdid="0.566955006.1.1" Name="testbug_char5_prt_6" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+        <dxl:Columns>
+          <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="user_id" Attno="2" Mdid="0.1700.1.0" Nullable="false" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="........pg.dropped.3........" Attno="3" Mdid="0.0.0.0" Nullable="true" IsDropped="true" ColWidth="8">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag1" Attno="4" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tag2" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="5">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+          <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
+            <dxl:DefaultValue/>
+          </dxl:Column>
+        </dxl:Columns>
+        <dxl:IndexInfoList>
+          <dxl:IndexInfo Mdid="0.567110006.1.0" IsPartial="false"/>
+        </dxl:IndexInfoList>
+        <dxl:Triggers/>
+        <dxl:CheckConstraints/>
+        <dxl:PartConstraint>
+          <dxl:And>
+            <dxl:IsNotNull>
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+            </dxl:IsNotNull>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+              <dxl:Ident ColId="1" ColName="timest" TypeMdid="0.1043.1.0"/>
+              <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAAAXo=" LintValue="60034194879664"/>
+            </dxl:Comparison>
+          </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.7" Name="cmin" Width="4.000000"/>
@@ -417,7 +1049,7 @@
     <dxl:Plan Id="1" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3.515918" Rows="1.000000" Width="27"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000344" Rows="1.000000" Width="27"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="timest">
@@ -437,7 +1069,7 @@
         <dxl:SortingColumnList/>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.450000" Rows="1.000000" Width="27"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000181" Rows="1.000000" Width="27"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="timest">
@@ -476,7 +1108,7 @@
           </dxl:PartitionSelector>
           <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.450000" Rows="1.000000" Width="27"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000181" Rows="1.000000" Width="27"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="timest">

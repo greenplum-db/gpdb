@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarBitmapBoolOp.cpp
@@ -11,12 +11,11 @@
 
 #include "naucrates/dxl/operators/CDXLScalarBitmapBoolOp.h"
 
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/dxl/xml/CXMLSerializer.h"
-
-#include "naucrates/md/IMDType.h"
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/md/IMDType.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -144,7 +143,7 @@ CDXLScalarBitmapBoolOp::SerializeToDXL(CXMLSerializer *xml_serializer,
 
 	const CWStringConst *element_name = GetOpNameStr();
 
-	GPOS_ASSERT(NULL != element_name);
+	GPOS_ASSERT(nullptr != element_name);
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 	m_mdid_type->Serialize(xml_serializer,

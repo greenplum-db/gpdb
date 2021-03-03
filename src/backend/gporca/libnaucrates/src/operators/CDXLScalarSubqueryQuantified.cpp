@@ -9,11 +9,11 @@
 //		Implementation of quantified subquery operator
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarSubqueryQuantified.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLScalarSubqueryQuantified.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -37,7 +37,7 @@ CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 	  m_colid(colid)
 {
 	GPOS_ASSERT(scalar_op_mdid->IsValid());
-	GPOS_ASSERT(NULL != scalar_op_mdname);
+	GPOS_ASSERT(nullptr != scalar_op_mdname);
 }
 
 //---------------------------------------------------------------------------

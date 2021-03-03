@@ -36,24 +36,22 @@ static char expectedErrorMsg[ERROR_MESSAGE_MAX_LEN];
 
 static MemoryContext testMemoryContext = NULL;
 
-static int
-errfinish_impl(int dummy pg_attribute_unused(),...)
+static void
+errfinish_impl(const char *filename, int lineno, const char *funcname)
 {
 	/* We only throw error if the error message matches our expectation */
 	if (0 == strcmp(lastErrorMsg, expectedErrorMsg))
 	{
 		PG_RE_THROW();
 	}
-	return 0;
 }
 
-static int
+static void
 errmsg_impl(const char *fmt, ...)
 {
-	return 0;
 }
 
-static int
+static void
 errdetail_internal_impl(const char* fmt, ...)
 {
     StringInfoData	buf;
@@ -65,16 +63,12 @@ errdetail_internal_impl(const char* fmt, ...)
 	strncpy(lastErrorMsg, buf.data, sizeof(lastErrorMsg) / sizeof(lastErrorMsg[0]));
 
 	pfree(buf.data);
-	return 0;
 }
 
 #include "../dfmgr.c"
 
 #define EXPECT_EREPORT(LOG_LEVEL)     \
 	expect_any(errstart, elevel); \
-	expect_any(errstart, filename); \
-	expect_any(errstart, lineno); \
-	expect_any(errstart, funcname); \
 	expect_any(errstart, domain); \
 	if (LOG_LEVEL < ERROR) \
 	{ \

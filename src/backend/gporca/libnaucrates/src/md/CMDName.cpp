@@ -9,9 +9,10 @@
 //		Metadata name of objects
 //---------------------------------------------------------------------------
 
+#include "naucrates/md/CMDName.h"
+
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
-#include "naucrates/md/CMDName.h"
 
 using namespace gpmd;
 
@@ -26,7 +27,7 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CMDName::CMDName(CMemoryPool *mp, const CWStringBase *str)
-	: m_name(NULL), m_deep_copy(true)
+	: m_name(nullptr), m_deep_copy(true)
 {
 	m_name = GPOS_NEW(mp) CWStringConst(mp, str->GetBuffer());
 }
@@ -44,7 +45,7 @@ CMDName::CMDName(CMemoryPool *mp, const CWStringBase *str)
 CMDName::CMDName(const CWStringConst *str, BOOL owns_memory)
 	: m_name(str), m_deep_copy(owns_memory)
 {
-	GPOS_ASSERT(NULL != m_name);
+	GPOS_ASSERT(nullptr != m_name);
 	GPOS_ASSERT(m_name->IsValid());
 }
 
@@ -59,7 +60,7 @@ CMDName::CMDName(const CWStringConst *str, BOOL owns_memory)
 CMDName::CMDName(const CMDName &name)
 	: m_name(name.GetMDName()), m_deep_copy(false)
 {
-	GPOS_ASSERT(NULL != m_name->GetBuffer());
+	GPOS_ASSERT(nullptr != m_name->GetBuffer());
 	GPOS_ASSERT(m_name->IsValid());
 }
 

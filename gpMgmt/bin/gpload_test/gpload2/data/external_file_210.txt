@@ -1,0 +1,5 @@
+a\\b|c\\\x31
+a\\\\b|o\\\x31
+a\|b|off\\\x31
+a\nb|O\\\x31
+a\\nb|OFF\\\x31

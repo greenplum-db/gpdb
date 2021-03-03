@@ -13,8 +13,9 @@
 #define GPDXL_CDXLLogicalLimit_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 
 namespace gpdxl
 {
@@ -41,19 +42,18 @@ class CDXLLogicalLimit : public CDXLLogical
 private:
 	BOOL m_top_limit_under_dml;
 
-	// private copy ctor
-	CDXLLogicalLimit(CDXLLogicalLimit &);
-
 public:
+	CDXLLogicalLimit(CDXLLogicalLimit &) = delete;
+
 	// ctor/dtor
 	CDXLLogicalLimit(CMemoryPool *mp, BOOL fNonRemovableLimit);
 
-	virtual ~CDXLLogicalLimit();
+	~CDXLLogicalLimit() override;
 
 	// accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// the limit is right under a DML or CTAS
 	BOOL
@@ -63,14 +63,14 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLLogicalLimit *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalLimit == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalLimit *>(dxl_op);
@@ -79,7 +79,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

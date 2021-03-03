@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 //
 //	Template Class for Inner / Left Outer Index Apply
 //---------------------------------------------------------------------------
@@ -8,6 +8,7 @@
 #define GPOPT_CXformImplementIndexApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalIndexApply.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
@@ -22,10 +23,9 @@ using namespace gpos;
 class CXformImplementIndexApply : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformImplementIndexApply(const CXformImplementIndexApply &);
-
 public:
+	CXformImplementIndexApply(const CXformImplementIndexApply &) = delete;
+
 	// ctor
 	explicit CXformImplementIndexApply(CMemoryPool *mp)
 		:  // pattern
@@ -42,48 +42,47 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformImplementIndexApply()
-	{
-	}
+	~CXformImplementIndexApply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementIndexApply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementIndexApply";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return ExfpHigh;
 	}
 
 	// actual transform
-	virtual void
+	void
 	Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-			  CExpression *pexpr) const
+			  CExpression *pexpr) const override
 	{
-		GPOS_ASSERT(NULL != pxfctxt);
+		GPOS_ASSERT(nullptr != pxfctxt);
 		GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 		GPOS_ASSERT(FCheckPattern(pexpr));
 
 		CMemoryPool *mp = pxfctxt->Pmp();
+		CLogicalIndexApply *indexApply =
+			CLogicalIndexApply::PopConvert(pexpr->Pop());
 
 		// extract components
 		CExpression *pexprOuter = (*pexpr)[0];
 		CExpression *pexprInner = (*pexpr)[1];
 		CExpression *pexprScalar = (*pexpr)[2];
-		CColRefArray *colref_array =
-			CLogicalIndexApply::PopConvert(pexpr->Pop())->PdrgPcrOuterRefs();
+		CColRefArray *colref_array = indexApply->PdrgPcrOuterRefs();
 		colref_array->AddRef();
 
 		// addref all components
@@ -92,12 +91,14 @@ public:
 		pexprScalar->AddRef();
 
 		// assemble physical operator
-		CPhysicalNLJoin *pop = NULL;
+		CPhysicalNLJoin *pop = nullptr;
 
 		if (CLogicalIndexApply::PopConvert(pexpr->Pop())->FouterJoin())
-			pop = GPOS_NEW(mp) CPhysicalLeftOuterIndexNLJoin(mp, colref_array);
+			pop = GPOS_NEW(mp) CPhysicalLeftOuterIndexNLJoin(
+				mp, colref_array, indexApply->OrigJoinPred());
 		else
-			pop = GPOS_NEW(mp) CPhysicalInnerIndexNLJoin(mp, colref_array);
+			pop = GPOS_NEW(mp) CPhysicalInnerIndexNLJoin(
+				mp, colref_array, indexApply->OrigJoinPred());
 
 		CExpression *pexprResult = GPOS_NEW(mp)
 			CExpression(mp, pop, pexprOuter, pexprInner, pexprScalar);

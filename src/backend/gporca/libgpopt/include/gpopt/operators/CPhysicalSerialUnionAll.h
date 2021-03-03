@@ -1,10 +1,11 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #ifndef GPOPT_CPhysicalSerialUnionAll_H
 #define GPOPT_CPhysicalSerialUnionAll_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalUnionAll.h"
 
 namespace gpopt
@@ -23,37 +24,35 @@ class CDistributionSpecHashed;
 class CPhysicalSerialUnionAll : public CPhysicalUnionAll
 {
 private:
-	// private copy ctor
-	CPhysicalSerialUnionAll(const CPhysicalSerialUnionAll &);
-
 public:
+	CPhysicalSerialUnionAll(const CPhysicalSerialUnionAll &) = delete;
+
 	// ctor
 	CPhysicalSerialUnionAll(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
-							CColRef2dArray *pdrgpdrgpcrInput,
-							ULONG ulScanIdPartialIndex);
+							CColRef2dArray *pdrgpdrgpcrInput);
 
 	// dtor
-	virtual ~CPhysicalSerialUnionAll();
+	~CPhysicalSerialUnionAll() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalSerialUnionAll;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalSerialUnionAll";
 	}
 
 	// distribution matching type
-	virtual CEnfdDistribution::EDistributionMatching
+	CEnfdDistribution::EDistributionMatching
 	Edm(CReqdPropPlan *prppInput,
 		ULONG,			   // child_index
 		CDrvdPropArray *,  //pdrgpdpCtxt
-		ULONG ulOptReq)
+		ULONG ulOptReq) override
 	{
 		if (0 == ulOptReq && CDistributionSpec::EdtHashed ==
 								 prppInput->Ped()->PdsRequired()->Edt())
@@ -68,12 +67,11 @@ public:
 
 
 	// compute required distribution of the n-th child
-	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
-										   CExpressionHandle &exprhdl,
-										   CDistributionSpec *pdsRequired,
-										   ULONG child_index,
-										   CDrvdPropArray *pdrgpdpCtxt,
-										   ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CDistributionSpec *pdsRequired,
+								   ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulOptReq) const override;
 
 };	// class CPhysicalSerialUnionAll
 

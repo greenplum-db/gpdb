@@ -9,11 +9,12 @@
 //		Implementation of n-ary inner join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalNAryJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
@@ -29,16 +30,16 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CLogicalNAryJoin::CLogicalNAryJoin(CMemoryPool *mp)
-	: CLogicalJoin(mp), m_lojChildPredIndexes(NULL)
+	: CLogicalJoin(mp), m_lojChildPredIndexes(nullptr)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 CLogicalNAryJoin::CLogicalNAryJoin(CMemoryPool *mp,
 								   ULongPtrArray *lojChildIndexes)
 	: CLogicalJoin(mp), m_lojChildPredIndexes(lojChildIndexes)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 
@@ -75,7 +76,7 @@ CLogicalNAryJoin::DeriveMaxCard(CMemoryPool *mp,
 
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(arity - 1);
 
-	if (NULL != pexprScalar)
+	if (nullptr != pexprScalar)
 	{
 		if (COperator::EopScalarNAryJoinPredList == pexprScalar->Pop()->Eopid())
 		{
@@ -83,7 +84,7 @@ CLogicalNAryJoin::DeriveMaxCard(CMemoryPool *mp,
 
 			// in case of a false condition (when the operator is non Inner Join)
 			// maxcard should be zero
-			if (NULL != pexprScalarChild &&
+			if (nullptr != pexprScalarChild &&
 				CUtils::FScalarConstFalse(pexprScalarChild))
 			{
 				pexprScalarChild->Release();
@@ -157,7 +158,7 @@ CLogicalNAryJoin::DerivePropertyConstraint(CMemoryPool *mp,
 
 			// constraint coming from child
 			CConstraint *pcnstr = ppc->Pcnstr();
-			if (NULL != pcnstr)
+			if (nullptr != pcnstr)
 			{
 				pcnstr->AddRef();
 				constraints->Append(pcnstr);
@@ -167,13 +168,13 @@ CLogicalNAryJoin::DerivePropertyConstraint(CMemoryPool *mp,
 
 	// process inner join predicates
 	CExpression *trueInnerJoinPreds = GetTrueInnerJoinPreds(mp, exprhdl);
-	if (NULL != trueInnerJoinPreds)
+	if (nullptr != trueInnerJoinPreds)
 	{
-		CColRefSetArray *equivClassesFromInnerJoinPreds = NULL;
+		CColRefSetArray *equivClassesFromInnerJoinPreds = nullptr;
 		CConstraint *pcnstr = CConstraint::PcnstrFromScalarExpr(
 			mp, trueInnerJoinPreds, &equivClassesFromInnerJoinPreds);
 
-		if (NULL != pcnstr)
+		if (nullptr != pcnstr)
 		{
 			constraints->Append(pcnstr);
 
@@ -221,12 +222,12 @@ CLogicalNAryJoin::PopConvertNAryLOJ(COperator *pop)
 {
 	CLogicalNAryJoin *naryJoin = PopConvert(pop);
 
-	if (NULL != naryJoin && naryJoin->HasOuterJoinChildren())
+	if (nullptr != naryJoin && naryJoin->HasOuterJoinChildren())
 	{
 		return naryJoin;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 CExpression *
@@ -245,11 +246,11 @@ CLogicalNAryJoin::GetTrueInnerJoinPreds(CMemoryPool *mp,
 	ULONG arity = exprhdl.Arity();
 	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(arity - 1);
 
-	if (NULL == pexprScalar)
+	if (nullptr == pexprScalar)
 	{
 		// can't determine the true inner join preds, as there is no exact scalar
 		// expression available and this method is expected to return an exact expression
-		return NULL;
+		return nullptr;
 	}
 
 	if (!HasOuterJoinChildren())
@@ -259,7 +260,7 @@ CLogicalNAryJoin::GetTrueInnerJoinPreds(CMemoryPool *mp,
 		return pexprScalar;
 	}
 
-	CExpressionArray *predArray = NULL;
+	CExpressionArray *predArray = nullptr;
 	CExpressionArray *trueInnerJoinPredArray =
 		GPOS_NEW(mp) CExpressionArray(mp);
 	CExpression *innerJoinPreds = (*pexprScalar)[0];
@@ -329,7 +330,7 @@ CLogicalNAryJoin::ReplaceInnerJoinPredicates(
 
 	if (EopScalarNAryJoinPredList == pop->Eopid())
 	{
-		GPOS_ASSERT(NULL != m_lojChildPredIndexes);
+		GPOS_ASSERT(nullptr != m_lojChildPredIndexes);
 		// this requires a bit of surgery, make a new copy of the
 		// CScalarNAryJoinPredList with the first child replaced
 		CExpressionArray *new_children = GPOS_NEW(mp) CExpressionArray(mp);
@@ -351,7 +352,7 @@ CLogicalNAryJoin::ReplaceInnerJoinPredicates(
 
 	// with all inner joins it's a total replacement, just return the inner join preds
 	// (caller should have passed us a ref count which they now get back from us)
-	GPOS_ASSERT(NULL == m_lojChildPredIndexes);
+	GPOS_ASSERT(nullptr == m_lojChildPredIndexes);
 
 	return new_inner_join_preds;
 }
@@ -370,7 +371,7 @@ CLogicalNAryJoin::OsPrint(IOstream &os) const
 {
 	os << SzId();
 
-	if (NULL != m_lojChildPredIndexes)
+	if (nullptr != m_lojChildPredIndexes)
 	{
 		// print out the indexes of the logical children that correspond to
 		// the scalar child entries below the CScalarNAryJoinPredList

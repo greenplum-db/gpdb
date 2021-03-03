@@ -1,12 +1,13 @@
 //	Greenplum Database
-//	Copyright (C) 2018 Pivotal Software, Inc.
+//	Copyright (C) 2018 VMware, Inc. or its affiliates.
 
 #ifndef GPDXL_CCostModelConfigSerializer_H
 #define GPDXL_CCostModelConfigSerializer_H
 
 #include <gpopt/cost/ICostModel.h>
-#include "gpos/memory/CMemoryPool.h"
+
 #include "gpos/common/CAutoP.h"
+#include "gpos/memory/CMemoryPool.h"
 
 
 namespace gpdxl

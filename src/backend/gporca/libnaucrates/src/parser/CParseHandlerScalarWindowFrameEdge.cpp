@@ -11,10 +11,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerScalarWindowFrameEdge.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 using namespace gpdxl;
 
@@ -31,9 +31,8 @@ XERCES_CPP_NAMESPACE_USE
 //---------------------------------------------------------------------------
 CParseHandlerScalarWindowFrameEdge::CParseHandlerScalarWindowFrameEdge(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root, BOOL leading_edge)
-	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_leading_edge(leading_edge)
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 
@@ -54,7 +53,7 @@ CParseHandlerScalarWindowFrameEdge::StartElement(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarWindowFrameLeadingEdge),
 				 element_local_name))
 	{
-		GPOS_ASSERT(NULL == m_dxl_node);
+		GPOS_ASSERT(nullptr == m_dxl_node);
 		EdxlFrameBoundary dxl_frame_bound =
 			CDXLOperatorFactory::ParseDXLFrameBoundary(
 				attrs, EdxltokenWindowLeadingBoundary);
@@ -67,7 +66,7 @@ CParseHandlerScalarWindowFrameEdge::StartElement(
 						  EdxltokenScalarWindowFrameTrailingEdge),
 					  element_local_name))
 	{
-		GPOS_ASSERT(NULL == m_dxl_node);
+		GPOS_ASSERT(nullptr == m_dxl_node);
 		EdxlFrameBoundary dxl_frame_bound =
 			CDXLOperatorFactory::ParseDXLFrameBoundary(
 				attrs, EdxltokenWindowTrailingBoundary);
@@ -78,7 +77,7 @@ CParseHandlerScalarWindowFrameEdge::StartElement(
 	else
 	{
 		// we must have seen a Window Frame Edge already and initialized its corresponding node
-		if (NULL == m_dxl_node)
+		if (nullptr == m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

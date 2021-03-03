@@ -16,13 +16,12 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
-
 #include "gpos/string/CWStringBase.h"
 #include "gpos/string/CWStringConst.h"
 
+#include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
-#include "naucrates/md/IMDFunction.h"
 
 namespace gpmd
 {
@@ -44,14 +43,16 @@ protected:
 								  IMDType::ETypeInfo type_info);
 
 public:
-	virtual ~IMDProvider()
-	{
-	}
+	~IMDProvider() override = default;
 
 	// returns the DXL string of the requested metadata object
 	virtual CWStringBase *GetMDObjDXLStr(CMemoryPool *mp,
 										 CMDAccessor *md_accessor,
 										 IMDId *mdid) const = 0;
+
+	// return the requested metadata object
+	virtual IMDCacheObject *GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
+									 IMDId *mdid) const = 0;
 
 	// return the mdid for the specified system id and type
 	virtual IMDId *MDId(CMemoryPool *mp, CSystemId sysid,

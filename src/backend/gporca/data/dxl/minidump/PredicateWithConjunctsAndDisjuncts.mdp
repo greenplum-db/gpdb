@@ -37,7 +37,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="103027,102024,102025,102074,102146,102119,102120,102128,102131,102132,102133,102134,102135,102136,102140,102141,102142,102143,103001,103014,103015,103022,104003,104004,104005,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102074,102119,102120,102128,102131,102132,102133,102134,102135,102136,102140,102141,102142,102143,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Index Mdid="0.16523.1.0" Name="t1_g_h" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="6,7" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14">

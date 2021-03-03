@@ -12,6 +12,7 @@
 #define GPOPT_CXformPushDownLeftOuterJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -30,38 +31,35 @@ using namespace gpos;
 class CXformPushDownLeftOuterJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformPushDownLeftOuterJoin(const CXformPushDownLeftOuterJoin &);
-
 public:
+	CXformPushDownLeftOuterJoin(const CXformPushDownLeftOuterJoin &) = delete;
+
 	// ctor
 	explicit CXformPushDownLeftOuterJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformPushDownLeftOuterJoin()
-	{
-	}
+	~CXformPushDownLeftOuterJoin() override = default;
 
 	// xform promise
-	virtual CXform::EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	CXform::EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfPushDownLeftOuterJoin;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformPushDownLeftOuterJoin";
 	}
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformPushDownLeftOuterJoin
 

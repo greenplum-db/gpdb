@@ -9,9 +9,10 @@
 //		Implementation
 //---------------------------------------------------------------------------
 
+#include "naucrates/md/IMDRelation.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelation.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
@@ -39,7 +40,7 @@ IMDRelation::GetDistrPolicyStr(Ereldistrpolicy rel_distr_policy)
 		case EreldistrReplicated:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrReplicated);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -72,7 +73,7 @@ IMDRelation::GetStorageTypeStr(IMDRelation::Erelstoragetype rel_storage_type)
 		case ErelstorageVirtual:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageVirtual);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -108,13 +109,4 @@ IMDRelation::ColumnsToStr(CMemoryPool *mp, ULongPtrArray *colid_array)
 
 	return str;
 }
-
-// check if index is partial given its mdid
-BOOL
-IMDRelation::IsPartialIndex(IMDId *	 // mdid
-) const
-{
-	return false;
-}
-
 // EOF

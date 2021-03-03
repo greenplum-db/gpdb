@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerStatsDerivedColumn_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/md/CDXLStatsDerivedColumn.h"
 
@@ -52,32 +53,32 @@ private:
 	// derived column stats
 	CDXLStatsDerivedColumn *m_dxl_stats_derived_col;
 
-	// private copy ctor
-	CParseHandlerStatsDerivedColumn(const CParseHandlerStatsDerivedColumn &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerStatsDerivedColumn(const CParseHandlerStatsDerivedColumn &) =
+		delete;
+
 	// ctor
 	CParseHandlerStatsDerivedColumn(CMemoryPool *mp,
 									CParseHandlerManager *parse_handler_mgr,
 									CParseHandlerBase *parse_handler_root);
 
 	//dtor
-	~CParseHandlerStatsDerivedColumn();
+	~CParseHandlerStatsDerivedColumn() override;
 
 	// derived column stats
 	CDXLStatsDerivedColumn *

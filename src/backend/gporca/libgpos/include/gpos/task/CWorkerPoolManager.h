@@ -111,9 +111,6 @@ private:
 	// Methods for internal use
 	//-------------------------------------------------------------------
 
-	// no copy ctor
-	CWorkerPoolManager(const CWorkerPoolManager &);
-
 	// private ctor
 	CWorkerPoolManager(CMemoryPool *mp);
 
@@ -121,6 +118,8 @@ private:
 	static CWorkerPoolManager *m_worker_pool_manager;
 
 public:
+	CWorkerPoolManager(const CWorkerPoolManager &) = delete;
+
 	// lookup own worker
 	inline CWorker *
 	Self()
@@ -131,7 +130,7 @@ public:
 	// dtor
 	~CWorkerPoolManager()
 	{
-		GPOS_ASSERT(NULL == m_worker_pool_manager &&
+		GPOS_ASSERT(nullptr == m_worker_pool_manager &&
 					"Worker pool has not been shut down");
 	}
 

@@ -159,7 +159,7 @@ DEFAULT_CHK_PT_SEG=8
 DEFAULT_QD_MAX_CONNECT=250
 QE_CONNECT_FACTOR=3
 # DEFAULT_BUFFERS sets the default shared_buffers unless overridden by '-b'.
-# It applies to the master db and segment dbs.  Specify either the number of
+# It applies to the coordinator db and segment dbs.  Specify either the number of
 # buffers (without suffix) or the amount of memory to use for buffers (with
 # case-insensitive suffix 'kB', 'MB' or 'GB').
 DEFAULT_BUFFERS=128000kB
@@ -252,7 +252,7 @@ ERROR_EXIT () {
 				if [ -s $BACKOUT_FILE ]; then
 						LOG_MSG "[WARN]:-Script has left Greenplum Database in an incomplete state"
 						LOG_MSG "[WARN]:-Run command bash $BACKOUT_FILE to remove these changes"
-						BACKOUT_COMMAND "if [ x$MASTER_HOSTNAME != x\`$HOSTNAME\` ];then $ECHO \"[FATAL]:-Not on original master host $MASTER_HOSTNAME, backout script exiting!\";exit 1;fi"
+						BACKOUT_COMMAND "if [ x$COORDINATOR_HOSTNAME != x\`$HOSTNAME\` ];then $ECHO \"[FATAL]:-Not on original coordinator host $COORDINATOR_HOSTNAME, backout script exiting!\";exit 1;fi"
 						$ECHO "$RM -f $BACKOUT_FILE" >> $BACKOUT_FILE
 				fi
 		fi
@@ -616,50 +616,50 @@ CHK_DIR () {
 		fi
 }
 
-GET_MASTER_PORT () {
+GET_COORDINATOR_PORT () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		MASTER_DATA_DIRECTORY=$1
-		if [ x"" == x"$MASTER_DATA_DIRECTORY" ];then
-			ERROR_EXIT "[FATAL]:-MASTER_DATA_DIRECTORY variable not set";fi
-		if [ ! -d $MASTER_DATA_DIRECTORY ]; then
-				ERROR_EXIT "[FATAL]:-No $MASTER_DATA_DIRECTORY directory"
+		COORDINATOR_DATA_DIRECTORY=$1
+		if [ x"" == x"$COORDINATOR_DATA_DIRECTORY" ];then
+			ERROR_EXIT "[FATAL]:-COORDINATOR_DATA_DIRECTORY variable not set";fi
+		if [ ! -d $COORDINATOR_DATA_DIRECTORY ]; then
+				ERROR_EXIT "[FATAL]:-No $COORDINATOR_DATA_DIRECTORY directory"
 		fi
-		if [ -r $MASTER_DATA_DIRECTORY/$PG_CONF ];then
-			MASTER_PORT=`$AWK 'split($0,a,"#")>0 && split(a[1],b,"=")>1 {print b[1] " " b[2]}' $MASTER_DATA_DIRECTORY/$PG_CONF | $AWK '$1=="port" {print $2}' | $TAIL -1`
-			if [ x"" == x"$MASTER_PORT" ] ; then
+		if [ -r $COORDINATOR_DATA_DIRECTORY/$PG_CONF ];then
+			COORDINATOR_PORT=`$AWK 'split($0,a,"#")>0 && split(a[1],b,"=")>1 {print b[1] " " b[2]}' $COORDINATOR_DATA_DIRECTORY/$PG_CONF | $AWK '$1=="port" {print $2}' | $TAIL -1`
+			if [ x"" == x"$COORDINATOR_PORT" ] ; then
                 #look for include files
-                for INC_FILE in `$AWK '/^[ ]*include /{print $2}' $MASTER_DATA_DIRECTORY/$PG_CONF | $TR -d "'\""` ; do
+                for INC_FILE in `$AWK '/^[ ]*include /{print $2}' $COORDINATOR_DATA_DIRECTORY/$PG_CONF | $TR -d "'\""` ; do
                     if [[ $INC_FILE == /* ]] ; then
-                        GET_MASTER_PORT_RECUR "$INC_FILE" 1
+                        GET_COORDINATOR_PORT_RECUR "$INC_FILE" 1
                     else
-                        GET_MASTER_PORT_RECUR "$MASTER_DATA_DIRECTORY/$INC_FILE" 1
+                        GET_COORDINATOR_PORT_RECUR "$COORDINATOR_DATA_DIRECTORY/$INC_FILE" 1
                     fi
                 done
-                if [ x"" == x"$MASTER_PORT" ] ; then
-			        ERROR_EXIT "[FATAL]:-Failed to obtain master port number from $MASTER_DATA_DIRECTORY/$PG_CONF"
+                if [ x"" == x"$COORDINATOR_PORT" ] ; then
+			        ERROR_EXIT "[FATAL]:-Failed to obtain coordinator port number from $COORDINATOR_DATA_DIRECTORY/$PG_CONF"
                 fi
 			fi
 		else
-			ERROR_EXIT "[FATAL]:-Do not have read access to $MASTER_DATA_DIRECTORY/$PG_CONF"
+			ERROR_EXIT "[FATAL]:-Do not have read access to $COORDINATOR_DATA_DIRECTORY/$PG_CONF"
 		fi
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-GET_MASTER_PORT_RECUR () {
+GET_COORDINATOR_PORT_RECUR () {
     INCLUDED_FILE=$1
     RECUR=$2
     if [ $RECUR -le 10 ] ; then
-        MASTER_PORT=`$AWK 'split($0,a,"#")>0 && split(a[1],b,"=")>1 {print b[1] " " b[2]}' $INCLUDED_FILE | $AWK '$1=="port" {print $2}' | $TAIL -1`
-        if [ x"" == x"$MASTER_PORT" ] ; then
+        COORDINATOR_PORT=`$AWK 'split($0,a,"#")>0 && split(a[1],b,"=")>1 {print b[1] " " b[2]}' $INCLUDED_FILE | $AWK '$1=="port" {print $2}' | $TAIL -1`
+        if [ x"" == x"$COORDINATOR_PORT" ] ; then
             #look for include files
             let CURR_DEPTH=$RECUR+1
             for INC_FILE in `$AWK '/^[ ]*include /{print $2}' $INC_FILE | $TR -d "'\""` ; do
                 if [[ $INC_FILE == /* ]] ; then
-                    GET_MASTER_PORT_RECUR "$INC_FILE" $CURR_DEPTH
+                    GET_COORDINATOR_PORT_RECUR "$INC_FILE" $CURR_DEPTH
                 else
-                    GET_MASTER_PORT_RECUR "$MASTER_DATA_DIRECTORY/$INC_FILE" $CURR_DEPTH
+                    GET_COORDINATOR_PORT_RECUR "$COORDINATOR_DATA_DIRECTORY/$INC_FILE" $CURR_DEPTH
                 fi
-                if [ x"" != x"$MASTER_PORT" ] ; then
+                if [ x"" != x"$COORDINATOR_PORT" ] ; then
                     break
                 fi
             done
@@ -682,12 +682,12 @@ GET_CIDRADDR () {
     fi
 }
 
-BUILD_MASTER_PG_HBA_FILE () {
+BUILD_COORDINATOR_PG_HBA_FILE () {
         LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -eq 0 ];then ERROR_EXIT "[FATAL]:-Passed zero parameters, expected at least 2";fi
 	GP_DIR=$1
 	HBA_HOSTNAMES=${2:-0}
-        LOG_MSG "[INFO]:-Clearing values in Master $PG_HBA"
+        LOG_MSG "[INFO]:-Clearing values in Coordinator $PG_HBA"
         $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
         $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
         LOG_MSG "[INFO]:-Setting local access"
@@ -697,7 +697,7 @@ BUILD_MASTER_PG_HBA_FILE () {
         if [ $HBA_HOSTNAMES -eq 0 ];then
             $ECHO "host     all         $USER_NAME         127.0.0.1/28    trust" >> ${GP_DIR}/$PG_HBA
 
-            for ADDR in "${MASTER_IP_ADDRESS_ALL[@]}"
+            for ADDR in "${COORDINATOR_IP_ADDRESS_ALL[@]}"
             do
                 # MPP-15889
                 CIDRADDR=$(GET_CIDRADDR $ADDR)
@@ -712,7 +712,7 @@ BUILD_MASTER_PG_HBA_FILE () {
             done
 
             # Add all local IPV6 addresses
-            for ADDR in "${MASTER_IPV6_LOCAL_ADDRESS_ALL[@]}"
+            for ADDR in "${COORDINATOR_IPV6_LOCAL_ADDRESS_ALL[@]}"
             do
                 # MPP-15889
                 CIDRADDR=$(GET_CIDRADDR $ADDR)
@@ -720,7 +720,7 @@ BUILD_MASTER_PG_HBA_FILE () {
             done
         else
             $ECHO "host     all         $USER_NAME         localhost    trust" >> ${GP_DIR}/$PG_HBA
-            $ECHO "host     all         $USER_NAME         $MASTER_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            $ECHO "host     all         $USER_NAME         $COORDINATOR_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
         fi
 
 
@@ -729,22 +729,22 @@ BUILD_MASTER_PG_HBA_FILE () {
         # Add the samehost replication entry to support single-host development
         $ECHO "host     replication $USER_NAME         samehost       trust" >> ${GP_DIR}/$PG_HBA
         if [ $HBA_HOSTNAMES -eq 0 ];then
-            local MASTER_IP_ADDRESS_NO_LOOPBACK=($("$GPHOME"/libexec/ifaddrs --no-loopback))
-            if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$MASTER_HOSTNAME" ];then
+            local COORDINATOR_IP_ADDRESS_NO_LOOPBACK=($("$GPHOME"/libexec/ifaddrs --no-loopback))
+            if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$COORDINATOR_HOSTNAME" ];then
                 local STANDBY_IP_ADDRESS_NO_LOOPBACK=($($TRUSTED_SHELL $STANDBY_HOSTNAME "$GPHOME"/libexec/ifaddrs --no-loopback))
             fi
-            for ADDR in "${MASTER_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}"
+            for ADDR in "${COORDINATOR_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}"
             do
                 CIDRADDR=$(GET_CIDRADDR $ADDR)
                 $ECHO "host     replication $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
             done
         else
-            $ECHO "host     replication $USER_NAME         $MASTER_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
-            if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$MASTER_HOSTNAME" ];then
+            $ECHO "host     replication $USER_NAME         $COORDINATOR_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            if [ x"" != x"$STANDBY_HOSTNAME" ] && [ "$STANDBY_HOSTNAME" != "$COORDINATOR_HOSTNAME" ];then
                 $ECHO "host     replication $USER_NAME         $STANDBY_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
             fi
         fi
-        LOG_MSG "[INFO]:-Complete Master $PG_HBA configuration"
+        LOG_MSG "[INFO]:-Complete Coordinator $PG_HBA configuration"
         LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
@@ -1045,10 +1045,10 @@ CHK_GPDB_ID () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ -f ${INITDB} ];then
 	        PERMISSION=`ls -al ${INITDB}|$AWK '{print $1}'`
-		MASTER_INITDB_ID=`ls -al ${INITDB}|$AWK '{print $3}'`
-		INIT_CHAR=`$ECHO $MASTER_INITDB_ID|$TR -d '\n'|$WC -c|$TR -d ' '`
-		MASTER_INITDB_GROUPID=`ls -al ${INITDB}|$AWK '{print $4}'`
-		GROUP_INIT_CHAR=`$ECHO $MASTER_INITDB_ID|$TR -d '\n'|$WC -c|$TR -d ' '`
+		COORDINATOR_INITDB_ID=`ls -al ${INITDB}|$AWK '{print $3}'`
+		INIT_CHAR=`$ECHO $COORDINATOR_INITDB_ID|$TR -d '\n'|$WC -c|$TR -d ' '`
+		COORDINATOR_INITDB_GROUPID=`ls -al ${INITDB}|$AWK '{print $4}'`
+		GROUP_INIT_CHAR=`$ECHO $COORDINATOR_INITDB_ID|$TR -d '\n'|$WC -c|$TR -d ' '`
 		GPDB_ID=`id|$TR '(' ' '|$TR ')' ' '|$AWK '{print $2}'`
 		GPDB_GROUPID=`id|$TR '(' ' '|$TR ')' ' '|$AWK '{print $4}'`
 
@@ -1067,13 +1067,13 @@ CHK_GPDB_ID () {
 			GPDB_GROUPID_CHK=$GPDB_GROUPID
 		fi
 
-		if [ x$GPDB_ID_CHK == x$MASTER_INITDB_ID ] && [ x"x" == x"$USER_EXECUTE" ];then
-		    LOG_MSG "[INFO]:-Current user id of $GPDB_ID, matches initdb id of $MASTER_INITDB_ID"
-		elif [ x$GPDB_GROUPID_CHK == x$MASTER_INITDB_GROUPID ] && [ x"x" == x"$GROUP_EXECUTE" ] ; then
-		    LOG_MSG "[INFO]:-Current group id of $GPDB_GROUPID, matches initdb group id of $MASTER_INITDB_GROUPID"
+		if [ x$GPDB_ID_CHK == x$COORDINATOR_INITDB_ID ] && [ x"x" == x"$USER_EXECUTE" ];then
+		    LOG_MSG "[INFO]:-Current user id of $GPDB_ID, matches initdb id of $COORDINATOR_INITDB_ID"
+		elif [ x$GPDB_GROUPID_CHK == x$COORDINATOR_INITDB_GROUPID ] && [ x"x" == x"$GROUP_EXECUTE" ] ; then
+		    LOG_MSG "[INFO]:-Current group id of $GPDB_GROUPID, matches initdb group id of $COORDINATOR_INITDB_GROUPID"
 		else
 			LOG_MSG "[WARN]:-File permission mismatch.  The $GPDB_ID_CHK owns the Greenplum Database installation directory."
-			LOG_MSG "[WARN]:-You are currently logged in as $MASTER_INITDB_ID and may not have sufficient"
+			LOG_MSG "[WARN]:-You are currently logged in as $COORDINATOR_INITDB_ID and may not have sufficient"
 			LOG_MSG "[WARN]:-permissions to run the Greenplum binaries and management utilities."
 		fi
 
@@ -1119,7 +1119,7 @@ SET_GP_USER_PW () {
     local alter_statement="alter user :\"username\" password :'password';"
 
     $PSQL --variable=ON_ERROR_STOP=1 \
-      -p $MASTER_PORT \
+      -p $COORDINATOR_PORT \
       -d "$DEFAULTDB" \
       --variable=username="$USER_NAME" \
       --variable=password="$GP_PASSWD" <<< "$alter_statement" >> $LOG_FILE 2>&1
@@ -1151,7 +1151,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -i"
 		NOLINE_ECHO="$ECHO -e"
-		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
@@ -1163,7 +1162,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO=$ECHO
-		DEFAULT_LOCALE_SETTING=en_US.utf-8
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
@@ -1173,7 +1171,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO="$ECHO -e"
-		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		;;
 	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
@@ -1182,7 +1179,6 @@ case $OS_TYPE in
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO="echo -e"
-		DEFAULT_LOCALE_SETTING=en_US.UTF-8
 		PING_TIME="-c 1"
 		DF="df -P"
 		;;
@@ -1192,7 +1188,7 @@ esac
 GP_LIBRARY_PATH=`$DIRNAME \`$DIRNAME $INITDB\``/lib
 
 ##
-# we setup some EXPORT foo='blah' commands for when we dispatch to segments and standby master
+# we setup some EXPORT foo='blah' commands for when we dispatch to segments and standby coordinator
 ##
 EXPORT_GPHOME='export GPHOME='$GPHOME
 if [ x"$LIB_TYPE" == x"LD_LIBRARY_PATH" ]; then

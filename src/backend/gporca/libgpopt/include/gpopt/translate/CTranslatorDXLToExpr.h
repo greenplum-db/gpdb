@@ -15,23 +15,22 @@
 #include "gpos/base.h"
 #include "gpos/common/CHashMap.h"
 
-#include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
-#include "naucrates/dxl/operators/CDXLColDescr.h"
-#include "naucrates/dxl/operators/CDXLWindowFrame.h"
-#include "naucrates/dxl/operators/CDXLScalarWindowFrameEdge.h"
-#include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
-#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
-
 #include "gpopt/base/CQueryContext.h"
 #include "gpopt/base/CWindowFrame.h"
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
+#include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
-#include "gpopt/operators/CScalarBoolOp.h"
-#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/translate/CTranslatorDXLToExprUtils.h"
+#include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
+#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarWindowFrameEdge.h"
+#include "naucrates/dxl/operators/CDXLScalarWindowRef.h"
+#include "naucrates/dxl/operators/CDXLWindowFrame.h"
 
 // fwd decl
 
@@ -70,20 +69,6 @@ typedef CHashMapIter<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
 //---------------------------------------------------------------------------
 class CTranslatorDXLToExpr
 {
-	// shorthand for functions for translating DXL operator nodes into expression trees
-	typedef CExpression *(CTranslatorDXLToExpr::*PfPexpr)(
-		const CDXLNode *dxlnode);
-
-	// pair of DXL operator type and the corresponding translator
-	struct STranslatorMapping
-	{
-		// type
-		Edxlopid edxlopid;
-
-		// translator function pointer
-		PfPexpr pf;
-	};
-
 private:
 	// memory pool
 	CMemoryPool *m_mp;
@@ -110,9 +95,6 @@ private:
 
 	// id of CTE that we are currently processing (gpos::ulong_max for main query)
 	ULONG m_ulCTEId;
-
-	// DXL operator translators indexed by the operator id
-	PfPexpr m_rgpfTranslators[EdxlopSentinel];
 
 	// a copy of the pointer to column factory, obtained at construction time
 	CColumnFactory *m_pcf;
@@ -232,7 +214,7 @@ private:
 		const CDXLNode *pdxlnSubqueryAny);
 
 	// translate a DXL scalar into an expr scalar
-	CExpression *PexprScalar(const CDXLNode *pdxlnCond);
+	CExpression *PexprScalar(const CDXLNode *dxlnode);
 
 	// translate a DXL scalar if stmt into a scalar if
 	CExpression *PexprScalarIf(const CDXLNode *pdxlnIf);
@@ -351,9 +333,6 @@ private:
 								const IMDRelation *pmdrel,
 								IntToUlongMap *phmiulAttnoColMapping);
 
-	// initialize index of operator translators
-	void InitTranslators();
-
 	// main translation routine for DXL tree -> Expr tree
 	CExpression *Pexpr(const CDXLNode *dxlnode,
 					   const CDXLNodeArray *query_output_dxlnode_array,
@@ -402,7 +381,7 @@ public:
 	// translate a dxl scalar expression
 	CExpression *PexprTranslateScalar(const CDXLNode *dxlnode,
 									  CColRefArray *colref_array,
-									  ULongPtrArray *colids = NULL);
+									  ULongPtrArray *colids = nullptr);
 
 	// return the array of query output column reference id
 	ULongPtrArray *PdrgpulOutputColRefs();
@@ -411,7 +390,7 @@ public:
 	CMDNameArray *
 	Pdrgpmdname()
 	{
-		GPOS_ASSERT(NULL != m_pdrgpmdname);
+		GPOS_ASSERT(nullptr != m_pdrgpmdname);
 		return m_pdrgpmdname;
 	}
 };

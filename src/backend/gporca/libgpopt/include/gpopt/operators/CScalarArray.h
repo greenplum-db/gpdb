@@ -12,10 +12,10 @@
 #define GPOPT_CScalarArray_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
 
 #include "gpopt/operators/CScalar.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {
@@ -47,10 +47,9 @@ private:
 	// const values
 	CScalarConstArray *m_pdrgPconst;
 
-	// private copy ctor
-	CScalarArray(const CScalarArray &);
-
 public:
+	CScalarArray(const CScalarArray &) = delete;
+
 	// ctor
 	CScalarArray(CMemoryPool *mp, IMDId *elem_type_mdid, IMDId *array_type_mdid,
 				 BOOL is_multidimenstional);
@@ -60,42 +59,42 @@ public:
 				 BOOL is_multidimenstional, CScalarConstArray *pdrgPconst);
 
 	// dtor
-	virtual ~CScalarArray();
+	~CScalarArray() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarArray;
 	}
 
 	// return a string for aggregate function
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarArray";
 	}
 
 
 	// operator specific hash function
-	ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
 	BOOL
-	FInputOrderSensitive() const
+	FInputOrderSensitive() const override
 	{
 		return true;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -104,10 +103,10 @@ public:
 	static CScalarArray *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarArray == pop->Eopid());
 
-		return reinterpret_cast<CScalarArray *>(pop);
+		return dynamic_cast<CScalarArray *>(pop);
 	}
 
 	// element type id
@@ -120,13 +119,13 @@ public:
 	BOOL FMultiDimensional() const;
 
 	// type of expression's result
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// CScalarConst array
 	CScalarConstArray *PdrgPconst() const;
 
 	// print
-	IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CScalarArray
 

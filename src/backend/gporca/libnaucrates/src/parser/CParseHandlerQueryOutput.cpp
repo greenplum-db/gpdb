@@ -11,9 +11,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/parser/CParseHandlerQueryOutput.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarIdent.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarIdent.h"
 
 
 
@@ -34,7 +35,7 @@ CParseHandlerQueryOutput::CParseHandlerQueryOutput(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_dxl_array(NULL)
+	  m_dxl_array(nullptr)
 {
 }
 
@@ -63,7 +64,7 @@ CParseHandlerQueryOutput::~CParseHandlerQueryOutput()
 CDXLNodeArray *
 CParseHandlerQueryOutput::GetOutputColumnsDXLArray()
 {
-	GPOS_ASSERT(NULL != m_dxl_array);
+	GPOS_ASSERT(nullptr != m_dxl_array);
 	return m_dxl_array;
 }
 
@@ -87,7 +88,7 @@ CParseHandlerQueryOutput::StartElement(const XMLCh *const element_uri,
 								 element_local_name))
 	{
 		// start the query output section in the DXL document
-		GPOS_ASSERT(NULL == m_dxl_array);
+		GPOS_ASSERT(nullptr == m_dxl_array);
 
 		m_dxl_array = GPOS_NEW(m_mp) CDXLNodeArray(m_mp);
 	}
@@ -96,7 +97,7 @@ CParseHandlerQueryOutput::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a proj list already and initialized the proj list node
-		GPOS_ASSERT(NULL != m_dxl_array);
+		GPOS_ASSERT(nullptr != m_dxl_array);
 
 		// start new scalar ident element
 		CParseHandlerBase *child_parse_handler =
@@ -150,7 +151,7 @@ CParseHandlerQueryOutput::EndElement(const XMLCh *const,  // element_uri,
 		CParseHandlerScalarIdent *child_parse_handler =
 			dynamic_cast<CParseHandlerScalarIdent *>((*this)[ul]);
 
-		GPOS_ASSERT(NULL != child_parse_handler);
+		GPOS_ASSERT(nullptr != child_parse_handler);
 
 		CDXLNode *pdxlnIdent = child_parse_handler->CreateDXLNode();
 		pdxlnIdent->AddRef();

@@ -19,8 +19,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/dxl/operators/CDXLLogical.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/operators/CDXLLogical.h"
 
 namespace gpdxl
 {
@@ -46,9 +46,6 @@ enum EdxlSetOpType
 class CDXLLogicalSetOp : public CDXLLogical
 {
 private:
-	// private copy ctor
-	CDXLLogicalSetOp(CDXLLogicalSetOp &);
-
 	// set operation type
 	EdxlSetOpType m_set_operation_dxl_type;
 
@@ -62,19 +59,21 @@ private:
 	BOOL m_cast_across_input_req;
 
 public:
+	CDXLLogicalSetOp(CDXLLogicalSetOp &) = delete;
+
 	// ctor
 	CDXLLogicalSetOp(CMemoryPool *mp, EdxlSetOpType edxlsetoptype,
 					 CDXLColDescrArray *pdrgdxlcd, ULongPtr2dArray *array_2D,
 					 BOOL fCastAcrossInput);
 
 	// dtor
-	virtual ~CDXLLogicalSetOp();
+	~CDXLLogicalSetOp() override;
 
 	// operator id
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// set operator type
 	EdxlSetOpType
@@ -128,17 +127,17 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// check if given column is defined by operator
-	virtual BOOL IsColDefined(ULONG colid) const;
+	BOOL IsColDefined(ULONG colid) const override;
 
 	// conversion function
 	static CDXLLogicalSetOp *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalSetOp == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalSetOp *>(dxl_op);
@@ -147,7 +146,7 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *, BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

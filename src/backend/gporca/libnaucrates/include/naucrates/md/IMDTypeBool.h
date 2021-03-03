@@ -17,7 +17,6 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/gpdb_types.h"
-
 #include "naucrates/md/IMDType.h"
 
 // fwd decl
@@ -48,8 +47,8 @@ public:
 		return EtiBool;
 	}
 
-	virtual ETypeInfo
-	GetDatumType() const
+	ETypeInfo
+	GetDatumType() const override
 	{
 		return IMDTypeBool::GetTypeInfo();
 	}

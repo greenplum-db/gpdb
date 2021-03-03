@@ -1,8 +1,9 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
+
+#include "gpopt/base/CColConstraintsHashMapper.h"
 
 #include "gpos/common/CAutoRef.h"
-#include "gpopt/base/CColConstraintsHashMapper.h"
 
 using namespace gpopt;
 
@@ -33,7 +34,7 @@ PhmcolconstrSingleColConstr(CMemoryPool *mp, CConstraintArray *drgPcnstr)
 		{
 			CColRef *colref = pcrs->PcrFirst();
 			CConstraintArray *pcnstrMapped = phmcolconstr->Find(colref);
-			if (NULL == pcnstrMapped)
+			if (nullptr == pcnstrMapped)
 			{
 				pcnstrMapped = GPOS_NEW(mp) CConstraintArray(mp);
 				phmcolconstr->Insert(colref, pcnstrMapped);

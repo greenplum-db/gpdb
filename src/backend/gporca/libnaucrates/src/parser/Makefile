@@ -32,8 +32,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerDirectDispatchInfo.o \
               CParseHandlerDistinctComp.o \
               CParseHandlerDummy.o \
-              CParseHandlerDynamicIndexScan.o \
-              CParseHandlerDynamicTableScan.o \
               CParseHandlerEnumeratorConfig.o \
               CParseHandlerExternalScan.o \
               CParseHandlerFactory.o \
@@ -103,7 +101,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerPhysicalCTEConsumer.o \
               CParseHandlerPhysicalCTEProducer.o \
               CParseHandlerPhysicalDML.o \
-              CParseHandlerPhysicalDynamicBitmapTableScan.o \
               CParseHandlerPhysicalOp.o \
               CParseHandlerPhysicalRowTrigger.o \
               CParseHandlerPhysicalSplit.o \

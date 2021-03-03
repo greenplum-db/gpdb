@@ -67,7 +67,7 @@ select distinct a from (select  distinct 'A' from (select 'C' from (select disti
 --
 CREATE TABLE test1 (id int);
 insert into test1 values (1);
-CREATE EXTERNAL WEB TABLE test2 (id int) EXECUTE 'echo 2' ON MASTER FORMAT 'csv';
+CREATE EXTERNAL WEB TABLE test2 (id int) EXECUTE 'echo 2' ON COORDINATOR FORMAT 'csv';
 
 (SELECT 'test1' as branch, id FROM test1 LIMIT 1)
 union

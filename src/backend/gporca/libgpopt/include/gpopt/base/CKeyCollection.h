@@ -12,8 +12,8 @@
 #define GPOPT_CKeyCollection_H
 
 #include "gpos/base.h"
-#include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CColRefSet.h"
 
@@ -33,23 +33,19 @@ using namespace gpos;
 class CKeyCollection : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// array of key sets
 	CColRefSetArray *m_pdrgpcrs;
 
-	// private copy ctor
-	CKeyCollection(const CKeyCollection &);
-
 public:
+	CKeyCollection(const CKeyCollection &) = delete;
+
 	// ctors
 	explicit CKeyCollection(CMemoryPool *mp);
 	CKeyCollection(CMemoryPool *mp, CColRefSet *pcrs);
 	CKeyCollection(CMemoryPool *mp, CColRefArray *colref_array);
 
 	// dtor
-	virtual ~CKeyCollection();
+	~CKeyCollection() override;
 
 	// add individual set -- takes ownership
 	void Add(CColRefSet *pcrs);
@@ -84,7 +80,7 @@ public:
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CKeyCollection
 

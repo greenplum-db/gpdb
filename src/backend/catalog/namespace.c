@@ -3302,6 +3302,13 @@ isTempNamespaceInUse(Oid namespaceId)
  * namespace (either my own, or another backend's), return the BackendId
  * that owns it.  Temporary-toast-table namespaces are included, too.
  * If it isn't a temp namespace, return InvalidBackendId.
+ *
+ * FIXME: This function doesn't work or useful in GPDB (only useful for
+ * utility mode temp tables which are none or rare). Since the temp namespace
+ * for QD and QE is using gp_session_id as suffix instead of backendID.
+ * Function needs to be modified to work for GPDB. Maybe checking if
+ * gp_session_id is active in system or not currently. Only user of this
+ * function is autovacuum process so far so the impact is low.
  */
 int
 GetTempNamespaceBackendId(Oid namespaceId)

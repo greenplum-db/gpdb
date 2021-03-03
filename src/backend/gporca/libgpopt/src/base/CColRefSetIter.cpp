@@ -9,10 +9,11 @@
 //		Implementation of bitset iterator
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CColRefSetIter.h"
 
+#include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
+
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CColumnFactory.h"
 
@@ -33,7 +34,7 @@ CColRefSetIter::CColRefSetIter(const CColRefSet &bs) : CBitSetIter(bs)
 {
 	// get column factory from optimizer context object
 	m_pcf = COptCtxt::PoctxtFromTLS()->Pcf();
-	GPOS_ASSERT(NULL != m_pcf);
+	GPOS_ASSERT(nullptr != m_pcf);
 }
 
 

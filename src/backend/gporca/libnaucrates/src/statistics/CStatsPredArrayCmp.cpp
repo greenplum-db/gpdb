@@ -10,10 +10,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/statistics/CStatsPredArrayCmp.h"
-#include "naucrates/md/CMDIdGPDB.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefTable.h"
+#include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpnaucrates;
 using namespace gpopt;

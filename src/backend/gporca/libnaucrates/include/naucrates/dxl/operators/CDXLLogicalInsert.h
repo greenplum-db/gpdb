@@ -13,6 +13,7 @@
 #define GPDXL_CDXLLogicalInsert_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLLogical.h"
 
 namespace gpdxl
@@ -39,21 +40,20 @@ private:
 	// list of source column ids
 	ULongPtrArray *m_src_colids_array;
 
-	// private copy ctor
-	CDXLLogicalInsert(const CDXLLogicalInsert &);
-
 public:
+	CDXLLogicalInsert(const CDXLLogicalInsert &) = delete;
+
 	// ctor/dtor
 	CDXLLogicalInsert(CMemoryPool *mp, CDXLTableDescr *table_descr,
 					  ULongPtrArray *src_colids_array);
 
-	virtual ~CDXLLogicalInsert();
+	~CDXLLogicalInsert() override;
 
 	// operator type
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// target table descriptor
 	CDXLTableDescr *
@@ -72,18 +72,19 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *node, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *node,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *node) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *node) const override;
 
 	// conversion function
 	static CDXLLogicalInsert *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalInsert == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalInsert *>(dxl_op);

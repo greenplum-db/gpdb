@@ -45,16 +45,15 @@ private:
 	// average row width in bytes
 	CWStringDynamic *m_width_str;
 
-	// private copy ctor
-	CDXLOperatorCost(const CDXLOperatorCost &);
-
 public:
+	CDXLOperatorCost(const CDXLOperatorCost &) = delete;
+
 	// ctor/dtor
 	CDXLOperatorCost(CWStringDynamic *startup_cost_str,
 					 CWStringDynamic *total_cost_str,
 					 CWStringDynamic *rows_out_str, CWStringDynamic *width_str);
 
-	virtual ~CDXLOperatorCost();
+	~CDXLOperatorCost() override;
 
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer) const;

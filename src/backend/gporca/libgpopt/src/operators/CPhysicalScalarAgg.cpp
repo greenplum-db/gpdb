@@ -9,13 +9,14 @@
 //		Implementation of scalar aggregation operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalScalarAgg.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPhysicalScalarAgg.h"
 
 using namespace gpopt;
 
@@ -48,9 +49,7 @@ CPhysicalScalarAgg::CPhysicalScalarAgg(
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CPhysicalScalarAgg::~CPhysicalScalarAgg()
-{
-}
+CPhysicalScalarAgg::~CPhysicalScalarAgg() = default;
 
 
 //---------------------------------------------------------------------------
@@ -115,7 +114,7 @@ CPhysicalScalarAgg::EpetOrder(CExpressionHandle &,	// exprhdl
 #endif	// GPOS_DEBUG
 ) const
 {
-	GPOS_ASSERT(NULL != peo);
+	GPOS_ASSERT(nullptr != peo);
 	GPOS_ASSERT(!peo->PosRequired()->IsEmpty());
 
 	// TODO: , 06/20/2012: scalar agg produces one row, and hence it should satisfy any order;

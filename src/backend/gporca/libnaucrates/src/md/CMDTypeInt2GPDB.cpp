@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDTypeInt2GPDB.cpp
@@ -10,16 +10,15 @@
 //		MD cache
 //---------------------------------------------------------------------------
 
-#include "gpos/string/CWStringDynamic.h"
-
 #include "naucrates/md/CMDTypeInt2GPDB.h"
 
-#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
-#include "naucrates/dxl/operators/CDXLDatum.h"
-#include "naucrates/dxl/operators/CDXLDatumInt2.h"
-#include "naucrates/dxl/CDXLUtils.h"
+#include "gpos/string/CWStringDynamic.h"
 
 #include "naucrates/base/CDatumInt2GPDB.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLDatumInt2.h"
+#include "naucrates/dxl/operators/CDXLScalarConstValue.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -48,8 +47,8 @@ CMDTypeInt2GPDB::CMDTypeInt2GPDB(CMemoryPool *mp) : m_mp(mp)
 	}
 	else
 	{
-		m_distr_opfamily = NULL;
-		m_legacy_distr_opfamily = NULL;
+		m_distr_opfamily = nullptr;
+		m_legacy_distr_opfamily = nullptr;
 	}
 	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT2_EQ_OP);
 	m_mdid_op_neq = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT2_NEQ_OP);
@@ -190,7 +189,7 @@ CMDTypeInt2GPDB::GetMdidForCmpType(ECmpType cmp_type) const
 			return m_mdid_op_geq;
 		default:
 			GPOS_ASSERT(!"Invalid operator type");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -219,7 +218,7 @@ CMDTypeInt2GPDB::GetMdidForAggType(EAggType agg_type) const
 			return m_mdid_count;
 		default:
 			GPOS_ASSERT(!"Invalid aggregate type");
-			return NULL;
+			return nullptr;
 	}
 }
 //---------------------------------------------------------------------------

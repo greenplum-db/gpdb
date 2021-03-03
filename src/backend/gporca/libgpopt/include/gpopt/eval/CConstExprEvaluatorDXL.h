@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorDXL.h
@@ -20,13 +20,11 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/eval/IConstExprEvaluator.h"
 #include "gpopt/base/CColRef.h"
+#include "gpopt/eval/IConstExprEvaluator.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
-
 #include "naucrates/dxl/operators/CDXLNode.h"
-
 #include "naucrates/md/CMDName.h"
 
 // forward declaration
@@ -61,23 +59,22 @@ private:
 	// translates DXL coming from the evaluator back to CExpression
 	CTranslatorDXLToExpr m_trdxl2expr;
 
-	// private copy ctor
-	CConstExprEvaluatorDXL(const CConstExprEvaluatorDXL &);
-
 public:
+	CConstExprEvaluatorDXL(const CConstExprEvaluatorDXL &) = delete;
+
 	// ctor
 	CConstExprEvaluatorDXL(CMemoryPool *mp, CMDAccessor *md_accessor,
 						   IConstDXLNodeEvaluator *pconstdxleval);
 
 	// dtor
-	virtual ~CConstExprEvaluatorDXL();
+	~CConstExprEvaluatorDXL() override;
 
 	// evaluate the given expression and return the result as a new expression
 	// caller takes ownership of returned expression
-	virtual CExpression *PexprEval(CExpression *pexpr);
+	CExpression *PexprEval(CExpression *pexpr) override;
 
 	// Returns true iff the evaluator can evaluate expressions
-	virtual BOOL FCanEvalExpressions();
+	BOOL FCanEvalExpressions() override;
 };
 }  // namespace gpopt
 

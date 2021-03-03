@@ -1,7 +1,5 @@
 -- Tests FTS can handle DNS error.
 
-include: helpers/server_helpers.sql;
-
 -- to make test deterministic and fast
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 

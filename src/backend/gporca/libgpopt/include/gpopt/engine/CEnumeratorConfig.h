@@ -16,7 +16,6 @@
 #include "gpos/common/CRefCount.h"
 
 #include "gpopt/cost/CCost.h"
-
 #include "naucrates/traceflags/traceflags.h"
 
 #define GPOPT_UNBOUNDED_COST_THRESHOLD 0.0
@@ -72,7 +71,7 @@ private:
 		}
 
 		// dtor
-		virtual ~SSamplePlan(){};
+		virtual ~SSamplePlan() = default;
 
 		// return plan id
 		ULLONG
@@ -138,19 +137,18 @@ private:
 	// initialize size of cost distribution
 	void InitCostDistrSize();
 
-	// inaccessible copy ctor
-	CEnumeratorConfig(const CEnumeratorConfig &);
-
 	// compute Gaussian probability value
 	static DOUBLE DGaussian(DOUBLE d, DOUBLE dMean, DOUBLE dStd);
 
 public:
+	CEnumeratorConfig(const CEnumeratorConfig &) = delete;
+
 	// ctor
 	CEnumeratorConfig(CMemoryPool *mp, ULLONG plan_id, ULLONG ullSamples,
 					  CDouble cost_threshold = GPOPT_UNBOUNDED_COST_THRESHOLD);
 
 	// dtor
-	virtual ~CEnumeratorConfig();
+	~CEnumeratorConfig() override;
 
 	// return plan id
 	ULLONG
@@ -276,7 +274,7 @@ public:
 	void
 	SetPlanChecker(FnPlanChecker *pfpc)
 	{
-		GPOS_ASSERT(NULL != pfpc);
+		GPOS_ASSERT(nullptr != pfpc);
 
 		m_pfpc = pfpc;
 	}
@@ -300,9 +298,9 @@ public:
 	BOOL
 	FCheckPlan(CExpression *pexpr) const
 	{
-		GPOS_ASSERT(NULL != pexpr);
+		GPOS_ASSERT(nullptr != pexpr);
 
-		if (NULL != m_pfpc)
+		if (nullptr != m_pfpc)
 		{
 			return m_pfpc(pexpr);
 		}
@@ -322,9 +320,9 @@ public:
 	void PrintPlanSample() const;
 
 	// compute Gaussian kernel density
-	static void GussianKernelDensity(DOUBLE *pdObervationX,
-									 DOUBLE *pdObervationY,
-									 ULONG ulObservations, DOUBLE *pdX,
+	static void GussianKernelDensity(const DOUBLE *pdObervationX,
+									 const DOUBLE *pdObervationY,
+									 ULONG ulObservations, const DOUBLE *pdX,
 									 DOUBLE *pdY, ULONG size);
 
 	// generate default enumerator configurations

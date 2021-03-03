@@ -12,9 +12,10 @@
 #define GPOPT_CXformLeftSemiApply2LeftSemiJoinNoCorrelations_H
 
 #include "gpos/base.h"
-#include "gpopt/xforms/CXformApply2Join.h"
+
 #include "gpopt/operators/CLogicalLeftSemiApply.h"
 #include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/xforms/CXformApply2Join.h"
 
 
 namespace gpopt
@@ -33,11 +34,10 @@ class CXformLeftSemiApply2LeftSemiJoinNoCorrelations
 	: public CXformApply2Join<CLogicalLeftSemiApply, CLogicalLeftSemiJoin>
 {
 private:
-	// private copy ctor
-	CXformLeftSemiApply2LeftSemiJoinNoCorrelations(
-		const CXformLeftSemiApply2LeftSemiJoinNoCorrelations &);
-
 public:
+	CXformLeftSemiApply2LeftSemiJoinNoCorrelations(
+		const CXformLeftSemiApply2LeftSemiJoinNoCorrelations &) = delete;
+
 	// ctor
 	explicit CXformLeftSemiApply2LeftSemiJoinNoCorrelations(CMemoryPool *mp)
 		: CXformApply2Join<CLogicalLeftSemiApply, CLogicalLeftSemiJoin>(mp)
@@ -45,9 +45,7 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftSemiApply2LeftSemiJoinNoCorrelations()
-	{
-	}
+	~CXformLeftSemiApply2LeftSemiJoinNoCorrelations() override = default;
 
 	// ctor with a passed pattern
 	CXformLeftSemiApply2LeftSemiJoinNoCorrelations(CMemoryPool *mp,
@@ -58,24 +56,24 @@ public:
 	}
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiApply2LeftSemiJoinNoCorrelations;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiApply2LeftSemiJoinNoCorrelations";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 
 };	// class CXformLeftSemiApply2LeftSemiJoinNoCorrelations

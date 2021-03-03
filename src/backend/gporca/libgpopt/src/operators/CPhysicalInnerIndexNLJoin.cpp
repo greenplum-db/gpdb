@@ -9,16 +9,16 @@
 //		Implementation of index inner nested-loops join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
+
 #include "gpos/base.h"
-#include "gpopt/base/CDistributionSpecReplicated.h"
+
+#include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
-#include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
-
-
-#include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
 
 
 
@@ -34,10 +34,17 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CPhysicalInnerIndexNLJoin::CPhysicalInnerIndexNLJoin(CMemoryPool *mp,
-													 CColRefArray *colref_array)
-	: CPhysicalInnerNLJoin(mp), m_pdrgpcrOuterRefs(colref_array)
+													 CColRefArray *colref_array,
+													 CExpression *origJoinPred)
+	: CPhysicalInnerNLJoin(mp),
+	  m_pdrgpcrOuterRefs(colref_array),
+	  m_origJoinPred(origJoinPred)
 {
-	GPOS_ASSERT(NULL != colref_array);
+	GPOS_ASSERT(nullptr != colref_array);
+	if (nullptr != origJoinPred)
+	{
+		origJoinPred->AddRef();
+	}
 }
 
 
@@ -52,6 +59,7 @@ CPhysicalInnerIndexNLJoin::CPhysicalInnerIndexNLJoin(CMemoryPool *mp,
 CPhysicalInnerIndexNLJoin::~CPhysicalInnerIndexNLJoin()
 {
 	m_pdrgpcrOuterRefs->Release();
+	CRefCount::SafeRelease(m_origJoinPred);
 }
 
 
@@ -85,23 +93,40 @@ CPhysicalInnerIndexNLJoin::Matches(COperator *pop) const
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalInnerIndexNLJoin::PdsRequired(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl,
+CPhysicalInnerIndexNLJoin::PdsRequired(CMemoryPool *mp GPOS_UNUSED,
+									   CExpressionHandle &exprhdl GPOS_UNUSED,
 									   CDistributionSpec *,	 //pdsRequired,
-									   ULONG child_index,
-									   CDrvdPropArray *pdrgpdpCtxt,
+									   ULONG child_index GPOS_UNUSED,
+									   CDrvdPropArray *pdrgpdpCtxt GPOS_UNUSED,
 									   ULONG  // ulOptReq
 ) const
 {
+	GPOS_RAISE(
+		CException::ExmaInvalid, CException::ExmiInvalid,
+		GPOS_WSZ_LIT(
+			"PdsRequired should not be called for CPhysicalInnerIndexNLJoin"));
+	return nullptr;
+}
+
+CEnfdDistribution *
+CPhysicalInnerIndexNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							   CReqdPropPlan *prppInput, ULONG child_index,
+							   CDrvdPropArray *pdrgpdpCtxt, ULONG ulDistrReq)
+{
 	GPOS_ASSERT(2 > child_index);
+
+	CEnfdDistribution::EDistributionMatching dmatch =
+		Edm(prppInput, child_index, pdrgpdpCtxt, ulDistrReq);
 
 	if (1 == child_index)
 	{
 		// inner (index-scan side) is requested for Any distribution,
 		// we allow outer references on the inner child of the join since it needs
 		// to refer to columns in join's outer child
-		return GPOS_NEW(mp)
-			CDistributionSpecAny(this->Eopid(), true /*fAllowOuterRefs*/);
+		return GPOS_NEW(mp) CEnfdDistribution(
+			GPOS_NEW(mp)
+				CDistributionSpecAny(this->Eopid(), true /*fAllowOuterRefs*/),
+			dmatch);
 	}
 
 	// we need to match distribution of inner
@@ -113,7 +138,8 @@ CPhysicalInnerIndexNLJoin::PdsRequired(CMemoryPool *mp,
 		CDistributionSpec::EdtUniversal == edtInner)
 	{
 		// enforce executing on a single host
-		return GPOS_NEW(mp) CDistributionSpecSingleton();
+		return GPOS_NEW(mp) CEnfdDistribution(
+			GPOS_NEW(mp) CDistributionSpecSingleton(), dmatch);
 	}
 
 	if (CDistributionSpec::EdtHashed == edtInner)
@@ -136,12 +162,19 @@ CPhysicalInnerIndexNLJoin::PdsRequired(CMemoryPool *mp,
 										pdshashedEquiv->FNullsColocated());
 			pdsHashedRequired->ComputeEquivHashExprs(mp, exprhdl);
 
-			return pdsHashedRequired;
+			return GPOS_NEW(mp) CEnfdDistribution(pdsHashedRequired, dmatch);
 		}
 	}
 
 	// otherwise, require outer child to be replicated
-	return GPOS_NEW(mp) CDistributionSpecReplicated();
+	// The match type for this request has to be "Satisfy" since EdtReplicated
+	// is required only property. Since a Broadcast motion will always
+	// derive a EdtStrictReplicated distribution spec, it will never "Match"
+	// the required distribution spec and hence will not be optimized.
+	return GPOS_NEW(mp) CEnfdDistribution(
+		GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated),
+		CEnfdDistribution::EdmSatisfy);
 }
 
 

@@ -10,12 +10,12 @@
 //		Implementation of the SAX parse handler class for parsing scalar cast operator.
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarCast.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/parser/CParseHandlerScalarCast.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -56,7 +56,7 @@ CParseHandlerScalarCast::StartElement(const XMLCh *const,  // element_uri,
 		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarCast),
 								 element_local_name))
 	{
-		if (NULL != m_dxl_node)
+		if (nullptr != m_dxl_node)
 		{
 			CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 				m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

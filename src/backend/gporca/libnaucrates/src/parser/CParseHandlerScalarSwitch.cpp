@@ -11,10 +11,11 @@
 //---------------------------------------------------------------------------
 
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarSwitch.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarSwitch.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarSwitchCase.h"
 
 
@@ -34,7 +35,7 @@ CParseHandlerScalarSwitch::CParseHandlerScalarSwitch(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdid_type(NULL),
+	  m_mdid_type(nullptr),
 	  m_arg_processed(false),
 	  m_default_val_processed(false)
 {
@@ -57,7 +58,7 @@ CParseHandlerScalarSwitch::StartElement(const XMLCh *const element_uri,
 	if (0 == XMLString::compareString(
 				 CDXLTokens::XmlstrToken(EdxltokenScalarSwitch),
 				 element_local_name) &&
-		NULL == m_mdid_type)
+		nullptr == m_mdid_type)
 	{
 		// parse type id
 		m_mdid_type = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
@@ -74,7 +75,7 @@ CParseHandlerScalarSwitch::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have already seen the arg child, but have not seen the DEFAULT child
-		GPOS_ASSERT(NULL != m_dxl_node && m_arg_processed &&
+		GPOS_ASSERT(nullptr != m_dxl_node && m_arg_processed &&
 					!m_default_val_processed);
 
 		// parse case
@@ -92,7 +93,7 @@ CParseHandlerScalarSwitch::StartElement(const XMLCh *const element_uri,
 	}
 	else
 	{
-		GPOS_ASSERT(NULL != m_dxl_node && !m_default_val_processed);
+		GPOS_ASSERT(nullptr != m_dxl_node && !m_default_val_processed);
 
 		// parse scalar child
 		CParseHandlerBase *child_parse_handler =

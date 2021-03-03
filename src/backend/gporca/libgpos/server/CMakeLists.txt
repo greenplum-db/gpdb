@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Pivotal Software, Inc. All Rights Reserved.
+# Copyright (c) 2015, VMware, Inc. or its affiliates. All Rights Reserved.
 
 # Include path for unit test headers.
 include_directories(include)

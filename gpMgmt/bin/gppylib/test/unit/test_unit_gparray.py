@@ -9,7 +9,7 @@
 """
 import os
 
-from gppylib.gparray import GpArray, Segment, createSegmentRows, get_gparray_from_config
+from gppylib.gparray import GpArray, Segment, createSegmentRows
 from gppylib import gplog
 from .gp_unittest import *
 from mock import patch, Mock
@@ -155,42 +155,21 @@ class GpArrayTestCase(GpTestCase):
         self._validate_get_segment_list(gparray, hostlist, expansion_hosts, primary_list)
 
 
-    @patch('gppylib.system.configurationInterface.getConfigurationProvider')
-    @patch('gppylib.system.environment.GpMasterEnvironment', return_value=Mock(), autospec=True)
-    def test_get_gparray_from_config(self, gpMasterEnvironmentMock, getConfigProviderFunctionMock):
-        os.environ['MASTER_DATA_DIRECTORY'] = "MY_TEST_DIR"
-        configProviderMock = Mock(spec=GpConfigurationProvider)
-        getConfigProviderFunctionMock.return_value = configProviderMock
-        configProviderMock.initializeProvider.return_value = configProviderMock
-        gpArrayMock = Mock(spec=GpArray)
-        gpArrayMock.hasMirrors = False
-        configProviderMock.loadSystemConfig.return_value = gpArrayMock
-        gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
-
-        gpArray = get_gparray_from_config()
-
-        self.assertEqual(gpArray.hasMirrors, False)
-        gpMasterEnvironmentMock.assert_called_once_with("MY_TEST_DIR", False)
-        getConfigProviderFunctionMock.assert_any_call()
-        configProviderMock.initializeProvider.assert_called_once_with(123456)
-        configProviderMock.loadSystemConfig.assert_called_once_with(useUtilityMode=True)
-
-
 #------------------------------- non-test helpers --------------------------------
     def _setup_gparray(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type,
                        mirror_list, mirror_portbase, dir_prefix):
-        master = Segment(content = -1,
+        coordinator = Segment(content = -1,
                     preferred_role = 'p',
                     dbid = 0,
                     role = 'p',
                     mode = 's',
                     status = 'u',
-                    hostname = 'masterhost',
-                    address = 'masterhost-1',
+                    hostname = 'coordinatorhost',
+                    address = 'coordinatorhost-1',
                     port = 5432,
-                    datadir = '/masterdir')
+                    datadir = '/coordinatordir')
         allrows = []
-        allrows.append(master)                 
+        allrows.append(coordinator)                 
         rows =  createSegmentRows(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
                                   mirror_list, mirror_portbase, dir_prefix)
         

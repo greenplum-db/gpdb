@@ -4,7 +4,7 @@
  *	Greenplum specific file system operations
  *
  *	Portions Copyright (c) 2010, PostgreSQL Global Development Group
- *	Portions Copyright (c) 2016-Present, Pivotal Software Inc
+ *	Portions Copyright (c) 2016-Present, VMware, Inc. or its affiliates
  *	contrib/pg_upgrade/file_gp.c
  */
 #include "postgres_fe.h"

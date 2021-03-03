@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLCtasStorageOptions.h
@@ -17,6 +17,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CRefCount.h"
+
 #include "naucrates/md/CMDName.h"
 
 using namespace gpmd;
@@ -59,8 +60,8 @@ public:
 			  m_str_value(str_value),
 			  m_is_null(is_null)
 		{
-			GPOS_ASSERT(NULL != str_name);
-			GPOS_ASSERT(NULL != str_value);
+			GPOS_ASSERT(nullptr != str_name);
+			GPOS_ASSERT(nullptr != str_value);
 		}
 
 		// dtor
@@ -101,21 +102,20 @@ private:
 	// array of name-value pairs of storage options
 	CDXLCtasOptionArray *m_ctas_storage_option_array;
 
-	// private copy ctor
-	CDXLCtasStorageOptions(const CDXLCtasStorageOptions &);
-
 	// string representation of OnCommit action
 	static const CWStringConst *GetOnCommitActionStr(
 		ECtasOnCommitAction ctas_on_commit_action);
 
 public:
+	CDXLCtasStorageOptions(const CDXLCtasStorageOptions &) = delete;
+
 	// ctor
 	CDXLCtasStorageOptions(CMDName *mdname_tablespace,
 						   ECtasOnCommitAction ctas_on_commit_action,
 						   CDXLCtasOptionArray *ctas_storage_option_array);
 
 	// dtor
-	virtual ~CDXLCtasStorageOptions();
+	~CDXLCtasStorageOptions() override;
 
 	// accessor to tablespace name
 	CMDName *GetMdNameTableSpace() const;

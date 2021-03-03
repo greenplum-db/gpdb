@@ -12,9 +12,10 @@
 #define GPOPT_CScalarIdent_H
 
 #include "gpos/base.h"
+
+#include "gpopt/base/CDrvdProp.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdProp.h"
 
 namespace gpopt
 {
@@ -34,11 +35,10 @@ private:
 	// column
 	const CColRef *m_pcr;
 
-	// private copy ctor
-	CScalarIdent(const CScalarIdent &);
-
 
 public:
+	CScalarIdent(const CScalarIdent &) = delete;
+
 	// ctor
 	CScalarIdent(CMemoryPool *mp, const CColRef *colref)
 		: CScalar(mp), m_pcr(colref)
@@ -46,20 +46,18 @@ public:
 	}
 
 	// dtor
-	virtual ~CScalarIdent()
-	{
-	}
+	~CScalarIdent() override = default;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarIdent;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarIdent";
 	}
@@ -72,25 +70,26 @@ public:
 	}
 
 	// operator specific hash function
-	ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 
 	// return locally used columns
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsUsed(CMemoryPool *mp,
 			 CExpressionHandle &  // exprhdl
 
-	)
+			 ) override
 	{
 		CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 		pcrs->Include(m_pcr);
@@ -102,20 +101,20 @@ public:
 	static CScalarIdent *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarIdent == pop->Eopid());
 
-		return reinterpret_cast<CScalarIdent *>(pop);
+		return dynamic_cast<CScalarIdent *>(pop);
 	}
 
 	// the type of the scalar expression
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// the type modifier of the scalar expression
-	virtual INT TypeModifier() const;
+	INT TypeModifier() const override;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// is the given expression a scalar cast of a scalar identifier
 	static BOOL FCastedScId(CExpression *pexpr);

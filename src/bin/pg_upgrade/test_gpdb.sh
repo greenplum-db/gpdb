@@ -263,7 +263,7 @@ diff_and_exit() {
 	# when done. Set the same variables as gpdemo-env.sh exports. Since creation
 	# of that file can collide between the gpdemo clusters, perform it manually
 	export PGPORT=17432
-	export MASTER_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
+	export COORDINATOR_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
 	${NEW_BINDIR}/gpstart -a ${args}
 
 	echo -n 'Dumping database schema after upgrade... '
@@ -271,7 +271,7 @@ diff_and_exit() {
 	echo done
 
 	${NEW_BINDIR}/gpstop -a ${args}
-	MASTER_DATA_DIRECTORY=""; unset MASTER_DATA_DIRECTORY
+	COORDINATOR_DATA_DIRECTORY=""; unset COORDINATOR_DATA_DIRECTORY
 	PGPORT=""; unset PGPORT
 	
 	# Since we've used the same pg_dumpall binary to create both dumps, whitespace
@@ -430,7 +430,7 @@ main() {
 	
 	${OLD_BINDIR}/gpstop -a
 	
-	MASTER_DATA_DIRECTORY=""; unset MASTER_DATA_DIRECTORY
+	COORDINATOR_DATA_DIRECTORY=""; unset COORDINATOR_DATA_DIRECTORY
 	PGPORT=""; unset PGPORT
 	
 	########################## END: OLD cluster checks
@@ -445,17 +445,17 @@ main() {
 	# using a demo cluster anyway, this is acceptable.
 	export DEMO_PORT_BASE=17432
 	export NUM_PRIMARY_MIRROR_PAIRS=3
-	export MASTER_DATADIR=${temp_root}
+	export COORDINATOR_DATADIR=${temp_root}
 	cp ${OLD_DATADIR}/../lalshell .
 	
-	BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${temp_root}/../../../../gpAux/gpdemo/demo_cluster.sh ${DEMOCLUSTER_OPTS}
+	LANG=en_US.utf8 BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${temp_root}/../../../../gpAux/gpdemo/demo_cluster.sh ${DEMOCLUSTER_OPTS}
 
-	export MASTER_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
+	export COORDINATOR_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
 	export PGPORT=17432
 	
 	${NEW_BINDIR}/gpstop -a
 	
-	MASTER_DATA_DIRECTORY=""; unset MASTER_DATA_DIRECTORY
+	COORDINATOR_DATA_DIRECTORY=""; unset COORDINATOR_DATA_DIRECTORY
 	PGPORT=""; unset PGPORT
 	PGOPTIONS=""; unset PGOPTIONS
 

@@ -11,8 +11,8 @@
 
 
 #include "naucrates/dxl/operators/CDXLPhysicalNLJoin.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
 
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -33,7 +33,7 @@ CDXLPhysicalNLJoin::CDXLPhysicalNLJoin(CMemoryPool *mp, EdxlJoinType join_type,
 	  m_is_index_nlj(is_index_nlj),
 	  m_nest_params_exists(nest_params_exists)
 {
-	m_nest_params_col_refs = NULL;
+	m_nest_params_col_refs = nullptr;
 }
 
 CDXLPhysicalNLJoin::~CDXLPhysicalNLJoin()

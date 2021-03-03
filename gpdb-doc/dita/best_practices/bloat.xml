@@ -177,7 +177,7 @@ where a.relnamespace=b.oid and b.nspname='pg_catalog' and a.relkind='r'"
 
 reindexdb -s -d $DBNAME
 psql -tc "SELECT 'VACUUM' || $SYSTABLES" $DBNAME | psql -a $DBNAME
-analyzedb -s pg_catalog -d $DBNAME</pre></p>
+analyzedb -a -s pg_catalog -d $DBNAME</pre></p>
       <p>If the system catalogs become significantly bloated, you must run <codeph>VACUUM
           FULL</codeph> during a scheduled downtime period. During this period, stop all catalog
         activity on the system; <codeph>VACUUM FULL</codeph> takes <codeph>ACCESS EXCLUSIVE</codeph>

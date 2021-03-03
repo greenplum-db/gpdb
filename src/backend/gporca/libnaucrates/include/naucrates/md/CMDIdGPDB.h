@@ -19,9 +19,8 @@
 #include "gpos/string/CWStringConst.h"
 
 #include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/IMDId.h"
 #include "naucrates/md/CSystemId.h"
+#include "naucrates/md/IMDId.h"
 
 
 // TODO:  - Feb 1, 2012; remove once system id is part of the mdid
@@ -73,18 +72,18 @@ public:
 	// copy ctor
 	explicit CMDIdGPDB(const CMDIdGPDB &mdidSource);
 
-	virtual EMDIdType
-	MdidType() const
+	EMDIdType
+	MdidType() const override
 	{
 		return EmdidGPDB;
 	}
 
 	// string representation of mdid
-	virtual const WCHAR *GetBuffer() const;
+	const WCHAR *GetBuffer() const override;
 
 	// source system id
-	virtual CSystemId
-	Sysid() const
+	CSystemId
+	Sysid() const override
 	{
 		return m_sysid;
 	}
@@ -99,11 +98,11 @@ public:
 	virtual ULONG VersionMinor() const;
 
 	// equality check
-	virtual BOOL Equals(const IMDId *mdid) const;
+	BOOL Equals(const IMDId *mdid) const override;
 
 	// computes the hash value for the metadata id
-	virtual ULONG
-	HashValue() const
+	ULONG
+	HashValue() const override
 	{
 		return gpos::CombineHashes(
 			MdidType(),
@@ -114,20 +113,20 @@ public:
 	}
 
 	// is the mdid valid
-	virtual BOOL IsValid() const;
+	BOOL IsValid() const override;
 
 	// serialize mdid in DXL as the value of the specified attribute
-	virtual void Serialize(CXMLSerializer *xml_serializer,
-						   const CWStringConst *pstrAttribute) const;
+	void Serialize(CXMLSerializer *xml_serializer,
+				   const CWStringConst *pstrAttribute) const override;
 
 	// debug print of the metadata id
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// const converter
 	static const CMDIdGPDB *
 	CastMdid(const IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidGPDB == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidGPDB == mdid->MdidType());
 
 		return dynamic_cast<const CMDIdGPDB *>(mdid);
 	}
@@ -136,10 +135,16 @@ public:
 	static CMDIdGPDB *
 	CastMdid(IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && (EmdidGPDB == mdid->MdidType() ||
-									 EmdidGPDBCtas == mdid->MdidType()));
+		GPOS_ASSERT(nullptr != mdid && (EmdidGPDB == mdid->MdidType() ||
+										EmdidGPDBCtas == mdid->MdidType()));
 
 		return dynamic_cast<CMDIdGPDB *>(mdid);
+	}
+
+	IMDId *
+	Copy(CMemoryPool *mp) const override
+	{
+		return GPOS_NEW(mp) CMDIdGPDB(*this);
 	}
 
 	// invalid mdid

@@ -39,7 +39,9 @@ public:
 		EdtHashed,		// data is hashed across all segments
 		EdtHashedNoOp,	// same as hashed, used to force multiple slices for parallel union all. The motions always mirror the underlying distributions.
 		EdtStrictHashed,  // same as hashed, used to force multiple slices for parallel union all. The motions mirror the distribution of the output columns.
-		EdtReplicated,	  // data is replicated across all segments
+		EdtStrictReplicated,  // data is strictly replicated across all segments
+		EdtReplicated,	// data is strict or tainted replicated (required only)
+		EdtTaintedReplicated,  // data once-replicated, after being processed by an input-order-sensitive operator (derived only)
 		EdtAny,		   // data can be anywhere on the segments (required only)
 		EdtSingleton,  // data is on a single segment or the master
 		EdtStrictSingleton,	 // data is on a single segment or the master (derived only, only compatible with other singleton distributions)
@@ -64,17 +66,14 @@ public:
 	};
 
 private:
-	// private copy ctor
-	CDistributionSpec(const CDistributionSpec &);
-
 public:
+	CDistributionSpec(const CDistributionSpec &) = delete;
+
 	// ctor
-	CDistributionSpec()
-	{
-	}
+	CDistributionSpec() = default;
 
 	// dtor
-	virtual ~CDistributionSpec(){};
+	~CDistributionSpec() override = default;
 
 	// distribution type accessor
 	virtual EDistributionType Edt() const = 0;
@@ -83,24 +82,24 @@ public:
 	virtual BOOL FSatisfies(const CDistributionSpec *pds) const = 0;
 
 	// default hash function for distribution spec
-	virtual ULONG
-	HashValue() const
+	ULONG
+	HashValue() const override
 	{
 		ULONG ulEdt = (ULONG) Edt();
 		return gpos::HashValue<ULONG>(&ulEdt);
 	}
 
 	// extract columns used by the distribution spec
-	virtual CColRefSet *
-	PcrsUsed(CMemoryPool *mp) const
+	CColRefSet *
+	PcrsUsed(CMemoryPool *mp) const override
 	{
 		// by default, return an empty set
 		return GPOS_NEW(mp) CColRefSet(mp);
 	}
 
 	// property type
-	virtual EPropSpecType
-	Epst() const
+	EPropSpecType
+	Epst() const override
 	{
 		return EpstDistribution;
 	}
@@ -147,7 +146,7 @@ public:
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const = 0;
+	IOstream &OsPrint(IOstream &os) const override = 0;
 
 	// return distribution partitioning type
 	virtual EDistributionPartitioningType Edpt() const = 0;

@@ -10,11 +10,12 @@
 //		window specifications in the logical window operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerWindowSpec.h"
 #include "naucrates/dxl/parser/CParseHandlerWindowSpecList.h"
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/parser/CParseHandlerWindowSpec.h"
 
 using namespace gpdxl;
 
@@ -32,7 +33,7 @@ CParseHandlerWindowSpecList::CParseHandlerWindowSpecList(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_window_spec_array(NULL)
+	  m_window_spec_array(nullptr)
 {
 }
 
@@ -61,7 +62,7 @@ CParseHandlerWindowSpecList::StartElement(const XMLCh *const element_uri,
 					  element_local_name))
 	{
 		// we must have seen a window specification list already
-		GPOS_ASSERT(NULL != m_window_spec_array);
+		GPOS_ASSERT(nullptr != m_window_spec_array);
 		// start new window specification element
 		CParseHandlerBase *window_spec_parse_handler =
 			CParseHandlerFactory::GetParseHandler(
@@ -107,7 +108,7 @@ CParseHandlerWindowSpecList::EndElement(const XMLCh *const,	 // element_uri,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 				   str->GetBuffer());
 	}
-	GPOS_ASSERT(NULL != m_window_spec_array);
+	GPOS_ASSERT(nullptr != m_window_spec_array);
 
 	const ULONG size = this->Length();
 	// add the window specifications to the list

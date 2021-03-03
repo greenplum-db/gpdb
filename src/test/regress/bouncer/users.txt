@@ -1,3 +1,0 @@
-"gpadmin" ""
-"build" ""
-"test" ""

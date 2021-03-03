@@ -1,6 +1,6 @@
 # Docker container of Greenplum DB based on Ubuntu 16
 
-This container raises the Greenplum database in "Single Instance" mode (master and two segments in one docker container). Use docker `-v` to mount host data directory to the container `/data` directory (as in example below).
+This container raises the Greenplum database in "Single Instance" mode (coordinator and two segments in one docker container). Use docker `-v` to mount host data directory to the container `/data` directory (as in example below).
 
 This dockerfile is using PPA for Ubuntu 16 — https://launchpad.net/~greenplum/+archive/ubuntu/db
 

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal, Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerLogicalExternalGet.h
@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerLogicalExternalGet_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerLogicalGet.h"
 
 namespace gpdxl
@@ -33,25 +34,25 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerLogicalExternalGet : public CParseHandlerLogicalGet
 {
 private:
-	// private copy ctor
-	CParseHandlerLogicalExternalGet(const CParseHandlerLogicalExternalGet &);
-
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerLogicalExternalGet(const CParseHandlerLogicalExternalGet &) =
+		delete;
+
 	// ctor
 	CParseHandlerLogicalExternalGet(CMemoryPool *mp,
 									CParseHandlerManager *parse_handler_mgr,

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc
+//	Copyright (C) 2014 VMware, Inc. or its affiliates
 //
 //	@filename:
 //		CParseHandlerLogicalCTAS.h
@@ -13,8 +13,8 @@
 #define GPDXL_CParseHandlerLogicalCTAS_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
+#include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 #include "naucrates/md/IMDRelation.h"
 
 
@@ -65,25 +65,24 @@ private:
 	// storage type
 	IMDRelation::Erelstoragetype m_rel_storage_type;
 
-	// private copy ctor
-	CParseHandlerLogicalCTAS(const CParseHandlerLogicalCTAS &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerLogicalCTAS(const CParseHandlerLogicalCTAS &) = delete;
+
 	// ctor
 	CParseHandlerLogicalCTAS(CMemoryPool *mp,
 							 CParseHandlerManager *parse_handler_mgr,

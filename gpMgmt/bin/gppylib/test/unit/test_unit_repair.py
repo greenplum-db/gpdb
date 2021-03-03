@@ -15,11 +15,11 @@ class RepairTestCase(GpTestCase):
         self.context.report_cfg = {0: {'segname': 'seg1', 'hostname': 'somehost', 'port': 25432},
                                    1: {'segname': 'seg2', 'hostname': 'somehost', 'port': 25433},
                                    2: {'segname': 'seg3', 'hostname': 'somehost', 'port': 25434},
-                                   -1: {'segname': 'master', 'hostname': 'somehost', 'port': 15432}}
+                                   -1: {'segname': 'coordinator', 'hostname': 'somehost', 'port': 15432}}
         self.context.cfg = {0: {'content': 0, 'dbid': 0, 'segname': 'seg1', 'hostname': 'somehost', 'port': 25432},
                             1: {'content': 1, 'dbid': 1, 'segname': 'seg2', 'hostname': 'somehost', 'port': 25433},
                             2: {'content': 2, 'dbid': 2, 'segname': 'seg3', 'hostname': 'somehost', 'port': 25434},
-                            3: {'content': -1, 'dbid': 3, 'segname': 'master', 'hostname': 'somehost', 'port': 15432}}
+                            3: {'content': -1, 'dbid': 3, 'segname': 'coordinator', 'hostname': 'somehost', 'port': 15432}}
         self.context.dbname = "somedb"
 
         self.subject = Repair(self.context, "issuetype", "some desc")

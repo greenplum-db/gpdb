@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for CXForm
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CXformTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
@@ -18,10 +20,9 @@
 #include "gpopt/xforms/xforms.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CXformTest.h"
-#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 #include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
+#include "unittest/gpopt/xforms/CDecorrelatorTest.h"
 
 
 //---------------------------------------------------------------------------
@@ -107,7 +108,7 @@ CXformTest::EresUnittest_ApplyXforms()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	for (ULONG ul = 0; ul < GPOS_ARRAY_SIZE(rgpf); ul++)
@@ -146,7 +147,7 @@ CXformTest::EresUnittest_ApplyXforms_CTE()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
@@ -232,14 +233,14 @@ CXformTest::ApplyExprXforms(CMemoryPool *mp, IOstream &os, CExpression *pexpr)
 					// derive stats on NAry join expression
 					CExpressionHandle exprhdl(mp);
 					exprhdl.Attach(pexpr);
-					exprhdl.DeriveStats(mp, mp, NULL /*prprel*/,
-										NULL /*stats_ctxt*/);
+					exprhdl.DeriveStats(mp, mp, nullptr /*prprel*/,
+										nullptr /*stats_ctxt*/);
 				}
 
 				pxform->Transform(pxfctxt, pxfres, pexpr);
 
 				CExpression *pexprResult = pxfres->PexprNext();
-				while (NULL != pexprResult)
+				while (nullptr != pexprResult)
 				{
 					GPOS_ASSERT(pexprResult->FMatchDebug(pexprResult));
 

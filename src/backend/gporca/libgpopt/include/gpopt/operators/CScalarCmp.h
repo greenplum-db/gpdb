@@ -12,9 +12,9 @@
 #define GPOPT_CScalarCmp_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/CScalar.h"
-#include "gpopt/base/CDrvdProp.h"
 
+#include "gpopt/base/CDrvdProp.h"
+#include "gpopt/operators/CScalar.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
 
@@ -58,7 +58,7 @@ public:
 			   IMDType::ECmpType cmp_type);
 
 	// dtor
-	virtual ~CScalarCmp()
+	~CScalarCmp() override
 	{
 		m_mdid_op->Release();
 		GPOS_DELETE(m_pstrOp);
@@ -66,8 +66,8 @@ public:
 
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarCmp;
 	}
@@ -80,28 +80,28 @@ public:
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarCmp";
 	}
 
 
 	// operator specific hash function
-	ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
@@ -110,7 +110,7 @@ public:
 	BOOL FCommutative() const;
 
 	// boolean expression evaluation
-	virtual EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const;
+	EBoolEvalResult Eber(ULongPtrArray *pdrgpulChildren) const override;
 
 	// name of the comparison operator
 	const CWStringConst *Pstr() const;
@@ -119,16 +119,16 @@ public:
 	IMDId *MdIdOp() const;
 
 	// the type of the scalar expression
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CScalarCmp *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarCmp == pop->Eopid());
 
 		return dynamic_cast<CScalarCmp *>(pop);

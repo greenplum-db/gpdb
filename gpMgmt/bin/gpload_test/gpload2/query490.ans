@@ -1,0 +1,8 @@
+2020-12-17 11:47:34|INFO|gpload session started 2020-12-17 11:47:34
+2020-12-17 11:47:34|INFO|setting schema 'public' for table 'texttable'
+2020-12-17 11:47:34|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2020-12-17 11:47:34|ERROR|A gpload control file processing error occurred. The configuration must contain gpload:output:update_columns
+2020-12-17 11:47:34|INFO|rows Inserted          = 0
+2020-12-17 11:47:34|INFO|rows Updated           = 0
+2020-12-17 11:47:34|INFO|data formatting errors = 0
+2020-12-17 11:47:34|INFO|gpload failed

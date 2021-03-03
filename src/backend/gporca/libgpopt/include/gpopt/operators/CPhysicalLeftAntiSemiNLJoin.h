@@ -12,6 +12,7 @@
 #define GPOPT_CPhysicalLeftAntiSemiNLJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CPhysicalNLJoin.h"
 
 namespace gpopt
@@ -27,40 +28,32 @@ namespace gpopt
 class CPhysicalLeftAntiSemiNLJoin : public CPhysicalNLJoin
 {
 private:
-	// private copy ctor
-	CPhysicalLeftAntiSemiNLJoin(const CPhysicalLeftAntiSemiNLJoin &);
-
 public:
+	CPhysicalLeftAntiSemiNLJoin(const CPhysicalLeftAntiSemiNLJoin &) = delete;
+
 	// ctor
 	explicit CPhysicalLeftAntiSemiNLJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CPhysicalLeftAntiSemiNLJoin();
+	~CPhysicalLeftAntiSemiNLJoin() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopPhysicalLeftAntiSemiNLJoin;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CPhysicalLeftAntiSemiNLJoin";
 	}
 
 	// check if required columns are included in output columns
-	virtual BOOL FProvidesReqdCols(CExpressionHandle &exprhdl,
-								   CColRefSet *pcrsRequired,
-								   ULONG ulOptReq) const;
-
-	// compute required partition propagation of the n-th child
-	virtual CPartitionPropagationSpec *PppsRequired(
-		CMemoryPool *mp, CExpressionHandle &exprhdl,
-		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+	BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired,
+						   ULONG ulOptReq) const override;
 
 	// conversion function
 	static CPhysicalLeftAntiSemiNLJoin *

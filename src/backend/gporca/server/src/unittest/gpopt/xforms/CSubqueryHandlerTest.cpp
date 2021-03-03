@@ -8,23 +8,22 @@
 //	@doc:
 //		Test for subquery handling
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/xforms/CSubqueryHandlerTest.h"
+
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/ops.h"
-
-#include "gpopt/xforms/CXformFactory.h"
 #include "gpopt/xforms/CSubqueryHandler.h"
+#include "gpopt/xforms/CXformFactory.h"
+#include "naucrates/md/CMDIdGPDB.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/xforms/CSubqueryHandlerTest.h"
 #include "unittest/gpopt/CSubqueryTestUtils.h"
-
-#include "naucrates/md/CMDIdGPDB.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 ULONG CSubqueryHandlerTest::m_ulSubqueryHandlerMinidumpTestCounter =
@@ -141,7 +140,7 @@ CSubqueryHandlerTest::EresUnittest_Subquery2Apply()
 	{
 		ULONG ulIndex = ul / 2;
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// generate expression
@@ -156,7 +155,7 @@ CSubqueryHandlerTest::EresUnittest_Subquery2Apply()
 		while (xsi.Advance())
 		{
 			CXform *pxform = CXformFactory::Pxff()->Pxf(xsi.TBit());
-			GPOS_ASSERT(NULL != pxform);
+			GPOS_ASSERT(nullptr != pxform);
 
 			CWStringDynamic str(mp);
 			COstreamString oss(&str);
@@ -171,7 +170,7 @@ CSubqueryHandlerTest::EresUnittest_Subquery2Apply()
 			CExpression *pexprResult = pxfres->PexprNext();
 
 			oss << std::endl << "OUTPUT:" << std::endl;
-			if (NULL != pexprResult)
+			if (nullptr != pexprResult)
 			{
 				oss << *pexprResult << std::endl;
 			}
@@ -230,7 +229,7 @@ CSubqueryHandlerTest::EresUnittest_SubqueryWithConstSubqueries()
 		CMDAccessor mda(mp, pcache, CTestUtils::m_sysidDefault, pmdp);
 
 		// install opt context in TLS
-		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 						 CTestUtils::GetCostModel(mp));
 
 		// create a subquery with const table get expression
@@ -305,13 +304,13 @@ CSubqueryHandlerTest::EresUnittest_SubqueryWithDisjunction()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// create a subquery with const table get expression
 
-	CExpression *pexprOuter = NULL;
-	CExpression *pexprInner = NULL;
+	CExpression *pexprOuter = nullptr;
+	CExpression *pexprInner = nullptr;
 	CSubqueryTestUtils::GenerateGetExpressions(mp, &pexprOuter, &pexprInner);
 
 	CExpression *pexpr = CSubqueryTestUtils::PexprSelectWithSubqueryBoolOp(

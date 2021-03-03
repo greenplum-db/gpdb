@@ -9,12 +9,12 @@
 //		Implementation of column reference set based on bit sets
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/base/CColRefSet.h"
 
-#include "gpopt/base/CColRefSetIter.h"
+#include "gpos/base.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColumnFactory.h"
 
 using namespace gpopt;
@@ -71,9 +71,7 @@ CColRefSet::CColRefSet(CMemoryPool *mp, const CColRefArray *colref_array,
 //		dtor
 //
 //---------------------------------------------------------------------------
-CColRefSet::~CColRefSet()
-{
-}
+CColRefSet::~CColRefSet() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -123,7 +121,7 @@ CColRefSet::PcrFirst() const
 	}
 
 	GPOS_ASSERT(0 == Size());
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -396,7 +394,7 @@ CColRefSet::ExtractColIds(CMemoryPool *mp, ULongPtrArray *colids) const
 BOOL
 CColRefSet::FContained(const CColRefSetArray *pdrgpcrs)
 {
-	GPOS_ASSERT(NULL != pdrgpcrs);
+	GPOS_ASSERT(nullptr != pdrgpcrs);
 
 	const ULONG length = pdrgpcrs->Size();
 	for (ULONG ul = 0; ul < length; ul++)
@@ -413,7 +411,7 @@ CColRefSet::FContained(const CColRefSetArray *pdrgpcrs)
 BOOL
 CColRefSet::FIntersects(const CColRefSet *pcrs)
 {
-	GPOS_ASSERT(NULL != pcrs);
+	GPOS_ASSERT(nullptr != pcrs);
 	CColRefSet *intersecting_colrefset = GPOS_NEW(m_mp) CColRefSet(m_mp, *this);
 	intersecting_colrefset->Intersection(pcrs);
 
@@ -434,8 +432,8 @@ CColRefSet::FIntersects(const CColRefSet *pcrs)
 BOOL
 CColRefSet::FCovered(CColRefSetArray *pdrgpcrs, CColRefSet *pcrs)
 {
-	GPOS_ASSERT(NULL != pdrgpcrs);
-	GPOS_ASSERT(NULL != pcrs);
+	GPOS_ASSERT(nullptr != pdrgpcrs);
+	GPOS_ASSERT(nullptr != pcrs);
 	GPOS_ASSERT(0 < pdrgpcrs->Size());
 
 	if (0 == pcrs->Size())

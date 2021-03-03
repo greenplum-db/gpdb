@@ -72,40 +72,39 @@ private:
 	// implement child group expressions action
 	static EEvent EevtImplementChildren(CSchedulerContext *psc, CJob *pj);
 
-	// private copy ctor
-	CJobGroupImplementation(const CJobGroupImplementation &);
-
 public:
+	CJobGroupImplementation(const CJobGroupImplementation &) = delete;
+
 	// ctor
 	CJobGroupImplementation();
 
 	// dtor
-	~CJobGroupImplementation();
+	~CJobGroupImplementation() override;
 
 	// initialize job
 	void Init(CGroup *pgroup);
 
 	// get first unscheduled expression
-	virtual CGroupExpression *
-	PgexprFirstUnsched()
+	CGroupExpression *
+	PgexprFirstUnsched() override
 	{
 		return CJobGroup::PgexprFirstUnschedLogical();
 	}
 
 	// schedule implementation jobs for of all new group expressions
-	virtual BOOL FScheduleGroupExpressions(CSchedulerContext *psc);
+	BOOL FScheduleGroupExpressions(CSchedulerContext *psc) override;
 
 	// schedule a new group implementation job
 	static void ScheduleJob(CSchedulerContext *psc, CGroup *pgroup,
 							CJob *pjParent);
 
 	// job's function
-	virtual BOOL FExecute(CSchedulerContext *psc);
+	BOOL FExecute(CSchedulerContext *psc) override;
 
 #ifdef GPOS_DEBUG
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os);
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// dump state machine diagram in graphviz format
 	virtual IOstream &
@@ -131,7 +130,7 @@ public:
 	static CJobGroupImplementation *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupImplementation == pj->Ejt());
 
 		return dynamic_cast<CJobGroupImplementation *>(pj);

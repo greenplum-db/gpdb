@@ -4,7 +4,7 @@
  *	  miscellaneous executor utility routines
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -46,6 +46,7 @@
  */
 
 #include "postgres.h"
+#include "pgstat.h"
 
 #include "access/genam.h"
 #include "access/heapam.h"
@@ -138,11 +139,6 @@ CreateExecutorState(void)
 	oldcontext = MemoryContextSwitchTo(qcontext);
 
 	estate = makeNode(EState);
-
-	/*
-	 * Initialize dynamicTableScanInfo.
-	 */
-	estate->dynamicTableScanInfo = palloc0(sizeof(DynamicTableScanInfo));
 
 	/*
 	 * Initialize all fields of the Executor State structure
@@ -263,7 +259,6 @@ FreeExecutorState(EState *estate)
 	}
 
 	estate->dispatcherState = NULL;
-	estate->dynamicTableScanInfo = NULL;
 
 	/* release JIT context, if allocated */
 	if (estate->es_jit)
@@ -950,21 +945,21 @@ UpdateChangedParamSet(PlanState *node, Bitmapset *newchg)
  * normal non-error case: computing character indexes would be much more
  * expensive than storing token offsets.)
  */
-int
+void
 executor_errposition(EState *estate, int location)
 {
 	int			pos;
 
 	/* No-op if location was not provided */
 	if (location < 0)
-		return 0;
+		return;
 	/* Can't do anything if source text is not available */
 	if (estate == NULL || estate->es_sourceText == NULL)
-		return 0;
+		return;
 	/* Convert offset to character number */
 	pos = pg_mbstrlen_with_len(estate->es_sourceText, location) + 1;
 	/* And pass it to the ereport mechanism */
-	return errposition(pos);
+	errposition(pos);
 }
 
 /*
@@ -1428,6 +1423,7 @@ sliceRunsOnQE(ExecSlice *slice)
 }
 
 /* Forward declarations */
+static bool AssignWriterGangFirst(CdbDispatcherState *ds, SliceTable *sliceTable, int sliceIndex);
 static void InventorySliceTree(CdbDispatcherState *ds, SliceTable *sliceTable, int sliceIndex);
 
 /*
@@ -1462,7 +1458,72 @@ AssignGangs(CdbDispatcherState *ds, QueryDesc *queryDesc)
 	for (int i = 0; i < sliceTable->numSlices; i++)
 		sliceTable->slices[i].processesMap = NULL;
 
+	AssignWriterGangFirst(ds, sliceTable, rootIdx);
 	InventorySliceTree(ds, sliceTable, rootIdx);
+}
+
+/*
+ * AssignWriterGangFirst() - Try to assign writer gang first.
+ *
+ * For the gang allocation, our current implementation required the first
+ * allocated gang must be the writer gang.
+ * This has several reasons:
+ * - For lock holding, Because of our MPP structure, we assign a LockHolder
+ *   for each segment when executing a query. lockHolder is the gang member that
+ *   should hold and manage locks for this transaction. On the QEs, it should
+ *   normally be the Writer gang member. More details please refer to
+ *   lockHolderProcPtr in lock.c.
+ * - For SharedSnapshot among session's gang processes on a particular segment.
+ *   During initPostgres(), reader QE will try to lookup the shared slot written
+ *   by writer QE. More details please reger to sharedsnapshot.c.
+ *
+ * Normally, the writer slice will be assign writer gang first when iterate the
+ * slice table. But this is not true for writable CTE (with only one writer gang).
+ * For below statement:
+ *
+ * WITH updated AS (update tbl set rank = 6 where id = 5 returning rank)
+ * select * from tbl where rank in (select rank from updated);
+ *                                           QUERY PLAN
+ * ----------------------------------------------------------------------------------------------
+ *  Gather Motion 3:1  (slice1; segments: 3)
+ *    ->  Seq Scan on tbl
+ *          Filter: (hashed SubPlan 1)
+ *          SubPlan 1
+ *            ->  Broadcast Motion 1:3  (slice2; segments: 1)
+ *                  ->  Update on tbl
+ *                        ->  Seq Scan on tbl
+ *                              Filter: (id = 5)
+ *  Slice 0: Dispatcher; root 0; parent -1; gang size 0
+ *  Slice 1: Reader; root 0; parent 0; gang size 3
+ *  Slice 2: Primary Writer; root 0; parent 1; gang size 1
+ *
+ * If we sill assign writer gang to Slice 1 here, the writer process will execute
+ * on reader gang. So, find the writer slice and assign writer gang first.
+ */
+static bool
+AssignWriterGangFirst(CdbDispatcherState *ds, SliceTable *sliceTable, int sliceIndex)
+{
+	ExecSlice	   *slice = &sliceTable->slices[sliceIndex];
+
+	if (slice->gangType == GANGTYPE_PRIMARY_WRITER)
+	{
+		Assert(slice->primaryGang == NULL);
+		Assert(slice->segments != NIL);
+		slice->primaryGang = AllocateGang(ds, slice->gangType, slice->segments);
+		setupCdbProcessList(slice);
+		return true;
+	}
+	else
+	{
+		ListCell *cell;
+		foreach(cell, slice->children)
+		{
+			int			childIndex = lfirst_int(cell);
+			if (AssignWriterGangFirst(ds, sliceTable, childIndex))
+				return true;
+		}
+	}
+	return false;
 }
 
 /*
@@ -1481,7 +1542,7 @@ InventorySliceTree(CdbDispatcherState *ds, SliceTable *sliceTable, int sliceInde
 		slice->primaryGang = NULL;
 		slice->primaryProcesses = getCdbProcessesForQD(true);
 	}
-	else
+	else if (!slice->primaryGang)
 	{
 		Assert(slice->segments != NIL);
 		slice->primaryGang = AllocateGang(ds, slice->gangType, slice->segments);
@@ -1562,11 +1623,13 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 {
 	EState	   *estate;
 	ExecSlice  *currentSlice;
+	int			primaryWriterSliceIndex;
 
 	/* caller must have switched into per-query memory context already */
 	estate = queryDesc->estate;
 
 	currentSlice = getCurrentSlice(estate, LocallyExecutingSliceIndex(estate));
+	primaryWriterSliceIndex = PrimaryWriterSliceIndex(estate);
 
 	/* Teardown the Interconnect */
 	if (estate->es_interconnect_is_setup)
@@ -1607,7 +1670,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 
 		cdbdisp_checkDispatchResult(ds, waitMode);
 
-		pr = cdbdisp_getDispatchResults(ds, &qeError);		
+		pr = cdbdisp_getDispatchResults(ds, &qeError);
 
 		if (qeError)
 		{
@@ -1616,13 +1679,12 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 			ReThrowError(qeError);
 		}
 
-		/* If top slice was delegated to QEs, get num of rows processed. */
-		int primaryWriterSliceIndex = PrimaryWriterSliceIndex(estate);
-		//if (sliceRunsOnQE(currentSlice))
-		{
-			estate->es_processed +=
-				cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
-		}
+		/* collect pgstat from QEs for current transaction level */
+		pgstat_combine_from_qe(pr, primaryWriterSliceIndex);
+
+		/* get num of rows processed from writer QEs. */
+		estate->es_processed +=
+			cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
 
 		/* sum up rejected rows if any (single row error handling only) */
 		cdbdisp_sumRejectedRows(pr);

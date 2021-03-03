@@ -9,12 +9,13 @@
 //		Implementation of group expression transformation job
 //---------------------------------------------------------------------------
 
+#include "gpopt/search/CJobTransformation.h"
+
 #include "gpopt/engine/CEngine.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CJobFactory.h"
-#include "gpopt/search/CJobTransformation.h"
 #include "gpopt/search/CScheduler.h"
 #include "gpopt/search/CSchedulerContext.h"
 
@@ -63,9 +64,7 @@ const WCHAR rgwszEvents[CJobTransformation::eevSentinel]
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobTransformation::CJobTransformation()
-{
-}
+CJobTransformation::CJobTransformation() = default;
 
 
 //---------------------------------------------------------------------------
@@ -76,9 +75,7 @@ CJobTransformation::CJobTransformation()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobTransformation::~CJobTransformation()
-{
-}
+CJobTransformation::~CJobTransformation() = default;
 
 
 //---------------------------------------------------------------------------
@@ -93,8 +90,8 @@ void
 CJobTransformation::Init(CGroupExpression *pgexpr, CXform *pxform)
 {
 	GPOS_ASSERT(!FInit());
-	GPOS_ASSERT(NULL != pgexpr);
-	GPOS_ASSERT(NULL != pxform);
+	GPOS_ASSERT(nullptr != pgexpr);
+	GPOS_ASSERT(nullptr != pxform);
 
 	m_pgexpr = pgexpr;
 	m_xform = pxform;
@@ -195,7 +192,7 @@ CJobTransformation::ScheduleJob(CSchedulerContext *psc,
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJobTransformation::OsPrint(IOstream &os)
+CJobTransformation::OsPrint(IOstream &os) const
 {
 	return m_jsm.OsHistory(os);
 }

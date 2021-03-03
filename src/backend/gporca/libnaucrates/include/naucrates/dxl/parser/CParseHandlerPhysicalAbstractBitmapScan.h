@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerPhysicalAbstractBitmapScan.h
@@ -34,10 +34,6 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerPhysicalAbstractBitmapScan : public CParseHandlerPhysicalOp
 {
 private:
-	// private copy ctor
-	CParseHandlerPhysicalAbstractBitmapScan(
-		const CParseHandlerPhysicalAbstractBitmapScan &);
-
 protected:
 	// common StartElement functionality for child classes
 	void StartElementHelper(const XMLCh *const element_local_name,
@@ -45,10 +41,12 @@ protected:
 
 	// common EndElement functionality for child classes
 	void EndElementHelper(const XMLCh *const element_local_name,
-						  Edxltoken token_type, ULONG part_idx_id = 0,
-						  ULONG part_idx_id_printable = 0);
+						  Edxltoken token_type);
 
 public:
+	CParseHandlerPhysicalAbstractBitmapScan(
+		const CParseHandlerPhysicalAbstractBitmapScan &) = delete;
+
 	// ctor
 	CParseHandlerPhysicalAbstractBitmapScan(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

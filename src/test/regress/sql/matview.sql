@@ -6,6 +6,7 @@ INSERT INTO mvtest_t VALUES
   (3, 'y', 5),
   (4, 'y', 7),
   (5, 'z', 11);
+ANALYZE mvtest_t;
 
 -- we want a view based on the table, too, since views present additional challenges
 CREATE VIEW mvtest_tv AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type;

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2019 Pivotal Inc.
+//	Copyright (C) 2019 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarNAryJoinPredList.cpp
@@ -9,8 +9,9 @@
 //		Join predicate list for NAry joins with some non-inner joins
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
+
+#include "gpos/base.h"
 
 
 using namespace gpopt;

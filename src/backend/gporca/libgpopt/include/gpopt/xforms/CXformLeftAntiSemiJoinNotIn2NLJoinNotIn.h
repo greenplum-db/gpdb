@@ -12,6 +12,7 @@
 #define GPOPT_CXformLeftAntiSemiJoinNotIn2NLJoinNotIn_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,39 +30,36 @@ using namespace gpos;
 class CXformLeftAntiSemiJoinNotIn2NLJoinNotIn : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(
-		const CXformLeftAntiSemiJoinNotIn2NLJoinNotIn &);
-
 public:
+	CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(
+		const CXformLeftAntiSemiJoinNotIn2NLJoinNotIn &) = delete;
+
 	// ctor
 	explicit CXformLeftAntiSemiJoinNotIn2NLJoinNotIn(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformLeftAntiSemiJoinNotIn2NLJoinNotIn()
-	{
-	}
+	~CXformLeftAntiSemiJoinNotIn2NLJoinNotIn() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftAntiSemiJoinNotIn2NLJoinNotIn;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftAntiSemiJoinNotIn2NLJoinNotIn";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformLeftAntiSemiJoinNotIn2NLJoinNotIn
 

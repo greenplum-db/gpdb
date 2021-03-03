@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerColStatsBucket_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 
 // fwd decl
@@ -65,32 +66,31 @@ private:
 	// dxl bucket object
 	CDXLBucket *m_dxl_bucket;
 
-	// private copy ctor
-	CParseHandlerColStatsBucket(const CParseHandlerColStatsBucket &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerColStatsBucket(const CParseHandlerColStatsBucket &) = delete;
+
 	// ctor
 	CParseHandlerColStatsBucket(CMemoryPool *mp,
 								CParseHandlerManager *parse_handler_mgr,
 								CParseHandlerBase *parse_handler_base);
 
 	// dtor
-	virtual ~CParseHandlerColStatsBucket();
+	~CParseHandlerColStatsBucket() override;
 
 	// returns the constructed bucket
 	CDXLBucket *GetDXLBucketAt() const;

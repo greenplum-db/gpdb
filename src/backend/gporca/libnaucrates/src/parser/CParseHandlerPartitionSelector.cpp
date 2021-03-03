@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerPartitionSelector.cpp
@@ -11,16 +11,16 @@
 //		selectors
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerPartitionSelector.h"
-#include "naucrates/dxl/parser/CParseHandlerProperties.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLPhysicalPartitionSelector.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerProperties.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 using namespace gpdxl;
 
@@ -38,7 +38,7 @@ CParseHandlerPartitionSelector::CParseHandlerPartitionSelector(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_rel_mdid(NULL),
+	  m_rel_mdid(nullptr),
 	  m_num_of_part_levels(0),
 	  m_scan_id(0)
 {
@@ -62,14 +62,14 @@ CParseHandlerPartitionSelector::StartElement(
 				 element_local_name))
 	{
 		// PartitionSelector node may have another PartitionSelector node as a child
-		if (NULL != m_rel_mdid)
+		if (nullptr != m_rel_mdid)
 		{
 			// instantiate the parse handler
 			CParseHandlerBase *child_parse_handler =
 				CParseHandlerFactory::GetParseHandler(
 					m_mp, element_local_name, m_parse_handler_mgr, this);
 
-			GPOS_ASSERT(NULL != child_parse_handler);
+			GPOS_ASSERT(nullptr != child_parse_handler);
 
 			// activate the parse handler
 			m_parse_handler_mgr->ActivateParseHandler(child_parse_handler);

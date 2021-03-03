@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CCardinalityTestUtils.h
@@ -11,9 +11,9 @@
 #ifndef GPNAUCRATES_CCardinalityTestUtils_H
 #define GPNAUCRATES_CCardinalityTestUtils_H
 
-#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 
@@ -64,6 +64,9 @@ public:
 	static CPoint *PpointNumeric(CMemoryPool *mp,
 								 CWStringDynamic *pstrEncodedValue,
 								 CDouble value);
+
+	// helper function to generate a point of double datatype
+	static CPoint *PpointDouble(CMemoryPool *mp, OID oid, CDouble value);
 
 	// helper method to print statistics object
 	static void PrintStats(CMemoryPool *mp, const CStatistics *stats);

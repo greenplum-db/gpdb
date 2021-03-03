@@ -13,6 +13,7 @@
 #define GPDXL_CDXLWindowFrame_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLScalar.h"
 #include "naucrates/md/IMDId.h"
 
@@ -49,17 +50,11 @@ enum EdxlFrameExclusionStrategy
 class CDXLWindowFrame : public CRefCount
 {
 private:
-	// memory pool;
-	CMemoryPool *m_mp;
-
 	// row or range based window specification method
 	EdxlFrameSpec m_dxl_win_frame_spec;
 
 	// exclusion strategy
 	EdxlFrameExclusionStrategy m_dxl_frame_exclusion_strategy;
-
-	// private copy ctor
-	CDXLWindowFrame(const CDXLWindowFrame &);
 
 	// scalar value representing the boundary leading
 	CDXLNode *m_dxlnode_leading;
@@ -68,13 +63,15 @@ private:
 	CDXLNode *m_dxlnode_trailing;
 
 public:
+	CDXLWindowFrame(const CDXLWindowFrame &) = delete;
+
 	// ctor
-	CDXLWindowFrame(CMemoryPool *mp, EdxlFrameSpec edxlfs,
+	CDXLWindowFrame(EdxlFrameSpec edxlfs,
 					EdxlFrameExclusionStrategy frame_exc_strategy,
-					CDXLNode *pdxlnLeading, CDXLNode *pdxlnTrailing);
+					CDXLNode *dxlnode_leading, CDXLNode *dxlnode_trailing);
 
 	//dtor
-	virtual ~CDXLWindowFrame();
+	~CDXLWindowFrame() override;
 
 	EdxlFrameSpec
 	ParseDXLFrameSpec() const

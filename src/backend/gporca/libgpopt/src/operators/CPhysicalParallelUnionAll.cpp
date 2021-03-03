@@ -1,10 +1,11 @@
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 
 #include "gpopt/operators/CPhysicalParallelUnionAll.h"
+
+#include "gpopt/base/CDistributionSpecHashedNoOp.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecStrictHashed.h"
-#include "gpopt/base/CDistributionSpecHashedNoOp.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CStrictHashedDistributions.h"
@@ -13,9 +14,8 @@ namespace gpopt
 {
 CPhysicalParallelUnionAll::CPhysicalParallelUnionAll(
 	CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
-	CColRef2dArray *pdrgpdrgpcrInput, ULONG ulScanIdPartialIndex)
-	: CPhysicalUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput,
-						ulScanIdPartialIndex),
+	CColRef2dArray *pdrgpdrgpcrInput)
+	: CPhysicalUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput),
 	  m_pdrgpds(GPOS_NEW(mp) CStrictHashedDistributions(mp, pdrgpcrOutput,
 														pdrgpdrgpcrInput))
 {

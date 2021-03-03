@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDefaultComparator.cpp
@@ -15,15 +15,15 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CDefaultComparator.h"
+
 #include "gpos/memory/CAutoMemoryPool.h"
 
-#include "gpopt/base/CDefaultComparator.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/IConstExprEvaluator.h"
 #include "gpopt/exception.h"
 #include "gpopt/mdcache/CMDAccessor.h"
-
 #include "naucrates/base/IDatum.h"
 #include "naucrates/base/IDatumBool.h"
 #include "naucrates/md/IMDId.h"
@@ -45,7 +45,7 @@ using gpnaucrates::IDatum;
 CDefaultComparator::CDefaultComparator(IConstExprEvaluator *pceeval)
 	: m_pceeval(pceeval)
 {
-	GPOS_ASSERT(NULL != pceeval);
+	GPOS_ASSERT(nullptr != pceeval);
 }
 
 //---------------------------------------------------------------------------
@@ -86,6 +86,50 @@ CDefaultComparator::FEvalComparison(CMemoryPool *mp, const IDatum *datum1,
 	return result;
 }
 
+BOOL
+CDefaultComparator::FUseInternalEvaluator(const IDatum *datum1,
+										  const IDatum *datum2,
+										  BOOL *can_use_external_evaluator)
+{
+	IMDId *mdid1 = datum1->MDId();
+	IMDId *mdid2 = datum2->MDId();
+
+	// be conservative for now and require this extra condition that
+	// has been in place for a while (might be relaxed in the future)
+	*can_use_external_evaluator =
+		GPOS_FTRACE(EopttraceEnableConstantExpressionEvaluation) &&
+		CUtils::FConstrainableType(mdid1) && CUtils::FConstrainableType(mdid2);
+
+	if (CUtils::FIntType(mdid1) && CUtils::FIntType(mdid2) &&
+		!(*can_use_external_evaluator &&
+		  GPOS_FTRACE(EopttraceUseExternalConstantExpressionEvaluationForInts)))
+	{
+		// INT types can be processed precisely by the internal evaluator
+		return true;
+	}
+
+	// For now, specifically target date and timestamp columns, since they
+	// are mappable to a double value that represents the number of microseconds
+	// since Jan 1, 2000 and therefore those can be compared precisely, just like
+	// integer types. Same goes for float types, since they map naturally to a
+	// double value
+	if (mdid1->Equals(datum2->MDId()) && datum1->StatsAreComparable(datum2) &&
+		(CMDIdGPDB::m_mdid_date.Equals(mdid1) ||
+		 CMDIdGPDB::m_mdid_time.Equals(mdid1) ||
+		 CMDIdGPDB::m_mdid_timestamp.Equals(mdid1) ||
+		 CMDIdGPDB::m_mdid_float4.Equals(mdid1) ||
+		 CMDIdGPDB::m_mdid_float8.Equals(mdid1) ||
+		 CMDIdGPDB::m_mdid_numeric.Equals(mdid1)))
+	{
+		return true;
+	}
+
+	// GPDB_12_MERGE_FIXME: Throw an exception when result = false and can_use_external_evaluator = false
+
+	return false;
+}
+
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDefaultComparator::Equals
@@ -97,16 +141,18 @@ CDefaultComparator::FEvalComparison(CMemoryPool *mp, const IDatum *datum1,
 BOOL
 CDefaultComparator::Equals(const IDatum *datum1, const IDatum *datum2) const
 {
-	if (!CUtils::FConstrainableType(datum1->MDId()) ||
-		!CUtils::FConstrainableType(datum2->MDId()))
-	{
-		return false;
-	}
-	if (FUseBuiltinIntEvaluators() && CUtils::FIntType(datum1->MDId()) &&
-		CUtils::FIntType(datum2->MDId()))
+	BOOL can_use_external_evaluator = false;
+
+	if (FUseInternalEvaluator(datum1, datum2, &can_use_external_evaluator))
 	{
 		return datum1->StatsAreEqual(datum2);
 	}
+
+	if (!can_use_external_evaluator)
+	{
+		return false;
+	}
+
 	CAutoMemoryPool amp;
 
 	// NULL datum is a special case and is being handled here. Assumptions made are
@@ -132,16 +178,18 @@ CDefaultComparator::Equals(const IDatum *datum1, const IDatum *datum2) const
 BOOL
 CDefaultComparator::IsLessThan(const IDatum *datum1, const IDatum *datum2) const
 {
-	if (!CUtils::FConstrainableType(datum1->MDId()) ||
-		!CUtils::FConstrainableType(datum2->MDId()))
-	{
-		return false;
-	}
-	if (FUseBuiltinIntEvaluators() && CUtils::FIntType(datum1->MDId()) &&
-		CUtils::FIntType(datum2->MDId()))
+	BOOL can_use_external_evaluator = false;
+
+	if (FUseInternalEvaluator(datum1, datum2, &can_use_external_evaluator))
 	{
 		return datum1->StatsAreLessThan(datum2);
 	}
+
+	if (!can_use_external_evaluator)
+	{
+		return false;
+	}
+
 	CAutoMemoryPool amp;
 
 	// NULL datum is a special case and is being handled here. Assumptions made are
@@ -168,17 +216,19 @@ BOOL
 CDefaultComparator::IsLessThanOrEqual(const IDatum *datum1,
 									  const IDatum *datum2) const
 {
-	if (!CUtils::FConstrainableType(datum1->MDId()) ||
-		!CUtils::FConstrainableType(datum2->MDId()))
-	{
-		return false;
-	}
-	if (FUseBuiltinIntEvaluators() && CUtils::FIntType(datum1->MDId()) &&
-		CUtils::FIntType(datum2->MDId()))
+	BOOL can_use_external_evaluator = false;
+
+	if (FUseInternalEvaluator(datum1, datum2, &can_use_external_evaluator))
 	{
 		return datum1->StatsAreLessThan(datum2) ||
 			   datum1->StatsAreEqual(datum2);
 	}
+
+	if (!can_use_external_evaluator)
+	{
+		return false;
+	}
+
 	CAutoMemoryPool amp;
 
 	// NULL datum is a special case and is being handled here. Assumptions made are
@@ -212,16 +262,18 @@ BOOL
 CDefaultComparator::IsGreaterThan(const IDatum *datum1,
 								  const IDatum *datum2) const
 {
-	if (!CUtils::FConstrainableType(datum1->MDId()) ||
-		!CUtils::FConstrainableType(datum2->MDId()))
-	{
-		return false;
-	}
-	if (FUseBuiltinIntEvaluators() && CUtils::FIntType(datum1->MDId()) &&
-		CUtils::FIntType(datum2->MDId()))
+	BOOL can_use_external_evaluator = false;
+
+	if (FUseInternalEvaluator(datum1, datum2, &can_use_external_evaluator))
 	{
 		return datum1->StatsAreGreaterThan(datum2);
 	}
+
+	if (!can_use_external_evaluator)
+	{
+		return false;
+	}
+
 	CAutoMemoryPool amp;
 
 	// NULL datum is a special case and is being handled here. Assumptions made are
@@ -248,17 +300,19 @@ BOOL
 CDefaultComparator::IsGreaterThanOrEqual(const IDatum *datum1,
 										 const IDatum *datum2) const
 {
-	if (!CUtils::FConstrainableType(datum1->MDId()) ||
-		!CUtils::FConstrainableType(datum2->MDId()))
-	{
-		return false;
-	}
-	if (FUseBuiltinIntEvaluators() && CUtils::FIntType(datum1->MDId()) &&
-		CUtils::FIntType(datum2->MDId()))
+	BOOL can_use_external_evaluator = false;
+
+	if (FUseInternalEvaluator(datum1, datum2, &can_use_external_evaluator))
 	{
 		return datum1->StatsAreGreaterThan(datum2) ||
 			   datum1->StatsAreEqual(datum2);
 	}
+
+	if (!can_use_external_evaluator)
+	{
+		return false;
+	}
+
 	CAutoMemoryPool amp;
 
 	// NULL datum is a special case and is being handled here. Assumptions made are

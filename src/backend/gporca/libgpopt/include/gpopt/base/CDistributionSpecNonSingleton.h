@@ -34,12 +34,12 @@ class CDistributionSpecNonSingleton : public CDistributionSpec
 {
 private:
 	// should Replicated distribution satisfy current distribution
-	BOOL m_fAllowReplicated;
-
-	// private copy ctor
-	CDistributionSpecNonSingleton(const CDistributionSpecNonSingleton &);
+	BOOL m_fAllowReplicated{true};
 
 public:
+	CDistributionSpecNonSingleton(const CDistributionSpecNonSingleton &) =
+		delete;
+
 	//ctor
 	CDistributionSpecNonSingleton();
 
@@ -54,47 +54,56 @@ public:
 	}
 
 	// accessor
-	virtual EDistributionType
-	Edt() const
+	EDistributionType
+	Edt() const override
 	{
 		return CDistributionSpec::EdtNonSingleton;
 	}
 
 	// does current distribution satisfy the given one
-	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
+	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// return distribution partitioning type
-	virtual EDistributionPartitioningType
-	Edpt() const
+	EDistributionPartitioningType
+	Edpt() const override
 	{
 		// a non-singleton distribution could be replicated to all segments, or partitioned across segments
 		return EdptUnknown;
 	}
 
 	// return true if distribution spec can be derived
-	virtual BOOL
-	FDerivable() const
+	BOOL
+	FDerivable() const override
 	{
 		return false;
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CDistributionSpecNonSingleton *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtNonSingleton == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecNonSingleton *>(pds);
+	}
+
+	// conversion function
+	static const CDistributionSpecNonSingleton *
+	PdsConvert(const CDistributionSpec *pds)
+	{
+		GPOS_ASSERT(nullptr != pds);
+		GPOS_ASSERT(EdtNonSingleton == pds->Edt());
+
+		return dynamic_cast<const CDistributionSpecNonSingleton *>(pds);
 	}
 
 };	// class CDistributionSpecNonSingleton

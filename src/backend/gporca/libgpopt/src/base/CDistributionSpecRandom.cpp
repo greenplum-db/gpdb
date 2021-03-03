@@ -9,15 +9,16 @@
 //		Specification of random distribution
 //---------------------------------------------------------------------------
 
-#include "naucrates/traceflags/traceflags.h"
-#include "gpopt/base/CUtils.h"
+#include "gpopt/base/CDistributionSpecRandom.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
 #include "gpopt/base/COptCtxt.h"
-#include "gpopt/operators/CPhysicalMotionRandom.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalMotionRandom.h"
+#include "naucrates/traceflags/traceflags.h"
 
 using namespace gpopt;
 
@@ -31,7 +32,6 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDistributionSpecRandom::CDistributionSpecRandom()
-	: m_is_duplicate_sensitive(false), m_fSatisfiedBySingleton(true)
 {
 	if (COptCtxt::PoctxtFromTLS()->FDMLQuery())
 	{
@@ -108,10 +108,10 @@ CDistributionSpecRandom::AppendEnforcers(CMemoryPool *mp,
 										 CExpressionArray *pdrgpexpr,
 										 CExpression *pexpr)
 {
-	GPOS_ASSERT(NULL != mp);
-	GPOS_ASSERT(NULL != prpp);
-	GPOS_ASSERT(NULL != pdrgpexpr);
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != prpp);
+	GPOS_ASSERT(nullptr != pdrgpexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(!GPOS_FTRACE(EopttraceDisableMotions));
 	GPOS_ASSERT(
 		this == prpp->Ped()->PdsRequired() &&
@@ -152,7 +152,7 @@ CDistributionSpecRandom::AppendEnforcers(CMemoryPool *mp,
 
 	CDistributionSpec *expr_dist_spec =
 		CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
-	CDistributionSpecRandom *random_dist_spec = NULL;
+	CDistributionSpecRandom *random_dist_spec = nullptr;
 
 	if (expr_dist_spec->Edt() == CDistributionSpec::EdtUniversal)
 	{

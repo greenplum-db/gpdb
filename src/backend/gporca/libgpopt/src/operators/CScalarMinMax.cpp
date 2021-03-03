@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarMinMax.cpp
@@ -9,17 +9,15 @@
 //		Implementation of scalar MinMax operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarMinMax.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/COptCtxt.h"
-
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-
-#include "gpopt/operators/CScalarMinMax.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;

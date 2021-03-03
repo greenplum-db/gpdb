@@ -4,7 +4,7 @@
  *	  Routines to handle moving tuples around in Greenplum Database.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -680,7 +680,7 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	/* QE must fill in map from motionID to MotionState node. */
 	else
 	{
-		Insist(Gp_role == GP_ROLE_EXECUTE);
+		Assert(Gp_role == GP_ROLE_EXECUTE);
 
 		if (LocallyExecutingSliceIndex(estate) == recvSlice->sliceIndex)
 		{

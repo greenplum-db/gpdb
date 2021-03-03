@@ -32,77 +32,77 @@ class IMDRelationExternal : public IMDRelation
 {
 public:
 	// storage type
-	virtual Erelstoragetype
-	RetrieveRelStorageType() const
+	Erelstoragetype
+	RetrieveRelStorageType() const override
 	{
 		return ErelstorageExternal;
 	}
 
 	// is this a temp relation
-	virtual BOOL
-	IsTemporary() const
+	BOOL
+	IsTemporary() const override
 	{
 		return false;
 	}
 
 	// is this a partitioned table
-	virtual BOOL
-	IsPartitioned() const
+	BOOL
+	IsPartitioned() const override
 	{
 		return false;
 	}
 
 	// return true if a hash distributed table needs to be considered as random
-	virtual BOOL ConvertHashToRandom() const = 0;
+	BOOL ConvertHashToRandom() const override = 0;
 
 	// does this table have oids
-	virtual BOOL
-	HasOids() const
+	BOOL
+	HasOids() const override
 	{
 		return false;
 	}
 
 	// number of partition columns
-	virtual ULONG
-	PartColumnCount() const
+	ULONG
+	PartColumnCount() const override
 	{
 		return 0;
 	}
 
 	// number of partitions
-	virtual ULONG
-	PartitionCount() const
+	ULONG
+	PartitionCount() const override
 	{
 		return 0;
 	}
 
 	// retrieve the partition column at the given position
-	virtual const IMDColumn *PartColAt(ULONG /*pos*/) const
+	const IMDColumn *PartColAt(ULONG /*pos*/) const override
 	{
 		GPOS_ASSERT(!"External tables have no partition columns");
-		return NULL;
+		return nullptr;
 	}
 
 	// retrieve list of partition types
-	virtual CharPtrArray *
-	GetPartitionTypes() const
+	CharPtrArray *
+	GetPartitionTypes() const override
 	{
 		GPOS_ASSERT(!"External tables have no partition types");
-		return NULL;
+		return nullptr;
 	}
 
 	// retrieve the partition type at the given position
-	virtual CHAR PartTypeAtLevel(ULONG /*pos*/) const
+	CHAR PartTypeAtLevel(ULONG /*pos*/) const override
 	{
 		GPOS_ASSERT(!"External tables have no partition types");
 		return (CHAR) 0;
 	}
 
 	// part constraint
-	virtual IMDPartConstraint *
-	MDPartConstraint() const
+	CDXLNode *
+	MDPartConstraint() const override
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// reject limit

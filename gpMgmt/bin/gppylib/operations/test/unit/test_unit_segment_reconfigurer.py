@@ -17,7 +17,7 @@ class MyDbUrl:
 
 class SegmentReconfiguerTestCase(GpTestCase):
     db = 'database'
-    host = 'mdw'
+    host = 'cdw'
     port = 15432
     user = 'postgres'
     passwd = 'passwd'
@@ -46,7 +46,7 @@ class SegmentReconfiguerTestCase(GpTestCase):
                 worker_pool=self.worker_pool, timeout=self.timeout)
         reconfigurer.reconfigure()
         pg.connect.assert_has_calls([
-            call(self.db, self.host, self.port, None, self.user, self.passwd),
+            call(dbname=self.db, host=self.host, port=self.port, opt=None, user=self.user, passwd=self.passwd),
             call().query(FTS_PROBE_QUERY),
             call().close(),
             ]

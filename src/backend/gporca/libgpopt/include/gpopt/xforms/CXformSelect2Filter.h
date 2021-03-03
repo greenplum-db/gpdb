@@ -12,6 +12,7 @@
 #define GPOPT_CXformSelect2Filter_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt
@@ -29,36 +30,34 @@ using namespace gpos;
 class CXformSelect2Filter : public CXformImplementation
 {
 private:
-	// private copy ctor
-	CXformSelect2Filter(const CXformSelect2Filter &);
-
 public:
+	CXformSelect2Filter(const CXformSelect2Filter &) = delete;
+
 	// ctor
 	explicit CXformSelect2Filter(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformSelect2Filter()
-	{
-	}
+	~CXformSelect2Filter() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfSelect2Filter;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformSelect2Filter";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	void Transform(CXformContext *, CXformResult *, CExpression *) const;
+	void Transform(CXformContext *, CXformResult *,
+				   CExpression *) const override;
 
 };	// class CXformSelect2Filter
 

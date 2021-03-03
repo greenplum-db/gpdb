@@ -74,22 +74,22 @@ private:
 	// finalize action
 	static EEvent EevtFinalize(CSchedulerContext *psc, CJob *pj);
 
-	// private copy ctor
-	CJobGroupExpressionExploration(const CJobGroupExpressionExploration &);
-
 protected:
 	// schedule transformation jobs for applicable xforms
-	virtual void ScheduleApplicableTransformations(CSchedulerContext *psc);
+	void ScheduleApplicableTransformations(CSchedulerContext *psc) override;
 
 	// schedule exploration jobs for all child groups
-	virtual void ScheduleChildGroupsJobs(CSchedulerContext *psc);
+	void ScheduleChildGroupsJobs(CSchedulerContext *psc) override;
 
 public:
+	CJobGroupExpressionExploration(const CJobGroupExpressionExploration &) =
+		delete;
+
 	// ctor
 	CJobGroupExpressionExploration();
 
 	// dtor
-	virtual ~CJobGroupExpressionExploration();
+	~CJobGroupExpressionExploration() override;
 
 	// initialize job
 	void Init(CGroupExpression *pgexpr);
@@ -99,12 +99,12 @@ public:
 							CJob *pjParent);
 
 	// job's main function
-	virtual BOOL FExecute(CSchedulerContext *psc);
+	BOOL FExecute(CSchedulerContext *psc) override;
 
 #ifdef GPOS_DEBUG
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os);
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// dump state machine diagram in graphviz format
 	virtual IOstream &
@@ -130,7 +130,7 @@ public:
 	static CJobGroupExpressionExploration *
 	PjConvert(CJob *pj)
 	{
-		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(nullptr != pj);
 		GPOS_ASSERT(EjtGroupExpressionExploration == pj->Ejt());
 
 		return dynamic_cast<CJobGroupExpressionExploration *>(pj);

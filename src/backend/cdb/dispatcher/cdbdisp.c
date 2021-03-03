@@ -5,7 +5,7 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -146,9 +146,12 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
 		 * likely to output the errors on NULL return, add an error message to
 		 * aid debugging.
 		 */
-		if (errstart(ERROR, __FILE__, __LINE__, PG_FUNCNAME_MACRO, TEXTDOMAIN))
-			*qeError = errfinish_and_return(errcode(ERRCODE_INTERNAL_ERROR),
-											errmsg("no dispatcher state"));
+		if (errstart(ERROR, TEXTDOMAIN))
+		{
+			errcode(ERRCODE_INTERNAL_ERROR);
+			errmsg("no dispatcher state");
+			*qeError = errfinish_and_return(__FILE__, __LINE__, PG_FUNCNAME_MACRO);
+		}
 		else
 			pg_unreachable();
 

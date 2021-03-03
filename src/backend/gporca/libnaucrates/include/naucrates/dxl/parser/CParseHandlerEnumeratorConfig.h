@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerEnumeratorConfig_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
@@ -35,35 +36,35 @@ private:
 	// enumerator configuration
 	CEnumeratorConfig *m_enumerator_cfg;
 
-	// private copy ctor
-	CParseHandlerEnumeratorConfig(const CParseHandlerEnumeratorConfig &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerEnumeratorConfig(const CParseHandlerEnumeratorConfig &) =
+		delete;
+
 	// ctor
 	CParseHandlerEnumeratorConfig(CMemoryPool *mp,
 								  CParseHandlerManager *parse_handler_mgr,
 								  CParseHandlerBase *parse_handler_root);
 
 	// dtor
-	virtual ~CParseHandlerEnumeratorConfig();
+	~CParseHandlerEnumeratorConfig() override;
 
 	// type of the parse handler
-	EDxlParseHandlerType GetParseHandlerType() const;
+	EDxlParseHandlerType GetParseHandlerType() const override;
 
 	// enumerator configuration
 	CEnumeratorConfig *GetEnumeratorCfg() const;

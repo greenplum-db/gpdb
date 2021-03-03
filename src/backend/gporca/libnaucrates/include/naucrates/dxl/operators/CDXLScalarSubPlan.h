@@ -13,8 +13,9 @@
 #define GPDXL_CDXLScalarSubPlan_H
 
 #include "gpos/base.h"
-#include "naucrates/dxl/operators/CDXLScalar.h"
+
 #include "naucrates/dxl/operators/CDXLColRef.h"
+#include "naucrates/dxl/operators/CDXLScalar.h"
 
 namespace gpdxl
 {
@@ -62,27 +63,26 @@ private:
 	// test expression -- not null if quantified/existential subplan
 	CDXLNode *m_dxlnode_test_expr;
 
-	// private copy ctor
-	CDXLScalarSubPlan(CDXLScalarSubPlan &);
-
 public:
+	CDXLScalarSubPlan(CDXLScalarSubPlan &) = delete;
+
 	// ctor/dtor
 	CDXLScalarSubPlan(CMemoryPool *mp, IMDId *first_col_type_mdid,
 					  CDXLColRefArray *dxl_colref_array,
 					  EdxlSubPlanType dxl_subplan_type,
 					  CDXLNode *dxlnode_test_expr);
 
-	virtual ~CDXLScalarSubPlan();
+	~CDXLScalarSubPlan() override;
 
 	// Operator type
 	Edxlopid
-	GetDXLOperator() const
+	GetDXLOperator() const override
 	{
 		return EdxlopScalarSubPlan;
 	}
 
 	// Operator name
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// type of first output column
 	IMDId *GetFirstColTypeMdId() const;
@@ -109,21 +109,21 @@ public:
 	}
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
-								const CDXLNode *dxlnode) const;
+	void SerializeToDXL(CXMLSerializer *xml_serializer,
+						const CDXLNode *dxlnode) const override;
 
 	// conversion function
 	static CDXLScalarSubPlan *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarSubPlan == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarSubPlan *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	BOOL HasBoolResult(CMDAccessor *md_accessor) const override;
 
 	// return a string representation of Subplan type
 	const CWStringConst *GetSubplanTypeStr() const;
@@ -131,7 +131,8 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

@@ -11,9 +11,11 @@ create table truncate_test ("колонка 1" int, "колонка 2" int, "к�
 "колонка 24" int, "колонка 25" int, "колонка 26" int, "колонка 27" int, "колонка 28" int, "колонка 29" int,
 "колонка 30" int, "колонка 31" int, "колонка 32" int, "колонка 33" int, "колонка 34" int, "колонка 35" int,
 "колонка 36" int, "колонка 37" int, "колонка 38" int, "колонка 39" int, "колонка 40" int, "особая колонка" int);
-select logdebug from gp_toolkit.__gp_log_segment_ext where logdebug ilike
-'%create table truncate_test%' and logdebug not ilike '%gp_toolkit.__gp_log_segment_ext%' order by logtime desc limit 1;
-                                                     logdebug                                                     
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'колонка 1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select split_part(logmessage, 'statement: ', 2) from gp_toolkit.__gp_log_segment_ext where logmessage ilike
+'%create table truncate_test%' and logmessage not ilike '%gp_toolkit.__gp_log_segment_ext%' order by logtime desc limit 1;
+                                                    split_part                                                    
 ------------------------------------------------------------------------------------------------------------------
  create table truncate_test ("колонка 1" int, "колонка 2" int, "колонка 3" int, "колонка 4" int, "колонка 5" int,+
  "колонка 6" int, "колонка 7" int, "колонка 8" int, "колонка 9" int, "колонка 10" int, "колонка 11" int,         +

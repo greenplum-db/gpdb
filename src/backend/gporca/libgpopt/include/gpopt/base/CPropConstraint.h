@@ -45,19 +45,18 @@ private:
 	// constraint
 	CConstraint *m_pcnstr;
 
-	// hidden copy ctor
-	CPropConstraint(const CPropConstraint &);
-
 	// initialize mapping from columns to equivalence classes
 	void InitHashMap(CMemoryPool *mp);
 
 public:
+	CPropConstraint(const CPropConstraint &) = delete;
+
 	// ctor
 	CPropConstraint(CMemoryPool *mp, CColRefSetArray *pdrgpcrs,
 					CConstraint *pcnstr);
 
 	// dtor
-	virtual ~CPropConstraint();
+	~CPropConstraint() override;
 
 	// equivalence classes
 	CColRefSetArray *
@@ -70,9 +69,9 @@ public:
 	CColRefSet *
 	PcrsEquivClass(const CColRef *colref) const
 	{
-		if (NULL == m_phmcrcrs)
+		if (nullptr == m_phmcrcrs)
 		{
-			return NULL;
+			return nullptr;
 		}
 		return m_phmcrcrs->Find(colref);
 	}
@@ -89,11 +88,12 @@ public:
 
 	// scalar expression on given column mapped from all constraints
 	// on its equivalent columns
-	CExpression *PexprScalarMappedFromEquivCols(CMemoryPool *mp,
-												CColRef *colref) const;
+	CExpression *PexprScalarMappedFromEquivCols(
+		CMemoryPool *mp, CColRef *colref,
+		CPropConstraint *constraintsForOuterRefs) const;
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const;
 
 };	// class CPropConstraint
 

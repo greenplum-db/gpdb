@@ -16,7 +16,7 @@ CREATE
 GRANT SELECT ON TABLE __gp_localid TO public;
 GRANT
 
-CREATE EXTERNAL WEB TABLE __gp_masterid ( masterid    int ) EXECUTE E'echo $GP_SEGMENT_ID' ON MASTER FORMAT 'TEXT';
+CREATE EXTERNAL WEB TABLE __gp_masterid ( masterid    int ) EXECUTE E'echo $GP_SEGMENT_ID' ON COORDINATOR FORMAT 'TEXT';
 CREATE
 GRANT SELECT ON TABLE __gp_masterid TO public;
 GRANT

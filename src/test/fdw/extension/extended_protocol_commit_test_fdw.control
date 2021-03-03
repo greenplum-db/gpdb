@@ -1,0 +1,3 @@
+comment = 'Extended protocol commit test foreign data wrapper'
+default_version = '1.0'
+relocatable = true

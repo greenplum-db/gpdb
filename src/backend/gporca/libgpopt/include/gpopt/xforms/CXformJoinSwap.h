@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/xforms/CXformUtils.h"
 
@@ -32,10 +33,9 @@ template <class TJoinTop, class TJoinBottom>
 class CXformJoinSwap : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformJoinSwap(const CXformJoinSwap &);
-
 public:
+	CXformJoinSwap(const CXformJoinSwap &) = delete;
+
 	// ctor
 	explicit CXformJoinSwap(CMemoryPool *mp)
 		: CXformExploration(
@@ -60,14 +60,12 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformJoinSwap()
-	{
-	}
+	~CXformJoinSwap() override = default;
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise
+	EXformPromise
 	Exfp(CExpressionHandle &  // exprhdl
-	) const
+	) const override
 	{
 		return CXform::ExfpHigh;
 	}
@@ -75,9 +73,9 @@ public:
 	// actual transform
 	void
 	Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-			  CExpression *pexpr) const
+			  CExpression *pexpr) const override
 	{
-		GPOS_ASSERT(NULL != pxfctxt);
+		GPOS_ASSERT(nullptr != pxfctxt);
 		GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 		GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -85,7 +83,7 @@ public:
 
 		CExpression *pexprResult =
 			CXformUtils::PexprSwapJoins(mp, pexpr, (*pexpr)[0]);
-		if (NULL == pexprResult)
+		if (nullptr == pexprResult)
 		{
 			return;
 		}

@@ -8,31 +8,29 @@
 //	@doc:
 //		Tests for datum classes
 //---------------------------------------------------------------------------
+#include "unittest/dxl/base/CDatumTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
+#include "gpopt/base/CQueryContext.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 #include "gpopt/mdcache/CMDCache.h"
-#include "gpopt/base/CQueryContext.h"
-
-#include "unittest/base.h"
-#include "unittest/dxl/base/CDatumTest.h"
-#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
-#include "unittest/gpopt/CTestUtils.h"
-
+#include "naucrates/base/CDatumBoolGPDB.h"
 #include "naucrates/base/CDatumGenericGPDB.h"
-#include "naucrates/base/CDatumOidGPDB.h"
 #include "naucrates/base/CDatumInt2GPDB.h"
 #include "naucrates/base/CDatumInt4GPDB.h"
 #include "naucrates/base/CDatumInt8GPDB.h"
-#include "naucrates/base/CDatumBoolGPDB.h"
-
-#include "naucrates/md/IMDType.h"
+#include "naucrates/base/CDatumOidGPDB.h"
+#include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
+#include "naucrates/md/IMDType.h"
 
-#include "naucrates/dxl/gpdb_types.h"
+#include "unittest/base.h"
+#include "unittest/gpopt/CTestUtils.h"
+#include "unittest/gpopt/translate/CTranslatorExprToDXLTest.h"
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -45,7 +43,12 @@
 GPOS_RESULT
 CDatumTest::EresUnittest()
 {
-	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(CDatumTest::EresUnittest_Basics)};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CDatumTest::EresUnittest_Basics),
+		GPOS_UNITTEST_FUNC(CDatumTest::StatsComparisonDoubleLessThan),
+		GPOS_UNITTEST_FUNC(CDatumTest::StatsComparisonDoubleEqualWithinEpsilon),
+		GPOS_UNITTEST_FUNC(CDatumTest::StatsComparisonIntLessThan),
+		GPOS_UNITTEST_FUNC(CDatumTest::StatsComparisonIntEqual)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -72,7 +75,7 @@ CDatumTest::EresUnittest_Basics()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	typedef IDatum *(*Pfpdatum)(CMemoryPool *, BOOL);
@@ -232,5 +235,178 @@ CDatumTest::CreateGenericDatum(CMemoryPool *mp, BOOL is_null)
 		);
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CDatumTest::StatsComparisonDouble
+//
+//	@doc:
+//		Compare DOUBle statistics that are within a small epsilon and ensure
+//      StatsAreEqual and StatsAreLessThan do not overlap
+//
+//---------------------------------------------------------------------------
+GPOS_RESULT
+CDatumTest::StatsComparisonDoubleEqualWithinEpsilon()
+{
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
 
+	// setup a file-based provider
+	CMDProviderMemory *pmdp = CTestUtils::m_pmdpf;
+	pmdp->AddRef();
+	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
+
+	// install opt context in TLS
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
+
+	// create accesssor
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	IMDId *mdid1 = GPOS_NEW(mp) CMDIdGPDB(GPDB_FLOAT8);
+	IDatum *datum1 = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid1,
+												   CDouble(631.82140500000003));
+
+	IMDId *mdid2 = GPOS_NEW(mp) CMDIdGPDB(GPDB_FLOAT8);
+	IDatum *datum2 = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid2,
+												   CDouble(631.82140700000002));
+
+	BOOL isEqual = datum1->StatsAreEqual(datum2);
+	BOOL isLessThan = datum1->StatsAreLessThan(datum2);
+	datum1->Release();
+	datum2->Release();
+
+	if (isEqual || !isLessThan)
+	{
+		return GPOS_OK;
+	}
+
+	return GPOS_FAILED;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDatumTest::StatsComparisonDouble
+//
+//	@doc:
+//		Compare DOUBle statistics and ensure StatsAreEqual and StatsAreLessThan do not overlap
+//
+//---------------------------------------------------------------------------
+GPOS_RESULT
+CDatumTest::StatsComparisonDoubleLessThan()
+{
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// setup a file-based provider
+	CMDProviderMemory *pmdp = CTestUtils::m_pmdpf;
+	pmdp->AddRef();
+	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
+
+	// install opt context in TLS
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
+
+	// create accesssor
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	IMDId *mdid1 = GPOS_NEW(mp) CMDIdGPDB(GPDB_FLOAT8);
+	IDatum *datum1 = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid1,
+												   CDouble(99.82140500000003));
+
+	IMDId *mdid2 = GPOS_NEW(mp) CMDIdGPDB(GPDB_FLOAT8);
+	IDatum *datum2 = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid2,
+												   CDouble(100.92140700000002));
+
+	BOOL isEqual = datum1->StatsAreEqual(datum2);
+	BOOL isLessThan = datum1->StatsAreLessThan(datum2);
+	datum1->Release();
+	datum2->Release();
+
+	if (!isEqual && isLessThan)
+	{
+		return GPOS_OK;
+	}
+
+	return GPOS_FAILED;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDatumTest::StatsComparisonIntLessThan
+//
+//	@doc:
+//		Compare LINT statistics and ensure StatsAreEqual and StatsAreLessThan do not overlap
+//
+//---------------------------------------------------------------------------
+GPOS_RESULT
+CDatumTest::StatsComparisonIntLessThan()
+{
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// setup a file-based provider
+	CMDProviderMemory *pmdp = CTestUtils::m_pmdpf;
+	pmdp->AddRef();
+	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
+
+	// install opt context in TLS
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
+
+	IDatum *datum1 = GPOS_NEW(mp) CDatumInt4GPDB(CTestUtils::m_sysidDefault,
+												 100 /*val*/, false /*isnull*/);
+	IDatum *datum2 = GPOS_NEW(mp) CDatumInt4GPDB(CTestUtils::m_sysidDefault,
+												 101 /*val*/, false /*isnull*/);
+	BOOL isEqual = datum1->StatsAreEqual(datum2);
+	BOOL isLessThan = datum1->StatsAreLessThan(datum2);
+	datum1->Release();
+	datum2->Release();
+
+	if (!isEqual && isLessThan)
+	{
+		return GPOS_OK;
+	}
+
+	return GPOS_FAILED;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDatumTest::StatsComparisonIntEqual
+//
+//	@doc:
+//		Compare LINT statistics and ensure StatsAreEqual and StatsAreLessThan do not overlap
+//
+//---------------------------------------------------------------------------
+GPOS_RESULT
+CDatumTest::StatsComparisonIntEqual()
+{
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// setup a file-based provider
+	CMDProviderMemory *pmdp = CTestUtils::m_pmdpf;
+	pmdp->AddRef();
+	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
+
+	// install opt context in TLS
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
+
+	IDatum *datum1 = GPOS_NEW(mp) CDatumInt4GPDB(CTestUtils::m_sysidDefault,
+												 101 /*val*/, false /*isnull*/);
+	IDatum *datum2 = GPOS_NEW(mp) CDatumInt4GPDB(CTestUtils::m_sysidDefault,
+												 101 /*val*/, false /*isnull*/);
+	BOOL isEqual = datum1->StatsAreEqual(datum2);
+	BOOL isLessThan = datum1->StatsAreLessThan(datum2);
+	datum1->Release();
+	datum2->Release();
+
+	if (isEqual && !isLessThan)
+	{
+		return GPOS_OK;
+	}
+
+	return GPOS_FAILED;
+}
 // EOF

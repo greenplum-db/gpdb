@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarArrayRef.cpp
@@ -9,9 +9,9 @@
 //		Implementation of scalar arrayref
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CScalarArrayRef.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 using namespace gpmd;

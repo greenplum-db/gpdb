@@ -5,7 +5,7 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -27,6 +27,7 @@
 #include "cdb/cdbsrlz.h"
 #include "cdb/tupleremap.h"
 #include "nodes/execnodes.h"
+#include "pgstat.h"
 #include "tcop/tcopprot.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
@@ -435,7 +436,8 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchUtilityStatement: %s (needTwoPhase = %s)",
-		   debug_query_string, (needTwoPhase ? "true" : "false"));
+		   (PointerIsValid(debug_query_string) ? debug_query_string : "\"\""),
+		   (needTwoPhase ? "true" : "false"));
 
 	pQueryParms = cdbdisp_buildUtilityQueryParms(stmt, flags, oid_assignments);
 
@@ -507,6 +509,9 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 		FlushErrorState();
 		ReThrowError(qeError);
 	}
+
+	/* collect pgstat from QEs for current transaction level */
+	pgstat_combine_from_qe(pr, -1);
 
 	cdbdisp_returnResults(pr, cdb_pgresults);
 
@@ -590,7 +595,7 @@ cdbdisp_buildUtilityQueryParms(struct Node *stmt,
 	}
 
 	pQueryParms = palloc0(sizeof(*pQueryParms));
-	pQueryParms->strCommand = debug_query_string;
+	pQueryParms->strCommand = PointerIsValid(debug_query_string) ? debug_query_string : "";
 	pQueryParms->serializedPlantree = serializedPlantree;
 	pQueryParms->serializedPlantreelen = serializedPlantree_len;
 	pQueryParms->serializedQueryDispatchDesc = serializedQueryDispatchDesc;
@@ -910,7 +915,7 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		sizeof(resgroupInfo.len) +
 		resgroupInfo.len;
 
-	shared_query = palloc0(total_query_len);
+	shared_query = palloc(total_query_len);
 
 	pos = shared_query;
 
@@ -1303,7 +1308,8 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCopyStart: %s (needTwoPhase = %s)",
-		   debug_query_string, (needTwoPhase ? "true" : "false"));
+		   (PointerIsValid(debug_query_string) ? debug_query_string : "\"\""),
+		   (needTwoPhase ? "true" : "false"));
 
 	pQueryParms = cdbdisp_buildUtilityQueryParms(stmt, flags, NULL);
 

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDIdGPDBCtas.h
@@ -41,27 +41,27 @@ public:
 	explicit CMDIdGPDBCtas(const CMDIdGPDBCtas &mdid_source);
 
 	// mdid type
-	virtual EMDIdType
-	MdidType() const
+	EMDIdType
+	MdidType() const override
 	{
 		return EmdidGPDBCtas;
 	}
 
 	// source system id
-	virtual CSystemId
-	Sysid() const
+	CSystemId
+	Sysid() const override
 	{
 		return m_sysid;
 	}
 
 	// equality check
-	virtual BOOL Equals(const IMDId *mdid) const;
+	BOOL Equals(const IMDId *mdid) const override;
 
 	// is the mdid valid
-	virtual BOOL IsValid() const;
+	BOOL IsValid() const override;
 
 	// debug print of the metadata id
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// invalid mdid
 	static CMDIdGPDBCtas m_mdid_invalid_key;
@@ -70,7 +70,7 @@ public:
 	static const CMDIdGPDBCtas *
 	CastMdid(const IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidGPDBCtas == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidGPDBCtas == mdid->MdidType());
 
 		return dynamic_cast<const CMDIdGPDBCtas *>(mdid);
 	}
@@ -79,7 +79,7 @@ public:
 	static CMDIdGPDBCtas *
 	CastMdid(IMDId *mdid)
 	{
-		GPOS_ASSERT(NULL != mdid && EmdidGPDBCtas == mdid->MdidType());
+		GPOS_ASSERT(nullptr != mdid && EmdidGPDBCtas == mdid->MdidType());
 
 		return dynamic_cast<CMDIdGPDBCtas *>(mdid);
 	}

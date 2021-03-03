@@ -297,7 +297,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
           </dxl:Comparison>
           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
             <dxl:Ident ColId="3" ColName="p2" TypeMdid="0.1082.1.0"/>
-            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
           </dxl:Comparison>
           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
             <dxl:Ident ColId="4" ColName="p3" TypeMdid="0.1700.1.0"/>
@@ -369,7 +369,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
             <dxl:ProjList/>
             <dxl:PartEqFilters>
               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWE=" LintValue="160440876"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
               <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAABAA==" DoubleValue="1.000000"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
@@ -393,7 +393,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
                 </dxl:Comparison>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                   <dxl:Ident ColId="2" ColName="p2" TypeMdid="0.1082.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
                 </dxl:Comparison>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
                   <dxl:Ident ColId="3" ColName="p3" TypeMdid="0.1700.1.0"/>
@@ -430,7 +430,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
                 </dxl:Comparison>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                   <dxl:Ident ColId="2" ColName="p2" TypeMdid="0.1082.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
+                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
                 </dxl:Comparison>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
                   <dxl:Ident ColId="3" ColName="p3" TypeMdid="0.1700.1.0"/>

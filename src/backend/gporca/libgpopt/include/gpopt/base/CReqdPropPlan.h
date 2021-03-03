@@ -31,7 +31,6 @@ class CEnfdPartitionPropagation;
 class CExpressionHandle;
 class CCTEReq;
 class CPartInfo;
-class CPartFilterMap;
 class CPhysical;
 class CPropSpec;
 
@@ -47,70 +46,45 @@ class CReqdPropPlan : public CReqdProp
 {
 private:
 	// required columns
-	CColRefSet *m_pcrs;
+	CColRefSet *m_pcrs{nullptr};
 
 	// required sort order
-	CEnfdOrder *m_peo;
+	CEnfdOrder *m_peo{nullptr};
 
 	// required distribution
-	CEnfdDistribution *m_ped;
+	CEnfdDistribution *m_ped{nullptr};
 
 	// required rewindability
-	CEnfdRewindability *m_per;
-
-	// required partition propagation
-	CEnfdPartitionPropagation *m_pepp;
+	CEnfdRewindability *m_per{nullptr};
 
 	// required ctes
-	CCTEReq *m_pcter;
-
-	// private copy ctor
-	CReqdPropPlan(const CReqdPropPlan &);
-
-	// combine derived part filter map from input requirements and
-	// derived plan properties in the passed context
-	CPartFilterMap *PpfmCombineDerived(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl,
-									   CReqdPropPlan *prppInput,
-									   ULONG child_index,
-									   CDrvdPropArray *pdrgpdpCtxt);
+	CCTEReq *m_pcter{nullptr};
 
 public:
+	CReqdPropPlan(const CReqdPropPlan &) = delete;
+
 	// default ctor
-	CReqdPropPlan()
-		: m_pcrs(NULL),
-		  m_peo(NULL),
-		  m_ped(NULL),
-		  m_per(NULL),
-		  m_pepp(NULL),
-		  m_pcter(NULL)
-	{
-	}
+	CReqdPropPlan() = default;
 
 	// ctor
 	CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo, CEnfdDistribution *ped,
 				  CEnfdRewindability *per, CCTEReq *pcter);
 
-	// ctor
-	CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo, CEnfdDistribution *ped,
-				  CEnfdRewindability *per, CEnfdPartitionPropagation *pepp,
-				  CCTEReq *pcter);
-
 	// dtor
-	virtual ~CReqdPropPlan();
+	~CReqdPropPlan() override;
 
 	// type of properties
-	virtual BOOL
-	FPlan() const
+	BOOL
+	FPlan() const override
 	{
 		GPOS_ASSERT(!FRelational());
 		return true;
 	}
 
 	// required properties computation function
-	virtual void Compute(CMemoryPool *mp, CExpressionHandle &exprhdl,
-						 CReqdProp *prpInput, ULONG child_index,
-						 CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
+	void Compute(CMemoryPool *mp, CExpressionHandle &exprhdl,
+				 CReqdProp *prpInput, ULONG child_index,
+				 CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	// required columns computation function
 	void ComputeReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
@@ -150,13 +124,6 @@ public:
 		return m_per;
 	}
 
-	// required partition propagation accessor
-	CEnfdPartitionPropagation *
-	Pepp() const
-	{
-		return m_pepp;
-	}
-
 	// required cte accessor
 	CCTEReq *
 	Pcter() const
@@ -182,9 +149,6 @@ public:
 					 const CDrvdPropRelational *pdprel,
 					 const CDrvdPropPlan *pdpplan) const;
 
-	// initialize partition propagation requirements
-	void InitReqdPartitionPropagation(CMemoryPool *mp, CPartInfo *ppartinfo);
-
 	// check if expression attached to handle provides required columns by all plan properties
 	BOOL FProvidesReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						   ULONG ulOptReq) const;
@@ -193,7 +157,7 @@ public:
 	static CReqdPropPlan *
 	Prpp(CReqdProp *prp)
 	{
-		GPOS_ASSERT(NULL != prp);
+		GPOS_ASSERT(nullptr != prp);
 
 		return dynamic_cast<CReqdPropPlan *>(prp);
 	}
@@ -214,7 +178,7 @@ public:
 									UlongToColRefMap *colref_mapping);
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CReqdPropPlan
 

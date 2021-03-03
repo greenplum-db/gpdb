@@ -9,11 +9,10 @@
 //		Implementation of scalar IDF comparison operator
 //---------------------------------------------------------------------------
 
-#include "gpopt/base/COptCtxt.h"
-
-#include "gpopt/mdcache/CMDAccessorUtils.h"
-
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
+
+#include "gpopt/base/COptCtxt.h"
+#include "gpopt/mdcache/CMDAccessorUtils.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -23,10 +22,10 @@ using namespace gpmd;
 CScalarIsDistinctFrom *
 CScalarIsDistinctFrom::PopConvert(COperator *pop)
 {
-	GPOS_ASSERT(NULL != pop);
+	GPOS_ASSERT(nullptr != pop);
 	GPOS_ASSERT(EopScalarIsDistinctFrom == pop->Eopid());
 
-	return reinterpret_cast<CScalarIsDistinctFrom *>(pop);
+	return dynamic_cast<CScalarIsDistinctFrom *>(pop);
 }
 
 // perform boolean expression evaluation
@@ -72,12 +71,12 @@ CScalarIsDistinctFrom::PopCommutedOp(CMemoryPool *mp, COperator *pop)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	IMDId *mdid = PmdidCommuteOp(md_accessor, pop);
-	if (NULL != mdid && mdid->IsValid())
+	if (nullptr != mdid && mdid->IsValid())
 	{
 		return GPOS_NEW(mp)
 			CScalarIsDistinctFrom(mp, mdid, Pstr(mp, md_accessor, mdid));
 	}
-	return NULL;
+	return nullptr;
 }
 
 // EOF

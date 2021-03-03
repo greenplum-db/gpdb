@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpos/error/CSerializable.h"
+
 #include "gpopt/operators/CExpression.h"
 
 using namespace gpos;
@@ -43,20 +44,17 @@ private:
 	// serialize footer
 	void SerializeFooter(COstream &oos);
 
-	// private copy ctor
-	CSerializableMDAccessor(const CSerializableMDAccessor &);
-
 public:
+	CSerializableMDAccessor(const CSerializableMDAccessor &) = delete;
+
 	// ctor
 	explicit CSerializableMDAccessor(CMDAccessor *md_accessor);
 
 	// dtor
-	virtual ~CSerializableMDAccessor()
-	{
-	}
+	~CSerializableMDAccessor() override = default;
 
 	// serialize object to passed stream
-	virtual void Serialize(COstream &oos);
+	void Serialize(COstream &oos) override;
 
 };	// class CSerializableMDAccessor
 }  // namespace gpopt

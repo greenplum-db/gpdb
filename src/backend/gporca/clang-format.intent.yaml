@@ -52,10 +52,25 @@ PointerAlignment: Right
 SpaceAfterCStyleCast: true
 SpacesBeforeTrailingComments: 2
 
-# TODO: sort includes and reflow comments
+SortIncludes: true
+IncludeBlocks:   Regroup
+IncludeCategories:
+  - Regex:           '^<ext/.*\.h>'
+    Priority:        2
+  - Regex:           '^<.*\.h>'
+    Priority:        1
+  - Regex:           '^<.*'
+    Priority:        2
+  - Regex:           '"postgres\.h"'
+    Priority: -1
+  - Regex:           '"gpos/.*'
+    Priority:        3
+  - Regex:           '"(gpopt|naucrates|gpdbcost)/.*'
+    Priority:        4
+
+# TODO: reflow comments
 # when we get to it, should probably bite the bullet and add a bunch of no-lint
 # comment around problematic areas
-SortIncludes: false
 ReflowComments: false
 
 # TODO: break literal strings, once we resolve Wstring-concatenation

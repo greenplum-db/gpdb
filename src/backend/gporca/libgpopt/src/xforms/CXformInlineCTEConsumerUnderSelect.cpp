@@ -9,14 +9,15 @@
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/xforms/CXformInlineCTEConsumerUnderSelect.h"
-#include "gpopt/xforms/CXformUtils.h"
+
+#include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CNormalizer.h"
+#include "gpopt/operators/CPatternTree.h"
+#include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
 
@@ -69,7 +70,7 @@ CXformInlineCTEConsumerUnderSelect::Transform(CXformContext *pxfctxt,
 											  CXformResult *pxfres,
 											  CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -98,7 +99,7 @@ CXformInlineCTEConsumerUnderSelect::Transform(CXformContext *pxfctxt,
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	// inline consumer
-	GPOS_ASSERT(NULL != popConsumer->Phmulcr());
+	GPOS_ASSERT(nullptr != popConsumer->Phmulcr());
 	CExpression *pexprInlinedConsumer = popConsumer->PexprInlined();
 	pexprInlinedConsumer->AddRef();
 	pexprScalar->AddRef();

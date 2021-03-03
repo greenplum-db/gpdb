@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2017 Pivotal, Inc.
+//	Copyright (C) 2017 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CCardinalityTestUtils.cpp
@@ -13,20 +13,20 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
-#include "gpos/io/COstreamString.h"
+#include "unittest/dxl/statistics/CCardinalityTestUtils.h"
 
-#include "naucrates/statistics/CPoint.h"
-#include "naucrates/statistics/CBucket.h"
-#include "naucrates/statistics/CHistogram.h"
-#include "naucrates/statistics/CStatistics.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
+#include "gpos/io/COstreamString.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 #include "naucrates/dxl/operators/CDXLDatumStatsDoubleMappable.h"
 #include "naucrates/dxl/operators/CDXLDatumStatsLintMappable.h"
+#include "naucrates/statistics/CBucket.h"
+#include "naucrates/statistics/CHistogram.h"
+#include "naucrates/statistics/CPoint.h"
+#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/CStatisticsUtils.h"
 
-#include "unittest/dxl/statistics/CCardinalityTestUtils.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 
@@ -192,6 +192,19 @@ CCardinalityTestUtils::PpointNumeric(CMemoryPool *mp,
 	IDatum *datum = pmdtype->GetDatumForDXLDatum(mp, dxl_datum);
 	CPoint *point = GPOS_NEW(mp) CPoint(datum);
 	dxl_datum->Release();
+
+	return point;
+}
+
+// helper function to generate a point from an encoded value of specific datatype
+CPoint *
+CCardinalityTestUtils::PpointDouble(CMemoryPool *mp, OID oid, CDouble value)
+{
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(oid);
+	IDatum *datum = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid, value);
+	CPoint *point = GPOS_NEW(mp) CPoint(datum);
 
 	return point;
 }

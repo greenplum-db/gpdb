@@ -12,6 +12,7 @@
 #define GPOPT_CXformJoinAssociativity_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -29,43 +30,40 @@ using namespace gpos;
 class CXformJoinAssociativity : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformJoinAssociativity(const CXformJoinAssociativity &);
-
 	// helper function for creating the new join predicate
 	void CreatePredicates(CMemoryPool *mp, CExpression *pexpr,
 						  CExpressionArray *pdrgpexprLower,
 						  CExpressionArray *pdrgpexprUpper) const;
 
 public:
+	CXformJoinAssociativity(const CXformJoinAssociativity &) = delete;
+
 	// ctor
 	explicit CXformJoinAssociativity(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformJoinAssociativity()
-	{
-	}
+	~CXformJoinAssociativity() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfJoinAssociativity;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformJoinAssociativity";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformJoinAssociativity
 

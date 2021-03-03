@@ -11,8 +11,9 @@
 
 
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
-#include "naucrates/dxl/operators/CDXLNode.h"
+
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;

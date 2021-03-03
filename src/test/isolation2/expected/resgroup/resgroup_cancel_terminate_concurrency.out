@@ -243,5 +243,58 @@ DROP
 DROP RESOURCE GROUP rg_concurrency_test;
 DROP
 
+-- test5: terminate a query waiting for a slot, that opens a transaction on exit callback
+DROP ROLE IF EXISTS role_concurrency_test;
+DROP
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+ERROR:  resource group "rg_concurrency_test" does not exist
+-- end_ignore
+
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+CREATE
+1:SET ROLE role_concurrency_test;
+SET
+1:CREATE TEMP TABLE tmp(a INT);
+CREATE
+2:SET ROLE role_concurrency_test;
+SET
+2:BEGIN;
+BEGIN
+1&:SELECT 1;  <waiting ...>
+SELECT * FROM rg_concurrency_view;
+ waiting | wait_event_type | state               | query     | rsgname             
+---------+-----------------+---------------------+-----------+---------------------
+ t       | Client          | idle in transaction | BEGIN;    | rg_concurrency_test 
+ t       | ResourceGroup   | active              | SELECT 1; | rg_concurrency_test 
+(2 rows)
+-- Upon receiving the terminate request, session 1 should start a new transaction to cleanup temp table.
+-- Note, that session 1 has already been waiting for resource group slot, its new transaction will bypass
+-- resource group since it's exiting.
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE wait_event_type='ResourceGroup' AND rsgname='rg_concurrency_test';
+ pg_terminate_backend 
+----------------------
+ t                    
+(1 row)
+1<:  <... completed>
+FATAL:  terminating connection due to administrator command
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+2:COMMIT;
+COMMIT
+SELECT * FROM rg_concurrency_view;
+ waiting | wait_event_type | state | query | rsgname 
+---------+-----------------+-------+-------+---------
+(0 rows)
+1q: ... <quitting>
+2q: ... <quitting>
+DROP ROLE role_concurrency_test;
+DROP
+DROP RESOURCE GROUP rg_concurrency_test;
+DROP
+
 DROP VIEW rg_concurrency_view;
 DROP

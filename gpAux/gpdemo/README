@@ -3,7 +3,7 @@ ABOUT GP DEMO
 ******************************************************************
 
 The GP demo program will setup a virtual Greenplum Database system
-on a single host. It creates and starts a GP master instance and
+on a single host. It creates and starts a GP coordinator instance and
 three segment instances (three primary and three mirror segments)
 within the same directory. Running GP demo is a good way to test
 your initial installation before deploying the Greenplum Database
@@ -84,11 +84,11 @@ MODIFYING GP DEMO SETTINGS
 Certain parameters of the demo cluster are adjustable by setting
 environment variables before initializing the cluster:
 
-* Master and segments TCP port:
+* Coordinator and segments TCP port:
 
 	export PORT_BASE=<new TCP port number>
 
-  The cluster will use the PORT_BASE as master port and following
+  The cluster will use the PORT_BASE as coordinator port and following
   ports as segment ports.
 
 * Number of segments:
@@ -102,7 +102,7 @@ environment variables before initializing the cluster:
 
 	export DATADIRS=<path to directory>
 
-  The data directories for the master and the segments will be
+  The data directories for the coordinator and the segments will be
   created under the specified directory path.
 
 * Turn fsync off:

@@ -12,6 +12,7 @@
 #define GPNAUCRATES_CDatumTest_H
 
 #include "gpos/base.h"
+
 #include "naucrates/base/IDatum.h"
 
 namespace gpnaucrates
@@ -52,6 +53,14 @@ public:
 	static GPOS_RESULT EresUnittest();
 
 	static GPOS_RESULT EresUnittest_Basics();
+
+	static GPOS_RESULT StatsComparisonDoubleLessThan();
+
+	static GPOS_RESULT StatsComparisonDoubleEqualWithinEpsilon();
+
+	static GPOS_RESULT StatsComparisonIntLessThan();
+
+	static GPOS_RESULT StatsComparisonIntEqual();
 
 };	// class CDatumTest
 }  // namespace gpnaucrates

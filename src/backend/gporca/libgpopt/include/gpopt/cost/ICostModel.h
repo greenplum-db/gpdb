@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 Pivotal Inc.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		ICostModel.h
@@ -17,9 +17,9 @@
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
 
+#include "naucrates/md/IMDRelation.h"
 #include "naucrates/statistics/IStatistics.h"
 
-#include "naucrates/md/IMDRelation.h"
 #include "CCost.h"
 #include "ICostModelParams.h"
 
@@ -54,7 +54,8 @@ public:
 	{
 		EcmtGPDBLegacy = 0,
 		EcmtGPDBCalibrated = 1,
-		EcmtSentinel = 2
+		EcmtGPDBExperimental = 2,
+		EcmtSentinel = 3
 	};
 
 	//---------------------------------------------------------------------------
@@ -75,11 +76,11 @@ public:
 		// ctor
 		CCostingStats(IStatistics *stats) : m_pstats(stats)
 		{
-			GPOS_ASSERT(NULL != stats);
+			GPOS_ASSERT(nullptr != stats);
 		}
 
 		// dtor
-		~CCostingStats()
+		~CCostingStats() override
 		{
 			m_pstats->Release();
 		}
@@ -148,13 +149,13 @@ public:
 			  m_rows(0),
 			  m_width(0),
 			  m_num_rebinds(GPOPT_DEFAULT_REBINDS),
-			  m_pdRowsChildren(NULL),
-			  m_pdWidthChildren(NULL),
-			  m_pdRebindsChildren(NULL),
-			  m_pdCostChildren(NULL),
-			  m_pdrgstatsChildren(NULL)
+			  m_pdRowsChildren(nullptr),
+			  m_pdWidthChildren(nullptr),
+			  m_pdRebindsChildren(nullptr),
+			  m_pdCostChildren(nullptr),
+			  m_pdrgstatsChildren(nullptr)
 		{
-			GPOS_ASSERT(NULL != pcstats);
+			GPOS_ASSERT(nullptr != pcstats);
 			if (0 < ulChildren)
 			{
 				m_pdRowsChildren = GPOS_NEW_ARRAY(mp, DOUBLE, ulChildren);
@@ -166,7 +167,7 @@ public:
 
 				for (ULONG ul = 0; ul < m_ulChildren; ul++)
 				{
-					m_pdrgstatsChildren[ul] = NULL;
+					m_pdrgstatsChildren[ul] = nullptr;
 				}
 			}
 		}

@@ -12,6 +12,7 @@
 #define GPOPT_CLogicalTVF_H
 
 #include "gpos/base.h"
+
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CLogical.h"
 
@@ -52,10 +53,9 @@ private:
 	// does this function return a set of rows
 	BOOL m_returns_set;
 
-	// private copy ctor
-	CLogicalTVF(const CLogicalTVF &);
-
 public:
+	CLogicalTVF(const CLogicalTVF &) = delete;
+
 	// ctors
 	explicit CLogicalTVF(CMemoryPool *mp);
 
@@ -67,18 +67,18 @@ public:
 				CColRefArray *pdrgpcrOutput);
 
 	// dtor
-	virtual ~CLogicalTVF();
+	~CLogicalTVF() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopLogicalTVF;
 	}
 
 	// return a string for operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CLogicalTVF";
 	}
@@ -119,65 +119,67 @@ public:
 	}
 
 	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const;
+	BOOL FInputOrderSensitive() const override;
 
 	// operator specific hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *PopCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
+										  UlongToColRefMap *colref_mapping,
+										  BOOL must_exist) override;
 
 	//-------------------------------------------------------------------------------------
 	// Derived Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// derive output columns
-	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *, CExpressionHandle &);
+	CColRefSet *DeriveOutputColumns(CMemoryPool *,
+									CExpressionHandle &) override;
 
 	// derive partition consumer info
-	virtual CPartInfo *
+	CPartInfo *
 	DerivePartitionInfo(CMemoryPool *mp,
 						CExpressionHandle &	 //exprhdl
-	) const
+	) const override
 	{
 		return GPOS_NEW(mp) CPartInfo(mp);
 	}
 
 	// derive constraint property
-	virtual CPropConstraint *
+	CPropConstraint *
 	DerivePropertyConstraint(CMemoryPool *mp,
 							 CExpressionHandle &  //exprhdl
-	) const
+	) const override
 	{
 		return GPOS_NEW(mp) CPropConstraint(
-			mp, GPOS_NEW(mp) CColRefSetArray(mp), NULL /*pcnstr*/);
+			mp, GPOS_NEW(mp) CColRefSetArray(mp), nullptr /*pcnstr*/);
 	}
 
 	// derive function properties
-	virtual CFunctionProp *DeriveFunctionProperties(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	CFunctionProp *DeriveFunctionProperties(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// derive max card
-	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
-								   CExpressionHandle &exprhdl) const;
+	CMaxCard DeriveMaxCard(CMemoryPool *mp,
+						   CExpressionHandle &exprhdl) const override;
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties
 	//-------------------------------------------------------------------------------------
 
 	// compute required stat columns of the n-th child
-	virtual CColRefSet *
+	CColRefSet *
 	PcrsStat(CMemoryPool *,		   // mp
 			 CExpressionHandle &,  // exprhdl
 			 CColRefSet *,		   // pcrsInput
 			 ULONG				   // child_index
-	) const
+	) const override
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -185,19 +187,18 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// candidate set of xforms
-	virtual CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const override;
 
 	// stat promise
-	virtual EStatPromise
-	Esp(CExpressionHandle &) const
+	EStatPromise
+	Esp(CExpressionHandle &) const override
 	{
 		return CLogical::EspLow;
 	}
 
 	// derive statistics
-	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
-									  CExpressionHandle &exprhdl,
-									  IStatisticsArray *stats_ctxt) const;
+	IStatistics *PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							  IStatisticsArray *stats_ctxt) const override;
 
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
@@ -207,7 +208,7 @@ public:
 	static CLogicalTVF *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopLogicalTVF == pop->Eopid());
 
 		return dynamic_cast<CLogicalTVF *>(pop);
@@ -215,7 +216,7 @@ public:
 
 
 	// debug print
-	virtual IOstream &OsPrint(IOstream &) const;
+	IOstream &OsPrint(IOstream &) const override;
 
 };	// class CLogicalTVF
 

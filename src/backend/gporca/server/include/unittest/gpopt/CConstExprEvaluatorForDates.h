@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorForDates.h
@@ -43,27 +43,24 @@ private:
 	// memory pool, not owned
 	CMemoryPool *m_mp;
 
-	// disable copy ctor
-	CConstExprEvaluatorForDates(const CConstExprEvaluatorForDates &);
-
 public:
+	CConstExprEvaluatorForDates(const CConstExprEvaluatorForDates &) = delete;
+
 	// ctor
 	explicit CConstExprEvaluatorForDates(CMemoryPool *mp) : m_mp(mp)
 	{
 	}
 
 	// dtor
-	virtual ~CConstExprEvaluatorForDates()
-	{
-	}
+	~CConstExprEvaluatorForDates() override = default;
 
 	// evaluate the given expression and return the result as a new expression
 	// caller takes ownership of returned expression
-	virtual CExpression *PexprEval(CExpression *pexpr);
+	CExpression *PexprEval(CExpression *pexpr) override;
 
 	// returns true iff the evaluator can evaluate constant expressions
-	virtual BOOL
-	FCanEvalExpressions()
+	BOOL
+	FCanEvalExpressions() override
 	{
 		return true;
 	}

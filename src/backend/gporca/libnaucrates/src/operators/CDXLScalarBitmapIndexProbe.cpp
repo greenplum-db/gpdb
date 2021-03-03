@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLScalarBitmapIndexProbe.cpp
@@ -9,9 +9,10 @@
 //		Class for representing DXL bitmap index probe operators
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLScalarBitmapIndexProbe.h"
+
 #include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/operators/CDXLScalarBitmapIndexProbe.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/dxl/xml/dxltokens.h"
@@ -31,7 +32,7 @@ CDXLScalarBitmapIndexProbe::CDXLScalarBitmapIndexProbe(
 	CMemoryPool *mp, CDXLIndexDescr *dxl_index_descr)
 	: CDXLScalar(mp), m_dxl_index_descr(dxl_index_descr)
 {
-	GPOS_ASSERT(NULL != m_dxl_index_descr);
+	GPOS_ASSERT(nullptr != m_dxl_index_descr);
 }
 
 //---------------------------------------------------------------------------
@@ -113,7 +114,7 @@ CDXLScalarBitmapIndexProbe::AssertValid(const CDXLNode *dxlnode,
 	}
 
 	// assert validity of index descriptor
-	GPOS_ASSERT(NULL != m_dxl_index_descr->MdName());
+	GPOS_ASSERT(nullptr != m_dxl_index_descr->MdName());
 	GPOS_ASSERT(m_dxl_index_descr->MdName()->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

@@ -80,7 +80,7 @@ CDXLScalarArrayComp::GetDXLStrArrayCmpType() const
 			return CDXLTokens::GetDXLTokenStr(EdxltokenOpTypeAll);
 		default:
 			GPOS_ASSERT(!"Unrecognized array operation type");
-			return NULL;
+			return nullptr;
 	}
 }
 

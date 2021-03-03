@@ -48,14 +48,17 @@ public:
 	};
 
 	// object type
-	virtual Emdtype
-	MDType() const
+	Emdtype
+	MDType() const override
 	{
 		return EmdtInd;
 	}
 
 	// is the index clustered
 	virtual BOOL IsClustered() const = 0;
+
+	// is the index partitioned
+	virtual BOOL IsPartitioned() const = 0;
 
 	// index type
 	virtual EmdindexType IndexType() const = 0;
@@ -88,6 +91,9 @@ public:
 	// at the specified position
 	virtual BOOL IsCompatible(const IMDScalarOp *md_scalar_op,
 							  ULONG key_pos) const = 0;
+
+	// child index oids
+	virtual IMdIdArray *ChildIndexMdids() const = 0;
 
 	// index type as a string value
 	static const CWStringConst *GetDXLStr(EmdindexType index_type);

@@ -738,6 +738,8 @@ ALTER TABLE sales2 RENAME TO sales;
 GRANT ALL PRIVILEGES ON sales TO admin;
 GRANT SELECT ON sales TO guest;
 </codeblock>
+          <note>The <codeph>LIKE</codeph> clause does not copy over partition structures when
+            creating a new table. </note>
         </p>
         <p>See <xref href="ddl-partition.xml#topic84"/> to learn how to change the storage model of
           a partitioned table.</p>

@@ -16,7 +16,7 @@
  * freed with the ic_proxy_pkt_cache_free() function.
  *
  *
- * Copyright (c) 2020-Present Pivotal Software, Inc.
+ * Copyright (c) 2020-Present VMware, Inc. or its affiliates.
  *
  *
  *-------------------------------------------------------------------------

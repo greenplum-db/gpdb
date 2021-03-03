@@ -9,11 +9,12 @@
 //		Implementation of GbAgg to Apply transform
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformGbAgg2Apply.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CPatternLeaf.h"
-#include "gpopt/xforms/CXformGbAgg2Apply.h"
 
 using namespace gpopt;
 

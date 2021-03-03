@@ -36,8 +36,8 @@ class IMDScalarOp : public IMDCacheObject
 {
 public:
 	// object type
-	virtual Emdtype
-	MDType() const
+	Emdtype
+	MDType() const override
 	{
 		return EmdtOp;
 	}
@@ -72,7 +72,7 @@ public:
 	virtual IMDType::ECmpType ParseCmpType() const = 0;
 
 	// operator name
-	virtual CMDName Mdname() const = 0;
+	CMDName Mdname() const override = 0;
 
 	// number of classes this operator belongs to
 	virtual ULONG OpfamiliesCount() const = 0;

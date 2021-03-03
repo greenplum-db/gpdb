@@ -14,6 +14,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/md/CDXLBucket.h"
 
 namespace gpdxl
@@ -55,17 +56,16 @@ private:
 
 	CDXLBucketArray *m_dxl_stats_bucket_array;
 
-	// private copy ctor
-	CDXLStatsDerivedColumn(const CDXLStatsDerivedColumn &);
-
 public:
+	CDXLStatsDerivedColumn(const CDXLStatsDerivedColumn &) = delete;
+
 	// ctor
 	CDXLStatsDerivedColumn(ULONG colid, CDouble width, CDouble null_freq,
 						   CDouble distinct_remaining, CDouble freq_remaining,
 						   CDXLBucketArray *dxl_stats_bucket_array);
 
 	// dtor
-	virtual ~CDXLStatsDerivedColumn();
+	~CDXLStatsDerivedColumn() override;
 
 	// column identifier
 	ULONG

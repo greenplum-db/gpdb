@@ -12,12 +12,11 @@
 #define GPOS_CColRefComputed_H
 
 #include "gpos/base.h"
-#include "gpos/common/CList.h"
 #include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CList.h"
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/metadata/CName.h"
-
 #include "naucrates/md/IMDType.h"
 
 namespace gpopt
@@ -35,26 +34,25 @@ using namespace gpmd;
 class CColRefComputed : public CColRef
 {
 private:
-	// private copy ctor
-	CColRefComputed(const CColRefComputed &);
-
 public:
+	CColRefComputed(const CColRefComputed &) = delete;
+
 	// ctor
 	CColRefComputed(const IMDType *pmdtype, INT type_modifier, ULONG id,
 					const CName *pname);
 
 	// dtor
-	virtual ~CColRefComputed();
+	~CColRefComputed() override;
 
-	virtual CColRef::Ecolreftype
-	Ecrt() const
+	CColRef::Ecolreftype
+	Ecrt() const override
 	{
 		return CColRef::EcrtComputed;
 	}
 
 	// is column a system column?
 	BOOL
-	IsSystemCol() const
+	IsSystemCol() const override
 	{
 		// we cannot introduce system columns as computed column
 		return false;
@@ -62,7 +60,7 @@ public:
 
 	// is column a distribution column?
 	BOOL
-	IsDistCol() const
+	IsDistCol() const override
 	{
 		// we cannot introduce distribution columns as computed column
 		return false;

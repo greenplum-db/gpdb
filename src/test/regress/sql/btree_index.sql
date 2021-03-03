@@ -79,6 +79,7 @@ explain (costs off)
 select proname from pg_proc where proname ilike '00%foo' order by 1;
 select proname from pg_proc where proname ilike '00%foo' order by 1;
 set enable_sort to false; -- GPDB needs more strong-arming to get same plans as upstream
+set enable_bitmapscan to false;
 explain (costs off)
 select proname from pg_proc where proname ilike 'ri%foo' order by 1;
 

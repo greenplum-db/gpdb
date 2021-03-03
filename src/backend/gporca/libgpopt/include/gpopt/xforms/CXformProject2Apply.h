@@ -12,6 +12,7 @@
 #define GPOPT_CXformProject2Apply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformSubqueryUnnest.h"
 
 namespace gpopt
@@ -30,28 +31,25 @@ using namespace gpos;
 class CXformProject2Apply : public CXformSubqueryUnnest
 {
 private:
-	// private copy ctor
-	CXformProject2Apply(const CXformProject2Apply &);
-
 public:
+	CXformProject2Apply(const CXformProject2Apply &) = delete;
+
 	// ctor
 	explicit CXformProject2Apply(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformProject2Apply()
-	{
-	}
+	~CXformProject2Apply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfProject2Apply;
 	}
 
 	// return a string for xform name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformProject2Apply";
 	}

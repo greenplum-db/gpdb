@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2010 Greenplum Inc
  * Portions Copyright (c) 2010-2012 EMC Corporation
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
  *
  *
@@ -122,9 +122,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		lovIndex = index_open(idxid, AccessExclusiveLock);
 
 		RelationSetNewRelfilenode(lovHeap, lovHeap->rd_rel->relpersistence);
-		// GPDB_12_MERGE_FIXME: RecentXmin, GetOldestMultiXactId()); 
 		RelationSetNewRelfilenode(lovIndex, lovIndex->rd_rel->relpersistence);
-		// GPDB_12_MERGE_FIXME: InvalidTransactionId, InvalidMultiXactId);
 
 		/*
 		 * After creating the new relfilenode for a btee index, this is not

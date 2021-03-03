@@ -10,9 +10,10 @@
 //---------------------------------------------------------------------------
 
 
+#include "naucrates/md/IMDCacheObject.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDCacheObject.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpdxl;
@@ -31,7 +32,7 @@ IMDCacheObject::SerializeMDIdAsElem(CXMLSerializer *xml_serializer,
 									const CWStringConst *element_name,
 									const IMDId *mdid) const
 {
-	if (NULL == mdid)
+	if (nullptr == mdid)
 	{
 		return;
 	}

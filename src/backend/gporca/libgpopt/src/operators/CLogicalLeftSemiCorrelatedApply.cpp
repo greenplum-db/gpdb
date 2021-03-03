@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CLogicalLeftSemiCorrelatedApply.cpp
@@ -9,9 +9,9 @@
 //		Implementation of left semi correlated apply for EXISTS subqueries
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/operators/CLogicalLeftSemiCorrelatedApply.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 

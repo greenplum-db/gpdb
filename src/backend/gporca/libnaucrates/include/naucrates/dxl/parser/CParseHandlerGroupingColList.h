@@ -14,6 +14,7 @@
 #define GPDXL_CParseHandlerGroupingColList_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 
 namespace gpdxl
@@ -37,31 +38,30 @@ private:
 	// array of grouping column ids
 	ULongPtrArray *m_grouping_colids_array;
 
-	// private copy ctor
-	CParseHandlerGroupingColList(const CParseHandlerGroupingColList &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerGroupingColList(const CParseHandlerGroupingColList &) = delete;
+
 	// ctor/dtor
 	CParseHandlerGroupingColList(CMemoryPool *mp,
 								 CParseHandlerManager *parse_handler_mgr,
 								 CParseHandlerBase *parse_handler_root);
 
-	virtual ~CParseHandlerGroupingColList();
+	~CParseHandlerGroupingColList() override;
 
 	// accessor
 	ULongPtrArray *GetGroupingColidArray();

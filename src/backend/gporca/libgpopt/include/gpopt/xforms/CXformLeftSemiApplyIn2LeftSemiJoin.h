@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CXformLeftSemiApplyIn2LeftSemiJoin.h
@@ -12,6 +12,7 @@
 #define GPOPT_CXformLeftSemiApplyIn2LeftSemiJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalLeftSemiApplyIn.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPatternTree.h"
@@ -34,11 +35,10 @@ class CXformLeftSemiApplyIn2LeftSemiJoin
 	: public CXformLeftSemiApply2LeftSemiJoin
 {
 private:
-	// private copy ctor
-	CXformLeftSemiApplyIn2LeftSemiJoin(
-		const CXformLeftSemiApplyIn2LeftSemiJoin &);
-
 public:
+	CXformLeftSemiApplyIn2LeftSemiJoin(
+		const CXformLeftSemiApplyIn2LeftSemiJoin &) = delete;
+
 	// ctor
 	explicit CXformLeftSemiApplyIn2LeftSemiJoin(CMemoryPool *mp)
 		: CXformLeftSemiApply2LeftSemiJoin(
@@ -55,19 +55,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformLeftSemiApplyIn2LeftSemiJoin()
-	{
-	}
+	~CXformLeftSemiApplyIn2LeftSemiJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfLeftSemiApplyIn2LeftSemiJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformLeftSemiApplyIn2LeftSemiJoin";
 	}

@@ -9,9 +9,9 @@
 //		Implementation of basic exploration transformation
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
-
 #include "gpopt/xforms/CXformExploration.h"
+
+#include "gpos/base.h"
 
 using namespace gpopt;
 
@@ -26,7 +26,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CXformExploration::CXformExploration(CExpression *pexpr) : CXform(pexpr)
 {
-	GPOS_ASSERT(NULL != pexpr);
+	GPOS_ASSERT(nullptr != pexpr);
 }
 
 
@@ -38,9 +38,7 @@ CXformExploration::CXformExploration(CExpression *pexpr) : CXform(pexpr)
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformExploration::~CXformExploration()
-{
-}
+CXformExploration::~CXformExploration() = default;
 
 
 // EOF

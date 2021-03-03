@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerCtasStorageOptions.cpp
@@ -10,10 +10,11 @@
 //		options
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
+
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 
@@ -31,9 +32,9 @@ CParseHandlerCtasStorageOptions::CParseHandlerCtasStorageOptions(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	  m_mdname_tablespace(NULL),
-	  m_dxl_ctas_storage_option(NULL),
-	  m_ctas_storage_option_array(NULL)
+	  m_mdname_tablespace(nullptr),
+	  m_dxl_ctas_storage_option(nullptr),
+	  m_ctas_storage_option_array(nullptr)
 {
 }
 
@@ -71,7 +72,7 @@ CParseHandlerCtasStorageOptions::StartElement(
 	{
 		const XMLCh *xml_str_tablespace =
 			attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenTablespace));
-		if (NULL != xml_str_tablespace)
+		if (nullptr != xml_str_tablespace)
 		{
 			m_mdname_tablespace = CDXLUtils::CreateMDNameFromXMLChar(
 				m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_tablespace);
@@ -101,7 +102,7 @@ CParseHandlerCtasStorageOptions::StartElement(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenIsNull,
 			EdxltokenCTASOption);
 
-		if (NULL == m_ctas_storage_option_array)
+		if (nullptr == m_ctas_storage_option_array)
 		{
 			m_ctas_storage_option_array = GPOS_NEW(m_mp)
 				CDXLCtasStorageOptions::CDXLCtasOptionArray(m_mp);

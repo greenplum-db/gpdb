@@ -9,9 +9,10 @@
 //		Implementation of getopt abstraction
 //---------------------------------------------------------------------------
 
+#include "gpos/common/CMainArgs.h"
+
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
-#include "gpos/common/CMainArgs.h"
 
 using namespace gpos;
 
@@ -38,7 +39,7 @@ CMainArgs::CMainArgs(ULONG argc, const CHAR **argv, const CHAR *fmt)
 #endif	// GPOS_Darwin
 {
 	// initialize external opt params
-	optarg = NULL;
+	optarg = nullptr;
 	optind = 1;
 	optopt = 1;
 	opterr = 1;
@@ -79,7 +80,7 @@ CMainArgs::~CMainArgs()
 BOOL
 CMainArgs::Getopt(CHAR *pch)
 {
-	GPOS_ASSERT(NULL != pch);
+	GPOS_ASSERT(nullptr != pch);
 
 	INT res = clib::Getopt(m_argc, const_cast<CHAR **>(m_argv), m_fmt);
 

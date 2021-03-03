@@ -21,7 +21,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="103027,102016,102119,102120,103001,103014,103015,103022,103023,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102016,102119,102120,102144,103001,103014,103015,103022,103023,103027,103033,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:ColumnStatistics Mdid="1.16538.1.0.4" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="4.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

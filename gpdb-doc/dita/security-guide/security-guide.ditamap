@@ -3,7 +3,7 @@
 <map><title>Security Configuration Guide</title>
     <topicref href="../../7-0/homenav.html" scope="external" navtitle="Greenplum Database® 7.0 Beta Documentation"
         format="html" otherprops="oss-only"/>
-    <topicref href="../../7-0/homenav.html" scope="external" navtitle="Pivotal Greenplum® 7.0 Beta Documentation"
+    <topicref href="../../7-0/homenav.html" scope="external" navtitle="Tanzu Greenplum® 7.0 Beta Documentation"
         format="html" otherprops="pivotal"/>
     <topicref href="topics/preface.xml">
         <topicref href="topics/SecuringGPDB.xml"/>

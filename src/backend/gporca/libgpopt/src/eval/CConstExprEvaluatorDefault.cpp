@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CConstExprEvaluatorDefault.cpp
@@ -30,9 +30,7 @@ using namespace gpopt;
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CConstExprEvaluatorDefault::~CConstExprEvaluatorDefault()
-{
-}
+CConstExprEvaluatorDefault::~CConstExprEvaluatorDefault() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

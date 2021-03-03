@@ -119,7 +119,6 @@ extern int	XLogArchiveTimeout;
 extern int	wal_retrieve_retry_interval;
 extern char *XLogArchiveCommand;
 extern bool EnableHotStandby;
-extern bool gp_keep_all_xlog;
 
 extern bool fullPageWrites;
 extern bool wal_log_hints;
@@ -315,6 +314,7 @@ extern void CreateCheckPoint(int flags);
 extern bool CreateRestartPoint(int flags);
 extern void XLogPutNextOid(Oid nextOid);
 extern void XLogPutNextRelfilenode(Oid nextRelfilenode);
+extern void XLogPutNextGxid(DistributedTransactionId nextGxid);
 extern XLogRecPtr XLogRestorePoint(const char *rpName);
 extern void UpdateFullPageWrites(void);
 extern void GetFullPageWriteInfo(XLogRecPtr *RedoRecPtr_p, bool *doPageWrites_p);

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CMDProviderMemory.h
@@ -17,8 +17,8 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDCacheObject.h"
+#include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDProvider.h"
 
 namespace gpmd
@@ -60,16 +60,19 @@ public:
 	CMDProviderMemory(CMemoryPool *mp, const CHAR *file_name);
 
 	//dtor
-	virtual ~CMDProviderMemory();
+	~CMDProviderMemory() override;
 
 	// returns the DXL string of the requested metadata object
-	virtual CWStringBase *GetMDObjDXLStr(CMemoryPool *mp,
-										 CMDAccessor *md_accessor,
-										 IMDId *mdid) const;
+	CWStringBase *GetMDObjDXLStr(CMemoryPool *mp, CMDAccessor *md_accessor,
+								 IMDId *mdid) const override;
+
+	// returns the requested metadata object
+	IMDCacheObject *GetMDObj(CMemoryPool *mp, CMDAccessor *md_accessor,
+							 IMDId *mdid) const override;
 
 	// return the mdid for the specified system id and type
-	virtual IMDId *MDId(CMemoryPool *mp, CSystemId sysid,
-						IMDType::ETypeInfo type_info) const;
+	IMDId *MDId(CMemoryPool *mp, CSystemId sysid,
+				IMDType::ETypeInfo type_info) const override;
 };
 }  // namespace gpmd
 

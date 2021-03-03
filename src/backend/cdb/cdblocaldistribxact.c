@@ -10,7 +10,7 @@
  * distributed log SLRU files too frequently.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -79,7 +79,7 @@ LocalDistribXact_ChangeState(int pgprocno,
 		case LOCALDISTRIBXACT_STATE_PREPARED:
 			if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE)
 				elog(PANIC,
-					 "Expected distributed transaction xid = %u to local element to be in state \"Active\" and "
+					 "Expected distributed transaction xid = "UINT64_FORMAT" to local element to be in state \"Active\" and "
 					 "found state \"%s\"",
 					 distribXid,
 					 LocalDistribXactStateToString(oldState));
@@ -88,7 +88,7 @@ LocalDistribXact_ChangeState(int pgprocno,
 		case LOCALDISTRIBXACT_STATE_COMMITTED:
 			if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE)
 				elog(PANIC,
-					 "Expected distributed transaction xid = %u to local element to be in state \"Active\" or \"Commit Delivery\" and "
+					 "Expected distributed transaction xid = "UINT64_FORMAT" to local element to be in state \"Active\" or \"Commit Delivery\" and "
 					 "found state \"%s\"",
 					 distribXid,
 					 LocalDistribXactStateToString(oldState));
@@ -98,7 +98,7 @@ LocalDistribXact_ChangeState(int pgprocno,
 			if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE &&
 				oldState != LOCALDISTRIBXACT_STATE_ABORTED)
 				elog(PANIC,
-					 "Expected distributed transaction xid = %u to local element to be in state \"Active\" or \"Abort Delivery\" and "
+					 "Expected distributed transaction xid = "UINT64_FORMAT" to local element to be in state \"Active\" or \"Abort Delivery\" and "
 					 "found state \"%s\"",
 					 distribXid,
 					 LocalDistribXactStateToString(oldState));
@@ -117,7 +117,7 @@ LocalDistribXact_ChangeState(int pgprocno,
 	proc->localDistribXactData.state = newState;
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "Moved distributed transaction xid = %u (local xid = %u) from \"%s\" to \"%s\"",
+		 "Moved distributed transaction xid = "UINT64_FORMAT" (local xid = %u) from \"%s\" to \"%s\"",
 		 distribXid,
 		 pgxact->xid,
 		 LocalDistribXactStateToString(oldState),
@@ -138,8 +138,7 @@ LocalDistribXact_DisplayString(int pgprocno)
 		snprintf(
 				 LocalDistribDisplayBuffer,
 				 MAX_LOCAL_DISTRIB_DISPLAY_BUFFER,
-				 "distributed transaction {timestamp %u, xid %u} for local xid %u",
-				 proc->localDistribXactData.distribTimeStamp,
+				 "distributed transaction {gxid "UINT64_FORMAT" for local xid %u",
 				 proc->localDistribXactData.distribXid,
 				 pgxact->xid);
 

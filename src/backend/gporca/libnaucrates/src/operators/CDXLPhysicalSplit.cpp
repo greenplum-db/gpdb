@@ -10,10 +10,11 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLPhysicalSplit.h"
+
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLTableDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
-#include "naucrates/dxl/CDXLUtils.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -41,8 +42,8 @@ CDXLPhysicalSplit::CDXLPhysicalSplit(CMemoryPool *mp,
 	  m_preserve_oids(preserve_oids),
 	  m_tuple_oid(tuple_oid)
 {
-	GPOS_ASSERT(NULL != delete_colid_array);
-	GPOS_ASSERT(NULL != insert_colid_array);
+	GPOS_ASSERT(nullptr != delete_colid_array);
+	GPOS_ASSERT(nullptr != insert_colid_array);
 }
 
 //---------------------------------------------------------------------------

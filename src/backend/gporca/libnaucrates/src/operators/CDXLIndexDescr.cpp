@@ -9,9 +9,10 @@
 //		Implementation of DXL index descriptors
 //---------------------------------------------------------------------------
 
+#include "naucrates/dxl/operators/CDXLIndexDescr.h"
+
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/dxl/operators/CDXLIndexDescr.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
 using namespace gpos;
@@ -25,11 +26,11 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLIndexDescr::CDXLIndexDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname)
-	: m_mp(mp), m_mdid(mdid), m_mdname(mdname)
+CDXLIndexDescr::CDXLIndexDescr(IMDId *mdid, CMDName *mdname)
+	: m_mdid(mdid), m_mdname(mdname)
 {
 	GPOS_ASSERT(m_mdid->IsValid());
-	GPOS_ASSERT(NULL != m_mdname);
+	GPOS_ASSERT(nullptr != m_mdname);
 	GPOS_ASSERT(m_mdname->GetMDName()->IsValid());
 }
 

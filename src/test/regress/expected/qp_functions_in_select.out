@@ -6,6 +6,8 @@ CREATE TABLE foo (a int, b int);
 INSERT INTO foo select i, i+1 from generate_series(1,10) i;
 CREATE TABLE bar (c int, d int);
 INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+ANALYZE foo;
+ANALYZE bar;
 -- @description function_in_select_column_0.sql
 SELECT func1_nosql_vol(a) FROM foo order by 1; 
  func1_nosql_vol 

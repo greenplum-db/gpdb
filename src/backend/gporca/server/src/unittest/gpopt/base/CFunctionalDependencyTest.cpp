@@ -8,13 +8,14 @@
 //	@doc:
 //		Tests for functional dependencies
 //---------------------------------------------------------------------------
+#include "unittest/gpopt/base/CFunctionalDependencyTest.h"
+
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CFunctionalDependency.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 
 #include "unittest/base.h"
-#include "unittest/gpopt/base/CFunctionalDependencyTest.h"
 #include "unittest/gpopt/CTestUtils.h"
 
 
@@ -56,7 +57,7 @@ CFunctionalDependencyTest::EresUnittest_Basics()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+	CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */
 					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object

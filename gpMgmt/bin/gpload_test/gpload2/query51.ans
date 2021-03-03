@@ -1,0 +1,14 @@
+2020-12-01 17:16:29|INFO|gpload session started 2020-12-01 17:16:29
+2020-12-01 17:16:29|ERROR|could not connect to database: FATAL:  no pg_hba.conf entry for host "*", user "notexistusr", database "reuse_gptest"
+. Is the Greenplum Database running on port 7000?
+2020-12-01 17:16:29|INFO|rows Inserted          = 0
+2020-12-01 17:16:29|INFO|rows Updated           = 0
+2020-12-01 17:16:29|INFO|data formatting errors = 0
+2020-12-01 17:16:29|INFO|gpload failed
+2020-12-01 17:16:30|INFO|gpload session started 2020-12-01 17:16:30
+2020-12-01 17:16:30|ERROR|could not connect to database: FATAL:  no pg_hba.conf entry for host "*", user "notexistusr", database "reuse_gptest"
+. Is the Greenplum Database running on port 7000?
+2020-12-01 17:16:30|INFO|rows Inserted          = 0
+2020-12-01 17:16:30|INFO|rows Updated           = 0
+2020-12-01 17:16:30|INFO|data formatting errors = 0
+2020-12-01 17:16:30|INFO|gpload failed

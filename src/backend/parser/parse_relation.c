@@ -4,7 +4,7 @@
  *	  parser support routines dealing with relations
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -1667,7 +1667,7 @@ addRangeTableEntryForFunction(ParseState *pstate,
 			Datum     d;
 			int       i;
 
-			Insist(TypeSupportsDescribe(funcrettype));
+			Assert(TypeSupportsDescribe(funcrettype));
 
 			funcDescribe = lookupProcCallback(func->funcid, PROMETHOD_DESCRIBE);
 			if (OidIsValid(funcDescribe))

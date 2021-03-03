@@ -59,7 +59,7 @@ class RepairMissingExtraneous:
             seg_ids = issue[-1]
 
             # if an oid is missing from a segment(s) , then it is considered to be extra
-            # on all the other segments/master
+            # on all the other segments/coordinator
             if issue_type == "missing":
                 seg_ids = all_seg_ids - set(seg_ids)
 

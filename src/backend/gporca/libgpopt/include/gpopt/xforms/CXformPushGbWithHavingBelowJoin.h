@@ -12,6 +12,7 @@
 #define GPOPT_CXformPushGbWithHavingBelowJoin_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXformExploration.h"
 
 namespace gpopt
@@ -29,37 +30,35 @@ using namespace gpos;
 class CXformPushGbWithHavingBelowJoin : public CXformExploration
 {
 private:
-	// private copy ctor
-	CXformPushGbWithHavingBelowJoin(const CXformPushGbWithHavingBelowJoin &);
-
 public:
+	CXformPushGbWithHavingBelowJoin(const CXformPushGbWithHavingBelowJoin &) =
+		delete;
+
 	// ctor
 	explicit CXformPushGbWithHavingBelowJoin(CMemoryPool *mp);
 
 	// dtor
-	virtual ~CXformPushGbWithHavingBelowJoin()
-	{
-	}
+	~CXformPushGbWithHavingBelowJoin() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfPushGbWithHavingBelowJoin;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformPushGbWithHavingBelowJoin";
 	}
 
 	// compute xform promise for a given expression handle
-	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+	EXformPromise Exfp(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-				   CExpression *pexpr) const;
+				   CExpression *pexpr) const override;
 
 };	// class CXformPushGbWithHavingBelowJoin
 

@@ -17,7 +17,6 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/gpdb_types.h"
-
 #include "naucrates/md/IMDType.h"
 
 namespace gpmd
@@ -44,11 +43,14 @@ public:
 	}
 
 	// type id
-	virtual ETypeInfo
-	GetDatumType() const
+	ETypeInfo
+	GetDatumType() const override
 	{
 		return IMDTypeGeneric::GetTypeInfo();
 	}
+
+	virtual IDatum *CreateGenericNullDatum(CMemoryPool *mp,
+										   INT type_modifier) const = 0;
 };
 }  // namespace gpmd
 

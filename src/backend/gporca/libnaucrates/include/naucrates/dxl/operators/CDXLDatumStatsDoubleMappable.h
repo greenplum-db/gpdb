@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CDXLDatumStatsDoubleMappable.h
@@ -20,6 +20,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
+
 #include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 
 namespace gpdxl
@@ -43,24 +44,23 @@ private:
 	// for statistics computation, map to double
 	CDouble m_val;
 
-	// private copy ctor
-	CDXLDatumStatsDoubleMappable(const CDXLDatumStatsDoubleMappable &);
-
 public:
+	CDXLDatumStatsDoubleMappable(const CDXLDatumStatsDoubleMappable &) = delete;
+
 	// ctor
 	CDXLDatumStatsDoubleMappable(CMemoryPool *mp, IMDId *mdid_type,
 								 INT type_modifier, BOOL is_null, BYTE *data,
 								 ULONG length, CDouble val);
 
 	// dtor
-	virtual ~CDXLDatumStatsDoubleMappable(){};
+	~CDXLDatumStatsDoubleMappable() override = default;
 
 	// serialize the datum as the given element
-	virtual void Serialize(CXMLSerializer *xml_serializer);
+	void Serialize(CXMLSerializer *xml_serializer) override;
 
 	// datum type
-	virtual EdxldatumType
-	GetDatumType() const
+	EdxldatumType
+	GetDatumType() const override
 	{
 		return CDXLDatum::EdxldatumStatsDoubleMappable;
 	}
@@ -68,15 +68,15 @@ public:
 	// statistics related APIs
 
 	// can datum be mapped to double
-	virtual BOOL
-	IsDatumMappableToDouble() const
+	BOOL
+	IsDatumMappableToDouble() const override
 	{
 		return true;
 	}
 
 	// return the double mapping needed for statistics computation
-	virtual CDouble
-	GetDoubleMapping() const
+	CDouble
+	GetDoubleMapping() const override
 	{
 		return m_val;
 	}
@@ -85,7 +85,7 @@ public:
 	static CDXLDatumStatsDoubleMappable *
 	Cast(CDXLDatum *dxl_datum)
 	{
-		GPOS_ASSERT(NULL != dxl_datum);
+		GPOS_ASSERT(nullptr != dxl_datum);
 		GPOS_ASSERT(CDXLDatum::EdxldatumStatsDoubleMappable ==
 					dxl_datum->GetDatumType());
 

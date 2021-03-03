@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2015 Pivotal, Inc.
+//	Copyright (C) 2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CScalarAssertConstraint.h
@@ -22,10 +22,10 @@
 #define GPOPT_CScalarAssertConstraint_H
 
 #include "gpos/base.h"
-#include "naucrates/md/IMDId.h"
 
-#include "gpopt/operators/CScalar.h"
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/operators/CScalar.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpopt
 {
@@ -46,52 +46,51 @@ private:
 	// error message
 	CWStringBase *m_pstrErrorMsg;
 
-	// private copy ctor
-	CScalarAssertConstraint(const CScalarAssertConstraint &);
-
 public:
+	CScalarAssertConstraint(const CScalarAssertConstraint &) = delete;
+
 	// ctor
 	CScalarAssertConstraint(CMemoryPool *mp, CWStringBase *pstrErrorMsg);
 
 	// dtor
-	~CScalarAssertConstraint();
+	~CScalarAssertConstraint() override;
 
 	// ident accessors
-	virtual EOperatorId
-	Eopid() const
+	EOperatorId
+	Eopid() const override
 	{
 		return EopScalarAssertConstraint;
 	}
 
 	// operator name
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CScalarAssertConstraint";
 	}
 
 	// match function
-	virtual BOOL Matches(COperator *pop) const;
+	BOOL Matches(COperator *pop) const override;
 
 	// sensitivity to order of inputs
-	virtual BOOL
-	FInputOrderSensitive() const
+	BOOL
+	FInputOrderSensitive() const override
 	{
 		return false;
 	}
 
 	// return a copy of the operator with remapped columns
-	virtual COperator *
+	COperator *
 	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
 							   UlongToColRefMap *,	//colref_mapping,
 							   BOOL					//must_exist
-	)
+							   ) override
 	{
 		return PopCopyDefault();
 	}
 
 	// type of expression's result
-	virtual IMDId *MdidType() const;
+	IMDId *MdidType() const override;
 
 	// error message
 	CWStringBase *
@@ -101,13 +100,13 @@ public:
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CScalarAssertConstraint *
 	PopConvert(COperator *pop)
 	{
-		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(nullptr != pop);
 		GPOS_ASSERT(EopScalarAssertConstraint == pop->Eopid());
 
 		return dynamic_cast<CScalarAssertConstraint *>(pop);

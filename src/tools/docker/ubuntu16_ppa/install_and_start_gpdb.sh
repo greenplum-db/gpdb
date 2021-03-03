@@ -9,7 +9,7 @@ gpssh-exkeys -f /data/hostlist_singlenode
 
 pushd /data
   gpinitsystem -ac gpinitsystem_singlenode
-  echo "host all  all 0.0.0.0/0 trust" >> /data/master/gpsne-1/pg_hba.conf
-  MASTER_DATA_DIRECTORY=/data/master/gpsne-1/ gpstop -a
-  MASTER_DATA_DIRECTORY=/data/master/gpsne-1/ gpstart -a
+  echo "host all  all 0.0.0.0/0 trust" >> /data/coordinator/gpsne-1/pg_hba.conf
+  MASTER_DATA_DIRECTORY=/data/coordinator/gpsne-1/ gpstop -a
+  MASTER_DATA_DIRECTORY=/data/coordinator/gpsne-1/ gpstart -a
 popd

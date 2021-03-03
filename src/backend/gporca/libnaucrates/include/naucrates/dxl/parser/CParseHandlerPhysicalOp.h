@@ -13,6 +13,7 @@
 #define GPDXL_CParseHandlerPhysicalOp_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerOp.h"
 
 namespace gpdxl
@@ -33,33 +34,31 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerPhysicalOp : public CParseHandlerOp
 {
 private:
-	// private copy ctor
-	CParseHandlerPhysicalOp(const CParseHandlerPhysicalOp &);
-
-
 protected:
 	// process the start of an element
-	virtual void StartElement(
+	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
-	virtual void EndElement(
+	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerPhysicalOp(const CParseHandlerPhysicalOp &) = delete;
+
 	// ctor/dtor
 	CParseHandlerPhysicalOp(CMemoryPool *mp,
 							CParseHandlerManager *parse_handler_mgr,
 							CParseHandlerBase *parse_handler_root);
 
-	virtual ~CParseHandlerPhysicalOp();
+	~CParseHandlerPhysicalOp() override;
 };
 }  // namespace gpdxl
 

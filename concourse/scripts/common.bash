@@ -31,7 +31,7 @@ function configure() {
       # The full set of configure options which were used for building the
       # tree must be used here as well since the toplevel Makefile depends
       # on these options for deciding what to test. Since we don't ship
-      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python PYTHON=python3 --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca --with-openssl ${CONFIGURE_FLAGS}
+      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python PYTHON=python3 --enable-gpcloud --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca --with-openssl PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
   popd
 }
@@ -47,7 +47,7 @@ function make_cluster() {
   export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
   export STATEMENT_MEM=250MB
   pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; make create-demo-cluster"
+  su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; LANG=en_US.utf8 make create-demo-cluster"
 
   if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
     # generate the addresses for proxy mode

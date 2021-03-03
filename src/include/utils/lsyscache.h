@@ -218,6 +218,7 @@ extern Oid	get_range_subtype(Oid rangeOid);
 extern Oid	get_index_column_opclass(Oid index_oid, int attno);
 
 extern bool relation_is_partitioned(Oid oid);
+extern bool index_is_partitioned(Oid oid);
 extern List *relation_get_leaf_partitions(Oid oid);
 extern bool relation_exists(Oid oid);
 extern bool index_exists(Oid oid);

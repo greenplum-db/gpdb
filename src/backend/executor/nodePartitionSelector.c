@@ -49,7 +49,7 @@
  * upstream-style pruning based on Params, an join pruning using a Partition
  * Seletor, is possible however).
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

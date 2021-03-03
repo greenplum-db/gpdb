@@ -9,13 +9,13 @@
 //		Implementation of full outer join operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalFullOuterJoin.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
-#include "gpopt/operators/CLogicalFullOuterJoin.h"
 
 using namespace gpopt;
 
@@ -30,7 +30,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CLogicalFullOuterJoin::CLogicalFullOuterJoin(CMemoryPool *mp) : CLogicalJoin(mp)
 {
-	GPOS_ASSERT(NULL != mp);
+	GPOS_ASSERT(nullptr != mp);
 }
 
 

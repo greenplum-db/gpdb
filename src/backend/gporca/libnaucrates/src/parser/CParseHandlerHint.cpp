@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2016 Pivotal Software, Inc.
+//	Copyright (C) 2016 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerHint.cpp
@@ -10,15 +10,13 @@
 //		configuration
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerManager.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerHint.h"
 
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
-
-#include "naucrates/dxl/xml/dxltokens.h"
-
 #include "gpopt/engine/CHint.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerManager.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpdxl;
 using namespace gpopt;
@@ -36,7 +34,8 @@ XERCES_CPP_NAMESPACE_USE
 CParseHandlerHint::CParseHandlerHint(CMemoryPool *mp,
 									 CParseHandlerManager *parse_handler_mgr,
 									 CParseHandlerBase *parse_handler_root)
-	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root), m_hint(NULL)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_hint(nullptr)
 {
 }
 
@@ -141,7 +140,7 @@ CParseHandlerHint::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(NULL != m_hint);
+	GPOS_ASSERT(nullptr != m_hint);
 	GPOS_ASSERT(0 == this->Length());
 
 	// deactivate handler

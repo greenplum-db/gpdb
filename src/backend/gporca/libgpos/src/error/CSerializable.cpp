@@ -9,9 +9,10 @@
 //		Interface for serializable objects
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CSerializable.h"
+
 #include "gpos/base.h"
 #include "gpos/error/CErrorContext.h"
-#include "gpos/error/CSerializable.h"
 #include "gpos/task/CTask.h"
 
 using namespace gpos;
@@ -29,7 +30,7 @@ CSerializable::CSerializable()
 {
 	CTask *task = CTask::Self();
 
-	GPOS_ASSERT(NULL != task);
+	GPOS_ASSERT(nullptr != task);
 
 	task->ConvertErrCtxt()->Register(this);
 }
@@ -47,7 +48,7 @@ CSerializable::~CSerializable()
 {
 	CTask *task = CTask::Self();
 
-	GPOS_ASSERT(NULL != task);
+	GPOS_ASSERT(nullptr != task);
 
 	task->ConvertErrCtxt()->Unregister(this);
 }

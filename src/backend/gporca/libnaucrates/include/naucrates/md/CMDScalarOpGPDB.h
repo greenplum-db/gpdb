@@ -83,9 +83,9 @@ private:
 	// (used for cardinality estimation)
 	BOOL m_is_ndv_preserving;
 
-	CMDScalarOpGPDB(const CMDScalarOpGPDB &);
-
 public:
+	CMDScalarOpGPDB(const CMDScalarOpGPDB &) = delete;
+
 	// ctor/dtor
 	CMDScalarOpGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 					IMDId *mdid_type_left, IMDId *mdid_type_right,
@@ -96,68 +96,68 @@ public:
 					IMDId *m_mdid_hash_opfamily,
 					IMDId *mdid_legacy_hash_opfamily, BOOL is_ndv_preserving);
 
-	~CMDScalarOpGPDB();
+	~CMDScalarOpGPDB() override;
 
 	// accessors
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// operator id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// operator name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// left operand type id
-	virtual IMDId *GetLeftMdid() const;
+	IMDId *GetLeftMdid() const override;
 
 	// right operand type id
-	virtual IMDId *GetRightMdid() const;
+	IMDId *GetRightMdid() const override;
 
 	// resulttype id
-	virtual IMDId *GetResultTypeMdid() const;
+	IMDId *GetResultTypeMdid() const override;
 
 	// implementer function id
-	virtual IMDId *FuncMdId() const;
+	IMDId *FuncMdId() const override;
 
 	// commutor id
-	virtual IMDId *GetCommuteOpMdid() const;
+	IMDId *GetCommuteOpMdid() const override;
 
 	// inverse operator id
-	virtual IMDId *GetInverseOpMdid() const;
+	IMDId *GetInverseOpMdid() const override;
 
 	// is this an equality operator
-	virtual BOOL IsEqualityOp() const;
+	BOOL IsEqualityOp() const override;
 
 	// does operator return NULL when all inputs are NULL?
 	// STRICT implies NULL-returning, but the opposite is not always true,
 	// the implementation in GPDB returns what STRICT property states
-	virtual BOOL ReturnsNullOnNullInput() const;
+	BOOL ReturnsNullOnNullInput() const override;
 
 	// preserves NDVs of its inputs?
-	virtual BOOL IsNDVPreserving() const;
+	BOOL IsNDVPreserving() const override;
 
 	// comparison type
-	virtual IMDType::ECmpType ParseCmpType() const;
+	IMDType::ECmpType ParseCmpType() const override;
 
 	// serialize object in DXL format
-	virtual void Serialize(gpdxl::CXMLSerializer *xml_serializer) const;
+	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;
 
 	// number of classes this operator belongs to
-	virtual ULONG OpfamiliesCount() const;
+	ULONG OpfamiliesCount() const override;
 
 	// operator class at given position
-	virtual IMDId *OpfamilyMdidAt(ULONG pos) const;
+	IMDId *OpfamilyMdidAt(ULONG pos) const override;
 
 	// compatible hash opfamily
-	virtual IMDId *HashOpfamilyMdid() const;
+	IMDId *HashOpfamilyMdid() const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the type in the provided stream
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

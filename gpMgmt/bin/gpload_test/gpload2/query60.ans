@@ -1,0 +1,28 @@
+2020-12-07 09:57:17|INFO|gpload session started 2020-12-07 09:57:17
+2020-12-07 09:57:17|INFO|setting schema 'public' for table 'texttable'
+2020-12-07 09:57:17|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-07 09:57:17|INFO|did not find an external table to reuse. creating ext_gpload_reusable_88950998_382f_11eb_a511_00505698707d
+2020-12-07 09:57:17|INFO|running time: 0.12 seconds
+2020-12-07 09:57:17|INFO|rows Inserted          = 16
+2020-12-07 09:57:17|INFO|rows Updated           = 0
+2020-12-07 09:57:17|INFO|data formatting errors = 0
+2020-12-07 09:57:17|INFO|gpload succeeded
+2020-12-07 09:57:17|INFO|gpload session started 2020-12-07 09:57:17
+2020-12-07 09:57:17|INFO|setting schema 'public' for table 'texttable'
+2020-12-07 09:57:17|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-07 09:57:17|INFO|did not find an external table to reuse. creating ext_gpload_reusable_88cbcab4_382f_11eb_a0d3_00505698707d
+2020-12-07 09:57:17|INFO|running time: 0.12 seconds
+2020-12-07 09:57:17|INFO|rows Inserted          = 16
+2020-12-07 09:57:17|INFO|rows Updated           = 0
+2020-12-07 09:57:17|INFO|data formatting errors = 0
+2020-12-07 09:57:17|INFO|gpload succeeded
+2020-12-07 09:57:17|INFO|gpload session started 2020-12-07 09:57:17
+2020-12-07 09:57:17|INFO|setting schema 'public' for table 'texttable'
+2020-12-07 09:57:17|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.txt" -t 30
+2020-12-07 09:57:17|INFO|did not find an external table to reuse. creating ext_gpload_reusable_89036be0_382f_11eb_95c3_00505698707d
+2020-12-07 09:57:18|ERROR|ERROR:  connection with gpfdist failed for "gpfdist://*:pathto/data_file.txt", effective url: "http://*:pathto/data_file.txt": error code = 111 (Connection refused);  (seg1 slice1 10.152.8.160:7003 pid=4267)
+ encountered while running INSERT INTO public."texttable" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7" FROM ext_gpload_reusable_89036be0_382f_11eb_95c3_00505698707d
+2020-12-07 09:57:18|INFO|rows Inserted          = 0
+2020-12-07 09:57:18|INFO|rows Updated           = 0
+2020-12-07 09:57:18|INFO|data formatting errors = 0
+2020-12-07 09:57:18|INFO|gpload failed

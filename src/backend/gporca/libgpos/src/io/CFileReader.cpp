@@ -9,9 +9,10 @@
 //		Implementation of file handler for raw input
 //---------------------------------------------------------------------------
 
+#include "gpos/io/CFileReader.h"
+
 #include "gpos/base.h"
 #include "gpos/io/ioutils.h"
-#include "gpos/io/CFileReader.h"
 #include "gpos/task/IWorker.h"
 
 using namespace gpos;
@@ -25,8 +26,7 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CFileReader::CFileReader()
-	: CFileDescriptor(), m_file_size(0), m_file_read_size(0)
+CFileReader::CFileReader() : CFileDescriptor()
 {
 }
 
@@ -39,9 +39,7 @@ CFileReader::CFileReader()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CFileReader::~CFileReader()
-{
-}
+CFileReader::~CFileReader() = default;
 
 
 //---------------------------------------------------------------------------
@@ -55,7 +53,7 @@ CFileReader::~CFileReader()
 void
 CFileReader::Open(const CHAR *file_path, const ULONG permission_bits)
 {
-	GPOS_ASSERT(NULL != file_path);
+	GPOS_ASSERT(nullptr != file_path);
 
 	OpenFile(file_path, O_RDONLY, permission_bits);
 
@@ -94,7 +92,7 @@ CFileReader::ReadBytesToBuffer(BYTE *read_buffer,
 	GPOS_ASSERT(CFileDescriptor::IsFileOpen() &&
 				"Attempt to read from invalid file descriptor");
 	GPOS_ASSERT(0 < file_read_size);
-	GPOS_ASSERT(NULL != read_buffer);
+	GPOS_ASSERT(nullptr != read_buffer);
 
 	ULONG_PTR bytes_to_read = file_read_size;
 

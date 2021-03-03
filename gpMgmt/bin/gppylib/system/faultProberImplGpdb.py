@@ -22,31 +22,31 @@ logger = get_default_logger()
 class GpFaultProberImplGpdb(GpFaultProber):
     def __init__(self):
         self.__isPaused = False
-        self.__masterDbUrl = None
+        self.__coordinatorDbUrl = None
         self.__conn = None
 
     #
     # returns self
     #
-    def initializeProber( self, masterPort ) :
-        self.__masterDbUrl = dbconn.DbURL(port=masterPort, dbname='template1')
+    def initializeProber( self, coordinatorPort ) :
+        self.__coordinatorDbUrl = dbconn.DbURL(port=coordinatorPort, dbname='template1')
         return self
 
     def pauseFaultProber(self):
         assert not self.__isPaused
-        assert self.__masterDbUrl is not None # must be initialized
+        assert self.__coordinatorDbUrl is not None # must be initialized
         assert self.__conn is None
 
         logger.debug("Pausing fault prober")
         
-        self.__conn = dbconn.connect(self.__masterDbUrl, True) # use utility mode so we don't do any segment connection stuff
+        self.__conn = dbconn.connect(self.__coordinatorDbUrl, True) # use utility mode so we don't do any segment connection stuff
         dbconn.execSQL( self.__conn, "set gp_fts_probe_pause = on")
 
         self.__isPaused = True
 
     def unpauseFaultProber(self):
         assert self.__isPaused
-        assert self.__masterDbUrl is not None  # must be initialized
+        assert self.__coordinatorDbUrl is not None  # must be initialized
         assert self.__conn is not None
 
         logger.debug("Unpausing fault prober")
@@ -65,7 +65,7 @@ class GpFaultProberImplGpdb(GpFaultProber):
         conn = None
         
         try:
-            conn = dbconn.connect(self.__masterDbUrl, True)
+            conn = dbconn.connect(self.__coordinatorDbUrl, True)
             fts_probe_interval_value = catalog.getSessionGUC(conn, 'gp_fts_probe_interval')
             m = probe_interval_re.match(fts_probe_interval_value)
             if m.group('unit') == 'min':

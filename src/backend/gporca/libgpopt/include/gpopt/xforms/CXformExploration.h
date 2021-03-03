@@ -12,6 +12,7 @@
 #define GPOPT_CXformExploration_H
 
 #include "gpos/base.h"
+
 #include "gpopt/xforms/CXform.h"
 
 namespace gpopt
@@ -29,19 +30,18 @@ using namespace gpos;
 class CXformExploration : public CXform
 {
 private:
-	// private copy ctor
-	CXformExploration(const CXformExploration &);
-
 public:
+	CXformExploration(const CXformExploration &) = delete;
+
 	// ctor
 	explicit CXformExploration(CExpression *pexpr);
 
 	// dtor
-	virtual ~CXformExploration();
+	~CXformExploration() override;
 
 	// type of operator
-	virtual BOOL
-	FExploration() const
+	BOOL
+	FExploration() const override
 	{
 		GPOS_ASSERT(!FSubstitution() && !FImplementation());
 		return true;
@@ -72,7 +72,7 @@ public:
 	static CXformExploration *
 	Pxformexp(CXform *pxform)
 	{
-		GPOS_ASSERT(NULL != pxform);
+		GPOS_ASSERT(nullptr != pxform);
 		GPOS_ASSERT(pxform->FExploration());
 
 		return dynamic_cast<CXformExploration *>(pxform);

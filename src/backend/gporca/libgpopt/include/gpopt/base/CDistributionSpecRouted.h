@@ -35,19 +35,18 @@ private:
 	// segment id column
 	CColRef *m_pcrSegmentId;
 
-	// private copy ctor
-	CDistributionSpecRouted(const CDistributionSpecRouted &);
-
 public:
+	CDistributionSpecRouted(const CDistributionSpecRouted &) = delete;
+
 	// ctor
 	explicit CDistributionSpecRouted(CColRef *pcrSegmentId);
 
 	// dtor
-	virtual ~CDistributionSpecRouted();
+	~CDistributionSpecRouted() override;
 
 	// distribution type accessor
-	virtual EDistributionType
-	Edt() const
+	EDistributionType
+	Edt() const override
 	{
 		return CDistributionSpec::EdtRouted;
 	}
@@ -60,42 +59,42 @@ public:
 	}
 
 	// does this distribution satisfy the given one
-	virtual BOOL Matches(const CDistributionSpec *pds) const;
+	BOOL Matches(const CDistributionSpec *pds) const override;
 
 	// does this distribution satisfy the given one
-	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
+	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
 	// return a copy of the distribution spec with remapped columns
-	virtual CDistributionSpec *PdsCopyWithRemappedColumns(
-		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	CDistributionSpec *PdsCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping,
+		BOOL must_exist) override;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								 CReqdPropPlan *prpp,
-								 CExpressionArray *pdrgpexpr,
-								 CExpression *pexpr);
+	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
+						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,
+						 CExpression *pexpr) override;
 
 	// hash function for routed distribution spec
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// extract columns used by the distribution spec
-	virtual CColRefSet *PcrsUsed(CMemoryPool *mp) const;
+	CColRefSet *PcrsUsed(CMemoryPool *mp) const override;
 
 	// return distribution partitioning type
-	virtual EDistributionPartitioningType
-	Edpt() const
+	EDistributionPartitioningType
+	Edpt() const override
 	{
 		return EdptPartitioned;
 	}
 
 	// print
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 	// conversion function
 	static CDistributionSpecRouted *
 	PdsConvert(CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRouted == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecRouted *>(pds);
@@ -105,7 +104,7 @@ public:
 	static const CDistributionSpecRouted *
 	PdsConvert(const CDistributionSpec *pds)
 	{
-		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(nullptr != pds);
 		GPOS_ASSERT(EdtRouted == pds->Edt());
 
 		return dynamic_cast<const CDistributionSpecRouted *>(pds);

@@ -13,6 +13,7 @@
 #define GPDXL_CDXLScalarSubqueryExists_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLScalar.h"
 
@@ -29,38 +30,37 @@ namespace gpdxl
 class CDXLScalarSubqueryExists : public CDXLScalar
 {
 private:
-	// private copy ctor
-	CDXLScalarSubqueryExists(CDXLScalarSubqueryExists &);
-
 public:
+	CDXLScalarSubqueryExists(CDXLScalarSubqueryExists &) = delete;
+
 	// ctor/dtor
 	explicit CDXLScalarSubqueryExists(CMemoryPool *mp);
 
-	virtual ~CDXLScalarSubqueryExists();
+	~CDXLScalarSubqueryExists() override;
 
 	// ident accessors
-	Edxlopid GetDXLOperator() const;
+	Edxlopid GetDXLOperator() const override;
 
 	// name of the operator
-	const CWStringConst *GetOpNameStr() const;
+	const CWStringConst *GetOpNameStr() const override;
 
 	// serialize operator in DXL format
-	virtual void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const;
+	void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const override;
 
 	// conversion function
 	static CDXLScalarSubqueryExists *
 	Cast(CDXLOperator *dxl_op)
 	{
-		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopScalarSubqueryExists == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLScalarSubqueryExists *>(dxl_op);
 	}
 
 	// does the operator return a boolean result
-	virtual BOOL
+	BOOL
 	HasBoolResult(CMDAccessor *	 //md_accessor
-	) const
+	) const override
 	{
 		return true;
 	}
@@ -68,7 +68,8 @@ public:
 #ifdef GPOS_DEBUG
 	// checks whether the operator has valid structure, i.e. number and
 	// types of child nodes
-	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+	void AssertValid(const CDXLNode *dxlnode,
+					 BOOL validate_children) const override;
 #endif	// GPOS_DEBUG
 };
 }  // namespace gpdxl

@@ -13,9 +13,9 @@
             [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
-            [<b>-s</b> <varname>standby_master_host</varname>
-                [<b>-P</b> <varname>standby_master_port</varname>]
-                [<b>-S</b> <varname>standby_master_datadir</varname> | <b>--standby_datadir</b>=<varname>standby_master_datadir</varname>]]
+            [<b>-s</b> <varname>standby_coordinator_host</varname>
+                [<b>-P</b> <varname>standby_coordinator_port</varname>]
+                [<b>-S</b> <varname>standby_coordinator_datadir</varname> | <b>--standby_datadir</b>=<varname>standby_coordinator_datadir</varname>]]
             [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
             [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
@@ -44,14 +44,14 @@
                 to create a new cluster or re-create a cluster from a backed up configuration. See
                     <xref href="#topic1/section5" type="section" format="dita"/> for more
                 information. </p>
-            <p>In a Greenplum Database DBMS, each database instance (the master instance and all
+            <p>In a Greenplum Database DBMS, each database instance (the coordinator instance and all
                 segment instances) must be initialized across all of the hosts in the system in such
                 a way that they can all work together as a unified DBMS. The
                     <codeph>gpinitsystem</codeph> utility takes care of initializing the Greenplum
-                master and each segment instance, and configuring the system as a whole.</p>
+                coordinator and each segment instance, and configuring the system as a whole.</p>
             <p>Before running <codeph>gpinitsystem</codeph>, you must set the
                     <codeph>$GPHOME</codeph> environment variable to point to the location of your
-                Greenplum Database installation on the master host and exchange SSH keys between all
+                Greenplum Database installation on the coordinator host and exchange SSH keys between all
                 host addresses in the array using <codeph>gpssh-exkeys</codeph>.</p>
             <p>This utility performs the following tasks:</p>
             <ul>
@@ -62,8 +62,8 @@
                 <li id="it147949">Verifies the locale settings.</li>
                 <li id="it147950">Displays the configuration that will be used and prompts the user
                     for confirmation.</li>
-                <li id="it147951">Initializes the master instance.</li>
-                <li id="it147952">Initializes the standby master instance (if specified).</li>
+                <li id="it147951">Initializes the coordinator instance.</li>
+                <li id="it147952">Initializes the standby coordinator instance (if specified).</li>
                 <li id="it147953">Initializes the primary segment instances.</li>
                 <li id="it147954">Initializes the mirror segment instances (if mirroring is
                     configured).</li>
@@ -115,7 +115,7 @@
                 <plentry>
                     <pt>-I <varname>input_configuration_file</varname></pt>
                     <pd>The full path and filename of an input configuration file, which defines the
-                        Greenplum Database host systems, the master instance and segment instances
+                        Greenplum Database host systems, the coordinator instance and segment instances
                         on the hosts, using the <codeph>QD_PRIMARY_ARRAY</codeph>,
                             <codeph>PRIMARY_ARRAY</codeph>, and <codeph>MIRROR_ARRAY</codeph>
                         parameters. The input configuration file is typically created by using
@@ -132,7 +132,7 @@
                     </pt>
                     <pd>Sets the default locale used by Greenplum Database. If not specified, the
                             <codeph>LC_ALL</codeph>, <codeph>LC_COLLATE</codeph>, or
-                            <codeph>LANG</codeph> environment variable of the master host determines
+                            <codeph>LANG</codeph> environment variable of the coordinator host determines
                         the locale. If these are not set, the default locale is <codeph>C</codeph>
                             (<codeph>POSIX</codeph>). A locale identifier consists of a language
                         identifier and a region identifier, and optionally a character set encoding.
@@ -194,7 +194,7 @@
                 </plentry>
                 <plentry>
                     <pt> -m <varname>number</varname> | --max_connections=number</pt>
-                    <pd>Sets the maximum number of client connections allowed to the master. The
+                    <pd>Sets the maximum number of client connections allowed to the coordinator. The
                         default is 250.</pd>
                 </plentry>
                 <plentry id="output_config_file">
@@ -213,7 +213,7 @@
                     <pt>-p <varname>postgresql_conf_param_file</varname></pt>
                     <pd>Optional. The name of a file that contains <codeph>postgresql.conf</codeph>
                         parameter settings that you want to set for Greenplum Database. These
-                        settings will be used when the individual master and segment instances are
+                        settings will be used when the individual coordinator and segment instances are
                         initialized. You can also set parameters after initialization using the
                             <codeph>gpconfig</codeph> utility.</pd>
                 </plentry>
@@ -229,26 +229,26 @@
                         gigabytes (GB). The default is 125MB.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-s <varname>standby_master_host</varname></pt>
-                    <pd>Optional. If you wish to configure a backup master instance, specify the
+                    <pt>-s <varname>standby_coordinator_host</varname></pt>
+                    <pd>Optional. If you wish to configure a backup coordinator instance, specify the
                         host name using this option. The Greenplum Database software must already be
                         installed and configured on this host.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-P <varname>standby_master_port</varname></pt>
-                    <pd>If you configure a standby master instance with <codeph>-s</codeph>, specify
+                    <pt>-P <varname>standby_coordinator_port</varname></pt>
+                    <pd>If you configure a standby coordinator instance with <codeph>-s</codeph>, specify
                         its port number using this option. The default port is the same as the
-                        master port. To run the standby and master on the same host, you must use
+                        coordinator port. To run the standby and coordinator on the same host, you must use
                         this option to specify a different port for the standby. The Greenplum
                         Database software must already be installed and configured on the standby
                         host.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-S <varname>standby_master_datadir</varname> |
-                            --standby_dir=<varname>standby_master_datadir</varname></pt>
-                    <pd>If you configure a standby master host with <codeph>-s</codeph>, use this
+                    <pt>-S <varname>standby_coordinator_datadir</varname> |
+                            --standby_dir=<varname>standby_coordinator_datadir</varname></pt>
+                    <pd>If you configure a standby coordinator host with <codeph>-s</codeph>, use this
                         option to specify its data directory. If you configure a standby on the same
-                        host as the master instance, the master and standby must have separate data
+                        host as the coordinator instance, the coordinator and standby must have separate data
                         directories.</pd>
                 </plentry>
                 <plentry>
@@ -313,7 +313,7 @@ MIRROR_PORT_BASE = 7000</codeblock>
                     <pt>MACHINE_LIST_FILE</pt>
                     <pd><b>Optional.</b> Can be used in place of the <codeph>-h</codeph> option.
                         This specifies the file that contains the list of the segment host address
-                        names that comprise the Greenplum Database system. The master host is
+                        names that comprise the Greenplum Database system. The coordinator host is
                         assumed to be the host from which you are running the utility and should not
                         be included in this file. If your segment hosts have multiple network
                         interfaces, then this file would include all addresses for the host. Give
@@ -322,11 +322,11 @@ MIRROR_PORT_BASE = 7000</codeblock>
                 <plentry>
                     <pt>SEG_PREFIX</pt>
                     <pd><b>Required.</b> This specifies a prefix that will be used to name the data
-                        directories on the master and segment instances. The naming convention for
+                        directories on the coordinator and segment instances. The naming convention for
                         data directories in a Greenplum Database system is
                             <varname>SEG_PREFIXnumber</varname> where <varname>number</varname>
-                        starts with 0 for segment instances (the master is always -1). So for
-                        example, if you choose the prefix <codeph>gpseg</codeph>, your master
+                        starts with 0 for segment instances (the coordinator is always -1). So for
+                        example, if you choose the prefix <codeph>gpseg</codeph>, your coordinator
                         instance data directory would be named <codeph>gpseg-1</codeph>, and the
                         segment instances would be named <codeph>gpseg0</codeph>,
                             <codeph>gpseg1</codeph>, <codeph>gpseg2</codeph>,
@@ -360,7 +360,7 @@ MIRROR_PORT_BASE = 7000</codeblock>
                 </plentry>
                 <plentry>
                     <pt>MASTER_HOSTNAME</pt>
-                    <pd><b>Required.</b> The host name of the master instance. This host name must
+                    <pd><b>Required.</b> The host name of the coordinator instance. This host name must
                         exactly match the configured host name of the machine (run the
                             <codeph>hostname</codeph> command to determine the correct
                         hostname).</pd>
@@ -368,13 +368,13 @@ MIRROR_PORT_BASE = 7000</codeblock>
                 <plentry>
                     <pt>MASTER_DIRECTORY</pt>
                     <pd><b>Required.</b> This specifies the location where the data directory will
-                        be created on the master host. You must make sure that the user who runs
+                        be created on the coordinator host. You must make sure that the user who runs
                             <codeph>gpinitsystem</codeph> (for example, the <codeph>gpadmin</codeph>
                         user) has permissions to write to this directory.</pd>
                 </plentry>
                 <plentry>
                     <pt>MASTER_PORT</pt>
-                    <pd><b>Required.</b> The port number for the master instance. This is the port
+                    <pd><b>Required.</b> The port number for the coordinator instance. This is the port
                         number that users and client connections will use when accessing the
                         Greenplum Database system.</pd>
                 </plentry>
@@ -428,7 +428,7 @@ MIRROR_PORT_BASE = 7000</codeblock>
                     <pt>QD_PRIMARY_ARRAY, PRIMARY_ARRAY, MIRROR_ARRAY</pt>
                     <pd><b>Required</b> when using <codeph>input_configuration file</codeph> with
                             <codeph>-I</codeph> option. These parameters specify the Greenplum
-                        Database master host, the primary segment, and the mirror segment hosts
+                        Database coordinator host, the primary segment, and the mirror segment hosts
                         respectively. During new cluster initialization, use the
                             <codeph>gpinitsystem</codeph>
                         <codeph>-O <varname>output_configuration_file</varname></codeph> to populate
@@ -448,11 +448,11 @@ MIRROR_PORT_BASE = 7000</codeblock>
                         provided in the input configuration file. The second format populates
                             <codeph>hostname</codeph> and <codeph>address</codeph> fields with the
                         same value, derived from <varname>host</varname>.</pd>
-                    <pd>The Greenplum Database master always uses the value -1 for the segment ID
+                    <pd>The Greenplum Database coordinator always uses the value -1 for the segment ID
                         and content ID. For example, <varname>seg_prefix&lt;segment_id></varname>
                         and <varname>dbid</varname> values for <codeph>QD_PRIMARY_ARRAY</codeph> use
-                            <codeph>-1</codeph> to indicate the master
-                        instance:<codeblock>QD_PRIMARY_ARRAY=mdw~mdw~5432~/gpdata/master/gpseg<b>-1</b>~1~<b>-1</b>
+                            <codeph>-1</codeph> to indicate the coordinator
+                        instance:<codeblock>QD_PRIMARY_ARRAY=cdw~cdw~5432~/gpdata/coordinator/gpseg<b>-1</b>~1~<b>-1</b>
 declare -a PRIMARY_ARRAY=(
 sdw1~sdw1~40000~/gpdata/data1/gpseg0~2~0
 sdw1~sdw1~40001~/gpdata/data2/gpseg1~3~1
@@ -530,7 +530,7 @@ sdw1~sdw1~50001~/gpdata/mirror2/gpseg3~9~3
                         >HBA_HOSTNAMES</xref>=1</codeph> to add hostnames to the file.</p>
             <p>Greenplum Database uses the <codeph>address</codeph> value of the
                     <codeph>gp_segment_configuration</codeph> catalog table when looking up host
-                systems for Greenplum interconnect (internal) communication between the master and
+                systems for Greenplum interconnect (internal) communication between the coordinator and
                 segment instances and between segment instances, and for other internal
                 communication.</p>
         </section>
@@ -542,13 +542,13 @@ sdw1~sdw1~50001~/gpdata/mirror2/gpseg3~9~3
             <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem --mirror-mode=spread</codeblock>
             <p>Initialize a Greenplum Database system and set the superuser remote password:</p>
             <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem --su-password=mypassword</codeblock>
-            <p>Initialize a Greenplum Database system with an optional standby master host:</p>
+            <p>Initialize a Greenplum Database system with an optional standby coordinator host:</p>
             <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem -s host09</codeblock>
             <p>Initialize a Greenplum Database system and write the provided configuration to an
                 output file, for example <codeph>cluster_init.config</codeph>:</p>
             <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem -O cluster_init.config</codeblock>
             <p>The output file uses the <codeph>QD_PRIMARY_ARRAY</codeph> and
-                    <codeph>PRIMARY_ARRAY</codeph> parameters to define master and segment
+                    <codeph>PRIMARY_ARRAY</codeph> parameters to define coordinator and segment
                 hosts:</p>
             <codeblock>ARRAY_NAME="Greenplum Data Platform"
 TRUSTED_SHELL=ssh
@@ -557,12 +557,12 @@ ENCODING=UNICODE
 SEG_PREFIX=gpseg
 HEAP_CHECKSUM=on
 HBA_HOSTNAMES=0
-QD_PRIMARY_ARRAY=mdw~mwd.local~5433~/data/master1/gpseg-1~1~-1
+QD_PRIMARY_ARRAY=cdw~cdw.local~5433~/data/coordinator1/gpseg-1~1~-1
 declare -a PRIMARY_ARRAY=(
-mwd~mwd.local~6001~/data/primary1/gpseg0~2~0
+cdw~cdw.local~6001~/data/primary1/gpseg0~2~0
 )
 declare -a MIRROR_ARRAY=(
-mwd~mwd.local~7001~/data/mirror1/gpseg0~3~0
+cdw~cdw.local~7001~/data/mirror1/gpseg0~3~0
 )</codeblock>
             <p>Initialize a Greenplum Database using an input configuration file (a file that
                 defines the Greenplum Database cluster) using <codeph>QD_PRIMARY_ARRAY</codeph> and
@@ -576,16 +576,16 @@ mwd~mwd.local~7001~/data/mirror1/gpseg0~3~0
                 ensure that the Greenplum system configuration supports failover if a host system
                 fails. For information about Greenplum Database mirroring schemes, see <xref
                     href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/>.</p>
-            <p>For this simple master and segment instance configuration, the host system
+            <p>For this simple coordinator and segment instance configuration, the host system
                     <codeph>gp6m</codeph> is configured with two NICs <codeph>gp6m-1</codeph> and
                     <codeph>gp6m-2</codeph>. In the configuration, the <codeph><xref
                         href="#topic1/array_params" format="dita">QD_PRIMARY_ARRAY</xref></codeph>
-                parameter defines the master segment using <codeph>gp6m-1</codeph>. The
+                parameter defines the coordinator segment using <codeph>gp6m-1</codeph>. The
                         <codeph><xref href="#topic1/array_params" format="dita"
                     >PRIMARY_ARRAY</xref></codeph> and <codeph><xref href="#topic1/array_params"
                         format="dita">MIRROR_ARRAY</xref></codeph> parameters use
                     <codeph>gp6m-2</codeph> to define a primary and mirror segment instance.
-                <codeblock>QD_PRIMARY_ARRAY=gp6m~<b>gp6m-1</b>~5432~/data/master/gpseg-1~1~-1
+                <codeblock>QD_PRIMARY_ARRAY=gp6m~<b>gp6m-1</b>~5432~/data/coordinator/gpseg-1~1~-1
 declare -a PRIMARY_ARRAY=(
 gp6m~<b>gp6m-2</b>~40000~/data/data1/gpseg0~2~0
 gp6s~gp6s~40000~/data/data1/gpseg1~3~1

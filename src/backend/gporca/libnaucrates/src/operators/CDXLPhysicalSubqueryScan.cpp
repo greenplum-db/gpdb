@@ -149,7 +149,7 @@ CDXLPhysicalSubqueryScan::AssertValid(const CDXLNode *dxlnode,
 	}
 
 	// assert validity of table descriptor
-	GPOS_ASSERT(NULL != m_mdname_alias);
+	GPOS_ASSERT(nullptr != m_mdname_alias);
 	GPOS_ASSERT(m_mdname_alias->GetMDName()->IsValid());
 }
 #endif	// GPOS_DEBUG

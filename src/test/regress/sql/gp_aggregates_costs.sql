@@ -2,6 +2,8 @@ create table cost_agg_t1(a int, b int, c int);
 insert into cost_agg_t1 select i, random() * 99999, i % 2000 from generate_series(1, 1000000) i;
 create table cost_agg_t2 as select * from cost_agg_t1 with no data;
 insert into cost_agg_t2 select i, random() * 99999, i % 300000 from generate_series(1, 1000000) i;
+analyze cost_agg_t1;
+analyze cost_agg_t2;
 
 --
 -- Test planner's decisions on aggregates when only little memory is available.
@@ -31,3 +33,17 @@ explain select avg(b) from cost_agg_t2 group by c;
 drop table cost_agg_t1;
 drop table cost_agg_t2;
 reset statement_mem;
+
+-- The following case is to test GUC gp_eager_two_phase_agg for planner
+-- When it is set true, planner will choose two stage agg.
+create table t_planner_force_multi_stage(a int, b int) distributed randomly;
+analyze t_planner_force_multi_stage;
+show gp_eager_two_phase_agg;
+-- the GUC gp_eager_two_phase_agg is default false, the table contains no data
+-- so one stage agg will win.
+explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b;
+set gp_eager_two_phase_agg = on;
+-- when forcing two stage, it should generate two stage agg plan.
+explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b;
+reset gp_eager_two_phase_agg;
+drop table t_planner_force_multi_stage;

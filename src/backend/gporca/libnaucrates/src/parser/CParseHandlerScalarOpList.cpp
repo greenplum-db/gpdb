@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal, Inc.
+//	Copyright (C) 2014 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //		CParseHandlerScalarOpList.cpp
@@ -18,11 +18,10 @@
 
 #include "naucrates/dxl/parser/CParseHandlerScalarOpList.h"
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLScalarOpList.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 
 using namespace gpdxl;
@@ -62,7 +61,7 @@ CParseHandlerScalarOpList::StartElement(const XMLCh *const element_uri,
 {
 	CDXLScalarOpList::EdxlOpListType dxl_op_list_type =
 		GetDXLOpListType(element_local_name);
-	if (NULL == m_dxl_node &&
+	if (nullptr == m_dxl_node &&
 		CDXLScalarOpList::EdxloplistSentinel > dxl_op_list_type)
 	{
 		// create the list
@@ -73,7 +72,7 @@ CParseHandlerScalarOpList::StartElement(const XMLCh *const element_uri,
 	else
 	{
 		// we must have already initialized the list node
-		GPOS_ASSERT(NULL != m_dxl_node);
+		GPOS_ASSERT(nullptr != m_dxl_node);
 
 		// parse scalar child
 		CParseHandlerBase *child_parse_handler =

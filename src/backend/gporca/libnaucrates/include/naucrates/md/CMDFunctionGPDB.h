@@ -15,8 +15,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDFunction.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/IMDFunction.h"
 
 namespace gpmd
 {
@@ -88,10 +88,9 @@ private:
 	// initialize dxl token arrays
 	void InitDXLTokenArrays();
 
-	// private copy ctor
-	CMDFunctionGPDB(const CMDFunctionGPDB &);
-
 public:
+	CMDFunctionGPDB(const CMDFunctionGPDB &) = delete;
+
 	// ctor/dtor
 	CMDFunctionGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 					IMDId *result_type_mdid, IMdIdArray *mdid_array,
@@ -99,70 +98,70 @@ public:
 					EFuncDataAcc func_data_access, BOOL is_strict,
 					BOOL is_ndv_preserving, BOOL is_allowed_for_PS);
 
-	virtual ~CMDFunctionGPDB();
+	~CMDFunctionGPDB() override;
 
 	// accessors
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// function id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// function name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// result type
-	virtual IMDId *GetResultTypeMdid() const;
+	IMDId *GetResultTypeMdid() const override;
 
 	// output argument types
-	virtual IMdIdArray *OutputArgTypesMdidArray() const;
+	IMdIdArray *OutputArgTypesMdidArray() const override;
 
 	// does function return NULL on NULL input
-	virtual BOOL
-	IsStrict() const
+	BOOL
+	IsStrict() const override
 	{
 		return m_is_strict;
 	}
 
-	virtual BOOL
-	IsNDVPreserving() const
+	BOOL
+	IsNDVPreserving() const override
 	{
 		return m_is_ndv_preserving;
 	}
 
 	// is this function a lossy cast allowed for Partition selection
-	virtual BOOL
-	IsAllowedForPS() const
+	BOOL
+	IsAllowedForPS() const override
 	{
 		return m_is_allowed_for_PS;
 	}
 
 	// function stability
-	virtual EFuncStbl
-	GetFuncStability() const
+	EFuncStbl
+	GetFuncStability() const override
 	{
 		return m_func_stability;
 	}
 
 	// function data access
-	virtual EFuncDataAcc
-	GetFuncDataAccess() const
+	EFuncDataAcc
+	GetFuncDataAccess() const override
 	{
 		return m_func_data_access;
 	}
 
 	// does function return a set of values
-	virtual BOOL ReturnsSet() const;
+	BOOL ReturnsSet() const override;
 
 	// serialize object in DXL format
-	virtual void Serialize(gpdxl::CXMLSerializer *xml_serializer) const;
+	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the type in the provided stream
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

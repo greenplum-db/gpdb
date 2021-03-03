@@ -12,9 +12,9 @@
 #define GPOS_CAutoTraceFlag_H
 
 #include "gpos/base.h"
+#include "gpos/common/CStackObject.h"
 #include "gpos/task/ITask.h"
 #include "gpos/task/traceflags.h"
-#include "gpos/common/CStackObject.h"
 
 
 namespace gpos
@@ -36,10 +36,9 @@ private:
 	// original value
 	BOOL m_orig;
 
-	// no copy ctor
-	CAutoTraceFlag(const CAutoTraceFlag &);
-
 public:
+	CAutoTraceFlag(const CAutoTraceFlag &) = delete;
+
 	// ctor
 	CAutoTraceFlag(ULONG trace, BOOL orig);
 

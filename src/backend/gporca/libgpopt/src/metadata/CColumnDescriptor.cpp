@@ -9,8 +9,10 @@
 //		Column abstraction for tables, functions, external tables etc.
 //---------------------------------------------------------------------------
 
-#include "gpos/base.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
+
+#include "gpos/base.h"
+
 #include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpopt;
@@ -35,7 +37,7 @@ CColumnDescriptor::CColumnDescriptor(CMemoryPool *mp, const IMDType *pmdtype,
 	  m_width(ulWidth),
 	  m_is_dist_col(false)
 {
-	GPOS_ASSERT(NULL != pmdtype);
+	GPOS_ASSERT(nullptr != pmdtype);
 	GPOS_ASSERT(pmdtype->MDId()->IsValid());
 
 	if (m_pmdtype->IsFixedLength())
@@ -52,9 +54,7 @@ CColumnDescriptor::CColumnDescriptor(CMemoryPool *mp, const IMDType *pmdtype,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CColumnDescriptor::~CColumnDescriptor()
-{
-}
+CColumnDescriptor::~CColumnDescriptor() = default;
 
 //---------------------------------------------------------------------------
 //	@function:

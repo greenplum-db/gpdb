@@ -11,12 +11,11 @@
 
 #include "naucrates/dxl/parser/CParseHandlerLogicalGet.h"
 
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
-
 #include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+#include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
 
 using namespace gpdxl;
 
@@ -114,7 +113,7 @@ CParseHandlerLogicalGet::EndElement(const XMLCh *const element_local_name,
 	CParseHandlerTableDescr *table_descr_parse_handler =
 		dynamic_cast<CParseHandlerTableDescr *>((*this)[0]);
 
-	GPOS_ASSERT(NULL != table_descr_parse_handler->GetDXLTableDescr());
+	GPOS_ASSERT(nullptr != table_descr_parse_handler->GetDXLTableDescr());
 
 	CDXLTableDescr *table_descr = table_descr_parse_handler->GetDXLTableDescr();
 	table_descr->AddRef();

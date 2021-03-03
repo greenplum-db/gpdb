@@ -9,15 +9,15 @@
 //		Implementation of select over a table to an index get transformation
 //---------------------------------------------------------------------------
 
+#include "gpopt/xforms/CXformSelect2IndexGet.h"
+
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/xforms/CXformSelect2IndexGet.h"
 #include "gpopt/xforms/CXformUtils.h"
-
-#include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDIndexGPDB.h"
+#include "naucrates/md/CMDRelationGPDB.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -74,7 +74,7 @@ void
 CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								 CExpression *pexpr) const
 {
-	GPOS_ASSERT(NULL != pxfctxt);
+	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
@@ -116,10 +116,8 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
 		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
-			pcrsReqd, pcrsScalarExpr, NULL /*outer_refs*/, pmdindex, pmdrel,
-			false /*fAllowPartialIndex*/, NULL /*ppartcnstrIndex*/
-		);
-		if (NULL != pexprIndexGet)
+			pcrsReqd, pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel);
+		if (nullptr != pexprIndexGet)
 		{
 			pxfres->Add(pexprIndexGet);
 		}

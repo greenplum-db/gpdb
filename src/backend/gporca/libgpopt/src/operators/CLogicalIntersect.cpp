@@ -9,14 +9,15 @@
 //		Implementation of Intersect operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CLogicalIntersect.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/CLogicalIntersect.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CLogicalIntersectAll.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/CLogicalIntersectAll.h"
 
 using namespace gpopt;
 
@@ -56,9 +57,7 @@ CLogicalIntersect::CLogicalIntersect(CMemoryPool *mp,
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CLogicalIntersect::~CLogicalIntersect()
-{
-}
+CLogicalIntersect::~CLogicalIntersect() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -164,7 +163,7 @@ CLogicalIntersect::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		mp, pstatsIntersectAll,
 		(*m_pdrgpdrgpcrInput)[0],  // we group by the columns of the first child
 		pdrgpulComputedCols,	   // no computed columns for set ops
-		NULL					   // no keys, use all grouping cols
+		nullptr					   // no keys, use all grouping cols
 	);
 	// clean up
 	pdrgpulComputedCols->Release();

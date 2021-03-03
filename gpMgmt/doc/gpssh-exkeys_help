@@ -74,7 +74,7 @@ OPTIONS
 
  When doing a system expansion, this is the name and location of a file 
  containing all configured host names and host addresses (interface names) 
- for each host in your current Greenplum system (master, standby master 
+ for each host in your current Greenplum system (coordinator, standby coordinator 
  and segments), one name per line without blank lines or extra spaces. 
  Hosts specified in this file cannot be specified in the host file used 
  with -x. 
@@ -84,7 +84,7 @@ OPTIONS
 
  Specifies the name and location of a file containing all configured host 
  names and host addresses (interface names) for each host in your Greenplum 
- system (master, standby master and segments), one name per line without 
+ system (coordinator, standby coordinator and segments), one name per line without 
  blank lines or extra spaces.
 
 
@@ -133,12 +133,12 @@ Exchange SSH keys between existing hosts sdw1, sdw2 and sdw3, and new
 hosts sdw4 and sdw5 as part of a system expansion operation:
 
   $ cat hostfile_exkeys
-    mdw
-    mdw-1
-    mdw-2
-    smdw
-    smdw-1
-    smdw-2
+    cdw
+    cdw-1
+    cdw-2
+    scdw
+    scdw-1
+    scdw-2
     sdw1
     sdw1-1
     sdw1-2

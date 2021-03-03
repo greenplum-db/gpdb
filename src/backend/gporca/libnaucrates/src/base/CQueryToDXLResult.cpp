@@ -31,7 +31,7 @@ CQueryToDXLResult::CQueryToDXLResult(CDXLNode *query,
 	  m_query_output(query_output),
 	  m_cte_producers(cte_producers)
 {
-	GPOS_ASSERT(NULL != query);
+	GPOS_ASSERT(nullptr != query);
 }
 
 //---------------------------------------------------------------------------

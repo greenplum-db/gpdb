@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (c) 2004-2015 Pivotal Software, Inc.
+//	Copyright (c) 2004-2015 VMware, Inc. or its affiliates.
 //
 //	@filename:
 //	       	clibwrapper.h
@@ -18,9 +18,10 @@
 #define VA_ARG(vaList, type) va_arg(vaList, type)
 
 #include <unistd.h>
-#include "gpos/types.h"
+
 #include "gpos/attributes.h"
 #include "gpos/common/clibtypes.h"
+#include "gpos/types.h"
 
 namespace gpos
 {

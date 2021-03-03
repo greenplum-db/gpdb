@@ -11,8 +11,6 @@
 -- between primary and mirror is still alive and hence walreceiver
 -- also exist during promotion.
 
-include: helpers/server_helpers.sql;
-
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 -- stop a primary in order to trigger a mirror promotion
 select pg_ctl((select datadir from gp_segment_configuration c

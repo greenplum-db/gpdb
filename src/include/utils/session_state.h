@@ -3,7 +3,7 @@
  * session_state.h
  *	  This file contains declarations for session state information.
  *
- * Copyright (c) 2014-Present Pivotal Software, Inc.
+ * Copyright (c) 2014-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION

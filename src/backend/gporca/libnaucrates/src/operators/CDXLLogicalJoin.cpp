@@ -11,9 +11,10 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLLogicalJoin.h"
+
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -143,7 +144,7 @@ CDXLLogicalJoin::AssertValid(const CDXLNode *node, BOOL validate_children) const
 	}
 
 	CDXLNode *node_last_child = (*node)[num_of_child - 1];
-	GPOS_ASSERT(NULL != node_last_child);
+	GPOS_ASSERT(nullptr != node_last_child);
 
 	//The last child is a CDXLScalar operator representing the join qual
 	GPOS_ASSERT(EdxloptypeScalar ==

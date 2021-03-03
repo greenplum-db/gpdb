@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "naucrates/md/IMDProvider.h"
+
 #include "naucrates/md/CMDIdGPDB.h"
 
 using namespace gpmd;
@@ -52,7 +53,7 @@ IMDProvider::GetGPDBTypeMdid(CMemoryPool *mp,
 			return GPOS_NEW(mp) CMDIdGPDB(GPDB_OID);
 
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 

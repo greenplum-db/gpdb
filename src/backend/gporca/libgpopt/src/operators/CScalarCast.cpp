@@ -9,16 +9,14 @@
 //		Implementation of scalar relabel type  operator
 //---------------------------------------------------------------------------
 
+#include "gpopt/operators/CScalarCast.h"
+
 #include "gpos/base.h"
 
-#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
-
+#include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
-
-#include "gpopt/operators/CScalarCast.h"
 #include "gpopt/operators/CExpressionHandle.h"
-
 #include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;
@@ -42,7 +40,7 @@ CScalarCast::CScalarCast(CMemoryPool *mp, IMDId *return_type_mdid,
 	  m_returns_null_on_null_input(false),
 	  m_fBoolReturnType(false)
 {
-	if (NULL != m_func_mdid && m_func_mdid->IsValid())
+	if (nullptr != m_func_mdid && m_func_mdid->IsValid())
 	{
 		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 		const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);

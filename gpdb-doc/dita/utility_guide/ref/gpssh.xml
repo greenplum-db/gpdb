@@ -132,7 +132,7 @@
                     <codeph>ssh</codeph> connection. These parameters affect the network connection
                 before the <codeph>gpssh</codeph> session executes commands with
                     <codeph>ssh</codeph>. The location of the file is specified by the environment
-                variable <codeph>MASTER_DATA_DIRECTORY</codeph>. If the environment variable is not
+                variable <codeph>COORDINATOR_DATA_DIRECTORY</codeph>. If the environment variable is not
                 defined or the <codeph>gpssh.conf</codeph> file does not exist,
                     <codeph>gpssh</codeph> uses the default values or the values set with the
                     <codeph>-d</codeph> and <codeph>-t</codeph> options. For information about the

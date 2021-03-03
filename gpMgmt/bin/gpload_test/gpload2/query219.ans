@@ -1,0 +1,16 @@
+2021-01-05 17:01:19|INFO|gpload session started 2021-01-05 17:01:19
+2021-01-05 17:01:19|INFO|setting schema 'public' for table 'texttable2'
+2021-01-05 17:01:19|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2021-01-05 17:01:19|INFO|running time: 0.08 seconds
+2021-01-05 17:01:19|INFO|rows Inserted          = 5
+2021-01-05 17:01:19|INFO|rows Updated           = 0
+2021-01-05 17:01:19|INFO|data formatting errors = 0
+2021-01-05 17:01:19|INFO|gpload succeeded
+2021-01-05 17:01:19|INFO|gpload session started 2021-01-05 17:01:19
+2021-01-05 17:01:19|INFO|setting schema 'public' for table 'texttable2'
+2021-01-05 17:01:19|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2021-01-05 17:01:19|INFO|running time: 0.08 seconds
+2021-01-05 17:01:19|INFO|rows Inserted          = 5
+2021-01-05 17:01:19|INFO|rows Updated           = 0
+2021-01-05 17:01:19|INFO|data formatting errors = 0
+2021-01-05 17:01:19|INFO|gpload succeeded

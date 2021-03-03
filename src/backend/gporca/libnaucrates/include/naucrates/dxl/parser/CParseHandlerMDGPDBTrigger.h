@@ -13,9 +13,8 @@
 #define GPDXL_CParseHandlerMDGPDBTrigger_H
 
 #include "gpos/base.h"
+
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
-
-
 #include "naucrates/md/CMDTriggerGPDB.h"
 
 
@@ -55,25 +54,24 @@ private:
 	// is trigger enabled
 	BOOL m_is_enabled;
 
-	// private copy ctor
-	CParseHandlerMDGPDBTrigger(const CParseHandlerMDGPDBTrigger &);
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname,		// element's qname
 		const Attributes &attr					// element's attributes
-	);
+		) override;
 
 	// process the end of an element
 	void EndElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
 		const XMLCh *const element_local_name,	// local part of element's name
 		const XMLCh *const element_qname		// element's qname
-	);
+		) override;
 
 public:
+	CParseHandlerMDGPDBTrigger(const CParseHandlerMDGPDBTrigger &) = delete;
+
 	// ctor
 	CParseHandlerMDGPDBTrigger(CMemoryPool *mp,
 							   CParseHandlerManager *parse_handler_mgr,

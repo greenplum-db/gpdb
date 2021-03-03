@@ -14,6 +14,6 @@ include $(top_builddir)/src/Makefile.global
 
 OBJS = combocid.o snapmgr.o
 
-OBJS += sharedsnapshot.o visibility_summary.o
+OBJS += sharedsnapshot.o
 
 include $(top_srcdir)/src/backend/common.mk

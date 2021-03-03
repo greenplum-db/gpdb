@@ -22,8 +22,6 @@ namespace gpopt
 {
 using namespace gpos;
 
-class CPartitionPropagationSpec;
-
 //---------------------------------------------------------------------------
 //	@class:
 //		CEnfdDistribution
@@ -52,22 +50,21 @@ private:
 	// distribution matching type
 	EDistributionMatching m_edm;
 
-	// private copy ctor
-	CEnfdDistribution(const CEnfdDistribution &);
-
 	// names of distribution matching types
 	static const CHAR *m_szDistributionMatching[EdmSentinel];
 
 public:
+	CEnfdDistribution(const CEnfdDistribution &) = delete;
+
 	// ctor
 	CEnfdDistribution(CDistributionSpec *pds, EDistributionMatching edm);
 
 	// dtor
-	virtual ~CEnfdDistribution();
+	~CEnfdDistribution() override;
 
 	// distribution spec accessor
-	virtual CPropSpec *
-	Pps() const
+	CPropSpec *
+	Pps() const override
 	{
 		return m_pds;
 	}
@@ -83,13 +80,13 @@ public:
 	BOOL
 	Matches(CEnfdDistribution *ped)
 	{
-		GPOS_ASSERT(NULL != ped);
+		GPOS_ASSERT(nullptr != ped);
 
 		return m_edm == ped->Edm() && m_pds->Equals(ped->PdsRequired());
 	}
 
 	// hash function
-	virtual ULONG HashValue() const;
+	ULONG HashValue() const override;
 
 	// check if the given distribution specification is compatible with the
 	// distribution specification of this object for the specified matching type
@@ -104,11 +101,10 @@ public:
 
 	// get distribution enforcing type for the given operator
 	EPropEnforcingType Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
-							CPartitionPropagationSpec *pppsReqd,
 							BOOL fDistribReqd) const;
 
 	// print function
-	virtual IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 
 };	// class CEnfdDistribution
 

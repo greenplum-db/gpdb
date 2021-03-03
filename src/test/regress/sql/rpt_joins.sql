@@ -447,6 +447,8 @@ where f2 = 53;
 --
 create temp table t_5628 (c1 int, c2 int) distributed replicated;
 insert into t_5628 values (1,1), (2,2);
+set enable_indexscan to off;
+set enable_bitmapscan to off;
 explain (costs off) select max(c1) from pg_class left join t_5628 on true;
 select max(c1) from pg_class left join t_5628 on true;
 

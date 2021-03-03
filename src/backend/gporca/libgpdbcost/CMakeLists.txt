@@ -1,8 +1,8 @@
-# Copyright (c) 2015, Pivotal Software, Inc. All Rights Reserved.
+# Copyright (c) 2015, VMware, Inc. or its affiliates. All Rights Reserved.
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libgpopt/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libnaucrates/include)
+include_directories(${PROJECT_SOURCE_DIR}/libgpopt/include)
+include_directories(${PROJECT_SOURCE_DIR}/libnaucrates/include)
 # for the generated config.h file.
 include_directories(${PROJECT_BINARY_DIR}/libgpos/include/)
 

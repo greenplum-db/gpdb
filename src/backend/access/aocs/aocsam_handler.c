@@ -4,7 +4,7 @@
  *	  Append only columnar access methods handler
  *
  * Portions Copyright (c) 2009-2010, Greenplum Inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
  *
  * IDENTIFICATION
@@ -24,7 +24,7 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbaocsam.h"
@@ -77,7 +77,6 @@ typedef struct AOCSBitmapScanData
 	} bitmapScanDesc[2];
 
 	int	rs_cindex;	/* current tuple's index tbmres->offset or -1 */
-	int	rs_ntuples; /* how many tuples should fetch on the current block */
 } *AOCSBitmapScan;
 
 typedef struct AOCODMLState
@@ -435,10 +434,8 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 	found |= extractcolumns_from_node((Node *)qual, cols, natts);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: is this still true? varattno == 0 is checked inside
-	 * extractcolumns_from_node.
-	 *
-	 * In some cases (for example, count(*)), no columns are specified.
+	 * In some cases (for example, count(*)), targetlist and qual may be null,
+	 * extractcolumns_walker will return immediately, so no columns are specified.
 	 * We always scan the first column.
 	 */
 	if (!found)
@@ -922,21 +919,10 @@ aoco_relation_set_new_filenode(Relation rel,
 	SMgrRelation srel;
 
 	/*
-	 * Initialize to the minimum XID that could put tuples in the table. We
-	 * know that no xacts older than RecentXmin are still running, so that
-	 * will do.
+	 * Append-optimized tables do not contain transaction information in
+	 * tuples.
 	 */
-	*freezeXid = RecentXmin;
-
-	/*
-	 * Similarly, initialize the minimum Multixact to the first value that
-	 * could possibly be stored in tuples in the table.  Running transactions
-	 * could reuse values from their local cache, so we are careful to
-	 * consider all currently running multis.
-	 *
-	 * XXX this could be refined further, but is it worth the hassle?
-	 */
-	*minmulti = GetOldestMultiXactId();
+	*freezeXid = *minmulti = InvalidTransactionId;
 
 	/*
 	 * No special treatment is needed for new AO_ROW/COLUMN relation. Create
@@ -1716,31 +1702,25 @@ aoco_scan_bitmap_next_block(TableScanDesc scan,
 {
 	AOCSBitmapScan	aocsBitmapScan = (AOCSBitmapScan)scan;
 
-	/* If tbmres contains no tuples, continue. */
-	if (tbmres->ntuples == 0)
-		return false;
-
 	/* Make sure we never cross 15-bit offset number [MPP-24326] */
 	Assert(tbmres->ntuples <= INT16_MAX + 1);
 
 	/*
 	 * Start scanning from the beginning of the offsets array (or
 	 * at first "offset number" if it's a lossy page).
+	 * In nodeBitmapHeapscan.c's BitmapHeapNext. After call
+	 * `table_scan_bitmap_next_block` and return false, it doesn't
+	 * clean the tbmres. Then it'll call aoco_scan_bitmap_next_tuple
+	 * to try to get tuples from the skipped page, and it'll return false.
+	 * Althouth aoco_scan_bitmap_next_tuple works fine.
+	 * But it still be better to set these init value before return in case
+	 * of wrong init value.
 	 */
 	aocsBitmapScan->rs_cindex = 0;
 
-	/*
-	 * ntuples == -1 indicates a lossy page
-	 */
-	if (tbmres->ntuples == -1)
-	{
-		Assert(tbmres->recheck);
-		aocsBitmapScan->rs_ntuples = INT16_MAX + 1;
-	}
-	else
-	{
-		aocsBitmapScan->rs_ntuples = tbmres->ntuples;
-	}
+	/* If tbmres contains no tuples, continue. */
+	if (tbmres->ntuples == 0)
+		return false;
 
 	/*
 	 * which descriptor to be used for fetching the data
@@ -1760,6 +1740,7 @@ aoco_scan_bitmap_next_tuple(TableScanDesc scan,
 	OffsetNumber	pseudoOffset;
 	ItemPointerData	pseudoTid;
 	AOTupleId		aoTid;
+	int				numTuples;
 
 	aocoFetchDesc = aocsBitmapScan->bitmapScanDesc[aocsBitmapScan->whichDesc].bitmapFetch;
 	if (aocoFetchDesc == NULL)
@@ -1771,10 +1752,11 @@ aoco_scan_bitmap_next_tuple(TableScanDesc scan,
 		aocsBitmapScan->bitmapScanDesc[aocsBitmapScan->whichDesc].bitmapFetch = aocoFetchDesc;
 	}
 
-
 	ExecClearTuple(slot);
 
-	while (aocsBitmapScan->rs_cindex < aocsBitmapScan->rs_ntuples)
+	/* ntuples == -1 indicates a lossy page */
+	numTuples = (tbmres->ntuples == -1) ? INT16_MAX + 1 : tbmres->ntuples;
+	while (aocsBitmapScan->rs_cindex < numTuples)
 	{
 		/*
 		 * If it's a lossy page, iterate through all possible "offset numbers".
@@ -1851,7 +1833,7 @@ static const TableAmRoutine ao_column_methods = {
 	.slot_callbacks = aoco_slot_callbacks,
 
 	/*
-	 * GPDB_12_MERGE_FIXME: it is needed to extract the column information for
+	 * GPDB: it is needed to extract the column information for
 	 * scans before calling beginscan. This can not happen in beginscan because
 	 * the needed information is not available at that time. It is the caller's
 	 * responsibility to choose to call aoco_beginscan_extractcolumns or
@@ -1860,7 +1842,7 @@ static const TableAmRoutine ao_column_methods = {
 	.scan_begin_extractcolumns = aoco_beginscan_extractcolumns,
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Like above but for bitmap scans.
+	 * GPDB: Like above but for bitmap scans.
 	 */
 	.scan_begin_extractcolumns_bm = aoco_beginscan_extractcolumns_bm,
 

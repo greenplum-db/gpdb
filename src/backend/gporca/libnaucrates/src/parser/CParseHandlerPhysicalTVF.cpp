@@ -11,17 +11,17 @@
 //		functions
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerPhysicalTVF.h"
-#include "naucrates/dxl/parser/CParseHandlerProjList.h"
-#include "naucrates/dxl/parser/CParseHandlerProperties.h"
-#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
-#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLPhysicalTVF.h"
+#include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerProjList.h"
+#include "naucrates/dxl/parser/CParseHandlerProperties.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
+#include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 using namespace gpdxl;
 
@@ -39,9 +39,9 @@ CParseHandlerPhysicalTVF::CParseHandlerPhysicalTVF(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_func_mdid(NULL),
-	  m_return_type_mdid(NULL),
-	  m_pstr(NULL)
+	  m_func_mdid(nullptr),
+	  m_return_type_mdid(nullptr),
+	  m_pstr(nullptr)
 {
 }
 

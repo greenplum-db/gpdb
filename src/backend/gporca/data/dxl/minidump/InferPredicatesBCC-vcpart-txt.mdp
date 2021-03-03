@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-  create table infer_txt (a text);
-  insert into infer_txt select * from generate_series(1,1000);
-  analyze infer_txt;
-  CREATE TABLE infer_part_vc (id int, gender varchar(1)) 
+  create table infer_vc (a varchar);
+  insert into infer_vc select * from generate_series(1,1000);
+  analyze infer_vc;
+  CREATE TABLE infer_part (id int, gender varchar(1))
   DISTRIBUTED BY (id)
   PARTITION BY LIST (gender)
-  ( PARTITION girls VALUES ('F'), 
-    PARTITION boys VALUES ('M'), 
+  ( PARTITION girls VALUES ('F'),
+    PARTITION boys VALUES ('M'),
     DEFAULT PARTITION other );
-  insert into infer_part_vc select i, substring(i::varchar, 1, 1) from generate_series(1, 1000) i;
-  analyze infer_part_vc;
+  insert into infer_part select i, substring(i::varchar, 1, 1) from generate_series(1, 1000) i;
+  analyze infer_part;
   -- NOTE: Disable constant expression evaluation for now, should
   -- enable it when supported by MDP tests. For now, this is not
   -- really testing inferring predicates.
   set optimizer_enable_constant_expression_evaluation = off;
-  explain select * from infer_part_vc inner join infer_txt on (infer_part_vc.gender = infer_txt.a) and infer_txt.a = 'M';
+  explain select * from infer_part inner join infer_vc on (infer_part.gender = infer_vc.a) and infer_vc.a = 'M';
 
   Plan:
 
@@ -47,7 +47,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102074,102120,103001,103014,103015,103022,103027,104003,104004,104005,106000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:ColumnStatistics Mdid="1.40981.1.0.0" Name="a" Width="3.000000" NullFreq="0.000000" NdvRemain="1000.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

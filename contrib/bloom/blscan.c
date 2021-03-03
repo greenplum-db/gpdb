@@ -79,14 +79,32 @@ blendscan(IndexScanDesc scan)
  * Insert all matching tuples into a bitmap.
  */
 int64
-blgetbitmap(IndexScanDesc scan, TIDBitmap *tbm)
+blgetbitmap(IndexScanDesc scan, Node **bmNodeP)
 {
 	int64		ntids = 0;
 	BlockNumber blkno = BLOOM_HEAD_BLKNO,
 				npages;
 	int			i;
+	TIDBitmap  *tbm;
 	BufferAccessStrategy bas;
 	BloomScanOpaque so = (BloomScanOpaque) scan->opaque;
+
+	/*
+	 * GPDB specific code. Since GPDB also support StreamBitmap
+	 * in bitmap index. So normally we need to create specific bitmap
+	 * node in the amgetbitmap AM.
+	 */
+	Assert(bmNodeP);
+	if (*bmNodeP == NULL)
+	{
+		/* XXX should we use less than work_mem for this? */
+		tbm = tbm_create(work_mem * 1024L, NULL);
+		*bmNodeP = (Node *) tbm;
+	}
+	else if (!IsA(*bmNodeP, TIDBitmap))
+		elog(ERROR, "non bloom bitmap");
+	else
+		tbm = (TIDBitmap *)*bmNodeP;
 
 	if (so->sign == NULL)
 	{

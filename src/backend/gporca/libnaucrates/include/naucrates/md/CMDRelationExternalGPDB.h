@@ -15,10 +15,10 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "naucrates/md/IMDRelationExternal.h"
-#include "naucrates/md/IMDColumn.h"
 #include "naucrates/md/CMDColumn.h"
 #include "naucrates/md/CMDName.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDRelationExternal.h"
 
 namespace gpdxl
 {
@@ -126,101 +126,101 @@ public:
 		BOOL is_reject_limit_in_rows, IMDId *mdid_fmt_err_table);
 
 	// dtor
-	virtual ~CMDRelationExternalGPDB();
+	~CMDRelationExternalGPDB() override;
 
 	// accessors
-	virtual const CWStringDynamic *
-	GetStrRepr() const
+	const CWStringDynamic *
+	GetStrRepr() const override
 	{
 		return m_dxl_str;
 	}
 
 	// the metadata id
-	virtual IMDId *MDId() const;
+	IMDId *MDId() const override;
 
 	// relation name
-	virtual CMDName Mdname() const;
+	CMDName Mdname() const override;
 
 	// distribution policy (none, hash, random)
-	virtual Ereldistrpolicy GetRelDistribution() const;
+	Ereldistrpolicy GetRelDistribution() const override;
 
 	// number of columns
-	virtual ULONG ColumnCount() const;
+	ULONG ColumnCount() const override;
 
 	// width of a column with regards to the position
-	virtual DOUBLE ColWidth(ULONG pos) const;
+	DOUBLE ColWidth(ULONG pos) const override;
 
 	// does relation have dropped columns
-	virtual BOOL HasDroppedColumns() const;
+	BOOL HasDroppedColumns() const override;
 
 	// number of non-dropped columns
-	virtual ULONG NonDroppedColsCount() const;
+	ULONG NonDroppedColsCount() const override;
 
 	// return the original positions of all the non-dropped columns
-	virtual ULongPtrArray *NonDroppedColsArray() const;
+	ULongPtrArray *NonDroppedColsArray() const override;
 
 	// number of system columns
-	virtual ULONG SystemColumnsCount() const;
+	ULONG SystemColumnsCount() const override;
 
 	// return true if a hash distributed table needs to be considered as random
-	virtual BOOL ConvertHashToRandom() const;
+	BOOL ConvertHashToRandom() const override;
 
 	// reject limit
-	virtual INT RejectLimit() const;
+	INT RejectLimit() const override;
 
 	// reject limit in rows?
-	virtual BOOL IsRejectLimitInRows() const;
+	BOOL IsRejectLimitInRows() const override;
 
 	// format error table mdid
-	virtual IMDId *GetFormatErrTableMdid() const;
+	IMDId *GetFormatErrTableMdid() const override;
 
 	// retrieve the column at the given position
-	virtual const IMDColumn *GetMdCol(ULONG pos) const;
+	const IMDColumn *GetMdCol(ULONG pos) const override;
 
 	// number of key sets
-	virtual ULONG KeySetCount() const;
+	ULONG KeySetCount() const override;
 
 	// key set at given position
-	virtual const ULongPtrArray *KeySetAt(ULONG pos) const;
+	const ULongPtrArray *KeySetAt(ULONG pos) const override;
 
 	// number of distribution columns
-	virtual ULONG DistrColumnCount() const;
+	ULONG DistrColumnCount() const override;
 
 	// retrieve the column at the given position in the distribution columns list for the relation
-	virtual const IMDColumn *GetDistrColAt(ULONG pos) const;
+	const IMDColumn *GetDistrColAt(ULONG pos) const override;
 
-	virtual IMDId *GetDistrOpfamilyAt(ULONG pos) const;
+	IMDId *GetDistrOpfamilyAt(ULONG pos) const override;
 
 	// number of indices
-	virtual ULONG IndexCount() const;
+	ULONG IndexCount() const override;
 
 	// number of triggers
-	virtual ULONG TriggerCount() const;
+	ULONG TriggerCount() const override;
 
 	// return the absolute position of the given attribute position excluding dropped columns
-	virtual ULONG NonDroppedColAt(ULONG pos) const;
+	ULONG NonDroppedColAt(ULONG pos) const override;
 
 	// return the position of a column in the metadata object given the attribute number in the system catalog
-	virtual ULONG GetPosFromAttno(INT attno) const;
+	ULONG GetPosFromAttno(INT attno) const override;
 
 	// retrieve the id of the metadata cache index at the given position
-	virtual IMDId *IndexMDidAt(ULONG pos) const;
+	IMDId *IndexMDidAt(ULONG pos) const override;
 
 	// retrieve the id of the metadata cache trigger at the given position
-	virtual IMDId *TriggerMDidAt(ULONG pos) const;
+	IMDId *TriggerMDidAt(ULONG pos) const override;
 
 	// serialize metadata relation in DXL format given a serializer object
-	virtual void Serialize(gpdxl::CXMLSerializer *) const;
+	void Serialize(gpdxl::CXMLSerializer *) const override;
 
 	// number of check constraints
-	virtual ULONG CheckConstraintCount() const;
+	ULONG CheckConstraintCount() const override;
 
 	// retrieve the id of the check constraint cache at the given position
-	virtual IMDId *CheckConstraintMDidAt(ULONG pos) const;
+	IMDId *CheckConstraintMDidAt(ULONG pos) const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation
-	virtual void DebugPrint(IOstream &os) const;
+	void DebugPrint(IOstream &os) const override;
 #endif
 };
 }  // namespace gpmd

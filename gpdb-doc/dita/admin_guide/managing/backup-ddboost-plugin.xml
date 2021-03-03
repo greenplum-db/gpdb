@@ -3,7 +3,7 @@
 <topic id="topic_ddb-plugin" otherprops="pivotal">
   <title>Using the DD Boost Storage Plugin with gpbackup, gprestore, and gpbackup_manager</title>
   <body>
-    <note>The DD Boost storage plugin is available in the commercial release of Pivotal Greenplum
+    <note>The DD Boost storage plugin is available in the commercial release of Tanzu Greenplum
       Backup and Restore.</note>
     <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
           <codeph><xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref></codeph> and
@@ -54,7 +54,7 @@
       <parml id="ddb-exe-path">
         <plentry id="plugin-exe">
           <pt>executablepath</pt>
-          <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
+          <pd>Required. Absolute path to the plugin executable. For example, the Greenplum
             Database installation location is <codeph>$GPHOME/bin/gpbackup_ddboost_plugin</codeph>.
             The plugin must be in the same location on every Greenplum Database host.</pd>
         </plentry>
@@ -231,7 +231,7 @@ options:
     </section>
     <section id="ddboost_notes">
       <title>Notes</title>
-      <p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database and requires a DD Boost
+      <p>Dell EMC DD Boost is integrated with Tanzu Greenplum and requires a DD Boost
         license. Open source Greenplum Database cannot use the DD Boost software, but can back up to
         a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment
         hosts.</p>

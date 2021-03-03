@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2014 Pivotal Inc..
+//	Copyright (C) 2014 VMware, Inc. or its affiliates..
 //
 //	@filename:
 //		CXformImplementLeftAntiSemiCorrelatedApply.h
@@ -13,6 +13,7 @@
 #define GPOPT_CXformImplementLeftAntiSemiCorrelatedApply_H
 
 #include "gpos/base.h"
+
 #include "gpopt/operators/CLogicalLeftAntiSemiCorrelatedApply.h"
 #include "gpopt/operators/CPhysicalCorrelatedLeftAntiSemiNLJoin.h"
 #include "gpopt/xforms/CXformImplementCorrelatedApply.h"
@@ -36,11 +37,10 @@ class CXformImplementLeftAntiSemiCorrelatedApply
 		  CPhysicalCorrelatedLeftAntiSemiNLJoin>
 {
 private:
-	// private copy ctor
-	CXformImplementLeftAntiSemiCorrelatedApply(
-		const CXformImplementLeftAntiSemiCorrelatedApply &);
-
 public:
+	CXformImplementLeftAntiSemiCorrelatedApply(
+		const CXformImplementLeftAntiSemiCorrelatedApply &) = delete;
+
 	// ctor
 	explicit CXformImplementLeftAntiSemiCorrelatedApply(CMemoryPool *mp)
 		: CXformImplementCorrelatedApply<CLogicalLeftAntiSemiCorrelatedApply,
@@ -50,19 +50,17 @@ public:
 	}
 
 	// dtor
-	virtual ~CXformImplementLeftAntiSemiCorrelatedApply()
-	{
-	}
+	~CXformImplementLeftAntiSemiCorrelatedApply() override = default;
 
 	// ident accessors
-	virtual EXformId
-	Exfid() const
+	EXformId
+	Exfid() const override
 	{
 		return ExfImplementLeftAntiSemiCorrelatedApply;
 	}
 
-	virtual const CHAR *
-	SzId() const
+	const CHAR *
+	SzId() const override
 	{
 		return "CXformImplementLeftAntiSemiCorrelatedApply";
 	}

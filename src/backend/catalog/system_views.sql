@@ -2,7 +2,7 @@
  * PostgreSQL System Views
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  * Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  * src/backend/catalog/system_views.sql
@@ -587,7 +587,7 @@ CREATE VIEW pg_stat_all_tables_internal AS
     WHERE C.relkind IN ('r', 't', 'm')
     GROUP BY C.oid, N.nspname, C.relname;
 
--- Gather data from segments on user tables, and use data on master on system tables.
+-- Gather data from segments on user tables, and use data on coordinator on system tables.
 
 CREATE VIEW pg_stat_all_tables AS
 SELECT
@@ -618,17 +618,17 @@ FROM
          relid,
          schemaname,
          relname,
-         sum(seq_scan) as seq_scan,
-         sum(seq_tup_read) as seq_tup_read,
-         sum(idx_scan) as idx_scan,
-         sum(idx_tup_fetch) as idx_tup_fetch,
-         sum(n_tup_ins) as n_tup_ins,
-         sum(n_tup_upd) as n_tup_upd,
-         sum(n_tup_del) as n_tup_del,
-         sum(n_tup_hot_upd) as n_tup_hot_upd,
-         sum(n_live_tup) as n_live_tup,
-         sum(n_dead_tup) as n_dead_tup,
-         max(n_mod_since_analyze) as n_mod_since_analyze,
+         case when d.policytype = 'r' then (sum(seq_scan)/d.numsegments)::bigint else sum(seq_scan) end seq_scan,
+         case when d.policytype = 'r' then (sum(seq_tup_read)/d.numsegments)::bigint else sum(seq_tup_read) end seq_tup_read,
+         case when d.policytype = 'r' then (sum(idx_scan)/d.numsegments)::bigint else sum(idx_scan) end idx_scan,
+         case when d.policytype = 'r' then (sum(idx_tup_fetch)/d.numsegments)::bigint else sum(idx_tup_fetch) end idx_tup_fetch,
+         case when d.policytype = 'r' then (sum(n_tup_ins)/d.numsegments)::bigint else sum(n_tup_ins) end n_tup_ins,
+         case when d.policytype = 'r' then (sum(n_tup_upd)/d.numsegments)::bigint else sum(n_tup_upd) end n_tup_upd,
+         case when d.policytype = 'r' then (sum(n_tup_del)/d.numsegments)::bigint else sum(n_tup_del) end n_tup_del,
+         case when d.policytype = 'r' then (sum(n_tup_hot_upd)/d.numsegments)::bigint else sum(n_tup_hot_upd) end n_tup_hot_upd,
+         case when d.policytype = 'r' then (sum(n_live_tup)/d.numsegments)::bigint else sum(n_live_tup) end n_live_tup,
+         case when d.policytype = 'r' then (sum(n_dead_tup)/d.numsegments)::bigint else sum(n_dead_tup) end n_dead_tup,
+         case when d.policytype = 'r' then (sum(n_mod_since_analyze)/d.numsegments)::bigint else sum(n_mod_since_analyze) end n_mod_since_analyze,
          max(last_vacuum) as last_vacuum,
          max(last_autovacuum) as last_autovacuum,
          max(last_analyze) as last_analyze,
@@ -638,10 +638,10 @@ FROM
          max(analyze_count) as analyze_count,
          max(autoanalyze_count) as autoanalyze_count
      FROM
-         gp_dist_random('pg_stat_all_tables_internal')
+         gp_dist_random('pg_stat_all_tables_internal'), gp_distribution_policy as d
      WHERE
-             relid >= 16384
-     GROUP BY relid, schemaname, relname
+             relid >= 16384 and relid = d.localoid
+     GROUP BY relid, schemaname, relname, d.policytype, d.numsegments
 
      UNION ALL
 
@@ -744,7 +744,7 @@ CREATE VIEW pg_stat_all_indexes_internal AS
             LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm');
 
--- Gather data from segments on user tables, and use data on master on system tables.
+-- Gather data from segments on user tables, and use data on coordinator on system tables.
 
 CREATE VIEW pg_stat_all_indexes AS
 SELECT
@@ -1628,7 +1628,26 @@ AS
   'SELECT * FROM pg_catalog.gp_tablespace_segment_location($1)
    UNION ALL
    SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
-LANGUAGE SQL EXECUTE ON MASTER;
+LANGUAGE SQL EXECUTE ON COORDINATOR;
+
+-- pg_switch_wal wrapper functions to switch WAL segment files on Greenplum cluster-wide
+CREATE FUNCTION gp_switch_wal_on_all_segments (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
+AS 'SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
+LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
+
+CREATE FUNCTION gp_switch_wal (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
+RETURNS SETOF RECORD
+AS
+  'SELECT * FROM pg_catalog.gp_switch_wal_on_all_segments()
+   UNION ALL
+   SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
+LANGUAGE SQL EXECUTE ON COORDINATOR;
+
+COMMENT ON FUNCTION pg_catalog.gp_switch_wal_on_all_segments() IS 'Switch WAL segment files on all primary segments';
+COMMENT ON FUNCTION pg_catalog.gp_switch_wal() IS 'Switch WAL segment files on all segments';
+
+REVOKE EXECUTE ON FUNCTION gp_switch_wal_on_all_segments() FROM public;
+REVOKE EXECUTE ON FUNCTION gp_switch_wal() FROM public;
 
 CREATE OR REPLACE FUNCTION
   parse_ident(str text, strict boolean DEFAULT true)
@@ -1756,4 +1775,4 @@ $$
   -- brin_summarize_new_values_internal is marked as EXECUTE ON ALL SEGMENTS.
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
-LANGUAGE sql READS SQL DATA EXECUTE ON MASTER;
+LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;

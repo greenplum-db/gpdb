@@ -24,7 +24,7 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -313,7 +313,7 @@
                 </dxl:Cast>
                 <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAD3l5eXktbW1tLWRk" LintValue="2057460884"/>
               </dxl:FuncExpr>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" DoubleValue="623203200000000.000000"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" LintValue="7213"/>
             </dxl:Comparison>
           </dxl:And>
           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
@@ -482,7 +482,7 @@
                       </dxl:Cast>
                       <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAD3l5eXktbW1tLWRk" LintValue="2057460884"/>
                     </dxl:FuncExpr>
-                    <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" DoubleValue="623203200000000.000000"/>
+                    <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" LintValue="7213"/>
                   </dxl:Comparison>
                 </dxl:And>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
