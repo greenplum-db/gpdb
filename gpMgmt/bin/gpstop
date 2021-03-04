@@ -99,6 +99,7 @@ class GpStop:
         self.quiet = quiet
         self.pid = 0
         self.coordinatoronly = coordinatoronly
+        self.monitor = gp.MonitorNode.fromEnv()
         self.sighup = sighup
         self.interactive = interactive
         self.stopstandby = stopstandby
@@ -198,8 +199,11 @@ class GpStop:
                     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
                     if self.onlyThisHost is None:
-                        self._stop_coordinator()
-                        self._stop_standby()
+                        if self.monitor is None:
+                            self._stop_coordinator()
+                            self._stop_standby()
+                        else:
+                            self._stop_CMS()
                     self._stop_segments(segs)
                 finally:
                     # Reenable Ctrl-C
@@ -238,6 +242,20 @@ class GpStop:
         return 0
 
     ######
+    def _stop_CMS(self):
+        assert self.monitor is not None
+        self._stop_caf_node(self.monitor.host, self.monitor.datadir)
+        m = self.gparray.coordinator
+        assert m is not None
+        self._stop_caf_node(m.getSegmentHostName(), m.getSegmentDataDirectory())
+        s = self.gparray.standbyCoordinator
+        if s is not None:
+            self._stop_caf_node(s.getSegmentHostName(), s.getSegmentDataDirectory())
+    def _stop_caf_node(self, host, pgdata):
+        cmd = gp.PgautoctlCommand('stop', host, pgdata)
+        cmd.run(validateAfter=False)
+
+    #########################
     def cleanup(self):
         if self.pool:
             self.pool.haltWork()

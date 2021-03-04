@@ -6,6 +6,7 @@
 # THIS IMPORT MUST COME FIRST
 #
 # import mainUtils FIRST to get python version check
+import logging
 import sys
 from optparse import OptionGroup, SUPPRESS_HELP
 
@@ -64,6 +65,8 @@ class GpStart:
         self.quiet = quiet
         self.coordinatoronly = coordinatoronly
         self.coordinator_datadir = coordinator_datadir
+        self.coordinator_host = 'localhost'
+        self.monitor = gp.MonitorNode.fromEnv()
         self.interactive = interactive
         self.timeout = timeout
         self.wrapper = wrapper
@@ -83,6 +86,7 @@ class GpStart:
         self.dburl = None
         self.max_connections = None
         logger.debug("Setting level of parallelism to: %d" % self.parallel)
+        logger.debug("Monitor: %s" % self.monitor)
 
     ######
     def run(self):
@@ -172,6 +176,44 @@ class GpStart:
 
             # ------------------------------- Internal Helper --------------------------------
 
+    def _start_pgautoctl_node(self, host, pgdata, pmstatus):
+        logger.info("start pg_autoctl for %s - %s, expected pmstatus=%s" % (host, pgdata, pmstatus))
+        cmd = gp.PgautoctlCommand('start', host, pgdata)
+        cmd.run(validateAfter=True)
+        gp.wait_for_server_ready(host, pgdata, pmstatus)
+
+    def _start_pgautoctl_nodes(self):
+        gp_coordinator = self.gparray.coordinator
+        gp_standby = self.gparray.standbyCoordinator
+        logger.info("coordinator node %s" % (gp_coordinator))
+        logger.info("standby node %s" % (gp_standby))
+        coordinator_OK, standby_OK = False, False
+        assert gp_coordinator is not None
+        self._start_pgautoctl_node(gp_coordinator.getSegmentHostName(), gp_coordinator.getSegmentDataDirectory(), pmstatus='dtmready')
+        coordinator_OK = True
+
+        if gp_standby is not None:
+            self._start_pgautoctl_node(gp_standby.getSegmentHostName(), gp_standby.getSegmentDataDirectory(), pmstatus=('ready','standby'))
+            standby_OK = True
+        return coordinator_OK, standby_OK
+
+    def _check_and_run_monitor(self):
+        monitor = self.monitor
+        assert monitor is not None
+        logger.info("start monitor...")
+        try:
+            pgautoctl = gp.PgautoctlCommand('start', monitor.host, monitor.datadir)
+            pgautoctl.run(validateAfter=True)
+            ok = gp.wait_for_server_ready(monitor.host, monitor.datadir, 'ready', timeout=60)
+            if not ok:
+                logger.warning("Failed to start the monitor: %s %s" % (monitor.host, monitor.datadir))
+                logger.warning("Fall back with pg_auto_failover")
+                self.monitor = None
+        except:
+            logger.warning("Failed to start the monitor: %s %s" % (monitor.host, monitor.datadir))
+            logger.warning("Fall back with pg_auto_failover")
+            self.monitor = None
+
     ######
     def _prepare(self):
         logger.info("Gathering information and validating the environment...")
@@ -179,6 +221,8 @@ class GpStart:
 
         self._check_version()
         self._check_coordinator_running()
+        if self.monitor is not None:
+            self._check_and_run_monitor()
 
     ######
     def _basic_setup(self):
@@ -186,8 +230,9 @@ class GpStart:
         if self.coordinator_datadir is None:
             self.coordinator_datadir = gp.get_coordinatordatadir()
         self.user = unix.getUserName()
-        gp.check_permissions(self.user)
-        self._read_postgresqlconf()
+        gp.check_permissions_remote(self.coordinator_host, self.user, self.gphome)
+        self.port = gp.read_postgresqlconf_remote_int(self.coordinator_host, self.coordinator_datadir, 'port')
+        self.max_connections = gp.read_postgresqlconf_remote_int(self.coordinator_host, self.coordinator_datadir, 'max_connections')
 
     ######
     def _read_postgresqlconf(self):
@@ -200,16 +245,19 @@ class GpStart:
 
     ######
     def _check_version(self):
-        self.gpversion = gp.GpVersion.local('local GP software version check', self.gphome)
+        self.gpversion = gp.GpVersion.remote('remote GP software version check',
+                                              self.gphome, self.coordinator_host)
         logger.info("Greenplum Binary Version: '%s'" % self.gpversion)
 
         # It would be nice to work out the catalog version => greenplum version
         # calculation so that we can print out nicer error messages when
         # version doesn't match.
-        bin_catversion = gp.GpCatVersion.local('local GP software catalag version check', self.gphome)
+        bin_catversion = gp.GpCatVersion.remote('remote GP software catalag version check',
+                                                self.gphome, self.coordinator_host)
         logger.info("Greenplum Catalog Version: '%s'" % bin_catversion)
 
-        dir_catversion = gp.GpCatVersionDirectory.local('local GP directory catalog version check', self.coordinator_datadir)
+        dir_catversion = gp.GpCatVersionDirectory.remote('remote GP directory catalog version check',
+                                                self.coordinator_datadir, self.coordinator_host)
 
         if bin_catversion != dir_catversion:
             logger.info("COORDINATOR_DIRECTORY Catalog Version: '%s'" % dir_catversion)
@@ -231,6 +279,7 @@ class GpStart:
                         verbose=logging_is_verbose(),
                         datadir=self.coordinator_datadir,
                         parallel=self.parallel,
+                        ctxt=REMOTE, remoteHost=self.coordinator_host,
                         logfileDirectory=self.logfileDirectory)
         cmd.run()
         logger.debug("results of forcing coordinator shutdown: %s" % cmd)
@@ -400,12 +449,12 @@ class GpStart:
     def _startCoordinator(self):
         logger.info("Starting Coordinator instance in admin mode")
 
-        cmd = gp.CoordinatorStart('coordinator in utility mode', self.coordinator_datadir,
-                             self.port, self.era,
+        cmd = gp.CoordinatorStart.remote('coordinator in utility mode', self.coordinator_datadir,
+                             self.coordinator_host, self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
                              )
-        cmd.run()
+#        cmd.run()
 
         if cmd.get_results().rc != 0:
             logger.fatal("Failed to start Coordinator instance in admin mode")
@@ -464,12 +513,21 @@ class GpStart:
             raise ExceptionNoStackTraceNeeded("Do not have enough valid segments to start the array.")
 
         failedToStart = segmentStartResult.getFailedSegmentObjs()
-        coordinator_result, message = self._start_final_coordinator()
-        if not coordinator_result:
-            return False
 
-        # start standby after coordinator in dispatch mode comes up
-        standby_was_started = self._start_standby()
+        # TODO:
+        # 1. without coordinator auto failover: start coordinator, start standby
+        # 2. with coordinator auto failover: start coordinator and standby under pg_autoctl
+        #       if only one node registered, we don't start standby node
+        if self.monitor is None:
+            coordinator_result, message = self._start_final_coordinator()
+            if not coordinator_result:
+                return False
+
+            # start standby after coordinator in dispatch mode comes up
+            standby_was_started = self._start_standby()
+        else:
+            coordinator_result, standby_was_started = self._start_pgautoctl_nodes()
+            message = None
 
         # report if we complete operations
         return self._check_final_result(
@@ -678,18 +736,19 @@ class GpStart:
         self.gparray.coordinator.hostname, self.coordinator_datadir, restrict_txt))
 
         # attempt to start coordinator
-        gp.CoordinatorStart.local("Starting Coordinator instance",
-                             self.coordinator_datadir, self.port, self.era,
+        gp.CoordinatorStart.remote("Starting Coordinator instance",
+                             self.coordinator_datadir, self.gparray.coordinator.hostname,
+                             self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout,
                              max_connections=self.max_connections
                              )
 
         # check that coordinator is running now
-        if not pg.DbStatus.local('coordinator instance', self.gparray.coordinator):
-            logger.warning("Command pg_ctl reports Coordinator %s on port %d not running" % (
+        if not pg.DbStatus.remote('coordinator instance', self.gparray.coordinator, self.coordinator_host):
+            logger.warning("Command pg_ctl reports coordinator %s on port %d not running" % (
             self.gparray.coordinator.datadir, self.gparray.coordinator.port))
-            logger.warning("Coordinator could not be started")
+            logger.warning("Master could not be started")
             return False, None
 
         logger.info("Command pg_ctl reports Coordinator %s instance active" % self.gparray.coordinator.hostname)

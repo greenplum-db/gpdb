@@ -133,6 +133,11 @@ def parseargs():
     optgrp.add_option('-M', '--mode', type='string', default='smart',
                       help='use specified mode when stopping the GPDB array.  Default: smart')
 
+    # register this node to the monitor if pg_auto_failover is enabled.
+    optgrp.add_option('', '--monitor', type='string', default=None,
+                      help='specify the monitor to register the new standby for auto failover')
+
+
     parser.add_option_group(optgrp)
 
     
@@ -178,6 +183,13 @@ def parseargs():
             gp.Ping.local('check new standby up', options.standby_host)
         except:
             logger.error('Unable to ping new standby host %s' % options.standby_host)
+            parser.exit(2, None)
+
+    # check for monitor: host,port,datadir
+    if options.monitor:
+        monitor_list = options.monitor.strip().split(',')
+        if not monitor_list or len(monitor_list) != 3:
+            logger.error("Option --monitor format: monitor_host,monitor_port,monitor_datadir")
             parser.exit(2, None)
 
     return options, args
@@ -427,7 +439,10 @@ def create_standby(options):
             gp.start_standbycoordinator(standby.hostname,
                                    standby.datadir,
                                    standby.port)
+            if options.monitor:
+                _run_pg_autoctl(os.environ.get("GPHOME"), array.coordinator, standby, options.monitor)
         except Exception as ex:
+            logger.debug("EX: %s" % str(ex))
             raise GpInitStandbyException('failed to start standby')
 
     except Exception as ex:
@@ -492,6 +507,29 @@ def create_standby(options):
         # Reenable Ctrl-C
         signal.signal(signal.SIGINT,signal.default_int_handler)
             
+#-------------------------------------------------------------------------
+def _run_pg_autoctl(gphome, coordinator, standby, monitor):
+    assert monitor is not None
+    monitor_list = monitor.strip().split(',')
+    logger.debug("monitor info: %s" % (monitor))
+    if not monitor_list or len(monitor_list) != 3:
+        logger.warning("invalid monitor info, ignore to register the newly standby for autofailover")
+        return
+
+    cmdStr="%s/bin/gpautoctl -a -m config" % gphome
+    cmdStr += " --single %d" % standby.dbid
+    cmdStr += " -M %s:%s -D %s" % (monitor_list[0], monitor_list[1], monitor_list[2])
+    cmdStr += " -c %s:%s" % (coordinator.hostname, coordinator.port)
+    try:
+        cmd = base.Command("run gpautoctl for new standby", cmdStr=cmdStr)
+        cmd.run(validateAfter=True)
+        logger.info(cmd.get_results().stdout)
+        logger.info(cmd.get_results().stderr)
+    except Exception as e:
+        logger.warning("Failed to run gpautoctl %s" % str(e))
+        raise e
+
+
 #-------------------------------------------------------------------------
 def update_pg_hba_conf(options, array):
     """Updates the pg_hba.conf file to include the ip addresses of the

@@ -8,6 +8,7 @@ SUBDIRS= pexpect
 $(recurse)
 
 PROGRAMS= __init__.py \
+	gp_auto_failover.sh \
 	gp_bash_functions.sh \
 	gp_bash_version.sh \
 	gpconfigurenewsegment \

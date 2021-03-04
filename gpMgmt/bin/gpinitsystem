@@ -29,6 +29,7 @@ FUNCTIONS=$WORKDIR/lib/gp_bash_functions.sh
 if [ -f $FUNCTIONS ]; then
     . $FUNCTIONS
     . $WORKDIR/lib/gp_bash_version.sh
+    . $WORKDIR/lib/gp_auto_failover.sh
 else
     echo "[FATAL]:-Cannot source $FUNCTIONS file, script Exits!"
     exit 1
@@ -1833,7 +1834,7 @@ SET_MIRROR_MODE() {
 # Main Section
 #******************************************************************************
 trap 'ERROR_EXIT "[FATAL]:-Received INT or TERM signal"' INT TERM
-while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
+while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:AO:" opt
 		do
 		case $opt in
 				v ) print_version ;;
@@ -1854,6 +1855,7 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 				B ) BATCH_DEFAULT=$OPTARG ;;
 				I ) INPUT_CONFIG=$OPTARG ;;
 				O ) OUTPUT_CONFIG=$OPTARG ;;
+				A ) AUTOFAILOVER_CONFIG='yes' ;;
 				- ) # Long options ...
 					NAME=${OPTARG%%=*}
 					VAL=${OPTARG#*=}
@@ -1988,6 +1990,9 @@ fi
 if [ x"" != x"$STANDBY_HOSTNAME" ];then
 	CREATE_STANDBY_QD
 fi
+
+# configure coordinator auto failover if set
+CONFIG_COORDINATOR_AUTO_FAILOVER
 
 SCAN_LOG
 LOG_MSG "[INFO]:-Greenplum Database instance successfully created" 1

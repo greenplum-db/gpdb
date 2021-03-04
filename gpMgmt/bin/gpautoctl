@@ -1,0 +1,387 @@
+#!/usr/bin/env python3
+
+import logging
+import sys
+import time
+from optparse import OptionGroup, SUPPRESS_HELP
+
+from gppylib.mainUtils import *
+try:
+    from gppylib import userinput
+    from gppylib.db import dbconn
+    from gppylib.gpparseopts import OptParser, OptChecker
+    from gppylib.gparray import *
+    from gppylib.commands import gp
+except ImportError as e:
+    sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
+
+logger = get_default_logger()
+
+def id_to_name(dbid):
+    assert type(dbid) is int
+    return "gpaf_%d" % dbid
+
+def _get_conf_by_dbid(gparray, dbid, missingOK=True):
+    if gparray.coordinator.dbid == dbid:
+        return gparray.coordinator
+    node = gparray.standbyCoordinator
+    if node is not None and node.dbid == dbid:
+        return node
+    if missingOK:
+        return None
+    raise Exception("not exist dbid=%d in gp_segment_configuration" % dbid)
+
+
+class GpCAF:
+    ######
+    '''
+    When configuring the GPDB cluster with coordinator auto failover,
+    the cluster must be running.
+    '''
+    def __init__(self, mode, coordinator_host, coordinator_port,
+                 monitor_host, monitor_port, monitor_datadir,
+                 single = None, interactive=False):
+        self.gphome = None
+        self.mode = mode
+        self.coordinator_host = coordinator_host
+        self.coordinator_port = coordinator_port
+        self.monitor = gp.MonitorNode()
+        self.monitor.host = monitor_host
+        self.monitor.port = monitor_port
+        self.monitor.datadir = monitor_datadir
+        self.monitor_uri = None
+        self.single = None
+        if single is not None:
+            self.single = single
+        self.interactive = interactive
+
+        self.pool = None
+        self.gparray = None
+
+    def _basic_prepare(self):
+        if self.gphome is None:
+            self.gphome = os.environ.get('GPHOME')
+            if self.gphome is None:
+                raise Exception('gphome is not set, set it by either environment GPHOME')
+        logger.debug("host = %s, port = %s" % (self.coordinator_host, self.coordinator_port))
+        dburl = dbconn.DbURL(hostname=self.coordinator_host, port=self.coordinator_port,
+                             dbname='template1')
+        self.gparray = GpArray.initFromCatalog(dburl, utility=True)
+        if self.mode == 'config' and not self.gparray.hasStandbyCoordinator():
+            logger.error("Must have standby")
+            raise Exception("Must have standby")
+
+    def _prepare(self):
+        self._basic_prepare()
+
+    def _config(self):
+        # prepare monitor and config nodes.
+        if self.single is None:
+            self._prepare_monitor()
+            self._config_nodes()
+        else:
+            self._get_monitor_uri()
+            node = _get_conf_by_dbid(self.gparray, self.single, missingOK=False)
+            assert node is not None
+            self._config_node(node, ('dtmready','ready'))
+
+    def _prepare_monitor(self):
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " %s/bin/pg_autoctl create monitor" % self.gphome
+        cmdStr += " --pgdata %s" % self.monitor.datadir
+        cmdStr += " --pgport %s" % self.monitor.port
+        cmdStr += " --hostname %s" % self.monitor.host
+        cmdStr += " --auth trust --no-ssl"
+        cmd = Command(name="create monitor", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=self.monitor.host)
+        cmd.run(validateAfter=True)
+
+        logger.info("Create monitor successfully")
+        logger.info("Starting the monitor...")
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " PGAUTOCTL_DAEMON=yes %s/bin/pg_autoctl run" % self.gphome
+        cmdStr += " --pgdata %s" % self.monitor.datadir
+        cmd = Command(name="Start monitor", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=self.monitor.host)
+        cmd.run(validateAfter=True)
+
+        gp.wait_for_server_ready(self.monitor.host, self.monitor.datadir, 'ready')
+        logger.info("Started the monitor successfully")
+        self._get_monitor_uri()
+
+    def _get_monitor_uri(self):
+        if self.monitor_uri is not None:
+            return self.monitor_uri
+        logger.info("Query monitor uri")
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " %s/bin/pg_autoctl show uri --monitor" % self.gphome
+        cmdStr += " --pgdata %s" % self.monitor.datadir
+        cmd = Command(name="Show monitor uri", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=self.monitor.host)
+        cmd.run(validateAfter=True)
+        result = cmd.get_results().stdout
+        self.monitor_uri = result.strip()
+        logger.info("Query monitor uri successfully: '%s'" % self.monitor_uri)
+        return result
+
+    def _do_checks(self):
+        #
+        if self.mode == 'config':
+            self._check_config()
+        elif self.mode == 'deconfig':
+            self._check_deconfig()
+        else:
+            logger.error("Invalidate mode value: %s, see HELP" % self.mode)
+
+    def _check_config(self):
+    # host, port, pgdata of the monitor is required currently.
+    # host, port of the coordinator is required or get it from the ENV
+    # the GPDB cluster is required to be running
+        assert self.coordinator_host is not None
+        if self.coordinator_port is None or self.coordinator_port == '':
+            self.coordinator_port = os.environ.get('PGPORT')
+        assert self.monitor.port is not None
+        assert self.monitor.datadir is not None and self.monitor.datadir != ''
+
+    def _check_deconfig(self):
+        pass
+    def _config_nodes(self):
+        assert self.gparray.coordinator is not None
+        assert self.gparray.standbyCoordinator is not None
+        self._config_node(self.gparray.coordinator, 'dtmready')
+        self._config_node(self.gparray.standbyCoordinator, ('ready', 'standby'))
+    def _config_node(self, node, final_status):
+        assert node is not None
+        cmdStr = ""
+        cmdStr += " . %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " pg_ctl stop -D %s" % node.datadir
+        cmd = Command(name="Stop coordinator", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=node.hostname)
+        logger.info(cmd)
+        cmd.run(validateAfter=True)
+
+        monitor_uri = self.monitor_uri
+        logger.info("monitor_uri :'%s'" % monitor_uri)
+
+        cmdStr = ""
+        cmdStr += " . %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " %s/bin/pg_autoctl create postgres" % self.gphome
+        cmdStr += " --name %s" % id_to_name(node.dbid)
+        cmdStr += " --hostname %s" % node.hostname
+        cmdStr += " --pghost %s" % node.address
+        cmdStr += " --pgport %s" % node.port
+        cmdStr += " --pgdata %s" % node.datadir
+        cmdStr += " --gp_dbid %s" % node.dbid
+        cmdStr += " --gp_role dispatch"
+        cmdStr += " --monitor %s" % monitor_uri
+        cmdStr += " --auth trust --no-ssl"
+        logger.info(cmdStr)
+        cmd = Command(name="Create coordinator", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=node.hostname)
+        logger.info(cmd)
+        cmd.run(validateAfter=True)
+
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " PGAUTOCTL_DAEMON=yes %s/bin/pg_autoctl run" % self.gphome
+        cmdStr += " --pgdata %s" % node.datadir
+        cmd = Command(name="Run coordinator", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=node.hostname)
+        logger.info(cmd)
+        cmd.run(validateAfter=True)
+        gp.wait_for_server_ready(node.hostname, node.datadir, final_status)
+
+    def _deconfig_node(self, host, datadir):
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " %s/bin/pg_autoctl drop node" % self.gphome
+        cmdStr += " --pgdata %s" % datadir
+        cmd = Command(name='Drop node - %s' % host, cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=host)
+        logger.info(cmd)
+        cmd.run(validateAfter=False)
+
+    def _start_node(self, host, port, datadir):
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " %s/bin/pg_ctl start -D %s" % (self.gphome, datadir)
+        cmdStr += " -o '-p %s -c gp_role=dispatch'" % port
+        cmd = Command(name="Start node - %s" % host, cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=host)
+        logger.info(cmd)
+        cmd.run(validateAfter=True)
+
+    def _deconfig_single_node(self):
+        assert self.single is not None
+        name = id_to_name(self.single)
+        logger.info("deconfig %s from monitor" % name)
+        monitor_uri = self._get_monitor_uri()
+
+        url = dbconn.DbURL(hostname=self.monitor.host, port=self.monitor.port, dbname='pg_auto_failover', username='autoctl_node')
+        with closing(dbconn.connect(url, True)) as conn:
+            line = dbconn.queryRow(conn, "select nodehost, pgdata from pgautofailover.node where nodename='%s'" % name)
+            logger.debug("host, pgdata = (%s, %s)" % (line.nodehost, line.pgdata))
+            try:
+                self._deconfig_node(line.nodehost, line.pgdata)
+            except e:
+                logger.info("Error")
+
+    # try to connect to the monitor first, so we can safely
+    # stop & deconfig the standby first, and then coordinator.
+    # If coordinator is stopped first, the standby may be unnecessarily
+    # promoted.
+    def _deconfig_nodes(self):
+        err_s, err_c, err_m = None, None, None
+        node = self.gparray.standbyCoordinator
+        if node is not None:
+            try:
+                self._deconfig_node(node.hostname, node.datadir)
+            except e:
+# if the monitor is down, we can't run pg_autoctl drop node
+                err_s = e
+                logger.info("Error in deconfiging standy node: %s" % str(e))
+
+        node = self.gparray.coordinator
+        try:
+            self._deconfig_node(node.hostname, node.datadir)
+        except e:
+            err_c = e
+            logger.info("Error in deconfiging coordinator node: %s" % str(e))
+
+        try:
+            self._destroy_monitor()
+        except e:
+            err_m = e
+            logger.info("Error in deconfiging monitor node: %s" % str(e))
+
+        if err_c is None:
+            node = self.gparray.coordinator
+            self._start_node(node.hostname, node.port, node.datadir)
+        if err_s is None:
+            node = self.gparray.standbyCoordinator
+            self._start_node(node.hostname, node.port, node.datadir)
+
+    def _destroy_monitor_(self):
+        cmdStr = ""
+        cmdStr += ". %s/greenplum_path.sh;" % self.gphome
+        cmdStr += " %s/bin/pg_autoctl drop monitor --destroy" % self.gphome
+        cmdStr += " --pgdata %s" % self.monitor.datadir
+        cmd = Command(name="Drop monitor", cmdStr=cmdStr,
+                        ctxt=REMOTE, remoteHost=self.monitor.host)
+        logger.info(cmd)
+        cmd.run(validateAfter=False)
+        
+
+    def _destroy_monitor(self):
+        try:
+            self._destroy_monitor_()
+        except e:
+            logger.info(e)
+        pass
+    def _summary(self):
+        if self.single is None:
+            title = "Summary: %s the GPDB cluster with pg_auto_failover" % self.mode
+            logger.info(title)
+            logger.info("============================================")
+            logger.info("   MONITOR HOST:PORT       = %s:%s" % (self.monitor.host, self.monitor.port))
+            logger.info("   MONITOR DATADIR         = %s" % self.monitor.datadir)
+            node = self.gparray.coordinator
+            logger.info("   COORDINATOR HOST:PORT   = %s:%s" % (node.hostname, node.port))
+            logger.info("   COORDINATOR DATADIR     = %s" % node.datadir)
+            node = self.gparray.standbyCoordinator
+            if node is not None:
+                logger.info("   STANDBY HOST:PORT       = %s:%s" % (node.hostname, node.port))
+                logger.info("   STANDBY DATADIR         = %s" % node.datadir)
+            logger.info("============================================")
+        else:
+            # config/deconfig a single node
+            logger.info("Summary: %s the GPDB cluster for instance dbid=%s" % (self.mode, self.single))
+
+    def cleanup(self):
+        logger.info("cleanup:")
+        if self.pool:
+            self.pool.haltWork()
+    def run(self):
+        logger.info("running:")
+        self._do_checks()
+        self._prepare()
+        self._summary()
+        if self.interactive:
+            if not userinput.ask_yesno(None, "\nContinue to run %s?" % self.mode, "N"):
+                raise UserAbortedException()
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        if self.mode == 'config':
+            self._config()
+        elif self.mode == 'deconfig':
+            if self.single is not None:
+                self._deconfig_single_node()
+            else:
+                self._deconfig_nodes()
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+
+    # ----------------------- Command line option parser ----------------------
+    @staticmethod
+    def createParser():
+        parser = OptParser(option_class=OptChecker,
+                            description='Config/Deconfig GPDB with coordinator auto failover',
+                            version='0')
+        parser.setHelp([])
+        parser.add_option("-m", "--mode", dest="mode", default="config",
+                          choices=["config", "deconfig"],
+                          help="running mode: config|deconfig")
+        parser.add_option("-q", "--quiet",
+                          action="store_false", dest="verbose", default=True,
+                          help="don't print status messages to stdout")
+        parser.add_option("-M", "--monitor", dest="monitor",
+                            help="host:port of the monitor")
+        parser.add_option("-D", dest="pgdata",
+                          help="data directory of the monitor")
+        parser.add_option('-a', dest="interactive", action='store_false',
+                          default=True,
+                          help="quiet mode, do not require user input for confirmations")
+        # config single: dbid
+        # deconfig single: dbid
+        parser.add_option('-s', "--single", dest="single",
+                          default=None, type=int,
+                          help="config/deconfig for a single node(dbid)")
+        parser.add_option("-c", "--coordinator", dest="coordinator",
+                          help="host:port of the coordinator")
+
+        return parser
+    
+    @staticmethod
+    def createProgram(options, args):
+        def get_host_port(line, def_host, def_port):
+            host, port = def_host, def_port
+            if line is not None:
+                host_port = line.strip().split(':')
+                if host_port[0] != '':
+                    host = host_port[0]
+                if host_port[1] != '':
+                    port = host_port[1]
+            return host, port
+
+        coordinator_host, coordinator_port = get_host_port(options.coordinator,
+                                                'localhost', None)
+        monitor_host, monitor_port = get_host_port(options.monitor,
+                                                    None, None)
+        if not options.mode in ('config', 'deconfig'):
+            logger.error("Invalidate mode value: %s, see HELP" % options.mode)
+            sys.exit(1)
+
+        return GpCAF(mode=options.mode,
+                     coordinator_host=coordinator_host,
+                     coordinator_port=coordinator_port,
+                     monitor_host=monitor_host,
+                     monitor_port=monitor_port,
+                     monitor_datadir=options.pgdata,
+                     single=options.single,
+                     interactive=options.interactive)
+
+
+if __name__ == '__main__':
+    simple_main(GpCAF.createParser, GpCAF.createProgram)
+

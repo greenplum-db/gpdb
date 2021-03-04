@@ -11,6 +11,8 @@ gpinitstandby { -s <standby_hostname> [-P <port>] | -r | -n }
 
 [-a] [-q] [-D] [-S <standby data directory>] [-l <logfile_directory>]
 
+[--monitor host,port,datadir]
+
 gpinitstandby -? | -v
 
 
@@ -46,6 +48,9 @@ The utility performs the following steps:
 * Sets up the standby coordinator instance on the alternate coordinator host 
 
 * Starts the synchronization process 
+
+* Register the standby coordinator to monitor to join auto failover (if
+  the --monitor option is supplied)
 
 A backup, standby coordinator host serves as a 'warm standby' in the 
 event of the primary coordinator host becoming non-operational. The standby 
@@ -130,6 +135,9 @@ OPTIONS
 --hba-hostnames
 
  Optional. use hostnames instead of CIDR in pg_hba.conf
+
+--monitor
+ Optional. The host, port and datadir of the monitor.
 
 -v
 

@@ -16,6 +16,7 @@ logger = get_default_logger()
 
 GPHOME=os.environ.get('GPHOME')
 
+# FIXME: Use ReadPostmasterPidFile instead?
 class DbStatus(Command):
     def __init__(self,name,db,ctxt=LOCAL,remoteHost=None):
         self.db=db        
@@ -54,6 +55,57 @@ class ReloadDbConf(Command):
         cmd.run(validateAfter=True)
         return cmd
         
+class ReadPostmasterPidFile(Command):
+    def __init__(self, name, datadir, host=None):
+        self.datadir = datadir
+        self.host = host
+        self.cmdStr = "cat %s/postmaster.pid" % datadir
+        self.reason = None
+        ctxt = LOCAL if host is None else REMOTE
+        Command.__init__(self, name, self.cmdStr, ctxt=ctxt, remoteHost=host)
+
+    def validate(self):
+        if not self.results.completed or self.results.halt:
+            raise ExecutionError("Command did not complete successfully rc: %s" % self.results.rc, self)
+    
+    def getResult(self):
+        if self.results.stderr.find("No such file or directory") != -1:
+            self.reason = 'NotFound'
+            return None
+        if self.results.stdout is None:
+            self.reason = 'NotReady'
+            return None
+
+        lines = self.results.stdout.splitlines()
+        if len(lines) < 8:
+            logger.info("postmaster.pid is not ready %s" % self.host)
+            self.reason = 'NotReady'
+            return None
+
+        pid = int(lines[0].strip())
+
+        ctxt = LOCAL if self.host is None else REMOTE
+        cmd = Command("test pid", "kill -0 %s" % str(pid), ctxt=ctxt, remoteHost=self.host)
+        cmd.run(validateAfter=False)
+        if cmd.results.rc != 0:
+            logger.info("check process %s faild: %s" % (str(pid), cmd.results.stderr))
+            self.reason = 'NotAlive'
+            return None
+
+        result = {}
+        result['pid'] = pid
+        result['datadir'] = lines[1].strip()
+        result['timestamp'] = lines[2].strip()
+        result['port'] = int(lines[3].strip())
+        result['sockdir'] = lines[4].strip()
+        result['listenAddr'] = lines[5].strip()
+        result['shm'] = lines[6].strip()
+        result['pmstatus'] = lines[7].strip()
+        self.reason = 'OK'
+
+        return result
+        
+# FIXME: Use ReadPostmasterPidFile instead?
 class ReadPostmasterTempFile(Command):
     def __init__(self,name,port,ctxt=LOCAL,remoteHost=None):
         self.port=port
@@ -127,6 +179,7 @@ def getProcWithParent(host,targetParentPID,procname):
     return (0,0)
 
 
+# FIXME: Use ReadPostmasterPidFile instead?
 def getPostmasterPID(db):
     datadir = db.getSegmentDataDirectory()
     hostname = db.getSegmentHostName()

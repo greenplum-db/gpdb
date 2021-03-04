@@ -12,7 +12,7 @@ SUBDIRS += ifaddrs
 
 $(recurse)
 
-PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
+PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpautoctl gpcheckcat gpcheckperf \
 	gpcheckresgroupimpl gpconfig gpdeletesystem gpexpand gpinitstandby \
 	gpinitsystem gpload gpload.py gplogfilter gpmovemirrors \
 	gppkg gprecoverseg gpreload gpscp gpsd gpssh gpssh-exkeys gpstart \
@@ -196,7 +196,7 @@ clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
 	rm -rf *.pyc
-	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
+	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpautoctlc gpcheckcatc \
 		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
 		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
 		  gppkgc gprecoversegc gpreloadc gpscpc gpsdc gpssh-exkeysc gpsshc \

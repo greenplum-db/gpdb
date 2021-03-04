@@ -20,6 +20,7 @@ gpinitsystem -c <gpinitsystem_config>
             [--lc-monetary=<locale>] [--lc-numeric=<locale>] 
             [--lc-time=<locale>] [-e password | --su_password=<password>]
             [--mirror-mode={group|spread}] [-a] [-q] [-l <logfile_directory>] [-D]
+            [-A]
             [-I input_configuration_file]
             [-O output_configuration_file]
 
@@ -250,6 +251,8 @@ OPTIONS
  sufficient number of hosts in the array (number of hosts is greater
  than the number of segment instances).
 
+-A
+ Uses coordinator autofailover.
 
 -v | --version
 

@@ -19,6 +19,7 @@ from contextlib import closing
 from gppylib.gplog import *
 from gppylib.db import dbconn
 from gppylib import gparray
+from gppylib.commands import pg
 from gppylib.commands.base import *
 from .unix import *
 from gppylib import pgconf
@@ -67,6 +68,106 @@ def getPostmasterPID(hostname, datadir):
     except:
         return -1
 
+#-----------------------------------------------
+class MonitorNode:
+    def __init__(self):
+        self.host = None
+        self.port = None
+        self.datadir = None
+    @staticmethod
+    def fromEnv():
+        host = os.environ.get('MONITOR_HOST', '')
+        if host == '':
+            return None
+        port = os.environ.get('MONITOR_PORT', '')
+        datadir = os.environ.get('MONITOR_DATADIR', '')
+        if port == '' or datadir == '':
+            raise Exception('port or datadir is unset for the monitor')
+        node = MonitorNode()
+        node.setOptions(host=host, port=port, datadir=datadir)
+        return node
+
+    def setOptions(self, host=None, port=None, datadir=None):
+        if host is not None:
+            self.host = host
+        if port is not None:
+            self.port = port
+        if datadir is not None:
+            self.datadir = datadir
+        return self
+    def toURI(self):
+        return "postgres://autoctl_node@%s:%s/pg_auto_failover?sslmode=prefer" % (self.host, self.port)
+    def __str__(self):
+        return "%s:%s/%s" % (self.host, self.port, self.datadir)
+
+# start/stop pg_autoctl
+# monitor and the postgres node have the same command line
+# options to start/stop
+class PgautoctlCommand(Command):
+    def __init__(self, action, host, pgdata):
+        if not action in ['start', 'stop', 'restart']:
+            raise Exception('Invalid action: %s' % (action))
+        self.action = action
+        self.host = host
+        self.pgdata = pgdata
+        cmdStr = None
+        if action == 'start':
+            cmdStr = "export PGAUTOCTL_DAEMON=yes; pg_autoctl run --pgdata %s" % (pgdata)
+        elif action == 'stop':
+            cmdStr = 'pg_autoctl stop --pgdata %s' % (pgdata)
+        else:
+            raise Exception('not implemented yet')
+        self.cmdStr = cmdStr
+        name = '%s instance: %s/%s' % (action, host, pgdata)
+        Command.__init__(self, name, self.cmdStr, REMOTE, host)
+
+def wait_for_server_ready(host, pgdata, pmstatus='ready', timeout=120):
+    counter = 0
+    result = None
+    ready = False
+    if type(pmstatus) is str:
+        pmstatus = (pmstatus,)
+    elif type(pmstatus) is not tuple:
+        raise Exception("invalid type of pmstatus, MUST be str or tuple")
+
+    while not ready and counter < timeout:
+        cmd = pg.ReadPostmasterPidFile('read postmaster.pid', pgdata, host)
+        cmd.run()
+        result = cmd.getResult()
+        logger.debug("result = %s %s" % (str(result), cmd.reason))
+        ready = result is not None and result['pmstatus'] in pmstatus
+        if result is not None:
+            logger.debug("%s in %s? ready=%s" % (result['pmstatus'], pmstatus, ready))
+        if not ready:
+            if cmd.reason in ('NotFound', 'NotAlive') and counter > 3:
+                raise Exception("postmaster.pid is not generated in 3 seconds")
+            counter = counter + 1
+            time.sleep(1)
+    logger.info("wait server result = " + str(result))
+    if not ready:
+        return False
+    return result['pmstatus'] in pmstatus
+
+def run_script(host, funcname, *args, **kwargs):
+    array = []
+    for arg in args:
+        if type(arg) is str:
+            arg = '"' + arg + '"'
+        array.append(arg)
+    for k,v in kwargs.items():
+        if type(v) is str:
+            v = '"' + v + '"'
+        array.append("{key}={val}".format(key=k, val=v))
+
+    argStr = ', '.join(array)
+    logger.debug("""argStr = %s""" % argStr)
+    cmdStr ="""python3 -c 'from {module} import {func}; print({func}({args}))'""".format(
+                module=sys.modules[__name__].__name__,
+                func=funcname,
+                args=argStr)
+    logger.info("cmd = '%s'" % cmdStr)
+    cmd = Command(name='run this method remotely', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
+    return cmd
 #-----------------------------------------------
 
 class CmdArgs(list):
@@ -305,6 +406,19 @@ class CoordinatorStart(Command):
         self.cmdStr = str(c)
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
+
+    # We shouldn't assume we're on the node where the master is deployed.
+    # But, most of the code still rely on this assumption.
+    @staticmethod
+    def remote(name, dataDir, host, port, era,
+              wrapper, wrapper_args, specialMode=None, restrictedMode=False, timeout=SEGMENT_TIMEOUT_DEFAULT,
+              max_connections=1, utilityMode=False):
+        cmd=CoordinatorStart(name, dataDir, port, era,
+                        wrapper, wrapper_args, specialMode, restrictedMode, timeout,
+                        max_connections, utilityMode,
+                        ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+        return cmd
 
     @staticmethod
     def local(name, dataDir, port, era,
@@ -1009,6 +1123,13 @@ class GpVersion(Command):
         cmd.run(validateAfter=True)
         return cmd.get_version()
 
+    @staticmethod
+    def remote(name,gphome, host):
+        assert host is not None
+        cmd=GpVersion(name,gphome, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+        return cmd.get_version()
+
 #-----------------------------------------------
 class GpCatVersion(Command):
     """
@@ -1035,6 +1156,13 @@ class GpCatVersion(Command):
         cmd.run(validateAfter=True)
         return cmd.get_version()
 
+    @staticmethod
+    def remote(name,gphome,host):
+        assert host is not None
+        cmd=GpCatVersion(name,gphome, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+        return cmd.get_version()
+
 #-----------------------------------------------
 class GpCatVersionDirectory(Command):
     """
@@ -1055,6 +1183,13 @@ class GpCatVersionDirectory(Command):
         cmd=GpCatVersionDirectory(name,directory)
         cmd.run(validateAfter=True)
         return cmd.get_version()
+    @staticmethod
+    def remote(name,directory, host):
+        assert host is not None
+        cmd=GpCatVersionDirectory(name,directory, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+        return cmd.get_version()
+
 
 
 #-----------------------------------------------
@@ -1168,6 +1303,30 @@ def get_coordinatorport(datadir):
 def check_permissions(username):
     logger.debug("--Checking that current user can use GP binaries")
     chk_gpdb_id(username)
+
+def check_permissions_local(username, gphome):
+    path="%s/bin/initdb" % gphome
+    if not os.access(path,os.X_OK):
+        raise GpError("File permission mismatch.  The current user %s does not have sufficient"
+                      " privileges to run the Greenplum binaries and management utilities." % username )
+def check_permissions_remote(host, username, gphome):
+    cmd = run_script(host, 'check_permissions_local', username, gphome)
+    cmd.run(validateAfter=True)
+
+def read_postgresqlconf_local_int(datadir, key):
+    pgconf_dict = pgconf.readfile(datadir + "/postgresql.conf")
+    val = pgconf_dict.int(key)
+    logger.debug("Read from postgresql.conf %s=%s" % (key, val))
+    if type(val) is not int:
+        raise GpError("Fount not value of %s in postgresql.conf" % key)
+    return val
+
+def read_postgresqlconf_remote_int(host, datadir, key):
+    cmd = run_script(host, "read_postgresqlconf_local_int", datadir, key)
+    cmd.run(validateAfter=True)
+    val = cmd.get_results().stdout.strip()
+    logger.debug("%s => '%s'" % (key, val))
+    return int(val)
 
 
 
