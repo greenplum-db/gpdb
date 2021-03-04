@@ -77,7 +77,7 @@ formatTuple(StringInfo buf, TupleTableSlot *slot, Oid *outputFunArray)
 		if (d && !isnull)
 		{
 			char	   *s = OidOutputFunctionCall(outputFunArray[i], d);
-			char	   *name = NameStr(tupdesc->attrs[i]->attname);
+			char	   *name = NameStr(tupdesc->attrs[i].attname);
 
 			if (name && *name)
 				appendStringInfo(buf, "  %s=\"%.30s\"", name, s);
@@ -820,7 +820,7 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	{
 		bool		typisvarlena;
 
-		getTypeOutputInfo(tupDesc->attrs[i]->atttypid,
+		getTypeOutputInfo(tupDesc->attrs[i].atttypid,
 						  &motionstate->outputFunArray[i],
 						  &typisvarlena);
 	}
