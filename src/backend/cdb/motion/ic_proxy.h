@@ -22,8 +22,13 @@
 #define IC_PROXY_BACKLOG 1024
 #define IC_PROXY_INVALID_CONTENT ((uint16) -2)
 #define IC_PROXY_INVALID_DBID ((int16) 0)
-#define IC_PROXY_TRESHOLD_PAUSE 4
-#define IC_PROXY_TRESHOLD_RESUME 2
+/* pause the sender when the unack packet increase to this threshold */
+#define IC_PROXY_TRESHOLD_UNACK_PACKET_PAUSE 100
+/* resume the sender when the unack packet reduce to this threshold */
+#define IC_PROXY_TRESHOLD_UNACK_PACKET_RESUME 30
+/* send a ack message after a batch of packets*/
+#define IC_PROXY_PACKET_INTERVAL_OF_ACK_MESSAGE 10
+
 
 #ifndef IC_PROXY_LOG_LEVEL
 #define IC_PROXY_LOG_LEVEL WARNING
