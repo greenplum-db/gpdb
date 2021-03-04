@@ -49,7 +49,7 @@ FOREIGN_KEY(relid REFERENCES pg_class(oid));
 typedef FormData_gp_partition_template *Form_gp_partition_template;
 
 extern void StoreGpPartitionTemplate(Oid relid, int32 level,
-									 GpPartitionDefinition *gpPartDef, bool replace);
+									 GpPartitionDefinition *gpPartDef);
 extern GpPartitionDefinition *GetGpPartitionTemplate(Oid relid, int32 level);
 extern void RemoveGpPartitionTemplateByRelId(Oid relid);
 extern bool RemoveGpPartitionTemplate(Oid relid, int32 level);

@@ -2562,8 +2562,10 @@ typedef struct GpPartitionDefinition	/* a Partition Definition */
 {
 	NodeTag				type;
 	List			   *partDefElems;	/* partition definition element list */
-	List			   *enc_clauses;	/* ENCODING () clauses */
-	bool				istemplate;
+	List			   *encClauses;     /* ENCODING () clauses */
+	bool				isTemplate;
+	bool				fromCatalog;	/* whether the subpartition specification
+										 * is read from gp_partition_template */
 	int					location;		/* token location, or -1 if unknown */
 } GpPartitionDefinition;
 

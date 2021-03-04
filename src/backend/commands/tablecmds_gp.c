@@ -1131,6 +1131,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 			int						 level = list_length(ancestors) + 1;
 
 			gpPartDef->partDefElems = list_make1(elem);
+			gpPartDef->fromCatalog = false;
 
 			/*
 			 * Populate PARTITION BY spec for each level of the parents
@@ -1305,7 +1306,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 								   NULL, NULL, true);
 				table_close(firstrel, AccessShareLock);
 
-				StoreGpPartitionTemplate(topParentrelid, level, templateDef, true);
+				StoreGpPartitionTemplate(topParentrelid, level, templateDef);
 			}
 			else
 			{

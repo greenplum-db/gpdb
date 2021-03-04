@@ -1464,17 +1464,17 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 
 	if (subPartSpec && subPartSpec->gpPartDef)
 	{
-		Assert(subPartSpec->gpPartDef->istemplate);
-		isSubTemplate = subPartSpec->gpPartDef->istemplate;
+		Assert(subPartSpec->gpPartDef->isTemplate);
+		isSubTemplate = subPartSpec->gpPartDef->isTemplate;
 		/*
-		 * GPDB_12_MERGE_FIXME: Currently, StoreGpPartitionTemplate() is called
-		 * multiple times for a level, hence need to pass replace as false. Can
-		 * we avoid these multiple calls to StoreGpPartitionTemplate() for same
-		 * level?
+		 * If the subpartition specification is read from gp_partition_template
+		 * catalog, we don't need to call StoreGpPartitionTemplate. This will
+		 * help to save some IO since StoreGpPartitionTemplate trying to scan
+		 * gp_partition_template.
 		 */
-		if (isSubTemplate)
+		if (isSubTemplate && !subPartSpec->gpPartDef->fromCatalog)
 			StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
-									 partcomp.level, subPartSpec->gpPartDef, false);
+									 partcomp.level, subPartSpec->gpPartDef);
 	}
 
 	foreach(lc, parentattenc)
@@ -1486,7 +1486,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 
 	/*
 	 * GPDB_12_MERGE_FIXME: can we optimize grammar to create separate lists
-	 * for elems and encoding.
+	 * for elems and encoding in encClauses.
 	 */
 	foreach(lc, gpPartSpec->partDefElems)
 	{
@@ -1600,7 +1600,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 			 * syntax than we supported in past, hence keeping the restriction
 			 * in-place.
 			 */
-			if (gpPartSpec->istemplate && elem->colencs)
+			if (gpPartSpec->isTemplate && elem->colencs)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE"),

@@ -5331,8 +5331,8 @@ _outGpPartitionDefinition(StringInfo str, const GpPartitionDefinition *node)
 	WRITE_NODE_TYPE("GPPARTITIONDEFINITION");
 
 	WRITE_NODE_FIELD(partDefElems);
-	WRITE_NODE_FIELD(enc_clauses);
-	WRITE_BOOL_FIELD(istemplate);
+	WRITE_NODE_FIELD(encClauses);
+	WRITE_BOOL_FIELD(isTemplate);
 }
 
 static void

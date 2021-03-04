@@ -5449,8 +5449,9 @@ _copyGpPartitionDefinition(const GpPartitionDefinition *from)
 	GpPartitionDefinition *newnode = makeNode(GpPartitionDefinition);
 
 	COPY_NODE_FIELD(partDefElems);
-	COPY_NODE_FIELD(enc_clauses);
-	COPY_SCALAR_FIELD(istemplate);
+	COPY_NODE_FIELD(encClauses);
+	COPY_SCALAR_FIELD(isTemplate);
+	COPY_SCALAR_FIELD(fromCatalog);
 	COPY_LOCATION_FIELD(location);
 
 	return newnode;

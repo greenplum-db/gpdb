@@ -4281,8 +4281,8 @@ _readGpPartitionDefinition(void)
 	READ_LOCALS(GpPartitionDefinition);
 
 	READ_NODE_FIELD(partDefElems);
-	READ_NODE_FIELD(enc_clauses);
-	READ_BOOL_FIELD(istemplate);
+	READ_NODE_FIELD(encClauses);
+	READ_BOOL_FIELD(isTemplate);
 
 	READ_DONE();
 }
