@@ -82,6 +82,7 @@
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
 #include "common/file_perm.h"
+#include "common/md5.h"
 #include "miscadmin.h"
 #include "postmaster/bgwriter.h"
 #include "storage/bufmgr.h"
@@ -779,7 +780,25 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 		tablespaceoid, GpIdentity.dbid);
 
 	linkloc = psprintf("pg_tblspc/%u", tablespaceoid);
-	location_with_dbid_dir = psprintf("%s/%d", location, GpIdentity.dbid);
+	/*
+	 * Dbid may be uninitialized if coordinator and standby are managed by an
+	 * external entitiy.  Use MD5 hash of the absolute data directory path in
+	 * that case.  The MD5 hash serves the same purpose as dbid - to
+	 * differentiate tablespace directories belonging to cooredinator and
+	 * standby when the two are deployed on the same host.
+	 */
+	if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)
+	{
+		char datadirMD5[33];
+		if (pg_md5_hash(DataDir, strlen(DataDir), datadirMD5))
+		{
+			location_with_dbid_dir = psprintf("%s/%s", location, datadirMD5);
+		}
+		else
+			elog(ERROR, "failed to create DataDir MD5 hash");
+	}
+	else
+		location_with_dbid_dir = psprintf("%s/%d", location, GpIdentity.dbid);
 	location_with_version_dir = psprintf("%s/%s", location_with_dbid_dir,
 										 GP_TABLESPACE_VERSION_DIRECTORY);
 

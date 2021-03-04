@@ -472,7 +472,14 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->config->dbid == GpIdentity.dbid && cdbInfo->config->segindex == GpIdentity.segindex)
+		if (cdbInfo->config->segindex == GpIdentity.segindex &&
+			(cdbInfo->config->dbid == GpIdentity.dbid ||
+			 /*
+			  * If coordinator and standby are managed by an external entity,
+			  * dbid may be uninitialized.  Such an external entity needs to
+			  * provide an interface to obtain entry DB configuration.
+			  */
+			 GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE))
 		{
 			break;
 		}

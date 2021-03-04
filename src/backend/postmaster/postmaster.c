@@ -1081,6 +1081,19 @@ PostmasterMain(int argc, char *argv[])
          *  we don't actually know the dbid.
          */
     }
+	else if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)
+	{
+		/*
+		 * If coordinator and standby are managed by an external entity other
+		 * than FTS, such as pg_auto_failover, they do not need to have a
+		 * valid dbid set.
+		 *
+		 * Using the hardwired dbid value like this minimizes
+		 * Greenplum-specific changes needed in third-party auto-failover
+		 * solutions.
+		 */
+		GpIdentity.segindex = -1;
+	}
 	else if ( GpIdentity.dbid < 0 )
 	{
 	    ereport(FATAL,

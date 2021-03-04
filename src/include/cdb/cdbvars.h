@@ -711,7 +711,7 @@ extern GpId GpIdentity;
  */
 #define MAX_DBID_STRING_LENGTH  11
 
-#define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
+#define UNINITIALIZED_GP_IDENTITY_VALUE (0)
 #define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
 
 #define IS_QUERY_EXECUTOR_BACKEND() (Gp_role == GP_ROLE_EXECUTE && gp_session_id > 0)
