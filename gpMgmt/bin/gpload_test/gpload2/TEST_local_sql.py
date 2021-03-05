@@ -141,7 +141,7 @@ def test_665_gpload_sql_before_after():
 
 @prepare_before_test(num=666,times=1)
 def test_666_gpload_sql_before_after():
-    "666 gpload's before and after in a transaction, success sql fails"
+    "666 gpload's before and after in a transaction, before sql fails"
     file = mkpath('setup.sql')
     runfile(file)
     f = open(mkpath('query666.sql'),'a')
