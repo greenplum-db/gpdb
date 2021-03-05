@@ -19,7 +19,7 @@ use Test::More;
 
 if ($ENV{with_gssapi} eq 'yes')
 {
-	plan tests => 12;
+	plan tests => 13;
 }
 else
 {
@@ -275,6 +275,36 @@ test_access(
 	0,
 	"gssencmode=disable",
 	"succeeds with GSS encryption disabled and hostnogssenc hba");
+
+# Greenplum tests for expiration, remove if upstream adds the similar tests
+# Rewrite the pg_hba.conf to allow us doing the "ALTER USER" commands
+unlink($node->data_dir . '/pg_hba.conf');
+$node->append_conf('pg_hba.conf', qq{local all all trust});
+$node->append_conf('pg_hba.conf', qq{host all all all trust});
+$node->restart;
+
+$node->safe_psql('postgres', q{ALTER USER test1 VALID UNTIL '2001-01-01 01:00:00-00'});
+
+unlink($node->data_dir . '/pg_hba.conf');
+$node->append_conf('pg_hba.conf',
+	qq{hostgssenc all all $hostaddr/32 gss map=mymap});
+$node->restart;
+
+test_access(
+	$node,
+	"test1",
+	'SELECT true',
+	2,
+	"gssencmode=prefer",
+	"fails with user expired");
+
+unlink($node->data_dir . '/pg_hba.conf');
+$node->append_conf('pg_hba.conf', qq{local all all trust});
+$node->append_conf('pg_hba.conf', qq{host all all all trust});
+$node->restart;
+
+$node->safe_psql('postgres', q{ALTER USER test1 VALID UNTIL '2099-12-31 23:00:00-00'});
+# Following tests should succeed with user not expired
 
 truncate($node->data_dir . '/pg_ident.conf', 0);
 unlink($node->data_dir . '/pg_hba.conf');
