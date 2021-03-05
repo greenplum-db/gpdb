@@ -18,8 +18,7 @@ def test_651_gpload_sql_before_success():
              CREATE TABLE test_651 (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_651',sql=True,before="INSERT INTO test_651 VALUES(1)")
 
 @prepare_before_test(num=652, times=1)
@@ -30,8 +29,7 @@ def test_652_gpload_sql_before_fail():
     sql = '''CREATE TABLE texttable_652 (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_652',sql=True,before="INSERT INTO test_652 VALUES(1)")
 
 @prepare_before_test(num=653, times=1)
@@ -61,8 +59,7 @@ def test_661_gpload_sql_after_success():
              CREATE TABLE test_661(c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_661',sql=True,after="INSERT INTO test_661 VALUES(1)")
 
 @prepare_before_test(num=662,times=1)
@@ -79,8 +76,7 @@ def test_662_gpload_sql_after_fail():
              n5 numeric, n6 real, n7 double precision) DISTRIBUTED BY (n1);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_662',sql=True,after="INSERT INTO test_662 VALUES(1)")
 
 @prepare_before_test(num=663,times=1)
@@ -100,8 +96,7 @@ def test_663_gpload_sql_before_after():
              CREATE TABLE test_663_after (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_663',sql=True,before="INSERT INTO test_663_before VALUES(1)",after="INSERT INTO test_663_after VALUES(2)")
 
 @prepare_before_test(num=664,times=1)
@@ -121,8 +116,7 @@ def test_664_gpload_sql_before_after():
              CREATE TABLE test_664_after (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_664',sql=True,before="INSERT INTO test_664_before VALUES('a')",after="INSERT INTO test_664_after VALUES(2)")
 
 @prepare_before_test(num=665,times=1)
@@ -142,8 +136,7 @@ def test_665_gpload_sql_before_after():
              CREATE TABLE test_665_after (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(format='text',table='texttable_665',sql=True,before="INSERT INTO test_665_before VALUES(1)",after="INSERT INTO test_665_after VALUES('a')")
 
 @prepare_before_test(num=666,times=1)
@@ -163,8 +156,7 @@ def test_666_gpload_sql_before_after():
              CREATE TABLE test_666_after (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(mode='merge',format='text',table='texttable_666',sql=True,before="INSERT INTO test_666_before VALUES('a')",after="INSERT INTO test_666_after VALUES(2)")
 
 @prepare_before_test(num=667,times=1)
@@ -184,6 +176,5 @@ def test_667_gpload_sql_before_after():
              CREATE TABLE test_667_after (c1 int);'''
     (ok, out) = psql_run(cmd=sql,dbname='reuse_gptest')
     if not ok:
-        if not ok:
-            raise Exception("Unable to execute sql %s" % out)
+        raise Exception("Unable to execute sql %s" % out)
     write_config_file(mode='merge',format='text',table='texttable_667',sql=True,before="INSERT INTO test_667_before VALUES(1)",after="INSERT INTO test_667_after VALUES('a')")
