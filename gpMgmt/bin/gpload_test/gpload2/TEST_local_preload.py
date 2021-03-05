@@ -61,7 +61,7 @@ def test_607_clear_database():
     file = mkpath('setup.sql')
     runfile(file)
 
-@prepare_before_test(num=607, times=2)
+@prepare_before_test(num=608, times=2)
 def test_608_gpload_ext_staging_table():
     "608 gpload ignore staging_table if the reuse is false"
     file = mkpath('setup.sql')
