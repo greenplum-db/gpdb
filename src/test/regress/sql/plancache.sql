@@ -1,3 +1,10 @@
+-- start_matchsubs
+-- m/(?!0000)[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)?/
+-- s/(?!0000)[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)?/xxxx-xx-xx xx:xx:xx.xxxxxx/
+-- m/(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}/
+-- s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}/xxx xx xx xx:xx:xx xxxx/
+-- end_matchsubs
+
 --
 -- Tests to exercise the plan caching/invalidation mechanism
 --
@@ -216,3 +223,28 @@ set plan_cache_mode to force_custom_plan;
 explain (costs off) execute test_mode_pp(2);
 
 drop table test_mode;
+
+--
+-- Test correctness of prepare/execute statement after fixing the direct dispatch issue 
+--
+
+create table test_prepare_sql_value_function (a int, b timestamp);
+prepare test_sql_value_function as select * from test_prepare_sql_value_function where b < current_timestamp and a < $1;
+
+execute test_sql_value_function(1); -- 1x
+execute test_sql_value_function(1); -- 2x
+execute test_sql_value_function(1); -- 3x
+execute test_sql_value_function(1); -- 4x
+execute test_sql_value_function(1); -- 5x
+execute test_sql_value_function(1); -- 6x
+execute test_sql_value_function(1); -- 7x
+
+insert into test_prepare_sql_value_function values (1, current_timestamp);
+
+-- should return one row
+execute test_sql_value_function(100);
+
+-- should return one row
+select * from test_prepare_sql_value_function where b < current_timestamp and a < 100;
+
+drop table test_prepare_sql_value_function;

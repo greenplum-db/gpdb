@@ -2526,6 +2526,7 @@ estimate_expression_value(PlannerInfo *root, Node *node)
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
+	context.eval_stable_functions = false;
 
 	return eval_const_expressions_mutator(node, &context);
 }
@@ -3454,17 +3455,39 @@ eval_const_expressions_mutator(Node *node,
 				/*
 				 * All variants of SQLValueFunction are stable, so if we are
 				 * estimating the expression's value, we should evaluate the
-				 * current function value.  Otherwise just copy.
+				 * current function value.
+				 *
+				 * In GPDB, we add eval_stable_functions field in the context
+				 * to decide whether we should pre-evaluate this stable function.
+				 * If it is true, we evaluate the function value here so that we
+				 * can directly dispatch a single row insertion query that contains
+				 * SQLValueFunction (Otherwise we need to add a redistribution
+				 * motion). In a specific case where we use prepare/execute statement,
+				 * we need to set oneoffPlan to true so that we can re-evaluate 
+				 * the SQLValueFunction in the execute statement.
+				 *
+				 * If neither condition holds, we just copy.
 				 */
 				SQLValueFunction *svf = (SQLValueFunction *) node;
 
-				if (context->estimate)
+				if (context->eval_stable_functions)
+				{
+					context->root->glob->oneoffPlan = true;
 					return (Node *) evaluate_expr((Expr *) svf,
 												  svf->type,
 												  svf->typmod,
 												  InvalidOid);
-				else
-					return copyObject((Node *) svf);
+				}
+
+				if (context->estimate)
+				{
+					return (Node *) evaluate_expr((Expr *) svf,
+												  svf->type,
+												  svf->typmod,
+												  InvalidOid);
+				}
+
+				return copyObject((Node *) svf);
 			}
 		case T_FieldSelect:
 			{

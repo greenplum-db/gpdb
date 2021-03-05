@@ -264,9 +264,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
 -----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_carol'::name)
    ->  Seq Scan on document
          Filter: ((dlevel <= $0) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
@@ -277,9 +277,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dt
 -----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice3)
-     ->  Gather Motion 3:1  (slice4; segments: 3)
+     ->  Gather Motion 1:1  (slice4; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_carol'::name)
    ->  Hash Join
          Hash Cond: (category.cid = document.cid)
          ->  Broadcast Motion 3:3  (slice2; segments: 3)
@@ -335,9 +335,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_dave'::name)
    ->  Seq Scan on document
          Filter: ((cid <> 44) AND (cid <> 44) AND (cid < 50) AND (dlevel <= $0) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
@@ -348,9 +348,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dt
 ----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice3)
-     ->  Gather Motion 3:1  (slice4; segments: 3)
+     ->  Gather Motion 1:1  (slice4; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_dave'::name)
    ->  Hash Join
          Hash Cond: (category.cid = document.cid)
          ->  Broadcast Motion 3:3  (slice2; segments: 3)
@@ -437,7 +437,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
 ---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on document
-         Filter: ((dauthor = CURRENT_USER) AND f_leak(dtitle))
+         Filter: ((dauthor = 'regress_rls_carol'::name) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
 (4 rows)
 
@@ -451,7 +451,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dt
                ->  Seq Scan on category
          ->  Hash
                ->  Seq Scan on document
-                     Filter: ((dauthor = CURRENT_USER) AND f_leak(dtitle))
+                     Filter: ((dauthor = 'regress_rls_carol'::name) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -1029,9 +1029,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_bob'::name)
    ->  Append
          ->  Seq Scan on part_document_fiction
                Filter: ((dlevel <= $0) AND f_leak(dtitle))
@@ -1074,9 +1074,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_carol'::name)
    ->  Append
          ->  Seq Scan on part_document_fiction
                Filter: ((dlevel <= $0) AND f_leak(dtitle))
@@ -1107,9 +1107,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
 --------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_dave'::name)
    ->  Seq Scan on part_document_fiction
          Filter: ((cid < 55) AND (dlevel <= $0) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
@@ -1188,9 +1188,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
 --------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_dave'::name)
    ->  Seq Scan on part_document_fiction
          Filter: ((cid < 55) AND (dlevel <= $0) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
@@ -1230,9 +1230,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
+     ->  Gather Motion 1:1  (slice3; segments: 1)
            ->  Seq Scan on uaccount
-                 Filter: (pguser = CURRENT_USER)
+                 Filter: (pguser = 'regress_rls_carol'::name)
    ->  Append
          ->  Seq Scan on part_document_fiction
                Filter: ((dlevel <= $0) AND f_leak(dtitle))
@@ -1286,11 +1286,11 @@ EXPLAIN (COSTS OFF) SELECT * FROM part_document WHERE f_leak(dtitle);
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Seq Scan on part_document_fiction
-               Filter: ((dauthor = CURRENT_USER) AND f_leak(dtitle))
+               Filter: ((dauthor = 'regress_rls_carol'::name) AND f_leak(dtitle))
          ->  Seq Scan on part_document_satire
-               Filter: ((dauthor = CURRENT_USER) AND f_leak(dtitle))
+               Filter: ((dauthor = 'regress_rls_carol'::name) AND f_leak(dtitle))
          ->  Seq Scan on part_document_nonfiction
-               Filter: ((dauthor = CURRENT_USER) AND f_leak(dtitle))
+               Filter: ((dauthor = 'regress_rls_carol'::name) AND f_leak(dtitle))
  Optimizer: Postgres query optimizer
 (9 rows)
 

@@ -1339,7 +1339,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal WHERE f_leak(passwd);
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
-         Filter: (f_leak(passwd) AND (name = CURRENT_USER))
+         Filter: (f_leak(passwd) AND (name = 'regress_alice'::name))
  Optimizer: Postgres query optimizer
 (4 rows)
 
@@ -1357,7 +1357,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure WHERE f_leak(passwd);
    ->  Subquery Scan on my_property_secure
          Filter: f_leak(my_property_secure.passwd)
          ->  Seq Scan on customer
-               Filter: (name = CURRENT_USER)
+               Filter: (name = 'regress_alice'::name)
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -1384,7 +1384,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal v
 ---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
-         Filter: (f_leak('passwd'::text) AND f_leak(passwd) AND (name = CURRENT_USER))
+         Filter: (f_leak('passwd'::text) AND f_leak(passwd) AND (name = 'regress_alice'::name))
  Optimizer: Postgres query optimizer
 (4 rows)
 
@@ -1407,7 +1407,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure v
    ->  Subquery Scan on v
          Filter: f_leak(v.passwd)
          ->  Seq Scan on customer
-               Filter: (f_leak('passwd'::text) AND (name = CURRENT_USER))
+               Filter: (f_leak('passwd'::text) AND (name = 'regress_alice'::name))
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -1435,7 +1435,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
                Filter: f_leak(cnum)
          ->  Hash
                ->  Seq Scan on customer l
-                     Filter: (name = CURRENT_USER)
+                     Filter: (name = 'regress_alice'::name)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -1457,7 +1457,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
                ->  Seq Scan on credit_card r
                ->  Hash
                      ->  Seq Scan on customer l
-                           Filter: (name = CURRENT_USER)
+                           Filter: (name = 'regress_alice'::name)
  Optimizer: Postgres query optimizer
 (10 rows)
 
@@ -1494,7 +1494,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l_1
-                                             Filter: (name = CURRENT_USER)
+                                             Filter: (name = 'regress_alice'::name)
  Optimizer: Postgres query optimizer
 (16 rows)
 
@@ -1531,7 +1531,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l
-                                             Filter: (name = CURRENT_USER)
+                                             Filter: (name = 'regress_alice'::name)
  Optimizer: Postgres query optimizer
 (19 rows)
 
