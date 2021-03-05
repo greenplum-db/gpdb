@@ -2784,6 +2784,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_pause_on_restore_point_replay", PGC_SIGHUP, DEVELOPER_OPTIONS,
+		 gettext_noop("Pause recovery when a restore point is replayed."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_pause_on_restore_point_replay,
+		false,
+		NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
