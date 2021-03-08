@@ -20,6 +20,7 @@
 
 #include "executor/executor.h"
 #include "miscadmin.h"
+#include "utils/faultinjector.h"
 #include "utils/memutils.h"
 
 
@@ -127,6 +128,8 @@ ExecScan(ScanState *node,
 	ExprContext *econtext;
 	ExprState  *qual;
 	ProjectionInfo *projInfo;
+
+	SIMPLE_FAULT_INJECTOR("before_exec_scan");
 
 	/*
 	 * Fetch data from node

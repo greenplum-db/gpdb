@@ -720,7 +720,6 @@ CheckForResetSession(void)
 		return;
 
 	/* Do the session id change early. */
-
 	if (NeedResetSession)
 	{
 		/* If we have gangs, we can't change our session ID. */
@@ -745,6 +744,10 @@ CheckForResetSession(void)
 			 "The new session id = %d", oldSessionId, newSessionId);
 	}
 
+	/*
+	 * When it's in transaction block, need to bump the session id, e.g. retry COMMIT PREPARED,
+	 * but defer drop temp table to the main loop in PostgresMain().
+	 */
 	if (IsTransactionOrTransactionBlock())
 	{
 		NeedResetSession = false;

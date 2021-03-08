@@ -257,8 +257,8 @@ test: concurrent_drop_truncate_tablespace
 # Test for distributed commit array overflow during replay on standby 
 test: standby_replay_dtx_info 
 
+# test the orphan temp table is dropped on the coordinator when panic happens on segment
+test: orphan_temp_table 
+
 # test if gxid is valid or not on the cluster after running the tests
 test: check_gxid
-
-# test if there is orphan temp table on the coordinator
-test: orphan_temp_table 
