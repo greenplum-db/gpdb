@@ -469,7 +469,6 @@ pg_relation_size(PG_FUNCTION_ARGS)
 	if (rel == NULL)
 		PG_RETURN_NULL();
 
-	/* GPDB_12_MERGE_FIXME: Is this still needed? */
 	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 	{
 		FdwRoutine *fdwroutine;
@@ -493,11 +492,7 @@ pg_relation_size(PG_FUNCTION_ARGS)
 
 	forkNumber = forkname_to_number(text_to_cstring(forkName));
 
-	/* GPDB_12_MERGE_FIXME: Are these checks for 0 still needed? */
-	if (relOid == 0 || rel->rd_node.relNode == 0)
-		size = 0;
-	else
-		size = calculate_relation_size(rel, forkNumber);
+	size = calculate_relation_size(rel, forkNumber);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
