@@ -24,13 +24,6 @@ SUBDIRS += fsync walrep heap_checksum isolation2 fdw
 ifeq ($(with_gssapi),yes)
 ifneq (,$(filter kerberos,$(PG_TEST_EXTRA)))
 SUBDIRS += kerberos
-
-# GPDB_12_MERGE_FIXME: PostgreSQL v11 added a kerberos test suite under
-# 'kerberos'. I think we can retire the GPDB kerberos test suite now, but
-# need to check if it's testing some GPDB features that are not covered
-# by the upstream tests first.
-SUBDIRS += gpkerberos
-
 endif
 endif
 ifeq ($(with_ldap),yes)

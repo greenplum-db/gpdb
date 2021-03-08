@@ -113,7 +113,7 @@ CTableDescriptor::ColumnCount() const
 //---------------------------------------------------------------------------
 ULONG
 CTableDescriptor::UlPos(const CColumnDescriptor *pcoldesc,
-						const CColumnDescriptorArray *pdrgpcoldesc) const
+						const CColumnDescriptorArray *pdrgpcoldesc)
 {
 	GPOS_ASSERT(nullptr != pcoldesc);
 	GPOS_ASSERT(nullptr != pdrgpcoldesc);

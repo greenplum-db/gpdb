@@ -508,7 +508,7 @@ CCostContext::FBetterThan(const CCostContext *pcc) const
 }
 
 BOOL
-CCostContext::IsTwoStageScalarDQACostCtxt(const CCostContext *pcc) const
+CCostContext::IsTwoStageScalarDQACostCtxt(const CCostContext *pcc)
 {
 	if (CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
 	{
@@ -523,7 +523,7 @@ CCostContext::IsTwoStageScalarDQACostCtxt(const CCostContext *pcc) const
 }
 
 BOOL
-CCostContext::IsThreeStageScalarDQACostCtxt(const CCostContext *pcc) const
+CCostContext::IsThreeStageScalarDQACostCtxt(const CCostContext *pcc)
 {
 	if (CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
 	{

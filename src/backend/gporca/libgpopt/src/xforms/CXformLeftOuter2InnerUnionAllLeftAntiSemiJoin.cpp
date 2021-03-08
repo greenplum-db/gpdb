@@ -134,7 +134,7 @@ CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin::Exfp(
 //---------------------------------------------------------------------------
 BOOL
 CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin::FApplyXformUsingStatsInfo(
-	const IStatistics *outer_stats, const IStatistics *inner_side_stats) const
+	const IStatistics *outer_stats, const IStatistics *inner_side_stats)
 {
 	if (GPOS_FTRACE(
 			gpos::

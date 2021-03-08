@@ -182,7 +182,7 @@ CExpression *
 CXformExpandFullOuterJoin::PexprLogicalJoinOverCTEs(
 	CMemoryPool *mp, EdxlJoinType edxljointype, ULONG ulLeftCTEId,
 	CColRefArray *pdrgpcrLeft, ULONG ulRightCTEId, CColRefArray *pdrgpcrRight,
-	CExpression *pexprScalar) const
+	CExpression *pexprScalar)
 {
 	GPOS_ASSERT(nullptr != pexprScalar);
 

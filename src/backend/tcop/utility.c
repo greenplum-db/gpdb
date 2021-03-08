@@ -782,6 +782,11 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 		case T_AlterSystemStmt:
 			PreventInTransactionBlock(isTopLevel, "ALTER SYSTEM");
 			AlterSystemSetConfigFile((AlterSystemStmt *) parsetree);
+			if (Gp_role == GP_ROLE_DISPATCH)
+				CdbDispatchUtilityStatement((Node *) parsetree,
+											DF_CANCEL_ON_ERROR,
+											NULL,
+											NULL);
 			break;
 
 		case T_VariableSetStmt:

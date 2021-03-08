@@ -133,7 +133,7 @@ CLogicalRowTrigger::InitFunctionProperties()
 //
 //---------------------------------------------------------------------------
 INT
-CLogicalRowTrigger::ITriggerType(const IMDTrigger *pmdtrigger) const
+CLogicalRowTrigger::ITriggerType(const IMDTrigger *pmdtrigger)
 {
 	INT type = GPMD_TRIGGER_ROW;
 	if (pmdtrigger->IsBefore())

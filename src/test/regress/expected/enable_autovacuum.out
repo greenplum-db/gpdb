@@ -1,7 +1,10 @@
 alter system set autovacuum = on;
-select * from pg_reload_conf();
- pg_reload_conf 
-----------------
- t
-(1 row)
+select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');
+ gp_segment_id | pg_reload_conf 
+---------------+----------------
+             2 | t
+             1 | t
+             0 | t
+            -1 | t
+(4 rows)
 

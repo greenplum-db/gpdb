@@ -269,7 +269,7 @@ CAutoTaskProxy::FindFinished(CTask **task)
 //
 //---------------------------------------------------------------------------
 void
-CAutoTaskProxy::Execute(CTask *task)
+CAutoTaskProxy::Execute(CTask *task) const
 {
 	GPOS_ASSERT(CTask::EtsInit == task->m_status && "Task already scheduled");
 
@@ -342,7 +342,7 @@ CAutoTaskProxy::Cancel(CTask *task)
 //
 //---------------------------------------------------------------------------
 void
-CAutoTaskProxy::CheckError(CTask *sub_task)
+CAutoTaskProxy::CheckError(CTask *sub_task) const
 {
 	// sub-task has a pending error
 	if (sub_task->HasPendingExceptions())
@@ -384,8 +384,6 @@ CAutoTaskProxy::CheckError(CTask *sub_task)
 void
 CAutoTaskProxy::PropagateError(CTask *sub_task)
 {
-	GPOS_ASSERT(m_propagate_error);
-
 	// sub-task must be in error status and have a pending exception
 	GPOS_ASSERT(ITask::EtsError == sub_task->GetStatus() &&
 				sub_task->HasPendingExceptions());

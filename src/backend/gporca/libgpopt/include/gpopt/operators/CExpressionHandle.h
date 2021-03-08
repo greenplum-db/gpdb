@@ -129,7 +129,8 @@ public:
 
 	// stats derivation using given properties and context
 	void DeriveStats(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
-					 CReqdPropRelational *prprel, IStatisticsArray *stats_ctxt);
+					 CReqdPropRelational *prprel,
+					 IStatisticsArray *stats_ctxt) const;
 
 	// derive the properties of the plan carried by attached cost context,
 	// using default CDrvdPropCtxtPlan
@@ -226,21 +227,21 @@ public:
 
 	// check for outer references
 	BOOL
-	HasOuterRefs()
+	HasOuterRefs() const
 	{
 		return (0 < DeriveOuterReferences()->Size());
 	}
 
 	// check if attached expression must execute on a single host
 	BOOL
-	NeedsSingletonExecution()
+	NeedsSingletonExecution() const
 	{
 		return DeriveFunctionProperties()->NeedsSingletonExecution();
 	}
 
 	// check for outer references in the given child
 	BOOL
-	HasOuterRefs(ULONG child_index)
+	HasOuterRefs(ULONG child_index) const
 	{
 		return (0 < DeriveOuterReferences(child_index)->Size());
 	}
@@ -262,10 +263,10 @@ public:
 	ULONG UlPreviousOptimizedChildIndex(ULONG child_index) const;
 
 	// get the function properties of a child
-	CFunctionProp *PfpChild(ULONG child_index);
+	CFunctionProp *PfpChild(ULONG child_index) const;
 
 	// check whether an expression's children have a volatile function
-	BOOL FChildrenHaveVolatileFuncScan();
+	BOOL FChildrenHaveVolatileFuncScan() const;
 
 	// return a representative (inexact) scalar child at given index
 	CExpression *PexprScalarRepChild(ULONG child_index) const;
@@ -279,59 +280,59 @@ public:
 	// return an exact scalar expression attached to handle or null if not possible
 	CExpression *PexprScalarExact() const;
 
-	void DeriveProducerStats(ULONG child_index, CColRefSet *pcrsStat);
+	void DeriveProducerStats(ULONG child_index, CColRefSet *pcrsStat) const;
 
 	// return the columns used by a logical operator internally as well
 	// as columns used by all its scalar children
-	CColRefSet *PcrsUsedColumns(CMemoryPool *mp);
+	CColRefSet *PcrsUsedColumns(CMemoryPool *mp) const;
 
-	CColRefSet *DeriveOuterReferences();
-	CColRefSet *DeriveOuterReferences(ULONG child_index);
+	CColRefSet *DeriveOuterReferences() const;
+	CColRefSet *DeriveOuterReferences(ULONG child_index) const;
 
-	CColRefSet *DeriveOutputColumns();
-	CColRefSet *DeriveOutputColumns(ULONG child_index);
+	CColRefSet *DeriveOutputColumns() const;
+	CColRefSet *DeriveOutputColumns(ULONG child_index) const;
 
-	CColRefSet *DeriveNotNullColumns();
-	CColRefSet *DeriveNotNullColumns(ULONG child_index);
+	CColRefSet *DeriveNotNullColumns() const;
+	CColRefSet *DeriveNotNullColumns(ULONG child_index) const;
 
-	CColRefSet *DeriveCorrelatedApplyColumns();
-	CColRefSet *DeriveCorrelatedApplyColumns(ULONG child_index);
+	CColRefSet *DeriveCorrelatedApplyColumns() const;
+	CColRefSet *DeriveCorrelatedApplyColumns(ULONG child_index) const;
 
-	CMaxCard DeriveMaxCard();
-	CMaxCard DeriveMaxCard(ULONG child_index);
+	CMaxCard DeriveMaxCard() const;
+	CMaxCard DeriveMaxCard(ULONG child_index) const;
 
-	CKeyCollection *DeriveKeyCollection();
-	CKeyCollection *DeriveKeyCollection(ULONG child_index);
+	CKeyCollection *DeriveKeyCollection() const;
+	CKeyCollection *DeriveKeyCollection(ULONG child_index) const;
 
-	CPropConstraint *DerivePropertyConstraint();
-	CPropConstraint *DerivePropertyConstraint(ULONG child_index);
+	CPropConstraint *DerivePropertyConstraint() const;
+	CPropConstraint *DerivePropertyConstraint(ULONG child_index) const;
 
-	ULONG DeriveJoinDepth();
-	ULONG DeriveJoinDepth(ULONG child_index);
+	ULONG DeriveJoinDepth() const;
+	ULONG DeriveJoinDepth(ULONG child_index) const;
 
-	CFunctionProp *DeriveFunctionProperties();
-	CFunctionProp *DeriveFunctionProperties(ULONG child_index);
+	CFunctionProp *DeriveFunctionProperties() const;
+	CFunctionProp *DeriveFunctionProperties(ULONG child_index) const;
 
-	CFunctionalDependencyArray *Pdrgpfd();
-	CFunctionalDependencyArray *Pdrgpfd(ULONG child_index);
+	CFunctionalDependencyArray *Pdrgpfd() const;
+	CFunctionalDependencyArray *Pdrgpfd(ULONG child_index) const;
 
-	CPartInfo *DerivePartitionInfo();
-	CPartInfo *DerivePartitionInfo(ULONG child_index);
+	CPartInfo *DerivePartitionInfo() const;
+	CPartInfo *DerivePartitionInfo(ULONG child_index) const;
 
-	CTableDescriptor *DeriveTableDescriptor();
-	CTableDescriptor *DeriveTableDescriptor(ULONG child_index);
+	CTableDescriptor *DeriveTableDescriptor() const;
+	CTableDescriptor *DeriveTableDescriptor(ULONG child_index) const;
 
 	// Scalar property accessors
-	CColRefSet *DeriveDefinedColumns(ULONG child_index);
-	CColRefSet *DeriveUsedColumns(ULONG child_index);
-	CColRefSet *DeriveSetReturningFunctionColumns(ULONG child_index);
-	BOOL DeriveHasSubquery(ULONG child_index);
-	CPartInfo *DeriveScalarPartitionInfo(ULONG child_index);
-	CFunctionProp *DeriveScalarFunctionProperties(ULONG child_index);
-	BOOL DeriveHasNonScalarFunction(ULONG child_index);
-	ULONG DeriveTotalDistinctAggs(ULONG child_index);
-	BOOL DeriveHasMultipleDistinctAggs(ULONG child_index);
-	BOOL DeriveHasScalarArrayCmp(ULONG child_index);
+	CColRefSet *DeriveDefinedColumns(ULONG child_index) const;
+	CColRefSet *DeriveUsedColumns(ULONG child_index) const;
+	CColRefSet *DeriveSetReturningFunctionColumns(ULONG child_index) const;
+	BOOL DeriveHasSubquery(ULONG child_index) const;
+	CPartInfo *DeriveScalarPartitionInfo(ULONG child_index) const;
+	CFunctionProp *DeriveScalarFunctionProperties(ULONG child_index) const;
+	BOOL DeriveHasNonScalarFunction(ULONG child_index) const;
+	ULONG DeriveTotalDistinctAggs(ULONG child_index) const;
+	BOOL DeriveHasMultipleDistinctAggs(ULONG child_index) const;
+	BOOL DeriveHasScalarArrayCmp(ULONG child_index) const;
 
 };	// class CExpressionHandle
 

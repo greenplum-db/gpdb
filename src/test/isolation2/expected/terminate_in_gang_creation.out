@@ -165,9 +165,9 @@ SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid) FROM gp_
 --------------------------
  Success:                 
 (1 row)
-ALTER SYSTEM RESET gp_dtx_recovery_interval;
+2: ALTER SYSTEM RESET gp_dtx_recovery_interval;
 ALTER
-SELECT pg_reload_conf();
+2: SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
  t              

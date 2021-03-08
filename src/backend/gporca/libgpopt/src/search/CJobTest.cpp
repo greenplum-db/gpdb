@@ -235,7 +235,7 @@ CJobTest::FQueue(CSchedulerContext *psc)
 //
 //---------------------------------------------------------------------------
 void
-CJobTest::Loop()
+CJobTest::Loop() const
 {
 	ULONG ulOuter = 0;
 	while (ulOuter < m_ulIters)

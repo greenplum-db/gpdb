@@ -381,7 +381,7 @@ CEngine::InsertXformResult(
 		if (pgroupContainer != pgroupOrigin &&
 			FPossibleDuplicateGroups(pgroupContainer, pgroupOrigin))
 		{
-			m_pmemo->MarkDuplicates(pgroupOrigin, pgroupContainer);
+			gpopt::CMemo::MarkDuplicates(pgroupOrigin, pgroupContainer);
 		}
 
 		pexpr = pxfres->PexprNext();
@@ -1281,9 +1281,6 @@ CEngine::Implement()
 void
 CEngine::RecursiveOptimize()
 {
-	COptimizerConfig *optimizer_config =
-		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
-
 	CAutoTimer at("\n[OPT]: Total Optimization Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
@@ -1332,7 +1329,7 @@ CEngine::RecursiveOptimize()
 					  << m_search_stage_array->Size();
 	}
 
-	if (optimizer_config->GetEnumeratorCfg()->FSample())
+	if (CEnumeratorConfig::FSample())
 	{
 		SamplePlans();
 	}
@@ -1421,7 +1418,8 @@ CEngine::PdrgpocChildren(CMemoryPool *mp, CExpressionHandle &exprhdl)
 //
 //---------------------------------------------------------------------------
 void
-CEngine::ScheduleMainJob(CSchedulerContext *psc, COptimizationContext *poc)
+CEngine::ScheduleMainJob(CSchedulerContext *psc,
+						 COptimizationContext *poc) const
 {
 	GPOS_ASSERT(nullptr != PgroupRoot());
 
@@ -1671,9 +1669,6 @@ CEngine::ProcessTraceFlags()
 void
 CEngine::Optimize()
 {
-	COptimizerConfig *optimizer_config =
-		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
-
 	CAutoTimer at("\n[OPT]: Total Optimization Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
@@ -1731,7 +1726,7 @@ CEngine::Optimize()
 	}
 
 
-	if (optimizer_config->GetEnumeratorCfg()->FSample())
+	if (CEnumeratorConfig::FSample())
 	{
 		SamplePlans();
 	}
@@ -1793,7 +1788,7 @@ CEngine::PexprExtractPlan()
 	COptimizerConfig *optimizer_config =
 		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
 	CEnumeratorConfig *pec = optimizer_config->GetEnumeratorCfg();
-	if (pec->FEnumerate())
+	if (gpopt::CEnumeratorConfig::FEnumerate())
 	{
 		CAutoTrace at(m_mp);
 		ULLONG ullCount = Pmemotmap()->UllCount();

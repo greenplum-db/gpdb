@@ -1069,6 +1069,16 @@ _readAlterRoleSetStmt(void)
 	READ_DONE();
 }
 
+static AlterSystemStmt *
+_readAlterSystemStmt(void)
+{
+	READ_LOCALS(AlterSystemStmt);
+
+	READ_NODE_FIELD(setstmt);
+
+	READ_DONE();
+}
+
 static AlterObjectSchemaStmt *
 _readAlterObjectSchemaStmt(void)
 {
@@ -4648,6 +4658,8 @@ parseNodeString(void)
 		return_value = _readAlterPolicyStmt();
 	else if (MATCHX("ALTERROLESETSTMT"))
 		return_value = _readAlterRoleSetStmt();
+	else if (MATCHX("ALTERSYSTEMSTMT"))
+		return_value = _readAlterSystemStmt();
 	else if (MATCHX("ALTERROLESTMT"))
 		return_value = _readAlterRoleStmt();
 	else if (MATCHX("ALTERSEQSTMT"))

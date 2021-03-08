@@ -155,7 +155,7 @@ private:
 		}
 
 		BOOL
-		Satisfies(ULONG pt)
+		Satisfies(ULONG pt) const
 		{
 			return pt == (m_join_order & pt);
 		}
@@ -165,7 +165,7 @@ private:
 			m_join_order |= p.m_join_order;
 		}
 		BOOL
-		IsGreedy()
+		IsGreedy() const
 		{
 			return 0 != (m_join_order & (EJoinOrderQuery + EJoinOrderMincard +
 										 EJoinOrderGreedyAvoidXProd));
@@ -193,7 +193,7 @@ private:
 					   : (*m_group_info->m_best_expr_info_array)[m_expr_index];
 		}
 		BOOL
-		IsValid()
+		IsValid() const
 		{
 			return nullptr != m_group_info && gpos::ulong_max != m_expr_index;
 		}
@@ -279,19 +279,19 @@ private:
 
 		// cost (use -1 for greedy solutions to ensure we keep all of them)
 		CDouble
-		GetCostForHeap()
+		GetCostForHeap() const
 		{
 			return m_properties.IsGreedy() ? -1.0 : GetCost();
 		}
 
 		CDouble
-		GetCost()
+		GetCost() const
 		{
 			return m_cost + m_cost_adj_PS;
 		}
 
 		void
-		UnionPSProperties(SExpressionInfo *other)
+		UnionPSProperties(SExpressionInfo *other) const
 		{
 			m_contain_PS->Union(other->m_contain_PS);
 		}
@@ -337,12 +337,12 @@ private:
 		}
 
 		BOOL
-		IsAnAtom()
+		IsAnAtom() const
 		{
 			return 1 == m_atoms->Size();
 		}
 		CDouble
-		GetCostForHeap()
+		GetCostForHeap() const
 		{
 			return m_lowest_expr_cost;
 		}
@@ -487,20 +487,20 @@ private:
 								 SExpressionProperties &result_properties);
 
 	// does "prop" provide all the properties of "other_prop" plus maybe more?
-	BOOL IsASupersetOfProperties(SExpressionProperties &prop,
-								 SExpressionProperties &other_prop);
+	static BOOL IsASupersetOfProperties(SExpressionProperties &prop,
+										SExpressionProperties &other_prop);
 
 	// is one of the properties a subset of the other or are they disjoint?
-	BOOL ArePropertiesDisjoint(SExpressionProperties &prop,
-							   SExpressionProperties &other_prop);
+	static BOOL ArePropertiesDisjoint(SExpressionProperties &prop,
+									  SExpressionProperties &other_prop);
 
 	// get best expression in a group for a given set of properties
-	SGroupAndExpression GetBestExprForProperties(SGroupInfo *group_info,
-												 SExpressionProperties &props);
+	static SGroupAndExpression GetBestExprForProperties(
+		SGroupInfo *group_info, SExpressionProperties &props);
 
 	// add a new property to an existing predicate
-	void AddNewPropertyToExpr(SExpressionInfo *expr_info,
-							  SExpressionProperties props);
+	static void AddNewPropertyToExpr(SExpressionInfo *expr_info,
+									 SExpressionProperties props);
 
 	// enumerate bushy joins (joins where both children are also joins) of level "current_level"
 	void SearchBushyJoinOrders(ULONG current_level);
@@ -557,7 +557,7 @@ public:
 	// print function
 	IOstream &OsPrint(IOstream &) const;
 
-	IOstream &OsPrintProperty(IOstream &, SExpressionProperties &) const;
+	static IOstream &OsPrintProperty(IOstream &, SExpressionProperties &);
 
 };	// class CJoinOrderDPv2
 

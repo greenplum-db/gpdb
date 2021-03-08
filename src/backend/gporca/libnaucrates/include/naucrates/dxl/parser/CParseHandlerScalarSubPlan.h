@@ -42,7 +42,7 @@ private:
 	EdxlSubPlanType m_dxl_subplan_type;
 
 	// map character sequence to subplan type
-	EdxlSubPlanType GetDXLSubplanType(const XMLCh *xml_subplan_type);
+	static EdxlSubPlanType GetDXLSubplanType(const XMLCh *xml_subplan_type);
 
 	// process the start of an element
 	void StartElement(

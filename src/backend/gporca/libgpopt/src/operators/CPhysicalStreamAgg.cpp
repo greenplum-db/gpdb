@@ -105,7 +105,7 @@ CPhysicalStreamAgg::~CPhysicalStreamAgg()
 //---------------------------------------------------------------------------
 COrderSpec *
 CPhysicalStreamAgg::PosCovering(CMemoryPool *mp, COrderSpec *posRequired,
-								CColRefArray *pdrgpcrGrp) const
+								CColRefArray *pdrgpcrGrp)
 {
 	GPOS_ASSERT(nullptr != posRequired);
 

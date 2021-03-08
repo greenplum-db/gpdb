@@ -38,7 +38,7 @@ private:
 	CDXLScalarOpList::EdxlOpListType m_dxl_op_list_type;
 
 	// return the op list type corresponding to the given operator name
-	CDXLScalarOpList::EdxlOpListType GetDXLOpListType(
+	static CDXLScalarOpList::EdxlOpListType GetDXLOpListType(
 		const XMLCh *const element_local_name);
 
 	// process the start of an element

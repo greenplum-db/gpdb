@@ -57,10 +57,10 @@ protected:
 		ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
 
 	// helper to compute required rewindability of correlated join's children
-	CRewindabilitySpec *PrsRequiredCorrelatedJoin(
+	static CRewindabilitySpec *PrsRequiredCorrelatedJoin(
 		CMemoryPool *mp, CExpressionHandle &exprhdl,
 		CRewindabilitySpec *prsRequired, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const;
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq);
 
 	// helper for propagating required sort order to outer child
 	static COrderSpec *PosPropagateToOuter(CMemoryPool *mp,

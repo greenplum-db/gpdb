@@ -12,12 +12,14 @@ class GpBuild:
     def __init__(self, mode="orca"):
         self.mode = 'on' if mode == 'orca' else 'off'
         self.configure_options =  [
+                                    "--enable-gpcloud",
                                     "--enable-mapreduce",
                                     "--enable-orafce",
+                                    "--enable-tap-tests",
                                     "--with-gssapi",
-                                    "--with-perl",
-                                    "--enable-gpcloud",
                                     "--with-libxml",
+                                    "--with-openssl",
+                                    "--with-perl",
                                     "--with-python",
                                     # TODO: Remove this line as soon as zstd is built into Ubuntu docker image
                                     "--without-zstd",

@@ -158,7 +158,7 @@ CXformEagerAgg::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 // Only following aggregates are supported:
 // 	min, max, sum, count, avg
 BOOL
-CXformEagerAgg::CanPushAggBelowJoin(CExpression *scalar_agg_func_expr) const
+CXformEagerAgg::CanPushAggBelowJoin(CExpression *scalar_agg_func_expr)
 {
 	CScalarAggFunc *scalar_agg_func =
 		CScalarAggFunc::PopConvert(scalar_agg_func_expr->Pop());
@@ -208,7 +208,7 @@ CXformEagerAgg::CanPushAggBelowJoin(CExpression *scalar_agg_func_expr) const
 //		- Single expression input in the agg
 //		- Input expression only part of outer child
 BOOL
-CXformEagerAgg::CanApplyTransform(CExpression *gb_agg_expr) const
+CXformEagerAgg::CanApplyTransform(CExpression *gb_agg_expr)
 {
 	CExpression *join_expr = (*gb_agg_expr)[0];
 	CExpression *agg_proj_list_expr = (*gb_agg_expr)[1];
@@ -253,7 +253,7 @@ CXformEagerAgg::PopulateLowerUpperProjectList(
 		*orig_proj_list,  // project list of the original global aggregate
 	CExpression **lower_proj_list,	// project list of the new lower aggregate
 	CExpression **upper_proj_list	// project list of the new upper aggregate
-) const
+)
 {
 	// build an array of project elements for the new lower and upper aggregates
 	CExpressionArray *lower_proj_elem_array = GPOS_NEW(mp) CExpressionArray(mp);
@@ -310,7 +310,7 @@ CXformEagerAgg::PopulateLowerProjectElement(
 	CWStringConst *agg_name, CExpressionArray *agg_arg_array, BOOL is_distinct,
 	CExpression **
 		lower_proj_elem_expr  // output project element of the new lower aggregate
-) const
+)
 {
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
@@ -348,7 +348,7 @@ CXformEagerAgg::PopulateUpperProjectElement(
 	BOOL is_distinct,
 	CExpression **
 		upper_proj_elem_expr  // output project element of the new lower aggregate
-) const
+)
 {
 	// create a new operator
 	agg_mdid->AddRef();

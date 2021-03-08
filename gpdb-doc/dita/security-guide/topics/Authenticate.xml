@@ -258,6 +258,25 @@ host    all   dba   192.168.0.0/32  md5</codeblock></li>
         <p>
           <parml id="ul_zsk_kwd_jr">
             <plentry>
+              <pt>Trust</pt>
+              <pd>Allows the connection unconditionally, without the need for a password or any
+                other authentication. This entry is commonly used for the <codeph>gpadmin</codeph>
+                role, and for Greenplum utilities (for example <codeph>gpinitsystem</codeph>,
+                  <codeph>gpstop</codeph>, or <codeph>gpstart</codeph> amongst others) that need to
+                connect between nodes without prompting for input or a password. </pd>
+              <pd>
+                <note type="important">For a more secure system, remove records for remote
+                  connections that use <codeph>trust</codeph> authentication from
+                    the <codeph>pg_hba.conf</codeph> file. <codeph>trust</codeph> authentication
+                  grants any user who can connect to the server access to the database using any
+                  role they specify. You can safely replace <codeph>trust</codeph> authentication
+                  with <codeph>ident</codeph> authentication for local UNIX-socket connections. You
+                  can also use <codeph>ident</codeph> authentication for local and remote TCP
+                  clients, but the client host must be running an ident service and you must
+                    <codeph>trust</codeph> the integrity of that machine.</note>
+              </pd>
+            </plentry>
+            <plentry>
               <pt>Reject</pt>
               <pd>Reject the connections with the matching parameters. You should typically use this
                 to restrict access from specific hosts or insecure connections.</pd>
@@ -295,6 +314,14 @@ host    all   dba   192.168.0.0/32  md5</codeblock></li>
 hostssl      all   testuser   0.0.0.0/0 md5
 local        all   gpuser               ident</codeblock></p>
       </section>
+      <p>Or:</p>
+      <codeblock>
+local    all           gpadmin         ident 
+host     all           gpadmin         localhost      trust 
+host     all           gpadmin         mdw            trust 
+local    replication   gpadmin         ident 
+host     replication   gpadmin         samenet       trust 
+host     all           all             0.0.0.0/0     md5</codeblock>
       <section id="kerberos_auth">
         <title>GSSAPI Authentication</title>
         <p>GSSAPI is an industry-standard protocol for secure authentication defined in RFC 2743.

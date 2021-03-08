@@ -50,7 +50,7 @@ private:
 	void InitFunctionProperties();
 
 	// return the type of a given trigger as an integer
-	INT ITriggerType(const IMDTrigger *pmdtrigger) const;
+	static INT ITriggerType(const IMDTrigger *pmdtrigger);
 
 public:
 	CLogicalRowTrigger(const CLogicalRowTrigger &) = delete;

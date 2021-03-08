@@ -60,3 +60,11 @@ def test_607_clear_database():
     "drop tables in database and recreate them to clear the environment"
     file = mkpath('setup.sql')
     runfile(file)
+
+@prepare_before_test(num=608, times=2)
+def test_608_gpload_ext_staging_table():
+    "608 gpload ignore staging_table if the reuse is false"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_13.csv','data_file.csv')
+    write_config_file(reuse_tables=False, format='csv', file='data_file.csv', table='csvtable', delimiter="','", log_errors=True,error_limit=10,staging_table='staging_table')

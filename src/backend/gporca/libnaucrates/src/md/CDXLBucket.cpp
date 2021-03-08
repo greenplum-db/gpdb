@@ -164,8 +164,7 @@ CDXLBucket::Serialize(CXMLSerializer *xml_serializer) const
 void
 CDXLBucket::SerializeBoundaryValue(CXMLSerializer *xml_serializer,
 								   const CWStringConst *elem_str,
-								   CDXLDatum *dxl_datum,
-								   BOOL is_bound_closed) const
+								   CDXLDatum *dxl_datum, BOOL is_bound_closed)
 {
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), elem_str);

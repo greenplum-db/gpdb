@@ -9,7 +9,7 @@
 
 # Store gpdemo master and primary segment data directories.
 # This assumes default settings for the data directories.
-DATADIR="${MASTER_DATA_DIRECTORY%*/*/*}"
+DATADIR="${COORDINATOR_DATA_DIRECTORY%*/*/*}"
 MASTER=${DATADIR}/qddir/demoDataDir-1
 PRIMARY1=${DATADIR}/dbfast1/demoDataDir0
 PRIMARY2=${DATADIR}/dbfast2/demoDataDir1
@@ -20,7 +20,7 @@ TEMP_DIR=$PWD/temp_test
 # Stop the PITR cluster.
 echo "Stopping the PITR cluster..."
 REPLICA_MASTER=$TEMP_DIR/replica_m
-MASTER_DATA_DIRECTORY=$REPLICA_MASTER gpstop -ai -q
+COORDINATOR_DATA_DIRECTORY=$REPLICA_MASTER gpstop -ai -q
 
 # Remove the temp_test directory.
 echo "Removing the temporary test directory..."
@@ -37,3 +37,4 @@ done
 # Start back up the gpdemo cluster.
 echo "Starting back up the gpdemo cluster..."
 gpstart -a
+dropdb gpdb_pitr_database

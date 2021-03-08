@@ -147,7 +147,8 @@ private:
 								  CGroupExpression *pgexprOrigin);
 
 	// create and schedule the main optimization job
-	void ScheduleMainJob(CSchedulerContext *psc, COptimizationContext *poc);
+	void ScheduleMainJob(CSchedulerContext *psc,
+						 COptimizationContext *poc) const;
 
 	// print activated xform
 	void PrintActivatedXforms(IOstream &os) const;
@@ -174,7 +175,7 @@ private:
 	void SamplePlans();
 
 	// check if all children were successfully optimized
-	BOOL FChildrenOptimized(COptimizationContextArray *pdrgpoc);
+	static BOOL FChildrenOptimized(COptimizationContextArray *pdrgpoc);
 
 	// check if ayn of the given property enforcing types prohibits enforcement
 	static BOOL FProhibited(CEnfdProp::EPropEnforcingType epetOrder,

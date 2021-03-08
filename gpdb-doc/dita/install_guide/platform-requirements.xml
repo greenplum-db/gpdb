@@ -305,7 +305,7 @@
         </ul>
         <p>The Greenplum 6 Clients package includes the client and loader programs provided in the
           Greenplum 5 packages plus the addition of database/role/language commands and the
-          Greenplum-Kafka Integration and Greenplum Streaming Server command utilities. Refer to <xref
+          Greenplum Streaming Server command utilities. Refer to <xref
             href="../client_tool_guides/intro.xml" format="dita" scope="peer">Greenplum Client and
             Loader Tools Package</xref> for installation and usage details of the Greenplum 6 Client
           tools.</p>
@@ -424,19 +424,19 @@
                 >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
                 Administrator Guide</cite> for PXF configuration and usage
               information.<!--Also check OSS information in Hadoop section--></li>
-            <li>Greenplum-Kafka Integration - The Greenplum-Kafka Integration provides high
-              speed, parallel data transfer from a Kafka cluster to a Greenplum Database
-              cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or
-              newer for exactly-once delivery assurance. Refer to the <xref
-                href="https://greenplum.docs.pivotal.io/streaming-server/1-5/kafka/intro.html" scope="external" format="html">
-                 Greenplum-Kafka Integration</xref> Documentation for more information about this
-               feature.</li>
             <li>Greenplum Streaming Server v1.5.0 - The Tanzu Greenplum Streaming Server is an ETL
-              tool that provides high speed, parallel data transfer from Informatica, Kafka, and
+              tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache NiFi and
               custom client data sources to a Tanzu Greenplum cluster. Refer to the <xref
                 href="https://greenplum.docs.pivotal.io/streaming-server/1-5/intro.html"
                 scope="external" format="html"> Tanzu Greenplum Streaming Server</xref>
               Documentation for more information about this feature.</li>
+            <li>Greenplum Streaming Server Kafka integration - The Kafka integration provides high
+              speed, parallel data transfer from a Kafka cluster to a Greenplum Database
+              cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or
+              newer for exactly-once delivery assurance. Refer to the <xref
+                href="https://greenplum.docs.pivotal.io/streaming-server/1-5/kafka/intro.html" scope="external" format="html">
+                 Tanzu Greenplum Streaming Server</xref> Documentation for more information about this
+               feature.</li>
             <li>Greenplum Connector for Apache Spark  v1.6.2 - The Tanzu Greenplum Connector for
               Apache Spark supports high speed, parallel data transfer between Greenplum and an
               Apache Spark cluster using Spark’s Scala API.</li>

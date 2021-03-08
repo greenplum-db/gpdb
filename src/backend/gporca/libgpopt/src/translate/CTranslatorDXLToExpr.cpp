@@ -1834,7 +1834,7 @@ CTranslatorDXLToExpr::Pwf(const CDXLWindowFrame *window_frame)
 //
 //---------------------------------------------------------------------------
 CWindowFrame::EFrameBoundary
-CTranslatorDXLToExpr::Efb(EdxlFrameBoundary frame_boundary) const
+CTranslatorDXLToExpr::Efb(EdxlFrameBoundary frame_boundary)
 {
 	ULONG window_frame_boundary_to_frame_boundary_mapping[][2] = {
 		{EdxlfbUnboundedPreceding, CWindowFrame::EfbUnboundedPreceding},
@@ -1869,7 +1869,7 @@ CTranslatorDXLToExpr::Efb(EdxlFrameBoundary frame_boundary) const
 //
 //---------------------------------------------------------------------------
 CWindowFrame::EFrameExclusionStrategy
-CTranslatorDXLToExpr::Efes(EdxlFrameExclusionStrategy edxlfeb) const
+CTranslatorDXLToExpr::Efes(EdxlFrameExclusionStrategy edxlfeb)
 {
 	ULONG window_frame_boundary_to_frame_boundary_mapping[][2] = {
 		{EdxlfesNone, CWindowFrame::EfesNone},
@@ -2952,7 +2952,7 @@ CTranslatorDXLToExpr::PexprWindowFunc(const CDXLNode *pdxlnWindowRef)
 //
 //---------------------------------------------------------------------------
 CScalarWindowFunc::EWinStage
-CTranslatorDXLToExpr::Ews(EdxlWinStage edxlws) const
+CTranslatorDXLToExpr::Ews(EdxlWinStage edxlws)
 {
 	ULONG window_frame_boundary_to_frame_boundary_mapping[][2] = {
 		{EdxlwinstageImmediate, CScalarWindowFunc::EwsImmediate},

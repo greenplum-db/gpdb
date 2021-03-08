@@ -95,5 +95,5 @@ SELECT gp_inject_fault('fts_probe', 'reset', dbid)
 	FROM gp_segment_configuration WHERE role='p' AND content=-1;
 SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid)
     FROM gp_segment_configuration WHERE role='p' AND content=-1;
-ALTER SYSTEM RESET gp_dtx_recovery_interval;
-SELECT pg_reload_conf();
+2: ALTER SYSTEM RESET gp_dtx_recovery_interval;
+2: SELECT pg_reload_conf();

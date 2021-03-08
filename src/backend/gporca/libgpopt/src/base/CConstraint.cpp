@@ -857,10 +857,8 @@ CConstraint::PdrgpcnstrDeduplicate(CMemoryPool *mp,
 //---------------------------------------------------------------------------
 ColRefToConstraintArrayMap *
 CConstraint::Phmcolconstr(CMemoryPool *mp, CColRefSet *pcrs,
-						  CConstraintArray *pdrgpcnstr) const
+						  CConstraintArray *pdrgpcnstr)
 {
-	GPOS_ASSERT(nullptr != m_pcrsUsed);
-
 	ColRefToConstraintArrayMap *phmcolconstr =
 		GPOS_NEW(mp) ColRefToConstraintArrayMap(mp);
 

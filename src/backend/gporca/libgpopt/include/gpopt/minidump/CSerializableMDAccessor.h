@@ -42,7 +42,7 @@ private:
 	void SerializeHeader(COstream &oos);
 
 	// serialize footer
-	void SerializeFooter(COstream &oos);
+	static void SerializeFooter(COstream &oos);
 
 public:
 	CSerializableMDAccessor(const CSerializableMDAccessor &) = delete;

@@ -1364,7 +1364,7 @@ BOOL
 CGroup::FBetterPromise(CMemoryPool *mp, CLogical::EStatPromise espFst,
 					   CGroupExpression *pgexprFst,
 					   CLogical::EStatPromise espSnd,
-					   CGroupExpression *pgexprSnd) const
+					   CGroupExpression *pgexprSnd)
 {
 	// if there is a tie and both group expressions are inner join, we prioritize
 	// the inner join having less predicates

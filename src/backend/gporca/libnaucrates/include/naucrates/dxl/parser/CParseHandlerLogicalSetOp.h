@@ -49,7 +49,7 @@ private:
 	BOOL m_cast_across_input_req;
 
 	// return the set operation type
-	EdxlSetOpType GetSetOpType(const XMLCh *const element_local_name);
+	static EdxlSetOpType GetSetOpType(const XMLCh *const element_local_name);
 
 	// process the start of an element
 	void StartElement(

@@ -2216,6 +2216,10 @@ readNodeBinary(void)
 				return_value = _readAlterObjectDependsStmt();
 				break;
 
+			case T_AlterSystemStmt:
+				return_value = _readAlterSystemStmt();
+				break;
+
 			case T_AlterObjectSchemaStmt:
 				return_value = _readAlterObjectSchemaStmt();
 				break;

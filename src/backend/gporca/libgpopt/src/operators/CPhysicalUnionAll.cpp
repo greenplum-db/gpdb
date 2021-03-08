@@ -448,7 +448,7 @@ CPhysicalUnionAll::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 // inserting into t1_x. So, derive CDistributionSpecStrictRandom
 CDistributionSpecRandom *
 CPhysicalUnionAll::PdsStrictRandomParallelUnionAllChildren(
-	CMemoryPool *mp, CExpressionHandle &expr_handle) const
+	CMemoryPool *mp, CExpressionHandle &expr_handle)
 {
 	if (COperator::EopPhysicalParallelUnionAll == expr_handle.Pop()->Eopid())
 	{
@@ -686,7 +686,7 @@ CPhysicalUnionAll::PdsDeriveFromChildren(CMemoryPool *
 											 mp
 #endif	// GPOS_DEBUG
 										 ,
-										 CExpressionHandle &exprhdl) const
+										 CExpressionHandle &exprhdl)
 {
 	const ULONG arity = exprhdl.Arity();
 

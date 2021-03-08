@@ -153,7 +153,7 @@ private:
 		}
 
 		// return the key for this hashtable element
-		IMDId *MDId();
+		IMDId *MDId() const;
 
 		// equality function for hash tables
 		static BOOL Equals(const MdidPtr &left_mdid, const MdidPtr &right_mdid);

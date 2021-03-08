@@ -52,12 +52,12 @@ private:
 						  CExpressionArray *pdrgpexpr);
 
 	// move cursor
-	CGroupExpression *PgexprNext(CGroup *pgroup,
-								 CGroupExpression *pgexpr) const;
+	static CGroupExpression *PgexprNext(CGroup *pgroup,
+										CGroupExpression *pgexpr);
 
 	// expand n-th child of pattern
-	CExpression *PexprExpandPattern(CExpression *pexpr, ULONG ulPos,
-									ULONG arity);
+	static CExpression *PexprExpandPattern(CExpression *pexpr, ULONG ulPos,
+										   ULONG arity);
 
 	// get binding for children
 	BOOL FExtractChildren(CMemoryPool *mp, CGroupExpression *pgexpr,
@@ -70,8 +70,8 @@ private:
 							  CExpression *pexprLast);
 
 	// build expression
-	CExpression *PexprFinalize(CMemoryPool *mp, CGroupExpression *pgexpr,
-							   CExpressionArray *pdrgpexprChildren);
+	static CExpression *PexprFinalize(CMemoryPool *mp, CGroupExpression *pgexpr,
+									  CExpressionArray *pdrgpexprChildren);
 
 	// private copy ctor
 	CBinding(const CBinding &);

@@ -44,7 +44,7 @@ ICostModel::PcmDefault(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 void
-ICostModel::SetParams(ICostModelParamsArray *pdrgpcp)
+ICostModel::SetParams(ICostModelParamsArray *pdrgpcp) const
 {
 	if (nullptr == pdrgpcp)
 	{

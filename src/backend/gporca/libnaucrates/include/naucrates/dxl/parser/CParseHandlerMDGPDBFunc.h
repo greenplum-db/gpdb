@@ -80,10 +80,11 @@ private:
 		) override;
 
 	// parse function stability property from XML string
-	CMDFunctionGPDB::EFuncStbl ParseFuncStability(const XMLCh *xml_val);
+	static CMDFunctionGPDB::EFuncStbl ParseFuncStability(const XMLCh *xml_val);
 
 	// parse function data access property from XML string
-	CMDFunctionGPDB::EFuncDataAcc ParseFuncDataAccess(const XMLCh *xml_val);
+	static CMDFunctionGPDB::EFuncDataAcc ParseFuncDataAccess(
+		const XMLCh *xml_val);
 
 public:
 	CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &) = delete;

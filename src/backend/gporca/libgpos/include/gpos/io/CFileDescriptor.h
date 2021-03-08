@@ -31,7 +31,7 @@ class CFileDescriptor
 {
 private:
 	// file descriptor
-	INT m_file_descriptor;
+	INT m_file_descriptor{GPOS_FILE_DESCR_INVALID};
 
 protected:
 	// ctor -- accessible through inheritance only

@@ -1,0 +1,6 @@
+2021-01-11 17:30:56|INFO|gpload session started 2021-01-11 17:30:56
+2021-01-11 17:30:56|ERROR|table "texttable_653" not found in any database schema
+2021-01-11 17:30:56|INFO|rows Inserted          = 0
+2021-01-11 17:30:56|INFO|rows Updated           = 0
+2021-01-11 17:30:56|INFO|data formatting errors = 0
+2021-01-11 17:30:56|INFO|gpload failed

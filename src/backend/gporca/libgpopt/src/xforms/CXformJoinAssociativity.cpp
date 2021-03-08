@@ -66,9 +66,9 @@ CXformJoinAssociativity::CXformJoinAssociativity(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 void
-CXformJoinAssociativity::CreatePredicates(
-	CMemoryPool *mp, CExpression *pexpr, CExpressionArray *pdrgpexprLower,
-	CExpressionArray *pdrgpexprUpper) const
+CXformJoinAssociativity::CreatePredicates(CMemoryPool *mp, CExpression *pexpr,
+										  CExpressionArray *pdrgpexprLower,
+										  CExpressionArray *pdrgpexprUpper)
 {
 	GPOS_CHECK_ABORT;
 

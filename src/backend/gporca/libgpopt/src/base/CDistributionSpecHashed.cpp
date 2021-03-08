@@ -965,7 +965,7 @@ CDistributionSpecHashed::Combine(CMemoryPool *mp,
 
 // check if the equivalent spec (if any) has no matching columns with the main spec
 BOOL
-CDistributionSpecHashed::HasCompleteEquivSpec(CMemoryPool *mp)
+CDistributionSpecHashed::HasCompleteEquivSpec(CMemoryPool *mp) const
 {
 	CDistributionSpecHashed *pdshashedEquiv = this->PdshashedEquiv();
 

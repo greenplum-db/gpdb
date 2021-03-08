@@ -77,14 +77,14 @@ private:
 	CExpression *PexprEquality(CMemoryPool *mp, const CColRef *colref);
 
 	// construct a scalar comparison expression from one of the ends
-	CExpression *PexprScalarCompEnd(CMemoryPool *mp, IDatum *datum,
-									ERangeInclusion eri,
-									IMDType::ECmpType ecmptIncl,
-									IMDType::ECmpType ecmptExcl,
-									const CColRef *colref);
+	static CExpression *PexprScalarCompEnd(CMemoryPool *mp, IDatum *datum,
+										   ERangeInclusion eri,
+										   IMDType::ECmpType ecmptIncl,
+										   IMDType::ECmpType ecmptExcl,
+										   const CColRef *colref);
 
 	// inverse of the inclusion option
-	ERangeInclusion
+	static ERangeInclusion
 	EriInverseInclusion(ERangeInclusion eri)
 	{
 		if (EriIncluded == eri)
@@ -95,8 +95,8 @@ private:
 	}
 
 	// print a bound
-	IOstream &OsPrintBound(IOstream &os, IDatum *datum,
-						   const CHAR *szInfinity) const;
+	static IOstream &OsPrintBound(IOstream &os, IDatum *datum,
+								  const CHAR *szInfinity);
 
 public:
 	CRange(const CRange &) = delete;

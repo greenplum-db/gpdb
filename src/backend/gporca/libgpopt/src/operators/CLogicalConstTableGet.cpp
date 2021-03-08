@@ -272,7 +272,7 @@ CLogicalConstTableGet::PxfsCandidates(CMemoryPool *mp) const
 //---------------------------------------------------------------------------
 CColumnDescriptorArray *
 CLogicalConstTableGet::PdrgpcoldescMapping(CMemoryPool *mp,
-										   CColRefArray *colref_array) const
+										   CColRefArray *colref_array)
 {
 	GPOS_ASSERT(nullptr != colref_array);
 	CColumnDescriptorArray *pdrgpcoldesc =

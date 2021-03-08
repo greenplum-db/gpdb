@@ -83,8 +83,8 @@ public:
 	}
 
 	// return the string representation of frame boundary
-	const CWStringConst *GetFrameBoundaryStr(
-		EdxlFrameBoundary frame_boundary) const;
+	static const CWStringConst *GetFrameBoundaryStr(
+		EdxlFrameBoundary frame_boundary);
 
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer,

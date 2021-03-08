@@ -83,7 +83,7 @@ CLogical::~CLogical()
 CColRefArray *
 CLogical::PdrgpcrCreateMapping(CMemoryPool *mp,
 							   const CColumnDescriptorArray *pdrgpcoldesc,
-							   ULONG ulOpSourceId, IMDId *mdid_table) const
+							   ULONG ulOpSourceId, IMDId *mdid_table)
 {
 	// get column factory from optimizer context object
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();

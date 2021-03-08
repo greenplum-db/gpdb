@@ -60,7 +60,7 @@ private:
 									ICostModel::SCostingInfo *pci);
 
 	// raise exception if the stats object is NULL
-	void RaiseExceptionIfStatsNull(IStatistics *stats);
+	static void RaiseExceptionIfStatsNull(IStatistics *stats);
 
 public:
 	CPartialPlan(const CPartialPlan &) = delete;

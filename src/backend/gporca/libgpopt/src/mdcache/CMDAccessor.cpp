@@ -104,7 +104,7 @@ CMDAccessor::SMDAccessorElem::~SMDAccessorElem()
 //
 //---------------------------------------------------------------------------
 IMDId *
-CMDAccessor::SMDAccessorElem::MDId()
+CMDAccessor::SMDAccessorElem::MDId() const
 {
 	return m_mdid;
 }

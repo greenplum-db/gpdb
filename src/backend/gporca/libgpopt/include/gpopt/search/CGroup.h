@@ -289,24 +289,24 @@ private:
 	CGroupExpression *PgexprNext(CGroupExpression *pgexpr);
 
 	// return true if first promise is better than second promise
-	BOOL FBetterPromise(CMemoryPool *mp, CLogical::EStatPromise espFst,
-						CGroupExpression *pgexprFst,
-						CLogical::EStatPromise espSnd,
-						CGroupExpression *pgexprSnd) const;
+	static BOOL FBetterPromise(CMemoryPool *mp, CLogical::EStatPromise espFst,
+							   CGroupExpression *pgexprFst,
+							   CLogical::EStatPromise espSnd,
+							   CGroupExpression *pgexprSnd);
 
 	// derive stats recursively on child groups
-	CLogical::EStatPromise EspDerive(CMemoryPool *pmpLocal,
-									 CMemoryPool *pmpGlobal,
-									 CGroupExpression *pgexpr,
-									 CReqdPropRelational *prprel,
-									 IStatisticsArray *stats_ctxt,
-									 BOOL fDeriveChildStats);
+	static CLogical::EStatPromise EspDerive(CMemoryPool *pmpLocal,
+											CMemoryPool *pmpGlobal,
+											CGroupExpression *pgexpr,
+											CReqdPropRelational *prprel,
+											IStatisticsArray *stats_ctxt,
+											BOOL fDeriveChildStats);
 
 	// reset computed stats
 	void ResetStats();
 
 	// helper function to add links in child groups
-	void RecursiveBuildTreeMap(
+	static void RecursiveBuildTreeMap(
 		CMemoryPool *mp, COptimizationContext *poc, CCostContext *pccParent,
 		CGroupExpression *pgexprCurrent, ULONG child_index,
 		CTreeMap<CCostContext, CExpression, CDrvdPropCtxtPlan,

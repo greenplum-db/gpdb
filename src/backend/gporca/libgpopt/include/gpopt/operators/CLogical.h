@@ -66,14 +66,14 @@ protected:
 	CColRefSet *m_pcrsLocalUsed;
 
 	// output column generation given a list of column descriptors
-	CColRefArray *PdrgpcrCreateMapping(
+	static CColRefArray *PdrgpcrCreateMapping(
 		CMemoryPool *mp, const CColumnDescriptorArray *pdrgpcoldesc,
-		ULONG ulOpSourceId, IMDId *mdid_table = nullptr) const;
+		ULONG ulOpSourceId, IMDId *mdid_table = nullptr);
 
 	// initialize the array of partition columns
-	CColRef2dArray *PdrgpdrgpcrCreatePartCols(CMemoryPool *mp,
-											  CColRefArray *colref_array,
-											  const ULongPtrArray *pdrgpulPart);
+	static CColRef2dArray *PdrgpdrgpcrCreatePartCols(
+		CMemoryPool *mp, CColRefArray *colref_array,
+		const ULongPtrArray *pdrgpulPart);
 
 	// derive dummy statistics
 	IStatistics *PstatsDeriveDummy(CMemoryPool *mp, CExpressionHandle &exprhdl,

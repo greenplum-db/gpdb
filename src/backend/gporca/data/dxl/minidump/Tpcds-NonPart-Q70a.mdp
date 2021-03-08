@@ -14870,7 +14870,7 @@ with results as
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="21559.317591" Rows="20.062500" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="21949.250066" Rows="20.062500" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="842" Alias="total_sum">
@@ -14893,7 +14893,7 @@ with results as
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="21559.317591" Rows="20.062500" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="21949.250066" Rows="20.062500" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="842" Alias="sum">
@@ -14923,7 +14923,7 @@ with results as
           </dxl:SortingColumnList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="21559.315523" Rows="20.062500" Width="44"/>
+              <dxl:Cost StartupCost="0" TotalCost="21949.247997" Rows="20.062500" Width="44"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="842" Alias="sum">
@@ -14955,7 +14955,7 @@ with results as
             <dxl:LimitOffset/>
             <dxl:Sequence>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="21559.315523" Rows="20.062500" Width="44"/>
+                <dxl:Cost StartupCost="0" TotalCost="21949.247997" Rows="20.062500" Width="44"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="842" Alias="sum">
@@ -14979,7 +14979,7 @@ with results as
               </dxl:ProjList>
               <dxl:CTEProducer CTEId="0" Columns="204,89,88,205,206">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="20266.314944" Rows="14.062500" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="20656.247418" Rows="14.062500" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="204" Alias="sum">
@@ -15000,7 +15000,7 @@ with results as
                 </dxl:ProjList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="20266.314943" Rows="14.062500" Width="32"/>
+                    <dxl:Cost StartupCost="0" TotalCost="20656.247418" Rows="14.062500" Width="32"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="204" Alias="sum">
@@ -15023,7 +15023,7 @@ with results as
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="20266.314929" Rows="14.062500" Width="26"/>
+                      <dxl:Cost StartupCost="0" TotalCost="20656.247404" Rows="14.062500" Width="26"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="89"/>
@@ -15045,7 +15045,7 @@ with results as
                     <dxl:Filter/>
                     <dxl:Sort SortDiscardDuplicates="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="20266.314897" Rows="14.062500" Width="26"/>
+                        <dxl:Cost StartupCost="0" TotalCost="20656.247371" Rows="14.062500" Width="26"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="88" Alias="s_county">
@@ -15067,7 +15067,7 @@ with results as
                       <dxl:LimitOffset/>
                       <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="20266.314897" Rows="14.062500" Width="26"/>
+                          <dxl:Cost StartupCost="0" TotalCost="20656.247371" Rows="14.062500" Width="26"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="88" Alias="s_county">
@@ -15092,7 +15092,7 @@ with results as
                         </dxl:HashExprList>
                         <dxl:Result>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="20266.314849" Rows="14.062500" Width="26"/>
+                            <dxl:Cost StartupCost="0" TotalCost="20656.247324" Rows="14.062500" Width="26"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="88" Alias="s_county">
@@ -15109,7 +15109,7 @@ with results as
                           <dxl:OneTimeFilter/>
                           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="20266.314849" Rows="14.062500" Width="26"/>
+                              <dxl:Cost StartupCost="0" TotalCost="20656.247324" Rows="14.062500" Width="26"/>
                             </dxl:Properties>
                             <dxl:GroupingColumns>
                               <dxl:GroupingColumn ColId="89"/>
@@ -15131,7 +15131,7 @@ with results as
                             <dxl:Filter/>
                             <dxl:HashJoin JoinType="Inner">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="19782.739138" Rows="61135453.777721" Width="26"/>
+                                <dxl:Cost StartupCost="0" TotalCost="20119.800634" Rows="67819601.064540" Width="26"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="22" Alias="ss_net_profit">
@@ -15154,7 +15154,7 @@ with results as
                               </dxl:HashCondList>
                               <dxl:HashJoin JoinType="Inner">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="8119.513997" Rows="152838634.444302" Width="12"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="8141.454737" Rows="169549002.661349" Width="12"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="7" Alias="ss_store_sk">
@@ -15207,7 +15207,7 @@ with results as
                                 </dxl:TableScan>
                                 <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="431.251673" Rows="12092.239264" Width="4"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="431.252171" Rows="13414.324949" Width="4"/>
                                   </dxl:Properties>
                                   <dxl:ProjList>
                                     <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -15218,7 +15218,7 @@ with results as
                                   <dxl:SortingColumnList/>
                                   <dxl:TableScan>
                                     <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="431.247287" Rows="377.882477" Width="4"/>
+                                      <dxl:Cost StartupCost="0" TotalCost="431.247306" Rows="419.197655" Width="4"/>
                                     </dxl:Properties>
                                     <dxl:ProjList>
                                       <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -15249,7 +15249,7 @@ with results as
                               </dxl:HashJoin>
                               <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="10624.284156" Rows="4147.200000" Width="22"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="10825.822451" Rows="4147.200000" Width="22"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="65" Alias="s_store_sk">
@@ -15266,7 +15266,7 @@ with results as
                                 <dxl:SortingColumnList/>
                                 <dxl:HashJoin JoinType="In">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="10624.275883" Rows="129.600000" Width="22"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="10825.814178" Rows="129.600000" Width="22"/>
                                   </dxl:Properties>
                                   <dxl:ProjList>
                                     <dxl:ProjElem ColId="65" Alias="s_store_sk">
@@ -15320,7 +15320,7 @@ with results as
                                   </dxl:TableScan>
                                   <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                     <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="10193.268682" Rows="64.000000" Width="3"/>
+                                      <dxl:Cost StartupCost="0" TotalCost="10394.806977" Rows="64.000000" Width="3"/>
                                     </dxl:Properties>
                                     <dxl:ProjList>
                                       <dxl:ProjElem ColId="155" Alias="s_state">
@@ -15331,7 +15331,7 @@ with results as
                                     <dxl:SortingColumnList/>
                                     <dxl:Result>
                                       <dxl:Properties>
-                                        <dxl:Cost StartupCost="0" TotalCost="10193.268404" Rows="2.000000" Width="3"/>
+                                        <dxl:Cost StartupCost="0" TotalCost="10394.806698" Rows="2.000000" Width="3"/>
                                       </dxl:Properties>
                                       <dxl:ProjList>
                                         <dxl:ProjElem ColId="155" Alias="s_state">
@@ -15347,7 +15347,7 @@ with results as
                                       <dxl:OneTimeFilter/>
                                       <dxl:Window PartitionColumns="155">
                                         <dxl:Properties>
-                                          <dxl:Cost StartupCost="0" TotalCost="10193.268371" Rows="5.000000" Width="11"/>
+                                          <dxl:Cost StartupCost="0" TotalCost="10394.806665" Rows="5.000000" Width="11"/>
                                         </dxl:Properties>
                                         <dxl:ProjList>
                                           <dxl:ProjElem ColId="203" Alias="ranking">
@@ -15363,7 +15363,7 @@ with results as
                                         <dxl:Filter/>
                                         <dxl:Sort SortDiscardDuplicates="false">
                                           <dxl:Properties>
-                                            <dxl:Cost StartupCost="0" TotalCost="10193.268360" Rows="5.000000" Width="11"/>
+                                            <dxl:Cost StartupCost="0" TotalCost="10394.806654" Rows="5.000000" Width="11"/>
                                           </dxl:Properties>
                                           <dxl:ProjList>
                                             <dxl:ProjElem ColId="202" Alias="att_2">
@@ -15382,7 +15382,7 @@ with results as
                                           <dxl:LimitOffset/>
                                           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                                             <dxl:Properties>
-                                              <dxl:Cost StartupCost="0" TotalCost="10193.268360" Rows="5.000000" Width="11"/>
+                                              <dxl:Cost StartupCost="0" TotalCost="10394.806654" Rows="5.000000" Width="11"/>
                                             </dxl:Properties>
                                             <dxl:GroupingColumns>
                                               <dxl:GroupingColumn ColId="155"/>
@@ -15400,7 +15400,7 @@ with results as
                                             <dxl:Filter/>
                                             <dxl:Sort SortDiscardDuplicates="false">
                                               <dxl:Properties>
-                                                <dxl:Cost StartupCost="0" TotalCost="10193.268342" Rows="5.000000" Width="11"/>
+                                                <dxl:Cost StartupCost="0" TotalCost="10394.806637" Rows="5.000000" Width="11"/>
                                               </dxl:Properties>
                                               <dxl:ProjList>
                                                 <dxl:ProjElem ColId="155" Alias="s_state">
@@ -15418,7 +15418,7 @@ with results as
                                               <dxl:LimitOffset/>
                                               <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                                 <dxl:Properties>
-                                                  <dxl:Cost StartupCost="0" TotalCost="10193.268342" Rows="5.000000" Width="11"/>
+                                                  <dxl:Cost StartupCost="0" TotalCost="10394.806637" Rows="5.000000" Width="11"/>
                                                 </dxl:Properties>
                                                 <dxl:ProjList>
                                                   <dxl:ProjElem ColId="155" Alias="s_state">
@@ -15437,7 +15437,7 @@ with results as
                                                 </dxl:HashExprList>
                                                 <dxl:Result>
                                                   <dxl:Properties>
-                                                    <dxl:Cost StartupCost="0" TotalCost="10193.268330" Rows="5.000000" Width="11"/>
+                                                    <dxl:Cost StartupCost="0" TotalCost="10394.806624" Rows="5.000000" Width="11"/>
                                                   </dxl:Properties>
                                                   <dxl:ProjList>
                                                     <dxl:ProjElem ColId="155" Alias="s_state">
@@ -15451,7 +15451,7 @@ with results as
                                                   <dxl:OneTimeFilter/>
                                                   <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                                                     <dxl:Properties>
-                                                      <dxl:Cost StartupCost="0" TotalCost="10193.268330" Rows="5.000000" Width="11"/>
+                                                      <dxl:Cost StartupCost="0" TotalCost="10394.806624" Rows="5.000000" Width="11"/>
                                                     </dxl:Properties>
                                                     <dxl:GroupingColumns>
                                                       <dxl:GroupingColumn ColId="155"/>
@@ -15469,7 +15469,7 @@ with results as
                                                     <dxl:Filter/>
                                                     <dxl:HashJoin JoinType="Inner">
                                                       <dxl:Properties>
-                                                        <dxl:Cost StartupCost="0" TotalCost="9599.502175" Rows="152838634.444302" Width="11"/>
+                                                        <dxl:Cost StartupCost="0" TotalCost="9736.121994" Rows="169549002.661349" Width="11"/>
                                                       </dxl:Properties>
                                                       <dxl:ProjList>
                                                         <dxl:ProjElem ColId="123" Alias="ss_net_profit">
@@ -15489,7 +15489,7 @@ with results as
                                                       </dxl:HashCondList>
                                                       <dxl:HashJoin JoinType="Inner">
                                                         <dxl:Properties>
-                                                          <dxl:Cost StartupCost="0" TotalCost="8119.513997" Rows="152838634.444302" Width="12"/>
+                                                          <dxl:Cost StartupCost="0" TotalCost="8141.454737" Rows="169549002.661349" Width="12"/>
                                                         </dxl:Properties>
                                                         <dxl:ProjList>
                                                           <dxl:ProjElem ColId="108" Alias="ss_store_sk">
@@ -15542,7 +15542,7 @@ with results as
                                                         </dxl:TableScan>
                                                         <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                                           <dxl:Properties>
-                                                            <dxl:Cost StartupCost="0" TotalCost="431.251673" Rows="12092.239264" Width="4"/>
+                                                            <dxl:Cost StartupCost="0" TotalCost="431.252171" Rows="13414.324949" Width="4"/>
                                                           </dxl:Properties>
                                                           <dxl:ProjList>
                                                             <dxl:ProjElem ColId="167" Alias="d_date_sk">
@@ -15553,7 +15553,7 @@ with results as
                                                           <dxl:SortingColumnList/>
                                                           <dxl:TableScan>
                                                             <dxl:Properties>
-                                                              <dxl:Cost StartupCost="0" TotalCost="431.247287" Rows="377.882477" Width="4"/>
+                                                              <dxl:Cost StartupCost="0" TotalCost="431.247306" Rows="419.197655" Width="4"/>
                                                             </dxl:Properties>
                                                             <dxl:ProjList>
                                                               <dxl:ProjElem ColId="167" Alias="d_date_sk">

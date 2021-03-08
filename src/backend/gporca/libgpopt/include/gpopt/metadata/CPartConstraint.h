@@ -72,7 +72,7 @@ private:
 
 #ifdef GPOS_DEBUG
 	// are all default partitions on all levels included
-	BOOL FAllDefaultPartsIncluded();
+	BOOL FAllDefaultPartsIncluded() const;
 #endif	//GPOS_DEBUG
 
 	// does the current constraint overlap with given one at the given level
@@ -89,8 +89,8 @@ private:
 
 	// return the remaining part of the first constraint that is not covered by
 	// the second constraint
-	CConstraint *PcnstrRemaining(CMemoryPool *mp, CConstraint *pcnstrFst,
-								 CConstraint *pcnstrSnd);
+	static CConstraint *PcnstrRemaining(CMemoryPool *mp, CConstraint *pcnstrFst,
+										CConstraint *pcnstrSnd);
 
 	// check if two constaint maps have the same constraints
 	static BOOL FEqualConstrMaps(UlongToConstraintMap *phmulcnstrFst,

@@ -165,7 +165,7 @@ public:
 
 private:
 	// Set the bitmapset of a plan to the list of param_ids defined by the plan
-	void SetParamIds(Plan *);
+	static void SetParamIds(Plan *);
 
 	// translate DXL table scan node into a SeqScan node
 	Plan *TranslateDXLTblScan(
@@ -427,7 +427,7 @@ private:
 
 	// create a target list containing column references for a hash node from the
 	// project list of its child node
-	List *TranslateDXLProjectListToHashTargetList(
+	static List *TranslateDXLProjectListToHashTargetList(
 		const CDXLNode *project_list_dxlnode,
 		CDXLTranslateContext *child_context,
 		CDXLTranslateContext *output_context);
@@ -484,10 +484,11 @@ private:
 		CDXLTranslationContextArray *ctxt_translation_prev_siblings,
 		BitmapHeapScan *bitmap_tbl_scan);
 
-	void TranslateSortCols(const CDXLNode *sort_col_list_dxl,
-						   const CDXLTranslateContext *child_context,
-						   AttrNumber *att_no_sort_colids, Oid *sort_op_oids,
-						   Oid *sort_collations_oids, bool *is_nulls_first);
+	static void TranslateSortCols(const CDXLNode *sort_col_list_dxl,
+								  const CDXLTranslateContext *child_context,
+								  AttrNumber *att_no_sort_colids,
+								  Oid *sort_op_oids, Oid *sort_collations_oids,
+								  bool *is_nulls_first);
 
 	List *TranslateDXLScCondToQual(
 		const CDXLNode *filter_dxlnode,
@@ -502,9 +503,9 @@ private:
 	BOOL IsTgtTblDistributed(CDXLOperator *dxlop);
 
 	// add a target entry for a junk column with given colid to the target list
-	void AddJunkTargetEntryForColId(List **target_list,
-									CDXLTranslateContext *dxl_translate_ctxt,
-									ULONG colid, const char *resname);
+	static void AddJunkTargetEntryForColId(
+		List **target_list, CDXLTranslateContext *dxl_translate_ctxt,
+		ULONG colid, const char *resname);
 
 	// translate the index condition list in an Index scan
 	void TranslateIndexConditions(
@@ -538,14 +539,15 @@ private:
 	static void SetVarTypMod(const CDXLPhysicalCTAS *dxlop, List *target_list);
 
 	// translate the into clause for a DXL physical CTAS operator
-	IntoClause *TranslateDXLPhyCtasToIntoClause(const CDXLPhysicalCTAS *dxlop);
+	static IntoClause *TranslateDXLPhyCtasToIntoClause(
+		const CDXLPhysicalCTAS *dxlop);
 
 	// translate the distribution policy for a DXL physical CTAS operator
-	GpPolicy *TranslateDXLPhyCtasToDistrPolicy(const CDXLPhysicalCTAS *dxlop,
-											   List *target_list);
+	static GpPolicy *TranslateDXLPhyCtasToDistrPolicy(
+		const CDXLPhysicalCTAS *dxlop, List *target_list);
 
 	// translate CTAS storage options
-	List *TranslateDXLCtasStorageOptions(
+	static List *TranslateDXLCtasStorageOptions(
 		CDXLCtasStorageOptions::CDXLCtasOptionArray *ctas_storage_options);
 
 	// compute directed dispatch segment ids
@@ -556,9 +558,9 @@ private:
 	ULONG GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array);
 
 	// translate nest loop colrefs to GPDB nestparams
-	List *TranslateNestLoopParamList(CDXLColRefArray *pdrgdxlcrOuterRefs,
-									 CDXLTranslateContext *dxltrctxLeft,
-									 CDXLTranslateContext *dxltrctxRight);
+	static List *TranslateNestLoopParamList(
+		CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft,
+		CDXLTranslateContext *dxltrctxRight);
 };
 }  // namespace gpdxl
 

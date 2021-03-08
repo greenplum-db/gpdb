@@ -85,7 +85,7 @@ private:
 	// list of CTE producers shared among the logical and scalar translators
 	CDXLNodeArray *m_cte_producers;
 
-	EdxlBoolExprType EdxlbooltypeFromGPDBBoolType(BoolExprType) const;
+	static EdxlBoolExprType EdxlbooltypeFromGPDBBoolType(BoolExprType);
 
 	CTranslatorQueryToDXL *CreateSubqueryTranslator(
 		Query *subquery, const CMappingVarColId *var_colid_mapping);

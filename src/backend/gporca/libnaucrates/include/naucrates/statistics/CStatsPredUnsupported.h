@@ -37,7 +37,7 @@ private:
 	CDouble m_default_scale_factor;
 
 	// initialize the scale factor of the predicate
-	CDouble InitScaleFactor();
+	static CDouble InitScaleFactor();
 
 public:
 	CStatsPredUnsupported(const CStatsPredUnsupported &) = delete;

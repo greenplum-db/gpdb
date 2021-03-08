@@ -103,10 +103,10 @@ struct SOptContext
 	void HandleError(BOOL *had_unexpected_failure);
 
 	// free all members except input and output pointers
-	void Free(EPin input, EPin epinOutput);
+	void Free(EPin input, EPin epinOutput) const;
 
 	// Clone the error message in given context.
-	CHAR *CloneErrorMsg(struct MemoryContextData *context);
+	CHAR *CloneErrorMsg(struct MemoryContextData *context) const;
 
 	// casting function
 	static SOptContext *Cast(void *ptr);

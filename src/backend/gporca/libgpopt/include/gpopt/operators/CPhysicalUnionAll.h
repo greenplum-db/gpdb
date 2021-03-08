@@ -47,16 +47,16 @@ private:
 
 	// derive strict random distribution spec if all the children of the parallel union all
 	// node derive strict random; derive null spec otherwise
-	CDistributionSpecRandom *PdsStrictRandomParallelUnionAllChildren(
-		CMemoryPool *mp, CExpressionHandle &expr_handle) const;
+	static CDistributionSpecRandom *PdsStrictRandomParallelUnionAllChildren(
+		CMemoryPool *mp, CExpressionHandle &expr_handle);
 
 	// compute output hashed distribution matching the outer child's hashed distribution
 	CDistributionSpecHashed *PdsMatching(
 		CMemoryPool *mp, const ULongPtrArray *pdrgpulOuter) const;
 
 	// derive output distribution based on child distribution
-	CDistributionSpec *PdsDeriveFromChildren(CMemoryPool *mp,
-											 CExpressionHandle &exprhdl) const;
+	static CDistributionSpec *PdsDeriveFromChildren(CMemoryPool *mp,
+													CExpressionHandle &exprhdl);
 
 protected:
 	// compute required hashed distribution of the n-th child

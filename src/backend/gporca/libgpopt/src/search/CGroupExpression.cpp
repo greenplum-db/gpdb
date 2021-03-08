@@ -557,7 +557,7 @@ CGroupExpression::ResetState()
 //
 //---------------------------------------------------------------------------
 CCost
-CGroupExpression::CostCompute(CMemoryPool *mp, CCostContext *pcc) const
+CGroupExpression::CostCompute(CMemoryPool *mp, CCostContext *pcc)
 {
 	GPOS_ASSERT(nullptr != pcc);
 
@@ -740,7 +740,7 @@ CGroupExpression::PreprocessTransform(CMemoryPool *pmpLocal,
 void
 CGroupExpression::PostprocessTransform(CMemoryPool *,  // pmpLocal
 									   CMemoryPool *,  // pmpGlobal
-									   CXform *pxform)
+									   CXform *pxform) const
 {
 	if (CXformUtils::FDeriveStatsBeforeXform(pxform))
 	{
@@ -1195,7 +1195,7 @@ CGroupExpression::OsPrintWithPrefix(IOstream &os, const CHAR *szPrefix) const
 //
 //---------------------------------------------------------------------------
 void
-CGroupExpression::DbgPrintWithProperties()
+CGroupExpression::DbgPrintWithProperties() const
 {
 	CAutoTraceFlag atf(EopttracePrintGroupProperties, true);
 	CAutoTrace at(CTask::Self()->Pmp());

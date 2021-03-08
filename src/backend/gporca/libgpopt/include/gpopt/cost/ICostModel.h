@@ -352,7 +352,7 @@ public:
 	virtual ECostModelType Ecmt() const = 0;
 
 	// set cost model params
-	void SetParams(ICostModelParamsArray *pdrgpcp);
+	void SetParams(ICostModelParamsArray *pdrgpcp) const;
 
 	// create a default cost model instance
 	static ICostModel *PcmDefault(CMemoryPool *mp);

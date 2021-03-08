@@ -628,7 +628,7 @@ CJoinOrder::OsPrint(IOstream &os) const
 }
 
 BOOL
-CJoinOrder::IsValidJoinCombination(SComponent *comp1, SComponent *comp2) const
+CJoinOrder::IsValidJoinCombination(SComponent *comp1, SComponent *comp2)
 {
 	INT comp1_parent_loj_id = comp1->ParentLojId();
 	INT comp2_parent_loj_id = comp2->ParentLojId();
@@ -689,7 +689,7 @@ CJoinOrder::IsValidJoinCombination(SComponent *comp1, SComponent *comp2) const
 }
 
 BOOL
-CJoinOrder::IsChildOfSameLOJ(SComponent *comp1, SComponent *comp2) const
+CJoinOrder::IsChildOfSameLOJ(SComponent *comp1, SComponent *comp2)
 {
 	// check if these components are inner and outer children of a same join
 	BOOL child_of_same_loj = comp1->ParentLojId() == comp2->ParentLojId() &&

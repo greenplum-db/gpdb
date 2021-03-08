@@ -52,8 +52,8 @@ private:
 	static const DOUBLE m_dOuterInnerRatioThreshold;
 
 	// check the stats ratio to decide whether to apply the xform or not
-	BOOL FApplyXformUsingStatsInfo(const IStatistics *outer_stats,
-								   const IStatistics *inner_side_stats) const;
+	static BOOL FApplyXformUsingStatsInfo(const IStatistics *outer_stats,
+										  const IStatistics *inner_side_stats);
 
 	// check if the inner expression is of a type which should be considered by this xform
 	static BOOL FValidInnerExpr(CExpression *pexprInner);

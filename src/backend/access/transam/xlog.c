@@ -703,15 +703,6 @@ typedef struct XLogCtlData
 	CheckPoint	lastCheckPoint;
 
 	/*
-	 * Save the location of the last checkpoint record to enable supressing
-	 * unnecessary checkpoint records -- when no new xlog has been written
-	 * since the last one.
-	 */
-	bool 		haveLastCheckpointLoc;
-	XLogRecPtr	lastCheckpointLoc;
-	XLogRecPtr	lastCheckpointEndLoc;
-
-	/*
 	 * lastReplayedEndRecPtr points to end+1 of the last record successfully
 	 * replayed. When we're currently replaying a record, ie. in a redo
 	 * function, replayEndRecPtr points to the end+1 of the record being
@@ -1007,7 +998,6 @@ XLogInsertRecord(XLogRecData *rdata,
 				 XLogRecPtr fpw_lsn,
 				 uint8 flags)
 {
-
 	XLogCtlInsert *Insert = &XLogCtl->Insert;
 	pg_crc32c	rdata_crc;
 	bool		inserted;
@@ -5433,17 +5423,16 @@ validateRecoveryParameters(void)
 		if ((PrimaryConnInfo == NULL || strcmp(PrimaryConnInfo, "") == 0) &&
 			(recoveryRestoreCommand == NULL || strcmp(recoveryRestoreCommand, "") == 0))
 			ereport(WARNING,
-					(errmsg("primary_conninfo not specified"),
-					 errhint("The database server in standby mode needs primary_conninfo to connect to primary.")));
+					(errmsg("specified neither primary_conninfo nor restore_command"),
+					 errhint("The database server will regularly poll the pg_wal subdirectory to check for files placed there.")));
 	}
 	else
 	{
-		/* Currently, standby mode request is a must if recovery.conf file exists. */
-		/* Thus PG upstream code `if (recoveryRestoreCommand == NULL)` ... was removed. */
+		if (recoveryRestoreCommand == NULL ||
+			strcmp(recoveryRestoreCommand, "") == 0)
 		ereport(FATAL,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("recovery command file \"%s\" request for standby mode not specified",
-						RECOVERY_COMMAND_FILE)));
+					 errmsg("must specify restore_command when standby mode is not enabled")));
 	}
 
 	/*
@@ -7250,9 +7239,6 @@ StartupXLOG(void)
 			record = ReadRecord(xlogreader, InvalidXLogRecPtr, LOG, false);
 		}
 
-		/*
-		 * main redo apply loop, executed if we have record after checkpoint
-		 */
 		if (record != NULL)
 		{
 			ErrorContextCallback errcallback;
@@ -7358,9 +7344,9 @@ StartupXLOG(void)
 				 */
 				if (record->xl_rmid == RM_XLOG_ID)
 				{
-					uint8		info = record->xl_info & ~XLR_INFO_MASK;
 					TimeLineID	newTLI = ThisTimeLineID;
 					TimeLineID	prevTLI = ThisTimeLineID;
+					uint8		info = record->xl_info & ~XLR_INFO_MASK;
 
 					if (info == XLOG_CHECKPOINT_SHUTDOWN)
 					{
@@ -7673,8 +7659,6 @@ StartupXLOG(void)
 	 * problem by making the new active segment have a new timeline ID.
 	 *
 	 * In a normal crash recovery, we can just extend the timeline we were in.
-	 *
-	 * GPDB: Greenplum doesn't support archive recovery.
 	 */
 	PrevTimeLineID = ThisTimeLineID;
 	if (ArchiveRecoveryRequested)
@@ -7861,12 +7845,10 @@ StartupXLOG(void)
 		/*
 		 * And finally, execute the recovery_end_command, if any.
 		 */
-#if 0
 		if (recoveryEndCommand && strcmp(recoveryEndCommand, "") != 0)
 			ExecuteRecoveryCommand(recoveryEndCommand,
 								   "recovery_end_command",
 								   true);
-#endif
 	}
 
 	if (ArchiveRecoveryRequested)
@@ -7941,12 +7923,6 @@ StartupXLOG(void)
 			}
 		}
 	}
-
-	/*
-	 * Clean up any (possibly bogus) future WAL segments on the old timeline.
-	 */
-	if (ArchiveRecoveryRequested)
-		RemoveNonParentXlogFiles(EndOfLog, ThisTimeLineID);
 
 	/*
 	 * Preallocate additional log files, if wanted.
@@ -8367,13 +8343,7 @@ ReadCheckpointRecord(XLogReaderState *xlogreader, XLogRecPtr RecPtr,
 		return NULL;
 	}
 
-	/*
-	 * Set fetching_ckpt to true here, so that ReadRecord()
-	 * uses RedoStartLSN as the start replication location used
-	 * by WAL receiver (when StandbyMode is on). See comments
-	 * for fetching_ckpt in XLogReadPage()
-	 */
-	record = ReadRecord(xlogreader, RecPtr, LOG, true /* fetching_checkpoint */);
+	record = ReadRecord(xlogreader, RecPtr, LOG, true);
 
 	if (record == NULL)
 	{
@@ -8883,11 +8853,6 @@ CreateCheckPoint(int flags)
 	else
 		shutdown = false;
 
-	if (shutdown && ControlFile->state == DB_STARTUP)
-	{
-		return;
-	}
-
 #ifdef FAULT_INJECTOR
 	if (FaultInjector_InjectFaultIfSet(
 			"checkpoint",
@@ -9277,13 +9242,6 @@ CreateCheckPoint(int flags)
 	ControlFile->minRecoveryPointTLI = 0;
 
 	/*
-	 * Save the last checkpoint position.
-	 */
-	XLogCtl->haveLastCheckpointLoc = true;
-	XLogCtl->lastCheckpointLoc = ProcLastRecPtr;
-	XLogCtl->lastCheckpointEndLoc = XactLastRecEnd;
-
-	/*
 	 * Persist unloggedLSN value. It's reset on crash recovery, so this goes
 	 * unused on non-shutdown checkpoints, but seems useful to store it always
 	 * for debugging purposes.
@@ -9328,8 +9286,8 @@ CreateCheckPoint(int flags)
 	RemoveOldXlogFiles(_logSegNo, RedoRecPtr, recptr);
 
 	/*
-	 * Make more log segments if needed.  (Do this after deleting offline log
-	 * segments, to avoid having peak disk space usage higher than necessary.)
+	 * Make more log segments if needed.  (Do this after recycling old log
+	 * segments, since that may supply some of the needed files.)
 	 */
 	if (!shutdown)
 		PreallocXlogFiles(recptr);
@@ -9721,12 +9679,10 @@ CreateRestartPoint(int flags)
 	/*
 	 * Finally, execute archive_cleanup_command, if any.
 	 */
-#if 0
 	if (archiveCleanupCommand && strcmp(archiveCleanupCommand, "") != 0)
 		ExecuteRecoveryCommand(archiveCleanupCommand,
 							   "archive_cleanup_command",
 							   false);
-#endif
 
 	return true;
 }
@@ -11778,9 +11734,13 @@ read_backup_label(XLogRecPtr *checkPointLoc, bool *backupEndRequired,
 				 errmsg("invalid data in file \"%s\"", BACKUP_LABEL_FILE)));
 	*checkPointLoc = ((uint64) hi) << 32 | lo;
 
+	/*
+	 * BACKUP METHOD and BACKUP FROM lines are new in 9.2. We can't restore
+	 * from an older backup anyway, but since the information on it is not
+	 * strictly required, don't error out if it's missing for some reason.
+	 */
 	if (fscanf(lfp, "BACKUP METHOD: %19s\n", backuptype) == 1)
 	{
-		/* Streaming backup method is only supported */
 		if (strcmp(backuptype, "streamed") == 0)
 			*backupEndRequired = true;
 	}
@@ -12027,13 +11987,14 @@ CancelBackup(void)
  * in case of errors.  When errors occur, they are ereport'ed, but only
  * if they have not been previously reported.
  *
- * This is responsible for waiting for the requested WAL record to arrive in
- * standby mode.
+ * This is responsible for restoring files from archive as needed, as well
+ * as for waiting for the requested WAL record to arrive in standby mode.
  *
  * 'emode' specifies the log level used for reporting "file not found" or
- * "end of WAL" situations in standby mode when a trigger file is found.
- * If set to WARNING or below, XLogPageRead() returns false in those situations
- * on higher log levels the ereport() won't return.
+ * "end of WAL" situations in archive recovery, or in standby mode when a
+ * trigger file is found. If set to WARNING or below, XLogPageRead() returns
+ * false in those situations, on higher log levels the ereport() won't
+ * return.
  *
  * In standby mode, if after a successful return of XLogPageRead() the
  * caller finds the record it's interested in to be broken, it should

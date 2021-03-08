@@ -28,9 +28,7 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CFileDescriptor::CFileDescriptor() : m_file_descriptor(GPOS_FILE_DESCR_INVALID)
-{
-}
+CFileDescriptor::CFileDescriptor() = default;
 
 
 //---------------------------------------------------------------------------

@@ -77,18 +77,15 @@ select content, preferred_role, role, status, mode from gp_segment_configuration
 (2 rows)
 
 -- set GUCs to speed-up the test
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
--- start_ignore
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -c gp_fts_probe_timeout -v 5 --masteronly;
--- start_ignore
--- end_ignore
-(exited with code 0)
-!\retcode gpstop -u;
--- start_ignore
--- end_ignore
-(exited with code 0)
+alter system set gp_fts_probe_retries to 2;
+ALTER
+alter system set gp_fts_probe_timeout to 5;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
 
 -- start_ignore
 select dbid from gp_segment_configuration where content = 0 and role = 'p';
@@ -128,21 +125,16 @@ select content, preferred_role, role, status, mode from gp_segment_configuration
  0       | p              | p    | u      | n    
 (2 rows)
 
--- set GUCs to speed-up the test
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
--- start_ignore
-
--- end_ignore
-(exited with code 0)
-!\retcode gpconfig -r gp_fts_probe_timeout --masteronly;
--- start_ignore
-
--- end_ignore
-(exited with code 0)
-!\retcode gpstop -u;
--- start_ignore
--- end_ignore
-(exited with code 0)
+-- reset GUCs
+alter system set gp_fts_probe_retries to default;
+ALTER
+alter system set gp_fts_probe_timeout to default;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
 
 -- -- wait for content 0 (earlier mirror, now primary) to finish the promotion
 0U: select 1;

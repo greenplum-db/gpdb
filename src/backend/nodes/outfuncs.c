@@ -3521,6 +3521,13 @@ _outAlterRoleSetStmt(StringInfo str, const AlterRoleSetStmt *node)
 	WRITE_NODE_FIELD(setstmt);
 }
 
+static  void
+_outAlterSystemStmt(StringInfo str, const AlterSystemStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERSYSTEMSTMT");
+
+	WRITE_NODE_FIELD(setstmt);
+}
 
 static  void
 _outAlterOwnerStmt(StringInfo str, const AlterOwnerStmt *node)
@@ -6095,6 +6102,10 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_AlterRoleSetStmt:
 				_outAlterRoleSetStmt(str, obj);
+				break;
+
+			case T_AlterSystemStmt:
+				_outAlterSystemStmt(str, obj);
 				break;
 
 			case T_AlterObjectSchemaStmt:

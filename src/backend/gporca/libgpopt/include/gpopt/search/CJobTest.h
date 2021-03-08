@@ -71,7 +71,7 @@ private:
 	BOOL FQueue(CSchedulerContext *psc);
 
 	// burn some CPU to simulate actual work
-	void Loop();
+	void Loop() const;
 
 public:
 	// ctor

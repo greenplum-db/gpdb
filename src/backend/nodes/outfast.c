@@ -1431,6 +1431,9 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterRoleSetStmt:
 				_outAlterRoleSetStmt(str, obj);
 				break;
+			case T_AlterSystemStmt:
+				_outAlterSystemStmt(str, obj);
+				break;
 
 			case T_AlterObjectSchemaStmt:
 				_outAlterObjectSchemaStmt(str, obj);

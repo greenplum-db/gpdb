@@ -274,8 +274,8 @@ CPhysical::PdsCompute(CMemoryPool *mp, const CTableDescriptor *ptabdesc,
 			for (ULONG ul = 0; ul < size; ul++)
 			{
 				CColumnDescriptor *pcoldesc = (*pdrgpcoldesc)[ul];
-				ULONG ulPos =
-					ptabdesc->UlPos(pcoldesc, ptabdesc->Pdrgpcoldesc());
+				ULONG ulPos = gpopt::CTableDescriptor::UlPos(
+					pcoldesc, ptabdesc->Pdrgpcoldesc());
 
 				GPOS_ASSERT(ulPos < ptabdesc->Pdrgpcoldesc()->Size() &&
 							"Column not found");

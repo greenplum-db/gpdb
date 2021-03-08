@@ -60,10 +60,10 @@ private:
 	CDouble m_distinct;
 
 	// serialize the bucket boundary
-	void SerializeBoundaryValue(CXMLSerializer *xml_serializer,
-								const CWStringConst *elem_str,
-								CDXLDatum *dxl_datum,
-								BOOL is_bound_closed) const;
+	static void SerializeBoundaryValue(CXMLSerializer *xml_serializer,
+									   const CWStringConst *elem_str,
+									   CDXLDatum *dxl_datum,
+									   BOOL is_bound_closed);
 
 public:
 	CDXLBucket(const CDXLBucket &) = delete;

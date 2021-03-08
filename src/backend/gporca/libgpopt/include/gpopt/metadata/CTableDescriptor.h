@@ -215,8 +215,8 @@ public:
 
 	// helper function for finding the index of a column descriptor in
 	// an array of column descriptors
-	ULONG UlPos(const CColumnDescriptor *,
-				const CColumnDescriptorArray *) const;
+	static ULONG UlPos(const CColumnDescriptor *,
+					   const CColumnDescriptorArray *);
 
 	IOstream &OsPrint(IOstream &os) const;
 

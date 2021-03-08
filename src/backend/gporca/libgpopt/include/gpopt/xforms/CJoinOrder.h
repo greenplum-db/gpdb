@@ -167,7 +167,7 @@ public:
 
 		// get parent loj id
 		INT
-		ParentLojId()
+		ParentLojId() const
 		{
 			return m_parent_loj_id;
 		}
@@ -175,7 +175,7 @@ public:
 		// what is or must be the position of this component with
 		// respect to parent LOJ
 		EPosition
-		Position()
+		Position() const
 		{
 			return m_position;
 		}
@@ -241,10 +241,10 @@ public:
 	IOstream &OsPrint(IOstream &) const;
 
 	// is this a valid join combination
-	BOOL IsValidJoinCombination(SComponent *comp1, SComponent *comp2) const;
+	static BOOL IsValidJoinCombination(SComponent *comp1, SComponent *comp2);
 
 	// are these childs of the same LOJ
-	BOOL IsChildOfSameLOJ(SComponent *comp1, SComponent *comp2) const;
+	static BOOL IsChildOfSameLOJ(SComponent *comp1, SComponent *comp2);
 
 };	// class CJoinOrder
 

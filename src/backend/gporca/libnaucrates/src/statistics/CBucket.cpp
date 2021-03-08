@@ -176,6 +176,21 @@ CBucket::GetOverlapPercentage(const CPoint *point, BOOL include_point) const
 		}
 	}
 
+	// Use NDV to calculate percentage overlap when the overlap spans a single
+	// point.
+	if (this->m_bucket_lower_bound->Equals(point) && include_point)
+	{
+		// bucket [0,100], point 0 is basically a lower_bound singleton point.
+		return std::min(DOUBLE(1.0), (CDouble(1.0) / m_distinct).Get());
+	}
+	else if (this->m_bucket_upper_bound->Equals(point) && !include_point)
+	{
+		// bucket [0,100], point 100 is everthing except upper bound singleton
+		// point.
+		return CDouble(1.0) -
+			   std::min(DOUBLE(1.0), (CDouble(1.0) / m_distinct).Get());
+	}
+
 	// general case where your point lies within the bounds of the bucket
 	CDouble distance_upper = m_bucket_upper_bound->Width(
 		m_bucket_lower_bound, m_is_lower_closed, m_is_upper_closed);
@@ -187,14 +202,6 @@ CBucket::GetOverlapPercentage(const CPoint *point, BOOL include_point) const
 	CDouble res = 1 / distance_upper;
 	res = res * distance_middle;
 
-	// TODO: When calculating the overlap percentage for doubles, we're
-	// using a different method than when calculating the frequency. This
-	// causes the frequency of singleton Double buckets to be inconsistent
-	// -- the frequency of the split bucket exceeds the frequency of the
-	// original bucket.  Instead, we should have a consistent method of
-	// calculating singleton frequency, either through NDV or assuming a
-	// small epsilon (using the NDV in GetOverlapPercentage is probably
-	// safer)
 	return CDouble(std::min(res.Get(), DOUBLE(1.0)));
 }
 
@@ -408,14 +415,12 @@ CBucket::MakeBucketSingleton(CMemoryPool *mp, CPoint *point_singleton) const
 	// if the bucket is not already singleton, scale accordingly
 	if (!this->IsSingleton())
 	{
-		CDouble ratio =
-			CDouble(1.0) / m_bucket_upper_bound->Width(m_bucket_lower_bound,
-													   m_is_lower_closed,
-													   m_is_upper_closed);
-		frequency_new =
-			std::min(DOUBLE(1.0), (this->m_frequency * ratio).Get());
-		;
-		distinct_new = CDouble(1.0);
+		// scale NDV down to 1 (or take the entire NDV if it's less than 1),
+		// then scale the frequency by the same ratio
+		CDouble ratio = 1 / std::max(1.0, m_distinct.Get());
+		// equivalent to m_distinct = std::min(1.0, m_distinct)
+		distinct_new = m_distinct * ratio;
+		frequency_new = m_frequency * ratio;
 	}
 
 	// singleton point is both lower and upper
@@ -448,7 +453,7 @@ CBucket::MakeBucketCopy(CMemoryPool *mp)
 }
 
 BOOL
-CBucket::Equals(const CBucket *bucket)
+CBucket::Equals(const CBucket *bucket) const
 {
 	GPOS_ASSERT(bucket != nullptr);
 	if (this->GetLowerBound()->Equals(bucket->GetLowerBound()) &&
@@ -1196,6 +1201,9 @@ CBucket::SplitAndMergeBuckets(
 													 true /*include_lower*/);
 			this_overlap =
 				this->GetOverlapPercentage(minUpper, false /*include_point*/);
+			GPOS_ASSERT(this_overlap * this->GetFrequency() +
+							upper_third->GetFrequency() <=
+						this->GetFrequency() + CStatistics::Epsilon);
 		}
 		else
 		{
@@ -1204,6 +1212,9 @@ CBucket::SplitAndMergeBuckets(
 				mp, minUpper, true /*include_lower*/);
 			bucket_other_overlap = bucket_other->GetOverlapPercentage(
 				minUpper, false /*include_point*/);
+			GPOS_ASSERT(bucket_other_overlap * bucket_other->GetFrequency() +
+							upper_third->GetFrequency() <=
+						bucket_other->GetFrequency() + CStatistics::Epsilon);
 		}
 	}
 	else
@@ -1217,6 +1228,9 @@ CBucket::SplitAndMergeBuckets(
 													 true /*include_lower*/);
 			this_overlap =
 				this->GetOverlapPercentage(minUpper, false /*include_point*/);
+			GPOS_ASSERT(this_overlap * this->GetFrequency() +
+							upper_third->GetFrequency() <=
+						this->GetFrequency() + CStatistics::Epsilon);
 		}
 		else if (bucket_other->IsUpperClosed() && !this->IsUpperClosed())
 		{
@@ -1224,6 +1238,9 @@ CBucket::SplitAndMergeBuckets(
 				mp, minUpper, true /*include_lower*/);
 			bucket_other_overlap = bucket_other->GetOverlapPercentage(
 				minUpper, false /*include_point*/);
+			GPOS_ASSERT(bucket_other_overlap * bucket_other->GetFrequency() +
+							upper_third->GetFrequency() <=
+						bucket_other->GetFrequency() + CStatistics::Epsilon);
 		}
 		// the buckets are completely identical
 		// [1,5) & [1,5) OR (1,5] & (1,5] OR [1,5] & [1,5]

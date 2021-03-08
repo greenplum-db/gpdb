@@ -42,9 +42,9 @@ from gp_segment_configuration
 where content = 0;
 
 -- set GUCs to speed-up the test
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
-!\retcode gpconfig -c gp_fts_probe_timeout -v 5 --masteronly;
-!\retcode gpstop -u;
+alter system set gp_fts_probe_retries to 2;
+alter system set gp_fts_probe_timeout to 5;
+select pg_reload_conf();
 
 -- start_ignore
 select dbid from gp_segment_configuration where content = 0 and role = 'p';
@@ -67,10 +67,10 @@ select content, preferred_role, role, status, mode
 from gp_segment_configuration
 where content = 0;
 
--- set GUCs to speed-up the test
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
-!\retcode gpconfig -r gp_fts_probe_timeout --masteronly;
-!\retcode gpstop -u;
+-- reset GUCs
+alter system set gp_fts_probe_retries to default;
+alter system set gp_fts_probe_timeout to default;
+select pg_reload_conf();
 
 -- -- wait for content 0 (earlier mirror, now primary) to finish the promotion
 0U: select 1;

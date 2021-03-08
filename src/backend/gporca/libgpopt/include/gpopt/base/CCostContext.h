@@ -256,10 +256,10 @@ public:
 	BOOL FBetterThan(const CCostContext *pcc) const;
 
 	// is this cost context of a two stage scalar DQA created by CXformSplitDQA
-	BOOL IsTwoStageScalarDQACostCtxt(const CCostContext *pcc) const;
+	static BOOL IsTwoStageScalarDQACostCtxt(const CCostContext *pcc);
 
 	// is this cost context of a three stage scalar DQA created by CXformSplitDQA
-	BOOL IsThreeStageScalarDQACostCtxt(const CCostContext *pcc) const;
+	static BOOL IsThreeStageScalarDQACostCtxt(const CCostContext *pcc);
 
 	// equality function
 	static BOOL

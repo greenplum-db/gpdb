@@ -203,12 +203,12 @@ private:
 
 		// used for sorting in the binary heap
 		CDouble
-		DCost()
+		DCost() const
 		{
 			return m_similarity_factor;
 		}
 		CDouble
-		GetCostForHeap()
+		GetCostForHeap() const
 		{
 			return DCost();
 		}
@@ -304,12 +304,13 @@ public:
 											CDouble *num_output_rows) const;
 
 	// cleanup residual buckets
-	void CleanupResidualBucket(CBucket *bucket, BOOL bucket_is_residual) const;
+	static void CleanupResidualBucket(CBucket *bucket, BOOL bucket_is_residual);
 
 	// get the next bucket for union / union all
-	CBucket *GetNextBucket(const CHistogram *histogram, CBucket *new_bucket,
-						   BOOL *target_bucket_is_residual,
-						   ULONG *current_bucket_index) const;
+	static CBucket *GetNextBucket(const CHistogram *histogram,
+								  CBucket *new_bucket,
+								  BOOL *target_bucket_is_residual,
+								  ULONG *current_bucket_index);
 
 	// number of buckets
 	ULONG

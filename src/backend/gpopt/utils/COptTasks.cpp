@@ -105,7 +105,7 @@ SOptContext::SOptContext() = default;
 //
 //---------------------------------------------------------------------------
 void
-SOptContext::Free(SOptContext::EPin input, SOptContext::EPin output)
+SOptContext::Free(SOptContext::EPin input, SOptContext::EPin output) const
 {
 	if (nullptr != m_query_dxl && epinQueryDXL != input &&
 		epinQueryDXL != output)
@@ -145,7 +145,7 @@ SOptContext::Free(SOptContext::EPin input, SOptContext::EPin output)
 //
 //---------------------------------------------------------------------------
 CHAR *
-SOptContext::CloneErrorMsg(MemoryContext context)
+SOptContext::CloneErrorMsg(MemoryContext context) const
 {
 	if (nullptr == context || nullptr == m_error_msg)
 	{

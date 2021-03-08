@@ -139,7 +139,7 @@ private:
 
 	// check for unsupported node types, throws an exception if an unsupported
 	// node is found
-	void CheckUnsupportedNodeTypes(Query *query);
+	static void CheckUnsupportedNodeTypes(Query *query);
 
 	// check for SIRV functions in the targetlist without a FROM clause and
 	// throw an exception when found
@@ -165,7 +165,7 @@ private:
 										BOOL keep_res_junked) const;
 
 	// check if the set operation need to cast any of its input columns
-	BOOL SetOpNeedsCast(List *target_list, IMdIdArray *input_col_mdids) const;
+	static BOOL SetOpNeedsCast(List *target_list, IMdIdArray *input_col_mdids);
 	// translate a window operator
 	CDXLNode *TranslateWindowToDXL(
 		CDXLNode *child_dxlnode, List *target_list, List *window_clause,
@@ -269,7 +269,7 @@ private:
 	);
 
 	// throws an exception when RTE kind not yet supported
-	[[noreturn]] void UnsupportedRTEKind(RTEKind rtekind) const;
+	[[noreturn]] static void UnsupportedRTEKind(RTEKind rtekind);
 
 	// translate an entry of the from clause (this can either be FromExpr or JoinExpr)
 	CDXLNode *TranslateFromClauseToDXL(Node *node);
@@ -329,10 +329,10 @@ private:
 		List *target_list, IntToUlongMap *attno_to_colid_mapping) const;
 
 	// check for support command types, throws an exception when command type not yet supported
-	void CheckSupportedCmdType(Query *query);
+	static void CheckSupportedCmdType(Query *query);
 
 	// check for supported range table entries, throws an exception when something is not yet supported
-	void CheckRangeTable(Query *query);
+	static void CheckRangeTable(Query *query);
 
 	// translate a select-project-join expression into DXL
 	CDXLNode *TranslateSelectProjectJoinToDXL(
@@ -403,10 +403,10 @@ private:
 
 	// construct a new mapping based on the given one by replacing the colid in the "From" list
 	// with the colid at the same position in the "To" list
-	IntToUlongMap *RemapColIds(CMemoryPool *mp,
-							   IntToUlongMap *attno_to_colid_mapping,
-							   ULongPtrArray *from_list_colids,
-							   ULongPtrArray *to_list_colids) const;
+	static IntToUlongMap *RemapColIds(CMemoryPool *mp,
+									  IntToUlongMap *attno_to_colid_mapping,
+									  ULongPtrArray *from_list_colids,
+									  ULongPtrArray *to_list_colids);
 
 	// true iff this query or one of its ancestors is a DML query
 	BOOL IsDMLQuery();
