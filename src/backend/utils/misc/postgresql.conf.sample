@@ -560,6 +560,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #track_activities = on
 #track_counts = off
 #track_io_timing = off
+#track_wal_io_timing = off
 #track_functions = none			# none, pl, all
 #track_activity_query_size = 1024	# (change requires restart)
 #stats_temp_directory = 'pg_stat_tmp'

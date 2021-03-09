@@ -467,6 +467,12 @@ typedef struct PgStat_MsgWal
 	PgStat_Counter m_wal_fpw;
 	uint64		m_wal_bytes;
 	PgStat_Counter m_wal_buffers_full;
+	PgStat_Counter m_wal_write;
+	PgStat_Counter m_wal_sync;
+	PgStat_Counter m_wal_write_time;	/* time spent writing wal records in
+										 * microseconds */
+	PgStat_Counter m_wal_sync_time; /* time spent syncing wal records in
+									 * microseconds */
 } PgStat_MsgWal;
 
 /* ----------
@@ -649,7 +655,7 @@ typedef union PgStat_Msg
  * ------------------------------------------------------------
  */
 
-#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9E
+#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9F
 
 /* ----------
  * PgStat_StatDBEntry			The collector's data per database
@@ -830,6 +836,10 @@ typedef struct PgStat_WalStats
 	PgStat_Counter wal_fpw;
 	uint64		wal_bytes;
 	PgStat_Counter wal_buffers_full;
+	PgStat_Counter wal_write;
+	PgStat_Counter wal_sync;
+	PgStat_Counter wal_write_time;
+	PgStat_Counter wal_sync_time;
 	TimestampTz stat_reset_timestamp;
 } PgStat_WalStats;
 
@@ -1685,7 +1695,8 @@ extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
 
 extern void pgstat_send_archiver(const char *xlog, bool failed);
 extern void pgstat_send_bgwriter(void);
-extern void pgstat_send_wal(void);
+extern void pgstat_report_wal(void);
+extern bool pgstat_send_wal(bool force);
 
 struct CdbDispatchResults;
 struct pg_result;
