@@ -149,6 +149,7 @@ static void ic_proxy_client_cache_p2c_pkts(ICProxyClient *client, List *pkts);
 static void ic_proxy_client_drop_p2c_cache(ICProxyClient *client);
 static void ic_proxy_client_handle_p2c_cache(ICProxyClient *client);
 static void ic_proxy_client_maybe_start_read_data(ICProxyClient *client);
+static void ic_proxy_client_maybe_pause(ICProxyClient *client);
 static void ic_proxy_client_maybe_send_ack_message(ICProxyClient *client);
 static void ic_proxy_client_maybe_resume(ICProxyClient *client);
 
@@ -473,22 +474,8 @@ ic_proxy_client_on_c2p_data_pkt(void *opaque, const void *data, uint16 size)
 	/* increase the number of unack packets */
 	client->unackSendPkt++;
 
-	/*
-	 * If the number of unack-packets execeeds the pause threshold, the
-	 * ic_proxy sender should stop reading from backend.
-	 *
-	 * The ic_proxy receiver will send ack message back to the sender, when
-	 * the number of unack-packets is below the resume threshold, the sender
-	 * continues to read from the backend again.
-	 */
-	if (client->unackSendPkt >= IC_PROXY_TRESHOLD_UNACK_PACKET_PAUSE
-		&& !(client->state & IC_PROXY_CLIENT_STATE_PAUSED))
-	{
-		client->state |= IC_PROXY_CLIENT_STATE_PAUSED;
-		uv_read_stop((uv_stream_t *) &client->pipe);
-
-		ic_proxy_log(LOG, "%s: paused", ic_proxy_client_get_name(client));
-	}
+	/* check whether pause threshold is reached */
+	ic_proxy_client_maybe_pause(client);
 
 	/*
 	 * Send it out, but maybe not immediately.  The obuf helps to merge small
@@ -1130,11 +1117,20 @@ ic_proxy_client_on_p2c_message(ICProxyClient *client, const ICProxyPkt *pkt,
 	}
 	else if (ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_DATA_ACK))
 	{
-		ic_proxy_log(LOG, "%s: received %s",
+		ic_proxy_log(LOG, "%s: received %s, with %d existing unack packets",
 					 ic_proxy_client_get_name(client),
-					 ic_proxy_pkt_to_str(pkt));
+					 ic_proxy_pkt_to_str(pkt),
+					 client->unackSendPkt);
 
-		client->unackSendPkt -= IC_PROXY_PACKET_INTERVAL_OF_ACK_MESSAGE;
+		client->unackSendPkt -= IC_PROXY_ACK_INTERVAL;
+
+#if 0
+		/* for debug purpose */
+		if (client->unackSendPkt < 0)
+			ic_proxy_log(WARNING, "%s: unexpected number of unack packets: %d",
+						 ic_proxy_client_get_name(client),
+						 client->unackSendPkt);
+#endif
 
 		ic_proxy_client_maybe_resume(client);
 	}
@@ -1344,16 +1340,40 @@ ic_proxy_client_maybe_send_ack_message(ICProxyClient *client)
 	/*
 	 * Send ack message when the unackRecvPkt exceeds the threshold
 	 */
-	if (client->unackRecvPkt >= IC_PROXY_PACKET_INTERVAL_OF_ACK_MESSAGE)
+	if (client->unackRecvPkt >= IC_PROXY_ACK_INTERVAL)
 	{
 		ICProxyPkt *pkt = ic_proxy_message_new(IC_PROXY_MESSAGE_DATA_ACK,
 											   &client->key);
 
 		client->sending++;
-		client->unackRecvPkt -= IC_PROXY_PACKET_INTERVAL_OF_ACK_MESSAGE;
+		client->unackRecvPkt -= IC_PROXY_ACK_INTERVAL;
 
 		ic_proxy_router_route(client->pipe.loop, pkt,
 							  ic_proxy_client_on_sent_c2p_resume, client);
+	}
+}
+
+/*
+ * PAUSE if the number of unack-packets execeeds the pause threshold
+ */
+static void
+ic_proxy_client_maybe_pause(ICProxyClient *client)
+{
+	/*
+	 * If the number of unack-packets execeeds the pause threshold, the
+	 * ic_proxy sender should stop reading from backend.
+	 *
+	 * The ic_proxy receiver will send ack message back to the sender, when
+	 * the number of unack-packets is below the resume threshold, the sender
+	 * continues to read from the backend again.
+	 */
+	if (client->unackSendPkt >= IC_PROXY_TRESHOLD_UNACK_PACKET_PAUSE
+		&& !(client->state & IC_PROXY_CLIENT_STATE_PAUSED))
+	{
+		client->state |= IC_PROXY_CLIENT_STATE_PAUSED;
+		uv_read_stop((uv_stream_t *) &client->pipe);
+
+		ic_proxy_log(LOG, "%s: paused", ic_proxy_client_get_name(client));
 	}
 }
 

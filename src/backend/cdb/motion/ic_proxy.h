@@ -27,7 +27,7 @@
 /* resume the sender when the unack packet reduce to this threshold */
 #define IC_PROXY_TRESHOLD_UNACK_PACKET_RESUME 30
 /* send a ack message after a batch of packets*/
-#define IC_PROXY_PACKET_INTERVAL_OF_ACK_MESSAGE 10
+#define IC_PROXY_ACK_INTERVAL 10
 
 
 #ifndef IC_PROXY_LOG_LEVEL

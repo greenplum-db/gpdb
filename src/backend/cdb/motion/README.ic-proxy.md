@@ -156,8 +156,8 @@ number of unackSendPkt exceeds the pause threshold, the sender pause itself.
 - when receiver receives a packet, it will duplicate the packet and wait for
 the backend to consume the packet. After backend comsumed the packet, the
 receiver increases the value of unackRecvPkt. When the number of unackRecvPkt
-exceed the theshold: IC_PROXY_PACKET_INTERVAL_OF_ACK_MESSAGE, the receiver will
-send a ACK message to the sender.
+exceed the theshold: IC_PROXY_ACK_INTERVAL, the receiver will send a ACK message
+to the sender.
 - when the sender receives the ACK message, it decreases the value of
 unackSendPkt. When unackSendPkt is below the resume threshold, the sender can
 continue to read data from the backend.
