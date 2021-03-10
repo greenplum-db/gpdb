@@ -1,0 +1,7 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+run:
+  path: gpdb_src/concourse/scripts/unit_tests_gporca.bash
