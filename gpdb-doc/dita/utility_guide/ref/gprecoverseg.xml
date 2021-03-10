@@ -27,8 +27,8 @@
       <p>In a system with mirrors enabled, the <codeph>gprecoverseg</codeph> utility reactivates a
         failed segment instance and identifies the changed database files that require
         resynchronization. Once <codeph>gprecoverseg</codeph> completes this process, the system
-        goes into <i>resyncronizing</i> mode until the recovered segment is brought up to date. The
-        system is online and fully operational during resyncronization.</p>
+        goes into <i>resynchronizing</i> mode until the recovered segment is brought up to date. The
+        system is online and fully operational during resynchronization.</p>
       <p>During an incremental recovery (the <codeph>-F</codeph> option is not specified), if
           <codeph>gprecoverseg</codeph> detects a segment instance with mirroring disabled in a
         system with mirrors enabled, the utility reports that mirroring is disabled for the segment,
@@ -75,9 +75,9 @@
         location must exist on all currently configured segment hosts and have enough disk space to
         accommodate the failed segments.</p>
       <p>The recovery process marks the segment as up again in the Greenplum Database system
-        catalog, and then initiates the resyncronization process to bring the transactional state of
+        catalog, and then initiates the resynchronization process to bring the transactional state of
         the segment up-to-date with the latest changes. The system is online and available during
-        resyncronization. To check the status of the resyncronization process run:</p>
+        resynchronization. To check the status of the resynchronization process run:</p>
       <codeblock>gpstate -m</codeblock>
     </section>
     <section id="section4">
