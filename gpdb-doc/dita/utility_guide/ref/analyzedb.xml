@@ -19,7 +19,6 @@
    [ <b>--gen_profile_only</b> ]   
    [ <b>-p</b> <varname>parallel-level</varname> ]
    [ <b>--full</b> ]
-   [ <b>--skip_root_stats</b> ]
    [ <b>--skip_orca_root_stats</b> ]
    [ <b>-v</b> | <b>--verbose</b> ]
    [ <b>--debug</b> ]
@@ -169,26 +168,18 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
             can be an integer between 1 and 10, inclusive. Default value is 5. </pd>
         </plentry>
         <plentry>
-          <pt>--skip_root_stats</pt>
-          <pd>
-            <note>This option is deprecated and will be removed in a future release.</note>
-          </pd>
-          <pd>If the option is specified, a warning is issued stating that the option will be
-            ignored.</pd>
-          <pd>GPORCA uses root partition statistics. For information about how statistics are
-            collected for partitioned tables, see <codeph><xref
-                href="../../ref_guide/sql_commands/ANALYZE.xml">ANALYZE</xref></codeph>.</pd>
-        </plentry>
-        <plentry>
           <pt>--skip_orca_root_stats</pt>
           <pd>
-            <note>This option is deprecated and will be removed in a future release.</note>
+            <note>Do not use this option if GPORCA is enabled.</note>
           </pd>
           <pd>If the option is specified, a warning is issued stating that the option will be
-            ignored.</pd>
-          <pd>GPORCA uses root partition statistics. For information about how statistics are
-            collected for partitioned tables, see <codeph><xref
-              href="../../ref_guide/sql_commands/ANALYZE.xml">ANALYZE</xref></codeph>.</pd>
+            ignored. Use this option if you find that <codeph>ANALYZE ROOTPARTITION</codeph>
+            commands take a very long time to complete.</pd>
+          <pd>
+            <note type="warning">After analyzedb is run with this option, subsequent analyzedb
+              executions will no longer update root partition statistics except when changes have
+              been made to the table.</note>
+          </pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>
