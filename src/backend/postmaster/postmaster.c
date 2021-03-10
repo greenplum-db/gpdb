@@ -987,9 +987,6 @@ PostmasterMain(int argc, char *argv[])
 		ExitPostmaster(1);
 	}
 
-	/* If gp_role is not set, use utility role instead.*/
-	if (Gp_role == GP_ROLE_UNDEFINED)
-		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_OVERRIDE);
 
 	/*
 	 * Locate the proper configuration files and data directory, and read
@@ -998,18 +995,30 @@ PostmasterMain(int argc, char *argv[])
 	if (!SelectConfigFiles(userDoption, progname))
 		ExitPostmaster(2);
 
-	/*
-	 * When the instance runs as utility, its dbid and segindex(content)
-	 * may not be set properly. Mostly, the instance is not part of a GPDB
-	 * cluster. It's better to have the pair of dbid and content different to
-	 * the normal instances(coordinator or segment) in GPDB.
-	 */
-	if (Gp_role == GP_ROLE_UTILITY)
+	/* Validate gp_dbid and gp_contentid */
+	if (GpIdentity.dbid < 0 || GpIdentity.segindex < -1)
 	{
-		if (GpIdentity.dbid < 0)
-			GpIdentity.dbid = -1;
-		if (GpIdentity.segindex < -1)
-			GpIdentity.segindex = -1;
+		if (GpIdentity.dbid != UNINITIALIZED_GP_IDENTITY_VALUE ||
+			GpIdentity.segindex != UNINITIALIZED_GP_IDENTITY_VALUE)
+			ereport(FATAL, (errmsg("Invalid gp_dbid(%d) or gp_contentid(%d)",
+									GpIdentity.dbid, GpIdentity.segindex),
+							errhint("Set both gp_dbid and gp_contentid properly, "
+									"or leave them both uninitialized")));
+
+		if (Gp_role != GP_ROLE_UTILITY)
+			ereport(LOG, (errmsg("Force to use gp_role=utility, because both gp_dbid "
+						  "and gp_contentid are uninitialized")));
+		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_ARGV);
+	}
+	/*
+	 * If gp_role is not set from command line in GPDB,
+	 * we set the default gp_role by its gp_contentid.
+	 */
+	else if (Gp_role == GP_ROLE_UNDEFINED)
+	{
+		const char *role;
+		role = GpIdentity.segindex == -1 ? "dispatch" : "execute";
+		SetConfigOption("gp_role", role, PGC_POSTMASTER, PGC_S_ARGV);
 	}
 
 	/*
@@ -1087,30 +1096,6 @@ PostmasterMain(int argc, char *argv[])
 	if (max_wal_senders > 0 && wal_level == WAL_LEVEL_MINIMAL)
 		ereport(ERROR,
 				(errmsg("WAL streaming (max_wal_senders > 0) requires wal_level \"replica\" or \"logical\"")));
-
-    if ( GpIdentity.dbid == -1 && Gp_role == GP_ROLE_UTILITY)
-    {
-        /**
-         * okay in utility mode! -- when starting the master in utility mode to fetch the configuration contents,
-         *  we don't actually know the dbid.
-         */
-    }
-	else if ( GpIdentity.dbid < 0 )
-	{
-	    ereport(FATAL,
-            (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-             errmsg("dbid (from -b option) is not specified or is invalid.  This value must be >= 0, or >= -1 in utility mode.  "
-             "The dbid value to pass can be determined from this server's entry in the segment configuration; it may be -1 if running in utility mode.")));
-	}
-
-    if ( GpIdentity.segindex < -1 ) /* -1 is okay -- that means the master */
-	{
-	    ereport(FATAL,
-            (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-             errmsg("contentid (from -C option) is not specified or is invalid.  This value must be >= -1.  "
-             "The contentid value to pass can be determined this server's entry in the segment configuration; it may be -1 for a master, or in utility mode."
-             )));
-	}
 
 	/*
 	 * Other one-time internal sanity checks can go here, if they are fast.
