@@ -173,8 +173,9 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
             <note>Do not use this option if GPORCA is enabled.</note>
           </pd>
           <pd>If the option is specified, a warning is issued stating that the option will be
-            ignored. Use this option if you find that <codeph>ANALYZE ROOTPARTITION</codeph>
-            commands take a very long time to complete.</pd>
+            ignored.</pd>
+          <pd>Use this option if you find that <codeph>ANALYZE ROOTPARTITION</codeph> commands take
+            a very long time to complete.</pd>
           <pd>
             <note type="warning">After analyzedb is run with this option, subsequent analyzedb
               executions will no longer update root partition statistics except when changes have
