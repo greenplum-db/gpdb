@@ -345,9 +345,13 @@ InitProcess(void)
 	 * as GP_ROLE_UTILITY to prevent unwanted GP_ROLE_DISPATCH MyProc settings
 	 * such as mppSessionId being valid and mppIsWriter set to true.
 	 */
-	if (am_walsender || am_ftshandler ||
-		IsFaultHandler)
+	if (am_walsender || am_ftshandler || IsFaultHandler ||
+		(GpIdentity.segindex == -1 && HotStandbyActive()))
+	{
 		Gp_role = GP_ROLE_UTILITY;
+		if (GpIdentity.segindex == -1 && HotStandbyActive())
+			elog(WARNING, "force to utility mode in hot-standby");
+	}
 
 	/*
 	 * ProcGlobal should be set up already (if we are a backend, we inherit
