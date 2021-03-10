@@ -75,8 +75,7 @@
         </plentry>
         <plentry>
           <pt>-m (list mirrors)</pt>
-          <pd>Optional. List the mirror segment instances in the system, their current role, and
-            synchronization status.</pd>
+          <pd>Optional. List the mirror segment instances in the system and their current role.</pd>
         </plentry>
         <plentry>
           <pt>-p (show ports)</pt>
