@@ -999,6 +999,20 @@ PostmasterMain(int argc, char *argv[])
 		ExitPostmaster(2);
 
 	/*
+	 * When the instance runs as utility, its dbid and segindex(content)
+	 * may not be set properly. Mostly, the instance is not part of a GPDB
+	 * cluster. It's better to have the pair of dbid and content different to
+	 * the normal instances(coordinator or segment) in GPDB.
+	 */
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		if (GpIdentity.dbid < 0)
+			GpIdentity.dbid = -1;
+		if (GpIdentity.segindex < -1)
+			GpIdentity.segindex = -1;
+	}
+
+	/*
 	 * CDB/MPP/GPDB: Set the processor affinity (may be a no-op on
 	 * some platforms). The port number is nice to use because we know
 	 * that different segments on a single host will not have the same
