@@ -20,6 +20,7 @@
    [ <b>-p</b> <varname>parallel-level</varname> ]
    [ <b>--full</b> ]
    [ <b>--skip_root_stats</b> ]
+   [ <b>--skip_orca_root_stats</b> ]
    [ <b>-v</b> | <b>--verbose</b> ]
    [ <b>--debug</b> ]
    [ <b>-a</b> ]
@@ -177,6 +178,17 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
           <pd>GPORCA uses root partition statistics. For information about how statistics are
             collected for partitioned tables, see <codeph><xref
                 href="../../ref_guide/sql_commands/ANALYZE.xml">ANALYZE</xref></codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>--skip_orca_root_stats</pt>
+          <pd>
+            <note>This option is deprecated and will be removed in a future release.</note>
+          </pd>
+          <pd>If the option is specified, a warning is issued stating that the option will be
+            ignored.</pd>
+          <pd>GPORCA uses root partition statistics. For information about how statistics are
+            collected for partitioned tables, see <codeph><xref
+              href="../../ref_guide/sql_commands/ANALYZE.xml">ANALYZE</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>
