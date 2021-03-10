@@ -175,9 +175,9 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
           <pd>Use this option if you find that <codeph>ANALYZE ROOTPARTITION</codeph> commands take
             a very long time to complete.</pd>
           <pd>
-            <note type="warning">After analyzedb is run with this option, subsequent analyzedb
-              executions will not update root partition statistics except when changes have
-              been made to the table.</note>
+            <note type="warning">After you run <codeph>analyzedb</codeph> with this option,
+              subsequent <codeph>analyzedb</codeph> executions will not update root partition
+              statistics except when changes have been made to the table.</note>
           </pd>
         </plentry>
         <plentry>
