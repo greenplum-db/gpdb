@@ -30,6 +30,8 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
 
+/* Initial buffer size for holding QE identifier. */
+#define QE_IDENTIFIER_INITIAL_SIZE 128
 
 static uint32 cdbconn_get_motion_listener_port(PGconn *conn);
 static void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc);
@@ -99,6 +101,7 @@ void
 cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 {
 	CdbComponentDatabases *cdbs;
+	char *whoami;
 
 	Assert(CdbComponentsContext);
 
@@ -109,10 +112,17 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 
 	cdbconn_disconnect(segdbDesc);
 
-	if (segdbDesc->whoami != NULL)
+	whoami = segdbDesc->whoami;
+	if (whoami != NULL)
 	{
-		pfree(segdbDesc->whoami);
+		pfree(whoami);
 		segdbDesc->whoami = NULL;
+	}
+	if (segdbDesc->defaultWhoami != NULL)
+	{
+		if (segdbDesc->defaultWhoami != whoami)
+			pfree(segdbDesc->defaultWhoami);
+		segdbDesc->defaultWhoami = NULL;
 	}
 }								/* cdbconn_termSegmentDescriptor */
 
@@ -376,10 +386,36 @@ cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 	StringInfoData string;
 	MemoryContext oldContext;
 
+	/*
+	 * Each SegmentDatabaseDescriptor has a whoami string to store
+	 * the current QE identifier, and a defaultWhoami string to
+	 * store the QE identifier that contains backendPid but no slice
+	 * index. defaultWhoami is set once and never changes afterwards.
+	 *
+	 * defaultWhoami can be viewed as a cache for whoami: whenever the
+	 * sliceIndex is zero or negative and backendPid is valid, the
+	 * resulting whoami would be the same as defaultWhoami; so instead
+	 * of re-constructing it from scratch, we can just set whoami to
+	 * the cached value in defaultWhoami.
+	 */
+	if (sliceIndex <= 0 && segdbDesc->defaultWhoami != NULL)
+	{
+		Assert(segdbDesc->backendPid != 0);
+
+		/*
+		 * If whoami string currently is different from defaultWhoami
+		 * (e.g., it currently contains slice index), de-allocate it.
+		 */
+		if (segdbDesc->whoami != NULL && segdbDesc->whoami != segdbDesc->defaultWhoami)
+			pfree(segdbDesc->whoami);
+		segdbDesc->whoami = segdbDesc->defaultWhoami;
+		return;
+	}
+
 	Assert(CdbComponentsContext);
 	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
 
-	initStringInfo(&string);
+	initStringInfoOfSize(&string, QE_IDENTIFIER_INITIAL_SIZE);
 
 	/* Format the identity of the segment db. */
 	if (segdbDesc->segindex >= 0)
@@ -398,9 +434,15 @@ cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 
 	/* If connected, format the QE's process id. */
 	if (segdbDesc->backendPid != 0)
+	{
 		appendStringInfo(&string, " pid=%d", segdbDesc->backendPid);
 
-	if (segdbDesc->whoami != NULL)
+		/* If defaultWhoami is not set, now would be a good time to do it. */
+		if (!segdbDesc->defaultWhoami && sliceIndex <= 0)
+			segdbDesc->defaultWhoami = string.data;
+	}
+
+	if (segdbDesc->whoami != NULL && segdbDesc->whoami != segdbDesc->defaultWhoami)
 		pfree(segdbDesc->whoami);
 
 	segdbDesc->whoami = string.data;
