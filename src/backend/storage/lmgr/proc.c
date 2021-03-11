@@ -350,7 +350,7 @@ InitProcess(void)
 	{
 		Gp_role = GP_ROLE_UTILITY;
 		if (GpIdentity.segindex == -1 && HotStandbyActive())
-			elog(WARNING, "force to utility mode in hot-standby");
+			elog(WARNING, "Force to run in utility mode in hot standby");
 	}
 
 	/*

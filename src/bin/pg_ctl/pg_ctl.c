@@ -562,13 +562,16 @@ start_postmaster(void)
 static bool
 is_secondary_instance(const char *pg_data)
 {
-	char		standby_file[MAXPGPATH];
-	int			fd;
-	snprintf(standby_file, sizeof(standby_file), "%s/standby.signal", pg_data);
-	fd = open(standby_file, O_RDONLY);
-	if (fd >= 0)
-		close(fd);
-	return fd >= 0;
+	char		standby_signal[MAXPGPATH];
+	int			rc;
+
+	snprintf(standby_signal, sizeof(standby_signal), "%s/standby.signal", pg_data);
+	rc = access(standby_signal, R_OK);
+
+	if (rc == -1 && errno != ENOENT)
+		write_stderr(_("could not test the existence of standby.signal: %m"));
+
+	return rc == 0;
 }
 
 /*
