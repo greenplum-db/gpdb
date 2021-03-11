@@ -227,17 +227,19 @@ newPort|newDataDirectory</codeblock>
         </plentry>
       </parml>
     </section>
-    <section id="section5">
-      <title>Examples</title>
+    <section id="section5"><title>Examples</title>
+      <p><b>Example 1: Recover Failed Segments in Place</b></p>
       <p>Recover any failed segment instances in place:</p>
       <codeblock>$ gprecoverseg</codeblock>
-      <p>Rebalance your Greenplum Database system after a recovery by resetting all segments to
-        their preferred role.</p> <p>First, <b>FILL IN WITH WHY THEY'RE RUNNING gpstate -e</b></p>
-      <codeblock>$ gpstate -e</codeblock> 
-      <p>Next, rebalance the segments:</p>
-      <codeblock>$ gprecoverseg -r</codeblock>
+      <p><b>Example 2: Rebalance Failed Segments If Not in Preferred Roles</b></p>
+      <p>First, verify that all segments are up and running,
+        reysynchronization has completed, and there are segments <b>not</b> in preferred
+        roles:</p>
+      <codeblock>$ gpstate -e</codeblock>
+      <p>Then, if necessary, rebalance the segments:</p><codeblock>$ gprecoverseg -r</codeblock>
+      <p><b>Example 3: Recover Failed Segments to a Separate Host</b></p>
       <p>Recover any failed segment instances to a newly configured spare segment host:</p>
-      <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
+        <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
     </section>
     <section id="section6">
       <title>See Also</title>
