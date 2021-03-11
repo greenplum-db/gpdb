@@ -229,7 +229,6 @@ static const char *const subdirs[] = {
 	"pg_logical/mappings",
 /* GPDB needs these directories */
 	"pg_distributedlog",
-	"pg_utilitymodedtmredo",
 	"log"
 };
 
