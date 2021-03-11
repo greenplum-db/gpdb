@@ -71,7 +71,6 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'prepare_binary_swap_gpdb_centos6',
         'compile_gpdb_clients_windows',
         'compile_gpdb_photon3',
-        'concourse_unit_tests',
         'test_gpdb_clients_windows',
         'walrep_2',
         'Publish Server Builds',

@@ -187,7 +187,6 @@ anchors:
 groups:
 - name: all
   jobs:
-  - concourse_unit_tests
   - check_format
 {% if "centos6" in os_types %}
   - compile_gpdb_centos6
@@ -222,7 +221,6 @@ groups:
   - icw_gporca_icproxy_centos6
   - icw_planner_icproxy_centos6
   - icw_planner_ictcp_centos6
-  - fips_centos7
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - gpexpand
@@ -233,6 +231,7 @@ groups:
   - icw_planner_centos7
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
+  - fips_centos7
 {% endif %}
 {% if "oracle7" in os_types %}
   - icw_gporca_oracle7
@@ -352,7 +351,6 @@ groups:
   - icw_planner_icproxy_centos6
   - icw_planner_ictcp_centos6
   - compile_gpdb_centos6
-  - fips_centos7
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - pg_upgrade
@@ -363,6 +361,7 @@ groups:
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
   - compile_gpdb_centos7
+  - fips_centos7
 {% endif %}
 {% if "oracle7" in os_types %}
   - icw_gporca_oracle7
@@ -547,13 +546,6 @@ resources:
     ignore_paths:
     - gpdb-doc/*
     - README*
-
-- name: bats_core_src
-  type: git
-  source:
-    branch: master
-    uri: https://github.com/bats-core/bats-core.git
-    tag_filter: v1.1.0
 
 {% if "centos6" in os_types %}
 - name: previous_gpdb_rpm
@@ -779,13 +771,13 @@ resources:
 
 {% endif %}
 
+{% if "ubuntu18.04" in os_types %}
 - name: gpdb6-ubuntu18.04-build
   type: registry-image
   source:
     repository: pivotaldata/gpdb6-ubuntu18.04-build
     tag: latest
 
-{% if "ubuntu18.04" in os_types %}
 - name: gpdb6-ubuntu18.04-test
   type: registry-image
   source:
@@ -1179,35 +1171,6 @@ jobs:
 ## |_|   |_| .__/ \___|_|_|_| |_|\___|  \___/|_| |_|_|\__|   |_|\___||___/\__|___/
 ##         |_|
 ## ======================================================================
-
-- name: concourse_unit_tests
-  plan:
-    - in_parallel:
-        steps:
-        - get: bats_core_src
-        - get: gpdb_src
-          trigger: true
-        - get: gpdb6-ubuntu18.04-build
-    - task: run_unit_tests
-      image: gpdb6-ubuntu18.04-build
-      config:
-        inputs:
-          - name: bats_core_src
-          - name: gpdb_src
-        platform: linux
-        run:
-          path: bash
-          args:
-          - -exc
-          - |
-            python -m unittest discover --verbose -s gpdb_src/concourse/scripts/ -p *_test.py
-
-            if ls gpdb_src/concourse/scripts/*.bats >/dev/null 2>&1; then
-              bats_core_src/install.sh /usr/local
-
-              cd gpdb_src/concourse
-              bats -t scripts/*.bats
-            fi
 
 - name: check_format
   plan:
