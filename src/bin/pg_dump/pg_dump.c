@@ -4866,6 +4866,14 @@ binary_upgrade_set_type_oids_by_rel_oid_impl(Archive *fout,
 	Oid			pg_type_nsoid;
 	char	   *pg_type_name;
 	bool		toast_set = false;
+	char       *co_table_check = "";
+
+	/*
+	 * Starting GPDB7 CO tables no longer have TOAST tables. Hence, ignore
+	 * toast OIDs for CO tables to avoid upgrade failures.
+	 */
+	if (fout->remoteVersion < 120000)
+		co_table_check = " AND c.relstorage <> 'c'";
 
 	/*
 	 * We only support old >= 8.3 for binary upgrades.
@@ -4880,11 +4888,11 @@ binary_upgrade_set_type_oids_by_rel_oid_impl(Archive *fout,
 					  "       tt.typnamespace AS trelns "
 					  "FROM pg_catalog.pg_class c "
 					  "LEFT JOIN pg_catalog.pg_class t ON "
-					  "  (c.reltoastrelid = t.oid AND c.relkind <> '%c') "
+					  "  (c.reltoastrelid = t.oid AND c.relkind <> '%c'%s) "
 					  "LEFT JOIN pg_catalog.pg_type ct ON (c.reltype = ct.oid) "
 					  "LEFT JOIN pg_catalog.pg_type tt ON (t.reltype = tt.oid) "
 					  "WHERE c.oid = '%u'::pg_catalog.oid;",
-					  RELKIND_PARTITIONED_TABLE, pg_rel_oid);
+					  RELKIND_PARTITIONED_TABLE, co_table_check, pg_rel_oid);
 
 	upgrade_res = ExecuteSqlQueryForSingleRow(fout, upgrade_query->data);
 
@@ -5077,7 +5085,11 @@ binary_upgrade_set_pg_class_oids_impl(Archive *fout,
 						  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 						  pg_class_oid, pg_class_relnamespace, pg_class_relname);
 		/* only tables have toast tables, not indexes */
-		if (OidIsValid(pg_class_reltoastrelid))
+		/*
+		 * Starting GPDB7 CO tables no longer have TOAST tables. Hence, ignore
+		 * toast OIDs for CO tables to avoid upgrade failures.
+		 */
+		if (OidIsValid(pg_class_reltoastrelid) && !ao_columnstore)
 		{
 			/*
 			 * One complexity is that the table definition might not require
@@ -7196,7 +7208,7 @@ getTables(Archive *fout, int *numTables)
 						  "d.classid = c.tableoid AND d.objid = c.oid AND "
 						  "d.objsubid = 0 AND "
 						  "d.refclassid = c.tableoid AND d.deptype = 'a') "
-						  "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid) "
+						  "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid AND c.relstorage <> 'c') "
 						  "LEFT JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid "
 						  "LEFT JOIN pg_partition p ON pr.paroid = p.oid "
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0)"

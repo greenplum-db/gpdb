@@ -580,13 +580,18 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	 * Add a CTE that collects OIDs of toast tables belonging to the tables
 	 * selected by the regular_heap CTE.  (We have to do this separately
 	 * because the namespace-name rules above don't work for toast tables.)
+	 *
+	 * GPDB: Starting GPDB7 CO tables no longer have TOAST tables. Hence,
+	 * ignore toast OIDs for CO tables to avoid upgrade failures.
 	 */
 	snprintf(query + strlen(query), sizeof(query) - strlen(query),
 			 "  toast_heap (reloid, indtable, toastheap) AS ( "
 			 "  SELECT c.reltoastrelid, 0::oid, c.oid "
 			 "  FROM regular_heap JOIN pg_catalog.pg_class c "
 			 "      ON regular_heap.reloid = c.oid "
-			 "  WHERE c.reltoastrelid != 0), ");
+			 "  WHERE c.reltoastrelid != 0%s), ",
+			 (GET_MAJOR_VERSION(cluster->major_version) <= 904) ?
+			 " AND c.relstorage <> 'c'" : "");
 
 	/*
 	 * Add a CTE that collects OIDs of all valid indexes on the previously
@@ -629,7 +634,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	 * GPDB 7 with PostgreSQL v12 merge removed the relstorage column.
 	 * It was replaced with the upstream 'relam'.
 	 */
-			 (GET_MAJOR_VERSION(cluster->major_version) <= 906) ?
+			 (GET_MAJOR_VERSION(cluster->major_version) <= 904) ?
 			 "c.relstorage" :
 			 "(CASE WHEN am.amname = 'ao_row' THEN 'a'"
 			 " WHEN am.amname = 'ao_column' THEN 'c'"
