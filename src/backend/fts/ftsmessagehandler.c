@@ -53,7 +53,7 @@ checkIODataDirectory(void)
 	errno = 0;
 	bool failure = false;
 
-	fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | PG_O_DIRECT | O_EXCL,
+	fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | PG_O_DIRECT,
                                            S_IRUSR | S_IWUSR);
 	do
 	{
@@ -82,6 +82,15 @@ checkIODataDirectory(void)
 						failure = true;
 					}
 				}
+			}
+			else if (errno == EINVAL)
+			{
+				ereport(WARNING, (errcode_for_file_access(),
+						errmsg("FTS: could not open file \"%s\" (%m)", FTS_PROBE_FILE_NAME),
+						errdetail("Possibly because the file system does not "
+								  "support O_DIRECT (e.g. tmpfs does not). "
+								  "Skipping IO check anyway.")));
+				failure = false;
 			}
 			else
 			{
