@@ -92,19 +92,11 @@ CREATE [ OR REPLACE ] [ TEMP | TEMPORARY ] [ RECURSIVE ] VIEW <replaceable class
      <para>
       Creates a recursive view.  The syntax
 <synopsis>
-<<<<<<< HEAD
-CREATE RECURSIVE VIEW [ <replaceable>schema</> . ] <replaceable>view_name</> (<replaceable>column_names</>) AS SELECT <replaceable>...</>;
-</synopsis>
-      is equivalent to
-<synopsis>
-CREATE VIEW [ <replaceable>schema</> . ] <replaceable>view_name</> AS WITH RECURSIVE <replaceable>view_name</> (<replaceable>column_names</>) AS (SELECT <replaceable>...</>) SELECT <replaceable>column_names</> FROM <replaceable>view_name</>;
-=======
 CREATE RECURSIVE VIEW [ <replaceable>schema</replaceable> . ] <replaceable>view_name</replaceable> (<replaceable>column_names</replaceable>) AS SELECT <replaceable>...</replaceable>;
 </synopsis>
       is equivalent to
 <synopsis>
 CREATE VIEW [ <replaceable>schema</replaceable> . ] <replaceable>view_name</replaceable> AS WITH RECURSIVE <replaceable>view_name</replaceable> (<replaceable>column_names</replaceable>) AS (SELECT <replaceable>...</replaceable>) SELECT <replaceable>column_names</replaceable> FROM <replaceable>view_name</replaceable>;
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 </synopsis>
       A view column name list must be specified for a recursive view.
      </para>
@@ -479,17 +471,10 @@ CREATE VIEW comedies AS
 CREATE RECURSIVE VIEW public.nums_1_100 (n) AS
     VALUES (1)
 UNION ALL
-<<<<<<< HEAD
-    SELECT n+1 FROM nums_1_100 WHERE n < 100;
-</programlisting>
-   Notice that although the recursive view's name is schema-qualified in this
-   <command>CREATE</>, its internal self-reference is not schema-qualified.
-=======
     SELECT n+1 FROM nums_1_100 WHERE n &lt; 100;
 </programlisting>
    Notice that although the recursive view's name is schema-qualified in this
    <command>CREATE</command>, its internal self-reference is not schema-qualified.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    This is because the implicitly-created CTE's name cannot be
    schema-qualified.
   </para>

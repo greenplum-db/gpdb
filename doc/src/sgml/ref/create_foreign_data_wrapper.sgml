@@ -24,11 +24,7 @@ PostgreSQL documentation
 CREATE FOREIGN DATA WRAPPER <replaceable class="parameter">name</replaceable>
     [ HANDLER <replaceable class="parameter">handler_function</replaceable> | NO HANDLER ]
     [ VALIDATOR <replaceable class="parameter">validator_function</replaceable> | NO VALIDATOR ]
-<<<<<<< HEAD
-    [ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
-=======
-    [ OPTIONS ( <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ... ] ) ]
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+    [ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ... ] ) ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -104,11 +100,7 @@ CREATE FOREIGN DATA WRAPPER <replaceable class="parameter">name</replaceable>
    </varlistentry>
 
    <varlistentry>
-<<<<<<< HEAD
-    <term><literal>OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] )</literal></term>
-=======
-    <term><literal>OPTIONS ( <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ... ] )</literal></term>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+    <term><literal>OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ... ] )</literal></term>
     <listitem>
      <para>
       This clause specifies options for the new foreign-data wrapper.

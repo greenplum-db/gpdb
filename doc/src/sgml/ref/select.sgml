@@ -654,17 +654,10 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
       <listitem>
        <para>
         <literal>NATURAL</literal> is shorthand for a
-<<<<<<< HEAD
-        <literal>USING</> list that mentions all columns in the two
-        tables that have matching names.  If there are no common
-        column names, <literal>NATURAL</literal> is equivalent
-        to <literal>ON TRUE</>.
-=======
         <literal>USING</literal> list that mentions all columns in the two
         tables that have matching names.  If there are no common
         column names, <literal>NATURAL</literal> is equivalent
         to <literal>ON TRUE</literal>.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
        </para>
       </listitem>
      </varlistentry>
