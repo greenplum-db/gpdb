@@ -2461,35 +2461,34 @@ CTranslatorDXLToExpr::PexprLogicalConstTableGet(const CDXLNode *pdxlnConstTable)
 //---------------------------------------------------------------------------
 CExpression *
 CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
-	Edxlopid edxlopid, IMDId *scalar_op_mdid, const CWStringConst *str,
-	ULONG colid, CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild)
+	Edxlopid edxlopid, ULongPtrArray *colids, CExpression *pexprLogicalChild,
+	CExpression *pexprScalarChild)
 {
 	GPOS_ASSERT(EdxlopScalarSubqueryAny == edxlopid ||
 				EdxlopScalarSubqueryAll == edxlopid);
-	GPOS_ASSERT(nullptr != str);
-	GPOS_ASSERT(nullptr != pdxlnLogicalChild);
-	GPOS_ASSERT(nullptr != pdxlnScalarChild);
+	GPOS_ASSERT(nullptr != pexprLogicalChild);
+	GPOS_ASSERT(nullptr != pexprScalarChild);
+	// currently only scalar comparison is supported
+	GPOS_ASSERT(CUtils::FScalarCmp(pexprScalarChild));
 
-	// translate children
-
-	CExpression *pexprLogicalChild = Pexpr(pdxlnLogicalChild);
-	CExpression *pexprScalarChild = Pexpr(pdxlnScalarChild);
-
-	// get colref for subquery colid
-	const CColRef *colref = LookupColRef(m_phmulcr, colid);
+	// store the columns of the relational child used in comparison
+	// Ex: (a, b) IN (c, d) => store c and d
+	CColRefSet *pcrs = GPOS_NEW(m_mp) CColRefSet(m_mp);
+	for (ULONG i = 0; i < colids->Size(); i++)
+	{
+		ULONG id = *((*colids)[i]);
+		const CColRef *colref = LookupColRef(m_phmulcr, id);
+		pcrs->Include(colref);
+	}
 
 	CScalar *popScalarSubquery = nullptr;
 	if (EdxlopScalarSubqueryAny == edxlopid)
 	{
-		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAny(
-			m_mp, scalar_op_mdid,
-			GPOS_NEW(m_mp) CWStringConst(m_mp, str->GetBuffer()), colref);
+		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAny(m_mp, pcrs);
 	}
 	else
 	{
-		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAll(
-			m_mp, scalar_op_mdid,
-			GPOS_NEW(m_mp) CWStringConst(m_mp, str->GetBuffer()), colref);
+		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAll(m_mp, pcrs);
 	}
 
 	// create a scalar subquery any expression with the relational expression as
@@ -2523,16 +2522,16 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 		CDXLScalarSubqueryQuantified::Cast(pdxlnSubquery->GetOperator());
 	GPOS_ASSERT(nullptr != pdxlopSubqueryQuantified);
 
-	IMDId *mdid = pdxlopSubqueryQuantified->GetScalarOpMdId();
-	mdid->AddRef();
-	return PexprScalarSubqueryQuantified(
-		dxl_op->GetDXLOperator(), mdid,
-		pdxlopSubqueryQuantified->GetScalarOpMdName()->GetMDName(),
-		pdxlopSubqueryQuantified->GetColId(),
+	CExpression *pexprLogicalChild = Pexpr(
 		(*pdxlnSubquery)
-			[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexRelational],
-		(*pdxlnSubquery)
-			[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexScalar]);
+			[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexRelational]);
+	CExpression *pexprScalarChild =
+		Pexpr((*pdxlnSubquery)
+				  [CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexScalar]);
+
+	return PexprScalarSubqueryQuantified(dxl_op->GetDXLOperator(),
+										 pdxlopSubqueryQuantified->GetColIds(),
+										 pexprLogicalChild, pexprScalarChild);
 }
 
 
@@ -2672,7 +2671,11 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 								   : EdxlopScalarSubqueryAny;
 
 		// get mdid and name of the inverse of the comparison operator used by quantified subquery
-		IMDId *mdid_op = pdxlopSubqueryQuantified->GetScalarOpMdId();
+		CDXLNode *pdxlnScalarChild = (*pdxlnNotChild)
+			[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexScalar];
+		CDXLScalarComp *dxlScalarCmp =
+			CDXLScalarComp::Cast(pdxlnScalarChild->GetOperator());
+		IMDId *mdid_op = dxlScalarCmp->MDId();
 		IMDId *pmdidInverseOp =
 			m_pmda->RetrieveScOp(mdid_op)->GetInverseOpMdid();
 
@@ -2682,17 +2685,27 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 			return nullptr;
 		}
 
+		CExpression *pexprLogicalChild =
+			Pexpr((*pdxlnNotChild)[CDXLScalarSubqueryQuantified::
+									   EdxlsqquantifiedIndexRelational]);
+
+		CExpression *pexprScalarChild = Pexpr(pdxlnScalarChild);
+		GPOS_ASSERT(CUtils::FScalarCmp(pexprScalarChild));
+		CExpression *pexprLeft = (*pexprScalarChild)[0];
+		CExpression *pexprRight = (*pexprScalarChild)[1];
+
+		pexprLeft->AddRef();
+		pexprRight->AddRef();
+		pmdidInverseOp->AddRef();
 		const CWStringConst *pstrInverseOp =
 			m_pmda->RetrieveScOp(pmdidInverseOp)->Mdname().GetMDName();
+		CExpression *pexprInverseScalarCmp = CUtils::PexprScalarCmp(
+			m_mp, pexprLeft, pexprRight, *pstrInverseOp, pmdidInverseOp);
 
-		pmdidInverseOp->AddRef();
+		pexprScalarChild->Release();
 		return PexprScalarSubqueryQuantified(
-			edxlopidNew, pmdidInverseOp, pstrInverseOp,
-			pdxlopSubqueryQuantified->GetColId(),
-			(*pdxlnNotChild)
-				[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexRelational],
-			(*pdxlnNotChild)
-				[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexScalar]);
+			edxlopidNew, pdxlopSubqueryQuantified->GetColIds(),
+			pexprLogicalChild, pexprInverseScalarCmp);
 	}
 
 	// collapsing NOT node failed
@@ -2924,7 +2937,16 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 		if (1 == length)
 		{
 			CExpression *pexprFirstChild = (*pdrgpexprArgs)[0];
-			COperator *popFirstChild = pexprFirstChild->Pop();
+			COperator *popFirstChild = nullptr;
+			if (CUtils::FQuantifiedSubquery(pexprFirstChild->Pop()))
+			{
+				popFirstChild = (*pexprFirstChild)[1]->Pop();
+			}
+			else
+			{
+				popFirstChild = pexprFirstChild->Pop();
+			}
+
 			if (popFirstChild->FScalar())
 			{
 				pmdidInput = CScalar::PopConvert(popFirstChild)->MdidType();
@@ -3824,7 +3846,17 @@ CTranslatorDXLToExpr::PexprScalarProjElem(const CDXLNode *pdxlnPrEl)
 	CDXLNode *child_dxlnode = (*pdxlnPrEl)[0];
 	CExpression *pexprChild = Pexpr(child_dxlnode);
 
-	CScalar *popScalar = CScalar::PopConvert(pexprChild->Pop());
+	CScalar *popScalar = nullptr;
+	if (CUtils::FQuantifiedSubquery(pexprChild->Pop()))
+	{
+		GPOS_ASSERT((*pexprChild)[1]->Pop()->Eopid() ==
+					COperator::EopScalarCmp);
+		popScalar = CScalar::PopConvert((*pexprChild)[1]->Pop());
+	}
+	else
+	{
+		popScalar = CScalar::PopConvert(pexprChild->Pop());
+	}
 
 	IMDId *mdid = popScalar->MdidType();
 	const IMDType *pmdtype = m_pmda->RetrieveType(mdid);

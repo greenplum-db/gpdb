@@ -850,8 +850,12 @@ CXformUtils::SubqueryAnyToAgg(
 
 	GPOS_ASSERT(nullptr != scalarCmp);
 
-	const CColRef *pcrSubq =
-		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())->Pcr();
+	CScalarSubqueryQuantified *popScQuantified =
+		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
+	CColRefSet *pcrsSubquery = popScQuantified->Pcrs();
+	// single column is supported in IN clause
+	GPOS_ASSERT(pcrsSubquery->Size() == 1);
+	const CColRef *pcrSubq = pcrsSubquery->PcrFirst();
 	BOOL fCanEvaluateToNull =
 		(CUtils::FUsesNullableCol(mp, pexprSubqPred, pexprResult) ||
 		 !CPredicateUtils::FBuiltInComparisonIsVeryStrict(scalarCmp->MdIdOp()));
@@ -995,7 +999,7 @@ CXformUtils::SubqueryAllToAgg(
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
 	CExpression *pexprInner = (*pexprSubquery)[0];
-	CExpression *pexprScalarOuter = (*pexprSubquery)[1];
+	GPOS_ASSERT(CUtils::FScalarCmp((*pexprSubquery)[1]));
 	CExpression *pexprSubqPred = PexprInversePred(mp, pexprSubquery);
 
 	// generate subquery test expression
@@ -1010,9 +1014,13 @@ CXformUtils::SubqueryAllToAgg(
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 	pdrgpexpr->Append(pexprSubqTest);
 
+	CScalarSubqueryQuantified *popScQuantified =
+		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
+	CColRefSet *pcrsSubquery = popScQuantified->Pcrs();
+	// single column is supported in IN clause
+	GPOS_ASSERT(pcrsSubquery->Size() == 1);
 	// generate null indicator for inner expression
-	const CColRef *pcrSubq =
-		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())->Pcr();
+	const CColRef *pcrSubq = pcrsSubquery->PcrFirst();
 	CExpression *pexprInnerNullIndicator =
 		PexprNullIndicator(mp, CUtils::PexprScalarIdent(mp, pcrSubq));
 	pdrgpexpr->Append(pexprInnerNullIndicator);
@@ -1057,6 +1065,13 @@ CXformUtils::SubqueryAllToAgg(
 		mp, pexprScalarIdentSumNulls,
 		CScalarIdent::PopConvert(pexprScalarIdentSumNulls->Pop())->MdidType(),
 		IMDType::EcmptG);
+
+	// ensure that we are choosing the original left child of the subquery
+	CExpression *pexprScalarOuter = nullptr;
+	CExpression *pexprScalarInner = nullptr;
+	IMDId *subqueryCmpMdid = nullptr;
+	CUtils::PopulateSubqueryScalarChild(pexprSubquery, &pexprScalarOuter,
+										&pexprScalarInner, &subqueryCmpMdid);
 	pexprScalarOuter->AddRef();
 	CExpression *pexprIsOuterNull = CUtils::PexprIsNull(mp, pexprScalarOuter);
 
@@ -1229,24 +1244,26 @@ CExpression *
 CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 {
 	// get the scalar child of subquery
-	CScalarSubqueryAll *popSqAll =
-		CScalarSubqueryAll::PopConvert(pexprSubquery->Pop());
 	CExpression *pexprScalar = (*pexprSubquery)[1];
-	const CColRef *colref = popSqAll->Pcr();
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	GPOS_ASSERT(pexprScalar->Pop()->Eopid() == COperator::EopScalarCmp);
+
+	CScalarCmp *popScalarCmp = CScalarCmp::PopConvert(pexprScalar->Pop());
 
 	// get mdid and name of the inverse of the comparison operator used by subquery
-	IMDId *mdid_op = popSqAll->MdIdOp();
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	IMDId *mdid_op = popScalarCmp->MdIdOp();
 	IMDId *pmdidInverseOp =
 		md_accessor->RetrieveScOp(mdid_op)->GetInverseOpMdid();
 	const CWStringConst *pstrFirst =
 		md_accessor->RetrieveScOp(pmdidInverseOp)->Mdname().GetMDName();
 
 	// generate a predicate for the inversion of the comparison involved in the subquery
-	pexprScalar->AddRef();
+	CExpression *pexprLeft = (*pexprScalar)[0];
+	CExpression *pexprRight = (*pexprScalar)[1];
+	pexprLeft->AddRef();
+	pexprRight->AddRef();
 	pmdidInverseOp->AddRef();
-
-	return CUtils::PexprScalarCmp(mp, pexprScalar, colref, *pstrFirst,
+	return CUtils::PexprScalarCmp(mp, pexprLeft, pexprRight, *pstrFirst,
 								  pmdidInverseOp);
 }
 
@@ -3446,7 +3463,16 @@ CXformUtils::FHasAmbiguousType(CExpression *pexpr, CMDAccessor *md_accessor)
 	BOOL fAmbiguous = false;
 	if (pexpr->Pop()->FScalar())
 	{
-		CScalar *popScalar = CScalar::PopConvert(pexpr->Pop());
+		CScalar *popScalar = nullptr;
+		if (CUtils::FQuantifiedSubquery(pexpr->Pop()))
+		{
+			popScalar = CScalar::PopConvert((*pexpr)[1]->Pop());
+		}
+		else
+		{
+			popScalar = CScalar::PopConvert(pexpr->Pop());
+		}
+
 		switch (popScalar->Eopid())
 		{
 			case COperator::EopScalarAggFunc:

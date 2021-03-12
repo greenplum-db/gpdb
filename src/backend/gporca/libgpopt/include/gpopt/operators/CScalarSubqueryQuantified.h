@@ -42,20 +42,12 @@ class CExpressionHandle;
 class CScalarSubqueryQuantified : public CScalar
 {
 private:
-	// id of comparison operator
-	IMDId *m_scalar_op_mdid;
-
-	// name of comparison operator
-	const CWStringConst *m_pstrScalarOp;
-
-	// column reference used in comparison
-	const CColRef *m_pcr;
+	// column references used in comparison
+	CColRefSet *m_pcrs;
 
 protected:
 	// ctor
-	CScalarSubqueryQuantified(CMemoryPool *mp, IMDId *scalar_op_mdid,
-							  const CWStringConst *pstrScalarOp,
-							  const CColRef *colref);
+	CScalarSubqueryQuantified(CMemoryPool *mp, CColRefSet *colrefs);
 
 	// dtor
 	~CScalarSubqueryQuantified() override;
@@ -63,17 +55,14 @@ protected:
 public:
 	CScalarSubqueryQuantified(const CScalarSubqueryQuantified &) = delete;
 
-	// operator mdid accessor
-	IMDId *MdIdOp() const;
-
 	// operator name accessor
 	const CWStringConst *PstrOp() const;
 
 	// column reference accessor
-	const CColRef *
-	Pcr() const
+	CColRefSet *
+	Pcrs() const
 	{
-		return m_pcr;
+		return m_pcrs;
 	}
 
 	// return the type of the scalar expression

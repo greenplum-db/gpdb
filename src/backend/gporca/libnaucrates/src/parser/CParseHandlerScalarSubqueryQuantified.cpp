@@ -74,34 +74,19 @@ CParseHandlerScalarSubqueryQuantified::StartElement(
 				   str->GetBuffer());
 	}
 
-	// parse operator id
-	IMDId *mdid_op = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenOpNo,
-		dxl_token);
-
-	// parse operator name
-	const XMLCh *xmlszScalarOpName = CDXLOperatorFactory::ExtractAttrValue(
-		attrs, EdxltokenOpName, dxl_token);
-
-	CWStringDynamic *op_name_str = CDXLUtils::CreateDynamicStringFromXMLChArray(
-		m_parse_handler_mgr->GetDXLMemoryManager(), xmlszScalarOpName);
-	CMDName *md_op_name = GPOS_NEW(m_mp) CMDName(m_mp, op_name_str);
-	GPOS_DELETE(op_name_str);
-
-	// parse column id
-	ULONG colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenColId,
-		dxl_token);
+	const XMLCh *colids_xml = CDXLOperatorFactory::ExtractAttrValue(
+		attrs, EdxltokenColId, EdxltokenScalarSubqueryAny);
+	ULongPtrArray *colids = CDXLOperatorFactory::ExtractIntsToUlongArray(
+		m_parse_handler_mgr->GetDXLMemoryManager(), colids_xml, EdxltokenColId,
+		EdxltokenScalarSubqueryAny);
 
 	if (EdxltokenScalarSubqueryAny == dxl_token)
 	{
-		m_dxl_op = GPOS_NEW(m_mp)
-			CDXLScalarSubqueryAny(m_mp, mdid_op, md_op_name, colid);
+		m_dxl_op = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(m_mp, colids);
 	}
 	else
 	{
-		m_dxl_op = GPOS_NEW(m_mp)
-			CDXLScalarSubqueryAll(m_mp, mdid_op, md_op_name, colid);
+		m_dxl_op = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(m_mp, colids);
 	}
 
 	// parse handler for the child nodes

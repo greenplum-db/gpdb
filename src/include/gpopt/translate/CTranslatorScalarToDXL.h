@@ -94,107 +94,133 @@ private:
 		Query *subquery, const CMappingVarColId *var_colid_mapping);
 
 	// translate list elements and add them as children of the DXL node
-	void TranslateScalarChildren(CDXLNode *dxlnode, List *list,
-								 const CMappingVarColId *var_colid_mapping);
+	void TranslateScalarChildren(
+		CDXLNode *dxlnode, List *list,
+		const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar distinct comparison node from a GPDB DistinctExpr
 	CDXLNode *TranslateDistinctExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
-
-	// create a DXL scalar boolean expression node from a GPDB qual list
-	CDXLNode *CreateScalarCondFromQual(
-		List *quals, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar comparison node from a GPDB op expression
 	CDXLNode *CreateScalarCmpFromOpExpr(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar opexpr node from a GPDB expression
-	CDXLNode *TranslateOpExprToDXL(const Expr *expr,
-								   const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateOpExprToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// translate an array expression
 	CDXLNode *TranslateScalarArrayOpExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar array comparison node from a GPDB expression
 	CDXLNode *CreateScalarArrayCompFromExpr(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar Const node from a GPDB expression
-	CDXLNode *TranslateConstToDXL(const Expr *expr,
-								  const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateConstToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL node for a scalar nullif from a GPDB Expr
 	CDXLNode *TranslateNullIfExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar boolexpr node from a GPDB expression
-	CDXLNode *TranslateBoolExprToDXL(const Expr *expr,
-									 const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateBoolExprToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar boolean test node from a GPDB expression
 	CDXLNode *TranslateBooleanTestToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar nulltest node from a GPDB expression
-	CDXLNode *TranslateNullTestToDXL(const Expr *expr,
-									 const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateNullTestToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar case statement node from a GPDB expression
-	CDXLNode *TranslateCaseExprToDXL(const Expr *expr,
-									 const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateCaseExprToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar if statement node from a GPDB case expression
 	CDXLNode *CreateScalarIfStmtFromCaseExpr(
-		const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping);
+		const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar switch node from a GPDB case expression
 	CDXLNode *CreateScalarSwitchFromCaseExpr(
-		const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping);
+		const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL node for a case test from a GPDB Expr.
 	CDXLNode *TranslateCaseTestExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar coalesce node from a GPDB expression
 	CDXLNode *TranslateCoalesceExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar minmax node from a GPDB expression
 	CDXLNode *TranslateMinMaxExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar relabeltype node from a GPDB expression
 	CDXLNode *TranslateRelabelTypeToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar coerce node from a GPDB expression
 	CDXLNode *TranslateCoerceToDomainToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar coerceviaio node from a GPDB expression
 	CDXLNode *TranslateCoerceViaIOToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar array coerce expression node from a GPDB expression
 	CDXLNode *TranslateArrayCoerceExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar funcexpr node from a GPDB expression
-	CDXLNode *TranslateFuncExprToDXL(const Expr *expr,
-									 const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateFuncExprToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar WindowFunc node from a GPDB expression
 	CDXLNode *TranslateWindowFuncToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// create a DXL scalar Aggref node from a GPDB expression
-	CDXLNode *TranslateAggrefToDXL(const Expr *expr,
-								   const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateAggrefToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
-	CDXLNode *TranslateVarToDXL(const Expr *expr,
-								const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateVarToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
+
+	CDXLNode *TranslateParamToDXL(
+		const Expr *expr,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	CDXLNode *CreateInitPlanFromParam(const Param *param) const;
 
@@ -219,17 +245,20 @@ private:
 
 	// translate an array expression
 	CDXLNode *TranslateArrayExprToDXL(
-		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// translate an arrayref expression
-	CDXLNode *TranslateArrayRefToDXL(const Expr *expr,
-									 const CMappingVarColId *var_colid_mapping);
+	CDXLNode *TranslateArrayRefToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// add an indexlist to the given DXL arrayref node
 	void AddArrayIndexList(
 		CDXLNode *dxlnode, List *list,
 		gpdxl::CDXLScalarArrayRefIndexList::EIndexListBound index_list_bound,
-		const CMappingVarColId *var_colid_mapping);
+		const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array);
 
 	// get the operator name
 	const CWStringConst *GetDXLArrayCmpType(IMDId *mdid) const;
@@ -265,13 +294,9 @@ public:
 	}
 	// create a DXL scalar operator node from a GPDB expression
 	// and a table descriptor for looking up column descriptors
-	CDXLNode *TranslateScalarToDXL(const Expr *expr,
-								   const CMappingVarColId *var_colid_mapping);
-
-	// create a DXL scalar filter node from a GPDB qual list
-	CDXLNode *CreateFilterFromQual(List *quals,
-								   const CMappingVarColId *var_colid_mapping,
-								   Edxlopid filter_type);
+	CDXLNode *TranslateScalarToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping,
+		const CDXLNodeArray *subquery_output_cols_dxlnode_array = nullptr);
 
 	// create a DXL WindowFrame node from a GPDB expression
 	CDXLWindowFrame *TranslateWindowFrameToDXL(

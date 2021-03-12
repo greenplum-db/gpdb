@@ -35,9 +35,7 @@ public:
 	CScalarSubqueryAll(const CScalarSubqueryAll &) = delete;
 
 	// ctor
-	CScalarSubqueryAll(CMemoryPool *mp, IMDId *scalar_op_mdid,
-					   const CWStringConst *pstrScalarOp,
-					   const CColRef *colref);
+	CScalarSubqueryAll(CMemoryPool *mp, CColRefSet *colrefset);
 
 	// dtor
 	~CScalarSubqueryAll() override = default;

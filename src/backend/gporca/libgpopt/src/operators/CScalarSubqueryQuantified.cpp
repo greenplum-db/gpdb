@@ -32,17 +32,11 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CScalarSubqueryQuantified::CScalarSubqueryQuantified(
-	CMemoryPool *mp, IMDId *scalar_op_mdid, const CWStringConst *pstrScalarOp,
-	const CColRef *colref)
-	: CScalar(mp),
-	  m_scalar_op_mdid(scalar_op_mdid),
-	  m_pstrScalarOp(pstrScalarOp),
-	  m_pcr(colref)
+CScalarSubqueryQuantified::CScalarSubqueryQuantified(CMemoryPool *mp,
+													 CColRefSet *colrefs)
+	: CScalar(mp), m_pcrs(colrefs)
 {
-	GPOS_ASSERT(scalar_op_mdid->IsValid());
-	GPOS_ASSERT(nullptr != pstrScalarOp);
-	GPOS_ASSERT(nullptr != colref);
+	GPOS_ASSERT(nullptr != m_pcrs);
 }
 
 //---------------------------------------------------------------------------
@@ -55,36 +49,7 @@ CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 //---------------------------------------------------------------------------
 CScalarSubqueryQuantified::~CScalarSubqueryQuantified()
 {
-	m_scalar_op_mdid->Release();
-	GPOS_DELETE(m_pstrScalarOp);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CScalarSubqueryQuantified::PstrOp
-//
-//	@doc:
-//		Operator name
-//
-//---------------------------------------------------------------------------
-const CWStringConst *
-CScalarSubqueryQuantified::PstrOp() const
-{
-	return m_pstrScalarOp;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CScalarSubqueryQuantified::MdIdOp
-//
-//	@doc:
-//		Scalar operator metadata id
-//
-//---------------------------------------------------------------------------
-IMDId *
-CScalarSubqueryQuantified::MdIdOp() const
-{
-	return m_scalar_op_mdid;
+	m_pcrs->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -98,14 +63,14 @@ CScalarSubqueryQuantified::MdIdOp() const
 IMDId *
 CScalarSubqueryQuantified::MdidType() const
 {
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	IMDId *mdid_type =
-		md_accessor->RetrieveScOp(m_scalar_op_mdid)->GetResultTypeMdid();
-
 	GPOS_ASSERT(
-		md_accessor->PtMDType<IMDTypeBool>()->MDId()->Equals(mdid_type));
+		!"Invalid function call: CScalarSubqueryQuantified::MdidType()");
+	GPOS_RAISE(
+		CException::ExmaInvalid, CException::ExmiInvalid,
+		GPOS_WSZ_LIT(
+			"MdidType() should not be called for CScalarSubqueryQuantified"));
 
-	return mdid_type;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -119,10 +84,7 @@ CScalarSubqueryQuantified::MdidType() const
 ULONG
 CScalarSubqueryQuantified::HashValue() const
 {
-	return gpos::CombineHashes(
-		COperator::HashValue(),
-		gpos::CombineHashes(m_scalar_op_mdid->HashValue(),
-							gpos::HashPtr<CColRef>(m_pcr)));
+	return gpos::CombineHashes(COperator::HashValue(), m_pcrs->HashValue());
 }
 
 
@@ -145,7 +107,8 @@ CScalarSubqueryQuantified::Matches(COperator *pop) const
 	// match if contents are identical
 	CScalarSubqueryQuantified *popSsq =
 		CScalarSubqueryQuantified::PopConvert(pop);
-	return popSsq->Pcr() == m_pcr && popSsq->MdIdOp()->Equals(m_scalar_op_mdid);
+	return popSsq->Pcrs()->Equals(m_pcrs);
+	;
 }
 
 
@@ -160,18 +123,15 @@ CScalarSubqueryQuantified::Matches(COperator *pop) const
 CColRefSet *
 CScalarSubqueryQuantified::PcrsUsed(CMemoryPool *mp, CExpressionHandle &exprhdl)
 {
-	// used columns is an empty set unless subquery column is an outer reference
-	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
-
+	// inner / relational child colrefs
 	CColRefSet *pcrsChildOutput =
 		exprhdl.DeriveOutputColumns(0 /* child_index */);
-	if (!pcrsChildOutput->FMember(m_pcr))
-	{
-		// subquery column is not produced by relational child, add it to used columns
-		pcrs->Include(m_pcr);
-	}
 
-	return pcrs;
+	CColRefSet *pcrsOuterColrefs = GPOS_NEW(mp) CColRefSet(mp, *m_pcrs);
+	// used columns is an empty set unless subquery column is an outer reference
+	pcrsOuterColrefs->Exclude(pcrsChildOutput);
+
+	return pcrsOuterColrefs;
 }
 
 
@@ -206,9 +166,8 @@ IOstream &
 CScalarSubqueryQuantified::OsPrint(IOstream &os) const
 {
 	os << SzId();
-	os << "(" << PstrOp()->GetBuffer() << ")";
 	os << "[";
-	m_pcr->OsPrint(os);
+	m_pcrs->OsPrint(os);
 	os << "]";
 
 	return os;

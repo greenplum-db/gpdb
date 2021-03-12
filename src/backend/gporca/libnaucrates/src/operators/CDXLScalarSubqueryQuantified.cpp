@@ -13,6 +13,7 @@
 
 #include "gpos/string/CWStringDynamic.h"
 
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 
@@ -29,15 +30,10 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
-	CMemoryPool *mp, IMDId *scalar_op_mdid, CMDName *scalar_op_mdname,
-	ULONG colid)
-	: CDXLScalar(mp),
-	  m_scalar_op_mdid(scalar_op_mdid),
-	  m_scalar_op_mdname(scalar_op_mdname),
-	  m_colid(colid)
+	CMemoryPool *mp, ULongPtrArray *colids)
+	: CDXLScalar(mp), m_colids(colids)
 {
-	GPOS_ASSERT(scalar_op_mdid->IsValid());
-	GPOS_ASSERT(nullptr != scalar_op_mdname);
+	GPOS_ASSERT(nullptr != m_colids);
 }
 
 //---------------------------------------------------------------------------
@@ -50,8 +46,7 @@ CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 //---------------------------------------------------------------------------
 CDXLScalarSubqueryQuantified::~CDXLScalarSubqueryQuantified()
 {
-	m_scalar_op_mdid->Release();
-	GPOS_DELETE(m_scalar_op_mdname);
+	m_colids->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -70,15 +65,11 @@ CDXLScalarSubqueryQuantified::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
-	// serialize operator id and name
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpName),
-								 m_scalar_op_mdname->GetMDName());
-	m_scalar_op_mdid->Serialize(xml_serializer,
-								CDXLTokens::GetDXLTokenStr(EdxltokenOpNo));
-
 	// serialize computed column id
+	CWStringDynamic *str_colids = CDXLUtils::Serialize(m_mp, m_colids);
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId),
-								 m_colid);
+								 str_colids);
+	GPOS_DELETE(str_colids);
 
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 	xml_serializer->CloseElement(

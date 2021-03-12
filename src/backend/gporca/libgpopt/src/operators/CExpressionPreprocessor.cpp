@@ -229,10 +229,9 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 		if (fGbAggWithoutGrpCols || fOneRowConstTable)
 		{
 			// quantified subquery with max card 1
-			CExpression *pexprScalar = (*pexpr)[1];
 			CScalarSubqueryQuantified *popSubqQuantified =
 				CScalarSubqueryQuantified::PopConvert(pexpr->Pop());
-			const CColRef *colref = popSubqQuantified->Pcr();
+			const CColRef *colref = popSubqQuantified->Pcrs()->PcrFirst();
 			pexprInner->AddRef();
 			CExpression *pexprSubquery = GPOS_NEW(mp) CExpression(
 				mp,
@@ -241,15 +240,20 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 									true /*fGeneratedByQuantified*/),
 				pexprInner);
 
+
+			CExpression *pexprScalarOuter = nullptr;
+			CExpression *pexprScalarInner = nullptr;
+			IMDId *mdid = nullptr;
+			CUtils::PopulateSubqueryScalarChild(pexpr, &pexprScalarOuter,
+												&pexprScalarInner, &mdid);
 			CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-			IMDId *mdid = popSubqQuantified->MdIdOp();
 			const CWStringConst *str =
 				md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
 			mdid->AddRef();
-			pexprScalar->AddRef();
+			pexprScalarOuter->AddRef();
 
-			return CUtils::PexprScalarCmp(mp, pexprScalar, pexprSubquery, *str,
-										  mdid);
+			return CUtils::PexprScalarCmp(mp, pexprScalarOuter, pexprSubquery,
+										  *str, mdid);
 		}
 	}
 
@@ -2361,17 +2365,27 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 // Example Algebrized queries:
 // 1. Without a Project List:
 //		Input:
-//		+--CScalarSubqueryAny(=)["c2" (0)]
-//		|--CLogicalGet "foo" ("foo"), Columns: ["c1" (8) ...] Key sets: {[1,7]}
-//		+--CScalarIdent "c2" (0)
+//      +--CScalarSubqueryAny["a" (0)]
+//         |--CLogicalGbAgg( Global ) Grp Cols: ["a" (0)][Global], Minimal Grp Cols: [], Generates Duplicates :[ 0 ]
+//         |  |--CLogicalGet "bar" ("bar"), Columns: ["b" (8), "ctid" (9), "xmin" (10), "cmin" (11), "xmax" (12), "cmax" (13), "tableoid" (14), "gp_segment_id" (15)] Key sets: {[1,7]}
+//         |  +--CScalarProjectList
+//         +--CScalarCmp (=)
+//            |--CScalarIdent "a" (0)
+//            +--CScalarIdent "a" (0)
 //
 //		Output:
-//		+--CScalarBoolOp (EboolopAnd)
-//		|--CScalarCmp (=)
-//		|  |--CScalarIdent "c2" (0)
-//		|  +--CScalarIdent "c2" (0)
-//		+--CScalarSubqueryExists
-//		   +--CLogicalGet "foo" ("foo"), Columns: ["c1" (8) ...] Key sets: {[1,7]}
+//      +--CScalarBoolOp (EboolopAnd)
+//         |--CScalarCmp (=)
+//         |  |--CScalarIdent "a" (0)
+//         |  +--CScalarIdent "a" (0)
+//         +--CScalarSubqueryExists
+//            +--CLogicalGbAgg( Global ) Grp Cols: ["ColRef_0016" (16)][Global], Minimal Grp Cols: ["ColRef_0016" (16)], Generates Duplicates :[ 0 ]
+//               |--CLogicalProject
+//               |  |--CLogicalGet "bar" ("bar"), Columns: ["b" (8), "ctid" (9), "xmin" (10), "cmin" (11), "xmax" (12), "cmax" (13), "tableoid" (14), "gp_segment_id" (15)] Key sets: {[1,7]}
+//               |  +--CScalarProjectList
+//               |     +--CScalarProjectElement "ColRef_0016" (16)
+//               |        +--CScalarIdent "a" (0)
+//               +--CScalarProjectList
 //
 // 2. With a Project List:
 //		Input:
@@ -2383,7 +2397,9 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 //		|        +--CScalarOp (+)
 //		|           |--CScalarIdent "c2" (0)
 //		|           +--CScalarConst (1)
-//		+--CScalarIdent "c2" (0)
+//		+--CScalarCmp (=)
+//		   |--CScalarIdent "c2" (0)
+//		   +--CScalarIdent "?column?" (16)
 //
 //		Output:
 //		+--CScalarBoolOp (EboolopAnd)
@@ -2400,7 +2416,6 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 {
 	GPOS_ASSERT(COperator::EopScalarSubqueryAny == pexpr->Pop()->Eopid());
 
-	COperator *pop = pexpr->Pop();
 	CExpression *pexprRelational = (*pexpr)[0];
 
 	// Example for below variables:
@@ -2412,7 +2427,13 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	// generate scalarOp expression by using column reference of the IN subquery's
 	// inner child's column reference as well as the expression extracted above
 	// from the project element
-	CExpression *pexprLeft = (*pexpr)[1];
+	CExpression *pexprScalar = (*pexpr)[1];
+	GPOS_ASSERT(pexprScalar->Pop()->Eopid() == COperator::EopScalarCmp);
+	CExpression *pexprLeft = nullptr;
+	CExpression *pexprRight = nullptr;
+	IMDId *originalMdid = nullptr;
+	CUtils::PopulateSubqueryScalarChild(pexpr, &pexprLeft, &pexprRight,
+										&originalMdid);
 	if (CUtils::FSubquery(pexprLeft->Pop()))
 	{
 		// don't convert if inner child is a subquery
@@ -2424,7 +2445,6 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	// (a,a) in (select foo.a, foo.a from ...) ,
 	// only extract the first expression under the first project element in the
 	// project list and make it as the right operand to the scalar operation.
-	CExpression *pexprRight = nullptr;
 	CExpression *pexprSubqOfExists = nullptr;
 	if (COperator::EopLogicalProject == pexprRelational->Pop()->Eopid())
 	{
@@ -2434,16 +2454,19 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	}
 	else
 	{
-		pexprRight = CUtils::PexprScalarIdent(
-			mp, CScalarSubqueryAny::PopConvert(pop)->Pcr());
+		pexprRight->AddRef();
 		pexprSubqOfExists = pexprRelational;
 	}
 
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	IMDId *mdid = CScalarSubqueryAny::PopConvert(pop)->MdIdOp();
+	IMDId *mdid = nullptr;
+	if ((*pexprScalar)[0] == pexprLeft)
+		mdid = CScalarCmp::PopConvert(pexprScalar->Pop())->MdIdOp();
+	else
+		mdid = originalMdid;
+
 	const CWStringConst *str =
 		md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
-
 	mdid->AddRef();
 	pexprLeft->AddRef();
 	CExpression *pexprScalarOp =
@@ -2510,11 +2533,11 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 		else
 		{
 			// perform conversion if subquery does not output any of the columns from relational child
-			const CColRef *pcrSubquery =
-				CScalarSubqueryAny::PopConvert(pop)->Pcr();
+			CColRefSet *pcrsSubquery =
+				CScalarSubqueryAny::PopConvert(pop)->Pcrs();
 			CColRefSet *pcrsRelationalChild =
 				(*pexpr)[0]->DeriveOutputColumns();
-			if (pcrsRelationalChild->FMember(pcrSubquery))
+			if (pcrsRelationalChild->FIntersects(pcrsSubquery))
 			{
 				return pexprNew;
 			}

@@ -208,7 +208,8 @@ CTranslatorScalarToDXL::EdxlbooltypeFromGPDBBoolType(BoolExprType boolexprtype)
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateVarToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray * /*subquery_output_cols_dxlnode_array*/)
 {
 	GPOS_ASSERT(IsA(expr, Var));
 	const Var *var = (Var *) expr;
@@ -256,6 +257,22 @@ CTranslatorScalarToDXL::TranslateVarToDXL(
 	return dxlnode;
 }
 
+CDXLNode *
+CTranslatorScalarToDXL::TranslateParamToDXL(
+	const Expr *expr, const CDXLNodeArray *subquery_output_cols_dxlnode_array)
+{
+	GPOS_ASSERT(IsA(expr, Param));
+	const Param *param = (Param *) expr;
+
+	GPOS_ASSERT(subquery_output_cols_dxlnode_array->Size() >=
+				ULONG(param->paramid));
+	CDXLNode *dxl_node =
+		(*subquery_output_cols_dxlnode_array)[param->paramid - 1];
+	dxl_node->AddRef();
+
+	return dxl_node;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorScalarToDXL::TranslateScalarToDXL
@@ -269,7 +286,8 @@ CTranslatorScalarToDXL::TranslateVarToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateScalarToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	NodeTag tag = expr->type;
 	switch (tag)
@@ -286,6 +304,12 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		}
 		case T_Param:
 		{
+			if (subquery_output_cols_dxlnode_array &&
+				subquery_output_cols_dxlnode_array->Size() != 0)
+			{
+				return CTranslatorScalarToDXL::TranslateParamToDXL(
+					expr, subquery_output_cols_dxlnode_array);
+			}
 			// Note: The choose_custom_plan() function in plancache.c
 			// knows that GPORCA doesn't support Params. If you lift this
 			// limitation, adjust choose_custom_plan() accordingly!
@@ -294,103 +318,103 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		}
 		case T_Var:
 		{
-			return CTranslatorScalarToDXL::TranslateVarToDXL(expr,
-															 var_colid_mapping);
+			return CTranslatorScalarToDXL::TranslateVarToDXL(
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_OpExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateOpExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_ScalarArrayOpExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateScalarArrayOpExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_DistinctExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateDistinctExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_Const:
 		{
 			return CTranslatorScalarToDXL::TranslateConstToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_BoolExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateBoolExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_BooleanTest:
 		{
 			return CTranslatorScalarToDXL::TranslateBooleanTestToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_CaseExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateCaseExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_CaseTestExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateCaseTestExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_CoalesceExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateCoalesceExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_MinMaxExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateMinMaxExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_FuncExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateFuncExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_Aggref:
 		{
 			return CTranslatorScalarToDXL::TranslateAggrefToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_WindowFunc:
 		{
 			return CTranslatorScalarToDXL::TranslateWindowFuncToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_NullTest:
 		{
 			return CTranslatorScalarToDXL::TranslateNullTestToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_NullIfExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateNullIfExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_RelabelType:
 		{
 			return CTranslatorScalarToDXL::TranslateRelabelTypeToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_CoerceToDomain:
 		{
 			return CTranslatorScalarToDXL::TranslateCoerceToDomainToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_CoerceViaIO:
 		{
 			return CTranslatorScalarToDXL::TranslateCoerceViaIOToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_ArrayCoerceExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_SubLink:
 		{
@@ -400,12 +424,12 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		case T_ArrayExpr:
 		{
 			return CTranslatorScalarToDXL::TranslateArrayExprToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 		case T_SubscriptingRef:
 		{
 			return CTranslatorScalarToDXL::TranslateArrayRefToDXL(
-				expr, var_colid_mapping);
+				expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		}
 	}
 }
@@ -424,7 +448,8 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateDistinctExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, DistinctExpr));
 	const DistinctExpr *distinct_expr = (DistinctExpr *) expr;
@@ -433,10 +458,12 @@ CTranslatorScalarToDXL::TranslateDistinctExprToDXL(
 	GPOS_ASSERT(2 == gpdb::ListLength(distinct_expr->args));
 
 	CDXLNode *left_node = TranslateScalarToDXL(
-		(Expr *) gpdb::ListNth(distinct_expr->args, 0), var_colid_mapping);
+		(Expr *) gpdb::ListNth(distinct_expr->args, 0), var_colid_mapping,
+		subquery_output_cols_dxlnode_array);
 
 	CDXLNode *right_node = TranslateScalarToDXL(
-		(Expr *) gpdb::ListNth(distinct_expr->args, 1), var_colid_mapping);
+		(Expr *) gpdb::ListNth(distinct_expr->args, 1), var_colid_mapping,
+		subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != left_node);
 	GPOS_ASSERT(nullptr != right_node);
@@ -467,7 +494,8 @@ CTranslatorScalarToDXL::TranslateDistinctExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::CreateScalarCmpFromOpExpr(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, OpExpr));
 	const OpExpr *op_expr = (OpExpr *) expr;
@@ -478,8 +506,10 @@ CTranslatorScalarToDXL::CreateScalarCmpFromOpExpr(
 	Expr *left_expr = (Expr *) gpdb::ListNth(op_expr->args, 0);
 	Expr *right_expr = (Expr *) gpdb::ListNth(op_expr->args, 1);
 
-	CDXLNode *left_node = TranslateScalarToDXL(left_expr, var_colid_mapping);
-	CDXLNode *right_node = TranslateScalarToDXL(right_expr, var_colid_mapping);
+	CDXLNode *left_node = TranslateScalarToDXL(
+		left_expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
+	CDXLNode *right_node = TranslateScalarToDXL(
+		right_expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != left_node);
 	GPOS_ASSERT(nullptr != right_node);
@@ -515,7 +545,8 @@ CTranslatorScalarToDXL::CreateScalarCmpFromOpExpr(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateOpExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, OpExpr));
 
@@ -531,7 +562,8 @@ CTranslatorScalarToDXL::TranslateOpExprToDXL(
 	if (IMDType::EtiBool == md_type->GetDatumType() && 2 == num_args)
 	{
 		return_type_mdid->Release();
-		return CreateScalarCmpFromOpExpr(expr, var_colid_mapping);
+		return CreateScalarCmpFromOpExpr(expr, var_colid_mapping,
+										 subquery_output_cols_dxlnode_array);
 	}
 
 	// get operator name and id
@@ -546,7 +578,8 @@ CTranslatorScalarToDXL::TranslateOpExprToDXL(
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);
 
 	// process arguments
-	TranslateScalarChildren(dxlnode, op_expr->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, op_expr->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -560,7 +593,8 @@ CTranslatorScalarToDXL::TranslateOpExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateNullIfExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, NullIfExpr));
 	const NullIfExpr *null_if_expr = (NullIfExpr *) expr;
@@ -574,7 +608,8 @@ CTranslatorScalarToDXL::TranslateNullIfExprToDXL(
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);
 
 	// process arguments
-	TranslateScalarChildren(dxlnode, null_if_expr->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, null_if_expr->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -588,9 +623,11 @@ CTranslatorScalarToDXL::TranslateNullIfExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateScalarArrayOpExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
-	return CreateScalarArrayCompFromExpr(expr, var_colid_mapping);
+	return CreateScalarArrayCompFromExpr(expr, var_colid_mapping,
+										 subquery_output_cols_dxlnode_array);
 }
 
 //---------------------------------------------------------------------------
@@ -602,7 +639,8 @@ CTranslatorScalarToDXL::TranslateScalarArrayOpExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, ScalarArrayOpExpr));
 	const ScalarArrayOpExpr *scalar_array_op_expr = (ScalarArrayOpExpr *) expr;
@@ -611,7 +649,8 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr(
 	GPOS_ASSERT(2 == gpdb::ListLength(scalar_array_op_expr->args));
 
 	Expr *left_expr = (Expr *) gpdb::ListNth(scalar_array_op_expr->args, 0);
-	CDXLNode *left_node = TranslateScalarToDXL(left_expr, var_colid_mapping);
+	CDXLNode *left_node = TranslateScalarToDXL(
+		left_expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 
 	Expr *right_expr = (Expr *) gpdb::ListNth(scalar_array_op_expr->args, 1);
 
@@ -622,7 +661,8 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr(
 	if (IsA(right_expr, Const))
 		right_expr = gpdb::TransformArrayConstToArrayExpr((Const *) right_expr);
 
-	CDXLNode *right_node = TranslateScalarToDXL(right_expr, var_colid_mapping);
+	CDXLNode *right_node = TranslateScalarToDXL(
+		right_expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != left_node);
 	GPOS_ASSERT(nullptr != right_node);
@@ -666,7 +706,8 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr(
 CDXLNode *
 CTranslatorScalarToDXL::TranslateConstToDXL(
 	const Expr *expr,
-	const CMappingVarColId *  // var_colid_mapping
+	const CMappingVarColId *,  // var_colid_mapping,
+	const CDXLNodeArray *	   //subquery_output_cols_dxlnode_array
 )
 {
 	GPOS_ASSERT(IsA(expr, Const));
@@ -730,7 +771,8 @@ CTranslatorScalarToDXL::TranslateConstToDXL(const Const *constant) const
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateBoolExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, BoolExpr));
 	const BoolExpr *bool_expr = (BoolExpr *) expr;
@@ -760,7 +802,8 @@ CTranslatorScalarToDXL::TranslateBoolExprToDXL(
 				"Boolean Expression (NOT): Incorrect Number of Children "));
 	}
 
-	TranslateScalarChildren(dxlnode, bool_expr->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, bool_expr->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -778,7 +821,8 @@ CTranslatorScalarToDXL::TranslateBoolExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateBooleanTestToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, BooleanTest));
 
@@ -813,7 +857,8 @@ CTranslatorScalarToDXL::TranslateBooleanTestToDXL(
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarBooleanTest(m_mp, type));
 
 	CDXLNode *dxlnode_arg =
-		TranslateScalarToDXL(boolean_test->arg, var_colid_mapping);
+		TranslateScalarToDXL(boolean_test->arg, var_colid_mapping,
+							 subquery_output_cols_dxlnode_array);
 	GPOS_ASSERT(nullptr != dxlnode_arg);
 
 	dxlnode->AddChild(dxlnode_arg);
@@ -830,14 +875,15 @@ CTranslatorScalarToDXL::TranslateBooleanTestToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateNullTestToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, NullTest));
 	const NullTest *null_test = (NullTest *) expr;
 
 	GPOS_ASSERT(nullptr != null_test->arg);
-	CDXLNode *child_node =
-		TranslateScalarToDXL(null_test->arg, var_colid_mapping);
+	CDXLNode *child_node = TranslateScalarToDXL(
+		null_test->arg, var_colid_mapping, subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != child_node);
 	GPOS_ASSERT(IS_NULL == null_test->nulltesttype ||
@@ -866,7 +912,8 @@ CTranslatorScalarToDXL::TranslateNullTestToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateCoalesceExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, CoalesceExpr));
 
@@ -878,7 +925,8 @@ CTranslatorScalarToDXL::TranslateCoalesceExprToDXL(
 
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);
 
-	TranslateScalarChildren(dxlnode, coalesce_expr->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, coalesce_expr->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -892,7 +940,8 @@ CTranslatorScalarToDXL::TranslateCoalesceExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateMinMaxExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, MinMaxExpr));
 
@@ -916,7 +965,8 @@ CTranslatorScalarToDXL::TranslateMinMaxExprToDXL(
 
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);
 
-	TranslateScalarChildren(dxlnode, min_max_expr->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, min_max_expr->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -930,14 +980,15 @@ CTranslatorScalarToDXL::TranslateMinMaxExprToDXL(
 //---------------------------------------------------------------------------
 void
 CTranslatorScalarToDXL::TranslateScalarChildren(
-	CDXLNode *dxlnode, List *list, const CMappingVarColId *var_colid_mapping)
+	CDXLNode *dxlnode, List *list, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	ListCell *lc = nullptr;
 	ForEach(lc, list)
 	{
 		Expr *child_expr = (Expr *) lfirst(lc);
-		CDXLNode *child_node =
-			TranslateScalarToDXL(child_expr, var_colid_mapping);
+		CDXLNode *child_node = TranslateScalarToDXL(
+			child_expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		GPOS_ASSERT(nullptr != child_node);
 		dxlnode->AddChild(child_node);
 	}
@@ -956,7 +1007,8 @@ CTranslatorScalarToDXL::TranslateScalarChildren(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateCaseExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, CaseExpr));
 
@@ -971,10 +1023,12 @@ CTranslatorScalarToDXL::TranslateCaseExprToDXL(
 
 	if (nullptr == case_expr->arg)
 	{
-		return CreateScalarIfStmtFromCaseExpr(case_expr, var_colid_mapping);
+		return CreateScalarIfStmtFromCaseExpr(
+			case_expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 	}
 
-	return CreateScalarSwitchFromCaseExpr(case_expr, var_colid_mapping);
+	return CreateScalarSwitchFromCaseExpr(case_expr, var_colid_mapping,
+										  subquery_output_cols_dxlnode_array);
 }
 
 //---------------------------------------------------------------------------
@@ -987,7 +1041,8 @@ CTranslatorScalarToDXL::TranslateCaseExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::CreateScalarSwitchFromCaseExpr(
-	const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping)
+	const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(nullptr != case_expr->arg);
 
@@ -1010,12 +1065,13 @@ CTranslatorScalarToDXL::CreateScalarSwitchFromCaseExpr(
 			GPOS_NEW(m_mp) CDXLScalarSwitchCase(m_mp);
 		CDXLNode *switch_case_node = GPOS_NEW(m_mp) CDXLNode(m_mp, swtich_case);
 
-		CDXLNode *cmp_expr_node =
-			TranslateScalarToDXL(expr->expr, var_colid_mapping);
+		CDXLNode *cmp_expr_node = TranslateScalarToDXL(
+			expr->expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		GPOS_ASSERT(nullptr != cmp_expr_node);
 
 		CDXLNode *result_node =
-			TranslateScalarToDXL(expr->result, var_colid_mapping);
+			TranslateScalarToDXL(expr->result, var_colid_mapping,
+								 subquery_output_cols_dxlnode_array);
 		GPOS_ASSERT(nullptr != result_node);
 
 		switch_case_node->AddChild(cmp_expr_node);
@@ -1029,7 +1085,8 @@ CTranslatorScalarToDXL::CreateScalarSwitchFromCaseExpr(
 	if (nullptr != case_expr->defresult)
 	{
 		CDXLNode *default_result_node =
-			TranslateScalarToDXL(case_expr->defresult, var_colid_mapping);
+			TranslateScalarToDXL(case_expr->defresult, var_colid_mapping,
+								 subquery_output_cols_dxlnode_array);
 		GPOS_ASSERT(nullptr != default_result_node);
 
 		switch_node->AddChild(default_result_node);
@@ -1048,7 +1105,8 @@ CTranslatorScalarToDXL::CreateScalarSwitchFromCaseExpr(
 CDXLNode *
 CTranslatorScalarToDXL::TranslateCaseTestExprToDXL(
 	const Expr *expr,
-	const CMappingVarColId *  //var_colid_mapping
+	const CMappingVarColId *,  //var_colid_mapping
+	const CDXLNodeArray *	   //subquery_output_cols_dxlnode_array
 )
 {
 	GPOS_ASSERT(IsA(expr, CaseTestExpr));
@@ -1068,7 +1126,8 @@ CTranslatorScalarToDXL::TranslateCaseTestExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::CreateScalarIfStmtFromCaseExpr(
-	const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping)
+	const CaseExpr *case_expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(nullptr == case_expr->arg);
 	const ULONG when_clause_count = gpdb::ListLength(case_expr->args);
@@ -1087,10 +1146,11 @@ CTranslatorScalarToDXL::CreateScalarIfStmtFromCaseExpr(
 		CaseWhen *expr = (CaseWhen *) gpdb::ListNth(case_expr->args, ul);
 		GPOS_ASSERT(IsA(expr, CaseWhen));
 
-		CDXLNode *cond_node =
-			TranslateScalarToDXL(expr->expr, var_colid_mapping);
+		CDXLNode *cond_node = TranslateScalarToDXL(
+			expr->expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		CDXLNode *result_node =
-			TranslateScalarToDXL(expr->result, var_colid_mapping);
+			TranslateScalarToDXL(expr->result, var_colid_mapping,
+								 subquery_output_cols_dxlnode_array);
 
 		GPOS_ASSERT(nullptr != cond_node);
 		GPOS_ASSERT(nullptr != result_node);
@@ -1112,7 +1172,8 @@ CTranslatorScalarToDXL::CreateScalarIfStmtFromCaseExpr(
 	if (nullptr != case_expr->defresult)
 	{
 		CDXLNode *default_result_node =
-			TranslateScalarToDXL(case_expr->defresult, var_colid_mapping);
+			TranslateScalarToDXL(case_expr->defresult, var_colid_mapping,
+								 subquery_output_cols_dxlnode_array);
 		GPOS_ASSERT(nullptr != default_result_node);
 		cur_node->AddChild(default_result_node);
 	}
@@ -1129,7 +1190,8 @@ CTranslatorScalarToDXL::CreateScalarIfStmtFromCaseExpr(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateRelabelTypeToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, RelabelType));
 
@@ -1138,7 +1200,8 @@ CTranslatorScalarToDXL::TranslateRelabelTypeToDXL(
 	GPOS_ASSERT(nullptr != relabel_type->arg);
 
 	CDXLNode *child_node =
-		TranslateScalarToDXL(relabel_type->arg, var_colid_mapping);
+		TranslateScalarToDXL(relabel_type->arg, var_colid_mapping,
+							 subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != child_node);
 
@@ -1163,7 +1226,8 @@ CTranslatorScalarToDXL::TranslateRelabelTypeToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateCoerceToDomainToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, CoerceToDomain));
 
@@ -1171,7 +1235,8 @@ CTranslatorScalarToDXL::TranslateCoerceToDomainToDXL(
 
 	GPOS_ASSERT(nullptr != coerce->arg);
 
-	CDXLNode *child_node = TranslateScalarToDXL(coerce->arg, var_colid_mapping);
+	CDXLNode *child_node = TranslateScalarToDXL(
+		coerce->arg, var_colid_mapping, subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != child_node);
 
@@ -1196,7 +1261,8 @@ CTranslatorScalarToDXL::TranslateCoerceToDomainToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateCoerceViaIOToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, CoerceViaIO));
 
@@ -1227,7 +1293,8 @@ CTranslatorScalarToDXL::TranslateCoerceViaIOToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, ArrayCoerceExpr));
 	const ArrayCoerceExpr *array_coerce_expr = (ArrayCoerceExpr *) expr;
@@ -1235,7 +1302,8 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 	GPOS_ASSERT(nullptr != array_coerce_expr->arg);
 
 	CDXLNode *child_node =
-		TranslateScalarToDXL(array_coerce_expr->arg, var_colid_mapping);
+		TranslateScalarToDXL(array_coerce_expr->arg, var_colid_mapping,
+							 subquery_output_cols_dxlnode_array);
 
 	GPOS_ASSERT(nullptr != child_node);
 
@@ -1279,7 +1347,8 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateFuncExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, FuncExpr));
 	const FuncExpr *func_expr = (FuncExpr *) expr;
@@ -1324,7 +1393,8 @@ CTranslatorScalarToDXL::TranslateFuncExprToDXL(
 		}
 	}
 
-	TranslateScalarChildren(dxlnode, func_expr->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, func_expr->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -1338,7 +1408,8 @@ CTranslatorScalarToDXL::TranslateFuncExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateAggrefToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, Aggref));
 	const Aggref *aggref = (Aggref *) expr;
@@ -1407,8 +1478,8 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 	ForEach(lc, aggref->args)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-		CDXLNode *child_node =
-			TranslateScalarToDXL(tle->expr, var_colid_mapping);
+		CDXLNode *child_node = TranslateScalarToDXL(
+			tle->expr, var_colid_mapping, subquery_output_cols_dxlnode_array);
 		GPOS_ASSERT(nullptr != child_node);
 		dxlnode->AddChild(child_node);
 	}
@@ -1587,7 +1658,8 @@ CTranslatorScalarToDXL::TranslateWindowFrameEdgeToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateWindowFuncToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, WindowFunc));
 
@@ -1628,91 +1700,11 @@ CTranslatorScalarToDXL::TranslateWindowFuncToDXL(
 	// create the DXL node holding the scalar aggref
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, winref_dxlop);
 
-	TranslateScalarChildren(dxlnode, window_func->args, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, window_func->args, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorScalarToDXL::CreateScalarCondFromQual
-//
-//	@doc:
-//		Create a DXL scalar boolean operator node from a GPDB qual list.
-//		The function allocates memory in the translator memory pool, and the caller
-//		is responsible for freeing it
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorScalarToDXL::CreateScalarCondFromQual(
-	List *quals, const CMappingVarColId *var_colid_mapping)
-{
-	if (nullptr == quals || 0 == gpdb::ListLength(quals))
-	{
-		return nullptr;
-	}
-
-	if (1 == gpdb::ListLength(quals))
-	{
-		Expr *expr = (Expr *) gpdb::ListNth(quals, 0);
-		return TranslateScalarToDXL(expr, var_colid_mapping);
-	}
-	else
-	{
-		// GPDB assumes that if there are a list of qual conditions then it is an implicit AND operation
-		// Here we build the left deep AND tree
-		CDXLNode *dxlnode = GPOS_NEW(m_mp)
-			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarBoolExpr(m_mp, Edxland));
-
-		TranslateScalarChildren(dxlnode, quals, var_colid_mapping);
-
-		return dxlnode;
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorScalarToDXL::CreateFilterFromQual
-//
-//	@doc:
-//		Create a DXL scalar filter node from a GPDB qual list.
-//		The function allocates memory in the translator memory pool, and the caller
-//		is responsible for freeing it
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorScalarToDXL::CreateFilterFromQual(
-	List *quals, const CMappingVarColId *var_colid_mapping,
-	Edxlopid filter_type)
-{
-	CDXLScalarFilter *dxlop = nullptr;
-
-	switch (filter_type)
-	{
-		case EdxlopScalarFilter:
-			dxlop = GPOS_NEW(m_mp) CDXLScalarFilter(m_mp);
-			break;
-		case EdxlopScalarJoinFilter:
-			dxlop = GPOS_NEW(m_mp) CDXLScalarJoinFilter(m_mp);
-			break;
-		case EdxlopScalarOneTimeFilter:
-			dxlop = GPOS_NEW(m_mp) CDXLScalarOneTimeFilter(m_mp);
-			break;
-		default:
-			GPOS_ASSERT(!"Unrecognized filter type");
-	}
-
-
-	CDXLNode *filter_dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);
-
-	CDXLNode *cond_node = CreateScalarCondFromQual(quals, var_colid_mapping);
-
-	if (nullptr != cond_node)
-	{
-		filter_dxlnode->AddChild(cond_node);
-	}
-
-	return filter_dxlnode;
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1779,31 +1771,21 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 				   GPOS_WSZ_LIT("Non-Scalar Subquery"));
 	}
 
-	CDXLNode *dxl_sc_ident = (*query_output_dxlnode_array)[0];
-	GPOS_ASSERT(nullptr != dxl_sc_ident);
+	ULongPtrArray *colrefsIds = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	for (ULONG i = 0; i < query_output_dxlnode_array->Size(); i++)
+	{
+		CDXLNode *dxl_sc_ident = (*query_output_dxlnode_array)[i];
+		CDXLScalarIdent *scalar_ident =
+			dynamic_cast<CDXLScalarIdent *>(dxl_sc_ident->GetOperator());
+		const CDXLColRef *dxl_colref = scalar_ident->GetDXLColRef();
+		colrefsIds->Append(GPOS_NEW(m_mp) ULONG(dxl_colref->Id()));
+	}
 
-	// get dxl scalar identifier
-	CDXLScalarIdent *scalar_ident =
-		dynamic_cast<CDXLScalarIdent *>(dxl_sc_ident->GetOperator());
-
-	// get the dxl column reference
-	const CDXLColRef *dxl_colref = scalar_ident->GetDXLColRef();
-	const ULONG colid = dxl_colref->Id();
-
-	// get the test expression
 	GPOS_ASSERT(IsA(sublink->testexpr, OpExpr));
-	OpExpr *op_expr = (OpExpr *) sublink->testexpr;
 
-	IMDId *mdid = GPOS_NEW(m_mp) CMDIdGPDB(op_expr->opno);
-
-	// get operator name
-	const CWStringConst *str = GetDXLArrayCmpType(mdid);
-
-	// translate left hand side of the expression
-	GPOS_ASSERT(nullptr != op_expr->args);
-	Expr *LHS_expr = (Expr *) gpdb::ListNth(op_expr->args, 0);
-
-	CDXLNode *outer_dxlnode = TranslateScalarToDXL(LHS_expr, var_colid_mapping);
+	CDXLNode *testexpr_dxlnode =
+		TranslateScalarToDXL((Expr *) sublink->testexpr, var_colid_mapping,
+							 query_output_dxlnode_array);
 
 	CDXLNode *dxlnode = nullptr;
 	CDXLScalar *subquery = nullptr;
@@ -1812,18 +1794,16 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 				ANY_SUBLINK == sublink->subLinkType);
 	if (ALL_SUBLINK == sublink->subLinkType)
 	{
-		subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
-			m_mp, mdid, GPOS_NEW(m_mp) CMDName(m_mp, str), colid);
+		subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(m_mp, colrefsIds);
 	}
 	else
 	{
-		subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
-			m_mp, mdid, GPOS_NEW(m_mp) CMDName(m_mp, str), colid);
+		subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(m_mp, colrefsIds);
 	}
 
 	dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, subquery);
 
-	dxlnode->AddChild(outer_dxlnode);
+	dxlnode->AddChild(testexpr_dxlnode);
 	dxlnode->AddChild(inner_dxlnode);
 
 #ifdef GPOS_DEBUG
@@ -1888,7 +1868,8 @@ CTranslatorScalarToDXL::CreateScalarSubqueryFromSublink(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateArrayExprToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, ArrayExpr));
 
@@ -1901,7 +1882,8 @@ CTranslatorScalarToDXL::TranslateArrayExprToDXL(
 
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);
 
-	TranslateScalarChildren(dxlnode, parrayexpr->elements, var_colid_mapping);
+	TranslateScalarChildren(dxlnode, parrayexpr->elements, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 
 	return dxlnode;
 }
@@ -1916,7 +1898,8 @@ CTranslatorScalarToDXL::TranslateArrayExprToDXL(
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorScalarToDXL::TranslateArrayRefToDXL(
-	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+	const Expr *expr, const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(IsA(expr, SubscriptingRef));
 
@@ -1958,19 +1941,21 @@ CTranslatorScalarToDXL::TranslateArrayRefToDXL(
 
 	// add children
 	AddArrayIndexList(dxlnode, parrayref->reflowerindexpr,
-					  CDXLScalarArrayRefIndexList::EilbLower,
-					  var_colid_mapping);
+					  CDXLScalarArrayRefIndexList::EilbLower, var_colid_mapping,
+					  subquery_output_cols_dxlnode_array);
 	AddArrayIndexList(dxlnode, parrayref->refupperindexpr,
-					  CDXLScalarArrayRefIndexList::EilbUpper,
-					  var_colid_mapping);
+					  CDXLScalarArrayRefIndexList::EilbUpper, var_colid_mapping,
+					  subquery_output_cols_dxlnode_array);
 
-	dxlnode->AddChild(
-		TranslateScalarToDXL(parrayref->refexpr, var_colid_mapping));
+	dxlnode->AddChild(TranslateScalarToDXL(parrayref->refexpr,
+										   var_colid_mapping,
+										   subquery_output_cols_dxlnode_array));
 
 	if (nullptr != parrayref->refassgnexpr)
 	{
 		dxlnode->AddChild(
-			TranslateScalarToDXL(parrayref->refassgnexpr, var_colid_mapping));
+			TranslateScalarToDXL(parrayref->refassgnexpr, var_colid_mapping,
+								 subquery_output_cols_dxlnode_array));
 	}
 
 	return dxlnode;
@@ -1988,7 +1973,8 @@ void
 CTranslatorScalarToDXL::AddArrayIndexList(
 	CDXLNode *dxlnode, List *list,
 	CDXLScalarArrayRefIndexList::EIndexListBound index_list_bound,
-	const CMappingVarColId *var_colid_mapping)
+	const CMappingVarColId *var_colid_mapping,
+	const CDXLNodeArray *subquery_output_cols_dxlnode_array)
 {
 	GPOS_ASSERT(nullptr != dxlnode);
 	GPOS_ASSERT(EdxlopScalarArrayRef ==
@@ -1999,7 +1985,8 @@ CTranslatorScalarToDXL::AddArrayIndexList(
 		CDXLNode(m_mp, GPOS_NEW(m_mp)
 						   CDXLScalarArrayRefIndexList(m_mp, index_list_bound));
 
-	TranslateScalarChildren(index_list_dxlnode, list, var_colid_mapping);
+	TranslateScalarChildren(index_list_dxlnode, list, var_colid_mapping,
+							subquery_output_cols_dxlnode_array);
 	dxlnode->AddChild(index_list_dxlnode);
 }
 

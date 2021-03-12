@@ -17,6 +17,7 @@
 #include "gpopt/operators/CScalar.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarSubqueryQuantified.h"
 
 using namespace gpopt;
 
@@ -206,6 +207,15 @@ CDrvdPropScalar::DeriveUsedColumns(CExpressionHandle &exprhdl)
 				// from its relational child as used columns
 				m_pcrsUsed->Union(exprhdl.DeriveOuterReferences(0));
 			}
+		}
+
+		// For a quantified subquery the scalar child contains columns from the outer and
+		// inner side, but the pcrsUsed should only be the columns which does not come from
+		// the inner side
+		if (CUtils::FQuantifiedSubquery(popScalar))
+		{
+			m_pcrsUsed->Exclude(
+				CScalarSubqueryQuantified::PopConvert(popScalar)->Pcrs());
 		}
 	}
 	return m_pcrsUsed;

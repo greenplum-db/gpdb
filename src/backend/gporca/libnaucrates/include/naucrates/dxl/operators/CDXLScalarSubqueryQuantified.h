@@ -43,44 +43,23 @@ public:
 	};
 
 private:
-	// id of the scalar comparison operator
-	IMDId *m_scalar_op_mdid;
-
-	// name of scalar comparison operator
-	CMDName *m_scalar_op_mdname;
-
-	// colid produced by the relational child of the AnySubquery operator
-	ULONG m_colid;
+	// colid produced by the relational child of the subquery operator
+	ULongPtrArray *m_colids;
 
 public:
 	CDXLScalarSubqueryQuantified(CDXLScalarSubqueryQuantified &) = delete;
 
 	// ctor
-	CDXLScalarSubqueryQuantified(CMemoryPool *mp, IMDId *scalar_op_mdid,
-								 CMDName *mdname, ULONG colid);
+	CDXLScalarSubqueryQuantified(CMemoryPool *mp, ULongPtrArray *colids);
 
 	// dtor
 	~CDXLScalarSubqueryQuantified() override;
 
-	// scalar operator id
-	IMDId *
-	GetScalarOpMdId() const
-	{
-		return m_scalar_op_mdid;
-	}
-
-	// scalar operator name
-	const CMDName *
-	GetScalarOpMdName() const
-	{
-		return m_scalar_op_mdname;
-	}
-
 	// subquery colid
-	ULONG
-	GetColId() const
+	ULongPtrArray *
+	GetColIds() const
 	{
-		return m_colid;
+		return m_colids;
 	}
 
 	// serialize operator in DXL format

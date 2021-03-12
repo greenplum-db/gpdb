@@ -969,6 +969,14 @@ public:
 						 CExpressionArrays *input_exprs);
 
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
+
+	static CColRefArray *GetColRefArray(CMemoryPool *mp,
+										const CColRefSet *colrefset);
+
+	static void PopulateSubqueryScalarChild(CExpression *pexprSubquery,
+											CExpression **pexprLeft,
+											CExpression **pexprRight,
+											IMDId **mdid);
 };	// class CUtils
 
 // hash set from expressions

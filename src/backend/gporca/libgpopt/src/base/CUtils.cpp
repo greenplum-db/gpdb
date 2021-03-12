@@ -2270,8 +2270,18 @@ CUtils::PexprAddProjection(CMemoryPool *mp, CExpression *pexpr,
 		CExpression *pexprProjected = (*pdrgpexprProjected)[ul];
 		GPOS_ASSERT(pexprProjected->Pop()->FScalar());
 
+		CScalar *popScalar = nullptr;
+		if (CUtils::FQuantifiedSubquery(pexprProjected->Pop()))
+		{
+			popScalar = CScalar::PopConvert((*pexprProjected)[1]->Pop());
+		}
+		else
+		{
+			GPOS_ASSERT(pexprProjected->Pop()->FScalar());
+			popScalar = CScalar::PopConvert(pexprProjected->Pop());
+		}
+
 		// generate a computed column with scalar expression type
-		CScalar *popScalar = CScalar::PopConvert(pexprProjected->Pop());
 		const IMDType *pmdtype =
 			md_accessor->RetrieveType(popScalar->MdidType());
 		CColRef *colref =
@@ -4769,5 +4779,50 @@ CUtils::AddExprs(CExpressionArrays *results_exprs,
 		results_exprs->Append(exprs);
 	}
 	GPOS_ASSERT(results_exprs->Size() >= input_exprs->Size());
+}
+
+CColRefArray *
+CUtils::GetColRefArray(CMemoryPool *mp, const CColRefSet *colrefset)
+{
+	CColRefArray *colrefs = GPOS_NEW(mp) CColRefArray(mp);
+	CColRefSetIter crsi(*colrefset);
+	while (crsi.Advance())
+	{
+		colrefs->Append(crsi.Pcr());
+	}
+
+	return colrefs;
+}
+
+void
+CUtils::PopulateSubqueryScalarChild(CExpression *pexprSubquery,
+									CExpression **pexprLeft,
+									CExpression **pexprRight, IMDId **mdid)
+{
+	GPOS_ASSERT(*pexprLeft == nullptr);
+	GPOS_ASSERT(*pexprRight == nullptr);
+	GPOS_ASSERT(*mdid == nullptr);
+	GPOS_ASSERT(CUtils::FQuantifiedSubquery(pexprSubquery->Pop()));
+	CExpression *pexprScalar = (*pexprSubquery)[1];
+	COperator *pop = CScalarCmp::PopConvert(pexprScalar->Pop());
+	GPOS_ASSERT(CUtils::FScalarCmp(pexprScalar));
+	// During translation, the right side of the Quantified subquery is always an ident,
+	// so if the right side is a const, the scalar cmp child has been reordered from
+	// const op ident => ident op const
+	if (FScalarConst((*pexprScalar)[1]))
+	{
+		*pexprLeft = (*pexprScalar)[1];
+		*pexprRight = (*pexprScalar)[0];
+		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+		*mdid = CScalarCmp::PmdidCommuteOp(md_accessor, pop);
+	}
+	else
+	{
+		*pexprLeft = (*pexprScalar)[0];
+		*pexprRight = (*pexprScalar)[1];
+		*mdid = CScalarCmp::PopConvert(pexprScalar->Pop())->MdIdOp();
+	}
+
+	GPOS_ASSERT(*mdid != nullptr);
 }
 // EOF
