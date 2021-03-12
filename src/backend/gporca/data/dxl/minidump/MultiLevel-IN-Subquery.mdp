@@ -631,11 +631,17 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
+        <dxl:SubqueryAny ColId="10">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
           <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+          <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalSelect>
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="19">
-              <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:SubqueryAny ColId="19">
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="19" ColName="i" TypeMdid="0.23.1.0"/>
+	      </dxl:Comparison>
               <dxl:LogicalGet>
                 <dxl:TableDescriptor Mdid="0.761868.1.1" TableName="z">
                   <dxl:Columns>

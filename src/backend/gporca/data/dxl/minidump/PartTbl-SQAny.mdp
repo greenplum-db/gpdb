@@ -712,8 +712,11 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="&lt;" OperatorMdid="0.37.1.0" ColId="19">
-          <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+        <dxl:SubqueryAny ColId="19">
+          <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.37.1.0">
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="19" ColName="i" TypeMdid="0.2803.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalGroupBy>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="11"/>

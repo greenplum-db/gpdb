@@ -325,16 +325,25 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="9">
-            <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="9">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="9" ColName="c2" TypeMdid="0.23.1.0"/>
+	    </dxl:Comparison>
             <dxl:LogicalSelect>
               <dxl:Not>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="17">
-                  <dxl:Ident ColId="9" ColName="c2" TypeMdid="0.23.1.0"/>
+                <dxl:SubqueryAny ColId="17">
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="9" ColName="c2" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="17" ColName="c2" TypeMdid="0.23.1.0"/>
+	          </dxl:Comparison>
                   <dxl:LogicalSelect>
                     <dxl:Not>
-                      <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="25">
-                        <dxl:Ident ColId="17" ColName="c3" TypeMdid="0.23.1.0"/>
+                      <dxl:SubqueryAny ColId="25">
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0" ColId="25">
+                          <dxl:Ident ColId="17" ColName="c3" TypeMdid="0.23.1.0"/>
+                          <dxl:Ident ColId="25" ColName="c4" TypeMdid="0.23.1.0"/>
+		        </dxl:Comparison>
                         <dxl:LogicalSelect>
                           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                             <dxl:Ident ColId="25" ColName="c4" TypeMdid="0.23.1.0"/>

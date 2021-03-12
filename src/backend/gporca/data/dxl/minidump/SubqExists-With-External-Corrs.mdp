@@ -406,8 +406,11 @@
                 <dxl:Ident ColId="11" ColName="j" TypeMdid="0.23.1.0"/>
                 <dxl:Ident ColId="20" ColName="j" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="28">
-                <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+              <dxl:SubqueryAny ColId="28">
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="28" ColName="i" TypeMdid="0.23.1.0"/>
+                </dxl:Comparison>
                 <dxl:LogicalSelect>
                   <dxl:And>
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">

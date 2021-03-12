@@ -551,8 +551,11 @@ select * from t1 where 10 not in (select a from t2 where t2.b<>t1.b group by t2.
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
-            <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+          <dxl:SubqueryAny ColId="10">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+              <dxl:Ident ColId="10" ColName="m" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalGroupBy>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="10"/>
@@ -708,8 +711,8 @@ select * from t1 where 10 not in (select a from t2 where t2.b<>t1.b group by t2.
                         <dxl:ProjElem ColId="18" Alias="ColRef_0018">
                           <dxl:If TypeMdid="0.23.1.0">
                             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                               <dxl:Ident ColId="9" ColName="m" TypeMdid="0.23.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                             </dxl:Comparison>
                             <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                             <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>

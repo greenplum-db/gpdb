@@ -111,7 +111,10 @@
         <dxl:ProjList>
           <dxl:ProjElem ColId="6" Alias="?column?">
             <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="3">
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+	      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                <dxl:Ident ColId="3" ColName="?column?" TypeMdid="0.23.1.0"/>
+	      </dxl:Comparison>
               <dxl:Union InputColumns="3;5" CastAcrossInputs="false">
                 <dxl:Columns>
                   <dxl:Column ColId="3" Attno="1" ColName="?column?" TypeMdid="0.23.1.0"/>
@@ -163,7 +166,7 @@
         </dxl:LogicalConstTable>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1998">
+    <dxl:Plan Id="0" SpaceSize="1900">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.000506" Rows="1.000000" Width="1"/>
@@ -221,8 +224,8 @@
                 <dxl:If TypeMdid="0.23.1.0">
                   <dxl:IsNull>
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                       <dxl:Ident ColId="2" ColName="?column?" TypeMdid="0.23.1.0"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                     </dxl:Comparison>
                   </dxl:IsNull>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
@@ -321,8 +324,8 @@
                     <dxl:Filter>
                       <dxl:IsNotFalse>
                         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                           <dxl:Ident ColId="2" ColName="?column?" TypeMdid="0.23.1.0"/>
+                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                         </dxl:Comparison>
                       </dxl:IsNotFalse>
                     </dxl:Filter>
@@ -357,8 +360,8 @@
                     <dxl:Filter>
                       <dxl:IsNotFalse>
                         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                           <dxl:Ident ColId="4" ColName="?column?" TypeMdid="0.23.1.0"/>
+                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                         </dxl:Comparison>
                       </dxl:IsNotFalse>
                     </dxl:Filter>

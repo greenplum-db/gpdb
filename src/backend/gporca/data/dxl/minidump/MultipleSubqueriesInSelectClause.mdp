@@ -1092,8 +1092,11 @@
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="case">
             <dxl:If TypeMdid="0.23.1.0">
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="9">
-                <dxl:Ident ColId="1" ColName="field1" TypeMdid="0.23.1.0"/>
+              <dxl:SubqueryAny ColId="9">
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="1" ColName="field1" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+	        </dxl:Comparison>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="a">
@@ -1116,8 +1119,11 @@
           </dxl:ProjElem>
           <dxl:ProjElem ColId="13" Alias="case">
             <dxl:If TypeMdid="0.23.1.0">
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="12">
-                <dxl:Ident ColId="3" ColName="field3" TypeMdid="0.23.1.0"/>
+              <dxl:SubqueryAny ColId="12">
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="3" ColName="field3" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="12" ColName="b" TypeMdid="0.23.1.0"/>
+	        </dxl:Comparison>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="12" Alias="b">
@@ -1140,8 +1146,11 @@
           </dxl:ProjElem>
           <dxl:ProjElem ColId="16" Alias="case">
             <dxl:If TypeMdid="0.23.1.0">
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="15">
-                <dxl:Ident ColId="4" ColName="field4" TypeMdid="0.23.1.0"/>
+              <dxl:SubqueryAny ColId="15">
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="4" ColName="field4" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="15" ColName="c" TypeMdid="0.23.1.0"/>
+	        </dxl:Comparison>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="15" Alias="c">

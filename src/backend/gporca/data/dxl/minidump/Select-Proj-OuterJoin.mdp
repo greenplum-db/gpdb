@@ -777,8 +777,11 @@
               </dxl:ScalarSubquery>
             </dxl:Comparison>
             <dxl:Not>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.93.1.0" ColId="43">
-                <dxl:Ident ColId="1" ColName="proname" TypeMdid="0.19.1.0"/>
+              <dxl:SubqueryAny ColId="43">
+		<dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
+                  <dxl:Ident ColId="1" ColName="proname" TypeMdid="0.19.1.0"/>
+                  <dxl:Ident ColId="43" ColName="proname" TypeMdid="0.19.1.0"/>
+                </dxl:Comparison>
                 <dxl:LogicalSelect>
                   <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.607.1.0">
                     <dxl:Ident ColId="44" ColName="pronamespace" TypeMdid="0.26.1.0"/>

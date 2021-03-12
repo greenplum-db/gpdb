@@ -730,8 +730,11 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:Or>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="20">
-            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="20">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="20" ColName="?column?" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:Union InputColumns="20;22" CastAcrossInputs="false">
               <dxl:Columns>
                 <dxl:Column ColId="20" Attno="1" ColName="?column?" TypeMdid="0.23.1.0"/>
@@ -768,8 +771,11 @@
               </dxl:LogicalProject>
             </dxl:Union>
           </dxl:SubqueryAny>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="24">
-            <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="24">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="24" ColName="?column?" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:Union InputColumns="24;26" CastAcrossInputs="false">
               <dxl:Columns>
                 <dxl:Column ColId="24" Attno="1" ColName="?column?" TypeMdid="0.23.1.0"/>

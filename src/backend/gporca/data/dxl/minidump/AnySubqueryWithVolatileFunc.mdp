@@ -343,9 +343,12 @@
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
           </dxl:Comparison>
           <dxl:SubqueryAny OperatorName="&gt;" OperatorMdid="0.674.1.0" ColId="17">
-            <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
-              <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
-            </dxl:FuncExpr>
+            <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.674.1.0">
+              <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+                <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+              </dxl:FuncExpr>
+	      <dxl:Ident ColId="17" ColName="?column?" TypeMdid="0.701.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalProject>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="17" Alias="?column?">

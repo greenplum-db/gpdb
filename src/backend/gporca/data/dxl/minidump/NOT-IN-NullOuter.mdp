@@ -260,8 +260,11 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="11">
-            <dxl:Ident ColId="1" ColName="s1" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="11">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="1" ColName="s1" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="11" ColName="t2" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalGet>
               <dxl:TableDescriptor Mdid="0.53000.1.1" TableName="t">
                 <dxl:Columns>

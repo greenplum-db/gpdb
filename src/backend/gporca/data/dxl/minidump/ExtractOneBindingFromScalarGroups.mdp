@@ -382,8 +382,11 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="20">
-            <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="20">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="20" ColName="b" TypeMdid="0.23.1.0"/>
+	    </dxl:Comparison>
             <dxl:Union InputColumns="20;29" CastAcrossInputs="false">
               <dxl:Columns>
                 <dxl:Column ColId="20" Attno="1" ColName="b" TypeMdid="0.23.1.0"/>

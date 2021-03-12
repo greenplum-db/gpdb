@@ -349,8 +349,11 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.15.1.0" ColId="28">
-          <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+        <dxl:SubqueryAny ColId="28">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.15.1.0">
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="28" ColName="sum" TypeMdid="0.20.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalGroupBy>
             <dxl:GroupingColumns/>
             <dxl:ProjList>
@@ -364,8 +367,11 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalSelect>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="19">
-                <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
+              <dxl:SubqueryAny ColId="19">
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="19" ColName="a" TypeMdid="0.23.1.0"/>
+                </dxl:Comparison>
                 <dxl:LogicalSelect>
                   <dxl:And>
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">

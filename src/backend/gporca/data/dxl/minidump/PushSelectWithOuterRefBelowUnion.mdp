@@ -5413,8 +5413,11 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:Or>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="50">
-            <dxl:Ident ColId="35" ColName="month_number" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="50">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="35" ColName="month_number" TypeMdid="0.23.1.0"/>
+	      <dxl:Ident ColId="50" ColName="?column?" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:Union InputColumns="50;52" CastAcrossInputs="false">
               <dxl:Columns>
                 <dxl:Column ColId="50" Attno="1" ColName="?column?" TypeMdid="0.23.1.0"/>

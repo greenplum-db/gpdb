@@ -2403,8 +2403,11 @@
           <dxl:IsNotNull>
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.25.1.0"/>
           </dxl:IsNotNull>
-          <dxl:SubqueryAll OperatorName="&lt;" OperatorMdid="0.97.1.0" ColId="13">
-            <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAll ColId="13">
+            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+              <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="13" ColName="c" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalSelect>
               <dxl:SubqueryExists>
                 <dxl:LogicalGet>

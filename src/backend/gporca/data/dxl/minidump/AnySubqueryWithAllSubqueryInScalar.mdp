@@ -350,60 +350,66 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="17">
-          <dxl:ScalarSubquery ColId="34">
-            <dxl:LogicalLimit>
-              <dxl:SortingColumnList/>
-              <dxl:LimitCount>
-                <dxl:FuncExpr FuncId="0.481.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                </dxl:FuncExpr>
-              </dxl:LimitCount>
-              <dxl:LimitOffset/>
-              <dxl:LogicalProject>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="34" Alias="?column?">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:LogicalSelect>
-                  <dxl:Not>
-                    <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="26">
-                      <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
-                      <dxl:LogicalGet>
-                        <dxl:TableDescriptor Mdid="0.377096.1.0" TableName="t1">
-                          <dxl:Columns>
-                            <dxl:Column ColId="26" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="27" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="28" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="29" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="30" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="31" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="32" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="33" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:LogicalGet>
-                    </dxl:SubqueryAny>
-                  </dxl:Not>
-                  <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.377090.1.0" TableName="foo">
-                      <dxl:Columns>
-                        <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="19" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                        <dxl:Column ColId="20" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="21" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="22" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="23" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="24" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="25" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:LogicalGet>
-                </dxl:LogicalSelect>
-              </dxl:LogicalProject>
-            </dxl:LogicalLimit>
-          </dxl:ScalarSubquery>
+        <dxl:SubqueryAny ColId="17">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+            <dxl:ScalarSubquery ColId="34">
+              <dxl:LogicalLimit>
+                <dxl:SortingColumnList/>
+                <dxl:LimitCount>
+                  <dxl:FuncExpr FuncId="0.481.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                  </dxl:FuncExpr>
+                </dxl:LimitCount>
+                <dxl:LimitOffset/>
+                <dxl:LogicalProject>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="34" Alias="?column?">
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:LogicalSelect>
+                    <dxl:Not>
+                      <dxl:SubqueryAny ColId="26">
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                          <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
+                          <dxl:Ident ColId="26" ColName="c" TypeMdid="0.23.1.0"/>
+                        </dxl:Comparison>
+                        <dxl:LogicalGet>
+                          <dxl:TableDescriptor Mdid="0.377096.1.0" TableName="t1">
+                            <dxl:Columns>
+                              <dxl:Column ColId="26" Attno="1" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="27" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                              <dxl:Column ColId="28" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="29" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="30" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="31" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="32" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="33" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                            </dxl:Columns>
+                          </dxl:TableDescriptor>
+                        </dxl:LogicalGet>
+                      </dxl:SubqueryAny>
+                    </dxl:Not>
+                    <dxl:LogicalGet>
+                      <dxl:TableDescriptor Mdid="0.377090.1.0" TableName="foo">
+                        <dxl:Columns>
+                          <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="19" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="20" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="21" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="22" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="23" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="24" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="25" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:LogicalGet>
+                  </dxl:LogicalSelect>
+                </dxl:LogicalProject>
+              </dxl:LogicalLimit>
+            </dxl:ScalarSubquery>
+            <dxl:Ident ColId="17" ColName="b1" TypeMdid="0.23.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalProject>
             <dxl:ProjList>
               <dxl:ProjElem ColId="17" Alias="b1">

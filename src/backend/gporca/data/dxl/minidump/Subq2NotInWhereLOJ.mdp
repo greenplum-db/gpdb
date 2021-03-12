@@ -571,12 +571,15 @@
                     <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABA==" LintValue="2817148525"/>
                   </dxl:Comparison>
                   <dxl:Not>
-                    <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.98.1.0" ColId="30">
-                      <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
-                        <dxl:FuncExpr FuncId="0.401.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
-                          <dxl:Ident ColId="11" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
+                    <dxl:SubqueryAny ColId="30">
+                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                          <dxl:FuncExpr FuncId="0.401.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                            <dxl:Ident ColId="11" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
+                          </dxl:FuncExpr>
                         </dxl:FuncExpr>
-                      </dxl:FuncExpr>
+                        <dxl:Ident ColId="30" ColName="btrim" TypeMdid="0.25.1.0"/>
+                      </dxl:Comparison>
                       <dxl:LogicalProject>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="30" Alias="btrim">

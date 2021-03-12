@@ -311,8 +311,11 @@
         <dxl:DistrOpfamilies/>
         <dxl:DistrOpclasses/>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.15.1.0" ColId="17">
-            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="17">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.15.1.0">
+              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="17" ColName="row_number" TypeMdid="0.20.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalWindow>
               <dxl:WindowSpecList>
                 <dxl:WindowSpec PartitionColumns="1">

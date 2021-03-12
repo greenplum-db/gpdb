@@ -378,10 +378,13 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
         <dxl:LimitCount/>
         <dxl:LimitOffset/>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.1752.1.0" ColId="19">
-            <dxl:FuncExpr FuncId="0.1740.1.0" FuncRetSet="false" TypeMdid="0.1700.1.0">
-              <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-            </dxl:FuncExpr>
+          <dxl:SubqueryAny ColId="19">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
+              <dxl:FuncExpr FuncId="0.1740.1.0" FuncRetSet="false" TypeMdid="0.1700.1.0">
+                <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+              </dxl:FuncExpr>
+              <dxl:Ident ColId="19" ColName="avg" TypeMdid="0.1700.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalWindow>
               <dxl:WindowSpecList>
                 <dxl:WindowSpec PartitionColumns="">

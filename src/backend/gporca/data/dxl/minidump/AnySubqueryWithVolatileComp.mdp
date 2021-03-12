@@ -309,9 +309,12 @@ Physical plan:
       <dxl:LogicalSelect>
         <dxl:Not>
           <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.24579.1.0" ColId="17">
-            <dxl:CoerceToDomain TypeMdid="0.24576.1.0" CoercionForm="1" Location="38">
-              <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
-            </dxl:CoerceToDomain>
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.24579.1.0">
+              <dxl:CoerceToDomain TypeMdid="0.24576.1.0" CoercionForm="1" Location="38">
+                <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
+              </dxl:CoerceToDomain>
+	      <dxl:Ident ColId="17" ColName="c1n" TypeMdid="0.73810.1.0"/>
+	    </dxl:Comparison>
             <dxl:LogicalProject>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="17" Alias="c1n">

@@ -14524,8 +14524,11 @@ with results as
                     <dxl:Ident ColId="66" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Ident ColId="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
                   </dxl:Comparison>
-                  <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.1054.1.0" ColId="156">
-                    <dxl:Ident ColId="90" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                  <dxl:SubqueryAny ColId="156">
+		    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                      <dxl:Ident ColId="90" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                      <dxl:Ident ColId="156" ColName="s_state" TypeMdid="0.1042.1.0"/>
+		    </dxl:Comparison>
                     <dxl:LogicalSelect>
                       <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.420.1.0">
                         <dxl:Ident ColId="204" ColName="ranking" TypeMdid="0.20.1.0"/>

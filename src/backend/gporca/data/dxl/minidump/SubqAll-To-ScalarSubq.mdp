@@ -307,8 +307,11 @@
           </dxl:ProjList>
           <dxl:LogicalSelect>
             <dxl:Not>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.670.1.0" ColId="21">
-                <dxl:Ident ColId="3" ColName="f3" TypeMdid="0.701.1.0"/>
+             <dxl:SubqueryAny ColId="21">
+               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.670.1.0">
+                 <dxl:Ident ColId="3" ColName="f3" TypeMdid="0.701.1.0"/>
+                 <dxl:Ident ColId="21" ColName="?column?" TypeMdid="0.701.1.0"/>
+               </dxl:Comparison>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="21" Alias="?column?">

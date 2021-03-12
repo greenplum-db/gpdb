@@ -273,8 +273,11 @@ where t.a in (select count(s.i) from s);
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.15.1.0" ColId="19">
-          <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+        <dxl:SubqueryAny ColId="19">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.15.1.0" ColId="19">
+            <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="19" ColName="count" TypeMdid="0.20.1.0"/>
+	  </dxl:Comparison>
           <dxl:LogicalGroupBy>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="2"/>

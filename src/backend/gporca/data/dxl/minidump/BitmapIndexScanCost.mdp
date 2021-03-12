@@ -280,8 +280,11 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.98.1.0" ColId="7">
-          <dxl:Ident ColId="1" ColName="message_id" TypeMdid="0.25.1.0"/>
+        <dxl:SubqueryAny ColId="7">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+            <dxl:Ident ColId="1" ColName="message_id" TypeMdid="0.25.1.0"/>
+            <dxl:Ident ColId="7" ColName="message_id" TypeMdid="0.25.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalLimit>
             <dxl:SortingColumnList/>
             <dxl:LimitCount>

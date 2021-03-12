@@ -711,8 +711,11 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.15.1.0" ColId="21">
-          <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+        <dxl:SubqueryAny ColId="21">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.15.1.0">
+            <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="21" ColName="row_number" TypeMdid="0.20.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalWindow>
             <dxl:WindowSpecList>
               <dxl:WindowSpec PartitionColumns="1"/>

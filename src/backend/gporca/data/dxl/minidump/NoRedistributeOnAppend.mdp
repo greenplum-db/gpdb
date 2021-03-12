@@ -302,8 +302,11 @@ GROUP BY b;
               </dxl:GroupingColumns>
               <dxl:ProjList/>
               <dxl:LogicalSelect>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="21">
-                  <dxl:Ident ColId="12" ColName="b" TypeMdid="0.23.1.0"/>
+                <dxl:SubqueryAny ColId="21">
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="12" ColName="b" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="21" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
                   <dxl:LogicalGet>
                     <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
                       <dxl:Columns>
@@ -352,8 +355,11 @@ GROUP BY b;
               </dxl:GroupingColumns>
               <dxl:ProjList/>
               <dxl:LogicalSelect>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="40">
-                  <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
+                <dxl:SubqueryAny ColId="40">
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="31" ColName="b" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="40" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
                   <dxl:LogicalGet>
                     <dxl:TableDescriptor Mdid="0.532490.1.0" TableName="foo">
                       <dxl:Columns>

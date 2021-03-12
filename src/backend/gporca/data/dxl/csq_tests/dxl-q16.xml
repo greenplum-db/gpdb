@@ -13,8 +13,11 @@
           <dxl:Ident ColId="1" ColName="t1" TypeMdid="0.23.1.0"/>
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="50"/>
         </dxl:Comparison>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="12">
-          <dxl:Ident ColId="2" ColName="t2" TypeMdid="0.23.1.0"/>
+        <dxl:SubqueryAny ColId="12">
+          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+            <dxl:Ident ColId="2" ColName="t2" TypeMdid="0.23.1.0"/>
+            <dxl:Ident ColId="12" ColName="s2" TypeMdid="0.23.1.0"/>
+          </dxl:Comparison>
           <dxl:LogicalLimit>
             <dxl:SortingColumnList/>
             <dxl:LimitCount>

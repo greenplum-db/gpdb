@@ -513,8 +513,11 @@
           <dxl:ProjElem ColId="29" Alias="sum">
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
               <dxl:If TypeMdid="0.23.1.0">
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
-                  <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                <dxl:SubqueryAny ColId="10">
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
                   <dxl:LogicalSelect>
                     <dxl:SubqueryExists>
                       <dxl:LogicalGroupBy>
@@ -581,8 +584,11 @@
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
               <dxl:If TypeMdid="0.23.1.0">
                 <dxl:Not>
-                  <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="30">
-                    <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                  <dxl:SubqueryAny ColId="30">
+                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                      <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="30" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:Comparison>
                     <dxl:LogicalJoin JoinType="Inner">
                       <dxl:LogicalGet>
                         <dxl:TableDescriptor Mdid="0.98456.1.0" TableName="temp_b">

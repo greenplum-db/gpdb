@@ -700,8 +700,11 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAll OperatorName="=" OperatorMdid="0.96.1.0" ColId="9">
-            <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAll ColId="9">
+	    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="9" ColName="c2" TypeMdid="0.23.1.0"/>
+	    </dxl:Comparison>
             <dxl:LogicalGet>
               <dxl:TableDescriptor Mdid="0.90115.1.0" TableName="t2">
                 <dxl:Columns>

@@ -323,7 +323,10 @@ SELECT a FROM y WHERE (a IN (SELECT b FROM bar WHERE b = 2));
         <dxl:LogicalCTEAnchor CTEId="2">
           <dxl:LogicalSelect>
             <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="21">
-              <dxl:Ident ColId="19" ColName="a" TypeMdid="0.23.1.0"/>
+	      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="19" ColName="a" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="21" ColName="b" TypeMdid="0.23.1.0"/>
+	      </dxl:Comparison>
               <dxl:LogicalSelect>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                   <dxl:Ident ColId="21" ColName="b" TypeMdid="0.23.1.0"/>

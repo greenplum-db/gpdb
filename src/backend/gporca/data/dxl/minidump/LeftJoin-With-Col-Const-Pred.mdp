@@ -1981,8 +1981,11 @@
                 </dxl:Array>
               </dxl:ArrayComp>
               <dxl:Not>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.607.1.0" ColId="54">
-                  <dxl:Ident ColId="32" ColName="oid" TypeMdid="0.26.1.0"/>
+                <dxl:SubqueryAny ColId="54">
+		  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.607.1.0">
+                    <dxl:Ident ColId="32" ColName="oid" TypeMdid="0.26.1.0"/>
+                    <dxl:Ident ColId="54" ColName="paroid" TypeMdid="0.26.1.0"/>
+		  </dxl:Comparison>
                   <dxl:LogicalGet>
                     <dxl:TableDescriptor Mdid="0.5011.1.1" TableName="pg_partition_rule">
                       <dxl:Columns>

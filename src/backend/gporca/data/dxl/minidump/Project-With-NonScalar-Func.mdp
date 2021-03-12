@@ -159,8 +159,11 @@
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="?column?">
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="3">
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+            <dxl:SubqueryAny ColId="3">
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                <dxl:Ident ColId="3" ColName="generate_series" TypeMdid="0.23.1.0"/>
+              </dxl:Comparison>
               <dxl:LogicalProject>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="3" Alias="generate_series">
@@ -350,8 +353,8 @@
                         <dxl:Filter>
                           <dxl:Or>
                             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                               <dxl:Ident ColId="2" ColName="generate_series" TypeMdid="0.23.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                             </dxl:Comparison>
                             <dxl:IsNull>
                               <dxl:Ident ColId="2" ColName="generate_series" TypeMdid="0.23.1.0"/>

@@ -9,7 +9,7 @@
   insert into temp_b values (1,2), (2,2), (3,2), (4,2), (5,3), (6,3), (7,3), (8,3), (10,4);
   insert into temp_c values (NULL, 2), (2, 2), (4, NULL), (NULL, 3), (1, 3), (8, NULL), (7, 2), (NULL, NULL);
 
-  explain select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a &gt d)) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a &gt c)) then 1 else 0 end) from temp_a t;
+	 explain select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d)) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a > c)) then 1 else 0 end) from temp_a t;
 
                                                                             QUERY PLAN
    Aggregate  (cost=0.00..1356695741.51 rows=1 width=16)
@@ -479,8 +479,11 @@
           <dxl:ProjElem ColId="29" Alias="sum">
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
               <dxl:If TypeMdid="0.23.1.0">
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
-                  <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                <dxl:SubqueryAny ColId="10">
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:Comparison>
                   <dxl:LogicalSelect>
                     <dxl:SubqueryExists>
                       <dxl:LogicalGroupBy>
@@ -541,8 +544,11 @@
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal">
               <dxl:If TypeMdid="0.23.1.0">
                 <dxl:Not>
-                  <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="30">
-                    <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                  <dxl:SubqueryAny ColId="30">
+                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                      <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="30" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:Comparison>
                     <dxl:LogicalSelect>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
                         <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>

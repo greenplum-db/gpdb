@@ -773,8 +773,13 @@ AND
             <dxl:Ident ColId="19" ColName="oid" TypeMdid="0.26.1.0"/>
             <dxl:Ident ColId="44" ColName="oid" TypeMdid="0.26.1.0"/>
           </dxl:Comparison>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.93.1.0" ColId="89">
-            <dxl:Ident ColId="1" ColName="rolname" TypeMdid="0.19.1.0"/>
+          <dxl:SubqueryAny ColId="89">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
+              <dxl:Ident ColId="1" ColName="rolname" TypeMdid="0.19.1.0"/>
+	      <dxl:Cast TypeMdid="0.19.1.0" FuncId="0.1400.1.0">
+                <dxl:Ident ColId="89" ColName="role_name" TypeMdid="0.10689.1.0"/>
+              </dxl:Cast>
+	    </dxl:Comparison>  
             <dxl:LogicalProject>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="89" Alias="role_name">

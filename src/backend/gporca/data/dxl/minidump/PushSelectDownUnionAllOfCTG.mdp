@@ -1,49 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+   bchaudhary=# explain select  sum(field_1) from (select 1 as field_1 union all select 2 as field_1)x(field_1) where x.field_1 in ((select 1 as field_1 union all select 2 as field_1) union all (select 2 as field_1));
+                                     QUERY PLAN
+   ------------------------------------------------------------------------------
+    Aggregate  (cost=0.00..0.00 rows=1 width=8)
+      ->  Append  (cost=0.00..0.00 rows=2 width=4)
+            ->  Hash Join  (cost=0.00..0.00 rows=1 width=4)
+                  Hash Cond: ((1) = (1))
+                  ->  GroupAggregate  (cost=0.00..0.00 rows=2 width=4)
+                        Group Key: (1)
+                        ->  Sort  (cost=0.00..0.00 rows=3 width=4)
+                              Sort Key: (1)
+                              ->  Append  (cost=0.00..0.00 rows=3 width=4)
+                                    ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                    ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                    ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                  ->  Hash  (cost=0.00..0.00 rows=1 width=4)
+                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
+            ->  Hash Join  (cost=0.00..0.00 rows=1 width=4)
+                  Hash Cond: ((1) = (2))
+                  ->  GroupAggregate  (cost=0.00..0.00 rows=2 width=4)
+                        Group Key: (1)
+                        ->  Sort  (cost=0.00..0.00 rows=3 width=4)
+                              Sort Key: (1)
+                              ->  Append  (cost=0.00..0.00 rows=3 width=4)
+                                    ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                    ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                    ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                  ->  Hash  (cost=0.00..0.00 rows=1 width=4)
+                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
+    Optimizer: Pivotal Optimizer (GPORCA)
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
-      <dxl:CTEConfig CTEInliningCutoff="0"/> 
-      <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102016,102144,103001,103027,103033"/>
+      <dxl:CTEConfig CTEInliningCutoff="0"/>
+      <dxl:WindowOids RowNumber="3100" Rank="3101"/>
+      <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
+        <dxl:CostParams>
+          <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
+        </dxl:CostParams>
+      </dxl:CostModelConfig>
+      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102043,102074,102120,102144,103001,103003,103014,103022,103026,103027,103029,103033,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq">
-        <dxl:LeftType Mdid="0.23.1.0"/>
-        <dxl:RightType Mdid="0.23.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.65.1.0"/>
-        <dxl:Commutator Mdid="0.96.1.0"/>
-        <dxl:InverseOp Mdid="0.518.1.0"/>
-      </dxl:GPDBScalarOp>
-      <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT">
-        <dxl:LeftType Mdid="0.23.1.0"/>
-        <dxl:RightType Mdid="0.23.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.66.1.0"/>
-        <dxl:Commutator Mdid="0.521.1.0"/>
-        <dxl:InverseOp Mdid="0.525.1.0"/>
-      </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.65.1.0" Name="int4eq" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
-        <dxl:ResultType Mdid="0.16.1.0"/>
-      </dxl:GPDBFunc>
-      <dxl:Type Mdid="0.20.1.0" Name="Int8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="8" PassByValue="true">
-        <dxl:EqualityOp Mdid="0.410.1.0"/>
-        <dxl:InequalityOp Mdid="0.411.1.0"/>
-        <dxl:LessThanOp Mdid="0.412.1.0"/>
-        <dxl:LessThanEqualsOp Mdid="0.414.1.0"/>
-        <dxl:GreaterThanOp Mdid="0.413.1.0"/>
-        <dxl:GreaterThanEqualsOp Mdid="0.415.1.0"/>
-        <dxl:ComparisonOp Mdid="0.351.1.0"/>
-        <dxl:ArrayType Mdid="0.1016.1.0"/>
-        <dxl:MinAgg Mdid="0.2131.1.0"/>
-        <dxl:MaxAgg Mdid="0.2115.1.0"/>
-        <dxl:AvgAgg Mdid="0.2100.1.0"/>
-        <dxl:SumAgg Mdid="0.2107.1.0"/>
-        <dxl:CountAgg Mdid="0.2147.1.0"/>
-      </dxl:Type>
-      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
+      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.2222.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7124.1.0"/>
         <dxl:EqualityOp Mdid="0.91.1.0"/>
         <dxl:InequalityOp Mdid="0.85.1.0"/>
         <dxl:LessThanOp Mdid="0.58.1.0"/>
@@ -58,19 +65,26 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.410.1.0" Name="=" ComparisonType="Eq">
-        <dxl:LeftType Mdid="0.20.1.0"/>
-        <dxl:RightType Mdid="0.20.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.467.1.0"/>
-        <dxl:Commutator Mdid="0.410.1.0"/>
-        <dxl:InverseOp Mdid="0.411.1.0"/>
-      </dxl:GPDBScalarOp>
-      <dxl:GPDBAgg Mdid="0.2108.1.0" Name="sum" IsSplittable="true">
-        <dxl:ResultType Mdid="0.20.1.0"/>
-        <dxl:IntermediateResultType Mdid="0.20.1.0"/>
-      </dxl:GPDBAgg>
-      <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
+      <dxl:Type Mdid="0.20.1.0" Name="Int8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="8" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7100.1.0"/>
+        <dxl:EqualityOp Mdid="0.410.1.0"/>
+        <dxl:InequalityOp Mdid="0.411.1.0"/>
+        <dxl:LessThanOp Mdid="0.412.1.0"/>
+        <dxl:LessThanEqualsOp Mdid="0.414.1.0"/>
+        <dxl:GreaterThanOp Mdid="0.413.1.0"/>
+        <dxl:GreaterThanEqualsOp Mdid="0.415.1.0"/>
+        <dxl:ComparisonOp Mdid="0.351.1.0"/>
+        <dxl:ArrayType Mdid="0.1016.1.0"/>
+        <dxl:MinAgg Mdid="0.2131.1.0"/>
+        <dxl:MaxAgg Mdid="0.2115.1.0"/>
+        <dxl:AvgAgg Mdid="0.2100.1.0"/>
+        <dxl:SumAgg Mdid="0.2107.1.0"/>
+        <dxl:CountAgg Mdid="0.2147.1.0"/>
+      </dxl:Type>
+      <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="4" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7100.1.0"/>
         <dxl:EqualityOp Mdid="0.96.1.0"/>
         <dxl:InequalityOp Mdid="0.518.1.0"/>
         <dxl:LessThanOp Mdid="0.97.1.0"/>
@@ -85,15 +99,72 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.413.1.0" Name="&gt;" ComparisonType="GT">
+      <dxl:GPDBScalarOp Mdid="0.410.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.20.1.0"/>
+        <dxl:RightType Mdid="0.20.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.467.1.0"/>
+        <dxl:Commutator Mdid="0.410.1.0"/>
+        <dxl:InverseOp Mdid="0.411.1.0"/>
+        <dxl:HashOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyHashOpfamily Mdid="0.7100.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.1977.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.7100.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.413.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.20.1.0"/>
         <dxl:RightType Mdid="0.20.1.0"/>
         <dxl:ResultType Mdid="0.16.1.0"/>
         <dxl:OpFunc Mdid="0.470.1.0"/>
         <dxl:Commutator Mdid="0.412.1.0"/>
         <dxl:InverseOp Mdid="0.414.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBAgg Mdid="0.2803.1.0" Name="count" IsSplittable="true">
+      <dxl:GPDBAgg Mdid="0.2108.1.0" Name="sum" IsSplittable="true" HashAggCapable="true">
+        <dxl:ResultType Mdid="0.20.1.0"/>
+        <dxl:IntermediateResultType Mdid="0.20.1.0"/>
+      </dxl:GPDBAgg>
+      <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
+      <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.66.1.0"/>
+        <dxl:Commutator Mdid="0.521.1.0"/>
+        <dxl:InverseOp Mdid="0.525.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.65.1.0"/>
+        <dxl:Commutator Mdid="0.96.1.0"/>
+        <dxl:InverseOp Mdid="0.518.1.0"/>
+        <dxl:HashOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyHashOpfamily Mdid="0.7100.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.1977.1.0"/>
+          <dxl:Opfamily Mdid="0.4054.1.0"/>
+          <dxl:Opfamily Mdid="0.7100.1.0"/>
+          <dxl:Opfamily Mdid="0.10009.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBAgg Mdid="0.2803.1.0" Name="count" IsSplittable="true" HashAggCapable="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
@@ -113,8 +184,11 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="6">
-            <dxl:Ident ColId="2" ColName="field_1" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="6">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="2" ColName="field_1" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="6" ColName="field_1" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:UnionAll InputColumns="6;10" CastAcrossInputs="false">
               <dxl:Columns>
                 <dxl:Column ColId="6" Attno="1" ColName="field_1" TypeMdid="0.23.1.0"/>
@@ -209,7 +283,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="988020">
+    <dxl:Plan Id="0" SpaceSize="1719955571052">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.001436" Rows="1.000000" Width="8"/>

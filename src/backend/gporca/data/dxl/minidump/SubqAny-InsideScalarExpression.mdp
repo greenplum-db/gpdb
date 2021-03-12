@@ -343,8 +343,11 @@
           <dxl:CoerceViaIO TypeMdid="0.16.1.0" CoercionForm="1" Location="32">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.25.1.0"/>
           </dxl:CoerceViaIO>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="13">
-            <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="13">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="13" ColName="c" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalGet>
               <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="t2">
                 <dxl:Columns>

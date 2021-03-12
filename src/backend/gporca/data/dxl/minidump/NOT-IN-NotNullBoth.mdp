@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+  create table foo (a int not null);
+  create table bar (b int not null);
+  explain select * from foo where a not in (select b from bar);
+                                    QUERY PLAN
+  ------------------------------------------------------------------------------
+   Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+     ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
+           Hash Cond: (foo.a = bar.b)
+           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=4)
+           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                 ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+   Optimizer: Pivotal Optimizer (GPORCA)
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
@@ -216,8 +231,11 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="11">
-            <dxl:Ident ColId="1" ColName="t1" TypeMdid="0.23.1.0"/>
+          <dxl:SubqueryAny ColId="11">
+            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+              <dxl:Ident ColId="1" ColName="t1" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="11" ColName="t2" TypeMdid="0.23.1.0"/>
+            </dxl:Comparison>
             <dxl:LogicalGet>
               <dxl:TableDescriptor Mdid="0.53000.1.1" TableName="t">
                 <dxl:Columns>
