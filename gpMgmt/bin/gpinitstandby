@@ -440,7 +440,7 @@ def create_standby(options):
                                    standby.datadir,
                                    standby.port)
             if options.monitor:
-                _run_pg_autoctl(os.environ.get("GPHOME"), array.coordinator, standby, options.monitor)
+                _run_gpautoctl(os.environ.get("GPHOME"), array.coordinator, standby, options.monitor)
         except Exception as ex:
             logger.debug("EX: %s" % str(ex))
             raise GpInitStandbyException('failed to start standby')
@@ -508,7 +508,7 @@ def create_standby(options):
         signal.signal(signal.SIGINT,signal.default_int_handler)
             
 #-------------------------------------------------------------------------
-def _run_pg_autoctl(gphome, coordinator, standby, monitor):
+def _run_gpautoctl(gphome, coordinator, standby, monitor):
     assert monitor is not None
     monitor_list = monitor.strip().split(',')
     logger.debug("monitor info: %s" % (monitor))
@@ -516,7 +516,7 @@ def _run_pg_autoctl(gphome, coordinator, standby, monitor):
         logger.warning("invalid monitor info, ignore to register the newly standby for autofailover")
         return
 
-    cmdStr="%s/bin/gpautoctl -a -m config" % gphome
+    cmdStr="%s/bin/gpautoctl -a -m register" % gphome
     cmdStr += " --single %d" % standby.dbid
     cmdStr += " -M %s:%s -D %s" % (monitor_list[0], monitor_list[1], monitor_list[2])
     cmdStr += " -c %s:%s" % (coordinator.hostname, coordinator.port)

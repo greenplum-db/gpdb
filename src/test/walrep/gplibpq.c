@@ -87,7 +87,11 @@ test_connect(PG_FUNCTION_ARGS)
 	test_connection = walrcv_connect(conninfo, false, "walrcv_test", &err);
 	MemoryContextSwitchTo(oldcxt);
 
-	PG_RETURN_BOOL(true);
+	if (test_connection == NULL)
+		elog(ERROR, "can't establish connection, conninfo='%s', error: %s",
+				conninfo, err);
+
+	PG_RETURN_BOOL(test_connection != NULL);
 }
 
 Datum

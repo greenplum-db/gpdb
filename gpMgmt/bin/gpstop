@@ -252,7 +252,8 @@ class GpStop:
         if s is not None:
             self._stop_caf_node(s.getSegmentHostName(), s.getSegmentDataDirectory())
     def _stop_caf_node(self, host, pgdata):
-        cmd = gp.PgautoctlCommand('stop', host, pgdata)
+        cmdStr = 'pg_autoctl stop --pgdata %s' % pgdata
+        cmd = Command('pg_autoctl to stop', cmdStr, REMOTE, host)
         cmd.run(validateAfter=False)
 
     #########################

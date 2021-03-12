@@ -100,27 +100,6 @@ class MonitorNode:
     def __str__(self):
         return "%s:%s/%s" % (self.host, self.port, self.datadir)
 
-# start/stop pg_autoctl
-# monitor and the postgres node have the same command line
-# options to start/stop
-class PgautoctlCommand(Command):
-    def __init__(self, action, host, pgdata):
-        if not action in ['start', 'stop', 'restart']:
-            raise Exception('Invalid action: %s' % (action))
-        self.action = action
-        self.host = host
-        self.pgdata = pgdata
-        cmdStr = None
-        if action == 'start':
-            cmdStr = "export PGAUTOCTL_DAEMON=yes; pg_autoctl run --pgdata %s" % (pgdata)
-        elif action == 'stop':
-            cmdStr = 'pg_autoctl stop --pgdata %s' % (pgdata)
-        else:
-            raise Exception('not implemented yet')
-        self.cmdStr = cmdStr
-        name = '%s instance: %s/%s' % (action, host, pgdata)
-        Command.__init__(self, name, self.cmdStr, REMOTE, host)
-
 def wait_for_server_ready(host, pgdata, pmstatus='ready', timeout=120):
     counter = 0
     result = None
