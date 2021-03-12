@@ -595,11 +595,7 @@ CREATE [ OR REPLACE ] FUNCTION
     used for several different functions so long as they have distinct
     input argument types.  Whether or not you use it, this capability entails
     security precautions when calling functions in databases where some users
-<<<<<<< HEAD
-    mistrust other users; see <xref linkend="typeconv-func">.
-=======
     mistrust other users; see <xref linkend="typeconv-func"/>.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    </para>
 
    <para>

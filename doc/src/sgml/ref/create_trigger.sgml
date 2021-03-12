@@ -481,8 +481,6 @@ UPDATE OF <replaceable>column_name1</replaceable> [, <replaceable>column_name2</
   </para>
 
   <para>
-<<<<<<< HEAD
-=======
    In some cases it is possible for a single SQL command to fire more than
    one kind of trigger.  For instance an <command>INSERT</command> with
    an <literal>ON CONFLICT DO UPDATE</literal> clause may cause both insert and
@@ -512,7 +510,6 @@ UPDATE OF <replaceable>column_name1</replaceable> [, <replaceable>column_name2</
   </para>
 
   <para>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    Statement-level triggers on a view are fired only if the action on the
    view is handled by a row-level <literal>INSTEAD OF</literal> trigger.
    If the action is handled by an <literal>INSTEAD</literal> rule, then
@@ -526,8 +523,6 @@ UPDATE OF <replaceable>column_name1</replaceable> [, <replaceable>column_name2</
   </para>
 
   <para>
-<<<<<<< HEAD
-=======
    Creating a row-level trigger on a partitioned table will cause identical
    triggers to be created in all its existing partitions; and any partitions
    created or attached later will contain an identical trigger, too.
@@ -550,7 +545,6 @@ UPDATE OF <replaceable>column_name1</replaceable> [, <replaceable>column_name2</
   </para>
 
   <para>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    In <productname>PostgreSQL</productname> versions before 7.3, it was
    necessary to declare trigger functions as returning the placeholder
    type <type>opaque</type>, rather than <type>trigger</type>.  To support loading

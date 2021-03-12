@@ -32,18 +32,6 @@ CREATE USER <replaceable class="parameter">name</replaceable> [ [ WITH ] <replac
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
     | BYPASSRLS | NOBYPASSRLS
-<<<<<<< HEAD
-    | CONNECTION LIMIT <replaceable class="PARAMETER">connlimit</replaceable>
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
-    | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>'
-    | IN ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | IN GROUP <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | ADMIN <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | USER <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | SYSID <replaceable class="PARAMETER">uid</replaceable>
-    | RESOURCE QUEUE <replaceable class="PARAMETER">queuename</replaceable>
-=======
     | CONNECTION LIMIT <replaceable class="parameter">connlimit</replaceable>
     | [ ENCRYPTED ] PASSWORD '<replaceable class="parameter">password</replaceable>' | PASSWORD NULL
     | VALID UNTIL '<replaceable class="parameter">timestamp</replaceable>'
@@ -53,7 +41,7 @@ CREATE USER <replaceable class="parameter">name</replaceable> [ [ WITH ] <replac
     | ADMIN <replaceable class="parameter">role_name</replaceable> [, ...]
     | USER <replaceable class="parameter">role_name</replaceable> [, ...]
     | SYSID <replaceable class="parameter">uid</replaceable>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+    | RESOURCE QUEUE <replaceable class="parameter">queuename</replaceable>
 </synopsis>
  </refsynopsisdiv>
 

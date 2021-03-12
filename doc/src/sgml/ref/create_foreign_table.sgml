@@ -25,11 +25,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="parameter">table_name
 ] )
 [ INHERITS ( <replaceable>parent_table</replaceable> [, ... ] ) ]
   SERVER <replaceable class="parameter">server_name</replaceable>
-<<<<<<< HEAD
-[ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
-=======
-[ OPTIONS ( <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ... ] ) ]
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+[ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ... ] ) ]
 
 CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="parameter">table_name</replaceable>
   PARTITION OF <replaceable class="parameter">parent_table</replaceable> [ (
@@ -303,11 +299,7 @@ CHECK ( <replaceable class="parameter">expression</replaceable> ) [ NO INHERIT ]
    </varlistentry>
 
    <varlistentry>
-<<<<<<< HEAD
-    <term><literal>OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ...] )</literal></term>
-=======
-    <term><literal>OPTIONS ( <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ...] )</literal></term>
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
+    <term><literal>OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="parameter">option</replaceable> '<replaceable class="parameter">value</replaceable>' [, ...] )</literal></term>
     <listitem>
      <para>
       Options to be associated with the new foreign table or one of its

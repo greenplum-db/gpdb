@@ -85,15 +85,8 @@ PostgreSQL documentation
     </listitem>
     <listitem>
      <para>
-<<<<<<< HEAD
-      There is no guarantee that all WAL files required for the backup are archived
-      at the end of backup. If you are planning to use the backup for an archive
-      recovery and want to ensure that all required files are available at that moment,
-      you need to include them into the backup by using the <literal>-x</> option.
-=======
       If you are using <literal>-X none</literal>, there is no guarantee that all
       WAL files required for the backup are archived at the end of backup.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
      </para>
     </listitem>
     <listitem>
@@ -386,9 +379,6 @@ PostgreSQL documentation
       <term><option>--checkpoint=<replaceable class="parameter">fast|spread</replaceable></option></term>
       <listitem>
        <para>
-<<<<<<< HEAD
-        Sets checkpoint mode to fast (immediate) or spread (default) (see <xref linkend="backup-lowlevel-base-backup">).
-=======
         Sets checkpoint mode to fast (immediate) or spread (default) (see <xref linkend="backup-lowlevel-base-backup"/>).
        </para>
       </listitem>
@@ -402,7 +392,6 @@ PostgreSQL documentation
         This option causes creation of a replication slot named by the
         <literal>--slot</literal> option before starting the backup.
         An error is raised if the slot already exists.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
        </para>
       </listitem>
      </varlistentry>
@@ -726,11 +715,7 @@ PostgreSQL documentation
    symbolic links used for tablespaces are preserved.  Symbolic links pointing
    to certain directories known to PostgreSQL are copied as empty directories.
    Other symbolic links and special device files are skipped.
-<<<<<<< HEAD
-   See <xref linkend="protocol-replication"> for the precise details.
-=======
    See <xref linkend="protocol-replication"/> for the precise details.
->>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
   </para>
 
   <para>
