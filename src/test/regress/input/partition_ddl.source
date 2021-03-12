@@ -371,7 +371,7 @@ subpartition by range (y) subpartition template ( start (1) end (2) every (1))
 subpartition by range (z) subpartition template ( start (1) end (2) every (1))
 ( start (1) end (2) every (1));
 alter table multi_part2 rename to m_0000000;
-select relid,parentrelid,isleaf,level, pg_catalog.pg_get_expr(relpartbound, oid) from pg_partition_tree('m_0000000'), pg_class where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'm_0000000';
 alter table m_0000000 rename to multi_part2_0000000;
 select relid,parentrelid,isleaf,level, pg_catalog.pg_get_expr(relpartbound, oid) from pg_partition_tree('multi_part2_0000000'), pg_class where relid = oid;
 alter table multi_part2_0000000 rename partition for (1) to a123456789a123456789a123456789a123456789a123456789a123456789;
@@ -446,13 +446,13 @@ drop table mpp3363;
 CREATE TABLE mpp3059(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
 ( partition aa start (1) end (5) every (1) );
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059';
 
 alter table mpp3059 rename to mpp3059_rename; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059_rename') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059_rename';
 
 alter table mpp3059_rename rename to mpp3059; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059';
 
 -- 2 level partition
 CREATE TABLE mpp3059a (
@@ -476,12 +476,12 @@ CREATE TABLE mpp3059a (
 subpartition by range (unique2) subpartition template ( start (0) end (500) every (100) )
 ( start (0) end (500) every (100));
 alter table mpp3059a rename to mpp3059a_rename; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059a_rename') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059a_rename';
 
 create table mpp3216a (id int, rank int, year int, gender char(1), count int) distributed by (id); 
 create table mpp3216 (like mpp3216a) partition by range (year) ( start (2001) end (2006) every (1));
 alter table mpp3216 rename to mpp3216_rename;
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3216_rename') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3216_rename';
 
 CREATE TABLE mpp3059b (f1 time(2) with time zone, f2 char(4))
 partition by list (f2)
@@ -489,7 +489,7 @@ partition by list (f2)
   partition est values ('EST')
 );
 alter table mpp3059b rename partition pst to "pacific time"; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059b') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059b';
 
 CREATE TABLE mpp3059c (f1 time(2) with time zone, f2 char(4))
 partition by list (f2)
@@ -503,7 +503,7 @@ start (time '01:00')
 );
 alter table mpp3059c rename partition pst to pacific;
 alter table mpp3059c rename partition est to "Eastern Time";
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059c') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059c';
 
 CREATE TABLE mpp3059d (f1 time(2) with time zone, f2 char(4), f3 varchar(10))
 partition by list (f2)
@@ -516,7 +516,7 @@ subpartition template (
   partition est values ('EST')
 );
 alter table mpp3059d rename partition pst to pacific;
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059d') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059d';
 
 create table test_khush (a integer, b date, c varchar(30))
 partition by range(b)
@@ -782,9 +782,9 @@ partition by range (q1)
 CREATE TABLE mpp3079a(q1 int2, q2 int2)
 partition by range (q1)
 (start (1) end (10) every (1));
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3079') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3079';
 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3079a') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3079a';
 
 drop table mpp3079;
 drop table mpp3079a;
@@ -798,7 +798,7 @@ insert into mpp3242 values(-1);
 -- automatic.
 alter table mpp3242 add partition zz start ('-1') end (0);
 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3242') as t, pg_class as c where relid = oid;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3242';
 
 drop table mpp3242;
 
@@ -927,7 +927,7 @@ CREATE TABLE mpp3080_numericbig (id int4, val numeric(1000,800))
 partition by range (val)
 (start (1) end (5) every (1));
 -- order 1,5
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3080_numericbig') as t, pg_class as c where relid = oid order by 1,5;
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3080_numericbig' order by 1,5;
 
 create temp TABLE temp_hour_range (f1 time(2))
 partition by range (f1)

@@ -548,7 +548,7 @@ create table mpp3512a (like mpp3512_part);
 
 \d mpp3512
 \d mpp3512a
-select relid,parentrelid,isleaf,level, pg_catalog.pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3512_part'), pg_class where relid = oid;
+select * from pg_partitions where tablename='mpp3512_part';
 
 drop table mpp3512;
 drop table mpp3512_part;
@@ -1626,6 +1626,7 @@ drop table partition_cleanup1;
 drop schema partition_999 cascade;
 
 -- These should be empty
+select 'pg_partitions', count(*) from pg_partitions where tablename='partition_cleanup%';
 select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
 
 

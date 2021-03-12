@@ -1068,6 +1068,59 @@ CREATE VIEW pg_stat_resqueues AS
 		pg_stat_get_queue_elapsed_wait(Q.oid) AS elapsed_wait
 	FROM pg_resqueue AS Q;
 
+-- partitioning
+CREATE VIEW pg_partitions AS
+    SELECT
+        n.nspname schemaname,
+        c1.relname tablename,
+        n2.nspname partitionschemaname,
+        f.relid partitiontablename,
+        CASE
+            WHEN substring(f.relid::text for pg_catalog.char_length(f.parentrelid::text || '_' || f.level || '_prt_')) = (f.parentrelid::text || '_' || f.level || '_prt_')
+            -- extract the partition name after <parenttablename_level_prt_>
+            THEN substring(f.relid::text from pg_catalog.char_length(f.parentrelid::text || '_' || f.level || '_prt_') + 1)
+            ELSE null::text
+        END AS partitionname,
+        f.parentrelid parentpartitiontablename,
+        CASE
+            WHEN substring(f.parentrelid::text for pg_catalog.char_length(c1.relname)) = c1.relname and
+                position('_' || (f.level - 1) || '_prt_' in f.parentrelid::text) > 0
+            -- find the last match of <parentlevel_prt_> from the parent table name and extract the partition name
+            THEN substring(f.parentrelid::text from length(f.parentrelid::text)- length(pg_catalog.regexp_replace(f.parentrelid::text, '.*' || '_' || (f.level - 1) || '_prt_','')) + 1)
+            ELSE null::text
+        END AS parentpartitionname,
+        CASE
+            WHEN pt.partstrat = 'h'::"char" THEN 'hash'::text
+            WHEN pt.partstrat = 'r'::"char" THEN 'range'::text
+            WHEN pt.partstrat = 'l'::"char" THEN 'list'::text
+            ELSE null::text
+        END AS partitiontype,
+        f.level partitionlevel,
+        CASE
+            WHEN pg_catalog.pg_get_expr(c2.relpartbound, 0) = 'DEFAULT' THEN TRUE
+            ELSE FALSE
+        END AS partitionisdefault,
+        pg_catalog.pg_get_expr(c2.relpartbound, 0) partitionboundary,
+        coalesce(ts1.spcname, dfltspcname) as parenttablespace,
+        coalesce(ts2.spcname, dfltspcname) as partitiontablespace
+    FROM
+        pg_class c1 LEFT JOIN pg_tablespace ts1 ON c1.reltablespace = ts1.oid,
+        pg_class c2 LEFT JOIN pg_tablespace ts2 ON c2.reltablespace = ts2.oid,
+        pg_catalog.pg_partition_tree(c1.oid) f
+            LEFT JOIN pg_partitioned_table pt ON f.relid = pt.partrelid,
+        pg_namespace n,
+        pg_namespace n2,
+        (SELECT s.spcname
+            FROM pg_database, pg_tablespace s
+            WHERE datname = current_database() AND dattablespace = s.oid
+        ) d(dfltspcname)
+    WHERE
+        c1.relkind = 'p' AND
+        c1.relispartition = 'f' AND
+        n.oid = c1.relnamespace AND
+        c2.oid = f.relid AND
+        n2.oid = c2.relnamespace;
+
 -- Resource queue views
 
 CREATE VIEW pg_resqueue_status AS

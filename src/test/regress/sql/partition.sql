@@ -645,6 +645,8 @@ create table i_1_prt_3 (like i);
 -- could be matched by partition name when targeted on an irrelevant table.
 create table i2 (i int) partition by range(i) (start (1) end(3) every(1));
 create table i_1_prt_4 partition of i2 for values from (4) to (5);
+-- i_1_prt_4 should not have partitionname since it not using gpdb partition name pattern
+select * from pg_partitions where tablename = 'i2';
 
 -- the matechd table name is i_1_prt_3, but it's a normal table, raise error.
 alter table i drop partition "3";
@@ -687,7 +689,7 @@ partition p1 start('1') end('10001') every(5000)
 )
 );
 
-select relname, pg_get_expr(relpartbound, oid, false) from pg_class where relname like 'partsupp%';
+select tablename, partitiontablename, partitionboundary from pg_partitions where tablename = 'partsupp';
 drop table partsupp;
 
 -- ALTER TABLE ALTER PARTITION tests
@@ -1322,7 +1324,7 @@ drop table ao_p;
 -- MPP-3591: make sure we get inclusive/exclusive right with every().
 create table k (i int) partition by range(i)
 (start(0) exclusive end(100) inclusive every(25));
-\d+ k
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'k';
 insert into k select i from generate_series(1, 100) i;
 drop table k;
 
@@ -2129,7 +2131,8 @@ PARTITION p1_3 START ('1994-03-31'::date) END ('1995-04-30'::date)
 EVERY ('1 year 1 mon'::interval)
 );
 
-\d+ mpp6297
+select partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp6297';
+
 drop table mpp6297;
 
 
@@ -2503,7 +2506,7 @@ alter table mpp10223b alter partition p1
 split partition for (20) at (25)
 into (partition sp2, partition sp3);
 
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp10223b%';
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'mpp10223b';
 
 -- MPP-10480: dump templates (but don't use "foo")
 create table MPP10480 (a int, b int, d int)
@@ -2650,7 +2653,7 @@ alter table cov1 split partition p1 at (5,50);
 alter table cov1 split partition p1 at (5,6,7) 
 into (partition p1, partition p2);
 
-select relname, pg_get_expr(relpartbound, oid, false) from pg_class where relname like 'cov1%';
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'cov1';
 
 drop table cov1;
 
@@ -2727,8 +2730,8 @@ start (1) end (10) every (1)
 create table mpp6979dummy.mpp6979tab(like mpp6979part) with (appendonly=true);
 
 -- check that table and all parts in public schema
-select relname, nspname, relispartition from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and relname like ('mpp6979%');
+select schemaname, tablename, partitionschemaname, partitiontablename from pg_partitions 
+where tablename like ('mpp6979%');
 
 -- note that we have heap partitions in public, and ao table in mpp6979dummy
 select nspname, relname, amname
@@ -2743,8 +2746,8 @@ alter table mpp6979part exchange partition for (1)
 with table mpp6979dummy.mpp6979tab;
 
 -- after the exchange, all partitions are still in public
-select relname, nspname, relispartition from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and relname like ('mpp6979%');
+select schemaname, tablename, partitionschemaname, partitiontablename from pg_partitions 
+where tablename like ('mpp6979%');
 
 -- the rank 1 partition is ao, but still in public, and 
 -- table mpp6979tab is now heap, but still in mpp6979dummy
@@ -3580,11 +3583,11 @@ create table mpp7232a (a int, b int) distributed by (a) partition by range (b) (
 \d+ mpp7232a
 alter table mpp7232a rename partition for (1) to alpha;
 alter table mpp7232a rename partition for (2) to bravo;
-\d+ mpp7232a
+select partitionname, partitionlevel, partitionboundary from pg_partitions where tablename = 'mpp7232a';
 
 create table mpp7232b (a int, b int) distributed by (a) partition by range (b) (partition alpha start (1) end (3) every (1));
 alter table mpp7232b rename partition for (1) to foo;
-\d+ mpp7232b
+select partitionname, partitionlevel, partitionboundary from pg_partitions where tablename = 'mpp7232b';
 
 -- Test .. WITH (tablename = <foo> ..) syntax.
 create table mpp17740 (a integer, b integer, e date) with (appendonly = true, orientation = column)
@@ -3594,10 +3597,10 @@ partition by range(e)
     partition mpp17740_20120523 start ('2012-05-23'::date) inclusive end ('2012-05-24'::date) exclusive with (tablename = 'mpp17740_20120523', appendonly = true),
     partition mpp17740_20120524 start ('2012-05-24'::date) inclusive end ('2012-05-25'::date) exclusive with (tablename = 'mpp17740_20120524', appendonly = true)
 );
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp17740%';
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'mpp17740';
 
 alter table mpp17740 add partition mpp17740_20120520 start ('2012-05-20'::date) inclusive end ('2012-05-21'::date) exclusive with (tablename = 'mpp17740_20120520', appendonly=true);
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp17740%';
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'mpp17740';
 
 -- Test mix of add and drop various column before split, and exchange partition at the end
 create table sales (pkid serial, option1 int, option2 int, option3 int, constraint partable_pkey primary key(pkid, option3))
@@ -3691,7 +3694,7 @@ partition by list(b) (partition s_abc values ('abc') with (appendonly=true, orie
 
 alter table pt_tab_encode add partition "s_xyz" values ('xyz') WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1);
 
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'pt_tab_encode%';
+select tablename, partitiontablename, partitionboundary from pg_partitions where tablename = 'pt_tab_encode';
 
 select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;
 select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass order by 1,3 limit 5;

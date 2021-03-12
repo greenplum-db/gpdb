@@ -336,7 +336,7 @@ alter table alter_aocs_part_table drop partition for (1);
 alter table alter_aocs_part_table split default partition start(6) inclusive end(7) exclusive;
 alter table alter_aocs_part_table split default partition start(6) inclusive end(8) exclusive;
 alter table alter_aocs_part_table split default partition start(7) inclusive end(8) exclusive;
-\d+ alter_aocs_part_table
+select partitionisdefault, partitionboundary from pg_partitions where tablename = 'alter_aocs_part_table';
 create table alter_aocs_ao_table (a int, b int) with (appendonly=true) distributed by (a);
 insert into alter_aocs_ao_table values (2,2);
 alter table alter_aocs_part_table exchange partition for (2) with table alter_aocs_ao_table;

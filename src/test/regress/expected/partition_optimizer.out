@@ -1007,6 +1007,16 @@ create table i_1_prt_3 (like i);
 -- could be matched by partition name when targeted on an irrelevant table.
 create table i2 (i int) partition by range(i) (start (1) end(3) every(1));
 create table i_1_prt_4 partition of i2 for values from (4) to (5);
+-- i_1_prt_4 should not have partitionname since it not using gpdb partition name pattern
+select * from pg_partitions where tablename = 'i2';
+ schemaname | tablename | partitionschemaname | partitiontablename | partitionname | parentpartitiontablename | parentpartitionname | partitiontype | partitionlevel | partitionisdefault |     partitionboundary      | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+--------------------+---------------+--------------------------+---------------------+---------------+----------------+--------------------+----------------------------+------------------+---------------------
+ public     | i2        | public              | i2                 |               |                          |                     | range         |              0 | f                  |                            | pg_default       | pg_default
+ public     | i2        | public              | i2_1_prt_1         | 1             | i2                       |                     |               |              1 | f                  | FOR VALUES FROM (1) TO (2) | pg_default       | pg_default
+ public     | i2        | public              | i2_1_prt_2         | 2             | i2                       |                     |               |              1 | f                  | FOR VALUES FROM (2) TO (3) | pg_default       | pg_default
+ public     | i2        | public              | i_1_prt_4          |               | i2                       |                     |               |              1 | f                  | FOR VALUES FROM (4) TO (5) | pg_default       | pg_default
+(4 rows)
+
 -- the matechd table name is i_1_prt_3, but it's a normal table, raise error.
 alter table i drop partition "3";
 ERROR:  partition "3" of "i" does not exist
@@ -1052,36 +1062,36 @@ partition p1 start('1') end('10001') every(5000)
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ps_partkey' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select relname, pg_get_expr(relpartbound, oid, false) from pg_class where relname like 'partsupp%';
-                 relname                 |             pg_get_expr              
------------------------------------------+--------------------------------------
- partsupp                                | 
- partsupp_1_prt_p1_1                     | FOR VALUES FROM (1) TO (5001)
- partsupp_1_prt_p1_1_2_prt_sp1_1         | FOR VALUES FROM (1) TO (66667)
- partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_1_2_prt_sp1_2         | FOR VALUES FROM (66667) TO (133333)
- partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_1_2_prt_sp1_3         | FOR VALUES FROM (133333) TO (199999)
- partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_1_2_prt_sp1_4         | FOR VALUES FROM (199999) TO (200001)
- partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_2                     | FOR VALUES FROM (5001) TO (10001)
- partsupp_1_prt_p1_2_2_prt_sp1_1         | FOR VALUES FROM (1) TO (66667)
- partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_2_2_prt_sp1_2         | FOR VALUES FROM (66667) TO (133333)
- partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_2_2_prt_sp1_3         | FOR VALUES FROM (133333) TO (199999)
- partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
- partsupp_1_prt_p1_2_2_prt_sp1_4         | FOR VALUES FROM (199999) TO (200001)
- partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
- partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+select tablename, partitiontablename, partitionboundary from pg_partitions where tablename = 'partsupp';
+ tablename |           partitiontablename            |          partitionboundary           
+-----------+-----------------------------------------+--------------------------------------
+ partsupp  | partsupp                                | 
+ partsupp  | partsupp_1_prt_p1_1                     | FOR VALUES FROM (1) TO (5001)
+ partsupp  | partsupp_1_prt_p1_2                     | FOR VALUES FROM (5001) TO (10001)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1         | FOR VALUES FROM (1) TO (66667)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2         | FOR VALUES FROM (66667) TO (133333)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3         | FOR VALUES FROM (133333) TO (199999)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4         | FOR VALUES FROM (199999) TO (200001)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1         | FOR VALUES FROM (1) TO (66667)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2         | FOR VALUES FROM (66667) TO (133333)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3         | FOR VALUES FROM (133333) TO (199999)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4         | FOR VALUES FROM (199999) TO (200001)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_1 | FOR VALUES FROM ('1') TO ('501')
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_2 | FOR VALUES FROM ('501') TO ('1001')
 (27 rows)
 
 drop table partsupp;
@@ -1901,17 +1911,15 @@ create table k (i int) partition by range(i)
 (start(0) exclusive end(100) inclusive every(25));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-\d+ k
-                               Partitioned table "public.k"
- Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
---------+---------+-----------+----------+---------+---------+--------------+-------------
- i      | integer |           |          |         | plain   |              | 
-Partition key: RANGE (i)
-Partitions: k_1_prt_1 FOR VALUES FROM (1) TO (26),
-            k_1_prt_2 FOR VALUES FROM (26) TO (51),
-            k_1_prt_3 FOR VALUES FROM (51) TO (76),
-            k_1_prt_4 FOR VALUES FROM (76) TO (101)
-Distributed by: (i)
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'k';
+ partitiontablename |       partitionboundary       
+--------------------+-------------------------------
+ k                  | 
+ k_1_prt_1          | FOR VALUES FROM (1) TO (26)
+ k_1_prt_2          | FOR VALUES FROM (26) TO (51)
+ k_1_prt_3          | FOR VALUES FROM (51) TO (76)
+ k_1_prt_4          | FOR VALUES FROM (76) TO (101)
+(5 rows)
 
 insert into k select i from generate_series(1, 100) i;
 drop table k;
@@ -3072,18 +3080,15 @@ EVERY ('1 year 1 mon'::interval)
 PARTITION p1_3 START ('1994-03-31'::date) END ('1995-04-30'::date)
 EVERY ('1 year 1 mon'::interval)
 );
-\d+ mpp6297
-                              Partitioned table "public.mpp6297"
-    Column    |  Type  | Collation | Nullable | Default | Storage | Stats target | Description 
---------------+--------+-----------+----------+---------+---------+--------------+-------------
- l_orderkey   | bigint |           |          |         | plain   |              | 
- l_commitdate | date   |           |          |         | plain   |              | 
-Partition key: RANGE (l_commitdate)
-Partitions: mpp6297_1_prt_p1_1_1 FOR VALUES FROM ('01-31-1992') TO ('02-28-1993'),
-            mpp6297_1_prt_p1_2_1 FOR VALUES FROM ('02-28-1993') TO ('03-28-1994'),
-            mpp6297_1_prt_p1_2_2 FOR VALUES FROM ('03-28-1994') TO ('03-31-1994'),
-            mpp6297_1_prt_p1_3_1 FOR VALUES FROM ('03-31-1994') TO ('04-30-1995')
-Distributed by: (l_orderkey)
+select partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp6297';
+  partitiontablename  | partitionname |                partitionboundary                 
+----------------------+---------------+--------------------------------------------------
+ mpp6297              |               | 
+ mpp6297_1_prt_p1_1_1 | p1_1_1        | FOR VALUES FROM ('01-31-1992') TO ('02-28-1993')
+ mpp6297_1_prt_p1_2_1 | p1_2_1        | FOR VALUES FROM ('02-28-1993') TO ('03-28-1994')
+ mpp6297_1_prt_p1_2_2 | p1_2_2        | FOR VALUES FROM ('03-28-1994') TO ('03-31-1994')
+ mpp6297_1_prt_p1_3_1 | p1_3_1        | FOR VALUES FROM ('03-31-1994') TO ('04-30-1995')
+(5 rows)
 
 drop table mpp6297;
 -- when WITH(tablename=...) is specified, the EVERY is stored as an
@@ -3931,8 +3936,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 alter table mpp10223b alter partition p1 
 split partition for (20) at (25)
 into (partition sp2, partition sp3);
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp10223b%';
-           relname            |         pg_get_expr          
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'mpp10223b';
+      partitiontablename      |      partitionboundary       
 ------------------------------+------------------------------
  mpp10223b                    | 
  mpp10223b_1_prt_p1           | FOR VALUES FROM (1) TO (10)
@@ -4089,12 +4094,12 @@ ERROR:  AT clause parameter is not a member of the target partition specificatio
 -- good split
 alter table cov1 split partition p1 at (5,6,7) 
 into (partition p1, partition p2);
-select relname, pg_get_expr(relpartbound, oid, false) from pg_class where relname like 'cov1%';
-    relname    |          pg_get_expr          
----------------+-------------------------------
- cov1          | 
- cov1_1_prt_p1 | FOR VALUES IN (1, 2, 3, 4, 8)
- cov1_1_prt_p2 | FOR VALUES IN (5, 6, 7)
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'cov1';
+ partitiontablename |       partitionboundary       
+--------------------+-------------------------------
+ cov1               | 
+ cov1_1_prt_p1      | FOR VALUES IN (1, 2, 3, 4, 8)
+ cov1_1_prt_p2      | FOR VALUES IN (5, 6, 7)
 (3 rows)
 
 drop table cov1;
@@ -4190,22 +4195,21 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create table mpp6979dummy.mpp6979tab(like mpp6979part) with (appendonly=true);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- check that table and all parts in public schema
-select relname, nspname, relispartition from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and relname like ('mpp6979%');
-       relname       |   nspname    | relispartition 
----------------------+--------------+----------------
- mpp6979part         | public       | f
- mpp6979part_1_prt_1 | public       | t
- mpp6979part_1_prt_2 | public       | t
- mpp6979part_1_prt_3 | public       | t
- mpp6979part_1_prt_4 | public       | t
- mpp6979part_1_prt_5 | public       | t
- mpp6979part_1_prt_6 | public       | t
- mpp6979part_1_prt_7 | public       | t
- mpp6979part_1_prt_8 | public       | t
- mpp6979part_1_prt_9 | public       | t
- mpp6979tab          | mpp6979dummy | f
-(11 rows)
+select schemaname, tablename, partitionschemaname, partitiontablename from pg_partitions 
+where tablename like ('mpp6979%');
+ schemaname |  tablename  | partitionschemaname | partitiontablename  
+------------+-------------+---------------------+---------------------
+ public     | mpp6979part | public              | mpp6979part
+ public     | mpp6979part | public              | mpp6979part_1_prt_1
+ public     | mpp6979part | public              | mpp6979part_1_prt_2
+ public     | mpp6979part | public              | mpp6979part_1_prt_3
+ public     | mpp6979part | public              | mpp6979part_1_prt_4
+ public     | mpp6979part | public              | mpp6979part_1_prt_5
+ public     | mpp6979part | public              | mpp6979part_1_prt_6
+ public     | mpp6979part | public              | mpp6979part_1_prt_7
+ public     | mpp6979part | public              | mpp6979part_1_prt_8
+ public     | mpp6979part | public              | mpp6979part_1_prt_9
+(10 rows)
 
 -- note that we have heap partitions in public, and ao table in mpp6979dummy
 select nspname, relname, amname
@@ -4233,22 +4237,21 @@ where relname like ('mpp6979%');
 alter table mpp6979part exchange partition for (1) 
 with table mpp6979dummy.mpp6979tab;
 -- after the exchange, all partitions are still in public
-select relname, nspname, relispartition from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and relname like ('mpp6979%');
-       relname       |   nspname    | relispartition 
----------------------+--------------+----------------
- mpp6979part         | public       | f
- mpp6979part_1_prt_1 | public       | t
- mpp6979part_1_prt_2 | public       | t
- mpp6979part_1_prt_3 | public       | t
- mpp6979part_1_prt_4 | public       | t
- mpp6979part_1_prt_5 | public       | t
- mpp6979part_1_prt_6 | public       | t
- mpp6979part_1_prt_7 | public       | t
- mpp6979part_1_prt_8 | public       | t
- mpp6979part_1_prt_9 | public       | t
- mpp6979tab          | mpp6979dummy | f
-(11 rows)
+select schemaname, tablename, partitionschemaname, partitiontablename from pg_partitions 
+where tablename like ('mpp6979%');
+ schemaname |  tablename  | partitionschemaname | partitiontablename  
+------------+-------------+---------------------+---------------------
+ public     | mpp6979part | public              | mpp6979part
+ public     | mpp6979part | public              | mpp6979part_1_prt_2
+ public     | mpp6979part | public              | mpp6979part_1_prt_3
+ public     | mpp6979part | public              | mpp6979part_1_prt_4
+ public     | mpp6979part | public              | mpp6979part_1_prt_5
+ public     | mpp6979part | public              | mpp6979part_1_prt_6
+ public     | mpp6979part | public              | mpp6979part_1_prt_7
+ public     | mpp6979part | public              | mpp6979part_1_prt_8
+ public     | mpp6979part | public              | mpp6979part_1_prt_9
+ public     | mpp6979part | public              | mpp6979part_1_prt_1
+(10 rows)
 
 -- the rank 1 partition is ao, but still in public, and 
 -- table mpp6979tab is now heap, but still in mpp6979dummy
@@ -5513,29 +5516,23 @@ Distributed by: (a)
 
 alter table mpp7232a rename partition for (1) to alpha;
 alter table mpp7232a rename partition for (2) to bravo;
-\d+ mpp7232a
-                           Partitioned table "public.mpp7232a"
- Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
---------+---------+-----------+----------+---------+---------+--------------+-------------
- a      | integer |           |          |         | plain   |              | 
- b      | integer |           |          |         | plain   |              | 
-Partition key: RANGE (b)
-Partitions: mpp7232a_1_prt_alpha FOR VALUES FROM (1) TO (2),
-            mpp7232a_1_prt_bravo FOR VALUES FROM (2) TO (3)
-Distributed by: (a)
+select partitionname, partitionlevel, partitionboundary from pg_partitions where tablename = 'mpp7232a';
+ partitionname | partitionlevel |     partitionboundary      
+---------------+----------------+----------------------------
+               |              0 | 
+ alpha         |              1 | FOR VALUES FROM (1) TO (2)
+ bravo         |              1 | FOR VALUES FROM (2) TO (3)
+(3 rows)
 
 create table mpp7232b (a int, b int) distributed by (a) partition by range (b) (partition alpha start (1) end (3) every (1));
 alter table mpp7232b rename partition for (1) to foo;
-\d+ mpp7232b
-                           Partitioned table "public.mpp7232b"
- Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
---------+---------+-----------+----------+---------+---------+--------------+-------------
- a      | integer |           |          |         | plain   |              | 
- b      | integer |           |          |         | plain   |              | 
-Partition key: RANGE (b)
-Partitions: mpp7232b_1_prt_alpha_2 FOR VALUES FROM (2) TO (3),
-            mpp7232b_1_prt_foo FOR VALUES FROM (1) TO (2)
-Distributed by: (a)
+select partitionname, partitionlevel, partitionboundary from pg_partitions where tablename = 'mpp7232b';
+ partitionname | partitionlevel |     partitionboundary      
+---------------+----------------+----------------------------
+               |              0 | 
+ foo           |              1 | FOR VALUES FROM (1) TO (2)
+ alpha_2       |              1 | FOR VALUES FROM (2) TO (3)
+(3 rows)
 
 -- Test .. WITH (tablename = <foo> ..) syntax.
 create table mpp17740 (a integer, b integer, e date) with (appendonly = true, orientation = column)
@@ -5545,22 +5542,22 @@ partition by range(e)
     partition mpp17740_20120523 start ('2012-05-23'::date) inclusive end ('2012-05-24'::date) exclusive with (tablename = 'mpp17740_20120523', appendonly = true),
     partition mpp17740_20120524 start ('2012-05-24'::date) inclusive end ('2012-05-25'::date) exclusive with (tablename = 'mpp17740_20120524', appendonly = true)
 );
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp17740%';
-      relname      |                   pg_get_expr                    
--------------------+--------------------------------------------------
- mpp17740          | 
- mpp17740_20120523 | FOR VALUES FROM ('05-23-2012') TO ('05-24-2012')
- mpp17740_20120524 | FOR VALUES FROM ('05-24-2012') TO ('05-25-2012')
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'mpp17740';
+ partitiontablename |                partitionboundary                 
+--------------------+--------------------------------------------------
+ mpp17740           | 
+ mpp17740_20120523  | FOR VALUES FROM ('05-23-2012') TO ('05-24-2012')
+ mpp17740_20120524  | FOR VALUES FROM ('05-24-2012') TO ('05-25-2012')
 (3 rows)
 
 alter table mpp17740 add partition mpp17740_20120520 start ('2012-05-20'::date) inclusive end ('2012-05-21'::date) exclusive with (tablename = 'mpp17740_20120520', appendonly=true);
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp17740%';
-      relname      |                   pg_get_expr                    
--------------------+--------------------------------------------------
- mpp17740          | 
- mpp17740_20120520 | FOR VALUES FROM ('05-20-2012') TO ('05-21-2012')
- mpp17740_20120523 | FOR VALUES FROM ('05-23-2012') TO ('05-24-2012')
- mpp17740_20120524 | FOR VALUES FROM ('05-24-2012') TO ('05-25-2012')
+select partitiontablename, partitionboundary from pg_partitions where tablename = 'mpp17740';
+ partitiontablename |                partitionboundary                 
+--------------------+--------------------------------------------------
+ mpp17740           | 
+ mpp17740_20120523  | FOR VALUES FROM ('05-23-2012') TO ('05-24-2012')
+ mpp17740_20120524  | FOR VALUES FROM ('05-24-2012') TO ('05-25-2012')
+ mpp17740_20120520  | FOR VALUES FROM ('05-20-2012') TO ('05-21-2012')
 (4 rows)
 
 -- Test mix of add and drop various column before split, and exchange partition at the end
@@ -5686,12 +5683,12 @@ with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
 distributed by (a)
 partition by list(b) (partition s_abc values ('abc') with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1));
 alter table pt_tab_encode add partition "s_xyz" values ('xyz') WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1);
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'pt_tab_encode%';
-          relname          |      pg_get_expr      
----------------------------+-----------------------
- pt_tab_encode             | 
- pt_tab_encode_1_prt_s_abc | FOR VALUES IN ('abc')
- pt_tab_encode_1_prt_s_xyz | FOR VALUES IN ('xyz')
+select tablename, partitiontablename, partitionboundary from pg_partitions where tablename = 'pt_tab_encode';
+   tablename   |    partitiontablename     |   partitionboundary   
+---------------+---------------------------+-----------------------
+ pt_tab_encode | pt_tab_encode             | 
+ pt_tab_encode | pt_tab_encode_1_prt_s_abc | FOR VALUES IN ('abc')
+ pt_tab_encode | pt_tab_encode_1_prt_s_xyz | FOR VALUES IN ('xyz')
 (3 rows)
 
 select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;

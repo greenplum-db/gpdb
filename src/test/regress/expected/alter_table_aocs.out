@@ -577,20 +577,17 @@ alter table alter_aocs_part_table split default partition start(6) inclusive end
 alter table alter_aocs_part_table split default partition start(6) inclusive end(8) exclusive;
 ERROR:  partition "alter_aocs_part_table_1_prt_11" would overlap partition "alter_aocs_part_table_1_prt_1"
 alter table alter_aocs_part_table split default partition start(7) inclusive end(8) exclusive;
-\d+ alter_aocs_part_table
-                  Partitioned table "aocs_addcol.alter_aocs_part_table"
- Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
---------+---------+-----------+----------+---------+---------+--------------+-------------
- a      | integer |           |          |         | plain   |              | 
- b      | integer |           |          |         | plain   |              | 
-Partition key: RANGE (b)
-Partitions: alter_aocs_part_table_1_prt_1 FOR VALUES FROM (6) TO (7),
-            alter_aocs_part_table_1_prt_11 FOR VALUES FROM (7) TO (8),
-            alter_aocs_part_table_1_prt_3 FOR VALUES FROM (2) TO (3),
-            alter_aocs_part_table_1_prt_4 FOR VALUES FROM (3) TO (4),
-            alter_aocs_part_table_1_prt_5 FOR VALUES FROM (4) TO (5),
-            alter_aocs_part_table_1_prt_foo DEFAULT
-Distributed by: (a)
+select partitionisdefault, partitionboundary from pg_partitions where tablename = 'alter_aocs_part_table';
+ partitionisdefault |     partitionboundary      
+--------------------+----------------------------
+ f                  | 
+ f                  | FOR VALUES FROM (2) TO (3)
+ f                  | FOR VALUES FROM (3) TO (4)
+ f                  | FOR VALUES FROM (4) TO (5)
+ f                  | FOR VALUES FROM (6) TO (7)
+ f                  | FOR VALUES FROM (7) TO (8)
+ t                  | DEFAULT
+(7 rows)
 
 create table alter_aocs_ao_table (a int, b int) with (appendonly=true) distributed by (a);
 insert into alter_aocs_ao_table values (2,2);

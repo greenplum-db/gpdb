@@ -465,36 +465,36 @@ subpartition by range (y) subpartition template ( start (1) end (2) every (1))
 subpartition by range (z) subpartition template ( start (1) end (2) every (1))
 ( start (1) end (2) every (1));
 alter table multi_part2 rename to m_0000000;
-select relid,parentrelid,isleaf,level, pg_catalog.pg_get_expr(relpartbound, oid) from pg_partition_tree('m_0000000'), pg_class where relid = oid;
-                             relid                             |                          parentrelid                          | isleaf | level |        pg_get_expr         
----------------------------------------------------------------+---------------------------------------------------------------+--------+-------+----------------------------
- m_0000000                                                     |                                                               | f      |     0 | 
- m_0000000_1_prt_1                                             | m_0000000                                                     | f      |     1 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1                                     | m_0000000_1_prt_1                                             | f      |     2 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1                             | m_0000000_1_prt_1_2_prt_1                                     | f      |     3 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1                     | m_0000000_1_prt_1_2_prt_1_3_prt_1                             | f      |     4 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1             | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1                     | f      |     5 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_1     | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1             | f      |     6 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_7_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_1     | f      |     7 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_8_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_7_prt_1 | f      |     8 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_9_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_8_prt_1 | f      |     9 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__10_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_9_prt_1 | f      |    10 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__11_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__10_prt_1 | f      |    11 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__12_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__11_prt_1 | f      |    12 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__13_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__12_prt_1 | f      |    13 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__14_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__13_prt_1 | f      |    14 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__15_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__14_prt_1 | f      |    15 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__16_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__15_prt_1 | f      |    16 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__17_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__16_prt_1 | f      |    17 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__18_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__17_prt_1 | f      |    18 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__19_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__18_prt_1 | f      |    19 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__20_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__19_prt_1 | f      |    20 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__21_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__20_prt_1 | f      |    21 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__22_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__21_prt_1 | f      |    22 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__23_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__22_prt_1 | f      |    23 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__24_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__23_prt_1 | f      |    24 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__25_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__24_prt_1 | f      |    25 | FOR VALUES FROM (1) TO (2)
- m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__26_prt_1 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__25_prt_1 | t      |    26 | FOR VALUES FROM (1) TO (2)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'm_0000000';
+ tablename | partitionlevel |                      partitiontablename                       | partitionname |     partitionboundary      
+-----------+----------------+---------------------------------------------------------------+---------------+----------------------------
+ m_0000000 |              0 | m_0000000                                                     |               | 
+ m_0000000 |              1 | m_0000000_1_prt_1                                             | 1             | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              2 | m_0000000_1_prt_1_2_prt_1                                     | 1             | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              3 | m_0000000_1_prt_1_2_prt_1_3_prt_1                             | 1             | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              4 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1                     | 1             | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              5 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1             | 1             | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              6 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_1     | 1             | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              7 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_7_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              8 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_8_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |              9 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_p_9_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             10 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__10_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             11 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__11_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             12 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__12_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             13 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__13_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             14 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__14_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             15 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__15_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             16 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__16_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             17 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__17_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             18 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__18_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             19 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__19_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             20 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__20_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             21 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__21_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             22 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__22_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             23 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__23_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             24 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__24_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             25 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__25_prt_1 |               | FOR VALUES FROM (1) TO (2)
+ m_0000000 |             26 | m_0000000_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6__26_prt_1 |               | FOR VALUES FROM (1) TO (2)
 (27 rows)
 
 alter table m_0000000 rename to multi_part2_0000000;
@@ -1969,36 +1969,36 @@ drop table mpp3363;
 CREATE TABLE mpp3059(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
 ( partition aa start (1) end (5) every (1) );
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059') as t, pg_class as c where relid = oid;
-       relid        | parentrelid | isleaf | level |        pg_get_expr         
---------------------+-------------+--------+-------+----------------------------
- mpp3059            |             | f      |     0 | 
- mpp3059_1_prt_aa_1 | mpp3059     | t      |     1 | FOR VALUES FROM (1) TO (2)
- mpp3059_1_prt_aa_2 | mpp3059     | t      |     1 | FOR VALUES FROM (2) TO (3)
- mpp3059_1_prt_aa_3 | mpp3059     | t      |     1 | FOR VALUES FROM (3) TO (4)
- mpp3059_1_prt_aa_4 | mpp3059     | t      |     1 | FOR VALUES FROM (4) TO (5)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059';
+ tablename | partitionlevel | partitiontablename | partitionname |     partitionboundary      
+-----------+----------------+--------------------+---------------+----------------------------
+ mpp3059   |              0 | mpp3059            |               | 
+ mpp3059   |              1 | mpp3059_1_prt_aa_1 | aa_1          | FOR VALUES FROM (1) TO (2)
+ mpp3059   |              1 | mpp3059_1_prt_aa_2 | aa_2          | FOR VALUES FROM (2) TO (3)
+ mpp3059   |              1 | mpp3059_1_prt_aa_3 | aa_3          | FOR VALUES FROM (3) TO (4)
+ mpp3059   |              1 | mpp3059_1_prt_aa_4 | aa_4          | FOR VALUES FROM (4) TO (5)
 (5 rows)
 
 alter table mpp3059 rename to mpp3059_rename; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059_rename') as t, pg_class as c where relid = oid;
-           relid           |  parentrelid   | isleaf | level |        pg_get_expr         
----------------------------+----------------+--------+-------+----------------------------
- mpp3059_rename            |                | f      |     0 | 
- mpp3059_rename_1_prt_aa_1 | mpp3059_rename | t      |     1 | FOR VALUES FROM (1) TO (2)
- mpp3059_rename_1_prt_aa_2 | mpp3059_rename | t      |     1 | FOR VALUES FROM (2) TO (3)
- mpp3059_rename_1_prt_aa_3 | mpp3059_rename | t      |     1 | FOR VALUES FROM (3) TO (4)
- mpp3059_rename_1_prt_aa_4 | mpp3059_rename | t      |     1 | FOR VALUES FROM (4) TO (5)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059_rename';
+   tablename    | partitionlevel |    partitiontablename     | partitionname |     partitionboundary      
+----------------+----------------+---------------------------+---------------+----------------------------
+ mpp3059_rename |              0 | mpp3059_rename            |               | 
+ mpp3059_rename |              1 | mpp3059_rename_1_prt_aa_1 | aa_1          | FOR VALUES FROM (1) TO (2)
+ mpp3059_rename |              1 | mpp3059_rename_1_prt_aa_2 | aa_2          | FOR VALUES FROM (2) TO (3)
+ mpp3059_rename |              1 | mpp3059_rename_1_prt_aa_3 | aa_3          | FOR VALUES FROM (3) TO (4)
+ mpp3059_rename |              1 | mpp3059_rename_1_prt_aa_4 | aa_4          | FOR VALUES FROM (4) TO (5)
 (5 rows)
 
 alter table mpp3059_rename rename to mpp3059; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059') as t, pg_class as c where relid = oid;
-       relid        | parentrelid | isleaf | level |        pg_get_expr         
---------------------+-------------+--------+-------+----------------------------
- mpp3059            |             | f      |     0 | 
- mpp3059_1_prt_aa_1 | mpp3059     | t      |     1 | FOR VALUES FROM (1) TO (2)
- mpp3059_1_prt_aa_2 | mpp3059     | t      |     1 | FOR VALUES FROM (2) TO (3)
- mpp3059_1_prt_aa_3 | mpp3059     | t      |     1 | FOR VALUES FROM (3) TO (4)
- mpp3059_1_prt_aa_4 | mpp3059     | t      |     1 | FOR VALUES FROM (4) TO (5)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059';
+ tablename | partitionlevel | partitiontablename | partitionname |     partitionboundary      
+-----------+----------------+--------------------+---------------+----------------------------
+ mpp3059   |              0 | mpp3059            |               | 
+ mpp3059   |              1 | mpp3059_1_prt_aa_1 | aa_1          | FOR VALUES FROM (1) TO (2)
+ mpp3059   |              1 | mpp3059_1_prt_aa_2 | aa_2          | FOR VALUES FROM (2) TO (3)
+ mpp3059   |              1 | mpp3059_1_prt_aa_3 | aa_3          | FOR VALUES FROM (3) TO (4)
+ mpp3059   |              1 | mpp3059_1_prt_aa_4 | aa_4          | FOR VALUES FROM (4) TO (5)
 (5 rows)
 
 -- 2 level partition
@@ -2023,54 +2023,54 @@ CREATE TABLE mpp3059a (
 subpartition by range (unique2) subpartition template ( start (0) end (500) every (100) )
 ( start (0) end (500) every (100));
 alter table mpp3059a rename to mpp3059a_rename; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059a_rename') as t, pg_class as c where relid = oid;
-              relid              |       parentrelid       | isleaf | level |          pg_get_expr           
----------------------------------+-------------------------+--------+-------+--------------------------------
- mpp3059a_rename                 |                         | f      |     0 | 
- mpp3059a_rename_1_prt_1         | mpp3059a_rename         | f      |     1 | FOR VALUES FROM (0) TO (100)
- mpp3059a_rename_1_prt_2         | mpp3059a_rename         | f      |     1 | FOR VALUES FROM (100) TO (200)
- mpp3059a_rename_1_prt_3         | mpp3059a_rename         | f      |     1 | FOR VALUES FROM (200) TO (300)
- mpp3059a_rename_1_prt_4         | mpp3059a_rename         | f      |     1 | FOR VALUES FROM (300) TO (400)
- mpp3059a_rename_1_prt_5         | mpp3059a_rename         | f      |     1 | FOR VALUES FROM (400) TO (500)
- mpp3059a_rename_1_prt_1_2_prt_1 | mpp3059a_rename_1_prt_1 | t      |     2 | FOR VALUES FROM (0) TO (100)
- mpp3059a_rename_1_prt_1_2_prt_2 | mpp3059a_rename_1_prt_1 | t      |     2 | FOR VALUES FROM (100) TO (200)
- mpp3059a_rename_1_prt_1_2_prt_3 | mpp3059a_rename_1_prt_1 | t      |     2 | FOR VALUES FROM (200) TO (300)
- mpp3059a_rename_1_prt_1_2_prt_4 | mpp3059a_rename_1_prt_1 | t      |     2 | FOR VALUES FROM (300) TO (400)
- mpp3059a_rename_1_prt_1_2_prt_5 | mpp3059a_rename_1_prt_1 | t      |     2 | FOR VALUES FROM (400) TO (500)
- mpp3059a_rename_1_prt_2_2_prt_1 | mpp3059a_rename_1_prt_2 | t      |     2 | FOR VALUES FROM (0) TO (100)
- mpp3059a_rename_1_prt_2_2_prt_2 | mpp3059a_rename_1_prt_2 | t      |     2 | FOR VALUES FROM (100) TO (200)
- mpp3059a_rename_1_prt_2_2_prt_3 | mpp3059a_rename_1_prt_2 | t      |     2 | FOR VALUES FROM (200) TO (300)
- mpp3059a_rename_1_prt_2_2_prt_4 | mpp3059a_rename_1_prt_2 | t      |     2 | FOR VALUES FROM (300) TO (400)
- mpp3059a_rename_1_prt_2_2_prt_5 | mpp3059a_rename_1_prt_2 | t      |     2 | FOR VALUES FROM (400) TO (500)
- mpp3059a_rename_1_prt_3_2_prt_1 | mpp3059a_rename_1_prt_3 | t      |     2 | FOR VALUES FROM (0) TO (100)
- mpp3059a_rename_1_prt_3_2_prt_2 | mpp3059a_rename_1_prt_3 | t      |     2 | FOR VALUES FROM (100) TO (200)
- mpp3059a_rename_1_prt_3_2_prt_3 | mpp3059a_rename_1_prt_3 | t      |     2 | FOR VALUES FROM (200) TO (300)
- mpp3059a_rename_1_prt_3_2_prt_4 | mpp3059a_rename_1_prt_3 | t      |     2 | FOR VALUES FROM (300) TO (400)
- mpp3059a_rename_1_prt_3_2_prt_5 | mpp3059a_rename_1_prt_3 | t      |     2 | FOR VALUES FROM (400) TO (500)
- mpp3059a_rename_1_prt_4_2_prt_1 | mpp3059a_rename_1_prt_4 | t      |     2 | FOR VALUES FROM (0) TO (100)
- mpp3059a_rename_1_prt_4_2_prt_2 | mpp3059a_rename_1_prt_4 | t      |     2 | FOR VALUES FROM (100) TO (200)
- mpp3059a_rename_1_prt_4_2_prt_3 | mpp3059a_rename_1_prt_4 | t      |     2 | FOR VALUES FROM (200) TO (300)
- mpp3059a_rename_1_prt_4_2_prt_4 | mpp3059a_rename_1_prt_4 | t      |     2 | FOR VALUES FROM (300) TO (400)
- mpp3059a_rename_1_prt_4_2_prt_5 | mpp3059a_rename_1_prt_4 | t      |     2 | FOR VALUES FROM (400) TO (500)
- mpp3059a_rename_1_prt_5_2_prt_1 | mpp3059a_rename_1_prt_5 | t      |     2 | FOR VALUES FROM (0) TO (100)
- mpp3059a_rename_1_prt_5_2_prt_2 | mpp3059a_rename_1_prt_5 | t      |     2 | FOR VALUES FROM (100) TO (200)
- mpp3059a_rename_1_prt_5_2_prt_3 | mpp3059a_rename_1_prt_5 | t      |     2 | FOR VALUES FROM (200) TO (300)
- mpp3059a_rename_1_prt_5_2_prt_4 | mpp3059a_rename_1_prt_5 | t      |     2 | FOR VALUES FROM (300) TO (400)
- mpp3059a_rename_1_prt_5_2_prt_5 | mpp3059a_rename_1_prt_5 | t      |     2 | FOR VALUES FROM (400) TO (500)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059a_rename';
+    tablename    | partitionlevel |       partitiontablename        | partitionname |       partitionboundary        
+-----------------+----------------+---------------------------------+---------------+--------------------------------
+ mpp3059a_rename |              0 | mpp3059a_rename                 |               | 
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1         | 1             | FOR VALUES FROM (0) TO (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2         | 2             | FOR VALUES FROM (100) TO (200)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3         | 3             | FOR VALUES FROM (200) TO (300)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4         | 4             | FOR VALUES FROM (300) TO (400)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5         | 5             | FOR VALUES FROM (400) TO (500)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_1_2_prt_1 | 1             | FOR VALUES FROM (0) TO (100)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_1_2_prt_2 | 2             | FOR VALUES FROM (100) TO (200)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_1_2_prt_3 | 3             | FOR VALUES FROM (200) TO (300)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_1_2_prt_4 | 4             | FOR VALUES FROM (300) TO (400)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_1_2_prt_5 | 5             | FOR VALUES FROM (400) TO (500)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_2_2_prt_1 | 1             | FOR VALUES FROM (0) TO (100)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_2_2_prt_2 | 2             | FOR VALUES FROM (100) TO (200)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_2_2_prt_3 | 3             | FOR VALUES FROM (200) TO (300)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_2_2_prt_4 | 4             | FOR VALUES FROM (300) TO (400)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_2_2_prt_5 | 5             | FOR VALUES FROM (400) TO (500)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_3_2_prt_1 | 1             | FOR VALUES FROM (0) TO (100)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_3_2_prt_2 | 2             | FOR VALUES FROM (100) TO (200)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_3_2_prt_3 | 3             | FOR VALUES FROM (200) TO (300)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_3_2_prt_4 | 4             | FOR VALUES FROM (300) TO (400)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_3_2_prt_5 | 5             | FOR VALUES FROM (400) TO (500)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_4_2_prt_1 | 1             | FOR VALUES FROM (0) TO (100)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_4_2_prt_2 | 2             | FOR VALUES FROM (100) TO (200)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_4_2_prt_3 | 3             | FOR VALUES FROM (200) TO (300)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_4_2_prt_4 | 4             | FOR VALUES FROM (300) TO (400)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_4_2_prt_5 | 5             | FOR VALUES FROM (400) TO (500)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_5_2_prt_1 | 1             | FOR VALUES FROM (0) TO (100)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_5_2_prt_2 | 2             | FOR VALUES FROM (100) TO (200)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_5_2_prt_3 | 3             | FOR VALUES FROM (200) TO (300)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_5_2_prt_4 | 4             | FOR VALUES FROM (300) TO (400)
+ mpp3059a_rename |              2 | mpp3059a_rename_1_prt_5_2_prt_5 | 5             | FOR VALUES FROM (400) TO (500)
 (31 rows)
 
 create table mpp3216a (id int, rank int, year int, gender char(1), count int) distributed by (id); 
 create table mpp3216 (like mpp3216a) partition by range (year) ( start (2001) end (2006) every (1));
 alter table mpp3216 rename to mpp3216_rename;
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3216_rename') as t, pg_class as c where relid = oid;
-         relid          |  parentrelid   | isleaf | level |           pg_get_expr            
-------------------------+----------------+--------+-------+----------------------------------
- mpp3216_rename         |                | f      |     0 | 
- mpp3216_rename_1_prt_1 | mpp3216_rename | t      |     1 | FOR VALUES FROM (2001) TO (2002)
- mpp3216_rename_1_prt_2 | mpp3216_rename | t      |     1 | FOR VALUES FROM (2002) TO (2003)
- mpp3216_rename_1_prt_3 | mpp3216_rename | t      |     1 | FOR VALUES FROM (2003) TO (2004)
- mpp3216_rename_1_prt_4 | mpp3216_rename | t      |     1 | FOR VALUES FROM (2004) TO (2005)
- mpp3216_rename_1_prt_5 | mpp3216_rename | t      |     1 | FOR VALUES FROM (2005) TO (2006)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3216_rename';
+   tablename    | partitionlevel |   partitiontablename   | partitionname |        partitionboundary         
+----------------+----------------+------------------------+---------------+----------------------------------
+ mpp3216_rename |              0 | mpp3216_rename         |               | 
+ mpp3216_rename |              1 | mpp3216_rename_1_prt_1 | 1             | FOR VALUES FROM (2001) TO (2002)
+ mpp3216_rename |              1 | mpp3216_rename_1_prt_2 | 2             | FOR VALUES FROM (2002) TO (2003)
+ mpp3216_rename |              1 | mpp3216_rename_1_prt_3 | 3             | FOR VALUES FROM (2003) TO (2004)
+ mpp3216_rename |              1 | mpp3216_rename_1_prt_4 | 4             | FOR VALUES FROM (2004) TO (2005)
+ mpp3216_rename |              1 | mpp3216_rename_1_prt_5 | 5             | FOR VALUES FROM (2005) TO (2006)
 (6 rows)
 
 CREATE TABLE mpp3059b (f1 time(2) with time zone, f2 char(4))
@@ -2079,12 +2079,12 @@ partition by list (f2)
   partition est values ('EST')
 );
 alter table mpp3059b rename partition pst to "pacific time"; 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059b') as t, pg_class as c where relid = oid;
-             relid             | parentrelid | isleaf | level |      pg_get_expr       
--------------------------------+-------------+--------+-------+------------------------
- mpp3059b                      |             | f      |     0 | 
- "mpp3059b_1_prt_pacific time" | mpp3059b    | t      |     1 | FOR VALUES IN ('PST ')
- mpp3059b_1_prt_est            | mpp3059b    | t      |     1 | FOR VALUES IN ('EST ')
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059b';
+ tablename | partitionlevel |      partitiontablename       | partitionname |   partitionboundary    
+-----------+----------------+-------------------------------+---------------+------------------------
+ mpp3059b  |              0 | mpp3059b                      |               | 
+ mpp3059b  |              1 | "mpp3059b_1_prt_pacific time" |               | FOR VALUES IN ('PST ')
+ mpp3059b  |              1 | mpp3059b_1_prt_est            | est           | FOR VALUES IN ('EST ')
 (3 rows)
 
 CREATE TABLE mpp3059c (f1 time(2) with time zone, f2 char(4))
@@ -2099,16 +2099,16 @@ start (time '01:00')
 );
 alter table mpp3059c rename partition pst to pacific;
 alter table mpp3059c rename partition est to "Eastern Time";
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059c') as t, pg_class as c where relid = oid;
-                 relid                 |          parentrelid          | isleaf | level |                    pg_get_expr                     
----------------------------------------+-------------------------------+--------+-------+----------------------------------------------------
- mpp3059c                              |                               | f      |     0 | 
- mpp3059c_1_prt_pacific                | mpp3059c                      | f      |     1 | FOR VALUES IN ('PST ')
- "mpp3059c_1_prt_Eastern Time"         | mpp3059c                      | f      |     1 | FOR VALUES IN ('EST ')
- mpp3059c_1_prt_pacific_2_prt_1        | mpp3059c_1_prt_pacific        | t      |     2 | FOR VALUES FROM ('00:00:00-07') TO ('01:00:00-07')
- mpp3059c_1_prt_pacific_2_prt_2        | mpp3059c_1_prt_pacific        | t      |     2 | FOR VALUES FROM ('01:00:00-07') TO (MAXVALUE)
- "mpp3059c_1_prt_Eastern Time_2_prt_1" | "mpp3059c_1_prt_Eastern Time" | t      |     2 | FOR VALUES FROM ('00:00:00-07') TO ('01:00:00-07')
- "mpp3059c_1_prt_Eastern Time_2_prt_2" | "mpp3059c_1_prt_Eastern Time" | t      |     2 | FOR VALUES FROM ('01:00:00-07') TO (MAXVALUE)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059c';
+ tablename | partitionlevel |          partitiontablename           | partitionname |                 partitionboundary                  
+-----------+----------------+---------------------------------------+---------------+----------------------------------------------------
+ mpp3059c  |              0 | mpp3059c                              |               | 
+ mpp3059c  |              1 | mpp3059c_1_prt_pacific                | pacific       | FOR VALUES IN ('PST ')
+ mpp3059c  |              1 | "mpp3059c_1_prt_Eastern Time"         |               | FOR VALUES IN ('EST ')
+ mpp3059c  |              2 | mpp3059c_1_prt_pacific_2_prt_1        | 1             | FOR VALUES FROM ('00:00:00-07') TO ('01:00:00-07')
+ mpp3059c  |              2 | mpp3059c_1_prt_pacific_2_prt_2        | 2             | FOR VALUES FROM ('01:00:00-07') TO (MAXVALUE)
+ mpp3059c  |              2 | "mpp3059c_1_prt_Eastern Time_2_prt_1" |               | FOR VALUES FROM ('00:00:00-07') TO ('01:00:00-07')
+ mpp3059c  |              2 | "mpp3059c_1_prt_Eastern Time_2_prt_2" |               | FOR VALUES FROM ('01:00:00-07') TO (MAXVALUE)
 (7 rows)
 
 CREATE TABLE mpp3059d (f1 time(2) with time zone, f2 char(4), f3 varchar(10))
@@ -2122,16 +2122,16 @@ subpartition template (
   partition est values ('EST')
 );
 alter table mpp3059d rename partition pst to pacific;
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3059d') as t, pg_class as c where relid = oid;
-                relid                |      parentrelid       | isleaf | level |          pg_get_expr          
--------------------------------------+------------------------+--------+-------+-------------------------------
- mpp3059d                            |                        | f      |     0 | 
- mpp3059d_1_prt_pacific              | mpp3059d               | f      |     1 | FOR VALUES IN ('PST ')
- mpp3059d_1_prt_est                  | mpp3059d               | f      |     1 | FOR VALUES IN ('EST ')
- mpp3059d_1_prt_pacific_2_prt_male   | mpp3059d_1_prt_pacific | t      |     2 | FOR VALUES IN ('Male', 'M')
- mpp3059d_1_prt_pacific_2_prt_female | mpp3059d_1_prt_pacific | t      |     2 | FOR VALUES IN ('Female', 'F')
- mpp3059d_1_prt_est_2_prt_male       | mpp3059d_1_prt_est     | t      |     2 | FOR VALUES IN ('Male', 'M')
- mpp3059d_1_prt_est_2_prt_female     | mpp3059d_1_prt_est     | t      |     2 | FOR VALUES IN ('Female', 'F')
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3059d';
+ tablename | partitionlevel |         partitiontablename          | partitionname |       partitionboundary       
+-----------+----------------+-------------------------------------+---------------+-------------------------------
+ mpp3059d  |              0 | mpp3059d                            |               | 
+ mpp3059d  |              1 | mpp3059d_1_prt_pacific              | pacific       | FOR VALUES IN ('PST ')
+ mpp3059d  |              1 | mpp3059d_1_prt_est                  | est           | FOR VALUES IN ('EST ')
+ mpp3059d  |              2 | mpp3059d_1_prt_pacific_2_prt_male   | male          | FOR VALUES IN ('Male', 'M')
+ mpp3059d  |              2 | mpp3059d_1_prt_pacific_2_prt_female | female        | FOR VALUES IN ('Female', 'F')
+ mpp3059d  |              2 | mpp3059d_1_prt_est_2_prt_male       | male          | FOR VALUES IN ('Male', 'M')
+ mpp3059d  |              2 | mpp3059d_1_prt_est_2_prt_female     | female        | FOR VALUES IN ('Female', 'F')
 (7 rows)
 
 create table test_khush (a integer, b date, c varchar(30))
@@ -2607,34 +2607,34 @@ partition by range (q1)
 CREATE TABLE mpp3079a(q1 int2, q2 int2)
 partition by range (q1)
 (start (1) end (10) every (1));
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3079') as t, pg_class as c where relid = oid;
-      relid      | parentrelid | isleaf | level |           pg_get_expr           
------------------+-------------+--------+-------+---------------------------------
- mpp3079         |             | f      |     0 | 
- mpp3079_1_prt_1 | mpp3079     | t      |     1 | FOR VALUES FROM ('1') TO ('2')
- mpp3079_1_prt_2 | mpp3079     | t      |     1 | FOR VALUES FROM ('2') TO ('3')
- mpp3079_1_prt_3 | mpp3079     | t      |     1 | FOR VALUES FROM ('3') TO ('4')
- mpp3079_1_prt_4 | mpp3079     | t      |     1 | FOR VALUES FROM ('4') TO ('5')
- mpp3079_1_prt_5 | mpp3079     | t      |     1 | FOR VALUES FROM ('5') TO ('6')
- mpp3079_1_prt_6 | mpp3079     | t      |     1 | FOR VALUES FROM ('6') TO ('7')
- mpp3079_1_prt_7 | mpp3079     | t      |     1 | FOR VALUES FROM ('7') TO ('8')
- mpp3079_1_prt_8 | mpp3079     | t      |     1 | FOR VALUES FROM ('8') TO ('9')
- mpp3079_1_prt_9 | mpp3079     | t      |     1 | FOR VALUES FROM ('9') TO ('10')
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3079';
+ tablename | partitionlevel | partitiontablename | partitionname |        partitionboundary        
+-----------+----------------+--------------------+---------------+---------------------------------
+ mpp3079   |              0 | mpp3079            |               | 
+ mpp3079   |              1 | mpp3079_1_prt_1    | 1             | FOR VALUES FROM ('1') TO ('2')
+ mpp3079   |              1 | mpp3079_1_prt_2    | 2             | FOR VALUES FROM ('2') TO ('3')
+ mpp3079   |              1 | mpp3079_1_prt_3    | 3             | FOR VALUES FROM ('3') TO ('4')
+ mpp3079   |              1 | mpp3079_1_prt_4    | 4             | FOR VALUES FROM ('4') TO ('5')
+ mpp3079   |              1 | mpp3079_1_prt_5    | 5             | FOR VALUES FROM ('5') TO ('6')
+ mpp3079   |              1 | mpp3079_1_prt_6    | 6             | FOR VALUES FROM ('6') TO ('7')
+ mpp3079   |              1 | mpp3079_1_prt_7    | 7             | FOR VALUES FROM ('7') TO ('8')
+ mpp3079   |              1 | mpp3079_1_prt_8    | 8             | FOR VALUES FROM ('8') TO ('9')
+ mpp3079   |              1 | mpp3079_1_prt_9    | 9             | FOR VALUES FROM ('9') TO ('10')
 (10 rows)
 
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3079a') as t, pg_class as c where relid = oid;
-      relid       | parentrelid | isleaf | level |           pg_get_expr           
-------------------+-------------+--------+-------+---------------------------------
- mpp3079a         |             | f      |     0 | 
- mpp3079a_1_prt_1 | mpp3079a    | t      |     1 | FOR VALUES FROM ('1') TO ('2')
- mpp3079a_1_prt_2 | mpp3079a    | t      |     1 | FOR VALUES FROM ('2') TO ('3')
- mpp3079a_1_prt_3 | mpp3079a    | t      |     1 | FOR VALUES FROM ('3') TO ('4')
- mpp3079a_1_prt_4 | mpp3079a    | t      |     1 | FOR VALUES FROM ('4') TO ('5')
- mpp3079a_1_prt_5 | mpp3079a    | t      |     1 | FOR VALUES FROM ('5') TO ('6')
- mpp3079a_1_prt_6 | mpp3079a    | t      |     1 | FOR VALUES FROM ('6') TO ('7')
- mpp3079a_1_prt_7 | mpp3079a    | t      |     1 | FOR VALUES FROM ('7') TO ('8')
- mpp3079a_1_prt_8 | mpp3079a    | t      |     1 | FOR VALUES FROM ('8') TO ('9')
- mpp3079a_1_prt_9 | mpp3079a    | t      |     1 | FOR VALUES FROM ('9') TO ('10')
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3079a';
+ tablename | partitionlevel | partitiontablename | partitionname |        partitionboundary        
+-----------+----------------+--------------------+---------------+---------------------------------
+ mpp3079a  |              0 | mpp3079a           |               | 
+ mpp3079a  |              1 | mpp3079a_1_prt_1   | 1             | FOR VALUES FROM ('1') TO ('2')
+ mpp3079a  |              1 | mpp3079a_1_prt_2   | 2             | FOR VALUES FROM ('2') TO ('3')
+ mpp3079a  |              1 | mpp3079a_1_prt_3   | 3             | FOR VALUES FROM ('3') TO ('4')
+ mpp3079a  |              1 | mpp3079a_1_prt_4   | 4             | FOR VALUES FROM ('4') TO ('5')
+ mpp3079a  |              1 | mpp3079a_1_prt_5   | 5             | FOR VALUES FROM ('5') TO ('6')
+ mpp3079a  |              1 | mpp3079a_1_prt_6   | 6             | FOR VALUES FROM ('6') TO ('7')
+ mpp3079a  |              1 | mpp3079a_1_prt_7   | 7             | FOR VALUES FROM ('7') TO ('8')
+ mpp3079a  |              1 | mpp3079a_1_prt_8   | 8             | FOR VALUES FROM ('8') TO ('9')
+ mpp3079a  |              1 | mpp3079a_1_prt_9   | 9             | FOR VALUES FROM ('9') TO ('10')
 (10 rows)
 
 drop table mpp3079;
@@ -2649,20 +2649,20 @@ insert into mpp3242 values(-1);
 -- automatic.
 alter table mpp3242 add partition zz start ('-1') end (0);
 ERROR:  updated partition constraint for default partition "mpp3242_1_prt_default_part" would be violated by some row  (seg2 127.0.1.1:7004 pid=10757)
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3242') as t, pg_class as c where relid = oid;
-           relid            | parentrelid | isleaf | level |         pg_get_expr         
-----------------------------+-------------+--------+-------+-----------------------------
- mpp3242                    |             | f      |     0 | 
- mpp3242_1_prt_aa_1         | mpp3242     | t      |     1 | FOR VALUES FROM (1) TO (2)
- mpp3242_1_prt_aa_2         | mpp3242     | t      |     1 | FOR VALUES FROM (2) TO (3)
- mpp3242_1_prt_aa_3         | mpp3242     | t      |     1 | FOR VALUES FROM (3) TO (4)
- mpp3242_1_prt_aa_4         | mpp3242     | t      |     1 | FOR VALUES FROM (4) TO (5)
- mpp3242_1_prt_aa_5         | mpp3242     | t      |     1 | FOR VALUES FROM (5) TO (6)
- mpp3242_1_prt_aa_6         | mpp3242     | t      |     1 | FOR VALUES FROM (6) TO (7)
- mpp3242_1_prt_aa_7         | mpp3242     | t      |     1 | FOR VALUES FROM (7) TO (8)
- mpp3242_1_prt_aa_8         | mpp3242     | t      |     1 | FOR VALUES FROM (8) TO (9)
- mpp3242_1_prt_aa_9         | mpp3242     | t      |     1 | FOR VALUES FROM (9) TO (10)
- mpp3242_1_prt_default_part | mpp3242     | t      |     1 | DEFAULT
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3242';
+ tablename | partitionlevel |     partitiontablename     | partitionname |      partitionboundary      
+-----------+----------------+----------------------------+---------------+-----------------------------
+ mpp3242   |              0 | mpp3242                    |               | 
+ mpp3242   |              1 | mpp3242_1_prt_aa_1         | aa_1          | FOR VALUES FROM (1) TO (2)
+ mpp3242   |              1 | mpp3242_1_prt_aa_2         | aa_2          | FOR VALUES FROM (2) TO (3)
+ mpp3242   |              1 | mpp3242_1_prt_aa_3         | aa_3          | FOR VALUES FROM (3) TO (4)
+ mpp3242   |              1 | mpp3242_1_prt_aa_4         | aa_4          | FOR VALUES FROM (4) TO (5)
+ mpp3242   |              1 | mpp3242_1_prt_aa_5         | aa_5          | FOR VALUES FROM (5) TO (6)
+ mpp3242   |              1 | mpp3242_1_prt_aa_6         | aa_6          | FOR VALUES FROM (6) TO (7)
+ mpp3242   |              1 | mpp3242_1_prt_aa_7         | aa_7          | FOR VALUES FROM (7) TO (8)
+ mpp3242   |              1 | mpp3242_1_prt_aa_8         | aa_8          | FOR VALUES FROM (8) TO (9)
+ mpp3242   |              1 | mpp3242_1_prt_aa_9         | aa_9          | FOR VALUES FROM (9) TO (10)
+ mpp3242   |              1 | mpp3242_1_prt_default_part | default_part  | DEFAULT
 (11 rows)
 
 drop table mpp3242;
@@ -2806,14 +2806,14 @@ CREATE TABLE mpp3080_numericbig (id int4, val numeric(1000,800))
 partition by range (val)
 (start (1) end (5) every (1));
 -- order 1,5
-select t.*, pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3080_numericbig') as t, pg_class as c where relid = oid order by 1,5;
-           relid            |    parentrelid     | isleaf | level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         pg_get_expr                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
-----------------------------+--------------------+--------+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- mpp3080_numericbig         |                    | f      |     0 | 
- mpp3080_numericbig_1_prt_1 | mpp3080_numericbig | t      |     1 | FOR VALUES FROM (1.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
- mpp3080_numericbig_1_prt_2 | mpp3080_numericbig | t      |     1 | FOR VALUES FROM (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (3.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
- mpp3080_numericbig_1_prt_3 | mpp3080_numericbig | t      |     1 | FOR VALUES FROM (3.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (4.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
- mpp3080_numericbig_1_prt_4 | mpp3080_numericbig | t      |     1 | FOR VALUES FROM (4.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (5.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+select tablename, partitionlevel, partitiontablename, partitionname, partitionboundary from pg_partitions where tablename = 'mpp3080_numericbig' order by 1,5;
+     tablename      | partitionlevel |     partitiontablename     | partitionname |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      partitionboundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+--------------------+----------------+----------------------------+---------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ mpp3080_numericbig |              1 | mpp3080_numericbig_1_prt_1 | 1             | FOR VALUES FROM (1.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+ mpp3080_numericbig |              1 | mpp3080_numericbig_1_prt_2 | 2             | FOR VALUES FROM (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (3.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+ mpp3080_numericbig |              1 | mpp3080_numericbig_1_prt_3 | 3             | FOR VALUES FROM (3.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (4.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+ mpp3080_numericbig |              1 | mpp3080_numericbig_1_prt_4 | 4             | FOR VALUES FROM (4.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) TO (5.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+ mpp3080_numericbig |              0 | mpp3080_numericbig         |               | 
 (5 rows)
 
 create temp TABLE temp_hour_range (f1 time(2))

@@ -611,7 +611,10 @@ alter table no_start1 add partition baz end (4);
 -- ok (because starts after baz end)
 alter table no_start1 add partition baz2 start (5);
 
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'no_start%' or relname like 'no_end%';
+select tablename, partitionlevel, parentpartitiontablename,
+partitionname, partitionlevel, partitionboundary from pg_partitions
+where tablename = 'no_start1' or tablename = 'no_end1'
+order by partitiontablename::text, partitionlevel;
 
 drop table no_end1;
 drop table no_start1;
@@ -1237,18 +1240,18 @@ PARTITION BY RANGE (date)
 
 -- Add unbound partition right before the start succeeds
 alter table mpp13806 add partition test end (date '2008-01-01') exclusive;
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+select partitiontablename, partitionboundary from pg_partitions where tablename like 'mpp13806%' order by partitiontablename::text, partitionlevel;
 
 -- Drop the partition
 alter TABLE mpp13806 drop partition test;
 
 -- Add unbound partition with a gap succeeds
 alter table mpp13806 add partition test end (date '2007-12-31') exclusive;
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+select partitiontablename, partitionboundary from pg_partitions where tablename like 'mpp13806%' order by partitiontablename::text, partitionlevel;
 
 -- Fill the gap succeeds/adding immediately before the first partition succeeds
 alter table mpp13806 add partition test1 start (date '2007-12-31') inclusive end (date '2008-01-01') exclusive;
-select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+select partitiontablename, partitionboundary from pg_partitions where tablename like 'mpp13806%' order by partitiontablename::text, partitionlevel;
 
 
 --
@@ -1290,6 +1293,9 @@ create table mpp14613_range(
      default partition others,
      start(1) end(5) every(1)
  );
+
+-- Check the partition and subpartition details
+select tablename, partitiontablename, partitionname from pg_partitions where tablename in ('mpp14613_list','mpp14613_range');
 
 -- SPLIT partition
 alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition subothers);

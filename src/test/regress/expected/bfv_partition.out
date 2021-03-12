@@ -1197,15 +1197,15 @@ Distributed by: (id)
  count  | integer      |           |          | 
 Distributed by: (id)
 
-select relid,parentrelid,isleaf,level, pg_catalog.pg_get_expr(relpartbound, oid) from pg_partition_tree('mpp3512_part'), pg_class where relid = oid;
-        relid         | parentrelid  | isleaf | level |           pg_get_expr            
-----------------------+--------------+--------+-------+----------------------------------
- mpp3512_part         |              | f      |     0 | 
- mpp3512_part_1_prt_1 | mpp3512_part | t      |     1 | FOR VALUES FROM (2001) TO (2002)
- mpp3512_part_1_prt_2 | mpp3512_part | t      |     1 | FOR VALUES FROM (2002) TO (2003)
- mpp3512_part_1_prt_3 | mpp3512_part | t      |     1 | FOR VALUES FROM (2003) TO (2004)
- mpp3512_part_1_prt_4 | mpp3512_part | t      |     1 | FOR VALUES FROM (2004) TO (2005)
- mpp3512_part_1_prt_5 | mpp3512_part | t      |     1 | FOR VALUES FROM (2005) TO (2006)
+select * from pg_partitions where tablename='mpp3512_part';
+  schemaname   |  tablename   | partitionschemaname |  partitiontablename  | partitionname | parentpartitiontablename | parentpartitionname | partitiontype | partitionlevel | partitionisdefault |        partitionboundary         | parenttablespace | partitiontablespace 
+---------------+--------------+---------------------+----------------------+---------------+--------------------------+---------------------+---------------+----------------+--------------------+----------------------------------+------------------+---------------------
+ bfv_partition | mpp3512_part | bfv_partition       | mpp3512_part         |               |                          |                     | range         |              0 | f                  |                                  | pg_default       | pg_default
+ bfv_partition | mpp3512_part | bfv_partition       | mpp3512_part_1_prt_1 | 1             | mpp3512_part             |                     |               |              1 | f                  | FOR VALUES FROM (2001) TO (2002) | pg_default       | pg_default
+ bfv_partition | mpp3512_part | bfv_partition       | mpp3512_part_1_prt_2 | 2             | mpp3512_part             |                     |               |              1 | f                  | FOR VALUES FROM (2002) TO (2003) | pg_default       | pg_default
+ bfv_partition | mpp3512_part | bfv_partition       | mpp3512_part_1_prt_3 | 3             | mpp3512_part             |                     |               |              1 | f                  | FOR VALUES FROM (2003) TO (2004) | pg_default       | pg_default
+ bfv_partition | mpp3512_part | bfv_partition       | mpp3512_part_1_prt_4 | 4             | mpp3512_part             |                     |               |              1 | f                  | FOR VALUES FROM (2004) TO (2005) | pg_default       | pg_default
+ bfv_partition | mpp3512_part | bfv_partition       | mpp3512_part_1_prt_5 | 5             | mpp3512_part             |                     |               |              1 | f                  | FOR VALUES FROM (2005) TO (2006) | pg_default       | pg_default
 (6 rows)
 
 drop table mpp3512;
@@ -2978,6 +2978,12 @@ drop table partition_cleanup1;
 drop schema partition_999 cascade;
 NOTICE:  drop cascades to table partition_cleanup2
 -- These should be empty
+select 'pg_partitions', count(*) from pg_partitions where tablename='partition_cleanup%';
+   ?column?    | count 
+---------------+-------
+ pg_partitions |     0
+(1 row)
+
 select relid, level, template from gp_partition_template where not exists (select oid from pg_class where oid = relid);
  relid | level | template 
 -------+-------+----------
