@@ -17,17 +17,16 @@ CColConstraintsHashMapper::PdrgPcnstrLookup(CColRef *colref)
 
 // mapping between columns and single column constraints in array of constraints
 static ColRefToConstraintArrayMap *
-PhmcolconstrSingleColConstr(CMemoryPool *mp, CConstraintArray *drgPcnstr)
+PhmcolconstrSingleColConstr(CMemoryPool *mp, const CConstraintArray *drgPcnstr)
 {
-	CAutoRef<CConstraintArray> arpdrgpcnstr(drgPcnstr);
 	ColRefToConstraintArrayMap *phmcolconstr =
 		GPOS_NEW(mp) ColRefToConstraintArrayMap(mp);
 
-	const ULONG length = arpdrgpcnstr->Size();
+	const ULONG length = drgPcnstr->Size();
 
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		CConstraint *pcnstrChild = (*arpdrgpcnstr)[ul];
+		CConstraint *pcnstrChild = (*drgPcnstr)[ul];
 		CColRefSet *pcrs = pcnstrChild->PcrsUsed();
 
 		if (1 == pcrs->Size())
