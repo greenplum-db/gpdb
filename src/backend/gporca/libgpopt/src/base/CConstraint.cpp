@@ -765,13 +765,13 @@ CConstraint::PdrgpcnstrDeduplicate(CMemoryPool *mp,
 
 	const ULONG length = pdrgpcnstr->Size();
 
-	pdrgpcnstr->AddRef();
 	if (length >= 5)
 	{
 		arccm = GPOS_NEW(mp) CColConstraintsHashMapper(mp, pdrgpcnstr);
 	}
 	else
 	{
+		pdrgpcnstr->AddRef();
 		arccm = GPOS_NEW(mp) CColConstraintsArrayMapper(mp, pdrgpcnstr);
 	}
 
