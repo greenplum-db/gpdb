@@ -14,7 +14,6 @@
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogical.h"
-#include "gpopt/operators/CLogicalDynamicGetBase.h"
 
 namespace gpopt
 {
