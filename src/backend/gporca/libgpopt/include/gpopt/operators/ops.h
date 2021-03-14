@@ -11,9 +11,6 @@
 #ifndef GPOPT_ops_H
 #define GPOPT_ops_H
 
-#include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/COperator.h"
-
 // scalar ops
 #include "gpopt/operators/CScalar.h"
 #include "gpopt/operators/CScalarAggFunc.h"
