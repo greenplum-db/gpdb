@@ -16,6 +16,9 @@
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncList.h"
 
+#include "gpopt/base/CCostContext.h"
+#include "gpopt/base/COptimizationContext.h"
+#include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CLogical.h"
 #include "gpopt/search/CJobQueue.h"
 #include "gpopt/search/CTreeMap.h"
@@ -33,10 +36,6 @@ class CGroup;
 class CGroupExpression;
 class CDrvdProp;
 class CDrvdPropCtxtPlan;
-class CGroupProxy;
-class COptimizationContext;
-class CCostContext;
-class CReqdPropPlan;
 class CReqdPropRelational;
 class CExpression;
 
