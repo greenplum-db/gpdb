@@ -328,6 +328,9 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			case StartupProcess:
 				statmsg = pgstat_get_backend_desc(B_STARTUP);
 				break;
+			case ArchiverProcess:
+				statmsg = pgstat_get_backend_desc(B_ARCHIVER);
+				break;
 			case BgWriterProcess:
 				statmsg = pgstat_get_backend_desc(B_BG_WRITER);
 				break;
@@ -456,30 +459,29 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			proc_exit(1);		/* should never return */
 
 		case StartupProcess:
-			/* don't set signals, startup process has its own agenda */
 			StartupProcessMain();
-			proc_exit(1);		/* should never return */
+			proc_exit(1);
+
+		case ArchiverProcess:
+			PgArchiverMain();
+			proc_exit(1);
 
 		case BgWriterProcess:
-			/* don't set signals, bgwriter has its own agenda */
 			BackgroundWriterMain();
-			proc_exit(1);		/* should never return */
+			proc_exit(1);
 
 		case CheckpointerProcess:
-			/* don't set signals, checkpointer has its own agenda */
 			CheckpointerMain();
-			proc_exit(1);		/* should never return */
+			proc_exit(1);
 
 		case WalWriterProcess:
-			/* don't set signals, walwriter has its own agenda */
 			InitXLOGAccess();
 			WalWriterMain();
-			proc_exit(1);		/* should never return */
+			proc_exit(1);
 
 		case WalReceiverProcess:
-			/* don't set signals, walreceiver has its own agenda */
 			WalReceiverMain();
-			proc_exit(1);		/* should never return */
+			proc_exit(1);
 
 		default:
 			elog(PANIC, "unrecognized process type: %d", (int) MyAuxProcType);

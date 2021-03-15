@@ -7,3 +7,4 @@ struct AOCSWriteColumnDescData
 struct AppendOnlyFetchDescData
 struct AppendOnlyInsertDescData
 struct CreateForeignTableStmt
+enum PMSignalReason

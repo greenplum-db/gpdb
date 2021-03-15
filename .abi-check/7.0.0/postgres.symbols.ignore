@@ -7,3 +7,4 @@ createDir
 generatePartitions
 MergeAttributes
 makePartitionCreateStmt
+pgarch_start

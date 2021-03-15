@@ -23,11 +23,11 @@
 #include "access/xlog_internal.h"
 #include "miscadmin.h"
 #include "postmaster/startup.h"
+#include "postmaster/pgarch.h"
 #include "replication/walsender.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/lwlock.h"
-#include "storage/pmsignal.h"
 
 /*
  * GPDB specific imports:
@@ -561,7 +561,7 @@ XLogArchiveNotify(const char *xlog)
 
 	/* Notify archiver that it's got something to do */
 	if (IsUnderPostmaster)
-		SendPostmasterSignal(PMSIGNAL_WAKEN_ARCHIVER);
+		PgArchWakeup();
 }
 
 /*
