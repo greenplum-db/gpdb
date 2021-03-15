@@ -15,6 +15,7 @@
 
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRef.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalDML.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"

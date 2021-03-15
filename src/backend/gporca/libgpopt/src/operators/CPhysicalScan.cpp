@@ -16,6 +16,7 @@
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CName.h"
 #include "gpopt/metadata/CTableDescriptor.h"

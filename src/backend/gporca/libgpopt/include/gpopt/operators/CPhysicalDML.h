@@ -21,6 +21,7 @@ namespace gpopt
 {
 // fwd declaration
 class CDistributionSpec;
+class COptimizerConfig;
 
 //---------------------------------------------------------------------------
 //	@class:

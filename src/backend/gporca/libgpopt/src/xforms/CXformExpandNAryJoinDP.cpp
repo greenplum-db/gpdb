@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/engine/CHint.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"

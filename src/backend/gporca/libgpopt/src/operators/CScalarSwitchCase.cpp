@@ -13,6 +13,8 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/COptCtxt.h"
+
 using namespace gpopt;
 using namespace gpmd;
 

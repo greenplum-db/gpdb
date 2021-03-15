@@ -18,6 +18,7 @@
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CDrvdPropScalar.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/cost/ICostModelParams.h"
 #include "gpopt/exception.h"

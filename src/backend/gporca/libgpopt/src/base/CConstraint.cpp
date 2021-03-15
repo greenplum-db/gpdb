@@ -23,6 +23,7 @@
 #include "gpopt/base/CConstraintDisjunction.h"
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintNegation.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/IColConstraintsMapper.h"
 #include "gpopt/operators/CPredicateUtils.h"
