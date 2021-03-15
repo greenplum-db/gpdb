@@ -154,3 +154,41 @@ function tar_coverage() {
         tar --remove-files -cf "$prefix.tar" *
     popd
 }
+
+function add_ccache_support(){
+
+    _TARGET_OS=$1
+
+    ## Add CCache support
+    if [[ "${USE_CCACHE}" = "true" ]]; then
+        if [[ "${_TARGET_OS}" = "centos" ]]; then
+            # Enable CCache use
+            export PATH=/usr/lib64/ccache:$PATH
+        fi
+
+        export CCACHE_DIR=$(pwd)/ccache_dir
+        export CCACHE_BASEDIR=$(pwd)
+
+        ## Display current Ccache Stats
+        display_ccache_stats
+
+        ## Zero the cache statistics
+        ccache -z
+    fi
+}
+
+function display_ccache_stats(){
+    if [[ "${USE_CCACHE}" = "true" ]]; then
+        cat <<EOF
+
+======================================================================
+                            CCACHE STATS
+----------------------------------------------------------------------
+
+$( ccache --show-stats)
+
+======================================================================
+
+EOF
+    fi
+}

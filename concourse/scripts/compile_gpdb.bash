@@ -10,6 +10,8 @@ GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
 GREENPLUM_CL_INSTALL_DIR=/usr/local/greenplum-clients-devel
 GPDB_CL_FILENAME=${GPDB_CL_FILENAME:="gpdb-clients-${TARGET_OS}${TARGET_OS_VERSION}.tar.gz"}
 
+source "${CWDIR}/common.bash"
+
 function expand_glob_ensure_exists() {
   local -a glob=($*)
   [ -e "${glob[0]}" ]
@@ -231,6 +233,10 @@ function build_xerces()
 }
 
 function _main() {
+
+  ## Add CCache Support (?)
+  add_ccache_support "${TARGET_OS}"
+
   mkdir gpdb_src/gpAux/ext
 
   case "${TARGET_OS}" in
@@ -280,6 +286,9 @@ function _main() {
   then
       export_gpdb_clients
   fi
+
+  ## Display CCache Stats
+  display_ccache_stats
 }
 
 _main "$@"

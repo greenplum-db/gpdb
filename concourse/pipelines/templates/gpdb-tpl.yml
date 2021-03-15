@@ -775,6 +775,7 @@ jobs:
       TARGET_OS_VERSION: 7
       BLD_TARGETS: "clients"
       RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
+      USE_CCACHE: ((use_ccache))
   - in_parallel:
       steps:
       - put: bin_gpdb_centos7
