@@ -18,7 +18,7 @@ command_exit_is([ 'pg_ctl', 'status', '-D', $node->data_dir ],
 	3, 'pg_ctl status with server not running');
 
 system_or_bail 'pg_ctl', '-l', "$tempdir/logfile", '-D',
-  $node->data_dir, '-w', 'start', '-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1';
+  $node->data_dir, '-w', 'start';
 command_exit_is([ 'pg_ctl', 'status', '-D', $node->data_dir ],
 	0, 'pg_ctl status with server running');
 

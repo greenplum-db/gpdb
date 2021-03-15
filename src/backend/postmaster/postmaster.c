@@ -1000,7 +1000,8 @@ PostmasterMain(int argc, char *argv[])
 	{
 		if (GpIdentity.dbid != UNINITIALIZED_GP_IDENTITY_VALUE ||
 			GpIdentity.segindex != UNINITIALIZED_GP_IDENTITY_VALUE)
-			ereport(FATAL, (errmsg("Invalid gp_dbid(%d) or gp_contentid(%d)",
+			ereport(FATAL, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("Invalid gp_dbid(%d) or gp_contentid(%d)",
 									GpIdentity.dbid, GpIdentity.segindex),
 							errhint("Set both gp_dbid and gp_contentid properly, "
 									"or leave them both uninitialized")));

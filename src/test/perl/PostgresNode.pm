@@ -484,6 +484,7 @@ sub init
 	# issues_sql_like() doesn't work if logging_collector is enabled.
 	# Individual tests can override this.
 	print $conf "logging_collector = off\n";
+	print $conf "gp_contentid = 0\n";
 
 	# If a setting tends to affect whether tests pass or fail, print it after
 	# TEMP_CONFIG.  Otherwise, print it before TEMP_CONFIG, thereby permitting
